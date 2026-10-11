@@ -13,7 +13,7 @@ export default function NotFound() {
         <h1 className={styles.title} data-testid="not-found-title">
           {t('title')}
         </h1>
-        <p>{t('body')}</p>
+        <p data-testid="not-found-body">{t('body')}</p>
         <Link className={styles.home} href="/" data-testid="not-found-home">
           {t('home')}
         </Link>
