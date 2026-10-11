@@ -1,0 +1,32 @@
+# The local environment's dependencies. Started and stopped through infra/scripts; the API and the
+# web app run on the machine itself, not in containers.
+#
+# Every name carries the project's prefix, so nothing here can be mistaken for, or collide with,
+# another project's containers on the same machine.
+name: salon-local
+
+services:
+  postgres:
+    image: postgres:18.6
+    container_name: salon-postgres
+    environment:
+      # Local-only values that protect nothing. Override them in .env (see .env.example).
+      POSTGRES_DB: ${SALON_DB_NAME:-salon}
+      POSTGRES_USER: ${SALON_DB_USER:-salon}
+      POSTGRES_PASSWORD: ${SALON_DB_PASSWORD:-salon-local-only}
+    ports:
+      # Reachable from this machine only.
+      - "127.0.0.1:${SALON_POSTGRES_PORT:-5440}:5432"
+    volumes:
+      # PostgreSQL 18 keeps its data under /var/lib/postgresql/<major>, so the volume is mounted one
+      # level above the path older versions used.
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+volumes:
+  postgres-data:
+    name: salon-postgres-data

@@ -1,0 +1,74 @@
+# Runs every developer gate on a pull request. A failing command fails its step, the job and so
+# the pull request's check.
+#
+# The steps under "Verification commands" are the stage's `verification.commands`, in the same
+# order and with the same text. When a stage changes that list, change it here too.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Verification commands
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      COREPACK_ENABLE_DOWNLOAD_PROMPT: '0'
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v6
+        with:
+          distribution: corretto
+          java-version: '25'
+          cache: maven
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+
+      # pnpm at the version package.json pins.
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      # --- Verification commands ---
+      - name: cd apps/api && ./mvnw -q verify
+        run: cd apps/api && ./mvnw -q verify
+
+      - name: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile
+
+      - name: pnpm -r lint
+        run: pnpm -r lint
+
+      - name: pnpm -r typecheck
+        run: pnpm -r typecheck
+
+      - name: pnpm -r test
+        run: pnpm -r test
+
+      - name: pnpm --filter @salon/web build
+        run: pnpm --filter @salon/web build
+
+      - name: pnpm contracts:check
+        run: pnpm contracts:check
+
+      - name: qa/scripts/sdlc selftest
+        run: qa/scripts/sdlc selftest
