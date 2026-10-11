@@ -14,7 +14,7 @@
 
 | Stage | Status | QA | Requirements | Criteria | Cases | Automated | Manual | Deferred |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| F01-S01 | planned | not-run | - | 10 | 0 | 0 | 0 | 0 |
+| F01-S01 | in-progress | not-run | - | 10 | 0 | 0 | 0 | 0 |
 
 ## Deferred cases
 
