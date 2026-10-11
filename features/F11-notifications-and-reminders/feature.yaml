@@ -1,0 +1,20 @@
+id: F11
+title: "Notifications and reminders"
+summary: "Customers and staff are told about confirmations, reminders and changes by push, WhatsApp, SMS or email, with fallback, salon-branded templates, preferences and a cost log."
+release: R1
+milestone: M1-web
+status: backlog
+qa_status: not-run
+released_in: null
+depends_on: [F09]
+surfaces: [api, web]
+requirements: [NOT-01, NOT-02, NOT-03, NOT-04, NOT-05, NOT-06, NOT-07, NOT-08, BRD-10, MKT-02]
+nfr_focus: [NFR-15]
+cases: []
+verification:
+  automation: []
+  manual: []
+  deferred: []
+evidence:
+  last_run: null
+  last_result: null

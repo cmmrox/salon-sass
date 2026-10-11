@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# Entry point for the work-spine tooling: validate, generate, status, run, selftest.
+#
+# The tooling needs PyYAML and nothing else. It keeps its own virtual environment beside
+# this file so that it never depends on, or disturbs, whatever Python the machine has.
+set -euo pipefail
+ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+VENV="$ROOT/qa/scripts/.venv"
+PY="$VENV/bin/python"
+[[ -x "$PY" ]] || PY="$VENV/Scripts/python.exe"   # Windows layout
+
+if [[ ! -x "$PY" ]] || ! "$PY" -c 'import yaml' >/dev/null 2>&1; then
+  command -v python3 >/dev/null 2>&1 || { echo "sdlc: python3 is required and is not on PATH" >&2; exit 1; }
+  echo "sdlc: creating $VENV (first run only)" >&2
+  python3 -m venv "$VENV"
+  PY="$VENV/bin/python"; [[ -x "$PY" ]] || PY="$VENV/Scripts/python.exe"
+  # A validator that cannot read its inputs must fail loudly, never report a clean pass.
+  "$PY" -m pip install --quiet -r "$ROOT/qa/scripts/requirements.txt" || {
+    echo "sdlc: could not install PyYAML; check the network and rerun" >&2; exit 1; }
+fi
+
+cd "$ROOT"
+PYTHONPATH="$ROOT/qa/scripts" exec "$PY" -m sdlc_lib "$@"

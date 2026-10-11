@@ -1,0 +1,20 @@
+id: F13
+title: "Reports"
+summary: "A salon owner sees how the business did over a period, compared with the one before, broken down by source, service, professional and day, and can download it."
+release: R1
+milestone: M1-web
+status: backlog
+qa_status: not-run
+released_in: null
+depends_on: [F10]
+surfaces: [api, web]
+requirements: [REP-02, REP-03, REP-04]
+nfr_focus: []
+cases: []
+verification:
+  automation: []
+  manual: []
+  deferred: []
+evidence:
+  last_run: null
+  last_result: null

@@ -1,0 +1,31 @@
+id: F01-S01
+feature: F01
+title: "Walking skeleton and local environment"
+sequence: 1
+surfaces: [api, web, infra]
+status: planned
+qa_status: not-run
+released_in: null
+depends_on: []
+requirements: []
+handoff:
+  run: null
+  data: null
+  notes: null
+cases: []
+verification:
+  commands:
+    - "cd apps/api && ./mvnw -q verify"
+    - "pnpm install --frozen-lockfile"
+    - "pnpm -r lint"
+    - "pnpm -r typecheck"
+    - "pnpm -r test"
+    - "pnpm --filter @salon/web build"
+    - "pnpm contracts:check"
+    - "qa/scripts/sdlc selftest"
+  automation: []
+  manual: []
+  deferred: []
+evidence:
+  last_run: null
+  last_result: null

@@ -1,0 +1,20 @@
+id: F03
+title: "Operator console: salons, plans and billing"
+summary: "The operator creates a salon, puts it on a plan, bills it, suspends or closes it, and can enter its workspace only through a recorded support session."
+release: R1
+milestone: M1-web
+status: backlog
+qa_status: not-run
+released_in: null
+depends_on: [F02]
+surfaces: [api, web]
+requirements: [PLT-01, PLT-04, PLT-05, PLT-06, PLT-07]
+nfr_focus: [NFR-20]
+cases: []
+verification:
+  automation: []
+  manual: []
+  deferred: []
+evidence:
+  last_run: null
+  last_result: null

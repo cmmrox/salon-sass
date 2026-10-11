@@ -1,0 +1,20 @@
+id: F04
+title: "Salon setup: profile, branding, hours and policies"
+summary: "A salon owner sets the business profile, brand, opening hours, holidays and booking policies, and customers see the published brand without an app release."
+release: R1
+milestone: M1-web
+status: backlog
+qa_status: not-run
+released_in: null
+depends_on: [F02]
+surfaces: [api, web]
+requirements: [BRD-01, BRD-02, BRD-04, STF-04, BKG-02, BKG-09]
+nfr_focus: [NFR-13]
+cases: []
+verification:
+  automation: []
+  manual: []
+  deferred: []
+evidence:
+  last_run: null
+  last_result: null

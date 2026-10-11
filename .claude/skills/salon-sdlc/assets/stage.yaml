@@ -1,0 +1,50 @@
+# One stage: a part of a feature the developer can hand over and QA can test on its own.
+id: F00-S01
+feature: F00
+title: <stage name>
+sequence: 1
+surfaces: []                # api | web | mobile | infra | docs
+status: outlined            # outlined | planned | in-progress | in-qa | complete | released
+qa_status: not-run          # not-run | failing | blocked | pass
+blocked_reason: null        # QA: what stops the pass, when qa_status is blocked
+released_in: null
+reopened_by: null           # lead: the change request that reopened a closed stage, for example CR-004
+depends_on: []              # stage ids, of this or another feature
+requirements: []            # requirement ids of the feature that this stage delivers
+
+# Written by the developer at handoff. Facts QA needs to run the stage; not how the code works.
+handoff:
+  run: null                 # commands that start what QA needs
+  data: null                # the accounts and seed data that exist
+  notes: null               # what is left out, any criterion not checked and why, anything that
+                            # differs from a document under docs/
+
+# Written by QA. Each case is described in cases.md under a "### TC-..." heading.
+cases: []
+#  - id: TC-F00-S01-001
+#    title: <what is proved>
+#    type: api               # one of the types in docs/qa/test-types.md
+#    priority: high          # critical | high | medium | low
+#    covers: [AC-1]
+
+verification:
+  commands: []              # developer gates, exact shell commands, run from the repository root
+  automation: []
+  #  - id: <short name>
+  #    tool: playwright      # playwright | maestro | k6 | script
+  #    file: <path under qa/, as laid out in docs/qa/test-plan.md>
+  #    project: <name>       # only for a tool that groups tests into projects
+  #    covers: [TC-F00-S01-001]
+  #    suites: []            # regression | smoke; decided at feature-verify
+  manual: []
+  #  - case: TC-F00-S01-009
+  #    reason: <why it cannot be automated, and how it was checked>
+  #    performed_on: <YYYY-MM-DD>   # required: a manual case counts only once it was done
+  deferred: []
+  #  - case: TC-F00-S01-010
+  #    reason: <why it cannot be run yet>
+  #    unblocked_by: <a stage id, or the event the spec names>
+
+evidence:
+  last_run: null            # the run this status rests on, as a path: qa/reports/<folder>
+  last_result: null         # pass | fail

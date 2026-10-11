@@ -1,0 +1,20 @@
+id: F09
+title: "Manage a booking: reschedule, cancel and waitlist"
+summary: "A customer sees their bookings, reschedules or cancels within the salon's policy with the refund shown first, and can join a waitlist."
+release: R1
+milestone: M1-web
+status: backlog
+qa_status: not-run
+released_in: null
+depends_on: [F08]
+surfaces: [api, web]
+requirements: [BKG-07, BKG-08, BKG-17, APP-03]
+nfr_focus: []
+cases: []
+verification:
+  automation: []
+  manual: []
+  deferred: []
+evidence:
+  last_run: null
+  last_result: null

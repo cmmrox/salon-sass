@@ -1,0 +1,20 @@
+id: F12
+title: "Customer records"
+summary: "A salon keeps a record of each customer with visits, spend, notes and consents, and authorised staff can export the list."
+release: R1
+milestone: M1-web
+status: backlog
+qa_status: not-run
+released_in: null
+depends_on: [F07]
+surfaces: [api, web]
+requirements: [CRM-01, CRM-02, CRM-03, CRM-04, CRM-05]
+nfr_focus: [NFR-09, NFR-19]
+cases: []
+verification:
+  automation: []
+  manual: []
+  deferred: []
+evidence:
+  last_run: null
+  last_result: null

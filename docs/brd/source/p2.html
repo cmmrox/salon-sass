@@ -1,0 +1,372 @@
+<h1 id="s5">5. Market and competitor research</h1>
+<h2 id="s5-1">5.1 Launch market context</h2>
+<div class="stat">
+  <div><b>59.7%</b><span>Internet penetration in Sri Lanka at the end of 2025: 13.9 million users (DataReportal, Digital 2026)</span></div>
+  <div><b>30.3 m</b><span>Active mobile connections, about 130% of the population (DataReportal, Digital 2026)</span></div>
+  <div><b>~79% / 21%</b><span>Android versus iOS share of mobile usage, mid-2026 (StatCounter)</span></div>
+  <div><b>LKR 1,190</b><span>Fresha&rsquo;s listed price per team member per month in Sri Lanka (fresha.com pricing page)</span></div>
+</div>
+<p>Three implications follow. Android is the volume platform, so Android quality and small download size matter most; iOS matters for the higher-spending urban customer and for the salon&rsquo;s image. WhatsApp and phone calls are the existing booking channels, so the product has to work with them (links, messages, staff-created bookings) rather than expect them to disappear. And a global competitor is already priced in rupees, so the offer has to be distinct, not merely local.</p>
+
+<h2 id="s5-2">5.2 Competitor landscape</h2>
+<ptable head="Product|Model|Pricing found (Oct 2026)|Strengths|Weaknesses for our target salon" widths="15,14,24,24,23">
+<b>Fresha</b><br>(global, sells in LKR) | Subscription plus consumer marketplace | LKR 1,790 / month independent; LKR 1,190 per team member / month. Add-ons priced separately, for example loyalty at LKR 6,050 per location / month. 20 free automated messages a month, then per-message charges. One-time fee on new clients from the marketplace. | Very broad feature set: calendar, POS, forms, inventory, gift cards, packages, memberships, waitlist, reviews | The salon sits inside Fresha&rsquo;s app next to competitors. Reviewers complain about extra fees, paid messaging and slow support. No salon-owned app.
+<b>Booksy</b> | Subscription plus marketplace | About US$29.99 / month plus US$20 per additional staff member (third-party guides citing Booksy&rsquo;s US page). Optional &ldquo;Boost&rdquo;: a one-time commission, reported at 30%, on a new client&rsquo;s first visit. | Strong consumer app, popular with barbers | Marketplace model and commission; no local payment methods.
+<b>Vagaro</b> | Subscription plus marketplace, many add-ons | From about US$24 to US$30 / month for one location, plus US$10 per extra bookable calendar. Branded app offered as an add-on. | All-in-one, branded app available | US-centric payments; add-on pricing accumulates.
+<b>Square<br>Appointments</b> | Subscription tied to Square payments | Free tier for individuals; paid plans for teams | Simple, tightly integrated payments | Square payments are not available in Sri Lanka.
+<b>Phorest</b> | Premium subscription | Quote-based | Salon-branded app, strong marketing and retention tools | Priced for established salons; the salon must hold its own Apple developer account.
+<b>Mindbody</b> | Premium subscription | Third-party reports: from about US$99 / month per location, with the branded app at roughly US$249 to US$299 / month extra | Mature branded app programme | Cost; fitness-first product.
+<b>Zenoti</b> | Enterprise | Quote-based | Multi-location chains, deep operations | Out of reach for small salons.
+<b>SaloBook</b><br>(Sri Lanka) | Local SaaS | Free during early access; says pricing will not be per staff member | Built locally | Early stage.
+<b>SalonApp.lk<br>BookMySalon.lk<br>SalonReserve</b><br>(Sri Lanka) | Consumer marketplaces | Not published | Local discovery | Marketplaces, not the salon&rsquo;s own brand; limited back-office.
+<b>Custom builds</b><br>(local agencies) | One-off project | Example: about US$900 once plus US$20 / month | Fully bespoke, salon owns its list | No product roadmap; each salon pays for its own software.
+</ptable>
+<p class="small">Prices are as published or reported on the dates in Appendix A and should be re-checked before they are used in sales material. Figures from third-party guides are flagged as such.</p>
+
+<h2 id="s5-3">5.3 How others deliver a salon-branded app</h2>
+<p>This is the part of the plan where existing practice is most instructive, because every vendor operates under the same store rules.</p>
+<ptable head="Vendor|What their documentation says" widths="18,82">
+Phorest | &ldquo;For Phorest to build and publish your salon branded app on the AppStore, Apple requires that you have an Apple Developer account for your business.&rdquo; The salon must enrol as a company or organisation, be a registered legal entity, obtain a D-U-N-S number, and have a business email and public website.
+Mindbody | The client creates the Apple ID and developer account, pays Apple&rsquo;s fees, and grants Mindbody access as a contractor. Mindbody then takes over launching, updating and maintaining the app. None of these steps are required for the Android version.
+Pike13 | The business must register its own Apple Developer account, enrolled as a company or organisation; the vendor cannot create it for them.
+Event-app vendors (2017) | When Apple introduced rule 4.2.6, vendors either moved clients to their own developer accounts or consolidated them into a single multi-client &ldquo;container&rdquo; app, which the rule explicitly allows.
+</ptable>
+<div class="box"><span class="t">Pattern</span><p>Nobody publishes hundreds of near-identical client apps from one developer account. The two accepted models are: the client owns the store account and the vendor operates it; or the vendor ships one app that holds many clients. Section 7.4 applies both.</p></div>
+
+<h2 id="s5-4">5.4 What salon owners want</h2>
+<ptable head="Evidence|Implication for requirements" widths="50,50">
+Reviews of marketplace products repeatedly cite charges on top of the subscription, paid text messages, and commission on new clients (Capterra reviews of Fresha). | Publish simple pricing. Show message costs before sending. Never take commission.
+Slow or hard-to-reach support is a recurring complaint. | Local-hours support, WhatsApp support channel, and a support console that lets staff see what the salon sees (PLT-07).
+A reviewer reported client records overwriting each other when clients shared an email, phone or card. | Customer records must tolerate shared contact details (CRM-04, IAM-12).
+Limited control over reminder wording. | Editable templates per salon and language (NOT-04).
+Reporting that owners cannot reconcile. | Reports that tie back to bookings and payments line by line, with export (REP-02, PAY-11).
+New-client retention is low: one trade source puts it at about 29%. | Rebooking prompts, loyalty and win-back campaigns are revenue features, not extras (section 8.10).
+Deposits and reminders are widely reported by vendors to reduce no-shows by roughly a third to a half. Measured no-show rates vary widely by source, from about 3% (Fresha, three million bookings, 2024) to the commonly quoted 20%. | Ship deposits and reminders in R1, and measure each salon&rsquo;s own before-and-after rate (BO-4) instead of quoting an industry number.
+</ptable>
+
+<h2 id="s5-5">5.5 What customers want</h2>
+<ptable head="Evidence|Implication for requirements" widths="50,50">
+Online booking was the most preferred method (35%) ahead of phone (28%) in Zenoti&rsquo;s 2023 survey of 1,500 US beauty consumers; 82% want to book from their smartphone. | Booking must be complete on a phone in a few taps, without a call.
+Around 40% of appointments are booked outside business hours (Zenoti); Phorest reports that only 54% of bookings happen during opening hours. | Always-on self-service booking recovers demand that phone-only salons lose.
+86% want reminders by text (Zenoti). | Reminders by push, WhatsApp or SMS are expected, with the customer choosing the channel.
+The ability to book online or on mobile was a deciding factor for 37%, after location (53%) and referral (51%). | Make the booking link easy to share and to place on Instagram, Google and WhatsApp (BKG-21, MKT-08).
+Younger customers expect online booking most strongly (43% of 18 to 24 year olds in a Phorest survey). | The app experience is part of the salon&rsquo;s image with its next generation of customers.
+</ptable>
+<div class="box warn"><span class="t">A caution on single-salon apps</span><p>Customers install few apps and are selective about adding one for a business they visit every six weeks. The research supports online booking strongly; it does not show that customers demand a separate app per salon. The booking site must therefore be a first-class channel, and the app must earn its place on the phone with things a web page cannot do as well: one-tap rebooking, push reminders at no message cost, a loyalty card, and saved payment details.</p></div>
+
+<h2 id="s5-6">5.6 Positioning</h2>
+<div class="grid2">
+<div class="card"><h3>Where the platform should not compete</h3><ul><li>Lowest price: Fresha is already at LKR 1,190 per team member.</li><li>Feature count against products ten years old.</li><li>Consumer discovery: marketplaces own that.</li></ul></div>
+<div class="card"><h3>Where it can win</h3><ul><li><b>Your brand, your customers.</b> Own app, own domain, no marketplace, no commission.</li><li><b>Built for here.</b> Rupee gateways, LANKAQR and cash recorded properly, WhatsApp-first messaging, Sinhala and Tamil, local public holidays, local support hours.</li><li><b>Honest costs.</b> Flat pricing by location, message costs shown before sending.</li></ul></div>
+</div>
+
+<h1 id="s6">6. Gap analysis</h1>
+<p>The table compares what the prototype shows with what established products offer, and states what to do. &ldquo;Market norm&rdquo; reflects the feature lists of Fresha, Booksy, Vagaro and Phorest.</p>
+<h2 id="s6-1">6.1 Capability comparison</h2>
+<ptable head="Capability|Prototype|Market norm|Recommendation" widths="24,22,22,32">
+Service menu, search, categories | Yes, five fixed categories | Yes, with variants and add-ons | Keep; make categories editable; add variants in R1, add-ons in R2
+Choose professional or &ldquo;any&rdquo; | Yes | Yes | Keep
+Real-time availability with buffers | Yes | Yes | Keep; add minimum notice, advance window, resources
+Slot hold during checkout | Yes, 10 minutes, visible to staff | Often absent or hidden | Keep. This is a quality differentiator
+Multi-service, multi-professional booking | Single professional only | Yes | Add in R2
+Deposit, full payment, pay at salon | Yes, fixed rule | Yes, configurable | Keep; make configurable per salon and service
+Payment failure and pending handling | Yes, unusually complete | Varies | Keep as specified
+Customer reschedule and cancel with policy | Yes | Yes | Keep; make policy configurable
+Waitlist | Manual notify | Automatic offers | Keep manual in R1; automate in R2
+Customer accounts and booking history | No (guest only) | Yes | Add in R1: required for an app
+Push notifications | No | Yes | Add in R1
+Reminders and confirmations | Simulated | Yes | Add in R1
+Reviews and ratings | Static numbers | Yes | Add in R2; hide until real
+Loyalty, promo codes, referrals | No | Yes, often as paid add-on | Add in R2
+Packages, memberships, gift cards | No | Yes | Packages R2; memberships and gift cards R3
+Consultation forms, patch tests, consent | Mentioned in a service description only | Yes | Add in R2
+Languages | English | Many | Translation-ready in R1; Sinhala and Tamil in R2
+Day timeline with drag and drop | Yes, with validation and reasons | Yes | Keep
+Walk-in queue | Yes | Rare | Keep. Differentiator in a walk-in heavy market
+Conflict flags instead of auto-cancel | Yes | Varies | Keep
+Staff rota, time off, per-person hours | Leave toggle only; fixed hours | Yes | Add in R1
+Roles and permissions | No | Yes | Add in R1
+In-salon checkout, receipts, tenders | No | Yes (POS) | Add a light version in R1
+Customer records and notes | Derived list; note is a stub | Yes, with photos and formulas | Proper records in R1; photos and formulas in R2
+Reports and export | Yes, good coverage | Yes | Keep; add no-show rate, occupancy, rebooking, tax
+Marketing campaigns and automation | No | Yes | Add in R2
+Retail products and inventory | No | Yes | R3
+Commission and payroll reports | No | Yes | R3
+Multi-branch | No | Yes | Data model in R1; feature in R2
+Branding: logo, cover, colour | Yes, with draft and publish | Limited outside premium products | Keep and extend. Core to the proposition
+Dedicated branded app | The intended model | Premium products only | Deliver per section 7.4
+Chat-based booking on WhatsApp | Concept preview | Emerging (AI receptionists) | R3
+Operator console, billing, onboarding | No | n/a (internal to vendors) | Add in R1: required to run a SaaS
+</ptable>
+
+<h2 id="s6-2">6.2 Summary of additions and changes</h2>
+<div class="grid2">
+<div class="card"><h3>Add before the first paying salon</h3><ul>
+<li>Tenant onboarding, plans, billing, operator console</li>
+<li>Staff sign-in, roles, audit log</li>
+<li>Customer sign-in by one-time code; secure guest management</li>
+<li>Configurable hours, rota, leave, holidays, policies</li>
+<li>Real payments through a gateway; refunds</li>
+<li>In-salon checkout and receipts</li>
+<li>Notification engine: push, WhatsApp, SMS, email</li>
+<li>Booking history and one-tap rebook</li>
+<li>App build and release pipeline; store listing kit</li>
+<li>Privacy, consent, account deletion</li>
+</ul></div>
+<div class="card"><h3>Change from the prototype</h3><ul>
+<li>Remove unverified &ldquo;Welcome back&rdquo; recognition (PI-1)</li>
+<li>Replace constants with settings (PI-4)</li>
+<li>Replace the six-day strip with a month calendar and advance window (PI-10)</li>
+<li>Separate customer records from bookings (PI-6)</li>
+<li>Hide ratings until reviews are real (PI-7)</li>
+<li>Remove the Customer / Salon toggle: these are different applications with different sign-in</li>
+<li>Let staff reschedule to any day and professional (PI-11)</li>
+</ul></div>
+</div>
+
+<h1 id="s7">7. Recommended solution approach</h1>
+<p class="lead">This section answers &ldquo;what is the best way to build this kind of application&rdquo;. It records the approach and the reasons, at the level a business decision needs; the solution design document will take it to implementation detail.</p>
+
+<h2 id="s7-1">7.1 Solution overview</h2>
+<figure>
+<svg viewBox="0 0 720 372" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Solution architecture">
+  <defs><marker id="ar" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 z" fill="#5C6270"/></marker></defs>
+  <g font-size="9" fill="#1B1F2A">
+    <text x="0" y="10" font-size="8" fill="#5C6270" font-weight="600">CLIENTS</text>
+    <g>
+      <rect x="0" y="16" width="132" height="54" rx="7" fill="#FCE9F2" stroke="#D6086A"/><text x="66" y="35" text-anchor="middle" font-weight="600">Customer app</text><text x="66" y="48" text-anchor="middle" font-size="8">React Native (Expo)</text><text x="66" y="60" text-anchor="middle" font-size="8">1 codebase, N branded builds</text>
+      <rect x="142" y="16" width="132" height="54" rx="7" fill="#FCE9F2" stroke="#D6086A"/><text x="208" y="35" text-anchor="middle" font-weight="600">Booking site</text><text x="208" y="48" text-anchor="middle" font-size="8">Next.js, salon&#8217;s domain</text><text x="208" y="60" text-anchor="middle" font-size="8">no install needed</text>
+      <rect x="284" y="16" width="132" height="54" rx="7" fill="#E8F0FD" stroke="#1D5FD0"/><text x="350" y="35" text-anchor="middle" font-weight="600">Salon workspace</text><text x="350" y="48" text-anchor="middle" font-size="8">Next.js, responsive</text><text x="350" y="60" text-anchor="middle" font-size="8">owner, reception, staff</text>
+      <rect x="426" y="16" width="132" height="54" rx="7" fill="#F5F6F8" stroke="#5C6270"/><text x="492" y="35" text-anchor="middle" font-weight="600">Operator console</text><text x="492" y="48" text-anchor="middle" font-size="8">Next.js</text><text x="492" y="60" text-anchor="middle" font-size="8">tenants, billing, releases</text>
+    </g>
+    <rect x="0" y="90" width="558" height="30" rx="7" fill="#FFF4DC" stroke="#E09A00"/><text x="279" y="109" text-anchor="middle"><tspan font-weight="600">Edge:</tspan> DNS, TLS for platform subdomains and salon-owned domains, WAF, CDN, rate limiting</text>
+    <rect x="0" y="140" width="558" height="118" rx="7" fill="#fff" stroke="#1B1F2A" stroke-width="1.3"/>
+    <text x="12" y="158" font-weight="600" font-size="10">Backend API: one deployable (modular monolith)</text>
+    <text x="12" y="171" font-size="8" fill="#5C6270">Spring Boot 4.1 &#183; Java 25 &#183; virtual threads &#183; REST + OpenAPI &#183; tenant resolved and enforced on every request</text>
+    <g font-size="8.4">
+      <g fill="#F5F6F8" stroke="#DFE2E8">
+        <rect x="12" y="182" width="100" height="28" rx="5"/><rect x="120" y="182" width="100" height="28" rx="5"/><rect x="228" y="182" width="100" height="28" rx="5"/><rect x="336" y="182" width="100" height="28" rx="5"/><rect x="444" y="182" width="102" height="28" rx="5"/>
+        <rect x="12" y="218" width="100" height="28" rx="5"/><rect x="120" y="218" width="100" height="28" rx="5"/><rect x="228" y="218" width="100" height="28" rx="5"/><rect x="336" y="218" width="100" height="28" rx="5"/><rect x="444" y="218" width="102" height="28" rx="5"/>
+      </g>
+      <g text-anchor="middle" fill="#1B1F2A">
+        <text x="62" y="199">Tenancy &amp; plans</text><text x="170" y="199">Identity &amp; roles</text><text x="278" y="199">Catalogue</text><text x="386" y="199">Staff &amp; rota</text><text x="495" y="199">Booking engine</text>
+        <text x="62" y="235">Payments</text><text x="170" y="235">Notifications</text><text x="278" y="235">Customers &amp; loyalty</text><text x="386" y="235">Reporting</text><text x="495" y="235">Branding &amp; apps</text>
+      </g>
+    </g>
+    <text x="0" y="284" font-size="8" fill="#5C6270" font-weight="600">DATA</text>
+    <rect x="0" y="290" width="190" height="54" rx="7" fill="#E6F5EE" stroke="#0F7B55"/><text x="95" y="309" text-anchor="middle" font-weight="600">PostgreSQL</text><text x="95" y="322" text-anchor="middle" font-size="8">one database, shared schema</text><text x="95" y="334" text-anchor="middle" font-size="8">tenant_id + row-level security</text>
+    <rect x="200" y="290" width="112" height="54" rx="7" fill="#E6F5EE" stroke="#0F7B55"/><text x="256" y="309" text-anchor="middle" font-weight="600">Jobs &amp; outbox</text><text x="256" y="322" text-anchor="middle" font-size="8">reminders, hold expiry,</text><text x="256" y="334" text-anchor="middle" font-size="8">webhook retries</text>
+    <rect x="322" y="290" width="112" height="54" rx="7" fill="#E6F5EE" stroke="#0F7B55"/><text x="378" y="309" text-anchor="middle" font-weight="600">Object storage</text><text x="378" y="322" text-anchor="middle" font-size="8">logos, covers, photos</text><text x="378" y="334" text-anchor="middle" font-size="8">per-tenant prefixes</text>
+    <rect x="444" y="290" width="114" height="54" rx="7" fill="#E6F5EE" stroke="#0F7B55"/><text x="501" y="309" text-anchor="middle" font-weight="600">Cache</text><text x="501" y="322" text-anchor="middle" font-size="8">tenant config, rate limits</text><text x="501" y="334" text-anchor="middle" font-size="8">(add when needed)</text>
+    <text x="588" y="10" font-size="8" fill="#5C6270" font-weight="600">EXTERNAL SERVICES</text>
+    <g fill="#fff" stroke="#5C6270" stroke-dasharray="3 2">
+      <rect x="588" y="16" width="132" height="54" rx="7"/><rect x="588" y="140" width="132" height="54" rx="7"/><rect x="588" y="204" width="132" height="54" rx="7"/><rect x="588" y="84" width="132" height="42" rx="7"/>
+    </g>
+    <text x="654" y="35" text-anchor="middle" font-weight="600">App Store, Google Play</text><text x="654" y="48" text-anchor="middle" font-size="8">salon&#8217;s own accounts,</text><text x="654" y="60" text-anchor="middle" font-size="8">operator as delegate</text>
+    <text x="654" y="159" text-anchor="middle" font-weight="600">Payment gateway</text><text x="654" y="172" text-anchor="middle" font-size="8">salon&#8217;s merchant account</text><text x="654" y="184" text-anchor="middle" font-size="8">(PayHere first)</text>
+    <text x="654" y="223" text-anchor="middle" font-weight="600">Messaging</text><text x="654" y="236" text-anchor="middle" font-size="8">push, WhatsApp, SMS,</text><text x="654" y="248" text-anchor="middle" font-size="8">email</text>
+    <text x="654" y="101" text-anchor="middle" font-weight="600">Build service</text><text x="654" y="114" text-anchor="middle" font-size="8">per-tenant builds, OTA updates</text>
+    <g stroke="#5C6270" stroke-width="1" fill="none" marker-end="url(#ar)">
+      <path d="M279 70 V88"/><path d="M279 120 V138"/><path d="M279 258 V288"/>
+      <path d="M558 167 H586"/><path d="M558 231 H586"/>
+      <path d="M654 84 V72"/>
+    </g>
+  </g>
+</svg>
+<figcaption>Figure 1. Solution overview. One backend and one database serve every salon; the customer-facing surfaces are branded per tenant.</figcaption>
+</figure>
+<p><b>Why a modular monolith.</b> The team is small and the domain is tightly connected: a booking touches catalogue, staff, payments and notifications in one transaction. One deployable with enforced internal module boundaries keeps transactions simple and operations cheap, and leaves the option to separate a module (notifications is the likely first) when load justifies it. Microservices at this stage would add cost without adding anything a salon would notice.</p>
+
+<h2 id="s7-2">7.2 Multi-tenancy model</h2>
+<ptable head="Model|Isolation|Operating cost|Practical ceiling|Verdict" widths="19,22,23,16,20">
+<b>Shared schema, tenant column, row-level security</b> | Logical, enforced by the database on every query | Lowest: one schema, one migration, one connection pool | Thousands of tenants | <b>Recommended</b>
+Schema per tenant | Stronger separation of tables | Every migration runs once per tenant; catalogue grows with every salon; connection routing by <code>search_path</code> | Hundreds, comfortably | Not justified here
+Database per tenant | Strongest | Highest: a database to provision, patch, back up and monitor per salon | Tens | Keep as a future option for a large chain that demands it
+</ptable>
+<p>The user requirement is a single application and a single database with tenant configuration. The shared-schema model is that requirement in its most economical form, and it is how most small-business SaaS products are built. Its one weakness is that isolation depends on every query being filtered. The guardrails below remove that dependence on developer discipline.</p>
+<h3>Tenancy guardrails (binding on the solution design)</h3>
+<ptable head="Ref|Rule" widths="7,93" class="idc">
+T-1 | Every tenant-owned table carries a non-null <code>tenant_id</code>. Platform tables (plans, tenants, operator users) are held separately and are not reachable with a tenant role.
+T-2 | Isolation is enforced twice. In the application, Hibernate&rsquo;s <code>@TenantId</code> adds the tenant filter to every query and stamps every insert. In the database, a row-level security policy on each table compares <code>tenant_id</code> with a per-transaction setting, with <code>FORCE ROW LEVEL SECURITY</code> on, so a query that bypasses the ORM is still filtered.
+T-3 | The application connects with a role that does not own the tables and cannot bypass row-level security. Migrations run under a different role.
+T-4 | The tenant setting is applied per transaction (<code>set_config(&hellip;, true)</code>), never per session, so a pooled connection cannot carry one salon&rsquo;s context into another salon&rsquo;s request.
+T-5 | The tenant is derived on the server from the hostname or the signed token. A tenant identifier sent by the client is never trusted on its own; where both are present they must match.
+T-6 | Unique constraints, foreign keys and indexes include <code>tenant_id</code>. A reference to another tenant&rsquo;s row is impossible by construction.
+T-7 | Background jobs run one tenant at a time with an explicit context. A job without a tenant context can read nothing.
+T-8 | Caches, file paths, search indexes and log entries are keyed or tagged by tenant.
+T-9 | An automated test suite attempts cross-tenant reads and writes through every API endpoint on every build. A failure blocks release.
+T-10 | Operator access to tenant data is a deliberate, logged, time-limited action (PLT-07), not a standing privilege.
+</ptable>
+
+<h2 id="s7-3">7.3 Tenant resolution and web addresses</h2>
+<figure>
+<svg viewBox="0 0 720 118" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Tenant resolution flow">
+  <g font-size="8.6" fill="#1B1F2A" text-anchor="middle">
+    <g fill="#F5F6F8" stroke="#5C6270">
+      <rect x="0" y="14" width="128" height="78" rx="7"/><rect x="148" y="14" width="128" height="78" rx="7"/><rect x="296" y="14" width="128" height="78" rx="7"/><rect x="444" y="14" width="128" height="78" rx="7"/>
+    </g>
+    <rect x="592" y="14" width="128" height="78" rx="7" fill="#E6F5EE" stroke="#0F7B55"/>
+    <text x="64" y="32" font-weight="600">1. Request arrives</text><text x="64" y="47" font-size="7.8">Web: hostname</text><text x="64" y="58" font-size="7.8">glow.platform.lk or</text><text x="64" y="69" font-size="7.8">book.glowsalon.lk</text><text x="64" y="82" font-size="7.8">App: built-in tenant key</text>
+    <text x="212" y="32" font-weight="600">2. Resolve tenant</text><text x="212" y="47" font-size="7.8">Hostname or key looked</text><text x="212" y="58" font-size="7.8">up in the tenant registry</text><text x="212" y="69" font-size="7.8">(cached). Unknown host:</text><text x="212" y="80" font-size="7.8">not found</text>
+    <text x="360" y="32" font-weight="600">3. Verify identity</text><text x="360" y="47" font-size="7.8">Signed token carries</text><text x="360" y="58" font-size="7.8">tenant and role. It must</text><text x="360" y="69" font-size="7.8">match the resolved</text><text x="360" y="80" font-size="7.8">tenant, or reject</text>
+    <text x="508" y="32" font-weight="600">4. Bind context</text><text x="508" y="47" font-size="7.8">Tenant bound for the</text><text x="508" y="58" font-size="7.8">request; ORM filter on;</text><text x="508" y="69" font-size="7.8">transaction sets the</text><text x="508" y="80" font-size="7.8">database tenant setting</text>
+    <text x="656" y="32" font-weight="600">5. Database enforces</text><text x="656" y="47" font-size="7.8">Row-level security</text><text x="656" y="58" font-size="7.8">returns only this</text><text x="656" y="69" font-size="7.8">salon&#8217;s rows, whatever</text><text x="656" y="80" font-size="7.8">the query</text>
+    <g stroke="#5C6270" fill="none" marker-end="url(#ar)"><path d="M128 53 H146"/><path d="M276 53 H294"/><path d="M424 53 H442"/><path d="M572 53 H590"/></g>
+  </g>
+  <text x="0" y="112" font-size="8" fill="#5C6270">Hostnames in this figure are examples.</text>
+</svg>
+<figcaption>Figure 2. How every request is tied to exactly one salon.</figcaption>
+</figure>
+<ptable head="Address type|Example|How it works|Plan" widths="20,24,40,16">
+Platform subdomain | <code>glow.platform.lk</code> | One wildcard DNS record and wildcard certificate cover every salon. Created automatically at onboarding. | All
+Salon-owned domain | <code>book.glowsalon.lk</code> | The salon adds one CNAME record pointing to the platform. A custom-hostname service at the edge (for example Cloudflare for SaaS) validates the domain and issues and renews its certificate automatically. | Higher tiers
+Workspace | <code>glow.platform.lk/workspace</code> | Same hostname as the booking site with a separate sign-in area, so staff need to remember one address. | All
+Operator console | <code>console.platform.lk</code> | A reserved hostname that never resolves to a tenant. | Internal
+</ptable>
+<p>The Next.js application reads the hostname in its request proxy (the file named <code>proxy.ts</code> since Next.js 16, formerly middleware), resolves the tenant and passes it to pages. This layer does routing only. It is not a security boundary: authorisation is enforced in the API and the database, as above.</p>
+
+<h2 id="s7-4">7.4 White-label mobile app strategy</h2>
+<h3>The rules that constrain the plan</h3>
+<ptable head="Rule|Text or substance|Effect on the original plan" widths="17,48,35">
+Apple 4.2.6 | &ldquo;Apps created from a commercialized template or app generation service will be rejected unless they are submitted directly by the provider of the app&rsquo;s content. These services should not submit apps on behalf of their clients&hellip; Another acceptable option for template providers is to create a single binary to host all client content in an aggregated or &lsquo;picker&rsquo; model.&rdquo; | Salon apps published from the operator&rsquo;s Apple account would be rejected, and repeated attempts put the account at risk.
+Apple 4.3(a) | &ldquo;Don&rsquo;t create multiple Bundle IDs of the same app.&rdquo; | Reinforces the above for apps under one account.
+Google Play, white-label guidance (2025) | Recommends a decentralised model in which each client has its own developer account, optionally managed by the white-label developer. Warns that under one account &ldquo;policy issues with one app can negatively impact all other apps within the same account&rdquo;. Requires a unique description, icon, graphics and screenshots per app. | Putting all salons in one Play account is possible but discouraged, and one violation could remove every salon&rsquo;s app.
+Apple 5.1.1(v) | Apps that support account creation must offer account deletion in the app. | Requirement IAM-05.
+Apple 3.1.3(e) | Physical services consumed outside the app must be paid for by means other than in-app purchase. | Good news: salon bookings use the payment gateway, and no store commission applies.
+Apple 4.2 | An app must be more than a repackaged website. | The app needs native value: push, calendar, saved details, loyalty card.
+</ptable>
+
+<h3>Options</h3>
+<ptable head="Option|Compliant|Salon&rsquo;s effort|Operator&rsquo;s effort|Brand result" widths="25,13,22,20,20">
+A. Operator publishes every salon&rsquo;s app from its own accounts (the original plan) | <b>No</b> on Apple; discouraged on Google | None | High, and at risk | Own listing, but operator shown as developer
+B. Dedicated app per salon in the <b>salon&rsquo;s own</b> developer accounts, operated by the operator as delegated admin | Yes | Enrol with Apple (legal entity, D-U-N-S, website, US$99 a year) and Google (US$25 once; D-U-N-S for organisations) | Medium: guided enrolment, automated builds | Best: salon is the named developer
+C. One shared &ldquo;container&rdquo; app in the operator&rsquo;s account. A salon link, QR code or short code opens that salon&rsquo;s fully branded experience | Yes: the &ldquo;picker&rdquo; model named in 4.2.6 | None | Low: one app to release | Store listing carries the platform name; inside, the salon&rsquo;s brand only
+D. Branded booking site on the salon&rsquo;s address, installable to the home screen | Not subject to store review | None | Lowest | Salon brand and domain; no store presence
+</ptable>
+<div class="box rec"><span class="t">Recommendation</span>
+<p>Offer <b>D and C to every salon from the first day</b>, and <b>B as the premium tier</b>. All three are the same codebase. The goal of &ldquo;each salon has its own app&rdquo; is kept in full for salons that choose it, and no salon has to wait for a store account before it can take a booking.</p>
+<p>In the container app, a customer who arrives through a salon&rsquo;s link sees that salon only. There is no directory, search or cross-promotion of other salons: that promise to salon owners must be written into the product and the contract.</p></div>
+
+<h3>How one codebase becomes many apps</h3>
+<figure>
+<svg viewBox="0 0 720 132" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="White-label build pipeline">
+  <g font-size="8.4" fill="#1B1F2A" text-anchor="middle">
+    <rect x="0" y="12" width="126" height="92" rx="7" fill="#F5F6F8" stroke="#5C6270"/>
+    <text x="63" y="30" font-weight="600">Tenant app registry</text><text x="63" y="45" font-size="7.6">app name, bundle ID,</text><text x="63" y="56" font-size="7.6">icon, splash, tenant key,</text><text x="63" y="67" font-size="7.6">store account links,</text><text x="63" y="78" font-size="7.6">listing text</text><text x="63" y="94" font-size="7.6" fill="#5C6270">(operator console)</text>
+    <rect x="148" y="12" width="126" height="92" rx="7" fill="#FCE9F2" stroke="#D6086A"/>
+    <text x="211" y="30" font-weight="600">One codebase</text><text x="211" y="45" font-size="7.6">dynamic app config</text><text x="211" y="56" font-size="7.6">selects one tenant&#8217;s</text><text x="211" y="67" font-size="7.6">identity per build;</text><text x="211" y="78" font-size="7.6">no per-salon code</text>
+    <rect x="296" y="12" width="126" height="92" rx="7" fill="#F5F6F8" stroke="#5C6270"/>
+    <text x="359" y="30" font-weight="600">Build matrix</text><text x="359" y="45" font-size="7.6">CI builds iOS + Android</text><text x="359" y="56" font-size="7.6">per tenant, signed with</text><text x="359" y="67" font-size="7.6">that salon&#8217;s own</text><text x="359" y="78" font-size="7.6">credentials</text>
+    <rect x="444" y="12" width="126" height="92" rx="7" fill="#F5F6F8" stroke="#5C6270"/>
+    <text x="507" y="30" font-weight="600">Submit</text><text x="507" y="45" font-size="7.6">uploaded to the salon&#8217;s</text><text x="507" y="56" font-size="7.6">App Store Connect and</text><text x="507" y="67" font-size="7.6">Play Console through</text><text x="507" y="78" font-size="7.6">delegated API access</text>
+    <rect x="592" y="12" width="128" height="92" rx="7" fill="#E6F5EE" stroke="#0F7B55"/>
+    <text x="656" y="30" font-weight="600">Run time</text><text x="656" y="45" font-size="7.6">colours, images, content</text><text x="656" y="56" font-size="7.6">and features load from</text><text x="656" y="67" font-size="7.6">the API; fixes ship over</text><text x="656" y="78" font-size="7.6">the air, per tenant</text>
+    <g stroke="#5C6270" fill="none" marker-end="url(#ar)"><path d="M126 58 H146"/><path d="M274 58 H294"/><path d="M422 58 H442"/><path d="M570 58 H590"/></g>
+  </g>
+  <text x="0" y="124" font-size="8" fill="#5C6270">Only what the stores require to be fixed in the binary is set at build time. Everything else is data.</text>
+</svg>
+<figcaption>Figure 3. White-label build and release pipeline.</figcaption>
+</figure>
+<ptable head="Practice|Detail|Source of the practice" widths="22,56,22">
+Build-time identity only | App name, icon, splash screen, bundle and application ID, tenant key, API address. Selected by one variable in a dynamic Expo configuration file. | Awaze: three brands from one Expo codebase
+Run-time branding | Colour, logo, cover, texts, enabled features and policies are fetched from the API and cached. A salon can change its colour in Settings and see it in the app without a release, as the prototype&rsquo;s Publish button already implies. | Prototype; common practice
+Over-the-air updates | JavaScript-only fixes are delivered to every branded app without store review. A native fingerprint decides when a full rebuild is needed. One update channel per tenant app, so an update cannot reach the wrong salon&rsquo;s app. | Expo EAS Update guidance
+No native folders in source control | Native projects are generated from configuration at build time, so there is nothing per salon to maintain by hand. | Expo prebuild model
+Unique store listings | Each listing gets its own description, screenshots generated with the salon&rsquo;s branding and services, and its own privacy and data-safety declarations. | Google white-label guidance
+Release in waves | Internal build, then pilot salons, then all tenants; staged roll-out on Google Play. | Standard practice
+Plan for recurring work | Both stores set yearly deadlines for building against current SDK levels, and every dedicated app needs that rebuild and review. The cost grows with the number of dedicated apps; it is the main reason the dedicated app is a paid tier. | Store policy
+</ptable>
+
+<h2 id="s7-5">7.5 Technology stack</h2>
+<ptable head="Layer|Choice|Notes (versions verified October 2026)" widths="15,30,55">
+Language | Java 25 (LTS) | Current long-term-support release (September 2025).
+Backend framework | Spring Boot 4.1.x | 4.1.1 is the latest stable release; the 4.1 line was released on 30 June 2026 with open-source support to July 2027 and supports Java 17 to 26.
+Concurrency | Virtual threads enabled (<code>spring.threads.virtual.enabled=true</code>) | Since JDK 24, virtual threads no longer pin their carrier inside <code>synchronized</code> blocks, removing the main earlier caveat. See the notes below.
+Persistence | Spring Data JPA with Hibernate 7; Flyway migrations | <code>@TenantId</code> for the tenant discriminator.
+Database | PostgreSQL, current stable major (18 or later) | Row-level security; exclusion constraints for booking integrity; point-in-time recovery.
+Web | Next.js 16 (App Router), TypeScript | Hostname-based tenant routing in <code>proxy.ts</code>; server rendering for the public booking pages.
+Mobile | React Native with Expo (SDK 57 at the time of writing, React Native 0.86), Expo Router | EAS Build, Submit and Update for the per-tenant pipeline.
+Shared code | One repository for web and mobile with a shared API client generated from the OpenAPI contract, shared validation and design tokens | Keeps the two customer surfaces consistent.
+Edge | CDN, WAF and custom-hostname TLS (for example Cloudflare) | Salon-owned domains without manual certificate work.
+Background work | Database-backed job scheduler and transactional outbox | Reminders, hold expiry, webhook retries. Add a message broker only when volume requires it.
+Files | S3-compatible object storage | Images resized on upload, as the prototype already does in the browser.
+Observability | Structured logs and traces tagged with tenant, error reporting for web and mobile | Needed to answer &ldquo;what happened at this salon&rdquo; quickly.
+</ptable>
+<h3>Notes on virtual threads</h3>
+<ul>
+<li>Virtual threads suit this workload: most request time is spent waiting on the database, the payment gateway and messaging providers.</li>
+<li>They move the bottleneck, they do not remove it. With no thread-pool ceiling, the database connection pool becomes the limit. Size it deliberately and put explicit concurrency limits and timeouts on calls to external providers.</li>
+<li>Carry the tenant in a request-scoped or scoped value (scoped values are final in Java 25) and avoid designs that depend on thread-local state surviving in pooled threads.</li>
+<li>Monitor for remaining pinning (native calls, some file I/O) using the JDK&rsquo;s pinned-thread event during load testing.</li>
+</ul>
+
+<h2 id="s7-6">7.6 Booking integrity</h2>
+<p>Double booking is the failure a salon will not forgive. Application checks alone cannot prevent two customers confirming the same time in the same instant. The database must refuse the second one.</p>
+<ul>
+<li>A hold and a booking are the same kind of record in different states, so one rule covers both.</li>
+<li>A PostgreSQL exclusion constraint forbids two active records for the same tenant and professional with overlapping time ranges. The losing request receives a clear &ldquo;that time was just taken&rdquo; response, as the prototype already words it.</li>
+<li>Holds carry an expiry time. A scheduled job releases expired holds, and the availability calculation ignores them the moment they lapse.</li>
+<li>Payment confirmation, hold conversion and notification scheduling happen in one transaction; the notification itself is sent afterwards from the outbox, so a messaging outage never loses or duplicates a booking.</li>
+</ul>
+<figure>
+<svg viewBox="0 0 720 150" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Booking states">
+  <g font-size="8.8" text-anchor="middle" fill="#1B1F2A">
+    <rect x="6" y="52" width="86" height="34" rx="17" fill="#FCE9F2" stroke="#D6086A"/><text x="49" y="73" font-weight="600">Held</text>
+    <rect x="146" y="52" width="100" height="34" rx="17" fill="#FFF4DC" stroke="#E09A00"/><text x="196" y="73" font-weight="600">Pending payment</text>
+    <rect x="300" y="52" width="92" height="34" rx="17" fill="#E6F5EE" stroke="#0F7B55"/><text x="346" y="73" font-weight="600">Confirmed</text>
+    <rect x="442" y="52" width="76" height="34" rx="17" fill="#E8F0FD" stroke="#1D5FD0"/><text x="480" y="73" font-weight="600">Arrived</text>
+    <rect x="568" y="52" width="68" height="34" rx="17" fill="#E8F0FD" stroke="#1D5FD0"/><text x="602" y="73" font-weight="600">In service</text>
+    <rect x="652" y="8" width="66" height="30" rx="15" fill="#F5F6F8" stroke="#5C6270"/><text x="685" y="27" font-weight="600">Completed</text>
+    <rect x="6" y="112" width="86" height="30" rx="15" fill="#F5F6F8" stroke="#5C6270"/><text x="49" y="131">Expired</text>
+    <rect x="258" y="112" width="86" height="30" rx="15" fill="#FDE9E7" stroke="#B3261E"/><text x="301" y="131">Cancelled</text>
+    <rect x="358" y="112" width="86" height="30" rx="15" fill="#FDE9E7" stroke="#B3261E"/><text x="401" y="131">No-show</text>
+    <g stroke="#5C6270" fill="none" marker-end="url(#ar)">
+      <path d="M92 69 H144"/><path d="M246 69 H298"/><path d="M392 69 H440"/><path d="M518 69 H566"/><path d="M620 52 Q640 24 652 24"/>
+      <path d="M49 86 V110"/><path d="M320 86 V110"/><path d="M372 86 V110"/>
+      <path d="M49 52 Q49 22 196 22 Q330 22 340 50"/>
+    </g>
+    <g font-size="7.4" fill="#5C6270">
+      <text x="118" y="64">pay</text><text x="272" y="64">paid</text><text x="196" y="17">pay at salon</text>
+      <text x="74" y="102">timeout</text><text x="430" y="102">did not arrive</text>
+    </g>
+  </g>
+</svg>
+<figcaption>Figure 4. Booking states. Reschedule moves a confirmed booking to a new time without changing state. Cancellation carries a reason and a refund decision.</figcaption>
+</figure>
+
+<h2 id="s7-7">7.7 Integrations</h2>
+<h3>Payments</h3>
+<ptable head="Topic|Position" widths="22,78">
+Money flow | Customer pays the salon directly through the salon&rsquo;s own gateway merchant account. The platform stores each salon&rsquo;s gateway credentials encrypted and never receives booking funds. The salon&rsquo;s subscription is a separate charge from the platform to the salon.
+First gateway | PayHere. Published fees at the time of writing: Lite plan, no monthly fee, 3.30% per transaction with payment limits; Plus, LKR 3,990 a month and 2.99%; Premium, LKR 9,990 a month and 2.69%. Its API set includes checkout, authorise and capture, tokenised pre-approval, recurring billing and refunds. Refunds for some non-card methods may need manual handling.
+Abstraction | A payment-provider interface in the backend so that further gateways (other local providers, or an international one for tenants abroad) are additions, not rewrites.
+Truth | A booking is confirmed only when the gateway&rsquo;s server-to-server notification is received and its signature verified. A reconciliation job queries the gateway for any payment still pending after a short interval. This is the mechanism behind the prototype&rsquo;s &ldquo;verification in progress&rdquo; state.
+In-salon payments | Cash, card terminal, bank transfer and LANKAQR are recorded as tender types at checkout. No terminal integration in R1.
+Card data | Never touches the platform. Hosted checkout or the gateway&rsquo;s SDK keeps the platform out of card-data scope.
+</ptable>
+<h3>Messaging</h3>
+<ptable head="Channel|Use|Cost and constraints" widths="14,34,52">
+Push | Default channel for app users: confirmations, reminders, changes, offers | No per-message cost. A commercial reason to encourage app installs.
+WhatsApp Business Platform | Confirmations, reminders and waitlist offers for customers without the app; later, conversational booking | Since 1 July 2025 Meta charges per delivered template message, by category and recipient country. Utility templates sent inside an open customer-service window are free; marketing templates cost the most. Templates must be pre-approved.
+SMS | One-time codes; fallback when WhatsApp is not delivered | Local aggregator with a registered sender name. One-time-code traffic must be rate-limited to prevent abuse (IAM-10).
+Email | Receipts, staff and owner reports | Low cost; low reach among salon customers.
+</ptable>
+<p>Each notification follows a channel order per event (for example push, then WhatsApp, then SMS), stops at the first success, and records its cost against the salon. Whether messages are sent from a shared platform sender or from the salon&rsquo;s own WhatsApp number is decision D-07.</p>
+<h3>Other integrations</h3>
+<ptable head="Integration|Purpose|Release" widths="26,60,14">
+Device calendar, maps, dialler, WhatsApp deep links | Add to calendar, directions, call and chat from the app | R1
+Booking links for Instagram, Facebook and Google Business Profile | Put &ldquo;Book&rdquo; where customers already look | R1
+Google review link | Prompt satisfied customers to review | R1
+Calendar sync for staff (Google, Apple) | Professionals see appointments in their own calendar | R2
+Accounting export | Sales, tax and payment summaries for the salon&rsquo;s accountant | R2
+Reserve with Google and similar booking partners | Bookings from search and maps, subject to partner approval | R3
+</ptable>
+
+<h2 id="s7-8">7.8 Environments and operations</h2>
+<ul>
+<li><b>Hosting.</b> A single region close to Sri Lanka (Singapore or Mumbai are the usual choices) on a managed PostgreSQL service with point-in-time recovery. Provider and data-residency position are decision D-08.</li>
+<li><b>Environments.</b> Development, staging with a set of synthetic tenants, production. A demonstration tenant for sales.</li>
+<li><b>Releases.</b> Backend and web: continuous delivery with backward-compatible database migrations, since app versions in the field lag behind. Mobile: over-the-air for JavaScript changes, store releases in waves for native changes.</li>
+<li><b>API compatibility.</b> Versioned API; a minimum supported app version per tenant with a forced-update screen (APP-19), because old builds stay installed for months.</li>
+<li><b>Backups and recovery.</b> Tested restore, including restoring a single tenant&rsquo;s data to a point in time.</li>
+</ul>

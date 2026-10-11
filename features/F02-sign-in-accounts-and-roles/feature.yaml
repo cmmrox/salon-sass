@@ -1,0 +1,20 @@
+id: F02
+title: "Sign-in, accounts and roles"
+summary: "Staff sign in with a password and two-step verification and can do only what their role allows; customers sign in with a one-time code and control their own profile and data."
+release: R1
+milestone: M1-web
+status: backlog
+qa_status: not-run
+released_in: null
+depends_on: [F01]
+surfaces: [api, web]
+requirements: [IAM-01, IAM-03, IAM-04, IAM-05, IAM-06, IAM-07, IAM-08, IAM-09, IAM-10, IAM-11]
+nfr_focus: [NFR-08, NFR-10]
+cases: []
+verification:
+  automation: []
+  manual: []
+  deferred: []
+evidence:
+  last_run: null
+  last_result: null

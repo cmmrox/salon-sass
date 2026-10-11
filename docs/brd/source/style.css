@@ -1,0 +1,91 @@
+@page {
+  size: A4;
+  margin: 19mm 16mm 19mm;
+  @bottom-left { content: "Salon SaaS Platform \00B7  Business Requirements Document v1.0 (Draft)"; font: 7.5pt "Helvetica Neue", Helvetica, Arial, sans-serif; color: #7A7F8C; }
+  @bottom-right { content: "Page " counter(page) " of " counter(pages); font: 7.5pt "Helvetica Neue", Helvetica, Arial, sans-serif; color: #7A7F8C; }
+}
+@page :first { margin: 0; @bottom-left { content: none } @bottom-right { content: none } }
+
+:root { --ink: #1B1F2A; --mut: #5C6270; --ln: #DFE2E8; --bg: #F5F6F8; --ac: #D6086A; --acs: #FCE9F2; --ok: #0F7B55; --okb: #E6F5EE; --wn: #8F5A00; --wnb: #FFF4DC; --er: #B3261E; --erb: #FDE9E7; --in: #1D5FD0; --inb: #E8F0FD; }
+* { box-sizing: border-box; }
+html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+body { margin: 0; color: var(--ink); font: 9.4pt/1.48 "Helvetica Neue", Helvetica, Arial, sans-serif; }
+p { margin: 0 0 7pt; orphans: 3; widows: 3; }
+a { color: inherit; text-decoration: none; }
+b, strong { font-weight: 600; }
+code { font: 8.4pt Menlo, Consolas, monospace; background: var(--bg); padding: 0 3px; border-radius: 3px; }
+ul, ol { margin: 0 0 7pt; padding-left: 15pt; }
+li { margin-bottom: 2.5pt; }
+
+/* cover */
+.cover { height: 297mm; padding: 34mm 22mm 22mm; background: var(--ink); color: #fff; display: flex; flex-direction: column; position: relative; overflow: hidden; }
+.cover:before { content: ""; position: absolute; right: -70mm; top: -60mm; width: 190mm; height: 190mm; border-radius: 50%; background: var(--ac); opacity: .92; }
+.cover:after { content: ""; position: absolute; right: 12mm; top: 50mm; width: 60mm; height: 60mm; border-radius: 50%; background: #F79E1B; opacity: .9; mix-blend-mode: screen; }
+.cover > * { position: relative; z-index: 1; }
+.cover .kicker { font-size: 10pt; letter-spacing: .16em; text-transform: uppercase; opacity: .8; }
+.cover .title { font-size: 33pt; line-height: 1.12; font-weight: 600; letter-spacing: -.02em; margin: 84mm 0 8mm; max-width: 160mm; }
+.cover .sub { font-size: 12.5pt; line-height: 1.45; max-width: 128mm; opacity: .88; }
+.cover .meta { margin-top: auto; display: grid; grid-template-columns: repeat(4, auto); gap: 4mm 12mm; font-size: 8.6pt; border-top: 1px solid rgba(255,255,255,.25); padding-top: 6mm; }
+.cover .meta span { display: block; opacity: .6; font-size: 7.4pt; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 1mm; }
+
+h1 { break-before: page; font-size: 19pt; line-height: 1.2; font-weight: 600; letter-spacing: -.015em; margin: 0 0 10pt; padding-bottom: 7pt; border-bottom: 2.5pt solid var(--ac); }
+h2 { font-size: 12.4pt; line-height: 1.25; font-weight: 600; margin: 15pt 0 6pt; break-after: avoid; }
+h3 { font-size: 10pt; font-weight: 600; margin: 11pt 0 4pt; break-after: avoid; }
+h1 + h2 { margin-top: 4pt; }
+.lead { font-size: 10.6pt; line-height: 1.5; color: #2B3040; margin-bottom: 9pt; }
+.small { font-size: 8.2pt; color: var(--mut); }
+
+/* tables */
+table { width: 100%; border-collapse: collapse; margin: 5pt 0 10pt; font-size: 8.3pt; line-height: 1.38; table-layout: fixed; }
+thead { display: table-header-group; }
+th { background: var(--ink); color: #fff; font-weight: 600; text-align: left; padding: 4.5pt 6pt; font-size: 7.9pt; vertical-align: bottom; }
+td { padding: 4.2pt 6pt; border-bottom: .6pt solid var(--ln); vertical-align: top; overflow-wrap: anywhere; }
+tbody tr:nth-child(even) td { background: #FAFAFB; }
+tr { break-inside: avoid; }
+td.id, table.idc td:first-child { font-weight: 600; white-space: nowrap; color: #2B3040; }
+td.c { text-align: center; }
+td.cov { white-space: nowrap; font-size: 7.9pt; }
+td.cov.y { color: var(--ok); } td.cov.p { color: var(--wn); } td.cov.n { color: var(--mut); }
+table.kv td:first-child { font-weight: 600; background: var(--bg); width: 26%; }
+table.kv tbody tr:nth-child(even) td:first-child { background: var(--bg); }
+
+.pill { display: inline-block; border-radius: 99px; padding: .5pt 6pt; font-size: 7.3pt; font-weight: 600; white-space: nowrap; }
+.pill.m { background: var(--erb); color: var(--er); }
+.pill.s { background: var(--wnb); color: var(--wn); }
+.pill.c { background: var(--inb); color: var(--in); }
+.pill.rel { background: var(--bg); color: var(--ink); border: .6pt solid var(--ln); }
+.pill.ok { background: var(--okb); color: var(--ok); }
+
+/* callouts */
+.box { border-left: 3pt solid var(--in); background: var(--inb); padding: 7pt 10pt; margin: 7pt 0 10pt; border-radius: 0 5pt 5pt 0; break-inside: avoid; }
+.box p:last-child, .box ul:last-child { margin-bottom: 0; }
+.box.warn { border-color: #E09A00; background: var(--wnb); }
+.box.risk { border-color: var(--er); background: var(--erb); }
+.box.rec { border-color: var(--ok); background: var(--okb); }
+.box.key { border-color: var(--ac); background: var(--acs); }
+.box .t { font-weight: 600; display: block; margin-bottom: 2pt; }
+
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 9pt; margin: 6pt 0 10pt; }
+.card { border: .7pt solid var(--ln); border-radius: 6pt; padding: 8pt 10pt; break-inside: avoid; }
+.card h3 { margin-top: 0; }
+.card p:last-child, .card ul:last-child { margin-bottom: 0; }
+.stat { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8pt; margin: 6pt 0 10pt; }
+.stat div { background: var(--bg); border-radius: 6pt; padding: 8pt 9pt; break-inside: avoid; }
+.stat b { display: block; font-size: 15pt; letter-spacing: -.02em; line-height: 1.15; }
+.stat span { font-size: 7.8pt; color: var(--mut); display: block; margin-top: 2pt; line-height: 1.3; }
+
+figure { margin: 8pt 0 11pt; break-inside: avoid; }
+figure svg { width: 100%; height: auto; display: block; }
+figcaption { font-size: 7.9pt; color: var(--mut); margin-top: 4pt; }
+svg text { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; }
+
+/* contents */
+.toc { display: flex; align-items: baseline; gap: 4pt; padding: 2.6pt 0; }
+.toc.l1 { font-weight: 600; margin-top: 5pt; font-size: 9.8pt; }
+.toc.l2 { padding-left: 13pt; font-size: 8.8pt; color: #333847; }
+.toc .dots { flex: 1; border-bottom: .7pt dotted #B4B9C4; transform: translateY(-2.5pt); }
+.toc .pg { min-width: 14pt; text-align: right; font-variant-numeric: tabular-nums; }
+.legend { display: flex; flex-wrap: wrap; gap: 5pt 14pt; font-size: 8.2pt; margin: 4pt 0 8pt; }
+.src { margin-bottom: 4pt; } .src li { font-size: 7.8pt; margin-bottom: 1.6pt; line-height: 1.35; overflow-wrap: anywhere; }
+.src-h { font-size: 9pt; font-weight: 600; margin: 7pt 0 3pt; }
+.src .u { color: var(--in); }

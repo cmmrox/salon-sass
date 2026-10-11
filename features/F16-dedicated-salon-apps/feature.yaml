@@ -1,0 +1,20 @@
+id: F16
+title: "Dedicated salon apps and store pipeline"
+summary: "A salon gets its own app in the stores under its own developer accounts, built, signed, submitted and updated from the shared codebase by an automated pipeline."
+release: R1
+milestone: M2-mobile
+status: backlog
+qa_status: not-run
+released_in: null
+depends_on: [F15]
+surfaces: [mobile, infra, web]
+requirements: [BRD-05, BRD-06, BRD-07, BRD-08]
+nfr_focus: []
+cases: []
+verification:
+  automation: []
+  manual: []
+  deferred: []
+evidence:
+  last_run: null
+  last_result: null

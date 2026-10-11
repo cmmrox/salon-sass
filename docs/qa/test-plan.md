@@ -1,0 +1,123 @@
+# Test plan
+
+How this product is tested: the tools, where the automation lives, the data it runs on, the targets
+it must meet, and what its severities look like here. The method (who tests what, what a pass
+means, how to triage a failure) is in the `salon-qa` skill; this file is what is particular to this
+product.
+
+## Contents
+
+- Tools
+- Layout of `qa/`
+- The synthetic salons
+- Accounts
+- Time, messages and payments
+- Targets from the requirements
+- Platforms
+- Suites
+- Severity examples
+
+## Tools
+
+| Tool | Tests | From |
+| --- | --- | --- |
+| Playwright | The web app in a browser, and the API | F01-S01 |
+| k6 | Load, stress and concurrency | F01-S02 |
+| Shell checks | What a browser or API test cannot do | F01-S01 |
+| Maestro | The customer app on an emulator or device | Milestone `M2-mobile` |
+
+Conventions for each are in `docs/qa/automation.md`.
+
+## Layout of `qa/`
+
+```
+qa/
+  web/<feature>/       Playwright browser tests            S02-slot-search.spec.ts
+  api/<feature>/       Playwright API tests                S02-holds.spec.ts
+  mobile/<feature>/    Maestro flows                       S03-book-in-app.yaml
+  load/<feature>/      k6 load, stress and concurrency     S02-one-slot-many-customers.js
+  checks/<feature>/    shell checks (tool: script)         S01-database-down.sh
+  shared/              fixtures, salons, accounts, helpers, shared Maestro subflows
+  package.json         QA's own package and lock file, separate from the product's workspace
+  releases/<version>/  release manifests and results
+  reports/             run output; never committed
+  scripts/             the lifecycle tooling; the lead's, not QA's
+```
+
+- `<feature>` is the feature id: `qa/api/F07/`, not the feature's folder name.
+- A file is named for its stage and what it proves. Feature journeys are named `journey-<name>`.
+- `checks/` holds what a browser or API test cannot do: stopping and starting a service through
+  the developer's scripts in `infra/scripts/`, reading the database, scanning the build for something a criterion requires
+  (every string in a translation file, a contract check that fails on a stale file). A check never
+  edits the repository; when it has to alter a file to prove a point, it works on a copy outside it.
+
+## The synthetic salons
+
+From stage F01-S02 onward, three synthetic salons exist in every local environment, with fixed ids
+and hostnames. They are created by the product's own local seed, which the developer writes;
+`qa/shared/` holds their names, ids and hostnames as constants that must match the seed. (F01-S01
+has no salons; its cases say so.)
+
+| Salon | Use |
+| --- | --- |
+| `alpha` | The salon under test. Default brand colour |
+| `beta` | The other salon, for every isolation test. A dark brand colour and a long name |
+| `gamma` | An edge salon: a light brand colour, no cover image, a different time zone setting, most options off |
+
+Any test that touches a salon's data needs at least two salons. A suite that passes because two
+salons never happened to collide has proved nothing about isolation.
+
+## Accounts
+
+One account per role per salon (Owner, Manager, Receptionist, Professional, Accountant), plus
+customers and an operator user. Credentials live in `qa/.env.local`, which is never committed;
+`qa/.env.example` lists the keys. Use the least-privileged role a case needs. Sign in through the
+shared helper, never by typing a password into a test.
+
+## Time, messages and payments
+
+- **Hooks:** the test clock, the capture of outgoing messages and the payment sandbox are provided
+  by the developer, in local and test configurations only, by the stage that first needs each one.
+  That stage's spec defines the hook, and the lead adds how to use it here. None exists yet.
+- **Time:** bookings depend on the clock. Use the test clock hook to fix "now"; never write a test
+  that only passes on a weekday or before noon. Check behaviour across midnight and for a salon in
+  another time zone.
+- **Messages:** read one-time codes and outgoing messages from the local capture, never from a phone.
+- **Payments:** the PayHere sandbox only.
+- What a test may never touch is in `docs/operations/environments-and-releases.md`.
+
+## Targets from the requirements
+
+| Requirement | Target |
+| --- | --- |
+| NFR-01 | No request can read or change another salon's data, through any endpoint, export, file or cache |
+| NFR-05 | Simultaneous attempts on one slot produce exactly one booking |
+| NFR-03 | Availability search under 500 ms at the 95th percentile; other reads under 300 ms |
+| NFR-04 | The design holds at 2,000 salons, 20 staff each at the top end, 5 million bookings a year |
+| NFR-12 | WCAG 2.2 level AA on customer surfaces and the workspace |
+
+## Platforms
+
+- **Web:** the booking site is the only customer surface during milestone `M1-web`, so every
+  customer-facing stage is tested at 360 pixels wide first. The full width matrix is in
+  `docs/design/ui-ux-standards.md`. The workspace must be usable at 768.
+- **Customer app (from `M2-mobile`):** Android is the primary platform for the launch market and
+  every mobile stage passes there. iOS is run when a stage touches something that differs by
+  platform, and before a release.
+
+## Suites
+
+- `smoke` for this product means: sign in, see the services, book, pay in the sandbox, see the
+  booking on the salon's calendar. A few minutes in total.
+- `regression` always includes every tenant-isolation case and every concurrency case on bookings.
+
+## Severity examples
+
+The definitions are in the `salon-qa` skill. In this product:
+
+| Severity | Examples |
+| --- | --- |
+| `blocker` | One salon's data is visible to another; a customer is charged twice or the wrong amount; a booking is lost or duplicated; two bookings in one slot; the booking flow cannot be completed |
+| `major` | Reschedule ignores the policy window; a Receptionist can refund; a reminder goes to the wrong customer; a hold does not expire |
+| `minor` | The wrong message for an expired hold; the layout breaks at 360 wide on one screen; a report total is right but a label is wrong |
+| `trivial` | Spacing, a typo |

@@ -1,0 +1,20 @@
+id: F08
+title: "Payments, deposits and refunds"
+summary: "A customer pays a deposit or in full through the salon's own gateway account, the booking is confirmed by the gateway's verified notification, and the salon can refund and issue receipts."
+release: R1
+milestone: M1-web
+status: backlog
+qa_status: not-run
+released_in: null
+depends_on: [F07]
+surfaces: [api, web]
+requirements: [PAY-01, PAY-02, PAY-03, PAY-04, PAY-05, PAY-07, PAY-08, APP-08]
+nfr_focus: [NFR-11]
+cases: []
+verification:
+  automation: []
+  manual: []
+  deferred: []
+evidence:
+  last_run: null
+  last_result: null

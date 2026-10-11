@@ -1,0 +1,20 @@
+id: F14
+title: "Guided onboarding and data import"
+summary: "A new salon is led through setup by a checklist, can start from a template menu, and can import its customers, services and future appointments."
+release: R1
+milestone: M1-web
+status: backlog
+qa_status: not-run
+released_in: null
+depends_on: [F03, F06, F08]
+surfaces: [api, web]
+requirements: [PLT-02, PLT-03, PLT-08]
+nfr_focus: []
+cases: []
+verification:
+  automation: []
+  manual: []
+  deferred: []
+evidence:
+  last_run: null
+  last_result: null

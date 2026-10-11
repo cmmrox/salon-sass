@@ -1,0 +1,244 @@
+<h1 id="s10">10. Data, privacy and compliance</h1>
+<h2 id="s10-1">10.1 Principal data</h2>
+<ptable head="Entity|Holds|Scope" widths="20,60,20">
+Tenant, plan, subscription, invoice | The salon as a customer of the platform; what it has bought; billing history | Platform
+Tenant domain, tenant app | Web addresses; each app&rsquo;s identifiers, store account links, versions and credentials references | Platform
+Brand, business profile, policies | What the prototype&rsquo;s <code>brand.json</code> holds, plus address, hours, deposit and cancellation rules | Tenant
+Branch | Location, hours, contact | Tenant
+Staff member, role, working hours, time off | Who works when, and what they may do | Tenant
+Service, category, variant, add-on, package | The menu | Tenant
+Customer, dependant, consent, note | The salon&rsquo;s customer list | Tenant
+Booking, booking item, hold, status history | The appointment and its trail | Tenant
+Waitlist entry, walk-in queue entry | Demand not yet scheduled | Tenant
+Payment, refund, receipt, tender | Money in and out, with gateway references | Tenant
+Notification, template, delivery log | What was sent, how, with what result and cost | Tenant
+Review, loyalty account, promotion | Retention features | Tenant
+Audit event | Who did what | Tenant, plus a platform log
+</ptable>
+
+<h2 id="s10-2">10.2 Who is responsible for personal data</h2>
+<ul>
+<li>For customer data (names, numbers, visit history, notes), the <b>salon decides the purposes</b> and the platform processes it on the salon&rsquo;s behalf. The contract with each salon must include data-processing terms that say so.</li>
+<li>For salon account, staff sign-in and billing data, the <b>platform is responsible</b> in its own right.</li>
+<li>A salon&rsquo;s customer list is that salon&rsquo;s asset. The platform does not use it to market other salons, and does not combine customers across salons (IAM-03). This is both a privacy position and the commercial promise in section 5.6.</li>
+</ul>
+
+<h2 id="s10-3">10.3 Sri Lanka&rsquo;s Personal Data Protection Act</h2>
+<div class="box warn"><span class="t">Status at the time of writing</span><p>The Personal Data Protection Act, No. 9 of 2022 was amended by Act No. 22 of 2025, passed in October 2025. The Data Protection Authority is established. The amendment removed the fixed commencement timetable, and sources from mid-2026 report that the core obligations on controllers and processors were still awaiting a commencement order. The position may have changed; legal counsel should confirm it before launch.</p></div>
+<p>The prudent course is to build for the Act now, since the obligations are known and are far cheaper to design in than to retrofit:</p>
+<ptable head="Obligation area|What the product does" widths="30,70">
+Lawful basis and consent | Consent captured and recorded for marketing (CRM-04); transactional messages separated from marketing (NOT-06).
+Purpose limitation and minimisation | Only name and mobile number are mandatory to book. Birthday, email and notes are optional.
+Rights of the individual | Access, correction, deletion and export from the app and on request through the salon (IAM-05).
+Security | Section 9: isolation, encryption, access control, audit.
+Retention | Defined periods per data type; automatic anonymisation of inactive customers after the period the salon sets.
+Breach handling | Detection, an internal runbook, and the means to identify affected tenants and individuals quickly.
+Processor terms | Data-processing agreement with every salon; list of sub-processors (hosting, messaging, gateway).
+Cross-border transfer | Hosting outside Sri Lanka is to be assessed against the Act&rsquo;s transfer rules (D-08).
+Sensitive data | Allergy and health notes in consultation forms (R2) need explicit consent and tighter role access.
+</ptable>
+
+<h2 id="s10-4">10.4 App store compliance checklist</h2>
+<ptable head="Requirement|How it is met" widths="40,60">
+Template apps submitted by the content provider (Apple 4.2.6) | Dedicated apps are published in the salon&rsquo;s own developer account (BRD-05, BRD-08). The shared app follows the permitted container model (BRD-09).
+Unique listings (Google white-label guidance) | Listing kit generates distinct descriptions and screenshots per salon (BRD-07).
+More than a website (Apple 4.2) | Push, calendar, saved details, loyalty card, offline-tolerant states.
+Account deletion in the app (Apple 5.1.1(v)) | IAM-05.
+Browse without sign-in where possible (Apple 5.1.1(v)) | IAM-02: sign-in only at the details step.
+Payment for physical services outside in-app purchase (Apple 3.1.3(e)) | Gateway checkout; no store commission.
+Third-party sign-in rules (Apple 4.8) | Not triggered: sign-in uses the platform&rsquo;s own one-time-code system only.
+Privacy declarations (Apple privacy labels, Google data safety) | Maintained centrally and applied to every listing.
+Reviewer access | A demonstration salon and test sign-in are supplied with every submission.
+Yearly SDK and target-level deadlines | Scheduled rebuild of every dedicated app (section 7.4).
+</ptable>
+
+<h2 id="s10-5">10.5 Other regulatory points to confirm</h2>
+<ptable head="Topic|Question for the adviser|Why" widths="22,44,34">
+Payments | Does any part of the money flow make the platform a payment intermediary under Central Bank rules? | The recommended model (salon&rsquo;s own merchant account) is intended to avoid this; confirm it does.
+Messaging | Sender-name registration and content rules for commercial SMS; WhatsApp Business verification. | Lead time before launch; affects template wording.
+Tax | Treatment of subscription fees and of pass-through charges (messages, store fees); invoice format. | Pricing and invoicing design.
+Consumer terms | Wording of cancellation and deposit terms shown to customers; who is the contracting party. | The salon contracts with the customer; the platform&rsquo;s terms must say so.
+Store agreements | Each salon accepts Apple&rsquo;s and Google&rsquo;s developer agreements in its own name. | Needs to be explained during sales.
+</ptable>
+
+<h1 id="s11">11. Commercial model</h1>
+<p>This section is a hypothesis to test with pilot salons, not a price list.</p>
+<h2 id="s11-1">11.1 Reference points</h2>
+<ptable head="Reference|Figure|What it tells us" widths="26,34,40">
+Fresha in Sri Lanka | LKR 1,190 per team member a month; a five-person salon is about LKR 5,950 a month before add-ons. Loyalty add-on LKR 6,050 per location a month. | The price a salon owner will compare against. The add-ons show where the perceived extras are.
+Booksy (US) | About US$29.99 a month plus US$20 per additional staff member | Per-staff pricing is the norm, and is disliked by growing salons.
+SaloBook (Sri Lanka) | Free in early access; states there will be no per-staff pricing | A local entrant is positioning on flat pricing.
+Mindbody branded app | Reported at about US$249 to US$299 a month on top of the subscription | A dedicated app is priced as a premium item everywhere.
+Local custom build | About US$900 once plus US$20 a month | What a salon pays for a one-off site with booking.
+Apple and Google fees | US$99 a year; US$25 once | Paid by the salon directly for a dedicated app.
+PayHere | 2.69% to 3.30% per transaction depending on plan | Borne by the salon on its own merchant account.
+</ptable>
+
+<h2 id="s11-2">11.2 Proposed packaging</h2>
+<ptable head="Tier|For|Includes|Mobile presence" widths="13,19,44,24">
+<b>Essentials</b> | Independents and small salons | Branded booking site on a platform subdomain, calendar, walk-ins, customers, online payments, reports, push and email notifications | Branded space in the shared app
+<b>Professional</b> | Established salons | Everything in Essentials, plus a WhatsApp and SMS allowance, own domain, reviews, loyalty, campaigns, Sinhala and Tamil, more staff seats | Branded space in the shared app
+<b>Signature</b> | Salons that want their own app | Everything in Professional, plus dedicated iOS and Android apps in the salon&rsquo;s name, multiple branches, priority support | Dedicated store apps
+</ptable>
+<ul>
+<li><b>Charge basis.</b> Flat monthly price per location in staff bands (for example up to 3, up to 10, more than 10), not per head. It is simpler to explain and removes a known irritant.</li>
+<li><b>One-time fee</b> for dedicated app set-up, covering enrolment support, listing preparation and first submission.</li>
+<li><b>Pass-through</b> of store fees (paid by the salon to Apple and Google) and of messages beyond the allowance, with the price per message shown before sending.</li>
+<li><b>No commission</b> on bookings or new customers, stated prominently.</li>
+</ul>
+
+<h2 id="s11-3">11.3 Cost drivers to watch</h2>
+<ptable head="Driver|Behaviour|Control" widths="24,38,38">
+Messaging | Grows with bookings; SMS and WhatsApp are charged per message | Push first; allowance and top-up; cost shown to the salon
+One-time codes | Attractive target for abuse that generates charges | Rate limits and ceilings (IAM-10)
+Dedicated apps | Each adds builds, reviews and yearly rebuilds | Automation; over-the-air updates; premium pricing
+Support | Highest during onboarding | Wizard, templates, import tools, help content
+Hosting | Low per tenant in the shared model | Monitor heavy tenants; archive old data
+</ptable>
+
+<h1 id="s12">12. Roadmap and release plan</h1>
+<p>Durations are indicative, assume a core team of about six (two backend, one or two web, one mobile, one QA, with design and product part-time), and should be re-estimated at the end of Phase 0.</p>
+<ptable head="Phase|Goal|Main contents|Exit criteria|Indicative" widths="12,17,39,22,10">
+<b>Phase 0</b><br>Foundations | Close decisions, remove technical unknowns | Decisions D-01 to D-13. Technical spikes: tenant isolation with row-level security under virtual threads; gateway sandbox; per-tenant app build and submission end to end with one test salon; WhatsApp template approval. Start the operator&rsquo;s own Apple and Google organisation enrolment and D-U-N-S. Design system from the prototype. Contracts and data-processing terms. | Spikes pass; decisions recorded; store accounts in progress | 3 to 4 weeks
+<b>Release 1</b><br>Book and run the day | A salon can go live and take paid bookings under its brand | All requirements marked R1: tenant onboarding and billing, sign-in and roles, catalogue, rota, booking engine with holds, payments and refunds, in-salon checkout, notifications and reminders, customer records, reports, branding, booking site, customer app (shared and dedicated), build pipeline, operator console essentials. | 3 to 5 pilot salons live; at least one dedicated app approved in each store; isolation and load tests pass; penetration test complete | 14 to 18 weeks
+<b>Release 2</b><br>Grow and retain | Salons keep customers and reduce operator effort | All requirements marked R2: Sinhala and Tamil, reviews, loyalty, campaigns and automations, packages, forms, multi-professional bookings, automatic waitlist, own domain, multi-branch, saved payment methods, deeper reports, message allowance and top-up. | Measured gains against BO-3 and BO-4 at pilot salons; onboarding time meets BO-1 | 10 to 12 weeks
+<b>Release 3</b><br>Extend | Broaden the offer | All requirements marked R3: retail and inventory, commission, memberships and gift cards, recurring and group bookings, conversational booking on WhatsApp, booking-partner integrations. | Prioritised by pilot feedback | Ongoing
+</ptable>
+<div class="box"><span class="t">Sequencing advice</span><p>Within Release 1, build the booking site before the app. It exercises the same API, needs no store approval, and lets pilot salons take real bookings while the first app submissions are in review. Submit the first dedicated app early in the release, with a pilot salon, to learn the review process before it is on the critical path.</p></div>
+
+<h2 id="s12-1">12.1 Dependencies with lead times</h2>
+<ptable head="Dependency|Owner|Lead time|Needed by" widths="40,18,22,20">
+Operator&rsquo;s D-U-N-S number and organisation developer accounts | Operator | D-U-N-S can take up to 30 days | Phase 0
+Each pilot salon&rsquo;s legal entity, D-U-N-S and developer accounts (for dedicated apps) | Salon, guided by operator | Several weeks | Mid Release 1
+Gateway merchant account for each pilot salon | Salon | Days to weeks | Mid Release 1
+WhatsApp Business verification and template approval | Operator | Days to weeks | Mid Release 1
+SMS sender-name registration | Operator | To be confirmed with the aggregator | Mid Release 1
+Platform domain and wildcard certificate | Operator | Days | Phase 0
+Legal: terms, privacy notice, data-processing terms, salon contract | Operator with counsel | Weeks | Before pilot
+</ptable>
+
+<h1 id="s13">13. Risks, assumptions and constraints</h1>
+<h2 id="s13-1">13.1 Risks</h2>
+<ptable head="Ref|Risk|Likelihood|Impact|Response" widths="6,31,10,9,44" class="idc">
+R-01 | Store rejection or account action because apps are treated as template spam | High if published from one account | High | Publish dedicated apps only in salons&rsquo; own accounts; unique listings; container app as the default. Section 7.4.
+R-02 | Salons cannot or will not complete developer enrolment (legal entity, D-U-N-S, yearly fee) | High | Medium | Booking site and shared app need no enrolment; guided enrolment service; dedicated app sold only where the salon qualifies.
+R-03 | Customers do not install a single-salon app | Medium | Medium | Booking site as an equal channel; give the app reasons to exist (rebook, loyalty, push); in-salon QR prompts. Track install and use per salon.
+R-04 | Operating many dedicated apps overwhelms a small team | Medium | High | Full automation of build and submit; over-the-air updates; registry and status dashboard; price the tier to fund it.
+R-05 | Data from one salon is exposed to another | Low | Critical | Section 7.2 guardrails; automated isolation tests; penetration test; logged operator access.
+R-06 | Price pressure from Fresha and free local entrants | High | Medium | Compete on brand ownership and local fit, not price; flat pricing; no commission.
+R-07 | Messaging costs exceed what is recovered | Medium | Medium | Push first; allowances; cost visible to the salon; abuse controls.
+R-08 | Double booking or wrong availability damages trust early | Medium | High | Database-level constraint; load tests; attention list; pilot before wider release.
+R-09 | Payment state errors: charged but not booked, or the reverse | Medium | High | Server-verified callbacks; idempotency; reconciliation job; clear pending state.
+R-10 | Gateway limitations (manual refunds for some methods, settlement delay, onboarding time for salons) | Medium | Medium | Provider abstraction; manual-refund workflow; pay-at-salon as a fallback from day one.
+R-11 | Data-protection obligations commence at short notice | Medium | Medium | Build to the Act now (section 10.3).
+R-12 | Scope growth delays the first paying salon | High | High | Hold the R1 boundary; anything marked R2 or R3 waits.
+R-13 | Poor connectivity in salons | Medium | Medium | Lightweight screens; tolerant states; today&rsquo;s schedule cached for reading.
+R-14 | Imported data is poor (duplicates, wrong numbers) | Medium | Low | Import preview and validation; merge tool.
+R-15 | A store or provider policy changes | Medium | Medium | Review policies each quarter; keep the booking site independent of the stores.
+</ptable>
+
+<h2 id="s13-2">13.2 Assumptions</h2>
+<ptable head="Ref|Assumption" widths="7,93" class="idc">
+A-01 | The launch market is Sri Lanka, with rupee pricing and the Asia/Colombo time zone as defaults.
+A-02 | The operator is, or will be, a registered legal entity able to hold organisation developer accounts, a messaging account and contracts with salons.
+A-03 | Salons that take online payments will open their own gateway merchant account.
+A-04 | The prototype represents the intended look, tone and flow, and is the starting point for design.
+A-05 | One backend, one database and one codebase per client type are fixed constraints, as stated by the product owner.
+A-06 | Technology choices are fixed as stated: React Native, Spring Boot on the latest stable release with the latest long-term-support Java and virtual threads, Next.js, PostgreSQL.
+A-07 | First-year scale is in the low hundreds of salons; the design target is 2,000.
+A-08 | Staff use the workspace in a browser on a phone, tablet or computer; no staff app is needed for the first release.
+A-09 | English is acceptable for pilot salons&rsquo; staff and customers at launch.
+</ptable>
+
+<h2 id="s13-3">13.3 Constraints</h2>
+<ul>
+<li>App store policies, in particular Apple 4.2.6, are outside the operator&rsquo;s control and determine the distribution model.</li>
+<li>Local payment options are narrower than in markets served by global processors; split payments and platform-managed payouts are not assumed.</li>
+<li>Per-message charges make messaging a variable cost that must be priced.</li>
+<li>Small team: every design choice that adds per-tenant manual work is a cost that grows with success.</li>
+</ul>
+
+<h1 id="s14">14. Open decisions</h1>
+<ptable head="Ref|Decision|Options|Recommendation|Blocks" widths="6,24,28,30,12" class="idc">
+D-01 | Mobile distribution model | (a) all apps from operator accounts; (b) dedicated apps in salons&rsquo; accounts; (c) shared app; (d) web only; or a mix | Mix: (d) and (c) for all, (b) as premium. Not (a). | Architecture, pricing
+D-02 | Product name and platform domain | &ldquo;COSMO&rdquo; / <code>cosmo.lk</code> from the prototype, or other | Confirm availability of name, domain and store names | Branding
+D-03 | Who collects booking payments | Salon&rsquo;s merchant account; or platform collects and pays out | Salon&rsquo;s merchant account | Payments design
+D-04 | Customer identity | Per salon; or one identity across salons | Per salon | Data model
+D-05 | Guest booking in the app | Allowed; or sign-in required | Browse as guest; verify the number at the details step | App flow
+D-06 | Pricing and packaging | Per staff; flat by band; hybrid | Flat by band, three tiers (section 11) | Billing
+D-07 | Message sender | Shared platform sender naming the salon; or each salon&rsquo;s own WhatsApp number | Shared at launch; own number as a later option | Messaging
+D-08 | Hosting provider and region | Singapore, Mumbai, or in-country | Managed PostgreSQL in the nearest major region, subject to legal view on transfers | Infrastructure
+D-09 | Languages at launch | English only; or all three | English at launch, translation-ready; Sinhala and Tamil in R2 | Content
+D-10 | Multi-branch timing | R1 or R2 | Model it in R1, deliver in R2 | Data model
+D-11 | Staff mobile app | Responsive web; or native app | Responsive web for R1 and R2 | Scope
+D-12 | Marketplace or directory | Never; or later | Not now; it contradicts the positioning | Strategy
+D-13 | Support model | Hours, channels, response targets, who onboards | Local business hours, WhatsApp and phone, named onboarding contact for pilots | Operations
+</ptable>
+
+<h1 id="appa">Appendix A. Sources</h1>
+<p class="small">Accessed October 2026. Vendor pages state the vendor&rsquo;s own claims. Third-party guides are identified as such in the text.</p>
+<div class="src-h">App store policy and branded-app practice</div>
+<ul class="src">
+<li>Apple, App Review Guidelines (4.2, 4.2.6, 4.3, 4.8, 5.1.1, 3.1.3). <span class="u">developer.apple.com/app-store/review/guidelines/</span></li>
+<li>Google Play Console Help, Best practices for white label developers. <span class="u">support.google.com/googleplay/android-developer/answer/15884185</span></li>
+<li>Google Play Console Help, Spam policy (repetitive content). <span class="u">support.google.com/googleplay/android-developer/answer/9899034</span></li>
+<li>Google Play Console Help, developer account verification and D-U-N-S. <span class="u">support.google.com/googleplay/android-developer/answer/13634885</span></li>
+<li>TechCrunch, Apple revises its controversial guidelines on template-based apps (2017). <span class="u">techcrunch.com/2017/12/20/apple-revises-its-controversial-guidelines-on-template-based-apps/</span></li>
+<li>Phorest Help, Apple Developer enrollment (iOS salon branded app setup). <span class="u">phorest.helpjuice.com/44109-your-salon-s-app-GB/apple-developer-enrollment-(ios-salon-branded-app-setup)</span></li>
+<li>Mindbody, Supplemental terms for the branded mobile app. <span class="u">mindbodyonline.com/company/legal/terms-of-service/supplemental-terms-branded-app</span></li>
+<li>Pike13 Help, How to set up the Apple accounts required for the paid branded app. <span class="u">help.pike13.com/knowledge/how-to-set-up-the-apple-accounts-required-for-the-paid-branded-app</span></li>
+</ul>
+<div class="src-h">Competitors and market</div>
+<ul class="src">
+<li>Fresha pricing (Sri Lanka, LKR). <span class="u">fresha.com/pricing</span></li>
+<li>Fresha, Up Next 2026. <span class="u">fresha.com/blog/Up-Next-2026</span></li>
+<li>Capterra, Fresha reviews. <span class="u">capterra.com/p/142138/Shedul-com/reviews/</span></li>
+<li>Vagaro pricing. <span class="u">vagaro.com/pro/pricing</span></li>
+<li>Koalendar, Booksy pricing guide (third party); Booksy comparison pages. <span class="u">koalendar.com/blog/booksy-pricing</span>, <span class="u">biz.booksy.com/en-gb/comparison/phorest-comparison</span></li>
+<li>Zenoti, Customer data insights for salon owners (2023 consumer survey). <span class="u">zenoti.com/blogs/customer-data-insights-for-salon-owners-what-your-clients-really-want</span></li>
+<li>Salon Today, Data confirms demand for online booking (Phorest data). <span class="u">salontoday.com/articles/data-confirms-demand-for-online-booking</span></li>
+<li>Whito, UK salon research (critical review of no-show statistics). <span class="u">whito.co.uk/beauty-salons/research/uk-salon-cost-savings/</span></li>
+<li>SchedulingKit, no-show and salon scheduling statistics (compilation; attributions not independently verified). <span class="u">schedulingkit.com/statistics/no-show-statistics</span></li>
+<li>Local products: <span class="u">info.salobook.lk</span>, <span class="u">salonapp.lk</span>, <span class="u">bookmysalon.lk</span>, <span class="u">iasoft.dev/digital/appointments/</span></li>
+<li>DataReportal, Digital 2026: Sri Lanka. <span class="u">datareportal.com/reports/digital-2026-sri-lanka</span></li>
+<li>StatCounter, mobile operating system market share, Sri Lanka. <span class="u">gs.statcounter.com/os-market-share/mobile/sri-lanka</span></li>
+</ul>
+<div class="src-h">Payments, messaging and regulation</div>
+<ul class="src">
+<li>PayHere fees and limits. <span class="u">payhere.lk/fees/</span>, <span class="u">support.payhere.lk/limits-and-fees</span></li>
+<li>Meta, Pricing on the WhatsApp Business Platform. <span class="u">developers.facebook.com/docs/whatsapp/pricing</span></li>
+<li>Data Protection Authority of Sri Lanka. <span class="u">dpa.gov.lk</span></li>
+<li>DLA Piper, Data Protection Laws of the World: Sri Lanka. <span class="u">dlapiperdataprotection.com/index.html?t=law&amp;c=LK</span></li>
+</ul>
+<div class="src-h">Technology</div>
+<ul class="src">
+<li>Spring Boot project page and release support dates. <span class="u">spring.io/projects/spring-boot</span>, <span class="u">endoflife.date/spring-boot</span></li>
+<li>OpenJDK, JEP 491: Synchronize Virtual Threads without Pinning. <span class="u">openjdk.org/jeps/491</span></li>
+<li>InfoQ, Virtual threads after JDK 24. <span class="u">infoq.com/articles/virtual-threads-after-jdk24</span></li>
+<li>Hibernate ORM 7 User Guide, Multitenancy. <span class="u">docs.hibernate.org/orm/7.1/userguide/html_single/Hibernate_User_Guide.html</span></li>
+<li>Vercel, Multi-tenant platforms: concepts. <span class="u">vercel.com/docs/multi-tenant-platforms/concepts</span></li>
+<li>Cloudflare for SaaS (custom hostnames). <span class="u">developers.cloudflare.com/cloudflare-for-platforms/cloudflare-for-saas/</span></li>
+<li>Expo, One codebase, three brands: how Awaze shipped three enterprise apps with Expo. <span class="u">expo.dev/blog/one-codebase-three-brands-how-awaze-shipped-3-enterprise-apps-fast-with-expo</span></li>
+<li>Expo SDK changelog. <span class="u">expo.dev/changelog</span></li>
+</ul>
+
+<h1 id="appb">Appendix B. Glossary</h1>
+<ptable head="Term|Meaning" widths="22,78" class="kv">
+Tenant | One salon business on the platform, with its own data, settings, branding and users.
+Multi-tenant | One running application and database serving many tenants, each isolated from the others.
+White-label | A product built once and presented under each customer&rsquo;s brand.
+Row-level security | A PostgreSQL feature that restricts which rows a database session can see or change, according to a policy.
+Hold | A short reservation of a time slot while the customer completes a booking.
+Buffer | Time added after a service for clean-up or preparation; part of the appointment for scheduling, not shown to the customer as service time.
+Walk-in | A customer who arrives without an appointment.
+No-show | A customer who does not arrive for a confirmed appointment and did not cancel.
+One-time code (OTP) | A short code sent to a phone to prove the person controls that number.
+Container app | One store app that serves many businesses, each seen only by its own customers. Apple calls this the &ldquo;picker&rdquo; model.
+Over-the-air update | An update to an app&rsquo;s JavaScript delivered directly, without a new store release.
+D-U-N-S number | A business identifier issued by Dun &amp; Bradstreet, required by Apple and Google for organisation developer accounts.
+LANKAQR | Sri Lanka&rsquo;s national QR code standard for payments.
+Merchant account | The salon&rsquo;s account with a payment gateway, into which customer payments settle.
+Modular monolith | One deployable application divided internally into modules with enforced boundaries.
+MoSCoW | Prioritisation as Must, Should, Could (and Won&rsquo;t for now).
+PDPA | Sri Lanka&rsquo;s Personal Data Protection Act, No. 9 of 2022, as amended.
+</ptable>

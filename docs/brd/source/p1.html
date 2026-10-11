@@ -1,0 +1,209 @@
+<div class="cover">
+  <div class="kicker">Business Requirements Document</div>
+  <div class="title">White&#8209;Label, Multi&#8209;Tenant<br>Salon Management SaaS</div>
+  <div class="sub">Branded customer booking apps for iOS and Android, a salon workspace on the web, and the platform that runs every salon as a tenant on one codebase and one database.</div>
+  <div class="meta">
+    <div><span>Version</span>1.0 &middot; Draft for review</div>
+    <div><span>Date</span>11 October 2026</div>
+    <div><span>Launch market</span>Sri Lanka (LKR)</div>
+    <div><span>Basis</span>Prototype review + market and technical research</div>
+  </div>
+</div>
+
+<h1 id="doc-control">Document control</h1>
+<ptable head="Item|Detail" widths="24,76" class="kv">
+Document | Business Requirements Document (BRD) for the salon management SaaS platform
+Version / status | 1.0, draft for product owner review. Nothing in this document is approved until the open decisions in section 14 are closed.
+Purpose | Define what the business needs the platform to do, why, and in what order, so that design, architecture and delivery planning can start from an agreed baseline.
+Inputs | (1) The interactive HTML prototype <code>index.html</code> and its <code>brand.json</code>, read in full. (2) Research carried out in October 2026 into competing salon software, app store policy, multi-tenant architecture practice and the Sri Lankan payments, messaging and data-protection environment. Sources are listed in Appendix A.
+Audience | Product owner, solution architect, UX designer, engineering leads, QA lead, commercial and onboarding staff.
+Working name | The prototype refers to &ldquo;COSMO&rdquo; and the domain <code>cosmo.lk</code>. This document says &ldquo;the platform&rdquo; throughout; the product name is an open decision (D-02).
+Out of this document | Detailed UI specifications, API contracts, data model DDL and test cases. These follow from this BRD in the functional specification and solution design.
+</ptable>
+
+<h2 id="how-to-read">How to read the requirement tables</h2>
+<p>Every functional requirement in section 8 carries three markers.</p>
+<div class="legend">
+  <span><span class="pill m">Must</span> the release is not viable without it</span>
+  <span><span class="pill s">Should</span> important, but a workaround exists</span>
+  <span><span class="pill c">Could</span> valuable when capacity allows</span>
+</div>
+<div class="legend">
+  <span><span class="pill rel">R1</span> first release (MVP)</span>
+  <span><span class="pill rel">R2</span> second release</span>
+  <span><span class="pill rel">R3</span> later</span>
+  <span style="color:#0F7B55">&#9679; Yes: already shown in the prototype</span>
+  <span style="color:#8F5A00">&#9680; Partial: shown but incomplete or hard-coded</span>
+  <span style="color:#5C6270">&#9675; New: not in the prototype</span>
+</div>
+<p class="small">Research figures quoted from software vendors are marked as vendor-reported. They are directional evidence, not independent measurements.</p>
+
+<h1 id="contents">Contents</h1>
+<!--TOC-->
+
+<h1 id="s1">1. Executive summary</h1>
+<p class="lead">The business wants to sell salons their own booking app and their own management system, while operating a single product: one React Native codebase released as many branded apps, one Spring Boot backend, one PostgreSQL database, and one Next.js web application, with every salon isolated as a tenant.</p>
+<p>The prototype is a strong start. Its booking core (availability, ten-minute slot holds, deposits, payment failure handling, reschedule and cancel, walk-in queue, drag-and-drop calendar) is more carefully thought through than many shipping products. What it shows, though, is one salon. The platform that makes it a SaaS business is not in it yet, and one part of the intended distribution plan conflicts with app store rules. The six findings below shape everything else in this document.</p>
+
+<h2 id="s1-1">1.1 Key findings</h2>
+<ptable head="#|Finding|What it means" widths="4,40,56" class="idc">
+1 | <b>The app store plan needs to change.</b> Apple&rsquo;s guideline 4.2.6 rejects apps built from a template unless they are &ldquo;submitted directly by the provider of the app&rsquo;s content&rdquo;, and guideline 4.3(a) forbids multiple bundle IDs of the same app. Google advises white-label developers against putting all client apps in one developer account. | The operator cannot publish every salon&rsquo;s app from its own developer accounts. Each salon that wants a dedicated store app needs its own Apple and Google developer accounts, with the operator added as a delegated admin who builds and uploads. This is how Phorest, Mindbody and Pike13 already deliver branded apps. See section 7.4.
+2 | <b>A three-layer mobile offer fits the market better than &ldquo;an app for everyone&rdquo;.</b> Organisation enrolment with Apple needs a registered legal entity, a D-U-N-S number and a public website. Many small salons will not clear that bar quickly. | Give every salon a branded booking site and a place inside one shared container app from day one (both allowed and instant). Sell the dedicated store app as a premium upgrade from the same codebase.
+3 | <b>The prototype is single-salon.</b> There is no tenant onboarding, subscription billing, operator console, roles and permissions, customer accounts, configurable policies, real staff rotas or multi-branch support. | These are the largest block of new requirements (sections 8.1, 8.2, 8.4). They are prerequisites for selling to a second salon.
+4 | <b>Shared database with a tenant column, enforced by PostgreSQL row-level security, is the right tenancy model.</b> Schema-per-tenant multiplies migration and operations work as salons are added, with no benefit this product needs. | One schema, <code>tenant_id</code> on every tenant-owned table, isolation enforced twice: in the application (Hibernate <code>@TenantId</code>) and in the database (RLS). See section 7.2.
+5 | <b>The global leader already sells in rupees.</b> Fresha lists Sri Lankan pricing at LKR 1,790 a month for an independent and LKR 1,190 per team member a month for teams, plus paid add-ons and a marketplace fee on new clients. | Competing on price alone is not a strategy. The defensible position is brand ownership (the salon&rsquo;s own app and domain, no marketplace, no commission), local payments, WhatsApp-first messaging, and Sinhala and Tamil.
+6 | <b>Money should settle directly to the salon.</b> There is no Stripe Connect equivalent to lean on locally, and holding customer funds on behalf of salons raises licensing questions. | Each salon connects its own payment gateway merchant account (PayHere first). The platform orchestrates payments and never holds booking funds. See section 7.7.
+</ptable>
+
+<h2 id="s1-2">1.2 Recommended approach in one paragraph</h2>
+<p>Build a modular monolith on Spring Boot 4.1 and Java 25 with virtual threads enabled, backed by a single PostgreSQL database using a shared schema with row-level security. Serve three web surfaces from one Next.js application, routed by hostname: the salon&rsquo;s public booking site, the salon workspace, and the operator console. Build the customer app once in React Native with Expo; inject only identity (name, icon, bundle ID, tenant key) at build time and load all other branding from the API at run time, so a colour change never needs a store release. Automate per-tenant builds and submissions. Release in three steps: an MVP that lets a salon take bookings and run its day, a second release that adds retention and marketing tools, and a third that adds retail, payroll and conversational booking.</p>
+
+<h2 id="s1-3">1.3 Decisions needed before design starts</h2>
+<ptable head="Ref|Decision|Recommendation" widths="7,45,48" class="idc">
+D-01 | How are customer apps distributed? | Hybrid: booking site and shared container app for all, dedicated store app as a premium tier under the salon&rsquo;s own developer accounts.
+D-03 | Who collects booking payments? | The salon, through its own merchant account. The platform bills the salon separately for its subscription.
+D-04 | Is a customer one identity across all salons, or one per salon? | One per salon. It matches the &ldquo;your own app&rdquo; promise and keeps each salon&rsquo;s customer list private.
+D-06 | Pricing and packaging | Three tiers with flat pricing per location by staff band, benchmarked in section 11.
+D-09 | Languages at launch | English at launch with the app fully translation-ready; Sinhala and Tamil in the second release.
+</ptable>
+<p class="small">The full list of thirteen open decisions is in section 14.</p>
+
+<h1 id="s2">2. Business context and objectives</h1>
+<h2 id="s2-1">2.1 Background and problem</h2>
+<p>Most salons in the launch market still take bookings by phone call, WhatsApp message and walk-in, and record them on paper or in a chat thread. The consequences are familiar: bookings arrive while staff are busy with clients or after closing, double bookings happen, no-shows cost a chair for an hour, and the owner has no reliable view of revenue or of which customers have stopped coming.</p>
+<p>Software that solves this exists, but the dominant products are marketplaces. They list the salon beside its competitors, charge a commission on new clients, and build the marketplace&rsquo;s brand in the customer&rsquo;s phone rather than the salon&rsquo;s. Salons that want an app under their own name are offered it only by enterprise-priced products.</p>
+
+<h2 id="s2-2">2.2 Vision</h2>
+<div class="box key"><p>Give every salon, including a three-chair business, booking and management tools under its own brand: its own app in the customer&rsquo;s phone, its own web address, its own customer list. Run all of it as one product so that it stays affordable to sell and to operate.</p></div>
+
+<h2 id="s2-3">2.3 Business objectives and success measures</h2>
+<p>Targets are proposals for the product owner to confirm; the measurement method matters more than the starting number.</p>
+<ptable head="Ref|Objective|Measure|Proposed target" widths="7,33,34,26" class="idc">
+BO-1 | Make a new salon bookable quickly | Time from signed contract to first online booking on the salon&rsquo;s branded site | Under 1 working day
+BO-2 | Deliver dedicated store apps predictably | Time from the salon&rsquo;s developer accounts being ready to both apps live | Under 10 working days
+BO-3 | Move bookings online | Share of a salon&rsquo;s appointments created by the customer (app, site, link) after 90 days | 40% or more
+BO-4 | Reduce no-shows | No-show rate before and after go-live, measured per salon | 30% reduction at 90 days
+BO-5 | Keep salons | Monthly logo churn after the first three months | Under 2%
+BO-6 | Keep operating cost flat per salon | Operator hours per salon per month (support, releases, billing) | Falling quarter on quarter
+BO-7 | Protect tenant data | Cross-tenant data exposure incidents | Zero, verified by automated isolation tests and an annual penetration test
+BO-8 | Be dependable in opening hours | Availability of booking and calendar functions | 99.9% monthly
+</ptable>
+
+<h2 id="s2-4">2.4 Scope</h2>
+<div class="grid2">
+<div class="card"><h3>In scope</h3><ul>
+<li>Customer booking experience on iOS, Android and the web, branded per salon</li>
+<li>Salon workspace for owners, managers, reception and professionals (responsive web)</li>
+<li>Operator console: tenants, plans, billing, releases, support</li>
+<li>Booking engine, payments and refunds, notifications, customer records, reports</li>
+<li>White-label build and release pipeline for the apps</li>
+<li>Tenant web addresses: platform subdomain and salon-owned domain</li>
+<li>Retention tools: reviews, loyalty, campaigns, packages (later releases)</li>
+</ul></div>
+<div class="card"><h3>Out of scope for now</h3><ul>
+<li>A consumer marketplace or directory listing salons against each other. It contradicts the positioning; revisit only as an explicit strategy change (D-12)</li>
+<li>Full accounting, payroll processing and statutory filings (reports and exports only)</li>
+<li>Card-present payment terminals integrated in software (record the tender type instead)</li>
+<li>A native app for staff (the responsive workspace covers R1; revisit in D-11)</li>
+<li>Medical-grade clinical records for aesthetic clinics</li>
+<li>Markets outside Sri Lanka, although currency, time zone, language and tax are configurable per tenant from the start</li>
+</ul></div>
+</div>
+
+<h2 id="s2-5">2.5 The product at a glance</h2>
+<ptable head="Surface|Who uses it|Technology|In prototype" widths="22,30,30,18">
+Customer app | Salon customers | React Native (Expo), one codebase, many branded builds | Yes, as a mobile web mock-up
+Branded booking site | Customers who have not installed the app; people arriving from Instagram, Google or a WhatsApp link | Next.js on the salon&rsquo;s domain | Same screens serve as the model
+Salon workspace | Owner, manager, receptionist, professional | Next.js, responsive from phone to desktop | Yes
+Operator console | The platform business: onboarding, billing, support, releases | Next.js | No
+Backend API | All of the above | Spring Boot 4.1, Java 25, virtual threads, PostgreSQL | No (the prototype holds data in the browser)
+</ptable>
+
+<h1 id="s3">3. Stakeholders and users</h1>
+<ptable head="Role|Goals|Frustrations today|What the platform must give them" widths="15,25,28,32">
+<b>Platform owner</b> (the business) | Recurring revenue from many salons with a small team | Each new customer threatens to add bespoke work | One codebase, configuration instead of customisation, automated releases, clear unit costs
+<b>Onboarding and support staff</b> | Take a salon live quickly; resolve issues without engineers | Manual setup, no visibility into what the salon sees | Onboarding wizard, data import, controlled and logged support access, tenant health view
+<b>Salon owner</b> | Full chairs, fewer no-shows, loyal customers, a brand that looks established | Phone tag, marketplace commissions, surprise fees, no clear numbers | Own-brand app and site, deposits, reminders, honest pricing, daily and monthly figures
+<b>Manager / receptionist</b> | A calm, accurate day | Double bookings, walk-ins colliding with appointments, chasing customers by phone | One calendar, walk-in queue, conflict warnings, one-tap contact, quick checkout
+<b>Professional</b> (stylist, therapist, nail artist) | Know the day ahead, keep regulars, be paid fairly | Last-minute changes they hear about late | Own schedule on the phone, customer notes and formulas, visible performance
+<b>Customer, new</b> | Book quickly without a phone call, know the price and the time | Waiting for a reply, unclear prices, having to create yet another account | Booking in under two minutes, clear price and duration, guest or OTP sign-in, instant confirmation
+<b>Customer, returning</b> | Get the usual with the usual person | Repeating details every time | Rebook in one tap, reminders, loyalty rewards, easy reschedule
+<b>External parties</b> | n/a | n/a | Apple and Google (store policy), payment gateway, WhatsApp and SMS providers, the Data Protection Authority: each imposes rules reflected in sections 7 and 10
+</ptable>
+
+<h1 id="s4">4. Current state: what the prototype defines</h1>
+<p>The prototype is a single HTML page with two modes, <b>Customer</b> and <b>Salon</b>, switched by a toggle in the header (a demonstration device, not a product feature). Data lives in the browser. Branding is read from <code>brand.json</code>. The content is Sri Lankan: prices in rupees, <code>+94</code> mobile numbers, a Colombo address.</p>
+
+<h2 id="s4-1">4.1 Customer experience</h2>
+<ptable head="Screen|What it does" widths="22,78">
+Home | Cover image, logo, salon name, location, rating, open status and hours. Primary action &ldquo;Book an appointment&rdquo;; shortcuts to Services, WhatsApp and Call. Popular services with price and duration. A &ldquo;Your next appointment&rdquo; card once a booking exists.
+Services | Search and category filter (All, Hair, Nails, Facial, Makeup, Spa). Multi-select with a running total of price and minutes.
+Step 1 of 5: Services | Same list inside the booking flow, with a summary of total duration and price when more than one service is chosen.
+Step 2: Professional | &ldquo;Any available professional&rdquo; (default) or a named professional. Only people able to perform every chosen service are listed, each with role, rating, specialities and number of free times today. If nobody can do all services, the customer is told to remove one or book two visits.
+Step 3: Time | Six-day strip with a coloured state per day (Open, Limited, Full, Closed). Slots every 30 minutes that fit the whole appointment including buffer. Slots held by another customer show as &ldquo;Held&rdquo;. Choosing a slot reserves it for 10 minutes with a visible countdown. If nothing is free: next available day, Join waitlist, Contact salon.
+Step 4: Details | Name, Sri Lankan mobile number (validated), optional email and notes. &ldquo;No account needed.&rdquo; A returning number triggers &ldquo;Welcome back&rdquo; with an offer to reuse details.
+Step 5: Pay to confirm | Summary, then a choice of deposit, full payment or pay at salon. Handles processing, failure, customer cancellation, and &ldquo;verification in progress&rdquo; when the bank has not answered (with an explicit instruction not to pay again). Going offline mid-payment is handled.
+Confirmation | Booking ID, summary, amount paid and balance due, notice that WhatsApp and SMS confirmations were sent, Add to calendar, Contact salon, Manage, and an offer to save details.
+My booking | Status and payment badges, Reschedule (availability is checked again on confirm), Cancel (policy and refund amount shown first), Contact salon.
+Waitlist | Date, time band, professional and service. The customer is messaged when a time opens and must confirm before anything is booked.
+Contact | Address, hours, phone, WhatsApp and Call actions.
+</ptable>
+
+<h2 id="s4-2">4.2 Salon workspace</h2>
+<ptable head="Area|What it does" widths="16,84">
+Today | Four figures (appointments, collected, to collect at salon, walk-in queue). Schedule as a timeline per professional, a list, or a week view with occupancy. Timeline shows breaks, the current time, leave, holds in progress, and status colours. Confirmed bookings can be dragged to another time or professional; a move is rejected with a reason if it leaves opening hours, hits a break, leave, a hold or another booking, lands in the past, or the professional does not offer the service. Side panels: who is available now, walk-in queue, waitlist. A banner lists bookings that need attention.
+Bookings | Searchable table (name, phone, booking ID) with day and status filters. Columns: when, customer, service, professional, payment, status, source.
+Booking detail | Status actions (confirm, mark arrived, mark completed, cancel, no-show), reschedule to a free time with the same professional, contact, refund.
+Walk-ins | Capture name, phone, service and preferred professional; check availability now. Either start immediately, book the next free time, or join the queue with an estimated wait. Confirmed bookings are never moved to make room.
+Customers | List built from bookings: visits, upcoming appointment, preferred professional, total paid, no-shows. Detail shows history, with Book, Contact and Add note.
+Reports | Today, 7 days, 30 days or a custom range, with comparison to the previous period. Appointments, revenue, collected, outstanding, revenue by day, completed / no-show / cancelled, average per booking, booking sources, top services, staff totals, day-by-day table, CSV download.
+Staff | Per person: hours, break, services, and a toggle to add leave. A toggle to close the salon for a day. Affected bookings are kept and flagged, never removed.
+Services | Edit price, minutes and buffer per service. Changing duration recalculates future availability.
+Payments | Every booking with total, paid, balance, payment state and refund state. Failed refunds can be retried or escalated; processing refunds can be marked refunded.
+WhatsApp | A concept preview: a customer asks for a time in chat, the salon offers slots, a secure booking link (held for 10 minutes) completes the booking.
+Settings | Salon name, tagline, logo, cover photo and brand colour with a live preview. Changes are private until Publish. Text colour on the brand colour adjusts automatically for contrast.
+Notifications | A sample list of the messages the product sends and their channels.
+</ptable>
+
+<h2 id="s4-3">4.3 Business rules found in the prototype</h2>
+<p>These rules are implemented in the prototype&rsquo;s logic. The right-hand column states how each should be treated in the product.</p>
+<ptable head="Ref|Rule as prototyped|Treatment in the product" widths="7,53,40" class="idc">
+BR-01 | Opening hours 9:00 to 18:00, Monday to Saturday; one shared break 13:00 to 14:00 for all staff. | Configurable per salon, per branch and per professional, with date overrides and public holidays.
+BR-02 | Appointment length is the sum of each service&rsquo;s duration plus its buffer. Customers see service minutes; the buffer is added silently. | Keep. Buffer stays an internal scheduling concept.
+BR-03 | Customer slots start every 30 minutes; staff actions snap to 15 minutes. | Keep the distinction; make both intervals configurable.
+BR-04 | Today&rsquo;s first slot is the next 30-minute boundary after the current time. | Replace with a configurable minimum notice (for example 60 minutes).
+BR-05 | A professional is eligible only if their skills cover every chosen service category. | Keep, but match on services rather than categories, and offer a multi-professional sequence when no single person qualifies.
+BR-06 | &ldquo;Any professional&rdquo; assigns the first eligible person who is free. | Keep, with a choice of assignment strategy (first free, balance workload, seniority).
+BR-07 | A slot is unavailable if it overlaps a break, leave, a live booking, or a hold by another customer. | Keep. Add resource limits (chair, room) in a later release.
+BR-08 | A day is Limited when three or fewer slots remain, Full when none remain, Closed on a closed day. | Keep.
+BR-09 | Choosing a slot holds it for 10 minutes. The hold is shown to staff, is not released while a payment is processing, and becomes a booking only if payment succeeds (or the customer chooses pay at salon). | Keep. Hold length configurable. Enforce at the database so two customers cannot hold the same time.
+BR-10 | Deposit is 20% of the total, rounded to the nearest Rs. 100, capped at Rs. 2,000. | Make configurable: percentage or fixed amount, cap, and per-service override (for example a higher deposit for bridal).
+BR-11 | Three payment choices: deposit, full, pay at salon. | Keep. Each can be switched off per salon or per service.
+BR-12 | Payment results: success; failed (no money taken, slot still held); cancelled by customer; verification pending (do not pay again, check status). Completing twice never creates two bookings. | Keep. The server decides the result from the gateway&rsquo;s signed callback.
+BR-13 | Cancellation is free up to 24 hours before; later, the deposit is kept. Refunds take 3 to 5 working days. | Make the window and the retained amount configurable. Show the calculated refund before the customer confirms.
+BR-14 | Refund states: processing, refunded, failed (retry or contact support). | Keep.
+BR-15 | Reschedule keeps the same professional and re-checks availability at the moment of confirmation. | Keep; allow changing professional. Add a limit on how late and how often.
+BR-16 | Walk-ins never displace confirmed bookings; the system offers &ldquo;now&rdquo;, &ldquo;next available&rdquo; or the queue with an estimated wait. | Keep.
+BR-17 | Adding leave or closing a day keeps existing bookings and flags them for staff action. | Keep. Nothing is ever cancelled automatically without a person deciding.
+BR-18 | Statuses: pending, confirmed, arrived, completed, cancelled, no-show. No-shows are recorded on the customer. | Keep; add &ldquo;in service&rdquo; and a reason for cancellations.
+BR-19 | Booking sources: Online, WhatsApp, Walk-in, Phone. | Keep; add App, Website, Instagram, Google.
+BR-20 | Mobile numbers must be Sri Lankan (<code>07x</code> or <code>+947x</code>, 10 digits). | Validate by the tenant&rsquo;s country, allow international numbers for visitors.
+BR-21 | A waitlisted customer is notified and must confirm before a booking exists. | Keep; add automatic, time-limited offers.
+BR-22 | Brand changes are a private draft until published. | Keep.
+</ptable>
+
+<h2 id="s4-4">4.4 Issues to resolve when the prototype becomes a product</h2>
+<ptable head="Ref|Observation|Why it matters|Resolution" widths="6,34,30,30" class="idc">
+PI-1 | Typing any known phone number shows &ldquo;Welcome back, [first name]&rdquo; and offers that person&rsquo;s details. | It reveals who is a customer of the salon to anyone who knows a phone number. | Recognise a customer only after the number is verified by a one-time code.
+PI-2 | &ldquo;My booking&rdquo; has no access control. | Anyone holding the device, or a booking ID, could cancel. | App: signed-in account. Web guest: one-time code or a signed link sent to the booked number.
+PI-3 | Multi-service bookings need one professional who does everything. | A cut and a manicure cannot be booked together, which is a common request. | Offer back-to-back services with different professionals (R2).
+PI-4 | Hours, breaks, the closed weekday, deposit rule and cancellation window are constants. | Every salon differs. | Move all to tenant settings (BR-01, BR-10, BR-13).
+PI-5 | No concept of branch, role, or sign-in for staff. | A receptionist and an owner see the same figures and can refund. | Roles and permissions, audit log (section 8.2).
+PI-6 | The customer list is derived from bookings and keyed by phone number. | A parent booking for a child, or a couple sharing a number, would be merged into one person. Reviews of competing products report exactly this defect. | Customer records independent of bookings, with dependants under one number and an explicit merge tool.
+PI-7 | Ratings (&ldquo;4.8, 312 reviews&rdquo;, professional ratings) are static. | Displaying ratings requires a real, moderated review system. | Hide until verified reviews exist (R2).
+PI-8 | Checkout at the salon is missing. | &ldquo;To collect at salon&rdquo; is reported but there is no way to record the collection, the tender, a discount or a receipt. | Add in-salon checkout to R1 (section 8.7).
+PI-9 | Notifications are simulated. | The reminder and confirmation engine is a core value driver and a main running cost. | Event-driven notification service with templates, channels and cost tracking (section 8.8).
+PI-10 | Customer bookings are limited to a six-day window. | Bridal and colour bookings are made weeks ahead. | Month calendar with a configurable advance window.
+PI-11 | Staff reschedule keeps the same day and professional. | Most real reschedules change the day. | Full date and professional choice for staff.
+PI-12 | Languages: English only. | A large part of the customer base prefers Sinhala or Tamil. | Build translation-ready from the first screen; ship Sinhala and Tamil in R2.
+</ptable>

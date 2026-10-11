@@ -1,0 +1,24 @@
+# One feature: something a salon or its customers can use, and that can be released.
+id: F00
+title: <feature name, as a customer would say it>
+summary: <one sentence: who can do what once this is delivered>
+release: R1                 # the BRD's band: R1 | R2 | R3
+milestone: M1-web           # delivery milestone, from docs/ROADMAP.md; a later one waits for the earlier one's release
+started_early: null         # lead: the owner's instruction to start before an earlier milestone is released
+status: backlog             # backlog | planned | in-progress | in-qa | complete | released
+qa_status: not-run          # not-run | failing | blocked | pass   (set by feature-verify)
+blocked_reason: null
+released_in: null
+depends_on: []              # feature ids that must be complete first
+surfaces: []                # api | web | mobile | infra | docs
+requirements: []            # functional requirement ids this feature owns; each has one owner
+extends: []                 # requirements another feature owns that this one delivers on one more surface
+nfr_focus: []               # non-functional requirements this feature must prove
+cases: []                   # feature journeys, added by feature-verify: TC-F00-001
+verification:
+  automation: []
+  manual: []
+  deferred: []
+evidence:
+  last_run: null
+  last_result: null

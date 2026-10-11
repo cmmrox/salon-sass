@@ -1,0 +1,13 @@
+# One release. Written by release-prepare; run by: qa/scripts/sdlc run --release v0.0.0
+release: v0.0.0
+source_revision: null       # git rev-parse HEAD, set by release-verify
+client_versions: null       # any separately versioned client this release was verified with
+scope:
+  features: []              # features newly shipping in this release
+  stages: []                # their stages
+gates:                      # run in order; the run stops at the first failure
+  # Command gates: the verification.commands of the stages in scope, duplicates removed.
+  - {id: <name>, cmd: "<a verification command>"}
+  - {id: smoke, suite: smoke}
+  - {id: regression, suite: regression}
+deferred: []                # anything accepted as not certified by this release, in plain words

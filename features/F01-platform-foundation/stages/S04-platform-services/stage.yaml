@@ -1,0 +1,23 @@
+id: F01-S04
+feature: F01
+title: "Platform services: errors, time, audit trail, background jobs and observability"
+sequence: 4
+surfaces: [api]
+status: outlined
+qa_status: not-run
+released_in: null
+depends_on: [F01-S02]
+requirements: [BKG-15]
+handoff:
+  run: null
+  data: null
+  notes: null
+cases: []
+verification:
+  commands: []
+  automation: []
+  manual: []
+  deferred: []
+evidence:
+  last_run: null
+  last_result: null

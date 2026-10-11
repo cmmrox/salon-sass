@@ -1,0 +1,20 @@
+id: F10
+title: "Salon calendar and front desk"
+summary: "Staff run the day from the calendar: create and move bookings, handle walk-ins, resolve bookings that need attention, check customers out, and see today's figures."
+release: R1
+milestone: M1-web
+status: backlog
+qa_status: not-run
+released_in: null
+depends_on: [F08]
+surfaces: [api, web]
+requirements: [BKG-10, BKG-11, BKG-12, BKG-13, STF-06, PAY-06, REP-01]
+nfr_focus: []
+cases: []
+verification:
+  automation: []
+  manual: []
+  deferred: []
+evidence:
+  last_run: null
+  last_result: null

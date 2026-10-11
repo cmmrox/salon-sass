@@ -1,0 +1,20 @@
+id: F06
+title: "Staff, schedules and leave"
+summary: "A salon maintains its professionals, the services each performs, their working hours, leave and blocked time."
+release: R1
+milestone: M1-web
+status: backlog
+qa_status: not-run
+released_in: null
+depends_on: [F04, F05]
+surfaces: [api, web]
+requirements: [STF-01, STF-02, STF-03, STF-05]
+nfr_focus: []
+cases: []
+verification:
+  automation: []
+  manual: []
+  deferred: []
+evidence:
+  last_run: null
+  last_result: null

@@ -1,0 +1,1310 @@
+# Requirement register. Baseline: Salon-SaaS-BRD-v1.0.pdf, sections 8 and 9.
+# This file is the living, machine-readable register: a change request edits it here
+# (see .claude/skills/salon-sdlc/references/change-requests.md). The PDF stays the v1.0 snapshot.
+# priority: must | should | could.  release: R1 | R2 | R3.
+# prototype: how much of it the HTML prototype already shows (yes | partial | none).
+# status: active | changed | retired.  changed_by: the CR id that last touched it.
+
+modules:
+  PLT: "Platform and tenant management"
+  IAM: "Identity, roles and access"
+  CAT: "Service catalogue"
+  STF: "Staff and rota"
+  BKG: "Booking engine"
+  APP: "Customer app and booking site"
+  PAY: "Payments, checkout and refunds"
+  NOT: "Notifications and messaging"
+  CRM: "Customer records"
+  MKT: "Marketing and loyalty"
+  REP: "Reports"
+  BRD: "Branding, web addresses and white-label apps"
+  INV: "Retail and inventory"
+  NFR: "Non-functional requirements"
+
+requirements:
+  - id: PLT-01
+    module: PLT
+    priority: must
+    release: R1
+    prototype: none
+    status: active
+    text: "An operator can create a salon tenant with business profile, plan, platform subdomain, country, currency, time zone and default language."
+  - id: PLT-02
+    module: PLT
+    priority: must
+    release: R1
+    prototype: none
+    status: active
+    text: "A guided onboarding checklist takes the salon owner through opening hours, services, staff, policies, branding and payment set-up, and shows what remains before the salon can go live."
+  - id: PLT-03
+    module: PLT
+    priority: should
+    release: R1
+    prototype: none
+    status: active
+    text: "Starter templates (hair, nails, spa, barber, bridal) pre-fill a typical service menu that the salon then edits."
+  - id: PLT-04
+    module: PLT
+    priority: must
+    release: R1
+    prototype: none
+    status: active
+    text: "Plans define features and limits (staff seats, branches, message allowance, custom domain, dedicated app). Entitlements are enforced by the backend and reflected in every client."
+  - id: PLT-05
+    module: PLT
+    priority: must
+    release: R1
+    prototype: none
+    status: active
+    text: "Subscription billing: trial period, recurring charge or recorded bank transfer, invoices, reminders for failed or overdue payment, a grace period, then a read-only suspended state."
+  - id: PLT-06
+    module: PLT
+    priority: must
+    release: R1
+    prototype: none
+    status: active
+    text: "Tenant lifecycle: suspend, reactivate, and close. On closure the salon receives a full export of its data, and the data is deleted after the agreed retention period."
+  - id: PLT-07
+    module: PLT
+    priority: must
+    release: R1
+    prototype: none
+    status: active
+    text: "Operator support staff can enter a salon’s workspace only through a time-limited session with a recorded reason. The session is visible to the salon owner in the audit log."
+  - id: PLT-08
+    module: PLT
+    priority: should
+    release: R1
+    prototype: none
+    status: active
+    text: "Import of customers, services and future appointments from a spreadsheet, with validation, a preview of what will be created, and an error report."
+  - id: PLT-09
+    module: PLT
+    priority: should
+    release: R2
+    prototype: none
+    status: active
+    text: "Operator dashboard: tenants by plan and status, recurring revenue, booking volume, message spend, failed payments and callbacks, app versions in use, error rates per tenant."
+  - id: PLT-10
+    module: PLT
+    priority: should
+    release: R2
+    prototype: none
+    status: active
+    text: "Message allowance and top-up per tenant, with a usage statement by channel and by message type."
+  - id: PLT-11
+    module: PLT
+    priority: should
+    release: R2
+    prototype: none
+    status: active
+    text: "Multiple branches under one tenant, each with its own address, hours, staff, service availability and prices. Reports can be viewed per branch or combined."
+  - id: PLT-12
+    module: PLT
+    priority: could
+    release: R3
+    prototype: none
+    status: active
+    text: "In-product announcements and a help centre."
+  - id: IAM-01
+    module: IAM
+    priority: must
+    release: R1
+    prototype: none
+    status: active
+    text: "Customers sign in with their mobile number and a one-time code delivered by SMS or WhatsApp. There are no customer passwords."
+  - id: IAM-02
+    module: IAM
+    priority: must
+    release: R1
+    prototype: partial
+    status: active
+    text: "Customers can browse services and availability without signing in. Verification happens at the “Your details” step. On the web, a guest can manage a booking through a one-time code or a signed link sent to the booked number."
+  - id: IAM-03
+    module: IAM
+    priority: must
+    release: R1
+    prototype: none
+    status: active
+    text: "A customer identity belongs to one salon. The same phone number at two salons is two unrelated customers, and nothing is shared between them."
+  - id: IAM-04
+    module: IAM
+    priority: must
+    release: R1
+    prototype: partial
+    status: active
+    text: "Customer profile: name, mobile, email, optional birthday, preferred language, notification preferences and marketing consent."
+  - id: IAM-05
+    module: IAM
+    priority: must
+    release: R1
+    prototype: none
+    status: active
+    text: "A customer can delete their account, and request a copy of their data, from inside the app."
+  - id: IAM-06
+    module: IAM
+    priority: must
+    release: R1
+    prototype: none
+    status: active
+    text: "Staff sign in with email or mobile and a password. Two-step verification is available to all staff and required for the Owner role."
+  - id: IAM-07
+    module: IAM
+    priority: must
+    release: R1
+    prototype: none
+    status: active
+    text: "Roles: Owner, Manager, Receptionist, Professional, Accountant. Each has a defined set of permissions (for example only Owner and Manager can refund, change prices or export customers)."
+  - id: IAM-08
+    module: IAM
+    priority: should
+    release: R1
+    prototype: none
+    status: active
+    text: "A Professional sees their own calendar and the customers they serve, and does not see salon revenue or other staff’s figures unless the Owner allows it."
+  - id: IAM-09
+    module: IAM
+    priority: must
+    release: R1
+    prototype: none
+    status: active
+    text: "Sessions use short-lived access with renewal; a user can see their signed-in devices and sign them out; removing a staff member ends their sessions immediately."
+  - id: IAM-10
+    module: IAM
+    priority: must
+    release: R1
+    prototype: none
+    status: active
+    text: "One-time-code requests are limited per number, device and address, with a daily ceiling per tenant and alerts on unusual volume, to prevent abuse that generates message charges."
+  - id: IAM-11
+    module: IAM
+    priority: must
+    release: R1
+    prototype: none
+    status: active
+    text: "An audit log records who did what and when for sensitive actions: refunds, cancellations, price and policy changes, exports, role changes, sign-ins, and operator support sessions."
+  - id: IAM-12
+    module: IAM
+    priority: should
+    release: R2
+    prototype: none
+    status: active
+    text: "A customer can book for someone else (a child, a relative, a guest). Dependants sit under the customer’s account and have their own history."
+  - id: IAM-13
+    module: IAM
+    priority: could
+    release: R3
+    prototype: none
+    status: active
+    text: "The Owner can adjust which permissions each role has."
+  - id: CAT-01
+    module: CAT
+    priority: must
+    release: R1
+    prototype: partial
+    status: active
+    text: "A service has a name, description, category, price, duration, buffer, optional image, and a setting for whether it can be booked online."
+  - id: CAT-02
+    module: CAT
+    priority: must
+    release: R1
+    prototype: partial
+    status: active
+    text: "Categories are defined and ordered by the salon."
+  - id: CAT-03
+    module: CAT
+    priority: should
+    release: R1
+    prototype: none
+    status: active
+    text: "A service can have variants with their own price and duration (for example by hair length), and can display a “from” price."
+  - id: CAT-04
+    module: CAT
+    priority: must
+    release: R1
+    prototype: partial
+    status: active
+    text: "Changes to price, duration or buffer apply to future bookings only. Existing bookings keep the terms they were booked on."
+  - id: CAT-05
+    module: CAT
+    priority: must
+    release: R1
+    prototype: none
+    status: active
+    text: "Tax and service charge settings per tenant, with prices shown to customers inclusive of them."
+  - id: CAT-06
+    module: CAT
+    priority: should
+    release: R1
+    prototype: partial
+    status: active
+    text: "“Popular” services on the home screen are chosen by the salon or derived from booking volume."
+  - id: CAT-07
+    module: CAT
+    priority: should
+    release: R2
+    prototype: none
+    status: active
+    text: "Add-ons that can be attached to a service at booking (for example a treatment)."
+  - id: CAT-08
+    module: CAT
+    priority: should
+    release: R2
+    prototype: none
+    status: active
+    text: "A professional can have their own price or duration for a service (for example a senior stylist)."
+  - id: CAT-09
+    module: CAT
+    priority: should
+    release: R2
+    prototype: none
+    status: active
+    text: "A service can require a resource such as a chair, room or basin, and availability respects the number of each."
+  - id: CAT-10
+    module: CAT
+    priority: should
+    release: R2
+    prototype: none
+    status: active
+    text: "Packages that combine services at a set price, and courses of several sessions."
+  - id: CAT-11
+    module: CAT
+    priority: should
+    release: R2
+    prototype: none
+    status: active
+    text: "Service flags: patch test required, consultation required, custom deposit, minimum notice, staff-only (not bookable online)."
+  - id: CAT-12
+    module: CAT
+    priority: could
+    release: R3
+    prototype: none
+    status: active
+    text: "Processing time inside a service (for example colour developing) during which the professional can serve another customer."
+  - id: STF-01
+    module: STF
+    priority: must
+    release: R1
+    prototype: partial
+    status: active
+    text: "Staff profile: name, photo, title, short biography, the services they perform, and whether they are shown for online booking."
+  - id: STF-02
+    module: STF
+    priority: must
+    release: R1
+    prototype: partial
+    status: active
+    text: "Working hours per person per weekday, with breaks, and overrides for specific dates."
+  - id: STF-03
+    module: STF
+    priority: must
+    release: R1
+    prototype: yes
+    status: active
+    text: "Leave and time off. Existing bookings in the period are kept and flagged for action; none are cancelled automatically."
+  - id: STF-04
+    module: STF
+    priority: must
+    release: R1
+    prototype: partial
+    status: active
+    text: "Salon opening hours, special closures and public holidays. A Sri Lankan holiday calendar, including Poya days, is supplied as a preset the salon can accept or edit."
+  - id: STF-05
+    module: STF
+    priority: must
+    release: R1
+    prototype: none
+    status: active
+    text: "Blocked time on a professional’s calendar (training, errands) with a label."
+  - id: STF-06
+    module: STF
+    priority: should
+    release: R1
+    prototype: partial
+    status: active
+    text: "A “my day” view for professionals on their phone: upcoming appointments, customer notes, mark arrived and completed."
+  - id: STF-07
+    module: STF
+    priority: should
+    release: R2
+    prototype: partial
+    status: active
+    text: "Professional ratings are calculated from verified reviews of completed visits."
+  - id: STF-08
+    module: STF
+    priority: should
+    release: R3
+    prototype: none
+    status: active
+    text: "Commission rules per professional and a commission report."
+  - id: STF-09
+    module: STF
+    priority: could
+    release: R3
+    prototype: none
+    status: active
+    text: "Attendance and timesheets."
+  - id: BKG-01
+    module: BKG
+    priority: must
+    release: R1
+    prototype: yes
+    status: active
+    text: "Availability is calculated in real time from opening hours, each professional’s hours and breaks, leave, blocked time, existing bookings, current holds and service buffers."
+  - id: BKG-02
+    module: BKG
+    priority: must
+    release: R1
+    prototype: partial
+    status: active
+    text: "The salon sets the slot interval, the minimum notice before an appointment, and how far ahead customers can book."
+  - id: BKG-03
+    module: BKG
+    priority: must
+    release: R1
+    prototype: yes
+    status: active
+    text: "“Any available professional” assigns an eligible professional by a strategy the salon chooses."
+  - id: BKG-04
+    module: BKG
+    priority: must
+    release: R1
+    prototype: yes
+    status: active
+    text: "Selecting a time places a hold (10 minutes by default) with a visible countdown. The hold appears on the staff calendar, is not released while a payment is in progress, and is released automatically on expiry."
+  - id: BKG-05
+    module: BKG
+    priority: must
+    release: R1
+    prototype: partial
+    status: active
+    text: "Two bookings or holds can never overlap for the same professional. This is guaranteed by the database under simultaneous requests, not only checked by the application."
+  - id: BKG-06
+    module: BKG
+    priority: must
+    release: R1
+    prototype: yes
+    status: active
+    text: "Booking states: held, pending payment, confirmed, arrived, in service, completed, cancelled, no-show. Each change records who made it, when, and why."
+  - id: BKG-07
+    module: BKG
+    priority: must
+    release: R1
+    prototype: yes
+    status: active
+    text: "A customer can reschedule within the salon’s policy. Availability is checked again at confirmation, and any payment carries over."
+  - id: BKG-08
+    module: BKG
+    priority: must
+    release: R1
+    prototype: yes
+    status: active
+    text: "A customer can cancel. The policy and the exact refund are shown before they confirm."
+  - id: BKG-09
+    module: BKG
+    priority: must
+    release: R1
+    prototype: partial
+    status: active
+    text: "Policies are set per salon: deposit (percentage or amount, cap, per-service override), free-cancellation window, amount retained on late cancellation or no-show, limits on rescheduling."
+  - id: BKG-10
+    module: BKG
+    priority: must
+    release: R1
+    prototype: yes
+    status: active
+    text: "Walk-ins: check immediate availability, start now, book the next free time, or join a queue with an estimated wait. Confirmed bookings are never moved to make room."
+  - id: BKG-11
+    module: BKG
+    priority: must
+    release: R1
+    prototype: yes
+    status: active
+    text: "Staff can create a booking on a customer’s behalf, recording the source (phone, WhatsApp, in person)."
+  - id: BKG-12
+    module: BKG
+    priority: must
+    release: R1
+    prototype: yes
+    status: active
+    text: "Calendar views: day timeline by professional, list, and week with occupancy. Bookings can be dragged to a new time or professional with validation and a stated reason when a move is refused. The customer is notified of any change."
+  - id: BKG-13
+    module: BKG
+    priority: must
+    release: R1
+    prototype: yes
+    status: active
+    text: "An attention list shows bookings affected by leave, closures or removed services until staff resolve each one."
+  - id: BKG-14
+    module: BKG
+    priority: must
+    release: R1
+    prototype: yes
+    status: active
+    text: "Booking references are short, readable and unique within the salon."
+  - id: BKG-15
+    module: BKG
+    priority: must
+    release: R1
+    prototype: none
+    status: active
+    text: "All times are stored in a universal form and shown in the salon’s time zone."
+  - id: BKG-16
+    module: BKG
+    priority: must
+    release: R1
+    prototype: partial
+    status: active
+    text: "Every booking records its channel: app, website, shared link, Instagram, Google, WhatsApp, phone, walk-in."
+  - id: BKG-17
+    module: BKG
+    priority: should
+    release: R1
+    prototype: yes
+    status: active
+    text: "Waitlist: a customer joins for a date, time band and professional; staff can notify them when a time opens; the customer must confirm."
+  - id: BKG-18
+    module: BKG
+    priority: should
+    release: R2
+    prototype: none
+    status: active
+    text: "Waitlist offers are sent automatically when a matching time frees up, are valid for a limited time, and pass to the next person if unclaimed."
+  - id: BKG-19
+    module: BKG
+    priority: should
+    release: R2
+    prototype: partial
+    status: active
+    text: "When no single professional can perform all chosen services, the engine offers consecutive appointments with different professionals as one booking."
+  - id: BKG-20
+    module: BKG
+    priority: should
+    release: R2
+    prototype: none
+    status: active
+    text: "Customer risk rules: after a set number of no-shows, full prepayment is required, or online booking is blocked."
+  - id: BKG-21
+    module: BKG
+    priority: could
+    release: R3
+    prototype: none
+    status: active
+    text: "Recurring appointments (for example every four weeks)."
+  - id: BKG-22
+    module: BKG
+    priority: could
+    release: R3
+    prototype: none
+    status: active
+    text: "Group bookings (for example a bridal party) across several professionals."
+  - id: BKG-23
+    module: BKG
+    priority: could
+    release: R3
+    prototype: none
+    status: active
+    text: "Services at the customer’s location with travel time and an address."
+  - id: APP-01
+    module: APP
+    priority: must
+    release: R1
+    prototype: yes
+    status: active
+    text: "Branded home: cover, logo, name, location, opening status and hours, popular services, and the next appointment when there is one."
+  - id: APP-02
+    module: APP
+    priority: must
+    release: R1
+    prototype: yes
+    status: active
+    text: "The five-step booking flow as prototyped (services, professional, time, details, payment) with a progress indicator and a persistent summary of price and duration."
+  - id: APP-03
+    module: APP
+    priority: must
+    release: R1
+    prototype: partial
+    status: active
+    text: "My bookings: upcoming and past appointments, with reschedule, cancel and “book again”."
+  - id: APP-04
+    module: APP
+    priority: must
+    release: R1
+    prototype: none
+    status: active
+    text: "Push notifications for confirmations, reminders, changes and waitlist offers, with preferences per type."
+  - id: APP-05
+    module: APP
+    priority: must
+    release: R1
+    prototype: partial
+    status: active
+    text: "Add to the device calendar, directions to the salon, call and WhatsApp the salon."
+  - id: APP-06
+    module: APP
+    priority: must
+    release: R1
+    prototype: partial
+    status: active
+    text: "The same booking flow is available on the salon’s web address without installing anything. Links open the app when it is installed."
+  - id: APP-07
+    module: APP
+    priority: must
+    release: R1
+    prototype: none
+    status: active
+    text: "All text is held in translation files from the first release. The customer can choose a language where the salon has enabled more than one."
+  - id: APP-08
+    module: APP
+    priority: must
+    release: R1
+    prototype: yes
+    status: active
+    text: "Clear states for slow or lost connections. A payment is never submitted twice, and the customer is told what happened and what to do."
+  - id: APP-09
+    module: APP
+    priority: must
+    release: R1
+    prototype: partial
+    status: active
+    text: "Terms, privacy notice and cancellation policy are available before payment, and consent is recorded."
+  - id: APP-10
+    module: APP
+    priority: must
+    release: R1
+    prototype: partial
+    status: active
+    text: "Accessibility: screen-reader labels, support for larger text, sufficient contrast including on the salon’s brand colour, and touch targets of adequate size."
+  - id: APP-11
+    module: APP
+    priority: must
+    release: R1
+    prototype: none
+    status: active
+    text: "A minimum supported version can be set; older versions show an update prompt. A maintenance message can be shown."
+  - id: APP-12
+    module: APP
+    priority: should
+    release: R2
+    prototype: none
+    status: active
+    text: "Sinhala and Tamil translations of the app; salons can enter their service names and descriptions in each language."
+  - id: APP-13
+    module: APP
+    priority: should
+    release: R2
+    prototype: partial
+    status: active
+    text: "Reviews: after a completed visit the customer can rate the visit and the professional. The salon can reply. Only verified visits can review."
+  - id: APP-14
+    module: APP
+    priority: should
+    release: R2
+    prototype: none
+    status: active
+    text: "Favourites: preferred professional and usual services, offered first when booking."
+  - id: APP-15
+    module: APP
+    priority: should
+    release: R2
+    prototype: none
+    status: active
+    text: "Loyalty card showing points or stamps and available rewards."
+  - id: APP-16
+    module: APP
+    priority: should
+    release: R2
+    prototype: none
+    status: active
+    text: "Offers and promo codes applied at booking."
+  - id: APP-17
+    module: APP
+    priority: should
+    release: R2
+    prototype: none
+    status: active
+    text: "Gallery of the salon’s work and professional profiles."
+  - id: APP-18
+    module: APP
+    priority: should
+    release: R2
+    prototype: none
+    status: active
+    text: "Consultation and consent forms completed before the appointment (allergies, patch test, medical notes)."
+  - id: APP-19
+    module: APP
+    priority: should
+    release: R2
+    prototype: none
+    status: active
+    text: "Saved payment method for faster checkout, stored by the gateway as a token."
+  - id: APP-20
+    module: APP
+    priority: should
+    release: R2
+    prototype: none
+    status: active
+    text: "Branch selection where the salon has more than one."
+  - id: APP-21
+    module: APP
+    priority: could
+    release: R3
+    prototype: none
+    status: active
+    text: "Purchase of packages and gift cards; balances visible in the app."
+  - id: APP-22
+    module: APP
+    priority: could
+    release: R3
+    prototype: none
+    status: active
+    text: "Pay the remaining balance and add a tip from the app after the visit."
+  - id: PAY-01
+    module: PAY
+    priority: must
+    release: R1
+    prototype: yes
+    status: active
+    text: "At booking the customer can pay a deposit, pay in full, or pay at the salon. The salon chooses which options are offered, overall and per service."
+  - id: PAY-02
+    module: PAY
+    priority: must
+    release: R1
+    prototype: none
+    status: active
+    text: "Online payments go through the salon’s own gateway merchant account. The first supported gateway is PayHere; the design allows more to be added."
+  - id: PAY-03
+    module: PAY
+    priority: must
+    release: R1
+    prototype: partial
+    status: active
+    text: "A booking is confirmed on the gateway’s verified server notification, not on what the customer’s device reports."
+  - id: PAY-04
+    module: PAY
+    priority: must
+    release: R1
+    prototype: yes
+    status: active
+    text: "Outcomes are handled as prototyped: success, failure (slot stays held), cancelled by the customer, and verification pending with a status check. Repeated notifications never create a second booking or charge."
+  - id: PAY-05
+    module: PAY
+    priority: must
+    release: R1
+    prototype: yes
+    status: active
+    text: "Refunds, full or partial, are issued through the gateway where it supports them and otherwise recorded as manual. States: processing, refunded, failed, with retry."
+  - id: PAY-06
+    module: PAY
+    priority: must
+    release: R1
+    prototype: none
+    status: active
+    text: "In-salon checkout: settle the balance, add or remove services, apply a discount with a reason, record the tender (cash, card terminal, bank transfer, LANKAQR), and issue a receipt by WhatsApp, SMS or email."
+  - id: PAY-07
+    module: PAY
+    priority: must
+    release: R1
+    prototype: none
+    status: active
+    text: "Receipts and invoices are numbered per salon and show tax and service charge lines."
+  - id: PAY-08
+    module: PAY
+    priority: must
+    release: R1
+    prototype: none
+    status: active
+    text: "Gateway credentials are entered by the Owner, stored encrypted, and tested with a trial transaction before online payment is switched on."
+  - id: PAY-09
+    module: PAY
+    priority: should
+    release: R2
+    prototype: none
+    status: active
+    text: "A payment link can be sent for a staff-created booking so that a deposit can be taken for phone and WhatsApp bookings."
+  - id: PAY-10
+    module: PAY
+    priority: should
+    release: R2
+    prototype: none
+    status: active
+    text: "Day-end summary by tender and by staff member, with expected cash."
+  - id: PAY-11
+    module: PAY
+    priority: should
+    release: R2
+    prototype: none
+    status: active
+    text: "Reconciliation: gateway settlements matched to bookings, with differences listed."
+  - id: PAY-12
+    module: PAY
+    priority: should
+    release: R2
+    prototype: none
+    status: active
+    text: "Late-cancellation and no-show fees charged to a saved payment method, where the customer agreed to this at booking."
+  - id: PAY-13
+    module: PAY
+    priority: could
+    release: R3
+    prototype: none
+    status: active
+    text: "Tips, recorded per professional."
+  - id: PAY-14
+    module: PAY
+    priority: could
+    release: R3
+    prototype: none
+    status: active
+    text: "Additional gateways and wallets."
+  - id: NOT-01
+    module: NOT
+    priority: must
+    release: R1
+    prototype: partial
+    status: active
+    text: "Notifications are sent for: booking confirmed, payment received, payment failed, reminder, rescheduled, cancelled, waitlist time available, refund processed."
+  - id: NOT-02
+    module: NOT
+    priority: must
+    release: R1
+    prototype: partial
+    status: active
+    text: "Channels: push, WhatsApp, SMS and email. Each event has a channel order with fallback, and stops at the first successful delivery."
+  - id: NOT-03
+    module: NOT
+    priority: must
+    release: R1
+    prototype: none
+    status: active
+    text: "Reminder timing is set by the salon (for example the day before and two hours before). Reminders include links to confirm, reschedule or cancel."
+  - id: NOT-04
+    module: NOT
+    priority: must
+    release: R1
+    prototype: none
+    status: active
+    text: "Message templates are editable per salon and per language within approved structures, and carry the salon’s name."
+  - id: NOT-05
+    module: NOT
+    priority: must
+    release: R1
+    prototype: none
+    status: active
+    text: "Every message is logged with channel, status and cost. Cost is attributed to the salon."
+  - id: NOT-06
+    module: NOT
+    priority: must
+    release: R1
+    prototype: none
+    status: active
+    text: "Customers control which messages they receive and by which channel. Marketing messages require recorded consent and always include a way to opt out. Quiet hours are respected."
+  - id: NOT-07
+    module: NOT
+    priority: should
+    release: R1
+    prototype: partial
+    status: active
+    text: "Staff notifications: new booking, cancellation, booking needing attention, and a daily agenda."
+  - id: NOT-08
+    module: NOT
+    priority: should
+    release: R1
+    prototype: partial
+    status: active
+    text: "A notification centre in the workspace and in the app."
+  - id: NOT-09
+    module: NOT
+    priority: should
+    release: R2
+    prototype: none
+    status: active
+    text: "Review request after a completed visit."
+  - id: NOT-10
+    module: NOT
+    priority: could
+    release: R3
+    prototype: partial
+    status: active
+    text: "Conversational booking on WhatsApp as previewed in the prototype: the customer asks, the system offers times and sends a secure link that holds the slot."
+  - id: NOT-11
+    module: NOT
+    priority: could
+    release: R3
+    prototype: none
+    status: active
+    text: "A shared inbox for staff to reply to customer messages."
+  - id: CRM-01
+    module: CRM
+    priority: must
+    release: R1
+    prototype: yes
+    status: active
+    text: "A customer record with contact details, visits, total spend, no-shows, upcoming appointments and preferred professional."
+  - id: CRM-02
+    module: CRM
+    priority: must
+    release: R1
+    prototype: none
+    status: active
+    text: "Customer records exist independently of bookings. Two people can share a phone number; duplicates are merged only by a deliberate staff action that can be reviewed."
+  - id: CRM-03
+    module: CRM
+    priority: must
+    release: R1
+    prototype: partial
+    status: active
+    text: "Free-text notes on a customer, with author and date."
+  - id: CRM-04
+    module: CRM
+    priority: must
+    release: R1
+    prototype: none
+    status: active
+    text: "A register of consents: what the customer agreed to, when, and through which channel."
+  - id: CRM-05
+    module: CRM
+    priority: must
+    release: R1
+    prototype: none
+    status: active
+    text: "Export of the customer list by authorised roles, recorded in the audit log."
+  - id: CRM-06
+    module: CRM
+    priority: should
+    release: R2
+    prototype: none
+    status: active
+    text: "Structured records: allergies, patch-test dates, colour formulas, before and after photos, visible by role."
+  - id: CRM-07
+    module: CRM
+    priority: should
+    release: R2
+    prototype: none
+    status: active
+    text: "Tags and segments such as new, regular, lapsed, high-value, frequent no-show."
+  - id: CRM-08
+    module: CRM
+    priority: should
+    release: R2
+    prototype: none
+    status: active
+    text: "Block a customer from online booking."
+  - id: MKT-01
+    module: MKT
+    priority: must
+    release: R1
+    prototype: none
+    status: active
+    text: "Each salon has a shareable booking link and QR code for the booking site and the app, suitable for Instagram, Google Business Profile, WhatsApp and printed material."
+  - id: MKT-02
+    module: MKT
+    priority: should
+    release: R1
+    prototype: none
+    status: active
+    text: "A prompt to leave a Google review can be sent after a visit."
+  - id: MKT-03
+    module: MKT
+    priority: should
+    release: R2
+    prototype: none
+    status: active
+    text: "Automated messages: rebooking reminder a set number of weeks after a service, win-back for lapsed customers, birthday greeting."
+  - id: MKT-04
+    module: MKT
+    priority: should
+    release: R2
+    prototype: none
+    status: active
+    text: "Campaigns to a customer segment by push, WhatsApp or SMS, with the audience size and cost shown before sending."
+  - id: MKT-05
+    module: MKT
+    priority: should
+    release: R2
+    prototype: none
+    status: active
+    text: "Promo codes and time-limited offers, including quieter-time pricing."
+  - id: MKT-06
+    module: MKT
+    priority: should
+    release: R2
+    prototype: none
+    status: active
+    text: "Loyalty: points or a stamp card, with rewards redeemed at checkout."
+  - id: MKT-07
+    module: MKT
+    priority: could
+    release: R3
+    prototype: none
+    status: active
+    text: "Referral rewards for the referrer and the new customer."
+  - id: MKT-08
+    module: MKT
+    priority: could
+    release: R3
+    prototype: none
+    status: active
+    text: "Memberships and prepaid credit."
+  - id: MKT-09
+    module: MKT
+    priority: could
+    release: R3
+    prototype: none
+    status: active
+    text: "Gift cards sold online and in the salon."
+  - id: REP-01
+    module: REP
+    priority: must
+    release: R1
+    prototype: yes
+    status: active
+    text: "Today view: appointments, amount collected, amount to collect, walk-in queue."
+  - id: REP-02
+    module: REP
+    priority: must
+    release: R1
+    prototype: yes
+    status: active
+    text: "Period reports for today, 7 days, 30 days and a custom range, compared with the previous period, with download."
+  - id: REP-03
+    module: REP
+    priority: must
+    release: R1
+    prototype: yes
+    status: active
+    text: "Breakdowns by booking source, service, professional and day."
+  - id: REP-04
+    module: REP
+    priority: must
+    release: R1
+    prototype: partial
+    status: active
+    text: "Completed, cancelled and no-show counts and rates."
+  - id: REP-05
+    module: REP
+    priority: should
+    release: R2
+    prototype: none
+    status: active
+    text: "Share of bookings made online, occupancy by professional, rebooking rate, new versus returning customers."
+  - id: REP-06
+    module: REP
+    priority: should
+    release: R2
+    prototype: partial
+    status: active
+    text: "Financial reports: sales by tender, tax, discounts, refunds, outstanding balances."
+  - id: REP-07
+    module: REP
+    priority: should
+    release: R2
+    prototype: none
+    status: active
+    text: "Combined and per-branch reporting."
+  - id: REP-08
+    module: REP
+    priority: should
+    release: R3
+    prototype: none
+    status: active
+    text: "Staff performance and commission."
+  - id: REP-09
+    module: REP
+    priority: could
+    release: R3
+    prototype: none
+    status: active
+    text: "Scheduled report by email to the owner."
+  - id: BRD-01
+    module: BRD
+    priority: must
+    release: R1
+    prototype: yes
+    status: active
+    text: "Brand settings: salon name, tagline, logo, cover photo and brand colour, with a live preview. Changes remain a draft until published. Text colour on the brand colour is chosen automatically for contrast."
+  - id: BRD-02
+    module: BRD
+    priority: must
+    release: R1
+    prototype: partial
+    status: active
+    text: "Business profile: address and map position, phone, WhatsApp number, social links, opening hours, description."
+  - id: BRD-03
+    module: BRD
+    priority: must
+    release: R1
+    prototype: none
+    status: active
+    text: "Every salon receives a platform subdomain with a secure certificate at onboarding."
+  - id: BRD-04
+    module: BRD
+    priority: must
+    release: R1
+    prototype: partial
+    status: active
+    text: "Branding, content and enabled features are delivered to the app and site from the API, so that publishing a brand change does not require an app release."
+  - id: BRD-05
+    module: BRD
+    priority: must
+    release: R1
+    prototype: none
+    status: active
+    text: "A dedicated app per salon can be produced from the shared codebase with its own name, icon, splash screen, identifiers and store listings, published in the salon’s own developer accounts."
+  - id: BRD-06
+    module: BRD
+    priority: must
+    release: R1
+    prototype: none
+    status: active
+    text: "An automated pipeline builds, signs and submits each salon’s app from a tenant app registry, and can deliver JavaScript-only updates over the air to each app separately."
+  - id: BRD-07
+    module: BRD
+    priority: must
+    release: R1
+    prototype: none
+    status: active
+    text: "A store listing kit per salon: description, keywords, screenshots rendered with the salon’s branding and services, privacy and data-safety answers."
+  - id: BRD-08
+    module: BRD
+    priority: must
+    release: R1
+    prototype: none
+    status: active
+    text: "A developer-account onboarding guide and tracker for each salon: Apple and Google enrolment, D-U-N-S, granting access to the operator, renewal dates."
+  - id: BRD-09
+    module: BRD
+    priority: should
+    release: R1
+    prototype: none
+    status: active
+    text: "A shared container app in the operator’s store accounts. A salon’s link, QR code or short code opens that salon’s branded experience, and no other salon is shown or suggested."
+  - id: BRD-10
+    module: BRD
+    priority: should
+    release: R1
+    prototype: none
+    status: active
+    text: "Receipts and messages carry the salon’s name and, where the channel allows, its logo and colour."
+  - id: BRD-11
+    module: BRD
+    priority: should
+    release: R2
+    prototype: none
+    status: active
+    text: "A salon can connect a domain it owns: the workspace gives the DNS record to add, verifies it, and issues the certificate automatically."
+  - id: BRD-12
+    module: BRD
+    priority: should
+    release: R2
+    prototype: none
+    status: active
+    text: "Links on the salon’s domain open its dedicated app when installed; the booking site shows an install prompt."
+  - id: BRD-13
+    module: BRD
+    priority: should
+    release: R2
+    prototype: none
+    status: active
+    text: "The operator console shows, for every salon app, the store status, live version, pending reviews and expiring credentials."
+  - id: INV-01
+    module: INV
+    priority: could
+    release: R3
+    prototype: none
+    status: active
+    text: "A product catalogue; products can be sold at checkout."
+  - id: INV-02
+    module: INV
+    priority: could
+    release: R3
+    prototype: none
+    status: active
+    text: "Stock levels, low-stock alerts and stock adjustments."
+  - id: INV-03
+    module: INV
+    priority: could
+    release: R3
+    prototype: none
+    status: active
+    text: "Recording of products used in services."
+  - id: NFR-01
+    module: NFR
+    priority: must
+    release: R1
+    prototype: none
+    status: active
+    area: "Tenant isolation"
+    text: "No request can read or change another tenant’s data, including through search, reports, exports, files and caches."
+    target: "Enforced per section 7.2; automated cross-tenant tests on every build"
+  - id: NFR-02
+    module: NFR
+    priority: must
+    release: R1
+    prototype: none
+    status: active
+    area: "Availability"
+    text: "Booking, calendar and checkout functions are available during trading hours and beyond."
+    target: "99.9% a month; planned maintenance outside 07:00 to 22:00 local time"
+  - id: NFR-03
+    module: NFR
+    priority: must
+    release: R1
+    prototype: none
+    status: active
+    area: "Performance"
+    text: "Screens respond quickly on mid-range Android phones and mobile data."
+    target: "Availability search under 500 ms at the 95th percentile; other reads under 300 ms; app cold start under 3 s"
+  - id: NFR-04
+    module: NFR
+    priority: must
+    release: R1
+    prototype: none
+    status: active
+    area: "Capacity"
+    text: "The design supports growth without re-architecture."
+    target: "Planning assumption: 2,000 tenants, 20 staff each at the top end, 5 million bookings a year"
+  - id: NFR-05
+    module: NFR
+    priority: must
+    release: R1
+    prototype: none
+    status: active
+    area: "Concurrency"
+    text: "Simultaneous attempts on one slot produce exactly one booking."
+    target: "Verified by load test before each major release"
+  - id: NFR-06
+    module: NFR
+    priority: must
+    release: R1
+    prototype: none
+    status: active
+    area: "Recovery"
+    text: "Data can be restored after loss or error, for the platform or for one tenant."
+    target: "Recovery point 15 minutes or better; recovery time 4 hours; restore tested quarterly"
+  - id: NFR-07
+    module: NFR
+    priority: must
+    release: R1
+    prototype: none
+    status: active
+    area: "Security"
+    text: "Encryption in transit and at rest; secrets and gateway credentials encrypted with managed keys; least-privilege access; dependency and image scanning."
+    target: "OWASP ASVS level 2 as the reference; independent penetration test before public launch and yearly"
+  - id: NFR-08
+    module: NFR
+    priority: must
+    release: R1
+    prototype: none
+    status: active
+    area: "Authentication"
+    text: "Strong password policy and two-step verification for staff; rate limiting on sign-in and one-time codes."
+    target: "Per IAM-06, IAM-10"
+  - id: NFR-09
+    module: NFR
+    priority: must
+    release: R1
+    prototype: none
+    status: active
+    area: "Privacy"
+    text: "Personal data is collected for stated purposes, with consent recorded, retention periods defined, and deletion and export supported."
+    target: "Per section 10"
+  - id: NFR-10
+    module: NFR
+    priority: must
+    release: R1
+    prototype: none
+    status: active
+    area: "Auditability"
+    text: "Sensitive actions are logged immutably with actor, time, tenant and before-and-after values."
+    target: "Retained 24 months"
+  - id: NFR-11
+    module: NFR
+    priority: must
+    release: R1
+    prototype: none
+    status: active
+    area: "Payments integrity"
+    text: "No card data stored or processed by the platform. Every payment event is idempotent and traceable to a gateway reference."
+    target: "Hosted checkout or gateway SDK only"
+  - id: NFR-12
+    module: NFR
+    priority: must
+    release: R1
+    prototype: none
+    status: active
+    area: "Accessibility"
+    text: "Customer surfaces and workspace meet recognised accessibility criteria."
+    target: "WCAG 2.2 level AA as the reference"
+  - id: NFR-13
+    module: NFR
+    priority: must
+    release: R1
+    prototype: none
+    status: active
+    area: "Localisation"
+    text: "Languages, currency, number and date formats, time zone, tax labels and phone formats are configuration, not code."
+    target: "English, Sinhala, Tamil; LKR default"
+  - id: NFR-14
+    module: NFR
+    priority: must
+    release: R1
+    prototype: none
+    status: active
+    area: "Compatibility"
+    text: "The app supports current and recent operating-system versions and small Android devices."
+    target: "Android 8 and later; iOS 16 and later (confirm against usage data); app download under 40 MB"
+  - id: NFR-15
+    module: NFR
+    priority: must
+    release: R1
+    prototype: none
+    status: active
+    area: "Resilience"
+    text: "A failure of a messaging or payment provider degrades one function, not the system; work is retried."
+    target: "Outbox with retry; timeouts and circuit breakers on every external call"
+  - id: NFR-16
+    module: NFR
+    priority: must
+    release: R1
+    prototype: none
+    status: active
+    area: "Observability"
+    text: "Every log line, trace and error carries the tenant, and operators can see health per tenant."
+    target: "Alerting on error rate, payment callback failures, message failures, job delays"
+  - id: NFR-17
+    module: NFR
+    priority: must
+    release: R1
+    prototype: none
+    status: active
+    area: "Maintainability"
+    text: "No per-tenant code or branches. Tenant differences are configuration and entitlements."
+    target: "Enforced by code review and architecture tests"
+  - id: NFR-18
+    module: NFR
+    priority: must
+    release: R1
+    prototype: none
+    status: active
+    area: "Releasability"
+    text: "Backend and web are deployable at any time without downtime; older app versions keep working."
+    target: "Backward-compatible API and migrations; minimum-version control"
+  - id: NFR-19
+    module: NFR
+    priority: must
+    release: R1
+    prototype: none
+    status: active
+    area: "Data portability"
+    text: "A salon can export its customers, bookings, services and payments in an open format at any time."
+    target: "CSV or spreadsheet export"
+  - id: NFR-20
+    module: NFR
+    priority: must
+    release: R1
+    prototype: none
+    status: active
+    area: "Supportability"
+    text: "Support staff can reproduce what a salon or customer sees without asking for passwords."
+    target: "Per PLT-07"

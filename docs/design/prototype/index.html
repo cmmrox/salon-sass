@@ -1,0 +1,531 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>Your Salon Name</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--ac:#8A4B6B;--acs:#F6ECF1;--bg:#fff;--bg2:#F8F9FA;--ink:#111827;--mut:#6B7280;--ln:#E5E7EB;--ok:#0F7B55;--okb:#E6F5EE;--wn:#8F5A00;--wnb:#FFF4DC;--er:#B3261E;--erb:#FDE9E7;--in:#1D5FD0;--inb:#E8F0FD;--t:env(safe-area-inset-top,0px);--b:env(safe-area-inset-bottom,0px);box-sizing:border-box;padding-top:var(--t);padding-bottom:var(--b)}
+*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--ink);font:400 15px/1.5 Poppins,system-ui,-apple-system,"Segoe UI",sans-serif}
+button,input,select,textarea{font:inherit;color:inherit}button{cursor:pointer}:focus-visible{outline:3px solid var(--in);outline-offset:2px}
+h1{font:600 22px/1.3 Poppins,sans-serif;margin:0 0 4px}h2{font:600 16px/1.3 Poppins,sans-serif;margin:24px 0 10px}h3{font:500 15px/1.4 Poppins,sans-serif;margin:0}.m{color:var(--mut)}.s{font-size:13px}.r{display:flex;gap:10px;align-items:center}.sb{justify-content:space-between}.g{flex:1;min-width:0}.w{flex-wrap:wrap}
+.top{display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--ln);background:var(--bg);position:sticky;top:var(--t);z-index:20}
+.sw{margin-left:auto;display:flex;border:1px solid var(--ln);border-radius:10px;padding:2px}.sw button{border:0;background:none;padding:6px 14px;border-radius:8px;min-height:36px;color:var(--mut);font-weight:500}.sw [aria-pressed=true]{background:var(--ink);color:#fff}
+.logo{width:44px;height:44px;border-radius:12px;background:var(--ac);color:#fff;display:grid;place-items:center;font-weight:600;font-size:20px;overflow:hidden;flex:none}.logo img{width:100%;height:100%;object-fit:cover}
+.ban{height:170px;background-size:cover;background-position:center;background-color:var(--acs);background-image:repeating-linear-gradient(115deg,transparent 0 22px,rgba(138,75,107,.09) 22px 23px)}
+.wrap{max-width:560px;margin:0 auto;padding:16px 16px 120px}.wrap.nb{padding-top:0}
+.btn{border:0;border-radius:10px;min-height:48px;padding:0 20px;font-weight:500;background:var(--ac);color:#fff}.btn.o{background:#fff;border:1px solid var(--ln);color:var(--ink)}.btn.k{background:var(--ink)}.btn.d{background:#fff;border:1px solid var(--er);color:var(--er)}.btn.sm{min-height:36px;padding:0 14px;font-size:13px}.btn[disabled]{opacity:.45;cursor:not-allowed}.btn.bl{width:100%}
+.card{border:1px solid var(--ln);border-radius:12px;padding:16px;background:#fff}.sec{background:var(--bg2)}
+.row{display:flex;gap:12px;align-items:center;width:100%;text-align:left;padding:14px 4px;border:0;border-bottom:1px solid var(--ln);background:none;min-height:64px}.row[aria-pressed=true] .ck{background:var(--ac);border-color:var(--ac);color:#fff}.ck{width:24px;height:24px;border-radius:50%;border:1.5px solid var(--ln);display:grid;place-items:center;font-size:12px;flex:none}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:2px 0 8px}.chip{border:1px solid var(--ln);background:#fff;border-radius:99px;padding:0 16px;min-height:40px;white-space:nowrap}.chip[aria-pressed=true]{background:var(--ink);border-color:var(--ink);color:#fff}
+input,select,textarea{width:100%;min-height:48px;border:1px solid var(--ln);border-radius:10px;padding:10px 14px;background:#fff}input[aria-invalid=true]{border-color:var(--er)}label{display:block;font-weight:500;font-size:13px;margin:14px 0 6px}.err{color:var(--er);font-size:13px;margin-top:4px}
+.av{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-weight:600;color:#fff;flex:none}
+.pl{display:inline-block;border-radius:6px;padding:1px 8px;font-size:12px;font-weight:500;white-space:nowrap}.ok{background:var(--okb);color:var(--ok)}.wn{background:var(--wnb);color:var(--wn)}.er{background:var(--erb);color:var(--er)}.in{background:var(--inb);color:var(--in)}.ne{background:var(--bg2);color:var(--mut);border:1px solid var(--ln)}.ac{background:var(--acs);color:var(--ac)}
+.ds{display:flex;gap:8px;overflow-x:auto;padding:2px 0 8px}.dy{flex:none;width:68px;border:1px solid var(--ln);border-radius:10px;background:#fff;min-height:72px;padding:6px 2px;text-align:center}.dy[aria-pressed=true]{border-color:var(--ac);background:var(--acs)}.dy[disabled]{background:var(--bg2);color:#9CA3AF;cursor:not-allowed}.dy i{display:block;font-style:normal;font-size:11px;margin-top:2px}
+.sl{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.sl button{min-height:52px;border:1px solid var(--ln);border-radius:10px;background:#fff;font-weight:500}.sl [aria-pressed=true]{background:var(--ac);border-color:var(--ac);color:#fff}.sl .lm{border-color:#E8C27A}.sl .hd{border-style:dashed;color:var(--mut);cursor:not-allowed}
+.bn{border-radius:10px;padding:12px 14px;margin:12px 0;font-size:14px}.bn.ok{background:var(--okb)}.bn.wn{background:var(--wnb)}.bn.er{background:var(--erb)}.bn.in{background:var(--inb)}
+.bar{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--ln);padding:12px 16px calc(12px + var(--b));z-index:15}.bar>div{max-width:560px;margin:0 auto}
+.kv{display:flex;justify-content:space-between;gap:16px;padding:9px 0;border-bottom:1px solid var(--ln)}.kv:last-child{border:0}.kv b{font-weight:500;text-align:right}
+.tm{font-variant-numeric:tabular-nums;font-weight:600}
+.sk{height:52px;border-radius:10px;background:linear-gradient(90deg,var(--bg2),#EEF0F2,var(--bg2));background-size:200% 100%;animation:sh 1.2s infinite;margin-bottom:8px}@keyframes sh{to{background-position:-200% 0}}
+/* admin */
+.shell{display:grid;grid-template-columns:200px 1fr;min-height:calc(100vh - 62px)}.nav{border-right:1px solid var(--ln);padding:12px;background:var(--bg2)}.nav button{display:block;width:100%;text-align:left;border:0;background:none;padding:10px 12px;min-height:44px;border-radius:8px;color:var(--mut);font-weight:500}.nav [aria-current=true]{background:#fff;color:var(--ink);box-shadow:inset 3px 0 var(--ac)}
+.main{padding:20px 24px 40px;max-width:1000px}.cols{display:grid;grid-template-columns:1.6fr 1fr;gap:24px}
+.ev{display:flex;gap:14px;padding:14px 0;border-bottom:1px solid var(--ln);width:100%;text-align:left;background:none;border-left:0;border-right:0;border-top:0;min-height:64px}.ev .t{width:68px;flex:none;font-weight:500}.ev.hd{opacity:.9;background:var(--acs);padding-left:8px}
+.sheet{position:fixed;inset:0;background:rgba(17,24,39,.35);z-index:50;display:flex;justify-content:flex-end}.sheet>div{background:#fff;width:min(440px,100%);height:100%;overflow:auto;padding:20px calc(20px) calc(20px + var(--b))}
+@media(max-width:820px){.shell{grid-template-columns:1fr}.nav{position:fixed;bottom:0;left:0;right:0;display:flex;z-index:30;padding:4px;border-top:1px solid var(--ln);border-right:0;background:#fff;overflow-x:auto}.nav button{text-align:center;font-size:12px;padding:6px 10px;flex:none;min-height:48px}.nav [aria-current=true]{box-shadow:inset 0 3px var(--ac)}.main{padding:16px 16px 90px}.cols{grid-template-columns:1fr}.sheet{align-items:flex-end}.sheet>div{height:auto;max-height:88vh;border-radius:16px 16px 0 0}}
+@media(min-width:900px){.wrap.d{max-width:620px}}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(92px + var(--b));background:var(--ink);color:#fff;padding:12px 18px;border-radius:10px;z-index:80;max-width:90vw;font-size:14px}
+
+/* ===== mobile-only + modern ===== */
+html{-webkit-tap-highlight-color:transparent}body{background:#E9EBEF}
+.top,#app{max-width:430px;margin-left:auto;margin-right:auto}.top{background:#fff;padding:10px 16px;border-bottom:1px solid var(--ln)}
+#app{background:#fff;min-height:calc(100vh - 56px);overflow-x:hidden}
+input,select,textarea{font-size:16px;border-radius:14px}
+.btn{min-height:52px;border-radius:14px;font-weight:500}.btn.sm{min-height:40px}
+.card{border-radius:18px}.chip{min-height:42px}
+.ban{position:relative;height:250px;border-radius:0 0 28px 28px;background-size:cover;background-position:center}
+.ring .logo{border:4px solid #fff;border-radius:24px;box-shadow:0 4px 14px rgba(17,24,39,.12)}
+.wrap,.wrap.d{max-width:none;padding:16px 16px 130px}.wrap.nb{padding-top:0}
+h1{font-size:24px;letter-spacing:-.01em}
+.row{border:1px solid var(--ln);border-radius:18px;padding:14px;margin-bottom:10px;background:#fff;min-height:68px}.row[aria-pressed=true]{border-color:var(--ac);background:var(--acs)}
+.ck{width:26px;height:26px}
+.sl{grid-template-columns:repeat(3,1fr)}.sl button{border-radius:14px;min-height:54px}
+.dy{width:72px;border-radius:16px}
+.bar{left:50%;right:auto;transform:translateX(-50%);width:100%;max-width:430px;border-top:1px solid var(--ln);box-shadow:0 -6px 20px rgba(17,24,39,.05)}
+.bn{border-radius:14px}
+.shell{display:block;min-height:0}.nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;display:flex;overflow-x:auto;border-top:1px solid var(--ln);border-right:0;background:#fff;padding:6px 4px calc(6px + var(--b));z-index:30}
+.nav button{flex:none;text-align:center;font-size:12px;padding:6px 14px;min-height:48px}.nav [aria-current=true]{box-shadow:inset 0 3px var(--ac);background:var(--acs);color:var(--ac)}
+.main{max-width:none;padding:16px 16px 100px}.cols{display:block}
+.sheet{align-items:flex-end;justify-content:center}.sheet>div{width:100%;max-width:430px;height:auto;max-height:90vh;border-radius:24px 24px 0 0;padding:20px 20px calc(24px + var(--b))}
+.sheet>div:before{content:"";display:block;width:40px;height:4px;border-radius:4px;background:var(--ln);margin:-8px auto 14px}
+.ev .t{width:56px}
+.toast{bottom:calc(100px + var(--b))}
+
+/* ===== Mastercard-inspired system: warm canvas, black pills, red/orange circles ===== */
+:root{--ac:#141413;--acs:#EAE5DC;--bg:#F3F0EB;--bg2:#EAE5DC;--ln:#DDD6CA;--red:#EB001B;--org:#F79E1B}
+body{background:#DDD6CA}.top,#app{background:#F3F0EB}.top{border-bottom:0}
+html,body{font-family:Poppins,system-ui,sans-serif}
+h1,h2,h3{letter-spacing:-.02em}h1{font-weight:600}
+.btn{border-radius:999px;min-height:54px;padding:0 28px;font-weight:500}.btn.o{background:transparent;border:1.5px solid var(--ink);color:var(--ink)}.btn.d{border-color:var(--red);color:var(--red);background:transparent}.btn.sm{padding:0 18px}
+.chip,.sw,.sw button,.pl{border-radius:999px}.chip{border:1.5px solid var(--ink);background:transparent}.chip[aria-pressed=true]{background:var(--ink);color:#fff}
+.sw{background:#fff;border:0}.sw [aria-pressed=true]{background:var(--ink)}
+.card,.row,.dy,.sl button,.bn{border-radius:24px}.card,.row{background:#fff;border:0;box-shadow:none}.row{padding:16px 18px}.row[aria-pressed=true]{background:#fff;box-shadow:inset 0 0 0 2px var(--ink)}
+.row[aria-pressed=true] .ck,.sl [aria-pressed=true]{background:var(--ink);border-color:var(--ink);color:#fff}
+.ck{border:1.5px solid var(--ink);background:transparent}
+.sl button{background:#fff;border:0;border-radius:999px}.sl .lm{box-shadow:inset 0 0 0 1.5px var(--org)}.sl .hd{background:transparent;box-shadow:inset 0 0 0 1.5px var(--ln);border:0}
+.dy{background:#fff;border:0;border-radius:24px}.dy[aria-pressed=true]{background:var(--ink);color:#fff}.dy[aria-pressed=true] .pl{background:#fff}
+input,select,textarea{border:0;background:#fff;border-radius:20px;box-shadow:inset 0 0 0 1.5px var(--ln)}input:focus,select:focus,textarea:focus{box-shadow:inset 0 0 0 2px var(--ink);outline:0}
+.bar{background:#F3F0EB;border-top:0;box-shadow:0 -10px 24px rgba(20,20,19,.06)}
+.nav{background:#fff;border-radius:28px 28px 0 0;border-top:0}.nav [aria-current=true]{background:var(--ink);color:#fff;box-shadow:none;border-radius:999px}
+.sheet>div{background:#F3F0EB;border-radius:32px 32px 0 0}
+.ban{height:260px;border-radius:0 0 40px 40px}.ring .logo{border:4px solid #F3F0EB;border-radius:50%;box-shadow:none}
+.logo{border-radius:50%;background:none}.logo img{border-radius:50%}
+.s-dot{display:inline-block}
+.ev{background:#fff;border:0;border-radius:24px;margin-bottom:10px;padding:16px}.ev.hd{background:#FFF1DD;padding-left:16px}
+.kv{border-color:var(--ln)}
+.ac{background:#FFE9C7;color:#7A4A00}
+.ok{background:#DDF1E6}
+.hero-circles{display:flex}
+
+/* logo no longer hidden behind the cover; FB-style cover + avatar */
+.logo{position:relative;z-index:3;flex:none;aspect-ratio:1/1;overflow:hidden}.logo img{width:100%;height:100%;object-fit:cover;background:#fff;display:block}
+.ban{height:200px;border-radius:0 0 28px 28px;position:relative;z-index:1}.ring{position:relative;z-index:3;padding-left:4px}
+.ring .logo{border:4px solid #F3F0EB}
+.fbcover{height:130px;background-size:cover;background-position:center;background-color:var(--acs)}
+.btn{color:var(--onac,#fff)}.btn.o{color:var(--ink)}.btn.d{color:var(--red)}
+.chip[aria-pressed=true],.dy[aria-pressed=true],.nav [aria-current=true],.sl [aria-pressed=true],.row[aria-pressed=true] .ck{background:var(--ac);border-color:var(--ac);color:var(--onac,#fff)}
+.row[aria-pressed=true]{box-shadow:inset 0 0 0 2px var(--ac)}input:focus,select:focus,textarea:focus{box-shadow:inset 0 0 0 2px var(--ac)}
+/* footer tab bars (customer + salon) */
+.tabs{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;display:grid;grid-template-columns:repeat(5,1fr);background:#fff;border-radius:24px 24px 0 0;padding:8px 6px calc(8px + var(--b));box-shadow:0 -8px 24px rgba(20,20,19,.08);z-index:30}
+.tabs button{border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;font-weight:500;min-height:56px;color:var(--mut);padding:0}
+.tabs .ti{display:flex;padding:4px 18px;border-radius:999px}
+.tabs [aria-current=true]{color:var(--ink);font-weight:600}.tabs [aria-current=true] .ti{background:var(--acs)}
+.tabs .bk{color:var(--ink)}.tabs .bk .ti{background:var(--ac);color:var(--onac,#fff);width:52px;height:52px;padding:0;align-items:center;justify-content:center;margin-top:-22px;border:4px solid #fff;box-sizing:content-box}
+.bar.up{bottom:calc(72px + var(--b));border-radius:20px 20px 0 0}
+.kg{display:grid;grid-template-columns:1fr 1fr;gap:10px}.kg b{display:block;font-size:20px;font-weight:600;letter-spacing:-.02em;margin:2px 0}
+.bars{display:flex;align-items:flex-end;gap:2px;height:120px}.bars i{flex:1;background:var(--ac);border-radius:4px 4px 0 0;min-height:2px}
+.hb{height:8px;border-radius:99px;background:var(--bg2);overflow:hidden}.hb i{display:block;height:100%;background:var(--ac);border-radius:99px}
+.sgb{display:flex;height:12px;border-radius:99px;overflow:hidden}.sgb i{display:block}
+.lg{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;margin-top:10px}.lg b{font-weight:500}.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px}
+.main{padding-bottom:110px}
+
+/* default brand */
+:root{--ac:#D6086A;--acs:#D6086A1F;--onac:#fff}
+.ban,.fbcover{background-position:center 30%}
+.logo img{background:#F1F0F0}
+
+/* ===== v2 mobile polish: sizing, no cropping, calmer controls ===== */
+body{font-size:15px}
+h1{font-size:22px;line-height:1.25}h2{font-size:16px;margin:22px 0 10px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:50px;padding:0 22px;font-size:15px;line-height:1.2;white-space:nowrap}
+.btn.sm{min-height:40px;padding:0 16px;font-size:13.5px}
+.btn.bl{display:flex;width:100%}
+.btn[disabled]{background:#DDD6CA;color:#8C867C;border-color:transparent;opacity:1}
+.trio{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}.trio .btn{padding:0 6px}
+.duo{display:grid;grid-template-columns:1fr 1fr;gap:8px}.duo .btn{padding:0 10px;font-size:14px;min-height:46px}
+.lnk{display:block;margin:10px auto 0;border:0;background:none;color:var(--mut);font-weight:500;min-height:44px;text-decoration:underline}
+.chips{flex-wrap:wrap;overflow:visible;gap:8px;padding:0 0 8px}.chip{min-height:38px;padding:0 15px;font-size:13.5px;border-width:1px}
+/* header */
+.top{gap:8px;padding:8px 12px}#bm{min-width:0;flex:1;gap:8px!important}.hn{font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.sw{flex:none;margin-left:0;padding:2px}.sw button{padding:6px 12px;min-height:34px;font-size:13px}
+/* day strip */
+.ds{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;overflow:visible;padding:2px 0 8px}
+.dy{width:auto;min-width:0;min-height:74px;padding:8px 0;border-radius:18px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}
+.dw{font-size:11.5px;color:var(--mut);font-weight:500}.dn{font-size:18px;font-weight:600;line-height:1}
+.dy[aria-pressed=true] .dw{color:inherit;opacity:.85}
+.dt{display:block;width:8px;height:8px;border-radius:50%;padding:0;margin:2px 0 0;font-size:0}
+.dt.ok{background:#12805C}.dt.wn{background:#E09A00}.dt.er{background:#D92D20}.dt.ne{background:#B8B2A7}
+.dy[aria-pressed=true] .dt{box-shadow:0 0 0 2px #fff}
+.lgd{display:flex;gap:14px;font-size:12px;color:var(--mut);margin:4px 2px 0;flex-wrap:wrap}.lgd .dt{display:inline-block;margin:0 5px 0 0;vertical-align:middle}
+.dy[disabled]{opacity:.55}
+/* steps */
+.pg{display:flex;gap:4px;margin:10px 0 4px}.pg i{flex:1;height:4px;border-radius:4px;background:var(--ln)}.pg i.on{background:var(--ac)}
+/* rows & cards */
+.row{padding:14px 16px;min-height:64px;align-items:center}.row .ck{margin-left:4px}
+.chev{font-size:24px;color:var(--mut);line-height:1}
+.next{background:#fff;border-radius:20px;padding:14px 16px;margin:0 0 14px;display:flex;flex-direction:column;gap:2px;box-shadow:inset 4px 0 var(--ac)}.next .btn{align-self:flex-start;margin-top:8px}
+.bell{width:44px;height:44px;border-radius:50%;border:0;background:#fff;display:grid;place-items:center;flex:none;color:var(--ink)}
+.bar .btn{min-height:50px;padding:0 24px}
+.bar{padding:10px 16px calc(10px + var(--b))}
+.sl button{font-size:14.5px;min-height:50px}
+.ev .t{width:52px;font-size:14px}
+.kg b{font-size:19px}
+.tabs button{font-size:11px}
+.ev .t{width:66px;white-space:nowrap;font-size:13.5px}.trio .btn.sm{font-size:13px}.lgd span{white-space:nowrap}
+/* ===== salon workspace: responsive (phone, tablet, desktop) ===== */
+.side,.gsw,.tbb{display:none}
+.ph{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:14px}.ph h1{margin:0}
+.seg2{display:flex;background:#fff;border-radius:999px;padding:3px;flex:none}.seg2 button{border:0;background:none;padding:6px 16px;border-radius:999px;font-weight:500;font-size:13.5px;min-height:36px;color:var(--mut)}.seg2 [aria-pressed=true]{background:var(--ink);color:#fff}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 14px}.tools input{max-width:340px;min-height:44px}.tools select{min-height:44px}
+.tcard{background:#fff;border-radius:20px;overflow:auto}
+.tbl{width:100%;border-collapse:separate;border-spacing:0;min-width:640px}.tbl th{text-align:left;font-size:12px;color:var(--mut);font-weight:500;padding:12px 16px;border-bottom:1px solid var(--ln);background:#fff;white-space:nowrap}
+.tbl td{padding:13px 16px;border-bottom:1px solid var(--ln);vertical-align:middle;font-size:14px}.tbl tbody tr:last-child td{border-bottom:0}.tbl tr.rw{cursor:pointer}.tbl tr.rw:hover td,.tbl tr.rw:focus-visible td{background:#FAF8F4}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:0 0 22px}.kc{background:#fff;border-radius:20px;padding:16px 18px;display:flex;flex-direction:column;gap:2px}.kc b{font-size:24px;font-weight:600;letter-spacing:-.02em;line-height:1.2}
+.tlc{padding:14px 16px 16px;overflow-x:auto}.tl{min-width:680px}
+.tlh,.tlr{display:grid;grid-template-columns:150px 1fr}.tlh{margin-bottom:6px}
+.tlhh{display:grid;grid-template-columns:repeat(9,1fr);font-size:12px;color:var(--mut)}.tlhh i{font-style:normal;padding-left:5px;border-left:1px solid var(--ln)}
+.tlr{border-top:1px solid var(--ln);align-items:stretch}.tln{display:flex;gap:10px;align-items:center;padding:10px 8px 10px 0;font-size:14px}.tln .av{width:34px;height:34px;font-size:14px}
+.trk{position:relative;height:92px;background-image:linear-gradient(to right,var(--ln) 1px,transparent 1px);background-size:11.1111% 100%}.trk.off{background-color:#F1ECE3}
+.brk{position:absolute;top:0;bottom:0;background:repeating-linear-gradient(45deg,#ECE6DA,#ECE6DA 6px,#F6F2EA 6px,#F6F2EA 12px);display:grid;place-items:center;font-size:11px;color:var(--mut);pointer-events:none}
+.past{position:absolute;top:0;bottom:0;left:0;background:rgba(243,240,235,.65);pointer-events:none}.now{position:absolute;top:-1px;bottom:-1px;width:2px;background:var(--ac);pointer-events:none;z-index:2}
+.lvl{position:absolute;inset:0;display:grid;place-items:center;font-size:12px;color:var(--mut);pointer-events:none}
+.blk{position:absolute;top:8px;bottom:8px;border:0;border-left:4px solid;border-radius:10px;padding:6px 8px;text-align:left;overflow:hidden;font-size:12px;line-height:1.3;display:flex;flex-direction:column;gap:1px;cursor:pointer;min-width:0;z-index:1}
+.blk b{font-weight:600}.blk span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.blk .sv{opacity:.75}.blk[draggable=true]{cursor:grab}.blk:focus-visible{outline:3px solid var(--in)}
+.b-confirmed{background:#DDF1E6;border-color:#12805C;color:#0B4F37}.b-pending{background:#FFF1D6;border-color:#E09A00;color:#6B4300}.b-arrived{background:#E4EEFC;border-color:#1D5FD0;color:#103E8A}.b-completed{background:#ECE8E0;border-color:#9A9488;color:#4A463E}
+.b-cancelled,.b-noshow{background:#FCE6E4;border-color:#B3261E;color:#7A1812;opacity:.8}.b-hold{background:repeating-linear-gradient(45deg,var(--acs),var(--acs) 6px,#fff 6px,#fff 12px);border-color:var(--ac);color:var(--ink)}
+.blk.cf{outline:2px solid var(--er)}
+.ghost{position:absolute;top:8px;bottom:8px;border-radius:10px;pointer-events:none;display:flex;align-items:center;padding-left:8px;font-size:12px;font-weight:600;z-index:3}
+.ghost.ok{background:rgba(18,128,92,.18);border:2px dashed #12805C;color:#0B4F37}.ghost.bad{background:rgba(179,38,30,.15);border:2px dashed #B3261E;color:#7A1812}
+.wk{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}.wkd{background:#fff;border-radius:18px;padding:12px;display:flex;flex-direction:column;gap:6px;min-width:0}.wkd.cl{opacity:.6}
+.occ{height:6px;border-radius:99px;background:var(--bg2);overflow:hidden}.occ i{display:block;height:100%;background:var(--ac)}
+.wkc{border:0;background:var(--bg2);border-radius:10px;padding:6px 8px;text-align:left;font-size:12.5px;min-height:40px}
+.rg{display:block}.rg section{min-width:0}
+.gc3,.gc2{display:block}.setg{display:block}
+.gsl{position:absolute;top:48px;left:0;right:0;background:#fff;border-radius:18px;box-shadow:0 12px 32px rgba(20,20,19,.18);padding:6px;z-index:60}
+.gsl button{display:flex;flex-direction:column;align-items:flex-start;width:100%;border:0;background:none;padding:10px 12px;border-radius:12px;text-align:left}.gsl button:hover{background:var(--bg2)}
+/* tablet + phone admin: full width, bottom tabs */
+body.adm .top,body.adm #app{max-width:none}
+body.adm .tabs{max-width:none;left:0;transform:none;border-radius:0}
+body.adm .main{max-width:none}.mx{max-width:760px;margin:0 auto}
+@media(min-width:600px){.kpis{grid-template-columns:repeat(4,1fr)}.kg{grid-template-columns:repeat(4,1fr)}}
+/* desktop */
+@media(min-width:900px){
+ body.adm{background:var(--bg)}
+ body.adm .top{position:sticky;top:0;min-height:60px;padding:8px 28px;background:#fff;border-bottom:1px solid var(--ln);gap:16px;z-index:40}
+ body.adm #bm{flex:0 0 auto}body.adm .hn{font-size:16px}
+ body.adm .gsw{display:block;position:relative;flex:1;max-width:480px;margin-right:auto}.gsw input{min-height:42px;padding:8px 18px;border-radius:999px;font-size:14px;width:100%}
+ body.adm .tbb{display:grid;width:42px;height:42px;background:var(--bg)}
+ body.adm #app{background:transparent;min-height:calc(100vh - 60px);overflow:visible}
+ body.adm .shell{display:grid;grid-template-columns:236px minmax(0,1fr);align-items:start;min-height:calc(100vh - 60px)}
+ body.adm .side{display:flex;flex-direction:column;gap:2px;position:sticky;top:60px;height:calc(100vh - 60px);padding:16px 12px;background:#fff;border-right:1px solid var(--ln);overflow:auto}
+ .side button{display:flex;align-items:center;gap:12px;width:100%;border:0;background:none;padding:0 14px;min-height:46px;border-radius:14px;font-weight:500;color:var(--mut);text-align:left;font-size:14.5px}.side button .ti{display:flex}
+ .side [aria-current=true]{background:var(--ac);color:var(--onac,#fff)}.side button:hover:not([aria-current=true]){background:var(--bg)}
+ .sidefoot{margin-top:auto;padding:12px 14px;line-height:1.5}
+ body.adm .shell>.tabs{display:none}
+ body.adm .main{padding:28px 36px 56px}.mx{max-width:1280px}
+ body.adm .bell:not(.tbb){display:none}
+ body.adm h1{font-size:26px}
+ body.adm .cols{display:grid;grid-template-columns:minmax(0,1.8fr) minmax(300px,1fr);gap:28px;align-items:start}
+ body.adm .kg{grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+ body.adm .rg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 24px}.rg .full{grid-column:1/-1}
+ body.adm .bars{height:170px}
+ body.adm .gc3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.gc3>.card{margin:0!important}
+ body.adm .gc2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.gc2>.card{margin:0!important}
+ body.adm .setg{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:36px;align-items:start}.setp{order:2;position:sticky;top:84px}.setf{order:1;max-width:560px}.setp h2:first-child,.setf h2:first-child{margin-top:0}
+ body.adm .sheet{align-items:stretch;justify-content:flex-end;background:rgba(20,20,19,.28)}
+ body.adm .sheet>div{width:460px;max-width:100%;height:100%;max-height:none;border-radius:0;padding:24px 28px}body.adm .sheet>div:before{display:none}
+ body.adm .toast{bottom:32px}
+ body.adm .ev{min-height:72px}
+ body.adm [dialog],body.adm .wa{max-width:none}
+}
+@media(min-width:900px) and (prefers-reduced-motion:no-preference){body.adm .sheet>div{animation:sl .22s ease-out}@keyframes sl{from{transform:translateX(32px);opacity:0}}}
+.g3{display:block}.lsg{display:block}
+@media(min-width:900px){
+ body.adm .g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;margin-top:24px;align-items:start}
+ body.adm .lsg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.lsg .ev{margin:0}
+ .tl{min-width:820px}.tlh,.tlr{grid-template-columns:140px 1fr}
+ .blk{padding:5px 7px}
+}
+@media(min-width:900px) and (max-width:1199px){body.adm .shell{grid-template-columns:200px minmax(0,1fr)}body.adm .main{padding:24px 24px 48px}body.adm .g3{grid-template-columns:repeat(2,minmax(0,1fr))}body.adm .setg{grid-template-columns:minmax(0,1fr) 340px}body.adm .gc3{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style></head><body>
+<header class="top"><span id="bm" class="r" style="gap:10px"></span><div id="gsw" class="gsw"><input id="gs" type="search" aria-label="Search bookings or customers" placeholder="Search bookings or customers" oninput="gsearch(this.value)" autocomplete="off"><div id="gsr"></div></div><div class="sw" role="group" aria-label="Switch view"><button id="bc" aria-pressed="true" onclick="mode('c')">Customer</button><button id="ba" aria-pressed="false" onclick="mode('a')">Salon</button></div><button class="bell tbb" id="tbell" aria-label="Notifications" onclick="openNotif()"></button></header>
+<div id="app"></div><div id="cn"></div><div id="sh"></div><div id="ts"></div>
+<script>
+const $=s=>document.querySelector(s),fm=n=>'Rs. '+n.toLocaleString('en-LK'),T=m=>{let h=Math.floor(m/60);return(h%12||12)+':'+String(m%60).padStart(2,'0')+' '+(h<12?'AM':'PM')};
+const OPEN=540,CLOSE=1080,NOW=660,HOLD=600,BR=[780,840];
+const DEF={col:'#D6086A',name:'Your Salon Name',tag:'Simple booking. Better salon days.',logo:'data:image/svg+xml,%3Csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20viewBox=%270%200%20120%20120%27%3E%3Crect%20width=%27120%27%20height=%27120%27%20fill=%27%23EFE9E1%27/%3E%3Ccircle%20cx=%2760%27%20cy=%2760%27%20r=%2734%27%20fill=%27none%27%20stroke=%27%23B9AFA3%27%20stroke-width=%275%27/%3E%3Cpath%20d=%27M60%2038l5%2015%2015%205-15%205-5%2015-5-15-15-5%2015-5z%27%20fill=%27%23B9AFA3%27/%3E%3C/svg%3E',banner:'data:image/svg+xml,%3Csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20viewBox=%270%200%201200%20500%27%20preserveAspectRatio=%27xMidYMid%20slice%27%3E%3Cdefs%3E%3ClinearGradient%20id=%27g%27%20x1=%270%27%20y1=%270%27%20x2=%271%27%20y2=%271%27%3E%3Cstop%20offset=%270%27%20stop-color=%27%23E9E2D8%27/%3E%3Cstop%20offset=%271%27%20stop-color=%27%23D5CBBE%27/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect%20width=%271200%27%20height=%27500%27%20fill=%27url%28%23g%29%27/%3E%3Ccircle%20cx=%27980%27%20cy=%27110%27%20r=%27220%27%20fill=%27%23F3EEE7%27%20opacity=%27.7%27/%3E%3Ccircle%20cx=%27180%27%20cy=%27460%27%20r=%27200%27%20fill=%27%23F3EEE7%27%20opacity=%27.5%27/%3E%3Ccircle%20cx=%27620%27%20cy=%27260%27%20r=%2790%27%20fill=%27%23CFC4B6%27%20opacity=%27.5%27/%3E%3C/svg%3E'};
+let BRAND=Object.assign({},DEF),DR=null,PUB=Object.assign({},DEF),PUBBING=false;
+function bx(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;')}
+function dft(){return BRAND}
+function dirty(){return ['col','name','tag','logo','banner'].some(k=>BRAND[k]!==PUB[k])}
+function applyBrand(j){['name','tag','col','logo','banner'].forEach(k=>{if(j&&typeof j[k]=='string'&&j[k])BRAND[k]=j[k]});PUB=Object.assign({},BRAND);setCol(BRAND.col);document.title=BRAND.name}
+async function publishBrand(){if(PUBBING)return;let a=null;try{a=window.claude&&await claude.use('artifact')}catch(e){}
+ if(!a){toast('Publishing is not available here.');return}
+ PUBBING=true;render(1);
+ try{await a.publish({'brand.json':{content:JSON.stringify({name:BRAND.name,tag:BRAND.tag,col:BRAND.col,logo:BRAND.logo,banner:BRAND.banner}),contentType:'application/json'}});PUB=Object.assign({},BRAND);toast('Published. Everyone with the link now sees your branding.')}
+ catch(e){let c=e&&e.code;toast(c=='not_writer'||c=='not_granted'?'Only the page owner can publish branding.':c=='conflict'?'Someone else just updated this page. Please try again.':c=='too_large'?'Those images are too large. Try smaller ones.':'Could not publish. Please try again.')}
+ PUBBING=false;render(1)}
+function shrink(f,max,cb){let r=new FileReader();r.onload=()=>{let im=new Image();im.onload=()=>{let k=Math.min(1,max/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);let x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(im,0,0,c.width,c.height);cb(c.toDataURL('image/jpeg',.85))};im.onerror=()=>cb(r.result);im.src=r.result};r.readAsDataURL(f)}
+function setD(k,v){BRAND[k]=v;if(k=='col')setCol(v);if(k=='name')document.title=String(v).trim()||DEF.name;render(1)}
+function resetBrand(){BRAND=Object.assign({},DEF);DR=null;setCol(DEF.col);document.title=BRAND.name;render();toast('Default branding restored.')}
+const SV=[{id:1,n:'Haircut',d:'Cut and style with a consultation',c:'Hair',p:2500,m:30,b:0,pop:1},{id:2,n:'Hair Wash & Blow Dry',d:'Wash, conditioning and blow dry',c:'Hair',p:3000,m:45,b:0,pop:1},{id:3,n:'Hair Coloring',d:'Full colour with a patch test',c:'Hair',p:8500,m:120,b:15,pop:1},{id:4,n:'Facial',d:'Deep cleanse, mask and massage',c:'Facial',p:4500,m:60,b:15,pop:1},{id:5,n:'Manicure',d:'Shape, cuticle care and polish',c:'Nails',p:3000,m:45,b:0},{id:6,n:'Pedicure',d:'Soak, scrub and polish',c:'Nails',p:3500,m:60,b:0},{id:7,n:'Bridal Makeup',d:'Trial notes included',c:'Makeup',p:18000,m:90,b:15},{id:8,n:'Head Massage',d:'Relaxing scalp massage',c:'Spa',p:3500,m:45,b:0}];
+const ST=[{id:'n',n:'Nimal Perera',role:'Senior Stylist',sk:['Hair'],r:4.9,col:'#8A4B6B',tags:'Haircuts • Coloring'},{id:'s',n:'Sarah Fernando',role:'Beauty Therapist',sk:['Hair','Facial','Makeup','Spa'],r:4.8,col:'#3E6B7A',tags:'Facials • Makeup'},{id:'t',n:'Tharindu Silva',role:'Nail Artist',sk:['Nails','Spa'],r:4.7,col:'#6B6B3E',tags:'Nails • Spa'}];
+const DAYS=[{l:'Today',w:'Tue',n:6},{l:'Tomorrow',w:'Wed',n:7},{l:'Thu',w:'Thu',n:8,full:1},{l:'Fri',w:'Fri',n:9},{l:'Sat',w:'Sat',n:10},{l:'Sun',w:'Sun',n:11,closed:1}];
+const DL=['Tuesday, 6 October','Wednesday, 7 October','Thursday, 8 October','Friday, 9 October','Saturday, 10 October','Sunday, 11 October'];
+let A=[{id:'VL-10431',st:'n',d:0,s:600,du:135,sv:'Hair Coloring',cu:'Dilani Jayasinghe',ph:'077 412 3390',status:'confirmed',pay:'Deposit',paid:2000,tot:8500,src:'WhatsApp',refund:'Refund failed'},
+{id:'VL-10432',st:'s',d:0,s:540,du:75,sv:'Facial',cu:'Sachini Wickrama',ph:'071 889 2210',status:'completed',pay:'Paid',paid:4500,tot:4500,src:'Online'},
+{id:'VL-10433',st:'t',d:0,s:690,du:45,sv:'Manicure',cu:'Ishara Gunawardena',ph:'076 220 4417',status:'confirmed',pay:'Unpaid',paid:0,tot:3000,src:'Phone'},
+{id:'VL-10434',st:'s',d:0,s:720,du:30,sv:'Haircut',cu:'Kasun Rathnayake',ph:'070 551 9023',status:'confirmed',pay:'Paid',paid:2500,tot:2500,src:'Online'},
+{id:'VL-10435',st:'n',d:0,s:960,du:30,sv:'Haircut',cu:'Amal De Silva',ph:'077 100 8841',status:'confirmed',pay:'Deposit',paid:500,tot:2500,src:'Online'},
+{id:'VL-10436',st:'t',d:1,s:840,du:60,sv:'Pedicure',cu:'Maya Senanayake',ph:'075 330 2216',status:'confirmed',pay:'Paid',paid:3500,tot:3500,src:'Online'}];
+let Q=[{id:1,n:'Nadeesha Peiris',sv:'Facial',m:60,state:'Waiting',w:7},{id:2,n:'Kasun Bandara',sv:'Haircut',m:30,state:'Waiting',w:12}],W=[];
+let S={m:'c',v:'landing',step:0,sel:[],cat:'All',q:'',staff:'any',d:0,slot:null,hold:null,other:null,pay:'deposit',cu:{name:'',ph:'',em:'',note:''},touched:0,tok:0,paying:false,done:null,resch:null,load:0,state:'',leave:{},av:'today',wi:null,saved:0},tm=null,seq=10482;
+const live=a=>!['cancelled','noshow'].includes(a.status),sv=id=>SV.find(s=>s.id==id),stf=id=>ST.find(s=>s.id==id);
+const cats=()=>S.sel.map(i=>sv(i).c),dur=()=>S.sel.reduce((a,i)=>a+sv(i).m+sv(i).b,0),tot=()=>S.sel.reduce((a,i)=>a+sv(i).p,0),show=()=>S.sel.reduce((a,i)=>a+sv(i).m,0);
+const elig=cs=>ST.filter(s=>cs.every(c=>s.sk.includes(c))),dep=()=>Math.min(Math.round(tot()*.2/100)*100,2000);
+function busy(st,d,s,e,ign,own){if(S.leave[st+d])return 'leave';if(s<BR[1]&&e>BR[0])return 'break';
+ if(A.some(a=>a.st==st&&a.d==d&&live(a)&&a.id!=ign&&s<a.s+a.du&&e>a.s))return 'booked';
+ let h=S.other;if(h&&h.st==st&&h.d==d&&s<h.s+h.du&&e>h.s)return 'held';
+ h=S.hold;if(!own&&h&&h.st==st&&h.d==d&&s<h.s+h.du&&e>h.s)return 'held';return ''}
+function slots(d,L,cs,staff,ign,own){let D=DAYS[d];if(D.full||D.closed)return[];let pool=staff=='any'?elig(cs):elig(cs).filter(x=>x.id==staff),o=[];
+ for(let s=d==0?Math.max(OPEN,Math.ceil(NOW/30)*30):OPEN;s+L<=CLOSE;s+=30){let r=pool.map(p=>busy(p.id,d,s,s+L,ign,own)),i=r.indexOf('');o.push({s,free:i<0?null:pool[i].id,state:i>=0?'ok':r.includes('held')?'held':'x'})}
+ let n=o.filter(x=>x.state=='ok').length;o.forEach(x=>{if(x.state=='ok'&&n<=3)x.lim=1});return o}
+const ds=()=>slots(S.d,dur(),cats(),S.staff,S.resch,1);
+function nextAv(from){for(let d=from;d<DAYS.length;d++){let f=slots(d,dur(),cats(),S.staff,S.resch,1).find(x=>x.state=='ok');if(f)return{d,s:f.s}}}
+function dayState(i){let D=DAYS[i];if(D.closed)return['Closed','ne'];if(D.full)return['Full','er'];let n=slots(i,dur()||30,cats(),S.staff,S.resch,1).filter(x=>x.state=='ok').length;return n<=3?['Limited','wn']:['Open','ok']}
+function toast(m){$('#ts').innerHTML='<div class="toast" role="status">'+m+'</div>';clearTimeout(toast.t);toast.t=setTimeout(()=>$('#ts').innerHTML='',3400)}
+function mode(m){S.m=m;$('#bc').setAttribute('aria-pressed',m=='c');$('#ba').setAttribute('aria-pressed',m=='a');closeS();render()}
+const left=()=>{if(!S.hold)return'0:00';let s=Math.max(0,Math.ceil((S.hold.exp-Date.now())/1000));return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')};
+function stopT(){clearInterval(tm);tm=null}
+function startHold(){stopT();S.hold={st:S.slot.st,d:S.d,s:S.slot.s,du:dur(),exp:Date.now()+HOLD*1000};S.state='';tm=setInterval(()=>{if(!S.hold)return stopT();if(S.hold.exp<=Date.now()){if(S.paying)return;S.hold=null;stopT();S.state='expired';S.slot=null;if(S.step>2)S.step=2;render()}else document.querySelectorAll('.tm').forEach(e=>e.textContent=left())},500)}
+function pickSlot(s,st){S.slot={s,st};startHold();render()}
+function go(n){S.step=n;S.load=1;render();setTimeout(()=>{S.load=0;render()},n==2?350:0);scrollTo(0,0)}
+function book(){S.v='book';S.step=0;render();scrollTo(0,0)}
+function reset(){stopT();Object.assign(S,{v:'landing',step:0,sel:[],slot:null,hold:null,done:null,resch:null,state:'',staff:'any',paying:false,touched:0,saved:0});render()}
+function pick(i){let k=S.sel.indexOf(i);k<0?S.sel.push(i):S.sel.splice(k,1);S.slot=null;S.hold=null;render()}
+const okPh=p=>/^(\+94|0)7\d{8}$/.test(p.replace(/[\s-]/g,''));
+function recog(){let p=S.cu.ph.replace(/[\s-]/g,'');let a=A.find(x=>x.ph.replace(/\s/g,'')==p||('+94'+x.ph.replace(/\s/g,'').slice(1))==p);return a?a.cu:null}
+const GATEWAY={failRate:.08,delayRate:.06};
+function gateway(){if(!navigator.onLine)return 'drop';const r=Math.random();return r<GATEWAY.failRate?'fail':r<GATEWAY.failRate+GATEWAY.delayRate?'delay':'ok'}
+function pay(){if(S.paying)return;if(!S.hold){S.state='expired';render();return}
+ if(!navigator.onLine&&S.pay=='salon'){toast('You’re offline. Reconnect to confirm. Your time is still reserved.');return}
+ const tok=++S.tok,out=S.pay=='salon'?'ok':gateway();S.paying=true;S.state='proc';render();
+ setTimeout(()=>{if(S.tok!==tok||!S.paying)return;S.paying=false;
+  if(out=='fail')S.state='failed';else if(out=='drop'||out=='delay')S.state='verify';else{finish();return}render()},1400)}
+function cancelPay(){if(!S.paying)return;S.tok++;S.paying=false;S.state='cancelled';render()}
+function checkPay(){if(!navigator.onLine){toast('You’re offline. We’ll keep checking once you’re back online.');return}S.paying=false;finish()}
+if(typeof addEventListener=='function'){addEventListener('offline',()=>{if(S.paying){S.tok++;S.paying=false;S.state='verify';render()}});addEventListener('online',()=>{if(S.state=='verify')toast('You’re back online. Check your payment status.')})}
+function finish(){if(S.done&&S.done.key==S.key){S.state='';S.step=5;render();return}
+ if(!S.hold){S.state='expired';render();return}
+ let id=S.resch||'VL-'+(seq++),p=S.pay=='full'?tot():S.pay=='deposit'?dep():0,a={id,st:S.hold.st,d:S.hold.d,s:S.hold.s,du:S.hold.du,sv:S.sel.map(i=>sv(i).n).join(' + '),cu:S.cu.name||'Guest',ph:S.cu.ph,status:'confirmed',pay:S.pay=='full'?'Paid':S.pay=='deposit'?'Deposit':'Unpaid',paid:p,tot:tot(),src:'Online',note:S.cu.note};
+ A.push(a);S.done=a;S.key=a.id;stopT();S.hold=null;S.state='';S.step=5;render();scrollTo(0,0)}
+/* ---------- CUSTOMER ---------- */
+function logo(sz,B){B=B||BRAND;return '<div class="logo" style="'+(sz?'width:'+sz+'px;height:'+sz+'px':'')+'">'+(B.logo?'<img alt="" src="'+B.logo+'">':bx(B.name[0]||'S'))+'</div>'}
+function bar(lbl,fn,dis,info){return '<div class="bar"><div class="r"><div class="g">'+(info||'')+'</div><button class="btn" '+(dis?'disabled':'')+' onclick="'+fn+'">'+lbl+'</button></div></div>'}
+function back(n){const b='<button class="btn o sm" onclick="'+(n<0?'reset()':'go('+n+')')+'" aria-label="Back">← Back</button>';if(S.v=='book'&&S.step<=4&&!S.resch)return '<div class="r sb">'+b+'<span class="s m">Step '+(S.step+1)+' of 5</span></div><div class="pg" aria-hidden="true">'+[0,1,2,3,4].map(i=>'<i class="'+(i<=S.step?'on':'')+'"></i>').join('')+'</div>';return b}
+function holdBar(){return S.hold?'<div class="bn in r sb"><span><b>Your time is reserved for 10 minutes.</b></span><span class="tm" role="timer">'+left()+'</span></div>':''}
+function vLanding(){let pop=SV.filter(s=>s.pop);
+ return '<div class="ban" role="img" aria-label="Salon banner" '+(BRAND.banner?'style="background-image:url('+BRAND.banner+')"':'')+'></div><div class="wrap nb d"><div class="r ring" style="margin-top:-48px;align-items:flex-end">'+logo(96)+'</div><h1 style="margin-top:12px">'+BRAND.name+'</h1><div class="m s">Colombo, Sri Lanka</div><div class="r w s m" style="margin:8px 0 16px;gap:6px 16px"><span>★ 4.8 (312 reviews)</span><span class="pl ok">Open until 6 PM</span><span>Mon–Sat, 9 AM–6 PM</span></div>'
+ +recogBanner()+'<button class="btn bl" onclick="book()">Book an appointment</button><div class="trio"><button class="btn o sm" onclick="tab(\'svc\')">Services</button><button class="btn o sm" onclick="toast(\'Opening WhatsApp…\')">WhatsApp</button><button class="btn o sm" onclick="toast(\'Calling +94 77 123 4567\')">Call</button></div>'
+ +'<h2>Popular services</h2>'+pop.map(s=>'<button class="row" onclick="S.sel=['+s.id+'];book()"><span class="g"><b style="font-weight:500">'+s.n+'</b><br><span class="s m">'+s.m+' min</span></span><b style="font-weight:500">'+fm(s.p)+'</b></button>').join('')+'<p class="s m" style="margin-top:20px">'+bx(BRAND.tag)+'</p></div>'}
+function recogBanner(){let a=S.done&&live(S.done)&&S.done.status!='completed'?S.done:null;return a?'<div class="next"><span class="s m">Your next appointment</span><b>'+a.sv+'</b><span class="s">'+DL[a.d].split(',')[0]+', '+T(a.s)+' · '+stf(a.st).n.split(' ')[0]+'</span><button class="btn sm" onclick="manage(\''+a.id+'\')">Manage</button></div>':''}
+function vServices(){return '<div class="wrap"><h1 style="margin-top:8px">Services</h1>'+svList()+'</div>'+(S.sel.length?bar('Continue — '+fm(tot()),'book()',0,sumInfo()).replace('class="bar"','class="bar up"'):'')}
+function svList(){let L=SV.filter(s=>(S.cat=='All'||s.c==S.cat)&&s.n.toLowerCase().includes(S.q.toLowerCase()));
+ return '<input type="search" aria-label="Search services" placeholder="Search services" value="'+S.q+'" oninput="S.q=this.value;render(1)" style="margin:8px 0"><div class="chips">'+['All','Hair','Nails','Facial','Makeup','Spa'].map(c=>'<button class="chip" aria-pressed="'+(S.cat==c)+'" onclick="S.cat=\''+c+'\';render()">'+c+'</button>').join('')+'</div>'
+ +(L.length?L.map(s=>'<button class="row" aria-pressed="'+S.sel.includes(s.id)+'" onclick="pick('+s.id+')"><span class="ck">'+(S.sel.includes(s.id)?'✓':'')+'</span><span class="g"><b style="font-weight:500">'+s.n+'</b><br><span class="s m">'+s.d+' · '+s.m+' min</span></span><b style="font-weight:500">'+fm(s.p)+'</b></button>').join(''):'<div class="card sec m" style="text-align:center">Nothing matches “'+S.q+'”.<br><button class="btn o sm" style="margin-top:8px" onclick="S.q=\'\';S.cat=\'All\';render()">Clear search</button></div>')}
+function sumInfo(){return S.sel.length?'<b style="font-weight:600">'+fm(tot())+'</b><div class="s m">'+show()+' min'+(S.sel.length>1?' · '+S.sel.length+' services':'')+'</div>':'<span class="m s">Select a service</span>'}
+function vBook(){let h='<div class="wrap d">';
+ if(S.step==0){h+=back(-1)+'<h1 style="margin-top:12px">What would you like?</h1>'+svList();
+  if(S.sel.length>1)h+='<div class="card sec s" style="margin-top:12px">'+S.sel.map(i=>'<div class="kv"><span>'+sv(i).n+'</span><span class="m">'+sv(i).m+' min</span></div>').join('')+'<div class="kv"><b>Total duration</b><b>'+show()+' min</b></div><div class="kv"><b>Total</b><b>'+fm(tot())+'</b></div></div>';
+  return h+'</div>'+bar('Continue — '+fm(tot()),'go(1)',!S.sel.length,sumInfo())}
+ if(S.step==1){let el=elig(cats());h+=back(0)+'<h1 style="margin-top:12px">Who would you like?</h1><p class="m s" style="margin:0">Only professionals who can do your services are shown.</p>';
+  h+='<button class="row" aria-pressed="'+(S.staff=='any')+'" onclick="S.staff=\'any\';render()"><span class="av" style="background:var(--ink)">★</span><span class="g"><b style="font-weight:500">Any available professional</b><br><span class="s m">Fastest. We’ll match you automatically</span></span><span class="ck">'+(S.staff=='any'?'✓':'')+'</span></button>';
+  h+=el.length?'<h2>Or choose a professional</h2>'+el.map(s=>{let n=slots(S.d,dur(),cats(),s.id,0,1).filter(x=>x.state=='ok').length;return '<button class="row" aria-pressed="'+(S.staff==s.id)+'" onclick="S.staff=\''+s.id+'\';render()"><span class="av" style="background:'+s.col+'">'+s.n[0]+'</span><span class="g"><b style="font-weight:500">'+s.n+'</b><br><span class="s m">'+s.role+' · ★ '+s.r+'</span><br><span class="s m">'+s.tags+'</span><br><span class="pl '+(n?'ok':'er')+'" style="margin-top:4px">'+(n?n+' times today':'Full today')+'</span></span><span class="ck">'+(S.staff==s.id?'✓':'')+'</span></button>'}).join(''):'<div class="bn wn">No single professional does all of these. Remove one service, or book them as two visits.</div>';
+  return h+'</div>'+bar('Continue','go(2)',!el.length,sumInfo())}
+ if(S.step==2){let L=S.load?[]:ds(),D=DAYS[S.d],na=nextAv(S.d+1);
+  h+=back(1)+'<h1 style="margin-top:12px">'+(S.resch?'Choose a new time':'Choose a time')+'</h1><p class="m s" style="margin:0 0 8px">'+show()+' min'+(dur()>show()?' + '+(dur()-show())+' min buffer':'')+(S.staff!='any'?' · '+stf(S.staff).n:'')+'</p>';
+  h+='<div class="ds">'+DAYS.map((x,i)=>{let st=dayState(i);return '<button class="dy" '+(x.closed?'disabled':'')+' aria-pressed="'+(S.d==i)+'" aria-label="'+DL[i]+', '+st[0]+'" onclick="S.d='+i+';S.slot=null;S.hold=null;S.state=\'\';go(2)"><span class="dw">'+(i==0?'Today':x.w)+'</span><b class="dn">'+x.n+'</b><i class="dt '+st[1]+'"></i></button>'}).join('')+'</div><div class="lgd"><span><i class="dt ok"></i>Open</span><span><i class="dt wn"></i>Limited</span><span><i class="dt er"></i>Full</span><span><i class="dt ne"></i>Closed</span></div><h2 style="margin:14px 0 8px">'+DL[S.d]+'</h2>';
+  if(S.state=='expired')h+='<div class="bn wn"><b>Your reserved time ended.</b> It’s open to others again. Pick a time to reserve it again.</div>';
+  h+=holdBar();
+  if(S.load)h+='<div class="sl">'+'<div class="sk"></div>'.repeat(9)+'</div>';
+  else if(D.closed)h+='<div class="card sec">We’re closed on Sunday.</div>';
+  else if(!L.some(x=>x.state=='ok')){h+='<div class="card" style="margin-top:8px"><h3>'+(D.full?'Looks like we’re fully booked.':'Nothing available for this time.')+'</h3>'+(na?'<p class="m">Next available: <b style="font-weight:500">'+DAYS[na.d].l+', '+T(na.s)+'</b></p><button class="btn bl" onclick="S.d='+na.d+';S.slot=null;go(2)">Show '+DAYS[na.d].l+'</button>':'')+'<button class="btn o bl" style="margin-top:8px" onclick="openWait()">Join waitlist</button><button class="btn o bl" style="margin-top:8px" onclick="toast(\'Opening WhatsApp…\')">Contact salon</button></div>'}
+  else h+='<div class="sl" style="margin-top:6px">'+L.map(x=>x.state=='ok'?'<button class="'+(x.lim?'lm':'')+'" aria-pressed="'+!!(S.slot&&S.slot.s==x.s&&S.hold)+'" onclick="pickSlot('+x.s+',\''+x.free+'\')">'+T(x.s)+(x.lim?'<br><span class="s m">Limited</span>':'')+'</button>':x.state=='held'?'<button class="hd" disabled aria-label="'+T(x.s)+', held by another customer">'+T(x.s)+'<br><span class="s">Held</span></button>':'').join('')+'</div>'+(S.other?'<div class="bn in">Someone is currently completing a booking for a time marked “Held”. It may open again shortly.</div>':'')+'<p class="s m">Only times that fit your full appointment are shown.</p>';
+  return h+'</div>'+(S.resch?bar('Confirm new time','resch()',!S.slot,'<span class="s m">Availability is checked again</span>'):bar('Continue','go(3)',!(S.slot&&S.hold),S.slot&&S.hold?'<b style="font-weight:600">'+DL[S.d].split(',')[0]+', '+T(S.slot.s)+'</b><div class="s m">'+show()+' min · '+fm(tot())+'</div>':'<span class="s m">Select a time</span>'))}
+ if(S.step==3){let rn=recog(),pv=S.cu.ph&&!okPh(S.cu.ph);h+=back(2)+'<h1 style="margin-top:12px">Your details</h1>'+holdBar()+(rn?'<div class="bn ac"><b>Welcome back, '+rn.split(' ')[0]+'.</b> <a href="#" style="color:var(--ac)" onclick="S.cu.name=\''+rn+'\';render();return false">Use my details</a></div>':'')
+  +'<label for="n">Full name</label><input id="n" autocomplete="name" value="'+S.cu.name+'" oninput="S.cu.name=this.value;chk()"><label for="p">Mobile number</label><input id="p" inputmode="tel" placeholder="077 123 4567" '+(pv?'aria-invalid="true"':'')+' value="'+S.cu.ph+'" onblur="render()" oninput="S.cu.ph=this.value;chk()">'+(pv?'<div class="err">Please enter a valid Sri Lankan mobile number.</div>':'')+'<label for="e">Email <span class="m">(optional)</span></label><input id="e" type="email" value="'+S.cu.em+'" oninput="S.cu.em=this.value"><label for="o">Notes <span class="m">(optional)</span></label><textarea id="o" rows="2" oninput="S.cu.note=this.value">'+S.cu.note+'</textarea><p class="s m">No account needed. You’ll book as a guest.</p></div>'+'<div id="dbar"></div>';
+ }
+ if(S.step==4)return vPay();
+ if(S.step==5)return vDone();
+ return h}
+function chk(){let b=$('#dbar');if(b)b.innerHTML=bar('Continue to payment','go(4)',!(S.cu.name.trim().length>1&&okPh(S.cu.ph)),'<span class="s m">'+fm(tot())+'</span>')}
+function vPay(){let h='<div class="wrap d">'+back(3)+'<h1 style="margin-top:12px">Pay to confirm</h1>';
+ if(S.state=='verify')return h+'<div class="bn wn"><b>Payment verification in progress.</b> We haven’t heard back from your bank yet. Please don’t pay again. Your time is still reserved and you won’t be booked twice.</div><button class="btn bl" onclick="checkPay()">Check payment status</button></div>';
+ if(S.state=='failed'||S.state=='cancelled')h+='<div class="bn er"><b>'+(S.state=='failed'?'Your payment wasn’t completed.':'You cancelled the payment.')+'</b> No money was taken. Your time is still reserved for <span class="tm">'+left()+'</span>.</div>';else h+=holdBar();
+ let p=S.hold;h+='<div class="card">'+[['Service',S.sel.map(i=>sv(i).n).join(', ')],['Professional',stf(p?p.st:S.slot.st).n],['Date',DL[S.d]],['Time',T(S.slot.s)+' – '+T(S.slot.s+show())],['Duration',show()+' min']].map(k=>'<div class="kv"><span class="m">'+k[0]+'</span><b>'+k[1]+'</b></div>').join('')+'</div><h2>Payment option</h2>';
+ const O=[['deposit','Pay deposit',fm(dep()),'Remaining '+fm(tot()-dep())+' at the salon'],['full','Pay full amount',fm(tot()),'Nothing more to pay'],['salon','Pay at salon','Rs. 0','We hold your time. Pay when you arrive']];
+ h+=O.map(o=>'<button class="row" aria-pressed="'+(S.pay==o[0])+'" onclick="S.pay=\''+o[0]+'\';render()"><span class="ck">'+(S.pay==o[0]?'✓':'')+'</span><span class="g"><b style="font-weight:500">'+o[1]+'</b><br><span class="s m">'+o[3]+'</span></span><b style="font-weight:500">'+o[2]+'</b></button>').join('');
+ h+='<div class="kv" style="margin-top:8px"><b>Total</b><b style="font-weight:600">'+fm(tot())+'</b></div><p class="s m">Free cancellation up to 24 hours before. After that the deposit is kept.</p>';
+ h+=S.state=='failed'||S.state=='cancelled'?'<div class="r w" style="margin-top:12px"><button class="btn o sm" onclick="S.state=\'\';render()">Choose another method</button><button class="btn o sm" onclick="go(2)">Return to booking</button></div>':'';
+ return h+'</div>'+bar(S.paying?'Processing…':S.pay=='salon'?'Confirm booking':(S.state=='failed'?'Try again — ':'Pay ')+fm(S.pay=='full'?tot():dep()),'pay()',S.paying,S.paying?'<button class="btn o sm" onclick="cancelPay()">Cancel payment</button>':'<span class="s m">Secure checkout</span>')}
+function vDone(){let a=S.done;if(a.status=='cancelled')return '<div class="wrap d"><h1>Appointment cancelled</h1><div class="card" style="margin-top:12px"><div class="kv"><span class="m">Refund</span><b>'+(a.paid?fm(a.refAmt||0):'None due')+'</b></div>'+(a.paid?'<div class="kv"><span class="m">Status</span><b><span class="pl wn">Refund processing</span></b></div><p class="s m">It usually reaches your card in 3–5 working days.</p>':'')+'</div><button class="btn bl" style="margin-top:16px" onclick="reset()">Back to home</button></div>';
+ let r=a.paid?'':'';return '<div class="wrap d"><div style="text-align:center;padding:16px 0"><div class="logo" style="margin:0 auto 12px;background:var(--ok)">✓</div><h1>Appointment confirmed</h1><div class="m s">Booking ID '+a.id+'</div></div><div class="card">'+[['Service',a.sv],['Professional',stf(a.st).n],['Date',DL[a.d]],['Time',T(a.s)+' – '+T(a.s+(a.du-(a.du%15&&0)))],['Amount paid',fm(a.paid)],['Remaining at salon',fm(a.tot-a.paid)]].map(k=>'<div class="kv"><span class="m">'+k[0]+'</span><b>'+k[1]+'</b></div>').join('')+'</div><div class="bn ok s">Confirmation sent to your phone by WhatsApp and SMS.</div>'
+ +(S.saved?'<div class="bn ac s">Details saved for faster booking next time.</div>':'<div class="card sec s r sb"><span>Save your details for faster booking next time.</span><button class="btn o sm" onclick="S.saved=1;render()">Save</button></div>')
+ +'<div class="duo" style="margin-top:12px"><button class="btn o" onclick="toast(\'Added to calendar\')">Add to calendar</button><button class="btn o" onclick="toast(\'Opening WhatsApp…\')">Contact salon</button></div><button class="btn bl" style="margin-top:10px" onclick="manage(\''+a.id+'\')">Manage appointment</button><button class="lnk" onclick="reset()">Back to home</button></div>'}
+function vManage(){let a=S.done;if(!a)return '<div class="wrap d"><h1 style="margin-top:8px">My booking</h1><div class="card" style="margin-top:12px;text-align:center"><h3>No upcoming appointment</h3><p class="m s">Once you book, it appears here so you can reschedule or cancel.</p><button class="btn" onclick="book()">Book an appointment</button></div></div>';return '<div class="wrap d"><h1 style="margin-top:8px">Your appointment</h1><span class="pl ok">'+a.status+'</span> <span class="pl ne">'+a.pay+'</span><div class="card" style="margin-top:12px">'+[['Booking ID',a.id],['Service',a.sv],['Professional',stf(a.st).n],['When',DL[a.d]+', '+T(a.s)],['Paid',fm(a.paid)]].map(k=>'<div class="kv"><span class="m">'+k[0]+'</span><b>'+k[1]+'</b></div>').join('')+'</div><div class="r" style="margin-top:12px"><button class="btn g" onclick="startResch()">Reschedule</button><button class="btn d g" onclick="openCancel()">Cancel</button></div><button class="btn o bl" style="margin-top:8px" onclick="toast(\'Opening WhatsApp…\')">Contact salon</button></div>'}
+function manage(id){S.done=A.find(x=>x.id==id);S.v='manage';closeS();S.m='c';mode('c');S.v='manage';render()}
+function startResch(){let a=S.done;S.sel=SV.filter(s=>a.sv.includes(s.n)).map(s=>s.id);S.resch=a.id;S.staff=a.st;S.d=a.d;S.slot=null;S.hold=null;S.v='book';go(2)}
+function resch(){let a=A.find(x=>x.id==S.resch),c=busy(S.slot.st,S.d,S.slot.s,S.slot.s+dur(),S.resch,1);if(c){toast('That time was just booked by someone else. Please choose another time.');S.slot=null;S.hold=null;render();return}Object.assign(a,{st:S.slot.st,d:S.d,s:S.slot.s,du:dur()});S.done=a;S.resch=null;S.hold=null;stopT();toast('Rescheduled to '+T(a.s)+'. Confirmation sent');S.v='manage';render()}
+function openCancel(){let a=S.done,free=a.d>0,ra=free?a.paid:0;$('#sh').innerHTML='<div class="sheet" onclick="if(event.target==this)closeS()"><div role="dialog" aria-label="Cancel appointment"><h1>Cancel this appointment?</h1><div class="bn in s"><b>Cancellation policy:</b> free cancellation up to 24 hours before. Later cancellations keep the deposit.</div>'+(a.paid?'<div class="kv"><span class="m">You paid</span><b>'+fm(a.paid)+'</b></div><div class="kv"><span class="m">Refund</span><b>'+fm(ra)+(free?'':' (late cancellation)')+'</b></div>':'<p class="m s">Nothing was paid, so no refund is due.</p>')+'<button class="btn d bl" style="margin-top:16px" onclick="doCancel('+ra+')">Cancel appointment</button><button class="btn o bl" style="margin-top:8px" onclick="closeS()">Keep appointment</button></div></div>'}
+function doCancel(ra){let a=S.done;a.status='cancelled';a.refAmt=ra;if(a.paid)a.refund=ra?'Refund processing':'No refund';closeS();S.v='done';S.step=5;render()}
+function closeS(){$('#sh').innerHTML=''}
+function openWait(){$('#sh').innerHTML='<div class="sheet" onclick="if(event.target==this)closeS()"><div role="dialog"><h1>Join the waitlist</h1><p class="m s">We’ll message you if a time opens. You confirm before anything is booked.</p><label>Date</label><select id="wd">'+DAYS.filter(d=>!d.closed).map(d=>'<option>'+d.w+' '+d.n+' Oct</option>').join('')+'</select><label>Preferred time</label><select id="wt"><option>Morning (9–12)</option><option>Afternoon (12–4)</option><option>Evening (4–6)</option></select><label>Professional</label><select id="wp"><option>Any available professional</option>'+ST.map(s=>'<option>'+s.n+'</option>').join('')+'</select><label>Service</label><input value="'+(S.sel.map(i=>sv(i).n).join(', ')||'Haircut')+'" readonly><button class="btn bl" style="margin-top:16px" onclick="W.push({n:S.cu.name||\'Sarah Wickrama\',sv:\''+(S.sel.map(i=>sv(i).n).join(', ')||'Haircut')+'\',w:$(\'#wd\').value+\', \'+$(\'#wt\').value});closeS();toast(\'You’re on the waitlist. We’ll WhatsApp you if a time opens.\')">Join waitlist</button></div></div>'}
+
+/* ---------- icons, footer navs, reports ---------- */
+const IC={bell:'<path d="M6 17v-6a6 6 0 0 1 12 0v6l1.5 2h-15zM10 21h4"/>',clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',list:'<path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/>',users:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 5a3.5 3.5 0 0 1 0 7M18 14a6 6 0 0 1 3.5 6"/>',bars:'<path d="M5 20V10M12 20V4M19 20v-7"/>',dots:'<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>',home:'<path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',svc:'<path d="M4 6h16M4 12h16M4 18h10"/>',cal:'<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4M12 13v5M9.5 15.5h5"/>',mine:'<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4M9 15l2 2 4-4"/>',chat:'<path d="M4 5h16v11H9l-5 4z"/>'};
+const ic=n=>'<svg width="22" height="22" viewBox="0 0 24 24" fill="'+(n=='dots'?'currentColor':'none')+'" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+IC[n]+'</svg>';
+function cNav(){const a=S.v=='landing'?'home':S.v=='services'?'svc':(S.v=='manage'||S.v=='done')?'mine':'';
+ const it=[['home','Home','home'],['svc','Services','svc'],['book','Book','cal'],['mine','My booking','mine'],['contact','Contact','chat']];
+ return '<nav class="tabs" aria-label="Main">'+it.map(n=>'<button class="'+(n[0]=='book'?'bk':'')+'" '+(a==n[0]?'aria-current="true"':'')+' onclick="tab(\''+n[0]+'\')"><span class="ti">'+ic(n[2])+'</span>'+n[1]+'</button>').join('')+'</nav>'}
+function tab(t){closeS();if(t=='svc'){S.step=0;S.v='services';render();scrollTo(0,0);return}if(t=='contact'){openContact();return}S.step=0;if(t=='book'){book();return}if(t=='mine'){myb();return}S.v=t=='home'?'landing':'services';render();scrollTo(0,0)}
+function myb(){let a=S.done&&live(S.done)&&S.done;if(a)manage(a.id);else{S.done=null;S.v='manage';render()}scrollTo(0,0)}
+function openContact(){$('#sh').innerHTML='<div class="sheet" onclick="if(event.target==this)closeS()"><div role="dialog" aria-label="Contact salon"><div class="r sb"><h1>Contact us</h1><button class="btn o sm" onclick="closeS()">Close</button></div><div class="card" style="margin:12px 0"><div class="kv s"><span class="m">Address</span><b>Galle Road, Colombo 03</b></div><div class="kv s"><span class="m">Hours</span><b>Mon–Sat, 9 AM–6 PM</b></div><div class="kv s"><span class="m">Phone</span><b>+94 77 123 4567</b></div></div><button class="btn bl" onclick="toast(\'Opening WhatsApp…\')">Chat on WhatsApp</button><button class="btn o bl" style="margin-top:8px" onclick="toast(\'Calling +94 77 123 4567\')">Call the salon</button></div></div>'}
+function openMore(){const L=[['staff','Staff','Hours, breaks and leave'],['svc','Services','Prices, duration and buffer'],['pay','Payments','Paid, unpaid and refunds'],['wa','WhatsApp','Chat booking preview'],['set','Settings','Logo, cover and colour']];
+ $('#sh').innerHTML='<div class="sheet" onclick="if(event.target==this)closeS()"><div role="dialog" aria-label="More"><h1>More</h1><div style="margin-top:12px">'+L.map(l=>'<button class="row" onclick="S.av=\''+l[0]+'\';closeS();scrollTo(0,0);render()"><span class="g"><b style="font-weight:500">'+l[1]+'</b><br><span class="s m">'+l[2]+'</span></span><span class="chev">›</span></button>').join('')+'</div></div></div>'}
+S.rr={k:'7',f:-13,t:0};
+let sd=11;const rnd=()=>(sd=(sd*9301+49297)%233280)/233280;const HIST={};
+(function(){const W=[3,2,1,2,2,1.5,.4,1.2],sw=W.reduce((a,b)=>a+b);
+ for(let o=-90;o<=-1;o++){const wd=new Date(2026,9,6+o).getDay(),L=[];
+  if(wd!=0){const n=Math.round((wd==6?17:wd==5?14:9)+rnd()*5);
+   for(let i=0;i<n;i++){let r=rnd()*sw,k=0;while(k<W.length-1&&(r-=W[k])>0)k++;const s=SV[k],pool=ST.filter(x=>x.sk.includes(s.c)),st=pool[Math.floor(rnd()*pool.length)].id,q=rnd(),status=q<.06?'noshow':q<.14?'cancelled':'completed',x=rnd(),src=x<.52?'Online':x<.72?'WhatsApp':x<.87?'Walk-in':'Phone';
+    L.push({sv:s.n,st,tot:s.p,paid:status=='completed'?s.p:0,status,src})}}
+  HIST[o]=L}})();
+const dayList=o=>o<0?(HIST[o]||[]):A.filter(a=>a.d==o).map(a=>({sv:a.sv,st:a.st,tot:a.tot,paid:a.paid,status:a.status,src:a.src}));
+function agg(offs){const r={n:0,rev:0,col:0,pen:0,ns:0,ca:0,done:0,src:{},svc:{},stf:{},days:[]};
+ offs.forEach(o=>{const d={o,n:0,rev:0,ns:0,ca:0};
+  dayList(o).forEach(a=>{if(a.status=='noshow'){r.ns++;d.ns++;return}if(a.status=='cancelled'){r.ca++;d.ca++;return}
+   r.n++;d.n++;r.rev+=a.tot;d.rev+=a.tot;r.col+=a.paid;r.pen+=a.tot-a.paid;if(a.status=='completed')r.done++;
+   r.src[a.src]=(r.src[a.src]||0)+1;
+   a.sv.split(' + ').forEach(nm=>{const s=r.svc[nm]=r.svc[nm]||{n:0};s.n++});
+   const t=r.stf[a.st]=r.stf[a.st]||{n:0,rev:0};t.n++;t.rev+=a.tot});
+  r.days.push(d)});return r}
+function offs(){const r=S.rr,n=r.k=='7'?7:r.k=='30'?30:0;if(r.k=='1')return[0];if(n)return Array.from({length:n},(_,i)=>i-n+1);const a=[];for(let o=Math.min(r.f,r.t);o<=Math.max(r.f,r.t);o++)a.push(o);return a}
+const dstr=o=>new Date(2026,9,6+o).toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'}),dval=o=>{const d=new Date(2026,9,6+o);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')},dOff=v=>Math.round((new Date(v+'T00:00:00')-new Date(2026,9,6))/864e5);
+const dlt=(c,p)=>{if(!p)return'<div class="s m">No earlier data</div>';const x=Math.round((c-p)/p*100);return '<div class="s m">'+(x>=0?'▲ ':'▼ ')+Math.abs(x)+'% vs previous</div>'};
+function exportCsv(){const O=offs(),R=agg(O),rows=[['Date','Appointments','Revenue (Rs.)','No-shows','Cancellations']].concat(R.days.map(d=>[dval(d.o),d.n,d.rev,d.ns,d.ca])),b=new Blob([rows.map(r=>r.join(',')).join('\n')],{type:'text/csv'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='cosmo-report.csv';a.click();toast('Report downloaded')}
+/* ===== salon workspace: desktop + tablet + mobile ===== */
+const wide=()=>typeof innerWidth=='number'&&innerWidth>=900;let lastWide=wide();
+if(typeof addEventListener=='function')addEventListener('resize',()=>{const w=wide();if(w!==lastWide){lastWide=w;if(S.m=='a')render()}});
+IC.card='<rect x="3" y="6" width="18" height="13" rx="3"/><path d="M3 11h18"/>';IC.sliders='<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>';
+const NAVD=[['today','Today','clock'],['appts','Bookings','list'],['cust','Customers','users'],['rep','Reports','bars'],['staff','Staff','users'],['svc','Services','svc'],['pay','Payments','card'],['wa','WhatsApp','chat'],['set','Settings','sliders']];
+function sideNav(){return '<aside class="side" aria-label="Salon navigation">'+NAVD.map(n=>'<button '+(S.av==n[0]?'aria-current="true"':'')+' onclick="S.av=\''+n[0]+'\';scrollTo(0,0);render()"><span class="ti">'+ic(n[2])+'</span>'+n[1]+'</button>').join('')+'<div class="sidefoot s m">Open today<br>9 AM – 6 PM</div></aside>'}
+function gsearch(q){q=q.trim().toLowerCase();const box=$('#gsr');if(!q){box.innerHTML='';return}
+ const r=A.filter(a=>(a.cu+' '+a.ph+' '+a.id+' '+a.sv).toLowerCase().includes(q)).slice(0,6);
+ box.innerHTML='<div class="gsl">'+(r.length?r.map(a=>'<button onclick="gopick(\''+a.id+'\')"><b style="font-weight:500">'+a.cu+'</b><span class="s m">'+a.id+' · '+a.sv+' · '+DAYS[a.d].l+', '+T(a.s)+'</span></button>').join(''):'<div class="s m" style="padding:12px">No bookings or customers match “'+q.replace(/</g,'&lt;')+'”.</div>')+'</div>'}
+function gopick(id){$('#gs').value='';$('#gsr').innerHTML='';openA(id)}
+const confBanner=cf=>cf.length?'<div class="bn er"><b>'+cf.length+' appointment'+(cf.length>1?'s need':' needs')+' your attention.</b> '+cf.map(a=>a.cu+', '+DL[a.d].split(',')[0]+' '+T(a.s)).join('; ')+'. Staff are unavailable or the salon is closed. Reschedule or contact the customer. Nothing was removed.</div>':'';
+function schedList(day){let L=A.filter(a=>a.d==day).sort((x,y)=>x.s-y.s);
+ if(S.hold&&S.hold.d==day)L=L.concat([{id:'HOLD',st:S.hold.st,s:S.hold.s,du:S.hold.du,sv:'Online booking in progress',cu:'Customer in checkout',status:'hold',pay:'Held',src:'Online'}]).sort((x,y)=>x.s-y.s);
+ return L.length?L.map(a=>{let c=live(a)&&(S.leave[a.st+a.d]||DAYS[a.d].closed),hd=a.id=='HOLD';return '<button class="ev '+(hd?'hd':'')+'" onclick="'+(hd?'toast(\'Held for '+left()+'. Becomes a booking only if payment succeeds.\')':'openA(\''+a.id+'\')')+'"><span class="t">'+T(a.s).replace(':00','')+'</span><span class="g"><b style="font-weight:500">'+a.sv+'</b> · '+stf(a.st).n.split(' ')[0]+'<br><span class="s m">'+a.cu+'</span><br>'+(hd?'<span class="pl ac">Held <span class="tm">'+left()+'</span></span>':badges(a))+(c?' <span class="pl er">⚠ Staff unavailable</span>':'')+'</span></button>'}).join(''):'<div class="card sec" style="text-align:center"><h3>Your schedule is clear.</h3><p class="m s">Add an appointment or a walk-in to get started.</p></div>'}
+function sideParts(){return ['<h2 style="margin-top:8px">Who is available</h2>'+ST.map(p=>{let cur=A.find(a=>a.st==p.id&&a.d==0&&live(a)&&a.status!='completed'&&NOW>=a.s&&NOW<a.s+a.du),on=S.leave[p.id+0];return '<div class="kv"><span>'+p.n.split(' ')[0]+'</span><span>'+(on?'<span class="pl er">On leave</span>':cur?'<span class="pl wn">With '+cur.cu.split(' ')[0]+' till '+T(cur.s+cur.du)+'</span>':NOW>=BR[0]&&NOW<BR[1]?'<span class="pl ne">Break</span>':'<span class="pl ok">Free now</span>')+'</span></div>'}).join('')
+   ,'<h2 style="margin-top:8px">Walk-in queue</h2>'+(Q.length?Q.map(q=>'<div class="card" style="margin-bottom:8px"><div class="r sb"><div><b style="font-weight:500">'+q.n+'</b><br><span class="s m">'+q.sv+'</span></div><span class="pl '+(q.state=='Waiting'?'wn':q.state=='In service'?'in':'ne')+'">'+q.state+(q.state=='Waiting'?' · ~'+q.w+' min':'')+'</span></div>'+(q.state=='Waiting'?'<button class="btn sm bl" style="margin-top:8px" onclick="assignQ('+q.id+')">Assign next available</button>':q.state=='In service'?'<button class="btn o sm bl" style="margin-top:8px" onclick="Q.find(x=>x.id=='+q.id+').state=\'Completed\';render()">Mark completed</button>':'')+'</div>').join(''):'<p class="m s">No walk-ins right now.</p>')
+   ,'<h2 style="margin-top:8px">Waitlist</h2>'+(W.length?W.map((w,i)=>'<div class="card s" style="margin-bottom:8px"><b style="font-weight:500">'+w.n+'</b> · '+w.sv+'<br><span class="m">'+w.w+'</span><button class="btn sm bl" style="margin-top:8px" onclick="W.splice('+i+',1);toast(\'Customer notified on WhatsApp. They confirm before booking.\');render()">Notify: a time opened</button></div>').join(''):'<p class="m s">No customers are currently waiting.</p>')]}
+function sideCol(){const P=sideParts();return P[0]+P[1].replace(' style="margin-top:8px"','')+P[2].replace(' style="margin-top:8px"','')}
+function aToday(){const day=S.td||0,cf=cflicts();let h='';
+ h+='<div class="r sb w"><div><div class="m s">Good morning</div><h1>'+bx(BRAND.name)+'</h1><div class="m s">'+DL[day]+'</div></div><button class="bell" aria-label="Notifications" onclick="openNotif()">'+ic('bell')+'</button></div><div class="trio" style="margin-top:12px"><button class="btn sm" onclick="openWalk()">+ Walk-in</button><button class="btn o sm" onclick="openNew()">+ Booking</button><button class="btn o sm" onclick="S.av=\'appts\';render()">View all</button></div>'+confBanner(cf);
+ h+='<div class="chips" style="margin-top:12px">'+[0,1].map(i=>'<button class="chip" aria-pressed="'+(day==i)+'" onclick="S.td='+i+';render()">'+DAYS[i].l+'</button>').join('')+'</div><div class="cols"><div><h2 style="margin-top:8px">Schedule</h2>'+schedList(day)+'</div><div>'+sideCol()+'</div></div>';return h}
+/* timeline */
+const SPAN=CLOSE-OPEN,pc=m=>(m-OPEN)/SPAN*100;
+function kpiDay(day){const L=A.filter(a=>a.d==day&&live(a));return{n:L.length,done:L.filter(a=>a.status=='completed').length,col:L.reduce((s,a)=>s+a.paid,0),due:L.reduce((s,a)=>s+(a.tot-a.paid),0),tot:L.reduce((s,a)=>s+a.tot,0)}}
+function tlBlock(a){const hd=a.id=='HOLD',cf=live(a)&&(S.leave[a.st+a.d]||DAYS[a.d].closed),dg=!hd&&['confirmed','pending'].includes(a.status);
+ return '<button class="blk b-'+a.status+(cf?' cf':'')+'" style="left:'+pc(a.s)+'%;width:calc('+a.du/SPAN*100+'% - 3px)" '+(dg?'draggable="true" ondragstart="dgS(event,\''+a.id+'\')" ondragend="dgE()"':'')+' title="'+a.cu+' · '+a.sv+' · '+T(a.s)+'–'+T(a.s+a.du)+(cf?' · Staff unavailable':'')+'" onclick="'+(hd?'toast(\'Held for '+left()+'. Becomes a booking only if payment succeeds.\')':'openA(\''+a.id+'\')')+'"><b>'+(hd?'Held <span class="tm">'+left()+'</span>':T(a.s).replace(':00','').replace(' ',''))+'</b><span>'+a.cu.split(' ')[0]+'</span><span class="sv">'+a.sv+'</span>'+(cf?'<span>⚠ Staff unavailable</span>':'')+'</button>'}
+function tlGrid(day){const L=A.filter(a=>a.d==day);if(S.hold&&S.hold.d==day)L.push({id:'HOLD',st:S.hold.st,s:S.hold.s,du:S.hold.du,sv:'Online booking',cu:'In checkout',status:'hold',d:day});
+ const hrs=[];for(let t=OPEN;t<CLOSE;t+=60)hrs.push(T(t).replace(':00',''));
+ let h='<div class="tl"><div class="tlh"><span></span><div class="tlhh">'+hrs.map(x=>'<i>'+x+'</i>').join('')+'</div></div>';
+ ST.forEach(p=>{const lv=S.leave[p.id+day],cl=DAYS[day].closed;
+  h+='<div class="tlr"><div class="tln"><span class="av" style="background:'+p.col+'">'+p.n[0]+'</span><span><b style="font-weight:500">'+p.n.split(' ')[0]+'</b><br><span class="s m">'+p.role+'</span></span></div><div class="trk'+(lv||cl?' off':'')+'" data-st="'+p.id+'" data-d="'+day+'" ondragover="dgO(event,this)" ondrop="dgD(event,this)"><div class="brk" style="left:'+pc(BR[0])+'%;width:'+(BR[1]-BR[0])/SPAN*100+'%"><span>Break</span></div>'+(day==0?'<div class="past" style="width:'+pc(NOW)+'%"></div><div class="now" style="left:'+pc(NOW)+'%"></div>':'')+(lv?'<div class="lvl">On leave</div>':cl?'<div class="lvl">Salon closed</div>':'')+L.filter(a=>a.st==p.id).map(tlBlock).join('')+'</div></div>'});
+ return h+'</div><div class="lgd" style="margin-top:12px">'+[['#12805C','Confirmed'],['#E09A00','Pending payment'],['#1D5FD0','Arrived'],['#9A9488','Completed'],['var(--ac)','Held']].map(l=>'<span><i class="dt" style="background:'+l[0]+'"></i>'+l[1]+'</span>').join('')+'<span class="m">Drag a confirmed booking to move it</span></div>'}
+let DG=null;
+function dgS(e,id){DG=A.find(a=>a.id==id);e.dataTransfer.effectAllowed='move';try{e.dataTransfer.setData('text/plain',id)}catch(x){}}
+function dgE(){DG=null;document.querySelectorAll('.ghost').forEach(g=>g.remove())}
+function dgPos(e,el){const r=el.getBoundingClientRect(),q=Math.min(1,Math.max(0,(e.clientX-r.left)/r.width));return Math.round((OPEN+q*SPAN)/15)*15}
+function dgChk(st,day,m){const a=DG;if(!a)return'';const nm=stf(st).n.split(' ')[0];if(m<OPEN||m+a.du>CLOSE)return'That is outside opening hours.';
+ const cs=SV.filter(s=>a.sv.includes(s.n)).map(s=>s.c);if(!cs.every(c=>stf(st).sk.includes(c)))return nm+' doesn’t offer this service.';
+ if(day==0&&m<NOW)return'That time has already passed.';const c=busy(st,day,m,m+a.du,a.id,0);
+ return c=='break'?'It overlaps a break.':c=='leave'?nm+' is on leave.':c=='held'?'A customer is holding this time.':c?'It overlaps another booking.':''}
+function dgO(e,el){if(!DG)return;e.preventDefault();const m=dgPos(e,el),err=dgChk(el.dataset.st,+el.dataset.d,m);
+ document.querySelectorAll('.ghost').forEach(x=>{if(x.parentNode!==el)x.remove()});let g=el.querySelector('.ghost');if(!g){g=document.createElement('div');el.appendChild(g)}
+ g.className='ghost '+(err?'bad':'ok');g.style.left=pc(Math.max(OPEN,m))+'%';g.style.width='calc('+DG.du/SPAN*100+'% - 3px)';g.textContent=T(m).replace(':00','')}
+function dgD(e,el){e.preventDefault();const a=DG;if(!a)return;const m=dgPos(e,el),st=el.dataset.st,day=+el.dataset.d,err=dgChk(st,day,m);dgE();
+ if(err){toast('Can’t move here. '+err+' Pick another time.');return}a.st=st;a.s=m;toast(a.cu.split(' ')[0]+' moved to '+T(m)+' with '+stf(st).n.split(' ')[0]+'. Customer notified');render()}
+function weekView(){const cap=ST.length*(SPAN-(BR[1]-BR[0]));
+ return '<div class="wk">'+DAYS.map((d,i)=>{const L=A.filter(a=>a.d==i&&live(a)).sort((x,y)=>x.s-y.s),mins=L.reduce((s,a)=>s+a.du,0),pct=Math.min(100,Math.round(mins/cap*100));
+  return '<div class="wkd'+(d.closed?' cl':'')+'"><div class="r sb"><b style="font-weight:600">'+(i==0?'Today':d.w)+'</b><span class="s m">'+d.n+' Oct</span></div>'+(d.closed?'<span class="pl ne" style="margin-top:6px">Closed</span>':d.full?'<span class="pl er" style="margin-top:6px">Fully booked</span>':'<div class="occ"><i style="width:'+pct+'%"></i></div><span class="s m">'+L.length+' appointment'+(L.length==1?'':'s')+' · '+pct+'% booked</span>')+L.slice(0,7).map(a=>'<button class="wkc" onclick="openA(\''+a.id+'\')"><b style="font-weight:600">'+T(a.s).replace(':00','')+'</b> '+a.cu.split(' ')[0]+'<br><span class="s m">'+a.sv+'</span></button>').join('')+'</div>'}).join('')+'</div>'}
+function aTodayW(){const day=S.td||0,k=kpiDay(day),cf=cflicts(),v=S.tv||'tl',wq=Q.filter(q=>q.state=='Waiting').length;
+ let h='<div class="ph"><div><h1>'+(day?'Tomorrow':'Today')+'</h1><div class="m s">'+DL[day]+'</div></div><div class="r" style="gap:10px"><div class="seg2" role="group" aria-label="Day">'+[0,1].map(i=>'<button aria-pressed="'+(day==i)+'" onclick="S.td='+i+';render()">'+DAYS[i].l+'</button>').join('')+'</div><button class="btn sm" onclick="openWalk()">+ Walk-in</button><button class="btn o sm" onclick="openNew()">+ Booking</button></div></div>'+confBanner(cf);
+ h+='<div class="kpis"><div class="kc"><span class="s m">Appointments</span><b>'+k.n+'</b><span class="s m">'+k.done+' completed</span></div><div class="kc"><span class="s m">Collected</span><b>'+fm(k.col)+'</b><span class="s m">of '+fm(k.tot)+'</span></div><div class="kc"><span class="s m">To collect at salon</span><b>'+fm(k.due)+'</b><span class="s m">Unpaid balance</span></div><div class="kc"><span class="s m">Walk-in queue</span><b>'+wq+'</b><span class="s m">'+(wq?'waiting now':'Nobody waiting')+'</span></div></div>';
+ h+='<div><div class="r sb" style="margin:0 0 10px"><h2 style="margin:0">Schedule</h2><div class="seg2" role="group" aria-label="View">'+[['tl','Timeline'],['ls','List'],['wk','Week']].map(x=>'<button aria-pressed="'+(v==x[0])+'" onclick="S.tv=\''+x[0]+'\';render()">'+x[1]+'</button>').join('')+'</div></div>'+(v=='tl'?'<div class="card tlc">'+tlGrid(day)+'</div>':v=='wk'?weekView():'<div class="lsg">'+schedList(day)+'</div>')+'</div></div><div class="g3">'+sideParts().map(x=>'<div>'+x+'</div>').join('')+'</div>';return h}
+/* tables */
+function aApptsW(){const f=S.af=S.af||{d:'all',s:'all',q:''};let L=A.slice().sort((x,y)=>x.d-y.d||x.s-y.s).filter(a=>(f.d=='all'||a.d==+f.d)&&(f.s=='all'||a.status==f.s)&&(a.cu+' '+a.ph+' '+a.id+' '+a.sv).toLowerCase().includes(f.q.toLowerCase()));
+ return '<div class="ph"><div><h1>Bookings</h1><div class="m s">'+L.length+' appointment'+(L.length==1?'':'s')+'</div></div><button class="btn sm" onclick="openNew()">+ Booking</button></div><div class="tools"><input id="aq" type="search" aria-label="Search bookings" placeholder="Search name, phone or booking ID" value="'+f.q.replace(/"/g,'&quot;')+'" oninput="S.af.q=this.value;render(1)"><div class="seg2" role="group" aria-label="Day">'+[['all','All'],['0','Today'],['1','Tomorrow']].map(x=>'<button aria-pressed="'+(f.d==x[0])+'" onclick="S.af.d=\''+x[0]+'\';render()">'+x[1]+'</button>').join('')+'</div><label class="sr" for="as">Status</label><select id="as" onchange="S.af.s=this.value;render()" style="width:auto">'+[['all','All statuses'],['confirmed','Confirmed'],['pending','Pending'],['arrived','Arrived'],['completed','Completed'],['cancelled','Cancelled'],['noshow','No-show']].map(x=>'<option value="'+x[0]+'"'+(f.s==x[0]?' selected':'')+'>'+x[1]+'</option>').join('')+'</select></div>'
+ +(L.length?'<div class="tcard"><table class="tbl"><thead><tr><th>When</th><th>Customer</th><th>Service</th><th>Professional</th><th>Payment</th><th>Status</th><th>Source</th></tr></thead><tbody>'+L.map(a=>'<tr class="rw" tabindex="0" onclick="openA(\''+a.id+'\')" onkeydown="if(event.key==\'Enter\')openA(\''+a.id+'\')"><td><b style="font-weight:500">'+DAYS[a.d].l+'</b><br><span class="s m">'+T(a.s)+' – '+T(a.s+a.du)+'</span></td><td><b style="font-weight:500">'+a.cu+'</b><br><span class="s m">'+a.ph+'</span></td><td>'+a.sv+'</td><td>'+stf(a.st).n+'</td><td>'+fm(a.paid)+' <span class="m s">of '+fm(a.tot)+'</span><br><span class="pl '+(PY[a.pay]||'ne')+'">'+a.pay+'</span></td><td><span class="pl '+ST_LBL[a.status][1]+'">'+ST_LBL[a.status][0]+'</span></td><td><span class="pl ne">'+a.src+'</span></td></tr>').join('')+'</tbody></table></div>':'<div class="card" style="text-align:center"><h3>No bookings match.</h3><p class="m s">Try another day or clear the search.</p><button class="btn sm" onclick="S.af={d:\'all\',s:\'all\',q:\'\'};render()">Clear filters</button></div>')}
+function custList(){let m={};A.forEach(a=>{let c=m[a.ph]=m[a.ph]||{n:a.cu,ph:a.ph,v:0,ns:0,up:null,sp:0,pro:{}};c.v++;if(a.status=='noshow')c.ns++;if(a.status=='confirmed'&&!c.up)c.up=a;c.sp+=a.paid;c.pro[a.st]=(c.pro[a.st]||0)+1});return Object.values(m).filter(c=>c.ph!='—')}
+function aCustW(){const q=(S.cq||'').toLowerCase(),L=custList().filter(c=>(c.n+' '+c.ph).toLowerCase().includes(q));
+ return '<div class="ph"><div><h1>Customers</h1><div class="m s">'+L.length+' customer'+(L.length==1?'':'s')+'</div></div></div><div class="tools"><input id="cq" type="search" aria-label="Search customers" placeholder="Search name or phone" value="'+(S.cq||'').replace(/"/g,'&quot;')+'" oninput="S.cq=this.value;render(1)"></div>'
+ +(L.length?'<div class="tcard"><table class="tbl"><thead><tr><th>Customer</th><th>Phone</th><th>Visits</th><th>Upcoming</th><th>Preferred professional</th><th>Total paid</th><th>No-shows</th></tr></thead><tbody>'+L.map(c=>{const pr=Object.entries(c.pro).sort((a,b)=>b[1]-a[1])[0][0];return '<tr class="rw" tabindex="0" onclick="openC(\''+c.ph+'\')" onkeydown="if(event.key==\'Enter\')openC(\''+c.ph+'\')"><td><b style="font-weight:500">'+c.n+'</b></td><td>'+c.ph+'</td><td>'+c.v+'</td><td>'+(c.up?DAYS[c.up.d].l+', '+T(c.up.s):'<span class="m">None</span>')+'</td><td>'+stf(pr).n+'</td><td>'+fm(c.sp)+'</td><td>'+(c.ns?'<span class="pl er">'+c.ns+'</span>':'0')+'</td></tr>'}).join('')+'</tbody></table></div>':'<div class="card sec" style="text-align:center"><h3>'+(q?'No customers match “'+q.replace(/</g,'&lt;')+'”.':'Customers will appear here after their first booking.')+'</h3></div>')}
+function aPayW(){const L=A.slice().sort((x,y)=>x.id<y.id?-1:1),tp=L.reduce((s,a)=>s+a.paid,0),td=L.filter(live).reduce((s,a)=>s+a.tot-a.paid,0);
+ return '<div class="ph"><div><h1>Payments</h1><div class="m s">'+fm(tp)+' collected · '+fm(td)+' still to collect</div></div></div><div class="tcard"><table class="tbl"><thead><tr><th>Booking</th><th>Customer</th><th>Service</th><th>Total</th><th>Paid</th><th>Balance</th><th>Payment</th><th>Refund</th></tr></thead><tbody>'
+ +L.map(a=>{const rf=a.refund,bal=live(a)?a.tot-a.paid:0;return '<tr class="rw" onclick="openA(\''+a.id+'\')"><td>'+a.id+'</td><td>'+a.cu+'</td><td>'+a.sv+'</td><td>'+fm(a.tot)+'</td><td>'+fm(a.paid)+'</td><td>'+fm(bal)+'</td><td><span class="pl '+(PY[a.pay]||'ne')+'">'+a.pay+'</span></td><td onclick="event.stopPropagation()">'+(rf?'<span class="pl '+(rf=='Refund failed'?'er':rf=='Refunded'?'ok':'wn')+'">'+rf+'</span> '+(rf=='Refund failed'?'<button class="btn sm" onclick="A.find(x=>x.id==\''+a.id+'\').refund=\'Refund processing\';toast(\'Retrying refund…\');render()">Retry</button> <button class="btn o sm" onclick="toast(\'Support contacted\')">Contact support</button>':rf=='Refund processing'?'<button class="btn o sm" onclick="A.find(x=>x.id==\''+a.id+'\').refund=\'Refunded\';render()">Mark refunded</button>':''):'<span class="m">—</span>')+'</td></tr>'}).join('')+'</tbody></table></div>'}
+/* reports */
+function aRep(){const O=offs(),R=agg(O),P=agg(O.map(o=>o-O.length)),rl=O.length==1?dstr(O[0]):dstr(O[0])+' – '+dstr(O[O.length-1]);
+ let h='<div class="ph"><div><h1>Reports</h1><div class="m s">'+rl+'</div></div><button class="btn o sm" onclick="exportCsv()">Download CSV</button></div><div class="chips">'+[['1','Today'],['7','7 days'],['30','30 days'],['c','Custom']].map(c=>'<button class="chip" aria-pressed="'+(S.rr.k==c[0])+'" onclick="S.rr.k=\''+c[0]+'\';render()">'+c[1]+'</button>').join('')+'</div>';
+ if(S.rr.k=='c')h+='<div class="r" style="margin-bottom:12px;max-width:460px"><div class="g"><label for="rf" class="s">From</label><input id="rf" type="date" min="'+dval(-90)+'" max="'+dval(0)+'" value="'+dval(S.rr.f)+'" onchange="if(this.value){S.rr.f=dOff(this.value);render()}"></div><div class="g"><label for="rt" class="s">To</label><input id="rt" type="date" min="'+dval(-90)+'" max="'+dval(0)+'" value="'+dval(S.rr.t)+'" onchange="if(this.value){S.rr.t=dOff(this.value);render()}"></div></div>';
+ if(!(R.n+R.ns+R.ca))return h+'<div class="card" style="text-align:center"><h3>No appointments in this period.</h3><p class="m s">Try a longer date range.</p><button class="btn sm" onclick="S.rr.k=\'30\';render()">Show last 30 days</button></div>';
+ h+='<div class="kg"><div class="card"><span class="s m">Appointments</span><b>'+R.n+'</b>'+dlt(R.n,P.n)+'</div><div class="card"><span class="s m">Revenue</span><b>'+fm(R.rev)+'</b>'+dlt(R.rev,P.rev)+'</div><div class="card"><span class="s m">Collected</span><b>'+fm(R.col)+'</b><div class="s m">'+(R.rev?Math.round(R.col/R.rev*100):0)+'% of revenue</div></div><div class="card"><span class="s m">To collect at salon</span><b>'+fm(R.pen)+'</b><div class="s m">Unpaid balance</div></div></div><div class="rg">';
+ const sec=(c,t,b)=>'<section class="'+c+'"><h2>'+t+'</h2>'+b+'</section>';
+ if(O.length>1){const mx=Math.max(1,...R.days.map(d=>d.rev));h+=sec('full','Revenue by day','<div class="card"><div class="bars" role="img" aria-label="Revenue by day">'+R.days.map(d=>'<i title="'+dstr(d.o)+': '+fm(d.rev)+'" style="height:'+Math.max(2,d.rev/mx*100)+'%"></i>').join('')+'</div><div class="r sb s m" style="margin-top:8px"><span>'+dstr(O[0])+'</span><span>Best day '+fm(mx)+'</span><span>'+dstr(O[O.length-1])+'</span></div></div>')}
+ h+=sec('','Summary','<div class="card"><div class="kv"><span>Completed</span><b>'+R.done+'</b></div><div class="kv"><span>No-shows</span><b>'+R.ns+'</b></div><div class="kv"><span>Cancellations</span><b>'+R.ca+'</b></div><div class="kv"><span>Average per booking</span><b>'+fm(R.n?Math.round(R.rev/R.n/10)*10:0)+'</b></div></div>');
+ const tn=Object.values(R.src).reduce((a,b)=>a+b,0)||1,SC={Online:'var(--ac)',WhatsApp:'#25845F','Walk-in':'#F79E1B',Phone:'#9CA3AF'},se=Object.entries(R.src).sort((a,b)=>b[1]-a[1]);
+ h+=sec('','Where bookings come from','<div class="card"><div class="sgb">'+se.map(e=>'<i style="width:'+e[1]/tn*100+'%;background:'+(SC[e[0]]||'#9CA3AF')+'"></i>').join('')+'</div><div class="lg">'+se.map(e=>'<span><span class="dot" style="background:'+(SC[e[0]]||'#9CA3AF')+'"></span>'+e[0]+' <b>'+Math.round(e[1]/tn*100)+'%</b></span>').join('')+'</div></div>');
+ const ts=Object.entries(R.svc).sort((a,b)=>b[1].n-a[1].n).slice(0,5),mxs=ts.length?ts[0][1].n:1;
+ h+=sec('','Top services','<div class="card">'+ts.map(e=>'<div style="margin:8px 0"><div class="r sb s"><span>'+e[0]+'</span><b style="font-weight:500">'+e[1].n+'</b></div><div class="hb"><i style="width:'+e[1].n/mxs*100+'%"></i></div></div>').join('')+'</div>');
+ h+=sec('','Staff','<div class="card">'+ST.map(p=>({p,v:R.stf[p.id]||{n:0,rev:0}})).sort((a,b)=>b.v.rev-a.v.rev).map(x=>'<div class="kv"><span>'+x.p.n+'<br><span class="s m">'+x.v.n+' appointments</span></span><b>'+fm(x.v.rev)+'</b></div>').join('')+'</div>');
+ const rows=R.days.slice().reverse(),cl=d=>new Date(2026,9,6+d.o).getDay()==0;
+ h+=sec('full','Day by day',wide()?'<div class="tcard"><table class="tbl"><thead><tr><th>Date</th><th>Appointments</th><th>Revenue</th><th>No-shows</th><th>Cancellations</th></tr></thead><tbody>'+rows.map(d=>'<tr><td>'+dstr(d.o)+'</td><td>'+(cl(d)?'<span class="pl ne">Closed</span>':d.n)+'</td><td>'+(cl(d)?'':fm(d.rev))+'</td><td>'+d.ns+'</td><td>'+d.ca+'</td></tr>').join('')+'</tbody></table></div>':'<div class="card">'+rows.map(d=>'<div class="kv s"><span>'+dstr(d.o)+(d.ns||d.ca?'<br><span class="m">'+(d.ns?d.ns+' no-show ':'')+(d.ca?d.ca+' cancelled':'')+'</span>':'')+'</span><span style="text-align:right">'+(cl(d)?'<span class="pl ne">Closed</span>':'<b>'+fm(d.rev)+'</b><br><span class="m">'+d.n+' appointments</span>')+'</span></div>').join('')+'</div>');
+ return h+'</div>'}
+function vSalon(){const MORE=['staff','svc','pay','wa','set'],T5=[['today','Today','clock'],['appts','Bookings','list'],['cust','Customers','users'],['rep','Reports','bars'],['more','More','dots']],w=wide(),SC={today:w?aTodayW:aToday,appts:w?aApptsW:aAppts,cust:w?aCustW:aCust,rep:aRep,staff:aStaff,svc:aSvc,pay:w?aPayW:aPay,wa:aWa,set:aSet};
+ return '<div class="shell">'+sideNav()+'<nav class="tabs" aria-label="Salon">'+T5.map(n=>{const on=n[0]=='more'?MORE.includes(S.av):S.av==n[0];return '<button '+(on?'aria-current="true"':'')+' onclick="'+(n[0]=='more'?'openMore()':'S.av=\''+n[0]+'\';scrollTo(0,0);render()')+'"><span class="ti">'+ic(n[2])+'</span>'+n[1]+'</button>'}).join('')+'</nav><div class="main"><div class="mx">'+SC[S.av]()+'</div></div></div>'}
+function lum(c){let n=parseInt(c.slice(1),16),r=n>>16,g=n>>8&255,b=n&255;return(.299*r+.587*g+.114*b)/255}
+function setCol(c){BRAND.col=c;let s=document.documentElement.style;s.setProperty('--ac',c);s.setProperty('--acs',c+'22');s.setProperty('--onac',lum(c)>.62?'#141413':'#fff');let t=$('#hx');if(t)t.textContent=c.toUpperCase()}
+function aSet(){const D=dft(),col=D.col||'#D6086A',dr=dirty(),isDef=k=>D[k]===DEF[k];
+ return '<h1>Settings</h1><p class="m s">Changes preview instantly. Tap Publish to show them to everyone with your link.</p><div class="setg"><div class="setp">'
+ +'<h2>Preview</h2><div class="card" style="padding:0;overflow:hidden"><div class="fbcover" style="background-image:url('+D.banner+')"></div><div style="padding:0 16px 16px"><div class="r" style="margin-top:-38px">'+logo(76,D)+'</div><b style="font-weight:600;display:block;margin-top:8px">'+bx(D.name||DEF.name)+'</b><span class="s m">Colombo, Sri Lanka</span><div style="margin-top:10px"><span class="btn sm" style="display:inline-flex;align-items:center;background:'+col+';color:'+(lum(col)>.62?'#141413':'#fff')+'">Book an appointment</span></div></div></div>'
+ +'<p class="s m" style="margin-top:10px">'+(dr?'Only you can see these changes until you publish them.':'Your customers see this branding.')+'</p>'
+ +'</div><div class="setf"><h2>Salon details</h2><label for="bnm">Salon name</label><input id="bnm" value="'+bx(D.name)+'" oninput="setD(\'name\',this.value)"><label for="btg">Tagline</label><input id="btg" value="'+bx(D.tag)+'" oninput="dft().tag=this.value">'
+ +'<h2>Images</h2><label for="blg">Logo <span class="m">(square, shown as a circle)</span></label><input id="blg" type="file" accept="image/*" onchange="up(this,\'logo\')">'+(isDef('logo')?'':'<button class="btn o sm" style="margin-top:8px" onclick="setD(\'logo\',DEF.logo)">Use default logo</button>')
+ +'<label for="bbn">Cover photo <span class="m">(wide, about 1200×500)</span></label><input id="bbn" type="file" accept="image/*" onchange="up(this,\'banner\')">'+(isDef('banner')?'':'<button class="btn o sm" style="margin-top:8px" onclick="setD(\'banner\',DEF.banner)">Use default cover</button>')
+ +'<h2>Brand colour</h2><div class="r"><input id="bcol" type="color" aria-label="Brand colour" value="'+col+'" oninput="setD(\'col\',this.value)" style="width:64px;min-height:52px;padding:4px"><b id="hx" style="font-weight:500">'+col.toUpperCase()+'</b></div><div class="r w" style="margin-top:10px">'+['#D6086A','#141413','#CC5500','#8A4B6B','#2F6B5E','#2F4B8A'].map(c=>'<button class="av" aria-label="Use colour '+c+'" style="background:'+c+';border:0;width:44px;height:44px" onclick="setD(\'col\',\''+c+'\')"></button>').join('')+'</div>'
+ +'<button class="btn bl" style="margin-top:20px" '+(dr&&!PUBBING?'':'disabled')+' onclick="publishBrand()">'+(PUBBING?'Publishing…':dr?'Publish to everyone':'Published')+'</button>'+'<button class="btn o bl" style="margin-top:10px" onclick="resetBrand()">Reset to default branding</button></div></div>'}
+function up(i,k){let f=i.files[0];if(!f)return;shrink(f,k=='logo'?480:1400,d=>setD(k,d))}
+/* ---------- SALON ---------- */
+const ST_LBL={confirmed:['Confirmed','ok'],pending:['Pending','wn'],arrived:['Arrived','in'],completed:['Completed','ne'],cancelled:['Cancelled','er'],noshow:['No-show','er']},PY={Paid:'ok',Deposit:'wn',Unpaid:'ne'};
+function cflicts(){return A.filter(a=>live(a)&&a.status!='completed'&&(S.leave[a.st+a.d]||DAYS[a.d].closed))}
+const badges=a=>'<span class="pl '+ST_LBL[a.status][1]+'">'+ST_LBL[a.status][0]+'</span> <span class="pl '+(PY[a.pay]||'ne')+'">'+a.pay+'</span> <span class="pl ne">'+a.src+'</span>';
+function assignQ(id){let q=Q.find(x=>x.id==id),cs=[sv(SV.find(s=>s.n==q.sv).id).c],L=q.m,p=elig(cs).find(x=>!busy(x.id,0,NOW,NOW+L));if(!p){let f=nextWalk(cs,L);toast('Nobody is free yet. Next available: '+T(f.s)+' with '+stf(f.st).n.split(' ')[0]);return}
+ A.push({id:'VL-'+(seq++),st:p.id,d:0,s:NOW,du:L,sv:q.sv,cu:q.n,ph:'—',status:'arrived',pay:'Unpaid',paid:0,tot:SV.find(s=>s.n==q.sv).p,src:'Walk-in'});q.state='In service';toast(q.n.split(' ')[0]+' assigned to '+p.n.split(' ')[0]);render()}
+function nextWalk(cs,L){for(let s=NOW;s+L<=CLOSE;s+=15)for(const p of elig(cs))if(!busy(p.id,0,s,s+L))return{s,st:p.id}}
+function openWalk(r){let r2=r||{};$('#sh').innerHTML='<div class="sheet" onclick="if(event.target==this)closeS()"><div role="dialog" aria-label="New walk-in"><h1>New walk-in</h1><label for="wn">Customer name</label><input id="wn" value="'+(r2.n||'')+'"><label for="wph">Phone</label><input id="wph" inputmode="tel" value="'+(r2.ph||'')+'"><label for="wsv">Service</label><select id="wsv">'+SV.map(s=>'<option value="'+s.id+'">'+s.n+' · '+s.m+' min · '+fm(s.p)+'</option>').join('')+'</select><label for="wpr">Preferred professional <span class="m">(optional)</span></label><select id="wpr"><option value="any">No preference</option>'+ST.map(s=>'<option value="'+s.id+'">'+s.n+'</option>').join('')+'</select><button class="btn bl" style="margin-top:16px" onclick="chkWalk()">Check availability</button><div id="wres"></div></div></div>'}
+function chkWalk(){let s=sv(+$('#wsv').value),pr=$('#wpr').value,L=s.m+s.b,cs=[s.c],name=$('#wn').value||'Walk-in customer',pool=elig(cs).filter(x=>pr=='any'||x.id==pr);
+ if(!pool.length){$('#wres').innerHTML='<div class="bn wn">'+stf(pr).n+' doesn’t do this service. Choose another professional.</div>';return}
+ let p=pool.find(x=>!busy(x.id,0,NOW,NOW+L));window._w={name,s,L};
+ if(p){$('#wres').innerHTML='<div class="bn ok"><b>Available now</b> with '+p.n+' until '+T(NOW+L)+'.</div><button class="btn bl" onclick="addWalk(\''+p.id+'\','+NOW+')">Start with '+p.n.split(' ')[0]+' now</button>'}
+ else{let best=null;for(let t=NOW;t+L<=CLOSE&&!best;t+=15)for(const x of pool)if(!busy(x.id,0,t,t+L)){best={t,id:x.id};break}
+  $('#wres').innerHTML=best?'<div class="bn wn"><b>Next available: '+T(best.t)+'</b><br>Estimated wait '+(best.t-NOW)+' minutes. Confirmed bookings are never moved.</div><div class="r"><button class="btn g" onclick="joinQ('+(best.t-NOW)+')">Join queue</button><button class="btn o g" onclick="addWalk(\''+best.id+'\','+best.t+')">Book '+T(best.t)+'</button></div>':'<div class="bn er">Nothing is free for the rest of today. Offer tomorrow or the waitlist.</div>'}}
+function addWalk(st,t){let w=window._w;A.push({id:'VL-'+(seq++),st,d:0,s:t,du:w.L,sv:w.s.n,cu:w.name,ph:$('#wph').value||'—',status:t==NOW?'arrived':'confirmed',pay:'Unpaid',paid:0,tot:w.s.p,src:'Walk-in'});closeS();toast('Added at '+T(t)+' with '+stf(st).n.split(' ')[0]);render()}
+function joinQ(w){let x=window._w;Q.push({id:Date.now(),n:x.name,sv:x.s.n,m:x.s.m,state:'Waiting',w});closeS();toast('Added to the walk-in queue');render()}
+function openNew(){openWalk();$('#sh .sheet div h1').textContent='New appointment (staff-created)'}
+function openA(id){let a=A.find(x=>x.id==id);if(!a)return;let acts={confirmed:[['Mark arrived',"setS('arrived')",1],['Reschedule','rs',0],['Cancel',"setS('cancelled')",2]],pending:[['Confirm',"setS('confirmed')",1],['Cancel',"setS('cancelled')",2]],arrived:[['Mark completed',"setS('completed')",1]],completed:[],cancelled:[],noshow:[]}[a.status];window._a=a;
+ let fr=slots(a.d,a.du,[],'any',a.id,1);let opts=ST.filter(p=>p.id==a.st).flatMap(p=>{let o=[];for(let t=a.d==0?NOW:OPEN;t+a.du<=CLOSE;t+=30)if(!busy(p.id,a.d,t,t+a.du,a.id,0))o.push(t);return o});
+ $('#sh').innerHTML='<div class="sheet" onclick="if(event.target==this)closeS()"><div role="dialog" aria-label="Appointment"><div class="r sb"><h1>'+a.cu+'</h1><button class="btn o sm" onclick="closeS()">Close</button></div><div style="margin:6px 0 12px">'+badges(a)+(a.refund?' <span class="pl '+(a.refund=='Refund failed'?'er':'wn')+'">'+a.refund+'</span>':'')+'</div>'+(S.leave[a.st+a.d]||DAYS[a.d].closed?'<div class="bn er s">'+(DAYS[a.d].closed?'The salon is closed on this day.':stf(a.st).n+' is on leave.')+' Reschedule or contact the customer.</div>':'')+'<div class="card">'+[['Phone',a.ph],['Service',a.sv],['Professional',stf(a.st).n],['Date',DL[a.d]],['Time',T(a.s)+' – '+T(a.s+a.du)],['Payment',a.pay+' · '+fm(a.paid)+' of '+fm(a.tot)],['Source',a.src],['Notes',a.note||'None']].map(k=>'<div class="kv s"><span class="m">'+k[0]+'</span><b>'+k[1]+'</b></div>').join('')+'</div><div class="r w" style="margin-top:12px">'+acts.filter(x=>x[1]!='rs').map(x=>'<button class="btn '+(x[2]==1?'':'o')+' '+(x[2]==2?'d':'')+' sm" onclick="'+x[1]+'">'+x[0]+'</button>').join('')+'<button class="btn o sm" onclick="toast(\'Opening WhatsApp…\')">Contact</button>'+(a.status=='confirmed'?'<button class="btn d sm" onclick="setS(\'noshow\')">No-show</button>':'')+(a.paid&&!a.refund&&!live(a)?'<button class="btn o sm" onclick="window._a.refund=\'Refund processing\';openA(window._a.id);render()">Refund</button>':'')+'</div>'+(acts.some(x=>x[1]=='rs')?'<h2>Reschedule</h2><select id="rn">'+(opts.length?opts.map(t=>'<option value="'+t+'">'+T(t)+'</option>').join(''):'<option value="">No other times with '+stf(a.st).n.split(' ')[0]+'</option>')+'</select><button class="btn sm" style="margin-top:8px" '+(opts.length?'':'disabled')+' onclick="moveA()">Move appointment</button><p class="s m">Only times that are free for '+stf(a.st).n.split(' ')[0]+' are listed.</p>':'')+(a.status=='noshow'?'<p class="s m">No-shows are recorded on the customer profile.</p>':'')+'</div></div>'}
+function setS(s){let a=window._a;a.status=s;if(s=='cancelled'&&a.paid)a.refund='Refund processing';closeS();toast({arrived:'Marked arrived',completed:'Completed',noshow:a.cu.split(' ')[0]+' marked no-show. Added to history',cancelled:'Cancelled. The time is open again',confirmed:'Confirmed'}[s]);render()}
+function moveA(){let a=window._a,t=+$('#rn').value;if(busy(a.st,a.d,t,t+a.du,a.id,0)){toast('That time was just taken. Choose another.');return}a.s=t;closeS();toast('Moved to '+T(t)+'. Customer notified');render()}
+function aAppts(){return '<h1>Appointments</h1>'+[0,1,4].map(d=>{let L=A.filter(a=>a.d==d).sort((x,y)=>x.s-y.s);return L.length?'<h2>'+DL[d]+'</h2>'+L.map(a=>'<button class="ev" onclick="openA(\''+a.id+'\')"><span class="t">'+T(a.s).replace(':00','')+'</span><span class="g"><b style="font-weight:500">'+a.sv+'</b> · '+a.cu+'<br>'+badges(a)+'</span></button>').join(''):''}).join('')}
+function aCust(){let m={};A.forEach(a=>{let c=m[a.ph]=m[a.ph]||{n:a.cu,ph:a.ph,v:0,ns:0,up:null,sv:[]};c.v++;if(a.status=='noshow')c.ns++;if(a.status=='confirmed')c.up=a;c.sv.push(a.sv)});let L=Object.values(m).filter(c=>c.ph!='—');
+ return '<h1>Customers</h1>'+(L.length?L.map(c=>'<button class="ev" onclick="openC(\''+c.ph+'\')"><span class="g"><b style="font-weight:500">'+c.n+'</b><br><span class="s m">'+c.ph+' · '+c.v+' visit'+(c.v>1?'s':'')+(c.up?' · Next: '+DAYS[c.up.d].l+' '+T(c.up.s):'')+'</span></span>'+(c.ns?'<span class="pl er">'+c.ns+' no-show</span>':'')+'</button>').join(''):'<div class="card sec"><h3>Customers will appear here after their first booking.</h3></div>')}
+function openC(ph){let L=A.filter(a=>a.ph==ph),c=L[0];$('#sh').innerHTML='<div class="sheet" onclick="if(event.target==this)closeS()"><div role="dialog"><div class="r sb"><h1>'+c.cu+'</h1><button class="btn o sm" onclick="closeS()">Close</button></div><p class="m s">'+ph+' · Prefers '+stf(L[0].st).n+'</p><h2>History</h2>'+L.map(a=>'<div class="kv s"><span>'+a.sv+'<br><span class="m">'+DL[a.d].split(',')[0]+' '+T(a.s)+'</span></span><span>'+ST_LBL[a.status][0]+' · '+a.pay+'</span></div>').join('')+'<div class="r w" style="margin-top:16px"><button class="btn sm" onclick="closeS();openWalk({n:\''+c.cu+'\',ph:\''+ph+'\'})">Book appointment</button><button class="btn o sm" onclick="toast(\'Opening WhatsApp…\')">Contact</button><button class="btn o sm" onclick="toast(\'Note saved\')">Add note</button></div></div></div>'}
+function aStaff(){return '<h1>Staff</h1><p class="m s">Availability on the booking page follows these settings.</p><div class="card" style="margin:12px 0"><div class="r sb"><div><b style="font-weight:500">Salon open tomorrow</b><br><span class="s m">'+(DAYS[1].closed?'Closed. Existing bookings are flagged for you':'Open 9 AM – 6 PM')+'</span></div><button class="btn o sm" onclick="DAYS[1].closed=!DAYS[1].closed;render()">'+(DAYS[1].closed?'Reopen':'Close for the day')+'</button></div></div>'+'<div class="gc3">'+ST.map(p=>'<div class="card" style="margin-bottom:12px"><div class="r"><span class="av" style="background:'+p.col+'">'+p.n[0]+'</span><div class="g"><b style="font-weight:500">'+p.n+'</b><br><span class="s m">'+p.role+'</span></div><button class="btn o sm" onclick="S.leave[\''+p.id+'0\']=!S.leave[\''+p.id+'0\'];toast(S.leave[\''+p.id+'0\']?\'Leave added for today. Existing bookings were kept and flagged.\':\'Leave removed\');render()">'+(S.leave[p.id+'0']?'Remove leave':'Add leave')+'</button></div><div class="kv s"><span class="m">Hours</span><b>Mon–Sat, 9:00 AM – 6:00 PM</b></div><div class="kv s"><span class="m">Break</span><b>1:00 PM – 2:00 PM</b></div><div class="kv s"><span class="m">Services</span><b>'+p.sk.join(', ')+'</b></div></div>').join('')+'</div>'}
+function aSvc(){return '<h1>Services</h1><p class="m s">Each booking uses duration plus buffer.</p>'+'<div class="gc2">'+SV.map(s=>'<div class="card" style="margin-bottom:10px"><div class="r sb"><b style="font-weight:500">'+s.n+'</b><span class="pl ac">Uses '+(s.m+s.b)+' min</span></div><div class="r" style="margin-top:8px"><div class="g"><label class="s" for="p'+s.id+'">Price (Rs.)</label><input id="p'+s.id+'" type="number" value="'+s.p+'" onchange="sv('+s.id+').p=+this.value"></div><div class="g"><label class="s" for="m'+s.id+'">Minutes</label><input id="m'+s.id+'" type="number" step="15" value="'+s.m+'" onchange="sv('+s.id+').m=+this.value;toast(\'Duration updated. Future availability recalculated.\');render()"></div><div class="g"><label class="s" for="b'+s.id+'">Buffer</label><input id="b'+s.id+'" type="number" step="5" value="'+s.b+'" onchange="sv('+s.id+').b=+this.value;render()"></div></div></div>').join('')+'</div>'}
+function aPay(){return '<h1>Payments</h1>'+A.sort((x,y)=>x.id<y.id?-1:1).map(a=>{let rf=a.refund;return '<div class="ev" style="display:block"><div class="r sb"><div><b style="font-weight:500">'+a.id+'</b> · '+a.cu+'<br><span class="s m">'+a.sv+'</span></div><div style="text-align:right"><b style="font-weight:500">'+fm(a.paid)+'</b><br><span class="pl '+(PY[a.pay]||'ne')+'">'+a.pay+'</span></div></div>'+(rf?'<div class="r sb w" style="margin-top:8px"><span class="pl '+(rf=='Refund failed'?'er':rf=='Refunded'?'ok':'wn')+'">'+rf+'</span>'+(rf=='Refund failed'?'<span><button class="btn sm" onclick="A.find(x=>x.id==\''+a.id+'\').refund=\'Refund processing\';toast(\'Retrying refund…\');render()">Retry refund</button> <button class="btn o sm" onclick="toast(\'Support contacted\')">Contact support</button></span>':rf=='Refund processing'?'<button class="btn o sm" onclick="A.find(x=>x.id==\''+a.id+'\').refund=\'Refunded\';render()">Mark refunded</button>':'')+'</div>':'')+'</div>'}).join('')}
+function aWa(){return '<h1>WhatsApp</h1><p class="m s">Preview of how chat bookings could work.</p><div class="card sec" style="max-width:380px"><div class="bn" style="background:#fff;margin:0 0 8px;max-width:80%">Hi, can I get a haircut tomorrow?</div><div class="bn ok" style="margin:0 0 8px 20%">Sure. Please choose a time.</div><div class="r w" style="margin-bottom:8px">'+['10:00 AM','11:30 AM','2:00 PM','4:00 PM'].map(t=>'<button class="btn o sm" onclick="toast(\'Secure booking link sent for '+t+'\')">'+t+'</button>').join('')+'</div><div class="bn ok s" style="margin-left:20%">Tap to complete your booking: cosmo.lk/b/x7Kq2 (held for 10 min)</div></div><div class="r w" style="margin-top:12px"><button class="btn" onclick="S.sel=[1];S.d=1;mode(\'c\');book()">Open customer link</button><button class="btn o" onclick="closeS();openWalk({n:\'Tharushi Mendis\',ph:\'077 998 1234\'})">Convert to appointment</button></div>'}
+function openNotif(){$('#sh').innerHTML='<div class="sheet" onclick="if(event.target==this)closeS()"><div role="dialog"><div class="r sb"><h1>Notifications</h1><button class="btn o sm" onclick="closeS()">Close</button></div>'+[['Booking confirmed','VL-10482 · Nimal Perera, Sat 4:00 PM','ok','WhatsApp, SMS'],['Payment successful','Rs. 500 deposit received','ok','SMS'],['Payment failed','Your payment wasn’t completed. Your time is held for a few more minutes.','er','WhatsApp'],['Appointment reminder','Tomorrow, 2:00 PM at COSMO','in','WhatsApp, SMS'],['Appointment rescheduled','Moved to Fri 9 Oct, 11:30 AM','in','WhatsApp, Email'],['Appointment cancelled','Free cancellation applied','ne','Email'],['Waitlist available','A time opened on Thu 8 Oct. Tap to confirm.','wn','WhatsApp'],['Refund processed','Rs. 2,000 sent to your card','ok','Email']].map(n=>'<div class="kv"><span><span class="pl '+n[2]+'">'+n[0]+'</span><br><span class="s m">'+n[1]+'</span></span><span class="s m">'+n[3]+'</span></div>').join('')+'</div></div>'}
+function render(keep){$('#tbell').innerHTML=ic('bell');if(document.body&&document.body.classList)document.body.classList.toggle('adm',S.m=='a');$('#bm').innerHTML=logo(32)+'<b class="hn">'+bx(BRAND.name)+'</b>';let f=document.activeElement&&document.activeElement.type=='search',a=document.activeElement&&document.activeElement.id;
+ $('#app').innerHTML=S.m=='a'?vSalon():S.v=='landing'?vLanding():S.v=='services'?vServices():S.v=='book'?vBook():S.v=='manage'?vManage():S.v=='done'?vDone():'';
+ $('#cn').innerHTML=(S.m=='c'&&['landing','services','manage','done'].includes(S.v))?cNav():'';
+ if(S.m=='c'&&S.v=='book'&&S.step==3)chk();
+ if(keep&&a){let e=document.getElementById(a);if(e){e.focus();try{e.setSelectionRange(99,99)}catch(x){}}}
+ else if(f){let i=$('#app input[type=search]');if(i){i.focus();i.setSelectionRange(99,99)}}}
+if(document.addEventListener)document.addEventListener('click',e=>{if(!e.target.closest('#gsw'))$('#gsr').innerHTML=''});
+try{fetch('brand.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(j=>{if(j&&typeof j=='object'){applyBrand(j);render()}}).catch(()=>{})}catch(e){}
+render();setInterval(()=>{if(S.m=='a'&&S.hold)document.querySelectorAll('.tm').forEach(e=>e.textContent=left())},1000);
+</script></body></html>
+
+</body></html>
