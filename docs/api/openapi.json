@@ -1,0 +1,125 @@
+{
+  "components": {
+    "schemas": {
+      "Meta": {
+        "description": "What the running service says about itself.",
+        "properties": {
+          "commit": {
+            "description": "The commit the build was made from, or `unknown` when the build had no repository.",
+            "example": "e852c61f0c0e4d7a9b1f3c5d7e9a0b2c4d6e8f01",
+            "type": "string"
+          },
+          "service": {
+            "description": "The service's name.",
+            "example": "salon-api",
+            "type": "string"
+          },
+          "time": {
+            "description": "The server's time: an ISO-8601 instant in UTC.",
+            "example": "2026-10-12T02:17:00.123Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "version": {
+            "description": "The version the build was given.",
+            "example": "0.1.0",
+            "type": "string"
+          }
+        },
+        "required": [
+          "commit",
+          "service",
+          "time",
+          "version"
+        ],
+        "type": "object"
+      },
+      "Problem": {
+        "description": "An error, as problem details (RFC 9457) with a stable machine-readable `code`.",
+        "properties": {
+          "code": {
+            "description": "The stable reason. Branch on this.",
+            "type": "string"
+          },
+          "detail": {
+            "description": "A sentence for a person. Do not branch on it.",
+            "type": "string"
+          },
+          "instance": {
+            "description": "The path that was requested.",
+            "type": "string"
+          },
+          "status": {
+            "description": "The HTTP status.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "title": {
+            "description": "A short summary of the status.",
+            "type": "string"
+          },
+          "type": {
+            "description": "A URI identifying the kind of problem.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "status",
+          "title"
+        ],
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "description": "The platform's REST API. Every error is problem details with a stable `code`.",
+    "title": "salon-api",
+    "version": "v1"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/v1/meta": {
+      "get": {
+        "operationId": "getMeta",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Meta"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "summary": "The service's name, version, commit and time.",
+        "tags": [
+          "meta"
+        ]
+      }
+    }
+  },
+  "servers": [
+    {
+      "url": "/"
+    }
+  ],
+  "tags": [
+    {
+      "description": "The service's own metadata.",
+      "name": "meta"
+    }
+  ]
+}

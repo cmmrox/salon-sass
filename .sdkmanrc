@@ -1,0 +1,3 @@
+# The JDK this repository builds and runs with. `sdk env` selects it for one shell;
+# infra/scripts and the Maven build find it on their own (see README.md, "Prerequisites").
+java=25.0.1.0+8-amzn

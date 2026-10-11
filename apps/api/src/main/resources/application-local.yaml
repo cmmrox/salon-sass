@@ -1,0 +1,20 @@
+# A developer's machine. The database is the one infra/docker-compose.yml starts; its name, user
+# and password are local-only values and protect nothing.
+spring:
+  datasource:
+    url: ${SALON_DB_URL:jdbc:postgresql://localhost:${SALON_POSTGRES_PORT:5440}/${SALON_DB_NAME:salon}}
+    username: ${SALON_DB_USER:salon}
+    password: ${SALON_DB_PASSWORD:salon-local-only}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  info:
+    java:
+      enabled: true
+
+springdoc:
+  api-docs:
+    enabled: true
