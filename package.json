@@ -1,0 +1,14 @@
+{
+  "name": "@salon/workspace",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The pnpm workspace: the web app and the packages it shares. The API is built with Maven (apps/api); QA keeps its own package (qa/).",
+  "packageManager": "pnpm@12.11.2",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "contracts:generate": "node packages/api-contracts/scripts/contracts.mjs generate",
+    "contracts:check": "node packages/api-contracts/scripts/contracts.mjs check"
+  }
+}
