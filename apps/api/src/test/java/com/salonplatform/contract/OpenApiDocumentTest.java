@@ -31,6 +31,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  * <li>{@code update}: rewrites {@code docs/api/openapi.json}. {@code pnpm contracts:generate}
  * uses it. The committed document is never edited by hand.
  * </ul>
+ *
+ * <p>This class only generates and compares. What the document must always say is asserted in
+ * {@link OpenApiShapeTest}, so that generating never fails because the contract changed.
  */
 class OpenApiDocumentTest extends IntegrationTest {
 
@@ -61,20 +64,6 @@ class OpenApiDocumentTest extends IntegrationTest {
                         .isEqualTo(generated);
             }
         }
-    }
-
-    @Test
-    void theDocumentDescribesMetaAndTheErrorShape() {
-        String document = http().get("/v3/api-docs").body();
-
-        com.jayway.jsonpath.DocumentContext json = com.jayway.jsonpath.JsonPath.parse(document);
-        assertThat(json.<String>read("$.paths['/api/v1/meta'].get.operationId")).isEqualTo("getMeta");
-        assertThat(json.<List<String>>read("$.components.schemas.Meta.required"))
-                .containsExactlyInAnyOrder("service", "version", "commit", "time");
-        assertThat(json.<String>read("$.components.schemas.Meta.properties.time.format")).isEqualTo("date-time");
-        assertThat(json.<List<String>>read("$.components.schemas.Problem.required")).contains("code");
-        assertThat(json.<String>read("$.servers[0].url")).isEqualTo("/");
-        assertThat(json.<Map<String, Object>>read("$.paths")).containsOnlyKeys("/api/v1/meta");
     }
 
     /** Keys sorted, two-space indentation, a final newline: the same bytes on every machine. */
