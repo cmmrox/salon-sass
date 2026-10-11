@@ -44,6 +44,8 @@ load_settings() {
   export SALON_DB_NAME="${SALON_DB_NAME:-salon}"
   export SALON_DB_USER="${SALON_DB_USER:-salon}"
   export SALON_DB_PASSWORD="${SALON_DB_PASSWORD:-salon-local-only}"
+  # Remember whether the API will use the local database or one somebody pointed it at.
+  if [ -z "${SALON_DB_URL:-}" ]; then DATABASE_IS_LOCAL=1; else DATABASE_IS_LOCAL=0; fi
   export SALON_DB_URL="${SALON_DB_URL:-jdbc:postgresql://localhost:${SALON_POSTGRES_PORT}/${SALON_DB_NAME}}"
   export SALON_API_BASE_URL="${SALON_API_BASE_URL:-http://localhost:${SALON_API_PORT}}"
   export SALON_WEB_MODE="${SALON_WEB_MODE:-production}"
@@ -276,6 +278,9 @@ start_api() {
     return 0
   fi
   refuse_foreign_port api "$SALON_API_PORT" SALON_API_PORT
+  if [ "$DATABASE_IS_LOCAL" = "1" ] && ! port_in_use "$SALON_POSTGRES_PORT"; then
+    fail "api cannot start: it needs PostgreSQL, and nothing is listening on port $SALON_POSTGRES_PORT. Start it first: infra/scripts/local-service.sh start postgres"
+  fi
   say "api: building"
   ( cd "$ROOT/apps/api" && JAVA_HOME="$RESOLVED_JAVA_HOME" ./mvnw -q -DskipTests package ) >"$LOG_DIR/api-build.log" 2>&1 \
     || { tail -n 30 "$LOG_DIR/api-build.log" >&2; fail "the API did not build. See $LOG_DIR/api-build.log"; }

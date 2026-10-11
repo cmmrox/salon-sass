@@ -44,7 +44,7 @@ export function StatusBody({ state, retryHref }: { state: StatusState; retryHref
           {t('unavailable.title')}
         </h2>
         <p>{t('unavailable.body')}</p>
-        {/* A plain link, not a client-side one: a full reload asks the API again, without JavaScript. */}
+        {/* A plain link, not a client-side one: a full reload makes the page ask the API again. */}
         <a className={styles.action} href={retryHref} data-testid="status-retry">
           {t('unavailable.retry')}
         </a>
