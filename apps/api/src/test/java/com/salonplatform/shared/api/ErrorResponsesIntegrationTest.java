@@ -49,6 +49,25 @@ class ErrorResponsesIntegrationTest extends IntegrationTest {
         assertLeaksNothing(response.body());
     }
 
+    /** Requests the server refuses before the application sees them. */
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "GET /api/v1/%zz HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n",
+        "GET /api/v1/meta HTTP/1.1\r\nHost: localhost\r\nContent-Length: abc\r\nConnection: close\r\n\r\n",
+        "GET /api/v1/meta HTTP/1.1\r\nConnection: close\r\n\r\n",
+    })
+    void aMalformedRequestIsRefusedAsProblemDetails(String request) {
+        String response = http().raw(request);
+
+        assertThat(response).startsWith("HTTP/1.1 400");
+        assertThat(response).containsIgnoringCase("Content-Type: application/problem+json");
+        String body = response.substring(response.indexOf("{"), response.lastIndexOf("}") + 1);
+        assertThat(JsonPath.parse(body).<String>read("$.code")).isEqualTo("bad_request");
+        assertThat(JsonPath.parse(body).<Integer>read("$.status")).isEqualTo(400);
+        assertThat(response).doesNotContain("<html").doesNotContainIgnoringCase("Server:");
+        assertLeaksNothing(body);
+    }
+
     private static void assertLeaksNothing(String body) {
         assertThat(body)
                 .doesNotContainIgnoringCase("exception")

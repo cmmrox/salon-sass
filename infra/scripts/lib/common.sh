@@ -139,11 +139,13 @@ require_prerequisites() {
   for service in "$@"; do
     case "$service" in
       postgres) problem="$(docker_problem)" ;;
-      api)      resolve_java_home; problem="$JAVA_PROBLEM" ;;
+      api)      resolve_java_home || true; problem="$JAVA_PROBLEM" ;;
       web)      problem="$(node_problem)" ;;
       *)        problem="" ;;
     esac
-    [ -n "$problem" ] && problems="${problems}  - ${problem}"$'\n'
+    if [ -n "$problem" ]; then
+      problems="${problems}  - ${problem}"$'\n'
+    fi
   done
   if ! command -v curl >/dev/null 2>&1; then
     problems="${problems}  - curl is required and was not found."$'\n'

@@ -1,10 +1,12 @@
 package com.salonplatform.testing;
 
 import java.io.IOException;
+import java.net.Socket;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 
 /** Calls the running application over real HTTP, the way a client does. */
@@ -36,6 +38,22 @@ public final class Http {
         catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
             throw new IllegalStateException(method + " " + path + " was interrupted", ex);
+        }
+    }
+
+    /**
+     * Sends exactly these bytes and returns everything the server answered: the status line, the
+     * headers and the body. For requests no HTTP client would agree to send.
+     */
+    public String raw(String request) {
+        try (Socket socket = new Socket("localhost", port)) {
+            socket.setSoTimeout(10_000);
+            socket.getOutputStream().write(request.getBytes(StandardCharsets.ISO_8859_1));
+            socket.getOutputStream().flush();
+            return new String(socket.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        }
+        catch (IOException ex) {
+            throw new IllegalStateException("the raw request failed", ex);
         }
     }
 
