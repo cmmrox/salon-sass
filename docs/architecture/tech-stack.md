@@ -42,7 +42,7 @@ Set by stage F01-S01. Exact versions are in the build files (`apps/api/pom.xml`,
 | Web styling | CSS custom properties as tokens (`apps/web/src/styles/tokens.css`) with CSS Modules; no utility-class framework | A salon's brand is applied by changing custom properties at run time |
 | Web lint and tests | ESLint with `eslint-config-next`; Vitest with jsdom and Testing Library | |
 | TypeScript | The newest major that both `openapi-typescript` and `typescript-eslint` support | |
-| Node.js and pnpm | Node.js pinned in `.nvmrc`; pnpm pinned by `packageManager` and run through Corepack | A pnpm that is not Corepack's rewrites the lock file |
+| Node.js and pnpm | Node.js pinned in `.nvmrc`; pnpm pinned by `packageManager` and run through Corepack | A pnpm of another version stops with an error (`pmOnFail: error`) rather than rewrite the lock file; the scripts refuse to run without Corepack |
 
 ## External services
 

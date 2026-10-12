@@ -121,7 +121,12 @@ and `application`, never in a controller, a repository or a mapper.
 ## Health and service metadata
 
 - `GET /actuator/health` reports the database and Spring Boot's default components, showing status
-  only. It answers within the connection timeout when the database is down.
+  only. The `db` component is our own check (`DatabaseHealthIndicator`), not Spring Boot's: a
+  `SELECT 1` under the pool's validation timeout. Health answers within about two seconds whether
+  the database is down or accepts connections and stays silent, and recovers by itself when the
+  database answers again.
+- **Every wait on the database has a limit:** connection 2 s, validation 1 s, connect 2 s, login 2 s,
+  socket 30 s. A statement that gets no answer for 30 s fails. Do not add a database call without one.
 - `GET /actuator/info` is served in the `local` profile only and returns 404 in any other.
 - `GET /api/v1/meta` returns the service name, the build's version, the commit it was built from
   and the server time as a UTC instant. It does not touch the database.
