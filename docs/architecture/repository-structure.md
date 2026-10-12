@@ -8,7 +8,7 @@
 | `apps/web` | One Next.js application serving three surfaces by hostname: each salon's public booking site, each salon's staff workspace, and the operator console | Developer |
 | `apps/mobile` | The customer app: one Expo codebase for the shared container app and a dedicated app per salon. Created in milestone `M2-mobile` | Developer |
 | `packages/api-contracts` | The TypeScript client generated from the API's OpenAPI document, used by the web app and the customer app | Developer (generated) |
-| `infra/` | Docker Compose for the local environment, and its scripts | Developer |
+| `infra/` | Docker Compose for the local environment, its scripts, and `infra/postgres/` (the application role's definition) | Developer |
 | `.github/` | Continuous integration | Developer |
 | `package.json`, `pnpm-workspace.yaml`, `pnpm-lock.yaml`, `.nvmrc`, `.sdkmanrc`, `.editorconfig`, `.env.example` | The workspace, the pinned tool versions and the settings of the local environment | Developer |
 | `.local/` | Process ids and logs of the local environment. Never committed | The local scripts |

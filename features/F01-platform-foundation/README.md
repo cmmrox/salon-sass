@@ -48,7 +48,9 @@ while requests are in flight.
 - Names are placeholders until open decision D-02 (product name and platform domain): Java base
   package `com.salonplatform`, npm scope `@salon`, app identifiers under `com.salonplatform`.
   Recorded as decision 007.
-- F01-S05 cannot be planned until D-08 is decided.
+- F01-S05 is built ready to deploy and provider-neutral; the first real deployment waits for D-08
+  (hosting) and D-02 (domain). Decision 018. It also decides how the web app is served in a
+  production image (decision 022) and provisions the two database roles outside the local machine.
 - Settled when planning F01-S02: a request names its salon by hostname from F01-S02 onward, on the
   API (`<slug>.localhost` locally, rules in `docs/architecture/multi-tenancy.md`); F01-S03 adds the
   same on the web. The three synthetic salons' fixed ids are in `docs/qa/test-plan.md`.

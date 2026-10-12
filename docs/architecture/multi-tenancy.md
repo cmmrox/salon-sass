@@ -73,12 +73,27 @@ the salon's subdomain on the platform domain.
    ALTER TABLE service ENABLE ROW LEVEL SECURITY;
    ALTER TABLE service FORCE ROW LEVEL SECURITY;
    CREATE POLICY tenant_isolation ON service
-     USING      (tenant_id = current_setting('app.tenant_id', true)::uuid)
-     WITH CHECK (tenant_id = current_setting('app.tenant_id', true)::uuid);
+     USING      (tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::uuid)
+     WITH CHECK (tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::uuid);
    ```
 
-   With no setting, `current_setting(..., true)` is null, the comparison is null, and no row is
-   visible. The system fails closed.
+   With no setting, the value is null, the comparison is null, and no row is visible. The system
+   fails closed. The `NULLIF` is required: on a pooled connection that an earlier transaction set,
+   `current_setting` returns an empty string afterwards, not null, and an empty string cast to a
+   UUID is an error instead of "no rows".
+
+Three consequences of how the framework works, which every later stage follows:
+
+- **Resolve the salon before the transaction.** The request filter only binds the hostname's slug.
+  The registry is asked on first use, through `TenantContext.require()`, so an endpoint that needs
+  no salon (such as `meta`) never touches the database. A use case calls it before it opens its
+  transaction.
+- **A session with no salon uses the nil UUID.** Hibernate refuses a session with no tenant once an
+  entity carries `@TenantId`, so the resolver answers `00000000-0000-0000-0000-000000000000`, which
+  the database refuses as a tenant's id. It can therefore match no row.
+- **The application reads the registry only through `tenant_by_slug(text)`**, a `SECURITY DEFINER`
+  function that returns a slug's id and status. It has no grant on `tenant`. A suspended salon
+  resolves to no salon until F01-S03 defines what its hostname shows.
 
 ## Adding a table
 
@@ -88,7 +103,9 @@ the salon's subdomain on the platform domain.
 - [ ] The entity carries `@TenantId`.
 - [ ] Every unique constraint and every index starts with `tenant_id`.
 - [ ] Every foreign key to another tenant table is composite: `(tenant_id, other_id)`.
-- [ ] The application role is granted only the operations it needs.
+- [ ] The application role is granted only the operations it needs, in the migration, to the Flyway
+      placeholder for the application role (never to a role name written into the migration, and
+      no migration creates a role).
 - [ ] An isolation test covers the table (see below).
 
 ## Adding an endpoint
