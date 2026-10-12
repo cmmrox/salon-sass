@@ -4,7 +4,7 @@ title: "Walking skeleton and local environment"
 sequence: 1
 surfaces: [api, web, infra]
 status: in-qa
-qa_status: not-run
+qa_status: pass
 released_in: null
 depends_on: []
 requirements: []
@@ -223,7 +223,64 @@ handoff:
       SALON_API_BASE_URL, SALON_WEB_MODE, SPRING_PROFILES_ACTIVE, JAVA25_HOME.
     - The API and the web app run on the machine, not in containers. local-up.sh serves a
       production build of the web app (next start) and the packaged jar of the API.
-cases: []
+cases:
+  - {id: TC-F01-S01-001, title: "From stopped, local-up.sh starts PostgreSQL, the API and the web app and prints the address of each", type: functional, priority: high, covers: [AC-1]}
+  - {id: TC-F01-S01-002, title: "With Docker unreachable, local-up.sh exits non-zero, names Docker and starts nothing", type: build, priority: high, covers: [AC-1]}
+  - {id: TC-F01-S01-003, title: "With a Java that is not 25, local-up.sh exits non-zero, names the Java it needs and starts nothing", type: build, priority: high, covers: [AC-1]}
+  - {id: TC-F01-S01-004, title: "A second local-up.sh while the product is running changes nothing and exits zero", type: functional, priority: medium, covers: [AC-1]}
+  - {id: TC-F01-S01-005, title: "local-down.sh stops all three services, and a second local-down.sh exits zero", type: functional, priority: medium, covers: [AC-1]}
+  - {id: TC-F01-S01-006, title: "With its port taken by another program, local-up.sh exits non-zero, names the port and leaves that program alone", type: functional, priority: medium, covers: [AC-1]}
+  - {id: TC-F01-S01-007, title: "After the API process dies, local-up.sh starts it again and leaves the rest alone", type: resilience, priority: medium, covers: [AC-1]}
+  - {id: TC-F01-S01-008, title: "local-service.sh stops and starts one service, leaves the others running, and refuses anything else", type: functional, priority: medium, covers: [AC-1]}
+  - {id: TC-F01-S01-009, title: "The product runs on other ports when the documented settings name them, in the shell or in .env", type: functional, priority: low, covers: [AC-1]}
+  - {id: TC-F01-S01-010, title: "Health answers 200 with status UP and a database component that is UP", type: api, priority: high, covers: [AC-2]}
+  - {id: TC-F01-S01-011, title: "Meta answers 200 with service, version, commit and time, and matches the committed contract", type: api, priority: high, covers: [AC-3]}
+  - {id: TC-F01-S01-012, title: "Meta reports the server's time now, as a UTC instant, on every request", type: api, priority: medium, covers: [AC-3]}
+  - {id: TC-F01-S01-013, title: "Meta reports the commit the running build was made from", type: api, priority: medium, covers: [AC-3]}
+  - {id: TC-F01-S01-014, title: "The contract the running API serves is the committed docs/api/openapi.json", type: api, priority: high, covers: [AC-3]}
+  - {id: TC-F01-S01-015, title: "A path under /api that does not exist answers 404 as problem details with code not_found", type: api, priority: high, covers: [AC-4]}
+  - {id: TC-F01-S01-016, title: "An unknown path answers 404 as problem details whatever format the caller asks for", type: api, priority: medium, covers: [AC-4]}
+  - {id: TC-F01-S01-017, title: "A 404 shows no stack trace, class name or framework version, in its body or its headers", type: security, priority: high, covers: [AC-4]}
+  - {id: TC-F01-S01-018, title: "A method meta does not support answers 405 as problem details with code method_not_allowed", type: api, priority: medium, covers: []}
+  - {id: TC-F01-S01-019, title: "With the local profile, info reports Java 25 and that virtual threads are enabled", type: api, priority: high, covers: [AC-5]}
+  - {id: TC-F01-S01-020, title: "No actuator endpoint that exposes configuration, memory or control is served", type: security, priority: medium, covers: []}
+  - {id: TC-F01-S01-021, title: "A response format meta cannot produce answers 406 as problem details with code not_acceptable", type: api, priority: low, covers: []}
+  - {id: TC-F01-S01-022, title: "A malformed or oversized request is answered 4xx as problem details, shows no internals and never hangs", type: security, priority: high, covers: [AC-4]}
+  - {id: TC-F01-S01-023, title: "A large body sent to an endpoint that takes none is refused as problem details, and a flood of them leaves the API up", type: security, priority: medium, covers: []}
+  - {id: TC-F01-S01-024, title: "With PostgreSQL stopped, health answers 503 within 5 seconds with the database component DOWN", type: resilience, priority: high, covers: [AC-2]}
+  - {id: TC-F01-S01-025, title: "With PostgreSQL stopped, fifty health requests at once each answer 503 within 5 seconds", type: resilience, priority: high, covers: [AC-2]}
+  - {id: TC-F01-S01-026, title: "With PostgreSQL stopped, no answer shows how the product is built, and the rest of the API still answers", type: security, priority: medium, covers: [AC-2]}
+  - {id: TC-F01-S01-027, title: "When PostgreSQL comes back, health returns to 200 UP without the API being restarted", type: resilience, priority: high, covers: [AC-2]}
+  - {id: TC-F01-S01-028, title: "Started with a profile other than local, info answers 404 while the API itself is up", type: security, priority: high, covers: [AC-5]}
+  - {id: TC-F01-S01-029, title: "On an empty database the API applies the baseline migration and records it once in flyway_schema_history", type: data-integrity, priority: high, covers: [AC-6]}
+  - {id: TC-F01-S01-030, title: "Starting the API a second time applies nothing and does not fail", type: data-integrity, priority: high, covers: [AC-6]}
+  - {id: TC-F01-S01-031, title: "local-down.sh followed by local-up.sh keeps the database's data", type: data-integrity, priority: medium, covers: []}
+  - {id: TC-F01-S01-032, title: "The home page shows the service name and version the API reports", type: functional, priority: high, covers: [AC-7]}
+  - {id: TC-F01-S01-033, title: "The status page shows the product's placeholder name and says what the page is", type: functional, priority: medium, covers: []}
+  - {id: TC-F01-S01-034, title: "An address the web app does not have answers 404 with a not-found page that leads home", type: functional, priority: medium, covers: []}
+  - {id: TC-F01-S01-035, title: "At 360 and 1280 wide the status page and the not-found page fit without scrolling sideways", type: responsive, priority: high, covers: []}
+  - {id: TC-F01-S01-036, title: "An automated accessibility scan of the status page and the not-found page finds nothing serious", type: accessibility, priority: high, covers: []}
+  - {id: TC-F01-S01-037, title: "The not-found page can be used with the keyboard alone, and shows where the focus is", type: accessibility, priority: medium, covers: []}
+  - {id: TC-F01-S01-038, title: "Every string shown on the status page and the not-found page comes from the translation file", type: functional, priority: high, covers: [AC-9]}
+  - {id: TC-F01-S01-039, title: "Every element a test reads or presses on the status page and the not-found page carries a test id", type: functional, priority: high, covers: [AC-9]}
+  - {id: TC-F01-S01-040, title: "The three states of the status page look right to a person at 360 and 1280 wide", type: functional, priority: medium, covers: []}
+  - {id: TC-F01-S01-041, title: "With the API stopped the home page shows a plain service-unavailable state: no overlay, no stack trace, not blank", type: resilience, priority: high, covers: [AC-7]}
+  - {id: TC-F01-S01-042, title: "With the API stopped nothing the browser receives shows how the product is built or where the API is", type: security, priority: medium, covers: [AC-7]}
+  - {id: TC-F01-S01-043, title: "When the API accepts a connection and never answers, the page shows the unavailable state instead of hanging", type: resilience, priority: high, covers: [AC-7]}
+  - {id: TC-F01-S01-044, title: "When the API answers with an error or with something that is not meta, the page shows the unavailable state", type: resilience, priority: medium, covers: [AC-7]}
+  - {id: TC-F01-S01-045, title: "While the API is slow the page shows the loading state, and then the result", type: functional, priority: medium, covers: []}
+  - {id: TC-F01-S01-046, title: "Markup in what the API reports is shown as text and never runs", type: security, priority: medium, covers: []}
+  - {id: TC-F01-S01-047, title: "At 360 and 1280 wide the unavailable state fits, its action can be reached, and a very long value still fits", type: responsive, priority: high, covers: []}
+  - {id: TC-F01-S01-048, title: "An automated accessibility scan of the unavailable state finds nothing serious, and the state is announced", type: accessibility, priority: high, covers: []}
+  - {id: TC-F01-S01-049, title: "The unavailable state can be used with the keyboard alone: Tab reaches \"try again\", the focus shows, Enter retries", type: accessibility, priority: high, covers: []}
+  - {id: TC-F01-S01-050, title: "In the unavailable state every string comes from the translation file and every element a test reads or presses carries a test id", type: functional, priority: high, covers: [AC-9]}
+  - {id: TC-F01-S01-051, title: "When the API comes back, \"try again\" shows its name and version without the web app being restarted", type: resilience, priority: high, covers: [AC-7]}
+  - {id: TC-F01-S01-052, title: "pnpm contracts:check exits zero on the committed tree", type: build, priority: high, covers: [AC-8]}
+  - {id: TC-F01-S01-053, title: "With docs/api/openapi.json altered, pnpm contracts:check exits non-zero and names it", type: build, priority: high, covers: [AC-8]}
+  - {id: TC-F01-S01-054, title: "With a generated client file altered, pnpm contracts:check exits non-zero and names it", type: build, priority: high, covers: [AC-8]}
+  - {id: TC-F01-S01-055, title: "In the web shell's source every user-visible string comes from a translation file and every pressable element has a data-testid", type: build, priority: high, covers: [AC-9]}
+  - {id: TC-F01-S01-056, title: "The CI workflow runs every verification command on a pull request, and none of them is allowed to fail quietly", type: build, priority: high, covers: [AC-10]}
+  - {id: TC-F01-S01-057, title: "A pull request on GitHub runs every verification command, and a failing command marks the pull request as failed", type: build, priority: high, covers: [AC-10]}
 verification:
   commands:
     - "cd apps/api && ./mvnw -q verify"
@@ -234,9 +291,77 @@ verification:
     - "pnpm --filter @salon/web build"
     - "pnpm contracts:check"
     - "qa/scripts/sdlc selftest"
-  automation: []
-  manual: []
-  deferred: []
+  automation:
+    - id: local-environment
+      tool: script
+      file: qa/checks/F01/S01-local-environment.sh
+      covers: [TC-F01-S01-001, TC-F01-S01-002, TC-F01-S01-003, TC-F01-S01-004, TC-F01-S01-005, TC-F01-S01-006, TC-F01-S01-007, TC-F01-S01-008]
+      suites: []
+    - id: api-meta-health-info
+      tool: playwright
+      file: qa/api/F01/S01-meta-health-info.spec.ts
+      project: api
+      covers: [TC-F01-S01-010, TC-F01-S01-011, TC-F01-S01-012, TC-F01-S01-013, TC-F01-S01-014, TC-F01-S01-019, TC-F01-S01-020]
+      suites: []
+    - id: api-errors
+      tool: playwright
+      file: qa/api/F01/S01-errors.spec.ts
+      project: api
+      covers: [TC-F01-S01-015, TC-F01-S01-016, TC-F01-S01-017, TC-F01-S01-018, TC-F01-S01-021, TC-F01-S01-022, TC-F01-S01-023]
+      suites: []
+    - id: web-status-page
+      tool: playwright
+      file: qa/web/F01/S01-status-page.spec.ts
+      project: web
+      covers: [TC-F01-S01-032, TC-F01-S01-033, TC-F01-S01-034, TC-F01-S01-035, TC-F01-S01-036, TC-F01-S01-037, TC-F01-S01-038, TC-F01-S01-039]
+      suites: []
+    - id: web-status-page-api-down
+      tool: playwright
+      file: qa/web/F01/S01-status-page-api-down.spec.ts
+      project: web
+      covers: [TC-F01-S01-041, TC-F01-S01-042, TC-F01-S01-043, TC-F01-S01-044, TC-F01-S01-045, TC-F01-S01-046, TC-F01-S01-047, TC-F01-S01-048, TC-F01-S01-049, TC-F01-S01-050, TC-F01-S01-051]
+      suites: []
+    - id: database-down
+      tool: script
+      file: qa/checks/F01/S01-database-down.sh
+      covers: [TC-F01-S01-024, TC-F01-S01-025, TC-F01-S01-026, TC-F01-S01-027]
+      suites: []
+    - id: other-profile
+      tool: script
+      file: qa/checks/F01/S01-other-profile.sh
+      covers: [TC-F01-S01-028]
+      suites: []
+    - id: migrations
+      tool: script
+      file: qa/checks/F01/S01-migrations.sh
+      covers: [TC-F01-S01-029, TC-F01-S01-030, TC-F01-S01-031]
+      suites: []
+    - id: contract-drift
+      tool: script
+      file: qa/checks/F01/S01-contract-drift.sh
+      covers: [TC-F01-S01-052, TC-F01-S01-053, TC-F01-S01-054]
+      suites: []
+    - id: strings-and-test-ids
+      tool: script
+      file: qa/checks/F01/S01-strings-and-test-ids.sh
+      covers: [TC-F01-S01-055]
+      suites: []
+    - id: ci-workflow
+      tool: script
+      file: qa/checks/F01/S01-ci-workflow.sh
+      covers: [TC-F01-S01-056]
+      suites: []
+  manual:
+    - case: TC-F01-S01-009
+      reason: "it needs a root `.env`, which a check must never write into the repository, and a full extra build-and-start cycle on every stage run to protect settings no acceptance criterion names"
+      performed_on: 2026-10-12
+    - case: TC-F01-S01-040
+      reason: "whether a screen looks right is a person's judgement that no assertion replaces"
+      performed_on: 2026-10-12
+  deferred:
+    - case: TC-F01-S01-057
+      reason: "the repository has no GitHub remote, so no pull request can exist and the workflow has never run (the spec's \"Done criteria\" say so)"
+      unblocked_by: "the owner creates the GitHub remote"
 evidence:
-  last_run: null
-  last_result: null
+  last_run: qa/reports/20261012-073215-F01-S01
+  last_result: pass
