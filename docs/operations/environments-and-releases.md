@@ -62,6 +62,11 @@ Created by stage F01-S01. Everything runs on the host except PostgreSQL, which r
   `local-service.sh start api` starts the API as it would run elsewhere.
 - **A QA run needs the product running.** Start it with `local-up.sh` before
   `qa/scripts/sdlc run`; the automation refuses to start otherwise.
+- **Restart after rebuilding the runtime artifacts.** Maven `verify` repackages the jar used by
+  the local API. Replacing it while that process is running can break later class loading even
+  though health initially answers. Stop the API before repackaging; start it from the completed
+  build before QA. Restart the web app after rebuilding its production output as well. Passing
+  build gates does not refresh an already-running process.
 
 ## What a test or a developer may use
 
