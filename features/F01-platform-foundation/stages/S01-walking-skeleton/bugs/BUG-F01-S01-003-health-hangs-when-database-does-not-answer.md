@@ -2,12 +2,12 @@
 id: BUG-F01-S01-003
 title: Health hangs for as long as PostgreSQL accepts connections but does not answer
 severity: minor
-status: open
+status: fixed
 found_by: exploratory
 breaks: AC-2
 found_on: 2026-10-12
-fixed_in: null
-fix_note: null
+fixed_in: 73ef051
+fix_note: 'Cause: Spring Boot db health check calls Connection.isValid with no time limit on a pooled connection, and the driver had no socket or login timeout. Fix: the db component is now DatabaseHealthIndicator, whose SELECT 1 runs under the pool validation timeout (1 s) so the connection fails, is discarded and health recovers on its own; the driver also has loginTimeout 2 s and socketTimeout 30 s. Health answers 503 in 1 to 2 s with PostgreSQL paused and 200 at once when it resumes.'
 developer_note: null
 verified_on: null
 approved_by: null

@@ -2,12 +2,12 @@
 id: BUG-F01-S01-005
 title: README.md does not list curl, which local-up.sh requires and says is listed there
 severity: minor
-status: open
+status: fixed
 found_by: exploratory
 breaks: AC-1
 found_on: 2026-10-12
-fixed_in: null
-fix_note: null
+fixed_in: 43d9cf1
+fix_note: 'Cause: the README prerequisites table omitted curl, which local-up.sh requires. Fix: curl is now a row of the Quick start table (and 7ac555d adds the ps the scripts now need).'
 developer_note: null
 verified_on: null
 approved_by: null

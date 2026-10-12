@@ -12,13 +12,16 @@ nfr_focus: [NFR-17, NFR-18]
 handoff:
   run: |
     Prerequisites: JDK 25 (need not be the default Java; found through .sdkmanrc/SDKMAN, JAVA_HOME,
-    /usr/libexec/java_home or JAVA25_HOME), Node.js 24+ with Corepack (`corepack enable` once),
-    Docker running, curl. README.md "Quick start" lists them.
+    /usr/libexec/java_home or JAVA25_HOME), Node.js 24+ with Corepack (`corepack enable` once; the
+    scripts always run `corepack pnpm` and refuse to start without corepack), Docker running, curl,
+    and a `ps` that reports start times (`ps -p <id> -o lstart=`; procps on Linux). README.md
+    "Quick start" lists every one.
 
     infra/scripts/local-up.sh                          # PostgreSQL, API, web; prints each address
     infra/scripts/local-down.sh                        # stop all; container removed, data kept
     infra/scripts/local-reset.sh                       # delete the database's data, start from empty
     infra/scripts/local-service.sh <start|stop> <postgres|api|web>
+    infra/scripts/local-service.sh <pause|resume> postgres   # test hook, see below
 
     Web         http://localhost:3100                  (SALON_WEB_PORT)
     API         http://localhost:8090                  (SALON_API_PORT)
@@ -27,6 +30,9 @@ handoff:
                 Compose project salon-local, volume salon-postgres-data
 
     Process ids are in .local/run, logs in .local/logs (api.log, web.log, api-build.log, web-build.log).
+    A pid file holds "<pid> <start time>"; .local/run/lock exists while one of the scripts runs.
+    The scripts take turns: a second one prints "waiting for another of these scripts to finish
+    (process N)" on stderr, waits (up to 15 minutes), then acts on what the first left.
     The scripts build before they start; local-up.sh takes about 15 seconds once dependencies are
     downloaded, the first run several minutes.
     `stop postgres` stops the container and keeps it and its data; `start api` refuses to start
@@ -34,6 +40,15 @@ handoff:
     Every setting is in .env.example; a variable in the shell wins over .env.
 
     To test a case that needs something else:
+    - A database that accepts connections and answers nothing (BUG-F01-S01-003):
+      `infra/scripts/local-service.sh pause postgres`, then `resume postgres`. It is `docker pause`
+      on salon-postgres only. `start postgres`, `stop postgres` and local-down.sh thaw it first.
+      Pausing a PostgreSQL that is not running exits 1; pausing twice or resuming when not paused
+      exits 0 ("already paused", "not paused").
+    - A pid file left behind (BUG-F01-S01-002): write any "<pid>" or "<pid> <time>" into
+      .local/run/api.pid. Unless that process also started at that time, the scripts remove the
+      file, print "note: .local/run/api.pid was left by an earlier run. Process N is not something
+      these scripts started and is left alone." on stderr, and never signal it.
     - Another Spring profile (AC-5): stop the API, then
       `SPRING_PROFILES_ACTIVE=staging infra/scripts/local-service.sh start api`. Any name works; the
       scripts pass the database settings in the environment, so no profile file is needed.
@@ -77,6 +92,38 @@ handoff:
     - Checked on one machine only: macOS, Apple silicon, default Java 21 with JDK 25 beside it.
       Linux and Windows were not tried. The scripts are bash; there is no Windows equivalent.
 
+    BUG FIXES AFTER THE FIRST QA PASS (all five are fixed; how each was proved is in its fix_note
+    and below)
+    - BUG-001 (193a982): two local-up.sh 0, 4 and 6 s apart, and three at the same instant: every
+      run exits 0, the product is running, one API process, and local-down.sh stops it all.
+      local-down.sh issued during a start waits for it, then stops everything.
+    - BUG-002 (e092d81, 7ac555d): the bug's own steps: "api: started", health 200, the sleep
+      process alive after local-down.sh. Also a file naming a live process with a wrong start time,
+      and a file naming a dead process.
+    - BUG-003 (73ef051): new DatabaseFrozenIntegrationTest (pauses its own Testcontainers database)
+      and DatabaseTimeoutsIntegrationTest; both failed before the fix. On the running product with
+      salon-postgres paused: first health 503 in 1.0 s, concurrent and later ones 503 in 2.0 s,
+      fifty at once all 503, slowest 2.03 s, 503 in 2.0 s throughout a 40 s freeze, meta 200, and
+      200 within 1 s of the resume with the same API process.
+    - BUG-004 (5b85cf1): with Homebrew's pnpm 11.6.0 and no corepack on PATH,
+      `pnpm install --frozen-lockfile` exits 1 with "This project is configured to use 12.11.2 of
+      pnpm. Your current pnpm is v11.6.0" and local-up.sh exits 1 naming Corepack; pnpm-lock.yaml is
+      unchanged in both. Corepack's pnpm installs as before.
+    - BUG-005 (43d9cf1): README.md lists curl (and, from 7ac555d, ps).
+
+    WHAT CHANGED THAT QA'S AUTOMATION MAY SEE
+    - New lines on stderr: "waiting for another of these scripts to finish (process N)" and the
+      "note: ... was left by an earlier run" above. New lines on stdout: "postgres: resumed",
+      "postgres: paused; it accepts connections and answers nothing until it is resumed",
+      "postgres: already paused", "postgres: not paused". Every earlier line is worded as before.
+    - local-service.sh prints a second usage line, "<pause|resume> postgres"; refusals still exit 2.
+    - New ways to exit 1: corepack missing; ps unable to report a start time; another script still
+      holding the lock after 15 minutes; pausing a PostgreSQL that is not running.
+    - The API: the db component is now our own indicator (bean dbHealthIndicator, still "db" in
+      the body, same shape and codes). The driver now has loginTimeout 2 s and socketTimeout 30 s:
+      any one statement that gets no answer for 30 s fails. Health with PostgreSQL stopped is
+      unchanged (503 in 2.0 s).
+
     CHECKED BY HAND ON THE RUNNING PRODUCT: AC-1 to AC-9, including Docker unreachable, three
     wrong-Java cases, PostgreSQL stopped (health 503 in 2.0 s, back to 200 after start), a
     non-local profile, an empty database and a restart, the API stopped and the API hanging under
@@ -116,6 +163,13 @@ handoff:
       through the API being down, slow or wrong; that path is handled.
 
     DIFFERENT FROM A DOCUMENT UNDER docs/
+    - docs/engineering/backend.md, "Health and service metadata", says health "answers within the
+      connection timeout when the database is down". It now also answers, within the validation
+      timeout, when the database accepts connections and does not answer, and every database wait
+      has a limit (above). The db component is our own indicator, not Spring Boot's.
+    - docs/architecture/tech-stack.md, "Node.js and pnpm", says "A pnpm that is not Corepack's
+      rewrites the lock file". One that is not the pinned version now stops with an error instead
+      (pmOnFail: error in pnpm-workspace.yaml), and the scripts refuse to run without corepack.
     - docs/architecture/tech-stack.md says "JUnit 5 and Testcontainers (API)". Spring Boot 4.1.1
       manages JUnit Jupiter 6.0.3 and Testcontainers 2.0.5; that is what the tests run on.
     - docs/architecture/tech-stack.md, machine prerequisites, says "JDK 25, Node.js with pnpm
@@ -184,7 +238,8 @@ handoff:
     - Configuration: application.yaml has no default for the database (SALON_DB_URL,
       SALON_DB_USER, SALON_DB_PASSWORD); application-local.yaml supplies the local ones. The pool
       is 10 connections; a request waits 2 seconds for a connection, which is also how fast health
-      reports the database down.
+      reports a stopped database down. Every wait on the database has a limit: connection 2 s,
+      validation 1 s (also the health query's limit), connect 2 s, login 2 s, socket 30 s.
     - version comes from META-INF/build-info.properties (spring-boot-maven-plugin build-info),
       commit from git.properties (git-commit-id-maven-plugin 9.2.0). The Maven version is
       0.1.0-SNAPSHOT.

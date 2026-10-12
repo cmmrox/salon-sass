@@ -2,12 +2,12 @@
 id: BUG-F01-S01-001
 title: Two runs of local-up.sh that overlap both fail, leave the product stopped, and can leave an API process the scripts no longer stop
 severity: minor
-status: open
+status: fixed
 found_by: exploratory
 breaks: AC-1
 found_on: 2026-10-12
-fixed_in: null
-fix_note: null
+fixed_in: 193a982
+fix_note: 'Cause: nothing stopped two local-*.sh runs from building into the same target/, writing the same pid file and stopping each other. Fix: local-up, local-down, local-reset and local-service now take a lock (.local/run/lock, naming its holder by process id and start time) before starting or stopping anything; a second run prints waiting for another of these scripts to finish, then finds everything running and exits 0; a lock left by a killed script is recognised and removed.'
 developer_note: null
 verified_on: null
 approved_by: null

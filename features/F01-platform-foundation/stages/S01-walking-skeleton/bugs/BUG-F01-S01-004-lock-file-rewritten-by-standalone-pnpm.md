@@ -2,12 +2,12 @@
 id: BUG-F01-S01-004
 title: Run with a pnpm that is not Corepack's, local-up.sh and "pnpm install --frozen-lockfile" rewrite the committed pnpm-lock.yaml
 severity: minor
-status: open
+status: fixed
 found_by: exploratory
 breaks: AC-1
 found_on: 2026-10-12
-fixed_in: null
-fix_note: null
+fixed_in: 5b85cf1
+fix_note: 'Cause: a pnpm other than the pinned 12.11.2 switches to the pinned version by itself and first records @pnpm/exe in pnpm-lock.yaml, even with --frozen-lockfile, and local-up.sh fell back to whatever pnpm was on PATH. Fix: pnpm-workspace.yaml sets pmOnFail: error, so such a pnpm stops before writing anything and names the version it needs; local-up.sh requires Corepack, names it when missing, and always runs corepack pnpm.'
 developer_note: null
 verified_on: null
 approved_by: null

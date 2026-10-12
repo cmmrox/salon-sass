@@ -2,12 +2,12 @@
 id: BUG-F01-S01-002
 title: A process-id file left behind makes local-up.sh report the API as running when it is not, and local-down.sh then kills an unrelated process
 severity: minor
-status: open
+status: fixed
 found_by: exploratory
 breaks: AC-1
 found_on: 2026-10-12
-fixed_in: null
-fix_note: null
+fixed_in: e092d81
+fix_note: 'Cause: a pid file held only a number, so a leftover whose number had been reused was trusted. Fix: the file now records the process id and its start time (ps -p <id> -o lstart=), a service counts as running only while both match, and any other file is removed with a note while the process it names is left alone; 7ac555d makes a ps that cannot report start times a named prerequisite.'
 developer_note: null
 verified_on: null
 approved_by: null
