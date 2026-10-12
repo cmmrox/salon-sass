@@ -3,7 +3,7 @@ feature: F01
 title: "Walking skeleton and local environment"
 sequence: 1
 surfaces: [api, web, infra]
-status: in-qa
+status: complete
 qa_status: pass
 released_in: null
 depends_on: []
