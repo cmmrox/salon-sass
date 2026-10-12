@@ -1,11 +1,9 @@
-import { screen, within } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
 import { messages, renderWithMessages } from '@/test/render';
 
-import { SalonNotFound } from './SalonNotFound';
 import { SalonShell, SalonShellLoading } from './SalonShell';
-import { SalonUnavailable } from './SalonUnavailable';
 
 const beta = { slug: 'beta', name: 'Beta Hair, Beauty & Wellness Lounge of Colombo Seven', brandColour: '#1F2937' };
 const gamma = { slug: 'gamma', name: 'Gamma', brandColour: '#FDE68A' };
@@ -51,32 +49,6 @@ describe('SalonShellLoading', () => {
     expect(screen.getByTestId('salon-loading')).toBeInTheDocument();
     expect(container.querySelector('style')).toBeNull();
     expect(screen.queryByRole('heading')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('salon-name')).not.toBeInTheDocument();
-  });
-});
-
-describe('SalonNotFound', () => {
-  it('says there is no salon at this address, in the neutral theme, naming no salon', () => {
-    const { container } = renderWithMessages(<SalonNotFound />);
-
-    const page = screen.getByTestId('salon-not-found');
-    expect(within(page).getByRole('heading', { level: 1, name: messages.salon.notFound.title })).toBeVisible();
-    expect(screen.getByTestId('salon-not-found-title')).toHaveTextContent(messages.salon.notFound.title);
-    expect(screen.getByTestId('salon-not-found-body')).toHaveTextContent(messages.salon.notFound.body);
-    expect(container.querySelector('style')).toBeNull();
-    expect(screen.queryByTestId('salon-name')).not.toBeInTheDocument();
-  });
-});
-
-describe('SalonUnavailable', () => {
-  it("says the salon's site is not available, in the neutral theme, naming no salon", () => {
-    const { container } = renderWithMessages(<SalonUnavailable />);
-
-    const page = screen.getByTestId('salon-unavailable');
-    expect(within(page).getByRole('heading', { level: 1, name: messages.salon.unavailable.title })).toBeVisible();
-    expect(screen.getByTestId('salon-unavailable-title')).toHaveTextContent(messages.salon.unavailable.title);
-    expect(screen.getByTestId('salon-unavailable-body')).toHaveTextContent(messages.salon.unavailable.body);
-    expect(container.querySelector('style')).toBeNull();
     expect(screen.queryByTestId('salon-name')).not.toBeInTheDocument();
   });
 });

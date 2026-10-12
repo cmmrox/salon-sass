@@ -1,27 +1,20 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
+import { plainPageHtml, plainPageStatus, type PlainPage } from '@/lib/plain-page/plain-page';
+
 import { SALON_HEADER, encodeSalon } from './salon-header';
 import { resolveSite, type Site } from './site';
 
 /**
- * The pages a salon's hostname is rewritten to. They are reached only through `proxy.ts`; a request
- * for one of these paths from outside is answered as a page that does not exist.
+ * The page an active salon's hostname is rewritten to, at `/`. It is reached only through
+ * `proxy.ts`; a request for it from outside is answered as a page that does not exist.
  */
-export const SITE_ROUTES = {
-  /** An active salon's shell, at `/` on its hostname. */
-  shell: '/salon-site',
-  /** "Salon not found". */
-  notFound: '/salon-site/missing',
-  /** "Temporarily unavailable": a suspended salon. */
-  suspended: '/salon-site/suspended',
-  /** "Service unavailable": the salon could not be resolved. */
-  unavailable: '/salon-site/unavailable',
-} as const;
+export const SALON_SHELL_ROUTE = '/salon-site';
 
 /** A path no page answers, so the application's own not-found page answers it. */
 const NOWHERE = '/salon-site/nowhere';
 
-const INTERNAL_PREFIX = SITE_ROUTES.shell;
+const INTERNAL_PREFIX = SALON_SHELL_ROUTE;
 
 /**
  * Every response about a salon's hostname is for this request only: a status change, a brand
@@ -30,8 +23,10 @@ const INTERNAL_PREFIX = SITE_ROUTES.shell;
 const NOT_STORED = 'private, no-cache, no-store, max-age=0, must-revalidate';
 
 /**
- * What the proxy does with a request: works out the site from the `Host` header alone, and
- * rewrites to the page for it with the status that page answers with. Routing only: it is not a
+ * What the proxy does with a request: works out the site from the `Host` header alone. An active
+ * salon is rewritten to its shell; "salon not found", "temporarily unavailable" and "service
+ * unavailable" are answered here, as complete HTML with their status (decision 028), because the
+ * framework answers a page reached by a rewrite with 200. Routing only: it is not a
  * security boundary (docs/engineering/web.md); the API and the database enforce access.
  *
  * The salon is never taken from the client: the query, cookies and every header but `Host` are
@@ -50,7 +45,7 @@ export async function routeRequest(
 
   const path = request.nextUrl.pathname;
   if (path === INTERNAL_PREFIX || path.startsWith(`${INTERNAL_PREFIX}/`)) {
-    return rewrite(request, NOWHERE, 404, headers);
+    return rewrite(request, NOWHERE, headers);
   }
 
   const site = await resolve(request.headers.get('host'));
@@ -58,15 +53,15 @@ export async function routeRequest(
     case 'platform':
       return NextResponse.next({ request: { headers } });
     case 'not-found':
-      return rewrite(request, SITE_ROUTES.notFound, 404, headers);
+      return answer('salon-not-found');
     case 'suspended':
-      return rewrite(request, SITE_ROUTES.suspended, 503, headers);
+      return answer('salon-unavailable');
     case 'unavailable':
-      return rewrite(request, SITE_ROUTES.unavailable, 503, headers);
+      return answer('service-unavailable');
     case 'salon': {
       headers.set(SALON_HEADER, encodeSalon(site.salon));
       if (path === '/') {
-        return rewrite(request, SITE_ROUTES.shell, 200, headers);
+        return rewrite(request, SALON_SHELL_ROUTE, headers);
       }
       // Any other path on a salon's hostname is the application's, with the salon handed on.
       const response = NextResponse.next({ request: { headers } });
@@ -76,12 +71,19 @@ export async function routeRequest(
   }
 }
 
-function rewrite(request: NextRequest, pathname: string, status: number, headers: Headers): NextResponse {
+function rewrite(request: NextRequest, pathname: string, headers: Headers): NextResponse {
   // The same origin as the request, so the rewrite stays inside this application.
   const destination = request.nextUrl.clone();
   destination.pathname = pathname;
   destination.search = '';
-  const response = NextResponse.rewrite(destination, { status, request: { headers } });
+  const response = NextResponse.rewrite(destination, { request: { headers } });
   response.headers.set('Cache-Control', NOT_STORED);
   return response;
+}
+
+function answer(page: PlainPage): NextResponse {
+  return new NextResponse(plainPageHtml(page), {
+    status: plainPageStatus(page),
+    headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': NOT_STORED },
+  });
 }
