@@ -46,6 +46,8 @@ Layout of the project:
 
 - A module exposes a small public interface (a facade) and its events. Another module calls the
   facade; it never imports the other module's entities, repositories or internal services.
+- Concretely: another module may use only the types in a module's root package, and any module
+  may use anything in `shared`. The architecture tests enforce exactly this.
 - No module reads another module's tables. A report that needs both asks both, or reads a read
   model that the owning modules feed.
 - Dependencies point one way. `shared` depends on nothing; nothing depends on `reporting`.
@@ -70,9 +72,16 @@ and `application`, never in a controller, a repository or a mapper.
 
 - JSON over HTTP under `/api/v1`. Plural nouns, no verbs in paths except for actions that are not
   CRUD (`/bookings/{id}/cancel`).
-- Errors are problem details (`application/problem+json`) with a stable machine-readable `code`
-  (`slot_taken`, `hold_expired`, `policy_violation`). Clients and tests branch on `code`, never on
-  the message.
+- Errors are problem details (`application/problem+json`) with `title`, `status`, `detail`, a stable
+  machine-readable `code`, and `instance` when the application answered. Clients and tests branch
+  on `code`, never on the message. The general codes are `not_found` (404), `bad_request` (400),
+  `method_not_allowed` (405), `not_acceptable` (406), `unsupported_media_type` (415),
+  `service_unavailable` (503), `request_rejected` (any other 4xx) and `internal_error` (any other
+  5xx). A module adds its own for business outcomes (`slot_taken`, `hold_expired`,
+  `policy_violation`).
+- A request the server itself rejects before the application sees it (a badly encoded path, an
+  unreadable header) is still answered as problem details, never as the server's HTML page.
+- No error body carries a stack trace, a class name or a framework version.
 - A missing record and another salon's record both return 404 with the same body.
 - Lists are paginated, always. Sorting and filtering are explicit parameters.
 - A request that creates a booking, a payment or a refund carries an `Idempotency-Key`. Repeating it
@@ -108,6 +117,16 @@ and `application`, never in a controller, a repository or a mapper.
 - A hold has an expiry. Availability ignores an expired hold immediately; a job removes it later.
 - Confirming a payment, converting the hold and scheduling notifications happen in one transaction.
 - Every state change records who, when and why.
+
+## Health and service metadata
+
+- `GET /actuator/health` reports the database and Spring Boot's default components, showing status
+  only. It answers within the connection timeout when the database is down.
+- `GET /actuator/info` is served in the `local` profile only and returns 404 in any other.
+- `GET /api/v1/meta` returns the service name, the build's version, the commit it was built from
+  and the server time as a UTC instant. It does not touch the database.
+- The JVM currently runs in the machine's time zone; instants in the API are UTC regardless. Time
+  handling for business rules arrives in F01-S04.
 
 ## Virtual threads
 
@@ -148,7 +167,10 @@ and `application`, never in a controller, a repository or a mapper.
 | Integration | Use cases and endpoints against real PostgreSQL in a container | Includes the two-tenant isolation cases and the wrong-role cases |
 | Concurrency | Anything that must happen once: holds, bookings, payment notifications | Fire simultaneous requests and assert exactly one succeeds |
 | Architecture | Module boundaries | Fails the build |
-| Contract | The OpenAPI document and generated client are current | Fails the build |
+| Contract | The OpenAPI document and generated client are current | Fails the build. `pnpm contracts:check` regenerates the document from the controllers, so it needs the JDK and Docker |
+
+Integration tests are named `*IntegrationTest` and run in the same Maven phase as unit tests. One
+PostgreSQL container serves the whole run.
 
 A test asserts an outcome the spec promises. A test that passes when the feature is removed is not
 a test: when you write one for a bug, watch it fail first.

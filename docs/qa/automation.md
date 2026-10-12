@@ -29,7 +29,7 @@ qa/
   tsconfig.json           path alias to packages/api-contracts
   web/<feature>/*.spec.ts
   api/<feature>/*.spec.ts
-  shared/                 fixtures.ts, tenants.ts, accounts.ts, api-client.ts, builders/
+  shared/                 fixtures and helpers; tenants.ts and accounts.ts from F01-S02, builders as needed
   .env.example            the keys qa/.env.local must provide
 ```
 
@@ -38,8 +38,12 @@ qa/
 - Contract types come from `packages/api-contracts` through the path alias. Read them; never copy them.
 - Project `api` runs `qa/api/**`, with no browser. Project `web` runs `qa/web/**`.
 - Traces are off by default and never recorded around sign-in: a trace stores what was typed.
-- Screenshots on failure only. Output goes to the folder in `QA_REPORT_DIR`, which
-  `qa/scripts/sdlc run` sets.
+- Screenshots on failure only. `qa/scripts/sdlc run` sets `QA_REPORT_DIR`; because Playwright
+  empties its output folder when it starts, each invocation writes to its own folder,
+  `QA_REPORT_DIR/playwright/<invocation>/`.
+- The product must already be running (`infra/scripts/local-up.sh`). The automation checks this
+  first and stops with a line starting `ENVIRONMENT:` when it is not, so that a stopped product is
+  never reported as a failing one.
 - Start a test's title with its case id:
 
   ```ts

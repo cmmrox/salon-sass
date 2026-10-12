@@ -46,6 +46,8 @@ layout and conventions are in `docs/qa/automation.md`.
 - Wait for the thing you are about to assert, never for a fixed time.
 - Run headless while iterating. Before calling a visual stage passed, watch the flow once at real
   speed: something that opens, closes and reopens is invisible to assertions and obvious to the eye.
+  Where nobody can watch, record the sequence of states with their timings and inspect screenshots
+  of each, and record that as a manual case.
 
 ## Tests of things that must happen once
 

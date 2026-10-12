@@ -48,14 +48,14 @@ Ranked, most valuable first. A finding that breaks a requirement is a bug, not a
 
 | Id | Class | Suggestion | Disposition |
 | --- | --- | --- | --- |
-| SUG-F01-S01-01 | should | List the error codes in the contract, so a client can learn them from `docs/api/openapi.json` | |
-| SUG-F01-S01-02 | should | In the local environment, have the API and the web app listen on this machine only | |
-| SUG-F01-S01-03 | should | Say in the next spec that "down" includes "accepts connections and does not answer", and give QA a way to freeze PostgreSQL through `infra/scripts` | |
-| SUG-F01-S01-04 | idea | Tell a browser that runs no scripts something other than "checking the service" for ever | |
-| SUG-F01-S01-05 | idea | Do not call a request the server refuses to understand (501, 505) an `internal_error` | |
-| SUG-F01-S01-06 | idea | Set a page-weight budget and the security headers when the branded shell replaces this page | |
-| SUG-F01-S01-07 | idea | Let long words in headings wrap | |
-| SUG-F01-S01-08 | idea | Put the time on the web app's log lines, and say what was left running when a start fails half way | |
+| SUG-F01-S01-01 | should | List the error codes in the contract, so a client can learn them from `docs/api/openapi.json` | CR-001 |
+| SUG-F01-S01-02 | should | In the local environment, have the API and the web app listen on this machine only | CR-002 |
+| SUG-F01-S01-03 | should | Say in the next spec that "down" includes "accepts connections and does not answer", and give QA a way to freeze PostgreSQL through `infra/scripts` | CR-003 |
+| SUG-F01-S01-04 | idea | Tell a browser that runs no scripts something other than "checking the service" for ever | backlog |
+| SUG-F01-S01-05 | idea | Do not call a request the server refuses to understand (501, 505) an `internal_error` | backlog |
+| SUG-F01-S01-06 | idea | Set a page-weight budget and the security headers when the branded shell replaces this page | backlog |
+| SUG-F01-S01-07 | idea | Let long words in headings wrap | backlog |
+| SUG-F01-S01-08 | idea | Put the time on the web app's log lines, and say what was left running when a start fails half way | backlog |
 
 ### SUG-F01-S01-01 List the error codes in the contract
 

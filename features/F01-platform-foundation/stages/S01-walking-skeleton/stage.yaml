@@ -8,6 +8,7 @@ qa_status: pass
 released_in: null
 depends_on: []
 requirements: []
+nfr_focus: [NFR-17, NFR-18]
 handoff:
   run: |
     Prerequisites: JDK 25 (need not be the default Java; found through .sdkmanrc/SDKMAN, JAVA_HOME,

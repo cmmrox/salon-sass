@@ -355,6 +355,9 @@ def check_stages(bundle):
         for rid in _list(stage.get("requirements")):
             if rid not in _list(feature.get("requirements")) + _list(feature.get("extends")):
                 _add(findings, stage, f"requirement {rid} does not belong to feature {feature.get('id')}")
+        for rid in _list(stage.get("nfr_focus")):
+            if rid not in _list(feature.get("nfr_focus")):
+                _add(findings, stage, f"nfr_focus names {rid}, which is not in feature {feature.get('id')}'s nfr_focus")
         if feature.get("status") == "backlog" and status not in (None, "outlined"):
             _add(findings, stage, f"{sid} is '{status}' while its feature is still in the backlog")
 

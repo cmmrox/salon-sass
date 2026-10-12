@@ -11,6 +11,7 @@ released_in: null
 reopened_by: null           # lead: the change request that reopened a closed stage, for example CR-004
 depends_on: []              # stage ids, of this or another feature
 requirements: []            # requirement ids of the feature that this stage delivers
+nfr_focus: []               # non-functional requirements of the feature that this stage proves
 
 # Written by the developer at handoff. Facts QA needs to run the stage; not how the code works.
 handoff:

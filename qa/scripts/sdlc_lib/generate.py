@@ -122,7 +122,7 @@ def render_coverage(bundle):
         spec = stage.get("_spec") or {"acs": []}
         lines.append(_row(
             stage.get("id"), stage.get("status"), stage.get("qa_status"),
-            ", ".join(_list(stage.get("requirements"))) or "-",
+            ", ".join(_list(stage.get("requirements")) + _list(stage.get("nfr_focus"))) or "-",
             len(spec["acs"]), len(_list(stage.get("cases"))), len(automated),
             len(_list(verification.get("manual"))), len(_list(verification.get("deferred"))),
         ))

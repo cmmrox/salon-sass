@@ -10,6 +10,8 @@
 | `packages/api-contracts` | The TypeScript client generated from the API's OpenAPI document, used by the web app and the customer app | Developer (generated) |
 | `infra/` | Docker Compose for the local environment, and its scripts | Developer |
 | `.github/` | Continuous integration | Developer |
+| `package.json`, `pnpm-workspace.yaml`, `pnpm-lock.yaml`, `.nvmrc`, `.sdkmanrc`, `.editorconfig`, `.env.example` | The workspace, the pinned tool versions and the settings of the local environment | Developer |
+| `.local/` | Process ids and logs of the local environment. Never committed | The local scripts |
 | `features/` | The plan and state of every feature and stage: specs, status, test cases, bugs, reviews | Lead, with the developer and QA writing their own files |
 | `qa/` | QA automation, shared fixtures, release manifests | QA |
 | `qa/scripts/` | The lifecycle tooling (`sdlc`) and the path-ownership check (`guard.py`) | Lead |
@@ -26,7 +28,7 @@ A release certifies one revision of these paths. If any of them changes after a 
 verified, it is verified again (`release-cut` checks this):
 
 ```
-apps packages infra qa/web qa/api qa/mobile qa/load qa/checks qa/shared
+apps packages infra package.json pnpm-workspace.yaml pnpm-lock.yaml docs/api qa/web qa/api qa/mobile qa/load qa/checks qa/shared
 ```
 
 ## Inside the applications

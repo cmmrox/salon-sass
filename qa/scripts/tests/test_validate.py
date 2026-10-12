@@ -158,6 +158,11 @@ class ValidateTest(unittest.TestCase):
                           verification={})
         self.assertFinding(fx.bundle(stages=[first, second]), "depends on F07-S01, which is only 'in-progress'")
 
+    def test_stage_nfr_focus_must_come_from_its_feature(self):
+        self.assertFinding(fx.bundle(stages=[fx.stage(nfr_focus=["NFR-01"])]), "not in feature F07's nfr_focus")
+        self.assertEqual(findings(fx.bundle(features=[fx.feature(nfr_focus=["NFR-01"])],
+                                            stages=[fx.stage(nfr_focus=["NFR-01"])])), [])
+
     def test_stage_requirement_must_belong_to_its_feature(self):
         self.assertFinding(fx.bundle(stages=[fx.stage(requirements=["PAY-01"])]), "does not belong to feature F07")
 

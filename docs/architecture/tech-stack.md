@@ -17,7 +17,7 @@ this table in step when a major version changes.
 | API contract | An OpenAPI document generated from the API's controllers and committed; a TypeScript client generated from it |
 | Background work | Database-backed job scheduler and transactional outbox. No message broker |
 | Files | S3-compatible object storage, one prefix per tenant |
-| Developer tests | JUnit 5 and Testcontainers (API), Vitest (web), Jest (customer app) |
+| Developer tests | JUnit and Testcontainers, in the versions Spring Boot manages (API); Vitest with Testing Library (web); Jest (customer app) |
 | QA tools | Playwright (browser and API), Maestro (customer app), k6 (load and concurrency) |
 | Source hosting | GitHub. `main` is the trunk |
 | Continuous integration | GitHub Actions, added by stage F01-S01 |
@@ -25,6 +25,24 @@ this table in step when a major version changes.
 Next.js 16, Spring Boot 4 and Hibernate 7 differ from older versions in ways your memory may not
 cover. Read the installed version's documentation before using an API you have not used in this
 repository.
+
+## Tooling choices
+
+Set by stage F01-S01. Exact versions are in the build files (`apps/api/pom.xml`, `package.json`,
+`pnpm-lock.yaml`).
+
+| For | Choice | Why |
+| --- | --- | --- |
+| Selecting the JDK | `maven-toolchains-plugin`, and `JAVA25_HOME` as the override the scripts and the plugin both read; `.sdkmanrc` pins the JDK | The build works from a shell whose default Java is another version |
+| OpenAPI document | `springdoc-openapi` (no UI); the test `OpenApiDocumentTest` writes `docs/api/openapi.json` with sorted keys | No second application start, and a stable diff |
+| TypeScript client | `openapi-typescript` for types and `openapi-fetch` for the client, in `packages/api-contracts` (TypeScript source, no build step) | Fetch-based, so the customer app can use it unchanged |
+| Architecture tests | ArchUnit | Module boundaries fail the build |
+| Integration database | Testcontainers with the same PostgreSQL image as the local environment | Row-level security and exclusion constraints exist only in PostgreSQL |
+| Web translation | `next-intl`, files in `apps/web/messages/<locale>.json`, no locale in the URL | |
+| Web styling | CSS custom properties as tokens (`apps/web/src/styles/tokens.css`) with CSS Modules; no utility-class framework | A salon's brand is applied by changing custom properties at run time |
+| Web lint and tests | ESLint with `eslint-config-next`; Vitest with jsdom and Testing Library | |
+| TypeScript | The newest major that both `openapi-typescript` and `typescript-eslint` support | |
+| Node.js and pnpm | Node.js pinned in `.nvmrc`; pnpm pinned by `packageManager` and run through Corepack | A pnpm that is not Corepack's rewrites the lock file |
 
 ## External services
 
@@ -42,7 +60,7 @@ a real message or take a real payment.
 
 | For | Needs |
 | --- | --- |
-| Building and running the product | JDK 25, Node.js with pnpm through Corepack, Docker |
+| Building and running the product | JDK 25 (it need not be the machine's default Java), Node.js 24 or later with pnpm through Corepack, Docker, curl |
 | The lifecycle tooling (`qa/scripts/sdlc`) | Python 3.10 or later; it creates its own virtual environment |
 | QA | k6 from stage F01-S02 onward; Maestro and an Android emulator from milestone `M2-mobile` |
 
