@@ -25,5 +25,6 @@ load_settings
 if [ "$action" = "start" ] || [ "$service" = "postgres" ]; then
   require_prerequisites "$service"
 fi
+acquire_lock
 
 "${action}_${service}"

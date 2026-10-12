@@ -10,6 +10,7 @@ set -euo pipefail
 
 load_settings
 require_prerequisites postgres api web
+acquire_lock
 
 stop_web
 stop_api

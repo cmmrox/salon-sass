@@ -188,6 +188,72 @@ process_started() {
   LC_ALL=C ps -p "$1" -o lstart= 2>/dev/null | sed -e 's/^ *//' -e 's/ *$//' || true
 }
 
+# --- one script at a time ---------------------------------------------------------------------
+
+# Two of these scripts running at once build into the same folder, write the same pid files and
+# stop each other's processes. So each takes a lock before it starts or stops anything, and a
+# second one waits for the first to finish; it then finds things as the first left them.
+#
+# The lock is a symbolic link whose target names its holder (process id and start time). Creating
+# a link either succeeds or fails because one is there, with nothing in between, and it carries
+# the holder's name from the instant it exists.
+LOCK="$RUN_DIR/lock"
+LOCK_WAIT_SECONDS=900
+LOCK_HOLDER=""
+
+# Whether the process a lock or a pid file names ("<id> <start time>") is still that process.
+is_same_process() {
+  local pid="${1%% *}" started="${1#* }"
+  [ -n "$started" ] && [ "$started" != "$1" ] && [ "$(process_started "$pid")" = "$started" ]
+}
+
+release_lock() {
+  if [ -n "$LOCK_HOLDER" ] && [ "$(readlink "$LOCK" 2>/dev/null || true)" = "$LOCK_HOLDER" ]; then
+    rm -f "$LOCK"
+  fi
+  LOCK_HOLDER=""
+}
+
+# Removes a lock whose holder ($1) is gone: a script that was killed before it could let go. One
+# waiter at a time may do it, and only after looking again, so that a lock another script has
+# taken in the meantime is never the one removed.
+clear_abandoned_lock() {
+  # A leftover of this very step lasts an instant; one that is a minute old is from a killed script.
+  find "$LOCK.clearing" -maxdepth 0 -mmin +1 -exec rmdir {} \; 2>/dev/null || true
+  mkdir "$LOCK.clearing" 2>/dev/null || return 0
+  if [ "$(readlink "$LOCK" 2>/dev/null || true)" = "$1" ]; then
+    rm -f "$LOCK"
+  fi
+  rmdir "$LOCK.clearing"
+}
+
+# Takes the lock, waiting for a script that holds it. Released when this script exits, however it
+# exits. Call it once the prerequisites are known to be met and before starting or stopping anything.
+acquire_lock() {
+  local me holder waited=0 told=0
+  [ -w "$RUN_DIR" ] || fail "cannot write to $RUN_DIR"
+  me="$$ $(process_started "$$")"
+  while ! ln -s "$me" "$LOCK" 2>/dev/null; do
+    holder="$(readlink "$LOCK" 2>/dev/null || true)"
+    if [ -n "$holder" ] && ! is_same_process "$holder"; then
+      clear_abandoned_lock "$holder"
+    elif [ -n "$holder" ] && [ "$told" -eq 0 ]; then
+      printf 'waiting for another of these scripts to finish (process %s)\n' "${holder%% *}" >&2
+      told=1
+    fi
+    if [ "$waited" -ge "$LOCK_WAIT_SECONDS" ]; then
+      fail "another of these scripts${holder:+ (process ${holder%% *})} is still running after $((LOCK_WAIT_SECONDS / 60)) minutes. Nothing was done. If none is running, delete ${LOCK#"$ROOT"/} and try again."
+    fi
+    sleep 1
+    waited=$((waited + 1))
+  done
+  LOCK_HOLDER="$me"
+  trap release_lock EXIT
+  trap 'exit 130' INT
+  trap 'exit 143' TERM
+  trap 'exit 129' HUP
+}
+
 # Records a process these scripts started: its id, and when it started.
 record_pid() {
   printf '%s %s' "$2" "$(process_started "$2")" >"$(pid_file "$1")"
@@ -200,11 +266,12 @@ record_pid() {
 # with that id also started when the file says, the file is a leftover and is removed, and the
 # process it happens to name is left alone.
 running_pid() {
-  local file pid="" started=""
+  local file recorded pid
   file="$(pid_file "$1")"
   [ -f "$file" ] || return 0
-  IFS=' ' read -r pid started <"$file" 2>/dev/null || true
-  if [ -n "$started" ] && [ "$(process_started "$pid")" = "$started" ]; then
+  recorded="$(cat "$file" 2>/dev/null || true)"
+  pid="${recorded%% *}"
+  if is_same_process "$recorded"; then
     printf '%s' "$pid"
     return 0
   fi

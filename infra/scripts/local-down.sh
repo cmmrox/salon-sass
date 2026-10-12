@@ -8,6 +8,7 @@ set -euo pipefail
 . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common.sh"
 
 load_settings
+acquire_lock
 
 stop_web
 stop_api
