@@ -33,7 +33,7 @@ describe('createApiClient', () => {
   });
 
   it('returns an error response as problem details, with its code', async () => {
-    const problem: Problem = { title: 'Not Found', status: 404, code: 'not_found' };
+    const problem: Problem = { title: 'Not Found', status: 404, code: 'not_found', traceId: '4bf92f3577b34da6a3ce929d0e0e4736' };
     const { fetch } = respondingWith(404, problem, 'application/problem+json');
     const client = createApiClient({ baseUrl: 'http://api.test:8090', fetch });
 
@@ -42,10 +42,11 @@ describe('createApiClient', () => {
     expect(response.status).toBe(404);
     expect(data).toBeUndefined();
     expect(error?.code).toBe('not_found');
+    expect(error?.traceId).toBe('4bf92f3577b34da6a3ce929d0e0e4736');
   });
 
   it('requests the salon of the hostname it was given, with no parameter naming one', async () => {
-    const salon: Salon = { slug: 'alpha', name: 'Alpha Studio', brandColour: '#D6086A' };
+    const salon: Salon = { slug: 'alpha', name: 'Alpha Studio', brandColour: '#D6086A', timeZone: 'Asia/Colombo' };
     const { fetch, requests } = respondingWith(200, salon, 'application/json');
     const client = createApiClient({ baseUrl: 'http://alpha.localhost:8090', fetch });
 
@@ -57,7 +58,13 @@ describe('createApiClient', () => {
   });
 
   it('returns not found for a hostname that names no salon, with its code', async () => {
-    const problem: Problem = { title: 'Not Found', status: 404, code: 'not_found', instance: '/api/v1/salon' };
+    const problem: Problem = {
+      title: 'Not Found',
+      status: 404,
+      code: 'not_found',
+      instance: '/api/v1/salon',
+      traceId: '4bf92f3577b34da6a3ce929d0e0e4736',
+    };
     const { fetch } = respondingWith(404, problem, 'application/problem+json');
     const client = createApiClient({ baseUrl: 'http://localhost:8090', fetch });
 
@@ -71,7 +78,7 @@ describe('createApiClient', () => {
   it('returns forbidden for a suspended salon, with its code and nothing of its brand', async () => {
     // The contract lists every code, so a code it does not list does not compile.
     const code: Problem['code'] = 'salon_suspended';
-    const problem: Problem = { title: 'Forbidden', status: 403, code, instance: '/api/v1/salon' };
+    const problem: Problem = { title: 'Forbidden', status: 403, code, instance: '/api/v1/salon', traceId: '4bf92f3577b34da6a3ce929d0e0e4736' };
     const { fetch } = respondingWith(403, problem, 'application/problem+json');
     const client = createApiClient({ baseUrl: 'http://gamma.localhost:8090', fetch });
 

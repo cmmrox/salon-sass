@@ -113,13 +113,25 @@ class LocalHooksIntegrationTest extends IntegrationTest {
         int messages = count("outbox_message");
         int entries = count("audit_entry");
 
-        Exchange response = http().postJsonOnHost(host("beta"), "/local/probes", "{\"abort\":true}");
+        try (CapturedLogs logs = CapturedLogs.ofApplication()) {
+            Exchange response = http().sendOnHost("POST", host("beta"), "/local/probes",
+                    Map.of("Content-Type", "application/json", "traceparent", TRACE_PARENT), "{\"abort\":true}");
 
-        assertThat(response.status()).isEqualTo(500);
-        assertThat(JsonPath.parse(response.body()).<String>read("$.code")).isEqualTo("internal_error");
-        assertThat(response.body()).doesNotContain("ProbeAborted").doesNotContain("abort");
-        assertThat(count("outbox_message")).isEqualTo(messages);
-        assertThat(count("audit_entry")).isEqualTo(entries);
+            assertThat(response.status()).isEqualTo(500);
+            assertThat(response.contentType()).startsWith("application/problem+json");
+            assertThat(JsonPath.parse(response.body()).<String>read("$.code")).isEqualTo("internal_error");
+            assertThat(JsonPath.parse(response.body()).<String>read("$.traceId")).isEqualTo("4bf92f3577b34da6a3ce929d0e0e4736");
+            assertThat(response.body()).doesNotContain("ProbeAborted").doesNotContain("abort").doesNotContain("Exception");
+            assertThat(count("outbox_message")).isEqualTo(messages);
+            assertThat(count("audit_entry")).isEqualTo(entries);
+
+            // What went wrong is in the log, under the same trace and the salon, and not in the answer.
+            assertThat(logs.events(line -> "4bf92f3577b34da6a3ce929d0e0e4736".equals(CapturedLogs.context(line).get("trace.id"))))
+                    .hasSize(2)
+                    .allSatisfy(line -> assertThat(CapturedLogs.context(line)).containsEntry("tenant.id", BETA))
+                    .anySatisfy(line -> assertThat(line.getFormattedMessage()).isEqualTo("Unhandled exception"))
+                    .anySatisfy(line -> assertThat(CapturedLogs.keyValue(line, "http.response.status_code")).isEqualTo(500));
+        }
     }
 
     @ParameterizedTest

@@ -46,6 +46,15 @@ public final class StartedApplication implements AutoCloseable {
     /** Against a database whose migrations run as this role, which then owns its tables. */
     public static StartedApplication against(String jdbcUrl, String migrationUser, String migrationPassword,
             String... settings) {
+        return against(jdbcUrl, migrationUser, migrationPassword, null, settings);
+    }
+
+    /**
+     * As above, with one more configuration class added to the application's own: for a test that
+     * must see inside it (the spans it records), never to change what it does.
+     */
+    public static StartedApplication against(String jdbcUrl, String migrationUser, String migrationPassword,
+            Class<?> testConfiguration, String... settings) {
         List<String> arguments = new ArrayList<>();
         if (List.of(settings).stream().noneMatch(setting -> setting.startsWith("--server.port="))) {
             arguments.add("--server.port=0");
@@ -57,9 +66,11 @@ public final class StartedApplication implements AutoCloseable {
                 "--spring.flyway.user=" + migrationUser,
                 "--spring.flyway.password=" + migrationPassword));
         arguments.addAll(List.of(settings));
-        return new StartedApplication(new SpringApplicationBuilder(SalonApiApplication.class)
-                .profiles("test")
-                .run(arguments.toArray(String[]::new)));
+        SpringApplicationBuilder builder = new SpringApplicationBuilder(SalonApiApplication.class);
+        if (testConfiguration != null) {
+            builder.sources(testConfiguration);
+        }
+        return new StartedApplication(builder.profiles("test").run(arguments.toArray(String[]::new)));
     }
 
     public Http http() {

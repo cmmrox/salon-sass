@@ -193,6 +193,8 @@ class SalonEndpointDatabaseSilentIntegrationTest {
 
                     assertThat(response.status()).as(request).isEqualTo(503);
                     assertThat(JsonPath.parse(response.body()).<String>read("$.code")).isEqualTo("service_unavailable");
+                    assertThat(JsonPath.parse(response.body()).<String>read("$.traceId")).as("the trace id of a 503")
+                            .matches("^[0-9a-f]{32}$");
                 }
                 assertThat(http.getOnHost(host, "/api/v1/meta").status()).isEqualTo(200);
             }

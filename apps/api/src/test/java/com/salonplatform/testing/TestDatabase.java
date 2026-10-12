@@ -108,6 +108,11 @@ public final class TestDatabase {
         return DriverManager.getConnection(url, postgres.getUsername(), postgres.getPassword());
     }
 
+    /** The application started against this database, with a test's configuration class added to it. */
+    public StartedApplication startWith(Class<?> testConfiguration, String... settings) {
+        return StartedApplication.against(url, migrationUser, migrationPassword, testConfiguration, settings);
+    }
+
     /** The application started against this database. */
     public StartedApplication start(String... settings) {
         return StartedApplication.against(url, migrationUser, migrationPassword, settings);

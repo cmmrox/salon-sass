@@ -101,6 +101,38 @@ describe('the committed contract', () => {
     expect(committed.components.schemas.Problem.properties.code.enum).toContain('salon_suspended');
   });
 
+  it('lists every error code once, gives every problem a trace id, and names the fields of a validation failure', () => {
+    const problem = committed.components.schemas.Problem;
+
+    expect(problem.properties.code.enum).toEqual([
+      'bad_request',
+      'not_found',
+      'method_not_allowed',
+      'not_acceptable',
+      'unsupported_media_type',
+      'request_rejected',
+      'service_unavailable',
+      'salon_suspended',
+      'internal_error',
+    ]);
+    expect(problem.required).toEqual(expect.arrayContaining(['code', 'status', 'title', 'traceId']));
+    expect(problem.properties.traceId.pattern).toBe('^[0-9a-f]{32}$');
+    expect(problem.properties.errors.items.required).toEqual(['detail', 'field']);
+  });
+
+  it('gives a salon its time zone', () => {
+    expect(committed.components.schemas.Salon.required).toContain('timeZone');
+  });
+
+  it('describes nothing of the local test hooks or the meters', () => {
+    const text = JSON.stringify(committed);
+
+    expect(Object.keys(committed.paths).every((path) => path.startsWith('/api/v1/'))).toBe(true);
+    expect(text).not.toContain('/local/');
+    expect(text).not.toContain('actuator');
+    expect(text).not.toContain('probe');
+  });
+
   it('exposes the code in the generated client', () => {
     const schema = readFileSync(join(generatedDirectory, SCHEMA_FILE), 'utf8');
 

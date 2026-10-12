@@ -1,5 +1,5 @@
 // @vitest-environment node
-import type { Salon } from '@salon/api-contracts';
+import type { Salon } from '@/lib/api/salon';
 import { getRewrittenUrl, isRewrite, unstable_doesMiddlewareMatch } from 'next/experimental/testing/server';
 import { NextRequest } from 'next/server';
 import { describe, expect, it, vi } from 'vitest';
