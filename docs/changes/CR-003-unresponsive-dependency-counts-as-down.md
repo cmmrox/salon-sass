@@ -25,10 +25,10 @@ From `SUG-F01-S01-03`: state in the next spec that "down" includes "accepts conn
 | Area | Effect |
 | --- | --- |
 | Requirements | None changed. Makes NFR-15 (a failed dependency degrades one function, not the system) testable |
-| Features and stages | F01-S02's spec gains an acceptance criterion and the pause and resume controls. The defect itself is fixed under `BUG-F01-S01-003` |
+| Features and stages | F01-S02's spec gains an acceptance criterion. The defect itself was fixed and verified under `BUG-F01-S01-003`, and the pause and resume controls were added then as the test hook QA needed to verify it (commit e5f827c), so what remains is the acceptance criterion |
 | Test cases and automation | A resilience case in F01-S02 using pause and resume |
 | Data, API and released apps | None |
-| Size and delay | Small. No delay |
+| Size and delay | Smaller than first proposed: one acceptance criterion and its case. No delay |
 
 ## Recommendation
 

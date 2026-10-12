@@ -91,8 +91,11 @@ Use Playwright's request context through `qa/shared/api-client.ts`.
 ## Shell checks
 
 `qa/checks/<feature>/*.sh`, registered with `tool: script`. Use them to stop and start a service
-through the scripts the developer provides in `infra/scripts/` (`local-service.sh stop postgres`),
-to read the database, or to scan the build. If the control a check needs does not exist, that is a
+through the scripts the developer provides in `infra/scripts/` (`local-service.sh stop postgres`;
+`local-service.sh pause postgres` for a database that accepts connections and answers nothing, then
+`resume postgres`), to read the database, or to scan the build. A check that a request "does not
+hang" needs requests in flight at the moment the dependency goes quiet: a request that arrives later
+is handed a connection the pool has already tested. If the control a check needs does not exist, that is a
 testability bug for the developer; QA does not write under `infra/`. A check exits non-zero on
 failure, prints what it found, and leaves the environment as it found it (a stopped service is
 started again, even when the check fails).
