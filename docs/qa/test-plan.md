@@ -58,11 +58,15 @@ and hostnames. They are created by the product's own local seed, which the devel
 `qa/shared/` holds their names, ids and hostnames as constants that must match the seed. (F01-S01
 has no salons; its cases say so.)
 
-| Salon | Use |
-| --- | --- |
-| `alpha` | The salon under test. Default brand colour |
-| `beta` | The other salon, for every isolation test. A dark brand colour and a long name |
-| `gamma` | An edge salon: a light brand colour, no cover image, a different time zone setting, most options off |
+| Salon | Id | Local hostname | Use |
+| --- | --- | --- | --- |
+| `alpha` | `a1a1a1a1-0000-4000-8000-000000000001` | `alpha.localhost` | The salon under test. Name "Alpha Studio", the prototype's default brand colour `#D6086A` |
+| `beta` | `b2b2b2b2-0000-4000-8000-000000000002` | `beta.localhost` | The other salon, for every isolation test. A dark brand colour (`#1F2937`) and a long name: "Beta Hair, Beauty & Wellness Lounge of Colombo Seven" |
+| `gamma` | `c3c3c3c3-0000-4000-8000-000000000003` | `gamma.localhost` | An edge salon: name "Gamma", a light brand colour (`#FDE68A`); from later stages no cover image, a different time zone setting and most options off |
+
+The ids and slugs are fixed and the same in every local environment; the names and colours may be
+changed by later stages that own branding, and `qa/shared/tenants.ts` follows them. The hostnames use
+the local platform domain `localhost` and the API's or web app's port.
 
 Any test that touches a salon's data needs at least two salons. A suite that passes because two
 salons never happened to collide has proved nothing about isolation.

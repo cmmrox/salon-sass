@@ -6,6 +6,7 @@ defect the business cannot survive, so isolation is enforced twice and tested on
 ## Contents
 
 - The ten rules
+- Salons and their hostnames
 - How the tenant reaches the database
 - Adding a table
 - Adding an endpoint
@@ -28,6 +29,30 @@ defect the business cannot survive, so isolation is enforced twice and tested on
 | T-8 | Caches, file paths, search indexes and log lines are keyed or tagged by tenant |
 | T-9 | An automated suite attempts cross-tenant reads and writes through every endpoint on every build |
 | T-10 | Operator access to a salon's data is a deliberate, logged, time-limited session (PLT-07), never a standing privilege |
+
+## Salons and their hostnames
+
+A salon is a row of the platform table `tenant`: its id (a UUID, never shown to a customer), its
+slug, its status (`active` or `suspended`) and the times it was created and changed. The slug is
+the salon's subdomain on the platform domain.
+
+- **Hostname:** `<slug>.<platform domain>`, with the port ignored and compared without regard to case.
+  The platform domain is a setting: `localhost` on a developer's machine (so `alpha.localhost`
+  needs no hosts file), the staging and production domains elsewhere (open decision D-02).
+- **A hostname matches only when it is exactly one label in front of the platform domain.**
+  `a.b.<platform domain>`, `<slug>.<platform domain>.example.com` and the platform domain itself
+  resolve to no salon.
+- **Slug format:** 3 to 30 characters of lowercase letters, digits and hyphens, beginning and ending
+  with a letter or digit. The database refuses any other.
+- **Reserved slugs**, which can never be a salon, because they name the platform's own hostnames:
+  `admin`, `api`, `app`, `apps`, `assets`, `auth`, `cdn`, `console`, `docs`, `help`, `login`,
+  `mail`, `staging`, `static`, `status`, `support`, `www`. The database refuses them as well.
+- A request on a hostname that resolves to no salon reaches the platform endpoints (`meta`, health)
+  only. Every tenant endpoint answers 404 `not_found`, the same answer as for a salon that does not
+  exist, so a caller cannot probe for salons.
+- What a suspended salon's hostname shows is F01-S03's to define. Until then no salon is suspended.
+- A domain the salon owns (a later release) maps to the same tenant through the edge; it is another
+  way in to the same resolution, not a second mechanism.
 
 ## How the tenant reaches the database
 
