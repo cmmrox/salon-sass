@@ -91,7 +91,7 @@ public final class Http {
     /** A response read off the wire: status, headers (names in lower case) and the decoded body. */
     public record Exchange(int status, Map<String, String> headers, String body) {
 
-        static Exchange parse(String response) {
+        public static Exchange parse(String response) {
             int headerEnd = response.indexOf("\r\n\r\n");
             if (headerEnd < 0) {
                 throw new IllegalStateException("not an HTTP response: " + response);

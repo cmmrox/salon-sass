@@ -1,12 +1,17 @@
 package com.salonplatform.testing;
 
+import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
 
 import com.salonplatform.SalonApiApplication;
+import org.apache.catalina.connector.Connector;
+import org.apache.coyote.AbstractProtocol;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
 import org.springframework.boot.builder.SpringApplicationBuilder;
+import org.springframework.boot.tomcat.TomcatWebServer;
+import org.springframework.boot.web.server.context.WebServerApplicationContext;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.jdbc.core.JdbcTemplate;
 
@@ -57,6 +62,20 @@ public final class StartedApplication implements AutoCloseable {
 
     public int port() {
         return context.getEnvironment().getRequiredProperty("local.server.port", Integer.class);
+    }
+
+    /**
+     * The address each of the server's connectors is bound to; "*" for every interface. What the
+     * server listens on, read from the server itself.
+     */
+    public List<String> listenAddresses() {
+        TomcatWebServer server = (TomcatWebServer) ((WebServerApplicationContext) context).getWebServer();
+        List<String> addresses = new ArrayList<>();
+        for (Connector connector : server.getTomcat().getService().findConnectors()) {
+            InetAddress address = ((AbstractProtocol<?>) connector.getProtocolHandler()).getAddress();
+            addresses.add(address == null ? "*" : address.getHostAddress());
+        }
+        return addresses;
     }
 
     /** The application's own connections: its role, under row-level security. */
