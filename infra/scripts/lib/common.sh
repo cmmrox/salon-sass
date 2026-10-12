@@ -152,6 +152,10 @@ require_prerequisites() {
   if ! command -v curl >/dev/null 2>&1; then
     problems="${problems}  - curl is required and was not found."$'\n'
   fi
+  problem="$(ps_problem)"
+  if [ -n "$problem" ]; then
+    problems="${problems}  - ${problem}"$'\n'
+  fi
   if [ -n "$problems" ]; then
     printf 'error: a prerequisite is missing. Nothing was started.\n%s' "$problems" >&2
     printf 'The prerequisites are listed in README.md.\n' >&2
@@ -184,6 +188,15 @@ pid_file() { printf '%s/%s.pid' "$RUN_DIR" "$1"; }
 process_started() {
   case "${1:-}" in ''|*[!0-9]*) return 0 ;; esac
   LC_ALL=C ps -p "$1" -o lstart= 2>/dev/null | sed -e 's/^ *//' -e 's/ *$//' || true
+}
+
+# These scripts tell the processes they started from every other by when each one started. Where
+# `ps` cannot say, they could no longer tell, and would report a running service as stopped; so
+# that is a missing prerequisite, said aloud, and not something to carry on without.
+ps_problem() {
+  if [ -z "$(process_started "$$")" ]; then
+    say "A 'ps' that reports when a process started is required, and 'ps -p <id> -o lstart=' printed nothing. macOS has one; on Linux it is in the procps package."
+  fi
 }
 
 # --- one script at a time ---------------------------------------------------------------------
@@ -228,8 +241,10 @@ clear_abandoned_lock() {
 # Takes the lock, waiting for a script that holds it. Released when this script exits, however it
 # exits. Call it once the prerequisites are known to be met and before starting or stopping anything.
 acquire_lock() {
-  local me holder waited=0 told=0
+  local me holder problem waited=0 told=0
   [ -w "$RUN_DIR" ] || fail "cannot write to $RUN_DIR"
+  problem="$(ps_problem)"
+  [ -z "$problem" ] || fail "$problem"
   me="$$ $(process_started "$$")"
   while ! ln -s "$me" "$LOCK" 2>/dev/null; do
     holder="$(readlink "$LOCK" 2>/dev/null || true)"

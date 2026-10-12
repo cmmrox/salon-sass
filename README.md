@@ -14,6 +14,7 @@ Prerequisites, on the machine:
 | Node.js 24 or later | With Corepack, which ships with Node.js 24. Run `corepack enable` once so that `pnpm` is on your `PATH`; the pnpm version is pinned in `package.json`. A pnpm installed any other way is not used by the scripts, and stops with an error unless it is exactly that version: it would otherwise rewrite `pnpm-lock.yaml` |
 | Docker, running | For the local PostgreSQL, and for the API's integration tests |
 | curl | The scripts under `infra/scripts` use it to wait until the API and the web app answer. macOS has it; a minimal Linux image may not |
+| `ps` that reports start times | The scripts ask it when a process started (`ps -p <id> -o lstart=`), so that they only ever stop a process they started themselves. macOS has it; on Linux it is in the procps package |
 | Python 3.10 or later | For the lifecycle tooling only (`qa/scripts/sdlc`) |
 
 ```bash
