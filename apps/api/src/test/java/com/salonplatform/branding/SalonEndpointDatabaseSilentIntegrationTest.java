@@ -33,6 +33,16 @@ class SalonEndpointDatabaseSilentIntegrationTest {
 
     private static final Duration LIMIT = Duration.ofSeconds(5);
 
+    /** A silence that ends while the pool, left to itself, is in its longest wait between attempts. */
+    private static final Duration LONG_SILENCE = Duration.ofSeconds(30);
+
+    /**
+     * How soon after a long silence the endpoint must answer 200 again: well inside the five seconds
+     * AC-10 allows, which are counted from the request to thaw the database and so include the time
+     * the thaw itself takes.
+     */
+    private static final Duration RECOVERY = Duration.ofSeconds(2);
+
     @Test
     void requestsInFlightAndRequestsMadeWhileTheDatabaseIsSilentGet503QuicklyAndTheEndpointRecovers() throws Exception {
         try (PostgreSQLContainer postgres = TestPostgres.newContainer()) {
@@ -100,6 +110,72 @@ class SalonEndpointDatabaseSilentIntegrationTest {
         }
     }
 
+    /**
+     * How long the endpoint goes on answering 503 once the database answers again must not depend on
+     * how long the database was silent. Left to itself the pool waits longer and longer between its
+     * attempts to open a connection, up to five seconds, and notices that the database is back only
+     * when the wait it is in ends.
+     *
+     * <p>The silence here is timed to end inside such a wait. Requests keep every pooled connection
+     * busy, so all of them are given up together when the request's limit passes, three seconds into
+     * the silence; each attempt to replace them then takes the two seconds allowed for signing in.
+     * The pool's tenth attempt fails about 28 seconds in, and it would then sleep for five.
+     */
+    @Test
+    void afterALongSilenceTheEndpointAnswersAgainAsSoonAsTheDatabaseDoes() throws Exception {
+        try (PostgreSQLContainer postgres = TestPostgres.newContainer()) {
+            postgres.start();
+            try (StartedApplication application = StartedApplication.against(postgres)) {
+                TestSalon alpha = new TestSalons(TestDatabase.of(postgres).asOwner()).create("Alpha Studio", "#D6086A");
+                Http http = application.http();
+                String host = alpha.host(application.port());
+                assertThat(http.getOnHost(host, SALON).status()).isEqualTo(200);
+
+                List<Answered> answered = new CopyOnWriteArrayList<>();
+                AtomicBoolean keepGoing = new AtomicBoolean(true);
+                long thawAsked;
+                try (ExecutorService clients = Executors.newVirtualThreadPerTaskExecutor()) {
+                    for (int client = 0; client < 12; client++) {
+                        clients.submit(() -> {
+                            while (keepGoing.get()) {
+                                int status = http.getOnHost(host, SALON).status();
+                                answered.add(new Answered(status, System.nanoTime()));
+                            }
+                        });
+                    }
+                    Thread.sleep(500);
+                    freeze(postgres);
+                    try {
+                        Thread.sleep(LONG_SILENCE.toMillis());
+                    }
+                    finally {
+                        thawAsked = System.nanoTime();
+                        thaw(postgres);
+                    }
+                    // Longer than the pool's longest wait, so that the answer is found either way.
+                    Thread.sleep(LIMIT.plusSeconds(2).toMillis());
+                    keepGoing.set(false);
+                    clients.shutdown();
+                    assertThat(clients.awaitTermination(30, TimeUnit.SECONDS)).isTrue();
+                }
+
+                long asked = thawAsked;
+                assertThat(answered).as("while the database was silent").anySatisfy(answer -> {
+                    assertThat(answer.status()).isEqualTo(503);
+                    assertThat(answer.at()).isLessThan(asked);
+                });
+                Duration recovery = answered.stream()
+                        .filter(answer -> answer.status() == 200 && answer.at() > asked)
+                        .map(answer -> Duration.ofNanos(answer.at() - asked))
+                        .min(Duration::compareTo)
+                        .orElseThrow(() -> new AssertionError("no request was answered 200 after the database was thawed"));
+                assertThat(recovery)
+                        .as("from asking for the database to be thawed, after %s of silence, to the first 200", LONG_SILENCE)
+                        .isLessThan(RECOVERY);
+            }
+        }
+    }
+
     @Test
     void withTheDatabaseStoppedTheEndpointAnswers503Quickly() {
         try (PostgreSQLContainer postgres = TestPostgres.newContainer()) {
@@ -142,5 +218,9 @@ class SalonEndpointDatabaseSilentIntegrationTest {
     }
 
     private record Timed(int status, Duration took) {
+    }
+
+    /** A request's status and when its answer arrived, on the clock of {@link System#nanoTime()}. */
+    private record Answered(int status, long at) {
     }
 }

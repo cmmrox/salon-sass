@@ -81,6 +81,11 @@ salon:
     # before the request is answered 503. Shorter than the driver's socket timeout, which is the
     # limit for everything else (migrations included).
     request-timeout: 3s
+    # How often the pool asks for a new connection while the database is unreachable or silent,
+    # once it has been reached. This, not the pool's own wait between attempts (which grows to five
+    # seconds and cannot be set), decides how soon the API answers again after the database does
+    # (SteadyReconnectDataSource). Each attempt keeps the driver's limits above.
+    reconnect-interval: 250ms
   server:
     # Every network interface, as a service in a container must. The local profile listens on this
     # machine's loopback addresses only, unless SALON_LISTEN_ON_NETWORK says otherwise.
