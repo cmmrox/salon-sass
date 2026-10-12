@@ -6,8 +6,8 @@
 
 ## Read first
 
-The project documents that hold the rules for this stage. The developer and QA read each one in
-full before starting.
+The project documents that hold the rules for this stage. The developer reads each one in full
+before building, and QA before the feature pass.
 
 - `docs/<area>/<document>.md`: <what to take from it for this stage>
 
@@ -49,7 +49,8 @@ states. Write "Not applicable for this stage" if none.>
 
 ## Risks and test focus
 
-<What is most likely to go wrong, and the test types QA should plan for (see `docs/qa/test-types.md`), with the reason for each.>
+<What is most likely to go wrong, and the test types it calls for (see `docs/qa/test-types.md`), with
+the reason for each. The developer tests against it now; QA plans the feature pass from it.>
 
 ## Verification commands
 
@@ -61,7 +62,7 @@ The developer gates, run from the repository root. Copy them into `stage.yaml` `
 
 ## Done criteria
 
-- Every acceptance criterion holds on the running product.
+- The developer has checked every acceptance criterion on the running product and recorded it in
+  the handoff.
 - The verification commands are green.
-- QA has passed the stage and every blocker and major bug is verified fixed.
 - <Anything specific to this stage: a document updated, a decision recorded.>

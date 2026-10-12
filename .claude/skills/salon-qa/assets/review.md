@@ -1,4 +1,4 @@
-# F00-S01 <stage title>: product review
+# F00 <feature title>: product review
 
 Reviewed as: <which of the people in docs/qa/review-context.md>.
 Compared with: <which of the products in docs/qa/review-context.md>.
@@ -10,7 +10,7 @@ thing that would improve it most?>
 
 ## What works well
 
-- <Keep this in later stages.>
+- <Keep this in later features.>
 
 ## Suggestions
 
@@ -18,10 +18,10 @@ Ranked, most valuable first. A finding that breaks a requirement is a bug, not a
 
 | Id | Class | Suggestion | Disposition |
 | --- | --- | --- | --- |
-| SUG-F00-S01-01 | should | <short statement> | <left empty by QA; the lead writes BUG-... / CR-000 / backlog / declined by owner: reason> |
-| SUG-F00-S01-02 | idea | <short statement> | |
+| SUG-F00-01 | should | <short statement> | <left empty by QA; the lead writes BUG-... / CR-000 / backlog / declined by owner: reason> |
+| SUG-F00-02 | idea | <short statement> | |
 
-### SUG-F00-S01-01 <short statement>
+### SUG-F00-01 <short statement>
 
 - **Observed:** <screen, steps, what happens>
 - **Why it matters:** <for whom, and what it costs them>
@@ -36,4 +36,4 @@ Ranked, most valuable first. A finding that breaks a requirement is a bug, not a
 
 ## Bugs filed from this review
 
-- <BUG-F00-S01-00n, or "none">
+- <BUG-F00-00n, or "none">

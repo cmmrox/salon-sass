@@ -6,7 +6,7 @@ release: R1                 # the BRD's band: R1 | R2 | R3
 milestone: M1-web           # delivery milestone, from docs/ROADMAP.md; a later one waits for the earlier one's release
 started_early: null         # lead: the owner's instruction to start before an earlier milestone is released
 status: backlog             # backlog | planned | in-progress | in-qa | complete | released
-qa_status: not-run          # not-run | failing | blocked | pass   (set by feature-verify)
+qa_status: not-run          # not-run | failing | blocked | pass   (set by feature-verify, the feature's one QA pass)
 blocked_reason: null
 released_in: null
 depends_on: []              # feature ids that must be complete first

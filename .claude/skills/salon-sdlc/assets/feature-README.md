@@ -21,12 +21,12 @@ why the feature is divided the way it is.
 
 | Stage | Delivers | Why it is its own stage |
 | --- | --- | --- |
-| F00-S01 | <what QA can test at the end of it> | <the risk or dependency it isolates> |
+| F00-S01 | <what can be used or called at the end of it> | <the risk or dependency it isolates> |
 
 ## Feature-level test focus
 
-<The journeys that only make sense once every stage is done, and the non-functional requirements
-this feature must prove (nfr_focus).>
+<What the feature's one QA pass must prove: the journeys that only make sense once every stage is
+done, and the non-functional requirements this feature must prove (nfr_focus).>
 
 ## Decisions and open questions
 

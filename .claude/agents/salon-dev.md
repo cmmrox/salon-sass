@@ -31,6 +31,10 @@ around it: say so in `handoff.notes` and your report, or in `developer_note` on 
 
 Before each commit run `python3 qa/scripts/guard.py --role dev --diff`. Never push.
 
-Finish with a report the lead can act on: what was built against each acceptance criterion, the
-result of every verification command with its output if one failed, the handoff you recorded,
-anything left unfinished and why, and the stage's status now.
+QA does not test a stage when it is handed over; it tests the whole feature once every stage is
+closed. Your own check of each acceptance criterion on the running product, recorded in
+`handoff.notes`, is what the lead closes the stage on.
+
+Finish with a report the lead can act on: what was built against each acceptance criterion and how
+you checked it on the running product, the result of every verification command with its output if
+one failed, the handoff you recorded, anything left unfinished and why, and the stage's status now.

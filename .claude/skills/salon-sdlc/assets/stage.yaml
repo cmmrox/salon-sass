@@ -1,26 +1,27 @@
-# One stage: a part of a feature the developer can hand over and QA can test on its own.
+# One stage: a part of a feature the developer can build, show working and hand over on its own.
 id: F00-S01
 feature: F00
 title: <stage name>
 sequence: 1
 surfaces: []                # api | web | mobile | infra | docs
-status: outlined            # outlined | planned | in-progress | in-qa | complete | released
-qa_status: not-run          # not-run | failing | blocked | pass
-blocked_reason: null        # QA: what stops the pass, when qa_status is blocked
+status: outlined            # outlined | planned | in-progress | built | complete | released
+qa_status: not-run          # stays not-run: QA passes the feature. Set only by a stage pass the owner asked for
+blocked_reason: null        # QA: what stops a stage pass, when qa_status is blocked
 released_in: null
 reopened_by: null           # lead: the change request that reopened a closed stage, for example CR-004
 depends_on: []              # stage ids, of this or another feature
 requirements: []            # requirement ids of the feature that this stage delivers
 nfr_focus: []               # non-functional requirements of the feature that this stage proves
 
-# Written by the developer at handoff. Facts QA needs to run the stage; not how the code works.
+# Written by the developer at handoff. The stage is closed on it, and QA starts the feature pass
+# from it. Facts; not how the code works.
 handoff:
-  run: null                 # commands that start what QA needs
+  run: null                 # commands that start the product and reach what this stage built
   data: null                # the accounts and seed data that exist
-  notes: null               # what is left out, any criterion not checked and why, anything that
-                            # differs from a document under docs/
+  notes: null               # each acceptance criterion: checked on the running product, or not and
+                            # why; what is left out; anything that differs from a document under docs/
 
-# Written by QA. Each case is described in cases.md under a "### TC-..." heading.
+# Written by QA at the feature pass. Each case is described in cases.md under a "### TC-..." heading.
 cases: []
 #  - id: TC-F00-S01-001
 #    title: <what is proved>
@@ -46,6 +47,6 @@ verification:
   #    reason: <why it cannot be run yet>
   #    unblocked_by: <a stage id, or the event the spec names>
 
-evidence:
+evidence:                   # only for a stage pass; a feature pass records its evidence in feature.yaml
   last_run: null            # the run this status rests on, as a path: qa/reports/<folder>
   last_result: null         # pass | fail

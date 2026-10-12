@@ -9,6 +9,7 @@ layout and conventions are in `docs/qa/automation.md`.
 - Reliability rules
 - Selecting and waiting
 - Tests of things that must happen once
+- Time limits
 - Load tests
 - Tests on a device
 - Running and recording
@@ -26,8 +27,9 @@ layout and conventions are in `docs/qa/automation.md`.
 - **A test that passes on retry has failed.** Retries are off; find the cause.
 - **Assert there was something to count before asserting on the count.** A scrape that found nothing
   must fail, not report "0 of 0 correct".
-- **See it fail.** When a new test goes green first time, break the behaviour once, or point the
-  test at the wrong expectation, and watch it go red. Then restore it.
+- **See it fail, where it matters.** When a new `critical` test, or any test built on a count or a
+  scrape, goes green first time, point it at the wrong expectation once and watch it go red. Then
+  restore it. Do not build a second, negative copy of a check to prove the first.
 - **Scope an assertion to what it is about.** "No error text anywhere on the page" fires on correct
   pages and gets ignored.
 - **Assert the outcome, not the arrival.** That a screen opened proves only that it opened.
@@ -44,7 +46,7 @@ layout and conventions are in `docs/qa/automation.md`.
 - An element with no stable handle is a testability bug for the developer. Do not work around it
   with a fragile selector.
 - Wait for the thing you are about to assert, never for a fixed time.
-- Run headless while iterating. Before calling a visual stage passed, watch the flow once at real
+- Run headless while iterating. Before calling a visual flow passed, watch it once at real
   speed: something that opens, closes and reopens is invisible to assertions and obvious to the eye.
   Where nobody can watch, record the sequence of states with their timings and inspect screenshots
   of each, and record that as a manual case.
@@ -62,6 +64,21 @@ still correct.
   test.
 - Verify the end state by reading it back afterwards, not only by counting responses.
 - Correctness under a race is the same on any machine, so a local result is a real result.
+
+## Time limits
+
+A case that asserts how long something may take (an answer, a recovery) is only as good as its clock.
+
+- Take the limit from the requirement, and start the clock at the event the requirement names as
+  the product meets it, not at the moment the test asked a tool to cause it. A recovery limit was
+  once counted from when the test called the command that brings a dependency back; the command's
+  own run time was charged to the product, and the case failed by a hair's breadth one run in
+  several.
+- Record a mark for each event the timing depends on, so a failure shows where the time went
+  without another run.
+- A limit measured on a shared development machine proves the limit can be met there; it is not a
+  certification of a target. Never widen a limit to make a case pass: if the limit is wrong, that is
+  a change request.
 
 ## Load tests
 
@@ -81,7 +98,7 @@ device, the backend is healthy, and the data the flow needs exists and is fresh.
 for this product are in `docs/qa/automation.md`.
 
 If a gate fails, repair it and do not start the run. If you cannot repair it yourself, set
-`qa_status: blocked` with a `blocked_reason`; do not defer the cases to get the stage through. A
+`qa_status: blocked` with a `blocked_reason`; do not defer the cases to get the pass through. A
 platform that was not run is recorded, never implied: declare a case for it and list it under
 `verification.deferred` with the reason and what unblocks it.
 

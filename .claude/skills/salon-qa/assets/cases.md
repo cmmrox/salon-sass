@@ -1,8 +1,12 @@
 # F00-S01 <stage title>: test cases
 
+<!-- A stage's cases prove its acceptance criteria and are written at the feature's QA pass. The
+     feature's own cases.md (journeys, ids like TC-F00-001, covering requirement ids) uses the same
+     layout, and carries the "Test approach" table for the whole feature. -->
+
 ## Test approach
 
-| Test type | Why it applies to this stage |
+| Test type | Why it applies |
 | --- | --- |
 | api | <reason> |
 | <another type from docs/qa/test-types.md> | <reason> |
@@ -13,7 +17,7 @@ Environment: local. Test data and accounts (from docs/qa/test-plan.md): <what th
 
 ## Cases
 
-Every case id here is declared under `cases:` in `stage.yaml`, and the reverse.
+Every case id here is declared under `cases:` in the `stage.yaml` (or `feature.yaml`) beside it, and the reverse.
 
 ### TC-F00-S01-001 <what is proved, as a statement>
 

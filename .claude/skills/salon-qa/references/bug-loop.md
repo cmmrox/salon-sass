@@ -30,14 +30,17 @@ Rules that follow:
 - An environment fault you cannot repair yourself is not a failure of the product and not a reason
   to defer cases. Set `qa_status: blocked` with `blocked_reason`; the lead removes the blocker.
 - Rerun only what changed: a repaired fixture reruns the tests that used it; changed application
-  code reruns the stage.
+  code reruns the feature.
+- A check of a time limit that fails once in several runs is a result that changes between runs.
+  Before anything else, find where the time went: in the product, or in the test's own work around
+  it. If the run did not record enough to tell, that is a test defect to repair first.
 - Do not edit a test while a run is in progress.
 
 ## Filing a bug
 
-One file per defect: `<stage folder>/bugs/BUG-F07-S02-003-<slug>.md`, from `assets/bug.md`. Use the
-next free number in that stage. A defect found in feature QA goes in `features/<feature>/bugs/`
-with an id like `BUG-F07-003`.
+One file per defect: `features/<feature>/bugs/BUG-F07-003-<slug>.md`, from `assets/bug.md`. Use the
+next free number in that feature. A defect found in a stage pass the owner asked for goes in
+`<stage folder>/bugs/` with an id like `BUG-F07-S02-003`.
 
 A bug the developer can act on without asking has:
 
@@ -50,7 +53,7 @@ A bug the developer can act on without asking has:
 A bug found by exploring has no case yet. Write the case when you file the bug. If the bug is fixed
 in this pass, automate the case at re-verification. If it is `minor` or `trivial` and is being left
 open, declare the case and list it under `verification.deferred`, unblocked by the bug's id, so the
-stage run stays honest and the case is not forgotten.
+run stays honest and the case is not forgotten.
 
 One defect per bug. Two symptoms with one cause are one bug; one screen with two unrelated faults
 is two.
@@ -70,8 +73,8 @@ otherwise.
 
 Examples for this product are in `docs/qa/test-plan.md`, under "Severity examples".
 
-Severity describes the effect on the people who use the product. It is never lowered to let a stage pass.
-`blocker` and `major` bugs stop `qa_status: pass`.
+Severity describes the effect on the people who use the product. It is never lowered to let a pass
+through. `blocker` and `major` bugs stop `qa_status: pass`.
 
 ## Statuses and who sets them
 
@@ -80,7 +83,7 @@ Severity describes the effect on the people who use the product. It is never low
 | `open` | QA | Found, waiting for the developer |
 | `fixed` | Developer | A fix is committed; `fixed_in` and `fix_note` are filled in |
 | `verified` | QA | The fix was re-tested and holds |
-| `reopened` | QA | The fix did not hold, or broke something in the same stage |
+| `reopened` | QA | The fix did not hold, or broke something in the same feature |
 | `not-a-bug` | QA | The product was right; the test or the expectation was wrong and has been corrected |
 | `deferred` | Lead, with `approved_by` | The owner accepted leaving it for later. Minor or trivial only; the validator refuses it on a blocker or major |
 | `wont-fix` | Lead, with `approved_by` | The owner decided the behaviour is acceptable as it is. Any severity, and only ever the owner's decision |
@@ -88,31 +91,31 @@ Severity describes the effect on the people who use the product. It is never low
 ## The loop
 
 ```
-QA runs the stage  ->  files bugs, sets qa_status: failing
+QA runs the feature  ->  files bugs, sets qa_status: failing
 Developer fixes each open or reopened bug, sets it fixed
 QA re-verifies  ->  verified or reopened
-... until no blocker or major bug is unresolved and the stage run passes  ->  qa_status: pass
+... until no blocker or major bug is unresolved and the feature run passes  ->  qa_status: pass
 ```
 
-There is no limit on rounds. The loop ends when the product is right, not when it has been tried
-enough times. If the same bug is reopened twice, tell the lead: the spec may be unclear.
+This is the one place a feature's defects are fixed: everything QA finds in the feature is fixed
+here, in rounds, before the feature closes. There is no limit on rounds. The loop ends when the
+product is right, not when it has been tried enough times. If the same bug is reopened twice, tell the lead: the spec may be unclear.
 
 ## Re-verifying
 
 For each `fixed` bug:
 
 1. Repeat the bug's own steps by hand or with its case. The original symptom is gone.
-2. Run the case that found it, then the whole stage: `qa/scripts/sdlc run --stage <F-S>`. A fix that
-   breaks a neighbour in the same stage is `reopened`.
+2. Run the case that found it, then the whole feature: `qa/scripts/sdlc run --feature <F>`. A fix
+   that breaks a neighbour in the same feature is `reopened`.
 3. Check that the case would catch it again. If the bug was found by exploring and no case covers
    it, add one.
 4. Set `verified` with the run folder as evidence, or `reopened` with what still happens.
 
-Re-verification stays inside the stage. It does not run earlier stages or other features.
+Re-verification stays inside the feature. It does not run other features.
 
-A defect found after its stage was closed (in feature QA, in a release run, or in a shipped
-version) is filed against the feature; the table is in `lifecycle.md` in `salon-sdlc`, under "Bugs
-found after a stage is closed".
+Where a defect is filed when it is found in a release run or in a shipped version is the table
+"Where a bug is filed", in `lifecycle.md` in `salon-sdlc`.
 
 ## Disagreements
 

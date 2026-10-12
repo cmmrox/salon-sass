@@ -1,5 +1,5 @@
 ---
-id: BUG-F00-S01-001
+id: BUG-F00-001             # BUG-F00-S01-001 when filed in a stage pass the owner asked for
 title: <the wrong behaviour, as a statement>
 severity: major             # blocker | major | minor | trivial
 status: open                # open | fixed | verified | reopened | not-a-bug | deferred | wont-fix
@@ -14,7 +14,7 @@ approved_by: null           # lead: required for deferred or wont-fix; the owner
 found_in_release: null      # only for a bug found in a version that has already shipped, for example v1.2.0
 ---
 
-# BUG-F00-S01-001 <title>
+# BUG-F00-001 <title>
 
 ## Steps
 
