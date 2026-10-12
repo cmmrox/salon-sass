@@ -18,10 +18,14 @@ counts as evidence and what a pass means. The product's own tools, test data and
 
 | Level | Owner | Proves | Runs |
 | --- | --- | --- | --- |
-| Unit, integration, architecture, contract | Developer | The code does what the developer intended | Every build, through `verification.commands` |
-| Stage QA | QA | The stage meets its acceptance criteria and requirements, from outside | `stage-verify`, `stage-close` |
-| Feature QA | QA | The stages work together as something a person can use | `feature-verify`, `feature-close` |
+| Unit, integration, architecture, contract | Developer | The code does what the developer intended | Every build, through `verification.commands`; again at `stage-close` and `feature-close` |
+| Acceptance, on the running product | Developer | Each acceptance criterion of the stage holds when used from outside | Before handing a stage over; recorded in `handoff.notes`, which the stage is closed on |
+| Feature QA | QA | Every stage meets its acceptance criteria and requirements from outside, and the stages work together as something a person can use | `feature-verify`, `feature-close` |
+| Stage QA | QA | One stage, ahead of its feature | Only when the owner asks: `stage-verify` |
 | Regression and smoke | QA | What was delivered earlier still works | Only when the owner asks, and at `release-verify` |
+
+QA tests a feature once, when all its stages are closed. Nothing is tested by QA stage by stage
+unless the owner asks for it.
 
 QA tests through the same doors a user or a client application uses. QA does not repeat the
 developer's unit tests and does not rely on them. A criterion about the build itself (every string
@@ -36,7 +40,10 @@ build, never by editing it.
 - Where each kind of file lives, and how it is named, is in `docs/qa/test-plan.md`.
 - Shared helpers go in the shared folder. Do not copy sign-in, setup or data builders into a test.
 
-The fields QA writes in `stage.yaml` (the full template is `assets/stage.yaml` in `salon-sdlc`):
+The fields QA writes. `cases` and `verification` are the same in `stage.yaml` (a stage's criteria)
+and `feature.yaml` (the journeys); `qa_status` and `evidence` are set on the feature, and on a stage
+only by a stage pass the owner asked for. The full templates are `assets/stage.yaml` and
+`assets/feature.yaml` in `salon-sdlc`:
 
 ```yaml
 qa_status: failing            # not-run | failing | blocked | pass
@@ -94,14 +101,14 @@ this product is in `docs/qa/test-plan.md`.
 
 ## What a pass means
 
-The conditions for `qa_status: pass`, `failing` and `blocked` are the table in `stage-verify`, in
-`lifecycle.md` in `salon-sdlc`. Two points that table does not spell out: every manual case must
-have been performed on the code as it is now, and a fix counts only once QA has verified it.
+The conditions for `qa_status: pass`, `failing` and `blocked` are the table "Which `qa_status` to
+set", in `lifecycle.md` in `salon-sdlc`. Two points that table does not spell out: every manual case
+must have been performed on the code as it is now, and a fix counts only once QA has verified it.
 
-A `minor` or `trivial` bug may stay open; it is listed in the stage's close report.
+A `minor` or `trivial` bug may stay open; it is listed in the feature's close report.
 
 ## When a requirement changes
 
-A change request tells you which stages it touches. For each one: reread the changed spec, edit the
-cases whose expectation changed, delete the cases and automation that no longer apply, add what is
-new, and run that stage. Do not run other stages because of it.
+A change request tells you which stages it touches. At the feature's next pass, for each one:
+reread the changed spec, edit the cases whose expectation changed, delete the cases and automation
+that no longer apply, and add what is new. Do not run other features because of it.

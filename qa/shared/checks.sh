@@ -35,6 +35,10 @@ WEB_PORT="$(_setting SALON_WEB_PORT 3100)"
 POSTGRES_PORT="$(_setting SALON_POSTGRES_PORT 5440)"
 DB_NAME="$(_setting SALON_DB_NAME salon)"
 DB_USER="$(_setting SALON_DB_USER salon)"
+# The application's role: what the API connects as. Its name and local-only password are in the
+# product's .env.example.
+DB_APP_USER="$(_setting SALON_DB_APP_USER salon_app)"
+DB_APP_PASSWORD="$(_setting SALON_DB_APP_PASSWORD salon-app-local-only)"
 API_URL="$(_setting QA_API_URL "http://localhost:${API_PORT}")"; API_URL="${API_URL%/}"
 WEB_URL="$(_setting QA_WEB_URL "http://localhost:${WEB_PORT}")"; WEB_URL="${WEB_URL%/}"
 POSTGRES_CONTAINER="salon-postgres"
@@ -207,6 +211,74 @@ path_without() {
 psql_value() {
   docker exec "$POSTGRES_CONTAINER" psql -U "$DB_USER" -d "$DB_NAME" -At -v ON_ERROR_STOP=1 -c "$1" 2>&1
 }
+
+# Both roles are reached the way the handoff of F01-S02 says: through psql in the container. The
+# output is what psql printed, rows unaligned and errors included, so a refusal can be asserted.
+
+# owner_psql: runs the SQL on standard input as the owning role, statement by statement.
+owner_psql() {
+  docker exec -i "$POSTGRES_CONTAINER" psql -U "$DB_USER" -d "$DB_NAME" -X -At -q 2>&1
+}
+
+# app_psql: runs the SQL on standard input as the application's role, over a password login.
+app_psql() {
+  docker exec -i -e PGPASSWORD="$DB_APP_PASSWORD" "$POSTGRES_CONTAINER" \
+    psql -h localhost -U "$DB_APP_USER" -d "$DB_NAME" -X -At -q 2>&1
+}
+
+# as_salon <tenant id | none> <sql>: the SQL as the application's role, in one transaction with the
+# tenant set for that transaction only (or with none), which is then rolled back whatever happened.
+as_salon() {
+  local setting=""
+  [ "$1" = none ] || setting="select set_config('app.tenant_id', '$1', true) \\g /dev/null"
+  printf 'begin;\n%s\n%s\n;\nrollback;\n' "$setting" "$2" | app_psql
+}
+
+# owner_tx <sql>: the SQL as the owning role in one transaction that is rolled back whatever
+# happened. For proving a point that needs a grant or an owner the product does not have, without
+# changing the product: nothing the SQL does outlives it or is seen by any other connection.
+owner_tx() {
+  printf 'begin;\n%s\n;\nrollback;\n' "$1" | owner_psql
+}
+
+# require_database: the database answers both roles; otherwise nothing about it can be tested.
+require_database() {
+  [ "$(printf 'select 1;\n' | owner_psql)" = 1 ] \
+    || environment_fault "the owning role cannot reach the database through the $POSTGRES_CONTAINER container: $(printf 'select 1;\n' | owner_psql | head -n 2)"
+  [ "$(printf 'select 1;\n' | app_psql)" = 1 ] \
+    || environment_fault "the application's role ($DB_APP_USER) cannot log in to the database: $(printf 'select 1;\n' | app_psql | head -n 2)"
+}
+
+# --- the synthetic salons ---------------------------------------------------------------------
+
+# load_salons: the salons of docs/qa/test-plan.md, from shared/tenants.ts and nowhere else. Sets
+# SALON_SLUGS, <SLUG>_ID, <SLUG>_SLUG, <SLUG>_NAME, <SLUG>_COLOUR, <SLUG>_HOST for each salon,
+# NIL_TENANT_ID, PLATFORM_DOMAIN and RESERVED_SLUGS.
+load_salons() {
+  local assignments
+  assignments="$(NODE_NO_WARNINGS=1 node "$QA_ROOT/shared/tenants-shell.mjs" 2>&1)" \
+    || environment_fault "could not read the salons from shared/tenants.ts: $assignments"
+  eval "$assignments"
+  [ -n "${SALON_SLUGS:-}" ] || environment_fault "shared/tenants.ts gave no salons"
+}
+
+# salon_value <slug> <ID|SLUG|NAME|COLOUR|HOST>
+salon_value() {
+  local name; name="$(printf '%s_%s' "$1" "$2" | tr '[:lower:]' '[:upper:]')"
+  printf '%s' "${!name}"
+}
+
+# on_hostname <service url> <hostname>: http://localhost:8090 and alpha.localhost give
+# http://alpha.localhost:8090.
+on_hostname() {
+  printf '%s' "$1" | sed -E "s#^([a-z][a-z0-9+.-]*://)(\\[[^]]*\\]|[^/:?\#]*)#\\1$2#"
+}
+
+# salon_api <slug>: where that salon's brand is served.
+salon_api() { printf '%s/api/v1/salon' "$(on_hostname "$API_URL" "$(salon_value "$1" HOST)")"; }
+
+# now_ms: the time in milliseconds.
+now_ms() { node -e 'process.stdout.write(String(Date.now()))'; }
 
 # --- a copy of the committed tree -------------------------------------------------------------
 

@@ -18,8 +18,7 @@ class DatabaseDownIntegrationTest {
     void healthReportsDownQuicklyWhenTheDatabaseStops() {
         try (PostgreSQLContainer postgres = TestPostgres.newContainer()) {
             postgres.start();
-            try (StartedApplication application = StartedApplication.against(postgres.getJdbcUrl(),
-                    postgres.getUsername(), postgres.getPassword())) {
+            try (StartedApplication application = StartedApplication.against(postgres)) {
                 assertThat(application.http().get("/actuator/health").statusCode()).isEqualTo(200);
 
                 postgres.stop();

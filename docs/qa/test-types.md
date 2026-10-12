@@ -1,22 +1,24 @@
 # Test types
 
-Which kinds of test a stage of this product needs, and what each must assert. How to use the table
-(when to add to the spec's list, when a type may be ruled out) is in the `salon-qa` skill,
+Which kinds of test a feature of this product needs, how much of each is enough, and what each must
+assert. QA tests a feature once, when all its stages are closed. How to use the table (when to add
+to the specs' lists, when a type may be ruled out, where to stop) is in the `salon-qa` skill,
 `references/test-design.md`.
 
-Go down the selection table: every row whose trigger is true for the stage applies. The `type`
-values are the ones the validator accepts (`qa/scripts/sdlc_lib/schema.py`).
+Go down the selection table: every row whose trigger is true for any stage of the feature applies.
+The `type` values are the ones the validator accepts (`qa/scripts/sdlc_lib/schema.py`).
 
 ## Contents
 
 - Selection table
 - Always required
+- How much of each
 - What each type must assert
 - Types that need the owner's go-ahead
 
 ## Selection table
 
-| The stage... | Type | Tool |
+| A stage of the feature... | Type | Tool |
 | --- | --- | --- |
 | adds or changes a screen on the web | `functional`, `responsive`, `accessibility` | Playwright browser |
 | adds or changes an endpoint | `api` | Playwright API |
@@ -37,10 +39,29 @@ values are the ones the validator accepts (`qa/scripts/sdlc_lib/schema.py`).
 - **Every acceptance criterion** has at least one case, including a negative one where the
   criterion can be violated.
 - **`tenant-isolation` for every new endpoint and every new kind of record that holds or returns
-  salon data.** Where it applies it is never skipped and never deferred. A stage with no salon data
-  at all says so in `cases.md`.
+  salon data.** Where it applies it is never skipped, never deferred and never trimmed. A feature
+  with no salon data at all says so in `cases.md`.
 - **`permissions` for every endpoint that is not public.** Check each role, not just one allowed and
   one refused.
+
+## How much of each
+
+The feature waits for its QA pass, so each type has a size. These came from F01-S01 and F01-S02,
+whose two stages were given 108 cases between them. Going beyond a row needs the lead's agreement;
+going below "Always required" is never allowed.
+
+| Type | Enough | Not needed |
+| --- | --- | --- |
+| `api` | Per endpoint: one case for the contract (status, error `code`, fields and types), one per documented error. Malformed and hostile input is one case over a table of inputs | A case per malformed value; the same rule proved again through the browser |
+| `tenant-isolation` | Per endpoint and per kind of record: the other salon's data cannot be read or changed. Once per feature, the same at the database as the application's role. One case that requests for different salons sent together never cross | Nothing is trimmed here |
+| `permissions` | Per protected action: each role, allowed or refused | - |
+| `concurrency` | One case per invariant (one slot, one booking; one payment, one confirmation) | The same race at several sizes |
+| `load` | Only an endpoint with a response-time target in the requirements, or one every booking goes through. One scenario each | Load on an endpoint with no target that carries no booking |
+| `resilience` | Per dependency, one case that it is down and one that it is silent: what the caller is told, inside the requirement's limit, and that the product recovers without a restart. The recovery limit is counted from when the dependency is actually back | The same outage at several lengths; a limit counted from the test's own command |
+| `security` | What the trigger names for the feature (sign-in limits, sessions, exports, what an error reveals), one case each | Probing what the framework already refuses, unless an acceptance criterion asks |
+| `data-integrity` | One case per migration, calculation or report the feature changes | Re-checking a constraint the developer's integration tests already prove, beyond one case from outside |
+| `build` | One case per acceptance criterion about the build or the tooling | A case per way the same check could be broken |
+| `functional`, `responsive`, `accessibility`, `branding`, `mobile` | Per screen: the path, its loading, empty and error states, and the widths and salons the design standards list | The same state on every screen that shares one component |
 
 ## What each type must assert
 

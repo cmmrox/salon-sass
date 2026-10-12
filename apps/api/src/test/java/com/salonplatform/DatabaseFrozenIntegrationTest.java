@@ -33,8 +33,7 @@ class DatabaseFrozenIntegrationTest {
     void healthReportsDownQuicklyWhileTheDatabaseDoesNotAnswerAndRecoversWhenItDoes() {
         try (PostgreSQLContainer postgres = TestPostgres.newContainer()) {
             postgres.start();
-            try (StartedApplication application = StartedApplication.against(postgres.getJdbcUrl(),
-                    postgres.getUsername(), postgres.getPassword())) {
+            try (StartedApplication application = StartedApplication.against(postgres)) {
                 Http http = application.http();
                 // The pool now holds a connection it used a moment ago, which it hands out again
                 // without testing it first.
@@ -80,8 +79,7 @@ class DatabaseFrozenIntegrationTest {
     void aQueryOnAConnectionAlreadyInUseFailsWithinTheSocketTimeoutInsteadOfWaitingForEver() {
         try (PostgreSQLContainer postgres = TestPostgres.newContainer()) {
             postgres.start();
-            try (StartedApplication application = StartedApplication.against(postgres.getJdbcUrl(),
-                    postgres.getUsername(), postgres.getPassword(),
+            try (StartedApplication application = StartedApplication.against(postgres,
                     "--spring.datasource.hikari.data-source-properties.socketTimeout=2")) {
                 try {
                     CompletableFuture<Throwable> outcome = CompletableFuture.supplyAsync(

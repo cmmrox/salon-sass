@@ -35,6 +35,7 @@ Created by stage F01-S01. Everything runs on the host except PostgreSQL, which r
 | Web | `http://localhost:3100` | `SALON_WEB_PORT` |
 | API | `http://localhost:8090` | `SALON_API_PORT` |
 | PostgreSQL | `localhost:5440`, database `salon` | `SALON_POSTGRES_PORT` |
+| A salon | `http://<slug>.localhost:<port>`, for example `http://alpha.localhost:8090/api/v1/salon` | `SALON_PLATFORM_DOMAIN` |
 
 - Every setting is in `.env.example`; a variable in the shell wins over `.env`. The ports avoid the
   usual 3000, 8080 and 5432 because other projects on a developer's machine tend to hold them.
@@ -44,11 +45,28 @@ Created by stage F01-S01. Everything runs on the host except PostgreSQL, which r
   process id file only while the process it names is still the one it started (checked by start
   time), so it never stops an unrelated process.
 - The scripts take turns: a second run waits for the first to finish rather than racing it.
-- The local database user and password are local-only values in `.env.example`.
+- **Two database roles**, both with local-only passwords in `.env.example`: the owning role
+  (`SALON_DB_USER`, `salon`) runs the migrations and owns every table; the application role
+  (`SALON_DB_APP_USER`, `salon_app`) is what the API connects as, and cannot get round row-level
+  security. The scripts create the application role from `infra/postgres/application-role.sql`.
+  Elsewhere the application role must exist before the first migration, and the owning role must
+  not be a superuser (F01-S05).
+- **The three synthetic salons** of `docs/qa/test-plan.md` are seeded in the `local` profile only,
+  every time the API starts, without duplicating. No other profile creates a salon.
+- **Loopback only by default.** The API and the web app listen on `127.0.0.1` and `::1`.
+  `SALON_LISTEN_ON_NETWORK=true` makes both listen on every interface, for testing from a phone on
+  the same network; anyone else on that network can then reach them.
+- The local web app is started by `apps/web/scripts/serve.mjs`, a small custom server, because
+  `next start` binds a single address.
 - The Spring profile is `local` by default. `SPRING_PROFILES_ACTIVE=<name>` with
   `local-service.sh start api` starts the API as it would run elsewhere.
 - **A QA run needs the product running.** Start it with `local-up.sh` before
   `qa/scripts/sdlc run`; the automation refuses to start otherwise.
+- **Restart after rebuilding the runtime artifacts.** Maven `verify` repackages the jar used by
+  the local API. Replacing it while that process is running can break later class loading even
+  though health initially answers. Stop the API before repackaging; start it from the completed
+  build before QA. Restart the web app after rebuilding its production output as well. Passing
+  build gates does not refresh an already-running process.
 
 ## What a test or a developer may use
 

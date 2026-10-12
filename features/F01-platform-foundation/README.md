@@ -13,7 +13,7 @@ Functional: BRD-03 (each salon has its own platform subdomain with a secure cert
 (times stored in a universal form and shown in the salon's time zone).
 
 Non-functional, and the real substance of this feature: NFR-01 tenant isolation, NFR-15 resilience,
-NFR-16 observability, NFR-17 no per-salon code, NFR-18 releasable without downtime.
+NFR-07 least exposure (local only, through CR-002), NFR-16 observability, NFR-17 no per-salon code, NFR-18 releasable without downtime.
 
 ## How it is built
 
@@ -31,8 +31,8 @@ why the feature is divided the way it is.
 | Stage | Delivers | Why it is its own stage |
 | --- | --- | --- |
 | F01-S01 | The repository builds, the API and the web app start as shells that talk to each other through the generated contract, one command runs everything locally, and QA's harness can test it | Everything else needs somewhere to live. It also proves the newest pieces of the stack work together before anything depends on them |
-| F01-S02 | Salons exist as tenants; every tenant table is protected by Hibernate and by row-level security; three synthetic salons are seeded; a cross-tenant attempt is refused | Isolation is the highest risk in the product. It is proved on its own, early, against real PostgreSQL, before any business table exists |
-| F01-S03 | A salon's hostname resolves to that salon on the API and the web; the public shell shows that salon's name and brand; an unknown or suspended salon gets a safe page | Depends on tenants existing. It is where routing mistakes that leak one salon into another would appear, so QA tests it with three salons |
+| F01-S02 | Salons exist as tenants; the API resolves a salon from its hostname; every tenant table is protected by Hibernate and by row-level security; three synthetic salons are seeded; a cross-tenant attempt is refused; the first tenant table (a salon's published name and brand colour) proves it | Isolation is the highest risk in the product. It is proved on its own, early, against real PostgreSQL, before any business table exists |
+| F01-S03 | A salon's hostname resolves to that salon on the web; the public shell shows that salon's name and brand; an unknown or suspended salon gets a safe page | Depends on tenants existing. It is where routing mistakes that leak one salon into another would appear, so QA tests it with three salons |
 | F01-S04 | One error format, time handling in the salon's zone, the audit trail, the outbox and job scheduler with retry, and logs and traces tagged by tenant | Cross-cutting services that later stages assume. Testable through the API with provider fakes set to fail |
 | F01-S05 | A staging environment with synthetic salons, secure certificates for salon subdomains, and a pipeline that deploys backward-compatible changes | Blocked on open decision D-08 (hosting provider and region). Kept last so the rest of the feature is not held up by it |
 
@@ -48,7 +48,10 @@ while requests are in flight.
 - Names are placeholders until open decision D-02 (product name and platform domain): Java base
   package `com.salonplatform`, npm scope `@salon`, app identifiers under `com.salonplatform`.
   Recorded as decision 007.
-- F01-S05 cannot be planned until D-08 is decided.
-- To settle when planning F01-S02: how a request names its salon before hostnames (F01-S03) and
-  sign-in (F02) exist, since the isolation rules allow only those two sources; and the fixed ids of
-  the three synthetic salons, which the developer's seed and QA's constants must share.
+- F01-S05 is built ready to deploy and provider-neutral; the first real deployment waits for D-08
+  (hosting) and D-02 (domain). Decision 018. It also decides how the web app is served in a
+  production image (decision 022) and provisions the two database roles outside the local machine.
+- Settled when planning F01-S02: a request names its salon by hostname from F01-S02 onward, on the
+  API (`<slug>.localhost` locally, rules in `docs/architecture/multi-tenancy.md`); F01-S03 adds the
+  same on the web. The three synthetic salons' fixed ids are in `docs/qa/test-plan.md`.
+- Approved change requests: CR-002 and CR-003 are built in F01-S02, CR-001 in F01-S04.

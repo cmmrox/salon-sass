@@ -4,7 +4,7 @@
 
 ## Summary
 
-| Release | Requirements | Owned by a feature | Assigned to a stage | In a stage that passed QA |
+| Release | Requirements | Owned by a feature | Assigned to a stage | Passed QA |
 | --- | --- | --- | --- | --- |
 | R1 | 96 | 96 | 2 | 0 |
 | R2 | 40 | 0 | 0 | 0 |
@@ -12,9 +12,13 @@
 
 ## Stages
 
-| Stage | Status | QA | Requirements | Criteria | Cases | Automated | Manual | Deferred |
+QA runs once, on the whole feature. `Stage QA` shows a result only for a stage pass the owner
+asked for; the cases of a stage are written at its feature's pass.
+
+| Stage | Status | Stage QA | Requirements | Criteria | Cases | Automated | Manual | Deferred |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | F01-S01 | complete | pass | NFR-17, NFR-18 | 10 | 63 | 60 | 2 | 1 |
+| F01-S02 | complete | pass | NFR-01, NFR-07, NFR-15 | 12 | 45 | 45 | 0 | 0 |
 
 ## Deferred cases
 

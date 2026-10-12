@@ -1,4 +1,5 @@
-"""Dict fixtures for the tooling tests: one feature with one stage that legitimately passed QA.
+"""Dict fixtures for the tooling tests: one feature with one closed stage that also passed a
+stage QA pass the owner asked for, so every QA rule has something to break.
 
 Each test copies this known-good bundle and breaks exactly one thing, so a finding can only
 come from the rule under test.
@@ -16,6 +17,8 @@ def stage(**changes):
         "id": "F07-S01", "feature": "F07", "title": "Slot search", "sequence": 1,
         "status": "complete", "qa_status": "pass", "surfaces": ["api"],
         "requirements": ["BKG-01"], "depends_on": [],
+        "handoff": {"run": "infra/scripts/local-up.sh", "data": "three salons",
+                    "notes": "Every acceptance criterion was checked on the running product."},
         "cases": [{"id": "TC-F07-S01-001", "title": "Free slots are listed", "type": "api",
                    "priority": "high", "covers": ["AC-1"]}],
         "verification": {
@@ -31,6 +34,14 @@ def stage(**changes):
         "_cases_md": ["TC-F07-S01-001"], "_bugs": [], "_has_review": True,
         "_has_readme": False, "_missing_files": [],
     }
+    data.update(changes)
+    return data
+
+
+def unverified_stage(**changes):
+    """The normal closed stage: built, handed over and closed, with QA waiting for the feature."""
+    data = stage(qa_status="not-run", evidence={}, cases=[], _cases_md=None, _has_review=False,
+                 verification={"commands": ["cd apps/api && ./mvnw verify"], "automation": []})
     data.update(changes)
     return data
 

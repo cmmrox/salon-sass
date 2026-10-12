@@ -18,15 +18,16 @@ class FlowTest(unittest.TestCase):
         turn = lambda **c: flow.stage_turn(fx.stage(**c))
         self.assertEqual(turn(status="outlined"), ("lead", "stage-plan F07-S01"))
         self.assertEqual(turn(status="planned"), ("developer", "stage-build F07-S01"))
-        self.assertEqual(turn(status="in-qa", qa_status="not-run"), ("qa", "stage-verify F07-S01"))
-        self.assertEqual(turn(status="in-qa", qa_status="failing", _bugs=[fx.bug()]),
-                         ("developer", "bug-fix F07-S01"))
-        self.assertEqual(turn(status="in-qa", qa_status="failing", _bugs=[fx.bug(status="fixed")]),
-                         ("qa", "stage-verify F07-S01"))
-        self.assertEqual(turn(status="in-qa", qa_status="blocked", blocked_reason="no emulator"),
-                         ("lead", "unblock QA: no emulator"))
-        self.assertEqual(turn(status="in-qa", qa_status="pass"), ("lead", "stage-close F07-S01"))
+        # QA waits for the whole feature, so a built stage goes straight to the lead.
+        self.assertEqual(turn(status="built", qa_status="not-run"), ("lead", "stage-close F07-S01"))
         self.assertEqual(turn(status="complete"), flow.NOBODY)
+
+    def test_stage_turns_when_the_owner_asked_for_a_stage_pass(self):
+        turn = lambda **c: flow.stage_turn(fx.stage(status="built", **c))
+        self.assertEqual(turn(qa_status="failing", _bugs=[fx.bug()]), ("developer", "bug-fix F07-S01"))
+        self.assertEqual(turn(qa_status="failing", _bugs=[fx.bug(status="fixed")]), ("qa", "stage-verify F07-S01"))
+        self.assertEqual(turn(qa_status="blocked", blocked_reason="no emulator"), ("lead", "unblock QA: no emulator"))
+        self.assertEqual(turn(qa_status="pass"), ("lead", "stage-close F07-S01"))
 
     def test_feature_turns(self):
         self.assertEqual(flow.feature_turn(fx.feature(status="backlog"), []), ("lead", "feature-new F07"))
@@ -42,12 +43,20 @@ class FlowTest(unittest.TestCase):
         self.assertEqual(flow.feature_turn(fx.feature(), [fx.stage(status="planned")]),
                          ("developer", "stage-build F07-S01"))
         self.assertEqual(flow.feature_turn(fx.feature(), [fx.stage()]), ("qa", "feature-verify F07"))
+        self.assertEqual(flow.feature_turn(fx.feature(), [fx.unverified_stage()]), ("qa", "feature-verify F07"))
         self.assertEqual(flow.feature_turn(fx.feature(qa_status="pass"), [fx.stage()]), ("lead", "feature-close F07"))
+
+    def test_feature_pass_settles_a_bug_carried_from_a_stage(self):
+        carried = fx.unverified_stage(_bugs=[fx.bug(severity="minor")])
+        failing = fx.feature(status="in-qa", qa_status="failing")
+        self.assertEqual(flow.feature_turn(failing, [carried]), ("developer", "bug-fix F07"))
+        carried["_bugs"][0]["status"] = "fixed"
+        self.assertEqual(flow.feature_turn(failing, [carried]), ("qa", "feature-verify F07"))
 
 
 class RunnerTest(unittest.TestCase):
     def setUp(self):
-        second = fx.stage(id="F07-S02", sequence=2, status="in-qa", qa_status="not-run")
+        second = fx.stage(id="F07-S02", sequence=2, status="built", qa_status="not-run")
         second["verification"]["automation"] = [
             {"id": "hold", "tool": "k6", "file": "qa/load/F07/hold.js",
              "covers": ["TC-F07-S02-001"], "suites": ["regression"]}]
@@ -66,7 +75,7 @@ class RunnerTest(unittest.TestCase):
         self.assertEqual(self.ids(feature="F07"), ["slots", "hold", "journey"])
 
     def test_suite_draws_only_on_closed_work(self):
-        # F07-S02 is still in QA and the feature is not complete, so only the closed stage counts.
+        # F07-S02 is not closed and the feature is not complete, so only the closed stage counts.
         self.assertEqual(self.ids(suite="regression"), ["slots"])
         self.assertEqual(self.ids(suite="smoke"), [])
 

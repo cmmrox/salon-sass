@@ -28,6 +28,19 @@ def _row(*cells):
     return "| " + " | ".join(str(c) for c in cells) + " |"
 
 
+def _stage_qa(stage):
+    """A stage has a QA result of its own only when the owner asked for a stage pass."""
+    status = stage.get("qa_status")
+    return "-" if status == "not-run" else status
+
+
+def _passed_qa(stage, features):
+    """True when the stage was proved by QA: by its own pass, or by its feature's."""
+    if stage.get("qa_status") == "pass":
+        return True
+    return any(f.get("_dir") == stage.get("_feature_dir") and f.get("qa_status") == "pass" for f in features)
+
+
 def _turn(pair):
     role, action = pair
     if role == "-":
@@ -67,13 +80,13 @@ def render_portfolio(bundle):
     for feature, stages in in_flight:
         lines += [
             f"### {feature.get('id')} {feature.get('title')}", "",
-            _row("Stage", "Title", "Surfaces", "Status", "QA", "Blocking bugs", "Next"),
+            _row("Stage", "Title", "Surfaces", "Status", "Stage QA", "Blocking bugs", "Next"),
             _row("---", "---", "---", "---", "---", "---", "---"),
         ]
         for stage in stages:
             lines.append(_row(
                 stage.get("id"), stage.get("title"), ", ".join(_list(stage.get("surfaces"))),
-                stage.get("status"), stage.get("qa_status"), len(blocking_bugs(stage)),
+                stage.get("status"), _stage_qa(stage), len(blocking_bugs(stage)),
                 _turn(flow.stage_turn(stage)),
             ))
         lines.append("")
@@ -97,18 +110,20 @@ def render_coverage(bundle):
             staged.setdefault(rid, []).append(stage)
 
     lines = [HEADER, "# Requirement and test coverage", "", "## Summary", "",
-             _row("Release", "Requirements", "Owned by a feature", "Assigned to a stage", "In a stage that passed QA"),
+             _row("Release", "Requirements", "Owned by a feature", "Assigned to a stage", "Passed QA"),
              _row("---", "---", "---", "---", "---")]
     for release in S.RELEASES:
         scope = [r for r in functional if r.get("release") == release]
-        passed = [r for r in scope if any(s.get("qa_status") == "pass" for s in staged.get(r["id"], []))]
+        passed = [r for r in scope if any(_passed_qa(s, bundle["features"]) for s in staged.get(r["id"], []))]
         lines.append(_row(
             release, len(scope), sum(1 for r in scope if r["id"] in owner),
             sum(1 for r in scope if r["id"] in staged), len(passed),
         ))
 
     lines += ["", "## Stages", "",
-              _row("Stage", "Status", "QA", "Requirements", "Criteria", "Cases", "Automated", "Manual", "Deferred"),
+              "QA runs once, on the whole feature. `Stage QA` shows a result only for a stage pass the owner",
+              "asked for; the cases of a stage are written at its feature's pass.", "",
+              _row("Stage", "Status", "Stage QA", "Requirements", "Criteria", "Cases", "Automated", "Manual", "Deferred"),
               _row("---", "---", "---", "---", "---", "---", "---", "---", "---")]
     any_stage = False
     for stage in sorted(bundle["stages"], key=lambda s: s.get("id") or ""):
@@ -121,7 +136,7 @@ def render_coverage(bundle):
             automated.update(_list(entry.get("covers")))
         spec = stage.get("_spec") or {"acs": []}
         lines.append(_row(
-            stage.get("id"), stage.get("status"), stage.get("qa_status"),
+            stage.get("id"), stage.get("status"), _stage_qa(stage),
             ", ".join(_list(stage.get("requirements")) + _list(stage.get("nfr_focus"))) or "-",
             len(spec["acs"]), len(_list(stage.get("cases"))), len(automated),
             len(_list(verification.get("manual"))), len(_list(verification.get("deferred"))),

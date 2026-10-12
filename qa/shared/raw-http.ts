@@ -106,3 +106,99 @@ export function sendRaw(payload: string | Buffer, timeoutMs = 10_000): Promise<R
 export function apiHost(): string {
   return new URL(apiUrl).host;
 }
+
+/** The API's port, as a Host header carries it. */
+export function apiPort(): string {
+  const { port, protocol } = new URL(apiUrl);
+  return port || (protocol === 'https:' ? '443' : '80');
+}
+
+/**
+ * Several requests written to one connection, and every answer that came back, in order. With
+ * `pipelined` the requests are written at once, before any answer; otherwise each waits for the
+ * answer to the one before. A HEAD is answered with headers only, which this understands.
+ */
+export async function sendOnOneConnection(
+  requests: string[],
+  options: { pipelined?: boolean; timeoutMs?: number } = {},
+): Promise<RawResponse[]> {
+  const { hostname, port } = new URL(apiUrl);
+  const timeoutMs = options.timeoutMs ?? 10_000;
+  const methods = requests.map((request) => request.slice(0, request.indexOf(' ')).toUpperCase());
+  return new Promise((resolve, reject) => {
+    let buffer = Buffer.alloc(0);
+    const answers: RawResponse[] = [];
+    let sent = 0;
+    let settled = false;
+    const done = (error?: Error): void => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      socket.destroy();
+      if (error) {
+        reject(error);
+      } else {
+        resolve(answers);
+      }
+    };
+    const socket = net.connect({ host: hostname, port: Number(port) }, () => {
+      if (options.pipelined) {
+        socket.write(requests.join(''));
+        sent = requests.length;
+      } else {
+        socket.write(requests[0]);
+        sent = 1;
+      }
+    });
+    /** Takes one whole answer off the front of the buffer, or returns false when it is not all there yet. */
+    const takeOne = (): boolean => {
+      const text = buffer.toString('latin1');
+      const headerEnd = text.indexOf('\r\n\r\n');
+      if (headerEnd === -1) {
+        return false;
+      }
+      const head = parse(text.slice(0, headerEnd + 4));
+      const method = methods[answers.length];
+      let bodyLength: number;
+      if (method === 'HEAD' || head.status === 204 || head.status === 304) {
+        bodyLength = 0;
+      } else if ((head.headers['transfer-encoding'] ?? '').toLowerCase().includes('chunked')) {
+        const end = text.indexOf('0\r\n\r\n', headerEnd + 4);
+        if (end === -1) {
+          return false;
+        }
+        bodyLength = end + 5 - (headerEnd + 4);
+      } else {
+        bodyLength = Number(head.headers['content-length'] ?? 0);
+      }
+      const total = headerEnd + 4 + bodyLength;
+      if (buffer.length < total) {
+        return false;
+      }
+      answers.push(parse(buffer.subarray(0, total).toString('utf8')));
+      buffer = buffer.subarray(total);
+      return true;
+    };
+    socket.setTimeout(timeoutMs, () =>
+      done(new Error(`only ${answers.length} of ${requests.length} requests on one connection were answered within ${timeoutMs} ms`)),
+    );
+    socket.on('data', (chunk) => {
+      buffer = Buffer.concat([buffer, chunk]);
+      while (answers.length < requests.length && takeOne()) {
+        if (answers.length === requests.length) {
+          done();
+          return;
+        }
+        if (!options.pipelined && sent === answers.length) {
+          socket.write(requests[sent]);
+          sent += 1;
+        }
+      }
+    });
+    // The server closing the connection early is an answer too: the caller sees how many it got.
+    socket.on('end', () => done());
+    socket.on('close', () => done());
+    socket.on('error', () => done());
+  });
+}

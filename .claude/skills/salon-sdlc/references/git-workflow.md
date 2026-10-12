@@ -19,7 +19,7 @@ system are named in `docs/architecture/tech-stack.md`.
 
 ## Branches
 
-One branch per stage. The developer and QA both commit to it, in turn.
+One branch per stage, which the developer commits to, and one for the feature's QA pass.
 
 ```
 {username}/{type}/{id}-{slug}
@@ -31,7 +31,7 @@ One branch per stage. The developer and QA both commit to it, in turn.
 | `feature` | A stage | `charithm/feature/F07-S02-slot-search-and-hold` |
 | `bugfix` | A defect found after its stage was closed | `charithm/bugfix/F07-S02-hold-expiry-off-by-one` |
 | `hotfix` | A defect in a released version | `charithm/hotfix/v1-2-1-payment-callback` |
-| `test` | QA work done ahead of the developer's handoff | `charithm/test/F07-S02-cases` |
+| `test` | The feature's QA pass, or cases drafted ahead of it | `charithm/test/F07-feature-qa` |
 | `refactor`, `docs`, `chore` | Work that belongs to no stage (tooling, skills, documents, a change request, a release) | `charithm/docs/CR-004-per-salon-hold-time`, `charithm/chore/release-v0-1-0` |
 
 A stage reopened by a change request gets a new branch that names both:
@@ -58,10 +58,12 @@ Conventional Commits. The scope is the stage or feature id when the work belongs
 | Lead | Planning | `docs(F07-S02): plan slot search and hold`, committed on the stage's branch, which the lead creates when planning. A feature's outline is committed on its first stage's branch |
 | Developer | Building | `feat(F07-S02): hold a slot for ten minutes` |
 | Developer | Fixing a bug | `fix(F07-S02): release expired holds at the exact expiry` with `Fixes BUG-F07-S02-003` in the body |
-| Developer | Handing over | `chore(F07-S02): hand over to QA` |
-| QA | Cases and automation | `test(F07-S02): cover simultaneous holds on one slot` |
-| QA | Results and review | `test(F07-S02): record first QA pass, 3 bugs filed` |
-| Lead | Closing | `chore(F07-S02): close stage - slot search and hold` |
+| Developer | Handing over | `chore(F07-S02): hand over` |
+| Lead | Closing a stage | `chore(F07-S02): close stage - slot search and hold` |
+| QA | Cases and automation | `test(F07-S02): cover simultaneous holds on one slot`, or `test(F07): ...` for a journey |
+| QA | Results and review | `test(F07): record first QA pass, 3 bugs filed` |
+| Developer | Fixing a bug from the feature pass | `fix(F07): ...` with `Fixes BUG-F07-002` in the body |
+| Lead | Closing a feature | `chore(F07): close feature - online booking` |
 | Lead | A change request | `docs(CR-004): propose per-salon hold time`, later `docs(CR-004): apply to register and specs` |
 | Lead | Release | `chore(release): cut v1.2.0` |
 
@@ -84,10 +86,12 @@ folders a tool generates, or credentials. Review the staged diff before committi
 
 ## Pull requests and merging
 
-- One pull request per stage, into `main`, opened when the stage is closed and the owner asks.
-- Title: `F07-S02 Slot search and hold`.
-- Body: what the stage delivers; the acceptance criteria; the QA result (cases, automated, manual,
-  deferred); bugs found and fixed; suggestions awaiting the owner; anything deferred.
+- One pull request per stage, into `main`, opened when the stage is closed and the owner asks, and
+  one for the feature's QA pass with its fixes.
+- Title: `F07-S02 Slot search and hold`, or `F07 Online booking: QA pass`.
+- Body of a stage's: what the stage delivers; the acceptance criteria; the result of the developer's
+  gates; that QA tests it with the feature. Body of the QA pass's: the QA result (cases, automated,
+  manual, deferred); bugs found and fixed; suggestions awaiting the owner; anything deferred.
 - Merge with a merge commit, not a squash, so developer and QA commits stay attributable. Delete the
   branch after the merge.
 - After a merge, bring `main` into every stage branch still in progress.
@@ -97,9 +101,9 @@ folders a tool generates, or credentials. Review the staged diff before committi
 
 - Two sessions that share one checkout take turns: only the role whose turn it is writes.
 - Different stages may be built at the same time, each in its own git worktree and branch.
-- QA may draft cases from the spec while the developer is still building, on a
-  `{username}/test/{id}-cases` branch in its own worktree, and merge it into the stage branch at the
-  handoff.
+- QA may draft cases from the specs while the stages are still being built, on the feature's
+  `test` branch in its own worktree. Drafting is not a pass: nothing is run or recorded until
+  `feature-verify`.
 
 ## Never
 

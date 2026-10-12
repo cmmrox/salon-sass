@@ -8,7 +8,8 @@ NOBODY = ("-", "-")
 
 
 def _awaiting_developer(scope):
-    return [b for b in scope.get("_bugs") or [] if b.get("status") in ("open", "reopened")]
+    bugs = list(scope.get("_bugs") or []) + list(scope.get("_stage_bugs") or [])
+    return [b for b in bugs if b.get("status") in ("open", "reopened")]
 
 
 def _qa_turn(scope, verify_command, close_command):
@@ -31,7 +32,11 @@ def stage_turn(stage):
         return ("lead", f"stage-plan {sid}")
     if status in ("planned", "in-progress"):
         return ("developer", f"stage-build {sid}")
-    if status == "in-qa":
+    if status == "built":
+        if stage.get("qa_status") == "not-run":
+            # The normal path: no stage pass was asked for, so the lead closes on the
+            # developer's gates and QA waits for the whole feature.
+            return ("lead", f"stage-close {sid}")
         return _qa_turn(stage, f"stage-verify {sid}", f"stage-close {sid}")
     return NOBODY
 
@@ -61,4 +66,6 @@ def feature_turn(feature, stages, features=()):
             return stage_turn(stage)
     if not stages:
         return ("lead", f"feature-new {fid}")
-    return _qa_turn(feature, f"feature-verify {fid}", f"feature-close {fid}")
+    # The feature pass is where every bug is settled, including one carried from a stage.
+    carried = [bug for stage in stages for bug in stage.get("_bugs") or []]
+    return _qa_turn({**feature, "_stage_bugs": carried}, f"feature-verify {fid}", f"feature-close {fid}")

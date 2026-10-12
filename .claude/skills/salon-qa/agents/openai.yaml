@@ -1,6 +1,6 @@
 interface:
   display_name: "Salon QA"
-  short_description: "Test, automate and review salon SaaS stages"
-  default_prompt: "Use $salon-sdlc and $salon-qa to verify the stage that is waiting for QA in the salon SaaS repository."
+  short_description: "Test, automate and review salon SaaS features"
+  default_prompt: "Use $salon-sdlc and $salon-qa to verify the feature that is waiting for QA in the salon SaaS repository."
 policy:
   allow_implicit_invocation: true

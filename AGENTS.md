@@ -25,10 +25,10 @@ A project fact is never written into a skill, and a skill never restates a docum
 ## Rules
 
 - **Vocabulary:** feature -> stage -> release. A feature is something customers can use; a stage is
-  a part of it that QA can test on its own. Nothing is called a task.
+  a part of it that the developer can build and show working on its own. Nothing is called a task.
 - **Order:** the web application first, released, then the customer mobile app (`docs/ROADMAP.md`).
 - **Three roles:** the lead plans and closes, the developer builds, QA verifies. The agent that
-  built a stage never verifies it. In Claude Code delegate to the `salon-dev` and `salon-qa`
+  built a stage never verifies its feature. In Claude Code delegate to the `salon-dev` and `salon-qa`
   subagents; in Codex spawn the `salon_dev` and `salon_qa` agents; or use separate sessions.
 - **State is in files:** `feature.yaml` and `stage.yaml` are the only places status is written, and
   the handoff between roles is read from them and from the bug files. `qa/scripts/sdlc status` says
@@ -37,8 +37,9 @@ A project fact is never written into a skill, and a skill never restates a docum
   yaml, then run `qa/scripts/sdlc generate`.
 - **The gate:** run `qa/scripts/sdlc validate` before committing anything under `features/`, `qa/`,
   `docs/` or a skill. Fix findings at their source.
-- **QA scope:** a stage pass runs that stage's automation only; a feature pass runs that feature's
-  only; regression and smoke run only when the owner asks. Always through `qa/scripts/sdlc run`.
+- **One QA pass per feature:** a stage is closed on the developer's gates, and QA tests the whole
+  feature once every stage is closed, running that feature's automation only. A QA pass on a single
+  stage, regression and smoke run only when the owner asks. Always through `qa/scripts/sdlc run`.
 - **Path ownership:** the developer does not write under `qa/` or edit cases, reviews, specs or
   project documents; QA does not edit application code. Run
   `python3 qa/scripts/guard.py --role dev --diff` (or `--role qa`) before committing in either role.

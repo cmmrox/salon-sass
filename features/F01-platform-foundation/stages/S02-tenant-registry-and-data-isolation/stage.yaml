@@ -3,21 +3,261 @@ feature: F01
 title: "Tenant registry and data isolation"
 sequence: 2
 surfaces: [api, infra]
-status: outlined
-qa_status: not-run
+status: complete
+qa_status: pass
 released_in: null
 depends_on: [F01-S01]
 requirements: []
+nfr_focus: [NFR-01, NFR-07, NFR-15]
 handoff:
-  run: null
-  data: null
-  notes: null
-cases: []
+  run: |
+    infra/scripts/local-up.sh       # PostgreSQL, the API (8090) and the web app (3100); creates the
+                                    # application role and, in the local profile, seeds the salons
+    infra/scripts/local-down.sh     # stop everything; the data is kept
+    infra/scripts/local-reset.sh    # delete the local database's data and start from nothing
+    infra/scripts/local-service.sh <start|stop> <postgres|api|web>
+    infra/scripts/local-service.sh <pause|resume> postgres
+
+    A salon: http://alpha.localhost:8090/api/v1/salon (also beta, gamma). No hosts file is needed.
+
+    The database, from a shell (there is no psql on the host; it is in the container):
+      docker exec -i salon-postgres psql -U salon -d salon                      # the owning role
+      docker exec -i -e PGPASSWORD=salon-app-local-only salon-postgres \
+        psql -h localhost -U salon_app -d salon                                 # the application's role
+
+    The opt-in for CR-002 (restart the API and the web app with it set):
+      infra/scripts/local-service.sh stop web; infra/scripts/local-service.sh stop api
+      SALON_LISTEN_ON_NETWORK=true infra/scripts/local-service.sh start api
+      SALON_LISTEN_ON_NETWORK=true infra/scripts/local-service.sh start web
+
+    Another profile against an empty database (AC-9), in a database of its own:
+      infra/scripts/local-service.sh stop api
+      docker exec salon-postgres psql -U salon -d salon -c "create database salon_empty"
+      SPRING_PROFILES_ACTIVE=staging SALON_DB_URL=jdbc:postgresql://localhost:5440/salon_empty \
+        infra/scripts/local-service.sh start api
+    Afterwards stop the API, drop the database, and start the API again without the two variables.
+
+    What a port is bound to: lsof -nP -iTCP:8090 -sTCP:LISTEN (and 3100).
+  data: |
+    Three salons, seeded in the local profile only, exactly as docs/qa/test-plan.md lists them:
+      alpha  a1a1a1a1-0000-4000-8000-000000000001  "Alpha Studio"  #D6086A
+      beta   b2b2b2b2-0000-4000-8000-000000000002
+             "Beta Hair, Beauty & Wellness Lounge of Colombo Seven"  #1F2937
+      gamma  c3c3c3c3-0000-4000-8000-000000000003  "Gamma"  #FDE68A
+    All three are active. Each has one row in tenant and one in salon_brand. No salon is suspended.
+    There are no accounts: nothing signs in yet.
+    Database roles: salon (SALON_DB_USER, password salon-local-only) owns the tables and runs the
+    migrations; salon_app (SALON_DB_APP_USER, password salon-app-local-only) is what the API
+    connects as. Both are local-only values in .env.example.
+  notes: |
+    EVERY ACCEPTANCE CRITERION was checked on the running product. Nothing is left unfinished.
+
+    CHOICES THE SPEC LEFT TO THE DEVELOPER
+    - Roles. The owning role is the existing salon, the container's administrator (a superuser
+      locally). The application's role is salon_app: LOGIN, not a superuser, no BYPASSRLS, no
+      CREATEROLE or CREATEDB, owns nothing. infra/scripts create or correct it with
+      infra/postgres/application-role.sql through psql in the salon-postgres container, every time
+      PostgreSQL or the API is started, so it exists on a new volume and on the volume F01-S01
+      made (both were tried). Its password reaches the API as SALON_DB_APP_PASSWORD.
+    - Grants are in the migrations, to a Flyway placeholder (application_role) that is always the
+      role the API connects as (spring.datasource.username). No migration creates a role. An
+      environment must create the application's role before the API first starts; otherwise V2
+      fails and the API does not start.
+    - The registry is read only through the SECURITY DEFINER function tenant_by_slug(text), which
+      returns a slug's id and status. salon_app has no grant on tenant. Nothing is cached.
+    - salon_app is granted SELECT on salon_brand and nothing else, because the API only reads
+      brands in this stage. So in AC-6 an UPDATE, DELETE or INSERT as salon_app on the running
+      product is refused with "permission denied", not answered with 0 rows. That the policy
+      itself affects 0 rows and refuses the insert is proved by the integration test named below,
+      in a database where those writes are granted.
+    - Seed mechanism: a Flyway callback, db/local/afterMigrate.sql, in a location only
+      application-local.yaml adds. It runs after every migrate in the local profile, inserts with
+      ON CONFLICT DO NOTHING, and leaves no row in flyway_schema_history, so a database the local
+      profile seeded still starts under another profile.
+    - Listen variable: SALON_LISTEN_ON_NETWORK, false by default, true to listen on every
+      interface. Any other value stops the scripts with an error. It is in .env.example and
+      README.md. The scripts apply it whatever the Spring profile is.
+    - Platform domain: SALON_PLATFORM_DOMAIN, default localhost. Outside the local profile it has
+      no default and the API does not start without it.
+    - A suspended salon resolves to no salon (404 not_found) until F01-S03 defines what its
+      hostname answers. No salon is suspended.
+    - brand_colour is stored in upper case only (check ^#[0-9A-F]{6}$). display_name must not be
+      blank; no maximum length was chosen. tenant.id may not be the nil UUID.
+    - A hostname with a trailing dot (alpha.localhost.) and an IP address name no salon.
+    - No dependency was added.
+
+    BEYOND THE LITERAL SCOPE, FOR THE LEAD TO KEEP OR REMOVE
+    - The API refuses to start when the role it connects as is a superuser, has BYPASSRLS or owns
+      a table (ApplicationRoleCheck).
+    - Flyway's own connection is given the pool's connect, login and socket timeouts
+      (MigrationDataSourceConfiguration). Spring Boot builds it without them once migrations run
+      as another role.
+    - A request's database work waits at most 3 s for an answer on a connection it holds
+      (salon.database.request-timeout). AC-10 cannot be met with the 30 s socket timeout alone.
+
+    THE INTEGRATION TESTS THAT PROVE EACH ISOLATION LAYER ON ITS OWN (apps/api/src/test)
+    - Row-level security alone: branding/SalonBrandRowLevelSecurityAloneIntegrationTest. Plain
+      SQL as salon_app with INSERT, UPDATE and DELETE granted, Hibernate not involved.
+      aQueryWithNoSalonSetSeesNoRow; withAlphaSetOnlyAlphasRowIsVisibleEvenToAQueryThatAsksForBetas;
+      alphaCannotUpdateOrDeleteBetasRow; alphaCannotCreateARowForBetaNorMoveItsOwnRowToBeta;
+      withNoSalonSetNothingCanBeWritten; theSalonEndsWithItsTransactionOnTheSameConnection.
+    - Hibernate's tenant filter alone: branding/SalonBrandHibernateFilterAloneIntegrationTest.
+      Row-level security disabled on salon_brand and writes granted, so only @TenantId stands
+      between salons. rowLevelSecurityIsReallyOutOfTheWayHere;
+      alphaReadsOnlyAlphasRowAndBetasIsNotFound; alphaCannotUpdateOrDeleteBetasRow;
+      anInsertIsStampedWithTheCurrentSalonAndOneNamingAnotherSalonIsRefused;
+      withNoSalonNothingIsFoundAndNothingCanBeCreated. With @TenantId removed from the entity,
+      four of the five fail (tried).
+    - The per-transaction setting through the application's own transactions, on a pool of one
+      connection: shared/infrastructure/TenantTransactionIntegrationTest.
+      eachTransactionCarriesTheSalonItStartedWithAndTheNextOneOnTheSameConnectionCarriesNone;
+      nativeSqlInATransactionSeesTheTransactionsSalonOnlyAndNothingWithoutOne;
+      salonsTakingTurnsOnOneConnectionNeverSeeEachOther; aQueryOutsideAnyTransactionSeesNoSalonsRows.
+    - Both layers through HTTP: branding/SalonEndpointIntegrationTest (three salons, hostile
+      hostnames, client-chosen salons, 300 simultaneous requests).
+    - The catalogue and the role: DatabaseIsolationCatalogueIntegrationTest, written over every
+      table that has a tenant_id. The registry and its constraints:
+      platform/TenantTableIntegrationTest.
+    - Also: LocalSeedIntegrationTest (AC-9), branding/SalonEndpointDatabaseSilentIntegrationTest
+      (AC-10), shared/infrastructure/LoopbackOnlyIntegrationTest (AC-11),
+      shared/infrastructure/ApplicationRoleCheckIntegrationTest,
+      shared/tenancy/PlatformHostnameTest, shared/api/DatabaseUnavailableTest.
+
+    WHAT DIFFERS FROM A DOCUMENT UNDER docs/
+    - docs/architecture/multi-tenancy.md, the policy in "How the tenant reaches the database".
+      As written, tenant_id = current_setting('app.tenant_id', true)::uuid fails on a reused
+      connection: once a transaction has set the value with set_config(..., true) and ended,
+      current_setting returns the empty string, not null, and ''::uuid is an error. The policy
+      built is tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::uuid, in USING and
+      WITH CHECK. Every later tenant table needs the same.
+    - The same document and the spec say the request filter resolves the tenant against the
+      registry. The filter reads the Host header and binds the candidate slug in the scoped
+      value; the registry is asked the first time the request needs its salon
+      (TenantContext.require()), and the answer is kept for the request. So meta and health never
+      touch the registry, as docs/engineering/backend.md says of meta, and answer on a salon's
+      hostname while the database is down.
+    - A rule the document does not have: a use case calls TenantContext.require() before it opens
+      its transaction (GetPublishedBrand uses a TransactionTemplate for this). A transaction opened
+      before the salon is resolved has no salon and sees no row.
+    - "The entity carries @TenantId", and the test "tenant A cannot create a row that points at
+      tenant B's row". Once any entity carries @TenantId, Hibernate 7.4 refuses to open a session
+      with no tenant, so with no salon the resolver answers the nil UUID
+      (TenantContext.NO_TENANT), which no row can carry. On salon_brand the key is tenant_id
+      itself (@Id and @TenantId on one field): a row prepared with another salon's key is refused
+      as stale or detached, not with Hibernate's "assigned tenant id differs" message, which a
+      table with a key of its own will give.
+    - Hibernate's filter does cover HQL bulk UPDATE and DELETE and a load by id (tested).
+    - docs/engineering/backend.md, "Every wait on the database has a limit": add the request
+      limit of 3 s above. A statement in a request that gets no answer for 3 s fails and the
+      request is answered 503; the 30 s socket timeout remains for everything else. Later work
+      that legitimately runs longer than 3 s needs a limit of its own.
+    - The same document, API conventions: any endpoint whose database work fails because the
+      database is stopped, unreachable or silent now answers 503 service_unavailable. A lock
+      conflict or a constraint violation does not.
+    - docs/operations/environments-and-releases.md, the local environment: the settings
+      SALON_DB_APP_USER, SALON_DB_APP_PASSWORD, SALON_PLATFORM_DOMAIN and SALON_LISTEN_ON_NETWORK;
+      two database roles, not one user; the salons' addresses; the API and the web app listen on
+      127.0.0.1 and ::1 only.
+    - docs/architecture/repository-structure.md: two new folders, infra/postgres/ (the role's
+      SQL) and apps/web/scripts/ (serve.mjs).
+    - docs/engineering/web.md and docs/architecture/tech-stack.md: the local web app is no longer
+      started with next start or next dev but with apps/web/scripts/serve.mjs, a Next.js custom
+      server around the framework's own request handler, because next start listens on one
+      address only. The installed Next.js guide says a custom server cannot be used with
+      standalone output; F01-S05 should serve the production image with next start, not this.
+    - Staging and production (F01-S05): the owning role should not be a superuser there, and the
+      application's role must exist before the first migration.
+
+    FACTS ABOUT THIS MACHINE THAT A TEST OF AC-11 NEEDS
+    - A connection to this machine's IPv4 network address (192.168.1.55) is refused for every
+      listener, including the system's own on *:5000 and a listener on 0.0.0.0. A host route for
+      the address is on a VPN interface (utun4). A refused connection there proves nothing.
+    - Its global IPv6 address does tell the difference (ifconfig en0: the inet6 address that is
+      neither fe80:: link-local nor fd.. local; 2406:... today, and it changes with the network).
+      By default both ports refuse a connection on it while the system's *:5000
+      answers; with SALON_LISTEN_ON_NETWORK=true the API answers 200 and the web app answers.
+    - lsof shows 127.0.0.1:8090, [::1]:8090, 127.0.0.1:3100 and [::1]:3100 by default, and *:8090
+      and *:3100 with the opt-in.
+    - curl, Node.js and Python all resolve alpha.localhost to ::1 first here, and all three reach
+      both ports; so does a browser.
+
+    FOUND AND FIXED WHILE BUILDING
+    - A request part-way through its query when the database froze was answered 500: the rollback
+      on the connection the driver had given up replaced the failure that caused it. Fixed in
+      TenantTransactionConfiguration; covered by SalonEndpointDatabaseSilentIntegrationTest.
+
+    MEASURED ON THE RUNNING PRODUCT
+    - AC-4: 600 requests from 60 k6 virtual users across the three hostnames, 0 mismatches, 0
+      errors. AC-10: 503 in about 2 s for a request made during the freeze, at most 3.03 s for
+      one in flight; 200 again 0.8 s after resume; 503 in 2 s with PostgreSQL stopped.
+cases:
+  - {"id": "TC-F01-S02-001", "title": "each salon's hostname returns that salon's slug, name and brand colour, and no other field", "type": "api", "priority": "high", "covers": ["AC-1"]}
+  - {"id": "TC-F01-S02-002", "title": "a salon's brand is served on its own hostname and on no other salon's", "type": "tenant-isolation", "priority": "critical", "covers": ["AC-1"]}
+  - {"id": "TC-F01-S02-003", "title": "the hostname is matched without regard to case, and the port in it is ignored", "type": "api", "priority": "high", "covers": ["AC-1"]}
+  - {"id": "TC-F01-S02-004", "title": "a hostname that resolves to no salon answers 404 not_found, with the same body whichever hostname it was", "type": "security", "priority": "high", "covers": ["AC-2"]}
+  - {"id": "TC-F01-S02-005", "title": "the same 404 is given on another path of the salon's API, apart from instance", "type": "api", "priority": "high", "covers": ["AC-2"]}
+  - {"id": "TC-F01-S02-006", "title": "meta and health answer 200 on every hostname that resolves to no salon", "type": "api", "priority": "high", "covers": ["AC-2"]}
+  - {"id": "TC-F01-S02-007", "title": "a salon named in a query parameter is never trusted: alpha's hostname returns alpha's brand", "type": "tenant-isolation", "priority": "critical", "covers": ["AC-3"]}
+  - {"id": "TC-F01-S02-008", "title": "a salon named in a request header other than Host is never trusted: alpha's hostname returns alpha's brand", "type": "tenant-isolation", "priority": "critical", "covers": ["AC-3"]}
+  - {"id": "TC-F01-S02-009", "title": "a request that names two hosts, or a host no hostname is written like, is refused and given no salon's data", "type": "security", "priority": "high", "covers": ["AC-2", "AC-3"]}
+  - {"id": "TC-F01-S02-010", "title": "Sequential requests on one connection cannot inherit another salon", "type": "tenant-isolation", "priority": "critical", "covers": ["AC-1", "AC-2", "AC-3"]}
+  - {"id": "TC-F01-S02-011", "title": "Pipelined requests on one connection cannot inherit another salon", "type": "concurrency", "priority": "critical", "covers": ["AC-1", "AC-2", "AC-3", "AC-4"]}
+  - {"id": "TC-F01-S02-012", "title": "nothing but a read is accepted on the salon endpoint, and an attempt to write changes nothing", "type": "security", "priority": "high", "covers": ["AC-1", "AC-3"]}
+  - {"id": "TC-F01-S02-013", "title": "no answer of the salon endpoint shows how the product is built, sets a cookie or allows another origin", "type": "security", "priority": "high", "covers": ["AC-1", "AC-2", "AC-3"]}
+  - {"id": "TC-F01-S02-014", "title": "the contract describes GET /api/v1/salon with its 200 and 404, and the running API agrees with it", "type": "api", "priority": "high", "covers": ["AC-12"]}
+  - {"id": "TC-F01-S02-015", "title": "the generated client exposes the endpoint: a call through it returns each salon's brand and a typed 404", "type": "api", "priority": "high", "covers": ["AC-12"]}
+  - {"id": "TC-F01-S02-020", "title": "A simultaneous mixed-salon rush has zero mismatches or errors", "type": "concurrency", "priority": "critical", "covers": ["AC-4"]}
+  - {"id": "TC-F01-S02-021", "title": "Steady mixed-salon reads remain isolated and meet the local latency baseline", "type": "load", "priority": "high", "covers": ["AC-4"]}
+  - {"id": "TC-F01-S02-030", "title": "The application's role is not a superuser, cannot bypass row-level security, belongs to no other role and owns nothing", "type": "security", "priority": "high", "covers": ["AC-5"]}
+  - {"id": "TC-F01-S02-031", "title": "The application's role is refused any read of the tenant table, by row, by column or by count", "type": "security", "priority": "high", "covers": ["AC-5"]}
+  - {"id": "TC-F01-S02-032", "title": "The application's role cannot give itself more: every attempt to get round the policy is refused and leaves the catalogue as it was", "type": "security", "priority": "high", "covers": ["AC-5"]}
+  - {"id": "TC-F01-S02-033", "title": "The registry is reached only through tenant_by_slug, which gives one slug's id and status, to the application's role alone, and cannot be redirected", "type": "security", "priority": "high", "covers": ["AC-5"]}
+  - {"id": "TC-F01-S02-034", "title": "With no tenant set, the application's role sees no row of salon_brand, although three exist", "type": "tenant-isolation", "priority": "critical", "covers": ["AC-6"]}
+  - {"id": "TC-F01-S02-035", "title": "Set to alpha, the application's role sees alpha's row and no other, however the question is put", "type": "tenant-isolation", "priority": "critical", "covers": ["AC-6"]}
+  - {"id": "TC-F01-S02-036", "title": "On the running product, set to alpha, an UPDATE or DELETE aimed at beta's row and an INSERT with beta's tenant_id change nothing", "type": "tenant-isolation", "priority": "critical", "covers": ["AC-6"]}
+  - {"id": "TC-F01-S02-037", "title": "The policy itself: with the writes granted, alpha changes its own row and nothing of beta's, and with no tenant nothing can be written", "type": "tenant-isolation", "priority": "critical", "covers": ["AC-6"]}
+  - {"id": "TC-F01-S02-038", "title": "A tenant set in one transaction leaves the next transaction on the same connection with none", "type": "tenant-isolation", "priority": "critical", "covers": ["AC-6"]}
+  - {"id": "TC-F01-S02-039", "title": "A tenant that is nil, empty or not a tenant id at all shows no row, and never another salon's", "type": "tenant-isolation", "priority": "critical", "covers": ["AC-6"]}
+  - {"id": "TC-F01-S02-040", "title": "Row-level security is forced: an owner of the table that is not a superuser is held to the policy too", "type": "security", "priority": "high", "covers": ["AC-7"]}
+  - {"id": "TC-F01-S02-041", "title": "In the catalogue, every table with a tenant_id is protected in full: enabled and forced, one fail-closed tenant_isolation policy, tenant_id NOT NULL with a foreign key to tenant, and in every unique index", "type": "data-integrity", "priority": "high", "covers": ["AC-7"]}
+  - {"id": "TC-F01-S02-042", "title": "The registry refuses a slug that is reserved, too short, too long, or anything but lowercase letters, digits and inner hyphens, and a slug already taken", "type": "data-integrity", "priority": "high", "covers": ["AC-8"]}
+  - {"id": "TC-F01-S02-043", "title": "The tenant and brand tables hold their own rules: a known status, a real tenant, one brand per salon, a name, and a colour written #RRGGBB", "type": "data-integrity", "priority": "high", "covers": ["AC-7", "AC-8"]}
+  - {"id": "TC-F01-S02-050", "title": "Requests in flight at the moment PostgreSQL freezes are each answered 503 service_unavailable within 5 seconds", "type": "resilience", "priority": "high", "covers": ["AC-10"]}
+  - {"id": "TC-F01-S02-051", "title": "Requests made while PostgreSQL is frozen are each answered 503 within 5 seconds, for as long as it stays frozen, and nothing hangs", "type": "resilience", "priority": "high", "covers": ["AC-10"]}
+  - {"id": "TC-F01-S02-052", "title": "Within 5 seconds of PostgreSQL being thawed every salon is answered 200 with its own brand again, and the API was never restarted", "type": "resilience", "priority": "high", "covers": ["AC-10"]}
+  - {"id": "TC-F01-S02-053", "title": "With PostgreSQL stopped, a salon's request is answered 503 service_unavailable within 5 seconds, and 200 again once it is started", "type": "resilience", "priority": "high", "covers": ["AC-10"]}
+  - {"id": "TC-F01-S02-060", "title": "By default both ports refuse a connection on every non-loopback address of this machine, and listen on 127.0.0.1 and ::1 only", "type": "security", "priority": "high", "covers": ["AC-11"]}
+  - {"id": "TC-F01-S02-061", "title": "A salon's hostname works from curl and from Node.js on both ports, whether it is reached over IPv4 or IPv6", "type": "api", "priority": "high", "covers": ["AC-11"]}
+  - {"id": "TC-F01-S02-062", "title": "The opt-in is named in .env.example and README.md, is off by default, and any value but true or false stops the scripts without starting anything", "type": "security", "priority": "high", "covers": ["AC-11"]}
+  - {"id": "TC-F01-S02-063", "title": "With the opt-in set, both ports are reachable on the network address; without it again, they are not", "type": "security", "priority": "high", "covers": ["AC-11"]}
+  - {"id": "TC-F01-S02-064", "title": "a browser reaches each salon on its hostname, on the API's port and the web app's, over 127.0.0.1 and over ::1", "type": "api", "priority": "high", "covers": ["AC-11"]}
+  - {"id": "TC-F01-S02-070", "title": "local-reset.sh followed by local-up.sh leaves exactly the three synthetic salons of the test plan, and nothing that was there before", "type": "data-integrity", "priority": "high", "covers": ["AC-9"]}
+  - {"id": "TC-F01-S02-071", "title": "Running local-up.sh again, and starting the API again, neither duplicates nor changes the salons", "type": "data-integrity", "priority": "high", "covers": ["AC-9"]}
+  - {"id": "TC-F01-S02-072", "title": "Started with a profile other than local against an empty database, the API creates the schema and no salon exists", "type": "data-integrity", "priority": "high", "covers": ["AC-9"]}
+  - {"id": "TC-F01-S02-080", "title": "pnpm contracts:check passes on the committed tree, and fails, naming the file, when the salon endpoint is missing from the document or from the client", "type": "build", "priority": "high", "covers": ["AC-12"]}
+  - {"id": "TC-F01-S02-081", "title": "The generated client exposes GET /api/v1/salon with its three fields: code that uses them compiles, and code that asks for another path or for a tenant id does not", "type": "build", "priority": "high", "covers": ["AC-12"]}
 verification:
-  commands: []
-  automation: []
+  commands:
+    - "cd apps/api && ./mvnw -q verify"
+    - "pnpm install --frozen-lockfile"
+    - "pnpm -r lint"
+    - "pnpm -r typecheck"
+    - "pnpm -r test"
+    - "pnpm --filter @salon/web build"
+    - "pnpm contracts:check"
+    - "qa/scripts/sdlc selftest"
+  automation:
+    - {"id": "api", "tool": "playwright", "file": "qa/api/F01/S02-salon.spec.ts", "covers": ["TC-F01-S02-001", "TC-F01-S02-002", "TC-F01-S02-003", "TC-F01-S02-004", "TC-F01-S02-005", "TC-F01-S02-006", "TC-F01-S02-007", "TC-F01-S02-008", "TC-F01-S02-009", "TC-F01-S02-010", "TC-F01-S02-011", "TC-F01-S02-012", "TC-F01-S02-013", "TC-F01-S02-014", "TC-F01-S02-015"], "project": "api"}
+    - {"id": "rush", "tool": "k6", "file": "qa/load/F01/S02-salon-rush.js", "covers": ["TC-F01-S02-020"]}
+    - {"id": "read-load", "tool": "k6", "file": "qa/load/F01/S02-salon-read-load.js", "covers": ["TC-F01-S02-021"]}
+    - {"id": "database-isolation", "tool": "script", "file": "qa/checks/F01/S02-database-isolation.sh", "covers": ["TC-F01-S02-030", "TC-F01-S02-031", "TC-F01-S02-032", "TC-F01-S02-033", "TC-F01-S02-034", "TC-F01-S02-035", "TC-F01-S02-036", "TC-F01-S02-037", "TC-F01-S02-038", "TC-F01-S02-039", "TC-F01-S02-040", "TC-F01-S02-041", "TC-F01-S02-042", "TC-F01-S02-043"]}
+    - {"id": "database-silent", "tool": "script", "file": "qa/checks/F01/S02-database-silent.sh", "covers": ["TC-F01-S02-050", "TC-F01-S02-051", "TC-F01-S02-052", "TC-F01-S02-053"]}
+    - {"id": "listening", "tool": "script", "file": "qa/checks/F01/S02-listening.sh", "covers": ["TC-F01-S02-060", "TC-F01-S02-061", "TC-F01-S02-062", "TC-F01-S02-063"]}
+    - {"id": "browser-hostnames", "tool": "playwright", "file": "qa/web/F01/S02-salon-hostname-in-a-browser.spec.ts", "covers": ["TC-F01-S02-064"], "project": "web"}
+    - {"id": "seed", "tool": "script", "file": "qa/checks/F01/S02-seed.sh", "covers": ["TC-F01-S02-070", "TC-F01-S02-071", "TC-F01-S02-072"]}
+    - {"id": "contract", "tool": "script", "file": "qa/checks/F01/S02-contract.sh", "covers": ["TC-F01-S02-080", "TC-F01-S02-081"]}
   manual: []
   deferred: []
 evidence:
-  last_run: null
-  last_result: null
+  last_run: qa/reports/20261012-194720-F01-S02
+  last_result: pass

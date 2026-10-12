@@ -39,22 +39,25 @@ apart.
      | Stage status | What to do |
      | --- | --- |
      | `outlined`, `planned` | Update the outline or `spec.md` in place |
-     | `in-progress`, `in-qa` | Update `spec.md`; tell the developer and QA; QA updates cases and automation |
-     | `complete` (not released) | Reopen: set `status: in-progress`, `qa_status: not-run`, add `reopened_by: CR-<nnn>`, update `spec.md`. Stages that depend on it keep going; they cannot be closed until it is closed again |
+     | `in-progress`, `built` | Update `spec.md`; set a `built` stage back to `in-progress`; tell the developer |
+     | `complete` (not released) | Reopen: set `status: in-progress`, `qa_status: not-run`, add `reopened_by: CR-<nnn>`, update `spec.md`. Stages that depend on it keep going; they cannot be closed until it is closed again. If its feature was `in-qa` or `complete`, set the feature back to `in-progress` and `qa_status: not-run` |
      | `released` | Never rewritten. Add a new stage to the feature (or a new feature) that delivers the change |
 
    - A new feature gets the next free `F` number and a `feature.yaml` with `status: backlog`.
-5. **QA follows.** For every stage the change touches, QA updates the cases and the automation in
-   the same stage pass. A case whose expectation changed is edited; a case that no longer applies is
-   deleted, along with its automation. Old expectations do not stay behind "just in case".
+5. **QA follows, at the feature pass.** For every stage the change touches that already has cases,
+   QA updates the cases and the automation at the feature's next `feature-verify`. A case whose
+   expectation changed is edited; a case that no longer applies is deleted, along with its
+   automation. Old expectations do not stay behind "just in case".
 6. **Close.** When the last affected stage is `complete` again, set the change request to
    `implemented`.
 
 ## What a change request does not trigger
 
-Only the stages it touches are verified again, each by its own `stage-verify`. It is not a reason
-to run regression. If the change reaches into behaviour that earlier features rely on, say so in the
-impact analysis and let the owner decide whether to ask for a regression run.
+A change to a feature that has not been through QA triggers no QA of its own: the stage is built
+and closed again, and the feature pass covers it. A change to a feature that has been through QA
+sends that feature, and only that feature, through `feature-verify` again. It is not a reason to run
+regression. If the change reaches into behaviour that earlier features rely on, say so in the impact
+analysis and let the owner decide whether to ask for a regression run.
 
 ## Suggestions from QA
 
@@ -68,6 +71,6 @@ QA classifies each finding of a review as must, should or idea (the definitions 
 
 Nothing in the last two groups is built until the owner approves it.
 
-Before `stage-close`, the lead writes each suggestion's outcome in the Disposition column of
-`review.md`: `BUG-...` (it was really a defect), `CR-<nnn>` (raised for the owner), `backlog` (an
+Before `feature-close` (and before `stage-close`, when a stage pass wrote a review), the lead writes
+each suggestion's outcome in the Disposition column of `review.md`: `BUG-...` (it was really a defect), `CR-<nnn>` (raised for the owner), `backlog` (an
 idea, added to `features/BACKLOG.md`), or `declined by owner: <reason>`.

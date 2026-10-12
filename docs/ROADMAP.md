@@ -46,7 +46,7 @@ Delivered in this order. Each feature depends on the ones before it that it name
 What this means while there is no app:
 
 - **Customers book in their phone's browser.** The booking site is the only customer surface in
-  this milestone, so it is designed for a 360-pixel-wide phone first and tested there on every stage.
+  this milestone, so it is designed for a 360-pixel-wide phone first and tested there first.
 - **The API is built for the app from the start**: versioned paths, token sign-in, a generated
   contract, branding delivered at run time. `M2-mobile` should need no rework of the backend.
 - **Notifications go out by WhatsApp, SMS and email.** Push arrives with the app.

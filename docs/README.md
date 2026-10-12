@@ -17,7 +17,7 @@ it is about this product it is in this folder, and nowhere else.
 | Change the customer app (`apps/mobile`) | `engineering/mobile.md`, `design/ui-ux-standards.md` |
 | Build or change any screen | `design/ui-ux-standards.md`, `design/prototype/index.html` |
 | Add a dependency or use a framework feature for the first time | `architecture/tech-stack.md` |
-| Test a stage or a feature | `qa/test-plan.md`, `qa/test-types.md`, `qa/automation.md` |
+| Test a feature | `qa/test-plan.md`, `qa/test-types.md`, `qa/automation.md` |
 | Review how usable something is | `qa/review-context.md` |
 | Touch anything that is not local, or prepare a release | `operations/environments-and-releases.md` |
 
@@ -42,7 +42,7 @@ full before starting; this table is for everything the spec did not anticipate.
 | `design/ui-ux-standards.md` | Screens, tokens, states, formats, widths, accessibility, wording |
 | `design/prototype/index.html` | The HTML prototype: the reference for screens, flow and wording (`brand.json` beside it is its sample brand) |
 | `qa/test-plan.md` | How this product is tested: tools, layout of `qa/`, the synthetic salons, accounts, targets, severity examples |
-| `qa/test-types.md` | Which kinds of test a stage needs, and what each must assert |
+| `qa/test-types.md` | Which kinds of test a feature needs, how much of each, and what each must assert |
 | `qa/automation.md` | Conventions for the Playwright, Maestro and k6 automation |
 | `qa/review-context.md` | Who uses the product, what matters to them, and the products it is compared with |
 | `operations/environments-and-releases.md` | The environments, what a test may and may not touch, and the rules this product imposes on a release |
@@ -56,8 +56,9 @@ BRD was built from.
 ## Keeping these documents true
 
 - The lead owns these documents. The developer and QA do not edit them: when what was built or
-  tested differs from what a document says, the developer says so in `handoff.notes`, QA says so in
-  `review.md`, and the lead corrects the document before the stage is closed.
+  tested differs from what a document says, the developer says so in `handoff.notes` and the lead
+  corrects the document before the stage is closed; QA says so in `review.md` and the lead corrects
+  it before the feature is closed.
 - A decision that changes a document is also recorded in `decisions/DECISION_LOG.md`.
 - A new document is added to both tables above. `qa/scripts/sdlc validate` fails when a document is
   missing from this index, or when the index, a skill or an `AGENTS.md` points at a document that

@@ -5,7 +5,7 @@ tooling and belongs to the lead. Before writing or running anything here, load t
 and read in full:
 
 - `docs/qa/test-plan.md`: tools, layout of this folder, the synthetic salons, accounts, targets.
-- `docs/qa/test-types.md`: which kinds of test a stage needs, and what each must assert.
+- `docs/qa/test-types.md`: which kinds of test a feature needs, how much of each, and what each must assert.
 - `docs/qa/automation.md`: conventions for Playwright, k6, shell checks and Maestro.
 
 Run automation through `qa/scripts/sdlc run`, for exactly the scope you were asked for.

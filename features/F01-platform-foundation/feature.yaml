@@ -9,7 +9,7 @@ released_in: null
 depends_on: []
 surfaces: [api, web, infra]
 requirements: [BRD-03, BKG-15]
-nfr_focus: [NFR-01, NFR-15, NFR-16, NFR-17, NFR-18]
+nfr_focus: [NFR-01, NFR-07, NFR-15, NFR-16, NFR-17, NFR-18]
 cases: []
 verification:
   automation: []

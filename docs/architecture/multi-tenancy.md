@@ -6,6 +6,7 @@ defect the business cannot survive, so isolation is enforced twice and tested on
 ## Contents
 
 - The ten rules
+- Salons and their hostnames
 - How the tenant reaches the database
 - Adding a table
 - Adding an endpoint
@@ -29,6 +30,30 @@ defect the business cannot survive, so isolation is enforced twice and tested on
 | T-9 | An automated suite attempts cross-tenant reads and writes through every endpoint on every build |
 | T-10 | Operator access to a salon's data is a deliberate, logged, time-limited session (PLT-07), never a standing privilege |
 
+## Salons and their hostnames
+
+A salon is a row of the platform table `tenant`: its id (a UUID, never shown to a customer), its
+slug, its status (`active` or `suspended`) and the times it was created and changed. The slug is
+the salon's subdomain on the platform domain.
+
+- **Hostname:** `<slug>.<platform domain>`, with the port ignored and compared without regard to case.
+  The platform domain is a setting: `localhost` on a developer's machine (so `alpha.localhost`
+  needs no hosts file), the staging and production domains elsewhere (open decision D-02).
+- **A hostname matches only when it is exactly one label in front of the platform domain.**
+  `a.b.<platform domain>`, `<slug>.<platform domain>.example.com` and the platform domain itself
+  resolve to no salon.
+- **Slug format:** 3 to 30 characters of lowercase letters, digits and hyphens, beginning and ending
+  with a letter or digit. The database refuses any other.
+- **Reserved slugs**, which can never be a salon, because they name the platform's own hostnames:
+  `admin`, `api`, `app`, `apps`, `assets`, `auth`, `cdn`, `console`, `docs`, `help`, `login`,
+  `mail`, `staging`, `static`, `status`, `support`, `www`. The database refuses them as well.
+- A request on a hostname that resolves to no salon reaches the platform endpoints (`meta`, health)
+  only. Every tenant endpoint answers 404 `not_found`, the same answer as for a salon that does not
+  exist, so a caller cannot probe for salons.
+- What a suspended salon's hostname shows is F01-S03's to define. Until then no salon is suspended.
+- A domain the salon owns (a later release) maps to the same tenant through the edge; it is another
+  way in to the same resolution, not a second mechanism.
+
 ## How the tenant reaches the database
 
 1. The request filter resolves the tenant from the hostname, or from the signed token for the app,
@@ -48,12 +73,27 @@ defect the business cannot survive, so isolation is enforced twice and tested on
    ALTER TABLE service ENABLE ROW LEVEL SECURITY;
    ALTER TABLE service FORCE ROW LEVEL SECURITY;
    CREATE POLICY tenant_isolation ON service
-     USING      (tenant_id = current_setting('app.tenant_id', true)::uuid)
-     WITH CHECK (tenant_id = current_setting('app.tenant_id', true)::uuid);
+     USING      (tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::uuid)
+     WITH CHECK (tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::uuid);
    ```
 
-   With no setting, `current_setting(..., true)` is null, the comparison is null, and no row is
-   visible. The system fails closed.
+   With no setting, the value is null, the comparison is null, and no row is visible. The system
+   fails closed. The `NULLIF` is required: on a pooled connection that an earlier transaction set,
+   `current_setting` returns an empty string afterwards, not null, and an empty string cast to a
+   UUID is an error instead of "no rows".
+
+Three consequences of how the framework works, which every later stage follows:
+
+- **Resolve the salon before the transaction.** The request filter only binds the hostname's slug.
+  The registry is asked on first use, through `TenantContext.require()`, so an endpoint that needs
+  no salon (such as `meta`) never touches the database. A use case calls it before it opens its
+  transaction.
+- **A session with no salon uses the nil UUID.** Hibernate refuses a session with no tenant once an
+  entity carries `@TenantId`, so the resolver answers `00000000-0000-0000-0000-000000000000`, which
+  the database refuses as a tenant's id. It can therefore match no row.
+- **The application reads the registry only through `tenant_by_slug(text)`**, a `SECURITY DEFINER`
+  function that returns a slug's id and status. It has no grant on `tenant`. A suspended salon
+  resolves to no salon until F01-S03 defines what its hostname shows.
 
 ## Adding a table
 
@@ -63,7 +103,9 @@ defect the business cannot survive, so isolation is enforced twice and tested on
 - [ ] The entity carries `@TenantId`.
 - [ ] Every unique constraint and every index starts with `tenant_id`.
 - [ ] Every foreign key to another tenant table is composite: `(tenant_id, other_id)`.
-- [ ] The application role is granted only the operations it needs.
+- [ ] The application role is granted only the operations it needs, in the migration, to the Flyway
+      placeholder for the application role (never to a role name written into the migration, and
+      no migration creates a role).
 - [ ] An isolation test covers the table (see below).
 
 ## Adding an endpoint
@@ -106,3 +148,9 @@ For every new table and endpoint, an integration test with two tenants that prov
 
 QA repeats these from outside for every endpoint. Yours prove the mechanism; theirs prove nothing
 slipped past it.
+
+The first tenant table also proves each layer independently in the API's integration tests:
+`SalonBrandRowLevelSecurityAloneIntegrationTest` uses SQL with Hibernate out of the path;
+`SalonBrandHibernateFilterAloneIntegrationTest` disables RLS in its disposable test database;
+`TenantTransactionIntegrationTest` reuses one pooled connection across salons and transactions
+without a salon. Keep this independent coverage when adding tenant tables.

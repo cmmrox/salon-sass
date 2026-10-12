@@ -1,5 +1,6 @@
 package com.salonplatform.shared.api;
 
+import com.salonplatform.shared.tenancy.TenantNotFoundException;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,8 +30,19 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         return super.handleExceptionInternal(ex, Problems.of(statusCode), headers, statusCode, request);
     }
 
+    /** The hostname names no active salon: the same answer as for anything else that does not exist. */
+    @ExceptionHandler(TenantNotFoundException.class)
+    @Nullable ResponseEntity<Object> handleNoSalon(TenantNotFoundException ex, WebRequest request) {
+        return handleExceptionInternal(ex, null, new HttpHeaders(), HttpStatus.NOT_FOUND, request);
+    }
+
     @ExceptionHandler(Exception.class)
     @Nullable ResponseEntity<Object> handleUnexpected(Exception ex, WebRequest request) {
+        if (DatabaseUnavailable.isCauseOf(ex)) {
+            // Stopped, unreachable or silent: the request could not be served, and may be tried again.
+            log.warn("The database is unavailable: {}", DatabaseUnavailable.describe(ex));
+            return handleExceptionInternal(ex, null, new HttpHeaders(), HttpStatus.SERVICE_UNAVAILABLE, request);
+        }
         log.error("Unhandled exception", ex);
         return handleExceptionInternal(ex, null, new HttpHeaders(), HttpStatus.INTERNAL_SERVER_ERROR, request);
     }

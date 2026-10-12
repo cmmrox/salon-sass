@@ -46,3 +46,5 @@ Added by the lead at `stage-close` and `feature-close`, from suggestions classed
 | Let long words in headings wrap | SUG-F01-S01-07 | Seen at 320 wide with 200% text; add to the UI standards with F01-S03 |
 | Put the time on the web app's log lines, and say what was left running when a start fails half way | SUG-F01-S01-08 | Local scripts |
 | Give an automation check a way to report an environment fault to the runner, which today records only a missing tool that way | QA of F01-S01 | Lifecycle tooling |
+| Agree client retry guidance for temporary 503 responses | SUG-F01-S02-01 | Consider with the public shell; requires owner approval before changing requirements |
+| Evaluate tenant-aware conditional reads when the public brand payload grows | SUG-F01-S02-02 | Consider with F04 branding; cache and validator keys must include the salon |
