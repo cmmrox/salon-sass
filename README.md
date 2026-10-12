@@ -22,6 +22,7 @@ infra/scripts/local-up.sh       # PostgreSQL, the API and the web app; prints ea
 infra/scripts/local-down.sh     # stop everything; the database's data is kept
 infra/scripts/local-reset.sh    # delete the local database's data and start again from nothing
 infra/scripts/local-service.sh stop api      # one service: <start|stop> <postgres|api|web>
+infra/scripts/local-service.sh pause postgres   # for tests: PostgreSQL stays up and answers nothing; `resume postgres` ends it
 ```
 
 | Service | Address | Change it with |

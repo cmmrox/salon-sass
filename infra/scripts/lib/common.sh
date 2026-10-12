@@ -352,7 +352,22 @@ postgres_is_running() {
   [ -n "$(compose ps --status running --quiet postgres 2>/dev/null)" ]
 }
 
+postgres_is_paused() {
+  [ -n "$(compose ps --status paused --quiet postgres 2>/dev/null)" ]
+}
+
+# Thaws a paused PostgreSQL, and does nothing when it is not paused. Done before anything else is
+# done with the container: Docker refuses to start a paused one, and stopping or removing one as it
+# is kills the database where it stands instead of letting it shut down.
+thaw_postgres() {
+  postgres_is_paused || return 0
+  compose unpause postgres >>"$LOG_DIR/postgres.log" 2>&1 \
+    || { tail -n 30 "$LOG_DIR/postgres.log" >&2; fail "postgres is paused and could not be resumed. See $LOG_DIR/postgres.log"; }
+  say "postgres: resumed"
+}
+
 start_postgres() {
+  thaw_postgres
   if postgres_is_running; then
     say "postgres: already running"
     return 0
@@ -367,12 +382,44 @@ start_postgres() {
 
 # Stops the container and keeps it, so that starting it again is quick and its data is still there.
 stop_postgres() {
+  thaw_postgres
   if postgres_is_running; then
     compose stop postgres >>"$LOG_DIR/postgres.log" 2>&1
     say "postgres: stopped"
   else
     say "postgres: not running"
   fi
+}
+
+# A hook for tests, not something the product does: freezes PostgreSQL where it stands, with
+# `docker pause` on this project's own container and no other. It keeps its port and its open
+# connections and answers nothing, which is how a database that is overloaded, or behind a network
+# that drops packets without a word, looks to the API. `resume` thaws it, and so does `start`.
+pause_postgres() {
+  if postgres_is_paused; then
+    say "postgres: already paused"
+    return 0
+  fi
+  postgres_is_running \
+    || fail "postgres cannot be paused: it is not running. Start it first: infra/scripts/local-service.sh start postgres"
+  compose pause postgres >>"$LOG_DIR/postgres.log" 2>&1 \
+    || { tail -n 30 "$LOG_DIR/postgres.log" >&2; fail "postgres could not be paused. See $LOG_DIR/postgres.log"; }
+  say "postgres: paused; it accepts connections and answers nothing until it is resumed"
+}
+
+resume_postgres() {
+  if postgres_is_paused; then
+    thaw_postgres
+  else
+    say "postgres: not paused"
+  fi
+}
+
+# Stops and removes the container, for local-down.sh and local-reset.sh. Arguments go to
+# `docker compose down`.
+remove_postgres() {
+  thaw_postgres
+  compose down "$@" >>"$LOG_DIR/postgres.log" 2>&1
 }
 
 start_api() {

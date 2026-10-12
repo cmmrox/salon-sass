@@ -16,6 +16,6 @@ problem="$(docker_problem)"
 if [ -n "$problem" ]; then
   say "postgres: left as it is ($problem)"
 else
-  compose down >>"$LOG_DIR/postgres.log" 2>&1
+  remove_postgres
   say "postgres: stopped and removed; its data is kept"
 fi

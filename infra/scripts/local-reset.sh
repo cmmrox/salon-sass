@@ -14,7 +14,7 @@ acquire_lock
 
 stop_web
 stop_api
-compose down --volumes >>"$LOG_DIR/postgres.log" 2>&1
+remove_postgres --volumes
 say "postgres: stopped; its data is deleted"
 
 start_postgres
