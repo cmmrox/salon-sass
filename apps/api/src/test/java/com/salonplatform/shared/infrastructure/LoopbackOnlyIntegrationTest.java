@@ -2,15 +2,15 @@ package com.salonplatform.shared.infrastructure;
 
 import java.io.IOException;
 import java.net.ConnectException;
-import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
+import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Optional;
+import java.util.List;
 
 import com.jayway.jsonpath.JsonPath;
 import com.salonplatform.testing.Http;
@@ -106,30 +106,33 @@ class LoopbackOnlyIntegrationTest {
         TestDatabase database = TestDatabase.createEmpty(TestPostgres.shared());
         try (StartedApplication application = database.start("--server.port=" + port,
                 "--salon.server.listen-on-network=true")) {
-            assertThat(new Http(port).raw(network.getHostAddress(), META)).startsWith("HTTP/1.1 200");
+            assertThat(new Http(port).raw(network.getHostAddress(), META))
+                    .as("on %s", network.getHostAddress()).startsWith("HTTP/1.1 200");
         }
     }
 
     /**
-     * This machine's network address, once a listener of the test's own on every interface has
-     * been reached on it. Skips the test where there is no such address or it cannot be reached.
+     * One of this machine's network addresses, IPv4 or IPv6, on which a listener of the test's own
+     * on every interface has just been reached. Skips the test where there is none: a machine with
+     * no network, or one where a route or a sandbox keeps it from reaching its own address.
      */
     private static InetAddress reachableNetworkAddress() throws IOException {
-        Optional<InetAddress> network = networkAddress();
-        assumeTrue(network.isPresent(), "this machine has no network address");
+        List<InetAddress> candidates = networkAddresses();
+        assumeTrue(!candidates.isEmpty(), "this machine has no network address");
         try (ServerSocket everyInterface = new ServerSocket(0)) {
-            boolean reached;
-            try {
-                connect(network.get(), everyInterface.getLocalPort());
-                reached = true;
+            for (InetAddress candidate : candidates) {
+                try {
+                    connect(candidate, everyInterface.getLocalPort());
+                    return candidate;
+                }
+                catch (IOException ex) {
+                    // Not reachable from here; a refused connection on it would prove nothing.
+                }
             }
-            catch (IOException ex) {
-                reached = false;
-            }
-            assumeTrue(reached, "a listener on every interface cannot be reached on " + network.get().getHostAddress()
-                    + " from here, so a refused connection would prove nothing");
         }
-        return network.get();
+        assumeTrue(false, "a listener on every interface cannot be reached on any of " + candidates
+                + " from here, so a refused connection would prove nothing");
+        throw new IllegalStateException("unreachable");
     }
 
     private static void connect(InetAddress address, int port) throws IOException {
@@ -148,18 +151,19 @@ class LoopbackOnlyIntegrationTest {
         return NetworkInterface.getByInetAddress(InetAddress.getByName("::1")) != null;
     }
 
-    /** An IPv4 address of an interface that is up and is not the loopback. */
-    private static Optional<InetAddress> networkAddress() throws SocketException {
+    /** The addresses of the interfaces that are up, leaving out loopback and link-local ones. */
+    private static List<InetAddress> networkAddresses() throws SocketException {
+        List<InetAddress> addresses = new ArrayList<>();
         for (NetworkInterface network : Collections.list(NetworkInterface.getNetworkInterfaces())) {
-            if (!network.isUp() || network.isLoopback() || network.isPointToPoint()) {
+            if (!network.isUp() || network.isLoopback()) {
                 continue;
             }
             for (InetAddress address : Collections.list(network.getInetAddresses())) {
-                if (address instanceof Inet4Address && !address.isLoopbackAddress() && !address.isLinkLocalAddress()) {
-                    return Optional.of(address);
+                if (!address.isLoopbackAddress() && !address.isLinkLocalAddress()) {
+                    addresses.add(address);
                 }
             }
         }
-        return Optional.empty();
+        return addresses;
     }
 }

@@ -44,6 +44,16 @@ load_settings() {
   export SALON_DB_NAME="${SALON_DB_NAME:-salon}"
   export SALON_DB_USER="${SALON_DB_USER:-salon}"
   export SALON_DB_PASSWORD="${SALON_DB_PASSWORD:-salon-local-only}"
+  export SALON_DB_APP_USER="${SALON_DB_APP_USER:-salon_app}"
+  export SALON_DB_APP_PASSWORD="${SALON_DB_APP_PASSWORD:-salon-app-local-only}"
+  if [ "$SALON_DB_APP_USER" = "$SALON_DB_USER" ]; then
+    fail "SALON_DB_APP_USER and SALON_DB_USER are both '$SALON_DB_USER'. The API connects as a role of its own, which owns no table and cannot get round row-level security; the owning role runs the migrations. Give them different names (see .env.example)."
+  fi
+  export SALON_PLATFORM_DOMAIN="${SALON_PLATFORM_DOMAIN:-localhost}"
+  case "${SALON_LISTEN_ON_NETWORK:-false}" in
+    true|false) export SALON_LISTEN_ON_NETWORK="${SALON_LISTEN_ON_NETWORK:-false}" ;;
+    *) fail "SALON_LISTEN_ON_NETWORK must be 'true' or 'false', not '${SALON_LISTEN_ON_NETWORK}' (see .env.example)." ;;
+  esac
   # Remember whether the API will use the local database or one somebody pointed it at.
   if [ -z "${SALON_DB_URL:-}" ]; then DATABASE_IS_LOCAL=1; else DATABASE_IS_LOCAL=0; fi
   export SALON_DB_URL="${SALON_DB_URL:-jdbc:postgresql://localhost:${SALON_POSTGRES_PORT}/${SALON_DB_NAME}}"
@@ -366,9 +376,29 @@ thaw_postgres() {
   say "postgres: resumed"
 }
 
+# Runs SQL from standard input in the local database as the owning role, through psql in this
+# project's container. Further arguments go to psql.
+psql_as_owner() {
+  compose exec -T -e PGPASSWORD="$SALON_DB_PASSWORD" postgres \
+    psql --no-psqlrc --quiet --set ON_ERROR_STOP=1 --username "$SALON_DB_USER" --dbname "$SALON_DB_NAME" "$@"
+}
+
+# Creates the role the API connects as, or brings an existing one into line: it can log in, and it
+# is not a superuser, cannot bypass row-level security and owns nothing (infra/postgres/
+# application-role.sql). Done whenever PostgreSQL or the API is started, so it holds on a new
+# volume and on one made before the role existed. Its name and password are the local-only values
+# in .env.example.
+ensure_application_role() {
+  psql_as_owner \
+    --set app_user="$SALON_DB_APP_USER" --set app_password="$SALON_DB_APP_PASSWORD" --set db_name="$SALON_DB_NAME" \
+    --file - <"$ROOT/infra/postgres/application-role.sql" >>"$LOG_DIR/postgres.log" 2>&1 \
+    || { tail -n 30 "$LOG_DIR/postgres.log" >&2; fail "the application's database role '$SALON_DB_APP_USER' could not be created. See $LOG_DIR/postgres.log"; }
+}
+
 start_postgres() {
   thaw_postgres
   if postgres_is_running; then
+    ensure_application_role
     say "postgres: already running"
     return 0
   fi
@@ -377,6 +407,7 @@ start_postgres() {
   fi
   compose up --detach --wait postgres >"$LOG_DIR/postgres.log" 2>&1 \
     || { tail -n 30 "$LOG_DIR/postgres.log" >&2; fail "postgres did not start. See $LOG_DIR/postgres.log"; }
+  ensure_application_role
   say "postgres: started"
 }
 
@@ -431,6 +462,9 @@ start_api() {
   if [ "$DATABASE_IS_LOCAL" = "1" ] && ! port_in_use "$SALON_POSTGRES_PORT"; then
     fail "api cannot start: it needs PostgreSQL, and nothing is listening on port $SALON_POSTGRES_PORT. Start it first: infra/scripts/local-service.sh start postgres"
   fi
+  if [ "$DATABASE_IS_LOCAL" = "1" ] && postgres_is_running; then
+    ensure_application_role
+  fi
   say "api: building"
   ( cd "$ROOT/apps/api" && JAVA_HOME="$RESOLVED_JAVA_HOME" ./mvnw -q -DskipTests package ) >"$LOG_DIR/api-build.log" 2>&1 \
     || { tail -n 30 "$LOG_DIR/api-build.log" >&2; fail "the API did not build. See $LOG_DIR/api-build.log"; }
@@ -451,13 +485,15 @@ start_web() {
   say "web: installing dependencies"
   ( cd "$ROOT" && pnpm_run install --frozen-lockfile ) >"$LOG_DIR/web-build.log" 2>&1 \
     || { tail -n 30 "$LOG_DIR/web-build.log" >&2; fail "pnpm install failed. See $LOG_DIR/web-build.log"; }
+  # Served by apps/web/scripts/serve.mjs, which listens on this machine's loopback addresses only
+  # (IPv4 and IPv6 both) unless SALON_LISTEN_ON_NETWORK is true.
   if [ "$SALON_WEB_MODE" = "dev" ]; then
-    ( cd "$ROOT/apps/web" && exec nohup node_modules/.bin/next dev --port "$SALON_WEB_PORT" ) >"$LOG_DIR/web.log" 2>&1 &
+    ( cd "$ROOT/apps/web" && exec nohup node scripts/serve.mjs --dev --port "$SALON_WEB_PORT" ) >"$LOG_DIR/web.log" 2>&1 &
   else
     say "web: building"
     ( cd "$ROOT" && pnpm_run --filter @salon/web build ) >>"$LOG_DIR/web-build.log" 2>&1 \
       || { tail -n 30 "$LOG_DIR/web-build.log" >&2; fail "the web app did not build. See $LOG_DIR/web-build.log"; }
-    ( cd "$ROOT/apps/web" && exec nohup node_modules/.bin/next start --port "$SALON_WEB_PORT" ) >"$LOG_DIR/web.log" 2>&1 &
+    ( cd "$ROOT/apps/web" && exec nohup node scripts/serve.mjs --port "$SALON_WEB_PORT" ) >"$LOG_DIR/web.log" 2>&1 &
   fi
   record_pid web "$!"
   wait_until_up web "http://localhost:${SALON_WEB_PORT}/" 90 "$!"
@@ -468,8 +504,16 @@ stop_web() { stop_process web; }
 
 print_addresses() {
   say ""
-  say "PostgreSQL  localhost:${SALON_POSTGRES_PORT}  (database ${SALON_DB_NAME}, user ${SALON_DB_USER})"
+  say "PostgreSQL  localhost:${SALON_POSTGRES_PORT}  (database ${SALON_DB_NAME}; owner ${SALON_DB_USER}, application role ${SALON_DB_APP_USER})"
   say "API         http://localhost:${SALON_API_PORT}  (health: http://localhost:${SALON_API_PORT}/actuator/health)"
   say "Web         http://localhost:${SALON_WEB_PORT}"
+  if [ "$SPRING_PROFILES_ACTIVE" = "local" ]; then
+    say "Salons      alpha, beta, gamma: http://alpha.${SALON_PLATFORM_DOMAIN}:${SALON_API_PORT}/api/v1/salon"
+  fi
+  if [ "$SALON_LISTEN_ON_NETWORK" = "true" ]; then
+    say "Listening   on every network interface (SALON_LISTEN_ON_NETWORK=true): anyone on this network can reach the API and the web app"
+  else
+    say "Listening   on this machine only (set SALON_LISTEN_ON_NETWORK=true to test from a phone on the same network)"
+  fi
   say "Logs        ${LOG_DIR}"
 }

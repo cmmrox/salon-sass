@@ -29,7 +29,25 @@ infra/scripts/local-service.sh pause postgres   # for tests: PostgreSQL stays up
 | --- | --- | --- |
 | Web app | http://localhost:3100 | `SALON_WEB_PORT` |
 | API | http://localhost:8090 (`/api/v1/meta`, `/actuator/health`) | `SALON_API_PORT` |
+| A salon | http://alpha.localhost:8090/api/v1/salon (also `beta`, `gamma`) | `SALON_PLATFORM_DOMAIN` |
 | PostgreSQL | `localhost:5440`, database `salon` | `SALON_POSTGRES_PORT` |
+
+Three synthetic salons, `alpha`, `beta` and `gamma`, are seeded in the local environment; each is
+reached at `<slug>.localhost` on the API's and the web app's ports, with no hosts file.
+
+The API and the web app listen on this machine only (`127.0.0.1` and `::1`). To test from a phone
+on the same network, start them with `SALON_LISTEN_ON_NETWORK=true`; both ports are then open to
+everyone on that network, so turn it off again afterwards.
+
+The database has two roles. `salon` (`SALON_DB_USER`) owns the tables and runs the migrations.
+`salon_app` (`SALON_DB_APP_USER`) is what the API connects as: it owns nothing and cannot get round
+row-level security. `psql` is in the container:
+
+```bash
+docker exec -it salon-postgres psql -U salon -d salon                    # as the owner
+docker exec -it -e PGPASSWORD=salon-app-local-only salon-postgres \
+  psql -h localhost -U salon_app -d salon                                # as the API sees it
+```
 
 `local-up.sh` checks the prerequisites first and stops, naming what is missing, before it starts
 anything. Every setting and its default is in `.env.example`; copy it to `.env` to change one.
