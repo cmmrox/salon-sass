@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { createApiClient, type Meta, type Problem } from '../src/index';
+import { createApiClient, type Meta, type Problem, type Salon } from '../src/index';
 
 function respondingWith(status: number, body: unknown, contentType: string) {
   const requests: Request[] = [];
@@ -38,6 +38,30 @@ describe('createApiClient', () => {
     const client = createApiClient({ baseUrl: 'http://api.test:8090', fetch });
 
     const { data, error, response } = await client.GET('/api/v1/meta');
+
+    expect(response.status).toBe(404);
+    expect(data).toBeUndefined();
+    expect(error?.code).toBe('not_found');
+  });
+
+  it('requests the salon of the hostname it was given, with no parameter naming one', async () => {
+    const salon: Salon = { slug: 'alpha', name: 'Alpha Studio', brandColour: '#D6086A' };
+    const { fetch, requests } = respondingWith(200, salon, 'application/json');
+    const client = createApiClient({ baseUrl: 'http://alpha.localhost:8090', fetch });
+
+    const { data, error } = await client.GET('/api/v1/salon');
+
+    expect(requests[0]?.url).toBe('http://alpha.localhost:8090/api/v1/salon');
+    expect(error).toBeUndefined();
+    expect(data).toEqual(salon);
+  });
+
+  it('returns not found for a hostname that names no salon, with its code', async () => {
+    const problem: Problem = { title: 'Not Found', status: 404, code: 'not_found', instance: '/api/v1/salon' };
+    const { fetch } = respondingWith(404, problem, 'application/problem+json');
+    const client = createApiClient({ baseUrl: 'http://localhost:8090', fetch });
+
+    const { data, error, response } = await client.GET('/api/v1/salon');
 
     expect(response.status).toBe(404);
     expect(data).toBeUndefined();

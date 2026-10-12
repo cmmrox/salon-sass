@@ -30,6 +30,28 @@ class OpenApiShapeTest extends IntegrationTest {
     }
 
     @Test
+    void salonIsDescribedWithItsBrandAndItsNotFoundAnswer() {
+        DocumentContext document = document();
+        String salon = "$.paths['/api/v1/salon'].get";
+
+        assertThat(document.<String>read(salon + ".operationId")).isEqualTo("getSalon");
+        assertThat(document.<String>read(salon + ".responses.200.content['application/json'].schema.$ref"))
+                .isEqualTo("#/components/schemas/Salon");
+        for (String status : new String[] { "404", "503" }) {
+            assertThat(document.<String>read(
+                    salon + ".responses." + status + ".content['application/problem+json'].schema.$ref"))
+                    .as(status).isEqualTo("#/components/schemas/Problem");
+        }
+        assertThat(document.<List<String>>read("$.components.schemas.Salon.required"))
+                .containsExactlyInAnyOrder("slug", "name", "brandColour");
+        assertThat(document.<Map<String, Object>>read("$.components.schemas.Salon.properties").keySet())
+                .as("nothing identifies the salon beyond what its customers see")
+                .containsExactlyInAnyOrder("slug", "name", "brandColour");
+        assertThat(document.<Map<String, Object>>read(salon))
+                .as("the salon comes from the hostname, never from a parameter").doesNotContainKey("parameters");
+    }
+
+    @Test
     void everyOperationCanFailWithProblemDetailsThatCarryACode() {
         DocumentContext document = document();
 

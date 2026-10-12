@@ -69,6 +69,33 @@
           "title"
         ],
         "type": "object"
+      },
+      "Salon": {
+        "description": "The public brand of the salon the request's hostname names.",
+        "properties": {
+          "brandColour": {
+            "description": "The salon's brand colour, `#RRGGBB`.",
+            "example": "#D6086A",
+            "pattern": "^#[0-9A-F]{6}$",
+            "type": "string"
+          },
+          "name": {
+            "description": "The salon's published display name.",
+            "example": "Alpha Studio",
+            "type": "string"
+          },
+          "slug": {
+            "description": "The salon's slug: its subdomain on the platform domain.",
+            "example": "alpha",
+            "type": "string"
+          }
+        },
+        "required": [
+          "brandColour",
+          "name",
+          "slug"
+        ],
+        "type": "object"
       }
     }
   },
@@ -109,6 +136,57 @@
           "meta"
         ]
       }
+    },
+    "/api/v1/salon": {
+      "get": {
+        "operationId": "getSalon",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Salon"
+                }
+              }
+            },
+            "description": "The salon's public brand."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The hostname names no salon: `not_found`."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The database is down or not answering: `service_unavailable`."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "summary": "The public brand of the salon the request's hostname names.",
+        "tags": [
+          "salon"
+        ]
+      }
     }
   },
   "servers": [
@@ -117,6 +195,10 @@
     }
   ],
   "tags": [
+    {
+      "description": "The salon the request's hostname names.",
+      "name": "salon"
+    },
     {
       "description": "The service's own metadata.",
       "name": "meta"
