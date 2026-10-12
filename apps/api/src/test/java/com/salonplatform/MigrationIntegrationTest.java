@@ -29,7 +29,11 @@ class MigrationIntegrationTest {
                 .containsExactly(
                         tuple("1", "baseline"),
                         tuple("2", "create tenant"),
-                        tuple("3", "create salon brand"));
+                        tuple("3", "create salon brand"),
+                        tuple("4", "add tenant time zone"),
+                        tuple("5", "create audit entry"),
+                        tuple("6", "create outbox message"),
+                        tuple("7", "create scheduled job"));
         assertThat(afterFirstStart).allSatisfy(row -> assertThat(row).containsEntry("success", true));
 
         try (StartedApplication application = database.start()) {
