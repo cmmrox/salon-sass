@@ -1,0 +1,49 @@
+.shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* The salon's header, drawn in its brand colour: the look of the salon header in the prototype's
+   Customer mode, without the logo and cover that later stages add. */
+.banner {
+  padding: var(--space-12) var(--space-4) var(--space-8);
+  background: var(--color-brand);
+  color: var(--color-on-brand);
+}
+
+.inner,
+.main {
+  width: 100%;
+  max-width: var(--size-content);
+  margin: 0 auto;
+}
+
+.name {
+  font-size: var(--font-size-title);
+  font-weight: var(--font-weight-strong);
+  line-height: var(--line-height-heading);
+  overflow-wrap: anywhere;
+}
+
+.main {
+  flex: 1;
+  padding: var(--space-6) var(--space-4);
+}
+
+/* The same shape while the salon is being resolved, in the platform's neutral colours. */
+.bannerLoading {
+  padding: var(--space-12) var(--space-4) var(--space-8);
+  border-bottom: var(--size-border) solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.nameLoading {
+  composes: skeletonLine from '../../styles/shared.module.css';
+  width: 60%;
+  height: var(--font-size-title);
+}
+
+.visuallyHidden {
+  composes: visuallyHidden from '../../styles/shared.module.css';
+}

@@ -24,10 +24,7 @@
 }
 
 .skeletonLine {
-  display: block;
-  height: var(--size-skeleton-line);
-  border-radius: var(--radius-small);
-  background: var(--color-skeleton);
+  composes: skeletonLine from '../../styles/shared.module.css';
 }
 
 .summary {
@@ -88,10 +85,5 @@
 }
 
 .visuallyHidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
+  composes: visuallyHidden from '../../styles/shared.module.css';
 }
