@@ -48,7 +48,9 @@ leaves the three salons active.
 
 The API and the web app listen on this machine only (`127.0.0.1` and `::1`). To test from a phone
 on the same network, start them with `SALON_LISTEN_ON_NETWORK=true`; both ports are then open to
-everyone on that network, so turn it off again afterwards.
+everyone on that network, so turn it off again afterwards. The web app takes the salon from the
+hostname: the bare network address shows "salon not found", so the phone needs a hostname that
+resolves to this machine, with `SALON_PLATFORM_DOMAIN` set to its parent domain.
 
 The database has two roles. `salon` (`SALON_DB_USER`) owns the tables and runs the migrations.
 `salon_app` (`SALON_DB_APP_USER`) is what the API connects as: it owns nothing and cannot get round

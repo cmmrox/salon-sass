@@ -77,7 +77,10 @@ and `application`, never in a controller, a repository or a mapper.
   on `code`, never on the message. The general codes are `not_found` (404), `bad_request` (400),
   `method_not_allowed` (405), `not_acceptable` (406), `unsupported_media_type` (415),
   `service_unavailable` (503), `request_rejected` (any other 4xx) and `internal_error` (any other
-  5xx). A module adds its own for business outcomes (`slot_taken`, `hold_expired`,
+  5xx). `salon_suspended` (403) is the answer of every endpoint that needs a salon when the
+  hostname's salon is suspended. Every code is listed once, in `ErrorCode`, and the OpenAPI
+  document's `Problem.code` enumeration is generated from it (CR-001), so a new code reaches the
+  contract before the API can return it. A module adds its own for business outcomes (`slot_taken`, `hold_expired`,
   `policy_violation`).
 - A request the server itself rejects before the application sees it (a badly encoded path, an
   unreadable header) is still answered as problem details, never as the server's HTML page.
