@@ -3,16 +3,193 @@ feature: F01
 title: "Tenant registry and data isolation"
 sequence: 2
 surfaces: [api, infra]
-status: in-progress
+status: in-qa
 qa_status: not-run
 released_in: null
 depends_on: [F01-S01]
 requirements: []
 nfr_focus: [NFR-01, NFR-07, NFR-15]
 handoff:
-  run: null
-  data: null
-  notes: null
+  run: |
+    infra/scripts/local-up.sh       # PostgreSQL, the API (8090) and the web app (3100); creates the
+                                    # application role and, in the local profile, seeds the salons
+    infra/scripts/local-down.sh     # stop everything; the data is kept
+    infra/scripts/local-reset.sh    # delete the local database's data and start from nothing
+    infra/scripts/local-service.sh <start|stop> <postgres|api|web>
+    infra/scripts/local-service.sh <pause|resume> postgres
+
+    A salon: http://alpha.localhost:8090/api/v1/salon (also beta, gamma). No hosts file is needed.
+
+    The database, from a shell (there is no psql on the host; it is in the container):
+      docker exec -i salon-postgres psql -U salon -d salon                      # the owning role
+      docker exec -i -e PGPASSWORD=salon-app-local-only salon-postgres \
+        psql -h localhost -U salon_app -d salon                                 # the application's role
+
+    The opt-in for CR-002 (restart the API and the web app with it set):
+      infra/scripts/local-service.sh stop web; infra/scripts/local-service.sh stop api
+      SALON_LISTEN_ON_NETWORK=true infra/scripts/local-service.sh start api
+      SALON_LISTEN_ON_NETWORK=true infra/scripts/local-service.sh start web
+
+    Another profile against an empty database (AC-9), in a database of its own:
+      infra/scripts/local-service.sh stop api
+      docker exec salon-postgres psql -U salon -d salon -c "create database salon_empty"
+      SPRING_PROFILES_ACTIVE=staging SALON_DB_URL=jdbc:postgresql://localhost:5440/salon_empty \
+        infra/scripts/local-service.sh start api
+    Afterwards stop the API, drop the database, and start the API again without the two variables.
+
+    What a port is bound to: lsof -nP -iTCP:8090 -sTCP:LISTEN (and 3100).
+  data: |
+    Three salons, seeded in the local profile only, exactly as docs/qa/test-plan.md lists them:
+      alpha  a1a1a1a1-0000-4000-8000-000000000001  "Alpha Studio"  #D6086A
+      beta   b2b2b2b2-0000-4000-8000-000000000002
+             "Beta Hair, Beauty & Wellness Lounge of Colombo Seven"  #1F2937
+      gamma  c3c3c3c3-0000-4000-8000-000000000003  "Gamma"  #FDE68A
+    All three are active. Each has one row in tenant and one in salon_brand. No salon is suspended.
+    There are no accounts: nothing signs in yet.
+    Database roles: salon (SALON_DB_USER, password salon-local-only) owns the tables and runs the
+    migrations; salon_app (SALON_DB_APP_USER, password salon-app-local-only) is what the API
+    connects as. Both are local-only values in .env.example.
+  notes: |
+    EVERY ACCEPTANCE CRITERION was checked on the running product. Nothing is left unfinished.
+
+    CHOICES THE SPEC LEFT TO THE DEVELOPER
+    - Roles. The owning role is the existing salon, the container's administrator (a superuser
+      locally). The application's role is salon_app: LOGIN, not a superuser, no BYPASSRLS, no
+      CREATEROLE or CREATEDB, owns nothing. infra/scripts create or correct it with
+      infra/postgres/application-role.sql through psql in the salon-postgres container, every time
+      PostgreSQL or the API is started, so it exists on a new volume and on the volume F01-S01
+      made (both were tried). Its password reaches the API as SALON_DB_APP_PASSWORD.
+    - Grants are in the migrations, to a Flyway placeholder (application_role) that is always the
+      role the API connects as (spring.datasource.username). No migration creates a role. An
+      environment must create the application's role before the API first starts; otherwise V2
+      fails and the API does not start.
+    - The registry is read only through the SECURITY DEFINER function tenant_by_slug(text), which
+      returns a slug's id and status. salon_app has no grant on tenant. Nothing is cached.
+    - salon_app is granted SELECT on salon_brand and nothing else, because the API only reads
+      brands in this stage. So in AC-6 an UPDATE, DELETE or INSERT as salon_app on the running
+      product is refused with "permission denied", not answered with 0 rows. That the policy
+      itself affects 0 rows and refuses the insert is proved by the integration test named below,
+      in a database where those writes are granted.
+    - Seed mechanism: a Flyway callback, db/local/afterMigrate.sql, in a location only
+      application-local.yaml adds. It runs after every migrate in the local profile, inserts with
+      ON CONFLICT DO NOTHING, and leaves no row in flyway_schema_history, so a database the local
+      profile seeded still starts under another profile.
+    - Listen variable: SALON_LISTEN_ON_NETWORK, false by default, true to listen on every
+      interface. Any other value stops the scripts with an error. It is in .env.example and
+      README.md. The scripts apply it whatever the Spring profile is.
+    - Platform domain: SALON_PLATFORM_DOMAIN, default localhost. Outside the local profile it has
+      no default and the API does not start without it.
+    - A suspended salon resolves to no salon (404 not_found) until F01-S03 defines what its
+      hostname answers. No salon is suspended.
+    - brand_colour is stored in upper case only (check ^#[0-9A-F]{6}$). display_name must not be
+      blank; no maximum length was chosen. tenant.id may not be the nil UUID.
+    - A hostname with a trailing dot (alpha.localhost.) and an IP address name no salon.
+    - No dependency was added.
+
+    BEYOND THE LITERAL SCOPE, FOR THE LEAD TO KEEP OR REMOVE
+    - The API refuses to start when the role it connects as is a superuser, has BYPASSRLS or owns
+      a table (ApplicationRoleCheck).
+    - Flyway's own connection is given the pool's connect, login and socket timeouts
+      (MigrationDataSourceConfiguration). Spring Boot builds it without them once migrations run
+      as another role.
+    - A request's database work waits at most 3 s for an answer on a connection it holds
+      (salon.database.request-timeout). AC-10 cannot be met with the 30 s socket timeout alone.
+
+    THE INTEGRATION TESTS THAT PROVE EACH ISOLATION LAYER ON ITS OWN (apps/api/src/test)
+    - Row-level security alone: branding/SalonBrandRowLevelSecurityAloneIntegrationTest. Plain
+      SQL as salon_app with INSERT, UPDATE and DELETE granted, Hibernate not involved.
+      aQueryWithNoSalonSetSeesNoRow; withAlphaSetOnlyAlphasRowIsVisibleEvenToAQueryThatAsksForBetas;
+      alphaCannotUpdateOrDeleteBetasRow; alphaCannotCreateARowForBetaNorMoveItsOwnRowToBeta;
+      withNoSalonSetNothingCanBeWritten; theSalonEndsWithItsTransactionOnTheSameConnection.
+    - Hibernate's tenant filter alone: branding/SalonBrandHibernateFilterAloneIntegrationTest.
+      Row-level security disabled on salon_brand and writes granted, so only @TenantId stands
+      between salons. rowLevelSecurityIsReallyOutOfTheWayHere;
+      alphaReadsOnlyAlphasRowAndBetasIsNotFound; alphaCannotUpdateOrDeleteBetasRow;
+      anInsertIsStampedWithTheCurrentSalonAndOneNamingAnotherSalonIsRefused;
+      withNoSalonNothingIsFoundAndNothingCanBeCreated. With @TenantId removed from the entity,
+      four of the five fail (tried).
+    - The per-transaction setting through the application's own transactions, on a pool of one
+      connection: shared/infrastructure/TenantTransactionIntegrationTest.
+      eachTransactionCarriesTheSalonItStartedWithAndTheNextOneOnTheSameConnectionCarriesNone;
+      nativeSqlInATransactionSeesTheTransactionsSalonOnlyAndNothingWithoutOne;
+      salonsTakingTurnsOnOneConnectionNeverSeeEachOther; aQueryOutsideAnyTransactionSeesNoSalonsRows.
+    - Both layers through HTTP: branding/SalonEndpointIntegrationTest (three salons, hostile
+      hostnames, client-chosen salons, 300 simultaneous requests).
+    - The catalogue and the role: DatabaseIsolationCatalogueIntegrationTest, written over every
+      table that has a tenant_id. The registry and its constraints:
+      platform/TenantTableIntegrationTest.
+    - Also: LocalSeedIntegrationTest (AC-9), branding/SalonEndpointDatabaseSilentIntegrationTest
+      (AC-10), shared/infrastructure/LoopbackOnlyIntegrationTest (AC-11),
+      shared/infrastructure/ApplicationRoleCheckIntegrationTest,
+      shared/tenancy/PlatformHostnameTest, shared/api/DatabaseUnavailableTest.
+
+    WHAT DIFFERS FROM A DOCUMENT UNDER docs/
+    - docs/architecture/multi-tenancy.md, the policy in "How the tenant reaches the database".
+      As written, tenant_id = current_setting('app.tenant_id', true)::uuid fails on a reused
+      connection: once a transaction has set the value with set_config(..., true) and ended,
+      current_setting returns the empty string, not null, and ''::uuid is an error. The policy
+      built is tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::uuid, in USING and
+      WITH CHECK. Every later tenant table needs the same.
+    - The same document and the spec say the request filter resolves the tenant against the
+      registry. The filter reads the Host header and binds the candidate slug in the scoped
+      value; the registry is asked the first time the request needs its salon
+      (TenantContext.require()), and the answer is kept for the request. So meta and health never
+      touch the registry, as docs/engineering/backend.md says of meta, and answer on a salon's
+      hostname while the database is down.
+    - A rule the document does not have: a use case calls TenantContext.require() before it opens
+      its transaction (GetPublishedBrand uses a TransactionTemplate for this). A transaction opened
+      before the salon is resolved has no salon and sees no row.
+    - "The entity carries @TenantId", and the test "tenant A cannot create a row that points at
+      tenant B's row". Once any entity carries @TenantId, Hibernate 7.4 refuses to open a session
+      with no tenant, so with no salon the resolver answers the nil UUID
+      (TenantContext.NO_TENANT), which no row can carry. On salon_brand the key is tenant_id
+      itself (@Id and @TenantId on one field): a row prepared with another salon's key is refused
+      as stale or detached, not with Hibernate's "assigned tenant id differs" message, which a
+      table with a key of its own will give.
+    - Hibernate's filter does cover HQL bulk UPDATE and DELETE and a load by id (tested).
+    - docs/engineering/backend.md, "Every wait on the database has a limit": add the request
+      limit of 3 s above. A statement in a request that gets no answer for 3 s fails and the
+      request is answered 503; the 30 s socket timeout remains for everything else. Later work
+      that legitimately runs longer than 3 s needs a limit of its own.
+    - The same document, API conventions: any endpoint whose database work fails because the
+      database is stopped, unreachable or silent now answers 503 service_unavailable. A lock
+      conflict or a constraint violation does not.
+    - docs/operations/environments-and-releases.md, the local environment: the settings
+      SALON_DB_APP_USER, SALON_DB_APP_PASSWORD, SALON_PLATFORM_DOMAIN and SALON_LISTEN_ON_NETWORK;
+      two database roles, not one user; the salons' addresses; the API and the web app listen on
+      127.0.0.1 and ::1 only.
+    - docs/architecture/repository-structure.md: two new folders, infra/postgres/ (the role's
+      SQL) and apps/web/scripts/ (serve.mjs).
+    - docs/engineering/web.md and docs/architecture/tech-stack.md: the local web app is no longer
+      started with next start or next dev but with apps/web/scripts/serve.mjs, a Next.js custom
+      server around the framework's own request handler, because next start listens on one
+      address only. The installed Next.js guide says a custom server cannot be used with
+      standalone output; F01-S05 should serve the production image with next start, not this.
+    - Staging and production (F01-S05): the owning role should not be a superuser there, and the
+      application's role must exist before the first migration.
+
+    FACTS ABOUT THIS MACHINE THAT A TEST OF AC-11 NEEDS
+    - A connection to this machine's IPv4 network address (192.168.1.55) is refused for every
+      listener, including the system's own on *:5000 and a listener on 0.0.0.0. A host route for
+      the address is on a VPN interface (utun4). A refused connection there proves nothing.
+    - Its global IPv6 address does tell the difference (ifconfig en0: the inet6 address that is
+      neither fe80:: link-local nor fd.. local; 2406:... today, and it changes with the network).
+      By default both ports refuse a connection on it while the system's *:5000
+      answers; with SALON_LISTEN_ON_NETWORK=true the API answers 200 and the web app answers.
+    - lsof shows 127.0.0.1:8090, [::1]:8090, 127.0.0.1:3100 and [::1]:3100 by default, and *:8090
+      and *:3100 with the opt-in.
+    - curl, Node.js and Python all resolve alpha.localhost to ::1 first here, and all three reach
+      both ports; so does a browser.
+
+    FOUND AND FIXED WHILE BUILDING
+    - A request part-way through its query when the database froze was answered 500: the rollback
+      on the connection the driver had given up replaced the failure that caused it. Fixed in
+      TenantTransactionConfiguration; covered by SalonEndpointDatabaseSilentIntegrationTest.
+
+    MEASURED ON THE RUNNING PRODUCT
+    - AC-4: 600 requests from 60 k6 virtual users across the three hostnames, 0 mismatches, 0
+      errors. AC-10: 503 in about 2 s for a request made during the freeze, at most 3.03 s for
+      one in flight; 200 again 0.8 s after resume; 503 in 2 s with PostgreSQL stopped.
 cases: []
 verification:
   commands:
