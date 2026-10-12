@@ -11,6 +11,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -48,8 +49,9 @@ import org.springframework.transaction.support.TransactionTemplate;
  * again once its lease runs out, with the same idempotency key. Every time is the application's
  * clock.
  *
- * <p>On stop it claims nothing more and gives calls in flight {@code shutdown-grace} to finish; what
- * is still in flight then is left to its lease.
+ * <p>On stop it claims nothing more (the claim in progress, if any, is finished, not interrupted)
+ * and gives calls in flight {@code shutdown-grace} to finish and record their outcome; what is still
+ * in flight then is abandoned and left to its lease.
  */
 final class OutboxDispatcher implements SmartLifecycle {
 
@@ -86,6 +88,9 @@ final class OutboxDispatcher implements SmartLifecycle {
 
     private volatile boolean pollFailing;
 
+    /** Released on stop, so that the wait between polls ends at once and no claim is interrupted. */
+    private volatile CountDownLatch stopping = new CountDownLatch(1);
+
     private Thread poller;
 
     private ExecutorService deliveries;
@@ -120,6 +125,7 @@ final class OutboxDispatcher implements SmartLifecycle {
         }
         running = true;
         abandoning = false;
+        stopping = new CountDownLatch(1);
         deliveries = Executors.newThreadPerTaskExecutor(Thread.ofVirtual().name("outbox-delivery-", 0).factory());
         calls = Executors.newThreadPerTaskExecutor(Thread.ofVirtual().name("outbox-call-", 0).factory());
         poller = Thread.ofVirtual().name("outbox-dispatcher").start(this::pollUntilStopped);
@@ -132,8 +138,10 @@ final class OutboxDispatcher implements SmartLifecycle {
             return;
         }
         running = false;
-        poller.interrupt();
-        join(poller, settings.shutdownGrace().plusSeconds(1));
+        stopping.countDown();
+        if (!join(poller, settings.shutdownGrace().plusSeconds(1))) {
+            poller.interrupt();
+        }
         deliveries.shutdown();
         if (!awaitQuietly(deliveries, settings.shutdownGrace())) {
             // Still in flight: left to its lease, which brings it back after a restart.
@@ -153,14 +161,21 @@ final class OutboxDispatcher implements SmartLifecycle {
         return running;
     }
 
-    /** Polls until stopped. Exposed for tests that drive a dispatcher by hand. */
-    int pollOnce() {
+    /**
+     * One poll: refreshes the backlog meters, asks what is due across salons, and starts the delivery
+     * of each message it could claim. Returns how many it started.
+     */
+    private int pollOnce() {
         Instant now = clock.instant();
         try {
             metrics.backlog(store.backlog(now), now);
         }
         catch (RuntimeException ex) {
             log.debug("The outbox backlog could not be read", ex);
+        }
+        if (providers.isEmpty()) {
+            // No channel has a provider in this environment yet: nothing can be delivered.
+            return 0;
         }
         List<OutboxStore.Due> due = store.due(now, providers.keySet(), settings.perSalon(), settings.batchSize());
         Map<UUID, Optional<CurrentTenant>> salons = new HashMap<>();
@@ -360,10 +375,10 @@ final class OutboxDispatcher implements SmartLifecycle {
         }
     }
 
+    /** Waits between polls; false when the dispatcher was stopped meanwhile. */
     private boolean pause(Duration duration) {
         try {
-            Thread.sleep(duration);
-            return true;
+            return !stopping.await(duration.toMillis(), TimeUnit.MILLISECONDS);
         }
         catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
@@ -371,12 +386,14 @@ final class OutboxDispatcher implements SmartLifecycle {
         }
     }
 
-    private static void join(Thread thread, Duration limit) {
+    /** Whether the thread ended within the limit. */
+    private static boolean join(Thread thread, Duration limit) {
         try {
-            thread.join(limit);
+            return thread.join(limit);
         }
         catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
+            return false;
         }
     }
 

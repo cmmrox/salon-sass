@@ -6,6 +6,8 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import com.salonplatform.shared.api.DatabaseUnavailable;
 import com.salonplatform.shared.observability.Traces;
@@ -29,12 +31,16 @@ import org.springframework.transaction.support.TransactionTemplate;
  * logged without stopping the others. How late each occurrence started is the meter
  * {@value #START_DELAY}. Every time is the application's clock.
  *
- * <p>On stop it starts nothing new; a run in progress stops between salons. A claim left by an
- * instance that stopped mid-run is released when its hold runs out.
+ * <p>On stop it starts nothing new and lets the salon whose run is in progress finish, within
+ * {@value #STOP_LIMIT_SECONDS} seconds; the run then stops between salons. A claim left by an instance
+ * that stopped mid-run is released when its hold runs out.
  */
 final class JobScheduler implements SmartLifecycle {
 
     static final String START_DELAY = "salon.jobs.start.delay";
+
+    /** How long a stop waits for the salon in progress before it interrupts the run. */
+    private static final int STOP_LIMIT_SECONDS = 10;
 
     private static final Logger log = LoggerFactory.getLogger(JobScheduler.class);
 
@@ -60,6 +66,9 @@ final class JobScheduler implements SmartLifecycle {
 
     private volatile boolean pollFailing;
 
+    /** Released on stop, so that the wait between polls ends at once and nothing in progress is interrupted. */
+    private volatile CountDownLatch stopping = new CountDownLatch(1);
+
     private Thread poller;
 
     JobScheduler(JobSettings settings, JobStore store, List<TenantJob> jobs, ActiveTenants tenants,
@@ -80,6 +89,7 @@ final class JobScheduler implements SmartLifecycle {
             return;
         }
         running = true;
+        stopping = new CountDownLatch(1);
         poller = Thread.ofVirtual().name("job-scheduler").start(this::pollUntilStopped);
         log.info("The job scheduler started with the jobs {}", jobs.stream().map(TenantJob::name).toList());
     }
@@ -90,9 +100,13 @@ final class JobScheduler implements SmartLifecycle {
             return;
         }
         running = false;
-        poller.interrupt();
+        stopping.countDown();
         try {
-            poller.join(Duration.ofSeconds(10));
+            if (!poller.join(Duration.ofSeconds(STOP_LIMIT_SECONDS))) {
+                log.warn("A job's run did not finish within {} s of the stop and is interrupted", STOP_LIMIT_SECONDS);
+                poller.interrupt();
+                poller.join(Duration.ofSeconds(1));
+            }
         }
         catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
@@ -105,8 +119,8 @@ final class JobScheduler implements SmartLifecycle {
         return running;
     }
 
-    /** Runs every job whose occurrence is due. Exposed for tests that drive the scheduler by hand. */
-    void pollOnce() {
+    /** One poll: claims and runs every job whose occurrence is due. */
+    private void pollOnce() {
         for (TenantJob job : jobs) {
             if (!running) {
                 return;
@@ -200,7 +214,9 @@ final class JobScheduler implements SmartLifecycle {
                 }
             }
             try {
-                Thread.sleep(settings.pollInterval());
+                if (stopping.await(settings.pollInterval().toMillis(), TimeUnit.MILLISECONDS)) {
+                    return;
+                }
             }
             catch (InterruptedException ex) {
                 Thread.currentThread().interrupt();

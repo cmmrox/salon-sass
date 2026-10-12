@@ -259,6 +259,19 @@ class LocalHooksIntegrationTest extends IntegrationTest {
         }
     }
 
+    /** The hooks are served here, in the local profile, and still are no part of the contract. */
+    @Test
+    void theOpenApiDocumentDescribesNoneOfTheHooksEvenWhereTheyAreServed() {
+        assertThat(http().sendOnHost("GET", "localhost:" + port(), "/local/clock", Map.of(), null).status()).isEqualTo(200);
+
+        String document = http().get("/v3/api-docs").body();
+
+        assertThat(JsonPath.parse(document).<Map<String, Object>>read("$.paths").keySet())
+                .isNotEmpty().allMatch(path -> path.startsWith("/api/v1/"));
+        assertThat(document).doesNotContain("/local/").doesNotContain("actuator").doesNotContainIgnoringCase("probe")
+                .doesNotContainIgnoringCase("clock");
+    }
+
     private int count(String table) {
         return owner.queryForObject("SELECT count(*) FROM " + table, Integer.class);
     }
