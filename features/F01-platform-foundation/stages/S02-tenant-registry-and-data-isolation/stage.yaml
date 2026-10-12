@@ -4,7 +4,7 @@ title: "Tenant registry and data isolation"
 sequence: 2
 surfaces: [api, infra]
 status: in-qa
-qa_status: pass
+qa_status: failing
 released_in: null
 depends_on: [F01-S01]
 requirements: []
@@ -259,5 +259,5 @@ verification:
   manual: []
   deferred: []
 evidence:
-  last_run: qa/reports/20261012-170409-F01-S02
-  last_result: pass
+  last_run: qa/reports/20261012-172658-F01-S02
+  last_result: fail

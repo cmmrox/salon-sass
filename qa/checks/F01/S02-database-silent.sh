@@ -59,7 +59,11 @@ EXPECTED="$(for slug in $SALON_SLUGS; do jq -n --arg url "$(salon_api "$slug")" 
 
 # stream_count <jq filter over the array of requests>, with the marks of time as $variables.
 MARKS=()
-mark() { MARKS+=(--argjson "$1" "$2"); }
+: >"$REPORT_DIR/database-silent-marks.jsonl"
+mark() {
+  MARKS+=(--argjson "$1" "$2")
+  printf '{"name":"%s","time":%s}\n' "$1" "$2" >>"$REPORT_DIR/database-silent-marks.jsonl"
+}
 stream_query() { jq -s -r "${MARKS[@]}" --argjson expected "$EXPECTED" --argjson limit "$LIMIT_MS" "$1" "$STREAM"; }
 # A request "is this salon's brand" when its body is exactly the three fields its address expects.
 JQ_DEFS='def own: .status == 200 and ((.body | try fromjson catch null) == $expected[.url]);
@@ -73,8 +77,11 @@ freeze() {
   frozen || environment_fault "PostgreSQL was frozen by the script but its container is '$(docker inspect --format '{{.State.Status}}' "$POSTGRES_CONTAINER" 2>/dev/null)'"
   port_open "$POSTGRES_PORT" || environment_fault "PostgreSQL's port is closed while frozen: this is the stopped case, not the silent one"
 }
+THAW_SEQUENCE=0
 thaw() {
   local out; out="$("$SCRIPTS/local-service.sh" resume postgres 2>&1)" || environment_fault "could not thaw PostgreSQL: $out"
+  THAW_SEQUENCE=$((THAW_SEQUENCE + 1))
+  mark "resume_returned_$THAW_SEQUENCE" "$(now_ms)"
   frozen && environment_fault "PostgreSQL is still frozen after 'resume postgres'"
 }
 
@@ -187,6 +194,8 @@ recovery() { # <label> <the mark the thaw was asked at> <the mark the stream ran
 }
 recovery "after the first freeze" thaw_asked settled
 recovery "after the long freeze" second_thaw_asked second_settled
+note "first resume control returned $(( $(stream_query '$resume_returned_1') - $(stream_query '$thaw_asked') )) ms after invocation; PostgreSQL was confirmed thawed after $(( $(stream_query '$thawed') - $(stream_query '$thaw_asked') )) ms"
+note "long-freeze resume control returned $(( $(stream_query '$resume_returned_2') - $(stream_query '$second_thaw_asked') )) ms after invocation; PostgreSQL was confirmed thawed after $(( $(stream_query '$second_thawed') - $(stream_query '$second_thaw_asked') )) ms"
 # Whatever a frozen request left behind, no salon was ever answered with another's brand: before, between and after.
 expect_equal "200 answers of the whole stream: at least 1000" true "$(stream_query "$JQ_DEFS map(select(.status == 200)) | length >= 1000")"
 expect_equal "200 answers of the whole stream that were not exactly the brand of the hostname asked" 0 "$(stream_query "$JQ_DEFS map(select(.status == 200 and (own | not))) | length")"
