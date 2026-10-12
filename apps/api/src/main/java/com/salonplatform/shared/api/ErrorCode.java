@@ -6,6 +6,10 @@ import org.springframework.http.HttpStatusCode;
 /**
  * The stable, machine-readable reason carried by every error response as {@code code}. Clients and
  * tests branch on it, never on the wording. A code, once published, is not renamed.
+ *
+ * <p>This is the one place codes are listed: the OpenAPI document's {@code Problem.code} is
+ * generated from it. The general codes are chosen by status ({@link #forStatus}); a code for a
+ * particular outcome, such as {@link #SALON_SUSPENDED}, is named by the handler that answers it.
  */
 public enum ErrorCode {
 
@@ -16,6 +20,8 @@ public enum ErrorCode {
     UNSUPPORTED_MEDIA_TYPE("unsupported_media_type", "The format of the request body is not supported."),
     REQUEST_REJECTED("request_rejected", "The request was not accepted."),
     SERVICE_UNAVAILABLE("service_unavailable", "The service is temporarily unavailable."),
+    /** The hostname's salon is suspended: 403, on every endpoint that needs a salon. */
+    SALON_SUSPENDED("salon_suspended", "This salon is not available at the moment."),
     INTERNAL_ERROR("internal_error", "Something went wrong on our side.");
 
     private final String code;

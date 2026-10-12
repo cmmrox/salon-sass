@@ -9,14 +9,19 @@ import java.util.concurrent.Callable;
  * for exactly the extent of one request, and gone when it ends, so that a reused thread can never
  * carry one salon into another salon's request (docs/architecture/multi-tenancy.md).
  *
- * <p>The filter binds what the hostname names. The registry is asked whether that is an active
- * salon the first time the request needs it ({@link #require()}), which a tenant endpoint does
- * before it opens a transaction; the answer is kept for the rest of the request. Endpoints that are
- * not a salon's ({@code meta}, health) never ask, so they never wait on the database.
+ * <p>The filter binds what the hostname names. The registry is asked what that is the first time
+ * the request needs its salon ({@link #require()}), which a tenant endpoint does before it opens a
+ * transaction; the answer is kept for the rest of the request. Endpoints that are not a salon's
+ * ({@code meta}, health) never ask, so they never wait on the database and answer on any hostname.
+ *
+ * <p>{@link #require()} is where every tenant endpoint learns that there is no such salon
+ * ({@link TenantNotFoundException}, 404 {@code not_found}) or that the salon is suspended
+ * ({@link TenantSuspendedException}, 403 {@code salon_suspended}), so each endpoint gives the same
+ * two answers without saying so itself.
  *
  * <p>Everything that reaches the database reads {@link #resolved()}: Hibernate's tenant filter and
- * the per-transaction {@code app.tenant_id}. Where no salon is resolved they see none, and see no
- * row.
+ * the per-transaction {@code app.tenant_id}. Where no salon is resolved, or the salon is suspended,
+ * they see none, and see no row.
  */
 public final class TenantContext {
 
@@ -34,20 +39,22 @@ public final class TenantContext {
     /**
      * The salon of the current request, resolving it on first use.
      *
-     * @return the salon
-     * @throws TenantNotFoundException when the request is not for an active salon, or is not a
+     * @return the salon, which is active
+     * @throws TenantNotFoundException when the request's hostname names no salon, or this is not a
      *         request at all
+     * @throws TenantSuspendedException when the request's hostname names a suspended salon
      * @throws org.springframework.dao.DataAccessException when the registry cannot be read
      */
     public static CurrentTenant require() {
         if (!REQUEST.isBound()) {
             throw new TenantNotFoundException();
         }
-        return REQUEST.get().resolve().orElseThrow(TenantNotFoundException::new);
+        return REQUEST.get().require();
     }
 
     /**
-     * The salon of the current request if it has already been resolved; never asks the registry.
+     * The salon of the current request if it has already been resolved and is active; never asks
+     * the registry.
      *
      * @return the salon, or nothing
      */

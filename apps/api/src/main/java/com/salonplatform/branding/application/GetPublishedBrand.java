@@ -28,8 +28,10 @@ public class GetPublishedBrand {
     }
 
     /**
-     * @throws TenantNotFoundException when the hostname names no active salon, or the salon has no
+     * @throws TenantNotFoundException when the hostname names no salon, or the salon has no
      *         published brand
+     * @throws com.salonplatform.shared.tenancy.TenantSuspendedException when the hostname's salon
+     *         is suspended; its brand is not read
      */
     public PublishedBrand forCurrentSalon() {
         CurrentTenant salon = TenantContext.require();
