@@ -4,7 +4,7 @@ title: "Walking skeleton and local environment"
 sequence: 1
 surfaces: [api, web, infra]
 status: in-qa
-qa_status: pass
+qa_status: failing
 released_in: null
 depends_on: []
 requirements: []
