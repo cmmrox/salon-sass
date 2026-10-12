@@ -131,6 +131,15 @@ and `application`, never in a controller, a repository or a mapper.
   database is down, or accepts connections and stays silent, any endpoint that needs it answers 503
   `service_unavailable` within that limit, including a request already in flight, and recovers by
   itself. Migrations use the same connection limits.
+- **The API finds a database that answers again within a quarter of a second**
+  (`salon.database.reconnect-interval`, 250 ms). The pool opens its connections through
+  `SteadyReconnectDataSource`, which retries an unreachable or silent database at that interval.
+  Without it the pool's own wait between attempts grows to five seconds during a long outage, and
+  recovery took up to five seconds more than the outage. Only the pool's own thread waits there; a
+  request still waits at most the pool's connection limit. The API logs one warning when an outage
+  starts and one line when a connection is opened again. The configuration builds the pool's own
+  driver data source, so check both it and the pool's wait between attempts when the pool is
+  upgraded.
 - **The API refuses to start** when the role it connects as is a superuser, can bypass row-level
   security or owns a table. Migrations run as the owning role through their own connection.
 - `GET /actuator/info` is served in the `local` profile only and returns 404 in any other.

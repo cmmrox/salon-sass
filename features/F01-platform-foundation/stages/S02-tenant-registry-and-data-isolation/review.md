@@ -5,7 +5,7 @@ Compared with: Fresha and Booksy public business-page documentation, read on 202
 
 ## Verdict
 
-The foundation is ready for the lead's stage-closure gates. All 45 automated acceptance and boundary cases passed locally; no product bug was found. Hostnames select exactly one salon, requests with no salon fail closed, and database outages produce bounded errors and recover without restarting the API. This is not a complete customer-facing salon site; that surface starts in F01-S03.
+The foundation is ready for the lead's stage-closure gates. All 45 automated acceptance and boundary cases passed locally; one product bug was found, fixed and verified (BUG-F01-S02-001: recovery after a long database outage). Hostnames select exactly one salon, requests with no salon fail closed, and database outages produce bounded errors and recover without restarting the API. This is not a complete customer-facing salon site; that surface starts in F01-S03.
 
 ## What works well
 
@@ -63,7 +63,7 @@ Ranked, most valuable first. Neither is a requirement or approval to build it.
 
 ## Bugs filed from this review
 
-None. No unresolved minor or trivial defects were left open.
+- BUG-F01-S02-001 (minor): recovery after a long freeze took over five seconds about one time in two. Fixed in 77ec499 and verified. No defect is left open.
 
 ## Stage QA checklist
 
@@ -74,7 +74,7 @@ None. No unresolved minor or trivial defects were left open.
 - [x] Register nine automation entries.
 - [x] Observe each new case fail against an intentionally wrong expectation.
 - [x] Run exactly F01-S02 through qa/scripts/sdlc run.
-- [x] Triage failures; no product defect found.
+- [x] Triage failures; one product defect found (BUG-F01-S02-001), fixed and verified.
 - [x] Explore API/operator behavior and compare public competitor evidence.
 - [x] Record final QA fields; generate and validate.
 - [x] Run QA ownership guard and commit.
