@@ -40,6 +40,12 @@ public final class StartedApplication implements AutoCloseable {
      * command line gives them.
      */
     public static StartedApplication against(String jdbcUrl, PostgreSQLContainer postgres, String... settings) {
+        return against(jdbcUrl, postgres.getUsername(), postgres.getPassword(), settings);
+    }
+
+    /** Against a database whose migrations run as this role, which then owns its tables. */
+    public static StartedApplication against(String jdbcUrl, String migrationUser, String migrationPassword,
+            String... settings) {
         List<String> arguments = new ArrayList<>();
         if (List.of(settings).stream().noneMatch(setting -> setting.startsWith("--server.port="))) {
             arguments.add("--server.port=0");
@@ -48,8 +54,8 @@ public final class StartedApplication implements AutoCloseable {
                 "--spring.datasource.url=" + jdbcUrl,
                 "--spring.datasource.username=" + TestPostgres.APP_USER,
                 "--spring.datasource.password=" + TestPostgres.APP_PASSWORD,
-                "--spring.flyway.user=" + postgres.getUsername(),
-                "--spring.flyway.password=" + postgres.getPassword()));
+                "--spring.flyway.user=" + migrationUser,
+                "--spring.flyway.password=" + migrationPassword));
         arguments.addAll(List.of(settings));
         return new StartedApplication(new SpringApplicationBuilder(SalonApiApplication.class)
                 .profiles("test")

@@ -35,9 +35,10 @@ class TwoDispatchersIntegrationTest {
     @Test
     void everyMessageIsDeliveredOnceWhenTwoDispatchersRaceForIt() throws Exception {
         TestDatabase database = TestDatabase.createEmpty(TestPostgres.shared());
-        try (CapturedLogs logs = CapturedLogs.of("com.salonplatform.shared.outbox");
-                StartedApplication one = database.start(ProbeClient.localWithDispatcher("--salon.outbox.poll-interval=20ms"));
-                StartedApplication two = database.start(ProbeClient.localWithDispatcher("--salon.outbox.poll-interval=20ms"))) {
+        // The capture comes last: starting an application sets logging up afresh and would drop it.
+        try (StartedApplication one = database.start(ProbeClient.localWithDispatcher("--salon.outbox.poll-interval=20ms"));
+                StartedApplication two = database.start(ProbeClient.localWithDispatcher("--salon.outbox.poll-interval=20ms"));
+                CapturedLogs logs = CapturedLogs.of("com.salonplatform.shared.outbox")) {
             ProbeClient probes = new ProbeClient(one);
             List<String> order = List.of("alpha", "beta", "gamma");
             Map<String, String> salonOf = new HashMap<>();

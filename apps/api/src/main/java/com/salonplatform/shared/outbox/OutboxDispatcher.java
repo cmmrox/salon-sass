@@ -242,22 +242,33 @@ final class OutboxDispatcher implements SmartLifecycle {
     private void deliver(CurrentTenant salon, OutboxStore.Claim claim, ChannelGuard.Permit permit) {
         try {
             traces.inSpan("outbox.delivery", salon, claim.traceParent(), () -> TenantContext.callAs(salon, () -> {
-                Outcome outcome = call(salon, claim, permit);
-                if (outcome != null) {
-                    record(claim, outcome);
+                try {
+                    Outcome outcome = call(salon, claim, permit);
+                    if (outcome != null) {
+                        record(claim, outcome);
+                    }
+                }
+                catch (RuntimeException ex) {
+                    // Written inside the span, so that the line carries the delivery's trace.
+                    traces.failed(ex);
+                    outcomeNotRecorded(claim, ex);
                 }
                 return null;
             }));
         }
         catch (Exception ex) {
-            runAs(salon, () -> log.warn("The outcome of delivering outbox message {} could not be recorded ({}); "
-                    + "it is attempted again once its lease runs out", claim.messageId(),
-                    DatabaseUnavailable.isCauseOf(ex) ? DatabaseUnavailable.describe(ex) : ex.toString()));
+            runAs(salon, () -> outcomeNotRecorded(claim, ex));
         }
         finally {
             permit.abandoned();
             inFlight.remove(claim.messageId());
         }
+    }
+
+    private static void outcomeNotRecorded(OutboxStore.Claim claim, Exception ex) {
+        log.warn("The outcome of delivering outbox message {} could not be recorded ({}); it is attempted again "
+                + "once its lease runs out", claim.messageId(),
+                DatabaseUnavailable.isCauseOf(ex) ? DatabaseUnavailable.describe(ex) : ex.toString());
     }
 
     /** What the provider did with one attempt. */

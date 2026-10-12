@@ -147,14 +147,18 @@ final class JobScheduler implements SmartLifecycle {
         log.info("Job {} ran for {} salons, {} failed", job.name(), ids.size(), failed);
     }
 
+    /**
+     * One salon's run: its salon set, a span of its own, and one transaction. What it logs, the
+     * failure included, is written inside the span, so that every line carries the salon and the
+     * trace.
+     */
     private boolean runFor(TenantJob job, CurrentTenant salon, Instant now) {
         try {
-            return TenantContext.callAs(salon, () -> {
+            return TenantContext.callAs(salon, () -> traces.inSpan("job." + job.name(), salon, null, () -> {
                 try {
-                    traces.inSpan("job." + job.name(), salon, null, () -> transactions.execute(status -> {
+                    transactions.executeWithoutResult(status -> {
                         try {
                             job.runFor(salon, now);
-                            return null;
                         }
                         catch (RuntimeException ex) {
                             throw ex;
@@ -162,15 +166,16 @@ final class JobScheduler implements SmartLifecycle {
                         catch (Exception ex) {
                             throw new IllegalStateException(ex);
                         }
-                    }));
+                    });
                     log.info("Job {} ran for the salon", job.name());
                     return true;
                 }
-                catch (Exception ex) {
+                catch (RuntimeException ex) {
+                    traces.failed(ex);
                     log.error("Job {} failed for the salon; the other salons still run", job.name(), ex);
                     return false;
                 }
-            });
+            }));
         }
         catch (Exception ex) {
             log.error("Job {} could not run for salon {}", job.name(), salon.id(), ex);

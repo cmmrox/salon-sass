@@ -17,6 +17,11 @@ import java.util.concurrent.locks.ReentrantLock;
  * the breaker; its failure opens it again for another {@code wait}.</li>
  * </ul>
  *
+ * <p>The wait is measured from when the breaker opened. A clock that reads earlier than that moment
+ * was set back (the local test clock returned to real time, or a correction of the machine's
+ * clock): the wait is then taken as over, so that a channel is never held for longer than
+ * {@code wait} because of the clock.
+ *
  * <p>Whoever is let through reports the outcome with {@link #onSuccess()} or {@link #onFailure()},
  * or {@link #onAbandoned()} when no call was made after all.
  */
@@ -55,7 +60,8 @@ final class CircuitBreaker {
             return switch (state) {
                 case CLOSED -> true;
                 case OPEN -> {
-                    if (clock.instant().isBefore(openedAt.plus(wait))) {
+                    Instant now = clock.instant();
+                    if (!now.isBefore(openedAt) && now.isBefore(openedAt.plus(wait))) {
                         yield false;
                     }
                     state = State.HALF_OPEN;

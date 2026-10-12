@@ -17,13 +17,29 @@ import org.springframework.jdbc.datasource.DriverManagerDataSource;
  */
 public final class TestDatabase {
 
+    /** An owning role that is not a superuser, as the owning role is everywhere but on a developer's machine. */
+    public static final String ORDINARY_OWNER = "salon_owner_test";
+
+    private static final String ORDINARY_OWNER_PASSWORD = "salon-owner-test";
+
     private final PostgreSQLContainer postgres;
 
     private final String url;
 
+    /** The role that runs the migrations and owns the tables. */
+    private final String migrationUser;
+
+    private final String migrationPassword;
+
     private TestDatabase(PostgreSQLContainer postgres, String url) {
+        this(postgres, url, postgres.getUsername(), postgres.getPassword());
+    }
+
+    private TestDatabase(PostgreSQLContainer postgres, String url, String migrationUser, String migrationPassword) {
         this.postgres = postgres;
         this.url = url;
+        this.migrationUser = migrationUser;
+        this.migrationPassword = migrationPassword;
     }
 
     /** The container's own database. */
@@ -44,6 +60,32 @@ public final class TestDatabase {
         return new TestDatabase(postgres, postgres.getJdbcUrl().replace("/" + postgres.getDatabaseName(), "/" + name));
     }
 
+    /**
+     * A new, empty database owned by {@link #ORDINARY_OWNER}, a role that is not a superuser and
+     * cannot bypass row-level security, which runs the migrations and so owns every table. Forced
+     * row-level security then holds for the owner too, as it does in every environment but a
+     * developer's machine, where the owning role is the container's superuser. {@link #asOwner()}
+     * stays the container's superuser, so that a test can still arrange any salon's rows.
+     */
+    public static TestDatabase createEmptyOwnedByAnOrdinaryRole(PostgreSQLContainer postgres) {
+        String name = "test_" + UUID.randomUUID().toString().replace("-", "");
+        try (Connection connection = DriverManager.getConnection(postgres.getJdbcUrl(), postgres.getUsername(),
+                postgres.getPassword()); Statement statement = connection.createStatement()) {
+            // Two tests may arrive here at once in one container; the lock makes "create if absent" safe.
+            statement.execute("SELECT pg_advisory_lock(7401)");
+            statement.execute("DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '" + ORDINARY_OWNER
+                    + "') THEN CREATE ROLE " + ORDINARY_OWNER + " LOGIN PASSWORD '" + ORDINARY_OWNER_PASSWORD
+                    + "' NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS; END IF; END $$");
+            statement.execute("SELECT pg_advisory_unlock(7401)");
+            statement.execute("CREATE DATABASE " + name + " OWNER " + ORDINARY_OWNER);
+        }
+        catch (SQLException ex) {
+            throw new IllegalStateException("could not create database " + name, ex);
+        }
+        return new TestDatabase(postgres, postgres.getJdbcUrl().replace("/" + postgres.getDatabaseName(), "/" + name),
+                ORDINARY_OWNER, ORDINARY_OWNER_PASSWORD);
+    }
+
     public String url() {
         return url;
     }
@@ -52,7 +94,7 @@ public final class TestDatabase {
         return postgres;
     }
 
-    /** The owner: a superuser here, so row-level security does not apply to it. */
+    /** The container's own user: a superuser, so row-level security does not apply to it. */
     public JdbcTemplate asOwner() {
         return new JdbcTemplate(new DriverManagerDataSource(url, postgres.getUsername(), postgres.getPassword()));
     }
@@ -68,6 +110,6 @@ public final class TestDatabase {
 
     /** The application started against this database. */
     public StartedApplication start(String... settings) {
-        return StartedApplication.against(url, postgres, settings);
+        return StartedApplication.against(url, migrationUser, migrationPassword, settings);
     }
 }

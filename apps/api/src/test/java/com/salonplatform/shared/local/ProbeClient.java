@@ -27,14 +27,20 @@ final class ProbeClient {
         this.application = application;
     }
 
-    /** The settings that start an application with the local hooks and the dispatcher on. */
+    /**
+     * The settings that start an application with the local hooks and the dispatcher on. A setting
+     * given here replaces the same setting of the base, so that none is given twice.
+     */
     static String[] localWithDispatcher(String... more) {
-        String[] base = { "--spring.profiles.active=local", "--salon.outbox.enabled=true", "--salon.jobs.enabled=false",
-            "--salon.outbox.poll-interval=100ms" };
-        String[] all = new String[base.length + more.length];
-        System.arraycopy(base, 0, all, 0, base.length);
-        System.arraycopy(more, 0, all, base.length, more.length);
-        return all;
+        java.util.Map<String, String> settings = new java.util.LinkedHashMap<>();
+        for (String setting : new String[] { "--spring.profiles.active=local", "--salon.outbox.enabled=true",
+            "--salon.jobs.enabled=false", "--salon.outbox.poll-interval=100ms" }) {
+            settings.put(setting.substring(0, setting.indexOf('=')), setting);
+        }
+        for (String setting : more) {
+            settings.put(setting.substring(0, setting.indexOf('=')), setting);
+        }
+        return settings.values().toArray(String[]::new);
     }
 
     String host(String salon) {

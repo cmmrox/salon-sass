@@ -70,9 +70,18 @@ class ProviderLimitsIntegrationTest {
             assertThat(application.http().getOnHost(probes.host(BETA), "/api/v1/salon").status()).isEqualTo(200);
             assertThat(application.http().get("/actuator/health").statusCode()).isEqualTo(200);
 
-            probes.setClock(start.plusSeconds(25));
+            // The breaker opened a moment after `start` on the test clock and waits 60 s from then.
+            probes.setClock(start.plusSeconds(45));
+            ProbeClient.sleep(1_500);
+            DocumentContext stillHeld = probes.view(BETA, waiting);
+            assertThat(stillHeld.<String>read("$.status")).as("before the breaker's wait has passed").isEqualTo("pending");
+            assertThat(stillHeld.<Integer>read("$.attempts")).isZero();
+            assertThat(stillHeld.<Integer>read("$.providerCalls")).isZero();
+
+            probes.setClock(start.plusSeconds(120));
             DocumentContext sent = probes.awaitProbe(BETA, waiting, Duration.ofSeconds(5), status("sent"));
             assertThat(sent.<Integer>read("$.attempts")).isEqualTo(1);
+            assertThat(sent.<Integer>read("$.providerCalls")).isEqualTo(1);
         }
     }
 }

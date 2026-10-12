@@ -94,6 +94,22 @@ class CircuitBreakerTest {
         assertThat(breaker.tryAcquire()).isTrue();
     }
 
+    /** The local test clock can be returned to real time: the channel is not held until that time comes round again. */
+    @Test
+    void aClockSetBackToBeforeTheBreakerOpenedEndsTheWait() {
+        clock.advance(Duration.ofDays(30));
+        open();
+        assertThat(breaker.tryAcquire()).isFalse();
+
+        clock.advance(Duration.ofDays(-30));
+
+        assertThat(breaker.tryAcquire()).as("the trial").isTrue();
+        breaker.onFailure();
+        assertThat(breaker.tryAcquire()).as("open again, for a wait from now").isFalse();
+        clock.advance(Duration.ofSeconds(60));
+        assertThat(breaker.tryAcquire()).isTrue();
+    }
+
     @Test
     void theGuardLimitsCallsAtOnceAndGivesThePlaceBackOnce() {
         ChannelGuard guard = new ChannelGuard(2, 5, Duration.ofSeconds(60), clock);

@@ -51,23 +51,27 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE outbox_message TO "${application_r
 -- and nothing else. It then handles each message in a transaction with that salon set.
 --
 -- Row-level security is forced on the table, so it holds for the owner this function runs as
--- (unless the owner is a superuser). The function therefore sets each active salon in turn and
--- asks for that salon's messages; its SET clause puts the caller's app.tenant_id back on return.
+-- (unless the owner is a superuser, as on a developer's machine). The function therefore sets each
+-- active salon in turn and asks for that salon's messages, and before it returns puts back the
+-- salon its caller had set, or none: a caller is never left with another salon, and reads no more
+-- afterwards than it did before. (A SET clause on the function would do the same, but only a
+-- superuser may attach one for a setting of our own, and the owning role is not one.)
+--
 -- A due message is a pending one whose time has come, or one whose delivery was interrupted: its
 -- lease has run out. "Now" is the application's clock, passed in. At most per_salon messages are
 -- returned for one salon and max_count in all, salons taken in a random order, so that one salon's
--- backlog cannot hold back the others.
+-- backlog cannot hold back the others. A suspended salon's messages wait until it is active again.
 CREATE FUNCTION outbox_due(at_time timestamptz, channels text[], per_salon integer, max_count integer)
     RETURNS TABLE (message_id uuid, tenant_id uuid)
     LANGUAGE plpgsql
     SECURITY DEFINER
     SET search_path = pg_catalog, pg_temp
-    SET app.tenant_id = ''
 AS $$
 DECLARE
-    salon     uuid;
-    remaining integer := max_count;
-    found     integer;
+    callers_salon text := coalesce(current_setting('app.tenant_id', true), '');
+    salon         uuid;
+    remaining     integer := max_count;
+    found         integer;
 BEGIN
     FOR salon IN SELECT t.id FROM public.tenant t WHERE t.status = 'active' ORDER BY random() LOOP
         EXIT WHEN remaining <= 0;
@@ -87,6 +91,7 @@ BEGIN
         GET DIAGNOSTICS found = ROW_COUNT;
         remaining := remaining - found;
     END LOOP;
+    PERFORM set_config('app.tenant_id', callers_salon, true);
 END
 $$;
 
@@ -95,17 +100,18 @@ GRANT EXECUTE ON FUNCTION outbox_due(timestamptz, text[], integer, integer) TO "
 
 -- For the meters: how many messages are waiting (pending or being delivered) across every salon,
 -- and when the oldest one that is due became due. Counts and a time only, nothing of any message.
+-- It sets each salon in turn and puts its caller's back, as outbox_due does.
 CREATE FUNCTION outbox_backlog(at_time timestamptz)
     RETURNS TABLE (waiting bigint, oldest_due_at timestamptz)
     LANGUAGE plpgsql
     SECURITY DEFINER
     SET search_path = pg_catalog, pg_temp
-    SET app.tenant_id = ''
 AS $$
 DECLARE
-    salon        uuid;
-    salon_count  bigint;
-    salon_oldest timestamptz;
+    callers_salon text := coalesce(current_setting('app.tenant_id', true), '');
+    salon         uuid;
+    salon_count   bigint;
+    salon_oldest  timestamptz;
 BEGIN
     waiting := 0;
     oldest_due_at := NULL;
@@ -124,6 +130,7 @@ BEGIN
             oldest_due_at := salon_oldest;
         END IF;
     END LOOP;
+    PERFORM set_config('app.tenant_id', callers_salon, true);
     RETURN NEXT;
 END
 $$;

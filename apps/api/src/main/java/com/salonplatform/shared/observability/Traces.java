@@ -70,6 +70,14 @@ public class Traces {
         }
     }
 
+    /** Records on the current span, when there is one, that its work failed for this reason. */
+    public void failed(Throwable failure) {
+        Span span = tracer.currentSpan();
+        if (span != null) {
+            span.error(failure);
+        }
+    }
+
     /**
      * The work, made to run on another thread inside the span that is current here, so that its
      * log lines carry the same {@code trace.id} and {@code span.id}.
