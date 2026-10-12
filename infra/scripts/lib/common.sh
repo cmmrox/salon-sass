@@ -129,8 +129,8 @@ node_problem() {
   major="$(node -p 'process.versions.node.split(".")[0]' 2>/dev/null)"
   if [ -z "$major" ] || [ "$major" -lt "$REQUIRED_NODE" ]; then
     say "Node.js $REQUIRED_NODE or later is required; this is Node.js $(node -v 2>/dev/null)."
-  elif ! command -v corepack >/dev/null 2>&1 && ! command -v pnpm >/dev/null 2>&1; then
-    say "pnpm is not available. It comes through Corepack, which ships with Node.js: run 'corepack enable'."
+  elif ! command -v corepack >/dev/null 2>&1; then
+    say "Corepack is required and 'corepack' was not found. It provides pnpm at the version package.json pins; a pnpm installed any other way is not used. Corepack ships with Node.js $REQUIRED_NODE: if your Node.js came without it, install Corepack, then run 'corepack enable'."
   fi
 }
 
@@ -166,12 +166,10 @@ compose() {
 }
 
 # pnpm at the version package.json pins, through Corepack, whether or not its shims are installed.
+# Never the `pnpm` that happens to be on PATH: one of another version fetches the pinned version
+# itself and records that in pnpm-lock.yaml, so the committed file would change under a developer.
 pnpm_run() {
-  if command -v corepack >/dev/null 2>&1; then
-    corepack pnpm "$@"
-  else
-    pnpm "$@"
-  fi
+  corepack pnpm "$@"
 }
 
 port_in_use() {

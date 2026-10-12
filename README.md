@@ -11,7 +11,7 @@ Prerequisites, on the machine:
 | Needs | Notes |
 | --- | --- |
 | JDK 25 | It does not have to be the default Java. With SDKMAN: `sdk install java 25.0.1.0+8-amzn` (the version in `.sdkmanrc`), answering "no" to making it the default. The scripts and `./mvnw` find it themselves; set `JAVA25_HOME` only if it is installed somewhere unusual |
-| Node.js 24 or later | With Corepack, which ships with it. Run `corepack enable` once so that `pnpm` is on your `PATH`; the pnpm version is pinned in `package.json` |
+| Node.js 24 or later | With Corepack, which ships with Node.js 24. Run `corepack enable` once so that `pnpm` is on your `PATH`; the pnpm version is pinned in `package.json`. A pnpm installed any other way is not used by the scripts, and stops with an error unless it is exactly that version: it would otherwise rewrite `pnpm-lock.yaml` |
 | Docker, running | For the local PostgreSQL, and for the API's integration tests |
 | Python 3.10 or later | For the lifecycle tooling only (`qa/scripts/sdlc`) |
 
