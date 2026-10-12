@@ -508,7 +508,7 @@ print_addresses() {
   say "API         http://localhost:${SALON_API_PORT}  (health: http://localhost:${SALON_API_PORT}/actuator/health)"
   say "Web         http://localhost:${SALON_WEB_PORT}"
   if [ "$SPRING_PROFILES_ACTIVE" = "local" ]; then
-    say "Salons      alpha, beta, gamma: http://alpha.${SALON_PLATFORM_DOMAIN}:${SALON_API_PORT}/api/v1/salon"
+    say "Salons      alpha, beta, gamma: http://alpha.${SALON_PLATFORM_DOMAIN}:${SALON_WEB_PORT}  (API: http://alpha.${SALON_PLATFORM_DOMAIN}:${SALON_API_PORT}/api/v1/salon)"
   fi
   if [ "$SALON_LISTEN_ON_NETWORK" = "true" ]; then
     say "Listening   on every network interface (SALON_LISTEN_ON_NETWORK=true): anyone on this network can reach the API and the web app"

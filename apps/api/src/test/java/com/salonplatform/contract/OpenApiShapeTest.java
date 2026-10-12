@@ -1,10 +1,12 @@
 package com.salonplatform.contract;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
 import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
+import com.salonplatform.shared.api.ErrorCode;
 import com.salonplatform.testing.IntegrationTest;
 import org.junit.jupiter.api.Test;
 
@@ -37,7 +39,7 @@ class OpenApiShapeTest extends IntegrationTest {
         assertThat(document.<String>read(salon + ".operationId")).isEqualTo("getSalon");
         assertThat(document.<String>read(salon + ".responses.200.content['application/json'].schema.$ref"))
                 .isEqualTo("#/components/schemas/Salon");
-        for (String status : new String[] { "404", "503" }) {
+        for (String status : new String[] { "403", "404", "503" }) {
             assertThat(document.<String>read(
                     salon + ".responses." + status + ".content['application/problem+json'].schema.$ref"))
                     .as(status).isEqualTo("#/components/schemas/Problem");
@@ -49,6 +51,25 @@ class OpenApiShapeTest extends IntegrationTest {
                 .containsExactlyInAnyOrder("slug", "name", "brandColour");
         assertThat(document.<Map<String, Object>>read(salon))
                 .as("the salon comes from the hostname, never from a parameter").doesNotContainKey("parameters");
+    }
+
+    @Test
+    void aSuspendedSalonIsDescribedAsForbiddenWithItsCode() {
+        DocumentContext document = document();
+
+        assertThat(document.<String>read("$.paths['/api/v1/salon'].get.responses.403.description"))
+                .contains("`salon_suspended`");
+        assertThat(document.<List<String>>read("$.components.schemas.Problem.properties.code.enum"))
+                .contains("salon_suspended");
+    }
+
+    /** The codes are listed in one place, {@link ErrorCode}, and the contract lists exactly those. */
+    @Test
+    void theContractListsEveryErrorCodeAndNoOther() {
+        assertThat(document().<List<String>>read("$.components.schemas.Problem.properties.code.enum"))
+                .containsExactlyInAnyOrderElementsOf(Arrays.stream(ErrorCode.values()).map(ErrorCode::code).toList())
+                .contains("not_found", "bad_request", "method_not_allowed", "not_acceptable", "unsupported_media_type",
+                        "service_unavailable", "request_rejected", "internal_error");
     }
 
     @Test

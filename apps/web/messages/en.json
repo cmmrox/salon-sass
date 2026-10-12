@@ -20,5 +20,16 @@
     "title": "Page not found",
     "body": "There is nothing at this address.",
     "home": "Go to the home page"
+  },
+  "salon": {
+    "loading": "Loading the salon…",
+    "notFound": {
+      "title": "Salon not found",
+      "body": "There is no salon at this address. Check the address and try again."
+    },
+    "unavailable": {
+      "title": "Temporarily unavailable",
+      "body": "This salon's site is not available at the moment. Please try again later."
+    }
   }
 }

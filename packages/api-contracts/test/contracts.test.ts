@@ -90,6 +90,25 @@ describe('compareDocument', () => {
   });
 });
 
+describe('the committed contract', () => {
+  const committed = JSON.parse(readFileSync(committedDocument, 'utf8'));
+
+  it('describes what a suspended salon answers: 403 with the code salon_suspended', () => {
+    const forbidden = committed.paths['/api/v1/salon'].get.responses['403'];
+
+    expect(forbidden.description).toContain('`salon_suspended`');
+    expect(forbidden.content['application/problem+json'].schema.$ref).toBe('#/components/schemas/Problem');
+    expect(committed.components.schemas.Problem.properties.code.enum).toContain('salon_suspended');
+  });
+
+  it('exposes the code in the generated client', () => {
+    const schema = readFileSync(join(generatedDirectory, SCHEMA_FILE), 'utf8');
+
+    expect(schema).toContain('"salon_suspended"');
+    expect(schema).toMatch(/getSalon: \{[\s\S]*?403: \{/);
+  });
+});
+
 describe('the committed client', () => {
   // The quick half of `pnpm contracts:check`: it needs no API. Whether the committed document is
   // what the controllers generate is the other half, and needs the API build.

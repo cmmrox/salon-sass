@@ -28,6 +28,7 @@ Created by stage F01-S01. Everything runs on the host except PostgreSQL, which r
 | `infra/scripts/local-down.sh` | Stops all three. The container is removed; the data volume is kept |
 | `infra/scripts/local-reset.sh` | Deletes the database's data and starts from empty |
 | `infra/scripts/local-service.sh <start\|stop> <postgres\|api\|web>` | Takes one service down or brings it back, for tests |
+| `infra/scripts/local-salon.sh <suspend\|activate> <slug>` | For tests: suspends or reactivates one synthetic salon, as the owning role, changing its status and nothing else. Refuses a slug that is not a salon. Seen on the next request; `local-reset.sh` brings every salon back active |
 | `infra/scripts/local-service.sh <pause\|resume> postgres` | For tests: freezes PostgreSQL so that it accepts connections and answers nothing, then thaws it (`start postgres` also thaws it) |
 
 | Service | Default address | Variable |
@@ -55,7 +56,9 @@ Created by stage F01-S01. Everything runs on the host except PostgreSQL, which r
   every time the API starts, without duplicating. No other profile creates a salon.
 - **Loopback only by default.** The API and the web app listen on `127.0.0.1` and `::1`.
   `SALON_LISTEN_ON_NETWORK=true` makes both listen on every interface, for testing from a phone on
-  the same network; anyone else on that network can then reach them.
+  the same network; anyone else on that network can then reach them. The web app takes the salon
+  from the hostname, so a phone asking for the bare network address sees "salon not found"; it
+  needs a hostname that resolves to this machine, with `SALON_PLATFORM_DOMAIN` set to its parent.
 - The local web app is started by `apps/web/scripts/serve.mjs`, a small custom server, because
   `next start` binds a single address.
 - The Spring profile is `local` by default. `SPRING_PROFILES_ACTIVE=<name>` with

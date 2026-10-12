@@ -50,7 +50,10 @@ the salon's subdomain on the platform domain.
 - A request on a hostname that resolves to no salon reaches the platform endpoints (`meta`, health)
   only. Every tenant endpoint answers 404 `not_found`, the same answer as for a salon that does not
   exist, so a caller cannot probe for salons.
-- What a suspended salon's hostname shows is F01-S03's to define. Until then no salon is suspended.
+- **A suspended salon** (decision 027): every endpoint that needs a salon answers 403 problem
+  details with `code` `salon_suspended` and nothing of the salon; `meta` and health still answer.
+  The web app shows "temporarily unavailable" with status 503. The tenant context binds no salon
+  for such a request. A status change is seen on the next request; nothing caches it.
 - A domain the salon owns (a later release) maps to the same tenant through the edge; it is another
   way in to the same resolution, not a second mechanism.
 
@@ -92,8 +95,8 @@ Three consequences of how the framework works, which every later stage follows:
   entity carries `@TenantId`, so the resolver answers `00000000-0000-0000-0000-000000000000`, which
   the database refuses as a tenant's id. It can therefore match no row.
 - **The application reads the registry only through `tenant_by_slug(text)`**, a `SECURITY DEFINER`
-  function that returns a slug's id and status. It has no grant on `tenant`. A suspended salon
-  resolves to no salon until F01-S03 defines what its hostname shows.
+  function that returns a slug's id and status. It has no grant on `tenant`. `TenantContext`
+  tells "no such salon" (404 `not_found`) from "suspended" (403 `salon_suspended`).
 
 ## Adding a table
 

@@ -1,9 +1,10 @@
 package com.salonplatform.platform;
 
-import java.util.Optional;
 import java.util.UUID;
 
+import com.salonplatform.shared.tenancy.RegisteredTenant;
 import com.salonplatform.shared.tenancy.TenantDirectory;
+import com.salonplatform.shared.tenancy.TenantStatus;
 import com.salonplatform.testing.StartedApplication;
 import com.salonplatform.testing.TestDatabase;
 import com.salonplatform.testing.TestPostgres;
@@ -22,7 +23,7 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 /**
  * The tenant registry. The database refuses a slug that could never be a salon's subdomain, as the
- * owning role too, and the registry answers only for active salons.
+ * owning role too, and the registry says of each salon whether it is active or suspended.
  */
 class TenantTableIntegrationTest {
 
@@ -83,17 +84,31 @@ class TenantTableIntegrationTest {
     }
 
     @Test
-    void theRegistryAnswersForAnActiveSalonOnly() {
+    void theRegistryTellsAnActiveSalonFromASuspendedOneAndFromNoSalon() {
         UUID active = UUID.randomUUID();
         UUID suspended = UUID.randomUUID();
         insert(active, "open-salon", "active");
         insert(suspended, "closed-salon", "suspended");
         TenantDirectory registry = application.bean(TenantDirectory.class);
 
-        assertThat(registry.findActive("open-salon")).contains(active);
-        assertThat(registry.findActive("closed-salon")).isEmpty();
-        assertThat(registry.findActive("no-such-salon")).isEmpty();
-        assertThat(registry.findActive("OPEN-SALON")).as("slugs are stored and looked up in lower case").isEqualTo(Optional.empty());
+        assertThat(registry.find("open-salon")).contains(new RegisteredTenant(active, TenantStatus.ACTIVE));
+        assertThat(registry.find("closed-salon")).contains(new RegisteredTenant(suspended, TenantStatus.SUSPENDED));
+        assertThat(registry.find("no-such-salon")).isEmpty();
+        assertThat(registry.find("OPEN-SALON")).as("slugs are stored and looked up in lower case").isEmpty();
+    }
+
+    @Test
+    void theRegistryReadsAStatusWhereItIsDecidedEveryTime() {
+        UUID id = UUID.randomUUID();
+        insert(id, "now-and-then", "active");
+        TenantDirectory registry = application.bean(TenantDirectory.class);
+        assertThat(registry.find("now-and-then")).contains(new RegisteredTenant(id, TenantStatus.ACTIVE));
+
+        owner.update("UPDATE tenant SET status = 'suspended' WHERE id = ?", id);
+        assertThat(registry.find("now-and-then")).contains(new RegisteredTenant(id, TenantStatus.SUSPENDED));
+
+        owner.update("UPDATE tenant SET status = 'active' WHERE id = ?", id);
+        assertThat(registry.find("now-and-then")).contains(new RegisteredTenant(id, TenantStatus.ACTIVE));
     }
 
     private static void insert(UUID id, String slug, String status) {

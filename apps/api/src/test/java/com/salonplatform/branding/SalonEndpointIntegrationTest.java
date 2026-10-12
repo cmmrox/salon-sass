@@ -73,8 +73,6 @@ class SalonEndpointIntegrationTest extends IntegrationTest {
 
     @Test
     void aHostnameThatNamesNoSalonGetsTheSameNotFoundEveryTimeWhilePlatformEndpointsStillAnswer() {
-        TestSalon suspended = new TestSalons(TestDatabase.of(TestPostgres.shared()).asOwner())
-                .createWithoutBrand("suspended");
         TestSalon withoutBrand = new TestSalons(TestDatabase.of(TestPostgres.shared()).asOwner())
                 .createWithoutBrand("active");
         List<String> hosts = List.of(
@@ -85,7 +83,6 @@ class SalonEndpointIntegrationTest extends IntegrationTest {
                 alpha.slug() + "." + beta.slug() + ".localhost:" + port(),
                 alpha.slug() + ".localhost.example.com:" + port(),
                 "127.0.0.1:" + port(),
-                suspended.host(port()),
                 withoutBrand.host(port()));
 
         String first = null;

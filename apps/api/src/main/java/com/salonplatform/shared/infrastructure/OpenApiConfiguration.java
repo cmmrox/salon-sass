@@ -1,7 +1,9 @@
 package com.salonplatform.shared.infrastructure;
 
+import java.util.Arrays;
 import java.util.List;
 
+import com.salonplatform.shared.api.ErrorCode;
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
@@ -69,7 +71,8 @@ class OpenApiConfiguration {
                 .addProperty("status", new IntegerSchema().description("The HTTP status."))
                 .addProperty("detail", new StringSchema().description("A sentence for a person. Do not branch on it."))
                 .addProperty("instance", new StringSchema().description("The path that was requested."))
-                .addProperty("code", new StringSchema().description("The stable reason. Branch on this."))
+                .addProperty("code", new StringSchema().description("The stable reason. Branch on this.")
+                        ._enum(Arrays.stream(ErrorCode.values()).map(ErrorCode::code).toList()))
                 .required(List.of("title", "status", "code"));
     }
 }

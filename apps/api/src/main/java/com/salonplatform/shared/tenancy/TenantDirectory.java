@@ -1,7 +1,6 @@
 package com.salonplatform.shared.tenancy;
 
 import java.util.Optional;
-import java.util.UUID;
 
 /**
  * Where a slug is looked up. {@code shared} owns the question and {@code platform}, which owns the
@@ -10,12 +9,11 @@ import java.util.UUID;
 public interface TenantDirectory {
 
     /**
-     * The id of the salon with this slug, when there is one and it is active. A slug that names no
-     * salon, and one that names a suspended salon, both give nothing.
+     * The salon with this slug, active or suspended, or nothing when no salon has it.
      *
      * @param slug a lowercase slug
-     * @return the salon's id, or nothing
+     * @return the salon's id and status, or nothing
      * @throws org.springframework.dao.DataAccessException when the registry cannot be read
      */
-    Optional<UUID> findActive(String slug);
+    Optional<RegisteredTenant> find(String slug);
 }
