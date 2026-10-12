@@ -148,3 +148,9 @@ For every new table and endpoint, an integration test with two tenants that prov
 
 QA repeats these from outside for every endpoint. Yours prove the mechanism; theirs prove nothing
 slipped past it.
+
+The first tenant table also proves each layer independently in the API's integration tests:
+`SalonBrandRowLevelSecurityAloneIntegrationTest` uses SQL with Hibernate out of the path;
+`SalonBrandHibernateFilterAloneIntegrationTest` disables RLS in its disposable test database;
+`TenantTransactionIntegrationTest` reuses one pooled connection across salons and transactions
+without a salon. Keep this independent coverage when adding tenant tables.

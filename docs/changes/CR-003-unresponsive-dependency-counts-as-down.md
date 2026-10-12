@@ -1,7 +1,7 @@
 ---
 id: CR-003
 title: Treat a dependency that accepts connections but does not answer as down
-status: approved
+status: implemented
 requested_by: QA review of F01-S01
 requested_on: 2026-10-12
 decided_on: 2026-10-12
@@ -37,3 +37,7 @@ Approve.
 ## Decision
 
 Approved by the owner on 2026-10-12, as recommended: F01-S02's spec gains the acceptance criterion.
+
+Implemented in F01-S02; independent QA passed on 2026-10-12, covering requests already in flight
+when PostgreSQL goes silent, later requests, a stopped database and automatic recovery. Evidence:
+`qa/reports/20261012-170409-F01-S02`.

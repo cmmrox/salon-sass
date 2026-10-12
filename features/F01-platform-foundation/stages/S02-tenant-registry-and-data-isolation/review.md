@@ -22,8 +22,8 @@ Ranked, most valuable first. Neither is a requirement or approval to build it.
 
 | Id | Class | Suggestion | Disposition |
 | --- | --- | --- | --- |
-| SUG-F01-S02-01 | idea | Give clients a documented retry policy for temporary 503 responses before customer pages depend on this read. | |
-| SUG-F01-S02-02 | idea | Consider tenant-aware conditional brand reads when the public branding payload grows. | |
+| SUG-F01-S02-01 | idea | Give clients a documented retry policy for temporary 503 responses before customer pages depend on this read. | backlog |
+| SUG-F01-S02-02 | idea | Consider tenant-aware conditional brand reads when the public branding payload grows. | backlog |
 
 ### SUG-F01-S02-01 Document retry guidance for temporary outages
 

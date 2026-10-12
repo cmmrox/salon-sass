@@ -48,6 +48,11 @@ One Next.js application serves three surfaces. The hostname decides which.
   hangs on the API.
 - `agentRules` is off in `next.config.ts`, so that the framework does not write into
   `apps/web/AGENTS.md`.
+- Local startup uses `apps/web/scripts/serve.mjs`, a custom server around Next.js's request
+  handler, so that both IPv4 and IPv6 loopback work. Commands and settings are in
+  `docs/operations/environments-and-releases.md`. This custom server cannot be combined with
+  Next.js standalone output; F01-S05 selects the serving method for the production image
+  (decision 022).
 
 ## Branding
 
