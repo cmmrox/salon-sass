@@ -1,5 +1,8 @@
 package com.salonplatform.testing;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import com.salonplatform.SalonApiApplication;
 
 import org.springframework.boot.builder.SpringApplicationBuilder;
@@ -19,12 +22,19 @@ public final class StartedApplication implements AutoCloseable {
     }
 
     public static StartedApplication against(String jdbcUrl, String username, String password) {
+        return against(jdbcUrl, username, password, new String[0]);
+    }
+
+    /** As above, with further settings given the way a command line gives them. */
+    public static StartedApplication against(String jdbcUrl, String username, String password, String... settings) {
+        List<String> arguments = new ArrayList<>(List.of("--server.port=0",
+                "--spring.datasource.url=" + jdbcUrl,
+                "--spring.datasource.username=" + username,
+                "--spring.datasource.password=" + password));
+        arguments.addAll(List.of(settings));
         return new StartedApplication(new SpringApplicationBuilder(SalonApiApplication.class)
                 .profiles("test")
-                .run("--server.port=0",
-                        "--spring.datasource.url=" + jdbcUrl,
-                        "--spring.datasource.username=" + username,
-                        "--spring.datasource.password=" + password));
+                .run(arguments.toArray(String[]::new)));
     }
 
     public Http http() {
