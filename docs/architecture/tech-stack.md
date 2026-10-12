@@ -60,7 +60,7 @@ a real message or take a real payment.
 
 | For | Needs |
 | --- | --- |
-| Building and running the product | JDK 25 (it need not be the machine's default Java), Node.js 24 or later with pnpm through Corepack, Docker, curl |
+| Building and running the product | JDK 25 (it need not be the machine's default Java), Node.js 24 or later with pnpm through Corepack, Docker, curl, a `ps` that reports start times (procps on Linux) |
 | The lifecycle tooling (`qa/scripts/sdlc`) | Python 3.10 or later; it creates its own virtual environment |
 | QA | k6 from stage F01-S02 onward; Maestro and an Android emulator from milestone `M2-mobile` |
 

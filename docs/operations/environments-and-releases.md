@@ -28,6 +28,7 @@ Created by stage F01-S01. Everything runs on the host except PostgreSQL, which r
 | `infra/scripts/local-down.sh` | Stops all three. The container is removed; the data volume is kept |
 | `infra/scripts/local-reset.sh` | Deletes the database's data and starts from empty |
 | `infra/scripts/local-service.sh <start\|stop> <postgres\|api\|web>` | Takes one service down or brings it back, for tests |
+| `infra/scripts/local-service.sh <pause\|resume> postgres` | For tests: freezes PostgreSQL so that it accepts connections and answers nothing, then thaws it (`start postgres` also thaws it) |
 
 | Service | Default address | Variable |
 | --- | --- | --- |
@@ -39,7 +40,10 @@ Created by stage F01-S01. Everything runs on the host except PostgreSQL, which r
   usual 3000, 8080 and 5432 because other projects on a developer's machine tend to hold them.
 - Docker names: Compose project `salon-local`, container `salon-postgres`, volume
   `salon-postgres-data`. Containers of other projects on the machine are never touched.
-- Process ids are in `.local/run` and logs in `.local/logs`; neither is committed.
+- Process ids are in `.local/run` and logs in `.local/logs`; neither is committed. A script trusts a
+  process id file only while the process it names is still the one it started (checked by start
+  time), so it never stops an unrelated process.
+- The scripts take turns: a second run waits for the first to finish rather than racing it.
 - The local database user and password are local-only values in `.env.example`.
 - The Spring profile is `local` by default. `SPRING_PROFILES_ACTIVE=<name>` with
   `local-service.sh start api` starts the API as it would run elsewhere.
