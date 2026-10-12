@@ -29,10 +29,10 @@ requirement detail is in `qa/coverage.md`.
 
 ### F01 Platform foundation and tenant isolation
 
-| Stage | Title | Surfaces | Status | QA | Blocking bugs | Next |
+| Stage | Title | Surfaces | Status | Stage QA | Blocking bugs | Next |
 | --- | --- | --- | --- | --- | --- | --- |
 | F01-S01 | Walking skeleton and local environment | api, web, infra | complete | pass | 0 | - |
-| F01-S02 | Tenant registry and data isolation | api, infra | in-qa | failing | 0 | **qa**: `stage-verify F01-S02` |
-| F01-S03 | Salon web addresses and branded shell | api, web | outlined | not-run | 0 | **lead**: `stage-plan F01-S03` |
-| F01-S04 | Platform services: errors, time, audit trail, background jobs and observability | api | outlined | not-run | 0 | **lead**: `stage-plan F01-S04` |
-| F01-S05 | Staging environment and delivery pipeline | infra | outlined | not-run | 0 | **lead**: `stage-plan F01-S05` |
+| F01-S02 | Tenant registry and data isolation | api, infra | built | failing | 0 | **qa**: `stage-verify F01-S02` |
+| F01-S03 | Salon web addresses and branded shell | api, web | outlined | - | 0 | **lead**: `stage-plan F01-S03` |
+| F01-S04 | Platform services: errors, time, audit trail, background jobs and observability | api | outlined | - | 0 | **lead**: `stage-plan F01-S04` |
+| F01-S05 | Staging environment and delivery pipeline | infra | outlined | - | 0 | **lead**: `stage-plan F01-S05` |

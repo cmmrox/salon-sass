@@ -178,30 +178,22 @@ def check_qa_status(scope, scope_id):
     return findings
 
 
-def check_qa_gate(scope, scope_id, acceptance_criteria):
-    """Everything that must be true before QA may be recorded as passed.
+def _cases(scope):
+    return [c for c in _list(scope.get("cases")) if isinstance(c, dict)]
+
+
+def check_coverage(scope, acceptance_criteria):
+    """Every criterion has a case, every case is accounted for, and no blocking bug is left.
 
     acceptance_criteria is the list of AC ids for a stage, or None for a feature.
     """
-    findings = []
-    if scope.get("qa_status") != "pass":
-        _add(findings, scope, f"{scope_id} is '{scope.get('status')}' but qa_status is '{scope.get('qa_status')}'")
-    evidence = scope.get("evidence") if isinstance(scope.get("evidence"), dict) else {}
-    if evidence.get("last_result") != "pass" or not evidence.get("last_run"):
-        _add(findings, scope, f"{scope_id} claims a QA pass without evidence.last_run and evidence.last_result: pass")
-    cases = [c for c in _list(scope.get("cases")) if isinstance(c, dict)]
-    if not cases:
-        _add(findings, scope, f"{scope_id} claims a QA pass with no test cases")
-    if acceptance_criteria is not None:
-        asserted = set()
-        for case in cases:
-            asserted.update(_list(case.get("covers")))
-        for criterion in acceptance_criteria:
-            if criterion not in asserted:
-                _add(findings, scope, f"{criterion} is not covered by any test case")
-        commands = _list(_verification(scope).get("commands"))
-        if not commands and _list(scope.get("surfaces")) != ["docs"]:
-            _add(findings, scope, f"{scope_id} lists no verification.commands for the developer gates")
+    findings, cases = [], _cases(scope)
+    asserted = set()
+    for case in cases:
+        asserted.update(_list(case.get("covers")))
+    for criterion in acceptance_criteria or []:
+        if criterion not in asserted:
+            _add(findings, scope, f"{criterion} is not covered by any test case")
     for entry in _case_refs(scope, "manual"):
         if not entry.get("performed_on"):
             _add(findings, scope, f"manual case {entry.get('case')} has no performed_on date; a manual case counts only once it was done")
@@ -213,8 +205,55 @@ def check_qa_gate(scope, scope_id, acceptance_criteria):
             _add(findings, scope, f"case {case.get('id')} is neither automated, manual nor deferred with a reason")
     for bug in blocking_bugs(scope):
         _add(findings, scope, f"{bug.get('id')} ({bug.get('severity')}) is '{bug.get('status')}'; QA cannot pass with it unresolved")
+    return findings
+
+
+def check_qa_gate(scope, scope_id, acceptance_criteria):
+    """Everything that must be true before QA may be recorded as passed.
+
+    Applies to a feature, and to a stage only when the owner asked for a stage pass.
+    acceptance_criteria is the list of AC ids for a stage, or None for a feature.
+    """
+    findings = []
+    if scope.get("qa_status") != "pass":
+        _add(findings, scope, f"{scope_id} is '{scope.get('status')}' but qa_status is '{scope.get('qa_status')}'")
+    evidence = scope.get("evidence") if isinstance(scope.get("evidence"), dict) else {}
+    if evidence.get("last_result") != "pass" or not evidence.get("last_run"):
+        _add(findings, scope, f"{scope_id} claims a QA pass without evidence.last_run and evidence.last_result: pass")
+    if not _cases(scope):
+        _add(findings, scope, f"{scope_id} claims a QA pass with no test cases")
+    findings += check_coverage(scope, acceptance_criteria)
     if not scope.get("_has_review"):
         _add(findings, scope, f"{scope_id} has no review.md; QA owes a product review before a pass")
+    return findings
+
+
+def check_handed_over(stage, sid):
+    """What a stage is closed on when QA waits for the whole feature: the developer's gates
+    and the developer's own record that every acceptance criterion was checked."""
+    findings, status = [], stage.get("status")
+    if status in S.CLAIMED and stage.get("qa_status") in S.UNFINISHED_QA:
+        _add(findings, stage, f"{sid} is '{status}' but a stage QA pass was left '{stage.get('qa_status')}'; "
+                              "a stage pass that was started is finished before the stage is closed")
+    if not _list(_verification(stage).get("commands")) and _list(stage.get("surfaces")) != ["docs"]:
+        _add(findings, stage, f"{sid} is '{status}' but lists no verification.commands for the developer gates")
+    handoff = stage.get("handoff") if isinstance(stage.get("handoff"), dict) else {}
+    if not str(handoff.get("notes") or "").strip():
+        _add(findings, stage, f"{sid} is '{status}' but handoff.notes is empty; the stage is closed on the "
+                              "developer's record of what was checked and what was left out")
+    return findings
+
+
+def check_feature_covers_stages(feature, fid, stages):
+    """A feature pass is the QA of every stage in it: each stage's criteria are covered by
+    that stage's cases, written at the feature pass or at a stage pass the owner asked for."""
+    findings = []
+    for stage in stages:
+        if stage.get("qa_status") == "pass":
+            continue  # already held to the full gate as a stage
+        spec = stage.get("_spec")
+        for finding in check_coverage(stage, spec["acs"] if spec else []):
+            findings.append(f"{finding} ({fid} cannot pass QA until it is)")
     return findings
 
 
@@ -294,6 +333,7 @@ def check_features(bundle):
                     _add(findings, feature, f"{fid} is '{status}' but stage {stage.get('id')} is '{stage.get('status')}'")
         if status in S.CLAIMED or feature.get("qa_status") == "pass":
             findings += check_qa_gate(feature, fid, None)
+            findings += check_feature_covers_stages(feature, fid, stages)
         if (status == "released") != bool(feature.get("released_in")):
             _add(findings, feature, "released_in must be set exactly when status is 'released'")
 
@@ -364,7 +404,7 @@ def check_stages(bundle):
         for dep in depends[sid]:
             if dep not in by_id:
                 _add(findings, stage, f"depends_on names {dep}, which is not a stage")
-            elif (status in ("in-progress", "in-qa") + S.CLAIMED
+            elif (status in ("in-progress", "built") + S.CLAIMED
                   and by_id[dep].get("status") not in S.BUILDABLE_ON
                   # A stage reopened by a change request was complete once: what was built on
                   # it stays valid while it is being changed.
@@ -400,7 +440,9 @@ def check_stages(bundle):
         criteria = spec["acs"] if spec else []
         findings += check_cases(stage, sid, set(criteria) if spec else None, "acceptance criterion")
         findings += check_bugs(stage, sid)
-        if status in S.CLAIMED or stage.get("qa_status") == "pass":
+        if status in S.HANDED_OVER:
+            findings += check_handed_over(stage, sid)
+        if stage.get("qa_status") == "pass":
             findings += check_qa_gate(stage, sid, criteria)
         if (status == "released") != bool(stage.get("released_in")):
             _add(findings, stage, "released_in must be set exactly when status is 'released'")

@@ -3,7 +3,7 @@ feature: F01
 title: "Tenant registry and data isolation"
 sequence: 2
 surfaces: [api, infra]
-status: in-qa
+status: built
 qa_status: failing
 released_in: null
 depends_on: [F01-S01]

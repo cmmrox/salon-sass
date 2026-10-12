@@ -16,10 +16,61 @@ class ValidateTest(unittest.TestCase):
     def test_known_good_bundle_is_clean(self):
         self.assertEqual(findings(fx.bundle()), [])
 
-    # --- the QA gate: a stage cannot claim completion that QA has not proved ---
+    # --- closing a stage: on the developer's gates, with QA waiting for the feature ---
 
-    def test_complete_stage_needs_a_qa_pass(self):
-        self.assertFinding(fx.bundle(stages=[fx.stage(qa_status="failing")]), "qa_status is 'failing'")
+    def test_stage_closes_without_a_stage_qa_pass(self):
+        self.assertEqual(findings(fx.bundle(stages=[fx.unverified_stage()])), [])
+        self.assertEqual(findings(fx.bundle(stages=[fx.unverified_stage(status="built")])), [])
+
+    def test_stage_cannot_close_over_an_unfinished_stage_pass(self):
+        for left in ("failing", "blocked"):
+            self.assertFinding(fx.bundle(stages=[fx.unverified_stage(qa_status=left, blocked_reason="x")]),
+                               f"a stage QA pass was left '{left}'")
+
+    def test_handed_over_stage_needs_the_developer_gates_and_the_handoff(self):
+        self.assertFinding(fx.bundle(stages=[fx.unverified_stage(status="built", verification={})]),
+                           "lists no verification.commands")
+        self.assertFinding(fx.bundle(stages=[fx.unverified_stage(status="built", handoff={"notes": " "})]),
+                           "handoff.notes is empty")
+        building = fx.unverified_stage(status="in-progress", handoff={})
+        self.assertEqual(findings(fx.bundle(stages=[building])), [])
+
+    # --- the QA gate: a feature, or a stage pass the owner asked for, cannot claim what QA has not proved ---
+
+    def passed_feature(self, **changes):
+        data = dict(status="in-qa", qa_status="pass", _has_review=True,
+                    evidence={"last_run": "qa/reports/x", "last_result": "pass"},
+                    cases=[{"id": "TC-F07-001", "title": "Book end to end", "type": "functional",
+                            "priority": "critical", "covers": ["BKG-01"]}],
+                    _cases_md=["TC-F07-001"],
+                    verification={"automation": [{"id": "journey", "tool": "playwright",
+                                                  "file": "qa/web/F07/journey-book.spec.ts",
+                                                  "covers": ["TC-F07-001"]}]})
+        data.update(changes)
+        return fx.feature(**data)
+
+    def test_feature_pass_needs_every_stage_criterion_covered_by_a_case(self):
+        covered = fx.stage(qa_status="not-run", evidence={}, _has_review=False)
+        self.assertEqual(findings(fx.bundle(features=[self.passed_feature()], stages=[covered])), [])
+        self.assertFinding(fx.bundle(features=[self.passed_feature()], stages=[fx.unverified_stage()]),
+                           "AC-1 is not covered by any test case (F07 cannot pass QA until it is)")
+        self.assertEqual(findings(fx.bundle(stages=[fx.unverified_stage()])), [])
+
+    def test_feature_pass_needs_every_stage_case_accounted_for(self):
+        loose = fx.stage(qa_status="not-run", evidence={}, _has_review=False)
+        loose["verification"]["automation"] = []
+        self.assertFinding(fx.bundle(features=[self.passed_feature()], stages=[loose]),
+                           "neither automated, manual nor deferred")
+
+    def test_feature_cannot_pass_over_a_blocking_bug_carried_from_a_stage(self):
+        carried = fx.stage(qa_status="not-run", evidence={}, _has_review=False, _bugs=[fx.bug()])
+        self.assertFinding(fx.bundle(features=[self.passed_feature()], stages=[carried]), "QA cannot pass with it unresolved")
+        carried["_bugs"][0]["severity"] = "minor"
+        self.assertEqual(findings(fx.bundle(features=[self.passed_feature()], stages=[carried])), [])
+
+    def test_feature_pass_needs_evidence_and_a_review(self):
+        self.assertFinding(fx.bundle(features=[self.passed_feature(evidence={})]), "without evidence")
+        self.assertFinding(fx.bundle(features=[self.passed_feature(_has_review=False)]), "has no review.md")
 
     def test_qa_pass_needs_evidence(self):
         self.assertFinding(fx.bundle(stages=[fx.stage(evidence={})]), "without evidence")
@@ -85,7 +136,7 @@ class ValidateTest(unittest.TestCase):
         self.assertFinding(fx.bundle(stages=[fx.stage(_bugs=[late])]), "QA cannot pass")
 
     def test_blocked_qa_needs_a_reason(self):
-        blocked = fx.stage(status="in-qa", qa_status="blocked", evidence={})
+        blocked = fx.stage(status="built", qa_status="blocked", evidence={})
         self.assertFinding(fx.bundle(stages=[blocked]), "gives no blocked_reason")
 
     def test_stage_may_keep_building_on_a_dependency_reopened_by_a_change_request(self):
@@ -102,11 +153,9 @@ class ValidateTest(unittest.TestCase):
     def test_a_pass_needs_a_product_review(self):
         self.assertFinding(fx.bundle(stages=[fx.stage(_has_review=False)]), "has no review.md")
 
-    def test_stage_in_qa_is_not_held_to_the_gate_until_it_claims_a_pass(self):
-        waiting = fx.stage(status="in-qa", qa_status="not-run", evidence={}, cases=[], _cases_md=None,
-                           _has_review=False,
-                           verification={"commands": ["cd apps/api && ./mvnw verify"], "automation": []})
-        self.assertEqual(findings(fx.bundle(stages=[waiting])), [])
+    def test_stage_pass_in_progress_is_not_held_to_the_gate_until_it_claims_a_pass(self):
+        started = fx.unverified_stage(status="built", qa_status="failing")
+        self.assertEqual(findings(fx.bundle(stages=[started])), [])
 
     # --- structure ---
 
@@ -201,8 +250,8 @@ class ValidateTest(unittest.TestCase):
                           verification={"manual": [{"case": "TC-F07-001", "reason": "needs a real phone",
                                                     "performed_on": "2026-10-12"}]})
         self.assertEqual(findings(fx.bundle(features=[done])), [])
-        self.assertFinding(fx.bundle(features=[done], stages=[fx.stage(status="in-qa", qa_status="not-run")]),
-                           "but stage F07-S01 is 'in-qa'")
+        self.assertFinding(fx.bundle(features=[done], stages=[fx.stage(status="built", qa_status="not-run")]),
+                           "but stage F07-S01 is 'built'")
 
     # --- generated documents and skills ---
 

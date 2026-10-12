@@ -6,17 +6,25 @@ The skills document these values for people; this file is what is enforced.
 import re
 
 FEATURE_STATUSES = ("backlog", "planned", "in-progress", "in-qa", "complete", "released")
-STAGE_STATUSES = ("outlined", "planned", "in-progress", "in-qa", "complete", "released")
+# built: the developer has handed the stage over and the lead closes it on the developer's
+# gates. QA happens once, on the whole feature, so a stage has no QA state of its own unless
+# the owner asked for a stage pass.
+STAGE_STATUSES = ("outlined", "planned", "in-progress", "built", "complete", "released")
 # blocked: QA cannot run because of something it cannot repair itself (a missing emulator,
 # a tool that needs installing). It is the lead's turn; blocked_reason says why.
 QA_STATUSES = ("not-run", "failing", "blocked", "pass")
+# A stage pass the owner asked for that has not finished. A stage cannot be closed over it.
+UNFINISHED_QA = ("failing", "blocked")
 RELEASES = ("R1", "R2", "R3")
 SURFACES = ("api", "web", "mobile", "infra", "docs")
 
-# A stage that claims completion must have passing QA behind the claim.
+# Closed work. A feature that claims it must have passing QA behind the claim; a stage must
+# have the developer's gates and handoff behind it, and no stage pass left unfinished.
 CLAIMED = ("complete", "released")
 # spec.md is required from here on.
-SPECIFIED = ("planned", "in-progress", "in-qa", "complete", "released")
+SPECIFIED = ("planned", "in-progress", "built", "complete", "released")
+# The developer's handoff is required from here on.
+HANDED_OVER = ("built", "complete", "released")
 # A dependency must have reached one of these before a stage is built on it.
 BUILDABLE_ON = ("complete", "released")
 
