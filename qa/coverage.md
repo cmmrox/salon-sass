@@ -18,7 +18,7 @@ asked for; the cases of a stage are written at its feature's pass.
 | Stage | Status | Stage QA | Requirements | Criteria | Cases | Automated | Manual | Deferred |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | F01-S01 | complete | pass | NFR-17, NFR-18 | 10 | 63 | 60 | 2 | 1 |
-| F01-S02 | built | failing | NFR-01, NFR-07, NFR-15 | 12 | 45 | 45 | 0 | 0 |
+| F01-S02 | built | pass | NFR-01, NFR-07, NFR-15 | 12 | 45 | 45 | 0 | 0 |
 
 ## Deferred cases
 

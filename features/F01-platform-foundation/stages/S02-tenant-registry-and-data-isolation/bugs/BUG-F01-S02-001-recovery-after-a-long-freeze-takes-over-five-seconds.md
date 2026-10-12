@@ -2,14 +2,14 @@
 id: BUG-F01-S02-001
 title: After a 40-second freeze of PostgreSQL the API answered nothing but 503 until 5017 ms and 5064 ms after resume was asked for, in two of four such thaws; the limit is 5000 ms
 severity: minor
-status: fixed
+status: verified
 found_by: TC-F01-S02-052
 breaks: AC-10
 found_on: 2026-10-12
 fixed_in: 77ec499
 fix_note: 'Cause: the connection pool (HikariCP 7.0.2) waits between failed attempts to open a connection, twice as long after each failure up to 5 s, and that wait is not a setting; after half a minute of silence it tries once every 7 s, so a thaw that falls just after an attempt gives up is not noticed for 5 s. Fix: the pool opens its connections through SteadyReconnectDataSource, which asks an unreachable or silent database again every 250 ms (salon.database.reconnect-interval) until it answers, with the same limits on each attempt; ten thaws after 36 to 42 s of freeze recovered in 335 to 461 ms.'
 developer_note: 'What was not known is now measured. PostgreSQL is not the wait: in the slow thaw reproduced before the fix (5816 ms, after a 41.4 s freeze) it answered a new connection on its published port 788 ms after resume was asked for, and signed salon_app in at 828 ms, while the pool made no attempt for 5.0 s more (its log: an attempt gave up at 43.285, 4 ms after PostgreSQL answered, and the next began at 48.287). Whether a thaw was quick or slow depended only on where it fell in the pool cycle of 2 s trying and 5 s waiting, which is why the result was one or the other. After the fix the first 200 comes with the resume command itself: what remains of the recovery time is the 0.35 to 0.8 s that local-service.sh resume postgres takes.'
-verified_on: null
+verified_on: 2026-10-12
 approved_by: null
 found_in_release: null
 ---
@@ -127,4 +127,30 @@ In the instrumented run the resume command took 346 ms and 419 ms and the first 
 
 ## Re-verification
 
-<QA, after a fix: what was rerun, the run folder, and the result.>
+Re-verified on 2026-10-12 against the running product at commit `58073ef` (the fix is `77ec499`).
+The check, its limit of 5000 ms and where its clock starts are unchanged since the run of 18:55 that
+failed (nothing under `qa/` differs from `2c339b8`).
+
+The bug's own steps, with its case: `qa/checks/F01/S02-database-silent.sh` run directly three times,
+then the whole stage once with `qa/scripts/sdlc run --stage F01-S02`. Recovery time is from the
+resume command being asked for to the first 200.
+
+| Run folder | Long freeze lasted | After the 7 s freeze | After the 40 s freeze | Resume command returned after |
+| --- | --- | --- | --- | --- |
+| `qa/reports/F01-S02-reverify-1` (pass) | 40140 ms | 357 ms | 379 ms | 356 ms and 373 ms |
+| `qa/reports/F01-S02-reverify-2` (pass) | 40495 ms | 335 ms | 842 ms | 330 ms and 857 ms |
+| `qa/reports/F01-S02-reverify-3` (pass) | 40135 ms | 364 ms | 374 ms | 364 ms and 367 ms |
+| `qa/reports/20261012-194720-F01-S02` (stage run, pass) | 40173 ms | 386 ms | 414 ms | 363 ms and 411 ms |
+
+Result: TC-F01-S02-052 passed in all four, with TC-F01-S02-050, 051 and 053 beside it. After each of
+the four long freezes the first 200 came no more than 7 ms after the resume command returned (in the
+second run, 15 ms before it returned: its 842 ms is the command's own 857 ms, not the API). The API's
+process was the same before and after in every run, and no salon was answered with anything but its
+own brand. The stage run passed all nine automation entries, so the fix broke no neighbour in the stage.
+
+What this rests on: four long thaws seen by QA on the fixed build, none slow, against two slow in
+four before the fix. Unfixed, four quick thaws in a row would be expected about one time in sixteen,
+so the sample alone is not proof; it agrees with the cause the developer measured (the pool's 5 s
+wait between attempts, now 250 ms) and with the developer's ten further thaws, which QA did not
+repeat. TC-F01-S02-052 stays in the stage's automation and catches a return of the symptom whenever
+a thaw falls in a slow part of such a cycle, as it did twice.
