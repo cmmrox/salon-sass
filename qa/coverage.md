@@ -15,7 +15,7 @@
 | Stage | Status | QA | Requirements | Criteria | Cases | Automated | Manual | Deferred |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | F01-S01 | complete | pass | NFR-17, NFR-18 | 10 | 63 | 60 | 2 | 1 |
-| F01-S02 | planned | not-run | NFR-01, NFR-07, NFR-15 | 12 | 0 | 0 | 0 | 0 |
+| F01-S02 | in-progress | not-run | NFR-01, NFR-07, NFR-15 | 12 | 0 | 0 | 0 | 0 |
 
 ## Deferred cases
 

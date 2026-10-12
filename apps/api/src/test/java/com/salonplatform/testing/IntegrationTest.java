@@ -9,7 +9,7 @@ import org.springframework.test.context.DynamicPropertySource;
 
 /**
  * Base of the integration tests: the whole application on a real port, against real PostgreSQL in
- * a container.
+ * a container, connected as the application's role with migrations run as the owner.
  */
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
@@ -21,11 +21,17 @@ public abstract class IntegrationTest {
     @DynamicPropertySource
     static void database(DynamicPropertyRegistry registry) {
         registry.add("spring.datasource.url", TestPostgres.shared()::getJdbcUrl);
-        registry.add("spring.datasource.username", TestPostgres.shared()::getUsername);
-        registry.add("spring.datasource.password", TestPostgres.shared()::getPassword);
+        registry.add("spring.datasource.username", () -> TestPostgres.APP_USER);
+        registry.add("spring.datasource.password", () -> TestPostgres.APP_PASSWORD);
+        registry.add("spring.flyway.user", TestPostgres.shared()::getUsername);
+        registry.add("spring.flyway.password", TestPostgres.shared()::getPassword);
     }
 
     protected Http http() {
         return new Http(port);
+    }
+
+    protected int port() {
+        return port;
     }
 }

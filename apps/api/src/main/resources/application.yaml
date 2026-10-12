@@ -7,10 +7,13 @@ spring:
   threads:
     virtual:
       enabled: true
+  # The application connects as its own role, which owns no table, is not a superuser and cannot
+  # get round row-level security (docs/architecture/multi-tenancy.md, T-3). The API refuses to
+  # start when the role it is given could.
   datasource:
     url: ${SALON_DB_URL}
-    username: ${SALON_DB_USER}
-    password: ${SALON_DB_PASSWORD}
+    username: ${SALON_DB_APP_USER}
+    password: ${SALON_DB_APP_PASSWORD}
     hikari:
       # With virtual threads the pool, not the thread count, is the limit. Sized deliberately.
       maximum-pool-size: 10
@@ -33,6 +36,14 @@ spring:
         # included, may stay silent before the driver gives the connection up. A statement that is
         # merely slow should be stopped by the database long before this.
         socketTimeout: 30
+  # Migrations run as the role that owns the tables, on a connection of their own to the same
+  # database, with the same limits on every wait as the pool (MigrationDataSourceConfiguration).
+  flyway:
+    user: ${SALON_DB_USER}
+    password: ${SALON_DB_PASSWORD}
+    placeholders:
+      # The role the migrations grant to: whichever role the application connects as.
+      application_role: ${spring.datasource.username}
   jpa:
     open-in-view: false
     hibernate:
@@ -60,6 +71,20 @@ management:
   endpoint:
     health:
       show-components: always
+
+salon:
+  # Salons are served at <slug>.<platform domain>. Required: an environment that does not say
+  # which domain it serves must not guess.
+  platform-domain: ${SALON_PLATFORM_DOMAIN}
+  database:
+    # The longest a request's database work may wait for an answer on a connection it holds,
+    # before the request is answered 503. Shorter than the driver's socket timeout, which is the
+    # limit for everything else (migrations included).
+    request-timeout: 3s
+  server:
+    # Every network interface, as a service in a container must. The local profile listens on this
+    # machine's loopback addresses only, unless SALON_LISTEN_ON_NETWORK says otherwise.
+    listen-on-network: ${SALON_LISTEN_ON_NETWORK:true}
 
 # The OpenAPI document is generated at build time and committed. The running service serves it
 # only where a profile turns it on.

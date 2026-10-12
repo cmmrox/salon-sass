@@ -1,8 +1,11 @@
 # Developer tests. The database is a PostgreSQL container started by the tests, which supply its
-# address; the OpenAPI document is served so that the contract test can read it.
+# address and roles; the OpenAPI document is served so that the contract test can read it.
 spring:
   main:
     banner-mode: "off"
+
+salon:
+  platform-domain: localhost
 
 springdoc:
   api-docs:

@@ -1,19 +1,15 @@
 package com.salonplatform;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 import com.salonplatform.testing.StartedApplication;
+import com.salonplatform.testing.TestDatabase;
 import com.salonplatform.testing.TestPostgres;
 import org.junit.jupiter.api.Test;
-import org.testcontainers.postgresql.PostgreSQLContainer;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 
 class MigrationIntegrationTest {
 
@@ -21,30 +17,23 @@ class MigrationIntegrationTest {
             "SELECT version, description, success, installed_on FROM flyway_schema_history ORDER BY installed_rank";
 
     @Test
-    void theFirstStartAppliesTheBaselineAndTheSecondAppliesNothing() throws SQLException {
-        PostgreSQLContainer postgres = TestPostgres.shared();
-        String database = "migration_" + UUID.randomUUID().toString().replace("-", "");
-        try (Connection connection = DriverManager.getConnection(postgres.getJdbcUrl(), postgres.getUsername(),
-                postgres.getPassword()); Statement statement = connection.createStatement()) {
-            statement.execute("CREATE DATABASE " + database);
-        }
-        String emptyDatabaseUrl = postgres.getJdbcUrl().replace("/" + postgres.getDatabaseName(), "/" + database);
+    void theFirstStartAppliesEveryMigrationInOrderAndTheSecondAppliesNothing() {
+        TestDatabase database = TestDatabase.createEmpty(TestPostgres.shared());
 
         List<Map<String, Object>> afterFirstStart;
-        try (StartedApplication application = StartedApplication.against(emptyDatabaseUrl, postgres.getUsername(),
-                postgres.getPassword())) {
-            afterFirstStart = application.jdbc().queryForList(HISTORY);
+        try (StartedApplication application = database.start()) {
+            afterFirstStart = database.asOwner().queryForList(HISTORY);
         }
 
-        assertThat(afterFirstStart).hasSize(1);
-        assertThat(afterFirstStart.getFirst())
-                .containsEntry("version", "1")
-                .containsEntry("description", "baseline")
-                .containsEntry("success", true);
+        assertThat(afterFirstStart).extracting(row -> row.get("version"), row -> row.get("description"))
+                .containsExactly(
+                        tuple("1", "baseline"),
+                        tuple("2", "create tenant"),
+                        tuple("3", "create salon brand"));
+        assertThat(afterFirstStart).allSatisfy(row -> assertThat(row).containsEntry("success", true));
 
-        try (StartedApplication application = StartedApplication.against(emptyDatabaseUrl, postgres.getUsername(),
-                postgres.getPassword())) {
-            assertThat(application.jdbc().queryForList(HISTORY)).isEqualTo(afterFirstStart);
+        try (StartedApplication application = database.start()) {
+            assertThat(database.asOwner().queryForList(HISTORY)).isEqualTo(afterFirstStart);
             assertThat(application.http().get("/actuator/health").statusCode()).isEqualTo(200);
         }
     }

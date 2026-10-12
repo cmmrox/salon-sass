@@ -1,10 +1,23 @@
-# A developer's machine. The database is the one infra/docker-compose.yml starts; its name, user
-# and password are local-only values and protect nothing.
+# A developer's machine. The database is the one infra/docker-compose.yml starts; its roles and
+# passwords are local-only values and protect nothing (.env.example lists them).
 spring:
   datasource:
     url: ${SALON_DB_URL:jdbc:postgresql://localhost:${SALON_POSTGRES_PORT:5440}/${SALON_DB_NAME:salon}}
-    username: ${SALON_DB_USER:salon}
+    username: ${SALON_DB_APP_USER:salon_app}
+    password: ${SALON_DB_APP_PASSWORD:salon-app-local-only}
+  flyway:
+    user: ${SALON_DB_USER:salon}
     password: ${SALON_DB_PASSWORD:salon-local-only}
+    # db/local holds the seed of the three synthetic salons (docs/qa/test-plan.md). No other
+    # profile adds it, so no other environment is ever seeded.
+    locations: classpath:db/migration,classpath:db/local
+
+salon:
+  platform-domain: ${SALON_PLATFORM_DOMAIN:localhost}
+  server:
+    # This machine only (CR-002). SALON_LISTEN_ON_NETWORK=true opens the ports to the network, for
+    # testing from a phone on the same network.
+    listen-on-network: ${SALON_LISTEN_ON_NETWORK:false}
 
 management:
   endpoints:
