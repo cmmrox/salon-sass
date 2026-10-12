@@ -3,18 +3,27 @@ feature: F01
 title: "Salon web addresses and branded shell"
 sequence: 3
 surfaces: [api, web]
-status: outlined
+status: planned
 qa_status: not-run
 released_in: null
 depends_on: [F01-S02]
 requirements: [BRD-03]
+nfr_focus: [NFR-01, NFR-17]
 handoff:
   run: null
   data: null
   notes: null
 cases: []
 verification:
-  commands: []
+  commands:
+    - "cd apps/api && ./mvnw -q verify"
+    - "pnpm install --frozen-lockfile"
+    - "pnpm -r lint"
+    - "pnpm -r typecheck"
+    - "pnpm -r test"
+    - "pnpm --filter @salon/web build"
+    - "pnpm contracts:check"
+    - "qa/scripts/sdlc selftest"
   automation: []
   manual: []
   deferred: []
