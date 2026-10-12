@@ -35,4 +35,4 @@ requirement detail is in `qa/coverage.md`.
 | F01-S02 | Tenant registry and data isolation | api, infra | complete | pass | 0 | - |
 | F01-S03 | Salon web addresses and branded shell | api, web | outlined | - | 0 | **lead**: `stage-plan F01-S03` |
 | F01-S04 | Platform services: errors, time, audit trail, background jobs and observability | api | outlined | - | 0 | **lead**: `stage-plan F01-S04` |
-| F01-S05 | Staging environment and delivery pipeline | infra | outlined | - | 0 | **lead**: `stage-plan F01-S05` |
+| F01-S05 | Staging environment and delivery pipeline | infra | planned | - | 0 | **developer**: `stage-build F01-S05` |
