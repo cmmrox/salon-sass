@@ -1,6 +1,7 @@
 import type { ApiClient, Meta } from '@salon/api-contracts';
 
 import { API_TIMEOUT_MS, createServerApiClient } from './client';
+import { describeFailure } from './failure';
 
 export type MetaResult = { ok: true; meta: Meta } | { ok: false };
 
@@ -25,17 +26,8 @@ export async function getMeta(client: ApiClient | null = createServerApiClient()
     }
     return { ok: true, meta: data };
   } catch (error) {
-    return unavailable(describe(error));
+    return unavailable(describeFailure(error));
   }
-}
-
-/** The kind of failure, for the server log: "TimeoutError", "TypeError (ECONNREFUSED)". Never the message. */
-function describe(error: unknown): string {
-  if (!(error instanceof Error)) {
-    return 'the request failed';
-  }
-  const code = (error.cause as { code?: unknown } | undefined)?.code;
-  return typeof code === 'string' ? `${error.name} (${code})` : error.name;
 }
 
 function isMeta(value: unknown): value is Meta {

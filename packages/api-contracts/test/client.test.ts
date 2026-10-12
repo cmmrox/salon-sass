@@ -68,6 +68,22 @@ describe('createApiClient', () => {
     expect(error?.code).toBe('not_found');
   });
 
+  it('returns forbidden for a suspended salon, with its code and nothing of its brand', async () => {
+    // The contract lists every code, so a code it does not list does not compile.
+    const code: Problem['code'] = 'salon_suspended';
+    const problem: Problem = { title: 'Forbidden', status: 403, code, instance: '/api/v1/salon' };
+    const { fetch } = respondingWith(403, problem, 'application/problem+json');
+    const client = createApiClient({ baseUrl: 'http://gamma.localhost:8090', fetch });
+
+    const { data, error, response } = await client.GET('/api/v1/salon');
+
+    expect(response.status).toBe(403);
+    expect(data).toBeUndefined();
+    expect(error?.code).toBe('salon_suspended');
+    expect(error).not.toHaveProperty('name');
+    expect(error).not.toHaveProperty('brandColour');
+  });
+
   it('sends the headers it was given with every request', async () => {
     const { fetch, requests } = respondingWith(200, {}, 'application/json');
     const client = createApiClient({ baseUrl: 'http://api.test:8090', fetch, headers: { 'X-Test': 'yes' } });

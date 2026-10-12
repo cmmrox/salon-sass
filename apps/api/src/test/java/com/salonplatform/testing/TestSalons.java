@@ -32,6 +32,22 @@ public final class TestSalons {
         return new TestSalon(id, slug, null, null);
     }
 
+    /** Suspends a salon, the way an operator will: its status in the registry, and nothing else. */
+    public void suspend(TestSalon salon) {
+        setStatus(salon, "suspended");
+    }
+
+    public void activate(TestSalon salon) {
+        setStatus(salon, "active");
+    }
+
+    private void setStatus(TestSalon salon, String status) {
+        int changed = owner.update("UPDATE tenant SET status = ?, updated_at = now() WHERE id = ?", status, salon.id());
+        if (changed != 1) {
+            throw new IllegalStateException("no salon " + salon.slug() + " to set " + status);
+        }
+    }
+
     /**
      * @param id the tenant id
      * @param slug its slug

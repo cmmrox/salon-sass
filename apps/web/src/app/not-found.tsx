@@ -1,23 +1,17 @@
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 
-import { AppShell } from '@/components/shell/AppShell';
+import { Notice } from '@/components/notice/Notice';
 
 import styles from './not-found.module.css';
 
 export default function NotFound() {
   const t = useTranslations('notFound');
   return (
-    <AppShell>
-      <div className={styles.notFound} data-testid="not-found">
-        <h1 className={styles.title} data-testid="not-found-title">
-          {t('title')}
-        </h1>
-        <p data-testid="not-found-body">{t('body')}</p>
-        <Link className={styles.home} href="/" data-testid="not-found-home">
-          {t('home')}
-        </Link>
-      </div>
-    </AppShell>
+    <Notice testId="not-found" title={t('title')} body={t('body')}>
+      <Link className={styles.home} href="/" data-testid="not-found-home">
+        {t('home')}
+      </Link>
+    </Notice>
   );
 }

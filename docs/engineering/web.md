@@ -10,10 +10,29 @@ One Next.js application serves three surfaces. The hostname decides which.
 
 ## Tenant routing
 
-- `proxy.ts` reads the hostname, resolves the tenant through the API, and passes it to the pages.
-  This is routing only. It is not a security boundary: the API and the database enforce access.
-- An unknown hostname shows a "salon not found" page; a suspended salon shows a "temporarily
-  unavailable" page. Neither reveals whether a salon exists elsewhere.
+- `proxy.ts` reads the `Host` header only (never `X-Forwarded-Host` or `Forwarded`), applies the
+  hostname rule of `docs/architecture/multi-tenancy.md`, and resolves the salon through the API on
+  every request. This is routing only. It is not a security boundary: the API and the database
+  enforce access.
+- A hostname that is not exactly one slug-shaped label in front of the platform domain (a bare
+  network address included) is "salon not found" without calling the API. Reserved slugs are left
+  to the API, which answers 404.
+- The API is reached at its one configured address, `SALON_API_BASE_URL`, never at an address taken
+  from the request. The salon is named to it by the `Host` header of that request,
+  `<slug>.<platform domain>`, sent through a fetch built on `node:http`
+  (`src/lib/api/forward-hostname.ts`), because Node's `fetch` drops a `Host` header.
+- **Status codes (decision 028).** The proxy answers "salon not found" (404), "temporarily
+  unavailable" (503, a suspended salon, on every path of its hostname) and "service unavailable"
+  (503, the API cannot be reached within three seconds, or `SALON_PLATFORM_DOMAIN` is unset) itself,
+  as complete HTML from `src/lib/plain-page/`, with no script. Next.js 16 resets a status the proxy
+  sets for a page reached by rewrite, and has no 503 for a page. Neither page reveals whether a
+  salon exists elsewhere, and both use the neutral theme.
+- An active salon's `/` is rewritten to the page `/salon-site`, which answers 200. The proxy hands
+  it the salon it resolved in the request header `x-salon-resolved`, which it first removes from
+  every incoming request; the page does not call the API again. `/salon-site` asked for from
+  outside answers the application's 404.
+- Nothing about a salon is cached: every response on a salon's hostname carries `Cache-Control:
+  private, no-cache, no-store, max-age=0, must-revalidate`, and the shell is rendered per request.
 - Never read a tenant from a query parameter, a cookie the browser can set, or local storage.
 
 ## Structure
@@ -35,6 +54,8 @@ One Next.js application serves three surfaces. The hostname decides which.
 | Pages and layouts | `apps/web/src/app/`, in the route groups `(booking)`, `(workspace)`, `(console)` |
 | Strings | `apps/web/messages/<locale>.json`, read through `next-intl`. There is no locale in the URL |
 | Tokens | `apps/web/src/styles/tokens.css`, as CSS custom properties; components style with CSS Modules |
+| Base styles shared by pages and plain pages | `apps/web/src/styles/base.css` |
+| The proxy's plain HTML pages | `apps/web/src/lib/plain-page/`. They inline `tokens.css` and `base.css` from their one source; their layout is repeated in `plain-page.css`, in tokens only (a test forbids any colour or size of its own), because Turbopack cannot give a CSS module's source as text. A layout change to the AppShell, Notice or Status modules is made there too |
 | Formatting of money, dates and phone numbers | `apps/web/src/lib/format/` |
 | Calls to the API | `apps/web/src/lib/api/`, wrapping the generated client |
 
@@ -44,8 +65,8 @@ One Next.js application serves three surfaces. The hostname decides which.
 - Rendering follows the framework's current defaults (cache components and partial prefetching).
   Data fetched while rendering sits inside a suspense boundary or is marked cacheable; the page is
   served with its loading skeleton and the result is streamed in.
-- The web app waits three seconds for the API and then shows the unavailable state. A page never
-  hangs on the API.
+- The web app waits three seconds for the API, in the proxy and in a page, and then shows the
+  unavailable state. A page never hangs on the API.
 - `agentRules` is off in `next.config.ts`, so that the framework does not write into
   `apps/web/AGENTS.md`.
 - Local startup uses `apps/web/scripts/serve.mjs`, a custom server around Next.js's request

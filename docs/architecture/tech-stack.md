@@ -40,6 +40,7 @@ Set by stage F01-S01. Exact versions are in the build files (`apps/api/pom.xml`,
 | Integration database | Testcontainers with the same PostgreSQL image as the local environment | Row-level security and exclusion constraints exist only in PostgreSQL |
 | Web translation | `next-intl`, files in `apps/web/messages/<locale>.json`, no locale in the URL | |
 | Web styling | CSS custom properties as tokens (`apps/web/src/styles/tokens.css`) with CSS Modules; no utility-class framework | A salon's brand is applied by changing custom properties at run time |
+| CSS as text | A Turbopack rule in `next.config.ts` imports `*.css?raw` as a string, with the same rule in `vitest.config.mts`; used only for the proxy's plain pages (decision 028). It does not work for CSS Modules | The plain pages inline the one source of the tokens and base styles instead of a copy |
 | Web lint and tests | ESLint with `eslint-config-next`; Vitest with jsdom and Testing Library | |
 | Local web server | `apps/web/scripts/serve.mjs`, wrapping Next.js's request handler | Supports both loopback address families. Production image serving is decided in F01-S05; see `docs/engineering/web.md` and decision 022 |
 | TypeScript | The newest major that both `openapi-typescript` and `typescript-eslint` support | |
