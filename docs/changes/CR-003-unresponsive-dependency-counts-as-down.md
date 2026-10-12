@@ -1,10 +1,10 @@
 ---
 id: CR-003
 title: Treat a dependency that accepts connections but does not answer as down
-status: proposed
+status: approved
 requested_by: QA review of F01-S01
 requested_on: 2026-10-12
-decided_on: null
+decided_on: 2026-10-12
 requirements: []
 features: [F01]
 stages: [F01-S02]
@@ -36,3 +36,4 @@ Approve.
 
 ## Decision
 
+Approved by the owner on 2026-10-12, as recommended: F01-S02's spec gains the acceptance criterion.

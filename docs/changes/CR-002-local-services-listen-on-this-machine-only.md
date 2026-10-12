@@ -1,10 +1,10 @@
 ---
 id: CR-002
 title: Have the local API and web app listen on this machine only
-status: proposed
+status: approved
 requested_by: QA review of F01-S01
 requested_on: 2026-10-12
-decided_on: null
+decided_on: 2026-10-12
 requirements: []
 features: [F01]
 stages: [F01-S02]
@@ -36,3 +36,4 @@ Approve, with an opt-in variable for testing from a real phone.
 
 ## Decision
 
+Approved by the owner on 2026-10-12, as recommended, with an opt-in variable for testing from a real phone: built in F01-S02.

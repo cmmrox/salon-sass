@@ -1,10 +1,10 @@
 ---
 id: CR-001
 title: List the error codes in the API contract
-status: proposed
+status: approved
 requested_by: QA review of F01-S01
 requested_on: 2026-10-12
-decided_on: null
+decided_on: 2026-10-12
 requirements: []
 features: [F01]
 stages: [F01-S04]
@@ -36,3 +36,4 @@ Approve, as part of F01-S04.
 
 ## Decision
 
+Approved by the owner on 2026-10-12, as recommended: built in F01-S04.
