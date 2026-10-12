@@ -4,7 +4,7 @@ title: "Walking skeleton and local environment"
 sequence: 1
 surfaces: [api, web, infra]
 status: in-qa
-qa_status: failing
+qa_status: pass
 released_in: null
 depends_on: []
 requirements: []
@@ -337,6 +337,12 @@ cases:
   - {id: TC-F01-S01-055, title: "In the web shell's source every user-visible string comes from a translation file and every pressable element has a data-testid", type: build, priority: high, covers: [AC-9]}
   - {id: TC-F01-S01-056, title: "The CI workflow runs every verification command on a pull request, and none of them is allowed to fail quietly", type: build, priority: high, covers: [AC-10]}
   - {id: TC-F01-S01-057, title: "A pull request on GitHub runs every verification command, and a failing command marks the pull request as failed", type: build, priority: high, covers: [AC-10]}
+  - {id: TC-F01-S01-058, title: "Starts and stops that overlap leave the product running once, and local-down.sh still stops everything", type: functional, priority: medium, covers: [AC-1]}
+  - {id: TC-F01-S01-059, title: "A lock left by a script that was killed does not stop the next run, and is removed", type: resilience, priority: medium, covers: [AC-1]}
+  - {id: TC-F01-S01-060, title: "A process-id file left by an earlier run never makes a stopped service look running, and its process is never stopped", type: functional, priority: high, covers: [AC-1]}
+  - {id: TC-F01-S01-061, title: "With PostgreSQL frozen, health answers 503 within 5 seconds every time, and returns to 200 by itself when PostgreSQL answers again", type: resilience, priority: high, covers: [AC-2]}
+  - {id: TC-F01-S01-062, title: "A pnpm that is not Corepack's never rewrites pnpm-lock.yaml: install stops and says why, and local-up.sh asks for Corepack", type: build, priority: medium, covers: [AC-1]}
+  - {id: TC-F01-S01-063, title: "Every prerequisite local-up.sh refuses to start without is a row of README.md's prerequisites", type: build, priority: medium, covers: [AC-1]}
 verification:
   commands:
     - "cd apps/api && ./mvnw -q verify"
@@ -407,6 +413,31 @@ verification:
       file: qa/checks/F01/S01-ci-workflow.sh
       covers: [TC-F01-S01-056]
       suites: []
+    - id: overlapping-starts
+      tool: script
+      file: qa/checks/F01/S01-overlapping-starts.sh
+      covers: [TC-F01-S01-058, TC-F01-S01-059]
+      suites: []
+    - id: stale-pid-file
+      tool: script
+      file: qa/checks/F01/S01-stale-pid-file.sh
+      covers: [TC-F01-S01-060]
+      suites: []
+    - id: database-frozen
+      tool: script
+      file: qa/checks/F01/S01-database-frozen.sh
+      covers: [TC-F01-S01-061]
+      suites: []
+    - id: pinned-pnpm
+      tool: script
+      file: qa/checks/F01/S01-pinned-pnpm.sh
+      covers: [TC-F01-S01-062]
+      suites: []
+    - id: prerequisites-documented
+      tool: script
+      file: qa/checks/F01/S01-prerequisites-documented.sh
+      covers: [TC-F01-S01-063]
+      suites: []
   manual:
     - case: TC-F01-S01-009
       reason: "it needs a root `.env`, which a check must never write into the repository, and a full extra build-and-start cycle on every stage run to protect settings no acceptance criterion names"
@@ -419,5 +450,5 @@ verification:
       reason: "the repository has no GitHub remote, so no pull request can exist and the workflow has never run (the spec's \"Done criteria\" say so)"
       unblocked_by: "the owner creates the GitHub remote"
 evidence:
-  last_run: qa/reports/20261012-073215-F01-S01
+  last_run: qa/reports/20261012-130333-F01-S01
   last_result: pass

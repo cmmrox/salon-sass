@@ -2,14 +2,14 @@
 id: BUG-F01-S01-004
 title: Run with a pnpm that is not Corepack's, local-up.sh and "pnpm install --frozen-lockfile" rewrite the committed pnpm-lock.yaml
 severity: minor
-status: fixed
+status: verified
 found_by: exploratory
 breaks: AC-1
 found_on: 2026-10-12
 fixed_in: 5b85cf1
 fix_note: 'Cause: a pnpm other than the pinned 12.11.2 switches to the pinned version by itself and first records @pnpm/exe in pnpm-lock.yaml, even with --frozen-lockfile, and local-up.sh fell back to whatever pnpm was on PATH. Fix: pnpm-workspace.yaml sets pmOnFail: error, so such a pnpm stops before writing anything and names the version it needs; local-up.sh requires Corepack, names it when missing, and always runs corepack pnpm.'
 developer_note: null
-verified_on: null
+verified_on: 2026-10-12
 approved_by: null
 found_in_release: null
 ---
@@ -77,3 +77,4 @@ QA restored the file each time by reversing exactly this diff; the working tree 
 
 ## Re-verification
 
+Re-verified on 2026-10-12 against `5b85cf1`. TC-F01-S01-062 (`qa/checks/F01/S01-pinned-pnpm.sh`) works in a copy of the committed tree, with a pnpm of another version (QA's own dependency, pnpm 11.6.0) and no `corepack` on the PATH. `pnpm install --frozen-lockfile` exited 1 and named 12.11.2, `local-up.sh` exited 1 naming Corepack, and `corepack pnpm install --frozen-lockfile` exited 0. `pnpm-lock.yaml` was byte for byte unchanged after each (191,126 bytes). Homebrew's pnpm 11.6.0 on this machine now gives the same refusal. Against the tree before the fix (`e04b595`) the case failed: the install exited 0 and the lock file grew to 191,997 bytes. Stage run: `qa/reports/20261012-130333-F01-S01`, PASS. Verified.

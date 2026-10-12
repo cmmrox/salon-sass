@@ -2,14 +2,14 @@
 id: BUG-F01-S01-001
 title: Two runs of local-up.sh that overlap both fail, leave the product stopped, and can leave an API process the scripts no longer stop
 severity: minor
-status: fixed
+status: verified
 found_by: exploratory
 breaks: AC-1
 found_on: 2026-10-12
 fixed_in: 193a982
 fix_note: 'Cause: nothing stopped two local-*.sh runs from building into the same target/, writing the same pid file and stopping each other. Fix: local-up, local-down, local-reset and local-service now take a lock (.local/run/lock, naming its holder by process id and start time) before starting or stopping anything; a second run prints waiting for another of these scripts to finish, then finds everything running and exits 0; a lock left by a killed script is recognised and removed.'
 developer_note: null
-verified_on: null
+verified_on: 2026-10-12
 approved_by: null
 found_in_release: null
 ---
@@ -83,3 +83,4 @@ The log of one of the two runs shows the API it was waiting for being shut down 
 
 ## Re-verification
 
+Re-verified on 2026-10-12 against `193a982`. The bug's own steps by hand and as TC-F01-S01-058 (`qa/checks/F01/S01-overlapping-starts.sh`): a second `local-up.sh` 5 s into the first, three at the same instant, and `local-down.sh` 5 s into a start. Every run exited 0, the second said `waiting for another of these scripts to finish`, the product ran once (one API process, the recorded processes are the ones listening), no lock was left, and the stop left nothing running. TC-F01-S01-059 adds a lock left by a killed script: the next run cleared it and started in about 20 s. Both cases failed against the tree before the fix (`e04b595`): run a exited 1 with a second start 5 s in, and two of three simultaneous starts exited 1 with Docker's container-name conflict. Stage run: `qa/reports/20261012-130333-F01-S01`, PASS. Verified.

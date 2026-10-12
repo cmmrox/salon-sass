@@ -223,6 +223,25 @@ For the lead to correct; none of these is a product defect.
 - Checked on one machine only, as the handoff says: macOS on Apple silicon. Linux, where the CI
   workflow will run, was not available to QA; TC-F01-S01-057 will be the first run there.
 
+## Re-verification, 2026-10-12
+
+The five bugs were fixed and are verified; each now has a case that failed on the code before the
+fix (TC-F01-S01-058 to TC-F01-S01-063). No new defect was found. Observations from this pass, for
+the lead, none of them a suggestion that needs a decision:
+
+- The lock makes the scripts safe to run from two terminals, at the cost of waiting: a
+  `local-down.sh` issued during a start now waits for the whole start (about 20 s) and then stops
+  everything. That is the right trade for a developer's machine; it means a test that stops a
+  service while another test is starting one is serialised rather than racing.
+- `docs/qa/automation.md`, "Shell checks", names `local-service.sh stop postgres` as the way to
+  take a service down, and nothing in `docs/qa/` mentions the new `pause|resume postgres` hook,
+  which is what a check needs for a dependency that accepts connections and stays silent (CR-003).
+  It is described in `README.md`, `docs/operations/environments-and-releases.md` and the handoff.
+- A database that has gone quiet is only seen to hang by a request handed a connection used in the
+  last half second; one that arrives later is caught by the pool's own test. A check of "does not
+  hang" has to have requests in flight at the moment the dependency goes quiet. Worth carrying into
+  the F01-S02 criteria that CR-003 proposes.
+
 ## Bugs filed from this review
 
 - BUG-F01-S01-001 (minor): two runs of `local-up.sh` that overlap both fail, leave the product

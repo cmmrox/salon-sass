@@ -14,7 +14,7 @@
 
 | Stage | Status | QA | Requirements | Criteria | Cases | Automated | Manual | Deferred |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| F01-S01 | in-qa | failing | NFR-17, NFR-18 | 10 | 57 | 54 | 2 | 1 |
+| F01-S01 | in-qa | pass | NFR-17, NFR-18 | 10 | 63 | 60 | 2 | 1 |
 
 ## Deferred cases
 

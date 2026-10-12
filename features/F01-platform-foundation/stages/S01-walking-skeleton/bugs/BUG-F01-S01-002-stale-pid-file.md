@@ -2,14 +2,14 @@
 id: BUG-F01-S01-002
 title: A process-id file left behind makes local-up.sh report the API as running when it is not, and local-down.sh then kills an unrelated process
 severity: minor
-status: fixed
+status: verified
 found_by: exploratory
 breaks: AC-1
 found_on: 2026-10-12
 fixed_in: e092d81
 fix_note: 'Cause: a pid file held only a number, so a leftover whose number had been reused was trusted. Fix: the file now records the process id and its start time (ps -p <id> -o lstart=), a service counts as running only while both match, and any other file is removed with a note while the process it names is left alone; 7ac555d makes a ps that cannot report start times a named prerequisite.'
 developer_note: null
-verified_on: null
+verified_on: 2026-10-12
 approved_by: null
 found_in_release: null
 ---
@@ -79,3 +79,4 @@ kill: (68535): No such process
 
 ## Re-verification
 
+Re-verified on 2026-10-12 against `e092d81` and `7ac555d`. The bug's own steps as TC-F01-S01-060 (`qa/checks/F01/S01-stale-pid-file.sh`): a bare id of a live unrelated process in `api.pid` and a wrong start time in `web.pid`. `local-up.sh` said `api: started` and `web: started`, never `already running`, noted the leftover `api.pid`, and health answered 200. `local-down.sh` left both unrelated processes alive. A leftover naming an ended process, and `stop web` with a leftover `web.pid`, behaved the same. Against the tree before the fix (`e04b595`) the case failed exactly as filed: `already running` with health 000, and the unrelated process stopped. Stage run: `qa/reports/20261012-130333-F01-S01`, PASS. Verified.

@@ -18,7 +18,7 @@ Not applied, and why:
 - `tenant-isolation`: the stage has no salon data at all. Its database holds only the migration history, no endpoint stores, reads or returns a salon's data, and no salon exists. It starts in F01-S02.
 - `permissions`: there is no protected endpoint, no account and no role. Every endpoint of this stage is public by design. It starts in F02.
 - `mobile`: there is no customer app, and nothing under `apps/mobile`, until milestone `M2-mobile` (F15).
-- `concurrency`: nothing in this stage can be acted on by two people at once. The nearest thing, two starts of the local environment at the same moment, was explored by hand and is BUG-F01-S01-001.
+- `concurrency`: nothing in this stage can be acted on by two people at once. The nearest thing, two runs of the local scripts at the same moment, was BUG-F01-S01-001 and is now covered by TC-F01-S01-058 and TC-F01-S01-059 (shell checks, not k6).
 - `load`: no endpoint has a response-time target and no booking goes through one. k6 is not needed by this stage and is not installed.
 - `payment-integrity`, `branding`: no money and no salon brand exist yet (F01-S03 for branding).
 
@@ -27,6 +27,8 @@ Environment: local. The product must be running before a stage run (`infra/scrip
 Test data and accounts (from `docs/qa/test-plan.md`): none. The three synthetic salons arrive in F01-S02 and accounts in F02, so `qa/shared/` has no `tenants.ts` or `accounts.ts` yet. The cases rely only on what the handoff lists: the local addresses, the `meta` fields, the error codes, the test ids, `apps/web/messages/en.json` and `docs/api/openapi.json`.
 
 Seen to fail: every automated test was watched going red once before it was trusted. The API tests were pointed at a stand-in API that answers wrongly (14 of 14 failed), the browser tests at a stand-in web app that is wrong in each way they look for (19 of 19 failed), and the checks of the scripts, the database and the profile were run against scripts that do nothing and with one expectation at a time made false (every case failed). The three build checks carry their own proof: each breaks a copy and must fail on it in every run.
+
+Re-verification (2026-10-12): the five bugs of the first pass each got a case, TC-F01-S01-058 to TC-F01-S01-063. Each was seen to fail against the tree as it was before the fixes (`e04b595`, copied outside the repository and started on its own), for the reason its bug describes: overlapping starts both failing, "api: already running" with no API and an unrelated process killed, a health request with no answer in 60 s across a freeze, `pnpm-lock.yaml` growing by 871 bytes, and a README without curl or ps. TC-F01-S01-059 fails there too, but only because the old scripts ignore locks: it guards the fix's own new risk, a lock left by a killed script, rather than the original symptom.
 
 ## Cases
 
@@ -134,8 +136,8 @@ Every case id here is declared under `cases:` in `stage.yaml`, and the reverse.
 - **Steps:**
   1. Run `infra/scripts/local-service.sh stop web`.
   2. Run `infra/scripts/local-service.sh start web`.
-  3. Run it with `restart api`, with `stop redis`, with `start` alone and with nothing.
-- **Expected:** `stop web` exits 0, closes the web app's port and leaves the API's process and its health untouched. `start web` exits 0 and the home page answers 200 again. Each of the four other invocations exits non-zero, prints the usage naming `start|stop` and `postgres|api|web`, and changes nothing.
+  3. Run it with `restart api`, with `stop redis`, with `start` alone, with nothing, with `pause api`, with `resume web` and with `pause` alone.
+- **Expected:** `stop web` exits 0, closes the web app's port and leaves the API's process and its health untouched. `start web` exits 0 and the home page answers 200 again. Each of the seven other invocations exits non-zero, prints the usage naming `start|stop` and `postgres|api|web`, and its second line naming `pause|resume` and `postgres` (the test hook exists for PostgreSQL only), and changes nothing. (Changed at re-verification: the fix for BUG-F01-S01-003 added the `pause|resume postgres` hook and the second usage line.)
 - **Automation:** `qa/checks/F01/S01-local-environment.sh`
 
 ### TC-F01-S01-009 The product runs on other ports when the documented settings name them, in the shell or in .env
@@ -779,3 +781,90 @@ Every case id here is declared under `cases:` in `stage.yaml`, and the reverse.
   3. Remove the commit.
 - **Expected:** On the first pull request the workflow runs, each of the eight verification commands appears as a step, and the check is green. With the failing commit the step for that command fails, the later steps do not report success in its place, and the pull request's check is marked failed.
 - **Automation:** deferred, because the repository has no GitHub remote, so no pull request can exist and the workflow has never run (the spec's "Done criteria" say so); unblocked by the owner creates the GitHub remote
+
+### TC-F01-S01-058 Starts and stops that overlap leave the product running once, and local-down.sh still stops everything
+
+- **Type:** functional
+- **Priority:** medium
+- **Covers:** AC-1
+- **Performed as:** Two or three developers (or a person and an agent) at terminals on one checkout
+- **Preconditions:** The product is stopped, with nothing of it left running. Found as BUG-F01-S01-001.
+- **Steps:**
+  1. Run `infra/scripts/local-up.sh`; 5 seconds later, while the first is building the API, run it again in a second terminal. Wait for both.
+  2. Stop everything; run `infra/scripts/local-up.sh` three times at the same instant. Wait for all three.
+  3. Stop everything; run `infra/scripts/local-up.sh`, and 5 seconds later `infra/scripts/local-down.sh`. Wait for both.
+- **Expected:** In steps 1 and 2 every run exits 0 and prints the API's address. Afterwards health and the home page answer 200, there is exactly one API process, the processes the scripts recorded are the ones listening on the API's and the web app's ports, and no lock is left behind. In step 1 the second run says it is waiting for the first. In step 3 the stop exits 0 and afterwards nothing listens on the three ports and no API or web process is left.
+- **Automation:** `qa/checks/F01/S01-overlapping-starts.sh`
+
+### TC-F01-S01-059 A lock left by a script that was killed does not stop the next run, and is removed
+
+- **Type:** resilience
+- **Priority:** medium
+- **Covers:** AC-1
+- **Performed as:** A developer at a terminal, on a machine with the documented prerequisites, after a script was killed part-way (or the machine lost power)
+- **Preconditions:** The product is stopped. `.local/run/lock` is a leftover: it names a process that does not exist, or a live process that did not start at the time it records (the fix for BUG-F01-S01-001 introduced the lock; this case guards its own new risk).
+- **Steps:**
+  1. Place a lock naming process `999999` with a 1970 start time; run `infra/scripts/local-up.sh`.
+  2. Stop everything; place a lock naming process `1` (alive, started at another time); run `infra/scripts/local-up.sh`.
+- **Expected:** Each run finishes within 4 minutes (it does not wait out the scripts' 15-minute limit on a lock nobody holds), exits 0 and leaves the product running once, as in TC-F01-S01-058, with the leftover lock gone.
+- **Automation:** `qa/checks/F01/S01-overlapping-starts.sh`
+
+### TC-F01-S01-060 A process-id file left by an earlier run never makes a stopped service look running, and its process is never stopped
+
+- **Type:** functional
+- **Priority:** high
+- **Covers:** AC-1
+- **Performed as:** A developer at a terminal, on a machine with the documented prerequisites, after the machine restarted without `local-down.sh`
+- **Preconditions:** The product is stopped. Two unrelated long-lived processes exist. Found as BUG-F01-S01-002.
+- **Steps:**
+  1. Write the first unrelated process's id alone into `.local/run/api.pid` (as the scripts used to write it), and the second's id with a start time that is not its own into `.local/run/web.pid`. Run `infra/scripts/local-up.sh`.
+  2. Run `infra/scripts/local-down.sh`, then look for the two unrelated processes.
+  3. Write the id of a process that has ended into `.local/run/api.pid` and run `infra/scripts/local-up.sh`.
+  4. Stop the web app with `local-service.sh stop web`; write a third unrelated process's id into `.local/run/web.pid`; run `local-service.sh stop web` again.
+- **Expected:** Step 1 exits 0, says `api: started` and `web: started` and never `already running`, notes that `api.pid` was left by an earlier run, and health and meta answer 200 from a process that is not the unrelated one. Step 2 exits 0, both unrelated processes are still alive, and no API or web process is left. Step 3 exits 0 and starts the API. Step 4 exits 0, says `web: not running`, leaves the unrelated process alive and does not touch the API.
+- **Automation:** `qa/checks/F01/S01-stale-pid-file.sh`
+
+### TC-F01-S01-061 With PostgreSQL frozen, health answers 503 within 5 seconds every time, and returns to 200 by itself when PostgreSQL answers again
+
+- **Type:** resilience
+- **Priority:** high
+- **Covers:** AC-2
+- **Performed as:** Any caller of the API (in practice a load balancer's health probe)
+- **Preconditions:** The product is running and health answers 200. Found as BUG-F01-S01-003. PostgreSQL is frozen with the developer's test hook, `infra/scripts/local-service.sh pause postgres`.
+- **Steps:**
+  1. Ask for health every tenth of a second for 12 seconds; 3 seconds in, run `local-service.sh pause postgres`. (The hang came from a request handed a connection used an instant before, so requests must be in flight at the moment of the freeze.)
+  2. Run `pause postgres` a second time; ask for health once more.
+  3. Send fifty health requests at once.
+  4. Ask for health about 10, 20 and 35 seconds into the freeze (past the driver's 30-second socket limit), and ask for meta.
+  5. Run `local-service.sh resume postgres`, and poll health. Run `resume postgres` again.
+  6. Stop PostgreSQL and run `pause postgres`; then start it again.
+- **Expected:** `pause` exits 0, the container is paused and its port still accepts connections. At least 60 requests are sent across the freeze, some answer 503 (the freeze was seen), every one answers 200 or 503, and none takes 5 seconds or longer: no request hangs. A second `pause` exits 0. Every later health request, the fifty at once included, answers 503 in under 5 seconds with the database component `DOWN` and no internals in the body. Meta answers 200. After `resume`, health answers 200 within 30 seconds from the same API process; a second `resume` exits 0. `pause` on a stopped PostgreSQL exits non-zero.
+- **Automation:** `qa/checks/F01/S01-database-frozen.sh`
+
+### TC-F01-S01-062 A pnpm that is not Corepack's never rewrites pnpm-lock.yaml: install stops and says why, and local-up.sh asks for Corepack
+
+- **Type:** build
+- **Priority:** medium
+- **Covers:** AC-1
+- **Performed as:** A developer whose pnpm was installed on its own, with no `corepack` on the PATH
+- **Preconditions:** A copy of the committed tree outside the repository. A pnpm that is not the pinned version: QA's own dependency `pnpm` 11.6.0 (`qa/node_modules/pnpm`), so the case does not depend on what the machine has. A PATH holding it and Node.js and no `corepack`. Found as BUG-F01-S01-004.
+- **Steps:**
+  1. In the copy run `pnpm install --frozen-lockfile` with that PATH.
+  2. In the copy run `infra/scripts/local-up.sh` with that PATH.
+  3. In the copy run `corepack pnpm install --frozen-lockfile` with the normal PATH.
+- **Expected:** Step 1 exits non-zero and names the pinned version. Step 2 exits non-zero, names Corepack, and leaves no process-id file. Step 3 exits 0. After each step `pnpm-lock.yaml` is byte for byte what was committed.
+- **Automation:** `qa/checks/F01/S01-pinned-pnpm.sh`
+
+### TC-F01-S01-063 Every prerequisite local-up.sh refuses to start without is a row of README.md's prerequisites
+
+- **Type:** build
+- **Priority:** medium
+- **Covers:** AC-1
+- **Performed as:** A developer setting up a machine from `README.md`
+- **Preconditions:** The product is running (so that taking `ps` away from scripts that did not check for it changes nothing). Found as BUG-F01-S01-005.
+- **Steps:**
+  1. Read the table under "Prerequisites, on the machine" in a copy of `README.md`, and in a copy with the curl row removed, and say which of JDK, Node.js, Docker, curl and ps no row names.
+  2. Do the same for the committed `README.md`, and check that the table says pnpm comes through Corepack.
+  3. Run `infra/scripts/local-up.sh` with a PATH that has everything but curl, then everything but ps.
+- **Expected:** The unaltered copy and the committed README name all five; the copy without the curl row lacks exactly curl, which proves the reader. The table mentions Corepack. Without curl, and without ps, `local-up.sh` exits non-zero, names the missing tool and points at `README.md`, and the README's table names that tool.
+- **Automation:** `qa/checks/F01/S01-prerequisites-documented.sh`

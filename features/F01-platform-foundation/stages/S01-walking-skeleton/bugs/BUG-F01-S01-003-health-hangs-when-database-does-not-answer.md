@@ -2,14 +2,14 @@
 id: BUG-F01-S01-003
 title: Health hangs for as long as PostgreSQL accepts connections but does not answer
 severity: minor
-status: fixed
+status: verified
 found_by: exploratory
 breaks: AC-2
 found_on: 2026-10-12
 fixed_in: 73ef051
 fix_note: 'Cause: Spring Boot db health check calls Connection.isValid with no time limit on a pooled connection, and the driver had no socket or login timeout. Fix: the db component is now DatabaseHealthIndicator, whose SELECT 1 runs under the pool validation timeout (1 s) so the connection fails, is discarded and health recovers on its own; the driver also has loginTimeout 2 s and socketTimeout 30 s. Health answers 503 in 1 to 2 s with PostgreSQL paused and 200 at once when it resumes.'
 developer_note: null
-verified_on: null
+verified_on: 2026-10-12
 approved_by: null
 found_in_release: null
 ---
@@ -74,3 +74,4 @@ WARN ... o.s.b.h.a.e.HealthEndpointSupport        : Health contributor ...DataSo
 
 ## Re-verification
 
+Re-verified on 2026-10-12 against `73ef051`, with the new hook `infra/scripts/local-service.sh pause|resume postgres` (`e5f827c`) instead of `docker pause`. TC-F01-S01-061 (`qa/checks/F01/S01-database-frozen.sh`) asks for health every 0.1 s across the moment of the freeze, which is what makes the old hang appear: 84 requests, all 200 or 503, the slowest 2.0 s. After that, 503 in 2.0 s throughout (fifty at once included, and 35 s in, past the 30 s socket limit), meta 200, and 200 within a second of `resume` from the same API process. Against the API before the fix (`e04b595`) the same case failed: one request across the freeze got no answer in 60 s. A first version of the case, which froze the database and only then asked, passed on the old API, because the pool tests a connection idle for more than half a second; it was rewritten before it was trusted. Stage run: `qa/reports/20261012-130333-F01-S01`, PASS. Verified.
