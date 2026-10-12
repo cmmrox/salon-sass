@@ -2,13 +2,13 @@
 id: BUG-F01-S02-001
 title: After a 40-second freeze of PostgreSQL the API answered nothing but 503 until 5017 ms and 5064 ms after resume was asked for, in two of four such thaws; the limit is 5000 ms
 severity: minor
-status: open
+status: fixed
 found_by: TC-F01-S02-052
 breaks: AC-10
 found_on: 2026-10-12
-fixed_in: null
-fix_note: null
-developer_note: null
+fixed_in: 77ec499
+fix_note: 'Cause: the connection pool (HikariCP 7.0.2) waits between failed attempts to open a connection, twice as long after each failure up to 5 s, and that wait is not a setting; after half a minute of silence it tries once every 7 s, so a thaw that falls just after an attempt gives up is not noticed for 5 s. Fix: the pool opens its connections through SteadyReconnectDataSource, which asks an unreachable or silent database again every 250 ms (salon.database.reconnect-interval) until it answers, with the same limits on each attempt; ten thaws after 36 to 42 s of freeze recovered in 335 to 461 ms.'
+developer_note: 'What was not known is now measured. PostgreSQL is not the wait: in the slow thaw reproduced before the fix (5816 ms, after a 41.4 s freeze) it answered a new connection on its published port 788 ms after resume was asked for, and signed salon_app in at 828 ms, while the pool made no attempt for 5.0 s more (its log: an attempt gave up at 43.285, 4 ms after PostgreSQL answered, and the next began at 48.287). Whether a thaw was quick or slow depended only on where it fell in the pool cycle of 2 s trying and 5 s waiting, which is why the result was one or the other. After the fix the first 200 comes with the resume command itself: what remains of the recovery time is the 0.35 to 0.8 s that local-service.sh resume postgres takes.'
 verified_on: null
 approved_by: null
 found_in_release: null
