@@ -1,7 +1,8 @@
 # Test plan
 
 How this product is tested: the tools, where the automation lives, the data it runs on, the targets
-it must meet, and what its severities look like here. The method (who tests what, what a pass
+it must meet, and what its severities look like here. QA tests a feature once, when all its stages
+are closed; a stage is closed on the developer's own gates. The method (who tests what, what a pass
 means, how to triage a failure) is in the `salon-qa` skill; this file is what is particular to this
 product.
 
@@ -103,10 +104,10 @@ shared helper, never by typing a password into a test.
 ## Platforms
 
 - **Web:** the booking site is the only customer surface during milestone `M1-web`, so every
-  customer-facing stage is tested at 360 pixels wide first. The full width matrix is in
+  customer-facing screen is tested at 360 pixels wide first. The full width matrix is in
   `docs/design/ui-ux-standards.md`. The workspace must be usable at 768.
 - **Customer app (from `M2-mobile`):** Android is the primary platform for the launch market and
-  every mobile stage passes there. iOS is run when a stage touches something that differs by
+  every feature with a mobile surface passes there. iOS is run when a feature touches something that differs by
   platform, and before a release.
 
 ## Suites

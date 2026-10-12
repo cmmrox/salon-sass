@@ -162,8 +162,9 @@ slot today, an account with no bookings).
 ## Running
 
 ```bash
-qa/scripts/sdlc run --stage F07-S02            # the stage's registered automation, and nothing else
-qa/scripts/sdlc run --stage F07-S02 --dry-run  # show what would run
+qa/scripts/sdlc run --feature F07              # the feature's QA pass: every stage's automation, then the journeys
+qa/scripts/sdlc run --feature F07 --dry-run    # show what would run
+qa/scripts/sdlc run --stage F07-S02            # one stage's automation, for a stage pass the owner asked for
 ```
 
 While writing a test, running that one file directly with its tool is fine.
