@@ -4,7 +4,7 @@ title: "Tenant registry and data isolation"
 sequence: 2
 surfaces: [api, infra]
 status: in-qa
-qa_status: not-run
+qa_status: pass
 released_in: null
 depends_on: [F01-S01]
 requirements: []
@@ -190,7 +190,52 @@ handoff:
     - AC-4: 600 requests from 60 k6 virtual users across the three hostnames, 0 mismatches, 0
       errors. AC-10: 503 in about 2 s for a request made during the freeze, at most 3.03 s for
       one in flight; 200 again 0.8 s after resume; 503 in 2 s with PostgreSQL stopped.
-cases: []
+cases:
+  - {"id": "TC-F01-S02-001", "title": "each salon's hostname returns that salon's slug, name and brand colour, and no other field", "type": "api", "priority": "high", "covers": ["AC-1"]}
+  - {"id": "TC-F01-S02-002", "title": "a salon's brand is served on its own hostname and on no other salon's", "type": "tenant-isolation", "priority": "critical", "covers": ["AC-1"]}
+  - {"id": "TC-F01-S02-003", "title": "the hostname is matched without regard to case, and the port in it is ignored", "type": "api", "priority": "high", "covers": ["AC-1"]}
+  - {"id": "TC-F01-S02-004", "title": "a hostname that resolves to no salon answers 404 not_found, with the same body whichever hostname it was", "type": "security", "priority": "high", "covers": ["AC-2"]}
+  - {"id": "TC-F01-S02-005", "title": "the same 404 is given on another path of the salon's API, apart from instance", "type": "api", "priority": "high", "covers": ["AC-2"]}
+  - {"id": "TC-F01-S02-006", "title": "meta and health answer 200 on every hostname that resolves to no salon", "type": "api", "priority": "high", "covers": ["AC-2"]}
+  - {"id": "TC-F01-S02-007", "title": "a salon named in a query parameter is never trusted: alpha's hostname returns alpha's brand", "type": "tenant-isolation", "priority": "critical", "covers": ["AC-3"]}
+  - {"id": "TC-F01-S02-008", "title": "a salon named in a request header other than Host is never trusted: alpha's hostname returns alpha's brand", "type": "tenant-isolation", "priority": "critical", "covers": ["AC-3"]}
+  - {"id": "TC-F01-S02-009", "title": "a request that names two hosts, or a host no hostname is written like, is refused and given no salon's data", "type": "security", "priority": "high", "covers": ["AC-2", "AC-3"]}
+  - {"id": "TC-F01-S02-010", "title": "Sequential requests on one connection cannot inherit another salon", "type": "tenant-isolation", "priority": "critical", "covers": ["AC-1", "AC-2", "AC-3"]}
+  - {"id": "TC-F01-S02-011", "title": "Pipelined requests on one connection cannot inherit another salon", "type": "concurrency", "priority": "critical", "covers": ["AC-1", "AC-2", "AC-3", "AC-4"]}
+  - {"id": "TC-F01-S02-012", "title": "nothing but a read is accepted on the salon endpoint, and an attempt to write changes nothing", "type": "security", "priority": "high", "covers": ["AC-1", "AC-3"]}
+  - {"id": "TC-F01-S02-013", "title": "no answer of the salon endpoint shows how the product is built, sets a cookie or allows another origin", "type": "security", "priority": "high", "covers": ["AC-1", "AC-2", "AC-3"]}
+  - {"id": "TC-F01-S02-014", "title": "the contract describes GET /api/v1/salon with its 200 and 404, and the running API agrees with it", "type": "api", "priority": "high", "covers": ["AC-12"]}
+  - {"id": "TC-F01-S02-015", "title": "the generated client exposes the endpoint: a call through it returns each salon's brand and a typed 404", "type": "api", "priority": "high", "covers": ["AC-12"]}
+  - {"id": "TC-F01-S02-020", "title": "A simultaneous mixed-salon rush has zero mismatches or errors", "type": "concurrency", "priority": "critical", "covers": ["AC-4"]}
+  - {"id": "TC-F01-S02-021", "title": "Steady mixed-salon reads remain isolated and meet the local latency baseline", "type": "load", "priority": "high", "covers": ["AC-4"]}
+  - {"id": "TC-F01-S02-030", "title": "The application's role is not a superuser, cannot bypass row-level security, belongs to no other role and owns nothing", "type": "security", "priority": "high", "covers": ["AC-5"]}
+  - {"id": "TC-F01-S02-031", "title": "The application's role is refused any read of the tenant table, by row, by column or by count", "type": "security", "priority": "high", "covers": ["AC-5"]}
+  - {"id": "TC-F01-S02-032", "title": "The application's role cannot give itself more: every attempt to get round the policy is refused and leaves the catalogue as it was", "type": "security", "priority": "high", "covers": ["AC-5"]}
+  - {"id": "TC-F01-S02-033", "title": "The registry is reached only through tenant_by_slug, which gives one slug's id and status, to the application's role alone, and cannot be redirected", "type": "security", "priority": "high", "covers": ["AC-5"]}
+  - {"id": "TC-F01-S02-034", "title": "With no tenant set, the application's role sees no row of salon_brand, although three exist", "type": "tenant-isolation", "priority": "critical", "covers": ["AC-6"]}
+  - {"id": "TC-F01-S02-035", "title": "Set to alpha, the application's role sees alpha's row and no other, however the question is put", "type": "tenant-isolation", "priority": "critical", "covers": ["AC-6"]}
+  - {"id": "TC-F01-S02-036", "title": "On the running product, set to alpha, an UPDATE or DELETE aimed at beta's row and an INSERT with beta's tenant_id change nothing", "type": "tenant-isolation", "priority": "critical", "covers": ["AC-6"]}
+  - {"id": "TC-F01-S02-037", "title": "The policy itself: with the writes granted, alpha changes its own row and nothing of beta's, and with no tenant nothing can be written", "type": "tenant-isolation", "priority": "critical", "covers": ["AC-6"]}
+  - {"id": "TC-F01-S02-038", "title": "A tenant set in one transaction leaves the next transaction on the same connection with none", "type": "tenant-isolation", "priority": "critical", "covers": ["AC-6"]}
+  - {"id": "TC-F01-S02-039", "title": "A tenant that is nil, empty or not a tenant id at all shows no row, and never another salon's", "type": "tenant-isolation", "priority": "critical", "covers": ["AC-6"]}
+  - {"id": "TC-F01-S02-040", "title": "Row-level security is forced: an owner of the table that is not a superuser is held to the policy too", "type": "security", "priority": "high", "covers": ["AC-7"]}
+  - {"id": "TC-F01-S02-041", "title": "In the catalogue, every table with a tenant_id is protected in full: enabled and forced, one fail-closed tenant_isolation policy, tenant_id NOT NULL with a foreign key to tenant, and in every unique index", "type": "data-integrity", "priority": "high", "covers": ["AC-7"]}
+  - {"id": "TC-F01-S02-042", "title": "The registry refuses a slug that is reserved, too short, too long, or anything but lowercase letters, digits and inner hyphens, and a slug already taken", "type": "data-integrity", "priority": "high", "covers": ["AC-8"]}
+  - {"id": "TC-F01-S02-043", "title": "The tenant and brand tables hold their own rules: a known status, a real tenant, one brand per salon, a name, and a colour written #RRGGBB", "type": "data-integrity", "priority": "high", "covers": ["AC-7", "AC-8"]}
+  - {"id": "TC-F01-S02-050", "title": "Requests in flight at the moment PostgreSQL freezes are each answered 503 service_unavailable within 5 seconds", "type": "resilience", "priority": "high", "covers": ["AC-10"]}
+  - {"id": "TC-F01-S02-051", "title": "Requests made while PostgreSQL is frozen are each answered 503 within 5 seconds, for as long as it stays frozen, and nothing hangs", "type": "resilience", "priority": "high", "covers": ["AC-10"]}
+  - {"id": "TC-F01-S02-052", "title": "Within 5 seconds of PostgreSQL being thawed every salon is answered 200 with its own brand again, and the API was never restarted", "type": "resilience", "priority": "high", "covers": ["AC-10"]}
+  - {"id": "TC-F01-S02-053", "title": "With PostgreSQL stopped, a salon's request is answered 503 service_unavailable within 5 seconds, and 200 again once it is started", "type": "resilience", "priority": "high", "covers": ["AC-10"]}
+  - {"id": "TC-F01-S02-060", "title": "By default both ports refuse a connection on every non-loopback address of this machine, and listen on 127.0.0.1 and ::1 only", "type": "security", "priority": "high", "covers": ["AC-11"]}
+  - {"id": "TC-F01-S02-061", "title": "A salon's hostname works from curl and from Node.js on both ports, whether it is reached over IPv4 or IPv6", "type": "api", "priority": "high", "covers": ["AC-11"]}
+  - {"id": "TC-F01-S02-062", "title": "The opt-in is named in .env.example and README.md, is off by default, and any value but true or false stops the scripts without starting anything", "type": "security", "priority": "high", "covers": ["AC-11"]}
+  - {"id": "TC-F01-S02-063", "title": "With the opt-in set, both ports are reachable on the network address; without it again, they are not", "type": "security", "priority": "high", "covers": ["AC-11"]}
+  - {"id": "TC-F01-S02-064", "title": "a browser reaches each salon on its hostname, on the API's port and the web app's, over 127.0.0.1 and over ::1", "type": "api", "priority": "high", "covers": ["AC-11"]}
+  - {"id": "TC-F01-S02-070", "title": "local-reset.sh followed by local-up.sh leaves exactly the three synthetic salons of the test plan, and nothing that was there before", "type": "data-integrity", "priority": "high", "covers": ["AC-9"]}
+  - {"id": "TC-F01-S02-071", "title": "Running local-up.sh again, and starting the API again, neither duplicates nor changes the salons", "type": "data-integrity", "priority": "high", "covers": ["AC-9"]}
+  - {"id": "TC-F01-S02-072", "title": "Started with a profile other than local against an empty database, the API creates the schema and no salon exists", "type": "data-integrity", "priority": "high", "covers": ["AC-9"]}
+  - {"id": "TC-F01-S02-080", "title": "pnpm contracts:check passes on the committed tree, and fails, naming the file, when the salon endpoint is missing from the document or from the client", "type": "build", "priority": "high", "covers": ["AC-12"]}
+  - {"id": "TC-F01-S02-081", "title": "The generated client exposes GET /api/v1/salon with its three fields: code that uses them compiles, and code that asks for another path or for a tenant id does not", "type": "build", "priority": "high", "covers": ["AC-12"]}
 verification:
   commands:
     - "cd apps/api && ./mvnw -q verify"
@@ -201,9 +246,18 @@ verification:
     - "pnpm --filter @salon/web build"
     - "pnpm contracts:check"
     - "qa/scripts/sdlc selftest"
-  automation: []
+  automation:
+    - {"id": "api", "tool": "playwright", "file": "qa/api/F01/S02-salon.spec.ts", "covers": ["TC-F01-S02-001", "TC-F01-S02-002", "TC-F01-S02-003", "TC-F01-S02-004", "TC-F01-S02-005", "TC-F01-S02-006", "TC-F01-S02-007", "TC-F01-S02-008", "TC-F01-S02-009", "TC-F01-S02-010", "TC-F01-S02-011", "TC-F01-S02-012", "TC-F01-S02-013", "TC-F01-S02-014", "TC-F01-S02-015"], "project": "api"}
+    - {"id": "rush", "tool": "k6", "file": "qa/load/F01/S02-salon-rush.js", "covers": ["TC-F01-S02-020"]}
+    - {"id": "read-load", "tool": "k6", "file": "qa/load/F01/S02-salon-read-load.js", "covers": ["TC-F01-S02-021"]}
+    - {"id": "database-isolation", "tool": "script", "file": "qa/checks/F01/S02-database-isolation.sh", "covers": ["TC-F01-S02-030", "TC-F01-S02-031", "TC-F01-S02-032", "TC-F01-S02-033", "TC-F01-S02-034", "TC-F01-S02-035", "TC-F01-S02-036", "TC-F01-S02-037", "TC-F01-S02-038", "TC-F01-S02-039", "TC-F01-S02-040", "TC-F01-S02-041", "TC-F01-S02-042", "TC-F01-S02-043"]}
+    - {"id": "database-silent", "tool": "script", "file": "qa/checks/F01/S02-database-silent.sh", "covers": ["TC-F01-S02-050", "TC-F01-S02-051", "TC-F01-S02-052", "TC-F01-S02-053"]}
+    - {"id": "listening", "tool": "script", "file": "qa/checks/F01/S02-listening.sh", "covers": ["TC-F01-S02-060", "TC-F01-S02-061", "TC-F01-S02-062", "TC-F01-S02-063"]}
+    - {"id": "browser-hostnames", "tool": "playwright", "file": "qa/web/F01/S02-salon-hostname-in-a-browser.spec.ts", "covers": ["TC-F01-S02-064"], "project": "web"}
+    - {"id": "seed", "tool": "script", "file": "qa/checks/F01/S02-seed.sh", "covers": ["TC-F01-S02-070", "TC-F01-S02-071", "TC-F01-S02-072"]}
+    - {"id": "contract", "tool": "script", "file": "qa/checks/F01/S02-contract.sh", "covers": ["TC-F01-S02-080", "TC-F01-S02-081"]}
   manual: []
   deferred: []
 evidence:
-  last_run: null
-  last_result: null
+  last_run: qa/reports/20261012-170409-F01-S02
+  last_result: pass
