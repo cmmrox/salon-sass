@@ -33,6 +33,6 @@ requirement detail is in `qa/coverage.md`.
 | --- | --- | --- | --- | --- | --- | --- |
 | F01-S01 | Walking skeleton and local environment | api, web, infra | complete | pass | 0 | - |
 | F01-S02 | Tenant registry and data isolation | api, infra | complete | pass | 0 | - |
-| F01-S03 | Salon web addresses and branded shell | api, web | planned | - | 0 | **developer**: `stage-build F01-S03` |
+| F01-S03 | Salon web addresses and branded shell | api, web | in-progress | - | 0 | **developer**: `stage-build F01-S03` |
 | F01-S04 | Platform services: errors, time, audit trail, background jobs and observability | api | outlined | - | 0 | **lead**: `stage-plan F01-S04` |
 | F01-S05 | Staging environment and delivery pipeline | infra | outlined | - | 0 | **lead**: `stage-plan F01-S05` |

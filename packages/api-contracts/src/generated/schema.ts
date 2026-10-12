@@ -68,8 +68,11 @@ export interface components {
         };
         /** @description An error, as problem details (RFC 9457) with a stable machine-readable `code`. */
         Problem: {
-            /** @description The stable reason. Branch on this. */
-            code: string;
+            /**
+             * @description The stable reason. Branch on this.
+             * @enum {string}
+             */
+            code: "bad_request" | "not_found" | "method_not_allowed" | "not_acceptable" | "unsupported_media_type" | "request_rejected" | "service_unavailable" | "salon_suspended" | "internal_error";
             /** @description A sentence for a person. Do not branch on it. */
             detail?: string;
             /** @description The path that was requested. */
@@ -156,6 +159,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Salon"];
+                };
+            };
+            /** @description The hostname's salon is suspended: `salon_suspended`. Nothing of its brand is returned. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             /** @description The hostname names no salon: `not_found`. */

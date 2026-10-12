@@ -28,6 +28,10 @@ class SalonController {
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(operationId = "getSalon", summary = "The public brand of the salon the request's hostname names.")
     @ApiResponse(responseCode = "200", description = "The salon's public brand.")
+    @ApiResponse(responseCode = "403",
+            description = "The hostname's salon is suspended: `salon_suspended`. Nothing of its brand is returned.",
+            content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                    schema = @Schema(ref = "#/components/schemas/Problem")))
     @ApiResponse(responseCode = "404", description = "The hostname names no salon: `not_found`.",
             content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                     schema = @Schema(ref = "#/components/schemas/Problem")))

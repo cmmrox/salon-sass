@@ -23,17 +23,28 @@ infra/scripts/local-down.sh     # stop everything; the database's data is kept
 infra/scripts/local-reset.sh    # delete the local database's data and start again from nothing
 infra/scripts/local-service.sh stop api      # one service: <start|stop> <postgres|api|web>
 infra/scripts/local-service.sh pause postgres   # for tests: PostgreSQL stays up and answers nothing; `resume postgres` ends it
+infra/scripts/local-salon.sh suspend gamma      # for tests: suspends one local salon; `activate gamma` ends it
 ```
 
 | Service | Address | Change it with |
 | --- | --- | --- |
 | Web app | http://localhost:3100 | `SALON_WEB_PORT` |
 | API | http://localhost:8090 (`/api/v1/meta`, `/actuator/health`) | `SALON_API_PORT` |
-| A salon | http://alpha.localhost:8090/api/v1/salon (also `beta`, `gamma`) | `SALON_PLATFORM_DOMAIN` |
+| A salon's web address | http://alpha.localhost:3100 (also `beta`, `gamma`) | `SALON_PLATFORM_DOMAIN` |
+| A salon on the API | http://alpha.localhost:8090/api/v1/salon (also `beta`, `gamma`) | `SALON_PLATFORM_DOMAIN` |
 | PostgreSQL | `localhost:5440`, database `salon` | `SALON_POSTGRES_PORT` |
 
 Three synthetic salons, `alpha`, `beta` and `gamma`, are seeded in the local environment; each is
-reached at `<slug>.localhost` on the API's and the web app's ports, with no hosts file.
+reached at `<slug>.localhost` on the API's and the web app's ports, with no hosts file. The web app
+shows a salon at its own address, the status page at `localhost`, and "salon not found" at any
+other hostname.
+
+`local-salon.sh <suspend|activate> <slug>` is a hook for tests, for the local environment only. It
+changes that one salon's status in the local database, as the owning role, and nothing else; the
+salon's web address then shows "temporarily unavailable" and the API answers 403 `salon_suspended`
+on the next request, with nothing restarted. It refuses a slug that is not a salon. A suspended
+salon stays suspended until it is activated again or `local-reset.sh` starts from nothing, which
+leaves the three salons active.
 
 The API and the web app listen on this machine only (`127.0.0.1` and `::1`). To test from a phone
 on the same network, start them with `SALON_LISTEN_ON_NETWORK=true`; both ports are then open to

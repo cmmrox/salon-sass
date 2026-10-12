@@ -39,6 +39,17 @@
         "properties": {
           "code": {
             "description": "The stable reason. Branch on this.",
+            "enum": [
+              "bad_request",
+              "not_found",
+              "method_not_allowed",
+              "not_acceptable",
+              "unsupported_media_type",
+              "request_rejected",
+              "service_unavailable",
+              "salon_suspended",
+              "internal_error"
+            ],
             "type": "string"
           },
           "detail": {
@@ -150,6 +161,16 @@
               }
             },
             "description": "The salon's public brand."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The hostname's salon is suspended: `salon_suspended`. Nothing of its brand is returned."
           },
           "404": {
             "content": {
