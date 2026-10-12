@@ -1,0 +1,70 @@
+# Settings that hold in every environment. Nothing here has a local default: an environment that
+# does not say where its database is must fail to start, not connect somewhere by accident.
+# The local profile (application-local.yaml) supplies the values for a developer's machine.
+spring:
+  application:
+    name: salon-api
+  threads:
+    virtual:
+      enabled: true
+  datasource:
+    url: ${SALON_DB_URL}
+    username: ${SALON_DB_USER}
+    password: ${SALON_DB_PASSWORD}
+    hikari:
+      # With virtual threads the pool, not the thread count, is the limit. Sized deliberately.
+      maximum-pool-size: 10
+      # Every wait on the database has a limit, so that a database that is stopped, or that
+      # accepts connections and then says nothing, costs a request seconds and never hangs it.
+      #
+      # How long a request waits for a connection from the pool, in milliseconds. With the
+      # database stopped this is how quickly the health check reports it down.
+      connection-timeout: 2000
+      # How long the test that a connection is alive may take, in milliseconds: the pool's own
+      # test before it hands a connection out, and the health check's query (DatabaseHealthIndicator).
+      validation-timeout: 1000
+      # The PostgreSQL driver's own limits, in seconds.
+      data-source-properties:
+        # Opening the network connection.
+        connectTimeout: 2
+        # Opening it and signing in, together.
+        loginTimeout: 2
+        # Waiting for an answer on an open connection: the longest any one statement, a migration's
+        # included, may stay silent before the driver gives the connection up. A statement that is
+        # merely slow should be stopped by the database long before this.
+        socketTimeout: 30
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  mvc:
+    problemdetails:
+      enabled: true
+
+server:
+  port: ${SALON_API_PORT:8090}
+  shutdown: graceful
+  error:
+    include-stacktrace: never
+    include-message: never
+    include-binding-errors: never
+    include-exception: false
+    whitelabel:
+      enabled: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-components: always
+
+# The OpenAPI document is generated at build time and committed. The running service serves it
+# only where a profile turns it on.
+springdoc:
+  api-docs:
+    enabled: false
+  paths-to-match: /api/**
+  writer-with-order-by-keys: true

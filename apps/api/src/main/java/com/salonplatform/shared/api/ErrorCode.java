@@ -1,0 +1,55 @@
+package com.salonplatform.shared.api;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
+
+/**
+ * The stable, machine-readable reason carried by every error response as {@code code}. Clients and
+ * tests branch on it, never on the wording. A code, once published, is not renamed.
+ */
+public enum ErrorCode {
+
+    BAD_REQUEST("bad_request", "The request could not be understood."),
+    NOT_FOUND("not_found", "The requested resource was not found."),
+    METHOD_NOT_ALLOWED("method_not_allowed", "The method is not allowed for this resource."),
+    NOT_ACCEPTABLE("not_acceptable", "The resource cannot be returned in the requested format."),
+    UNSUPPORTED_MEDIA_TYPE("unsupported_media_type", "The format of the request body is not supported."),
+    REQUEST_REJECTED("request_rejected", "The request was not accepted."),
+    SERVICE_UNAVAILABLE("service_unavailable", "The service is temporarily unavailable."),
+    INTERNAL_ERROR("internal_error", "Something went wrong on our side.");
+
+    private final String code;
+    private final String detail;
+
+    ErrorCode(String code, String detail) {
+        this.code = code;
+        this.detail = detail;
+    }
+
+    public String code() {
+        return code;
+    }
+
+    /** A sentence that is safe to show: it never carries anything taken from an exception. */
+    public String detail() {
+        return detail;
+    }
+
+    /** The code for an error the framework or the server raised, known only by its status. */
+    public static ErrorCode forStatus(HttpStatusCode status) {
+        return switch (status.value()) {
+            case 400 -> BAD_REQUEST;
+            case 404 -> NOT_FOUND;
+            case 405 -> METHOD_NOT_ALLOWED;
+            case 406 -> NOT_ACCEPTABLE;
+            case 415 -> UNSUPPORTED_MEDIA_TYPE;
+            case 503 -> SERVICE_UNAVAILABLE;
+            default -> status.is4xxClientError() ? REQUEST_REJECTED : INTERNAL_ERROR;
+        };
+    }
+
+    static String titleOf(HttpStatusCode status) {
+        HttpStatus known = HttpStatus.resolve(status.value());
+        return known != null ? known.getReasonPhrase() : "Error";
+    }
+}

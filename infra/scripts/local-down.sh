@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Stops the product on this machine: the web app, the API, then PostgreSQL. The database container
+# is removed and its data is kept (the volume stays), so the next local-up.sh finds the same data.
+# local-reset.sh is the one that deletes it.
+#
+# Usage: infra/scripts/local-down.sh
+set -euo pipefail
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common.sh"
+
+load_settings
+acquire_lock
+
+stop_web
+stop_api
+problem="$(docker_problem)"
+if [ -n "$problem" ]; then
+  say "postgres: left as it is ($problem)"
+else
+  remove_postgres
+  say "postgres: stopped and removed; its data is kept"
+fi

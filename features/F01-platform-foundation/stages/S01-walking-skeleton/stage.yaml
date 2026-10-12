@@ -3,16 +3,346 @@ feature: F01
 title: "Walking skeleton and local environment"
 sequence: 1
 surfaces: [api, web, infra]
-status: planned
-qa_status: not-run
+status: complete
+qa_status: pass
 released_in: null
 depends_on: []
 requirements: []
+nfr_focus: [NFR-17, NFR-18]
 handoff:
-  run: null
-  data: null
-  notes: null
-cases: []
+  run: |
+    Prerequisites: JDK 25 (need not be the default Java; found through .sdkmanrc/SDKMAN, JAVA_HOME,
+    /usr/libexec/java_home or JAVA25_HOME), Node.js 24+ with Corepack (`corepack enable` once; the
+    scripts always run `corepack pnpm` and refuse to start without corepack), Docker running, curl,
+    and a `ps` that reports start times (`ps -p <id> -o lstart=`; procps on Linux). README.md
+    "Quick start" lists every one.
+
+    infra/scripts/local-up.sh                          # PostgreSQL, API, web; prints each address
+    infra/scripts/local-down.sh                        # stop all; container removed, data kept
+    infra/scripts/local-reset.sh                       # delete the database's data, start from empty
+    infra/scripts/local-service.sh <start|stop> <postgres|api|web>
+    infra/scripts/local-service.sh <pause|resume> postgres   # test hook, see below
+
+    Web         http://localhost:3100                  (SALON_WEB_PORT)
+    API         http://localhost:8090                  (SALON_API_PORT)
+                /api/v1/meta, /actuator/health, /actuator/info (local profile), /v3/api-docs (local profile)
+    PostgreSQL  localhost:5440, database salon         (SALON_POSTGRES_PORT); container salon-postgres,
+                Compose project salon-local, volume salon-postgres-data
+
+    Process ids are in .local/run, logs in .local/logs (api.log, web.log, api-build.log, web-build.log).
+    A pid file holds "<pid> <start time>"; .local/run/lock exists while one of the scripts runs.
+    The scripts take turns: a second one prints "waiting for another of these scripts to finish
+    (process N)" on stderr, waits (up to 15 minutes), then acts on what the first left.
+    The scripts build before they start; local-up.sh takes about 15 seconds once dependencies are
+    downloaded, the first run several minutes.
+    `stop postgres` stops the container and keeps it and its data; `start api` refuses to start
+    while PostgreSQL is stopped. The web app starts whether or not the API is up.
+    Every setting is in .env.example; a variable in the shell wins over .env.
+
+    To test a case that needs something else:
+    - A database that accepts connections and answers nothing (BUG-F01-S01-003):
+      `infra/scripts/local-service.sh pause postgres`, then `resume postgres`. It is `docker pause`
+      on salon-postgres only. `start postgres`, `stop postgres` and local-down.sh thaw it first.
+      Pausing a PostgreSQL that is not running exits 1; pausing twice or resuming when not paused
+      exits 0 ("already paused", "not paused").
+    - A pid file left behind (BUG-F01-S01-002): write any "<pid>" or "<pid> <time>" into
+      .local/run/api.pid. Unless that process also started at that time, the scripts remove the
+      file, print "note: .local/run/api.pid was left by an earlier run. Process N is not something
+      these scripts started and is left alone." on stderr, and never signal it.
+    - Another Spring profile (AC-5): stop the API, then
+      `SPRING_PROFILES_ACTIVE=staging infra/scripts/local-service.sh start api`. Any name works; the
+      scripts pass the database settings in the environment, so no profile file is needed.
+    - Docker not running (AC-1), without stopping Docker:
+      `DOCKER_HOST=unix:///nonexistent/docker.sock infra/scripts/local-up.sh`
+    - Wrong Java (AC-1): `JAVA25_HOME=<a JDK that is not 25> infra/scripts/local-up.sh`, or
+      `SDKMAN_DIR=/nonexistent infra/scripts/local-up.sh` on a machine whose default Java is not 25.
+    - An empty database (AC-6): infra/scripts/local-reset.sh, then
+      `docker exec salon-postgres psql -U salon -d salon -c 'select * from flyway_schema_history'`.
+    - Hot reload instead of the production build:
+      `SALON_WEB_MODE=dev infra/scripts/local-service.sh start web`.
+    - `pnpm contracts:check` starts the API's document test, so it needs JDK 25 and Docker and takes
+      about 12 seconds. In a copy of the repository run `pnpm install --frozen-lockfile` first.
+  data: |
+    None. There is no salon, no account and no seed. The database holds only flyway_schema_history
+    with one row (version 1, "baseline"); the baseline migration creates no table.
+    Local database: name salon, user salon, password salon-local-only (local-only values, in
+    .env.example and infra/docker-compose.yml; the port is bound to 127.0.0.1).
+
+    Fixed values a test can rely on:
+    - meta: service is "salon-api"; version is the Maven project version, now "0.1.0-SNAPSHOT";
+      commit is the full 40-character id of the commit the jar was built from, or "unknown" when
+      built outside a git repository; time is a UTC instant with millisecond precision ending in Z.
+    - /actuator/info (local profile): runtime.javaMajorVersion is 25 and runtime.virtualThreads is
+      true (the setting is on and the thread that answered is virtual); java.version starts with 25.
+    - Error codes: not_found (404), method_not_allowed (405), bad_request (400), not_acceptable
+      (406), unsupported_media_type (415), service_unavailable (503), request_rejected (any other
+      4xx), internal_error (any other 5xx). Body: title, status, detail, code, and instance when
+      the application answered. Content type application/problem+json.
+    - Test ids on the home page: app-name, status-panel, status-heading, status-loading,
+      status-loaded, status-summary, status-api-service, status-api-version, status-unavailable,
+      status-unavailable-title, status-unavailable-body, status-retry. On the not-found page:
+      not-found, not-found-title, not-found-body, not-found-home.
+    - Strings: apps/web/messages/en.json. Tokens: apps/web/src/styles/tokens.css.
+  notes: |
+    NOT CHECKED
+    - AC-10: .github/workflows/ci.yml is written and has never run, because there is no GitHub
+      remote. It runs the eight verification commands, same text and order, on pull_request and on
+      push to main. The action versions (checkout v7, setup-java v6, setup-node v7, setup-python v7)
+      are the latest release tags GitHub's API reported on 2026-10-12, not seen working.
+    - Checked on one machine only: macOS, Apple silicon, default Java 21 with JDK 25 beside it.
+      Linux and Windows were not tried. The scripts are bash; there is no Windows equivalent.
+
+    BUG FIXES AFTER THE FIRST QA PASS (all five are fixed; how each was proved is in its fix_note
+    and below)
+    - BUG-001 (193a982): two local-up.sh 0, 4 and 6 s apart, and three at the same instant: every
+      run exits 0, the product is running, one API process, and local-down.sh stops it all.
+      local-down.sh issued during a start waits for it, then stops everything.
+    - BUG-002 (e092d81, 7ac555d): the bug's own steps: "api: started", health 200, the sleep
+      process alive after local-down.sh. Also a file naming a live process with a wrong start time,
+      and a file naming a dead process.
+    - BUG-003 (73ef051): new DatabaseFrozenIntegrationTest (pauses its own Testcontainers database)
+      and DatabaseTimeoutsIntegrationTest; both failed before the fix. On the running product with
+      salon-postgres paused: first health 503 in 1.0 s, concurrent and later ones 503 in 2.0 s,
+      fifty at once all 503, slowest 2.03 s, 503 in 2.0 s throughout a 40 s freeze, meta 200, and
+      200 within 1 s of the resume with the same API process.
+    - BUG-004 (5b85cf1): with Homebrew's pnpm 11.6.0 and no corepack on PATH,
+      `pnpm install --frozen-lockfile` exits 1 with "This project is configured to use 12.11.2 of
+      pnpm. Your current pnpm is v11.6.0" and local-up.sh exits 1 naming Corepack; pnpm-lock.yaml is
+      unchanged in both. Corepack's pnpm installs as before.
+    - BUG-005 (43d9cf1): README.md lists curl (and, from 7ac555d, ps).
+
+    WHAT CHANGED THAT QA'S AUTOMATION MAY SEE
+    - New lines on stderr: "waiting for another of these scripts to finish (process N)" and the
+      "note: ... was left by an earlier run" above. New lines on stdout: "postgres: resumed",
+      "postgres: paused; it accepts connections and answers nothing until it is resumed",
+      "postgres: already paused", "postgres: not paused". Every earlier line is worded as before.
+    - local-service.sh prints a second usage line, "<pause|resume> postgres"; refusals still exit 2.
+    - New ways to exit 1: corepack missing; ps unable to report a start time; another script still
+      holding the lock after 15 minutes; pausing a PostgreSQL that is not running.
+    - The API: the db component is now our own indicator (bean dbHealthIndicator, still "db" in
+      the body, same shape and codes). The driver now has loginTimeout 2 s and socketTimeout 30 s:
+      any one statement that gets no answer for 30 s fails. Health with PostgreSQL stopped is
+      unchanged (503 in 2.0 s).
+
+    CHECKED BY HAND ON THE RUNNING PRODUCT: AC-1 to AC-9, including Docker unreachable, three
+    wrong-Java cases, PostgreSQL stopped (health 503 in 2.0 s, back to 200 after start), a
+    non-local profile, an empty database and a restart, the API stopped and the API hanging under
+    the web app (loaded and unavailable states at 1280 and 360 wide, no horizontal overflow, the
+    retry link reachable with Tab), and the contract check on altered copies. No accessibility scan
+    was run.
+
+    FOR QA TO KNOW
+    - The loading state is short-lived. The page is served as a static shell that already holds
+      the loading skeleton (status-loading), and the result is streamed into the same response and
+      swapped in by script. In the raw HTML of every response status-loading and the result are
+      both present; in a browser the skeleton is replaced within milliseconds. Not checked with
+      JavaScript off, where the swap would not happen.
+    - The web app waits 3 seconds for the API, then shows the unavailable state; the page answers
+      200 in that state. There is no hook to slow the API down. Seen by hand instead: with the API
+      stopped and a listener on its port that accepts connections and never answers, the first
+      byte (the skeleton) arrived in 4 ms and the unavailable state after 3.0 s.
+    - In dev mode (SALON_WEB_MODE=dev) Next.js forwards the server's warning "[api] meta is
+      unavailable" to the browser console and shows its own dev indicator. Neither exists in the
+      production build, which is what local-up.sh serves.
+    - /actuator/health also reports diskSpace, ping, ssl, livenessState and readinessState, which
+      Spring Boot adds by default. A full disk therefore reports 503. Components show status only.
+    - With PostgreSQL stopped /api/v1/meta still answers 200: it does not use the database.
+    - The API and the web app listen on all interfaces (the frameworks' default). Only PostgreSQL
+      is bound to 127.0.0.1.
+    - packages/api-contracts is TypeScript source with no build step. For types only, import
+      packages/api-contracts/src/generated/schema.ts, which has no dependency. src/index.ts also
+      exports createApiClient, which needs openapi-fetch from the product's node_modules.
+
+    LEFT OUT ON PURPOSE
+    - No table, no tenant, no seed, no sign-in, no CORS (the browser never calls the API: the page
+      is rendered on the server), no Swagger UI, no Dockerfile for the API or the web app.
+    - The formatting module (apps/web/src/lib/format/index.ts) exports nothing yet.
+    - The (workspace) and (console) route groups hold a layout and no page.
+    - No error.tsx or global-error.tsx: an unexpected rendering error shows Next.js's own page,
+      whose English text does not come from a translation file. The status page cannot reach it
+      through the API being down, slow or wrong; that path is handled.
+
+    DIFFERENT FROM A DOCUMENT UNDER docs/
+    - docs/engineering/backend.md, "Health and service metadata", says health "answers within the
+      connection timeout when the database is down". It now also answers, within the validation
+      timeout, when the database accepts connections and does not answer, and every database wait
+      has a limit (above). The db component is our own indicator, not Spring Boot's.
+    - docs/architecture/tech-stack.md, "Node.js and pnpm", says "A pnpm that is not Corepack's
+      rewrites the lock file". One that is not the pinned version now stops with an error instead
+      (pmOnFail: error in pnpm-workspace.yaml), and the scripts refuse to run without corepack.
+    - docs/architecture/tech-stack.md says "JUnit 5 and Testcontainers (API)". Spring Boot 4.1.1
+      manages JUnit Jupiter 6.0.3 and Testcontainers 2.0.5; that is what the tests run on.
+    - docs/architecture/tech-stack.md, machine prerequisites, says "JDK 25, Node.js with pnpm
+      through Corepack, Docker". Also needed: curl (the scripts wait on HTTP with it), and Node.js
+      is 24 or later (package.json engines, .nvmrc). JDK 25 does not have to be the default Java.
+    - docs/architecture/repository-structure.md, "What a release certifies", lists "apps packages
+      infra qa/web qa/api qa/mobile qa/load qa/checks qa/shared". pnpm-lock.yaml, package.json,
+      pnpm-workspace.yaml and docs/api/openapi.json decide what is built and are not in the list.
+    - docs/architecture/repository-structure.md, "Top level", does not list the root files this
+      stage adds: package.json, pnpm-workspace.yaml, pnpm-lock.yaml, .sdkmanrc, .nvmrc,
+      .editorconfig, .env.example, and .local/ (process ids and logs, ignored by git).
+    - docs/engineering/backend.md, "Inside a module", shows api, application, domain,
+      infrastructure and a Facade. shared has api, application and infrastructure only so far.
+    - docs/operations/environments-and-releases.md asks the stage that creates an environment to
+      report its addresses, commands and data rules: they are under `run` and `data` above.
+    - The spec's design note "This machine currently has an older JDK than the stack requires" no
+      longer holds: JDK 25 is installed beside the default.
+
+    DECISIONS THE LEAD MAY WANT TO REVISIT
+    - Next.js writes a block into AGENTS.md from `next dev` when it detects a coding agent. It is
+      turned off (agentRules: false in apps/web/next.config.ts) so that apps/web/AGENTS.md stays
+      the lead's file. The block only points agents at node_modules/next/dist/docs.
+    - Cache Components and Partial Prefetching are on (cacheComponents, partialPrefetching), as
+      create-next-app 16.4 sets them. Data fetched while rendering must sit inside Suspense or be
+      marked cacheable; later stages build on that model.
+    - Styling is CSS custom properties plus CSS Modules, with no Tailwind, although create-next-app
+      offers Tailwind by default: it is not needed for this scope and is the lead's call.
+    - spring-boot-starter-data-jpa is included with no entity yet (open-in-view off, ddl-auto
+      validate), so that Hibernate 7 is proved to start on this stack. Nothing uses it.
+    - A not-found page (apps/web/src/app/not-found.tsx) was added, because Next.js's own 404 text
+      would not come from a translation file (AC-9).
+    - Requests Tomcat rejects itself (a badly encoded path, an unreadable header) are answered as
+      problem details through a custom error valve, instead of Tomcat's HTML page.
+    - Environment variable names carry the placeholder prefix SALON_. A rename touches
+      .env.example, infra/, apps/api/src/main/resources/application*.yaml and apps/web/src/lib/api.
+    - The API runs in the machine's time zone. meta.time is UTC regardless. Forcing UTC for the JVM
+      or the JDBC session is left to the stage that builds time handling.
+    - A module rule had to be chosen where docs/engineering/backend.md leaves room: another module
+      may use only the types in a module's root package, and any module may use anything in shared.
+
+    CONVENTIONS AND VERSIONS SET BY THIS STAGE
+    Runtime and build
+    - Java 25 (Corretto 25.0.1), pinned in .sdkmanrc. Spring Boot 4.1.1 (Spring Framework 7.0.9,
+      Hibernate 7.4.5, Flyway 12.4.0, Tomcat 11.0.24, Jackson 3.1.5). Maven 3.10.0 through the
+      wrapper. One Maven module, groupId com.salonplatform, artifactId salon-api, jar
+      target/salon-api.jar.
+    - The Maven build selects JDK 25 itself with maven-toolchains-plugin 3.3.0
+      (select-jdk-toolchain, version [25,26)), so ./mvnw works from a shell whose JAVA_HOME is
+      another version. With no JDK 25 it fails with "Cannot find matching toolchain definitions
+      ... version=[25,26)". It writes a cache at ~/.m2/discovered-jdk-toolchains-cache.xml.
+    - Node.js 24 (.nvmrc, engines), pnpm 12.11.2 (packageManager, through Corepack). Workspace:
+      apps/web and packages/*. pnpm 12 fails an install until every dependency's install script has
+      a decision: all five are refused in pnpm-workspace.yaml (allowBuilds).
+    - PostgreSQL 18.6 (image postgres:18.6) locally and in the tests. Its volume is mounted at
+      /var/lib/postgresql, where PostgreSQL 18 keeps its data.
+    API
+    - OpenAPI generator: springdoc-openapi-starter-webmvc-api 3.1.1 (no UI). The document is
+      written to docs/api/openapi.json by a test (OpenApiDocumentTest) with sorted keys, two-space
+      indentation and a final newline; info.version is "v1", servers is "/". /v3/api-docs is served
+      in the local and test profiles only. Every operation gets a default response of the Problem
+      schema.
+    - Tests: all through Surefire in `./mvnw verify`, no Failsafe. Integration tests are named
+      *IntegrationTest, run the whole application on a random port against postgres:18.6 in
+      Testcontainers (one container per test run) and call it over real HTTP. Architecture tests
+      use ArchUnit 1.5.1 and prove each rule on a violating fixture.
+    - Configuration: application.yaml has no default for the database (SALON_DB_URL,
+      SALON_DB_USER, SALON_DB_PASSWORD); application-local.yaml supplies the local ones. The pool
+      is 10 connections; a request waits 2 seconds for a connection, which is also how fast health
+      reports a stopped database down. Every wait on the database has a limit: connection 2 s,
+      validation 1 s (also the health query's limit), connect 2 s, login 2 s, socket 30 s.
+    - version comes from META-INF/build-info.properties (spring-boot-maven-plugin build-info),
+      commit from git.properties (git-commit-id-maven-plugin 9.2.0). The Maven version is
+      0.1.0-SNAPSHOT.
+    - Migrations: V1__baseline.sql contains only `SELECT 1`. The first table is V2.
+    Contract
+    - Client generator: openapi-typescript 7.13.0 generates
+      packages/api-contracts/src/generated/schema.ts (types only); the client is openapi-fetch
+      0.17.0, created by createApiClient in src/client.ts. The package is @salon/api-contracts,
+      exported as TypeScript source.
+    - `pnpm contracts:generate` rewrites the document and the client from the controllers.
+      `pnpm contracts:check` regenerates both and exits 1 naming each stale file, or 2 when the API
+      cannot generate its document.
+    Web
+    - Next.js 16.4.0, React 19.3.0, TypeScript 5.9.3. TypeScript 7.0.2 is the latest but
+      openapi-typescript 7.13 requires ^5 and typescript-eslint 8.71 requires below 6.1.
+    - Translation: next-intl 4.14.9, no locale in the URL, one language (en). Files are
+      apps/web/messages/<locale>.json; the languages are listed in src/i18n/config.ts; a key that
+      is not in en.json is a type error.
+    - Tokens: CSS custom properties in apps/web/src/styles/tokens.css, used from CSS Modules.
+    - Formatting module: apps/web/src/lib/format/index.ts.
+    - API access: one module per API area under apps/web/src/lib/api (meta.ts), on the server only.
+      SALON_API_BASE_URL is read at request time, so one build runs anywhere.
+    - Shared components are under apps/web/src/components; routes under src/app/(booking),
+      (workspace) and (console).
+    - Linter: ESLint 9.39.5 with eslint-config-next 16.4.0 (flat config), --max-warnings 0. ESLint
+      10 is the latest, but the plugins eslint-config-next depends on declare support up to 9. Two
+      added rules are errors: a string literal in JSX or in a spoken attribute (aria-label, alt,
+      title, placeholder and similar), and an import from one surface into another.
+    - Unit tests: Vitest 5.0.3, jsdom, Testing Library, @vitejs/plugin-react; files are *.test.ts(x)
+      beside the source. The `@/` alias is resolved by Vite itself (resolve.tsconfigPaths), not by
+      the vite-tsconfig-paths plugin that Next.js's guide names. `pnpm typecheck` runs
+      `next typegen` first.
+    - Version of the web package and the workspace: 0.1.0.
+    Local environment
+    - Ports: PostgreSQL 5440, API 8090, web 3100. Variables: SALON_POSTGRES_PORT, SALON_API_PORT,
+      SALON_WEB_PORT, SALON_DB_NAME, SALON_DB_USER, SALON_DB_PASSWORD, SALON_DB_URL,
+      SALON_API_BASE_URL, SALON_WEB_MODE, SPRING_PROFILES_ACTIVE, JAVA25_HOME.
+    - The API and the web app run on the machine, not in containers. local-up.sh serves a
+      production build of the web app (next start) and the packaged jar of the API.
+cases:
+  - {id: TC-F01-S01-001, title: "From stopped, local-up.sh starts PostgreSQL, the API and the web app and prints the address of each", type: functional, priority: high, covers: [AC-1]}
+  - {id: TC-F01-S01-002, title: "With Docker unreachable, local-up.sh exits non-zero, names Docker and starts nothing", type: build, priority: high, covers: [AC-1]}
+  - {id: TC-F01-S01-003, title: "With a Java that is not 25, local-up.sh exits non-zero, names the Java it needs and starts nothing", type: build, priority: high, covers: [AC-1]}
+  - {id: TC-F01-S01-004, title: "A second local-up.sh while the product is running changes nothing and exits zero", type: functional, priority: medium, covers: [AC-1]}
+  - {id: TC-F01-S01-005, title: "local-down.sh stops all three services, and a second local-down.sh exits zero", type: functional, priority: medium, covers: [AC-1]}
+  - {id: TC-F01-S01-006, title: "With its port taken by another program, local-up.sh exits non-zero, names the port and leaves that program alone", type: functional, priority: medium, covers: [AC-1]}
+  - {id: TC-F01-S01-007, title: "After the API process dies, local-up.sh starts it again and leaves the rest alone", type: resilience, priority: medium, covers: [AC-1]}
+  - {id: TC-F01-S01-008, title: "local-service.sh stops and starts one service, leaves the others running, and refuses anything else", type: functional, priority: medium, covers: [AC-1]}
+  - {id: TC-F01-S01-009, title: "The product runs on other ports when the documented settings name them, in the shell or in .env", type: functional, priority: low, covers: [AC-1]}
+  - {id: TC-F01-S01-010, title: "Health answers 200 with status UP and a database component that is UP", type: api, priority: high, covers: [AC-2]}
+  - {id: TC-F01-S01-011, title: "Meta answers 200 with service, version, commit and time, and matches the committed contract", type: api, priority: high, covers: [AC-3]}
+  - {id: TC-F01-S01-012, title: "Meta reports the server's time now, as a UTC instant, on every request", type: api, priority: medium, covers: [AC-3]}
+  - {id: TC-F01-S01-013, title: "Meta reports the commit the running build was made from", type: api, priority: medium, covers: [AC-3]}
+  - {id: TC-F01-S01-014, title: "The contract the running API serves is the committed docs/api/openapi.json", type: api, priority: high, covers: [AC-3]}
+  - {id: TC-F01-S01-015, title: "A path under /api that does not exist answers 404 as problem details with code not_found", type: api, priority: high, covers: [AC-4]}
+  - {id: TC-F01-S01-016, title: "An unknown path answers 404 as problem details whatever format the caller asks for", type: api, priority: medium, covers: [AC-4]}
+  - {id: TC-F01-S01-017, title: "A 404 shows no stack trace, class name or framework version, in its body or its headers", type: security, priority: high, covers: [AC-4]}
+  - {id: TC-F01-S01-018, title: "A method meta does not support answers 405 as problem details with code method_not_allowed", type: api, priority: medium, covers: []}
+  - {id: TC-F01-S01-019, title: "With the local profile, info reports Java 25 and that virtual threads are enabled", type: api, priority: high, covers: [AC-5]}
+  - {id: TC-F01-S01-020, title: "No actuator endpoint that exposes configuration, memory or control is served", type: security, priority: medium, covers: []}
+  - {id: TC-F01-S01-021, title: "A response format meta cannot produce answers 406 as problem details with code not_acceptable", type: api, priority: low, covers: []}
+  - {id: TC-F01-S01-022, title: "A malformed or oversized request is answered 4xx as problem details, shows no internals and never hangs", type: security, priority: high, covers: [AC-4]}
+  - {id: TC-F01-S01-023, title: "A large body sent to an endpoint that takes none is refused as problem details, and a flood of them leaves the API up", type: security, priority: medium, covers: []}
+  - {id: TC-F01-S01-024, title: "With PostgreSQL stopped, health answers 503 within 5 seconds with the database component DOWN", type: resilience, priority: high, covers: [AC-2]}
+  - {id: TC-F01-S01-025, title: "With PostgreSQL stopped, fifty health requests at once each answer 503 within 5 seconds", type: resilience, priority: high, covers: [AC-2]}
+  - {id: TC-F01-S01-026, title: "With PostgreSQL stopped, no answer shows how the product is built, and the rest of the API still answers", type: security, priority: medium, covers: [AC-2]}
+  - {id: TC-F01-S01-027, title: "When PostgreSQL comes back, health returns to 200 UP without the API being restarted", type: resilience, priority: high, covers: [AC-2]}
+  - {id: TC-F01-S01-028, title: "Started with a profile other than local, info answers 404 while the API itself is up", type: security, priority: high, covers: [AC-5]}
+  - {id: TC-F01-S01-029, title: "On an empty database the API applies the baseline migration and records it once in flyway_schema_history", type: data-integrity, priority: high, covers: [AC-6]}
+  - {id: TC-F01-S01-030, title: "Starting the API a second time applies nothing and does not fail", type: data-integrity, priority: high, covers: [AC-6]}
+  - {id: TC-F01-S01-031, title: "local-down.sh followed by local-up.sh keeps the database's data", type: data-integrity, priority: medium, covers: []}
+  - {id: TC-F01-S01-032, title: "The home page shows the service name and version the API reports", type: functional, priority: high, covers: [AC-7]}
+  - {id: TC-F01-S01-033, title: "The status page shows the product's placeholder name and says what the page is", type: functional, priority: medium, covers: []}
+  - {id: TC-F01-S01-034, title: "An address the web app does not have answers 404 with a not-found page that leads home", type: functional, priority: medium, covers: []}
+  - {id: TC-F01-S01-035, title: "At 360 and 1280 wide the status page and the not-found page fit without scrolling sideways", type: responsive, priority: high, covers: []}
+  - {id: TC-F01-S01-036, title: "An automated accessibility scan of the status page and the not-found page finds nothing serious", type: accessibility, priority: high, covers: []}
+  - {id: TC-F01-S01-037, title: "The not-found page can be used with the keyboard alone, and shows where the focus is", type: accessibility, priority: medium, covers: []}
+  - {id: TC-F01-S01-038, title: "Every string shown on the status page and the not-found page comes from the translation file", type: functional, priority: high, covers: [AC-9]}
+  - {id: TC-F01-S01-039, title: "Every element a test reads or presses on the status page and the not-found page carries a test id", type: functional, priority: high, covers: [AC-9]}
+  - {id: TC-F01-S01-040, title: "The three states of the status page look right to a person at 360 and 1280 wide", type: functional, priority: medium, covers: []}
+  - {id: TC-F01-S01-041, title: "With the API stopped the home page shows a plain service-unavailable state: no overlay, no stack trace, not blank", type: resilience, priority: high, covers: [AC-7]}
+  - {id: TC-F01-S01-042, title: "With the API stopped nothing the browser receives shows how the product is built or where the API is", type: security, priority: medium, covers: [AC-7]}
+  - {id: TC-F01-S01-043, title: "When the API accepts a connection and never answers, the page shows the unavailable state instead of hanging", type: resilience, priority: high, covers: [AC-7]}
+  - {id: TC-F01-S01-044, title: "When the API answers with an error or with something that is not meta, the page shows the unavailable state", type: resilience, priority: medium, covers: [AC-7]}
+  - {id: TC-F01-S01-045, title: "While the API is slow the page shows the loading state, and then the result", type: functional, priority: medium, covers: []}
+  - {id: TC-F01-S01-046, title: "Markup in what the API reports is shown as text and never runs", type: security, priority: medium, covers: []}
+  - {id: TC-F01-S01-047, title: "At 360 and 1280 wide the unavailable state fits, its action can be reached, and a very long value still fits", type: responsive, priority: high, covers: []}
+  - {id: TC-F01-S01-048, title: "An automated accessibility scan of the unavailable state finds nothing serious, and the state is announced", type: accessibility, priority: high, covers: []}
+  - {id: TC-F01-S01-049, title: "The unavailable state can be used with the keyboard alone: Tab reaches \"try again\", the focus shows, Enter retries", type: accessibility, priority: high, covers: []}
+  - {id: TC-F01-S01-050, title: "In the unavailable state every string comes from the translation file and every element a test reads or presses carries a test id", type: functional, priority: high, covers: [AC-9]}
+  - {id: TC-F01-S01-051, title: "When the API comes back, \"try again\" shows its name and version without the web app being restarted", type: resilience, priority: high, covers: [AC-7]}
+  - {id: TC-F01-S01-052, title: "pnpm contracts:check exits zero on the committed tree", type: build, priority: high, covers: [AC-8]}
+  - {id: TC-F01-S01-053, title: "With docs/api/openapi.json altered, pnpm contracts:check exits non-zero and names it", type: build, priority: high, covers: [AC-8]}
+  - {id: TC-F01-S01-054, title: "With a generated client file altered, pnpm contracts:check exits non-zero and names it", type: build, priority: high, covers: [AC-8]}
+  - {id: TC-F01-S01-055, title: "In the web shell's source every user-visible string comes from a translation file and every pressable element has a data-testid", type: build, priority: high, covers: [AC-9]}
+  - {id: TC-F01-S01-056, title: "The CI workflow runs every verification command on a pull request, and none of them is allowed to fail quietly", type: build, priority: high, covers: [AC-10]}
+  - {id: TC-F01-S01-057, title: "A pull request on GitHub runs every verification command, and a failing command marks the pull request as failed", type: build, priority: high, covers: [AC-10]}
+  - {id: TC-F01-S01-058, title: "Starts and stops that overlap leave the product running once, and local-down.sh still stops everything", type: functional, priority: medium, covers: [AC-1]}
+  - {id: TC-F01-S01-059, title: "A lock left by a script that was killed does not stop the next run, and is removed", type: resilience, priority: medium, covers: [AC-1]}
+  - {id: TC-F01-S01-060, title: "A process-id file left by an earlier run never makes a stopped service look running, and its process is never stopped", type: functional, priority: high, covers: [AC-1]}
+  - {id: TC-F01-S01-061, title: "With PostgreSQL frozen, health answers 503 within 5 seconds every time, and returns to 200 by itself when PostgreSQL answers again", type: resilience, priority: high, covers: [AC-2]}
+  - {id: TC-F01-S01-062, title: "A pnpm that is not Corepack's never rewrites pnpm-lock.yaml: install stops and says why, and local-up.sh asks for Corepack", type: build, priority: medium, covers: [AC-1]}
+  - {id: TC-F01-S01-063, title: "Every prerequisite local-up.sh refuses to start without is a row of README.md's prerequisites", type: build, priority: medium, covers: [AC-1]}
 verification:
   commands:
     - "cd apps/api && ./mvnw -q verify"
@@ -23,9 +353,102 @@ verification:
     - "pnpm --filter @salon/web build"
     - "pnpm contracts:check"
     - "qa/scripts/sdlc selftest"
-  automation: []
-  manual: []
-  deferred: []
+  automation:
+    - id: local-environment
+      tool: script
+      file: qa/checks/F01/S01-local-environment.sh
+      covers: [TC-F01-S01-001, TC-F01-S01-002, TC-F01-S01-003, TC-F01-S01-004, TC-F01-S01-005, TC-F01-S01-006, TC-F01-S01-007, TC-F01-S01-008]
+      suites: []
+    - id: api-meta-health-info
+      tool: playwright
+      file: qa/api/F01/S01-meta-health-info.spec.ts
+      project: api
+      covers: [TC-F01-S01-010, TC-F01-S01-011, TC-F01-S01-012, TC-F01-S01-013, TC-F01-S01-014, TC-F01-S01-019, TC-F01-S01-020]
+      suites: []
+    - id: api-errors
+      tool: playwright
+      file: qa/api/F01/S01-errors.spec.ts
+      project: api
+      covers: [TC-F01-S01-015, TC-F01-S01-016, TC-F01-S01-017, TC-F01-S01-018, TC-F01-S01-021, TC-F01-S01-022, TC-F01-S01-023]
+      suites: []
+    - id: web-status-page
+      tool: playwright
+      file: qa/web/F01/S01-status-page.spec.ts
+      project: web
+      covers: [TC-F01-S01-032, TC-F01-S01-033, TC-F01-S01-034, TC-F01-S01-035, TC-F01-S01-036, TC-F01-S01-037, TC-F01-S01-038, TC-F01-S01-039]
+      suites: []
+    - id: web-status-page-api-down
+      tool: playwright
+      file: qa/web/F01/S01-status-page-api-down.spec.ts
+      project: web
+      covers: [TC-F01-S01-041, TC-F01-S01-042, TC-F01-S01-043, TC-F01-S01-044, TC-F01-S01-045, TC-F01-S01-046, TC-F01-S01-047, TC-F01-S01-048, TC-F01-S01-049, TC-F01-S01-050, TC-F01-S01-051]
+      suites: []
+    - id: database-down
+      tool: script
+      file: qa/checks/F01/S01-database-down.sh
+      covers: [TC-F01-S01-024, TC-F01-S01-025, TC-F01-S01-026, TC-F01-S01-027]
+      suites: []
+    - id: other-profile
+      tool: script
+      file: qa/checks/F01/S01-other-profile.sh
+      covers: [TC-F01-S01-028]
+      suites: []
+    - id: migrations
+      tool: script
+      file: qa/checks/F01/S01-migrations.sh
+      covers: [TC-F01-S01-029, TC-F01-S01-030, TC-F01-S01-031]
+      suites: []
+    - id: contract-drift
+      tool: script
+      file: qa/checks/F01/S01-contract-drift.sh
+      covers: [TC-F01-S01-052, TC-F01-S01-053, TC-F01-S01-054]
+      suites: []
+    - id: strings-and-test-ids
+      tool: script
+      file: qa/checks/F01/S01-strings-and-test-ids.sh
+      covers: [TC-F01-S01-055]
+      suites: []
+    - id: ci-workflow
+      tool: script
+      file: qa/checks/F01/S01-ci-workflow.sh
+      covers: [TC-F01-S01-056]
+      suites: []
+    - id: overlapping-starts
+      tool: script
+      file: qa/checks/F01/S01-overlapping-starts.sh
+      covers: [TC-F01-S01-058, TC-F01-S01-059]
+      suites: []
+    - id: stale-pid-file
+      tool: script
+      file: qa/checks/F01/S01-stale-pid-file.sh
+      covers: [TC-F01-S01-060]
+      suites: []
+    - id: database-frozen
+      tool: script
+      file: qa/checks/F01/S01-database-frozen.sh
+      covers: [TC-F01-S01-061]
+      suites: []
+    - id: pinned-pnpm
+      tool: script
+      file: qa/checks/F01/S01-pinned-pnpm.sh
+      covers: [TC-F01-S01-062]
+      suites: []
+    - id: prerequisites-documented
+      tool: script
+      file: qa/checks/F01/S01-prerequisites-documented.sh
+      covers: [TC-F01-S01-063]
+      suites: []
+  manual:
+    - case: TC-F01-S01-009
+      reason: "it needs a root `.env`, which a check must never write into the repository, and a full extra build-and-start cycle on every stage run to protect settings no acceptance criterion names"
+      performed_on: 2026-10-12
+    - case: TC-F01-S01-040
+      reason: "whether a screen looks right is a person's judgement that no assertion replaces"
+      performed_on: 2026-10-12
+  deferred:
+    - case: TC-F01-S01-057
+      reason: "the repository has no GitHub remote, so no pull request can exist and the workflow has never run (the spec's \"Done criteria\" say so)"
+      unblocked_by: "the owner creates the GitHub remote"
 evidence:
-  last_run: null
-  last_result: null
+  last_run: qa/reports/20261012-130333-F01-S01
+  last_result: pass

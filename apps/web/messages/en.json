@@ -1,0 +1,24 @@
+{
+  "app": {
+    "name": "Salon"
+  },
+  "status": {
+    "heading": "Service status",
+    "loading": "Checking the service…",
+    "loaded": {
+      "summary": "The service is running.",
+      "service": "Service",
+      "version": "Version"
+    },
+    "unavailable": {
+      "title": "Service unavailable",
+      "body": "We could not reach the service. Nothing is wrong on your side. Please try again in a moment.",
+      "retry": "Try again"
+    }
+  },
+  "notFound": {
+    "title": "Page not found",
+    "body": "There is nothing at this address.",
+    "home": "Go to the home page"
+  }
+}

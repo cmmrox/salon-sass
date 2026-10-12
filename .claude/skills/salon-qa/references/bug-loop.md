@@ -47,6 +47,11 @@ A bug the developer can act on without asking has:
 - what was expected and what happened, with the evidence (response body, screenshot, log line);
 - how often it happens.
 
+A bug found by exploring has no case yet. Write the case when you file the bug. If the bug is fixed
+in this pass, automate the case at re-verification. If it is `minor` or `trivial` and is being left
+open, declare the case and list it under `verification.deferred`, unblocked by the bug's id, so the
+stage run stays honest and the case is not forgotten.
+
 One defect per bug. Two symptoms with one cause are one bug; one screen with two unrelated faults
 is two.
 

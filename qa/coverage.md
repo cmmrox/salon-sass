@@ -14,7 +14,7 @@
 
 | Stage | Status | QA | Requirements | Criteria | Cases | Automated | Manual | Deferred |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| F01-S01 | planned | not-run | - | 10 | 0 | 0 | 0 | 0 |
+| F01-S01 | complete | pass | NFR-17, NFR-18 | 10 | 63 | 60 | 2 | 1 |
 
 ## Deferred cases
 
@@ -22,7 +22,7 @@ Cases waiting for something else. `feature-verify` and `release-prepare` go thro
 
 | Scope | Case | Reason | Unblocked by |
 | --- | --- | --- | --- |
-| - | none | - | - |
+| F01-S01 | TC-F01-S01-057 | the repository has no GitHub remote, so no pull request can exist and the workflow has never run (the spec's "Done criteria" say so) | the owner creates the GitHub remote |
 
 ## Requirements
 

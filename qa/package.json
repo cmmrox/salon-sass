@@ -1,0 +1,24 @@
+{
+  "name": "@salon/qa",
+  "version": "0.1.0",
+  "private": true,
+  "description": "QA automation: Playwright browser and API tests, shell checks and their shared helpers. Not part of the product's pnpm workspace; install with `pnpm --dir qa install --ignore-workspace`.",
+  "packageManager": "pnpm@12.11.2",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "browsers": "playwright install chromium"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
+    "@playwright/test": "1.64.0",
+    "@types/node": "^24",
+    "ajv": "8.20.0",
+    "ajv-formats": "3.0.1",
+    "pnpm": "11.6.0",
+    "typescript": "5.9.3",
+    "yaml": "2.9.1"
+  }
+}

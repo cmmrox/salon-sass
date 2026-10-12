@@ -9,12 +9,13 @@ QA automation, shared fixtures, release manifests and the lifecycle tooling. The
 | `scripts/sdlc` | The lifecycle tooling: `validate`, `generate`, `status`, `run`, `selftest` | Present |
 | `scripts/guard.py` | The path-ownership check for the developer and QA roles | Present |
 | `coverage.md` | Requirement and test coverage. Generated; do not edit | Present |
-| `web/`, `api/` | Playwright browser and API tests, by feature | By QA in F01-S01 |
+| `web/`, `api/` | Playwright browser and API tests, by feature | Present |
 | `mobile/` | Maestro flows for the customer app, by feature | From milestone `M2-mobile` |
 | `load/` | k6 load, stress and concurrency scripts, by feature | By QA in F01-S02 |
-| `checks/` | Shell checks for what a browser or API test cannot do, by feature | By QA in F01-S01 |
-| `package.json` | QA's own package and lock file, separate from the product's workspace | By QA in F01-S01 |
-| `shared/` | Fixtures, the three synthetic salons, accounts, helpers | By QA in F01-S01 |
+| `checks/` | Shell checks for what a browser or API test cannot do, by feature | Present |
+| `package.json` | QA's own package and lock file, separate from the product's workspace | Present |
+| `playwright.config.ts`, `tsconfig.json`, `.env.example` | The Playwright projects `api` and `web`, the path alias to the generated contract, and the keys `qa/.env.local` may provide | Present |
+| `shared/` | Fixtures and helpers. The three synthetic salons arrive with F01-S02 and accounts with F02 | Present |
 | `releases/<version>/` | Release manifests and results | At the first release |
 | `reports/` | Run output. Never committed | By each run |
 
@@ -27,3 +28,17 @@ qa/scripts/sdlc run --stage F01-S01 --dry-run
 
 Regression and smoke (`--suite regression`, `--suite smoke`, `--release <version>`) run only when
 the owner asks.
+
+## Before a run
+
+```bash
+pnpm --dir qa install --ignore-workspace    # once, and after qa/package.json changes
+pnpm --dir qa exec playwright install chromium
+infra/scripts/local-up.sh                   # the product must be running
+```
+
+A run does not start the product. Every automation entry checks that it is there first and, if it
+is not, stops with a message that begins `ENVIRONMENT:` (a shell check exits 3). That is a fault of
+the environment, not a failure of the product: start the product and run again. A run stops and
+starts the product's services and empties the local database through the scripts in
+`infra/scripts/`, and leaves the product running when it ends.

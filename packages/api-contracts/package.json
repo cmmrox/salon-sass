@@ -1,0 +1,27 @@
+{
+  "name": "@salon/api-contracts",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The TypeScript client for the API, generated from docs/api/openapi.json. Used by the web app, and later by the customer app.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "eslint --max-warnings 0",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "openapi-fetch": "0.17.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "@types/node": "^24",
+    "eslint": "^9.39.5",
+    "openapi-typescript": "7.13.0",
+    "typescript": "5.9.3",
+    "typescript-eslint": "^8.71.1",
+    "vitest": "^5.0.3"
+  }
+}

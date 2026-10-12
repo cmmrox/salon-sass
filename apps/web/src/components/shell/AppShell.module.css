@@ -1,0 +1,22 @@
+.shell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-6);
+  min-height: 100vh;
+  padding: var(--space-8) var(--space-4);
+}
+
+.header,
+.main {
+  width: 100%;
+  max-width: var(--size-content);
+}
+
+.name {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-large);
+  font-weight: var(--font-weight-strong);
+  line-height: var(--line-height-heading);
+  overflow-wrap: anywhere;
+}

@@ -1,0 +1,21 @@
+# The product's workspace. qa/ is deliberately not in it: QA keeps its own package and lock file
+# there, so a test dependency never changes the product's lock file.
+packages:
+  - apps/web
+  - packages/*
+
+# Only the pnpm version that package.json pins runs here, and Corepack is what provides it. Left to
+# its default, a pnpm of another version fetches the pinned one by itself and writes a record of
+# that into pnpm-lock.yaml, even for `install --frozen-lockfile`. With this it stops instead and
+# names the version it was asked for.
+pmOnFail: error
+
+# pnpm runs a dependency's install script only when it is allowed here, and fails the install
+# until every one has a decision. None is needed: each of these ships a prebuilt binary, and sharp
+# is only used by image optimisation.
+allowBuilds:
+  '@parcel/watcher': false
+  '@swc/core': false
+  esbuild: false
+  sharp: false
+  unrs-resolver: false
