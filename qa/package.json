@@ -17,6 +17,7 @@
     "@types/node": "^24",
     "ajv": "8.20.0",
     "ajv-formats": "3.0.1",
+    "pnpm": "11.6.0",
     "typescript": "5.9.3",
     "yaml": "2.9.1"
   }

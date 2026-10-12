@@ -12,6 +12,11 @@
 QA_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 REPO_ROOT="$(cd "$QA_ROOT/.." && pwd)"
 SCRIPTS="$REPO_ROOT/infra/scripts"
+# The checkout whose scripts are under test, and where those scripts keep their process ids and
+# their lock. Derived from SCRIPTS, so that a check run against another checkout's scripts (to see
+# it fail on an older version of them) looks at that checkout's state and not this one's.
+PRODUCT_ROOT="$(cd "$SCRIPTS/../.." && pwd)"
+RUN_DIR="$PRODUCT_ROOT/.local/run"
 
 _setting() {
   local name="$1" file value
@@ -169,6 +174,31 @@ product_is_up() {
 # A check of the running product can only fail meaningfully if the product was there to begin with.
 require_product_up() {
   product_is_up || environment_fault "the product is not running (health at $API_URL/actuator/health answered $(http_code "$API_URL/actuator/health" 5), the web app at $WEB_URL/ answered $(http_code "$WEB_URL/" 10)). Start it with infra/scripts/local-up.sh and run again."
+}
+
+# The process id a pid file of the scripts names (the first word of the file), or nothing.
+recorded_pid() { [ -f "$RUN_DIR/$1.pid" ] && cut -d' ' -f1 <"$RUN_DIR/$1.pid" || true; }
+
+# Processes running the API's jar or the web app's server, one id per line.
+product_processes() { pgrep -f 'salon-api\.jar|next-server|next start' || true; }
+
+# path_without <directory> <tool...>: fills the directory with links to every program in /usr/bin,
+# /bin, /usr/sbin and /sbin except the named ones, plus node, corepack and docker from this PATH,
+# so that a script can be run on "this machine, without curl" (or without ps).
+path_without() {
+  local target="$1" dir file name tool skip; shift
+  mkdir -p "$target"
+  for dir in /usr/bin /bin /usr/sbin /sbin; do
+    for file in "$dir"/*; do
+      name="${file##*/}"; skip=0
+      for tool in "$@"; do [ "$name" = "$tool" ] && skip=1; done
+      [ "$skip" = 1 ] || [ -e "$target/$name" ] || ln -s "$file" "$target/$name"
+    done
+  done
+  for tool in node corepack docker; do
+    skip=0; for name in "$@"; do [ "$name" = "$tool" ] && skip=1; done
+    [ "$skip" = 1 ] || { command -v "$tool" >/dev/null 2>&1 && ln -sf "$(command -v "$tool")" "$target/$tool"; }
+  done
 }
 
 # --- the database -----------------------------------------------------------------------------

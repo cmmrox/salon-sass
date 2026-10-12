@@ -168,11 +168,13 @@ START_OUTPUT="$("$SCRIPTS/local-service.sh" start web 2>&1)"; expect_equal "exit
 expect_equal "GET $WEB_URL/ after 'start web'" 200 "$(http_code "$WEB_URL/")"
 expect_equal "the API's process after 'start web'" "$API_PID_NOW" "$(listener_pid "$API_PORT")"
 WEB_PID_NOW="$(listener_pid "$WEB_PORT")"
-for arguments in "restart api" "stop redis" "start" ""; do
+# pause and resume exist for PostgreSQL only (the test hook of BUG-F01-S01-003).
+for arguments in "restart api" "stop redis" "start" "" "pause api" "resume web" "pause"; do
   # shellcheck disable=SC2086
   REFUSED_OUTPUT="$("$SCRIPTS/local-service.sh" $arguments 2>&1)"; REFUSED_EXIT=$?
   expect_not_equal "exit code of local-service.sh '$arguments'" 0 "$REFUSED_EXIT"
   expect_matches "what local-service.sh '$arguments' prints" 'start\|stop.*postgres\|api\|web' "$REFUSED_OUTPUT"
+  expect_matches "what local-service.sh '$arguments' prints" 'pause\|resume.*postgres' "$REFUSED_OUTPUT"
 done
 expect_equal "the API's process after the refused commands" "$API_PID_NOW" "$(listener_pid "$API_PORT")"
 expect_equal "the web app's process after the refused commands" "$WEB_PID_NOW" "$(listener_pid "$WEB_PORT")"
