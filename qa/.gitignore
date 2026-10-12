@@ -1,0 +1,8 @@
+# QA's own dependencies, credentials and run output. Never committed.
+node_modules/
+.env.local
+reports/
+test-results/
+playwright-report/
+blob-report/
+.auth/
