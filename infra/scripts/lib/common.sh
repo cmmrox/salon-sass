@@ -180,21 +180,44 @@ port_in_use() {
 
 pid_file() { printf '%s/%s.pid' "$RUN_DIR" "$1"; }
 
-# The pid of a service this script started and that is still alive; nothing otherwise.
-running_pid() {
-  local file pid
-  file="$(pid_file "$1")"
-  [ -f "$file" ] || return 0
-  pid="$(cat "$file" 2>/dev/null)"
-  if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
-    printf '%s' "$pid"
-  else
-    rm -f "$file"
-  fi
+# When the process with this id started, as the system reports it; nothing when there is no such
+# process. The system gives a process id to another process once the first is gone, but never the
+# same id with the same start time: the two together name one process and no other.
+process_started() {
+  case "${1:-}" in ''|*[!0-9]*) return 0 ;; esac
+  LC_ALL=C ps -p "$1" -o lstart= 2>/dev/null | sed -e 's/^ *//' -e 's/ *$//' || true
 }
 
-# Stops a process this script started, and its children. Only ever a pid we recorded: a process
-# that merely holds the same port belongs to someone else.
+# Records a process these scripts started: its id, and when it started.
+record_pid() {
+  printf '%s %s' "$2" "$(process_started "$2")" >"$(pid_file "$1")"
+}
+
+# The pid of a service these scripts started and that is still that process; nothing otherwise.
+#
+# A pid file can outlive its process (the machine lost power, the process was killed), and by then
+# its number may belong to something else. So a number alone is never trusted: unless the process
+# with that id also started when the file says, the file is a leftover and is removed, and the
+# process it happens to name is left alone.
+running_pid() {
+  local file pid="" started=""
+  file="$(pid_file "$1")"
+  [ -f "$file" ] || return 0
+  IFS=' ' read -r pid started <"$file" 2>/dev/null || true
+  if [ -n "$started" ] && [ "$(process_started "$pid")" = "$started" ]; then
+    printf '%s' "$pid"
+    return 0
+  fi
+  if [ -n "$(process_started "$pid")" ]; then
+    printf 'note: %s was left by an earlier run. Process %s is not something these scripts started and is left alone.\n' \
+      "${file#"$ROOT"/}" "$pid" >&2
+  fi
+  rm -f "$file"
+}
+
+# Stops a process these scripts started, and its children. Only ever a process we recorded, and
+# only while it is still that process: one that merely holds the same port, or has since been given
+# the same process id, belongs to someone else.
 stop_process() {
   local name="$1" pid waited=0
   pid="$(running_pid "$name")"
@@ -216,15 +239,15 @@ stop_process() {
   say "$name: stopped"
 }
 
-# Waits until the URL answers 200, the process dies, or the time runs out.
+# Waits until the URL answers 200, the process just started (its id is the fourth argument) dies,
+# or the time runs out.
 wait_until_up() {
-  local name="$1" url="$2" seconds="$3" pid waited=0
-  pid="$(running_pid "$name")"
+  local name="$1" url="$2" seconds="$3" pid="$4" waited=0
   while [ "$waited" -lt "$seconds" ]; do
     if [ "$(curl -s -o /dev/null -w '%{http_code}' --max-time 3 "$url" 2>/dev/null)" = "200" ]; then
       return 0
     fi
-    if [ -n "$pid" ] && ! kill -0 "$pid" 2>/dev/null; then
+    if ! kill -0 "$pid" 2>/dev/null; then
       break
     fi
     sleep 1
@@ -285,8 +308,8 @@ start_api() {
   ( cd "$ROOT/apps/api" && JAVA_HOME="$RESOLVED_JAVA_HOME" ./mvnw -q -DskipTests package ) >"$LOG_DIR/api-build.log" 2>&1 \
     || { tail -n 30 "$LOG_DIR/api-build.log" >&2; fail "the API did not build. See $LOG_DIR/api-build.log"; }
   ( cd "$ROOT/apps/api" && exec nohup "$RESOLVED_JAVA_HOME/bin/java" -jar target/salon-api.jar ) >"$LOG_DIR/api.log" 2>&1 &
-  printf '%s' "$!" >"$(pid_file api)"
-  wait_until_up api "http://localhost:${SALON_API_PORT}/actuator/health" 90
+  record_pid api "$!"
+  wait_until_up api "http://localhost:${SALON_API_PORT}/actuator/health" 90 "$!"
   say "api: started"
 }
 
@@ -309,8 +332,8 @@ start_web() {
       || { tail -n 30 "$LOG_DIR/web-build.log" >&2; fail "the web app did not build. See $LOG_DIR/web-build.log"; }
     ( cd "$ROOT/apps/web" && exec nohup node_modules/.bin/next start --port "$SALON_WEB_PORT" ) >"$LOG_DIR/web.log" 2>&1 &
   fi
-  printf '%s' "$!" >"$(pid_file web)"
-  wait_until_up web "http://localhost:${SALON_WEB_PORT}/" 90
+  record_pid web "$!"
+  wait_until_up web "http://localhost:${SALON_WEB_PORT}/" 90 "$!"
   say "web: started"
 }
 
