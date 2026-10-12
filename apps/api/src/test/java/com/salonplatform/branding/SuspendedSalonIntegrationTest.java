@@ -45,7 +45,7 @@ class SuspendedSalonIntegrationTest extends IntegrationTest {
         assertThat(response.status()).isEqualTo(403);
         assertThat(response.contentType()).startsWith("application/problem+json");
         Map<String, Object> body = JsonPath.parse(response.body()).read("$");
-        assertThat(body).containsOnlyKeys("title", "status", "detail", "instance", "code");
+        assertThat(body).containsOnlyKeys("title", "status", "detail", "instance", "code", "traceId");
         assertThat(body).containsEntry("code", "salon_suspended").containsEntry("status", 403)
                 .containsEntry("title", "Forbidden").containsEntry("instance", SALON);
         assertThat(response.body()).as("nothing of the suspended salon").doesNotContain(closed.name())

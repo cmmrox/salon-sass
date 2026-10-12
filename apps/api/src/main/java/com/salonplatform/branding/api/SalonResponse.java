@@ -16,9 +16,12 @@ public record SalonResponse(
         String name,
         @Schema(description = "The salon's brand colour, `#RRGGBB`.", example = "#D6086A", pattern = "^#[0-9A-F]{6}$",
                 requiredMode = RequiredMode.REQUIRED)
-        String brandColour) {
+        String brandColour,
+        @Schema(description = "The salon's time zone, an IANA name. The salon's times are shown in it.",
+                example = "Asia/Colombo", requiredMode = RequiredMode.REQUIRED)
+        String timeZone) {
 
     static SalonResponse from(PublishedBrand brand) {
-        return new SalonResponse(brand.slug(), brand.name(), brand.brandColour());
+        return new SalonResponse(brand.slug(), brand.name(), brand.brandColour(), brand.timeZone());
     }
 }

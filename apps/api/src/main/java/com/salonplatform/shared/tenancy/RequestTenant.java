@@ -3,6 +3,8 @@ package com.salonplatform.shared.tenancy;
 import java.util.Optional;
 import java.util.concurrent.locks.ReentrantLock;
 
+import org.slf4j.MDC;
+
 /**
  * What one request knows about its salon: the slug its hostname names, and once asked, what the
  * registry says about it. Lives only as long as the scoped value that holds it.
@@ -29,6 +31,9 @@ final class RequestTenant {
 
     /** Null until resolved. */
     private volatile Resolution resolution;
+
+    /** Why the lookup made when the request started failed, if it did; null otherwise. */
+    private volatile RuntimeException earlyFailure;
 
     private RequestTenant(String candidateSlug, TenantDirectory directory, Resolution resolution) {
         this.candidateSlug = candidateSlug;
@@ -59,11 +64,33 @@ final class RequestTenant {
      * @throws TenantSuspendedException when it names a suspended one
      */
     CurrentTenant require() {
+        RuntimeException failed = earlyFailure;
+        if (resolution == null && failed != null) {
+            // The registry could not be read when the request started; the request is not made to
+            // wait for it twice.
+            throw failed;
+        }
         Resolution current = resolve();
         if (current.suspended()) {
             throw new TenantSuspendedException();
         }
         return current.salon().orElseThrow(TenantNotFoundException::new);
+    }
+
+    /**
+     * Looks the slug up now, when the request starts, so that every log line of the request names
+     * its salon. A failure is kept and given to whoever requires the salon later in the request.
+     */
+    void resolveEarly() {
+        if (resolution != null) {
+            return;
+        }
+        try {
+            resolve();
+        }
+        catch (RuntimeException ex) {
+            earlyFailure = ex;
+        }
     }
 
     private Resolution resolve() {
@@ -75,6 +102,9 @@ final class RequestTenant {
         try {
             if (resolution == null) {
                 resolution = directory.find(candidateSlug).map(this::resolutionOf).orElse(Resolution.NONE);
+                // From here on every log line of the request names its salon (T-8, NFR-16). The
+                // request filter removes it when the request ends.
+                resolution.salon().ifPresent(salon -> MDC.put(TenantContext.LOG_FIELD, salon.id().toString()));
             }
             return resolution;
         }
@@ -85,7 +115,7 @@ final class RequestTenant {
 
     private Resolution resolutionOf(RegisteredTenant registered) {
         return switch (registered.status()) {
-            case ACTIVE -> Resolution.of(new CurrentTenant(registered.id(), candidateSlug));
+            case ACTIVE -> Resolution.of(new CurrentTenant(registered.id(), candidateSlug, registered.timeZone()));
             // Its id is dropped here: a suspended salon is never the salon of a request.
             case SUSPENDED -> Resolution.SUSPENDED;
         };

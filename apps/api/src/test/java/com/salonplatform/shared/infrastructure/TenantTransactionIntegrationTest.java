@@ -105,6 +105,6 @@ class TenantTransactionIntegrationTest {
     }
 
     private static <T> T as(TestSalon salon, Callable<T> work) throws Exception {
-        return TenantContext.callAs(new CurrentTenant(salon.id(), salon.slug()), work);
+        return TenantContext.callAs(new CurrentTenant(salon.id(), salon.slug(), TestSalons.DEFAULT_TIME_ZONE), work);
     }
 }

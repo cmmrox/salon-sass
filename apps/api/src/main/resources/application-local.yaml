@@ -23,7 +23,8 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        # The meters (/actuator/metrics) are for a developer and QA on this machine only.
+        include: health,info,metrics
   info:
     java:
       enabled: true
