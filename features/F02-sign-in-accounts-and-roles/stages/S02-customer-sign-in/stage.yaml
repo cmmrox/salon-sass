@@ -24,7 +24,117 @@ handoff:
   run: null
   data: null
   notes: null
-cases: []
+cases:
+  - id: TC-F02-S02-001
+    title: code requests reveal only a challenge and issue a protected server device cookie
+    type: api
+    priority: high
+    covers:
+      - AC-1
+  - id: TC-F02-S02-002
+    title: invalid challenge requests create no delivery and name invalid fields
+    type: api
+    priority: high
+    covers:
+      - AC-1
+  - id: TC-F02-S02-003
+    title: a correct code signs in a salon-specific customer with bounded credentials
+    type: security
+    priority: critical
+    covers:
+      - AC-2
+  - id: TC-F02-S02-004
+    title: the same mobile at two salons creates unrelated customer identities
+    type: tenant-isolation
+    priority: critical
+    covers:
+      - AC-2
+  - id: TC-F02-S02-005
+    title: customer authority cannot perform any staff-only action
+    type: permissions
+    priority: critical
+    covers:
+      - AC-2
+  - id: TC-F02-S02-006
+    title: wrong guesses exhaust a challenge durably and cannot issue a session
+    type: security
+    priority: critical
+    covers:
+      - AC-3
+  - id: TC-F02-S02-007
+    title: expiry resend and wrong-device verification cannot authorize an old challenge
+    type: security
+    priority: critical
+    covers:
+      - AC-3
+  - id: TC-F02-S02-008
+    title: concurrent valid-code reuse creates exactly one customer and session
+    type: concurrency
+    priority: critical
+    covers:
+      - AC-3
+  - id: TC-F02-S02-009
+    title: customer challenge and capture routes are isolated from other salons
+    type: tenant-isolation
+    priority: critical
+    covers:
+      - AC-3
+      - AC-7
+      - AC-8
+  - id: TC-F02-S02-010
+    title: each request limit prevents extra enqueue and resists forged selectors
+    type: security
+    priority: critical
+    covers:
+      - AC-4
+  - id: TC-F02-S02-011
+    title: simultaneous requests cannot cross the number or salon daily ceiling
+    type: concurrency
+    priority: critical
+    covers:
+      - AC-4
+  - id: TC-F02-S02-012
+    title: API restart preserves accepted code counters and issuing-device verification
+    type: security
+    priority: critical
+    covers:
+      - AC-4
+  - id: TC-F02-S02-013
+    title: the unusual-volume alert is once per salon UTC day and visible only to authorized readers
+    type: security
+    priority: critical
+    covers:
+      - AC-5
+  - id: TC-F02-S02-014
+    title: customer session ownership and principal-kind separation survive renewal and revocation
+    type: security
+    priority: critical
+    covers:
+      - AC-6
+  - id: TC-F02-S02-015
+    title: customer and challenge storage is tenant-bound encrypted and absent from logs and public errors
+    type: data-integrity
+    priority: critical
+    covers:
+      - AC-7
+  - id: TC-F02-S02-016
+    title: failed and silent delivery retries the existing request and recovers without duplicates
+    type: resilience
+    priority: high
+    covers:
+      - AC-8
+  - id: TC-F02-S02-017
+    title: an expired challenge is never delivered after provider recovery
+    type: security
+    priority: critical
+    covers:
+      - AC-8
+  - id: TC-F02-S02-018
+    title: provider controls are local-only and nonlocal unconfigured sending refuses honestly
+    type: build
+    priority: high
+    covers:
+      - AC-8
 verification:
   commands: []
   automation: []
