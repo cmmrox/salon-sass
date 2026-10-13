@@ -79,6 +79,18 @@ public class AuditTrail {
                 .getResultStream().map(this::toRecord).toList();
     }
 
+    public record AuditPage(List<AuditRecord> items,long total) {}
+
+    /** Identity's protected audit facade: tenant filtering is still applied by Hibernate and RLS. */
+    public AuditPage identityPage(int page,int size,String subjectId) {
+        String condition=" e.action like 'identity.%'";
+        if(subjectId!=null)condition+=" and e.subjectId=:subject";
+        var query=entityManager.createQuery("select e from AuditEntry e where"+condition+" order by e.createdAt desc,e.id",AuditEntry.class);
+        var count=entityManager.createQuery("select count(e) from AuditEntry e where"+condition,Long.class);
+        if(subjectId!=null){query.setParameter("subject",subjectId);count.setParameter("subject",subjectId);}
+        return new AuditPage(query.setFirstResult(page*size).setMaxResults(size).getResultStream().map(this::toRecord).toList(),count.getSingleResult());
+    }
+
     private AuditRecord toRecord(AuditEntry entry) {
         return new AuditRecord(entry.id(), entry.tenantId(), entry.createdAt(), entry.actorKind(), entry.actorId(),
                 entry.action(), entry.subjectKind(), entry.subjectId(), entry.reason(), fromJson(entry.beforeValues()),

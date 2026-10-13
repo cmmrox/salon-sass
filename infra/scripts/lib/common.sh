@@ -58,6 +58,7 @@ load_settings() {
   if [ -z "${SALON_DB_URL:-}" ]; then DATABASE_IS_LOCAL=1; else DATABASE_IS_LOCAL=0; fi
   export SALON_DB_URL="${SALON_DB_URL:-jdbc:postgresql://localhost:${SALON_POSTGRES_PORT}/${SALON_DB_NAME}}"
   export SALON_API_BASE_URL="${SALON_API_BASE_URL:-http://localhost:${SALON_API_PORT}}"
+  export SALON_IDENTITY_LOCAL_KEY_FILE="${SALON_IDENTITY_LOCAL_KEY_FILE:-$ROOT/.local/identity-keys.properties}"
   export SALON_WEB_MODE="${SALON_WEB_MODE:-production}"
   export SPRING_PROFILES_ACTIVE="${SPRING_PROFILES_ACTIVE:-local}"
   mkdir -p "$RUN_DIR" "$LOG_DIR"

@@ -13,6 +13,8 @@ spring:
     locations: classpath:db/migration,classpath:db/local
 
 salon:
+  identity:
+    local-key-file: ${SALON_IDENTITY_LOCAL_KEY_FILE:../../.local/identity-keys.properties}
   platform-domain: ${SALON_PLATFORM_DOMAIN:localhost}
   server:
     # This machine only (CR-002). SALON_LISTEN_ON_NETWORK=true opens the ports to the network, for

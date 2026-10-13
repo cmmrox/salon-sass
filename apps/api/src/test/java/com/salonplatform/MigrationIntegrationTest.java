@@ -33,7 +33,8 @@ class MigrationIntegrationTest {
                         tuple("4", "add tenant time zone"),
                         tuple("5", "create audit entry"),
                         tuple("6", "create outbox message"),
-                        tuple("7", "create scheduled job"));
+                        tuple("7", "create scheduled job"),
+                        tuple("8", "create staff identity"));
         assertThat(afterFirstStart).allSatisfy(row -> assertThat(row).containsEntry("success", true));
 
         try (StartedApplication application = database.start()) {
