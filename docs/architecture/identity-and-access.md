@@ -252,6 +252,23 @@ requires configured keys; never embed a fallback or generated local key in conta
 Document the environment variables and hooks when each stage hands them over; gates and QA must
 coordinate artifact rebuilds and service restarts as in the environment document.
 
+The browser rate-address boundary adds `SALON_IDENTITY_PROXY_KEY`, independently random from the
+three identity keys and encoded as 64 hex characters. Local startup appends the `proxy` entry to
+the retained key file without replacing earlier values; nonlocal startup requires all four keys
+and rejects any equal pair. Web runtime receives the same proxy key; it is excluded from browser
+data and build artifacts. `SALON_WEB_LOCAL_HTTP=true` is explicit for local HTTP and false outside
+it; `SALON_WEB_TRUSTED_PROXIES` is empty locally and an explicit edge CIDR allowlist behind Caddy.
+
+The private `x-salon-client-assertion` header is optional on staff password sign-in and customer
+code requests only. Its maximum length is 192 characters and its wire format is
+`v1;canonicalIP;issuedISOInstant;lowercaseHexMAC`. HMAC-SHA256 binds newline-separated version,
+canonical salon hostname without port, uppercase method, exact API path, canonical IP and issued
+instant. IPv6 is eight four-digit lowercase groups; mapped IPv6 normalizes to dotted IPv4.
+Duplicate headers, malformed or noncanonical values, wrong host/method/path, invalid MAC and
+timestamps outside the inclusive thirty-second API Clock window return safe 400
+`invalid_client_assertion` before rate accounting or other side effects. With no assertion,
+the API uses its real servlet peer. The header confers no tenant or session authority.
+
 ## Implemented staff API contract
 
 The generated [OpenAPI document](../api/openapi.json) is the detailed request/response contract.
