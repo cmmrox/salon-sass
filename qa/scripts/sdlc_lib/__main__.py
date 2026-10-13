@@ -3,7 +3,7 @@ import argparse
 import sys
 import unittest
 
-from . import flow, generate, model, runner, validate
+from . import flow, generate, integration, model, runner, validate
 
 
 def cmd_validate(_args):
@@ -71,6 +71,34 @@ def cmd_selftest(_args):
     return 0 if unittest.TextTestRunner(verbosity=1).run(suite).wasSuccessful() else 1
 
 
+def cmd_integration(args):
+    try:
+        bundle = model.load()
+        if args.command == "pr-check":
+            findings = validate.validate(bundle, generate.render(bundle))
+            if findings:
+                raise integration.Refusal("run validate and fix its findings before submitting")
+            integration.pr_check(bundle, args.feature)
+            print(f"OK {args.feature}: feature QA and revision gates passed; owner merges the PR")
+        elif args.command == "start-check":
+            integration.start_check(bundle, args.feature)
+            print(f"OK {args.feature}: earlier feature merges verified against GitHub and origin/main")
+        elif args.command == "merge-sync":
+            record = integration.merge_sync(bundle, args.feature, args.check)
+            if not args.check:
+                cmd_generate(argparse.Namespace(check=False))
+            print(f"OK {args.feature}: GitHub merge {record['merged_commit']} at {record['merged_at']}")
+        else:
+            import json
+            print(json.dumps(integration.cleanup(args.branch, args.apply), indent=2))
+            if not args.apply:
+                print("PREVIEW only; use --apply after checking the explicit targets")
+        return 0
+    except (integration.Refusal, OSError, ValueError) as error:
+        print(f"refusing: {error}")
+        return 2
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(prog="qa/scripts/sdlc")
     commands = parser.add_subparsers(dest="command", required=True)
@@ -87,6 +115,18 @@ def main(argv=None):
     run.add_argument("--dry-run", action="store_true", help="print what would run and stop")
     run.set_defaults(func=cmd_run)
     commands.add_parser("selftest", help="run the unit tests of this tooling").set_defaults(func=cmd_selftest)
+    for name, help_text in (("pr-check", "check closed feature and tested revision before its PR"),
+                            ("start-check", "verify previous feature merges live before starting"),
+                            ("merge-sync", "record a confirmed GitHub merge; never merges a PR")):
+        command = commands.add_parser(name, help=help_text)
+        command.add_argument("feature", help="feature id, for example F07")
+        if name == "merge-sync":
+            command.add_argument("--check", action="store_true", help="verify only; do not edit feature.yaml")
+        command.set_defaults(func=cmd_integration)
+    clean = commands.add_parser("cleanup", help="preview cleanup of explicit branches already merged into origin/main")
+    clean.add_argument("--branch", action="append", required=True, help="exact related branch; repeat for each target")
+    clean.add_argument("--apply", action="store_true", help="archive QA evidence and remove the verified targets")
+    clean.set_defaults(func=cmd_integration)
     args = parser.parse_args(argv)
     return args.func(args)
 

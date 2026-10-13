@@ -90,7 +90,7 @@ one in `docs/engineering/backend.md`.
 and the reason in `handoff.notes`. At `stage-close` the lead corrects the document and logs the
 decision. Nothing about the product is written into a skill.
 
-## 10. A built stage is not a request for QA
+## 11. A built stage is not a request for QA
 
 **Request:** "F07-S02 is built. What now?" (with F07-S03 still outlined)
 
@@ -98,7 +98,7 @@ decision. Nothing about the product is written into a skill.
 agent is started and no automation is run. The agent says QA tests F07 once every stage is closed.
 Only "QA F07-S02" or "run a stage pass on F07-S02" from the owner starts `stage-verify`.
 
-## 11. How much to test
+## 12. How much to test
 
 **Request:** "QA F07." (a feature with one new read-only endpoint among its stages)
 
@@ -106,3 +106,47 @@ Only "QA F07-S02" or "run a stage pass on F07-S02" from the owner starts `stage-
 beyond the criteria only where data, money, an appointment, an account or a permission is at stake;
 variations as rows of one case. No load test on an endpoint with no response-time target. Ideas
 that are not `critical` go to `review.md` as suggestions, not into `cases.md`.
+
+## 13. One feature PR, after QA
+
+**Request:** "F07 has passed QA; finish it."
+
+**Expected:** The lead integrates independent QA and verified fixes into the feature branch,
+closes it on the feature gates, runs `pr-check`, pushes and opens one feature PR into `main` under
+the recorded authorisation. The PR includes the tested revision, QA result and deferred cases.
+No stage PR targets `main`, the agent does not merge the PR, and nothing deploys.
+
+## 14. A complete feature still waits for merge
+
+**Request:** "Start F08." (F07 is complete, its PR is open)
+
+**Expected:** `start-check F08` refuses while GitHub reports F07 unmerged. A manually typed merge
+SHA or a local merge does not bypass the live check. The agent reports the owner's merge as the
+next action and starts no F08 development.
+
+## 15. Safe post-merge cleanup
+
+**Request:** "F07's PR is merged; continue."
+
+**Expected:** Verify with `merge-sync --check`, fast-forward retained `main`, preview/apply cleanup
+of only F07's named branches/worktrees. Archive QA evidence first. Keep `main`, unrelated and
+unmerged branches, dirty worktrees and ignored credentials. A failed preflight removes nothing.
+Record the confirmed merge on a branch and run the live start check before F08 planning.
+
+## 16. Optional batch staging
+
+**Request:** "Finish F08, then start F09; I will test staging after F10."
+
+**Expected:** Local feature QA, closure and the owner's PR merge gate F09. No VPS connection or
+deployment occurs. Staging-only cases remain explicitly deferred, with the requested deployment
+as their unblocking event. A later explicit staging request selects a version containing the
+merged feature batch and its requested release checks.
+
+## 17. QA revision changes after a pass
+
+**Request:** "Just add this small API change to the passed feature's PR."
+
+**Expected:** The lead checks scope/requirements first. If authorised and built, the changed
+product requires independent QA re-verification and a new `integration.qa_revision`. `pr-check`
+refuses submitting the changed product against the old QA revision. Metadata-only commits do not
+invalidate the unchanged product revision.

@@ -7,6 +7,23 @@ from . import schema as S
 NOBODY = ("-", "-")
 
 
+def merged(feature):
+    """Recorded merge evidence; start-check verifies it live before development starts."""
+    integration = feature.get("integration") or {}
+    if not isinstance(integration, dict):
+        return False
+    return bool(feature.get("status") in S.CLAIMED and feature.get("qa_status") == "pass" and
+                integration.get("pull_request") and integration.get("merged_commit") and
+                integration.get("merged_at"))
+
+
+def predecessors(feature, features):
+    """Portfolio order, plus any explicit dependency outside that order."""
+    fid = feature.get("id", "")
+    dependencies = feature.get("depends_on") or []
+    return [f for f in features if f.get("id", "") < fid or f.get("id") in dependencies]
+
+
 def _awaiting_developer(scope):
     bugs = list(scope.get("_bugs") or []) + list(scope.get("_stage_bugs") or [])
     return [b for b in bugs if b.get("status") in ("open", "reopened")]
@@ -49,17 +66,24 @@ def feature_turn(feature, stages, features=()):
     """
     fid, status = feature.get("id"), feature.get("status")
     if status == "backlog":
-        done = {f.get("id") for f in features if f.get("status") in S.CLAIMED}
+        done = {f.get("id") for f in features if merged(f)}
         unmet = [dep for dep in feature.get("depends_on") or [] if dep not in done]
         if unmet:
             return ("waiting", "after " + ", ".join(unmet))
         mine = str(feature.get("milestone") or "")
         earlier = sorted({str(f.get("milestone")) for f in features
                           if f.get("milestone") and str(f.get("milestone")) < mine and f.get("status") != "released"})
-        if earlier:
+        if earlier and not feature.get("started_early"):
             return ("waiting", f"after {earlier[0]} is released")
+        pending = [f.get("id") for f in predecessors(feature, features) if not merged(f)]
+        if pending and not feature.get("started_early"):
+            return ("waiting", "after GitHub merge of " + ", ".join(pending))
         return ("lead", f"feature-new {fid}")
     if status in S.CLAIMED:
+        if not merged(feature):
+            if (feature.get("integration") or {}).get("pull_request"):
+                return ("lead", f"merge-sync {fid} (after owner merges the PR)")
+            return ("lead", f"feature-submit {fid}")
         return NOBODY
     for stage in sorted(stages, key=lambda s: (s.get("sequence") or 0, s.get("id") or "")):
         if stage.get("status") not in S.CLAIMED:

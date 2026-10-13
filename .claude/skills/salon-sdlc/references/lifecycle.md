@@ -13,6 +13,8 @@ status it leaves behind. Each section stands alone; read only the one you are ru
 - `feature-verify` (and re-verifying fixes)
 - `bug-fix`
 - `feature-close`
+- `feature-submit`
+- `feature-integrate`
 - `stage-verify` (only when the owner asks)
 - `change-request`
 - `release-prepare`
@@ -27,7 +29,11 @@ status it leaves behind. Each section stands alone; read only the one you are ru
 feature: backlog -> planned -> in-progress -> in-qa -> complete -> released
 stage:   outlined -> planned -> in-progress -> built -> complete -> released
 qa_status (a feature; a stage only when the owner asked for a stage pass): not-run | failing | blocked | pass
+integration (feature.yaml): branch, pull_request, qa_revision, merged_commit, merged_at
 ```
+
+`complete` means QA-passed and closed, ready for the feature PR. Only the owner's confirmed
+GitHub merge permits the next feature to start. Deployment is a separate, optional action.
 
 **QA happens once, on the whole feature.** A stage is built, handed over and closed on the
 developer's gates; nobody from QA tests it then. When every stage of the feature is closed, QA
@@ -53,6 +59,8 @@ Whose turn it is, read from the files (`qa/scripts/sdlc status` prints it):
 | `failing`, no such bug | QA: `feature-verify` (finish the pass, or re-verify the fixes) |
 | `blocked` | Lead: remove what blocks QA (`blocked_reason` says what) |
 | `pass` | Lead: `feature-close` |
+| `complete`, no PR | Lead: `feature-submit` |
+| `complete`, PR not yet confirmed merged | Owner merges; lead: `feature-integrate` |
 
 **Which `qa_status` to set**, on the feature at `feature-verify` (on the stage at `stage-verify`):
 
@@ -101,8 +109,11 @@ prototype; the roadmap; the architecture; the parts of the requirements document
 
 **Refuse if:**
 - The feature's status is not `backlog`. It has already been planned.
-- A feature it `depends_on` is not `complete` or `released` (the portfolio shows "after F01" for
-  these), unless the owner has said to start it in parallel. Say which dependency is unfinished.
+- A feature it `depends_on` has not passed QA and been merged into GitHub `main`. Say which
+  dependency is awaiting closure or the owner's merge.
+- `qa/scripts/sdlc start-check <F>` fails. It checks earlier portfolio features and dependencies
+  live, and refuses an unmerged PR or stale/missing merge evidence. A recorded `started_early`
+  owner exception may waive portfolio/milestone order, never a dependency's merge.
 - The feature belongs to a later milestone and an earlier milestone is not yet released (the
   portfolio shows "after M1-web is released"). The order of milestones is in `docs/ROADMAP.md`;
   only the owner changes it. When the owner does say to start a feature early, record their
@@ -120,7 +131,9 @@ prototype; the roadmap; the architecture; the parts of the requirements document
    `assets/stage.yaml`: `status: outlined`, title, sequence, surfaces, `depends_on`, and the
    requirement ids it delivers. Every requirement of the feature must belong to at least one stage.
 3. Write the feature `README.md` from `assets/feature-README.md`.
-4. Set the feature's `status: planned`.
+4. On its integration branch from updated `origin/main`, record `integration.branch`, run
+   `start-check <F>` and set the feature's `status: planned`. The preceding feature's merge
+   bookkeeping may be committed here before the feature is planned; see `git-workflow.md`.
 5. Show the owner the stage outline and wait for approval before planning the first stage.
 
 **Does not:** write any `spec.md`, code or test case.
@@ -157,7 +170,7 @@ stage will need.
    copy them into `stage.yaml` `verification.commands`. The validator fails if the two differ.
 6. Set the stage's `status: planned`. If this is the feature's first planned stage, set the
    feature's `status: in-progress`.
-7. Create the stage's branch (see `git-workflow.md`) and commit the spec there:
+7. Create the stage's branch from the feature integration branch (see `git-workflow.md`) and commit the spec there:
    `docs(<F-S>): plan <title>`.
 
 **Does not:** write code, cases or automation.
@@ -181,7 +194,9 @@ part of the product the stage touches; the source the stage changes. Not other s
   Name the dependency and stop.
 
 **Do:**
-1. Create or switch to the stage branch (see `git-workflow.md`).
+1. Create or switch to the stage branch from the feature integration branch (see `git-workflow.md`).
+   Run `qa/scripts/sdlc start-check <F>` before building a newly started feature. Existing work
+   covered by the transition in `docs/operations/git-delivery.md` is preserved.
 2. Set `status: in-progress` before writing any code, so an interrupted session leaves an honest
    status. Commit it with your first commit.
 3. Implement the spec with unit and integration tests. Follow `salon-dev` and the project documents. Commit as often as is
@@ -240,10 +255,11 @@ else the spec's "Done criteria" assign to the lead.
 2. `qa/scripts/sdlc generate`, then `qa/scripts/sdlc validate` again. If it now fails, revert the
    status and stop.
 3. Commit: `chore(<F-S>): close stage - <title>`.
+   The lead integrates the closed stage into the feature integration branch with a merge commit.
 4. Report to the owner: what was delivered, the result of the developer's gates, any criterion the
    developer could not check, any bug left open, and that QA will test it with the rest of the
    feature. If this was the feature's last stage, say that `feature-verify` is next. Push or open
-   the pull request only if the owner asks.
+   the feature PR only after every stage closes and full feature QA passes.
 
 **Does not:** run QA automation or ask QA for a pass; fix a failing gate by editing `stage.yaml` by
 hand.
@@ -267,7 +283,7 @@ specs and the requirements, never from what the code happens to do.
 - You are the agent that built any stage of this feature in this same context.
 
 **Do, on the first pass (`qa_status: not-run`):**
-1. Set the feature's `status: in-qa`.
+1. Branch QA from the feature integration branch containing every closed stage; set `status: in-qa`.
 2. Preflight the environment from the stages' `handoff`. If the product cannot be started, that is
    the first bug.
 3. Choose the test types for the feature (`docs/qa/test-types.md`), starting from each spec's
@@ -284,7 +300,8 @@ specs and the requirements, never from what the code happens to do.
    `verification.automation` of the stage or the feature whose cases it covers.
 6. Decide suite membership for every automation entry: add `suites: [regression]` to what must keep
    working, and `smoke` to the few that prove the feature is alive.
-7. Run `qa/scripts/sdlc run --feature <F>`. It runs every stage's automation of this feature and
+7. Commit the cases and automation, with role guard and validation, before the final run. Record
+   `git rev-parse HEAD` as the tested revision. Run `qa/scripts/sdlc run --feature <F>`. It runs every stage's automation of this feature and
    then the journeys. No other feature.
 8. Triage every failure as a product defect, an environment fault or a test defect
    (`references/bug-loop.md` in `salon-qa`). File one bug per product defect under
@@ -294,7 +311,8 @@ specs and the requirements, never from what the code happens to do.
    one whose unblocking stage or event has now happened, and move it out of `deferred`.
 10. Explore the feature as a user and write its `review.md`
     (`references/product-review.md` in `salon-qa`). One review for the feature, none per stage.
-11. Record `evidence.last_run` (the run's folder, `qa/reports/<folder>`) and `evidence.last_result`
+11. Record `integration.qa_revision` (the tested full SHA), `evidence.last_run` (the run's folder,
+    `qa/reports/<folder>`) and `evidence.last_result`
     on the feature and set its `qa_status` from the table under "Status model". The stages'
     `qa_status` is left as it is. Generate and validate, run
     `python3 qa/scripts/guard.py --role qa --diff`, and commit: `test(<F>): ...`.
@@ -303,6 +321,8 @@ specs and the requirements, never from what the code happens to do.
 1. Rerun the cases of each fixed bug, then the whole feature: `qa/scripts/sdlc run --feature <F>`.
 2. Set each bug to `verified` or `reopened` with the evidence.
 3. Update the evidence and `qa_status`, generate and validate, guard, commit.
+   Commit any automation edits before the rerun and update `integration.qa_revision` to the
+   tested revision. The lead integrates the QA branch and fixes into the feature integration branch.
 
 **Does not:** edit application code; run any other feature's automation, regression or smoke; set
 the status to `complete`.
@@ -340,6 +360,10 @@ without checking again.
 Disposition column (see `change-requests.md`, "Suggestions from QA"), and correct the documents
 under `docs/` for everything QA reported in the review as different from them.
 
+Run from the feature integration branch after integrating the QA pass and all verified fixes.
+The product and automation must match `integration.qa_revision`; the path list is in
+`docs/architecture/repository-structure.md`. A change there requires QA re-verification.
+
 **Gates, in order. Stop at the first that fails, print why, and change nothing:**
 1. Every stage is `complete`, and the feature's `qa_status` is `pass`.
 2. The `verification.commands` of its stages, with duplicates removed, each exit zero, run now.
@@ -350,10 +374,42 @@ under `docs/` for everything QA reported in the review as different from them.
 **Then:** set `status: complete`; generate and validate; commit
 `chore(<F>): close feature - <title>`; report to the owner what was delivered, the QA result, the
 bugs found and fixed, what is manual or deferred, the minor bugs left open and the suggestions
-waiting for a decision; say the feature is ready to be released. If the feature changed code that
+waiting for a decision; say the feature is ready for its feature PR. If the feature changed code that
 earlier features rely on, say so; do not run their automation unless the owner asks.
 
+The feature is ready for `feature-submit`, not yet merged or deployed. When the project policy
+authorises pushes and PR creation, submit it as the next step without another permission prompt.
+
 **Does not:** fix a failing gate by editing a yaml by hand; run other features' automation.
+
+---
+
+## `feature-submit <F>`
+
+**Role:** Lead. Read `git-workflow.md` and `docs/operations/git-delivery.md`.
+
+**Refuse if:** the feature is not `complete` with QA `pass`; the integration branch is not clean;
+`qa/scripts/sdlc pr-check <F>` fails; or pushes/PR creation are outside the owner's authorisation.
+
+**Do:** push the feature integration branch, create one PR into `main` with the QA summary,
+tested revision and explicit manual/deferred cases; record `integration.pull_request`, generate,
+validate and push its metadata commit. Attach the created PR to the chat. Reuse an existing open
+PR for this feature rather than creating duplicates. Required CI must pass before the owner's merge.
+The owner merges it; the next feature waits. Nothing deploys.
+
+---
+
+## `feature-integrate <F>`
+
+**Role:** Lead. Follow `git-workflow.md`, "Confirming a merge and cleanup".
+
+**Refuse if:** `qa/scripts/sdlc merge-sync <F> --check` cannot verify the owner's GitHub merge.
+
+**Do:** update retained `main`, preview and apply cleanup for only the feature's related merged
+branches/worktrees, preserving QA evidence. On a bookkeeping, release or next-feature branch,
+run `qa/scripts/sdlc merge-sync <F>` and commit the generated merge record. Never write it directly
+to `main`. Run `start-check` before the next feature starts. Report any cleanup target retained
+and its concrete reason. A staging deployment is optional and is never triggered by this command.
 
 ---
 
@@ -397,10 +453,11 @@ and the automation together, and reopen the stages it affects.
 **Role:** Lead, with QA reviewing the suites. Assembles the release; runs nothing.
 
 **Refuse if:** `qa/releases/<vX.Y.Z>/` exists; the version is not `vN.N.N`; no feature is
-`complete` and unreleased; `qa/scripts/sdlc validate` fails.
+`complete`, merged and unreleased; `qa/scripts/sdlc validate` fails.
 
 **Do:**
-1. Scope: the features that are `complete` with no `released_in`, and their stages. Confirm the
+1. Scope: the features that are `complete`, confirmed merged with no `released_in`, and their stages.
+   Record any outstanding merge evidence on the release branch using `merge-sync`. Confirm the
    scope and the version with the owner (`releases.md` and
    `docs/operations/environments-and-releases.md` have the version rules).
 2. QA reviews suite membership across the scope. Regression is everything that must keep working.

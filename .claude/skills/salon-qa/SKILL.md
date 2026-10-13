@@ -64,6 +64,13 @@ QA's pass is the feature's: every stage is already built and closed on the devel
 you see all of it at once. Copy this checklist and work through it. The contract around it is
 `feature-verify` in `salon-sdlc`.
 
+Start the QA branch from the feature's integration branch, with every closed stage integrated.
+Commit cases and automation before the final run, and record that commit under
+`integration.qa_revision`. The lead integrates the QA branch and verified fixes into the feature
+branch; metadata commits may follow, but product or automation changes require re-verification.
+QA passes locally. The owner may defer staging deployment until several features have merged;
+report staging-only cases as deferred and not certified.
+
 ```
 Feature QA: <F>
 - [ ] 1. Read the feature README, every stage's spec.md and stage.yaml (handoff), the feature's

@@ -13,6 +13,10 @@ product imposes on a release. The release procedure itself (prepare, verify, cut
 | Production | Not created yet. Hosting provider and region are open decision D-08 in the BRD | The lead, when the owner's current message names production |
 
 - An unqualified "run it", "test it", "QA it" or "fix it" means local.
+- **Staging deployment is optional and manual.** A feature's QA pass, closure or GitHub merge does
+  not require or trigger a VPS deployment. The owner may merge two or three features, then request
+  a staging deployment of a chosen version containing them. Local QA and merge confirmation
+  permit the next feature to start; staging-only cases remain explicitly deferred and not certified.
 - Permission to touch staging or production is given per request. It never carries over from an
   earlier message, and "cut a release" is not permission to deploy.
 - When an environment is created, the stage that creates it reports its addresses, its start and
@@ -93,7 +97,8 @@ Created by stage F01-S01. Everything runs on the host except PostgreSQL, which r
 ## Versions
 
 The platform (API and web, deployed together) carries one version. Before the first public launch
-it stays below `v1.0.0`, and every feature release is a MINOR bump. The customer app carries its
+it stays below `v1.0.0`, and a release with one or more new features gets one MINOR bump, including
+a batch of several features. The customer app carries its
 own store version and build number; a release manifest records which app version it was verified
 with.
 

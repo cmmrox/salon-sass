@@ -50,6 +50,16 @@ DEFERRABLE_SEVERITIES = ("minor", "trivial")
 CR_STATUSES = ("proposed", "approved", "rejected", "implemented")
 
 FEATURE_ID_RE = re.compile(r"^F\d{2}$")
+COMMIT_RE = re.compile(r"^[0-9a-f]{40}$")
+PR_URL_RE = re.compile(r"^https://github\.com/([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)/pull/([1-9][0-9]*)$")
+# Metadata commits after QA may change feature records, but never the tested product,
+# automation or delivery pipeline. Keep this list aligned with repository-structure.md.
+FEATURE_QA_PATHS = (
+    "apps", "packages", "infra", ".github", "package.json", "pnpm-workspace.yaml",
+    "pnpm-lock.yaml", ".nvmrc", ".sdkmanrc", "docs/api", "qa/web", "qa/api", "qa/mobile", "qa/load",
+    "qa/checks", "qa/shared", "qa/scripts", "qa/package.json", "qa/pnpm-lock.yaml",
+    "qa/playwright.config.ts", "qa/tsconfig.json",
+)
 # Milestones sort by their number: M1-web is delivered and released before M2-mobile starts.
 MILESTONE_RE = re.compile(r"^M\d+-[a-z][a-z0-9-]*$")
 STAGE_ID_RE = re.compile(r"^(F\d{2})-(S\d{2}[a-z]?)$")
