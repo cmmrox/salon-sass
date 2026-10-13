@@ -4,7 +4,7 @@ summary: Staff sign in with a password and two-step verification and can do only
   sign in with a one-time code and control their own profile and data.
 release: R1
 milestone: M1-web
-status: in-progress
+status: in-qa
 qa_status: not-run
 released_in: null
 depends_on:
@@ -70,7 +70,7 @@ verification:
     file: qa/checks/F02/F02-read-baseline.sh
     covers:
     - TC-F02-004
-    suites: []
+    suites: [regression]
   - id: account-journeys
     tool: playwright
     file: qa/web/F02/feature-journeys.spec.ts
@@ -79,7 +79,7 @@ verification:
     - TC-F02-001
     - TC-F02-002
     - TC-F02-003
-    suites: []
+    suites: [regression, smoke]
   manual: []
   deferred: []
 evidence:

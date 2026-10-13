@@ -279,7 +279,7 @@ verification:
     - TC-F02-S02-010
     - TC-F02-S02-014
     - TC-F02-S02-015
-    suites: []
+    suites: [regression]
   - id: customer-runtime
     tool: playwright
     file: qa/api/F02/S02-customer-runtime.spec.ts
@@ -290,13 +290,13 @@ verification:
     - TC-F02-S02-013
     - TC-F02-S02-016
     - TC-F02-S02-017
-    suites: []
+    suites: [regression]
   - id: nonlocal-provider
     tool: script
     file: qa/checks/F02/S02-nonlocal-provider.sh
     covers:
     - TC-F02-S02-018
-    suites: []
+    suites: [regression]
   manual: []
   deferred: []
 evidence:

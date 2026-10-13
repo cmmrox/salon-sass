@@ -248,7 +248,7 @@ verification:
     - TC-F02-S03-012
     - TC-F02-S03-013
     - TC-F02-S03-014
-    suites: []
+    suites: [regression]
   manual: []
   deferred: []
 evidence:

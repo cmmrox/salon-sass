@@ -284,7 +284,7 @@ verification:
         - TC-F02-S01-024
         - TC-F02-S01-025
         - TC-F02-S01-026
-      suites: []
+      suites: [regression]
     - id: staff-runtime
       tool: playwright
       file: qa/api/F02/S01-runtime.spec.ts
@@ -293,13 +293,13 @@ verification:
         - TC-F02-S01-027
         - TC-F02-S01-028
         - TC-F02-S01-029
-      suites: []
+      suites: [regression]
     - id: nonlocal-identity
       tool: script
       file: qa/checks/F02/S01-nonlocal-secrets.sh
       covers:
         - TC-F02-S01-030
-      suites: []
+      suites: [regression]
   manual: []
   deferred: []
 evidence:

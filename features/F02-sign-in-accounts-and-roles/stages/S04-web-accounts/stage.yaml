@@ -311,7 +311,7 @@ verification:
     - TC-F02-S04-010
     - TC-F02-S04-011
     - TC-F02-S04-012
-    suites: []
+    suites: [regression]
   - id: browser-security
     tool: playwright
     file: qa/web/F02/S04-browser-security.spec.ts
@@ -324,7 +324,7 @@ verification:
     - TC-F02-S04-013
     - TC-F02-S04-014
     - TC-F02-S04-015
-    suites: []
+    suites: [regression]
   - id: web-presentation
     tool: playwright
     file: qa/web/F02/S04-presentation.spec.ts
@@ -334,7 +334,7 @@ verification:
     - TC-F02-S04-017
     - TC-F02-S04-019
     - TC-F02-S04-021
-    suites: []
+    suites: [regression]
   - id: web-resilience-address
     tool: playwright
     file: qa/web/F02/S04-resilience-address.spec.ts
@@ -342,7 +342,7 @@ verification:
     covers:
     - TC-F02-S04-020
     - TC-F02-S04-022
-    suites: []
+    suites: [regression]
   manual:
   - case: TC-F02-S04-018
     reason: Keyboard focus/order, contrast and real-speed visual interaction require human judgment on the final
