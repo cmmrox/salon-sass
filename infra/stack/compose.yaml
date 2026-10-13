@@ -19,6 +19,9 @@ x-api-environment: &api-environment
   # Forwarded headers are believed from the edge's network only.
   SALON_TRUSTED_PROXIES: ${SALON_STACK_EDGE_SUBNET:?SALON_STACK_EDGE_SUBNET is required (.env.stack.example)}
   SALON_OTLP_ENDPOINT: http://collector:4318
+  SALON_IDENTITY_SIGNING_KEY: ${SALON_IDENTITY_SIGNING_KEY:?SALON_IDENTITY_SIGNING_KEY is a required secret}
+  SALON_IDENTITY_CHALLENGE_KEY: ${SALON_IDENTITY_CHALLENGE_KEY:?SALON_IDENTITY_CHALLENGE_KEY is a required secret}
+  SALON_IDENTITY_ENCRYPTION_KEY: ${SALON_IDENTITY_ENCRYPTION_KEY:?SALON_IDENTITY_ENCRYPTION_KEY is a required secret}
 
 x-api: &api
   restart: unless-stopped

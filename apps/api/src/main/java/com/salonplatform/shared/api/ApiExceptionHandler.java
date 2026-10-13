@@ -106,6 +106,16 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         return handleExceptionInternal(ex, null, new HttpHeaders(), HttpStatus.NOT_FOUND, request);
     }
 
+    @ExceptionHandler(ApplicationProblemException.class)
+    @Nullable ResponseEntity<Object> handleApplicationProblem(ApplicationProblemException ex, WebRequest request) {
+        ProblemDetail problem = ex.errors().isEmpty() ? Problems.of(HttpStatusCode.valueOf(ex.status()), ex.code())
+                : Problems.invalid(HttpStatusCode.valueOf(ex.status()), ex.code(), ex.errors());
+        HttpHeaders headers = new HttpHeaders();
+        headers.setCacheControl("no-store");
+        if (ex.status() == 429) headers.set("Retry-After", "900");
+        return handleExceptionInternal(ex, new CodedProblem(problem), headers, HttpStatusCode.valueOf(ex.status()), request);
+    }
+
     @ExceptionHandler(Exception.class)
     @Nullable ResponseEntity<Object> handleUnexpected(Exception ex, WebRequest request) {
         if (DatabaseUnavailable.isCauseOf(ex)) {

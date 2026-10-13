@@ -26,6 +26,9 @@ answers 404 `not_found`. An authenticated native client on the bare API address 
 salon from the verified token, via a verifier interface in `shared` implemented in `identity`.
 Reserved platform hostnames never become a salon. Invalid credentials answer 401 with a registered
 stable error code; insufficient permissions answer 403; foreign ids answer indistinguishable 404.
+Sign-in, MFA challenge calls and opaque refresh renewal require the selected salon hostname.
+The bare API address supports protected requests using signed access tokens; it cannot resolve a
+salon from an opaque refresh token or a client-supplied tenant id.
 
 Every protected use case verifies current session and account state in the database, including
 account activity, MFA requirement and current role/grant. Do not trust permissions cached in JWTs.
@@ -54,6 +57,13 @@ Password sign-in is limited to 10 attempts per normalized identifier and 30 per 
 within 15 minutes, including unknown identifiers. MFA challenges allow five attempts. Failed
 attempts, consumption, limits and security audit entries commit even when the HTTP outcome is an
 error; throwing inside a transaction must not undo these controls.
+Staff rate windows start on the first attempt and last fifteen minutes; a denied request returns
+`Retry-After: 900`. The `identity-security-cleanup` job runs every fifteen minutes to remove expired
+staff rate/MFA challenges and consumed TOTP steps outside the accepted tolerance. Disabled staff
+accounts retain their identifiers; removal does not invent reactivation or recovery behavior.
+
+The current common-password list rejects `passwordpassword`, `password123456789`,
+`123456789012345`, `qwertyuiopasdfgh`, `letmeinletmeinletmein` and `welcome123456789`.
 
 ## Sessions
 
@@ -92,6 +102,8 @@ revocation, password/MFA change, staff creation/removal, role/grant changes and 
 actions in F01's immutable audit trail. Audit reads use explicit DTOs without secret or profile
 values and are permission-checked. Sensitive business actions in later features will call this
 same audit writer. Operators and support sessions are F03.
+Role, grant and active-state changes include nonsecret before/after values; profile rights actions
+include changed field names and versions only, never personal field values.
 
 ## Customer codes and abuse controls
 
@@ -138,6 +150,10 @@ in one transaction; no old token works afterwards. Re-verifying the same number 
 identity with a new id and no old profile. Immutable audit rows keep only the old opaque subject id
 and action/time, no phone, name or profile. Later legal booking/payment retention is planned by the
 owning feature; no such records exist in F02. Invalid confirmation changes nothing.
+Retain hashed anti-abuse number/device/address counters until their ordinary window expires;
+deletion and re-registration do not reset code ceilings. Deletion cancels queued deliveries and
+clears local captures. A delivery already in flight rechecks challenge existence before capture
+or delivery completion and cannot recreate deleted identity, challenge or message state.
 
 ## Browser boundary
 
@@ -146,11 +162,18 @@ refresh cookies are separate, HttpOnly, SameSite=Lax, Path=/, Secure outside loc
 alone omits Secure (CR-005); use no Domain cookie. Tokens are returned to the BFF only, never in
 HTML, client JSON, URLs, JavaScript-readable storage or client components. Public API bearer
 responses remain available to future mobile clients.
+Authenticator enrollment alone may transiently show its setup secret and `otpauth` instructions
+after correct password or authenticated enrollment authority. Never put those instructions in a
+browser navigation link or persistent storage; this exception does not expose session tokens or
+the challenge credential to client components.
 
 Every BFF mutation requires an exact trusted Origin matching this hostname/port and rejects
 cross-site Fetch Metadata, including unauthenticated sign-in (login CSRF). Do not trust arbitrary
 forwarded host/protocol. Refresh is explicit and serialized per browser session; reuse cannot
 restore a revoked session. BFF returns only allowlisted public result fields and field errors.
+Coordinate renewal across tabs for each principal kind, not only within one form or component.
+If a competing replay revokes the family, clear that kind's cookies and require a fresh sign-in;
+never retry a spent refresh credential or restore a family from a delayed response.
 Redirect targets are fixed same-origin paths; errors keep useful form values except credentials.
 Auth failures redirect a protected page to its own sign-in; authorization failures show a friendly
 denial. Customer screens use salon branding and staff screens the neutral platform theme.
@@ -171,3 +194,19 @@ permissions, preserving sessions across restarts. Tests supply throwaway keys. N
 requires configured keys; never embed a fallback or generated local key in container images.
 Document the environment variables and hooks when each stage hands them over; gates and QA must
 coordinate artifact rebuilds and service restarts as in the environment document.
+
+## Implemented staff API contract
+
+The generated [OpenAPI document](../api/openapi.json) is the detailed request/response contract.
+`POST /api/v1/identity/staff/sign-in` and `/staff/mfa/challenges` return
+`{state,challengeId,challengeToken,expiresAt,credentials}`. Successful password sign-in nests the
+tokens in `credentials`; MFA verification, renewal and password change return tokens directly:
+`{state,sessionId,accessToken,refreshToken,accessExpiresAt,refreshExpiresAt}`. Access expires at the
+same second-precision instant encoded in the signed JWT. Its fixed algorithm is HS256, issuer
+`salon-platform` and audience `salon-api`.
+
+Principal kinds are lowercase (`staff`); role names are uppercase. A list returns
+`{items,page,size,total}` with page 0 to 100,000 and size 1 to 100. Device entries identify the
+current session. Staff changes require the current `version`; audits expose nonsecret before/after
+values. All MFA routes require the salon hostname. Protected principal, staff, session, password
+and audit calls additionally support a verified signed tenant on the bare API address.

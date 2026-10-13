@@ -5,7 +5,7 @@ sequence: 1
 surfaces:
 - api
 - infra
-status: outlined
+status: complete
 qa_status: not-run
 blocked_reason: null
 released_in: null
@@ -21,12 +21,117 @@ nfr_focus:
 - NFR-08
 - NFR-10
 handoff:
-  run: null
-  data: null
-  notes: null
+  run: 'infra/scripts/local-up.sh starts the local product; use infra/scripts/local-service.sh stop api before Maven
+    verify/package and start api after the final build. API: http://alpha.localhost:8090/api/v1/identity (also beta/gamma),
+    health: http://localhost:8090/actuator/health. Public staff sign-in/MFA/refresh requests require the salon hostname.
+    Protected me/staff/sessions/password/audit requests additionally support a bare IP/localhost API address with
+    a verified signed tenant. Reserved or unknown salon hosts stay closed.
+
+    The API is currently running source 686965f97bd7fc30c3fdae6d7966e56b329b5de6 in persistent exec session 82694.
+    This tool environment reaps detached processes; retain a foreground shell while running the existing startup
+    script. The API was stopped before all repackaging and restarted from the final artifact.'
+  data: 'The fixed alpha/beta/gamma salons each contain one Owner, Manager, Receptionist, Professional and Accountant.
+    Supplied synthetic account credentials/TOTP seeds are in ignored .local/f02-staff-fixtures.json, mode 0600;
+    never commit or print it. POST /local/identity/seed takes {accounts:[{email,mobile,password,role,totpSecret?,professionalGrant?}]}
+    and returns only {accounts:number}; repeated seeding preserves existing accounts. DELETE /local/identity removes
+    synthetic identity records/rate state, preserves immutable audit and unrelated product data, and refuses any
+    nonfixed synthetic salon. Hooks are loopback-only, local profile only, excluded from OpenAPI. All three salons
+    were reset and reseeded after walkthrough; real clock restored.
+
+    SALON_IDENTITY_SIGNING_KEY, SALON_IDENTITY_CHALLENGE_KEY and SALON_IDENTITY_ENCRYPTION_KEY are independent 32-byte
+    keys represented as 64 hex characters, mandatory outside local. Local startup retains random keys in ignored
+    .local/identity-keys.properties, mode 0600; SALON_IDENTITY_LOCAL_KEY_FILE overrides the path. Startup scripts
+    make its default absolute. .env and .env.stack.example describe settings; container Compose passes all three
+    required secrets with no fallback.'
+  notes: 'AC-1 checked on the running local API: password email sign-in and generic wrong/unknown/disabled outcomes,
+    unknown-identifier limit and restart persistence; developer HTTP integration checks also cover normalized mobile
+    sign-in, five-minute access and seven-day absolute sessions. Failed attempts/audit commit on error, identifier/address
+    rows are durable and HMAC-keyed. Runtime walkthrough evidence: .local/f02-s01-developer-checks.json (90 checks).
+
+    AC-2 checked on the running local API: Owner enrollment-only challenge, protected-principal denial before verification,
+    enrollment retry preserving secret, valid TOTP sign-in, invalid/consumed challenge denial. Real-HTTP integration
+    checks cover five failed attempts, simultaneous reuse, per-account consumed steps and voluntary non-Owner enrollment
+    with old-session revocation. MFA secrets use tenant/account-bound AES-GCM; challenges store only keyed hashes.
+
+    AC-3 checked on the running local API: signed bare-API access, foreign host token rejection on identity and
+    public salon endpoints, reserved-host denial, forged signature denial and expiry via test clock. Real-HTTP integration
+    checks verify algorithm/issuer/audience/kind/issued time, pooled concurrent two-salon requests, and supplied
+    foreign signed credentials on public sign-in/refresh. All MFA routes remain hostname-selected as agreed with
+    the lead.
+
+    AC-4 checked on the running local API: paginated own devices/current flag, another user''s session id denied,
+    two simultaneous refreshes yielded one200/one401 and the successful family was then revoked by replay; live
+    renewal after access expiry. Real-HTTP integration checks cover explicit single/all device revocation, invalid
+    pagination, hash-only storage and old credential rejection. Refresh rotates access generation as well as refresh
+    secret; bare-API opaque renewal is refused.
+
+    AC-5 checked on the running local API: all five principal role/permission responses and positive/negative staff/audit
+    administration access, Professional Owner grant immediately affecting an existing credential. Developer tests
+    assert exact policy permissions and own/salon scope. IdentityFacade exposes current/require(permission); future
+    business modules must enforce the Professional scope on their own data.
+
+    AC-6 checked on the running local API: Owner-only administration, duplicate/invalid input, stale version, immediate
+    removed-session denial and last Owner removal/demotion refusal. Real-HTTP integration checks cover foreign ids,
+    promotion invalidating sessions and requiring fresh MFA, and concurrent removal/demotion preserving one active
+    Owner. All security mutations and last Owner decisions serialize on one tenant guard row. Removed accounts remain
+    disabled with their identifiers reserved; no reactivation/recovery behavior is invented.
+
+    AC-7 checked on the running local API: wrong old/weak new password denied, valid change rotating current credentials,
+    old access/old password immediately rejected, rotated access usable. Real-HTTP integration checks also prove
+    other sessions revoked. Passwords use identified PBKDF2-HMAC-SHA256 with random16-byte salt and600000 iterations,15-128
+    Unicode code points and no forced mixture. Common-password rejection list: passwordpassword, password123456789,123456789012345,qwertyuiopasdfgh,letmeinletmeinletmein,welcome123456789.
+
+    AC-8 checked on the running local API: Owner/Manager audit pagination, other roles denied, role/grant before/after
+    retained and no password/TOTP secret/full phone in results. Real-HTTP integration proves immutable audit updates
+    refused and foreign subject filters empty. Successful/failed sign-ins, MFA/password attempts/changes, staff
+    changes, removal, and revocation/replay record actor/time/tenant/subject. Runtime API logs were scanned against
+    supplied passwords, full mobiles, TOTP seeds and current access/refresh credentials: no matches.
+
+    AC-9 checked on the running local API/database: all seven identity tables have forced RLS; generated contract/client
+    expose explicit DTOs and registered invalid_credentials,invalid_session,permission_denied,conflict,rate_limited
+    outcomes. Developer integration proves every new entity under RLS alone and Hibernate alone, missing context,
+    foreign reads/writes/deletes and composite reference rejection. The catalogue gate confirms tenant-leading PK/unique/index
+    rules and exact minimal grants. Secret hashing/encryption and key independence are covered by developer tests.
+
+    AC-10 checked on the running local product: idempotent all-role seed/reset for alpha/beta/gamma, local hooks
+    absent from nonlocal API contract/profile, local key file0600, retained signed-access verification/refresh and
+    failed-limit state across restart. A naturally expired pre-restart access token was checked within its original
+    interval using the test clock, then real time restored. Secret-less nonlocal startup and key independence are
+    tested. Actual database stop yielded503 in2.032s/2.010s (salon/native); silent pause yielded503 in3.043s/2.016s
+    (3s database wait plus HTTP overhead). Recovery after database service available was18ms/14ms, without restarting
+    API. Sanitized evidence: .local/f02-s01-resilience-checks.json (9 checks).
+
+    Verification: cd apps/api && ./mvnw -q verify final PASS,447 tests,0 failures/errors/skips. Earlier full attempts
+    reported ''Tests run:442, Failures:7'' (V8 PKs, approved exact migration/table/grant baselines, existing Problems-only
+    writer and generated contract drift), then ''Tests run:445, Failures:1'' (local probe carrying an unrelated
+    Authorization header). Causes were fixed and final full gate passed; no assertions were weakened. pnpm contracts:generate
+    PASS; pnpm contracts:check PASS with ''docs/api/openapi.json and packages/api-contracts/src/generated are current''.
+    git diff --check, dev role guard and sdlc validate PASS. No QA automation was run or written.
+
+    Dependencies: Spring-managed spring-security-crypto and spring-security-oauth2-jose; java-otp1.0.0 (approved
+    maintained TOTP implementation, no transitive dependencies). Used installed Spring password/JWT docs and official
+    java-otp documentation. Google Java Format from the existing Maven cache formatted only new/changed identity/security
+    Java; no system software installed.
+
+    Contract: POST staff/sign-in and staff/mfa/challenges return {state,challengeId,challengeToken,expiresAt,credentials};
+    authenticated sign-in places Tokens in credentials. Tokens are {state,sessionId,accessToken,refreshToken,accessExpiresAt,refreshExpiresAt};
+    MFA verify, refresh and password change return Tokens directly. Lists return {items,page,size,total}, page0..100000
+    and size1..100. Roles are uppercase enum strings; principal kind is staff; Professional scope is own unless
+    granted. Staff changes require version; DTOs never serialize entities. Enrollment returns secret and otpauth
+    URI only under verified challenge authority. Retry-After is900 seconds for staff rate limits.
+
+    Operational choices for lead documents: fixed15-minute staff rate windows begin on their first attempt; the
+    scheduled identity-security-cleanup runs every15minutes and removes expired staff rate/MFA challenges and consumed
+    TOTP steps older than tolerance. Local seed secrets can be supplied but never returned. JWT uses fixed HS256,
+    issuer salon-platform, audience salon-api; permissions are read live rather than carried as cached JWT claims.
+    Three independent hex keys and hook request/response shapes above should be added to tech-stack/environment/test-plan
+    docs. Real Owner provisioning is F03; recovery/disable, customer authentication/privacy and browser cookies/screens
+    remain their specified later scope. Nothing unfinished in this stage; full feature QA is still not run.'
 cases: []
 verification:
-  commands: []
+  commands:
+  - cd apps/api && ./mvnw -q verify
+  - pnpm contracts:check
   automation: []
   manual: []
   deferred: []
