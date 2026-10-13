@@ -6,7 +6,7 @@ surfaces:
 - api
 - web
 - infra
-status: in-progress
+status: built
 qa_status: not-run
 blocked_reason: null
 released_in: null
@@ -30,9 +30,131 @@ nfr_focus:
 - NFR-08
 - NFR-10
 handoff:
-  run: null
-  data: null
-  notes: null
+  run: 'Use installed Node 24/Corepack pnpm 12.11.2 and JAVA25_HOME pointing at the installed JDK25. From this worktree:
+    infra/scripts/local-service.sh start postgres; start API from apps/api with SPRING_PROFILES_ACTIVE=local SALON_PLATFORM_DOMAIN=localhost
+    SALON_IDENTITY_LOCAL_KEY_FILE=<this-worktree>/.local/identity-keys.properties java -jar target/salon-api.jar.
+    Start web from apps/web using SALON_PLATFORM_DOMAIN=localhost SALON_API_BASE_URL=http://localhost:8090 SALON_WEB_LOCAL_HTTP=true
+    SALON_IDENTITY_LOCAL_KEY_FILE=<same-retained-file> node scripts/serve.mjs --port 3100. Keep foreground sessions
+    alive in this executor; the local script''s background child did not survive its tool session. Browser addresses:
+    http://alpha.localhost:3100/sign-in, /account, /workspace/sign-in, /workspace/account, /workspace/staff and
+    /workspace/audit; beta/gamma use their own hostname. API8090 and web3100 were stopped after walkthrough; PostgreSQL
+    remains running and resumed. Stop applications before repackaging their runtime artifacts.'
+  data: 'Synthetic alpha/beta/gamma only; existing Owner/Manager/Receptionist/Professional/Accountant fixtures and
+    their encrypted MFA values were preserved. Existing first three retained identity keys were privately copied
+    from the primary checkout before appending the independent proxy key; use the same retained file for API and
+    local web. Never print/copy keys into evidence. Credentials remain in ignored primary .local/f02-staff-fixtures.json
+    and ignored private walkthrough files. Additional alpha synthetic staff: s04-new-staff@alpha.test is removed;
+    s04-enroll-owner@alpha.test was provisioned, enrolled and password-changed through the product. No production
+    default credentials. Synthetic customer/code examples used 0740100404 (deleted), 0740100414 (expiry/resend),
+    and 0740100520/0521/0522 for alpha/beta/gamma branded account checks. The API Clock is real, providers were
+    not reconfigured, PostgreSQL is resumed, scheduler settings were unchanged. Native device-proof sessions were
+    revoked after checking them. No real delivery, payment, staging or deployment occurred.'
+  notes: 'Developer acceptance walkthrough completed 2026-10-14, independently of later feature QA. Latest application
+    source is 8eeca6f; final API artifact and running /api/v1/meta reported full 8eeca6f16049d3aac8cb37e710e35a2d155d96df
+    after rebuilding. API/helper commits cccbeae and metadata fix e5c9026 are included. Sanitized evidence: .local/s04-developer-checks.json
+    and .local/s04-final-gates.json; screenshots/CLI observations in ignored .local/playwright-s04 and .local/s04-*.png.
+    Runtime stopped after final checks.
+
+
+    AC-1: Checked staff password sign-in and authenticator verification in the running browser, required enrollment
+    for a newly provisioned Owner, and voluntary enrollment for a non-Owner. Incomplete enrollment returned no protected
+    principal (401); wrong authenticator/customer codes displayed recovery, and setup authority never appeared in
+    client responses. Existing synthetic staff/MFA fixtures stayed intact. APIs'' email/mobile normalization and
+    limits passed their developer integration gates; the shared browser identifier field accepts either. API failures
+    retain nonsensitive fields and clear submitted credentials.
+
+
+    AC-2: Checked SMS and WhatsApp request/capture, verification, incorrect code, resend with a changed challenge,
+    invalidated old code and injected-clock expiry through running screens. Number choice remained available after
+    expiry. Public browsing stayed accessible without sign-in. Accepted responses contained expiry only; challenge
+    id/token authority stayed in HttpOnly cookies. Local captures were read through developer hooks, never real
+    providers.
+
+
+    AC-3: Checked Owner provision/grant/role/removal screens and Manager read-only staff/audit screens, Professional
+    direct protected-URL denial, and 15 live BFF reads for every staff role (principal/staff/audit). Owner/Manager
+    returned allowed lists; Receptionist/Professional/Accountant received 403 on staff/audit. Wrong principal-kind
+    and foreign-salon credentials were denied through direct BFF calls without data. Permission checks use the live
+    server principal and API use cases. Changing a granted Professional to Receptionist initially sent an invalid
+    retained grant; fixed to clear the specific grant and reran controlled-component regression plus the real role/removal
+    flow.
+
+
+    AC-4: Checked current-device markers, audit/list pagination, sign-out, correct/incorrect old-password change,
+    credential rotation, current-device revocation and revoke-all. Created two synthetic Manager devices; revoked
+    the other through its browser row, verified its old access returned 401 while current access still returned
+    200, then revoked fixture sessions and restored the Clock. Staff/customer cookies coexisted; customer deletion
+    did not disturb staff. Two tabs after an injected six-minute advance made exactly one renewal and both recovered.
+    Replaying the old refresh returned 401, cleared staff cookies and required fresh sign-in. Renewal eligibility
+    used issued expiry metadata and API meta.time; metadata never authorized access. Unsupported Web Locks disabled
+    credential-changing controls with translated explanation.
+
+
+    AC-5: Checked fresh profile defaults, read-only verified mobile, name/email/birthday/language/all preferences/explicit
+    consent saving. A second tab''s stale update produced conflict, retained the draft and loaded the saved version
+    only on explicit reload; refresh did not silently overwrite it. Negative field/ownership/concurrency API tests
+    passed. Profile updates forward the allowlisted mutable representation/version only.
+
+
+    AC-6: Checked JSON download and exact top-level allowlist (devices/generatedAt/profile), no credential material,
+    no-store headers, cancel deletion, confirmed deletion and return to sign-in. Staff stayed authenticated after
+    customer deletion; other salons'' independently authenticated profiles remained available. The first real deletion
+    exposed Node transport dropping a DELETE JSON body; added explicit body length, a real HTTP regression, rebuilt
+    and reran successful deletion. Owner/Manager audit entries and pagination were visible without authentication
+    secrets; code-volume audit/threshold behavior is covered by closed API stages and their integration gates.
+
+
+    AC-7: Checked missing/wrong Origin and cross-site Fetch Metadata rejecting login before API side effects; forged
+    forwarded host/protocol/assertion did not alter authority. Host-only distinct HttpOnly SameSite=Lax staff/customer
+    cookies had no Domain attribute. Tokens were absent from rendered HTML, document.cookie and local/session storage.
+    BFF operations are fixed under /identity-web/<staff|customer>/<operation>, outside the edge''s /api routing.
+    Local HTTP alone omits Secure; nonlocal configuration requires Secure and exact https Origin. Enrollment only
+    transiently displays setup instructions; no browser navigation link/storage. Native wrong-kind/foreign-host
+    probes returned safe denial. Actual IPv4 sign-in address ceiling and separately arriving IPv6 loopback address
+    proved request diagnostics preserve the connection address; spoofed XFF/assertion could not reset the ceiling.
+
+
+    AC-8: Checked 72 settled layout combinations: 36 staff/customer sign-in views, 18 protected workspace account/staff/audit
+    views, and 18 customer account views over alpha/beta/gamma and all six widths (360/390/768/1024/1280/1440).
+    No horizontal overflow; minimum action targets 44px. Checked keyboard tab order, visible focus, semantic labels,
+    stable test ids, long Beta name and Gamma light-brand/dark contrast, neutral workspace. Loading skeletons, sign-in
+    errors, permission denial, stale-profile conflict, retry/expiry instructions, confirmations and success were
+    observed. Authenticated identity lists inherently contain at least the current session/Owner/sign-in audit;
+    empty presentation remains available for an empty API page rather than fabricating business records. During
+    actually silent PostgreSQL the browser displayed safe unavailable recovery in 2314ms and retained the entered
+    mobile; resumed PostgreSQL recovered to UP. This duration is the observed browser action, separate from pause/resume
+    control overhead. English translation files centralize new UI wording; en/si/ta profile preference persists
+    without a new global locale selector.
+
+
+    Final verification.commands on source 8eeca6f: cd apps/api && ./mvnw -q verify EXIT 0 (500 tests, zero failures/errors/skips);
+    pnpm -r lint EXIT 0; pnpm -r typecheck EXIT 0; pnpm -r test EXIT 0 (19 contract tests and 271 web tests); pnpm
+    --filter @salon/web build EXIT 0; pnpm contracts:check EXIT 0, committed contracts current. Logs .local/logs/s04-final-{maven,lint,typecheck,tests,build,contracts}.log.
+    Developer guard, lifecycle validation and diff checks passed before source commits; no QA automation was run
+    by this developer.
+
+
+    Resolved verification findings: intentional public Salon.timeZone propagation made older developer fixtures
+    stale; lead approved exact fixture/expectation updates preserving assertions and adding timezone formatting.
+    The F01-only hardcoded Problem enum fixture lacked F02 codes; lead approved the exact ordered 19-code expectation
+    and explicit uniqueness assertion. IPv6 zone input initially reached URL parsing; fixed strict rejection and
+    reran. Linked-worktree Git plugin metadata initially named the primary checkout; metadata regression/config
+    correction verified normal checkout, archive fallback and exact worktree source. Initial bundled filesystem
+    key read caused the retained file to enter standalone instrumentation traces even after route exclusions; moved
+    file loading into the nonbundled local launcher, made bundled BFF env-only, removed generated output and rebuilt.
+    Final actual-byte scan traversed 1417 standalone files, checked all four retained secret values and key/.env/.local
+    filenames: zero private artifacts. Strict local-loader tests cover missing/invalid/duplicate keys and no nonlocal
+    file fallback. The observed errors above were fixed; no accepted criterion remains unfinished.
+
+
+    Runtime contract: x-salon-client-assertion v1 canonical hostname/method/path/IP/issued instant HMAC is bounded
+    and verified by API before counters or side effects. SALON_IDENTITY_PROXY_KEY is the fourth independent 32-byte/64-hex
+    key; existing local file appends proxy without replacing signing/challenge/encryption. SALON_WEB_LOCAL_HTTP
+    selects only explicit local HTTP; SALON_WEB_TRUSTED_PROXIES is empty locally, explicit edge CIDRs in stack.
+    Nonlocal API/BFF require configured proxy key; real staging rejects local-HTTP configuration. Cookie suffixes
+    access/refresh/expires/session/challenge/challenge_id are separately prefixed salon_staff_ and salon_customer_;
+    salon_device is retained only as the server-issued rate-tracking device. BFF cookie Max-Age derives API-issued
+    durations, never subtracts the web machine clock. No dependency was added.'
 cases: []
 verification:
   commands:
