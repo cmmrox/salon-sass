@@ -5,7 +5,7 @@ sequence: 1
 surfaces:
 - api
 - infra
-status: outlined
+status: planned
 qa_status: not-run
 blocked_reason: null
 released_in: null
@@ -26,7 +26,9 @@ handoff:
   notes: null
 cases: []
 verification:
-  commands: []
+  commands:
+  - cd apps/api && ./mvnw -q verify
+  - pnpm contracts:check
   automation: []
   manual: []
   deferred: []
