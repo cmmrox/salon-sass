@@ -139,6 +139,13 @@ class LocalHooksIntegrationTest extends IntegrationTest {
         "{\"failures\":-1}                          | failures",
         "{\"failures\":51}                          | failures",
         "{\"failures\":\"abc\"}                     | failures",
+        // A value of another JSON type is not turned into the declared one: a number in quotes is
+        // not a number, a decimal is not a whole number, and 1 is not true.
+        "{\"failures\":\"5\"}                       | failures",
+        "{\"failures\":1.5}                       | failures",
+        "{\"delayMs\":\"10\"}                       | delayMs",
+        "{\"abort\":1}                            | abort",
+        "{\"abort\":\"true\"}                       | abort",
         "{\"delayMs\":-1}                           | delayMs",
         "{\"delayMs\":60001}                        | delayMs",
         "{\"failures\":99,\"delayMs\":-5}           | delayMs,failures",

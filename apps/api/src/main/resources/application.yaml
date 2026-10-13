@@ -60,6 +60,14 @@ spring:
   mvc:
     problemdetails:
       enabled: true
+  # A request body is read strictly: a value of another JSON type is never turned into the declared
+  # one. A number in quotes is not a number, a decimal is not a whole number, and 1 is not true; each
+  # is a validation failure that names the field (400 bad_request), as the contract's types say.
+  jackson:
+    mapper:
+      allow-coercion-of-scalars: false
+    deserialization:
+      accept-float-as-int: false
 
 server:
   port: ${SALON_API_PORT:8090}
