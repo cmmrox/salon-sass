@@ -121,3 +121,5 @@ In Claude Code: `/salon-sdlc stage-build F01-S01`. In Codex: `$salon-sdlc stage-
 Python 3.10 or later. The first run of `qa/scripts/sdlc` creates its own virtual environment and
 installs PyYAML. The prerequisites for the product itself are under "Quick start" above and in
 `docs/architecture/tech-stack.md`; `infra/scripts/local-up.sh` checks them.
+
+<!-- Temporary owner-approved F01 GitHub CI proof; never merge this branch. -->
