@@ -273,6 +273,29 @@ timestamps outside the inclusive thirty-second API Clock window return safe 400
 `invalid_client_assertion` before rate accounting or other side effects. With no assertion,
 the API uses its real servlet peer. The header confers no tenant or session authority.
 
+## Implemented web boundary
+
+Customer routes are `/sign-in` and `/account`; staff routes are `/workspace/sign-in`,
+`/workspace/account`, `/workspace/staff` and `/workspace/audit`. `/workspace` enters the account
+flow. The public salon shell links to customer accounts and staff sign-in. Customer surfaces use
+salon branding; staff surfaces use the neutral workspace. All visible account text uses next-intl
+English message keys under the project's English-first policy; stored preferred language still
+supports `en`, `si` and `ta`.
+
+The fixed BFF namespace is `/identity-web/{staff|customer}/{action}`. GET allows principal,
+sessions, staff, audit and profile reads; POST handles sign-in/code/MFA, password and device
+changes, profile updates, export/deletion, staff management, refresh and cookie clearing. API
+permissions and principal kind are checked on each protected action. Generated API types remain
+the contract, and only explicit fields are forwarded. The Node HTTP transport preserves the salon
+Host and sets the actual JSON body length, including confirmed DELETE requests to the API.
+
+Cookies are `salon_{kind}_{access,refresh,expires,session,challenge,challenge_id}` plus the separate
+`salon_device` tracking cookie. They are host-only, HttpOnly, SameSite=Lax, Path=/ and Secure
+outside explicit local HTTP. BFF JSON returns public flow/results and field names, never session
+or challenge authority. Each kind uses Web Lock `salon:identity:{kind}` and sends only nonsecret
+change events through BroadcastChannel `salon:identity`. Exports use CSRF-checked BFF POST and
+return a no-store attachment. Staff and customer authority remain independent on the same host.
+
 ## Implemented staff API contract
 
 The generated [OpenAPI document](../api/openapi.json) is the detailed request/response contract.
