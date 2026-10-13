@@ -295,6 +295,9 @@ outside explicit local HTTP. BFF JSON returns public flow/results and field name
 or challenge authority. Each kind uses Web Lock `salon:identity:{kind}` and sends only nonsecret
 change events through BroadcastChannel `salon:identity`. Exports use CSRF-checked BFF POST and
 return a no-store attachment. Staff and customer authority remain independent on the same host.
+Successful native API no-content mutations, including confirmed customer deletion, map to BFF
+HTTP 200 `{ok:true}`. Verify their actual revocation/erasure effects rather than equating a browser
+success response with completed deletion.
 
 ## Implemented staff API contract
 
