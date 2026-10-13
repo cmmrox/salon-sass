@@ -95,12 +95,12 @@ def ci_passed(repo, head):
 
 def merged_pr(scope, main):
     integration = scope.get("integration") or {}
+    if scope.get("status") not in S.CLAIMED or scope.get("qa_status") != "pass":
+        raise Refusal(f"{scope.get('id')}: finish independent QA and feature closure before its owner PR merge")
     match = S.PR_URL_RE.fullmatch(str(integration.get("pull_request") or ""))
     repo = repository()
     if not match or match.group(1) != repo:
         raise Refusal("feature PR must belong to origin's GitHub repository")
-    if scope.get("status") not in S.CLAIMED or scope.get("qa_status") != "pass":
-        raise Refusal("the feature must be QA-passed and closed before its merge is accepted")
     snapshot = json.loads(run("gh", "api", f"repos/{repo}/pulls/{match.group(2)}").stdout)
     if (snapshot.get("base", {}).get("ref") != "main" or
             snapshot.get("base", {}).get("repo", {}).get("full_name") != repo or
@@ -244,6 +244,17 @@ def archive_evidence(record, archive):
     return str(destination)
 
 
+def check_archived_evidence(record, archive):
+    source = Path(record["worktree"]) / "qa"
+    for name in ("reports", "test-results", "playwright-report"):
+        original = source / name
+        copied = Path(archive) / name if archive else None
+        if original.exists() != bool(copied and copied.exists()):
+            raise Refusal("QA evidence changed after archival; keep the worktree and rerun cleanup")
+        if original.exists() and tree_digest(original) != tree_digest(copied):
+            raise Refusal("QA evidence changed after archival; keep the worktree and rerun cleanup")
+
+
 def cleanup(branches, apply=False):
     main = remote_main()
     if not ancestor(main, "HEAD"):
@@ -262,8 +273,9 @@ def cleanup(branches, apply=False):
     if cleanup_plan(branches, main) != [{k: v for k, v in item.items() if k != "archives"} for item in plan]:
         raise Refusal("cleanup targets changed during preflight; nothing was removed")
     for item in plan:
-        for tree in item["worktrees"]:
+        for tree, saved in zip(item["worktrees"], item["archives"]):
             check_worktree(tree)
+            check_archived_evidence(tree, saved)
             run("git", "worktree", "remove", tree["worktree"])
         if item["local_sha"]:
             # Verify against main, then delete without forcing or relying on an upstream ref.

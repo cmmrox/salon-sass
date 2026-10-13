@@ -94,6 +94,11 @@ class LiveMergeTest(unittest.TestCase):
         with self.assertRaisesRegex(integration.Refusal, "origin's GitHub"):
             self.call()
 
+    def test_unfinished_feature_explains_the_block_before_pr_metadata(self):
+        self.scope.update(status="in-progress", qa_status="not-run", integration={})
+        with self.assertRaisesRegex(integration.Refusal, "F07: finish independent QA"):
+            self.call()
+
     def test_unfetched_merge_and_squashed_history_are_refused(self):
         result = subprocess.CompletedProcess([], 0, json.dumps(self.snapshot), "")
         for answers, message in (([False], "not included"), ([True, False], "merge commit")):
@@ -249,6 +254,21 @@ class GitCleanupTest(unittest.TestCase):
                 integration.cleanup([self.branch], apply=True)
         self.assertTrue(self.worktree.exists())
         self.git("rev-parse", "--verify", f"refs/heads/{self.branch}")
+
+    def test_report_written_after_archive_keeps_the_worktree(self):
+        real_archive = integration.archive_evidence
+
+        def archive_then_write(record, archive):
+            saved = real_archive(record, archive)
+            report = self.worktree / "qa/reports/new-run"
+            report.mkdir(parents=True)
+            (report / "summary.json").write_text("new evidence")
+            return saved
+
+        with patch.object(integration, "archive_evidence", side_effect=archive_then_write):
+            with self.assertRaisesRegex(integration.Refusal, "evidence changed after archival"):
+                integration.cleanup([self.branch], apply=True)
+        self.assertTrue(self.worktree.exists())
 
 
 if __name__ == "__main__":
