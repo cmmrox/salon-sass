@@ -43,6 +43,7 @@ Set by stage F01-S01. Exact versions are in the build files (`apps/api/pom.xml`,
 | CSS as text | A Turbopack rule in `next.config.ts` imports `*.css?raw` as a string, with the same rule in `vitest.config.mts`; used only for the proxy's plain pages (decision 028). It does not work for CSS Modules | The plain pages inline the one source of the tokens and base styles instead of a copy |
 | Web lint and tests | ESLint with `eslint-config-next`; Vitest with jsdom and Testing Library | |
 | Request validation | `spring-boot-starter-validation` (Jakarta Bean Validation) | Field errors on problem bodies |
+| Identity cryptography | Spring-managed `spring-security-crypto`, `spring-security-oauth2-jose`; `java-otp` pinned in `apps/api/pom.xml` | Maintained password/JWT/TOTP implementations; policies in `architecture/identity-and-access.md` |
 | Tracing and structured logs | `spring-boot-starter-opentelemetry` (Micrometer Tracing with the OpenTelemetry bridge, W3C propagation, OTLP export when configured); Spring Boot's structured logging in ECS format | Spring Boot 4's own support; no agent and no second logging library |
 | Local web server | `apps/web/scripts/serve.mjs`, wrapping Next.js's request handler | Supports both loopback address families; the container uses Next.js standalone serving (decision 030) |
 | Production images | Multi-stage API JRE image and Next.js standalone Node image, non-root; `infra/scripts/images-build.sh` | Both carry one version and source commit, with no environment files; base versions are pinned in the Dockerfiles |

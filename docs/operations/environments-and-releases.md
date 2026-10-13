@@ -87,6 +87,24 @@ Created by stage F01-S01. Everything runs on the host except PostgreSQL, which r
 
 ## The local production-like stack
 
+F02 identity startup uses three independent 32-byte secrets, each encoded as 64 hexadecimal
+characters: `SALON_IDENTITY_SIGNING_KEY`, `SALON_IDENTITY_CHALLENGE_KEY` and
+`SALON_IDENTITY_ENCRYPTION_KEY`. Outside `local`, startup requires them explicitly; the stack
+passes them from its ignored environment file. Local startup retains random keys in ignored
+`.local/identity-keys.properties` with mode `0600`; `SALON_IDENTITY_LOCAL_KEY_FILE` overrides the
+path, and the startup scripts set the default to an absolute path. Preserve this file when
+restarting the API so signatures, refresh credentials and abuse-counter hashes remain valid.
+Do not print or commit keys or synthetic account fixture files.
+Customer code limits use `SALON_IDENTITY_CODE_NUMBER_LIMIT`, `SALON_IDENTITY_CODE_DEVICE_LIMIT`,
+`SALON_IDENTITY_CODE_ADDRESS_LIMIT` and `SALON_IDENTITY_CODE_DAILY_LIMIT`, defaulting to 3, 10, 20
+and 1000. Focused local tests may override them explicitly, then must restore the defaults. Local
+SMS/WhatsApp adapters capture encrypted outbox delivery only; a nonlocal deployment has no real
+sender configured and returns `provider_unavailable` rather than claiming that a code was sent.
+
+In the Codex execution environment, a detached child can be reaped after the launching command
+ends. Keep a foreground shell session alive while running the existing local startup scripts,
+and verify HTTP readiness from another call before relying on the process.
+
 F01-S05 provides `infra/stack/compose.yaml`, independent of `salon-local`. The local stack serves
 HTTP only; it does not create certificates, redirect to HTTPS or test TLS. Staging keeps public TLS
 in its staging edge configuration. Copy

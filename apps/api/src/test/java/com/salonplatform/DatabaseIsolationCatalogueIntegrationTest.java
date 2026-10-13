@@ -54,7 +54,8 @@ class DatabaseIsolationCatalogueIntegrationTest {
         assertThat(tables).extracting(table -> table.get("name")).as("tenant tables")
                 .containsExactlyInAnyOrder("salon_brand", "audit_entry", "outbox_message",
                         "identity_staff", "identity_session", "identity_refresh_history", "identity_mfa_challenge",
-                        "identity_mfa_step", "identity_rate_bucket", "identity_guard");
+                        "identity_mfa_step", "identity_rate_bucket", "identity_guard",
+                        "identity_customer", "identity_customer_challenge");
         assertThat(tables).allSatisfy(table -> assertThat(table)
                 .as("%s", table.get("name"))
                 .containsEntry("enabled", true).containsEntry("forced", true).containsEntry("policy", true));
@@ -171,7 +172,9 @@ class DatabaseIsolationCatalogueIntegrationTest {
                         org.assertj.core.api.Assertions.tuple("identity_mfa_challenge", "DELETE,INSERT,SELECT,UPDATE"),
                         org.assertj.core.api.Assertions.tuple("identity_mfa_step", "DELETE,INSERT,SELECT"),
                         org.assertj.core.api.Assertions.tuple("identity_rate_bucket", "DELETE,INSERT,SELECT,UPDATE"),
-                        org.assertj.core.api.Assertions.tuple("identity_guard", "INSERT,SELECT,UPDATE"));
+                        org.assertj.core.api.Assertions.tuple("identity_guard", "INSERT,SELECT,UPDATE"),
+                        org.assertj.core.api.Assertions.tuple("identity_customer", "DELETE,INSERT,SELECT,UPDATE"),
+                        org.assertj.core.api.Assertions.tuple("identity_customer_challenge", "DELETE,INSERT,SELECT,UPDATE"));
     }
 
     /**

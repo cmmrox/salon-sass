@@ -27,6 +27,9 @@ public class AccessSession {
     @Column(name = "account_id")
     public UUID accountId;
 
+    @Column(name = "customer_account_id")
+    public UUID customerAccountId;
+
     @Column(name = "kind")
     public String kind;
 

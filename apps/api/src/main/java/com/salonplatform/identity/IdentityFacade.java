@@ -1,6 +1,6 @@
 package com.salonplatform.identity;
 
-import com.salonplatform.identity.application.StaffAccess;
+import com.salonplatform.identity.application.SessionAccess;
 
 import org.springframework.stereotype.Service;
 
@@ -12,18 +12,39 @@ import java.util.UUID;
  */
 @Service
 public class IdentityFacade {
+    @io.swagger.v3.oas.annotations.media.Schema(
+            requiredProperties = {
+                "id",
+                "kind",
+                "role",
+                "permissions",
+                "scope",
+                "staffId",
+                "mfaEnabled"
+            })
     public record Principal(
             UUID id,
             String kind,
-            String role,
+            @io.swagger.v3.oas.annotations.media.Schema(
+                            types = {"string", "null"},
+                            requiredMode =
+                                    io.swagger.v3.oas.annotations.media.Schema.RequiredMode
+                                            .REQUIRED)
+                    String role,
             Set<String> permissions,
             String scope,
-            UUID staffId,
+            @io.swagger.v3.oas.annotations.media.Schema(
+                            types = {"string", "null"},
+                            format = "uuid",
+                            requiredMode =
+                                    io.swagger.v3.oas.annotations.media.Schema.RequiredMode
+                                            .REQUIRED)
+                    UUID staffId,
             boolean mfaEnabled) {}
 
-    private final StaffAccess access;
+    private final SessionAccess access;
 
-    public IdentityFacade(StaffAccess access) {
+    public IdentityFacade(SessionAccess access) {
         this.access = access;
     }
 

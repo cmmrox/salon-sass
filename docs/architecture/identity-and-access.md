@@ -57,6 +57,13 @@ Password sign-in is limited to 10 attempts per normalized identifier and 30 per 
 within 15 minutes, including unknown identifiers. MFA challenges allow five attempts. Failed
 attempts, consumption, limits and security audit entries commit even when the HTTP outcome is an
 error; throwing inside a transaction must not undo these controls.
+Staff rate windows start on the first attempt and last fifteen minutes; a denied request returns
+`Retry-After: 900`. The `identity-security-cleanup` job runs every fifteen minutes to remove expired
+staff rate/MFA challenges and consumed TOTP steps outside the accepted tolerance. Disabled staff
+accounts retain their identifiers; removal does not invent reactivation or recovery behavior.
+
+The current common-password list rejects `passwordpassword`, `password123456789`,
+`123456789012345`, `qwertyuiopasdfgh`, `letmeinletmeinletmein` and `welcome123456789`.
 
 ## Sessions
 
@@ -90,6 +97,13 @@ salon-wide calendar/customer/figures access (IAM-08), not arbitrary role customi
 | Salon calendar/customer access | yes | yes | yes | own; salon if granted | no |
 | Salon financial reports | yes | yes | no | only if granted | yes |
 
+The API permission keys for these rows are `session.manage`, `password.change`, `mfa.enroll`,
+`staff.list`, `staff.manage`, `audit.list`, `payment.refund`, `catalogue.price.change`,
+`policy.change`, `customer.export`, `calendar.read`, `customer.read` and `financial.read`.
+All staff receive the first three own-account permissions; the table determines the rest.
+The customer principal has kind `customer`, null role/staff id, own scope, MFA false and
+`session.manage`; the customer privacy stage adds its own-profile/data-rights permissions.
+
 Keep pagination on staff, sessions and audit lists. Record successful/failed sign-ins, session
 revocation, password/MFA change, staff creation/removal, role/grant changes and customer rights
 actions in F01's immutable audit trail. Audit reads use explicit DTOs without secret or profile
@@ -111,6 +125,10 @@ one code creates at most one customer and one session. Counter rows survive proc
 Defaults: at most three requests per number in 15 minutes, ten per device in 15 minutes, twenty
 per trusted address in 15 minutes, and 1,000 per salon per UTC day. Reject excess with 429 and
 `Retry-After` before enqueueing. All dimensions are updated atomically, including concurrent calls.
+These counters count accepted send requests only. Check all four dimensions before inserting or
+incrementing any counter; a denied request writes its safe security audit but creates no empty
+counter row or chargeable outbox work. `Retry-After` is the positive ceiling of the longest remaining
+blocked window, including the time until UTC midnight for the daily ceiling.
 At 80% of the salon ceiling, write one secret-free `identity.code_volume_alert` audit entry per
 UTC day and increment a tenant-tagged security meter, visible to the Owner through audit. This is
 the local unusual-volume alert; real outbound operational notification awaits a provider decision.
@@ -122,6 +140,12 @@ failure/delay, and never send a real message. Outside `local`, an unconfigured a
 delivery and returns a clear service-unavailable response rather than pretending to send. Provider
 failures retry through the outbox; an expired challenge is not delivered. No raw number, password,
 code, secret, cookie, refresh credential or JWT appears in logs, public errors or audit values.
+Outbox cancellation is an explicit `CANCELLED` outcome. The shared `Outbox.cancel(id, instant)`
+facade joins the caller's writable tenant transaction, clears pending/sending/dead work and its
+lease, and conditional finalization cannot resurrect it. Sent or already-cancelled work stays
+unchanged. Resend, consumption and provider-expiry cancellation record `identity.code_cancelled`
+when a row changed; scheduled expiry cleanup and synthetic fixture reset do not add a duplicate
+identity action. The local provider rechecks a challenge after delay and before capture.
 
 ## Profile and privacy
 
@@ -171,6 +195,25 @@ Redirect targets are fixed same-origin paths; errors keep useful form values exc
 Auth failures redirect a protected page to its own sign-in; authorization failures show a friendly
 denial. Customer screens use salon branding and staff screens the neutral platform theme.
 
+The BFF namespace is `/identity-web/*`; the edge routes `/api/*` directly to Java. Address limits
+must reflect the browser connection without trusting browser forwarding headers. Node request
+diagnostics records the socket peer and a monotonic three-second request deadline; it accepts one
+valid Caddy-overwritten forwarded address only if the peer matches explicit
+`SALON_WEB_TRUSTED_PROXIES` CIDRs. Default local trust is empty. Normalize IPv4-mapped IPv6, reject
+lists, ports, brackets and zone identifiers, and never log or return the resulting address.
+
+For staff password sign-in and customer code requests, strip incoming assertion headers and sign
+a bounded, versioned HMAC assertion using a fourth independent proxy key shared by API and BFF.
+It binds the canonical API salon hostname without port, uppercase method, exact API pathname,
+normalized address and issued instant. Obtain that instant from the existing API metadata `time`
+field with strict ISO-instant validation; never substitute an unsynchronized/cached timestamp.
+Proxy lookup, metadata lookup and mutation share the original three-second request budget.
+API validates fields and MAC in constant time and accepts within thirty seconds of its injected
+Clock. A present invalid assertion fails before rate accounting or side effects; an absent
+assertion uses the trusted servlet peer address for direct/native callers. This assertion grants
+no tenant, principal or permission authority. Local startup retains the fourth random key without
+replacing the first three; nonlocal API/BFF startup requires its explicit configuration.
+
 ## Local hooks and secrets
 
 Identity's hooks live under `/local/identity`, are loopback-only with `@Profile("local")`, excluded
@@ -187,3 +230,38 @@ permissions, preserving sessions across restarts. Tests supply throwaway keys. N
 requires configured keys; never embed a fallback or generated local key in container images.
 Document the environment variables and hooks when each stage hands them over; gates and QA must
 coordinate artifact rebuilds and service restarts as in the environment document.
+
+## Implemented staff API contract
+
+The generated [OpenAPI document](../api/openapi.json) is the detailed request/response contract.
+`POST /api/v1/identity/staff/sign-in` and `/staff/mfa/challenges` return
+`{state,challengeId,challengeToken,expiresAt,credentials}`. Successful password sign-in nests the
+tokens in `credentials`; MFA verification, renewal and password change return tokens directly:
+`{state,sessionId,accessToken,refreshToken,accessExpiresAt,refreshExpiresAt}`. Access expires at the
+same second-precision instant encoded in the signed JWT. Its fixed algorithm is HS256, issuer
+`salon-platform` and audience `salon-api`.
+
+Principal kinds are lowercase (`staff`); role names are uppercase. A list returns
+`{items,page,size,total}` with page 0 to 100,000 and size 1 to 100. Device entries identify the
+current session. Staff changes require the current `version`; audits expose nonsecret before/after
+values. All MFA routes require the salon hostname. Protected principal, staff, session, password
+and audit calls additionally support a verified signed tenant on the bare API address.
+Staff creation answers 201 and staff/session deletion answers 204; generated success-response
+statuses must match these actual HTTP outcomes. Nullable/omitted challenge and customer-principal
+fields must likewise match the generated schema rather than relying on client casts.
+
+## Implemented customer sign-in contract
+
+`POST /api/v1/identity/customers/challenges` takes mobile, `sms` or `whatsapp` channel and
+deviceLabel, answering 200 `{challengeId,expiresAt}` only. A new verified device receives
+`salon_device`: a random HMAC-authenticated, salon-bound host-only cookie, HttpOnly, SameSite=Lax,
+Path=/, Max-Age 31536000, Secure outside local HTTP. A malformed, duplicate or foreign-salon cookie
+does not identify a verified device. `POST /customers/sign-in` takes challengeId/code and the
+issuing cookie, answering the same token structure as staff. Both routes require the salon host.
+Customer principal role/staffId are nullable and scope is `own`; sessions remain kind-separated.
+
+Code limit settings are positive integers under `salon.identity.codes`, supplied by
+`SALON_IDENTITY_CODE_NUMBER_LIMIT`, `SALON_IDENTITY_CODE_DEVICE_LIMIT`,
+`SALON_IDENTITY_CODE_ADDRESS_LIMIT` and `SALON_IDENTITY_CODE_DAILY_LIMIT` (3/10/20/1000 defaults).
+Nonlocal customer challenge requests return 503 `provider_unavailable` until a real sender is
+configured; local captures certify the API/delivery behavior, not live SMS or WhatsApp activation.
