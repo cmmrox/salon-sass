@@ -18,48 +18,90 @@ public class IdentitySecrets {
     private final byte[] signing;
     private final byte[] challenge;
     private final byte[] encryption;
+    private final byte[] proxy;
 
     public IdentitySecrets(Environment environment) {
         Properties saved = new Properties();
         boolean local = environment.matchesProfiles("local");
-        if (local) {
-            Path path =
-                    Path.of(
-                            environment.getProperty(
-                                    "salon.identity.local-key-file",
-                                    "../../.local/identity-keys.properties"));
-            try {
-                Files.createDirectories(path.toAbsolutePath().getParent());
-                if (!Files.exists(path)) {
-                    for (String name : new String[] {"signing", "challenge", "encryption"}) {
-                        byte[] key = new byte[32];
-                        new SecureRandom().nextBytes(key);
-                        saved.setProperty(name, HexFormat.of().formatHex(key));
-                    }
-                    // CREATE_NEW avoids overwriting a racing starter's keys.
-                    Files.createFile(
-                            path,
-                            PosixFilePermissions.asFileAttribute(
-                                    PosixFilePermissions.fromString("rw-------")));
-                    try (OutputStream out = Files.newOutputStream(path)) {
-                        saved.store(out, "Local-only identity keys. Never commit or print.");
-                    }
-                }
-                Files.setPosixFilePermissions(path, PosixFilePermissions.fromString("rw-------"));
-                try (InputStream in = Files.newInputStream(path)) {
-                    saved.load(in);
-                }
-            } catch (java.io.IOException ex) {
-                throw new IllegalStateException("Cannot read retained local identity keys", ex);
-            }
-        }
+        if (local) saved = retained(environment);
         signing = read(environment, saved, "signing");
         challenge = read(environment, saved, "challenge");
         encryption = read(environment, saved, "encryption");
-        if (java.security.MessageDigest.isEqual(signing, challenge)
-                || java.security.MessageDigest.isEqual(signing, encryption)
-                || java.security.MessageDigest.isEqual(challenge, encryption))
-            throw new IllegalStateException("Identity keys must be independent");
+        proxy = read(environment, saved, "proxy");
+        byte[][] keys = {signing, challenge, encryption, proxy};
+        for (int a = 0; a < keys.length; a++)
+            for (int b = a + 1; b < keys.length; b++)
+                if (java.security.MessageDigest.isEqual(keys[a], keys[b]))
+                    throw new IllegalStateException("Identity keys must be independent");
+    }
+
+    private static synchronized Properties retained(Environment environment) {
+        Path path =
+                Path.of(
+                                environment.getProperty(
+                                        "salon.identity.local-key-file",
+                                        "../../.local/identity-keys.properties"))
+                        .toAbsolutePath()
+                        .normalize();
+        Properties saved = new Properties();
+        Path temporary = null;
+        var mode = PosixFilePermissions.fromString("rw-------");
+        try {
+            Files.createDirectories(path.getParent());
+            Path lockPath = path.resolveSibling(path.getFileName() + ".lock");
+            // A separate lock remains stable while an atomic replacement preserves complete reads.
+            try (var channel =
+                    java.nio.channels.FileChannel.open(
+                            lockPath,
+                            java.nio.file.StandardOpenOption.CREATE,
+                            java.nio.file.StandardOpenOption.WRITE)) {
+                Files.setPosixFilePermissions(lockPath, mode);
+                try (var lock = channel.lock()) {
+                    if (Files.exists(path)) {
+                        Files.setPosixFilePermissions(path, mode);
+                        try (InputStream in = Files.newInputStream(path)) {
+                            saved.load(in);
+                        }
+                    }
+                    boolean changed = false;
+                    for (String name :
+                            new String[] {"signing", "challenge", "encryption", "proxy"}) {
+                        if (!saved.containsKey(name)) {
+                            byte[] key = new byte[32];
+                            new SecureRandom().nextBytes(key);
+                            saved.setProperty(name, HexFormat.of().formatHex(key));
+                            changed = true;
+                        }
+                    }
+                    if (changed) {
+                        temporary =
+                                Files.createTempFile(
+                                        path.getParent(),
+                                        ".identity-keys-",
+                                        ".tmp",
+                                        PosixFilePermissions.asFileAttribute(mode));
+                        try (OutputStream out = Files.newOutputStream(temporary)) {
+                            saved.store(out, "Local-only identity keys. Never commit or print.");
+                        }
+                        Files.move(
+                                temporary,
+                                path,
+                                java.nio.file.StandardCopyOption.ATOMIC_MOVE,
+                                java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                        temporary = null;
+                    }
+                }
+            }
+            return saved;
+        } catch (java.io.IOException ex) {
+            throw new IllegalStateException("Cannot read retained local identity keys", ex);
+        } finally {
+            if (temporary != null)
+                try {
+                    Files.deleteIfExists(temporary);
+                } catch (java.io.IOException ignored) {
+                }
+        }
     }
 
     private static byte[] read(Environment env, Properties saved, String name) {
@@ -83,5 +125,9 @@ public class IdentitySecrets {
 
     public byte[] encryption() {
         return encryption.clone();
+    }
+
+    public byte[] proxy() {
+        return proxy.clone();
     }
 }

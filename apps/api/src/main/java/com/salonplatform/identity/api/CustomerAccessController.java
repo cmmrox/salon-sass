@@ -28,12 +28,17 @@ import java.util.UUID;
 class CustomerAccessController {
     static final String DEVICE_COOKIE = "salon_device";
     private final CustomerAccess access;
+    private final com.salonplatform.identity.infrastructure.ClientAddressAssertion assertions;
     private final CustomerDevice devices;
     private final Environment environment;
 
     CustomerAccessController(
-            CustomerAccess access, CustomerDevice devices, Environment environment) {
+            CustomerAccess access,
+            CustomerDevice devices,
+            Environment environment,
+            com.salonplatform.identity.infrastructure.ClientAddressAssertion assertions) {
         this.access = access;
+        this.assertions = assertions;
         this.devices = devices;
         this.environment = environment;
     }
@@ -46,6 +51,14 @@ class CustomerAccessController {
     record CustomerCodeVerificationRequest(
             @NotNull UUID challengeId, @NotBlank @Size(max = 32) String code) {}
 
+    @io.swagger.v3.oas.annotations.Parameter(
+            name = "x-salon-client-assertion",
+            in = io.swagger.v3.oas.annotations.enums.ParameterIn.HEADER,
+            required = false,
+            description =
+                    "Private server-authenticated rate-address assertion; absent uses servlet peer,"
+                        + " invalid proof is rejected before accounting.",
+            schema = @io.swagger.v3.oas.annotations.media.Schema(type = "string", maxLength = 192))
     @PostMapping(path = "/challenges", consumes = MediaType.APPLICATION_JSON_VALUE)
     @io.swagger.v3.oas.annotations.responses.ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(
@@ -80,6 +93,7 @@ class CustomerAccessController {
     ResponseEntity<CustomerAccess.Challenge> request(
             @Valid @RequestBody CodeRequest request, HttpServletRequest http) {
         TenantContext.require();
+        String rateAddress = assertions.rateAddress(http);
         String cookie = cookie(http);
         String id = devices.verifiedId(cookie);
         boolean issued = id == null;
@@ -93,7 +107,7 @@ class CustomerAccessController {
                         request.channel(),
                         request.deviceLabel(),
                         id,
-                        http.getRemoteAddr());
+                        rateAddress);
         ResponseEntity.BodyBuilder response =
                 ResponseEntity.ok().cacheControl(CacheControl.noStore());
         if (issued)

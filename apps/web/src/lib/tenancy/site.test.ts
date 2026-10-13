@@ -7,7 +7,7 @@ import { contextFromTraceparent, runInRequest } from '@/lib/observability/reques
 
 import { resolveSite, type FindSalon } from './site';
 
-const alpha: Salon = { slug: 'alpha', name: 'Alpha Studio', brandColour: '#D6086A' };
+const alpha: Salon = { slug: 'alpha', name: 'Alpha Studio', brandColour: '#D6086A', timeZone: 'Asia/Colombo' };
 
 function finder(answer: SalonLookup) {
   return vi.fn<FindSalon>(async () => answer);

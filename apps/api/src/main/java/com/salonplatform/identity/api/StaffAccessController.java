@@ -22,12 +22,16 @@ import java.util.UUID;
 @RequestMapping(path = "/api/v1/identity", produces = MediaType.APPLICATION_JSON_VALUE)
 class StaffAccessController {
     private final StaffAccess access;
+    private final com.salonplatform.identity.infrastructure.ClientAddressAssertion assertions;
     private final com.salonplatform.identity.application.SessionAccess sessions;
 
     StaffAccessController(
-            StaffAccess access, com.salonplatform.identity.application.SessionAccess sessions) {
+            StaffAccess access,
+            com.salonplatform.identity.application.SessionAccess sessions,
+            com.salonplatform.identity.infrastructure.ClientAddressAssertion assertions) {
         this.sessions = sessions;
         this.access = access;
+        this.assertions = assertions;
     }
 
     record SignInRequest(
@@ -65,6 +69,14 @@ class StaffAccessController {
                 .body(body);
     }
 
+    @io.swagger.v3.oas.annotations.Parameter(
+            name = "x-salon-client-assertion",
+            in = io.swagger.v3.oas.annotations.enums.ParameterIn.HEADER,
+            required = false,
+            description =
+                    "Private server-authenticated rate-address assertion; absent uses servlet peer,"
+                        + " invalid proof is rejected before accounting.",
+            schema = @io.swagger.v3.oas.annotations.media.Schema(type = "string", maxLength = 192))
     @PostMapping(path = "/staff/sign-in", consumes = MediaType.APPLICATION_JSON_VALUE)
     ResponseEntity<StaffAccess.SignIn> signIn(
             @Valid @RequestBody SignInRequest request, HttpServletRequest http) {
@@ -73,7 +85,7 @@ class StaffAccessController {
                         request.identifier(),
                         request.password(),
                         request.deviceLabel(),
-                        http.getRemoteAddr()));
+                        assertions.rateAddress(http)));
     }
 
     @PostMapping("/staff/mfa/challenges")

@@ -26,7 +26,8 @@ class IdentityCryptoTest {
         return new MockEnvironment()
                 .withProperty("salon.identity.signing-key", key())
                 .withProperty("salon.identity.challenge-key", key())
-                .withProperty("salon.identity.encryption-key", key());
+                .withProperty("salon.identity.encryption-key", key())
+                .withProperty("salon.identity.proxy-key", key());
     }
 
     @Test
@@ -44,6 +45,64 @@ class IdentityCryptoTest {
                                                 .withProperty(
                                                         "salon.identity.challenge-key", same)))
                 .withMessageContaining("independent");
+    }
+
+    @Test
+    void nonlocalRequiresFourthKeyAndCannotReadALocalFile() throws Exception {
+        Path file = directory.resolve("keys.properties");
+        Properties saved = new Properties();
+        saved.setProperty("proxy", key());
+        try (var out = Files.newOutputStream(file)) {
+            saved.store(out, "Synthetic test keys");
+        }
+        MockEnvironment env = configured();
+        env.setProperty("salon.identity.proxy-key", "");
+        env.setProperty("salon.identity.local-key-file", file.toString());
+        assertThatIllegalStateException()
+                .isThrownBy(() -> new IdentitySecrets(env))
+                .withMessageContaining("SALON_IDENTITY_PROXY_KEY");
+        for (String name : List.of("signing", "challenge", "encryption")) {
+            MockEnvironment duplicate = configured();
+            duplicate.setProperty(
+                    "salon.identity.proxy-key",
+                    duplicate.getProperty("salon.identity." + name + "-key"));
+            assertThatIllegalStateException()
+                    .isThrownBy(() -> new IdentitySecrets(duplicate))
+                    .withMessageContaining("independent");
+        }
+    }
+
+    @Test
+    void appendingProxyKeyPreservesEveryExistingKeyAndItsPermissions() throws Exception {
+        Path file = directory.resolve("keys.properties");
+        Properties before = new Properties();
+        for (String name : List.of("signing", "challenge", "encryption"))
+            before.setProperty(name, key());
+        try (var out = Files.newOutputStream(file)) {
+            before.store(out, "Synthetic test keys");
+        }
+        MockEnvironment env =
+                new MockEnvironment()
+                        .withProperty("salon.identity.local-key-file", file.toString());
+        env.setActiveProfiles("local");
+        IdentitySecrets first = new IdentitySecrets(env), second = new IdentitySecrets(env);
+        Properties after = new Properties();
+        try (var in = Files.newInputStream(file)) {
+            after.load(in);
+        }
+        for (String name : before.stringPropertyNames())
+            assertThat(after.getProperty(name)).isEqualTo(before.getProperty(name));
+        assertThat(after.getProperty("proxy")).matches("[0-9a-f]{64}");
+        assertThat(first.proxy()).containsExactly(second.proxy());
+        assertThat(Files.getPosixFilePermissions(file))
+                .isEqualTo(java.nio.file.attribute.PosixFilePermissions.fromString("rw-------"));
+        byte[] copy = first.proxy();
+        copy[0] ^= 1;
+        assertThat(copy).isNotEqualTo(first.proxy());
+        try (var files = Files.list(directory)) {
+            assertThat(files.map(p -> p.getFileName().toString()))
+                    .containsExactlyInAnyOrder("keys.properties", "keys.properties.lock");
+        }
     }
 
     @Test

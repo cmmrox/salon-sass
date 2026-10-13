@@ -478,6 +478,7 @@
           "code": {
             "description": "The stable reason. Branch on this.",
             "enum": [
+              "invalid_client_assertion",
               "confirmation_required",
               "invalid_code",
               "code_expired",
@@ -897,6 +898,17 @@
     "/api/v1/identity/customers/challenges": {
       "post": {
         "operationId": "request",
+        "parameters": [
+          {
+            "description": "Private server-authenticated rate-address assertion; absent uses servlet peer, invalid proof is rejected before accounting.",
+            "in": "header",
+            "name": "x-salon-client-assertion",
+            "schema": {
+              "maxLength": 192,
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -1547,6 +1559,17 @@
     "/api/v1/identity/staff/sign-in": {
       "post": {
         "operationId": "signIn",
+        "parameters": [
+          {
+            "description": "Private server-authenticated rate-address assertion; absent uses servlet peer, invalid proof is rejected before accounting.",
+            "in": "header",
+            "name": "x-salon-client-assertion",
+            "schema": {
+              "maxLength": 192,
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
