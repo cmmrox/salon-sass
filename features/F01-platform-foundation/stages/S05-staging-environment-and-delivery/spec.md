@@ -3,16 +3,16 @@
 ## Objective
 
 After this stage the platform can be deployed to any host that runs containers, without a minute
-of downtime. Production images exist for the API and the web app. An edge serves every salon's
-subdomain over HTTPS from one wildcard certificate, so a new salon is secure the moment it exists.
-A deployment replaces each instance while requests keep being answered, and can be rolled back the
-same way. All of this is proved on a production-like stack on the local machine (decision 018). The
-first deployment to a real staging host waits for the owner to decide hosting (D-08) and the
-domain (D-02).
+of downtime. Production images exist for the API and the web app. In staging, an edge serves every
+salon subdomain over HTTPS using a wildcard certificate. A deployment replaces each instance while
+requests keep being answered, and can be rolled back the same way. Local development and QA use an
+HTTP-only edge with no local certificate setup or TLS assertions (CR-005). Deployment and public
+TLS verification on the real staging host remain optional and require an explicit owner request.
 
 ## Read first
 
-- `docs/decisions/DECISION_LOG.md`: decisions 018, 022, 028 and 030
+- `docs/decisions/DECISION_LOG.md`: decisions 018, 022, 028, 030 and 034
+- `docs/changes/CR-005-local-http-staging-tls.md`: local HTTP-only scope and deferred staging TLS
 - `docs/operations/environments-and-releases.md`: environments, what may be touched, the rules for
   a release (backward-compatible migrations, a rollback plan)
 - `docs/architecture/ARCHITECTURE.md`: web addresses, environments
@@ -50,15 +50,14 @@ domain (D-02).
 
 - One Compose project, `salon-stack`, separate from `salon-local` in every name, port and volume:
   an edge, two API instances, two web app instances, PostgreSQL and an OpenTelemetry collector.
-  Only the edge publishes ports. The same files deploy to a real host later; nothing in them names
-  the local machine except the settings in its environment file.
-- The edge is Caddy (decision 030). It serves the platform domain and `*.<platform domain>` over
-  HTTPS from one wildcard certificate, redirects HTTP to HTTPS, sends HSTS, and passes the request's
-  `Host` to the apps unchanged. On the local machine the certificate comes from the stack's own
-  certificate authority, whose root the stack writes out so that tests can trust it. On a real host
-  it comes from a public authority by the DNS challenge, configured but not exercised here.
-- The platform domain on the local machine is `stack.localhost`, with the edge on port 8443 for
-  HTTPS and 8089 for HTTP, as settings.
+  Only the edge publishes ports. The local HTTP edge and staging TLS edge use environment-specific
+  Caddy configuration; app images and tenant routing are shared.
+- The edge is Caddy (decision 030). Locally it serves the platform domain and
+  `*.<platform domain>` over HTTP and passes the request's `Host` to the apps unchanged. Staging
+  configuration serves these names over HTTPS with a public wildcard certificate, redirects HTTP
+  to HTTPS and sends HSTS using DNS challenge credentials. No local certificate authority, trust
+  setup or TLS configuration is required.
+- The local platform domain is `stack.localhost`, served on port 8089 over HTTP.
 - The two database roles are provisioned by `infra/postgres/provision-roles.sql`: the owning role,
   which is not a superuser, and the application's role, as T-3 requires. It can be run again
   without harm, and is what a real host's administrator runs once.
@@ -116,9 +115,9 @@ actionlint) runs from its official container image. Nothing is installed on the 
 
 ## Acceptance criteria
 
-"The stack" is the production-like stack started by `stack-up.sh` and seeded by `stack-seed.sh`.
-Its hostnames are `<slug>.stack.localhost` on the edge's ports. Every HTTPS request in a test
-trusts only the root the stack wrote out.
+The local stack is started by `stack-up.sh` and seeded by `stack-seed.sh`. Its hostnames are
+`<slug>.stack.localhost` on the HTTP edge. Staging-only certificate issuance and TLS behavior are
+outside local acceptance and remain deferred in `TC-F01-002`.
 
 - AC-1: `images-build.sh` builds an API image and a web image tagged with the version and the
   commit. A container from each runs as a user other than root, contains no `.env` file, and
@@ -126,14 +125,14 @@ trusts only the root the stack wrote out.
 - AC-2: `images-scan.sh` exits zero on the images built from the stage's tree, and exits non-zero,
   naming the vulnerability, when given an image that has a critical or high vulnerability with a
   fix. (NFR-07)
-- AC-3: In the stack, `https://alpha.stack.localhost:8443/` shows alpha's shell and
-  `https://alpha.stack.localhost:8443/api/v1/salon` returns alpha's brand, each over a certificate
-  valid for that hostname. The same holds for beta and gamma, the bare platform domain shows the
-  status page, and an unknown slug and `console` get the "salon not found" page of F01-S03, also
-  over a valid certificate. HTTP on 8089 answers a redirect to the same path over HTTPS, and every
-  HTTPS answer carries `Strict-Transport-Security`. (BRD-03, NFR-07)
-- AC-4: A salon added by `stack-seed.sh` while the stack runs is served over HTTPS with a valid
-  certificate on its first request, with no certificate step and no restart. (BRD-03)
+- AC-3: In the local stack, `http://alpha.stack.localhost:8089/` shows alpha's shell and
+  `http://alpha.stack.localhost:8089/api/v1/salon` returns alpha's brand. The same holds for beta
+  and gamma, the bare platform domain shows the status page, and an unknown slug and `console` get
+  the salon-not-found page of F01-S03. No local HTTPS, certificate, redirect or HSTS assertion is
+  made. Staging-only TLS behavior is deferred in `TC-F01-002`. (BRD-03, NFR-07)
+- AC-4: A salon added by `stack-seed.sh` while the local stack runs is served over HTTP on its first
+  request, with no restart. Certificate issuance is staging-only and is not checked locally.
+  (BRD-03)
 - AC-5: Only the edge's ports are published on the machine: the API, the web app, PostgreSQL and
   the collector cannot be reached from the host except through the edge. A request through the edge
   on alpha's hostname carrying beta's slug in `X-Forwarded-Host`, `X-Tenant-Id` or a query parameter
@@ -168,9 +167,9 @@ trusts only the root the stack wrote out.
 
 ## Design notes
 
-- **The same files everywhere.** The stack's Compose file and Caddy configuration are the ones a
-  real host will use; only the environment file differs. Anything that is true only on the local
-  machine (the stack's own certificate authority, `stack.localhost`) is a setting with a comment.
+- **Shared app stack, environment-specific edge.** Local QA uses an HTTP Caddy configuration. The
+  real staging host uses a separate TLS Caddy configuration with public DNS-challenge certificates.
+  Both preserve the incoming `Host`; no local certificate is created or trusted.
 - **Both versions answer at once during a deployment.** That is why migrations must be backward
   compatible (`docs/engineering/backend.md`). Flyway runs once per deployment, from the new
   version, before its first instance starts serving; an instance starting while another migrates
@@ -208,7 +207,7 @@ Not applicable for this stage. The pages are F01-S03's, served through the edge.
 | Risk | Test type and why |
 | --- | --- |
 | A deployment drops requests, or old and new versions disagree mid-deployment | `resilience` and `concurrency`: k6 during deploy, rollback and instance loss (AC-8, AC-9, AC-10) |
-| A salon's subdomain is served without a valid certificate, or over HTTP | `security` (AC-3, AC-4) |
+| A salon resolves to the wrong tenant on the local edge | `tenant-isolation` and `security` (AC-3, AC-5); staging TLS is deferred to TC-F01-002 |
 | Something other than the edge is reachable, or a forwarded header picks the salon | `security` and `tenant-isolation` (AC-5) |
 | The production-like database runs with a role that can bypass isolation | `tenant-isolation` (AC-6) |
 | A secret or a local hook reaches an image or a non-local profile | `security` and `build` (AC-1, AC-7) |

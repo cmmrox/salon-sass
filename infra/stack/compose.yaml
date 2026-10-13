@@ -109,26 +109,40 @@ services:
     image: ${SALON_IMAGE_PREFIX:-}salon-web:${SALON_WEB_2_VERSION:?SALON_WEB_2_VERSION is set by infra/scripts}
     container_name: salon-stack-web-2
 
-  # The only service with published ports (decision 030): HTTPS for the platform domain and every
-  # salon's subdomain, and HTTP, which redirects to HTTPS.
-  edge:
-    image: ${SALON_EDGE_IMAGE:?SALON_EDGE_IMAGE is required (.env.stack.example)}
+  # Local development and QA use this HTTP-only edge. Staging has its own profile and Caddyfile.
+  edge-http:
+    profiles: [local]
+    image: caddy:2.11.7-alpine
     container_name: salon-stack-edge
     restart: unless-stopped
     ports:
-      - "${SALON_EDGE_PUBLISH_ADDRESS:?SALON_EDGE_PUBLISH_ADDRESS is required (.env.stack.example)}:${SALON_EDGE_HTTPS_PORT:?SALON_EDGE_HTTPS_PORT is required (.env.stack.example)}:${SALON_EDGE_HTTPS_PORT}"
-      - "${SALON_EDGE_PUBLISH_ADDRESS}:${SALON_EDGE_HTTP_PORT:?SALON_EDGE_HTTP_PORT is required (.env.stack.example)}:${SALON_EDGE_HTTP_PORT}"
+      - "${SALON_EDGE_PUBLISH_ADDRESS:-127.0.0.1}:${SALON_EDGE_HTTP_PORT:-8089}:8089"
     environment:
       SALON_PLATFORM_DOMAIN: ${SALON_PLATFORM_DOMAIN}
-      SALON_EDGE_HTTPS_PORT: ${SALON_EDGE_HTTPS_PORT}
-      SALON_EDGE_HTTP_PORT: ${SALON_EDGE_HTTP_PORT}
-      SALON_EDGE_CERTIFICATES: ${SALON_EDGE_CERTIFICATES:?SALON_EDGE_CERTIFICATES is required (.env.stack.example)}
+      SALON_EDGE_HTTP_PORT: ${SALON_EDGE_HTTP_PORT:-8089}
+    volumes:
+      - ./edge/Caddyfile:/etc/caddy/Caddyfile:ro
+    networks:
+      edge:
+        aliases: [edge]
+
+  # Selected only when SALON_STACK_ENV=staging on the deployment host. Public DNS and the
+  # certificate provider are configured there; local development never starts this service.
+  edge-staging:
+    profiles: [staging]
+    image: ${SALON_EDGE_IMAGE:-caddy:2.11.7-alpine}
+    container_name: salon-stack-edge
+    restart: unless-stopped
+    ports:
+      - "${SALON_EDGE_PUBLISH_ADDRESS:-0.0.0.0}:80:80"
+      - "${SALON_EDGE_PUBLISH_ADDRESS:-0.0.0.0}:443:443"
+    environment:
+      SALON_PLATFORM_DOMAIN: ${SALON_PLATFORM_DOMAIN}
       SALON_EDGE_ACME_EMAIL: ${SALON_EDGE_ACME_EMAIL:-}
       SALON_EDGE_DNS_PROVIDER: ${SALON_EDGE_DNS_PROVIDER:-}
       SALON_EDGE_DNS_CREDENTIALS: ${SALON_EDGE_DNS_CREDENTIALS:-}
     volumes:
-      - ./edge/Caddyfile:/etc/caddy/Caddyfile:ro
-      # Certificates, and on the local machine the stack's own certificate authority.
+      - ./edge/Caddyfile.staging:/etc/caddy/Caddyfile:ro
       - edge-data:/data
       - edge-config:/config
     networks:

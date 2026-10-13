@@ -28,11 +28,16 @@ if [ "${#missing[@]}" -gt 0 ]; then
   fail "these images do not exist: ${missing[*]}. Build them with infra/scripts/images-build.sh <version>. Nothing was started."
 fi
 
-# The edge's ports are free, unless the stack's own edge already holds them.
+# The selected environment's edge ports are free, unless the stack's own edge already holds them.
 if ! container_running edge; then
-  for setting in SALON_EDGE_HTTPS_PORT SALON_EDGE_HTTP_PORT; do
-    if port_in_use "${!setting}"; then
-      fail "port ${!setting} is already in use by something else. Free it, or set $setting in .env.stack to another port. Nothing was started."
+  if [ "$SALON_STACK_ENV" = "staging" ]; then
+    ports=(80 443)
+  else
+    ports=("$SALON_EDGE_HTTP_PORT")
+  fi
+  for port in "${ports[@]}"; do
+    if port_in_use "$port"; then
+      fail "port $port is already in use by something else. Free it, or change the staging ports on the host. Nothing was started."
     fi
   done
 fi
@@ -61,27 +66,17 @@ stack_compose --profile migrate run --rm --no-deps migrate >"$STACK_LOG_DIR/migr
   || { tail -n 30 "$STACK_LOG_DIR/migrate-$version.log" >&2; fail "the migrations of version $version failed. See .stack/logs/migrate-$version.log"; }
 
 say "collector, API, web app and edge: starting"
-stack_compose up --detach --wait --wait-timeout 300 collector "${STACK_INSTANCES[@]}" edge >>"$STACK_LOG_DIR/up.log" 2>&1 \
+stack_compose up --detach --wait --wait-timeout 300 collector "${STACK_INSTANCES[@]}" "$STACK_EDGE_SERVICE" >>"$STACK_LOG_DIR/up.log" 2>&1 \
   || { tail -n 30 "$STACK_LOG_DIR/up.log" >&2; fail "the stack did not become ready. See .stack/logs/up.log and docker logs salon-stack-<service>"; }
 
-if [ "$SALON_EDGE_CERTIFICATES" = "internal" ]; then
-  # The stack's own certificate authority: its root, for the tests that must trust it.
-  for _ in $(seq 1 60); do
-    if stack_compose cp edge:/data/caddy/pki/authorities/local/root.crt "$STACK_ROOT_CERT" >/dev/null 2>&1; then
-      break
-    fi
-    sleep 1
-  done
-  [ -s "$STACK_ROOT_CERT" ] || fail "the edge did not create its certificate authority. See docker logs salon-stack-edge"
-fi
-
-https="https://${SALON_PLATFORM_DOMAIN}:${SALON_EDGE_HTTPS_PORT}"
 say ""
-say "Stack       ${https}  (status page)"
-say "Salons      https://<slug>.${SALON_PLATFORM_DOMAIN}:${SALON_EDGE_HTTPS_PORT}  (none until infra/scripts/stack-seed.sh)"
-say "HTTP        http://${SALON_PLATFORM_DOMAIN}:${SALON_EDGE_HTTP_PORT}  (redirects to HTTPS)"
-say "Versions    api $(deployed_version api-1)/$(deployed_version api-2), web $(deployed_version web-1)/$(deployed_version web-2)"
-if [ "$SALON_EDGE_CERTIFICATES" = "internal" ]; then
-  say "Trust       .stack/edge-root.crt  (curl --cacert .stack/edge-root.crt ${https}/api/v1/meta)"
+if [ "$SALON_STACK_ENV" = "staging" ]; then
+  say "Stack       https://${SALON_PLATFORM_DOMAIN}  (status page)"
+  say "Salons      https://<slug>.${SALON_PLATFORM_DOMAIN}  (none until infra/scripts/stack-seed.sh)"
+  say "HTTP        http://${SALON_PLATFORM_DOMAIN}  (redirects to HTTPS)"
+else
+  say "Stack       http://${SALON_PLATFORM_DOMAIN}:${SALON_EDGE_HTTP_PORT}  (status page)"
+  say "Salons      http://<slug>.${SALON_PLATFORM_DOMAIN}:${SALON_EDGE_HTTP_PORT}  (none until infra/scripts/stack-seed.sh)"
 fi
+say "Versions    api $(deployed_version api-1)/$(deployed_version api-2), web $(deployed_version web-1)/$(deployed_version web-2)"
 say "Telemetry   .stack/telemetry  (traces.jsonl, metrics.jsonl); logs: docker logs salon-stack-<service>"
