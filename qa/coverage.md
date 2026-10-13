@@ -24,7 +24,7 @@ asked for; the cases of a stage are written at its feature's pass.
 | F01-S05 | complete | - | BRD-03, NFR-01, NFR-07, NFR-16, NFR-18 | 12 | 12 | 12 | 0 | 0 |
 | F02-S01 | complete | - | IAM-06, IAM-07, IAM-08, IAM-09, IAM-11, NFR-08, NFR-10 | 10 | 0 | 0 | 0 | 0 |
 | F02-S02 | complete | - | IAM-01, IAM-03, IAM-09, IAM-10, IAM-11, NFR-08, NFR-10 | 8 | 0 | 0 | 0 | 0 |
-| F02-S03 | in-progress | - | IAM-03, IAM-04, IAM-05, IAM-11, NFR-08, NFR-10 | 6 | 0 | 0 | 0 | 0 |
+| F02-S03 | complete | - | IAM-03, IAM-04, IAM-05, IAM-11, NFR-08, NFR-10 | 6 | 0 | 0 | 0 | 0 |
 | F02-S04 | planned | - | IAM-01, IAM-03, IAM-04, IAM-05, IAM-06, IAM-07, IAM-08, IAM-09, IAM-10, IAM-11, NFR-08, NFR-10 | 8 | 0 | 0 | 0 | 0 |
 
 ## Deferred cases
@@ -53,15 +53,15 @@ Cases waiting for something else. `feature-verify` and `release-prepare` go thro
 | PLT-12 | R3 | could | unowned | - |
 | IAM-01 | R1 | must | F02 | F02-S02 (complete), F02-S04 (planned) |
 | IAM-02 | R1 | must | F07 | - |
-| IAM-03 | R1 | must | F02 | F02-S02 (complete), F02-S03 (in-progress), F02-S04 (planned) |
-| IAM-04 | R1 | must | F02 | F02-S03 (in-progress), F02-S04 (planned) |
-| IAM-05 | R1 | must | F02 | F02-S03 (in-progress), F02-S04 (planned) |
+| IAM-03 | R1 | must | F02 | F02-S02 (complete), F02-S03 (complete), F02-S04 (planned) |
+| IAM-04 | R1 | must | F02 | F02-S03 (complete), F02-S04 (planned) |
+| IAM-05 | R1 | must | F02 | F02-S03 (complete), F02-S04 (planned) |
 | IAM-06 | R1 | must | F02 | F02-S01 (complete), F02-S04 (planned) |
 | IAM-07 | R1 | must | F02 | F02-S01 (complete), F02-S04 (planned) |
 | IAM-08 | R1 | should | F02 | F02-S01 (complete), F02-S04 (planned) |
 | IAM-09 | R1 | must | F02 | F02-S01 (complete), F02-S02 (complete), F02-S04 (planned) |
 | IAM-10 | R1 | must | F02 | F02-S02 (complete), F02-S04 (planned) |
-| IAM-11 | R1 | must | F02 | F02-S01 (complete), F02-S02 (complete), F02-S03 (in-progress), F02-S04 (planned) |
+| IAM-11 | R1 | must | F02 | F02-S01 (complete), F02-S02 (complete), F02-S03 (complete), F02-S04 (planned) |
 | IAM-12 | R2 | should | unowned | - |
 | IAM-13 | R3 | could | unowned | - |
 | CAT-01 | R1 | must | F05 | - |

@@ -160,8 +160,9 @@ New profile defaults are language `en`, operational channel preferences
 `{sms:true,whatsapp:true,email:true}` and marketing consent `false`; email and birthday are null.
 Enabling a channel preference neither supplies an address nor grants marketing consent. Updates
 send the full mutable representation and version, with every channel preference and marketing
-consent required; omitted or null optional email/birthday clears it. Trim names and trim/lowercase
-email. Reject unknown update fields, including mobile and account/tenant selectors. Customer rights
+consent required; omitted or null optional email/birthday clears it. Blank/whitespace optional email
+also clears it; a nonblank email must be valid. Trim names and trim/lowercase email. Reject unknown
+update fields, including mobile and account/tenant selectors. Customer rights
 use `profile.manage`, `data.export` and `account.delete`, alongside `session.manage`.
 
 Export is a JSON download of the current customer's profile, preferences and signed-in-device
@@ -285,3 +286,28 @@ Code limit settings are positive integers under `salon.identity.codes`, supplied
 `SALON_IDENTITY_CODE_ADDRESS_LIMIT` and `SALON_IDENTITY_CODE_DAILY_LIMIT` (3/10/20/1000 defaults).
 Nonlocal customer challenge requests return 503 `provider_unavailable` until a real sender is
 configured; local captures certify the API/delivery behavior, not live SMS or WhatsApp activation.
+
+## Implemented customer privacy contract
+
+`GET /api/v1/identity/customers/me` returns
+`{id,version,name,mobile,email,birthday,preferredLanguage,notificationPreferences,marketingConsent}`.
+`PUT` on the same path takes version and mutable fields only, with all three Boolean channel
+preferences and marketing consent required. Email and birthday are nullable. Read/update responses
+are no-store; unknown fields are rejected with field errors. Stale versions return 409 `conflict`.
+
+`GET /customers/me/export` returns no-store JSON
+`{generatedAt,profile,devices}` with attachment filename `customer-data.json`. Device metadata uses
+the existing own-session allowlist. `DELETE /customers/me` takes `{confirm:true}` and answers 204;
+false confirmation returns 400 `confirmation_required`. Staff authority cannot call these routes.
+Audit actions are `identity.profile_updated`, `identity.data_exported` and
+`identity.account_deleted`; profile audit stores versions and changed field names, never values.
+
+Privacy cleanup uses shared `Outbox.eraseMatching(channels, matchingOwner, instant)` inside the
+writable tenant transaction. It scans bounded keyset pages and erases matching identity envelopes
+in every delivery state, including messages whose expired challenge rows were already cleaned up.
+Identity recognizes its own encrypted payload shape; an unreadable recognized envelope rolls back
+deletion with a safe internal-error response. Conditional dispatcher finalization cannot recreate
+erased rows. An opaque `CustomerDataErased(tenantId,challengeIds)` event clears local captures after
+commit; core identity code never imports local hooks. Other numbers/salons and ordinary hashed
+anti-abuse counters remain. V10 adds profile defaults to the existing customer table; it introduces
+no new tenant table or cross-module table access.

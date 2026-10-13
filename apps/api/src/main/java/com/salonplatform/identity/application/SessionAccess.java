@@ -121,7 +121,13 @@ public class SessionAccess {
     private Principal principal(Auth a) {
         if (a.customer() != null)
             return new Principal(
-                    a.ownerId(), "customer", null, Set.of("session.manage"), "own", null, false);
+                    a.ownerId(),
+                    "customer",
+                    null,
+                    Set.of("session.manage", "profile.manage", "data.export", "account.delete"),
+                    "own",
+                    null,
+                    false);
         StaffAccount s = a.staff();
         StaffRole r = StaffRole.valueOf(s.role);
         return new Principal(

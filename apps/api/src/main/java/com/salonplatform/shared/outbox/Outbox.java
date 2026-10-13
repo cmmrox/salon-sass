@@ -59,14 +59,14 @@ public class Outbox {
                 || TransactionSynchronizationManager.isCurrentTransactionReadOnly()) {
             throw new IllegalStateException(
                     "An outbox message is written in the transaction of the change that causes it;"
-                        + " there is none here");
+                            + " there is none here");
         }
         TenantContext.resolved()
                 .orElseThrow(
                         () ->
                                 new IllegalStateException(
                                         "An outbox message belongs to a salon: write it inside work"
-                                            + " for one (TenantContext)"));
+                                                + " for one (TenantContext)"));
         if (channel == null || channel.isBlank()) {
             throw new IllegalArgumentException("a message has a channel");
         }
@@ -101,6 +101,56 @@ public class Outbox {
                         .setParameter("at", at)
                         .executeUpdate()
                 == 1;
+    }
+
+    /**
+     * Erases identifying delivery envelopes for one owner inside its privacy transaction. The owner
+     * recognizes its own payloads and returns only an opaque correlation id. Keyset pages remain
+     * bounded even when matched rows are removed. All states, including sent, are erased; absent
+     * rows cannot be recreated by conditional dispatcher finalization.
+     */
+    public java.util.Set<UUID> eraseMatching(
+            java.util.Set<String> channels,
+            java.util.function.Function<String, Optional<UUID>> matchingOwner,
+            Instant at) {
+        if (!TransactionSynchronizationManager.isActualTransactionActive()
+                || TransactionSynchronizationManager.isCurrentTransactionReadOnly())
+            throw new IllegalStateException("Erasure requires a writable tenant transaction");
+        UUID tenant = TenantContext.require().id();
+        java.util.Set<UUID> correlations = new java.util.HashSet<>();
+        UUID after = null;
+        while (true) {
+            String condition = after == null ? "" : " and m.id>:after";
+            var query =
+                    entityManager
+                            .createQuery(
+                                    "select m.id,m.payload from OutboxMessage m where m.channel in"
+                                        + " :channels"
+                                            + condition
+                                            + " order by m.id",
+                                    Object[].class)
+                            .setParameter("channels", channels)
+                            .setMaxResults(100);
+            if (after != null) query.setParameter("after", after);
+            var rows = query.getResultList();
+            if (rows.isEmpty()) break;
+            for (Object[] row : rows) {
+                UUID id = (UUID) row[0];
+                after = id;
+                Optional<UUID> correlation = matchingOwner.apply((String) row[1]);
+                if (correlation.isPresent()) {
+                    cancel(id, at);
+                    entityManager
+                            .createNativeQuery(
+                                    "DELETE FROM outbox_message WHERE tenant_id=:tenant AND id=:id")
+                            .setParameter("tenant", tenant)
+                            .setParameter("id", id)
+                            .executeUpdate();
+                    correlations.add(correlation.get());
+                }
+            }
+        }
+        return java.util.Set.copyOf(correlations);
     }
 
     /**
