@@ -57,8 +57,8 @@ def render_portfolio(bundle):
         "turn it is and the lifecycle command to run. Milestones are explained in `docs/ROADMAP.md`;",
         "requirement detail is in `qa/coverage.md`.",
         "",
-        _row("ID", "Feature", "Milestone", "Status", "Stages done", "Requirements", "Next"),
-        _row("---", "---", "---", "---", "---", "---", "---"),
+        _row("ID", "Feature", "Milestone", "Status", "GitHub merge", "Stages done", "Requirements", "Next"),
+        _row("---", "---", "---", "---", "---", "---", "---", "---"),
     ]
     in_flight = []
     for feature in bundle["features"]:
@@ -67,6 +67,7 @@ def render_portfolio(bundle):
         link = f"[{feature.get('title')}]({os.path.basename(feature['_dir'])}/)"
         lines.append(_row(
             feature.get("id"), link, feature.get("milestone"), feature.get("status"),
+            "merged" if flow.merged(feature) else ("awaiting owner" if (feature.get("integration") or {}).get("pull_request") else "-"),
             f"{done}/{len(stages)}" if stages else "-",
             len(_list(feature.get("requirements"))),
             _turn(flow.feature_turn(feature, stages, bundle["features"])),

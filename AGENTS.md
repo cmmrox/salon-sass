@@ -50,8 +50,14 @@ A project fact is never written into a skill, and a skill never restates a docum
 - **Local by default.** Staging, production, real payments and real messages are touched only when
   the owner's current message says so: `docs/operations/environments-and-releases.md`.
 - **Git:** branch before committing (`{username}/{type}/{id}-{slug}`), Conventional Commits scoped
-  to the stage (`feat(F07-S02): ...`). Never push, open a pull request, merge, tag or deploy unless
-  the owner asks.
+  to the stage (`feat(F07-S02): ...`). Stages and QA integrate into a feature branch. After full
+  independent feature QA, open one GitHub PR for the owner to merge into `main`; verify that merge
+  before starting the next feature. Clean up related merged branches/worktrees with the guarded
+  lifecycle command. Push/PR authorisation and the existing-history transition are in
+  `docs/operations/git-delivery.md`. Tags and deployments require separate requests.
+- **Optional staging:** closing or merging a feature does not deploy to the VPS. The owner may
+  deploy several merged features together; local QA and explicitly deferred staging cases are
+  reported separately.
 - **Skills and documents are the lead's.** Edit skills under `.claude/skills/` only
   (`.agents/skills/` holds symlinks to the same files) after reading `references/skill-maintenance.md`
   in `salon-sdlc`.

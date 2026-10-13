@@ -51,7 +51,9 @@ When the documents do not cover something:
 ## Building a stage
 
 1. Read, as above.
-2. Set the status and branch as `stage-build` in `salon-sdlc` describes.
+2. Set the status and branch as `stage-build` in `salon-sdlc` describes. Branch from the feature's
+   integration branch; the lead integrates closed stages there. Follow `references/git-workflow.md`
+   in `salon-sdlc`: unfinished stages do not merge into `main`.
 3. Implement against the acceptance criteria, with tests alongside.
 4. Run the stage's `verification.commands` until green.
 5. Start the product and walk through every acceptance criterion yourself, from outside: the

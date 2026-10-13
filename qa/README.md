@@ -6,7 +6,7 @@ QA automation, shared fixtures, release manifests and the lifecycle tooling. The
 
 | Path | Holds | Created |
 | --- | --- | --- |
-| `scripts/sdlc` | The lifecycle tooling: `validate`, `generate`, `status`, `run`, `selftest` | Present |
+| `scripts/sdlc` | Lifecycle tooling: `validate`, `generate`, `status`, `run`, `selftest`, `pr-check`, `merge-sync`, `start-check`, `cleanup` | Present |
 | `scripts/guard.py` | The path-ownership check for the developer and QA roles | Present |
 | `coverage.md` | Requirement and test coverage. Generated; do not edit | Present |
 | `web/`, `api/` | Playwright browser and API tests, by feature | Present |
@@ -28,6 +28,17 @@ qa/scripts/sdlc run --stage F01-S01 --dry-run
 
 Regression and smoke (`--suite regression`, `--suite smoke`, `--release <version>`) run only when
 the owner asks.
+
+Feature integration and post-merge cleanup follow `docs/operations/git-delivery.md`. `complete`
+means QA-passed; it does not permit the next feature until its GitHub merge is confirmed. Cleanup
+archives local QA evidence outside a worktree before removing it. It previews by default:
+
+```bash
+qa/scripts/sdlc pr-check F07
+qa/scripts/sdlc merge-sync F07 --check
+qa/scripts/sdlc start-check F08
+qa/scripts/sdlc cleanup --branch charithm/feature/F07-online-booking
+```
 
 ## Before a run
 
