@@ -1,0 +1,104 @@
+# The stack's edge (decision 030): the only way in. Every value that differs between the local
+# machine and a real host is a setting from the stack's environment file (.env.stack.example).
+#
+# - HTTPS for the platform domain and for every salon's subdomain, `*.<platform domain>`, from one
+#   wildcard certificate: a salon created while the platform runs is served securely on its first
+#   request, with no certificate of its own to obtain. (The platform domain itself has its own
+#   certificate: a wildcard does not cover the bare name.)
+# - HTTP answers with a redirect to the same path over HTTPS; every HTTPS answer carries HSTS.
+# - The request's Host is passed to the apps unchanged; they take the salon from it alone. Caddy sets
+#   X-Forwarded-For and X-Forwarded-Proto itself (it believes no client's), and X-Forwarded-Host is
+#   removed: the apps never read it (T-5).
+# - Traffic goes only to an instance that answers ready, checked every second; an idempotent request
+#   whose first instance fails is retried on the other.
+
+{
+	http_port {$SALON_EDGE_HTTP_PORT}
+	https_port {$SALON_EDGE_HTTPS_PORT}
+	# The admin API answers inside the container only.
+	admin localhost:2019
+	# The stack's own certificate authority (the local machine) is never added to the container's
+	# trust store; stack-up.sh writes its root out for the tests that must trust it.
+	skip_install_trust
+	# HTTP/1.1 and HTTP/2 over TCP. Not HTTP/3: it would be advertised on a UDP port that is not
+	# published.
+	servers {
+		protocols h1 h2
+	}
+}
+
+# Where certificates come from, chosen by SALON_EDGE_CERTIFICATES.
+#
+# internal: the stack's own certificate authority. For the local machine only, where no public
+# authority can reach `stack.localhost`.
+(certificates-internal) {
+	tls internal
+}
+
+# acme-dns: a public authority (Let's Encrypt by default), proving control of the domain by the DNS
+# challenge, which is what a wildcard certificate requires. Needs an edge image built with the DNS
+# provider's module (SALON_EDGE_IMAGE) and that provider's credentials; the provider is chosen with
+# the hosting and the domain (D-08, D-02). Configured, not exercised on the local machine.
+(certificates-acme-dns) {
+	tls {$SALON_EDGE_ACME_EMAIL} {
+		dns {$SALON_EDGE_DNS_PROVIDER} {$SALON_EDGE_DNS_CREDENTIALS}
+	}
+}
+
+# How traffic reaches a pair of instances. The argument is the path of their readiness check.
+(instances) {
+	lb_policy round_robin
+	# A request whose instance cannot be reached is tried on the other; any method when the
+	# connection failed, GET when the instance failed after accepting it.
+	lb_retries 2
+	lb_try_duration 5s
+	lb_try_interval 100ms
+	# An instance that could not be reached is left alone for this long, unless a health check passes.
+	fail_duration 10s
+	health_uri {args[0]}
+	health_interval 1s
+	health_timeout 2s
+	health_fails 1
+	health_passes 1
+	header_up -X-Forwarded-Host
+	transport http {
+		dial_timeout 2s
+	}
+}
+
+{$SALON_PLATFORM_DOMAIN}, *.{$SALON_PLATFORM_DOMAIN} {
+	import certificates-{$SALON_EDGE_CERTIFICATES}
+
+	header Strict-Transport-Security "max-age=31536000; includeSubDomains"
+	header -Server
+
+	# The API's paths, on every hostname; the rest is the web app's.
+	@api path /api /api/* /actuator /actuator/* /local /local/*
+	handle @api {
+		reverse_proxy api-1:8080 api-2:8080 {
+			import instances /actuator/health/readiness
+		}
+	}
+	handle {
+		reverse_proxy web-1:3000 web-2:3000 {
+			import instances /healthz
+		}
+	}
+}
+
+# HTTP answers every path with a permanent redirect to the same path and query over HTTPS, on the
+# edge's HTTPS port. Written out because Caddy's own redirect leaves out a port it listens on itself,
+# which on the local machine is not the default one.
+http://{$SALON_PLATFORM_DOMAIN}, http://*.{$SALON_PLATFORM_DOMAIN} {
+	header -Server
+	redir https://{host}:{$SALON_EDGE_HTTPS_PORT}{uri} 308
+}
+
+# The API's one address for the web app (SALON_API_BASE_URL, http://edge:8080), on the stack's own
+# network only: never published. The salon's hostname the web app sends as Host passes unchanged.
+http://:8080 {
+	header -Server
+	reverse_proxy api-1:8080 api-2:8080 {
+		import instances /actuator/health/readiness
+	}
+}
