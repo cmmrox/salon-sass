@@ -26,6 +26,7 @@ for (const salon of salons) {
     `${prefix}_NAME=${quoted(salon.name)}`,
     `${prefix}_COLOUR=${quoted(salon.brandColour)}`,
     `${prefix}_HOST=${quoted(salon.hostname)}`,
+    `${prefix}_ZONE=${quoted(salon.timeZone)}`,
   );
 }
 if (salons.length < 2) {

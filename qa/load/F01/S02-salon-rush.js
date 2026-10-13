@@ -96,7 +96,7 @@ function judge(response, salon) {
   } catch (_) {
     brand = null;
   }
-  const own = response.status === 200 && brand !== null && brand.slug === salon.slug && brand.name === salon.name && brand.brandColour === salon.brandColour && Object.keys(brand).length === 3;
+  const own = response.status === 200 && brand !== null && brand.slug === salon.slug && brand.name === salon.name && brand.brandColour === salon.brandColour && brand.timeZone === salon.timeZone && Object.keys(brand).length === 4;
   const body = String(response.body || '');
   const another = salons.some((other) => other !== salon && (body.includes(other.name) || body.includes(other.id) || body.includes(other.brandColour) || body.includes(`"${other.slug}"`)));
   served.add(own ? 1 : 0, { salon: salon.slug });

@@ -101,18 +101,115 @@ handoff:
     - globals.css now imports styles/base.css; the shared visually-hidden and skeleton styles are in
       styles/shared.module.css, which Status.module.css and SalonShell.module.css compose from.
     Left out: nothing in the spec's scope.
-cases: []
+cases:
+- id: TC-F01-S03-001
+  title: Each salon hostname renders only its own heading and title
+  type: tenant-isolation
+  priority: critical
+  covers:
+  - AC-1
+- id: TC-F01-S03-002
+  title: Brand foreground contrasts correctly for pink dark and light brands
+  type: branding
+  priority: high
+  covers:
+  - AC-2
+- id: TC-F01-S03-003
+  title: Unknown reserved and lookalike hosts share the neutral not-found page
+  type: tenant-isolation
+  priority: critical
+  covers:
+  - AC-3
+- id: TC-F01-S03-004
+  title: The bare domain retains the status page
+  type: functional
+  priority: high
+  covers:
+  - AC-4
+- id: TC-F01-S03-005
+  title: Suspension hides the brand and activation restores the next request
+  type: functional
+  priority: high
+  covers:
+  - AC-5
+- id: TC-F01-S03-006
+  title: Forged client tenant selectors cannot change the web salon
+  type: tenant-isolation
+  priority: critical
+  covers:
+  - AC-6
+- id: TC-F01-S03-007
+  title: Simultaneous pages never cross salon brands
+  type: concurrency
+  priority: critical
+  covers:
+  - AC-7
+- id: TC-F01-S03-008
+  title: A stopped API gives bounded safe unavailability and recovers
+  type: resilience
+  priority: high
+  covers:
+  - AC-8
+- id: TC-F01-S03-009
+  title: A silent API gives bounded safe unavailability and recovers
+  type: resilience
+  priority: high
+  covers:
+  - AC-8
+- id: TC-F01-S03-010
+  title: Long name and safe error states fit both widths and pass axe
+  type: accessibility
+  priority: high
+  covers:
+  - AC-9
+- id: TC-F01-S03-011
+  title: Strings and result test ids follow the shared convention
+  type: build
+  priority: high
+  covers:
+  - AC-10
+- id: TC-F01-S03-012
+  title: The contract describes a suspended salon
+  type: api
+  priority: high
+  covers:
+  - AC-11
 verification:
   commands:
-    - "cd apps/api && ./mvnw -q verify"
-    - "pnpm install --frozen-lockfile"
-    - "pnpm -r lint"
-    - "pnpm -r typecheck"
-    - "pnpm -r test"
-    - "pnpm --filter @salon/web build"
-    - "pnpm contracts:check"
-    - "qa/scripts/sdlc selftest"
-  automation: []
+  - cd apps/api && ./mvnw -q verify
+  - pnpm install --frozen-lockfile
+  - pnpm -r lint
+  - pnpm -r typecheck
+  - pnpm -r test
+  - pnpm --filter @salon/web build
+  - pnpm contracts:check
+  - qa/scripts/sdlc selftest
+  automation:
+  - id: branded-shell
+    tool: playwright
+    file: qa/web/F01/S03-branded-shell.spec.ts
+    covers:
+    - TC-F01-S03-001
+    - TC-F01-S03-002
+    - TC-F01-S03-003
+    - TC-F01-S03-004
+    - TC-F01-S03-005
+    - TC-F01-S03-006
+    - TC-F01-S03-008
+    - TC-F01-S03-009
+    - TC-F01-S03-010
+    - TC-F01-S03-011
+    - TC-F01-S03-012
+    suites:
+    - regression
+    project: web
+  - id: web-rush
+    tool: k6
+    file: qa/load/F01/S03-web-rush.js
+    covers:
+    - TC-F01-S03-007
+    suites:
+    - regression
   manual: []
   deferred: []
 evidence:

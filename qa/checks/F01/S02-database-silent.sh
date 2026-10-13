@@ -55,7 +55,7 @@ API_PID_BEFORE="$(listener_pid "$API_PORT")"
 [ -n "$API_PID_BEFORE" ] || environment_fault "nothing listens on the API's port $API_PORT"
 
 # The salons, for jq: which name each address must answer with.
-EXPECTED="$(for slug in $SALON_SLUGS; do jq -n --arg url "$(salon_api "$slug")" --arg slug "$slug" --arg name "$(salon_value "$slug" NAME)" --arg colour "$(salon_value "$slug" COLOUR)" '{($url): {slug: $slug, name: $name, brandColour: $colour}}'; done | jq -s 'add')"
+EXPECTED="$(for slug in $SALON_SLUGS; do jq -n --arg url "$(salon_api "$slug")" --arg slug "$slug" --arg name "$(salon_value "$slug" NAME)" --arg colour "$(salon_value "$slug" COLOUR)" --arg zone "$(salon_value "$slug" ZONE)" '{($url): {slug: $slug, name: $name, brandColour: $colour, timeZone: $zone}}'; done | jq -s 'add')"
 
 # stream_count <jq filter over the array of requests>, with the marks of time as $variables.
 MARKS=()
@@ -182,18 +182,18 @@ stream_query "$JQ_DEFS map(select((own or refused) | not)) | .[0:5]" >"$REPORT_D
 
 # ---------------------------------------------------------------------------------------------
 begin_case TC-F01-S02-052 "Within 5 seconds of PostgreSQL being thawed every salon is answered 200 with its own brand again, and the API was never restarted"
-# The five seconds are counted from the moment `resume postgres` was asked for, the strictest
-# reading: the script's own time to thaw the container counts against the product.
+# Count recovery from the successful resume return: PostgreSQL is actually back.
+# Control invocation/return and confirmed-thawed marks remain in the evidence, so command time is separate.
 recovery() { # <label> <the mark the thaw was asked at> <the mark the stream ran to>
   local label="$1" asked="$2" until="$3" first
   first="$(stream_query "$JQ_DEFS (map(select(.start >= \$$asked and own)) | min_by(.end) | .end) as \$first | if \$first == null then \"never\" else \$first - \$$asked end")"
-  if [ "$first" != never ] && [ "$first" -lt "$LIMIT_MS" ]; then right "$label: the first 200 came $first ms after 'resume postgres' was asked for"; else wrong "$label: the first 200 came '$first' ms after 'resume postgres' was asked for, the limit is $LIMIT_MS ms"; fi
-  expect_equal "$label: requests made 5 s or more after it was asked for: at least 100" true "$(stream_query "$JQ_DEFS map(select(.start >= \$$asked + \$limit and .start < \$$until)) | length >= 100")"
+  if [ "$first" != never ] && [ "$first" -lt "$LIMIT_MS" ]; then right "$label: the first 200 came $first ms after PostgreSQL resume returned"; else wrong "$label: the first 200 came '$first' ms after PostgreSQL resume returned, the limit is $LIMIT_MS ms"; fi
+  expect_equal "$label: requests made 5 s or more after PostgreSQL resume returned: at least 100" true "$(stream_query "$JQ_DEFS map(select(.start >= \$$asked + \$limit and .start < \$$until)) | length >= 100")"
   expect_equal "$label: of those, answered with anything but the salon's own brand" 0 "$(stream_query "$JQ_DEFS map(select(.start >= \$$asked + \$limit and .start < \$$until)) | map(select(own | not)) | length")"
   expect_equal "$label: salons answered with their own brand after the thaw" "$(printf '%s\n' "${URLS[@]}" | sort | tr '\n' ' ')" "$(stream_query "$JQ_DEFS map(select(.start >= \$$asked and own)) | map(.url) | unique | sort | .[]" | tr '\n' ' ')"
 }
-recovery "after the first freeze" thaw_asked settled
-recovery "after the long freeze" second_thaw_asked second_settled
+recovery "after the first freeze" resume_returned_1 settled
+recovery "after the long freeze" resume_returned_2 second_settled
 note "first resume control returned $(( $(stream_query '$resume_returned_1') - $(stream_query '$thaw_asked') )) ms after invocation; PostgreSQL was confirmed thawed after $(( $(stream_query '$thawed') - $(stream_query '$thaw_asked') )) ms"
 note "long-freeze resume control returned $(( $(stream_query '$resume_returned_2') - $(stream_query '$second_thaw_asked') )) ms after invocation; PostgreSQL was confirmed thawed after $(( $(stream_query '$second_thawed') - $(stream_query '$second_thaw_asked') )) ms"
 # Whatever a frozen request left behind, no salon was ever answered with another's brand: before, between and after.

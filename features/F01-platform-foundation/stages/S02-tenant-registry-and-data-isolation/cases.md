@@ -17,6 +17,10 @@ Not applied: functional, responsive, accessibility and browser branding: no UI c
 
 Environment: local API/web and salon-postgres only. Three synthetic salons from docs/qa/test-plan.md; no accounts. Database checks use app/owning roles from handoff. Tests creating data, granting writes or probing ownership roll back; reset explicitly removes only local synthetic data. Non-local profiles are tested on this same local container in a temporary database.
 
+## Expectations at the full F01 pass
+
+The approved S03/S04 specifications supersede the skeleton's original response shape: `timeZone` is a public salon field (S04 AC-4), `traceId` identifies each error request (S04 AC-1), and equivalent safe errors exclude that trace when compared. Invalid bare network hosts return the neutral 404 page (S03 AC-3, decision 028). S04 adds audit/outbox/job migrations; migration tests prove the baseline once and every committed migration once, with history unchanged on restart. Recovery timing uses successful PostgreSQL resume return, with invocation and confirmation marks retained, as the QA timing rule requires.
+
 ## Cases
 
 Every case is automated; no manual or deferred acceptance cases. Human API/operator review is recorded separately in review.md.

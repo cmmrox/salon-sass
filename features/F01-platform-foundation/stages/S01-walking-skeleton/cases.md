@@ -30,6 +30,10 @@ Seen to fail: every automated test was watched going red once before it was trus
 
 Re-verification (2026-10-12): the five bugs of the first pass each got a case, TC-F01-S01-058 to TC-F01-S01-063. Each was seen to fail against the tree as it was before the fixes (`e04b595`, copied outside the repository and started on its own), for the reason its bug describes: overlapping starts both failing, "api: already running" with no API and an unrelated process killed, a health request with no answer in 60 s across a freeze, `pnpm-lock.yaml` growing by 871 bytes, and a README without curl or ps. TC-F01-S01-059 fails there too, but only because the old scripts ignore locks: it guards the fix's own new risk, a lock left by a killed script, rather than the original symptom.
 
+## Expectations at the full F01 pass
+
+The approved S03/S04 specifications supersede the skeleton's original response shape: `timeZone` is a public salon field (S04 AC-4), `traceId` identifies each error request (S04 AC-1), and equivalent safe errors exclude that trace when compared. Invalid bare network hosts return the neutral 404 page (S03 AC-3, decision 028). S04 adds audit/outbox/job migrations; migration tests prove the baseline once and every committed migration once, with history unchanged on restart. Recovery timing uses successful PostgreSQL resume return, with invocation and confirmation marks retained, as the QA timing rule requires.
+
 ## Cases
 
 Every case id here is declared under `cases:` in `stage.yaml`, and the reverse.

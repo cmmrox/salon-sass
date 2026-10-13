@@ -147,7 +147,7 @@ NETWORK_ADDRESS="$(printf '%s\n' "$TELLING_NOW" | grep -v '%' | head -n 1)"
 if [ -n "$NETWORK_ADDRESS" ]; then
   case "$NETWORK_ADDRESS" in *:*) AT="[$NETWORK_ADDRESS]" ;; *) AT="$NETWORK_ADDRESS" ;; esac
   expect_equal "with the opt-in, alpha's brand asked for on $NETWORK_ADDRESS" "$ALPHA_NAME" "$(curl -s -g --max-time 10 -H "Host: $ALPHA_HOST:$API_PORT" "http://$AT:$API_PORT/api/v1/salon" | jq -r '.name' 2>/dev/null)"
-  expect_equal "with the opt-in, the web app asked for on $NETWORK_ADDRESS" 200 "$(curl -s -g -o /dev/null -w '%{http_code}' --max-time 15 "http://$AT:$WEB_PORT/")"
+  expect_equal "with the opt-in, the web app asked for on $NETWORK_ADDRESS" 404 "$(curl -s -g -o /dev/null -w '%{http_code}' --max-time 15 "http://$AT:$WEB_PORT/")"
   # The address is not a salon's hostname: it reaches the API and names no salon.
   expect_equal "with the opt-in, the salon endpoint asked for by the bare address" 404 "$(curl -s -g -o /dev/null -w '%{http_code}' --max-time 10 "http://$AT:$API_PORT/api/v1/salon")"
 else
