@@ -46,6 +46,15 @@ public class StaffAccess {
         this.audit = audit;
     }
 
+    @io.swagger.v3.oas.annotations.media.Schema(
+            requiredProperties = {
+                "state",
+                "sessionId",
+                "accessToken",
+                "refreshToken",
+                "accessExpiresAt",
+                "refreshExpiresAt"
+            })
     public record Tokens(
             String state,
             UUID sessionId,
@@ -54,6 +63,9 @@ public class StaffAccess {
             Instant accessExpiresAt,
             Instant refreshExpiresAt) {}
 
+    @com.fasterxml.jackson.annotation.JsonInclude(
+            com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+    @io.swagger.v3.oas.annotations.media.Schema(requiredProperties = {"state"})
     public record SignIn(
             String state,
             UUID challengeId,

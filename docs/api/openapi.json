@@ -265,16 +265,31 @@
             "uniqueItems": true
           },
           "role": {
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "scope": {
             "type": "string"
           },
           "staffId": {
             "format": "uuid",
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ]
           }
         },
+        "required": [
+          "id",
+          "kind",
+          "mfaEnabled",
+          "permissions",
+          "role",
+          "scope",
+          "staffId"
+        ],
         "type": "object"
       },
       "Problem": {
@@ -446,6 +461,9 @@
             "type": "string"
           }
         },
+        "required": [
+          "state"
+        ],
         "type": "object"
       },
       "SignInRequest": {
@@ -528,6 +546,14 @@
             "type": "string"
           }
         },
+        "required": [
+          "accessExpiresAt",
+          "accessToken",
+          "refreshExpiresAt",
+          "refreshToken",
+          "sessionId",
+          "state"
+        ],
         "type": "object"
       },
       "VerifyRequest": {
@@ -659,8 +685,8 @@
       "delete": {
         "operationId": "revokeAll",
         "responses": {
-          "200": {
-            "description": "OK"
+          "204": {
+            "description": "No Content"
           },
           "default": {
             "content": {
@@ -782,8 +808,8 @@
           }
         ],
         "responses": {
-          "200": {
-            "description": "OK"
+          "204": {
+            "description": "No Content"
           },
           "default": {
             "content": {
@@ -865,7 +891,7 @@
           "required": true
         },
         "responses": {
-          "200": {
+          "201": {
             "content": {
               "application/json": {
                 "schema": {
@@ -873,7 +899,7 @@
                 }
               }
             },
-            "description": "OK"
+            "description": "Created"
           },
           "default": {
             "content": {
@@ -1095,8 +1121,8 @@
           }
         ],
         "responses": {
-          "200": {
-            "description": "OK"
+          "204": {
+            "description": "No Content"
           },
           "default": {
             "content": {

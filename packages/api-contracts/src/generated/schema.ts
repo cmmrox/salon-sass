@@ -334,14 +334,14 @@ export interface components {
         };
         Principal: {
             /** Format: uuid */
-            id?: string;
-            kind?: string;
-            mfaEnabled?: boolean;
-            permissions?: string[];
-            role?: string;
-            scope?: string;
+            id: string;
+            kind: string;
+            mfaEnabled: boolean;
+            permissions: string[];
+            role: string | null;
+            scope: string;
             /** Format: uuid */
-            staffId?: string;
+            staffId: string | null;
         };
         /** @description An error, as problem details (RFC 9457) with a stable machine-readable `code`. */
         Problem: {
@@ -419,7 +419,7 @@ export interface components {
             credentials?: components["schemas"]["Tokens"];
             /** Format: date-time */
             expiresAt?: string;
-            state?: string;
+            state: string;
         };
         SignInRequest: {
             deviceLabel: string;
@@ -440,14 +440,14 @@ export interface components {
         };
         Tokens: {
             /** Format: date-time */
-            accessExpiresAt?: string;
-            accessToken?: string;
+            accessExpiresAt: string;
+            accessToken: string;
             /** Format: date-time */
-            refreshExpiresAt?: string;
-            refreshToken?: string;
+            refreshExpiresAt: string;
+            refreshToken: string;
             /** Format: uuid */
-            sessionId?: string;
-            state?: string;
+            sessionId: string;
+            state: string;
         };
         VerifyRequest: {
             /** Format: uuid */
@@ -567,8 +567,8 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
-            200: {
+            /** @description No Content */
+            204: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -629,8 +629,8 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
-            200: {
+            /** @description No Content */
+            204: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -692,8 +692,8 @@ export interface operations {
             };
         };
         responses: {
-            /** @description OK */
-            200: {
+            /** @description Created */
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -884,8 +884,8 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
-            200: {
+            /** @description No Content */
+            204: {
                 headers: {
                     [name: string]: unknown;
                 };

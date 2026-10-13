@@ -107,12 +107,14 @@ class StaffAccessController {
     }
 
     @DeleteMapping("/sessions/{id}")
+    @ResponseStatus(org.springframework.http.HttpStatus.NO_CONTENT)
     ResponseEntity<Void> revoke(@PathVariable String id) {
         access.revoke(id(id));
         return ResponseEntity.noContent().build();
     }
 
     @DeleteMapping("/sessions")
+    @ResponseStatus(org.springframework.http.HttpStatus.NO_CONTENT)
     ResponseEntity<Void> revokeAll() {
         access.revokeAll();
         return ResponseEntity.noContent().build();
@@ -131,6 +133,7 @@ class StaffAccessController {
     }
 
     @PostMapping(path = "/staff", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseStatus(org.springframework.http.HttpStatus.CREATED)
     ResponseEntity<StaffAccess.StaffView> create(@Valid @RequestBody CreateStaffRequest request) {
         return ResponseEntity.status(201)
                 .cacheControl(org.springframework.http.CacheControl.noStore())
@@ -155,6 +158,7 @@ class StaffAccessController {
     }
 
     @DeleteMapping("/staff/{id}")
+    @ResponseStatus(org.springframework.http.HttpStatus.NO_CONTENT)
     ResponseEntity<Void> remove(@PathVariable String id) {
         access.remove(id(id));
         return ResponseEntity.noContent().build();
