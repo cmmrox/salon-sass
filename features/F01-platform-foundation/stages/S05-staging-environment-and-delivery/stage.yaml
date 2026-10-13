@@ -85,13 +85,13 @@ cases:
   covers:
   - AC-2
 - id: TC-F01-S05-003
-  title: Every salon and safe host has valid HTTPS redirect and HSTS
+  title: Every salon and safe host resolves through the HTTP edge
   type: security
   priority: high
   covers:
   - AC-3
 - id: TC-F01-S05-004
-  title: New salon gets HTTPS immediately without edge restart
+  title: New salon gets HTTP immediately without edge restart
   type: security
   priority: high
   covers:

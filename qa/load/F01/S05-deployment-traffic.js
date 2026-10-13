@@ -1,6 +1,6 @@
 // Invoked only by S05-deployment.sh: TC-F01-S05-008 and TC-F01-S05-009.
 // 50 VUs continuously read web, salon API and metadata across all three salons.
-// SSL_CERT_FILE is the stack's exported CA: TLS validation remains enabled.
+// CR-005: local ingress uses HTTP; public TLS is staging-only.
 import http from 'k6/http';
 import {check} from 'k6';
 import {Counter} from 'k6/metrics';
@@ -8,7 +8,7 @@ import exec from 'k6/execution';
 import {salons} from '../../shared/tenants.ts';
 const base=__ENV.QA_STACK_URL;
 if(!base)throw Error('ENVIRONMENT: QA_STACK_URL missing');
-const domain=base.replace(/^https:\/\//,'').split(':')[0];
+const domain=base.replace(/^http:\/\//,'').split(':')[0];
 const hostMap=Object.fromEntries(salons.map(s=>[`${s.slug}.${domain}`,__ENV.QA_STACK_EDGE_IP||'127.0.0.1']));
 const own=new Counter('own_tenant'),cross=new Counter('cross_tenant'),versions=new Counter('meta_versions');
 export const options={hosts:hostMap,vus:50,duration:'10m',thresholds:{http_req_failed:['rate==0'],checks:['rate==1'],own_tenant:['count>300'],cross_tenant:['count==0'],meta_versions:['count>0']}};

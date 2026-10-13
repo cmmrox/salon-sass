@@ -4,12 +4,12 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { salons } from './tenants.ts';
-import {root,report,settings,cert,base,url,run,script,curl,db,versions} from './stack-settings.mjs';
+import {root,report,settings,base,url,run,script,curl,db,versions} from './stack-settings.mjs';
 let failures=0;
 async function one(id,title,fn){console.log(`--- ${id} ${title}`);try{await fn();console.log(`PASS ${id} ${title}`);}catch(e){failures++;console.error(`FAIL ${id} ${title}: ${e.message}`);}}
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 async function until(fn,limit=15000){const end=Date.now()+limit;while(Date.now()<end){if(await fn())return;await sleep(100);}throw Error('expected observable outcome did not arrive within limit');}
-if(!fs.existsSync(cert)){console.error('ENVIRONMENT: stack root certificate missing; start production-like stack');process.exit(3);}
+assert.equal(settings.SALON_STACK_ENV||'local','local','ENVIRONMENT: QA stack must use local HTTP');
 const sha=run('git',['rev-parse','HEAD']).trim();
 await one('TC-F01-S05-001','images are unprivileged and report the tested commit',()=>{
   for(const kind of ['api','web']){const version=versions()[`SALON_${kind.toUpperCase()}_1_VERSION`];const image=`${settings.SALON_IMAGE_PREFIX||''}salon-${kind}:${version}`;const info=JSON.parse(run('docker',['image','inspect',image]))[0];assert(info.Config.User&&!['0','root'].includes(info.Config.User.split(':')[0]));assert.equal(info.Config.Labels['org.opencontainers.image.revision'],sha);assert.equal(info.Config.Labels['org.opencontainers.image.version'],version);assert.notEqual(run('docker',['run','--rm','--network','none','--entrypoint','id',image,'-u']).trim(),'0');assert.equal(run('docker',['run','--rm','--network','none','--user','0','--entrypoint','find',image,'/','-xdev','(','-name','.env','-o','-name','.env.*',')','-print'],{stdio:['pipe','pipe','ignore']}).trim(),'');}
@@ -19,19 +19,15 @@ await one('TC-F01-S05-002','image scanner passes clean images and refuses a fixa
   const version=versions().SALON_API_1_VERSION;const output=script('images-scan',[`${settings.SALON_IMAGE_PREFIX||''}salon-api:${version}`,`${settings.SALON_IMAGE_PREFIX||''}salon-web:${version}`]);fs.writeFileSync(path.join(report,'images-scan.log'),output);
   run('docker',['pull','alpine:3.18.0']);let failed=false;try{script('images-scan',['alpine:3.18.0']);}catch(e){const out=String(e.stdout)+String(e.stderr);fs.writeFileSync(path.join(report,'images-scan-vulnerable.log'),out);failed=e.status!==0&&/CVE-\d{4}-\d+/.test(out);}assert(failed,'scanner must reject and name a vulnerability');
 });
-await one('TC-F01-S05-003','all salon and neutral hosts have valid HTTPS and redirect with HSTS',()=>{
-  for(const s of salons){const r=curl(s.slug);assert.equal(r.status,200);assert(r.body.includes(s.name.replaceAll('&','&amp;')));const api=curl(s.slug,'/api/v1/salon');assert.equal(api.status,200);assert.deepEqual(JSON.parse(api.body),{slug:s.slug,name:s.name,brandColour:s.brandColour,timeZone:s.timeZone});assert.match(r.headers,/Strict-Transport-Security:/i);}
-  for(const slug of ['','unknown','console']){const r=curl(slug);assert.equal(r.status,slug?404:200);assert.match(r.headers,/Strict-Transport-Security:/i);}
-  const http=`http://alpha.${settings.SALON_PLATFORM_DOMAIN}:${settings.SALON_EDGE_HTTP_PORT}/not-here?x=1`;
-  const response=run('curl',['-sS','-D','-','-o','/dev/null',http]);assert.match(response,/HTTP\/\S+ 30[178]/);assert(response.includes(url('alpha','/not-here?x=1')));
-  // The certificate is actually checked: omitting this CA must fail on the private local certificate.
-  let refused=false;try{run('curl',['-sS','--max-time','5',url('alpha')],{stdio:['ignore','pipe','ignore']});}catch(e){refused=e.status===60;}assert(refused,'untrusted local certificate must be rejected');
+await one('TC-F01-S05-003','HTTP hostname routing preserves salon and neutral hosts',()=>{
+  for(const s of salons){const r=curl(s.slug);assert.equal(r.status,200);assert(r.body.includes(s.name.replaceAll('&','&amp;')));const api=curl(s.slug,'/api/v1/salon');assert.equal(api.status,200);assert.deepEqual(JSON.parse(api.body),{slug:s.slug,name:s.name,brandColour:s.brandColour,timeZone:s.timeZone});}
+  for(const slug of ['','unknown','console']){const r=curl(slug);assert.equal(r.status,slug?404:200);}
 });
-await one('TC-F01-S05-004','a new salon is covered by TLS immediately without a restart',()=>{
+await one('TC-F01-S05-004','a new salon is served over HTTP immediately without a restart',()=>{
   const slug=`qa-${Date.now().toString(36)}`;const before=run('docker',['inspect','--format','{{.Id}} {{.State.StartedAt}}','salon-stack-edge']);script('stack-seed',['add',slug,'QA New Salon','#2563EB']);const r=curl(slug);assert.equal(r.status,200);assert(r.body.includes('QA New Salon'));assert.equal(JSON.parse(curl(slug,'/api/v1/salon').body).slug,slug);assert.equal(run('docker',['inspect','--format','{{.Id}} {{.State.StartedAt}}','salon-stack-edge']),before);
 });
 await one('TC-F01-S05-005','only edge ports are published and forged tenant selectors are ignored',()=>{
-  const info=JSON.parse(run('docker',['inspect',...['edge','api-1','api-2','web-1','web-2','postgres','collector'].map(n=>'salon-stack-'+n)]));for(const container of info){const ports=container.NetworkSettings.Ports;const published=Object.values(ports||{}).filter(Boolean).flat();if(container.Name!=='/salon-stack-edge')assert.equal(published.length,0,container.Name);else assert.equal(published.length,2);}
+  const info=JSON.parse(run('docker',['inspect',...['edge','api-1','api-2','web-1','web-2','postgres','collector'].map(n=>'salon-stack-'+n)]));for(const container of info){const ports=container.NetworkSettings.Ports;const published=Object.values(ports||{}).filter(Boolean).flat();if(container.Name!=='/salon-stack-edge')assert.equal(published.length,0,container.Name);else assert.equal(published.length,1);}
   for(const p of ['/','/api/v1/salon']){const r=curl('alpha',p+'?tenant=beta',['-H','X-Forwarded-Host: beta.'+settings.SALON_PLATFORM_DOMAIN,'-H','X-Tenant-Id: '+salons[1].id]);assert.equal(r.status,200);assert(r.body.includes(salons[0].name));assert(!r.body.includes(salons[1].name.replaceAll('&','&amp;')));}
 });
 await one('TC-F01-S05-006','database roles cannot bypass tenant isolation and reprovisioning is idempotent',()=>{

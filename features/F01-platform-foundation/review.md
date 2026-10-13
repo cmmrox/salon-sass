@@ -58,3 +58,7 @@ The 36-test API/web triage and corrected SQL/freeze checks passed. Eighteen crit
 The earlier local read baseline had p95 616.53 ms and 893 reads per salon. Fresh controlled measurements with unchanged thresholds gave p95 17.52 ms with the stack stopped (58,997 reads), and 12.83 ms with it running (81,564 reads), both 30 VUs/20 seconds and zero errors or wrong tenants. The earlier slowdown was not reproduced; its cause is unproven. These are local measurements over three brand rows, not target-host or scale certification.
 
 Persistent terminals are required in this environment: an exited test terminal kills runtime descendants it restarted. QA restored affected services and holds the final runner's terminal open. Manual ports and visual checks were refreshed on 2026-10-13. CI proof is the independently inspected green/failing-lint/green evidence archived under the retained main Git directory; the proof PR is closed unmerged. Real hosting/domain/public TLS is the sole deferred feature case, under decision 018.
+
+## Approved local HTTP scope
+
+CR-005 replaces local certificate/HTTPS/redirect/HSTS checks with HTTP hostname and first-request routing checks. Public TLS remains in deferred TC-F01-002 for an explicitly requested staging deployment. The earlier TLS run and interrupted report20261013-132232-F01 are historical evidence only; they do not certify the revised scope. No certificate or trust setup is used by the new pass.

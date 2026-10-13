@@ -29,7 +29,7 @@ Across-stage restart and deployment risks are exercised by S04 AC-11 and S05 AC-
 - **Priority:** critical
 - **Covers:** BRD-03, BKG-15
 - **Performed as:** QA operator on synthetic local data; public caller on each salon hostname.
-- **Preconditions:** Final integrated F01 tree is committed; local product is running and all salons are active. Stack cases also require the local production-like stack seeded and its exported CA; deployment cases require versions N and N+1 from this tested tree.
+- **Preconditions:** Final integrated F01 tree is committed; local product is running and all salons are active. Stack cases also require the local HTTP production-like stack seeded; deployment cases require versions N and N+1 from this tested tree.
 - **Steps:**
   1. For each salon open web, read brand, create probe; await delivery and verify trace/tenant; try each foreign probe; advance cleanup and revisit web.
 - **Expected:** Only own brand/probe/audit/logs; foreign ids 404; all expired work removed by each salon job; shell identity retained.
