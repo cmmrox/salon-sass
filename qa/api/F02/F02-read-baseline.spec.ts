@@ -57,7 +57,7 @@ test('TC-F02-004 bounded local reads meet the documented per-read latency baseli
     // are rotated by the real refresh endpoint, preserving one device per actor.
     for(const item of prepared){
       if(Date.parse(item.actor.tokens.accessExpiresAt)<Date.parse(await identity.now())+60000){
-        const renewed=await json<Tokens>(await identity.call(item.salon,'POST','/refresh',{refreshToken:item.actor.tokens.refreshToken}),'Tokens');
+        const renewed=await json<Tokens>(await identity.call(item.salon,'POST','/sessions/refresh',{refreshToken:item.actor.tokens.refreshToken}),'Tokens');
         assertTokens(renewed);item.actor.tokens=renewed;
       }
     }
