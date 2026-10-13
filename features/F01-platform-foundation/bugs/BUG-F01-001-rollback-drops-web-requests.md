@@ -2,12 +2,12 @@
 id: BUG-F01-001
 title: Rolling rollback briefly removes every web upstream and returns 503
 severity: major
-status: open
+status: fixed
 found_by: TC-F01-S05-008
 breaks: AC-8
 found_on: 2026-10-13
-fixed_in: null
-fix_note: null
+fixed_in: 24006d5303302e006317c3ccedf6af3f7b4734f8
+fix_note: Caddy now requires three consecutive failed active health checks before removing a backend; a pinned-image regression test verifies recovery after one transient failure.
 developer_note: null
 verified_on: null
 approved_by: null
