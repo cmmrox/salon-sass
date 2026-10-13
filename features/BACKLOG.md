@@ -43,7 +43,7 @@ Added by the lead at `stage-close` and `feature-close`, from suggestions classed
 | Tell a browser that runs no scripts something other than "checking the service" for ever | SUG-F01-S01-04 | Decide the no-script policy before the branded shell (F01-S03) |
 | Do not call a request the server refuses to understand (501, 505) an `internal_error` | SUG-F01-S01-05 | It will be noise in error-rate alerting; fits F01-S04 |
 | Set a page-weight budget and the security headers when the branded shell replaces the status page | SUG-F01-S01-06 | About 180 KB of compressed JavaScript today; fits F01-S03 |
-| Let long words in headings wrap | SUG-F01-S01-07 | Seen at 320 wide with 200% text; add to the UI standards with F01-S03 |
+| Let long words in headings wrap | SUG-F01-S01-07; SUG-F01-02 | Seen again in the F01 review at 320 wide with 200% text: the status heading extends beyond its notice background, with no page overflow. Proposal for a later approved visual change. |
 | Put the time on the web app's log lines, and say what was left running when a start fails half way | SUG-F01-S01-08 | Local scripts |
 | Give an automation check a way to report an environment fault to the runner, which today records only a missing tool that way | QA of F01-S01 | Lifecycle tooling |
 | Agree client retry guidance for temporary 503 responses | SUG-F01-S02-01 | Consider with the public shell; requires owner approval before changing requirements |

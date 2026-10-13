@@ -3,8 +3,9 @@ feature: F01
 title: "Staging environment and delivery pipeline"
 sequence: 5
 surfaces: [infra]
-status: complete
+status: in-progress
 qa_status: not-run
+reopened_by: CR-005
 released_in: null
 depends_on: [F01-S03, F01-S04]
 requirements: [BRD-03]
@@ -34,7 +35,9 @@ handoff:
     Asia/Colombo) for AC-4; all five salons are active. No real data, messages or payments.
     Fresh isolated staging startup had zero tenants; seeding remains explicit.
     Final stack: all API/web instances 0.1.0-SNAPSHOT, source 2cf930415d96e3d103aca8baab45cb6b5e83f223;
-    Flyway V1-V8 successful. PostgreSQL, edge and collector remain running, data volumes preserved.
+    Committed migrations are V1-V7. The retained developer database also has the inherited V8
+    deployment fixture described below; it is not a committed product migration.
+    PostgreSQL, edge and collector remain running, data volumes preserved.
     Primary salon-local database and browser preview were left running and reachable.
   notes: |
     Developer acceptance checks performed 2026-10-13 on LOCAL salon-stack only; this is not feature QA.
@@ -45,10 +48,15 @@ handoff:
     Source and image provenance:
     - Gates and final build use 2cf930415d96e3d103aca8baab45cb6b5e83f223. The handoff changes only metadata.
     - Earlier acceptance traffic used 0.5.0/0.5.1 images built from d9ed773c3119851e36a06c779e2054b0d1339597.
-      image-source-match.diff and runtime-source-match.diff are empty: every image input and runtime
-      configuration/script is unchanged between that revision and 2cf9304. Only delivery.yml and
-      lint-workflows.sh differed; the final current-tree workflow was linted and checked separately.
-      Mounted edge/collector files always came from this checkout. Trace proof used 0.5.1.
+      Git-tree diffs alone did not establish built-image equality. The 0.5.0 API image contains
+      committed V1-V7; the 0.5.1 developer fixture also contains uncommitted
+      db/migration/V8__deployment_check.sql, which only comments on the tenant table.
+      Its SHA256 is 041ab8850d941f81ecea8180284703901fe8cb9f850f985dedb2f37724852693.
+      The fixture is not an exact committed-tree artifact despite its d9ed773 source label.
+      Read-only artifact comparison found all compiled classes, shared resources and 121 dependency
+      jars equal to the clean build, except V8 and build/version metadata; both web images have
+      identical contents across 1275 files. V1-V7 match repository bytes. Mounted edge/collector
+      files came from this checkout. Trace proof used 0.5.1. Current workflows were linted separately.
     - Final retained stack uses newly built0.1.0-SNAPSHOT and commit tags2cf930415d96. Immutable local
       image IDs (registry manifest digests do not exist because nothing was pushed):
       api 0.1.0-SNAPSHOT sha256:6a21f181899841b25936d721554575d65851ddf68d0074e96c18f49cbaeff3c9
@@ -98,8 +106,12 @@ handoff:
       only 0.5.1 afterward through the run ending 05:25:45UTC.
       Rollback 0.5.1 -> 0.5.0: 89s deployment inside 150s traffic; 63,063 requests,126,126 checks,
       failed-request rate 0, connection_errors 0, wrong_tenant 0. Both versions overlap 05:26:39-05:26:43UTC;
-      only 0.5.0 afterward through 05:28:36UTC. Database V1-V8 remain successful and unchanged;
-      S05 adds no migration, so no schema downgrade is needed for rollback.
+      only 0.5.0 afterward through 05:28:36UTC. The inherited database already contained the V8
+      developer fixture before this traffic deployment, so its migration step applied nothing new;
+      rollback preserved that fixture history/table comment. A separate fresh-database check applied
+      V8 outside traffic. S05 adds no product migration; committed migrations remain V1-V7.
+      Independent full feature QA uses rebuilt source images and an explicitly labelled additive
+      test migration on a fresh synthetic database to check migration application under traffic.
       Evidence deploy-results.json, rollback-results.json, deploy.log, rollback.log,
       summary-{deploy,rollback}.json, {deployment,rollback}-versions.jsonl,
       samples-{deploy,rollback}.jsonl.gz, database-after-rollback.log. Traffic helper is traffic.js.
