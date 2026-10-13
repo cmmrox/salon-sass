@@ -114,7 +114,27 @@ verification:
   commands:
     - cd apps/api && ./mvnw -q verify
     - pnpm contracts:check
-  automation: []
+  automation:
+    - id: customer-profile
+      tool: playwright
+      file: qa/api/F02/S03-customer-profile.spec.ts
+      project: api
+      covers:
+        - TC-F02-S03-001
+        - TC-F02-S03-002
+        - TC-F02-S03-003
+        - TC-F02-S03-004
+        - TC-F02-S03-005
+        - TC-F02-S03-006
+        - TC-F02-S03-007
+        - TC-F02-S03-008
+        - TC-F02-S03-009
+        - TC-F02-S03-010
+        - TC-F02-S03-011
+        - TC-F02-S03-012
+        - TC-F02-S03-013
+        - TC-F02-S03-014
+      suites: []
   manual: []
   deferred: []
 evidence:

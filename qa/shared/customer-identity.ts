@@ -64,6 +64,7 @@ export class Customers {
     const tokens=await json<Tokens>(await this.verify(salon,{challengeId:issued.challenge.challengeId,code:capture.code},issued.device),'Tokens');assertTokens(tokens);
     const principal=await this.identity.principal(salon,tokens);
     expect(principal.kind).toBe('customer');expect(principal.role).toBeNull();expect(principal.staffId).toBeNull();expect(principal.scope).toBe('own');expect(principal.mfaEnabled).toBe(false);
+    expect([...principal.permissions].sort()).toEqual(['account.delete','data.export','profile.manage','session.manage']);
     return {salon,tokens,principal,...issued};
   }
 }
