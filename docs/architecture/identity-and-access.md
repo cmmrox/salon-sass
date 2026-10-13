@@ -185,6 +185,25 @@ Redirect targets are fixed same-origin paths; errors keep useful form values exc
 Auth failures redirect a protected page to its own sign-in; authorization failures show a friendly
 denial. Customer screens use salon branding and staff screens the neutral platform theme.
 
+The BFF namespace is `/identity-web/*`; the edge routes `/api/*` directly to Java. Address limits
+must reflect the browser connection without trusting browser forwarding headers. Node request
+diagnostics records the socket peer and a monotonic three-second request deadline; it accepts one
+valid Caddy-overwritten forwarded address only if the peer matches explicit
+`SALON_WEB_TRUSTED_PROXIES` CIDRs. Default local trust is empty. Normalize IPv4-mapped IPv6, reject
+lists, ports, brackets and zone identifiers, and never log or return the resulting address.
+
+For staff password sign-in and customer code requests, strip incoming assertion headers and sign
+a bounded, versioned HMAC assertion using a fourth independent proxy key shared by API and BFF.
+It binds the canonical API salon hostname without port, uppercase method, exact API pathname,
+normalized address and issued instant. Obtain that instant from the existing API metadata `time`
+field with strict ISO-instant validation; never substitute an unsynchronized/cached timestamp.
+Proxy lookup, metadata lookup and mutation share the original three-second request budget.
+API validates fields and MAC in constant time and accepts within thirty seconds of its injected
+Clock. A present invalid assertion fails before rate accounting or side effects; an absent
+assertion uses the trusted servlet peer address for direct/native callers. This assertion grants
+no tenant, principal or permission authority. Local startup retains the fourth random key without
+replacing the first three; nonlocal API/BFF startup requires its explicit configuration.
+
 ## Local hooks and secrets
 
 Identity's hooks live under `/local/identity`, are loopback-only with `@Profile("local")`, excluded
