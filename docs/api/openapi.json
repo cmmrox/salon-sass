@@ -147,6 +147,24 @@
         ],
         "type": "object"
       },
+      "CustomerCodeVerificationRequest": {
+        "properties": {
+          "challengeId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "code": {
+            "maxLength": 32,
+            "minLength": 0,
+            "type": "string"
+          }
+        },
+        "required": [
+          "challengeId",
+          "code"
+        ],
+        "type": "object"
+      },
       "Enrollment": {
         "properties": {
           "challengeId": {
@@ -770,7 +788,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/VerifyRequest"
+                "$ref": "#/components/schemas/CustomerCodeVerificationRequest"
               }
             }
           },
