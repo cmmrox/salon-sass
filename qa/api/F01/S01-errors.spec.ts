@@ -113,7 +113,7 @@ test('TC-F01-S01-017 a 404 shows no stack trace, class name or framework version
   // Asking for a trace the way Spring Boot's default error page allows changes nothing.
   const asked = await answerOf(await api.get('/api/v1/does-not-exist?trace=true&message=true&errors=true&exception=true'));
   expect(asked.status).toBe(404);
-  expect(Object.keys(JSON.parse(asked.body)).sort(), 'no field beyond the contract\'s').toEqual(['code', 'detail', 'instance', 'status', 'title']);
+  expect(Object.keys(JSON.parse(asked.body)).sort(), 'no field beyond the contract\'s').toEqual(['code', 'detail', 'instance', 'status', 'title', 'traceId']);
   expectNoInternals(asked, 'GET with ?trace=true');
 });
 

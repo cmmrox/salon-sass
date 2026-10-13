@@ -147,18 +147,157 @@ handoff:
     - The web app keeps its own Salon type (slug, name, brandColour); it does not use timeZone yet.
     - An F01-S04 build was begun in this worktree by a second developer session while this one was stalled; its three
       later commits (8b3c642, 1c25f71, af0ccee) were reviewed against the spec and kept.
-cases: []
+cases:
+- id: TC-F01-S04-001
+  title: Error responses retain trace and do not echo sensitive input
+  type: security
+  priority: high
+  covers:
+  - AC-1
+- id: TC-F01-S04-002
+  title: Invalid probes produce field errors without writes
+  type: data-integrity
+  priority: critical
+  covers:
+  - AC-2
+- id: TC-F01-S04-003
+  title: Problem contract enumerates every code
+  type: api
+  priority: high
+  covers:
+  - AC-3
+- id: TC-F01-S04-004
+  title: UTC instants remain unchanged under another machine zone
+  type: data-integrity
+  priority: high
+  covers:
+  - AC-4
+- id: TC-F01-S04-005
+  title: DST and midnight render exact salon-local offsets
+  type: data-integrity
+  priority: high
+  covers:
+  - AC-5
+- id: TC-F01-S04-006
+  title: Committed work is sent exactly once and audited
+  type: data-integrity
+  priority: critical
+  covers:
+  - AC-6
+- id: TC-F01-S04-007
+  title: Retry backoff dead-letter and meter follow configured limits
+  type: resilience
+  priority: critical
+  covers:
+  - AC-7
+- id: TC-F01-S04-008
+  title: An aborted transaction leaves no outbox or audit work
+  type: data-integrity
+  priority: critical
+  covers:
+  - AC-8
+- id: TC-F01-S04-009
+  title: Twenty slow deliveries do not hold up salon reads
+  type: resilience
+  priority: high
+  covers:
+  - AC-9
+- id: TC-F01-S04-010
+  title: Open breaker holds new work without harming the API
+  type: resilience
+  priority: high
+  covers:
+  - AC-10
+- id: TC-F01-S04-011
+  title: API restart recovers the interrupted delivery id
+  type: resilience
+  priority: critical
+  covers:
+  - AC-11
+- id: TC-F01-S04-012
+  title: One hundred simultaneous probes deliver once for their salon
+  type: concurrency
+  priority: critical
+  covers:
+  - AC-12
+- id: TC-F01-S04-013
+  title: Probes and audit/outbox records enforce salon and write isolation
+  type: tenant-isolation
+  priority: critical
+  covers:
+  - AC-13
+- id: TC-F01-S04-014
+  title: Request logs preserve tenant and strip sensitive request values
+  type: security
+  priority: high
+  covers:
+  - AC-14
+- id: TC-F01-S04-015
+  title: Background cleanup retains each salon newer messages
+  type: tenant-isolation
+  priority: critical
+  covers:
+  - AC-15
+- id: TC-F01-S04-016
+  title: Staging exposes no local hook or metrics
+  type: security
+  priority: high
+  covers:
+  - AC-16
+- id: TC-F01-S04-017
+  title: Database restart recovers interrupted committed delivery
+  type: resilience
+  priority: critical
+  covers:
+  - AC-11
+- id: TC-F01-S04-018
+  title: Client tenant selectors cannot write a probe into another salon
+  type: tenant-isolation
+  priority: critical
+  covers:
+  - AC-13
 verification:
   commands:
-    - "cd apps/api && ./mvnw -q verify"
-    - "pnpm install --frozen-lockfile"
-    - "pnpm -r lint"
-    - "pnpm -r typecheck"
-    - "pnpm -r test"
-    - "pnpm --filter @salon/web build"
-    - "pnpm contracts:check"
-    - "qa/scripts/sdlc selftest"
-  automation: []
+  - cd apps/api && ./mvnw -q verify
+  - pnpm install --frozen-lockfile
+  - pnpm -r lint
+  - pnpm -r typecheck
+  - pnpm -r test
+  - pnpm --filter @salon/web build
+  - pnpm contracts:check
+  - qa/scripts/sdlc selftest
+  automation:
+  - id: platform-services
+    tool: playwright
+    file: qa/api/F01/S04-platform-services.spec.ts
+    covers:
+    - TC-F01-S04-001
+    - TC-F01-S04-002
+    - TC-F01-S04-003
+    - TC-F01-S04-004
+    - TC-F01-S04-005
+    - TC-F01-S04-006
+    - TC-F01-S04-007
+    - TC-F01-S04-008
+    - TC-F01-S04-009
+    - TC-F01-S04-010
+    - TC-F01-S04-011
+    - TC-F01-S04-012
+    - TC-F01-S04-013
+    - TC-F01-S04-014
+    - TC-F01-S04-015
+    - TC-F01-S04-017
+    - TC-F01-S04-018
+    suites:
+    - regression
+    project: api
+  - id: nonlocal-hooks
+    tool: script
+    file: qa/checks/F01/S04-other-profile.sh
+    covers:
+    - TC-F01-S04-016
+    suites:
+    - regression
   manual: []
   deferred: []
 evidence:

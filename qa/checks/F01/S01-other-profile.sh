@@ -17,7 +17,7 @@ require_product_up
 start_api_with_profile() {
   "$SCRIPTS/local-service.sh" stop api >"$WORK/stop-$1.log" 2>&1
   wait_for_port_closed "$API_PORT" 40 || environment_fault "the API did not stop"
-  SPRING_PROFILES_ACTIVE="$1" "$SCRIPTS/local-service.sh" start api >"$WORK/start-$1.log" 2>&1
+  SALON_TRUSTED_PROXIES=127.0.0.1 SALON_OTLP_ENDPOINT=http://127.0.0.1:43180 SPRING_PROFILES_ACTIVE="$1" "$SCRIPTS/local-service.sh" start api >"$WORK/start-$1.log" 2>&1
 }
 
 restore() {

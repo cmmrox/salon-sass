@@ -71,20 +71,116 @@ handoff:
     Stack tools: Caddy 2.11.7, OpenTelemetry Collector 0.162.0, Trivy 0.75.0, actionlint 1.7.12,
     k6 1.8.2. No images were pushed. No real data, payments, messages, external deployment or VPS access.
 
-cases: []
+cases:
+- id: TC-F01-S05-001
+  title: Production images report tested commit and run without root or env files
+  type: build
+  priority: high
+  covers:
+  - AC-1
+- id: TC-F01-S05-002
+  title: Image scanning rejects fixable high and critical vulnerabilities
+  type: build
+  priority: high
+  covers:
+  - AC-2
+- id: TC-F01-S05-003
+  title: Every salon and safe host resolves through the HTTP edge
+  type: security
+  priority: high
+  covers:
+  - AC-3
+- id: TC-F01-S05-004
+  title: New salon gets HTTP immediately without edge restart
+  type: security
+  priority: high
+  covers:
+  - AC-4
+- id: TC-F01-S05-005
+  title: Only edge is published and forged tenant fields do not switch salons
+  type: tenant-isolation
+  priority: critical
+  covers:
+  - AC-5
+- id: TC-F01-S05-006
+  title: Production-like roles enforce least privilege idempotently
+  type: tenant-isolation
+  priority: critical
+  covers:
+  - AC-6
+- id: TC-F01-S05-007
+  title: Staging secrets and local hooks are closed by default
+  type: security
+  priority: high
+  covers:
+  - AC-7
+- id: TC-F01-S05-008
+  title: Deploy and rollback preserve every response under continuous traffic
+  type: resilience
+  priority: critical
+  covers:
+  - AC-8
+- id: TC-F01-S05-009
+  title: One API and web instance can disappear and rejoin under traffic
+  type: resilience
+  priority: critical
+  covers:
+  - AC-9
+- id: TC-F01-S05-010
+  title: Missing images refuse deployment without stopping anything
+  type: resilience
+  priority: high
+  covers:
+  - AC-10
+- id: TC-F01-S05-011
+  title: Web API and collector preserve tenant trace without secrets
+  type: security
+  priority: high
+  covers:
+  - AC-11
+- id: TC-F01-S05-012
+  title: Delivery workflow enforces CI main publication and manual staging
+  type: build
+  priority: high
+  covers:
+  - AC-12
 verification:
   commands:
-    - "cd apps/api && ./mvnw -q verify"
-    - "pnpm install --frozen-lockfile"
-    - "pnpm -r lint"
-    - "pnpm -r typecheck"
-    - "pnpm -r test"
-    - "pnpm --filter @salon/web build"
-    - "pnpm contracts:check"
-    - "infra/scripts/images-build.sh"
-    - "infra/scripts/lint-workflows.sh"
-    - "qa/scripts/sdlc selftest"
-  automation: []
+  - cd apps/api && ./mvnw -q verify
+  - pnpm install --frozen-lockfile
+  - pnpm -r lint
+  - pnpm -r typecheck
+  - pnpm -r test
+  - pnpm --filter @salon/web build
+  - pnpm contracts:check
+  - infra/scripts/images-build.sh
+  - infra/scripts/lint-workflows.sh
+  - qa/scripts/sdlc selftest
+  automation:
+  - id: production-like-stack
+    tool: script
+    file: qa/checks/F01/S05-stack.sh
+    covers:
+    - TC-F01-S05-001
+    - TC-F01-S05-002
+    - TC-F01-S05-003
+    - TC-F01-S05-004
+    - TC-F01-S05-005
+    - TC-F01-S05-006
+    - TC-F01-S05-007
+    - TC-F01-S05-010
+    - TC-F01-S05-011
+    - TC-F01-S05-012
+    suites:
+    - regression
+  - id: deployment-traffic
+    tool: script
+    file: qa/checks/F01/S05-deployment.sh
+    covers:
+    - TC-F01-S05-008
+    - TC-F01-S05-009
+    suites:
+    - regression
   manual: []
   deferred: []
 evidence:

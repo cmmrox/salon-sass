@@ -28,6 +28,7 @@ async function openSalon(browser: Browser, salon: Salon): Promise<{ api: string;
       slug: salon.slug,
       name: salon.name,
       brandColour: salon.brandColour,
+      timeZone: salon.timeZone,
     });
     // The address bar still shows the salon's hostname: the browser was not sent elsewhere.
     expect(new URL(page.url()).hostname).toBe(salon.hostname);

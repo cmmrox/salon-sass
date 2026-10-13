@@ -18,13 +18,14 @@ export type Salon = {
   brandColour: string;
   /** The hostname on the local platform domain, without a port. */
   hostname: string;
+  timeZone: string;
 };
 
 /** The local platform domain (SALON_PLATFORM_DOMAIN in the product's .env.example). */
 export const PLATFORM_DOMAIN = 'localhost';
 
 function salon(slug: string, id: string, name: string, brandColour: string): Salon {
-  return { slug, id, name, brandColour, hostname: `${slug}.${PLATFORM_DOMAIN}` };
+  return { slug, id, name, brandColour, hostname: `${slug}.${PLATFORM_DOMAIN}`, timeZone: slug == 'gamma' ? 'Europe/London' : 'Asia/Colombo' };
 }
 
 /** The salon under test. */

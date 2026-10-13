@@ -67,7 +67,7 @@ test('TC-F01-S02-001 each salon\'s hostname returns that salon\'s slug, name and
     const answer = await answerOf(await api.salon(salon));
     const brand = expectBrandOf(answer, salon, salon.hostname);
     expect(validate(brand), `${salon.hostname}: matches the Salon schema: ${JSON.stringify(validate.errors)}`).toBe(true);
-    expect(Object.keys(brand).sort(), `${salon.hostname}: nothing else identifies the salon`).toEqual(['brandColour', 'name', 'slug']);
+    expect(Object.keys(brand).sort(), `${salon.hostname}: nothing else identifies the salon`).toEqual(['brandColour', 'name', 'slug', 'timeZone']);
     expect(answer.headers['set-cookie'], `${salon.hostname}: no cookie is set`).toBeUndefined();
   }
 });
@@ -195,7 +195,7 @@ test('TC-F01-S02-004 a hostname that resolves to no salon answers 404 not_found,
     expect(problem.code, name).toBe('not_found');
     // Identical apart from instance, which is the same path here: so identical outright. A caller
     // cannot tell a reserved slug, a salon that does not exist and a name that is no salon's apart.
-    expect(sorted(problem), `${name}: the same body as for an unknown slug`).toEqual(sorted(baselineProblem));
+    expect(sorted({ ...problem, traceId: '' }), `${name}: the same body as for an unknown slug`).toEqual(sorted({ ...baselineProblem, traceId: '' }));
     expect(answer.contentType, name).toBe(baseline.contentType);
     expectNothingOfOtherSalons(answer, null, name);
     expectNoTenantId(answer, name);
@@ -210,7 +210,7 @@ test('TC-F01-S02-005 the same 404 is given on another path of the salon\'s API, 
   );
   expect(elsewhere.instance).toBe('/api/v1/does-not-exist');
   // "No such salon" and "no such thing" are one answer: neither confirms that anything exists.
-  expect(sorted({ ...onSalon, instance: '' })).toEqual(sorted({ ...elsewhere, instance: '' }));
+  expect(sorted({ ...onSalon, instance: '', traceId: '' })).toEqual(sorted({ ...elsewhere, instance: '', traceId: '' }));
 });
 
 test('TC-F01-S02-006 meta and health answer 200 on every hostname that resolves to no salon', async () => {
@@ -506,8 +506,8 @@ test('TC-F01-S02-014 the contract describes GET /api/v1/salon with its 200 and 4
   expect(responses['404']?.content?.['application/problem+json']?.schema?.$ref, 'the 404 is problem details').toBe('#/components/schemas/Problem');
 
   const described = contract.components.schemas.Salon;
-  expect(Object.keys(described.properties ?? {}).sort(), 'the Salon schema has the three public fields and no id').toEqual(['brandColour', 'name', 'slug']);
-  expect([...(described.required ?? [])].sort(), 'all three are required').toEqual(['brandColour', 'name', 'slug']);
+  expect(Object.keys(described.properties ?? {}).sort(), 'the Salon schema has the three public fields and no id').toEqual(['brandColour', 'name', 'slug', 'timeZone']);
+  expect([...(described.required ?? [])].sort(), 'all three are required').toEqual(['brandColour', 'name', 'slug', 'timeZone']);
 
   const validSalon = schemaValidator('Salon');
   for (const salon of salons) {

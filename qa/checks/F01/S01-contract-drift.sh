@@ -30,7 +30,10 @@ tree_state() { git -C "$REPO_ROOT" status --porcelain -- docs/api packages apps;
 # ---------------------------------------------------------------------------------------------
 begin_case TC-F01-S01-052 "pnpm contracts:check exits zero on the committed tree"
 expect_equal "uncommitted changes to the contract or the product before the check" "" "$(tree_state)"
+# The contract generator repackages the runtime jar. Keep the live API stopped while it does.
+"$SCRIPTS/local-service.sh" stop api >"$REPORT_DIR/contract-stop-api.log" 2>&1 || environment_fault "API could not be stopped before contract generation"
 run_check "$REPO_ROOT"
+"$SCRIPTS/local-service.sh" start api >"$REPORT_DIR/contract-start-api.log" 2>&1 || environment_fault "API could not restart after contract generation"
 printf '%s\n' "$CHECK_OUTPUT" >"$REPORT_DIR/contracts-check-committed.log"
 expect_equal "exit code" 0 "$CHECK_EXIT"
 expect_equal "changes the check made to the repository" "" "$(tree_state)"

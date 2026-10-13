@@ -43,14 +43,16 @@ begin_case TC-F01-S01-029 "On an empty database the API applies the baseline mig
 "$SCRIPTS/local-reset.sh" >"$WORK/reset.log" 2>&1; expect_equal "exit code of local-reset.sh" 0 "$?"
 expect_equal "GET $API_URL/actuator/health after the reset" 200 "$(http_code "$API_URL/actuator/health")"
 # The database really was emptied: what QA wrote before is gone, and the history is a new one.
-expect_equal "tables in the database" flyway_schema_history "$(user_tables)"
+expect_equal "QA marker gone after reset" 0 "$(psql_value "select count(*) from information_schema.tables where table_name = '$MARKER'")"
 HISTORY_AFTER_RESET="$(history)"
+TABLES_AFTER_RESET="$(user_tables)"
 expect_not_equal "the migration history, against the one before the reset" "$HISTORY_BEFORE" "$HISTORY_AFTER_RESET"
-expect_equal "rows in flyway_schema_history" 1 "$(history_count)"
-expect_equal "the row's version" 1 "$(psql_value "select version from flyway_schema_history")"
-expect_equal "the row's success flag" t "$(psql_value "select success from flyway_schema_history")"
-expect_matches "the row's description" 'baseline' "$(psql_value "select description from flyway_schema_history")"
-expect_equal "the row's type" SQL "$(psql_value "select type from flyway_schema_history")"
+MIGRATION_COUNT="$(find "$REPO_ROOT/apps/api/src/main/resources/db/migration" -name 'V*.sql' | wc -l | tr -d ' ')"
+expect_equal "rows in flyway_schema_history" "$MIGRATION_COUNT" "$(history_count)"
+expect_equal "the row's version" 1 "$(psql_value "select version from flyway_schema_history where version='1'")"
+expect_equal "the row's success flag" t "$(psql_value "select success from flyway_schema_history where version='1'")"
+expect_matches "the row's description" 'baseline' "$(psql_value "select description from flyway_schema_history where version='1'")"
+expect_equal "the row's type" SQL "$(psql_value "select type from flyway_schema_history where version='1'")"
 
 # ---------------------------------------------------------------------------------------------
 begin_case TC-F01-S01-030 "Starting the API a second time applies nothing and does not fail"
@@ -60,9 +62,9 @@ for round in second third; do
   "$SCRIPTS/local-service.sh" start api >"$WORK/start-$round.log" 2>&1
   expect_equal "$round start: exit code of 'start api'" 0 "$?"
   expect_equal "$round start: GET $API_URL/actuator/health" 200 "$(http_code "$API_URL/actuator/health")"
-  expect_equal "$round start: rows in flyway_schema_history" 1 "$(history_count)"
+  expect_equal "$round start: rows in flyway_schema_history" "$MIGRATION_COUNT" "$(history_count)"
   expect_equal "$round start: the migration history, unchanged to the timestamp" "$HISTORY_AFTER_RESET" "$(history)"
-  expect_equal "$round start: tables in the database" flyway_schema_history "$(user_tables)"
+  expect_equal "$round start: table catalogue unchanged" "$TABLES_AFTER_RESET" "$(user_tables)"
 done
 
 finish
