@@ -34,6 +34,7 @@ if grep -q 'SALON_IDENTITY_.*_KEY' "$WORK/missing.log"; then right "refusal name
 export SALON_IDENTITY_SIGNING_KEY="$(node -e 'process.stdout.write(require("crypto").randomBytes(32).toString("hex"))')"
 export SALON_IDENTITY_CHALLENGE_KEY="$(node -e 'process.stdout.write(require("crypto").randomBytes(32).toString("hex"))')"
 export SALON_IDENTITY_ENCRYPTION_KEY="$(node -e 'process.stdout.write(require("crypto").randomBytes(32).toString("hex"))')"
+export SALON_IDENTITY_PROXY_KEY="$(node -e 'process.stdout.write(require("crypto").randomBytes(32).toString("hex"))')"
 "$RESOLVED_JAVA_HOME/bin/java" -jar "$JAR" --spring.profiles.active=qa-nonlocal --server.port="$PORT" --spring.flyway.enabled=false >"$WORK/configured.log" 2>&1 &
 PID=$!
 wait_for_code "http://localhost:$PORT/actuator/health" 200 40 || environment_fault "configured separate API did not become healthy"

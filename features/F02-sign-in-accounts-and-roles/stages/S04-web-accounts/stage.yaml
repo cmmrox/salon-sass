@@ -175,8 +175,57 @@ verification:
   - pnpm -r test
   - pnpm --filter @salon/web build
   - pnpm contracts:check
-  automation: []
-  manual: []
+  automation:
+  - id: web-functional
+    tool: playwright
+    file: qa/web/F02/S04-functional.spec.ts
+    project: web
+    covers:
+    - TC-F02-S04-001
+    - TC-F02-S04-002
+    - TC-F02-S04-003
+    - TC-F02-S04-004
+    - TC-F02-S04-005
+    - TC-F02-S04-010
+    - TC-F02-S04-011
+    - TC-F02-S04-012
+    suites: []
+  - id: browser-security
+    tool: playwright
+    file: qa/web/F02/S04-browser-security.spec.ts
+    project: web
+    covers:
+    - TC-F02-S04-006
+    - TC-F02-S04-007
+    - TC-F02-S04-008
+    - TC-F02-S04-009
+    - TC-F02-S04-013
+    - TC-F02-S04-014
+    - TC-F02-S04-015
+    suites: []
+  - id: web-presentation
+    tool: playwright
+    file: qa/web/F02/S04-presentation.spec.ts
+    project: web
+    covers:
+    - TC-F02-S04-016
+    - TC-F02-S04-017
+    - TC-F02-S04-019
+    - TC-F02-S04-021
+    suites: []
+  - id: web-resilience-address
+    tool: playwright
+    file: qa/web/F02/S04-resilience-address.spec.ts
+    project: web
+    covers:
+    - TC-F02-S04-020
+    - TC-F02-S04-022
+    suites: []
+  manual:
+  - case: TC-F02-S04-018
+    reason: Keyboard focus/order, contrast and real-speed visual interaction require
+      human judgment on the final source; preparation only, not performed.
+    performed_on: null
   deferred: []
 evidence:
   last_run: null

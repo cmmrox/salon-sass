@@ -17,6 +17,7 @@ PORT="$(node -e 'const n=require("net"),s=n.createServer();s.listen(0,"127.0.0.1
 export SALON_IDENTITY_SIGNING_KEY="$(node -e 'process.stdout.write(require("crypto").randomBytes(32).toString("hex"))')"
 export SALON_IDENTITY_CHALLENGE_KEY="$(node -e 'process.stdout.write(require("crypto").randomBytes(32).toString("hex"))')"
 export SALON_IDENTITY_ENCRYPTION_KEY="$(node -e 'process.stdout.write(require("crypto").randomBytes(32).toString("hex"))')"
+export SALON_IDENTITY_PROXY_KEY="$(node -e 'process.stdout.write(require("crypto").randomBytes(32).toString("hex"))')"
 begin_case TC-F02-S02-018 "Nonlocal code sending refuses without a provider and local hooks remain unavailable"
 "$RESOLVED_JAVA_HOME/bin/java" -jar "$ROOT/apps/api/target/salon-api.jar" --spring.profiles.active=qa-nonlocal --server.port="$PORT" --spring.flyway.enabled=false >"$WORK/runtime.log" 2>&1 &
 PID=$!

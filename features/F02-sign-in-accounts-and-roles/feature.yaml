@@ -71,6 +71,15 @@ verification:
     covers:
     - TC-F02-004
     suites: []
+  - id: account-journeys
+    tool: playwright
+    file: qa/web/F02/feature-journeys.spec.ts
+    project: web
+    covers:
+    - TC-F02-001
+    - TC-F02-002
+    - TC-F02-003
+    suites: []
   manual: []
   deferred: []
 evidence:
