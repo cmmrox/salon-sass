@@ -10,11 +10,19 @@ depends_on: []
 surfaces: [api, web, infra]
 requirements: [BRD-03, BKG-15]
 nfr_focus: [NFR-01, NFR-07, NFR-10, NFR-15, NFR-16, NFR-17, NFR-18]
-cases: []
+cases:
+  - id: TC-F01-002
+    title: "First real staging deployment serves salon subdomains with public TLS"
+    type: security
+    priority: high
+    covers: [BRD-03]
 verification:
   automation: []
   manual: []
-  deferred: []
+  deferred:
+    - case: TC-F01-002
+      reason: "First real-host deployment is outside local F01 proof, explicitly deferred by decision 018; public certificate, remote delivery and provider-dependent monitoring are not certified."
+      unblocked_by: "Owner decides D-08 hosting and D-02 platform domain, configures the DNS challenge module and credentials, provides host access, and explicitly requests staging deployment."
 evidence:
   last_run: null
   last_result: null
