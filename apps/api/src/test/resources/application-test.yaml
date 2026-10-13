@@ -25,3 +25,4 @@ salon.identity:
   signing-key: ${random.value}${random.value}
   challenge-key: ${random.value}${random.value}
   encryption-key: ${random.value}${random.value}
+  proxy-key: ${random.value}${random.value}

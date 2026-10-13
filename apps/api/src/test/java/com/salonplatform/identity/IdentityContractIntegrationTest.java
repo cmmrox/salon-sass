@@ -142,6 +142,36 @@ class IdentityContractIntegrationTest extends IntegrationTest {
     }
 
     @Test
+    void privateClientAssertionIsOptionalAndDeclaredOnlyForTheTwoRateMutations() {
+        Map<String, Object> document = json.readValue(http().get("/v3/api-docs").body(), Map.class);
+        Map<String, Object> paths = (Map<String, Object>) document.get("paths");
+        for (String path :
+                List.of(
+                        "/api/v1/identity/staff/sign-in",
+                        "/api/v1/identity/customers/challenges")) {
+            var operation =
+                    (Map<String, Object>) ((Map<String, Object>) paths.get(path)).get("post");
+            var parameters = (List<Map<String, Object>>) operation.get("parameters");
+            assertThat(parameters)
+                    .anySatisfy(
+                            p -> {
+                                assertThat(p)
+                                        .containsEntry("name", "x-salon-client-assertion")
+                                        .containsEntry("in", "header");
+                                // OpenAPI defaults non-path parameters to optional when omitted.
+                                assertThat(p.getOrDefault("required", false)).isEqualTo(false);
+                                assertThat((Map<String, Object>) p.get("schema"))
+                                        .containsEntry("type", "string")
+                                        .containsEntry("maxLength", 192);
+                            });
+        }
+        var protectedOperation =
+                (Map<String, Object>)
+                        ((Map<String, Object>) paths.get("/api/v1/identity/me")).get("get");
+        assertThat(protectedOperation.get("parameters")).isNull();
+    }
+
+    @Test
     void optionalSignInFieldsAreOmittedAndCustomerPrincipalFieldsAreNullable() {
         StaffAccess.SignIn challenge =
                 new StaffAccess.SignIn(

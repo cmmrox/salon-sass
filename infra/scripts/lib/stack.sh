@@ -92,6 +92,7 @@ load_stack_settings() {
 stack_public_url() {
   local host="$1"
   if [ "$SALON_STACK_ENV" = "staging" ]; then
+    [ "$(file_setting SALON_WEB_LOCAL_HTTP)" = "false" ] || fail "Staging requires SALON_WEB_LOCAL_HTTP=false"
     printf 'https://%s' "$host"
   else
     printf 'http://%s:%s' "$host" "$SALON_EDGE_HTTP_PORT"

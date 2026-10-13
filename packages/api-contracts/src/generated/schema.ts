@@ -460,7 +460,7 @@ export interface components {
              * @description The stable reason. Branch on this.
              * @enum {string}
              */
-            code: "confirmation_required" | "invalid_code" | "code_expired" | "provider_unavailable" | "invalid_credentials" | "invalid_session" | "permission_denied" | "conflict" | "rate_limited" | "bad_request" | "not_found" | "method_not_allowed" | "not_acceptable" | "unsupported_media_type" | "request_rejected" | "service_unavailable" | "salon_suspended" | "internal_error";
+            code: "invalid_client_assertion" | "confirmation_required" | "invalid_code" | "code_expired" | "provider_unavailable" | "invalid_credentials" | "invalid_session" | "permission_denied" | "conflict" | "rate_limited" | "bad_request" | "not_found" | "method_not_allowed" | "not_acceptable" | "unsupported_media_type" | "request_rejected" | "service_unavailable" | "salon_suspended" | "internal_error";
             /** @description A sentence for a person. Do not branch on it. */
             detail?: string;
             /** @description For a request body that failed validation (`bad_request`): each field that failed, when the failure has a field. Never the value that was refused. */
@@ -625,7 +625,10 @@ export interface operations {
     request: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Private server-authenticated rate-address assertion; absent uses servlet peer, invalid proof is rejected before accounting. */
+                "x-salon-client-assertion"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -1167,7 +1170,10 @@ export interface operations {
     signIn: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Private server-authenticated rate-address assertion; absent uses servlet peer, invalid proof is rejected before accounting. */
+                "x-salon-client-assertion"?: string;
+            };
             path?: never;
             cookie?: never;
         };

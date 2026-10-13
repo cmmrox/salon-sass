@@ -3,178 +3,178 @@ feature: F02
 title: Staff workspace and customer account screens
 sequence: 4
 surfaces:
-  - api
-  - web
-  - infra
-status: planned
+- api
+- web
+- infra
+status: in-progress
 qa_status: not-run
 blocked_reason: null
 released_in: null
 reopened_by: null
 depends_on:
-  - F02-S01
-  - F02-S02
-  - F02-S03
+- F02-S01
+- F02-S02
+- F02-S03
 requirements:
-  - IAM-01
-  - IAM-03
-  - IAM-04
-  - IAM-05
-  - IAM-06
-  - IAM-07
-  - IAM-08
-  - IAM-09
-  - IAM-10
-  - IAM-11
+- IAM-01
+- IAM-03
+- IAM-04
+- IAM-05
+- IAM-06
+- IAM-07
+- IAM-08
+- IAM-09
+- IAM-10
+- IAM-11
 nfr_focus:
-  - NFR-08
-  - NFR-10
+- NFR-08
+- NFR-10
 handoff:
   run: null
   data: null
   notes: null
 cases:
-  - id: TC-F02-S04-001
-    title: staff password and authenticator flows reach account only after complete verification
-    type: functional
-    priority: high
-    covers:
-      - AC-1
-  - id: TC-F02-S04-002
-    title: staff authentication refusals preserve useful input and expose recovery
-    type: functional
-    priority: high
-    covers:
-      - AC-1
-  - id: TC-F02-S04-003
-    title: customer SMS WhatsApp and resend screens preserve the number and explain proof lifetime
-    type: functional
-    priority: high
-    covers:
-      - AC-2
-  - id: TC-F02-S04-004
-    title: web permissions protect every page and BFF action for all roles and kinds
-    type: permissions
-    priority: critical
-    covers:
-      - AC-3
-  - id: TC-F02-S04-005
-    title: web devices password rotation and logout revoke server authority immediately
-    type: functional
-    priority: high
-    covers:
-      - AC-4
-  - id: TC-F02-S04-006
-    title: staff and customer cookies coexist and independent signout preserves the other account
-    type: security
-    priority: critical
-    covers:
-      - AC-4
-  - id: TC-F02-S04-007
-    title: simultaneous tabs coordinate renewal once for each principal kind
-    type: concurrency
-    priority: critical
-    covers:
-      - AC-4
-  - id: TC-F02-S04-008
-    title: replay revocation and unknown refresh outcome cannot restore signed-out authority
-    type: security
-    priority: critical
-    covers:
-      - AC-4
-  - id: TC-F02-S04-009
-    title: unsupported Web Locks disable credential changes with a clear explanation
-    type: functional
-    priority: high
-    covers:
-      - AC-4
-      - AC-8
-  - id: TC-F02-S04-010
-    title: customer profile screens save every mutable field and recover stale edits
-    type: functional
-    priority: high
-    covers:
-      - AC-5
-  - id: TC-F02-S04-011
-    title: data download and deletion confirmation clearly complete or cancel the customer request
-    type: functional
-    priority: high
-    covers:
-      - AC-6
-  - id: TC-F02-S04-012
-    title: audit screens expose useful identity alerts without personal or credential values
-    type: functional
-    priority: high
-    covers:
-      - AC-6
-  - id: TC-F02-S04-013
-    title: all browser mutation routes reject CSRF before any side effect
-    type: security
-    priority: critical
-    covers:
-      - AC-7
-  - id: TC-F02-S04-014
-    title: browser cookies and every client surface exclude session and challenge authority
-    type: security
-    priority: critical
-    covers:
-      - AC-7
-  - id: TC-F02-S04-015
-    title: redirect and hostname input cannot choose the bearer destination or another salon
-    type: tenant-isolation
-    priority: critical
-    covers:
-      - AC-7
-  - id: TC-F02-S04-016
-    title: responsive layouts keep every control reachable across six widths
-    type: responsive
-    priority: high
-    covers:
-      - AC-8
-  - id: TC-F02-S04-017
-    title: all screens pass automated accessibility checks and announce errors
-    type: accessibility
-    priority: high
-    covers:
-      - AC-8
-  - id: TC-F02-S04-018
-    title: keyboard journeys have visible focus sensible order and readable contrast
-    type: accessibility
-    priority: high
-    covers:
-      - AC-8
-  - id: TC-F02-S04-019
-    title: customer screens use the correct salon brand while workspace stays neutral
-    type: branding
-    priority: high
-    covers:
-      - AC-8
-  - id: TC-F02-S04-020
-    title: API outage and slow BFF work preserve form values and present safe retry within budget
-    type: resilience
-    priority: high
-    covers:
-      - AC-8
-  - id: TC-F02-S04-021
-    title: translation and test-id inventories cover every new screen state
-    type: build
-    priority: high
-    covers:
-      - AC-8
-  - id: TC-F02-S04-022
-    title: trusted client address assertions cannot alter tenant authority or evade abuse limits
-    type: security
-    priority: critical
-    covers:
-      - AC-7
+- id: TC-F02-S04-001
+  title: staff password and authenticator flows reach account only after complete verification
+  type: functional
+  priority: high
+  covers:
+  - AC-1
+- id: TC-F02-S04-002
+  title: staff authentication refusals preserve useful input and expose recovery
+  type: functional
+  priority: high
+  covers:
+  - AC-1
+- id: TC-F02-S04-003
+  title: customer SMS WhatsApp and resend screens preserve the number and explain proof lifetime
+  type: functional
+  priority: high
+  covers:
+  - AC-2
+- id: TC-F02-S04-004
+  title: web permissions protect every page and BFF action for all roles and kinds
+  type: permissions
+  priority: critical
+  covers:
+  - AC-3
+- id: TC-F02-S04-005
+  title: web devices password rotation and logout revoke server authority immediately
+  type: functional
+  priority: high
+  covers:
+  - AC-4
+- id: TC-F02-S04-006
+  title: staff and customer cookies coexist and independent signout preserves the other account
+  type: security
+  priority: critical
+  covers:
+  - AC-4
+- id: TC-F02-S04-007
+  title: simultaneous tabs coordinate renewal once for each principal kind
+  type: concurrency
+  priority: critical
+  covers:
+  - AC-4
+- id: TC-F02-S04-008
+  title: replay revocation and unknown refresh outcome cannot restore signed-out authority
+  type: security
+  priority: critical
+  covers:
+  - AC-4
+- id: TC-F02-S04-009
+  title: unsupported Web Locks disable credential changes with a clear explanation
+  type: functional
+  priority: high
+  covers:
+  - AC-4
+  - AC-8
+- id: TC-F02-S04-010
+  title: customer profile screens save every mutable field and recover stale edits
+  type: functional
+  priority: high
+  covers:
+  - AC-5
+- id: TC-F02-S04-011
+  title: data download and deletion confirmation clearly complete or cancel the customer request
+  type: functional
+  priority: high
+  covers:
+  - AC-6
+- id: TC-F02-S04-012
+  title: audit screens expose useful identity alerts without personal or credential values
+  type: functional
+  priority: high
+  covers:
+  - AC-6
+- id: TC-F02-S04-013
+  title: all browser mutation routes reject CSRF before any side effect
+  type: security
+  priority: critical
+  covers:
+  - AC-7
+- id: TC-F02-S04-014
+  title: browser cookies and every client surface exclude session and challenge authority
+  type: security
+  priority: critical
+  covers:
+  - AC-7
+- id: TC-F02-S04-015
+  title: redirect and hostname input cannot choose the bearer destination or another salon
+  type: tenant-isolation
+  priority: critical
+  covers:
+  - AC-7
+- id: TC-F02-S04-016
+  title: responsive layouts keep every control reachable across six widths
+  type: responsive
+  priority: high
+  covers:
+  - AC-8
+- id: TC-F02-S04-017
+  title: all screens pass automated accessibility checks and announce errors
+  type: accessibility
+  priority: high
+  covers:
+  - AC-8
+- id: TC-F02-S04-018
+  title: keyboard journeys have visible focus sensible order and readable contrast
+  type: accessibility
+  priority: high
+  covers:
+  - AC-8
+- id: TC-F02-S04-019
+  title: customer screens use the correct salon brand while workspace stays neutral
+  type: branding
+  priority: high
+  covers:
+  - AC-8
+- id: TC-F02-S04-020
+  title: API outage and slow BFF work preserve form values and present safe retry within budget
+  type: resilience
+  priority: high
+  covers:
+  - AC-8
+- id: TC-F02-S04-021
+  title: translation and test-id inventories cover every new screen state
+  type: build
+  priority: high
+  covers:
+  - AC-8
+- id: TC-F02-S04-022
+  title: trusted client address assertions cannot alter tenant authority or evade abuse limits
+  type: security
+  priority: critical
+  covers:
+  - AC-7
 verification:
   commands:
-    - cd apps/api && ./mvnw -q verify
-    - pnpm -r lint
-    - pnpm -r typecheck
-    - pnpm -r test
-    - pnpm --filter @salon/web build
-    - pnpm contracts:check
+  - cd apps/api && ./mvnw -q verify
+  - pnpm -r lint
+  - pnpm -r typecheck
+  - pnpm -r test
+  - pnpm --filter @salon/web build
+  - pnpm contracts:check
   automation: []
   manual: []
   deferred: []

@@ -10,8 +10,8 @@ import { SALON_SHELL_ROUTE, routeRequest } from './route-request';
 import { SALON_HEADER, decodeSalon, encodeSalon } from './salon-header';
 import type { Site } from './site';
 
-const alpha: Salon = { slug: 'alpha', name: 'Alpha Studio', brandColour: '#D6086A' };
-const beta: Salon = { slug: 'beta', name: 'Beta Hair, Beauty & Wellness Lounge of Colombo Seven', brandColour: '#1F2937' };
+const alpha: Salon = { slug: 'alpha', name: 'Alpha Studio', brandColour: '#D6086A', timeZone: 'Asia/Colombo' };
+const beta: Salon = { slug: 'beta', name: 'Beta Hair, Beauty & Wellness Lounge of Colombo Seven', brandColour: '#1F2937', timeZone: 'Asia/Colombo' };
 
 function request(path: string, headers: Record<string, string> = {}): NextRequest {
   return new NextRequest(`http://alpha.localhost:3100${path}`, { headers: { host: 'alpha.localhost:3100', ...headers } });

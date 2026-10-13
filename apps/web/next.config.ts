@@ -10,6 +10,8 @@ const nextConfig: NextConfig = {
   // with only the files the application needs. The local environment serves the same build through
   // scripts/serve.mjs, which this does not change.
   output: 'standalone',
+  // Runtime secrets and checkout-local state are never deployment artifacts.
+  outputFileTracingExcludes: { '*': ['../../.local/**', '../../.env*', '../../qa/.env*', '.env*'] },
   // The workspace root, so that the workspace's own packages (the API client) are part of it.
   outputFileTracingRoot: join(__dirname, '../..'),
   // The framework's defaults for a new application: data is fetched at request time unless a

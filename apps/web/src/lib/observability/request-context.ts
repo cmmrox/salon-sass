@@ -15,6 +15,8 @@ export type RequestContext = {
   sampled: boolean;
   /** The salon's slug, set once the API has said the hostname names a salon. */
   tenantSlug?: string;
+  clientAddress?: string;
+  deadline?: number;
 };
 
 // One store for the whole process. The request proxy, the pages and the instrumentation hook are

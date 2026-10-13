@@ -2,14 +2,14 @@ import type { ApiClient, Salon as ContractSalon } from '@salon/api-contracts';
 
 import { isHexColour } from '@/styles/brand';
 
-import { API_TIMEOUT_MS, createServerApiClient } from './client';
+import { requestSignal, createServerApiClient } from './client';
 import { describeFailure } from './failure';
 
 /**
  * What the web app carries about a salon: its public brand. The contract's salon holds more (its
  * time zone, from F01-S04), which no screen uses yet; a screen that shows a time takes it then.
  */
-export type Salon = Pick<ContractSalon, 'slug' | 'name' | 'brandColour'>;
+export type Salon = Pick<ContractSalon, 'slug' | 'name' | 'brandColour' | 'timeZone'>;
 
 /** What the API said about the salon a hostname names. */
 export type SalonLookup =
@@ -43,11 +43,11 @@ export async function findSalon(
   }
   try {
     const { data, error, response } = await client.GET('/api/v1/salon', {
-      signal: AbortSignal.timeout(API_TIMEOUT_MS),
+      signal: requestSignal(),
     });
     if (response.status === 200) {
       return isSalon(data, slug)
-        ? { kind: 'found', salon: { slug: data.slug, name: data.name, brandColour: data.brandColour } }
+        ? { kind: 'found', salon: { slug: data.slug, name: data.name, brandColour: data.brandColour, timeZone: data.timeZone } }
         : unavailable(slug, 'the API answered with something that is not this salon');
     }
     const code = typeof error === 'object' && error !== null ? (error as { code?: unknown }).code : undefined;
@@ -72,7 +72,7 @@ function isSalon(value: unknown, slug: string): value is Salon {
     candidate.slug === slug &&
     typeof candidate.name === 'string' &&
     candidate.name.trim() !== '' &&
-    isHexColour(candidate.brandColour)
+    isHexColour(candidate.brandColour) && typeof candidate.timeZone === 'string'
   );
 }
 
