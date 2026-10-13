@@ -160,8 +160,9 @@ New profile defaults are language `en`, operational channel preferences
 `{sms:true,whatsapp:true,email:true}` and marketing consent `false`; email and birthday are null.
 Enabling a channel preference neither supplies an address nor grants marketing consent. Updates
 send the full mutable representation and version, with every channel preference and marketing
-consent required; omitted or null optional email/birthday clears it. Trim names and trim/lowercase
-email. Reject unknown update fields, including mobile and account/tenant selectors. Customer rights
+consent required; omitted or null optional email/birthday clears it. Blank/whitespace optional email
+also clears it; a nonblank email must be valid. Trim names and trim/lowercase email. Reject unknown
+update fields, including mobile and account/tenant selectors. Customer rights
 use `profile.manage`, `data.export` and `account.delete`, alongside `session.manage`.
 
 Export is a JSON download of the current customer's profile, preferences and signed-in-device
