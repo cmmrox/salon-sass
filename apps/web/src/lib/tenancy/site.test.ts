@@ -3,6 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { SalonLookup } from '@/lib/api/salon';
 
+import { contextFromTraceparent, runInRequest } from '@/lib/observability/request-context';
+
 import { resolveSite, type FindSalon } from './site';
 
 const alpha: Salon = { slug: 'alpha', name: 'Alpha Studio', brandColour: '#D6086A' };
@@ -78,4 +80,17 @@ describe('resolveSite', () => {
       expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('SALON_PLATFORM_DOMAIN'));
     },
   );
+
+  it.each([
+    ['an active salon', { kind: 'found', salon: alpha }, 'alpha'],
+    ['a suspended salon', { kind: 'suspended' }, 'alpha'],
+    ['no salon', { kind: 'not-found' }, undefined],
+    ['an API that cannot say', { kind: 'unavailable' }, undefined],
+  ] as const)("names the salon on the request's log line only once the API says it is one: %s", async (_, lookup, slug) => {
+    const request = contextFromTraceparent(undefined);
+
+    await runInRequest(request, () => resolveSite('alpha.localhost:3100', finder(lookup), 'localhost'));
+
+    expect(request.tenantSlug).toBe(slug);
+  });
 });

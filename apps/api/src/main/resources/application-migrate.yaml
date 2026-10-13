@@ -1,0 +1,25 @@
+# Runs the migrations and stops: the API image started with this profile beside its environment's
+# (`staging,migrate`) migrates the database as the owning role and exits 0, or exits non-zero and
+# leaves the database as the failed migration's transaction left it. No server is started and no
+# work is claimed, so it can run while the previous version keeps serving (SalonApiApplication.main).
+spring:
+  main:
+    web-application-type: none
+  flyway:
+    enabled: true
+
+salon:
+  outbox:
+    enabled: false
+  jobs:
+    enabled: false
+
+management:
+  otlp:
+    metrics:
+      export:
+        enabled: false
+  tracing:
+    export:
+      otlp:
+        enabled: false

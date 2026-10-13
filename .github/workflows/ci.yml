@@ -21,7 +21,7 @@ jobs:
   verify:
     name: Verification commands
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     env:
       COREPACK_ENABLE_DOWNLOAD_PROMPT: '0'
     steps:
@@ -69,6 +69,14 @@ jobs:
 
       - name: pnpm contracts:check
         run: pnpm contracts:check
+
+      # Builds both production images and checks each runs as an unprivileged user and holds no
+      # environment file. Docker is on the runner; Trivy and actionlint run from their images.
+      - name: infra/scripts/images-build.sh
+        run: infra/scripts/images-build.sh
+
+      - name: infra/scripts/lint-workflows.sh
+        run: infra/scripts/lint-workflows.sh
 
       - name: qa/scripts/sdlc selftest
         run: qa/scripts/sdlc selftest

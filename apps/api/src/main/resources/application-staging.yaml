@@ -1,0 +1,38 @@
+# The production-like stack (infra/stack) and the environments deployed from the same files. Every
+# value comes from the stack's environment file (.env.stack.example lists them); nothing here has a
+# default that could let an instance start half-configured. There is no local hook, no seed and no
+# OpenAPI document in this profile: those are the local profile's alone.
+spring:
+  flyway:
+    # Migrations run once per deployment, from the new version, before its first instance starts:
+    # infra/scripts/stack-deploy.sh runs the image with the `migrate` profile as well
+    # (application-migrate.yaml). An instance never migrates, and is never given the owning role's
+    # password.
+    enabled: false
+
+server:
+  # The edge is the only way in. It sets X-Forwarded-For and X-Forwarded-Proto, and they are believed
+  # only from an address on the edge's network (a CIDR range); from anywhere else they are ignored.
+  forward-headers-strategy: native
+  tomcat:
+    remoteip:
+      internal-proxies: ${SALON_TRUSTED_PROXIES}
+      # Never X-Forwarded-Host (T-5): the salon comes from Host alone, as received. An empty name
+      # turns Tomcat's handling of that header off.
+      host-header: ""
+      port-header: ""
+
+management:
+  opentelemetry:
+    tracing:
+      export:
+        otlp:
+          # The stack's collector, over OTLP/HTTP.
+          endpoint: ${SALON_OTLP_ENDPOINT}/v1/traces
+  otlp:
+    metrics:
+      export:
+        # The meters of the outbox and the jobs (docs/engineering/backend.md), to the same collector.
+        enabled: true
+        url: ${SALON_OTLP_ENDPOINT}/v1/metrics
+        step: 10s

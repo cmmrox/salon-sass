@@ -1,5 +1,7 @@
 import { createApiClient, type ApiClient } from '@salon/api-contracts';
 
+import { currentRequest, traceparentOf } from '@/lib/observability/request-context';
+
 import { fetchForHostname } from './forward-hostname';
 
 /** How long the web app waits for the API before it treats the service as unavailable. */
@@ -20,6 +22,23 @@ export function createServerApiClient(options: { hostname?: string } = {}): ApiC
   }
   return createApiClient({
     baseUrl,
-    fetch: options.hostname === undefined ? undefined : fetchForHostname(options.hostname),
+    fetch: withTraceparent(options.hostname === undefined ? globalThis.fetch : fetchForHostname(options.hostname)),
   });
+}
+
+/**
+ * A `fetch` that sends the W3C `traceparent` of the request being served with every call, so that
+ * the API's log lines and spans for the call share the web app's trace id (NFR-16). Outside a
+ * request it sends none, and the API starts a trace of its own.
+ */
+export function withTraceparent(send: typeof fetch): typeof fetch {
+  return (input, init) => {
+    const context = currentRequest();
+    if (!context) {
+      return send(input, init);
+    }
+    const request = new Request(input, init);
+    request.headers.set('traceparent', traceparentOf(context));
+    return send(request);
+  };
 }
