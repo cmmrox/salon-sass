@@ -29,6 +29,7 @@ Cases waiting for something else. `feature-verify` and `release-prepare` go thro
 
 | Scope | Case | Reason | Unblocked by |
 | --- | --- | --- | --- |
+| F01 | TC-F01-002 | First real-host deployment is outside local F01 proof, explicitly deferred by decision 018; public certificate, remote delivery and provider-dependent monitoring are not certified. | Owner decides D-08 hosting and D-02 platform domain, configures the DNS challenge module and credentials, provides host access, and explicitly requests staging deployment. |
 | F01-S01 | TC-F01-S01-057 | the repository has no GitHub remote, so no pull request can exist and the workflow has never run (the spec's "Done criteria" say so) | the owner creates the GitHub remote |
 
 ## Requirements

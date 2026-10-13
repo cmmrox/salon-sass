@@ -74,8 +74,10 @@ its cost.
 
 ## Environments
 
-Local, created by F01-S01. Staging with synthetic salons and production follow in F01-S05, after
-open decision D-08 (hosting provider and region). See `docs/operations/environments-and-releases.md`.
+Local is created by F01-S01. F01-S05 adds a production-like local stack with synthetic salons and
+a provider-neutral delivery pipeline. The first real staging deployment is optional and waits for
+hosting, domain and access decisions; production is deployed separately when requested. Feature QA
+and GitHub merge do not require either deployment. See `docs/operations/environments-and-releases.md`.
 
 ## Where to read more
 

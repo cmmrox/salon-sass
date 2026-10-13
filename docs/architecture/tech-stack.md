@@ -44,7 +44,11 @@ Set by stage F01-S01. Exact versions are in the build files (`apps/api/pom.xml`,
 | Web lint and tests | ESLint with `eslint-config-next`; Vitest with jsdom and Testing Library | |
 | Request validation | `spring-boot-starter-validation` (Jakarta Bean Validation) | Field errors on problem bodies |
 | Tracing and structured logs | `spring-boot-starter-opentelemetry` (Micrometer Tracing with the OpenTelemetry bridge, W3C propagation, OTLP export when configured); Spring Boot's structured logging in ECS format | Spring Boot 4's own support; no agent and no second logging library |
-| Local web server | `apps/web/scripts/serve.mjs`, wrapping Next.js's request handler | Supports both loopback address families. Production image serving is decided in F01-S05; see `docs/engineering/web.md` and decision 022 |
+| Local web server | `apps/web/scripts/serve.mjs`, wrapping Next.js's request handler | Supports both loopback address families; the container uses Next.js standalone serving (decision 030) |
+| Production images | Multi-stage API JRE image and Next.js standalone Node image, non-root; `infra/scripts/images-build.sh` | Both carry one version and source commit, with no environment files; base versions are pinned in the Dockerfiles |
+| Production-like edge | Caddy, two instances of each app, provider-neutral Docker Compose | Bare and wildcard TLS, readiness checks and draining replacements; local and real-host settings in `.env.stack.example` (decision 030) |
+| Telemetry collector | OpenTelemetry Collector Contrib, OTLP/HTTP, file exports | Local spans and meters in `.stack/telemetry`; image pinned in `infra/stack/compose.yaml` |
+| Image and workflow gates | Trivy and actionlint from official containers | Fail on fixable HIGH/CRITICAL vulnerabilities or workflow problems; pins in `infra/scripts/lib/stack.sh`, no host installation required |
 | TypeScript | The newest major that both `openapi-typescript` and `typescript-eslint` support | |
 | Node.js and pnpm | Node.js pinned in `.nvmrc`; pnpm pinned by `packageManager` and run through Corepack | A pnpm of another version stops with an error (`pmOnFail: error`) rather than rewrite the lock file; the scripts refuse to run without Corepack |
 
