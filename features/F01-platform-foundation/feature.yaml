@@ -18,3 +18,10 @@ verification:
 evidence:
   last_run: null
   last_result: null
+
+integration:
+  branch: charithm/feature/F01-platform-foundation
+  pull_request: null
+  qa_revision: null
+  merged_commit: null
+  merged_at: null
