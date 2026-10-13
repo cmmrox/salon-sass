@@ -155,6 +155,10 @@ refresh cookies are separate, HttpOnly, SameSite=Lax, Path=/, Secure outside loc
 alone omits Secure (CR-005); use no Domain cookie. Tokens are returned to the BFF only, never in
 HTML, client JSON, URLs, JavaScript-readable storage or client components. Public API bearer
 responses remain available to future mobile clients.
+Authenticator enrollment alone may transiently show its setup secret and `otpauth` instructions
+after correct password or authenticated enrollment authority. Never put those instructions in a
+browser navigation link or persistent storage; this exception does not expose session tokens or
+the challenge credential to client components.
 
 Every BFF mutation requires an exact trusted Origin matching this hostname/port and rejects
 cross-site Fetch Metadata, including unauthenticated sign-in (login CSRF). Do not trust arbitrary

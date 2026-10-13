@@ -117,6 +117,13 @@ shared helper, never by typing a password into a test.
 | NFR-04 | The design holds at 2,000 salons, 20 staff each at the top end, 5 million bookings a year |
 | NFR-12 | WCAG 2.2 level AA on customer surfaces and the workspace |
 
+F02's local read baseline uses the three synthetic salons, five staff roles, 50 synthetic customers
+and 100 audit entries per salon, with ten concurrent users. One scenario exercises authenticated
+current-principal, own-device, permitted staff/audit and own-profile reads, recording p95 separately
+for each read against NFR-03's 300 ms target. Password hashing, code delivery and other mutations
+are outside that read target. This bounded baseline is local feature evidence, not certification
+of NFR-04's production scale. QA creates synthetic fixtures through local hooks or public APIs.
+
 ## Platforms
 
 - **Web:** the booking site is the only customer surface during milestone `M1-web`, so every
