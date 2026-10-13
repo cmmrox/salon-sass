@@ -138,6 +138,24 @@
     "initialPassword": "Initial password",
     "permissions": "Your permissions",
     "created": "Created {time}",
-    "updated": "Updated {time}"
+    "updated": "Updated {time}",
+    "permissionLabels": {
+      "session_manage": "Manage your signed-in devices",
+      "password_change": "Change your password",
+      "mfa_enroll": "Set up authenticator verification",
+      "staff_list": "View staff access",
+      "staff_manage": "Manage staff access",
+      "audit_list": "View the activity log",
+      "payment_refund": "Refund payments",
+      "catalogue_price_change": "Change prices",
+      "policy_change": "Change salon policies",
+      "customer_export": "Export customer records",
+      "calendar_read": "View the calendar",
+      "customer_read": "View customer records",
+      "financial_read": "View financial reports",
+      "profile_manage": "Manage your profile",
+      "data_export": "Download your personal data",
+      "account_delete": "Delete your account"
+    }
   }
 }

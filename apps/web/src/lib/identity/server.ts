@@ -1,6 +1,4 @@
 import { createHmac } from 'node:crypto';
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import type { components } from '@salon/api-contracts';
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerApiClient, requestSignal } from '@/lib/api/client';
@@ -28,11 +26,7 @@ export function csrf(request: NextRequest): boolean {
   return Boolean(host && request.headers.get('origin') === host.origin && request.headers.get('sec-fetch-site') !== 'cross-site');
 }
 export function proxyKey(): Buffer {
-  let value = process.env.SALON_IDENTITY_PROXY_KEY;
-  if (!value && localHttp()) {
-    const file = process.env.SALON_IDENTITY_LOCAL_KEY_FILE ?? resolve(process.cwd(), '../../.local/identity-keys.properties');
-    value = /^proxy=([a-fA-F0-9]{64})$/m.exec(readFileSync(/* turbopackIgnore: true */ file, 'utf8'))?.[1];
-  }
+  const value = process.env.SALON_IDENTITY_PROXY_KEY;
   if (!value || !/^[a-fA-F0-9]{64}$/.test(value)) throw new Error('Configure SALON_IDENTITY_PROXY_KEY');
   return Buffer.from(value, 'hex');
 }
