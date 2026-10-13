@@ -4,7 +4,7 @@ title: Customer one-time-code sign-in and abuse prevention
 sequence: 2
 surfaces:
 - api
-status: built
+status: complete
 qa_status: not-run
 blocked_reason: null
 released_in: null
