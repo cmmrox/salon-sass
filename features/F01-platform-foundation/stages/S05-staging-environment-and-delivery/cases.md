@@ -148,3 +148,7 @@ Environment: local only; the synthetic alpha, beta and gamma salons of docs/qa/t
 - **Expected:** Valid workflow, build/scan after successful main CI only; dispatch+staging deploy; guard fails naming each absent secret.
 - **Automation:** `qa/checks/F01/S05-stack.sh`
 
+
+## Deployment fixture provenance
+
+TC-F01-S05-008 uses N and N+1 images built by `infra/scripts/images-build.sh` from the tested revision. `qa/checks/F01/S05-fixture-build.sh` adds only the QA-owned `V8__qa_rollout_probe.sql` to the next API image's jar. It compares every original jar entry byte-for-byte and asserts exactly one new resource. No application source or migration is edited. The fixture creates only a synthetic platform table/marker; rollout must apply V8 while old instances serve, and rollback must retain that migration and marker. The original next product image stays tagged `-product`; fixture images are local only and must never be published.
