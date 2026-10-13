@@ -125,6 +125,10 @@ one code creates at most one customer and one session. Counter rows survive proc
 Defaults: at most three requests per number in 15 minutes, ten per device in 15 minutes, twenty
 per trusted address in 15 minutes, and 1,000 per salon per UTC day. Reject excess with 429 and
 `Retry-After` before enqueueing. All dimensions are updated atomically, including concurrent calls.
+These counters count accepted send requests only. Check all four dimensions before inserting or
+incrementing any counter; a denied request writes its safe security audit but creates no empty
+counter row or chargeable outbox work. `Retry-After` is the positive ceiling of the longest remaining
+blocked window, including the time until UTC midnight for the daily ceiling.
 At 80% of the salon ceiling, write one secret-free `identity.code_volume_alert` audit entry per
 UTC day and increment a tenant-tagged security meter, visible to the Owner through audit. This is
 the local unusual-volume alert; real outbound operational notification awaits a provider decision.
@@ -136,6 +140,12 @@ failure/delay, and never send a real message. Outside `local`, an unconfigured a
 delivery and returns a clear service-unavailable response rather than pretending to send. Provider
 failures retry through the outbox; an expired challenge is not delivered. No raw number, password,
 code, secret, cookie, refresh credential or JWT appears in logs, public errors or audit values.
+Outbox cancellation is an explicit `CANCELLED` outcome. The shared `Outbox.cancel(id, instant)`
+facade joins the caller's writable tenant transaction, clears pending/sending/dead work and its
+lease, and conditional finalization cannot resurrect it. Sent or already-cancelled work stays
+unchanged. Resend, consumption and provider-expiry cancellation record `identity.code_cancelled`
+when a row changed; scheduled expiry cleanup and synthetic fixture reset do not add a duplicate
+identity action. The local provider rechecks a challenge after delay and before capture.
 
 ## Profile and privacy
 
@@ -239,3 +249,19 @@ and audit calls additionally support a verified signed tenant on the bare API ad
 Staff creation answers 201 and staff/session deletion answers 204; generated success-response
 statuses must match these actual HTTP outcomes. Nullable/omitted challenge and customer-principal
 fields must likewise match the generated schema rather than relying on client casts.
+
+## Implemented customer sign-in contract
+
+`POST /api/v1/identity/customers/challenges` takes mobile, `sms` or `whatsapp` channel and
+deviceLabel, answering 200 `{challengeId,expiresAt}` only. A new verified device receives
+`salon_device`: a random HMAC-authenticated, salon-bound host-only cookie, HttpOnly, SameSite=Lax,
+Path=/, Max-Age 31536000, Secure outside local HTTP. A malformed, duplicate or foreign-salon cookie
+does not identify a verified device. `POST /customers/sign-in` takes challengeId/code and the
+issuing cookie, answering the same token structure as staff. Both routes require the salon host.
+Customer principal role/staffId are nullable and scope is `own`; sessions remain kind-separated.
+
+Code limit settings are positive integers under `salon.identity.codes`, supplied by
+`SALON_IDENTITY_CODE_NUMBER_LIMIT`, `SALON_IDENTITY_CODE_DEVICE_LIMIT`,
+`SALON_IDENTITY_CODE_ADDRESS_LIMIT` and `SALON_IDENTITY_CODE_DAILY_LIMIT` (3/10/20/1000 defaults).
+Nonlocal customer challenge requests return 503 `provider_unavailable` until a real sender is
+configured; local captures certify the API/delivery behavior, not live SMS or WhatsApp activation.

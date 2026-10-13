@@ -113,6 +113,18 @@ shared helper, never by typing a password into a test.
   credentials/TOTP seeds stay in ignored environment or `.local` files with mode `0600`. Current
   developer fixtures are `.local/f02-staff-fixtures.json`; never print or commit their contents.
 - **Payments:** the PayHere sandbox only.
+- **Customer code capture** (F02-S02), on the issuing salon Host: poll
+  `GET /local/identity/captures/{challengeId}` until 200; 404 means it has not captured a live code.
+  The capture contains `{challengeId,channel,code,attempt,deliveredAt}`, no phone. Read
+  `GET /local/identity/deliveries/{challengeId}` for safe outbox status/attempt/error/timing metadata;
+  states are `PENDING`, `SENDING`, `SENT`, `CANCELLED`, `DEAD`.
+  `PUT /local/identity/providers/{sms|whatsapp}` takes `{failures:0..50,delayMs:0..60000}` and returns
+  204, controlling subsequent attempts for that salon/channel. `DELETE /local/identity/customers`
+  resets mutable customer/challenge/session/history/rate fixtures and captures/provider controls,
+  preserving staff and immutable audit. All hooks are local-only, loopback-only, tenant-bound and
+  contract-excluded; resets accept only alpha/beta/gamma. Audit is not empty after reset, so isolate
+  a run/day or assert against a baseline. Code limits may be explicitly configured for a focused
+  local daily-ceiling test; restore 3/10/20/1000 defaults afterwards and report overrides as such.
 - What a test may never touch is in `docs/operations/environments-and-releases.md`.
 
 ## Targets from the requirements

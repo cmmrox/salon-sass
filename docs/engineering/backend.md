@@ -209,6 +209,12 @@ and `application`, never in a controller, a repository or a mapper.
   30 s and doubles to 1 h; after 10 attempts the message is `dead` with its last error. A delivery
   interrupted by a stop is attempted again when its lease (60 s) runs out. A suspended salon's
   messages wait, unattempted, until it is active again.
+- Identity code work may end `cancelled` on resend, consumption or expiry. `Outbox.cancel` joins
+  a writable tenant transaction and clears its lease; conditional result writes cannot turn it
+  back into sending/sent. A provider `OutboxCancelled` outcome does not count as a provider failure.
+  Ordinary delivery failures retain the existing retry/breaker behavior. Cancellation does not
+  erase payloads by itself; a privacy-erasure operation must use a shared outbox facade to remove
+  identifying payloads as well.
 - **Every provider call** has a time limit (10 s), a limit on calls at once per channel (4), and a
   circuit breaker per channel that opens after 5 consecutive failures and waits 60 s. While it is
   open, the channel's messages wait without using up attempts.
