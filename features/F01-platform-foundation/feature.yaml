@@ -47,7 +47,7 @@ evidence:
 
 integration:
   branch: charithm/feature/F01-platform-foundation
-  pull_request: null
+  pull_request: https://github.com/cmmrox/salon-sass/pull/3
   qa_revision: 771c56b89f192deec47ab3d4f68f04a7dbcbf6ce
   merged_commit: null
   merged_at: null

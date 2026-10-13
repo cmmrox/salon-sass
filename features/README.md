@@ -8,7 +8,7 @@ requirement detail is in `qa/coverage.md`.
 
 | ID | Feature | Milestone | Status | GitHub merge | Stages done | Requirements | Next |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| F01 | [Platform foundation and tenant isolation](F01-platform-foundation/) | M1-web | complete | - | 5/5 | 2 | **lead**: `feature-submit F01` |
+| F01 | [Platform foundation and tenant isolation](F01-platform-foundation/) | M1-web | complete | awaiting owner | 5/5 | 2 | **lead**: `merge-sync F01 (after owner merges the PR)` |
 | F02 | [Sign-in, accounts and roles](F02-sign-in-accounts-and-roles/) | M1-web | backlog | - | - | 10 | after F01 |
 | F03 | [Operator console: salons, plans and billing](F03-operator-console/) | M1-web | backlog | - | - | 5 | after F02 |
 | F04 | [Salon setup: profile, branding, hours and policies](F04-salon-setup/) | M1-web | backlog | - | - | 6 | after F02 |
