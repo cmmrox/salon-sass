@@ -94,8 +94,17 @@ Three consequences of how the framework works, which every later stage follows:
 - **A session with no salon uses the nil UUID.** Hibernate refuses a session with no tenant once an
   entity carries `@TenantId`, so the resolver answers `00000000-0000-0000-0000-000000000000`, which
   the database refuses as a tenant's id. It can therefore match no row.
-- **The application reads the registry only through `tenant_by_slug(text)`**, a `SECURITY DEFINER`
-  function that returns a slug's id and status. It has no grant on `tenant`. `TenantContext`
+- **The application reads the registry only through `SECURITY DEFINER` functions.** It has no grant
+  on `tenant` or on any other platform table. `tenant_by_slug(text)` returns a slug's id, status and
+  time zone; `tenant_by_id` the same for an id; `active_tenant_ids` the ids of active salons, for
+  jobs. The outbox reaches across salons only through `outbox_due` and `outbox_backlog`, which
+  return ids and counts and nothing of a message, and the scheduler only through `job_claim` and
+  `job_finish`.
+- **Row-level security is forced, so it holds for the owning role too**, which is not a superuser
+  outside a developer's machine. A `SECURITY DEFINER` function that must see several salons' rows
+  (`outbox_due`, `outbox_backlog`) sets each active salon in turn inside the function, and puts the
+  caller's `app.tenant_id` back before it returns. A `SET` clause on the function cannot be used:
+  only a superuser may attach one for a custom setting. `TenantContext`
   tells "no such salon" (404 `not_found`) from "suspended" (403 `salon_suspended`).
 
 ## Adding a table
@@ -125,13 +134,18 @@ A job iterates tenants explicitly and opens one transaction per tenant with that
 that needs every salon's data in one query is a platform job: it runs under the platform role,
 touches platform tables only, and is reviewed as such.
 
+The scheduler and the outbox dispatcher in `shared` already do this (`docs/engineering/backend.md`).
+A new job declares itself to the scheduler and receives one salon at a time; it never queries
+across salons. A suspended salon's jobs are skipped and its messages wait.
+
 ## Caches, files, search and logs
 
 - A cache key starts with the tenant id. So does anything cached at the edge.
 - An object-storage path starts with the tenant's prefix. A signed URL is issued only after the
   tenant check.
-- Every log line, trace and error report carries the tenant id (NFR-16). No personal data, one-time
-  code, token or payment detail is logged.
+- Every log line, trace and error report carries the tenant id (NFR-16) as `tenant.id`, whenever a
+  salon is bound. No personal data, one-time code, token or payment detail is logged. How the API
+  does it is in `docs/engineering/backend.md`, "Logs, traces and meters".
 
 ## Platform data and operator access
 
