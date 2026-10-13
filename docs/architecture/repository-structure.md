@@ -32,6 +32,20 @@ verified, it is verified again (`release-cut` checks this):
 apps packages infra package.json pnpm-workspace.yaml pnpm-lock.yaml docs/api qa/web qa/api qa/mobile qa/load qa/checks qa/shared
 ```
 
+## What feature QA certifies
+
+Feature QA records `integration.qa_revision`, a full commit SHA. Its certified product, automation
+and pipeline paths are:
+
+```
+apps packages infra .github package.json pnpm-workspace.yaml pnpm-lock.yaml docs/api qa/web qa/api qa/mobile qa/load qa/checks qa/shared qa/scripts qa/package.json qa/pnpm-lock.yaml qa/playwright.config.ts qa/tsconfig.json
+```
+
+`qa/scripts/sdlc pr-check` and the live merge gate refuse changes in these paths after that
+revision, and also check the feature's `cases.md` and each stage's `spec.md` and `cases.md`.
+Feature/QA metadata and documentation commits may follow. The tooling's
+`schema.FEATURE_QA_PATHS` is the machine-readable counterpart of this list.
+
 ## Inside the applications
 
 - `apps/api`: the module list and the layout inside a module are in `docs/engineering/backend.md`.

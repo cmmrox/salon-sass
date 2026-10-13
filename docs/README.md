@@ -20,6 +20,7 @@ it is about this product it is in this folder, and nowhere else.
 | Test a feature | `qa/test-plan.md`, `qa/test-types.md`, `qa/automation.md` |
 | Review how usable something is | `qa/review-context.md` |
 | Touch anything that is not local, or prepare a release | `operations/environments-and-releases.md` |
+| Push, open a feature PR, confirm a merge, start the next feature or clean up branches/worktrees | `operations/git-delivery.md` |
 
 A stage's `spec.md` has a "Read first" section naming the documents for that stage. Read those in
 full before starting; this table is for everything the spec did not anticipate.
@@ -46,6 +47,7 @@ full before starting; this table is for everything the spec did not anticipate.
 | `qa/automation.md` | Conventions for the Playwright, Maestro and k6 automation |
 | `qa/review-context.md` | Who uses the product, what matters to them, and the products it is compared with |
 | `operations/environments-and-releases.md` | The environments, what a test may and may not touch, and the rules this product imposes on a release |
+| `operations/git-delivery.md` | GitHub repository and authorisation, feature PR/merge records, cleanup evidence, and the existing-history transition |
 | `operations/skill-evaluation.md` | The requests used to check that the skills and these documents lead an agent to the right behaviour |
 | `decisions/DECISION_LOG.md` | Decisions taken, one entry each |
 | `changes/README.md` | Change requests: how a requirement changes after the baseline |
