@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
-# Stops the production-like stack and removes its containers and networks. Its data is kept (the
-# database, the edge's certificates and authority) unless --delete-data is given, which removes the
-# stack's volumes too, so that the next stack-up.sh starts from an empty database.
+# Stops the production-like stack and removes its containers and networks. Its data is kept unless
+# --delete-data is given, which removes the stack's volumes too, so the next start is empty.
 #
 # Usage: infra/scripts/stack-down.sh [--delete-data]
 #
@@ -18,6 +17,7 @@ esac
 
 require_docker
 require_env_file
+load_stack_settings
 acquire_stack_lock
 
 if [ ! -f "$STACK_DEPLOYED" ]; then
@@ -30,7 +30,7 @@ args=(--profile migrate down --remove-orphans --timeout 45)
 stack_compose "${args[@]}"
 
 if [ "$delete_data" -eq 1 ]; then
-  rm -f "$STACK_DEPLOYED" "$STACK_ROOT_CERT"
+  rm -f "$STACK_DEPLOYED"
   rm -rf "$STACK_TELEMETRY_DIR"
   say "stack: stopped, and its data deleted"
 else

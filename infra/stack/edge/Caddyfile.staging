@@ -1,0 +1,59 @@
+# Public staging edge only. Local development uses Caddyfile and never starts this configuration.
+{
+	admin localhost:2019
+	servers {
+		protocols h1 h2
+	}
+}
+
+(certificates-acme-dns) {
+	tls {$SALON_EDGE_ACME_EMAIL} {
+		dns {$SALON_EDGE_DNS_PROVIDER} {$SALON_EDGE_DNS_CREDENTIALS}
+	}
+}
+
+(instances) {
+	lb_policy round_robin
+	lb_retries 2
+	lb_try_duration 5s
+	lb_try_interval 100ms
+	fail_duration 10s
+	health_uri {args[0]}
+	health_interval 1s
+	health_timeout 2s
+	health_fails 1
+	health_passes 1
+	header_up -X-Forwarded-Host
+	transport http {
+		dial_timeout 2s
+	}
+}
+
+{$SALON_PLATFORM_DOMAIN}, *.{$SALON_PLATFORM_DOMAIN} {
+	import certificates-acme-dns
+	header Strict-Transport-Security "max-age=31536000; includeSubDomains"
+	header -Server
+	@api path /api /api/* /actuator /actuator/* /local /local/*
+	handle @api {
+		reverse_proxy api-1:8080 api-2:8080 {
+			import instances /actuator/health/readiness
+		}
+	}
+	handle {
+		reverse_proxy web-1:3000 web-2:3000 {
+			import instances /healthz
+		}
+	}
+}
+
+http://{$SALON_PLATFORM_DOMAIN}, http://*.{$SALON_PLATFORM_DOMAIN} {
+	header -Server
+	redir https://{host}{uri} 308
+}
+
+http://:8080 {
+	header -Server
+	reverse_proxy api-1:8080 api-2:8080 {
+		import instances /actuator/health/readiness
+	}
+}

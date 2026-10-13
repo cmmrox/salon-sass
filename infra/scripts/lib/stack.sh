@@ -14,7 +14,6 @@ STACK_STATE_DIR="$ROOT/.stack"
 STACK_DEPLOYED="$STACK_STATE_DIR/deployed.env"
 STACK_LOG_DIR="$STACK_STATE_DIR/logs"
 STACK_TELEMETRY_DIR="$STACK_STATE_DIR/telemetry"
-STACK_ROOT_CERT="$STACK_STATE_DIR/edge-root.crt"
 # The instances a deployment replaces, in the order it replaces them: the API before the web app, so
 # that a new web app never calls an old API.
 STACK_INSTANCES=(api-1 api-2 web-1 web-2)
@@ -78,11 +77,25 @@ load_stack_settings() {
   require_env_file
   SALON_IMAGE_PREFIX="$(file_setting SALON_IMAGE_PREFIX)"
   SALON_PLATFORM_DOMAIN="$(file_setting SALON_PLATFORM_DOMAIN)"
-  SALON_EDGE_HTTPS_PORT="$(file_setting SALON_EDGE_HTTPS_PORT)"
+  SALON_STACK_ENV="$(file_setting SALON_STACK_ENV)"
+  SALON_STACK_ENV="${SALON_STACK_ENV:-local}"
+  case "$SALON_STACK_ENV" in
+    local) STACK_EDGE_SERVICE="edge-http" ;;
+    staging) STACK_EDGE_SERVICE="edge-staging" ;;
+    *) fail "SALON_STACK_ENV must be local or staging (found '$SALON_STACK_ENV')." ;;
+  esac
   SALON_EDGE_HTTP_PORT="$(file_setting SALON_EDGE_HTTP_PORT)"
   SALON_EDGE_PUBLISH_ADDRESS="$(file_setting SALON_EDGE_PUBLISH_ADDRESS)"
-  SALON_EDGE_CERTIFICATES="$(file_setting SALON_EDGE_CERTIFICATES)"
   mkdir -p "$STACK_STATE_DIR" "$STACK_LOG_DIR"
+}
+
+stack_public_url() {
+  local host="$1"
+  if [ "$SALON_STACK_ENV" = "staging" ]; then
+    printf 'https://%s' "$host"
+  else
+    printf 'http://%s:%s' "$host" "$SALON_EDGE_HTTP_PORT"
+  fi
 }
 
 # Docker Compose for the stack, with the stack's environment file and the versions deployed, and an
@@ -99,7 +112,7 @@ stack_compose() {
     pass+=("$1")
     shift
   done
-  local -a files=(--env-file "$STACK_ENV_FILE")
+  local -a files=(--profile "$SALON_STACK_ENV" --env-file "$STACK_ENV_FILE")
   [ -f "$STACK_DEPLOYED" ] && files+=(--env-file "$STACK_DEPLOYED")
   env -i "${pass[@]}" docker compose -p "$STACK_PROJECT" -f "$STACK_COMPOSE_FILE" "${files[@]}" "$@"
 }
@@ -113,6 +126,13 @@ require_settings() {
     printf 'error: the stack cannot start: %s\n' "$(printf '%s\n' "$problem" | sed 's/^error while interpolating [^:]*: //' | awk '!seen[$0]++')" >&2
     printf 'Nothing was started. Every setting is described in .env.stack.example.\n' >&2
     exit 1
+  fi
+  if [ "$SALON_STACK_ENV" = "staging" ]; then
+    local setting
+    for setting in SALON_EDGE_ACME_EMAIL SALON_EDGE_DNS_PROVIDER SALON_EDGE_DNS_CREDENTIALS; do
+      [ -n "$(file_setting "$setting")" ] || fail "the staging edge requires $setting in .env.stack. Nothing was started."
+    done
+    [ -n "$(file_setting SALON_EDGE_IMAGE)" ] || fail "the staging edge requires SALON_EDGE_IMAGE with the selected DNS provider module in .env.stack. Nothing was started."
   fi
 }
 
