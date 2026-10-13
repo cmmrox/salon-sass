@@ -38,7 +38,7 @@ Feature QA records `integration.qa_revision`, a full commit SHA. Its certified p
 and pipeline paths are:
 
 ```
-apps packages infra .github package.json pnpm-workspace.yaml pnpm-lock.yaml docs/api qa/web qa/api qa/mobile qa/load qa/checks qa/shared qa/scripts qa/package.json qa/pnpm-lock.yaml qa/playwright.config.ts qa/tsconfig.json
+apps packages infra .github package.json pnpm-workspace.yaml pnpm-lock.yaml .nvmrc .sdkmanrc docs/api qa/web qa/api qa/mobile qa/load qa/checks qa/shared qa/scripts qa/package.json qa/pnpm-lock.yaml qa/playwright.config.ts qa/tsconfig.json
 ```
 
 `qa/scripts/sdlc pr-check` and the live merge gate refuse changes in these paths after that

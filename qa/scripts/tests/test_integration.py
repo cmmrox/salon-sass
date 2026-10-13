@@ -262,6 +262,33 @@ class GitCleanupTest(unittest.TestCase):
         self.assertTrue(self.worktree.exists())
         self.git("rev-parse", "--verify", f"refs/heads/{self.branch}")
 
+    def test_toolchain_pin_changes_require_feature_qa_again(self):
+        for name, value in ((".nvmrc", "26\n"), (".sdkmanrc", "java=26-open\n")):
+            with self.subTest(pin=name):
+                scope = fx.feature(integration={"qa_revision": self.git("rev-parse", "HEAD")})
+                Path(name).write_text(value)
+                self.git("add", name)
+                self.git("commit", "-m", "build: change runtime pin after QA")
+                with self.assertRaisesRegex(integration.Refusal, "changed since feature QA"):
+                    integration.qa_unchanged(scope, "HEAD")
+
+    def test_report_updated_after_archive_keeps_the_worktree(self):
+        report = self.worktree / "qa/reports/run-1/summary.json"
+        report.parent.mkdir(parents=True)
+        report.write_text("original evidence")
+        real_archive = integration.archive_evidence
+
+        def archive_then_update(record, archive):
+            saved = real_archive(record, archive)
+            report.write_text("newer evidence")
+            return saved
+
+        with patch.object(integration, "archive_evidence", side_effect=archive_then_update):
+            with self.assertRaisesRegex(integration.Refusal, "evidence changed after archival"):
+                integration.cleanup([self.branch], apply=True)
+        self.assertTrue(self.worktree.exists())
+        self.assertEqual(report.read_text(), "newer evidence")
+
     def test_report_written_after_archive_keeps_the_worktree(self):
         real_archive = integration.archive_evidence
 

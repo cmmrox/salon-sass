@@ -56,7 +56,7 @@ PR_URL_RE = re.compile(r"^https://github\.com/([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)/
 # automation or delivery pipeline. Keep this list aligned with repository-structure.md.
 FEATURE_QA_PATHS = (
     "apps", "packages", "infra", ".github", "package.json", "pnpm-workspace.yaml",
-    "pnpm-lock.yaml", "docs/api", "qa/web", "qa/api", "qa/mobile", "qa/load",
+    "pnpm-lock.yaml", ".nvmrc", ".sdkmanrc", "docs/api", "qa/web", "qa/api", "qa/mobile", "qa/load",
     "qa/checks", "qa/shared", "qa/scripts", "qa/package.json", "qa/pnpm-lock.yaml",
     "qa/playwright.config.ts", "qa/tsconfig.json",
 )
