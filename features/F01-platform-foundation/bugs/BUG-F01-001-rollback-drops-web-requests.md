@@ -2,14 +2,14 @@
 id: BUG-F01-001
 title: Rolling rollback briefly removes every web upstream and returns 503
 severity: major
-status: fixed
+status: verified
 found_by: TC-F01-S05-008
 breaks: AC-8
 found_on: 2026-10-13
 fixed_in: 24006d5303302e006317c3ccedf6af3f7b4734f8
 fix_note: Caddy now requires three consecutive failed active health checks before removing a backend; a pinned-image regression test verifies recovery after one transient failure.
 developer_note: null
-verified_on: null
+verified_on: 2026-10-13
 approved_by: null
 found_in_release: null
 ---
@@ -63,5 +63,8 @@ in one recorded rollback, with 36 independently failed page requests. No blind r
 
 ## Re-verification
 
-Pending developer fix. First repeat the existing deployment/rollback case with the same
-50 VUs and zero-error thresholds, then the full F01 run. Keep the failure evidence above.
+Verified on 2026-10-13 against revision 771c56b89f192deec47ab3d4f68f04a7dbcbf6ce.
+Independent focused rollout, rollback and instance-loss traffic passed unchanged zero-error and
+tenant thresholds. Full F01 run qa/reports/20261013-152705-F01 passed all 32 registered entries.
+Its 50-VU rollout had 38,202 requests, rollback 44,241, and instance loss 7,154; every scenario
+had zero HTTP failures and zero cross-tenant responses. Original failure evidence is retained.
