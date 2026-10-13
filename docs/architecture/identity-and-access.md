@@ -156,6 +156,14 @@ verified mobile (read-only), optional valid email, optional nonfuture birthday, 
 updates use optimistic concurrency, returning conflict for a stale version. Customers cannot name
 another customer in profile, export or deletion requests. Staff credentials are refused here.
 
+New profile defaults are language `en`, operational channel preferences
+`{sms:true,whatsapp:true,email:true}` and marketing consent `false`; email and birthday are null.
+Enabling a channel preference neither supplies an address nor grants marketing consent. Updates
+send the full mutable representation and version, with every channel preference and marketing
+consent required; omitted or null optional email/birthday clears it. Trim names and trim/lowercase
+email. Reject unknown update fields, including mobile and account/tenant selectors. Customer rights
+use `profile.manage`, `data.export` and `account.delete`, alongside `session.manage`.
+
 Export is a JSON download of the current customer's profile, preferences and signed-in-device
 metadata with a generated time; allowlist fields, never include credentials, other customers or
 audit internals. The synchronous export is the data-copy request at this feature's size. Later
@@ -171,6 +179,8 @@ Retain hashed anti-abuse number/device/address counters until their ordinary win
 deletion and re-registration do not reset code ceilings. Deletion cancels queued deliveries and
 clears local captures. A delivery already in flight rechecks challenge existence before capture
 or delivery completion and cannot recreate deleted identity, challenge or message state.
+Retain the `salon_device` rate-tracking cookie after deletion. It grants no account authority;
+all signed-in-device session credentials are revoked and a fresh code is needed to register again.
 
 ## Browser boundary
 
@@ -194,6 +204,16 @@ never retry a spent refresh credential or restore a family from a delayed respon
 Redirect targets are fixed same-origin paths; errors keep useful form values except credentials.
 Auth failures redirect a protected page to its own sign-in; authorization failures show a friendly
 denial. Customer screens use salon branding and staff screens the neutral platform theme.
+
+Per-kind HttpOnly expiry metadata comes from issued `accessExpiresAt`. Compare it with strictly
+validated API `meta.time` to decide whether missing/expired access with a refresh credential is
+eligible for one renewal. A 401 with future expiry clears that kind without renewal; expiry
+metadata never authorizes access. Origin scheme is `http` only with the explicit local HTTP
+setting and `https` otherwise, matching validated Host and port exactly. Do not derive it from
+forwarded headers or `nextUrl`. BFF export uses a CSRF-checked POST because its underlying API GET
+records a rights audit. If Web Locks are unavailable, show a translated browser-support message
+and block credential-changing actions, including sign-in, sign-out, renewal, password/session
+changes and deletion. Profile reads/updates and exports remain available when already authenticated.
 
 The BFF namespace is `/identity-web/*`; the edge routes `/api/*` directly to Java. Address limits
 must reflect the browser connection without trusting browser forwarding headers. Node request
