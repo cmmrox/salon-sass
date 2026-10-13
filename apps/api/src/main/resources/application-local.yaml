@@ -18,6 +18,8 @@ salon:
     # This machine only (CR-002). SALON_LISTEN_ON_NETWORK=true opens the ports to the network, for
     # testing from a phone on the same network.
     listen-on-network: ${SALON_LISTEN_ON_NETWORK:false}
+    # Nothing routes traffic to the local API by its readiness, so it stops at once.
+    drain-delay: 0s
 
 management:
   endpoints:
