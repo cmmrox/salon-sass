@@ -9,7 +9,7 @@ product imposes on a release. The release procedure itself (prepare, verify, cut
 | Environment | State | Who may touch it |
 | --- | --- | --- |
 | Local | Created by stage F01-S01. The default for every build, test, QA run and bug fix | Any role |
-| Local production-like stack | F01-S05's container images, TLS edge and two instances of each app, on this machine | Any role |
+| Local production-like stack | F01-S05's container images, HTTP edge and two instances of each app, on this machine | Any role |
 | Staging | Real host not created yet; uses F01-S05's stack files. Holds synthetic salons only | QA, when the owner's current message names staging |
 | Production | Not created yet. Hosting provider and region are open decision D-08 in the BRD | The lead, when the owner's current message names production |
 
@@ -87,7 +87,9 @@ Created by stage F01-S01. Everything runs on the host except PostgreSQL, which r
 
 ## The local production-like stack
 
-F01-S05 provides `infra/stack/compose.yaml`, independent of `salon-local`. Copy
+F01-S05 provides `infra/stack/compose.yaml`, independent of `salon-local`. The local stack serves
+HTTP only; it does not create certificates, redirect to HTTPS or test TLS. Staging keeps public TLS
+in its staging edge configuration. Copy
 `.env.stack.example` to the ignored `.env.stack` and fill in its required secrets. Stack scripts
 read that file, rather than shell overrides; missing settings or images cause a named refusal
 before services start. The `staging` Spring profile here describes container behaviour; running
@@ -97,25 +99,23 @@ it locally does not create or certify a real staging environment.
 | --- | --- |
 | `infra/scripts/images-build.sh [version]` | Builds non-root API and web images, tagged with the version and source commit; verifies labels and absence of environment files |
 | `infra/scripts/images-scan.sh [image ...]` | Scans the two current-version images by default; fails on HIGH or CRITICAL vulnerabilities with a fix |
-| `infra/scripts/stack-up.sh` | Provisions the two database roles, runs migrations once, then starts the collector, two API and two web instances and the TLS edge; waits for readiness |
+| `infra/scripts/stack-up.sh` | Provisions the two database roles, runs migrations once, then starts the collector, two API and two web instances and the HTTP edge; waits for readiness |
 | `infra/scripts/stack-seed.sh` | Explicitly creates alpha, beta and gamma without duplicates; no salon is seeded by stack startup |
 | `infra/scripts/stack-seed.sh add <slug> [name] [colour]` | Adds a synthetic salon while the stack runs |
 | `infra/scripts/stack-deploy.sh <version>` | Checks both images first, migrates once, then drains and replaces one instance at a time; deploying the preceding version rolls back application images while retaining newer migrations |
-| `infra/scripts/stack-down.sh` | Stops the `salon-stack` containers and networks, retaining data and certificates; `--delete-data` explicitly removes this stack's volumes and telemetry |
+| `infra/scripts/stack-down.sh` | Stops the `salon-stack` containers and networks, retaining data; `--delete-data` explicitly removes this stack's volumes and telemetry |
 | `infra/scripts/lint-workflows.sh` | Checks Actions workflows with actionlint and rejects third-party actions without a full commit pin |
 
-Default addresses are `https://stack.localhost:8443/` for status,
-`https://alpha.stack.localhost:8443/` (also beta and gamma) for salons, and
-`https://alpha.stack.localhost:8443/api/v1/salon` for the API. HTTP on port 8089 redirects to HTTPS,
-preserving path and query. Only the edge publishes host ports, on `127.0.0.1` by default; the
-database, apps and collector stay on Docker networks. TLS covers the bare and wildcard domains,
-and every HTTPS response carries HSTS. Local certificates come from the edge's own authority;
-tests trust `.stack/edge-root.crt`, for example with `curl --cacert`, rather than disabling TLS
-verification. Public DNS-challenge certificates require the chosen domain, DNS provider module
-and credentials and are deferred until an explicitly requested real deployment.
+Default addresses are `http://stack.localhost:8089/` for status,
+`http://alpha.stack.localhost:8089/` (also beta and gamma) for salons, and
+`http://alpha.stack.localhost:8089/api/v1/salon` for the API. Only the edge publishes a host port,
+on `127.0.0.1` by default; the database, apps and collector stay on Docker networks. Local
+development and QA make no TLS, certificate, HTTPS redirect or HSTS assertion. The staging edge
+configuration uses public DNS-challenge certificates; certificate issuance, HTTPS, redirects and
+HSTS are tested only after the owner requests deployment to the VPS staging environment.
 
-Container and network names carry `salon-stack`; volumes are `salon-stack-postgres-data`,
-`salon-stack-edge-data` and `salon-stack-edge-config`. This stack never shares the local database.
+Container and network names carry `salon-stack`; its persistent data volume is
+`salon-stack-postgres-data`. This stack never shares the local database.
 An administrator provisions a non-superuser owning role and an application role that owns no
 table and cannot bypass RLS. Only the migration container receives the owning role's password;
 API instances receive the application role's credentials. The stack profile exposes no local
@@ -133,7 +133,8 @@ environment. It requires `STAGING_SSH_HOST`, `STAGING_SSH_USER`, `STAGING_SSH_KE
 `STAGING_SSH_KNOWN_HOSTS` and refuses with their names when missing. Before using it, the host
 administrator supplies `.env.stack`, registry access and an initial stack. Feature QA and a PR
 merge do not run this deployment. The first real host deployment, public TLS and external
-operational checks remain deferred until hosting, domain, access and an owner request exist.
+operational checks remain deferred until hosting, domain, access and an owner request exist. The
+deferred TLS case is `TC-F01-002` in the F01 feature case register.
 
 ## What a test or a developer may use
 
