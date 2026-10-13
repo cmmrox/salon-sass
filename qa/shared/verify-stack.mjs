@@ -1,3 +1,4 @@
+import { ecsRecord } from './ecs-log.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -49,7 +50,7 @@ await one('TC-F01-S05-010','an absent deployment version changes no running inst
 });
 await one('TC-F01-S05-011','web API and collector share tenant-tagged traces with no sensitive log fields',async()=>{
   const trace='abcdef1234567890abcdef1234567890';const marker='qa-secret-query-marker';const r=curl('alpha','/?private='+marker,['-H',`traceparent: 00-${trace}-1234567890abcdef-01`,'-H','Cookie: private='+marker,'-H','Authorization: Bearer '+marker]);assert.equal(r.status,200);
-  const lines=kind=>['1','2'].flatMap(n=>run('sh',['-c','docker logs "$1" 2>&1','qa-log-reader','salon-stack-'+kind+'-'+n]).split('\n').filter(l=>l.startsWith('{')).map(l=>JSON.parse(l))).filter(l=>l['trace.id']===trace);
+  const lines=kind=>['1','2'].flatMap(n=>run('sh',['-c','docker logs "$1" 2>&1','qa-log-reader','salon-stack-'+kind+'-'+n]).split('\n').filter(l=>l.startsWith('{')).map(l=>ecsRecord(JSON.parse(l)))).filter(l=>l['trace.id']===trace);
   const web=lines('web');assert.equal(web.length,1);assert.equal(web[0]['tenant.slug'],'alpha');assert(!JSON.stringify(web).includes(marker));const api=lines('api');assert(api.length>0);for(const line of api)assert.equal(line['tenant.id'],salons[0].id);
   const traceFile=path.join(root,'.stack/telemetry/traces.jsonl');await until(()=>fs.existsSync(traceFile)&&fs.readFileSync(traceFile,'utf8').includes(trace));const batches=fs.readFileSync(traceFile,'utf8').split('\n').filter(Boolean).map(l=>JSON.parse(l));let found=false;for(const b of batches)for(const resource of b.resourceSpans||[])for(const scope of resource.scopeSpans||[])for(const span of scope.spans||[])if(span.traceId===trace){assert(span.attributes.some(a=>a.key==='tenant.id'&&a.value.stringValue===salons[0].id));found=true;}assert(found);
   const metrics=path.join(root,'.stack/telemetry/metrics.jsonl');await until(()=>fs.existsSync(metrics)&&fs.readFileSync(metrics,'utf8').includes('salon.outbox'),65000);const text=fs.readFileSync(metrics,'utf8');for(const name of ['salon.outbox.dead','salon.outbox.waiting','salon.jobs.start.delay'])assert(text.includes(name));

@@ -1,3 +1,4 @@
+import { ecsRecord } from './ecs-log.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
@@ -7,7 +8,7 @@ import { ApiClient } from './api-client';
 import { expect } from './fixtures';
 
 export type Probe = {id:string;status:string;attempts:number;providerCalls:number;nextAttemptAt:string|null;lastError:string|null;createdAt:string;createdAtLocal:string;sentAt:string|null;audit:{action:string;occurredAt:string;actorKind:string;after:Record<string,unknown>;traceId:string}[]};
-export const logs = () => fs.readFileSync(path.join(REPO_ROOT,'.local/logs/api.log'),'utf8').split('\n').filter(Boolean).map(line=>JSON.parse(line));
+export const logs = () => fs.readFileSync(path.join(REPO_ROOT,'.local/logs/api.log'),'utf8').split('\n').filter(Boolean).map(line=>ecsRecord(JSON.parse(line)));
 export function sql(query:string, role='salon', strict=true):string {
   return execFileSync('docker',['exec','-i','salon-postgres','psql','-U',role,'-d','salon','-X','-qAt',...(strict?['-v','ON_ERROR_STOP=1']:[])],{input:query,encoding:'utf8'}).trim();
 }
