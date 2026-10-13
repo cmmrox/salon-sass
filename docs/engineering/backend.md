@@ -140,10 +140,14 @@ and `application`, never in a controller, a repository or a mapper.
   database answers again.
 - **Every wait on the database has a limit:** connection 2 s, validation 1 s, connect 2 s, login 2 s,
   socket 30 s. A statement that gets no answer for 30 s fails. Do not add a database call without one.
-- **A request's database work waits at most 3 s** (`salon.database.request-timeout`). When the
-  database is down, or accepts connections and stays silent, any endpoint that needs it answers 503
-  `service_unavailable` within that limit, including a request already in flight, and recovers by
-  itself. Migrations use the same connection limits.
+- **A held database connection has a 3 s network wait timeout** (`salon.database.request-timeout`).
+  This is the driver's configured wait, not an exact three-second HTTP stopwatch deadline: request
+  scheduling, connection acquisition and response handling add time. The endpoint outage deadline
+  remains five seconds, as F01-S02 AC-10 and CR-003 require: a stopped or silent database produces
+  503 `service_unavailable` within five seconds, including in-flight calls, and the API recovers
+  within five seconds of actual database availability without restarting. Record HTTP and control
+  timing separately; do not call an HTTP measurement a database-only wait. Migrations use the same
+  connection limits.
 - **The API finds a database that answers again within a quarter of a second**
   (`salon.database.reconnect-interval`, 250 ms). The pool opens its connections through
   `SteadyReconnectDataSource`, which retries an unreachable or silent database at that interval.
