@@ -25,6 +25,8 @@ export function fetchForHostname(hostname: string): typeof fetch {
     });
     headers.host = hostname;
     const body = request.body ? Buffer.from(await request.arrayBuffer()) : undefined;
+    // Node does not default DELETE to chunked transfer; explicit length preserves its JSON body.
+    if (body) headers['content-length'] = String(body.byteLength);
     request.signal.throwIfAborted();
 
     return new Promise<Response>((resolve, reject) => {

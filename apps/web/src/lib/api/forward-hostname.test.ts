@@ -88,6 +88,18 @@ describe('fetchForHostname', () => {
     await expect(pending).rejects.toMatchObject({ name: 'TimeoutError' });
   });
 
+  it('carries a JSON confirmation body on DELETE instead of silently dropping it', async () => {
+    let receivedBody = '';
+    server.removeAllListeners('request');
+    server.on('request', (request, response) => {
+      request.on('data', (chunk) => { receivedBody += chunk.toString(); });
+      request.on('end', () => { response.writeHead(204); response.end(); });
+    });
+    const result = await fetchForHostname('alpha.localhost')(`${base()}/api/v1/identity/customers/me`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ confirm: true }) });
+    expect(result.status).toBe(204);
+    expect(receivedBody).toBe('{"confirm":true}');
+  });
+
   it('refuses at once when the signal has already given up', async () => {
     const signal = AbortSignal.abort();
 
