@@ -37,6 +37,23 @@
         },
         "type": "object"
       },
+      "Challenge": {
+        "properties": {
+          "challengeId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "expiresAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "challengeId",
+          "expiresAt"
+        ],
+        "type": "object"
+      },
       "ChallengeRequest": {
         "properties": {
           "challengeId": {
@@ -71,6 +88,31 @@
         },
         "required": [
           "version"
+        ],
+        "type": "object"
+      },
+      "CodeRequest": {
+        "properties": {
+          "channel": {
+            "maxLength": 16,
+            "minLength": 0,
+            "type": "string"
+          },
+          "deviceLabel": {
+            "maxLength": 160,
+            "minLength": 0,
+            "type": "string"
+          },
+          "mobile": {
+            "maxLength": 32,
+            "minLength": 0,
+            "type": "string"
+          }
+        },
+        "required": [
+          "channel",
+          "deviceLabel",
+          "mobile"
         ],
         "type": "object"
       },
@@ -298,6 +340,9 @@
           "code": {
             "description": "The stable reason. Branch on this.",
             "enum": [
+              "invalid_code",
+              "code_expired",
+              "provider_unavailable",
               "invalid_credentials",
               "invalid_session",
               "permission_denied",
@@ -580,6 +625,13 @@
         ],
         "type": "object"
       }
+    },
+    "securitySchemes": {
+      "customerDevice": {
+        "in": "cookie",
+        "name": "salon_device",
+        "type": "apiKey"
+      }
     }
   },
   "info": {
@@ -648,6 +700,111 @@
         },
         "tags": [
           "staff-access-controller"
+        ]
+      }
+    },
+    "/api/v1/identity/customers/challenges": {
+      "post": {
+        "operationId": "request",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CodeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Challenge"
+                }
+              }
+            },
+            "description": "Code request accepted"
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "An accepted-send ceiling is reached",
+            "headers": {
+              "Retry-After": {
+                "description": "Positive seconds until the longest blocking window expires",
+                "schema": {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "style": "simple"
+              }
+            }
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "tags": [
+          "customer-access-controller"
+        ]
+      }
+    },
+    "/api/v1/identity/customers/sign-in": {
+      "post": {
+        "operationId": "verify_1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tokens"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "security": [
+          {
+            "customerDevice": []
+          }
+        ],
+        "tags": [
+          "customer-access-controller"
         ]
       }
     },

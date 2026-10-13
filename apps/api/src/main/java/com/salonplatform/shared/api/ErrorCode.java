@@ -13,6 +13,9 @@ import org.springframework.http.HttpStatusCode;
  */
 public enum ErrorCode {
 
+    INVALID_CODE("invalid_code", "The verification code could not be verified."),
+    CODE_EXPIRED("code_expired", "Please request a new verification code."),
+    PROVIDER_UNAVAILABLE("provider_unavailable", "Code delivery is not configured."),
     INVALID_CREDENTIALS("invalid_credentials", "The sign-in credentials could not be verified."),
     INVALID_SESSION("invalid_session", "Please sign in again."),
     PERMISSION_DENIED("permission_denied", "Your account does not have permission for this action."),

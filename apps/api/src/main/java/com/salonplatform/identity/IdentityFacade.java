@@ -1,6 +1,6 @@
 package com.salonplatform.identity;
 
-import com.salonplatform.identity.application.StaffAccess;
+import com.salonplatform.identity.application.SessionAccess;
 
 import org.springframework.stereotype.Service;
 
@@ -42,9 +42,9 @@ public class IdentityFacade {
                     UUID staffId,
             boolean mfaEnabled) {}
 
-    private final StaffAccess access;
+    private final SessionAccess access;
 
-    public IdentityFacade(StaffAccess access) {
+    public IdentityFacade(SessionAccess access) {
         this.access = access;
     }
 

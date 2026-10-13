@@ -17,6 +17,11 @@ import java.time.Instant;
 @Component
 class IdentityCleanupJob implements TenantJob {
     @PersistenceContext private EntityManager em;
+    private final com.salonplatform.identity.application.CustomerAccess customers;
+
+    IdentityCleanupJob(com.salonplatform.identity.application.CustomerAccess customers) {
+        this.customers = customers;
+    }
 
     @Override
     public String name() {
@@ -30,6 +35,7 @@ class IdentityCleanupJob implements TenantJob {
 
     @Override
     public void runFor(CurrentTenant salon, Instant now) {
+        customers.cleanup(now);
         em.createQuery("delete from MfaChallenge c where c.expiresAt<=:now")
                 .setParameter("now", now)
                 .executeUpdate();

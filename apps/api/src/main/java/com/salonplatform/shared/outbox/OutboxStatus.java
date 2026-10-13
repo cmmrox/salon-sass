@@ -10,6 +10,8 @@ public enum OutboxStatus {
     SENDING,
     /** Delivered. */
     SENT,
+    /** Intentionally not delivered because its purpose expired or was superseded. */
+    CANCELLED,
     /** Out of attempts; it stays with its last error and is not attempted again. */
     DEAD;
 
