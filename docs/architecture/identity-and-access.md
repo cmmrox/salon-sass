@@ -26,6 +26,9 @@ answers 404 `not_found`. An authenticated native client on the bare API address 
 salon from the verified token, via a verifier interface in `shared` implemented in `identity`.
 Reserved platform hostnames never become a salon. Invalid credentials answer 401 with a registered
 stable error code; insufficient permissions answer 403; foreign ids answer indistinguishable 404.
+Sign-in, MFA challenge calls and opaque refresh renewal require the selected salon hostname.
+The bare API address supports protected requests using signed access tokens; it cannot resolve a
+salon from an opaque refresh token or a client-supplied tenant id.
 
 Every protected use case verifies current session and account state in the database, including
 account activity, MFA requirement and current role/grant. Do not trust permissions cached in JWTs.
@@ -92,6 +95,8 @@ revocation, password/MFA change, staff creation/removal, role/grant changes and 
 actions in F01's immutable audit trail. Audit reads use explicit DTOs without secret or profile
 values and are permission-checked. Sensitive business actions in later features will call this
 same audit writer. Operators and support sessions are F03.
+Role, grant and active-state changes include nonsecret before/after values; profile rights actions
+include changed field names and versions only, never personal field values.
 
 ## Customer codes and abuse controls
 
@@ -138,6 +143,10 @@ in one transaction; no old token works afterwards. Re-verifying the same number 
 identity with a new id and no old profile. Immutable audit rows keep only the old opaque subject id
 and action/time, no phone, name or profile. Later legal booking/payment retention is planned by the
 owning feature; no such records exist in F02. Invalid confirmation changes nothing.
+Retain hashed anti-abuse number/device/address counters until their ordinary window expires;
+deletion and re-registration do not reset code ceilings. Deletion cancels queued deliveries and
+clears local captures. A delivery already in flight rechecks challenge existence before capture
+or delivery completion and cannot recreate deleted identity, challenge or message state.
 
 ## Browser boundary
 
@@ -151,6 +160,9 @@ Every BFF mutation requires an exact trusted Origin matching this hostname/port 
 cross-site Fetch Metadata, including unauthenticated sign-in (login CSRF). Do not trust arbitrary
 forwarded host/protocol. Refresh is explicit and serialized per browser session; reuse cannot
 restore a revoked session. BFF returns only allowlisted public result fields and field errors.
+Coordinate renewal across tabs for each principal kind, not only within one form or component.
+If a competing replay revokes the family, clear that kind's cookies and require a fresh sign-in;
+never retry a spent refresh credential or restore a family from a delayed response.
 Redirect targets are fixed same-origin paths; errors keep useful form values except credentials.
 Auth failures redirect a protected page to its own sign-in; authorization failures show a friendly
 denial. Customer screens use salon branding and staff screens the neutral platform theme.
