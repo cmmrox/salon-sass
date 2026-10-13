@@ -138,7 +138,12 @@ shared helper, never by typing a password into a test.
 | NFR-12 | WCAG 2.2 level AA on customer surfaces and the workspace |
 
 F02's local read baseline uses the three synthetic salons, five staff roles, 50 synthetic customers
-and 100 audit entries per salon, with ten concurrent users. One scenario exercises authenticated
+and at least 100 audit entries per salon, with ten concurrent users. Record the actual audit totals;
+immutable entries from earlier checks remain and are never deleted to manufacture this baseline.
+Synthetic preparation may temporarily use an address ceiling of 200 to register the 50 customers
+through real code sign-in, with distinct server-issued devices. Restore and verify the default
+3/10/20/1000 ceilings with retained keys before the measured read phase; report preparation
+overrides separately and clean mutable fixtures afterwards. One scenario exercises authenticated
 current-principal, own-device, permitted staff/audit and own-profile reads, recording p95 separately
 for each read against NFR-03's 300 ms target. Password hashing, code delivery and other mutations
 are outside that read target. This bounded baseline is local feature evidence, not certification
