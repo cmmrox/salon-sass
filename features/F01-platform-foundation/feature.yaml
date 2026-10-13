@@ -4,7 +4,7 @@ summary: "The platform runs locally and in staging as one deployment in which ev
 release: R1
 milestone: M1-web
 status: in-qa
-qa_status: failing
+qa_status: pass
 released_in: null
 depends_on: []
 surfaces: [api, web, infra]
@@ -42,12 +42,12 @@ verification:
     unblocked_by: Owner decides D-08 hosting and D-02 platform domain, configures the DNS challenge module and credentials, provides host access, and explicitly requests
       staging deployment.
 evidence:
-  last_run: qa/reports/20261013-142212-F01
-  last_result: fail
+  last_run: qa/reports/20261013-152705-F01
+  last_result: pass
 
 integration:
   branch: charithm/feature/F01-platform-foundation
   pull_request: null
-  qa_revision: 940b696862ac4a595e78a7dd0f06ed74dbc41f09
+  qa_revision: 771c56b89f192deec47ab3d4f68f04a7dbcbf6ce
   merged_commit: null
   merged_at: null

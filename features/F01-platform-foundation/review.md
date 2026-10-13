@@ -5,7 +5,7 @@ Compared with public Fresha and Booksy documentation; no accounts, real data or 
 
 ## Verdict
 
-The foundation gives each salon a distinct address and readable identity, and safely separates unknown, suspended and unavailable states. It is ready to support later customer features once its full automated pass is green; the empty salon body is the expressly planned shell, not a booking site yet. Public TLS and real-host operation remain uncertified and explicitly deferred.
+The foundation gives each salon a distinct address and readable identity, and safely separates unknown, suspended and unavailable states. The full automated pass is green, ready to support later customer features; the empty salon body is the expressly planned shell. Public TLS and real-host operation remain uncertified and explicitly deferred.
 
 ## What works well
 
@@ -47,7 +47,8 @@ Sources checked 2026-10-13: [Fresha client booking paths](https://www.fresha.com
 
 ## Bugs filed from this review
 
-BUG-F01-001 (major): rollback briefly removes every web upstream, returning 36 page requests with HTTP 503. Existing six stage bugs are verified and their cases remain in the full feature pass.
+BUG-F01-001 found an intermittent rollback outage and is now verified after the developer fix.
+Existing six stage bugs are verified and their cases remain in the full feature pass.
 
 ## QA repairs and evidence limits
 
@@ -71,3 +72,20 @@ failure was TC-F01-S05-008: rollback returned 36 genuine page 503s while web-2 w
 replaced and the remaining web-1 readiness probe timed out. These errors preceded QA traffic
 shutdown by about nine seconds. BUG-F01-001 records the exact interval and filtered edge logs.
 No request threshold was relaxed and no full suite was rerun merely hoping for a pass.
+
+## Final verification
+
+Full local HTTP-only F01 run `qa/reports/20261013-152705-F01` passed all 32 registered entries
+on committed revision `771c56b89f192deec47ab3d4f68f04a7dbcbf6ce`. BUG-F01-001 also passed the
+independent focused deployment/rollback test before this run. Full-run rollout/rollback/loss
+traffic had 38,202 / 44,241 / 7,154 requests respectively, zero HTTP failures and zero wrong-tenant
+responses. The unchanged read-load threshold passed with 14.91 ms p95 and 70,151 salon reads.
+
+Docker Hub registry DNS failed during image preparation. A report-only wrapper used temporary
+Dockerfile copies omitting only the external frontend syntax directive, preserving source and
+Dockerignore bytes, to build current images with cached bases and Docker's built-in frontend.
+The original image assertions passed. This compiler deviation and hashes are preserved in
+`qa/reports/rollback-fix-20261013/builtin-build-provenance.json`; old images were not relabelled.
+The independent QA runner completed after its agent hit workspace credits. The lead, who did not
+build application code, inspected the final summary, key logs and unchanged traffic thresholds
+and recorded this result under the QA role. No staging deployment or local TLS testing occurred.
