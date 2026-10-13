@@ -105,6 +105,16 @@ describe('the committed contract', () => {
     const problem = committed.components.schemas.Problem;
 
     expect(problem.properties.code.enum).toEqual([
+      'invalid_client_assertion',
+      'confirmation_required',
+      'invalid_code',
+      'code_expired',
+      'provider_unavailable',
+      'invalid_credentials',
+      'invalid_session',
+      'permission_denied',
+      'conflict',
+      'rate_limited',
       'bad_request',
       'not_found',
       'method_not_allowed',
@@ -115,6 +125,7 @@ describe('the committed contract', () => {
       'salon_suspended',
       'internal_error',
     ]);
+    expect(new Set(problem.properties.code.enum).size).toBe(problem.properties.code.enum.length);
     expect(problem.required).toEqual(expect.arrayContaining(['code', 'status', 'title', 'traceId']));
     expect(problem.properties.traceId.pattern).toBe('^[0-9a-f]{32}$');
     expect(problem.properties.errors.items.required).toEqual(['detail', 'field']);

@@ -19,6 +19,10 @@
   --color-caution-surface: #fffbeb;
   --color-skeleton: #e4e4e9;
 
+  --color-negative: #9f231d;
+  --color-negative-surface: #fff0ee;
+  --opacity-disabled: 0.55;
+
   /* Space */
   --space-1: 0.25rem;
   --space-2: 0.5rem;
