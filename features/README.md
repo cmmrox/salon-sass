@@ -32,6 +32,6 @@ requirement detail is in `qa/coverage.md`.
 | Stage | Title | Surfaces | Status | Stage QA | Blocking bugs | Next |
 | --- | --- | --- | --- | --- | --- | --- |
 | F02-S01 | Staff sign-in, sessions and role permissions | api, infra | complete | - | 0 | - |
-| F02-S02 | Customer one-time-code sign-in and abuse prevention | api | planned | - | 0 | **developer**: `stage-build F02-S02` |
+| F02-S02 | Customer one-time-code sign-in and abuse prevention | api | in-progress | - | 0 | **developer**: `stage-build F02-S02` |
 | F02-S03 | Customer profile, data export and account deletion | api | outlined | - | 0 | **lead**: `stage-plan F02-S03` |
 | F02-S04 | Staff workspace and customer account screens | web | outlined | - | 0 | **lead**: `stage-plan F02-S04` |
