@@ -19,8 +19,8 @@ Ranked, most valuable first. These are proposals, not requirements or permission
 
 | Id | Class | Suggestion | Disposition |
 | --- | --- | --- | --- |
-| SUG-F01-01 | should | Give operators an authenticated view of dead messages and backlog when the console is built | |
-| SUG-F01-02 | idea | Keep oversized status headings within their notice background at narrow widths | |
+| SUG-F01-01 | should | Give operators an authenticated view of dead messages and backlog when the console is built | CR-004 |
+| SUG-F01-02 | idea | Keep oversized status headings within their notice background at narrow widths | backlog |
 
 ### SUG-F01-01 Operator view of failed background work
 
