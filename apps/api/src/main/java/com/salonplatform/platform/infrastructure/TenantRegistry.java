@@ -2,10 +2,16 @@ package com.salonplatform.platform.infrastructure;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.time.DateTimeException;
+import java.time.ZoneId;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 import com.salonplatform.shared.infrastructure.RequestDatabaseLimit;
+import com.salonplatform.shared.tenancy.ActiveTenants;
+import com.salonplatform.shared.tenancy.CurrentTenant;
 import com.salonplatform.shared.tenancy.RegisteredTenant;
 import com.salonplatform.shared.tenancy.TenantDirectory;
 import com.salonplatform.shared.tenancy.TenantStatus;
@@ -15,19 +21,24 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 /**
- * The tenant registry, as the application reads it: through {@code tenant_by_slug()}, the one narrow
- * path its database role has to the {@code tenant} table, which it cannot read directly. One short
- * statement on a pooled connection, under the request's limit on database waits. Nothing is cached:
- * a salon's status is read where it is decided.
+ * The tenant registry, as the application reads it: through {@code tenant_by_slug()},
+ * {@code tenant_by_id()} and {@code active_tenant_ids()}, the narrow paths its database role has to
+ * the {@code tenant} table, which it cannot read directly. One short statement on a pooled
+ * connection, under the request's limit on database waits. Nothing is cached: a salon's status is
+ * read where it is decided.
  */
 @Component
-class TenantRegistry implements TenantDirectory {
+class TenantRegistry implements TenantDirectory, ActiveTenants {
 
     static final String ACTIVE = "active";
 
     static final String SUSPENDED = "suspended";
 
-    private static final String LOOKUP = "SELECT id, status FROM tenant_by_slug(?)";
+    private static final String BY_SLUG = "SELECT id, status, time_zone FROM tenant_by_slug(?)";
+
+    private static final String BY_ID = "SELECT id, slug, status, time_zone FROM tenant_by_id(?)";
+
+    private static final String ACTIVE_IDS = "SELECT id FROM active_tenant_ids()";
 
     private final JdbcTemplate jdbc;
 
@@ -42,15 +53,48 @@ class TenantRegistry implements TenantDirectory {
     public Optional<RegisteredTenant> find(String slug) {
         return jdbc.execute((ConnectionCallback<Optional<RegisteredTenant>>) connection -> {
             limit.applyTo(connection);
-            try (PreparedStatement statement = connection.prepareStatement(LOOKUP)) {
+            try (PreparedStatement statement = connection.prepareStatement(BY_SLUG)) {
                 statement.setString(1, slug);
                 try (ResultSet row = statement.executeQuery()) {
                     if (!row.next()) {
                         return Optional.empty();
                     }
                     UUID id = row.getObject("id", UUID.class);
-                    return statusOf(row.getString("status")).map(status -> new RegisteredTenant(id, status));
+                    ZoneId zone = timeZoneOf(row);
+                    return statusOf(row.getString("status")).map(status -> new RegisteredTenant(id, status, zone));
                 }
+            }
+        });
+    }
+
+    @Override
+    public Optional<CurrentTenant> findActive(UUID id) {
+        return jdbc.execute((ConnectionCallback<Optional<CurrentTenant>>) connection -> {
+            limit.applyTo(connection);
+            try (PreparedStatement statement = connection.prepareStatement(BY_ID)) {
+                statement.setObject(1, id);
+                try (ResultSet row = statement.executeQuery()) {
+                    if (!row.next() || statusOf(row.getString("status")).orElse(null) != TenantStatus.ACTIVE) {
+                        return Optional.empty();
+                    }
+                    return Optional.of(new CurrentTenant(row.getObject("id", UUID.class), row.getString("slug"),
+                            timeZoneOf(row)));
+                }
+            }
+        });
+    }
+
+    @Override
+    public List<UUID> activeIds() {
+        return jdbc.execute((ConnectionCallback<List<UUID>>) connection -> {
+            limit.applyTo(connection);
+            try (PreparedStatement statement = connection.prepareStatement(ACTIVE_IDS);
+                    ResultSet rows = statement.executeQuery()) {
+                List<UUID> ids = new java.util.ArrayList<>();
+                while (rows.next()) {
+                    ids.add(rows.getObject("id", UUID.class));
+                }
+                return List.copyOf(ids);
             }
         });
     }
@@ -67,5 +111,16 @@ class TenantRegistry implements TenantDirectory {
             return Optional.of(TenantStatus.SUSPENDED);
         }
         return Optional.empty();
+    }
+
+    /** The database accepts only names it knows as IANA time zones; one Java does not know is a fault. */
+    private static ZoneId timeZoneOf(ResultSet row) throws SQLException {
+        String name = row.getString("time_zone");
+        try {
+            return ZoneId.of(name);
+        }
+        catch (DateTimeException ex) {
+            throw new IllegalStateException("The registry holds a time zone this application does not know: " + name, ex);
+        }
     }
 }

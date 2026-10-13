@@ -6,6 +6,12 @@ spring:
 
 salon:
   platform-domain: localhost
+  # The tests share one database across application contexts; a dispatcher or a scheduler in each
+  # would race the others. The tests that need them start an application of their own with them on.
+  outbox:
+    enabled: false
+  jobs:
+    enabled: false
 
 springdoc:
   api-docs:

@@ -63,7 +63,7 @@ has no salons; its cases say so.)
 | --- | --- | --- | --- |
 | `alpha` | `a1a1a1a1-0000-4000-8000-000000000001` | `alpha.localhost` | The salon under test. Name "Alpha Studio", the prototype's default brand colour `#D6086A` |
 | `beta` | `b2b2b2b2-0000-4000-8000-000000000002` | `beta.localhost` | The other salon, for every isolation test. A dark brand colour (`#1F2937`) and a long name: "Beta Hair, Beauty & Wellness Lounge of Colombo Seven" |
-| `gamma` | `c3c3c3c3-0000-4000-8000-000000000003` | `gamma.localhost` | An edge salon: name "Gamma", a light brand colour (`#FDE68A`); from later stages no cover image, a different time zone setting and most options off |
+| `gamma` | `c3c3c3c3-0000-4000-8000-000000000003` | `gamma.localhost` | An edge salon: name "Gamma", a light brand colour (`#FDE68A`); from F01-S04 the time zone `Europe/London` (alpha and beta are `Asia/Colombo`); from later stages no cover image and most options off |
 
 The ids and slugs are fixed and the same in every local environment; the names and colours may be
 changed by later stages that own branding, and `qa/shared/tenants.ts` follows them. The hostnames use
@@ -83,7 +83,23 @@ shared helper, never by typing a password into a test.
 
 - **Hooks:** the test clock, the capture of outgoing messages and the payment sandbox are provided
   by the developer, in local and test configurations only, by the stage that first needs each one.
-  That stage's spec defines the hook, and the lead adds how to use it here. None exists yet.
+  That stage's spec defines the hook, and the lead adds how to use it here.
+- **The test clock** (F01-S04), on the API's port, local profile only: `GET /local/clock` reads it;
+  `PUT /local/clock {"instant": "2026-03-29T01:30:00Z"}` sets it, and it runs on from there;
+  `DELETE /local/clock` returns to real time. It is the application's one clock, for every salon,
+  so a test that sets it must put it back, and tests that set it cannot run in parallel. Instants a
+  probe shows are truncated to the second.
+- **The probe** (F01-S04), on a salon's hostname: `POST /local/probes {"failures", "delayMs",
+  "abort"}`, all optional, writes one outbox message on the channel `probe` and one audit entry
+  (`probe.created`) in one transaction, and answers 201 with the probe. Its fake provider fails the
+  first `failures` attempts (0 to 50), takes `delayMs` to answer (0 to 60000; above the 10 s time
+  limit it counts as a failure), and `abort: true` aborts the transaction after writing (500).
+  `GET /local/probes/{id}` shows the message's state, attempts, provider calls, times in UTC and in
+  the salon's zone, and its audit entries. To interrupt a delivery with a graceful stop of the API,
+  use a `delayMs` between the shutdown grace (5 s) and the time limit (10 s); a shorter call simply
+  finishes. Waits (backoff, breaker, lease, retention) are crossed by moving the test clock.
+- **Meters**, local profile only: `GET /actuator/metrics/salon.outbox.dead` and the others listed in
+  `docs/engineering/backend.md`.
 - **Time:** bookings depend on the clock. Use the test clock hook to fix "now"; never write a test
   that only passes on a weekday or before noon. Check behaviour across midnight and for a salon in
   another time zone.

@@ -7,6 +7,7 @@ import com.salonplatform.shared.api.ErrorCode;
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
+import io.swagger.v3.oas.models.media.ArraySchema;
 import io.swagger.v3.oas.models.media.Content;
 import io.swagger.v3.oas.models.media.IntegerSchema;
 import io.swagger.v3.oas.models.media.MediaType;
@@ -73,6 +74,18 @@ class OpenApiConfiguration {
                 .addProperty("instance", new StringSchema().description("The path that was requested."))
                 .addProperty("code", new StringSchema().description("The stable reason. Branch on this.")
                         ._enum(Arrays.stream(ErrorCode.values()).map(ErrorCode::code).toList()))
-                .required(List.of("title", "status", "code"));
+                .addProperty("traceId", new StringSchema()
+                        .description("The request's trace id: the `trace.id` of its log lines and of its trace.")
+                        .pattern("^[0-9a-f]{32}$").example("4bf92f3577b34da6a3ce929d0e0e4736"))
+                .addProperty("errors", new ArraySchema()
+                        .description("For a request body that failed validation (`bad_request`): each field that "
+                                + "failed, when the failure has a field. Never the value that was refused.")
+                        .items(new ObjectSchema()
+                                .addProperty("field", new StringSchema()
+                                        .description("The field, as the request names it; a dotted path when nested."))
+                                .addProperty("detail", new StringSchema()
+                                        .description("What is wrong with it, for a person."))
+                                .required(List.of("field", "detail"))))
+                .required(List.of("title", "status", "code", "traceId"));
     }
 }

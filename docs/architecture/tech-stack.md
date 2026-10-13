@@ -42,6 +42,8 @@ Set by stage F01-S01. Exact versions are in the build files (`apps/api/pom.xml`,
 | Web styling | CSS custom properties as tokens (`apps/web/src/styles/tokens.css`) with CSS Modules; no utility-class framework | A salon's brand is applied by changing custom properties at run time |
 | CSS as text | A Turbopack rule in `next.config.ts` imports `*.css?raw` as a string, with the same rule in `vitest.config.mts`; used only for the proxy's plain pages (decision 028). It does not work for CSS Modules | The plain pages inline the one source of the tokens and base styles instead of a copy |
 | Web lint and tests | ESLint with `eslint-config-next`; Vitest with jsdom and Testing Library | |
+| Request validation | `spring-boot-starter-validation` (Jakarta Bean Validation) | Field errors on problem bodies |
+| Tracing and structured logs | `spring-boot-starter-opentelemetry` (Micrometer Tracing with the OpenTelemetry bridge, W3C propagation, OTLP export when configured); Spring Boot's structured logging in ECS format | Spring Boot 4's own support; no agent and no second logging library |
 | Local web server | `apps/web/scripts/serve.mjs`, wrapping Next.js's request handler | Supports both loopback address families. Production image serving is decided in F01-S05; see `docs/engineering/web.md` and decision 022 |
 | TypeScript | The newest major that both `openapi-typescript` and `typescript-eslint` support | |
 | Node.js and pnpm | Node.js pinned in `.nvmrc`; pnpm pinned by `packageManager` and run through Corepack | A pnpm of another version stops with an error (`pmOnFail: error`) rather than rewrite the lock file; the scripts refuse to run without Corepack |

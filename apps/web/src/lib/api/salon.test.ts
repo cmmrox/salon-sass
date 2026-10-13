@@ -1,7 +1,7 @@
-import { createApiClient, type Problem, type Salon } from '@salon/api-contracts';
+import { createApiClient, type Problem } from '@salon/api-contracts';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { findSalon } from './salon';
+import { findSalon, type Salon } from './salon';
 
 const alpha: Salon = { slug: 'alpha', name: 'Alpha Studio', brandColour: '#D6086A' };
 
@@ -18,7 +18,7 @@ function clientAnswering(status: number, body: unknown, contentType = 'applicati
 }
 
 function problem(status: number, code: Problem['code']): Problem {
-  return { title: 'x', status, code, instance: '/api/v1/salon' };
+  return { title: 'x', status, code, instance: '/api/v1/salon', traceId: '4bf92f3577b34da6a3ce929d0e0e4736' };
 }
 
 describe('findSalon', () => {
@@ -32,14 +32,15 @@ describe('findSalon', () => {
   });
 
   it('returns the brand of the salon that was asked for', async () => {
-    const { client, requests } = clientAnswering(200, alpha);
+    // The API's answer as it is from F01-S04: the brand, and the salon's time zone.
+    const { client, requests } = clientAnswering(200, { ...alpha, timeZone: 'Asia/Colombo' });
 
     await expect(findSalon('alpha', 'alpha.localhost', client)).resolves.toEqual({ kind: 'found', salon: alpha });
     expect(requests.map((request) => request.url)).toEqual(['http://api.test/api/v1/salon']);
   });
 
-  it('returns only the contract\'s fields of the brand', async () => {
-    const { client } = clientAnswering(200, { ...alpha, secret: 'x' });
+  it('returns only the fields of the brand, whatever else the answer holds', async () => {
+    const { client } = clientAnswering(200, { ...alpha, timeZone: 'Europe/London', secret: 'x' });
 
     await expect(findSalon('alpha', 'alpha.localhost', client)).resolves.toEqual({ kind: 'found', salon: alpha });
   });

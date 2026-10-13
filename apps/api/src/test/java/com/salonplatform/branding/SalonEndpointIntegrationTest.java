@@ -1,6 +1,7 @@
 package com.salonplatform.branding;
 
 import java.util.ArrayList;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
@@ -12,6 +13,7 @@ import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
 import com.salonplatform.testing.Http.Exchange;
 import com.salonplatform.testing.IntegrationTest;
+import com.salonplatform.testing.ProblemBodies;
 import com.salonplatform.testing.TestDatabase;
 import com.salonplatform.testing.TestPostgres;
 import com.salonplatform.testing.TestSalons;
@@ -42,7 +44,7 @@ class SalonEndpointIntegrationTest extends IntegrationTest {
         TestSalons salons = new TestSalons(TestDatabase.of(TestPostgres.shared()).asOwner());
         alpha = salons.create("Alpha Studio", "#D6086A");
         beta = salons.create("Beta Hair, Beauty & Wellness Lounge of Colombo Seven", "#1F2937");
-        gamma = salons.create("Gamma", "#FDE68A");
+        gamma = salons.create("Gamma", "#FDE68A", ZoneId.of("Europe/London"));
     }
 
     @Test
@@ -53,9 +55,10 @@ class SalonEndpointIntegrationTest extends IntegrationTest {
             assertThat(response.status()).as(salon.slug()).isEqualTo(200);
             assertThat(response.contentType()).startsWith("application/json");
             Map<String, Object> body = JsonPath.parse(response.body()).read("$");
-            assertThat(body).containsOnlyKeys("slug", "name", "brandColour");
+            assertThat(body).containsOnlyKeys("slug", "name", "brandColour", "timeZone");
             assertThat(body).containsEntry("slug", salon.slug()).containsEntry("name", salon.name())
-                    .containsEntry("brandColour", salon.brandColour());
+                    .containsEntry("brandColour", salon.brandColour())
+                    .containsEntry("timeZone", salon == gamma ? "Europe/London" : "Asia/Colombo");
             assertThat(response.body()).doesNotContain(salon.id().toString());
         }
     }
@@ -94,10 +97,13 @@ class SalonEndpointIntegrationTest extends IntegrationTest {
             DocumentContext body = JsonPath.parse(response.body());
             assertThat(body.<String>read("$.code")).as(host).isEqualTo("not_found");
             assertThat(body.<String>read("$.instance")).as(host).isEqualTo(SALON);
+            assertThat(body.<String>read("$.traceId")).as(host).matches("^[0-9a-f]{32}$");
+            String withoutTrace = ProblemBodies.withoutTraceId(response.body());
             if (first == null) {
-                first = response.body();
+                first = withoutTrace;
             }
-            assertThat(response.body()).as("the body on %s is the body on every other", host).isEqualTo(first);
+            assertThat(withoutTrace).as("the body on %s is the body on every other, but for its trace id", host)
+                    .isEqualTo(first);
 
             assertThat(http().getOnHost(host, "/api/v1/meta").status()).as("meta on %s", host).isEqualTo(200);
             assertThat(http().getOnHost(host, "/actuator/health").status()).as("health on %s", host).isEqualTo(200);

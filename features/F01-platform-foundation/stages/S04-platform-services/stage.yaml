@@ -3,18 +3,161 @@ feature: F01
 title: "Platform services: errors, time, audit trail, background jobs and observability"
 sequence: 4
 surfaces: [api]
-status: outlined
+status: complete
 qa_status: not-run
 released_in: null
 depends_on: [F01-S02]
 requirements: [BKG-15]
+nfr_focus: [NFR-01, NFR-10, NFR-15, NFR-16]
 handoff:
-  run: null
-  data: null
-  notes: null
+  run: |
+    infra/scripts/local-reset.sh   (or local-up.sh on an existing database); API http://localhost:8090, web http://localhost:3100.
+    Salon endpoints and probes on the salon's hostname: http://alpha.localhost:8090 (beta, gamma likewise).
+    Test clock: GET /local/clock; PUT /local/clock {"instant":"2026-03-29T01:30:00Z"} (runs on from there); DELETE /local/clock (real time).
+    Probe: POST /local/probes {"failures":n,"delayMs":ms,"abort":bool}, all optional (201 with the probe); GET /local/probes/{id}.
+    Meters: GET /actuator/metrics/salon.outbox.waiting, salon.outbox.oldest.due.age, salon.outbox.dead,
+    salon.outbox.deliveries (tags channel, outcome: sent, failed, timed_out), salon.jobs.start.delay (tag job).
+    Another profile: infra/scripts/local-service.sh stop api; SPRING_PROFILES_ACTIVE=staging infra/scripts/local-service.sh start api.
+    Another machine zone: TZ=Pacific/Chatham infra/scripts/local-service.sh start api.
+    Suspend a salon: infra/scripts/local-salon.sh suspend gamma (activate gamma to undo).
+    The API's log is .local/logs/api.log: one ECS JSON object per line (fields trace.id, span.id, tenant.id nested as trace{id} etc.).
+  data: |
+    The three synthetic salons of docs/qa/test-plan.md, seeded in the local profile: alpha and beta in Asia/Colombo,
+    gamma in Europe/London. A database seeded before this stage gets gamma's zone on the next start (the seed sets a
+    synthetic salon's zone only while it still has the column's default). No accounts. The only outbox provider is the
+    probe's fake (channel "probe"); no real message is sent anywhere.
+  notes: |
+    Checked on the running product (local-reset.sh on the build of df5fd63; the application is unchanged since: e4fadd2
+    changes infra/scripts only, 20f64f7 a test only), from outside, with HTTP to port 8090, psql in salon-postgres as the
+    owner and as salon_app, and the API's JSON log. 193 checks, all passing.
+
+    AC-1 checked. 404 (unknown path; salon endpoint on a hostname with no salon), 405, 406, 415, 400 (validation), 400
+    refused by Tomcat itself (bad path encoding), 403 salon_suspended (local-salon.sh suspend gamma), 500 (probe abort)
+    and 503 (local-service.sh stop postgres): each is problem+json with its code and a traceId of 32 lowercase hex equal
+    to the trace.id of that request's one log line; the same request with a valid traceparent got that trace id back;
+    no body carried a stack trace, a class name or the input it refused.
+    AC-2 checked. failures -1, 51, "abc", 1.5, "5"; delayMs -1, 60001, "10"; abort 1; failures 99 with delayMs -7 (both
+    named); a body that is not JSON and a truncated one (errors []): each 400 bad_request, errors naming each field, and
+    no row written (counted before and after). failures 0 and 50, delayMs 0 accepted. Found while checking and fixed in
+    df5fd63: Jackson turned "5" into 5, 1.5 into 1 and 1 into true, and accepted them (abort 1 answered 500); request
+    bodies are now read strictly (spring.jackson.mapper.allow-coercion-of-scalars=false,
+    spring.jackson.deserialization.accept-float-as-int=false), for every endpoint.
+    AC-3 checked. The Problem.code enumeration served at /v3/api-docs and in the committed docs/api/openapi.json is
+    exactly ErrorCode's nine codes, salon_suspended included; every code seen on the running product was in it;
+    pnpm contracts:check passes. OpenApiShapeTest and OnlyListedCodesTest (only Problems puts a property on a problem
+    body, and the code comes from ErrorCode) hold it in the build.
+    AC-4 checked. timeZone: alpha and beta Asia/Colombo, gamma Europe/London. The API started with TZ=Pacific/Chatham
+    (its process environment confirmed) and then with TZ=UTC gave the same results: meta's time the real UTC instant, a
+    probe's createdAt the real instant, the database holding that same instant for the message and its audit entry,
+    createdAtLocal correct, log timestamps in UTC; and the same with the test clock set to 2026-03-29T01:30:00Z on gamma
+    and 2026-10-12T20:00:00Z on alpha.
+    AC-5 checked. gamma at 2026-03-29T00:30:00Z: createdAt 2026-03-29T00:30:00Z, createdAtLocal 2026-03-29T00:30:00+00:00;
+    at 01:30Z: 2026-03-29T02:30:00+01:00; alpha at 2026-10-12T20:00:00Z: 2026-10-13T01:30:00+05:30; the offset always
+    +HH:MM. DELETE /local/clock returned real time (fixed false). Accepted by the lead: the probe view shows its instants
+    truncated to the second, because the test clock runs on from the instant it is set to; the database keeps full
+    precision.
+    AC-6 checked. failures 0: sent in about 1 s, one attempt, one provider call. Its one audit entry: probe.created,
+    occurredAt equal to createdAt (the same instant in the database), after {failures, delayMs, abort}, the request's
+    trace id; in the database alpha's, actor system/local-probe, subject probe/{id}. The delivery's log line is in the
+    trace of the request that wrote the message, with alpha's tenant.id.
+    AC-7 checked. failures 2: after each failure next_attempt_at - updated_at was exactly 30 s then 60 s on the test
+    clock; not attempted before the clock reached it; each advance past it caused the next attempt within 1 s; sent after
+    the third attempt, three calls. failures 50: the waits after failures 1 to 9 were 30, 60, 120, 240, 480, 960, 1920,
+    3600, 3600 s; after the tenth attempt dead with its last error; salon.outbox.dead rose by exactly one; three hours
+    later on the clock still ten calls.
+    AC-8 checked. abort true answers 500 internal_error; no outbox message and no audit entry was added (counted).
+    AC-9 checked. 20 probes with delayMs 15000: 4 in a provider call at once (concurrency), 16 waiting; GET /api/v1/salon
+    on alpha, beta and gamma answered 200 in under 10 ms each and health 200. The first four were recorded as failed
+    with "The provider did not answer within 10000 ms" about 11 s after they were written, before 15 s.
+    AC-10 checked. Five probes failing once each opened the probe channel's breaker; a further probe stayed pending with
+    zero attempts and zero calls for 3.5 s and still at 45 s on the test clock (the failed ones, due again, were not
+    attempted either); at 75 s it was delivered within 1 s and the five failed ones were sent on their second attempt.
+    /api/v1/salon on the three salons and /actuator/health answered 200 throughout.
+    AC-11 checked, both ways. A probe with delayMs 8000 in its provider call; local-service.sh stop api (took about 7 s:
+    the call outlived the 5 s shutdown grace and was left to its lease); the message stayed sending, one attempt, lease
+    running; after start api it was held until the lease ran out on the test clock, then attempted again within 1 s with
+    the same id as idempotency key and sent (attempts 2), no repair. Accepted by the lead: QA needs a delayMs between the
+    shutdown grace (5 s) and the provider time limit (10 s), or a graceful stop lets the call finish and it is simply sent.
+    With local-service.sh stop postgres during a delivery: health 503 within 2 s, meta 200, salons 503
+    service_unavailable; after start postgres health recovered by itself; the outcome had not been recorded (sending,
+    one attempt); after the lease ran out on the test clock it was attempted again (the provider counted two calls for
+    that id) and sent.
+    AC-12 checked. 100 probes (34 alpha, 33 beta, 33 gamma) sent together: all sent within 1.3 s, each with one attempt and
+    one provider call; every delivery line carried the tenant.id of its probe's salon. Two dispatchers in two processes
+    racing on one database are covered by TwoDispatchersIntegrationTest, not on the local environment, which runs one API.
+    AC-13 checked. alpha's probe asked for on beta: 404 not_found, the same body as an id that does not exist (but for the
+    traceId and the id in the path). As salon_app with no salon set: no row of audit_entry or outbox_message; set to
+    alpha: alpha's rows and none of beta's; UPDATE and DELETE of audit_entry refused (permission denied); the owner's
+    UPDATE refused too (trigger). The F01-S02 catalogue check holds for both tables (RLS enabled and forced,
+    tenant_isolation policy, tenant_id required with a foreign key to tenant, every unique and every index starting with
+    tenant_id). salon_app's grants: audit_entry INSERT, SELECT; outbox_message SELECT, INSERT, UPDATE, DELETE; nothing
+    on tenant or scheduled_job.
+    AC-14 checked. On gamma's hostname, GET /api/v1/salon 200, an unknown path 404, a probe 400 and 201, DELETE 405: every
+    line of each request carried gamma's tenant.id, and one request line with method, path without the query string,
+    status and duration (event.duration, ns). A hostname with no salon and the platform hostname: no tenant.id. With a
+    query string, a body, a Cookie and an Authorization header sent, none of them appears anywhere in the log, and every
+    line of the log is one JSON object. Accepted by the lead: on a salon's hostname, /api/v1/meta, /actuator/** and the
+    OpenAPI document carry no tenant.id, because the salon is not looked up for them (they must not wait on the
+    database); every other request looks its salon up when it starts.
+    AC-15 checked. With the clock moved 30 days on, the cleanup job's next run came within seconds: alpha's 36 delivered
+    messages gone, beta's message delivered after the jump kept and its older ones gone, the dead message kept. Its
+    lines carry each salon's tenant.id, each salon's run in a trace of its own.
+    AC-16 checked. Under SPRING_PROFILES_ACTIVE=staging (the startup line says so): GET, PUT and DELETE /local/clock, POST
+    /local/probes, GET /local/probes/{id}, /local/ and /local/anything, /actuator/metrics and /actuator/metrics/{name},
+    on localhost and on a salon's hostname: all 404 not_found; the refused PUT did not move the clock and the refused
+    probes wrote nothing. Neither the committed contract nor the local profile's /v3/api-docs mentions /local or the
+    actuator; outside local /v3/api-docs itself is 404. It started and ran with no warning or error.
+
+    Settings' final values (application.yaml, salon.*): outbox.enabled true; outbox.poll-interval 1s; outbox.batch-size
+    100; outbox.per-salon 20; outbox.lease 60s; outbox.max-attempts 10; outbox.backoff.initial 30s, multiplier 2, max 1h;
+    outbox.provider.time-limit 10s, concurrency 4; outbox.breaker.failure-threshold 5, wait-duration 60s;
+    outbox.retention 30d; outbox.shutdown-grace 5s; jobs.enabled true; jobs.poll-interval 1s; jobs.hold 10m;
+    jobs.outbox-cleanup 1h. batch-size, per-salon, shutdown-grace, jobs.poll-interval and jobs.hold were not in the spec.
+    The breaker's wait is wait-duration because a Java record component cannot be named wait. A job's stop waits 10 s for
+    the salon in progress (a constant). Tracing: management.tracing.sampling.probability 1.0,
+    management.tracing.propagation.type w3c, management.otlp.metrics.export.enabled false; spans and logs are exported
+    only when management.opentelemetry.tracing.export.otlp.endpoint (or the logging one) is set, and here none is.
+    logging.structured.format.console ecs; spring.main.banner-mode off.
+
+    Dependencies added (apps/api/pom.xml, versions managed by Spring Boot 4.1.1): spring-boot-starter-validation,
+    spring-boot-starter-opentelemetry, and their -test starters; micrometer-tracing-bridge-otel declared for compiling
+    (the starter brings it at runtime) to name the log fields trace.id and span.id.
+
+    For the documents:
+    - Suspended salons (accepted by the lead): their messages wait, not attempted, until the salon is active again
+      (outbox_due takes active salons only); jobs skip them (active_tenant_ids).
+    - Row-level security is forced, so it holds for the owning role, which is not a superuser outside a developer's
+      machine. outbox_due and outbox_backlog therefore set each active salon in turn inside the function and put the
+      caller's app.tenant_id back before returning; a function SET clause cannot be used, because only a superuser may
+      attach one for a custom setting. multi-tenancy.md should describe this, with the new SECURITY DEFINER functions:
+      tenant_by_id, active_tenant_ids, outbox_due, outbox_backlog, job_claim, job_finish.
+    - tenant_by_slug now returns id, status, time_zone; it is dropped and recreated in V4 (a return type cannot be
+      changed in place); the previous version selects id and status by name and keeps working.
+    - tenant.time_zone is refused unless it is in PostgreSQL's time zone list and shaped as an IANA name
+      (is_iana_time_zone), so that Java knows it too.
+    - backend.md: "the JVM runs in the machine's time zone" is no longer true; the API sets UTC at start (UtcTimeZone).
+      New: every problem body has traceId; validation failures have errors [{field, detail}]; request bodies are read
+      strictly (no coercion between JSON types); the request log line and its ECS fields; the outbox, jobs and meters.
+    - Every audit_entry and outbox_message time is the application's clock, written by the application; these tables
+      have no DEFAULT now().
+    - Spring Boot 4's test support turns W3C propagation off together with tracing export; the integration test base
+      carries @AutoConfigureTracing so that tests trace as the product does.
+    - infra/scripts read a process's start time in UTC now (e4fadd2): an API started with another TZ was otherwise
+      disowned by the next stop and left holding its port.
+    - The web app keeps its own Salon type (slug, name, brandColour); it does not use timeZone yet.
+    - An F01-S04 build was begun in this worktree by a second developer session while this one was stalled; its three
+      later commits (8b3c642, 1c25f71, af0ccee) were reviewed against the spec and kept.
 cases: []
 verification:
-  commands: []
+  commands:
+    - "cd apps/api && ./mvnw -q verify"
+    - "pnpm install --frozen-lockfile"
+    - "pnpm -r lint"
+    - "pnpm -r typecheck"
+    - "pnpm -r test"
+    - "pnpm --filter @salon/web build"
+    - "pnpm contracts:check"
+    - "qa/scripts/sdlc selftest"
   automation: []
   manual: []
   deferred: []

@@ -1,9 +1,15 @@
-import type { ApiClient, Salon } from '@salon/api-contracts';
+import type { ApiClient, Salon as ContractSalon } from '@salon/api-contracts';
 
 import { isHexColour } from '@/styles/brand';
 
 import { API_TIMEOUT_MS, createServerApiClient } from './client';
 import { describeFailure } from './failure';
+
+/**
+ * What the web app carries about a salon: its public brand. The contract's salon holds more (its
+ * time zone, from F01-S04), which no screen uses yet; a screen that shows a time takes it then.
+ */
+export type Salon = Pick<ContractSalon, 'slug' | 'name' | 'brandColour'>;
 
 /** What the API said about the salon a hostname names. */
 export type SalonLookup =

@@ -36,7 +36,8 @@ public class GetPublishedBrand {
     public PublishedBrand forCurrentSalon() {
         CurrentTenant salon = TenantContext.require();
         return readOnly.execute(status -> brands.findCurrent()
-                .map(brand -> new PublishedBrand(salon.slug(), brand.displayName(), brand.brandColour()))
+                .map(brand -> new PublishedBrand(salon.slug(), brand.displayName(), brand.brandColour(),
+                        salon.timeZone().getId()))
                 .orElseThrow(TenantNotFoundException::new));
     }
 }

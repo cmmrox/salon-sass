@@ -20,6 +20,7 @@ asked for; the cases of a stage are written at its feature's pass.
 | F01-S01 | complete | pass | NFR-17, NFR-18 | 10 | 63 | 60 | 2 | 1 |
 | F01-S02 | complete | pass | NFR-01, NFR-07, NFR-15 | 12 | 45 | 45 | 0 | 0 |
 | F01-S03 | complete | - | BRD-03, NFR-01, NFR-17 | 11 | 0 | 0 | 0 | 0 |
+| F01-S04 | complete | - | BKG-15, NFR-01, NFR-10, NFR-15, NFR-16 | 16 | 0 | 0 | 0 | 0 |
 | F01-S05 | planned | - | BRD-03, NFR-01, NFR-07, NFR-16, NFR-18 | 12 | 0 | 0 | 0 | 0 |
 
 ## Deferred cases
@@ -94,7 +95,7 @@ Cases waiting for something else. `feature-verify` and `release-prepare` go thro
 | BKG-12 | R1 | must | F10 | - |
 | BKG-13 | R1 | must | F10 | - |
 | BKG-14 | R1 | must | F07 | - |
-| BKG-15 | R1 | must | F01 | F01-S04 (outlined) |
+| BKG-15 | R1 | must | F01 | F01-S04 (complete) |
 | BKG-16 | R1 | must | F07 | - |
 | BKG-17 | R1 | should | F09 | - |
 | BKG-18 | R2 | should | unowned | - |

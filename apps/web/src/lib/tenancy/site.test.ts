@@ -1,4 +1,4 @@
-import type { Salon } from '@salon/api-contracts';
+import type { Salon } from '@/lib/api/salon';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { SalonLookup } from '@/lib/api/salon';

@@ -44,7 +44,14 @@ Created by stage F01-S01. Everything runs on the host except PostgreSQL, which r
   `salon-postgres-data`. Containers of other projects on the machine are never touched.
 - Process ids are in `.local/run` and logs in `.local/logs`; neither is committed. A script trusts a
   process id file only while the process it names is still the one it started (checked by start
-  time), so it never stops an unrelated process.
+  time, read in UTC whatever `TZ` the starting shell had), so it never stops an unrelated process.
+- **The API's log** (`.local/logs/api.log`) is one ECS JSON object per line, with `tenant.id`,
+  `trace.id` and `span.id`.
+- **Local test hooks** are served by the API in the `local` profile only: the test clock under
+  `/local/clock`, the probe under `/local/probes`, and `/actuator/metrics`. Every other profile
+  answers 404. How to use them is in `docs/qa/test-plan.md`.
+- `TZ=<zone> infra/scripts/local-service.sh start api` starts the API under another machine time
+  zone; the API runs in UTC whatever it is.
 - The scripts take turns: a second run waits for the first to finish rather than racing it.
 - **Two database roles**, both with local-only passwords in `.env.example`: the owning role
   (`SALON_DB_USER`, `salon`) runs the migrations and owns every table; the application role
@@ -53,7 +60,9 @@ Created by stage F01-S01. Everything runs on the host except PostgreSQL, which r
   Elsewhere the application role must exist before the first migration, and the owning role must
   not be a superuser (F01-S05).
 - **The three synthetic salons** of `docs/qa/test-plan.md` are seeded in the `local` profile only,
-  every time the API starts, without duplicating. No other profile creates a salon.
+  every time the API starts, without duplicating. No other profile creates a salon. Alpha and beta
+  are in `Asia/Colombo`, gamma in `Europe/London`; a database seeded before F01-S04 gets gamma's zone
+  on the next start.
 - **Loopback only by default.** The API and the web app listen on `127.0.0.1` and `::1`.
   `SALON_LISTEN_ON_NETWORK=true` makes both listen on every interface, for testing from a phone on
   the same network; anyone else on that network can then reach them. The web app takes the salon

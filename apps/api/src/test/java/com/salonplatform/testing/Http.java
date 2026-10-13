@@ -64,6 +64,31 @@ public final class Http {
     }
 
     /**
+     * Any request with this {@code Host} header, these other headers and, when it is not null, this
+     * body (sent as UTF-8 with its length).
+     */
+    public Exchange sendOnHost(String method, String host, String path, Map<String, String> headers, String body) {
+        StringBuilder request = new StringBuilder(method).append(' ').append(path).append(" HTTP/1.1\r\n")
+                .append("Host: ").append(host).append("\r\n");
+        headers.forEach((name, value) -> request.append(name).append(": ").append(value).append("\r\n"));
+        if (headers.keySet().stream().noneMatch(name -> name.equalsIgnoreCase("Accept"))) {
+            request.append("Accept: application/json\r\n");
+        }
+        byte[] content = body == null ? new byte[0] : body.getBytes(StandardCharsets.UTF_8);
+        if (body != null) {
+            request.append("Content-Length: ").append(content.length).append("\r\n");
+        }
+        request.append("Connection: close\r\n\r\n");
+        String head = request.toString();
+        return Exchange.parse(raw("127.0.0.1", head + new String(content, StandardCharsets.ISO_8859_1)));
+    }
+
+    /** {@code POST} of a JSON body on a hostname. */
+    public Exchange postJsonOnHost(String host, String path, String json) {
+        return sendOnHost("POST", host, path, Map.of("Content-Type", "application/json"), json);
+    }
+
+    /**
      * Sends exactly these bytes and returns everything the server answered: the status line, the
      * headers and the body. For requests no HTTP client would agree to send.
      */

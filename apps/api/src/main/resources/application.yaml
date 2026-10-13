@@ -4,6 +4,9 @@
 spring:
   application:
     name: salon-api
+  main:
+    # Every line the API writes is a JSON log line; the banner is not one.
+    banner-mode: "off"
   threads:
     virtual:
       enabled: true
@@ -48,9 +51,23 @@ spring:
     open-in-view: false
     hibernate:
       ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          # Times go to and from the database as UTC instants, whatever the machine's zone (the
+          # API also sets the JVM's default zone to UTC when it starts: UtcTimeZone).
+          time_zone: UTC
   mvc:
     problemdetails:
       enabled: true
+  # A request body is read strictly: a value of another JSON type is never turned into the declared
+  # one. A number in quotes is not a number, a decimal is not a whole number, and 1 is not true; each
+  # is a validation failure that names the field (400 bad_request), as the contract's types say.
+  jackson:
+    mapper:
+      allow-coercion-of-scalars: false
+    deserialization:
+      accept-float-as-int: false
 
 server:
   port: ${SALON_API_PORT:8090}
@@ -71,6 +88,28 @@ management:
   endpoint:
     health:
       show-components: always
+  tracing:
+    # Every request, delivery and job run is traced. Spans leave the process only when an OTLP
+    # endpoint is configured (management.opentelemetry.tracing.export.otlp.endpoint); where they are
+    # shipped is F01-S05's.
+    sampling:
+      probability: 1.0
+    # A caller's W3C traceparent is continued; nothing else is read or written.
+    propagation:
+      type: w3c
+  otlp:
+    metrics:
+      export:
+        # Meters are read at /actuator/metrics in the local profile. Shipping them is F01-S05's.
+        enabled: false
+
+# One JSON object per line, in the Elastic Common Schema: every line carries trace.id and span.id,
+# and tenant.id whenever a salon is bound (a request on its hostname, a delivery or a job run for
+# it). The developer tests keep their own quiet, plain configuration (logback-test.xml).
+logging:
+  structured:
+    format:
+      console: ecs
 
 salon:
   # Salons are served at <slug>.<platform domain>. Required: an environment that does not say
@@ -86,6 +125,37 @@ salon:
     # seconds and cannot be set), decides how soon the API answers again after the database does
     # (SteadyReconnectDataSource). Each attempt keeps the driver's limits above.
     reconnect-interval: 250ms
+  # The outbox (OutboxSettings) and the recurring jobs (JobSettings). These are the defaults, written
+  # out so that they can be read in one place; tests shorten them.
+  outbox:
+    # Whether this instance delivers. Messages are written whatever this says.
+    enabled: true
+    poll-interval: 1s
+    batch-size: 100
+    per-salon: 20
+    # How long a claim holds a message; a delivery interrupted by a stop is attempted again after it.
+    lease: 60s
+    max-attempts: 10
+    backoff:
+      initial: 30s
+      multiplier: 2
+      max: 1h
+    provider:
+      time-limit: 10s
+      concurrency: 4
+    breaker:
+      failure-threshold: 5
+      wait-duration: 60s
+    # Delivered messages are kept this long, then removed by the outbox-cleanup job.
+    retention: 30d
+    # On stop, calls in flight are given this long to finish; what is left is recovered by its lease.
+    shutdown-grace: 5s
+  jobs:
+    enabled: true
+    poll-interval: 1s
+    # How long a job stays claimed by an instance that stopped without finishing it.
+    hold: 10m
+    outbox-cleanup: 1h
   server:
     # Every network interface, as a service in a container must. The local profile listens on this
     # machine's loopback addresses only, unless SALON_LISTEN_ON_NETWORK says otherwise.
