@@ -1,4 +1,5 @@
 import { findSalon, type Salon, type SalonLookup } from '@/lib/api/salon';
+import { markTenant } from '@/lib/observability/request-context';
 
 import { classifyHostname, hasSlugForm, platformDomainOf, salonHostname } from './hostname';
 
@@ -50,10 +51,13 @@ export async function resolveSite(
   const lookup = await find(hostname.slug, salonHostname(hostname.slug, platformDomain));
   switch (lookup.kind) {
     case 'found':
+      // The request's log line names the salon (NFR-16) once the API has said it is one.
+      markTenant(hostname.slug);
       return { kind: 'salon', salon: lookup.salon };
     case 'not-found':
       return { kind: 'not-found' };
     case 'suspended':
+      markTenant(hostname.slug);
       return { kind: 'suspended' };
     case 'unavailable':
       return { kind: 'unavailable' };

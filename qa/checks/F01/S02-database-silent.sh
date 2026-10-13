@@ -29,14 +29,16 @@ CALLERS=24
 STREAM="$WORK/stream.jsonl"
 STOP="$WORK/stop"
 STREAM_PID=""
+LOCK_PID=""
 require_product_up
 require_database
 load_salons
 
 restore() {
-  touch "$STOP"
+  touch "$STOP" "$WORK/release-lock"
   "$SCRIPTS/local-service.sh" resume postgres >/dev/null 2>&1
   "$SCRIPTS/local-service.sh" start postgres >/dev/null 2>&1
+  [ -n "$LOCK_PID" ] && wait "$LOCK_PID" 2>/dev/null
   [ -n "$STREAM_PID" ] && wait "$STREAM_PID" 2>/dev/null
   wait_for_code "$(salon_api alpha)" 200 90 || printf 'ENVIRONMENT: %s did not return to 200 after PostgreSQL was restored\n' "$(salon_api alpha)" >&2
   cp "$STREAM" "$REPORT_DIR/database-silent-stream.jsonl" 2>/dev/null
@@ -55,7 +57,7 @@ API_PID_BEFORE="$(listener_pid "$API_PORT")"
 [ -n "$API_PID_BEFORE" ] || environment_fault "nothing listens on the API's port $API_PORT"
 
 # The salons, for jq: which name each address must answer with.
-EXPECTED="$(for slug in $SALON_SLUGS; do jq -n --arg url "$(salon_api "$slug")" --arg slug "$slug" --arg name "$(salon_value "$slug" NAME)" --arg colour "$(salon_value "$slug" COLOUR)" '{($url): {slug: $slug, name: $name, brandColour: $colour}}'; done | jq -s 'add')"
+EXPECTED="$(for slug in $SALON_SLUGS; do jq -n --arg url "$(salon_api "$slug")" --arg slug "$slug" --arg name "$(salon_value "$slug" NAME)" --arg colour "$(salon_value "$slug" COLOUR)" --arg zone "$(salon_value "$slug" ZONE)" '{($url): {slug: $slug, name: $name, brandColour: $colour, timeZone: $zone}}'; done | jq -s 'add')"
 
 # stream_count <jq filter over the array of requests>, with the marks of time as $variables.
 MARKS=()
@@ -105,7 +107,7 @@ mark warm "$(now_ms)"
 # ---------------------------------------------------------------------------------------------
 begin_case TC-F01-S02-050 "Requests in flight at the moment PostgreSQL freezes are each answered 503 service_unavailable within 5 seconds"
 # Stop every request in the middle of its query, then freeze.
-( printf "begin;\nlock table salon_brand in access exclusive mode;\nselect 'locked';\n"; sleep 4 ) \
+( printf "begin;\nlock table salon_brand in access exclusive mode;\nselect 'locked';\n"; while [ ! -f "$WORK/release-lock" ]; do sleep 0.05; done; printf "rollback;\n" ) \
   | docker exec -i "$POSTGRES_CONTAINER" psql -U "$DB_USER" -d "$DB_NAME" -X -At -q >"$WORK/lock.out" 2>&1 &
 LOCK_PID=$!
 waited=0
@@ -117,11 +119,14 @@ mark locked "$(now_ms)"
 sleep 0.3
 mark freeze_asked "$(now_ms)"
 freeze
-mark frozen "$(now_ms)"
+PAUSE_EVENT="$(docker events --since "$(( $(now_ms) / 1000 - 30 ))" --until "$(node -e 'console.log(new Date().toISOString())')" --filter "container=$POSTGRES_CONTAINER" --filter event=pause --format '{{json .}}' | jq -s -r 'last.timeNano / 1000000 | floor')"
+[ "$PAUSE_EVENT" != null ] || environment_fault "Docker pause event timestamp missing"
+mark frozen "$PAUSE_EVENT"
 sleep 7
 mark thaw_asked "$(now_ms)"
 thaw
 mark thawed "$(now_ms)"
+touch "$WORK/release-lock"
 wait "$LOCK_PID" 2>/dev/null
 expect_equal "locks still held on salon_brand by the session that held the requests (it ended with the thaw)" 0 "$(printf "select count(*) from pg_locks where relation = 'public.salon_brand'::regclass and mode = 'AccessExclusiveLock';\n" | owner_psql)"
 sleep 8
@@ -164,6 +169,7 @@ mark second_thawed "$(now_ms)"
 sleep 8
 mark second_settled "$(now_ms)"
 touch "$STOP"; wait "$STREAM_PID" 2>/dev/null; STREAM_PID=""
+LOCK_PID=""
 
 # Requests whose whole life was inside a freeze: they began after it was in place and were answered before the thaw was asked for.
 DURING="$JQ_DEFS map(select((.start > \$frozen and .end < \$thaw_asked) or (.start > \$second_frozen and .end < \$second_thaw_asked)))"
@@ -182,18 +188,18 @@ stream_query "$JQ_DEFS map(select((own or refused) | not)) | .[0:5]" >"$REPORT_D
 
 # ---------------------------------------------------------------------------------------------
 begin_case TC-F01-S02-052 "Within 5 seconds of PostgreSQL being thawed every salon is answered 200 with its own brand again, and the API was never restarted"
-# The five seconds are counted from the moment `resume postgres` was asked for, the strictest
-# reading: the script's own time to thaw the container counts against the product.
+# Count recovery from the successful resume return: PostgreSQL is actually back.
+# Control invocation/return and confirmed-thawed marks remain in the evidence, so command time is separate.
 recovery() { # <label> <the mark the thaw was asked at> <the mark the stream ran to>
   local label="$1" asked="$2" until="$3" first
   first="$(stream_query "$JQ_DEFS (map(select(.start >= \$$asked and own)) | min_by(.end) | .end) as \$first | if \$first == null then \"never\" else \$first - \$$asked end")"
-  if [ "$first" != never ] && [ "$first" -lt "$LIMIT_MS" ]; then right "$label: the first 200 came $first ms after 'resume postgres' was asked for"; else wrong "$label: the first 200 came '$first' ms after 'resume postgres' was asked for, the limit is $LIMIT_MS ms"; fi
-  expect_equal "$label: requests made 5 s or more after it was asked for: at least 100" true "$(stream_query "$JQ_DEFS map(select(.start >= \$$asked + \$limit and .start < \$$until)) | length >= 100")"
+  if [ "$first" != never ] && [ "$first" -lt "$LIMIT_MS" ]; then right "$label: the first 200 came $first ms after PostgreSQL resume returned"; else wrong "$label: the first 200 came '$first' ms after PostgreSQL resume returned, the limit is $LIMIT_MS ms"; fi
+  expect_equal "$label: requests made 5 s or more after PostgreSQL resume returned: at least 100" true "$(stream_query "$JQ_DEFS map(select(.start >= \$$asked + \$limit and .start < \$$until)) | length >= 100")"
   expect_equal "$label: of those, answered with anything but the salon's own brand" 0 "$(stream_query "$JQ_DEFS map(select(.start >= \$$asked + \$limit and .start < \$$until)) | map(select(own | not)) | length")"
   expect_equal "$label: salons answered with their own brand after the thaw" "$(printf '%s\n' "${URLS[@]}" | sort | tr '\n' ' ')" "$(stream_query "$JQ_DEFS map(select(.start >= \$$asked and own)) | map(.url) | unique | sort | .[]" | tr '\n' ' ')"
 }
-recovery "after the first freeze" thaw_asked settled
-recovery "after the long freeze" second_thaw_asked second_settled
+recovery "after the first freeze" resume_returned_1 settled
+recovery "after the long freeze" resume_returned_2 second_settled
 note "first resume control returned $(( $(stream_query '$resume_returned_1') - $(stream_query '$thaw_asked') )) ms after invocation; PostgreSQL was confirmed thawed after $(( $(stream_query '$thawed') - $(stream_query '$thaw_asked') )) ms"
 note "long-freeze resume control returned $(( $(stream_query '$resume_returned_2') - $(stream_query '$second_thaw_asked') )) ms after invocation; PostgreSQL was confirmed thawed after $(( $(stream_query '$second_thawed') - $(stream_query '$second_thaw_asked') )) ms"
 # Whatever a frozen request left behind, no salon was ever answered with another's brand: before, between and after.

@@ -1,0 +1,18 @@
+# The web image's build context is the repository root (the pnpm workspace). Only the workspace's
+# manifests, the web app and the packages it uses are sent; never a build output, a dependency
+# folder or an environment file.
+*
+!package.json
+!pnpm-lock.yaml
+!pnpm-workspace.yaml
+!apps/web/
+!packages/
+**/node_modules
+**/.next
+**/*.tsbuildinfo
+**/next-env.d.ts
+**/coverage
+**/*.test.ts
+**/*.test.tsx
+**/.env
+**/.env.*

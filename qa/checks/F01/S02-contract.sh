@@ -30,7 +30,10 @@ begin_case TC-F01-S02-080 "pnpm contracts:check passes on the committed tree, an
 expect_equal "uncommitted changes to the contract or the product before the check" "" "$(tree_state)"
 expect_equal "the committed document describes GET $SALON_PATH with a 200 and a 404" "200 404" "$(jq -r --arg p "$SALON_PATH" '.paths[$p].get.responses | keys | map(select(. == "200" or . == "404")) | join(" ")' "$REPO_ROOT/$DOCUMENT" 2>/dev/null)"
 expect_contains "the committed client" "\"$SALON_PATH\"" "$(cat "$REPO_ROOT/$CLIENT")"
+# The contract generator repackages the runtime jar. Keep the live API stopped while it does.
+"$SCRIPTS/local-service.sh" stop api >"$REPORT_DIR/contract-stop-api.log" 2>&1 || environment_fault "API could not be stopped before contract generation"
 run_check "$REPO_ROOT"
+"$SCRIPTS/local-service.sh" start api >"$REPORT_DIR/contract-start-api.log" 2>&1 || environment_fault "API could not restart after contract generation"
 printf '%s\n' "$CHECK_OUTPUT" >"$REPORT_DIR/contracts-check-committed.log"
 expect_equal "exit code on the committed tree" 0 "$CHECK_EXIT"
 expect_equal "changes the check made to the repository" "" "$(tree_state)"

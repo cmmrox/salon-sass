@@ -88,6 +88,20 @@ management:
   endpoint:
     health:
       show-components: always
+      # Two more groups beside the full health, for whatever sends traffic to this instance (the
+      # edge) and whatever restarts it: /actuator/health/readiness, which turns OUT_OF_SERVICE as
+      # soon as the instance starts to stop, and /actuator/health/liveness. Each shows its status only.
+      probes:
+        enabled: true
+      # Named here only to show the status alone; a group named in configuration includes every
+      # indicator unless it says which, so each says.
+      group:
+        readiness:
+          include: readinessState
+          show-components: never
+        liveness:
+          include: livenessState
+          show-components: never
   tracing:
     # Every request, delivery and job run is traced. Spans leave the process only when an OTLP
     # endpoint is configured (management.opentelemetry.tracing.export.otlp.endpoint); where they are
@@ -157,6 +171,10 @@ salon:
     hold: 10m
     outbox-cleanup: 1h
   server:
+    # How long a stopping instance keeps answering, with its readiness already OUT_OF_SERVICE, before
+    # it stops taking requests (ReadinessDrain): long enough for the edge's health check, which runs
+    # every second, to take it out of the rotation. Calls in flight then get the shutdown grace.
+    drain-delay: 5s
     # Every network interface, as a service in a container must. The local profile listens on this
     # machine's loopback addresses only, unless SALON_LISTEN_ON_NETWORK says otherwise.
     listen-on-network: ${SALON_LISTEN_ON_NETWORK:true}

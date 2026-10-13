@@ -1,0 +1,188 @@
+# The production-like stack (decisions 018 and 030): the edge, two API instances, two web app
+# instances, PostgreSQL and an OpenTelemetry collector. The same files deploy to a real host; only
+# the environment file differs (.env.stack.example lists every setting, and nothing here has a value
+# that belongs to one machine).
+#
+# Started, deployed and stopped only through infra/scripts/stack-*.sh, which pass the environment
+# file and the versions deployed (.stack/deployed.env) and nothing from the shell.
+#
+# Every name carries the project's prefix, and nothing here is shared with the local environment
+# (salon-local): no container, volume, network or port.
+name: salon-stack
+
+x-api-environment: &api-environment
+  SPRING_PROFILES_ACTIVE: staging
+  SALON_PLATFORM_DOMAIN: ${SALON_PLATFORM_DOMAIN:?SALON_PLATFORM_DOMAIN is required (.env.stack.example)}
+  SALON_DB_URL: ${SALON_DB_URL:?SALON_DB_URL is required (.env.stack.example)}
+  SALON_DB_APP_USER: ${SALON_DB_APP_USER:?SALON_DB_APP_USER is required (.env.stack.example)}
+  SALON_DB_APP_PASSWORD: ${SALON_DB_APP_PASSWORD:?SALON_DB_APP_PASSWORD is a required secret (.env.stack.example)}
+  # Forwarded headers are believed from the edge's network only.
+  SALON_TRUSTED_PROXIES: ${SALON_STACK_EDGE_SUBNET:?SALON_STACK_EDGE_SUBNET is required (.env.stack.example)}
+  SALON_OTLP_ENDPOINT: http://collector:4318
+
+x-api: &api
+  restart: unless-stopped
+  # Long enough for the drain (5 s), the calls in flight (up to 30 s) and the stop itself.
+  stop_grace_period: 45s
+  depends_on:
+    postgres:
+      condition: service_healthy
+  networks:
+    - edge
+    - data
+
+x-web: &web
+  restart: unless-stopped
+  stop_grace_period: 45s
+  environment:
+    SALON_PLATFORM_DOMAIN: ${SALON_PLATFORM_DOMAIN:?SALON_PLATFORM_DOMAIN is required (.env.stack.example)}
+    # The API's one address: the edge's internal listener, which spreads calls over both API
+    # instances and passes the salon's hostname on unchanged.
+    SALON_API_BASE_URL: http://edge:8080
+  networks:
+    - edge
+
+services:
+  postgres:
+    image: postgres:18.6
+    container_name: salon-stack-postgres
+    restart: unless-stopped
+    stop_grace_period: 30s
+    environment:
+      POSTGRES_DB: ${SALON_DB_NAME:?SALON_DB_NAME is required (.env.stack.example)}
+      # The administrator: creates the two roles (infra/postgres/provision-roles.sql) and nothing else.
+      POSTGRES_USER: ${SALON_DB_ADMIN_USER:?SALON_DB_ADMIN_USER is required (.env.stack.example)}
+      POSTGRES_PASSWORD: ${SALON_DB_ADMIN_PASSWORD:?SALON_DB_ADMIN_PASSWORD is a required secret (.env.stack.example)}
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    networks:
+      - data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  # Runs the migrations of one version and stops (the `migrate` profile of the API). Never started
+  # by `up`: infra/scripts run it before the first instance of a version starts.
+  migrate:
+    image: ${SALON_IMAGE_PREFIX:-}salon-api:${SALON_MIGRATE_VERSION:?SALON_MIGRATE_VERSION is set by infra/scripts}
+    profiles: [migrate]
+    restart: "no"
+    environment:
+      <<: *api-environment
+      SPRING_PROFILES_ACTIVE: staging,migrate
+      # Only the migrations run as the owning role; no instance is given its password.
+      SALON_DB_USER: ${SALON_DB_USER:?SALON_DB_USER is required (.env.stack.example)}
+      SALON_DB_PASSWORD: ${SALON_DB_PASSWORD:?SALON_DB_PASSWORD is a required secret (.env.stack.example)}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - data
+
+  api-1:
+    <<: *api
+    image: ${SALON_IMAGE_PREFIX:-}salon-api:${SALON_API_1_VERSION:?SALON_API_1_VERSION is set by infra/scripts}
+    container_name: salon-stack-api-1
+    environment:
+      <<: *api-environment
+      # Which instance a span or a meter came from.
+      OTEL_RESOURCE_ATTRIBUTES: service.instance.id=api-1
+
+  api-2:
+    <<: *api
+    image: ${SALON_IMAGE_PREFIX:-}salon-api:${SALON_API_2_VERSION:?SALON_API_2_VERSION is set by infra/scripts}
+    container_name: salon-stack-api-2
+    environment:
+      <<: *api-environment
+      # Which instance a span or a meter came from.
+      OTEL_RESOURCE_ATTRIBUTES: service.instance.id=api-2
+
+  web-1:
+    <<: *web
+    image: ${SALON_IMAGE_PREFIX:-}salon-web:${SALON_WEB_1_VERSION:?SALON_WEB_1_VERSION is set by infra/scripts}
+    container_name: salon-stack-web-1
+
+  web-2:
+    <<: *web
+    image: ${SALON_IMAGE_PREFIX:-}salon-web:${SALON_WEB_2_VERSION:?SALON_WEB_2_VERSION is set by infra/scripts}
+    container_name: salon-stack-web-2
+
+  # Local development and QA use this HTTP-only edge. Staging has its own profile and Caddyfile.
+  edge-http:
+    profiles: [local]
+    image: caddy:2.11.7-alpine
+    container_name: salon-stack-edge
+    restart: unless-stopped
+    ports:
+      - "${SALON_EDGE_PUBLISH_ADDRESS:-127.0.0.1}:${SALON_EDGE_HTTP_PORT:-8089}:8089"
+    environment:
+      SALON_PLATFORM_DOMAIN: ${SALON_PLATFORM_DOMAIN}
+      SALON_EDGE_HTTP_PORT: ${SALON_EDGE_HTTP_PORT:-8089}
+    volumes:
+      - ./edge/Caddyfile:/etc/caddy/Caddyfile:ro
+    networks:
+      edge:
+        aliases: [edge]
+
+  # Selected only when SALON_STACK_ENV=staging on the deployment host. Public DNS and the
+  # certificate provider are configured there; local development never starts this service.
+  edge-staging:
+    profiles: [staging]
+    image: ${SALON_EDGE_IMAGE:-caddy:2.11.7-alpine}
+    container_name: salon-stack-edge
+    restart: unless-stopped
+    ports:
+      - "${SALON_EDGE_PUBLISH_ADDRESS:-0.0.0.0}:80:80"
+      - "${SALON_EDGE_PUBLISH_ADDRESS:-0.0.0.0}:443:443"
+    environment:
+      SALON_PLATFORM_DOMAIN: ${SALON_PLATFORM_DOMAIN}
+      SALON_EDGE_ACME_EMAIL: ${SALON_EDGE_ACME_EMAIL:-}
+      SALON_EDGE_DNS_PROVIDER: ${SALON_EDGE_DNS_PROVIDER:-}
+      SALON_EDGE_DNS_CREDENTIALS: ${SALON_EDGE_DNS_CREDENTIALS:-}
+    volumes:
+      - ./edge/Caddyfile.staging:/etc/caddy/Caddyfile:ro
+      - edge-data:/data
+      - edge-config:/config
+    networks:
+      edge:
+        aliases: [edge]
+
+  collector:
+    image: otel/opentelemetry-collector-contrib:0.162.0
+    container_name: salon-stack-collector
+    restart: unless-stopped
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    volumes:
+      - ./collector/config.yaml:/etc/otelcol-contrib/config.yaml:ro
+      # Traces and meters as OTLP JSON lines, where a test can read them (.stack/telemetry).
+      - ../../.stack/telemetry:/var/lib/otelcol/out
+    logging:
+      driver: json-file
+      options:
+        max-size: 20m
+        max-file: "3"
+    networks:
+      - data
+
+networks:
+  # The edge, the apps, and the address the web app calls the API at. Its range is the one the API
+  # believes forwarded headers from.
+  edge:
+    name: salon-stack-edge
+    ipam:
+      config:
+        - subnet: ${SALON_STACK_EDGE_SUBNET}
+  # The API, the database and the collector. Nothing on it reaches anything outside.
+  data:
+    name: salon-stack-data
+    internal: true
+
+volumes:
+  postgres-data:
+    name: salon-stack-postgres-data
+  edge-data:
+    name: salon-stack-edge-data
+  edge-config:
+    name: salon-stack-edge-config

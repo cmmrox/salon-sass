@@ -1,0 +1,40 @@
+# The stack's OpenTelemetry collector. It receives the API's traces and meters over OTLP/HTTP and
+# writes them as OTLP JSON, one batch per line, where a test can read them: .stack/telemetry/
+# traces.jsonl and metrics.jsonl on the machine running the stack. Its own log, with one line per
+# batch, is read through Docker (docker logs salon-stack-collector).
+#
+# On a real host the exporters become the monitoring service's, chosen with the hosting (D-08).
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch:
+    timeout: 2s
+
+exporters:
+  file/traces:
+    path: /var/lib/otelcol/out/traces.jsonl
+    rotation:
+      max_megabytes: 50
+      max_backups: 2
+  file/metrics:
+    path: /var/lib/otelcol/out/metrics.jsonl
+    rotation:
+      max_megabytes: 50
+      max_backups: 2
+  debug:
+    verbosity: basic
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [file/traces, debug]
+    metrics:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [file/metrics, debug]

@@ -1,0 +1,51 @@
+# Local development and QA deliberately use plain HTTP. No local certificate, trust store,
+# redirect, HSTS header or TLS listener is configured here.
+{
+	admin localhost:2019
+	servers {
+		protocols h1 h2
+	}
+}
+
+# The Host header is passed unchanged; the apps resolve the salon from it alone. X-Forwarded-Host
+# is removed and Caddy overwrites the forwarded client/protocol headers (T-5).
+(instances) {
+	lb_policy round_robin
+	lb_retries 2
+	lb_try_duration 5s
+	lb_try_interval 100ms
+	fail_duration 10s
+	health_uri {args[0]}
+	health_interval 1s
+	health_timeout 2s
+	# A single transient readiness response must not eject the only remaining instance during rollout.
+	health_fails 3
+	health_passes 1
+	header_up -X-Forwarded-Host
+	transport http {
+		dial_timeout 2s
+	}
+}
+
+http://{$SALON_PLATFORM_DOMAIN}:{$SALON_EDGE_HTTP_PORT}, http://*.{$SALON_PLATFORM_DOMAIN}:{$SALON_EDGE_HTTP_PORT} {
+	header -Server
+	@api path /api /api/* /actuator /actuator/* /local /local/*
+	handle @api {
+		reverse_proxy api-1:8080 api-2:8080 {
+			import instances /actuator/health/readiness
+		}
+	}
+	handle {
+		reverse_proxy web-1:3000 web-2:3000 {
+			import instances /healthz
+		}
+	}
+}
+
+# The API address used by the web app is private to the stack network.
+http://:8080 {
+	header -Server
+	reverse_proxy api-1:8080 api-2:8080 {
+		import instances /actuator/health/readiness
+	}
+}

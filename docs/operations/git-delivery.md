@@ -12,6 +12,10 @@ evidence storage and transition from its earlier local workflow.
   GitHub PRs. Feature PRs are created after independent full feature QA and closure gates pass.
 - The owner reviews and merges PRs into `main`. Agents may integrate stage/QA branches into the
   feature branch locally, but do not merge the owner's GitHub PRs or push directly to `main`.
+- For F01 only, the owner's request on 2026-10-13 explicitly authorises the lead to merge its
+  GitHub PR after independent full feature QA, closure and required GitHub checks pass, then
+  remove its related merged branches and worktrees. This does not authorise merging later
+  feature PRs or deploying F01.
 - Post-merge cleanup of related local/remote branches and worktrees is authorised when the
   lifecycle command proves they contain no work outside `origin/main`. It requires no renewed
   permission, but an unsafe target is retained with the reason reported.

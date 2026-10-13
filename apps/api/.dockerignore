@@ -1,0 +1,9 @@
+# The API image's build context: the Maven wrapper, the build file and the sources, nothing else.
+*
+!.mvn/
+!mvnw
+!pom.xml
+!src/main/
+# Never an environment file, wherever it is.
+**/.env
+**/.env.*

@@ -6,7 +6,7 @@
 
 | Release | Requirements | Owned by a feature | Assigned to a stage | Passed QA |
 | --- | --- | --- | --- | --- |
-| R1 | 96 | 96 | 2 | 0 |
+| R1 | 96 | 96 | 2 | 2 |
 | R2 | 40 | 0 | 0 | 0 |
 | R3 | 22 | 0 | 0 | 0 |
 
@@ -17,10 +17,11 @@ asked for; the cases of a stage are written at its feature's pass.
 
 | Stage | Status | Stage QA | Requirements | Criteria | Cases | Automated | Manual | Deferred |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| F01-S01 | complete | pass | NFR-17, NFR-18 | 10 | 63 | 60 | 2 | 1 |
+| F01-S01 | complete | pass | NFR-17, NFR-18 | 10 | 63 | 60 | 3 | 0 |
 | F01-S02 | complete | pass | NFR-01, NFR-07, NFR-15 | 12 | 45 | 45 | 0 | 0 |
-| F01-S03 | complete | - | BRD-03, NFR-01, NFR-17 | 11 | 0 | 0 | 0 | 0 |
-| F01-S04 | complete | - | BKG-15, NFR-01, NFR-10, NFR-15, NFR-16 | 16 | 0 | 0 | 0 | 0 |
+| F01-S03 | complete | - | BRD-03, NFR-01, NFR-17 | 11 | 12 | 12 | 0 | 0 |
+| F01-S04 | complete | - | BKG-15, NFR-01, NFR-10, NFR-15, NFR-16 | 16 | 18 | 18 | 0 | 0 |
+| F01-S05 | complete | - | BRD-03, NFR-01, NFR-07, NFR-16, NFR-18 | 12 | 12 | 12 | 0 | 0 |
 
 ## Deferred cases
 
@@ -28,7 +29,7 @@ Cases waiting for something else. `feature-verify` and `release-prepare` go thro
 
 | Scope | Case | Reason | Unblocked by |
 | --- | --- | --- | --- |
-| F01-S01 | TC-F01-S01-057 | the repository has no GitHub remote, so no pull request can exist and the workflow has never run (the spec's "Done criteria" say so) | the owner creates the GitHub remote |
+| F01 | TC-F01-002 | First real-host deployment is outside local F01 proof, explicitly deferred by decision 018 and CR-005; public certificate, remote delivery and provider-dependent monitoring are not certified. | Owner decides D-08 hosting and D-02 platform domain, configures the DNS challenge module and credentials, provides host access, and explicitly requests staging deployment. |
 
 ## Requirements
 
@@ -178,7 +179,7 @@ Cases waiting for something else. `feature-verify` and `release-prepare` go thro
 | REP-09 | R3 | could | unowned | - |
 | BRD-01 | R1 | must | F04 | - |
 | BRD-02 | R1 | must | F04 | - |
-| BRD-03 | R1 | must | F01 | F01-S03 (complete), F01-S05 (outlined) |
+| BRD-03 | R1 | must | F01 | F01-S03 (complete), F01-S05 (complete) |
 | BRD-04 | R1 | must | F04 | - |
 | BRD-05 | R1 | must | F16 | - |
 | BRD-06 | R1 | must | F16 | - |

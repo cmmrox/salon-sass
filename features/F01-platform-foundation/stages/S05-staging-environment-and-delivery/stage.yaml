@@ -3,19 +3,184 @@ feature: F01
 title: "Staging environment and delivery pipeline"
 sequence: 5
 surfaces: [infra]
-status: outlined
+status: complete
 qa_status: not-run
+reopened_by: CR-005
 released_in: null
 depends_on: [F01-S03, F01-S04]
 requirements: [BRD-03]
+nfr_focus: [NFR-01, NFR-07, NFR-16, NFR-18]
 handoff:
-  run: null
-  data: null
-  notes: null
-cases: []
+  run: |
+    Local development is HTTP-only; no local certificate, trust, TLS, redirect or HSTS setup is needed.
+    Ensure ignored .env.stack contains the three DB secrets and SALON_STACK_ENV=local.
+    infra/scripts/stack-up.sh
+    infra/scripts/stack-seed.sh
+    infra/scripts/stack-seed.sh add <slug> [name] [colour]
+    infra/scripts/images-build.sh [version]
+    infra/scripts/images-scan.sh [image ...]
+    infra/scripts/stack-deploy.sh <version>
+    Stack: http://stack.localhost:8089; salons: http://<slug>.stack.localhost:8089.
+    Example: curl --resolve alpha.stack.localhost:8089:127.0.0.1 http://alpha.stack.localhost:8089/api/v1/salon
+    infra/scripts/stack-down.sh (keeps data; do not pass --delete-data)
+    Logs: docker logs salon-stack-<service>. Collector: .stack/telemetry/{traces,metrics}.jsonl.
+    Staging TLS is a separate profile and deferred until an explicit VPS staging request.
+    Developer gates used installed Node 24/Corepack: export PATH=/Users/cmmrox/.nvm/versions/node/v24.12.0/bin:$PATH
+    export COREPACK_ENABLE_DOWNLOAD_PROMPT=0. No tools were installed; primary salon-local is independent.
+  data: |
+    Synthetic alpha, beta, gamma and epsilon; prior delta was preserved. No real data, accounts,
+    messages or payments. Stack was stopped after checks; database and evidence volumes are preserved.
+    Primary salon-local state was not changed. Evidence is in ignored .stack/evidence/cr005-http.
+    Historical .stack/evidence/finish-s05 is retained; its TLS-specific evidence is superseded.
+  notes: |
+    Developer acceptance checks performed 2026-10-13 on local salon-stack only; this is not feature QA.
+    Local stack uses HTTP only at 127.0.0.1:8089. No local TLS, SSL, certificate, trust, redirect,
+    HSTS or HTTPS behavior was configured or tested. Staging TLS remains separately configured but was
+    not started or verified; TC-F01-002 is deferred until an explicit VPS staging request.
+    Evidence root: ignored .stack/evidence/cr005-http. Historical TLS evidence is not current evidence.
+
+    AC-1: Built API/web version and commit images; verified UID 10001, no .env files and version/commit
+    from /api/v1/meta over HTTP. Image sizes: API 433 MB, web 292 MB. Bases: eclipse-temurin:25.0.4.1_1-jdk-alpine-3.24,
+    eclipse-temurin:25.0.4.1_1-jre-alpine-3.24 and node:24.21.0-alpine3.24.
+    AC-2: Current images scan clean; alpine:3.18.0 negative control exits nonzero and names CVEs.
+    AC-3: Alpha/beta/gamma HTTP shells and APIs return matching tenants; platform status 200; unknown
+    and console return 404. AC-4: Added epsilon while running; its first API/web HTTP requests returned
+    the correct brand without restart. AC-5: Only edge publishes 127.0.0.1:8089; application/database/
+    collector ports are unpublished; beta spoof headers/id/query on alpha still resolve alpha.
+    AC-6: Role provisioning rerun succeeded; owner/app are non-superusers, app has no BYPASSRLS, owns
+    zero tables, and direct tenant SELECT is denied. AC-7: Missing each required DB secret refuses
+    startup naming it; fresh DB has no tenants before seed; /local/probes and /actuator/metrics return
+    404; tracked repository secret scan is clean.
+    AC-8: 50-VU HTTP k6 traffic across three salons during 0.1.0-SNAPSHOT -> 0.1.1-http: 35,595
+    requests / 71,190 checks, zero failures, connection errors or wrong-tenant responses; both versions
+    observed during rollout and only new version afterward. Rollback: 64,824 requests / 129,648 checks,
+    same zero-error results; both versions observed then old version only. AC-9: Under 50-VU HTTP traffic,
+    stopped/restarted one API and web instance: 45,996 requests / 91,992 checks, zero failures,
+    connection errors or wrong-tenant responses; both healthy and alpha routing worked afterward.
+    AC-10: Missing-version deploy refused before container state or deployed.env changed. AC-11: Alpha
+    web log, API trace and collector span share trace id and alpha tenant identity; web log excludes
+    query/cookie/authorization values. AC-12: Workflow lint passed; workflow contract reviewed and
+    missing staging secrets fail with their names. No GitHub deployment or registry write was run.
+
+    All prescribed developer commands passed: API Maven verify (417 tests, no failures/errors/skips),
+    frozen pnpm install using installed Node 24.12.0/Corepack pnpm 12.11.2, workspace lint/typecheck,
+    255 tests (19 contracts + 236 web), web build, contracts check, image build, workflow lint and
+    SDLC selftest (81 tests). No system software was installed. Local Compose config has only the
+    Caddyfile mount and no certificate volume. Staging config parses with a separate TLS Caddyfile and
+    cert storage; this is configuration validation, not certificate or TLS testing.
+    Stack tools: Caddy 2.11.7, OpenTelemetry Collector 0.162.0, Trivy 0.75.0, actionlint 1.7.12,
+    k6 1.8.2. No images were pushed. No real data, payments, messages, external deployment or VPS access.
+
+cases:
+- id: TC-F01-S05-001
+  title: Production images report tested commit and run without root or env files
+  type: build
+  priority: high
+  covers:
+  - AC-1
+- id: TC-F01-S05-002
+  title: Image scanning rejects fixable high and critical vulnerabilities
+  type: build
+  priority: high
+  covers:
+  - AC-2
+- id: TC-F01-S05-003
+  title: Every salon and safe host resolves through the HTTP edge
+  type: security
+  priority: high
+  covers:
+  - AC-3
+- id: TC-F01-S05-004
+  title: New salon gets HTTP immediately without edge restart
+  type: security
+  priority: high
+  covers:
+  - AC-4
+- id: TC-F01-S05-005
+  title: Only edge is published and forged tenant fields do not switch salons
+  type: tenant-isolation
+  priority: critical
+  covers:
+  - AC-5
+- id: TC-F01-S05-006
+  title: Production-like roles enforce least privilege idempotently
+  type: tenant-isolation
+  priority: critical
+  covers:
+  - AC-6
+- id: TC-F01-S05-007
+  title: Staging secrets and local hooks are closed by default
+  type: security
+  priority: high
+  covers:
+  - AC-7
+- id: TC-F01-S05-008
+  title: Deploy and rollback preserve every response under continuous traffic
+  type: resilience
+  priority: critical
+  covers:
+  - AC-8
+- id: TC-F01-S05-009
+  title: One API and web instance can disappear and rejoin under traffic
+  type: resilience
+  priority: critical
+  covers:
+  - AC-9
+- id: TC-F01-S05-010
+  title: Missing images refuse deployment without stopping anything
+  type: resilience
+  priority: high
+  covers:
+  - AC-10
+- id: TC-F01-S05-011
+  title: Web API and collector preserve tenant trace without secrets
+  type: security
+  priority: high
+  covers:
+  - AC-11
+- id: TC-F01-S05-012
+  title: Delivery workflow enforces CI main publication and manual staging
+  type: build
+  priority: high
+  covers:
+  - AC-12
 verification:
-  commands: []
-  automation: []
+  commands:
+  - cd apps/api && ./mvnw -q verify
+  - pnpm install --frozen-lockfile
+  - pnpm -r lint
+  - pnpm -r typecheck
+  - pnpm -r test
+  - pnpm --filter @salon/web build
+  - pnpm contracts:check
+  - infra/scripts/images-build.sh
+  - infra/scripts/lint-workflows.sh
+  - qa/scripts/sdlc selftest
+  automation:
+  - id: production-like-stack
+    tool: script
+    file: qa/checks/F01/S05-stack.sh
+    covers:
+    - TC-F01-S05-001
+    - TC-F01-S05-002
+    - TC-F01-S05-003
+    - TC-F01-S05-004
+    - TC-F01-S05-005
+    - TC-F01-S05-006
+    - TC-F01-S05-007
+    - TC-F01-S05-010
+    - TC-F01-S05-011
+    - TC-F01-S05-012
+    suites:
+    - regression
+  - id: deployment-traffic
+    tool: script
+    file: qa/checks/F01/S05-deployment.sh
+    covers:
+    - TC-F01-S05-008
+    - TC-F01-S05-009
+    suites:
+    - regression
   manual: []
   deferred: []
 evidence:

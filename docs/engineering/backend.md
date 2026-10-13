@@ -158,6 +158,15 @@ and `application`, never in a controller, a repository or a mapper.
 - `GET /actuator/info` is served in the `local` profile only and returns 404 in any other.
 - `GET /api/v1/meta` returns the service name, the build's version, the commit it was built from
   and the server time as a UTC instant. It does not touch the database.
+- `/actuator/health/readiness` and `/actuator/health/liveness` expose only the respective
+  application state. On shutdown readiness becomes `OUT_OF_SERVICE` first, with a five-second
+  serving delay before graceful shutdown; the edge checks every second and removes the instance
+  while accepted calls finish. The full health endpoint remains the database diagnostic.
+- In the stack's `staging` profile, migrations run once in a separate container with the `migrate`
+  profile and owning-role credentials; application instances never migrate or receive that
+  password. Forwarded client address and protocol are trusted only from `SALON_TRUSTED_PROXIES`,
+  the edge network. Forwarded host and port are disabled: tenant resolution always uses `Host`.
+  OTLP traces and meters are exported to `SALON_OTLP_ENDPOINT`; the collector is internal.
 - The API sets its default time zone to UTC when it starts (`UtcTimeZone`), whatever the machine's
   is, and Hibernate talks to the database in UTC. Instants in the API are UTC, written with `Z`.
 

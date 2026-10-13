@@ -1,9 +1,17 @@
+import { join } from 'node:path';
+
 import type { NextConfig } from 'next';
 import createNextIntlPlugin from 'next-intl/plugin';
 
 const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 
 const nextConfig: NextConfig = {
+  // The production image runs Next.js's own minimal server from .next/standalone (decision 030),
+  // with only the files the application needs. The local environment serves the same build through
+  // scripts/serve.mjs, which this does not change.
+  output: 'standalone',
+  // The workspace root, so that the workspace's own packages (the API client) are part of it.
+  outputFileTracingRoot: join(__dirname, '../..'),
   // The framework's defaults for a new application: data is fetched at request time unless a
   // component says it may be cached, and a static shell is served while it streams in.
   cacheComponents: true,

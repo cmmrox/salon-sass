@@ -92,7 +92,7 @@ export function expectBrandOf(answer: Answer, of: Salon, label: string): SalonBr
   expect(answer.contentType, `${label}: content type`).toBe('application/json');
   const brand = JSON.parse(answer.body) as SalonBrand;
   // toEqual on the whole object: a field the contract does not promise is a failure here.
-  expect(brand, label).toEqual({ slug: of.slug, name: of.name, brandColour: of.brandColour });
+  expect(brand, label).toEqual({ slug: of.slug, name: of.name, brandColour: of.brandColour, timeZone: of.timeZone });
   expectNoTenantId(answer, label);
   expectNothingOfOtherSalons(answer, of, label);
   return brand;
