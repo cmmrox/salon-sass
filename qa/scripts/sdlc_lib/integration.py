@@ -281,7 +281,11 @@ def cleanup(branches, apply=False):
             # Verify against main, then delete without forcing or relying on an upstream ref.
             if run("git", "rev-parse", f"refs/heads/{item['branch']}").stdout.strip() != item["local_sha"]:
                 raise Refusal("local branch changed during cleanup")
-            run("git", "branch", "-d", item["branch"])
+            # A stale upstream can lag a closed stage even though main includes it.
+            # Override it for this command only, so -d checks the verified main ref.
+            run("git", "-c", f"branch.{item['branch']}.remote=.",
+                "-c", f"branch.{item['branch']}.merge=refs/remotes/origin/main",
+                "branch", "-d", item["branch"])
         if item["remote_sha"]:
             # A lease protects concurrent pushes. This deletes one ref; no history is rewritten.
             run("git", "push", "origin", f"--force-with-lease=refs/heads/{item['branch']}:{item['remote_sha']}",

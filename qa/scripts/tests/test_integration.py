@@ -197,6 +197,13 @@ class GitCleanupTest(unittest.TestCase):
         self.assertTrue(self.worktree.exists())
         self.assertTrue(self.git("ls-remote", "--heads", "origin", f"refs/heads/{self.branch}"))
 
+    def test_stale_upstream_does_not_block_a_branch_proved_merged_into_main(self):
+        self.git("update-ref", f"refs/remotes/origin/{self.branch}", self.baseline)
+        self.git("config", f"branch.{self.branch}.remote", "origin")
+        self.git("config", f"branch.{self.branch}.merge", f"refs/heads/{self.branch}")
+        integration.cleanup([self.branch], apply=True)
+        self.assertFalse(self.worktree.exists())
+
     def test_apply_archives_evidence_and_preserves_unrelated_branch(self):
         self.git("branch", "charithm/feature/F08-active")
         report = self.worktree / "qa/reports/run-1"
