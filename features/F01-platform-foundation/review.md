@@ -47,7 +47,7 @@ Sources checked 2026-10-13: [Fresha client booking paths](https://www.fresha.com
 
 ## Bugs filed from this review
 
-None. Existing six stage bugs are verified and their cases remain in the full feature pass.
+BUG-F01-001 (major): rollback briefly removes every web upstream, returning 36 page requests with HTTP 503. Existing six stage bugs are verified and their cases remain in the full feature pass.
 
 ## QA repairs and evidence limits
 
@@ -62,3 +62,12 @@ Persistent terminals are required in this environment: an exited test terminal k
 ## Approved local HTTP scope
 
 CR-005 replaces local certificate/HTTPS/redirect/HSTS checks with HTTP hostname and first-request routing checks. Public TLS remains in deferred TC-F01-002 for an explicitly requested staging deployment. The earlier TLS run and interrupted report20261013-132232-F01 are historical evidence only; they do not certify the revised scope. No certificate or trust setup is used by the new pass.
+
+
+## HTTP-only full pass and rollback triage
+
+The recorded run `qa/reports/20261013-142212-F01` passed 31 of 32 automation entries. The only
+failure was TC-F01-S05-008: rollback returned 36 genuine page 503s while web-2 was being
+replaced and the remaining web-1 readiness probe timed out. These errors preceded QA traffic
+shutdown by about nine seconds. BUG-F01-001 records the exact interval and filtered edge logs.
+No request threshold was relaxed and no full suite was rerun merely hoping for a pass.
