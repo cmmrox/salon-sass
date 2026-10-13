@@ -162,6 +162,10 @@ and `application`, never in a controller, a repository or a mapper.
 - `GET /actuator/info` is served in the `local` profile only and returns 404 in any other.
 - `GET /api/v1/meta` returns the service name, the build's version, the commit it was built from
   and the server time as a UTC instant. It does not touch the database.
+  For real checkouts, a root `.git`-present Maven profile uses native Git lookup from the build's
+  checkout, including linked worktrees. A source archive without `.git` retains the existing
+  unknown-commit fallback. Verify the embedded build revision and HTTP metadata against the
+  actual API source; later documentation or web-only commits do not rewrite an already built jar.
 - `/actuator/health/readiness` and `/actuator/health/liveness` expose only the respective
   application state. On shutdown readiness becomes `OUT_OF_SERVICE` first, with a five-second
   serving delay before graceful shutdown; the edge checks every second and removes the instance

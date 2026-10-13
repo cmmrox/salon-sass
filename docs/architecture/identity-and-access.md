@@ -252,6 +252,53 @@ requires configured keys; never embed a fallback or generated local key in conta
 Document the environment variables and hooks when each stage hands them over; gates and QA must
 coordinate artifact rebuilds and service restarts as in the environment document.
 
+The browser rate-address boundary adds `SALON_IDENTITY_PROXY_KEY`, independently random from the
+three identity keys and encoded as 64 hex characters. Local startup appends the `proxy` entry to
+the retained key file without replacing earlier values; nonlocal startup requires all four keys
+and rejects any equal pair. Web runtime receives the same proxy key; it is excluded from browser
+data and build artifacts. Bundled Next.js code reads only `SALON_IDENTITY_PROXY_KEY`; it never
+opens the retained file. The nonbundled local launcher loads the retained proxy value before
+importing Next.js, rejecting missing, malformed or duplicate retained entries. A fresh standalone
+artifact scan checks actual files, including ignored paths, for local/environment copies and all
+four key values without printing them. `SALON_WEB_LOCAL_HTTP=true` is explicit for local HTTP and false outside
+it; `SALON_WEB_TRUSTED_PROXIES` is empty locally and an explicit edge CIDR allowlist behind Caddy.
+
+The private `x-salon-client-assertion` header is optional on staff password sign-in and customer
+code requests only. Its maximum length is 192 characters and its wire format is
+`v1;canonicalIP;issuedISOInstant;lowercaseHexMAC`. HMAC-SHA256 binds newline-separated version,
+canonical salon hostname without port, uppercase method, exact API path, canonical IP and issued
+instant. IPv6 is eight four-digit lowercase groups; mapped IPv6 normalizes to dotted IPv4.
+Duplicate headers, malformed or noncanonical values, wrong host/method/path, invalid MAC and
+timestamps outside the inclusive thirty-second API Clock window return safe 400
+`invalid_client_assertion` before rate accounting or other side effects. With no assertion,
+the API uses its real servlet peer. The header confers no tenant or session authority.
+
+## Implemented web boundary
+
+Customer routes are `/sign-in` and `/account`; staff routes are `/workspace/sign-in`,
+`/workspace/account`, `/workspace/staff` and `/workspace/audit`. `/workspace` enters the account
+flow. The public salon shell links to customer accounts and staff sign-in. Customer surfaces use
+salon branding; staff surfaces use the neutral workspace. All visible account text uses next-intl
+English message keys under the project's English-first policy; stored preferred language still
+supports `en`, `si` and `ta`.
+
+The fixed BFF namespace is `/identity-web/{staff|customer}/{action}`. GET allows principal,
+sessions, staff, audit and profile reads; POST handles sign-in/code/MFA, password and device
+changes, profile updates, export/deletion, staff management, refresh and cookie clearing. API
+permissions and principal kind are checked on each protected action. Generated API types remain
+the contract, and only explicit fields are forwarded. The Node HTTP transport preserves the salon
+Host and sets the actual JSON body length, including confirmed DELETE requests to the API.
+
+Cookies are `salon_{kind}_{access,refresh,expires,session,challenge,challenge_id}` plus the separate
+`salon_device` tracking cookie. They are host-only, HttpOnly, SameSite=Lax, Path=/ and Secure
+outside explicit local HTTP. BFF JSON returns public flow/results and field names, never session
+or challenge authority. Each kind uses Web Lock `salon:identity:{kind}` and sends only nonsecret
+change events through BroadcastChannel `salon:identity`. Exports use CSRF-checked BFF POST and
+return a no-store attachment. Staff and customer authority remain independent on the same host.
+Successful native API no-content mutations, including confirmed customer deletion, map to BFF
+HTTP 200 `{ok:true}`. Verify their actual revocation/erasure effects rather than equating a browser
+success response with completed deletion.
+
 ## Implemented staff API contract
 
 The generated [OpenAPI document](../api/openapi.json) is the detailed request/response contract.
