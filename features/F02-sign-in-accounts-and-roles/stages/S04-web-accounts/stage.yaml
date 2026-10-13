@@ -3,8 +3,10 @@ feature: F02
 title: Staff workspace and customer account screens
 sequence: 4
 surfaces:
+- api
 - web
-status: outlined
+- infra
+status: planned
 qa_status: not-run
 blocked_reason: null
 released_in: null
@@ -33,7 +35,13 @@ handoff:
   notes: null
 cases: []
 verification:
-  commands: []
+  commands:
+  - cd apps/api && ./mvnw -q verify
+  - pnpm -r lint
+  - pnpm -r typecheck
+  - pnpm -r test
+  - pnpm --filter @salon/web build
+  - pnpm contracts:check
   automation: []
   manual: []
   deferred: []
