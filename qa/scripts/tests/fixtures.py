@@ -50,11 +50,15 @@ def feature(**changes):
     data = {
         "id": "F07", "title": "Online booking", "status": "in-progress", "release": "R1", "milestone": "M1-web",
         "qa_status": "not-run", "requirements": ["BKG-01"], "depends_on": [],
+        "integration": {"branch": "charithm/feature/F07-online-booking", "qa_revision": "a" * 40,
+                        "pull_request": None, "merged_commit": None, "merged_at": None},
         "_path": FEATURE_DIR + "/feature.yaml", "_dir": FEATURE_DIR, "_spec": None,
         "_cases_md": None, "_bugs": [], "_has_review": False, "_has_readme": True,
         "_missing_files": [],
     }
     data.update(changes)
+    if "integration" not in changes:
+        data["integration"]["branch"] = f"charithm/feature/{data['id']}-online-booking"
     return data
 
 

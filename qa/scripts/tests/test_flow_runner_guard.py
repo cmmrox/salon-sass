@@ -34,11 +34,16 @@ class FlowTest(unittest.TestCase):
         waiting = fx.feature(id="F08", status="backlog", depends_on=["F07"])
         self.assertEqual(flow.feature_turn(waiting, [], [fx.feature(), waiting]), ("waiting", "after F07"))
         self.assertEqual(flow.feature_turn(waiting, [], [fx.feature(status="complete"), waiting]),
+                         ("waiting", "after F07"))
+        merged = dict(branch="charithm/feature/F07-online-booking", qa_revision="a" * 40,
+                      pull_request="https://github.com/example/salon/pull/1", merged_commit="b" * 40,
+                      merged_at="2026-10-13T00:00:00Z")
+        self.assertEqual(flow.feature_turn(waiting, [], [fx.feature(status="complete", qa_status="pass", integration=merged), waiting]),
                          ("lead", "feature-new F08"))
         app = fx.feature(id="F15", status="backlog", milestone="M2-mobile")
         self.assertEqual(flow.feature_turn(app, [], [fx.feature(status="complete"), app]),
                          ("waiting", "after M1-web is released"))
-        self.assertEqual(flow.feature_turn(app, [], [fx.feature(status="released"), app]),
+        self.assertEqual(flow.feature_turn(app, [], [fx.feature(status="released", qa_status="pass", integration=merged), app]),
                          ("lead", "feature-new F15"))
         self.assertEqual(flow.feature_turn(fx.feature(), [fx.stage(status="planned")]),
                          ("developer", "stage-build F07-S01"))

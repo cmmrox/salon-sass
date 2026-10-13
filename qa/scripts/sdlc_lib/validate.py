@@ -6,8 +6,9 @@ of the form "<path>: <what is wrong>". An empty list is the only pass.
 """
 import os
 import re
+from datetime import datetime
 
-from . import schema as S
+from . import flow, schema as S
 
 SKILL_NAME_RE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 RESERVED_SKILL_WORDS = ("anthropic", "claude")
@@ -259,6 +260,41 @@ def check_feature_covers_stages(feature, fid, stages):
 
 # --- features ---------------------------------------------------------------------------
 
+def check_integration(scope):
+    findings = []
+    integration = scope.get("integration") or {}
+    if not isinstance(integration, dict):
+        _add(findings, scope, "integration must be a mapping")
+        return findings
+    for key in ("qa_revision", "merged_commit"):
+        value = integration.get(key)
+        if value and not S.COMMIT_RE.fullmatch(str(value)):
+            _add(findings, scope, f"integration.{key} must be a full Git commit SHA")
+    if integration.get("pull_request") and not S.PR_URL_RE.fullmatch(str(integration["pull_request"])):
+        _add(findings, scope, "integration.pull_request must be a GitHub pull request URL")
+    branch = integration.get("branch")
+    if branch and not re.fullmatch(r"[a-z]+/feature/" + re.escape(scope.get("id", "")) + r"-[A-Za-z0-9-]+", str(branch)):
+        _add(findings, scope, "integration.branch must name this feature's integration branch")
+    if integration.get("merged_at"):
+        try:
+            timestamp = datetime.fromisoformat(str(integration["merged_at"]).replace("Z", "+00:00"))
+            if timestamp.tzinfo is None:
+                raise ValueError("timezone missing")
+        except ValueError:
+            _add(findings, scope, "integration.merged_at must be a timestamp with a timezone")
+    if (scope.get("status") in S.CLAIMED or scope.get("qa_status") == "pass"):
+        if not integration.get("qa_revision"):
+            _add(findings, scope, "passing feature QA needs integration.qa_revision")
+        if not integration.get("branch"):
+            _add(findings, scope, "passing feature QA needs its integration.branch")
+    if integration.get("merged_commit") or integration.get("merged_at"):
+        if not all(integration.get(k) for k in ("branch", "pull_request", "qa_revision", "merged_commit", "merged_at")):
+            _add(findings, scope, "merge evidence needs branch, pull_request, qa_revision, merged_commit and merged_at")
+        if scope.get("status") not in S.CLAIMED or scope.get("qa_status") != "pass":
+            _add(findings, scope, "merge evidence belongs only to a QA-passed, closed feature")
+    return findings
+
+
 def check_features(bundle):
     findings = []
     requirements = {r.get("id"): r for r in bundle["requirements"]}
@@ -292,6 +328,13 @@ def check_features(bundle):
                 _add(findings, feature, f"{fid} is '{status}' but milestone {unreleased[0]} is not released; "
                                         "only the owner starts a later milestone early (record it in started_early)")
         findings += check_qa_status(feature, fid)
+        findings += check_integration(feature)
+        if status not in (None, "backlog"):
+            pending = [f.get("id") for f in flow.predecessors(feature, bundle["features"])
+                       if not flow.merged(f) and (not feature.get("started_early") or
+                                                f.get("id") in _list(feature.get("depends_on")))]
+            if pending:
+                _add(findings, feature, "started before confirmed GitHub merge of " + ", ".join(pending))
         for dep in _list(feature.get("depends_on")):
             if dep not in feature_ids:
                 _add(findings, feature, f"depends_on names {dep}, which is not a feature")
@@ -479,6 +522,7 @@ def check_change_requests(bundle):
 def check_releases(bundle):
     findings = []
     stages = {s.get("id"): s for s in bundle["stages"]}
+    features = {f.get("id"): f for f in bundle["features"]}
     for release in bundle["releases"]:
         version = release.get("release") or ""
         if not S.RELEASE_VERSION_RE.match(version):
@@ -486,6 +530,11 @@ def check_releases(bundle):
         elif os.path.basename(os.path.dirname(release["_path"])) != version:
             _add(findings, release, f"folder must be named {version}")
         scope = release.get("scope") if isinstance(release.get("scope"), dict) else {}
+        for fid in _list(scope.get("features")):
+            if fid not in features:
+                _add(findings, release, f"scope names feature {fid}, which does not exist")
+            elif not flow.merged(features[fid]):
+                _add(findings, release, f"scope includes {fid} before its confirmed GitHub merge")
         if not _list(scope.get("stages")):
             _add(findings, release, "release scope lists no stages")
         for sid in _list(scope.get("stages")):
@@ -493,6 +542,8 @@ def check_releases(bundle):
                 _add(findings, release, f"scope names stage {sid}, which does not exist")
             elif stages[sid].get("status") not in S.CLAIMED:
                 _add(findings, release, f"scope includes {sid}, which is only '{stages[sid].get('status')}'")
+            elif not flow.merged(features.get(stages[sid].get("feature"), {})):
+                _add(findings, release, f"scope includes {sid} before its feature's confirmed GitHub merge")
     return findings
 
 
