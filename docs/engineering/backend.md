@@ -10,8 +10,12 @@ The isolation rules every table, endpoint and job must follow are in
 - API conventions
 - Persistence and migrations
 - Booking integrity
+- Health and service metadata
+- Time
 - Virtual threads
 - Transactions, outbox and external calls
+- Logs, traces and meters
+- Local test hooks
 - Security
 - Tests
 - Verification commands
@@ -85,11 +89,17 @@ and `application`, never in a controller, a repository or a mapper.
 - A request the server itself rejects before the application sees it (a badly encoded path, an
   unreadable header) is still answered as problem details, never as the server's HTML page.
 - No error body carries a stack trace, a class name or a framework version.
+- Every problem body carries `traceId`, the request's trace id (32 lowercase hex characters), which
+  is the `trace.id` of that request's log lines. Only `Problems` puts a property on a problem body,
+  and its `code` always comes from `ErrorCode` (a test holds both).
 - A missing record and another salon's record both return 404 with the same body.
 - Lists are paginated, always. Sorting and filtering are explicit parameters.
 - A request that creates a booking, a payment or a refund carries an `Idempotency-Key`. Repeating it
   returns the first result and never a second side effect.
-- Request records are validated at the edge; a validation failure names the field.
+- Request records are validated at the edge. A validation failure answers 400 `bad_request` with
+  `errors: [{ field, detail }]`, one entry per failing field.
+- Request bodies are read strictly: no coercion between JSON types (`"5"` is not 5, `1.5` is not 1,
+  `1` is not `true`). Each such value is a validation failure naming its field.
 - The OpenAPI document is generated from the controllers and committed. A drift check fails the
   build when the committed document or the generated client is stale.
 - Never break a published field. Add a new one, keep the old one until the minimum supported app
@@ -148,8 +158,20 @@ and `application`, never in a controller, a repository or a mapper.
 - `GET /actuator/info` is served in the `local` profile only and returns 404 in any other.
 - `GET /api/v1/meta` returns the service name, the build's version, the commit it was built from
   and the server time as a UTC instant. It does not touch the database.
-- The JVM currently runs in the machine's time zone; instants in the API are UTC regardless. Time
-  handling for business rules arrives in F01-S04.
+- The API sets its default time zone to UTC when it starts (`UtcTimeZone`), whatever the machine's
+  is, and Hibernate talks to the database in UTC. Instants in the API are UTC, written with `Z`.
+
+## Time
+
+- Every time the application decides on (when something is due, when it expires, when it happened)
+  comes from the application's one `Clock` bean, never from the database's `now()`. Tables written
+  by the application's clock (`audit_entry`, `outbox_message`) have no `DEFAULT now()`.
+- A salon's time zone is `tenant.time_zone`, an IANA name the database checks against its own list
+  (`is_iana_time_zone`), and the tenant context carries it. One shared service converts between an
+  instant and the salon's local date and time: in the hour clocks skip, a local time moves forward
+  by the length of the gap; in the hour that repeats, the earlier instant is used.
+- A local time shown to a caller is an offset date-time in the salon's zone, with the offset always
+  written `+HH:MM`, never `Z`.
 
 ## Virtual threads
 
@@ -166,6 +188,56 @@ and `application`, never in a controller, a repository or a mapper.
 - One transaction per use case, opened in `application`.
 - Anything that leaves the system (message, payment call, webhook) is written to the outbox table
   in the same transaction and sent afterwards, with retry and a dead-letter state.
+- **The outbox** (`shared.outbox`): writing a message joins the caller's transaction and refuses to
+  run outside one. The dispatcher polls every second, learns what is due across salons only through
+  `outbox_due` (ids, nothing else), and handles each message in a transaction with its salon set:
+  it claims the message with a lease, commits, calls the provider with no transaction open and the
+  message id as the idempotency key, and records the outcome in a new transaction. Backoff starts at
+  30 s and doubles to 1 h; after 10 attempts the message is `dead` with its last error. A delivery
+  interrupted by a stop is attempted again when its lease (60 s) runs out. A suspended salon's
+  messages wait, unattempted, until it is active again.
+- **Every provider call** has a time limit (10 s), a limit on calls at once per channel (4), and a
+  circuit breaker per channel that opens after 5 consecutive failures and waits 60 s. While it is
+  open, the channel's messages wait without using up attempts.
+- **Recurring jobs** (`shared.jobs`): a job runs at most once per occurrence across every instance,
+  claimed through `job_claim` and released through `job_finish`. A job over salon data asks
+  `active_tenant_ids` and runs each salon in its own transaction with that salon set; one salon's
+  failure is logged and the others go on. Suspended salons are skipped. The first job removes
+  delivered messages older than 30 days, hourly.
+- On stop, the dispatcher and the scheduler stop claiming work and give calls in flight 5 s
+  (`salon.outbox.shutdown-grace`); what is not finished is recovered by the lease.
+- Every setting is under `salon.outbox` and `salon.jobs` in `application.yaml`, with its default.
+- **The audit trail** (`shared.audit`): one way to write an entry, which joins the caller's
+  transaction and refuses to run outside one. An entry records the salon, when (the application's
+  clock), the actor, the action, the subject, an optional reason, the values before and after, and
+  the trace id. Values under a key that names a secret are never stored. The application's role may
+  only insert and read; a trigger refuses an update by any role.
+
+## Logs, traces and meters
+
+- The API logs one ECS JSON object per line (`logging.structured.format.console: ecs`) with
+  `trace.id`, `span.id`, and `tenant.id` whenever a salon is bound: a request on its hostname, a
+  delivery or a job run for it. A request on a salon's hostname looks its salon up when it starts,
+  except `/api/v1/meta`, `/actuator/**` and the OpenAPI document, which must not wait on the
+  database and so carry no `tenant.id`.
+- Each request writes one line with its method, its path without the query string, its status and
+  its duration (`event.duration`, nanoseconds). No line carries a request body, a query string, a
+  `Cookie` or an `Authorization` header.
+- Spans for each request, each delivery and each job run for a salon carry `tenant.id`. A W3C
+  `traceparent` from the caller is continued, and a message's delivery belongs to the trace of the
+  request that wrote it. Spans are exported over OTLP only when an endpoint is configured.
+- Spring Boot 4's test support turns W3C propagation off along with export; the integration test
+  base carries `@AutoConfigureTracing` so that tests trace as the product does.
+- Meters: `salon.outbox.waiting`, `salon.outbox.oldest.due.age`, `salon.outbox.dead`,
+  `salon.outbox.deliveries` (tags `channel`, `outcome`) and `salon.jobs.start.delay` (tag `job`).
+  `/actuator/metrics` is served in the `local` profile only.
+
+## Local test hooks
+
+Served in the `local` profile only, on loopback, under `/local/`, and never in the OpenAPI document;
+404 `not_found` in any other profile. The test clock (`/local/clock`) and the probe
+(`/local/probes`), whose fake provider is the only provider until a feature adds a real one. How a
+test uses them is in `docs/qa/test-plan.md`.
 - An incoming payment notification is verified (signature, amount, merchant, order), handled
   idempotently, and acknowledged only after it is stored.
 - Every external call sits behind an interface with a real adapter and a local fake.

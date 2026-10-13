@@ -4,6 +4,7 @@ import java.util.UUID;
 
 import com.salonplatform.shared.tenancy.RegisteredTenant;
 import com.salonplatform.shared.tenancy.TenantDirectory;
+import com.salonplatform.testing.TestSalons;
 import com.salonplatform.shared.tenancy.TenantStatus;
 import com.salonplatform.testing.StartedApplication;
 import com.salonplatform.testing.TestDatabase;
@@ -91,8 +92,8 @@ class TenantTableIntegrationTest {
         insert(suspended, "closed-salon", "suspended");
         TenantDirectory registry = application.bean(TenantDirectory.class);
 
-        assertThat(registry.find("open-salon")).contains(new RegisteredTenant(active, TenantStatus.ACTIVE));
-        assertThat(registry.find("closed-salon")).contains(new RegisteredTenant(suspended, TenantStatus.SUSPENDED));
+        assertThat(registry.find("open-salon")).contains(new RegisteredTenant(active, TenantStatus.ACTIVE, TestSalons.DEFAULT_TIME_ZONE));
+        assertThat(registry.find("closed-salon")).contains(new RegisteredTenant(suspended, TenantStatus.SUSPENDED, TestSalons.DEFAULT_TIME_ZONE));
         assertThat(registry.find("no-such-salon")).isEmpty();
         assertThat(registry.find("OPEN-SALON")).as("slugs are stored and looked up in lower case").isEmpty();
     }
@@ -102,13 +103,13 @@ class TenantTableIntegrationTest {
         UUID id = UUID.randomUUID();
         insert(id, "now-and-then", "active");
         TenantDirectory registry = application.bean(TenantDirectory.class);
-        assertThat(registry.find("now-and-then")).contains(new RegisteredTenant(id, TenantStatus.ACTIVE));
+        assertThat(registry.find("now-and-then")).contains(new RegisteredTenant(id, TenantStatus.ACTIVE, TestSalons.DEFAULT_TIME_ZONE));
 
         owner.update("UPDATE tenant SET status = 'suspended' WHERE id = ?", id);
-        assertThat(registry.find("now-and-then")).contains(new RegisteredTenant(id, TenantStatus.SUSPENDED));
+        assertThat(registry.find("now-and-then")).contains(new RegisteredTenant(id, TenantStatus.SUSPENDED, TestSalons.DEFAULT_TIME_ZONE));
 
         owner.update("UPDATE tenant SET status = 'active' WHERE id = ?", id);
-        assertThat(registry.find("now-and-then")).contains(new RegisteredTenant(id, TenantStatus.ACTIVE));
+        assertThat(registry.find("now-and-then")).contains(new RegisteredTenant(id, TenantStatus.ACTIVE, TestSalons.DEFAULT_TIME_ZONE));
     }
 
     private static void insert(UUID id, String slug, String status) {

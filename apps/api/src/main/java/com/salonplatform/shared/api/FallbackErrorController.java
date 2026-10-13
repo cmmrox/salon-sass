@@ -26,7 +26,7 @@ class FallbackErrorController implements ErrorController {
     @RequestMapping("${server.error.path:/error}")
     ResponseEntity<ProblemDetail> error(HttpServletRequest request) {
         HttpStatusCode status = statusOf(request);
-        ProblemDetail problem = Problems.of(status);
+        ProblemDetail problem = Problems.traced(Problems.of(status), RequestTrace.of(request));
         if (request.getAttribute(RequestDispatcher.ERROR_REQUEST_URI) instanceof String path) {
             problem.setInstance(URI.create(path));
         }

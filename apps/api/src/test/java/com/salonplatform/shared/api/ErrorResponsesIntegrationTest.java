@@ -68,14 +68,16 @@ class ErrorResponsesIntegrationTest extends IntegrationTest {
         assertLeaksNothing(body);
     }
 
+    /** No stack trace, class name or framework name; the only trace is the request's trace id. */
     private static void assertLeaksNothing(String body) {
-        assertThat(body)
+        assertThat(JsonPath.parse(body).<String>read("$.traceId")).matches("^[0-9a-f]{32}$");
+        assertThat(body.replace("\"traceId\"", ""))
                 .doesNotContainIgnoringCase("exception")
                 .doesNotContainIgnoringCase("springframework")
                 .doesNotContainIgnoringCase("tomcat")
                 .doesNotContainIgnoringCase("salonplatform")
                 .doesNotContain("java.")
                 .doesNotContain("\tat ")
-                .doesNotContain("trace");
+                .doesNotContainIgnoringCase("trace");
     }
 }

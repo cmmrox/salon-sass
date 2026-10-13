@@ -4,6 +4,7 @@ import java.util.function.Function;
 import java.util.stream.Stream;
 
 import com.salonplatform.SalonApiApplication;
+import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
@@ -41,6 +42,17 @@ class ModuleBoundariesTest {
         new ModuleRules(BASE).all().forEach(rule -> rule.check(application));
     }
 
+    /** The two rules about the local hooks have something to check: the hooks are where they look. */
+    @Test
+    void theLocalHooksAreWhereTheRulesLookForThem() {
+        JavaClasses application = new ClassFileImporter()
+                .withImportOption(ImportOption.Predefined.DO_NOT_INCLUDE_TESTS)
+                .importPackages(BASE + ".shared.local");
+
+        assertThat(application.stream().map(JavaClass::getSimpleName))
+                .contains("TestClock", "LocalClockController", "ProbeController", "Probes", "ProbeProvider");
+    }
+
     @Test
     void aTreeThatFollowsTheRulesPasses() {
         JavaClasses clean = fixture("clean");
@@ -66,7 +78,10 @@ class ModuleBoundariesTest {
                 arguments("internals", rule(ModuleRules::anotherModuleIsUsedOnlyThroughItsRootPackage),
                         "PaymentUsesBookingEntity"),
                 arguments("springindomain", rule(ModuleRules::domainUsesNoSpringAndNoHttp), "SpringInDomain"),
-                arguments("unlisted", rule(ModuleRules::everyClassBelongsToAKnownModule), "Points"));
+                arguments("unlisted", rule(ModuleRules::everyClassBelongsToAKnownModule), "Points"),
+                arguments("localhookused", rule(ModuleRules::theLocalHooksAreUsedByNothingElse), "BookingUsesTestClock"),
+                arguments("localhookalways", rule(ModuleRules::theLocalHooksLoadInTheLocalProfileOnly), "AlwaysThere"),
+                arguments("localhookalways", rule(ModuleRules::theLocalHooksLoadInTheLocalProfileOnly), "AlsoElsewhere"));
     }
 
     private static Function<ModuleRules, ArchRule> rule(Function<ModuleRules, ArchRule> rule) {

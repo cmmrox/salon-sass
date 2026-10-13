@@ -1,5 +1,6 @@
 package com.salonplatform.testing;
 
+import org.springframework.boot.micrometer.tracing.test.autoconfigure.AutoConfigureTracing;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.boot.test.web.server.LocalServerPort;
@@ -13,6 +14,9 @@ import org.springframework.test.context.DynamicPropertySource;
  */
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
+// Spring Boot's test support turns tracing export off, and W3C propagation with it; this keeps
+// tracing as the product runs it. Nothing is exported: no OTLP endpoint is configured.
+@AutoConfigureTracing
 public abstract class IntegrationTest {
 
     @LocalServerPort

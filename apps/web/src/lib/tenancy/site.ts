@@ -1,6 +1,4 @@
-import type { Salon } from '@salon/api-contracts';
-
-import { findSalon, type SalonLookup } from '@/lib/api/salon';
+import { findSalon, type Salon, type SalonLookup } from '@/lib/api/salon';
 
 import { classifyHostname, hasSlugForm, platformDomainOf, salonHostname } from './hostname';
 

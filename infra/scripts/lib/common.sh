@@ -195,9 +195,13 @@ pid_file() { printf '%s/%s.pid' "$RUN_DIR" "$1"; }
 # When the process with this id started, as the system reports it; nothing when there is no such
 # process. The system gives a process id to another process once the first is gone, but never the
 # same id with the same start time: the two together name one process and no other.
+#
+# `ps` prints that time in the caller's time zone, so it is always asked in UTC: a service started
+# by a shell with one TZ (`TZ=Pacific/Chatham local-service.sh start api`, to see that the API runs
+# in UTC whatever the machine's zone is) must still be this script's own when another shell stops it.
 process_started() {
   case "${1:-}" in ''|*[!0-9]*) return 0 ;; esac
-  LC_ALL=C ps -p "$1" -o lstart= 2>/dev/null | sed -e 's/^ *//' -e 's/ *$//' || true
+  LC_ALL=C TZ=UTC ps -p "$1" -o lstart= 2>/dev/null | sed -e 's/^ *//' -e 's/ *$//' || true
 }
 
 # These scripts tell the processes they started from every other by when each one started. Where

@@ -51,7 +51,8 @@ class DatabaseIsolationCatalogueIntegrationTest {
                  WHERE c.relnamespace = 'public'::regnamespace AND c.relkind IN ('r', 'p')
                 """);
 
-        assertThat(tables).extracting(table -> table.get("name")).as("tenant tables").contains("salon_brand");
+        assertThat(tables).extracting(table -> table.get("name")).as("tenant tables")
+                .containsExactlyInAnyOrder("salon_brand", "audit_entry", "outbox_message");
         assertThat(tables).allSatisfy(table -> assertThat(table)
                 .as("%s", table.get("name"))
                 .containsEntry("enabled", true).containsEntry("forced", true).containsEntry("policy", true));
@@ -121,7 +122,76 @@ class DatabaseIsolationCatalogueIntegrationTest {
         }
     }
 
-    /** The product's grants: the application only reads salon brands in this release. */
+    /**
+     * Every index of a tenant table starts with {@code tenant_id}, unique or not, so that no index
+     * can answer a question across salons.
+     */
+    @Test
+    void everyIndexOfATenantTableStartsWithTenantId() {
+        List<Map<String, Object>> indexes = owner.queryForList("""
+                SELECT c.relname AS name, i.relname AS index,
+                       x.indkey[0] = (SELECT a.attnum FROM pg_attribute a
+                                       WHERE a.attrelid = c.oid AND a.attname = 'tenant_id') AS starts_with_tenant
+                  FROM pg_index x
+                  JOIN pg_class c ON c.oid = x.indrelid
+                  JOIN pg_class i ON i.oid = x.indexrelid
+                 WHERE c.relnamespace = 'public'::regnamespace
+                   AND EXISTS (SELECT 1 FROM pg_attribute a WHERE a.attrelid = c.oid AND a.attname = 'tenant_id')
+                """);
+
+        assertThat(indexes).extracting(index -> index.get("index")).contains("audit_entry_pkey", "audit_entry_subject_idx",
+                "outbox_message_pkey", "outbox_message_due_idx", "outbox_message_lease_idx");
+        assertThat(indexes).allSatisfy(index -> assertThat(index)
+                .as("%s on %s", index.get("index"), index.get("name")).containsEntry("starts_with_tenant", true));
+    }
+
+    /**
+     * What the application's role may do to each table, and nothing more: it reads salon brands,
+     * adds to and reads the audit trail, and works the outbox. It has nothing on a platform table.
+     */
+    @Test
+    void theApplicationRoleHoldsExactlyTheTablePrivilegesItNeeds() {
+        List<Map<String, Object>> grants = owner.queryForList("""
+                SELECT table_name AS name, string_agg(privilege_type, ',' ORDER BY privilege_type) AS privileges
+                  FROM information_schema.role_table_grants
+                 WHERE grantee = ? AND table_schema = 'public'
+                 GROUP BY table_name
+                """, TestPostgres.APP_USER);
+
+        assertThat(grants).extracting(grant -> grant.get("name"), grant -> grant.get("privileges"))
+                .containsExactlyInAnyOrder(
+                        org.assertj.core.api.Assertions.tuple("salon_brand", "SELECT"),
+                        org.assertj.core.api.Assertions.tuple("audit_entry", "INSERT,SELECT"),
+                        org.assertj.core.api.Assertions.tuple("outbox_message", "DELETE,INSERT,SELECT,UPDATE"));
+    }
+
+    /**
+     * The functions that run with their owner's rights are the application's only way to a platform
+     * table or across salons. Each is listed here, so that a new one is looked at; each pins its
+     * search path, cannot be run by everyone, and can be run by the application's role.
+     */
+    @Test
+    void everyFunctionThatRunsWithItsOwnersRightsIsKnownPinsItsSearchPathAndIsNotPublic() {
+        List<Map<String, Object>> functions = owner.queryForList("""
+                SELECT p.proname AS name,
+                       coalesce(array_to_string(p.proconfig, ';'), '') AS settings,
+                       has_function_privilege('public', p.oid, 'EXECUTE') AS public_may_run,
+                       has_function_privilege(?, p.oid, 'EXECUTE') AS application_may_run
+                  FROM pg_proc p
+                 WHERE p.pronamespace = 'public'::regnamespace AND p.prosecdef
+                """, TestPostgres.APP_USER);
+
+        assertThat(functions).extracting(function -> function.get("name")).containsExactlyInAnyOrder("tenant_by_slug",
+                "tenant_by_id", "active_tenant_ids", "outbox_due", "outbox_backlog", "job_claim", "job_finish");
+        assertThat(functions).allSatisfy(function -> {
+            assertThat((String) function.get("settings")).as("%s", function.get("name"))
+                    .isEqualTo("search_path=pg_catalog, pg_temp");
+            assertThat(function).as("%s", function.get("name")).containsEntry("public_may_run", false)
+                    .containsEntry("application_may_run", true);
+        });
+    }
+
+    /** The product's grants: what the application's role is refused, table by table. */
     @ParameterizedTest
     @ValueSource(strings = {
         "INSERT INTO salon_brand (tenant_id, display_name, brand_colour) VALUES (gen_random_uuid(), 'x', '#000000')",
@@ -130,6 +200,16 @@ class DatabaseIsolationCatalogueIntegrationTest {
         "INSERT INTO tenant (id, slug) VALUES (gen_random_uuid(), 'sneaky')",
         "UPDATE tenant SET status = 'suspended'",
         "CREATE TABLE intruder (id int)",
+        "UPDATE audit_entry SET reason = 'changed'",
+        "DELETE FROM audit_entry",
+        "TRUNCATE audit_entry",
+        "TRUNCATE outbox_message",
+        "SELECT * FROM scheduled_job",
+        "INSERT INTO scheduled_job (name, next_run_at, created_at, updated_at) VALUES ('sneaky', now(), now(), now())",
+        "UPDATE scheduled_job SET locked_by = NULL, locked_until = NULL",
+        "DELETE FROM scheduled_job",
+        "ALTER TABLE outbox_message DISABLE ROW LEVEL SECURITY",
+        "DROP FUNCTION outbox_due(timestamptz, text[], integer, integer)",
     })
     void theApplicationRoleIsRefusedEverythingItDoesNotNeed(String sql) throws SQLException {
         try (Connection connection = database.connectAsApplication(); Statement statement = connection.createStatement()) {

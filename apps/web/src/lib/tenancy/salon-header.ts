@@ -1,4 +1,4 @@
-import type { Salon } from '@salon/api-contracts';
+import type { Salon } from '@/lib/api/salon';
 
 import { isHexColour } from '@/styles/brand';
 

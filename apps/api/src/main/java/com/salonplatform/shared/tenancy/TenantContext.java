@@ -4,6 +4,8 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 
+import org.slf4j.MDC;
+
 /**
  * The salon the current request is for, held in a {@link ScopedValue}: bound by the request filter
  * for exactly the extent of one request, and gone when it ends, so that a reused thread can never
@@ -30,6 +32,12 @@ public final class TenantContext {
      * row can ever belong to it.
      */
     public static final UUID NO_TENANT = new UUID(0L, 0L);
+
+    /**
+     * The field that names the salon in every log line and span written for it (T-8, NFR-16): set
+     * when a request's salon is resolved, and for the extent of {@link #callAs}.
+     */
+    public static final String LOG_FIELD = "tenant.id";
 
     private static final ScopedValue<RequestTenant> REQUEST = ScopedValue.newInstance();
 
@@ -63,6 +71,18 @@ public final class TenantContext {
     }
 
     /**
+     * Resolves the current request's salon now, if its hostname names one, without failing: so that
+     * every log line of the request carries {@value #LOG_FIELD} (T-8). Used by the request filter
+     * for every endpoint except the platform's own, which must not wait on the database. A failure
+     * to read the registry is given to {@link #require()} later in the request.
+     */
+    public static void resolveEarly() {
+        if (REQUEST.isBound()) {
+            REQUEST.get().resolveEarly();
+        }
+    }
+
+    /**
      * Runs work for a request whose hostname named this candidate slug. Used by the request filter.
      *
      * @param candidateSlug the slug the hostname names, or null when it names none
@@ -83,6 +103,18 @@ public final class TenantContext {
      * @param work the work
      */
     public static <R> R callAs(CurrentTenant tenant, Callable<R> work) throws Exception {
-        return ScopedValue.where(REQUEST, RequestTenant.known(tenant)).call(work::call);
+        String outer = MDC.get(LOG_FIELD);
+        MDC.put(LOG_FIELD, tenant.id().toString());
+        try {
+            return ScopedValue.where(REQUEST, RequestTenant.known(tenant)).call(work::call);
+        }
+        finally {
+            if (outer == null) {
+                MDC.remove(LOG_FIELD);
+            }
+            else {
+                MDC.put(LOG_FIELD, outer);
+            }
+        }
     }
 }

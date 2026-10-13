@@ -75,6 +75,13 @@ export interface components {
             code: "bad_request" | "not_found" | "method_not_allowed" | "not_acceptable" | "unsupported_media_type" | "request_rejected" | "service_unavailable" | "salon_suspended" | "internal_error";
             /** @description A sentence for a person. Do not branch on it. */
             detail?: string;
+            /** @description For a request body that failed validation (`bad_request`): each field that failed, when the failure has a field. Never the value that was refused. */
+            errors?: {
+                /** @description What is wrong with it, for a person. */
+                detail: string;
+                /** @description The field, as the request names it; a dotted path when nested. */
+                field: string;
+            }[];
             /** @description The path that was requested. */
             instance?: string;
             /**
@@ -84,6 +91,11 @@ export interface components {
             status: number;
             /** @description A short summary of the status. */
             title: string;
+            /**
+             * @description The request's trace id: the `trace.id` of its log lines and of its trace.
+             * @example 4bf92f3577b34da6a3ce929d0e0e4736
+             */
+            traceId: string;
             /** @description A URI identifying the kind of problem. */
             type?: string;
         };
@@ -104,6 +116,11 @@ export interface components {
              * @example alpha
              */
             slug: string;
+            /**
+             * @description The salon's time zone, an IANA name. The salon's times are shown in it.
+             * @example Asia/Colombo
+             */
+            timeZone: string;
         };
     };
     responses: never;
