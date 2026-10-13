@@ -102,10 +102,10 @@ test('TC-F01-S04-013 another salon cannot read a probe and application transacti
   const a=await create(api,alpha),b=await create(api,beta);expect((await read(api,beta,b.id)).id).toBe(b.id);
   const foreign=await api.getOn(beta.hostname,`/local/probes/${a.id}`),missing=await api.getOn(beta.hostname,`/local/probes/${randomUUID()}`);expect(foreign.status()).toBe(404);expect(missing.status()).toBe(404);const fp=await foreign.json(),mp=await missing.json();expect({...fp,instance:'',traceId:''}).toEqual({...mp,instance:'',traceId:''});
   for(const table of ['outbox_message','audit_entry']){expect(sql(`BEGIN; SET LOCAL ROLE salon_app; SELECT count(*) FROM ${table}; ROLLBACK;`)).toContain('0');const result=sql(`BEGIN; SET LOCAL ROLE salon_app; SELECT set_config('app.tenant_id','${alpha.id}',true); SELECT count(*) FROM ${table} WHERE tenant_id='${beta.id}'; ROLLBACK;`);expect(result.split('\n')).toContain('0');}
-  for(const table of ['outbox_message','audit_entry'])expect(sql(`BEGIN; SET LOCAL ROLE salon_app; DO $$$$ BEGIN PERFORM set_config('app.tenant_id','${alpha.id}',true); END $$$$; SELECT count(*) FROM ${table}; ROLLBACK;`.replaceAll('$$$$','$$'))).toBe('1');
+  for(const table of ['outbox_message','audit_entry'])expect(sql(`BEGIN; SET LOCAL ROLE salon_app; DO $$ BEGIN PERFORM set_config('app.tenant_id','${alpha.id}',true); END $$; SELECT count(*) FROM ${table}; ROLLBACK;`)).toBe('1');
   for(const verb of ['UPDATE audit_entry SET action=\'changed\'','DELETE FROM audit_entry']){let error='';try{sql(`BEGIN; SET LOCAL ROLE salon_app; SELECT set_config('app.tenant_id','${alpha.id}',true); ${verb}; ROLLBACK;`);}catch(e){error=String((e as {stderr:Buffer}).stderr);}expect(error).toMatch(/permission denied/);}
-  for(const action of [`UPDATE outbox_message SET payload='{}' WHERE tenant_id='${beta.id}' RETURNING id`,`DELETE FROM outbox_message WHERE tenant_id='${beta.id}' RETURNING id`])expect(sql(`BEGIN; SET LOCAL ROLE salon_app; DO $$$$ BEGIN PERFORM set_config('app.tenant_id','${alpha.id}',true); END $$$$; WITH changed AS (${action}) SELECT count(*) FROM changed; ROLLBACK;`.replaceAll('$$$$','$$'))).toBe('0');
-  let error='';try{sql(`BEGIN; SET LOCAL ROLE salon_app; DO $$$$ BEGIN PERFORM set_config('app.tenant_id','${alpha.id}',true); END $$$$; INSERT INTO outbox_message (tenant_id,id,channel,payload,status,next_attempt_at,created_at,updated_at) VALUES ('${beta.id}','${randomUUID()}','probe','{}','pending',now(),now(),now());ROLLBACK;`.replaceAll('$$$$','$$'));}catch(e){error=String((e as {stderr:Buffer}).stderr);}expect(error).toMatch(/row-level security/);expect((await read(api,beta,b.id)).id).toBe(b.id);
+  for(const action of [`UPDATE outbox_message SET payload='{}' WHERE tenant_id='${beta.id}' RETURNING id`,`DELETE FROM outbox_message WHERE tenant_id='${beta.id}' RETURNING id`])expect(sql(`BEGIN; SET LOCAL ROLE salon_app; DO $$ BEGIN PERFORM set_config('app.tenant_id','${alpha.id}',true); END $$; WITH changed AS (${action}) SELECT count(*) FROM changed; ROLLBACK;`)).toBe('0');
+  let error='';try{sql(`BEGIN; SET LOCAL ROLE salon_app; DO $$ BEGIN PERFORM set_config('app.tenant_id','${alpha.id}',true); END $$; INSERT INTO outbox_message (tenant_id,id,channel,payload,status,next_attempt_at,created_at,updated_at) VALUES ('${beta.id}','${randomUUID()}','probe','{}','pending',now(),now(),now());ROLLBACK;`);}catch(e){error=String((e as {stderr:Buffer}).stderr);}expect(error).toMatch(/row-level security/);expect((await read(api,beta,b.id)).id).toBe(b.id);
 });
 
 test('TC-F01-S04-014 request JSON logs retain tenant and trace while dropping sensitive inputs',async({api})=>{
@@ -115,8 +115,8 @@ test('TC-F01-S04-014 request JSON logs retain tenant and trace while dropping se
 });
 
 test('TC-F01-S04-015 tenant cleanup removes old sent work while keeping newer work',async({api})=>{
-  await clock(api,'2026-03-01T00:00:00Z');const old=await create(api,alpha);await state(api,alpha,old.id,'sent');
-  await clock(api,'2026-03-31T01:00:00Z');const recent=await create(api,beta);await state(api,beta,recent.id,'sent');
+  const start=Date.now()+86400000;await clock(api,new Date(start).toISOString());const old=await create(api,alpha);await state(api,alpha,old.id,'sent');
+  await clock(api,new Date(start+31*86400000).toISOString());const recent=await create(api,beta);await state(api,beta,recent.id,'sent');
   await expect.poll(async()=>sql(`SELECT count(*) FROM outbox_message WHERE id='${old.id}';`),{timeout:5000}).toBe('0');expect((await read(api,beta,recent.id)).id).toBe(recent.id);
   const cleanup=logs().filter(l=>l.message?.includes('outbox-cleanup')&&l['tenant.id']);expect(cleanup.length).toBeGreaterThan(0);for(const s of salons)expect(cleanup.some(l=>l['tenant.id']===s.id)).toBe(true);
 });

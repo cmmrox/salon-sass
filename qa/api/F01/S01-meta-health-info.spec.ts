@@ -104,10 +104,11 @@ test('TC-F01-S01-020 no actuator endpoint that exposes configuration, memory or 
   const links = index.status() === 200 ? Object.keys((await index.json())._links ?? {}) : [];
   // Proves the list below is checked against a live actuator, not against one that is switched off.
   expect((await api.health()).status()).toBe(200);
-  expect(links.filter((name) => !['self', 'health', 'health-path', 'info'].includes(name))).toEqual([]);
+  expect(links.filter((name) => !['self', 'health', 'health-path', 'info', 'metrics', 'metrics-requiredMetricName'].includes(name))).toEqual([]);
 
+  expect((await api.get('/actuator/metrics')).status()).toBe(200);
   const sensitive = [
-    'env', 'beans', 'configprops', 'heapdump', 'threaddump', 'mappings', 'loggers', 'metrics',
+    'env', 'beans', 'configprops', 'heapdump', 'threaddump', 'mappings', 'loggers',
     'shutdown', 'logfile', 'conditions', 'scheduledtasks', 'flyway', 'caches', 'sbom', 'startup',
   ];
   for (const name of sensitive) {

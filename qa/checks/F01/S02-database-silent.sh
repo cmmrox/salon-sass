@@ -29,14 +29,16 @@ CALLERS=24
 STREAM="$WORK/stream.jsonl"
 STOP="$WORK/stop"
 STREAM_PID=""
+LOCK_PID=""
 require_product_up
 require_database
 load_salons
 
 restore() {
-  touch "$STOP"
+  touch "$STOP" "$WORK/release-lock"
   "$SCRIPTS/local-service.sh" resume postgres >/dev/null 2>&1
   "$SCRIPTS/local-service.sh" start postgres >/dev/null 2>&1
+  [ -n "$LOCK_PID" ] && wait "$LOCK_PID" 2>/dev/null
   [ -n "$STREAM_PID" ] && wait "$STREAM_PID" 2>/dev/null
   wait_for_code "$(salon_api alpha)" 200 90 || printf 'ENVIRONMENT: %s did not return to 200 after PostgreSQL was restored\n' "$(salon_api alpha)" >&2
   cp "$STREAM" "$REPORT_DIR/database-silent-stream.jsonl" 2>/dev/null
@@ -105,7 +107,7 @@ mark warm "$(now_ms)"
 # ---------------------------------------------------------------------------------------------
 begin_case TC-F01-S02-050 "Requests in flight at the moment PostgreSQL freezes are each answered 503 service_unavailable within 5 seconds"
 # Stop every request in the middle of its query, then freeze.
-( printf "begin;\nlock table salon_brand in access exclusive mode;\nselect 'locked';\n"; sleep 4 ) \
+( printf "begin;\nlock table salon_brand in access exclusive mode;\nselect 'locked';\n"; while [ ! -f "$WORK/release-lock" ]; do sleep 0.05; done; printf "rollback;\n" ) \
   | docker exec -i "$POSTGRES_CONTAINER" psql -U "$DB_USER" -d "$DB_NAME" -X -At -q >"$WORK/lock.out" 2>&1 &
 LOCK_PID=$!
 waited=0
@@ -117,11 +119,14 @@ mark locked "$(now_ms)"
 sleep 0.3
 mark freeze_asked "$(now_ms)"
 freeze
-mark frozen "$(now_ms)"
+PAUSE_EVENT="$(docker events --since "$(( $(now_ms) / 1000 - 30 ))" --until "$(node -e 'console.log(new Date().toISOString())')" --filter "container=$POSTGRES_CONTAINER" --filter event=pause --format '{{json .}}' | jq -s -r 'last.timeNano / 1000000 | floor')"
+[ "$PAUSE_EVENT" != null ] || environment_fault "Docker pause event timestamp missing"
+mark frozen "$PAUSE_EVENT"
 sleep 7
 mark thaw_asked "$(now_ms)"
 thaw
 mark thawed "$(now_ms)"
+touch "$WORK/release-lock"
 wait "$LOCK_PID" 2>/dev/null
 expect_equal "locks still held on salon_brand by the session that held the requests (it ended with the thaw)" 0 "$(printf "select count(*) from pg_locks where relation = 'public.salon_brand'::regclass and mode = 'AccessExclusiveLock';\n" | owner_psql)"
 sleep 8
@@ -164,6 +169,7 @@ mark second_thawed "$(now_ms)"
 sleep 8
 mark second_settled "$(now_ms)"
 touch "$STOP"; wait "$STREAM_PID" 2>/dev/null; STREAM_PID=""
+LOCK_PID=""
 
 # Requests whose whole life was inside a freeze: they began after it was in place and were answered before the thaw was asked for.
 DURING="$JQ_DEFS map(select((.start > \$frozen and .end < \$thaw_asked) or (.start > \$second_frozen and .end < \$second_thaw_asked)))"

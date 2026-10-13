@@ -157,7 +157,7 @@ Every case id here is declared under `cases:` in `stage.yaml`, and the reverse.
   3. Create a root `.env` holding `SALON_WEB_PORT=3102` and `SALON_API_PORT="8092"`, run `local-up.sh`, then restart the web app with `SALON_WEB_PORT=3103` in the shell.
   4. Stop everything and delete the `.env`.
 - **Expected:** Each start exits 0 and prints the addresses on the ports that were set. The web app's status page shows the API's name and version, so it found the API on its new port without being told separately. `local-down.sh` stops everything even without the variables. A value in `.env` is honoured with or without double quotes, and a variable in the shell wins over `.env`.
-- **Automation:** manual, because it needs a root `.env`, which a check must never write into the repository, and a full extra build-and-start cycle on every stage run to protect settings no acceptance criterion names; performed on 2026-10-12, result as expected
+- **Automation:** manual, because it needs a root `.env`, which a check must never write into the repository, and a full extra build-and-start cycle on every stage run to protect settings no acceptance criterion names; performed on 2026-10-13 using an isolated committed-product copy outside the checkout; shell ports 8091/3101/5441, quoted dotenv 8092/3102 and shell web override 3103 each showed the API service/version; default runtime restored. Evidence: qa/reports/triage-sol-20261013/ports-*.log and ports-*-page.html. Result as expected
 
 ### TC-F01-S01-010 Health answers 200 with status UP and a database component that is UP
 
@@ -295,10 +295,12 @@ Every case id here is declared under `cases:` in `stage.yaml`, and the reverse.
 - **Preconditions:** The product is running (`infra/scripts/local-up.sh`) with the local profile, the most permissive one.
 - **Steps:**
   1. `GET /actuator` and read its links.
-  2. `GET` each of `/actuator/env`, `beans`, `configprops`, `heapdump`, `threaddump`, `mappings`, `loggers`, `metrics`, `shutdown`, `logfile`, `conditions`, `scheduledtasks`, `flyway`, `caches`, `sbom`, `startup`.
+  2. `GET` each of `/actuator/env`, `beans`, `configprops`, `heapdump`, `threaddump`, `mappings`, `loggers`, `shutdown`, `logfile`, `conditions`, `scheduledtasks`, `flyway`, `caches`, `sbom`, `startup`.
   3. `POST /actuator/shutdown`.
-- **Expected:** The index links to health and info only. Every listed endpoint answers 404. The shutdown request is refused (404 or 405) and the API is still healthy afterwards.
+- **Expected:** The index links only to health, info and the local metrics hooks introduced by F01-S04. GET /actuator/metrics answers 200 locally (F01-S04 AC-16). Every listed endpoint answers 404. The shutdown request is refused (404 or 405) and the API is still healthy afterwards.
 - **Automation:** `qa/api/F01/S01-meta-health-info.spec.ts`
+
+- F01-S04 adds the exact local metrics discovery links and requires local GET /actuator/metrics 200; sensitive configuration, memory and control endpoints remain refused.
 
 ### TC-F01-S01-021 A response format meta cannot produce answers 406 as problem details with code not_acceptable
 
@@ -561,7 +563,7 @@ Every case id here is declared under `cases:` in `stage.yaml`, and the reverse.
   3. Stop the API, reload and look at the unavailable state; press Tab and look at the focus.
   4. Repeat the unavailable state at 320 wide with text at 200%.
 - **Expected:** The loading state is a skeleton shaped like the content, not a blank page or a spinner. The loaded and unavailable states are readable, aligned and inside their card, with nothing overlapping. The focus ring on the action is plainly visible. Nothing opens, closes and reopens while the page settles.
-- **Automation:** manual, because whether a screen looks right is a person's judgement that no assertion replaces; performed on 2026-10-12, result as expected at 360 and 1280 (the skeleton shows for about 0.3 s on a fast connection and about 0.65 s at 50 KB/s; at 320 wide with 200% text the word "unavailable" runs past its box, noted in review.md)
+- **Automation:** manual; performed on 2026-10-13. Inspected timed screenshots of loaded and unavailable states at 360/1280, visible keyboard focus on Try again, and the loading skeleton at 270 ms giving way to loaded content at 1056 ms under 50 KB/s and 200 ms latency. At 320 with 200% root text the page has no horizontal overflow, but the unavailable heading extends beyond its inner notice background; proposed as a review suggestion. Evidence: qa/reports/triage-sol-20261013/visual-observations.json and status-*.png.
 
 ### TC-F01-S01-041 With the API stopped the home page shows a plain service-unavailable state: no overlay, no stack trace, not blank
 

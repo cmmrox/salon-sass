@@ -265,7 +265,7 @@ Every case is automated; no manual or deferred acceptance cases. Human API/opera
 - **Expected:** Escalation refused; RLS cannot be bypassed; rows/catalogue unchanged.
 - **Automation:** `qa/checks/F01/S02-database-isolation.sh`
 
-### TC-F01-S02-033 The registry is reached only through tenant_by_slug, which gives one slug's id and status, to the application's role alone, and cannot be redirected
+### TC-F01-S02-033 The registry is reached only through tenant_by_slug, which gives one slug's id, status and time zone, to the application's role alone, and cannot be redirected
 
 - **Type:** security
 - **Priority:** high

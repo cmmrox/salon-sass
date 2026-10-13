@@ -77,10 +77,16 @@ test('TC-F01-S03-005 a suspended salon shows a neutral 503 and returns immediate
   const r = await request.get(`${salonUrl(gamma, webUrl)}/`); expect(r.status()).toBe(200); expect(await r.text()).toContain(gamma.name);
 });
 
-test('TC-F01-S03-006 another salon in client-controlled fields never changes the rendered brand', async ({ request }) => {
-  const owner = await request.get(`${salonUrl(beta, webUrl)}/`); expect(await owner.text()).toContain(beta.name);
-  const r = await request.get(`${salonUrl(alpha, webUrl)}/?tenant=${beta.slug}&tenantId=${beta.id}`, {headers:{'X-Forwarded-Host':beta.hostname, 'X-Tenant-Id':beta.id, 'Forwarded':`host=${beta.hostname}`, 'Cookie':`tenant=${beta.slug}; tenant_id=${beta.id}`, 'x-salon-resolved':JSON.stringify(beta)}});
-  expect(r.status()).toBe(200); expect(await r.text()).toContain(alpha.name); noOtherBrand(await r.text(),alpha);
+test('TC-F01-S03-006 another salon in client-controlled fields never changes the rendered brand', async ({ page }) => {
+  await page.goto(`${salonUrl(beta, webUrl)}/`);
+  await expect(page.getByTestId('salon-name')).toHaveText(beta.name);
+  await page.setExtraHTTPHeaders({'X-Forwarded-Host':beta.hostname, 'X-Tenant-Id':beta.id, 'Forwarded':`host=${beta.hostname}`, 'Cookie':`tenant=${beta.slug}; tenant_id=${beta.id}`, 'x-salon-resolved':JSON.stringify(beta)});
+  const response = await page.goto(`${salonUrl(alpha, webUrl)}/?tenant=${beta.slug}&tenantId=${beta.id}`);
+  expect(response!.status()).toBe(200);
+  await expect(page.getByTestId('salon-name')).toHaveText(alpha.name);
+  await expect(page).toHaveTitle(alpha.name);
+  noOtherBrand(await page.locator('body').innerText(),alpha);
+  for (const other of salons.filter(s => s !== alpha)) expect(await page.content()).not.toContain(other.brandColour);
 });
 
 for (const kind of ['stopped','silent'] as const) test(`TC-F01-S03-${kind === 'stopped' ? '008':'009'} the ${kind} API produces a bounded service unavailable page and recovers`, async ({ request }) => {
