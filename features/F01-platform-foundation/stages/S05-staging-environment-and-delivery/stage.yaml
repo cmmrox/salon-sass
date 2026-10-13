@@ -3,7 +3,7 @@ feature: F01
 title: "Staging environment and delivery pipeline"
 sequence: 5
 surfaces: [infra]
-status: in-progress
+status: built
 qa_status: not-run
 reopened_by: CR-005
 released_in: null
@@ -12,168 +12,65 @@ requirements: [BRD-03]
 nfr_focus: [NFR-01, NFR-07, NFR-16, NFR-18]
 handoff:
   run: |
-    Prepared .env.stack already exists and is ignored; preserve its secrets and .stack state.
-    infra/scripts/images-build.sh [version]
-    infra/scripts/images-scan.sh [image ...]
+    Local development is HTTP-only; no local certificate, trust, TLS, redirect or HSTS setup is needed.
+    Ensure ignored .env.stack contains the three DB secrets and SALON_STACK_ENV=local.
     infra/scripts/stack-up.sh
     infra/scripts/stack-seed.sh
     infra/scripts/stack-seed.sh add <slug> [name] [colour]
+    infra/scripts/images-build.sh [version]
+    infra/scripts/images-scan.sh [image ...]
     infra/scripts/stack-deploy.sh <version>
-    infra/scripts/stack-down.sh (keeps data)
-    Stack: https://stack.localhost:8443 and https://<slug>.stack.localhost:8443;
-    HTTP 8089 redirects to HTTPS 8443. Trust only .stack/edge-root.crt, for example:
-    curl --cacert .stack/edge-root.crt --resolve alpha.stack.localhost:8443:127.0.0.1 https://alpha.stack.localhost:8443/api/v1/meta
+    Stack: http://stack.localhost:8089; salons: http://<slug>.stack.localhost:8089.
+    Example: curl --resolve alpha.stack.localhost:8089:127.0.0.1 http://alpha.stack.localhost:8089/api/v1/salon
+    infra/scripts/stack-down.sh (keeps data; do not pass --delete-data)
     Logs: docker logs salon-stack-<service>. Collector: .stack/telemetry/{traces,metrics}.jsonl.
-    Developer gates used the already-installed Node 24/Corepack toolchain:
-    export PATH=/Users/cmmrox/.nvm/versions/node/v24.12.0/bin:$PATH
-    export COREPACK_ENABLE_DOWNLOAD_PROMPT=0
-    No tools were installed. Do not rebuild or stop the primary salon-local preview for this stack.
+    Staging TLS is a separate profile and deferred until an explicit VPS staging request.
+    Developer gates used installed Node 24/Corepack: export PATH=/Users/cmmrox/.nvm/versions/node/v24.12.0/bin:$PATH
+    export COREPACK_ENABLE_DOWNLOAD_PROMPT=0. No tools were installed; primary salon-local is independent.
   data: |
-    Synthetic alpha/beta/gamma with the fixed ids and brands of docs/qa/test-plan.md;
-    alpha/beta Asia/Colombo, gamma Europe/London. No accounts exist yet (F02).
-    Existing synthetic delta was preserved. Added epsilon (Epsilon Studio, #2563EB,
-    Asia/Colombo) for AC-4; all five salons are active. No real data, messages or payments.
-    Fresh isolated staging startup had zero tenants; seeding remains explicit.
-    Final stack: all API/web instances 0.1.0-SNAPSHOT, source 2cf930415d96e3d103aca8baab45cb6b5e83f223;
-    Committed migrations are V1-V7. The retained developer database also has the inherited V8
-    deployment fixture described below; it is not a committed product migration.
-    PostgreSQL, edge and collector remain running, data volumes preserved.
-    Primary salon-local database and browser preview were left running and reachable.
+    Synthetic alpha, beta, gamma and epsilon; prior delta was preserved. No real data, accounts,
+    messages or payments. Stack was stopped after checks; database and evidence volumes are preserved.
+    Primary salon-local state was not changed. Evidence is in ignored .stack/evidence/cr005-http.
+    Historical .stack/evidence/finish-s05 is retained; its TLS-specific evidence is superseded.
   notes: |
-    Developer acceptance checks performed 2026-10-13 on LOCAL salon-stack only; this is not feature QA.
-    Preserved the existing application/infra/pipeline implementation and history; finishing this session
-    required no further application change. All twelve criteria were checked, with no local deferral.
-    Evidence root: .stack/evidence/finish-s05 (ignored, kept for QA/lead and post-merge archival).
+    Developer acceptance checks performed 2026-10-13 on local salon-stack only; this is not feature QA.
+    Local stack uses HTTP only at 127.0.0.1:8089. No local TLS, SSL, certificate, trust, redirect,
+    HSTS or HTTPS behavior was configured or tested. Staging TLS remains separately configured but was
+    not started or verified; TC-F01-002 is deferred until an explicit VPS staging request.
+    Evidence root: ignored .stack/evidence/cr005-http. Historical TLS evidence is not current evidence.
 
-    Source and image provenance:
-    - Gates and final build use 2cf930415d96e3d103aca8baab45cb6b5e83f223. The handoff changes only metadata.
-    - Earlier acceptance traffic used 0.5.0/0.5.1 images built from d9ed773c3119851e36a06c779e2054b0d1339597.
-      Git-tree diffs alone did not establish built-image equality. The 0.5.0 API image contains
-      committed V1-V7; the 0.5.1 developer fixture also contains uncommitted
-      db/migration/V8__deployment_check.sql, which only comments on the tenant table.
-      Its SHA256 is 041ab8850d941f81ecea8180284703901fe8cb9f850f985dedb2f37724852693.
-      The fixture is not an exact committed-tree artifact despite its d9ed773 source label.
-      Read-only artifact comparison found all compiled classes, shared resources and 121 dependency
-      jars equal to the clean build, except V8 and build/version metadata; both web images have
-      identical contents across 1275 files. V1-V7 match repository bytes. Mounted edge/collector
-      files came from this checkout. Trace proof used 0.5.1. Current workflows were linted separately.
-    - Final retained stack uses newly built0.1.0-SNAPSHOT and commit tags2cf930415d96. Immutable local
-      image IDs (registry manifest digests do not exist because nothing was pushed):
-      api 0.1.0-SNAPSHOT sha256:6a21f181899841b25936d721554575d65851ddf68d0074e96c18f49cbaeff3c9
-      web 0.1.0-SNAPSHOT sha256:251b6538484a5eaed7bc66d224f0b7239d7abed5688728e3336522e22165fa7d
-      api 0.5.0 sha256:f185d5bac6ee802a591905cfb38ab0ed89b067f39d69c40d3e06ef456f9941f8
-      web 0.5.0 sha256:8883ca259fab2239cfbf54e10a89c2d84195092986a964d2d20860775baab292
-      api 0.5.1 sha256:fbf80b02d408cab5c56523e48aaf484c8d3210196f4312fe2a138fdd74bcffa0
-      web 0.5.1 sha256:09cb004d2202d35b83396e0f2476b9a1fe78896ad0a9058f5f863746a0015060
-      image-inventory.txt and final-containers.txt record labels, sizes and the running image IDs.
+    AC-1: Built API/web version and commit images; verified UID 10001, no .env files and version/commit
+    from /api/v1/meta over HTTP. Image sizes: API 433 MB, web 292 MB. Bases: eclipse-temurin:25.0.4.1_1-jdk-alpine-3.24,
+    eclipse-temurin:25.0.4.1_1-jre-alpine-3.24 and node:24.21.0-alpine3.24.
+    AC-2: Current images scan clean; alpine:3.18.0 negative control exits nonzero and names CVEs.
+    AC-3: Alpha/beta/gamma HTTP shells and APIs return matching tenants; platform status 200; unknown
+    and console return 404. AC-4: Added epsilon while running; its first API/web HTTP requests returned
+    the correct brand without restart. AC-5: Only edge publishes 127.0.0.1:8089; application/database/
+    collector ports are unpublished; beta spoof headers/id/query on alpha still resolve alpha.
+    AC-6: Role provisioning rerun succeeded; owner/app are non-superusers, app has no BYPASSRLS, owns
+    zero tables, and direct tenant SELECT is denied. AC-7: Missing each required DB secret refuses
+    startup naming it; fresh DB has no tenants before seed; /local/probes and /actuator/metrics return
+    404; tracked repository secret scan is clean.
+    AC-8: 50-VU HTTP k6 traffic across three salons during 0.1.0-SNAPSHOT -> 0.1.1-http: 35,595
+    requests / 71,190 checks, zero failures, connection errors or wrong-tenant responses; both versions
+    observed during rollout and only new version afterward. Rollback: 64,824 requests / 129,648 checks,
+    same zero-error results; both versions observed then old version only. AC-9: Under 50-VU HTTP traffic,
+    stopped/restarted one API and web instance: 45,996 requests / 91,992 checks, zero failures,
+    connection errors or wrong-tenant responses; both healthy and alpha routing worked afterward.
+    AC-10: Missing-version deploy refused before container state or deployed.env changed. AC-11: Alpha
+    web log, API trace and collector span share trace id and alpha tenant identity; web log excludes
+    query/cookie/authorization values. AC-12: Workflow lint passed; workflow contract reviewed and
+    missing staging secrets fail with their names. No GitHub deployment or registry write was run.
 
-    Acceptance criteria:
-    - AC-1 checked: images-build.sh built both version and commit tags; each container uid 10001,
-      USER 10001:10001, no .env/.env.* file found even by root. Current images deployed successfully
-      in 67s; root-trusted HTTPS /api/v1/meta returns 0.1.0-SNAPSHOT and the full 2cf9304 source SHA.
-      Evidence gate-08.log, image-inventory.txt, deploy-final-tree.log, final-meta.json.
-    - AC-2 checked: images-scan.sh exits 0 on both 0.5.0 images and both final 0.1.0-SNAPSHOT images.
-      Negative alpine:3.18.0 exits 1 and names fixable critical CVE-2022-48174 and other findings.
-      Evidence scan-positive.log, scan-final-tree.log, scan-negative.log. No findings were ignored.
-    - AC-3 checked: alpha/beta/gamma shell and API brands 200; bare platform status 200; unknown and
-      console salon-not-found 404. All six hostnames pass TLS hostname/root verification and HSTS;
-      HTTP 308 redirects preserve path/query and the 8443 port. Salon cache-control remains private/no-store.
-      Rechecked on the final2cf9304 images. certificates.json proves all salon/reserved/unknown names,
-      including epsilon, share one wildcard certificate; the bare platform has its own certificate.
-      Evidence http-results.json, alpha-page.html, certificates.json.
-    - AC-4 checked: stack-seed.sh add epsilon while running; its very first API and web requests
-      succeed with Epsilon Studio and the existing valid wildcard certificate. No restart/cert step.
-      Evidence seed-epsilon.log, epsilon-first-api.json, epsilon-first-page.html, certificates.json.
-      Earlier delta-add correctly refused the already-existing slug; delta data was preserved.
-    - AC-5 checked: Docker bindings expose only edge 127.0.0.1:8089/8443. API/web/PostgreSQL/collector
-      have no host bindings. Alpha requests with beta X-Forwarded-Host, X-Tenant-Id and tenant query
-      still show alpha on web/API. Evidence published-ports.json, http-results.json.
-    - AC-6 checked: role provisioning rerun succeeds; owner/app rolsuper=false, rolbypassrls=false;
-      app owns 0 tables; SET ROLE salon_app; SELECT * FROM tenant fails permission denied.
-      Evidence database-roles.log. No roles/passwords were changed by the idempotent rerun.
-    - AC-7 checked: removing each of SALON_DB_ADMIN_PASSWORD, SALON_DB_PASSWORD and
-      SALON_DB_APP_PASSWORD in isolated copies makes stack-up refuse before starting anything,
-      naming that setting. All /local/ paths tested and /actuator/metrics return 404.
-      Fresh disposable staging database, migrations and healthy API startup leave 0 tenants;
-      disposable containers/network removed afterward, without touching stack/local volumes.
-      Secret scan of tracked repository files finds 0 matches for real .env.stack passwords.
-      Evidence settings-results.json, no-seed-results.json, empty-migrations.log, http-results.json.
-    - AC-8 checked with official grafana/k6:1.8.2, 50 VUs continuously requesting / and /api/v1/salon
-      on all three salons, plus /api/v1/meta. TLS verification remained enabled; the container CA
-      bundle held only .stack/edge-root.crt and SSL_CERT_DIR=/tmp. No insecure TLS option used.
-      Deploy 0.5.0 -> 0.5.1: 82s deployment inside 210s traffic; 89,913 requests,179,826 checks,
-      failed-request rate 0, connection_errors 0, wrong_tenant 0. Both versions overlap 05:22:41-05:22:48UTC;
-      only 0.5.1 afterward through the run ending 05:25:45UTC.
-      Rollback 0.5.1 -> 0.5.0: 89s deployment inside 150s traffic; 63,063 requests,126,126 checks,
-      failed-request rate 0, connection_errors 0, wrong_tenant 0. Both versions overlap 05:26:39-05:26:43UTC;
-      only 0.5.0 afterward through 05:28:36UTC. The inherited database already contained the V8
-      developer fixture before this traffic deployment, so its migration step applied nothing new;
-      rollback preserved that fixture history/table comment. A separate fresh-database check applied
-      V8 outside traffic. S05 adds no product migration; committed migrations remain V1-V7.
-      Independent full feature QA uses rebuilt source images and an explicitly labelled additive
-      test migration on a fresh synthetic database to check migration application under traffic.
-      Evidence deploy-results.json, rollback-results.json, deploy.log, rollback.log,
-      summary-{deploy,rollback}.json, {deployment,rollback}-versions.jsonl,
-      samples-{deploy,rollback}.jsonl.gz, database-after-rollback.log. Traffic helper is traffic.js.
-    - AC-9 checked with the same 50 VU/root-verified traffic for 100s: stopped api-1 and web-1 together
-      using docker stop, kept stopped 15s, then docker start both. 49,317 requests,98,634 checks,
-      failed-request rate 0, connection_errors 0, wrong_tenant 0. Stop took 5.794s; start->both healthy
-      10.611s; stop request->both ready31.783s. Caddy automatically logged both returning to rotation;
-      no edge command/reload/restart. Evidence loss-results.json, loss-timings.json, summary-loss.json,
-      traffic-loss.log, loss-edge-recovery.log. All instances healthy afterward.
-    - AC-10 checked: missing-s05-version-never-built exits 1 naming both missing images. All7 container
-      ids/start times/images/running states and deployed.env unchanged. Stack still serves 0.5.0.
-      Evidence missing-version.log, missing-version-results.json.
-    - AC-11 checked: alpha page with trace aabbccddeeff00112233445566778899 gives exactly one JSON
-      web request line, tenant.slug alpha; API lines share trace.id and alpha tenant.id; collector
-      holds corresponding tenant-tagged API spans and outbox meters. Query/cookie/authorization
-      sentinel strings absent from both request logs. Evidence trace-results.json and *-trace.log.
-    - AC-12 checked: current-tree lint-workflows.sh passes both workflows, including SHA pin checks.
-      Delivery publish requires successful CI workflow_run, push and main, uses images-build/scan,
-      and publishes to GHCR. Deploy requires workflow_dispatch and staging environment. Executed
-      the workflow's exact missing-secret shell step locally with all 4 secrets empty: exits 1 and
-      names STAGING_SSH_HOST, STAGING_SSH_USER, STAGING_SSH_KEY, STAGING_SSH_KNOWN_HOSTS.
-      No GitHub job, SSH or registry write was run. Evidence gate-09.log, lint-final-tree.log,
-      workflow-secrets.log; workflow source .github/workflows/delivery.yml.
+    All prescribed developer commands passed: API Maven verify (417 tests, no failures/errors/skips),
+    frozen pnpm install using installed Node 24.12.0/Corepack pnpm 12.11.2, workspace lint/typecheck,
+    255 tests (19 contracts + 236 web), web build, contracts check, image build, workflow lint and
+    SDLC selftest (81 tests). No system software was installed. Local Compose config has only the
+    Caddyfile mount and no certificate volume. Staging config parses with a separate TLS Caddyfile and
+    cert storage; this is configuration validation, not certificate or TLS testing.
+    Stack tools: Caddy 2.11.7, OpenTelemetry Collector 0.162.0, Trivy 0.75.0, actionlint 1.7.12,
+    k6 1.8.2. No images were pushed. No real data, payments, messages, external deployment or VPS access.
 
-    Verification commands, in stage order: all 10 exit0; gates.json and gate-01-maven.log/gate-02..10.log.
-    Maven 417 tests, 0 failures/errors/skips; contract package 19 tests and web 236 tests pass;
-    SDLC selftest 81 tests pass. Initial pnpm install attempt used the shell's old pnpm and exited1:
-    "[ERROR] This project is configured to use 12.11.2 of pnpm. Your current pnpm is v11.6.0".
-    Selected the already-installed Node 24.12.0/Corepack pnpm 12.11.2 on PATH and reran successfully.
-    No version check was bypassed, no lockfile altered, no system software installed.
-
-    Facts for lead document corrections:
-    - Production web uses Next.js standalone output; local serve.mjs remains. /healthz is web readiness,
-      200 UP / 503 OUT_OF_SERVICE, and does not resolve a salon. Web SIGTERM drain is 5s then up to 30s
-      in-flight grace; Compose stop grace 45s. API has separate readiness/liveness health groups;
-      readiness fails before its 5s drain, then the server gracefully finishes accepted requests.
-    - Staging profile disables local hooks/automatic seed/metrics endpoint/OpenAPI. Migrations run once
-      as owner from staging,migrate; running API instances receive app credentials only.
-    - API native forwarded-header handling trusts only SALON_STACK_EDGE_SUBNET; forwarded-host/port
-      names disabled. Caddy passes Host unchanged, overwrites forwarded proto/for and removes forwarded-host.
-    - Web request logs use ECS-shaped JSON, path without query, resolved tenant.slug and trace.id;
-      API calls propagate W3C traceparent. Collector OTLP HTTP 4318 exports traces/meters to .stack/telemetry.
-    - Final images: API 433.050MB; web 292.993MB. Bases: eclipse-temurin:25.0.4.1_1-jdk-alpine-3.24
-      for build, eclipse-temurin:25.0.4.1_1-jre-alpine-3.24 for runtime; node:24.21.0-alpine3.24
-      for both web stages. Runtime files root-owned, process 10001:10001; web removes package managers.
-    - Tool containers: caddy:2.11.7-alpine(v2.11.7,88.909MB),
-      otel/opentelemetry-collector-contrib:0.162.0(482.274MB), aquasec/trivy:0.75.0(242.153MB),
-      rhysd/actionlint:1.7.12(151.941MB); acceptance traffic grafana/k6:1.8.2. tools-inventory.txt
-      records immutable IDs/sizes. Docker Compose stack/network/volume prefix salon-stack; distinct
-      from salon-local. Every deployed setting comes only from .env.stack plus .stack/deployed.env.
-    - .env.stack.example settings: SALON_VERSION, SALON_IMAGE_PREFIX, SALON_PLATFORM_DOMAIN,
-      SALON_EDGE_HTTPS_PORT, SALON_EDGE_HTTP_PORT, SALON_EDGE_PUBLISH_ADDRESS, SALON_EDGE_IMAGE,
-      SALON_EDGE_CERTIFICATES, SALON_EDGE_ACME_EMAIL, SALON_EDGE_DNS_PROVIDER,
-      SALON_EDGE_DNS_CREDENTIALS, SALON_STACK_EDGE_SUBNET, SALON_DB_NAME, SALON_DB_URL,
-      SALON_DB_ADMIN_USER, SALON_DB_ADMIN_PASSWORD, SALON_DB_USER, SALON_DB_PASSWORD,
-      SALON_DB_APP_USER, SALON_DB_APP_PASSWORD. Normal startup requires all 3 database secrets;
-      real acme-dns additionally needs a DNS-provider Caddy module and that provider's credentials.
-    - Deferred by decision 018: first real host/domain/public DNS-challenge certificate, unblocked by
-      owner D-08 hosting, D-02 domain and host/DNS access. At-rest encryption/managed keys/backups
-      and monitoring dashboards/alerts remain hosting-dependent/out of scope. No local AC deferred.
-    - No push/PR/deployment to external hosts, real message or payment performed. Primary preview
-      remained HTTP 200. The lead closes this built stage, integrates docs, then independent QA verifies F01.
 cases: []
 verification:
   commands:
