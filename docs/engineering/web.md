@@ -71,9 +71,16 @@ One Next.js application serves three surfaces. The hostname decides which.
   `apps/web/AGENTS.md`.
 - Local startup uses `apps/web/scripts/serve.mjs`, a custom server around Next.js's request
   handler, so that both IPv4 and IPv6 loopback work. Commands and settings are in
-  `docs/operations/environments-and-releases.md`. This custom server cannot be combined with
-  Next.js standalone output; F01-S05 selects the serving method for the production image
-  (decision 022).
+  `docs/operations/environments-and-releases.md`. The production image instead runs Next.js's
+  generated standalone server (`apps/web/server.js`), on one container port (decision 030).
+- `GET /healthz` is the container's readiness check. On SIGTERM readiness fails immediately,
+  while the app keeps serving for the drain delay so the edge removes it from rotation, then
+  finishes accepted requests. The container sets `NEXT_MANUAL_SIG_HANDLE=true`; keep the
+  application drain handler active when changing how the image starts.
+- Each answered request writes one JSON log line with method, path without query, status,
+  duration, `tenant.slug` and `trace.id`. A W3C trace continues into the API; no cookie, header
+  or query value is logged. The standalone server uses the same request instrumentation as
+  the local custom server.
 
 ## Branding
 
