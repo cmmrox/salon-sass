@@ -8,15 +8,11 @@ import com.salonplatform.shared.audit.*;
 import com.salonplatform.shared.tenancy.*;
 
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.LockModeType;
 import jakarta.persistence.PersistenceContext;
 
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Clock;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -30,22 +26,34 @@ import java.util.function.Supplier;
 @Service
 public class StaffAccess {
     @PersistenceContext private EntityManager em;
-    private final TransactionTemplate transactions;
+    private final IdentityWork identityWork;
+    private final SessionAccess sessionAccess;
     private final IdentityCrypto crypto;
     private final Clock clock;
     private final AuditTrail audit;
 
     public StaffAccess(
-            PlatformTransactionManager manager,
+            IdentityWork identityWork,
+            SessionAccess sessionAccess,
             IdentityCrypto crypto,
             Clock clock,
             AuditTrail audit) {
-        this.transactions = new TransactionTemplate(manager);
+        this.identityWork = identityWork;
+        this.sessionAccess = sessionAccess;
         this.crypto = crypto;
         this.clock = clock;
         this.audit = audit;
     }
 
+    @io.swagger.v3.oas.annotations.media.Schema(
+            requiredProperties = {
+                "state",
+                "sessionId",
+                "accessToken",
+                "refreshToken",
+                "accessExpiresAt",
+                "refreshExpiresAt"
+            })
     public record Tokens(
             String state,
             UUID sessionId,
@@ -54,6 +62,9 @@ public class StaffAccess {
             Instant accessExpiresAt,
             Instant refreshExpiresAt) {}
 
+    @com.fasterxml.jackson.annotation.JsonInclude(
+            com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+    @io.swagger.v3.oas.annotations.media.Schema(requiredProperties = {"state"})
     public record SignIn(
             String state,
             UUID challengeId,
@@ -103,40 +114,8 @@ public class StaffAccess {
             String totpSecret,
             Boolean professionalGrant) {}
 
-    private record Outcome<T>(T value, ApplicationProblemException failure) {}
-
     private <T> T work(Supplier<T> useCase) {
-        TenantContext.require();
-        Outcome<T> result =
-                transactions.execute(
-                        status -> {
-                            lockSalon();
-                            try {
-                                return new Outcome<>(useCase.get(), null);
-                            } catch (ApplicationProblemException failure) {
-                                if (failure.status() != 401 && failure.status() != 429)
-                                    throw failure;
-                                return new Outcome<>(null, failure);
-                            }
-                        });
-        if (result.failure() != null) throw result.failure();
-        return result.value();
-    }
-
-    /** Serializes security mutations across instances, including last Owner and rate counters. */
-    private void lockSalon() {
-        UUID tenant = TenantContext.require().id();
-        Instant at = clock.instant();
-        em.createNativeQuery(
-                        "INSERT INTO identity_guard(id,tenant_id,created_at,updated_at)"
-                                + " VALUES(:id,:tenant,:at,:at) ON CONFLICT(tenant_id) DO NOTHING")
-                .setParameter("id", tenant)
-                .setParameter("tenant", tenant)
-                .setParameter("at", at)
-                .executeUpdate();
-        em.createQuery("select g from IdentityGuard g", IdentityGuard.class)
-                .setLockMode(LockModeType.PESSIMISTIC_WRITE)
-                .getSingleResult();
+        return identityWork.run(useCase);
     }
 
     private <T> T fresh(T entity) {
@@ -228,22 +207,8 @@ public class StaffAccess {
     private record Auth(StaffAccount account, AccessSession session) {}
 
     private Auth auth() {
-        IdentityCrypto.Claims claims = crypto.verify(RequestCredential.require());
-        if (!claims.tenantId().equals(TenantContext.require().id())) throw new NotFoundException();
-        if (!"staff".equals(claims.kind())) throw sessionError();
-        AccessSession s =
-                em.createQuery(
-                                "select s from AccessSession s where s.id=:id and"
-                                        + " s.accountId=:account",
-                                AccessSession.class)
-                        .setParameter("id", claims.sessionId())
-                        .setParameter("account", claims.accountId())
-                        .getResultStream()
-                        .findFirst()
-                        .orElseThrow(this::sessionError);
-        StaffAccount a = account(s.accountId);
-        if (!live(a, s) || s.generation != claims.generation()) throw sessionError();
-        return new Auth(a, s);
+        SessionAccess.Auth a = sessionAccess.staffAuth();
+        return new Auth(a.staff(), a.session());
     }
 
     private boolean live(StaffAccount a, AccessSession s) {
@@ -488,159 +453,31 @@ public class StaffAccess {
     }
 
     private Tokens newSession(StaffAccount a, String label, boolean mfa) {
-        AccessSession s = new AccessSession();
-        stamp(s);
-        s.accountId = a.id;
-        s.kind = "staff";
-        s.deviceLabel = label;
-        s.expiresAt = s.createdAt.plus(Duration.ofDays(7));
-        s.mfaVerified = mfa;
-        Tokens result = rotate(a, s, false);
-        fresh(s);
-        return result;
+        return sessionAccess.newStaff(a, label, mfa);
     }
 
     private Tokens rotate(StaffAccount a, AccessSession s, boolean remember) {
-        if (remember) {
-            RefreshHistory h = new RefreshHistory();
-            stamp(h);
-            h.sessionId = s.id;
-            h.credentialHash = s.refreshHash;
-            fresh(h);
-        }
-        String refresh = crypto.randomToken();
-        s.refreshHash = crypto.hash("refresh", refresh);
-        s.generation++;
-        s.updatedAt = clock.instant();
-        Instant issuedAt = clock.instant().truncatedTo(java.time.temporal.ChronoUnit.SECONDS);
-        return new Tokens(
-                "authenticated",
-                s.id,
-                crypto.access(
-                        TenantContext.require().id(), a.id, s.id, "staff", s.generation, issuedAt),
-                refresh,
-                issuedAt.plusSeconds(300),
-                s.expiresAt);
-    }
-
-    public Tokens refresh(String credential) {
-        return work(
-                () -> {
-                    String hash = crypto.hash("refresh", credential == null ? "" : credential);
-                    AccessSession s =
-                            em.createQuery(
-                                            "select s from AccessSession s where s.refreshHash=:h",
-                                            AccessSession.class)
-                                    .setParameter("h", hash)
-                                    .getResultStream()
-                                    .findFirst()
-                                    .orElse(null);
-                    if (s == null) {
-                        RefreshHistory old =
-                                em.createQuery(
-                                                "select h from RefreshHistory h where"
-                                                        + " h.credentialHash=:h",
-                                                RefreshHistory.class)
-                                        .setParameter("h", hash)
-                                        .getResultStream()
-                                        .findFirst()
-                                        .orElse(null);
-                        if (old != null) {
-                            s = session(old.sessionId);
-                            s.revokedAt = clock.instant();
-                            s.updatedAt = clock.instant();
-                            event(
-                                    account(s.accountId),
-                                    "refresh_replay",
-                                    "session",
-                                    s.id.toString());
-                        }
-                        throw sessionError();
-                    }
-                    StaffAccount a = account(s.accountId);
-                    if (!live(a, s)) throw sessionError();
-                    return rotate(a, s, true);
-                });
+        return sessionAccess.rotate(s, remember);
     }
 
     private void revokeAccount(UUID accountId, UUID keep) {
-        for (AccessSession s :
-                em.createQuery(
-                                "select s from AccessSession s where s.accountId=:a and s.revokedAt"
-                                        + " is null",
-                                AccessSession.class)
-                        .setParameter("a", accountId)
-                        .getResultList()) {
-            if (keep == null || !s.id.equals(keep)) {
-                s.revokedAt = clock.instant();
-                s.updatedAt = clock.instant();
-            }
-        }
+        sessionAccess.revokeOwner("staff", accountId, keep);
+    }
+
+    public Tokens refresh(String token) {
+        return sessionAccess.refresh(token);
     }
 
     public Page<SessionView> sessions(int page, int size) {
-        pagination(page, size);
-        return work(
-                () -> {
-                    Auth a = permitted("session.manage");
-                    var rows =
-                            em.createQuery(
-                                            "select s from AccessSession s where s.accountId=:a and"
-                                                + " s.revokedAt is null and s.expiresAt>:now order"
-                                                + " by s.createdAt desc,s.id",
-                                            AccessSession.class)
-                                    .setParameter("a", a.account().id)
-                                    .setParameter("now", clock.instant())
-                                    .setFirstResult(page * size)
-                                    .setMaxResults(size)
-                                    .getResultList();
-                    long total =
-                            em.createQuery(
-                                            "select count(s) from AccessSession s where"
-                                                    + " s.accountId=:a and s.revokedAt is null and"
-                                                    + " s.expiresAt>:now",
-                                            Long.class)
-                                    .setParameter("a", a.account().id)
-                                    .setParameter("now", clock.instant())
-                                    .getSingleResult();
-                    return new Page<>(
-                            rows.stream()
-                                    .map(
-                                            s ->
-                                                    new SessionView(
-                                                            s.id,
-                                                            s.deviceLabel,
-                                                            s.createdAt,
-                                                            s.expiresAt,
-                                                            s.id.equals(a.session().id)))
-                                    .toList(),
-                            page,
-                            size,
-                            total);
-                });
+        return sessionAccess.sessions(page, size);
     }
 
     public void revoke(UUID id) {
-        work(
-                () -> {
-                    Auth a = permitted("session.manage");
-                    AccessSession s = session(id);
-                    if (!s.accountId.equals(a.account().id)) throw new NotFoundException();
-                    s.revokedAt = clock.instant();
-                    s.updatedAt = clock.instant();
-                    event(a.account(), "session_revoked", "session", s.id.toString());
-                    return null;
-                });
+        sessionAccess.revoke(id);
     }
 
     public void revokeAll() {
-        work(
-                () -> {
-                    Auth a = permitted("session.manage");
-                    revokeAccount(a.account().id, null);
-                    event(a.account(), "sessions_revoked", "staff", a.account().id.toString());
-                    return null;
-                });
+        sessionAccess.revokeAll();
     }
 
     public Tokens password(String oldPassword, String newPassword) {
@@ -932,11 +769,13 @@ public class StaffAccess {
                     synthetic();
                     for (Class<?> entity :
                             List.of(
+                                    CustomerChallenge.class,
                                     MfaStep.class,
                                     MfaChallenge.class,
                                     RefreshHistory.class,
                                     AccessSession.class,
                                     RateBucket.class,
+                                    CustomerAccount.class,
                                     StaffAccount.class))
                         em.createQuery("delete from " + entity.getSimpleName()).executeUpdate();
                     return null;

@@ -22,8 +22,11 @@ import java.util.UUID;
 @RequestMapping(path = "/api/v1/identity", produces = MediaType.APPLICATION_JSON_VALUE)
 class StaffAccessController {
     private final StaffAccess access;
+    private final com.salonplatform.identity.application.SessionAccess sessions;
 
-    StaffAccessController(StaffAccess access) {
+    StaffAccessController(
+            StaffAccess access, com.salonplatform.identity.application.SessionAccess sessions) {
+        this.sessions = sessions;
         this.access = access;
     }
 
@@ -91,30 +94,32 @@ class StaffAccessController {
 
     @GetMapping("/me")
     ResponseEntity<Principal> me() {
-        return ok(access.me());
+        return ok(sessions.me());
     }
 
     @GetMapping("/sessions")
     ResponseEntity<StaffAccess.Page<StaffAccess.SessionView>> sessions(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        return ok(access.sessions(page, size));
+        return ok(sessions.sessions(page, size));
     }
 
     @PostMapping(path = "/sessions/refresh", consumes = MediaType.APPLICATION_JSON_VALUE)
     ResponseEntity<StaffAccess.Tokens> refresh(@Valid @RequestBody RefreshRequest request) {
-        return ok(access.refresh(request.refreshToken()));
+        return ok(sessions.refresh(request.refreshToken()));
     }
 
     @DeleteMapping("/sessions/{id}")
+    @ResponseStatus(org.springframework.http.HttpStatus.NO_CONTENT)
     ResponseEntity<Void> revoke(@PathVariable String id) {
-        access.revoke(id(id));
+        sessions.revoke(id(id));
         return ResponseEntity.noContent().build();
     }
 
     @DeleteMapping("/sessions")
+    @ResponseStatus(org.springframework.http.HttpStatus.NO_CONTENT)
     ResponseEntity<Void> revokeAll() {
-        access.revokeAll();
+        sessions.revokeAll();
         return ResponseEntity.noContent().build();
     }
 
@@ -131,6 +136,7 @@ class StaffAccessController {
     }
 
     @PostMapping(path = "/staff", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseStatus(org.springframework.http.HttpStatus.CREATED)
     ResponseEntity<StaffAccess.StaffView> create(@Valid @RequestBody CreateStaffRequest request) {
         return ResponseEntity.status(201)
                 .cacheControl(org.springframework.http.CacheControl.noStore())
@@ -155,6 +161,7 @@ class StaffAccessController {
     }
 
     @DeleteMapping("/staff/{id}")
+    @ResponseStatus(org.springframework.http.HttpStatus.NO_CONTENT)
     ResponseEntity<Void> remove(@PathVariable String id) {
         access.remove(id(id));
         return ResponseEntity.noContent().build();

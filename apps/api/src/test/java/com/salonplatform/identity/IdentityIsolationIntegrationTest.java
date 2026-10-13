@@ -251,7 +251,7 @@ class IdentityIsolationIntegrationTest {
                                                             + UUID.randomUUID()
                                                             + "'::uuid,tenant_id,created_at,updated_at,'"
                                                             + beta.id()
-                                                            + "'::uuid,kind,refresh_hash,device_label,expires_at,revoked_at,generation,mfa_verified"
+                                                            + "'::uuid,kind,refresh_hash,device_label,expires_at,revoked_at,generation,mfa_verified,customer_account_id"
                                                             + " FROM identity_session WHERE id='"
                                                             + alpha.id()
                                                             + "'"))
@@ -276,7 +276,7 @@ class IdentityIsolationIntegrationTest {
             case "identity_staff" ->
                     "created_at,updated_at,email,mobile,password_hash,role,active,professional_grant,mfa_secret,version";
             case "identity_session" ->
-                    "created_at,updated_at,account_id,kind,refresh_hash,device_label,expires_at,revoked_at,generation,mfa_verified";
+                    "created_at,updated_at,account_id,kind,refresh_hash,device_label,expires_at,revoked_at,generation,mfa_verified,customer_account_id";
             case "identity_refresh_history" -> "created_at,updated_at,session_id,credential_hash";
             case "identity_mfa_challenge" ->
                     "created_at,updated_at,account_id,session_id,purpose,credential_hash,pending_secret,device_label,expires_at,attempts,consumed_at";

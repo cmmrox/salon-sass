@@ -24,8 +24,15 @@ import java.util.List;
 @RequestMapping("/local/identity")
 class LocalIdentityController {
     private final StaffAccess access;
+    private final com.salonplatform.identity.application.CustomerAccess customers;
+    private final CustomerMessageCapture capture;
 
-    LocalIdentityController(StaffAccess access) {
+    LocalIdentityController(
+            StaffAccess access,
+            com.salonplatform.identity.application.CustomerAccess customers,
+            CustomerMessageCapture capture) {
+        this.customers = customers;
+        this.capture = capture;
         this.access = access;
     }
 
@@ -45,6 +52,8 @@ class LocalIdentityController {
     @DeleteMapping
     ResponseEntity<Void> reset(HttpServletRequest http) {
         loopback(http);
+        customers.resetCustomer();
+        capture.clear();
         access.reset();
         return ResponseEntity.noContent().build();
     }

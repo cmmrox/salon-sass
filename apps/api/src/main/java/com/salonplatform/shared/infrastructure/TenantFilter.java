@@ -98,6 +98,8 @@ class TenantFilter extends OncePerRequestFilter {
                             || name.matches("^\\[[0-9a-f:]+\\](:[0-9]+)?$");
             boolean publicPath =
                     request.getRequestURI().contains("/sign-in")
+                            || request.getRequestURI()
+                                    .equals("/api/v1/identity/customers/challenges")
                             || request.getRequestURI().contains("/mfa/")
                             || request.getRequestURI().endsWith("/sessions/refresh")
                             || request.getRequestURI().startsWith("/local/");
