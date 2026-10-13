@@ -4,7 +4,7 @@ title: Customer one-time-code sign-in and abuse prevention
 sequence: 2
 surfaces:
 - api
-status: outlined
+status: planned
 qa_status: not-run
 blocked_reason: null
 released_in: null
@@ -26,7 +26,9 @@ handoff:
   notes: null
 cases: []
 verification:
-  commands: []
+  commands:
+  - cd apps/api && ./mvnw -q verify
+  - pnpm contracts:check
   automation: []
   manual: []
   deferred: []
