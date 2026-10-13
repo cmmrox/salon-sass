@@ -3,7 +3,7 @@ feature: F01
 title: "Staging environment and delivery pipeline"
 sequence: 5
 surfaces: [infra]
-status: built
+status: complete
 qa_status: not-run
 reopened_by: CR-005
 released_in: null
