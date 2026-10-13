@@ -256,7 +256,11 @@ The browser rate-address boundary adds `SALON_IDENTITY_PROXY_KEY`, independently
 three identity keys and encoded as 64 hex characters. Local startup appends the `proxy` entry to
 the retained key file without replacing earlier values; nonlocal startup requires all four keys
 and rejects any equal pair. Web runtime receives the same proxy key; it is excluded from browser
-data and build artifacts. `SALON_WEB_LOCAL_HTTP=true` is explicit for local HTTP and false outside
+data and build artifacts. Bundled Next.js code reads only `SALON_IDENTITY_PROXY_KEY`; it never
+opens the retained file. The nonbundled local launcher loads the retained proxy value before
+importing Next.js, rejecting missing, malformed or duplicate retained entries. A fresh standalone
+artifact scan checks actual files, including ignored paths, for local/environment copies and all
+four key values without printing them. `SALON_WEB_LOCAL_HTTP=true` is explicit for local HTTP and false outside
 it; `SALON_WEB_TRUSTED_PROXIES` is empty locally and an explicit edge CIDR allowlist behind Caddy.
 
 The private `x-salon-client-assertion` header is optional on staff password sign-in and customer
