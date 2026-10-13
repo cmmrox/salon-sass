@@ -167,7 +167,42 @@ verification:
   commands:
     - cd apps/api && ./mvnw -q verify
     - pnpm contracts:check
-  automation: []
+  automation:
+    - id: customer-access
+      tool: playwright
+      file: qa/api/F02/S02-customer-access.spec.ts
+      project: api
+      covers:
+        - TC-F02-S02-001
+        - TC-F02-S02-002
+        - TC-F02-S02-003
+        - TC-F02-S02-004
+        - TC-F02-S02-005
+        - TC-F02-S02-006
+        - TC-F02-S02-007
+        - TC-F02-S02-008
+        - TC-F02-S02-009
+        - TC-F02-S02-010
+        - TC-F02-S02-014
+        - TC-F02-S02-015
+      suites: []
+    - id: customer-runtime
+      tool: playwright
+      file: qa/api/F02/S02-customer-runtime.spec.ts
+      project: api
+      covers:
+        - TC-F02-S02-011
+        - TC-F02-S02-012
+        - TC-F02-S02-013
+        - TC-F02-S02-016
+        - TC-F02-S02-017
+      suites: []
+    - id: nonlocal-provider
+      tool: script
+      file: qa/checks/F02/S02-nonlocal-provider.sh
+      covers:
+        - TC-F02-S02-018
+      suites: []
   manual: []
   deferred: []
 evidence:

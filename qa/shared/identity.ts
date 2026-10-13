@@ -18,7 +18,8 @@ export type Principal = Required<components['schemas']['Principal']>;
 export type SessionPage = Required<components['schemas']['PageSessionView']>;
 export type AuditPage = Required<components['schemas']['PageAuditView']>;
 export type SeedAccount = { email: string; mobile: string; password: string; role: Role; totpSecret?: string; professionalGrant?: boolean };
-export type SignedStaff = { salon: Salon; account: SeedAccount; tokens: Tokens; principal: Principal };
+export type Actor = { salon: Salon; tokens: Tokens; principal: Principal };
+export type SignedStaff = Actor & { account: SeedAccount };
 
 export function syntheticAccount(role: Role = 'MANAGER', mfa = role === 'OWNER'): SeedAccount {
   return { email: `qa-${randomUUID()}@example.invalid`, mobile: `077${randomInt(1000000,10000000)}`,
@@ -115,14 +116,14 @@ export class Identity {
   async staff(salon = alpha, role: Role = 'MANAGER', mfa = role === 'OWNER') {
     const account = syntheticAccount(role,mfa); await this.seed(salon,[account]); return this.login(salon,account);
   }
-  async sessions(actor: SignedStaff, page = 0, size = 100): Promise<SessionPage> {
+  async sessions(actor: Actor, page = 0, size = 100): Promise<SessionPage> {
     return json(await this.call(actor.salon,'GET',`/sessions?page=${page}&size=${size}`,undefined,actor.tokens),'PageSessionView');
   }
   async list(actor: SignedStaff): Promise<Staff[]> {
     const page = await json<Required<components['schemas']['PageStaffView']>>(await this.call(actor.salon,'GET','/staff?size=100',undefined,actor.tokens),'PageStaffView');
     return page.items as Staff[];
   }
-  async audit(actor: SignedStaff, subjectId?: string): Promise<AuditPage> {
+  async audit(actor: Actor, subjectId?: string): Promise<AuditPage> {
     return json(await this.call(actor.salon,'GET',`/audit?size=100${subjectId?`&subjectId=${encodeURIComponent(subjectId)}`:''}`,undefined,actor.tokens),'PageAuditView');
   }
 }
