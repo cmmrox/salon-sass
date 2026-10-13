@@ -22,7 +22,7 @@ asked for; the cases of a stage are written at its feature's pass.
 | F01-S03 | complete | - | BRD-03, NFR-01, NFR-17 | 11 | 12 | 12 | 0 | 0 |
 | F01-S04 | complete | - | BKG-15, NFR-01, NFR-10, NFR-15, NFR-16 | 16 | 18 | 18 | 0 | 0 |
 | F01-S05 | complete | - | BRD-03, NFR-01, NFR-07, NFR-16, NFR-18 | 12 | 12 | 12 | 0 | 0 |
-| F02-S01 | built | - | IAM-06, IAM-07, IAM-08, IAM-09, IAM-11, NFR-08, NFR-10 | 10 | 0 | 0 | 0 | 0 |
+| F02-S01 | built | - | IAM-06, IAM-07, IAM-08, IAM-09, IAM-11, NFR-08, NFR-10 | 10 | 30 | 30 | 0 | 0 |
 
 ## Deferred cases
 

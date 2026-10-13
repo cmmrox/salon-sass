@@ -13,6 +13,7 @@
     "forceConsistentCasingInFileNames": true,
     "baseUrl": ".",
     "paths": {
+      "openapi-fetch": ["./node_modules/openapi-fetch/dist/index.d.mts"],
       "@contracts/schema": ["../packages/api-contracts/src/generated/schema.ts"],
       "@contracts/client": ["../packages/api-contracts/src/index.ts"],
       "@qa/*": ["shared/*"]

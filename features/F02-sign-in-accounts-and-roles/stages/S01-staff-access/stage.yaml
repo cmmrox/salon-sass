@@ -42,12 +42,252 @@ handoff:
     Dependencies: Spring-managed spring-security-crypto and spring-security-oauth2-jose; java-otp1.0.0 (approved maintained TOTP implementation, no transitive dependencies). Used installed Spring password/JWT docs and official java-otp documentation. Google Java Format from the existing Maven cache formatted only new/changed identity/security Java; no system software installed.
     Contract: POST staff/sign-in and staff/mfa/challenges return {state,challengeId,challengeToken,expiresAt,credentials}; authenticated sign-in places Tokens in credentials. Tokens are {state,sessionId,accessToken,refreshToken,accessExpiresAt,refreshExpiresAt}; MFA verify, refresh and password change return Tokens directly. Lists return {items,page,size,total}, page0..100000 and size1..100. Roles are uppercase enum strings; principal kind is staff; Professional scope is own unless granted. Staff changes require version; DTOs never serialize entities. Enrollment returns secret and otpauth URI only under verified challenge authority. Retry-After is900 seconds for staff rate limits.
     Operational choices for lead documents: fixed15-minute staff rate windows begin on their first attempt; the scheduled identity-security-cleanup runs every15minutes and removes expired staff rate/MFA challenges and consumed TOTP steps older than tolerance. Local seed secrets can be supplied but never returned. JWT uses fixed HS256, issuer salon-platform, audience salon-api; permissions are read live rather than carried as cached JWT claims. Three independent hex keys and hook request/response shapes above should be added to tech-stack/environment/test-plan docs. Real Owner provisioning is F03; recovery/disable, customer authentication/privacy and browser cookies/screens remain their specified later scope. Nothing unfinished in this stage; full feature QA is still not run.
-cases: []
+cases:
+  - id: TC-F02-S01-001
+    title: normalized staff identifiers establish bounded credentials
+    type: api
+    priority: high
+    covers:
+      - AC-1
+  - id: TC-F02-S01-002
+    title: wrong unknown and disabled credentials expose the same denial
+    type: security
+    priority: critical
+    covers:
+      - AC-1
+  - id: TC-F02-S01-003
+    title: identifier limits survive failed outcomes and normalization
+    type: security
+    priority: critical
+    covers:
+      - AC-1
+  - id: TC-F02-S01-004
+    title: trusted address limits cannot be bypassed with forwarded headers
+    type: security
+    priority: critical
+    covers:
+      - AC-1
+  - id: TC-F02-S01-005
+    title: an Owner enrollment challenge never authorizes a session before TOTP
+    type: security
+    priority: critical
+    covers:
+      - AC-2
+  - id: TC-F02-S01-006
+    title: invalid expired consumed or exhausted MFA challenges issue no second session
+    type: security
+    priority: critical
+    covers:
+      - AC-2
+  - id: TC-F02-S01-007
+    title: simultaneous TOTP reuse establishes exactly one session
+    type: concurrency
+    priority: critical
+    covers:
+      - AC-2
+  - id: TC-F02-S01-008
+    title: voluntary MFA enrollment replaces pre-enrollment authority
+    type: security
+    priority: critical
+    covers:
+      - AC-2
+  - id: TC-F02-S01-009
+    title: hostile access claims and expiry cannot authenticate
+    type: security
+    priority: critical
+    covers:
+      - AC-3
+  - id: TC-F02-S01-010
+    title: all identity endpoints honor tenant and hostname boundaries
+    type: tenant-isolation
+    priority: critical
+    covers:
+      - AC-3
+  - id: TC-F02-S01-011
+    title: foreign ids lists and MFA credentials reveal no foreign records
+    type: tenant-isolation
+    priority: critical
+    covers:
+      - AC-3
+      - AC-6
+  - id: TC-F02-S01-012
+    title: concurrent salon requests never carry another principal
+    type: tenant-isolation
+    priority: critical
+    covers:
+      - AC-3
+  - id: TC-F02-S01-013
+    title: device lists paginate and identify only one's current session
+    type: api
+    priority: high
+    covers:
+      - AC-4
+  - id: TC-F02-S01-014
+    title: renewal rotates credentials and cannot extend the absolute session
+    type: security
+    priority: critical
+    covers:
+      - AC-4
+  - id: TC-F02-S01-015
+    title: simultaneous refresh permits one rotation and replay revokes its family
+    type: concurrency
+    priority: critical
+    covers:
+      - AC-4
+  - id: TC-F02-S01-016
+    title: single and all-device revocation is immediate and owner-scoped
+    type: security
+    priority: critical
+    covers:
+      - AC-4
+  - id: TC-F02-S01-017
+    title: each role receives exactly its permitted identity actions
+    type: permissions
+    priority: critical
+    covers:
+      - AC-5
+      - AC-6
+      - AC-7
+      - AC-8
+  - id: TC-F02-S01-018
+    title: live role and Professional grant changes replace cached permissions
+    type: permissions
+    priority: critical
+    covers:
+      - AC-5
+      - AC-6
+  - id: TC-F02-S01-019
+    title: invalid duplicate and stale staff edits leave accounts unchanged
+    type: api
+    priority: high
+    covers:
+      - AC-6
+  - id: TC-F02-S01-020
+    title: removal and Owner promotion end every existing credential
+    type: security
+    priority: critical
+    covers:
+      - AC-6
+  - id: TC-F02-S01-021
+    title: concurrent demotion and removal retain an active Owner
+    type: concurrency
+    priority: critical
+    covers:
+      - AC-6
+  - id: TC-F02-S01-022
+    title: password policy and old-password proof rotate current and revoke other sessions
+    type: security
+    priority: critical
+    covers:
+      - AC-7
+  - id: TC-F02-S01-023
+    title: sensitive identity actions write paginated secret-free before-after audit
+    type: security
+    priority: critical
+    covers:
+      - AC-8
+  - id: TC-F02-S01-024
+    title: new identity records fail closed at the database and persist no raw credentials
+    type: data-integrity
+    priority: critical
+    covers:
+      - AC-9
+      - AC-8
+  - id: TC-F02-S01-025
+    title: contract and local fixtures expose no accidental auth surface
+    type: build
+    priority: high
+    covers:
+      - AC-9
+      - AC-10
+  - id: TC-F02-S01-026
+    title: malformed identity input is refused with field errors and no mutation
+    type: api
+    priority: high
+    covers:
+      - AC-1
+      - AC-2
+      - AC-4
+      - AC-6
+      - AC-7
+      - AC-8
+  - id: TC-F02-S01-027
+    title: API restart preserves local keys sessions and failed-attempt limits
+    type: security
+    priority: critical
+    covers:
+      - AC-1
+      - AC-10
+  - id: TC-F02-S01-028
+    title: stopped database answers identity requests within five seconds and recovers
+    type: resilience
+    priority: high
+    covers:
+      - AC-10
+  - id: TC-F02-S01-029
+    title: silent database answers in-flight identity requests and recovers within five seconds
+    type: resilience
+    priority: high
+    covers:
+      - AC-10
+  - id: TC-F02-S01-030
+    title: nonlocal startup requires configured independent keys and exposes no local identity hooks
+    type: build
+    priority: high
+    covers:
+      - AC-10
 verification:
   commands:
-  - cd apps/api && ./mvnw -q verify
-  - pnpm contracts:check
-  automation: []
+    - cd apps/api && ./mvnw -q verify
+    - pnpm contracts:check
+  automation:
+    - id: staff-access
+      tool: playwright
+      file: qa/api/F02/S01-staff-access.spec.ts
+      project: api
+      covers:
+        - TC-F02-S01-001
+        - TC-F02-S01-002
+        - TC-F02-S01-003
+        - TC-F02-S01-004
+        - TC-F02-S01-005
+        - TC-F02-S01-006
+        - TC-F02-S01-007
+        - TC-F02-S01-008
+        - TC-F02-S01-009
+        - TC-F02-S01-010
+        - TC-F02-S01-011
+        - TC-F02-S01-012
+        - TC-F02-S01-013
+        - TC-F02-S01-014
+        - TC-F02-S01-015
+        - TC-F02-S01-016
+        - TC-F02-S01-017
+        - TC-F02-S01-018
+        - TC-F02-S01-019
+        - TC-F02-S01-020
+        - TC-F02-S01-021
+        - TC-F02-S01-022
+        - TC-F02-S01-023
+        - TC-F02-S01-024
+        - TC-F02-S01-025
+        - TC-F02-S01-026
+      suites: []
+    - id: staff-runtime
+      tool: playwright
+      file: qa/api/F02/S01-runtime.spec.ts
+      project: api
+      covers:
+        - TC-F02-S01-027
+        - TC-F02-S01-028
+        - TC-F02-S01-029
+      suites: []
+    - id: nonlocal-identity
+      tool: script
+      file: qa/checks/F02/S01-nonlocal-secrets.sh
+      covers:
+        - TC-F02-S01-030
+      suites: []
   manual: []
   deferred: []
 evidence:
