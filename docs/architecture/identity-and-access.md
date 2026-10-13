@@ -97,6 +97,13 @@ salon-wide calendar/customer/figures access (IAM-08), not arbitrary role customi
 | Salon calendar/customer access | yes | yes | yes | own; salon if granted | no |
 | Salon financial reports | yes | yes | no | only if granted | yes |
 
+The API permission keys for these rows are `session.manage`, `password.change`, `mfa.enroll`,
+`staff.list`, `staff.manage`, `audit.list`, `payment.refund`, `catalogue.price.change`,
+`policy.change`, `customer.export`, `calendar.read`, `customer.read` and `financial.read`.
+All staff receive the first three own-account permissions; the table determines the rest.
+The customer principal has kind `customer`, null role/staff id, own scope, MFA false and
+`session.manage`; the customer privacy stage adds its own-profile/data-rights permissions.
+
 Keep pagination on staff, sessions and audit lists. Record successful/failed sign-ins, session
 revocation, password/MFA change, staff creation/removal, role/grant changes and customer rights
 actions in F01's immutable audit trail. Audit reads use explicit DTOs without secret or profile
@@ -210,3 +217,6 @@ Principal kinds are lowercase (`staff`); role names are uppercase. A list return
 current session. Staff changes require the current `version`; audits expose nonsecret before/after
 values. All MFA routes require the salon hostname. Protected principal, staff, session, password
 and audit calls additionally support a verified signed tenant on the bare API address.
+Staff creation answers 201 and staff/session deletion answers 204; generated success-response
+statuses must match these actual HTTP outcomes. Nullable/omitted challenge and customer-principal
+fields must likewise match the generated schema rather than relying on client casts.
