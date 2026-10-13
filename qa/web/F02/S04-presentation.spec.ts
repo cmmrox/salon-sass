@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import ts from 'typescript';
-import {test,expect,handle,routes,screenMap} from '../../shared/identity-browser';
+import {test,expect,handle,routes,screenMap,brandName} from '../../shared/identity-browser';
 import {alpha,beta,syntheticAccount} from '../../shared/identity';
 import {salons} from '../../shared/tenants';
 import {fit,seriousViolations,testIds,TEST_ID_NAME} from '../../shared/page-checks';
@@ -30,7 +30,7 @@ test(`${c(17)} all screens pass automated accessibility checks and announce erro
 test(`${c(19)} customer screens use the correct salon brand while workspace stays neutral`,async({identity,accounts})=>{
  const workspaceColours:string[]=[];
  for(const salon of salons){const customer=await accounts.customers.login(salon),staff=await identity.staff(salon,'MANAGER'),context=await accounts.context(salon,[customer,staff]);
-  for(const route of [routes.customerSignIn,routes.customer]){const page=await accounts.open(context,route);await expect(handle(page,'title')).toHaveText(salon.name);const theme=await handle(page,'title').evaluate(el=>getComputedStyle(el).getPropertyValue('--color-brand').trim().toUpperCase());expect(theme).toBe(salon.brandColour.toUpperCase());for(const other of salons.filter(s=>s!==salon))expect((await page.locator('body').innerText()).includes(other.name)).toBe(false);await page.close();}
+  for(const route of [routes.customerSignIn,routes.customer]){const page=await accounts.open(context,route);await expect(brandName(page)).toHaveText(salon.name);const theme=await brandName(page).evaluate(el=>getComputedStyle(el).getPropertyValue('--color-brand').trim().toUpperCase());expect(theme).toBe(salon.brandColour.toUpperCase());for(const other of salons.filter(s=>s!==salon))expect((await page.locator('body').innerText()).includes(other.name)).toBe(false);await page.close();}
   const page=await accounts.open(context,routes.staff);await accounts.ready(page);await expect(handle(page,'title')).not.toHaveText(salon.name);const button=await handle(page,'logout').evaluate(el=>({background:getComputedStyle(el).backgroundColor,text:getComputedStyle(el).getPropertyValue('--color-text').trim()}));expect(button.background.length).toBeGreaterThan(0);workspaceColours.push(button.background);
  }
  expect(new Set(workspaceColours).size,'all workspaces use the same neutral palette').toBe(1);

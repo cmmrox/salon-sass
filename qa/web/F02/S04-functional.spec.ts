@@ -2,6 +2,7 @@ import {test,expect,handle,routes,mutations,cookie} from '../../shared/identity-
 import {alpha,beta,ROLES,syntheticAccount,totp,problem} from '../../shared/identity';
 import {codeSettings} from '../../shared/identity-runtime';
 import {randomInt} from 'node:crypto';
+import {createHash} from 'node:crypto';
 import {Profiles} from '../../shared/customer-profile';
 import {salonUrl} from '../../shared/tenants';
 import {webUrl} from '../../shared/env';
@@ -74,9 +75,13 @@ test(`${c(10)} customer profile screens save every mutable field and recover sta
  await handle(b,'name').fill('Stale draft');await handle(b,'profile-save').click();await expect(handle(b,'profile-conflict')).toBeVisible();await expect(handle(b,'name')).toHaveValue('Stale draft');expect(await accounts.profiles.read(actor)).toEqual(saved);await handle(b,'profile-reload').click();await expect(handle(b,'name')).toHaveValue(saved.name);await b.reload();await expect(handle(b,'name')).toHaveValue(saved.name);
 });
 test(`${c(11)} data download and deletion confirmation clearly complete or cancel the customer request`,async({identity,accounts})=>{
- const actor=await accounts.customers.login(alpha),other=await accounts.customers.login(beta,actor.mobile),second=await accounts.customers.login(alpha,actor.mobile);const saved=await accounts.profiles.saved(actor),foreign=await accounts.profiles.saved(other,'Beta preserved');const context=await accounts.context(alpha,[actor]),page=await accounts.open(context,routes.customer);await accounts.ready(page);
+ const actor=await accounts.customers.login(alpha),other=await accounts.customers.login(beta,actor.mobile),second=await accounts.customers.login(alpha,actor.mobile),staff=await identity.staff();const saved=await accounts.profiles.saved(actor),foreign=await accounts.profiles.saved(other,'Beta preserved');const context=await accounts.context(alpha,[actor,staff]),page=await accounts.open(context,routes.customer);await accounts.ready(page);
+ const staffCookies=async()=>createHash('sha256').update(JSON.stringify((await context.cookies()).filter(item=>item.name.startsWith('salon_staff_')))).digest('hex');const staffBefore=await staffCookies();
  const downloaded=page.waitForEvent('download');await handle(page,'export').click();const download=await downloaded;expect(download.suggestedFilename()).toBe('customer-data.json');const stream=await download.createReadStream();expect(Boolean(stream)).toBe(true);let raw='';for await(const chunk of stream!)raw+=chunk;const copy=JSON.parse(raw);expect(copy.profile).toEqual(saved);expect(Object.keys(copy).sort()).toEqual(['devices','generatedAt','profile']);
- await handle(page,'delete').click();await expect(handle(page,'confirm-action')).toBeVisible();await handle(page,'cancel-action').click();expect(await accounts.profiles.read(actor)).toEqual(saved);await accounts.confirm(page,'delete');await page.waitForURL('**'+routes.customerSignIn);await problem(await identity.call(alpha,'GET','/me',undefined,second.tokens),401,'invalid_session');expect(await accounts.profiles.read(other)).toEqual(foreign);
+ await handle(page,'delete').click();await expect(handle(page,'confirm-action')).toBeVisible();await handle(page,'cancel-action').click();expect(await accounts.profiles.read(actor)).toEqual(saved);
+ const deletion=page.waitForResponse(response=>new URL(response.url()).pathname==='/identity-web/customer/delete');await accounts.confirm(page,'delete');const answer=await deletion;expect(answer.status(),'successful BFF confirmation of native deletion').toBe(200);expect(await answer.json()).toEqual({ok:true});await page.waitForURL('**'+routes.customerSignIn);
+ for(const tokens of [actor.tokens,second.tokens]){await problem(await identity.call(alpha,'GET','/me',undefined,tokens),401,'invalid_session');await problem(await identity.call(alpha,'POST','/sessions/refresh',{refreshToken:tokens.refreshToken}),401,'invalid_session');}
+ expect((await context.cookies()).some(item=>item.name.startsWith('salon_customer_')),'customer credential cookies are cleared').toBe(false);expect(await staffCookies(),'deletion preserves independent staff cookie family').toBe(staffBefore);expect((await accounts.principal(context,alpha,'staff')).id).toBe(staff.principal.id);expect((await identity.principal(alpha,staff.tokens)).id).toBe(staff.principal.id);expect(await accounts.profiles.read(other)).toEqual(foreign);
 });
 test(`${c(12)} audit screens expose useful identity alerts without personal or credential values`,async({identity,accounts})=>{
  test.setTimeout(180000);await codeSettings({SALON_IDENTITY_CODE_DAILY_LIMIT:'5'},async()=>{

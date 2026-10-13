@@ -11,6 +11,7 @@ export const routes={staffSignIn:'/workspace/sign-in',staff:'/workspace/account'
 export const bff=(kind:Kind,action:string)=>`/identity-web/${kind}/${action}`;
 export const cookie=(kind:Kind,name:string)=>`salon_${kind}_${name}`;
 export const handle=(page:Page,name:string)=>page.getByTestId(`account-${name}`);
+export const brandName=(page:Page)=>page.getByTestId('salon-name');
 export const mutations={staff:['sign-in','mfa-start','mfa-enroll','mfa-verify','password','logout','revoke','revoke-all','staff-create','staff-change','staff-remove','refresh','clear'],
   customer:['code','sign-in','logout','revoke','revoke-all','profile','export','delete','refresh','clear']} as const;
 export const screenMap=[routes.staffSignIn,routes.staff,routes.staffList,routes.audit,routes.customerSignIn,routes.customer];
