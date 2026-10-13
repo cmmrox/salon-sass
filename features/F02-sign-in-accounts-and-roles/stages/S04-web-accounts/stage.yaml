@@ -1,0 +1,42 @@
+id: F02-S04
+feature: F02
+title: Staff workspace and customer account screens
+sequence: 4
+surfaces:
+- web
+status: outlined
+qa_status: not-run
+blocked_reason: null
+released_in: null
+reopened_by: null
+depends_on:
+- F02-S01
+- F02-S02
+- F02-S03
+requirements:
+- IAM-01
+- IAM-03
+- IAM-04
+- IAM-05
+- IAM-06
+- IAM-07
+- IAM-08
+- IAM-09
+- IAM-10
+- IAM-11
+nfr_focus:
+- NFR-08
+- NFR-10
+handoff:
+  run: null
+  data: null
+  notes: null
+cases: []
+verification:
+  commands: []
+  automation: []
+  manual: []
+  deferred: []
+evidence:
+  last_run: null
+  last_result: null

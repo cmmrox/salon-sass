@@ -1,0 +1,34 @@
+id: F02-S03
+feature: F02
+title: Customer profile, data export and account deletion
+sequence: 3
+surfaces:
+- api
+status: outlined
+qa_status: not-run
+blocked_reason: null
+released_in: null
+reopened_by: null
+depends_on:
+- F02-S02
+requirements:
+- IAM-03
+- IAM-04
+- IAM-05
+- IAM-11
+nfr_focus:
+- NFR-08
+- NFR-10
+handoff:
+  run: null
+  data: null
+  notes: null
+cases: []
+verification:
+  commands: []
+  automation: []
+  manual: []
+  deferred: []
+evidence:
+  last_run: null
+  last_result: null

@@ -16,6 +16,9 @@ evidence storage and transition from its earlier local workflow.
   GitHub PR after independent full feature QA, closure and required GitHub checks pass, then
   remove its related merged branches and worktrees. This does not authorise merging later
   feature PRs or deploying F01.
+- For F02, the owner requested implementation, independent QA and merge into `main` on
+  2026-10-13. The lead may merge its feature PR after full QA, closure and required GitHub
+  checks pass. This does not authorise deployment or later feature PR merges.
 - Post-merge cleanup of related local/remote branches and worktrees is authorised when the
   lifecycle command proves they contain no work outside `origin/main`. It requires no renewed
   permission, but an unsafe target is retained with the reason reported.

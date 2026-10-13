@@ -1,0 +1,35 @@
+id: F02-S01
+feature: F02
+title: Staff sign-in, sessions and role permissions
+sequence: 1
+surfaces:
+- api
+- infra
+status: outlined
+qa_status: not-run
+blocked_reason: null
+released_in: null
+reopened_by: null
+depends_on: []
+requirements:
+- IAM-06
+- IAM-07
+- IAM-08
+- IAM-09
+- IAM-11
+nfr_focus:
+- NFR-08
+- NFR-10
+handoff:
+  run: null
+  data: null
+  notes: null
+cases: []
+verification:
+  commands: []
+  automation: []
+  manual: []
+  deferred: []
+evidence:
+  last_run: null
+  last_result: null

@@ -6,7 +6,7 @@
 
 | Release | Requirements | Owned by a feature | Assigned to a stage | Passed QA |
 | --- | --- | --- | --- | --- |
-| R1 | 96 | 96 | 2 | 2 |
+| R1 | 96 | 96 | 12 | 2 |
 | R2 | 40 | 0 | 0 | 0 |
 | R3 | 22 | 0 | 0 | 0 |
 
@@ -47,17 +47,17 @@ Cases waiting for something else. `feature-verify` and `release-prepare` go thro
 | PLT-10 | R2 | should | unowned | - |
 | PLT-11 | R2 | should | unowned | - |
 | PLT-12 | R3 | could | unowned | - |
-| IAM-01 | R1 | must | F02 | - |
+| IAM-01 | R1 | must | F02 | F02-S02 (outlined), F02-S04 (outlined) |
 | IAM-02 | R1 | must | F07 | - |
-| IAM-03 | R1 | must | F02 | - |
-| IAM-04 | R1 | must | F02 | - |
-| IAM-05 | R1 | must | F02 | - |
-| IAM-06 | R1 | must | F02 | - |
-| IAM-07 | R1 | must | F02 | - |
-| IAM-08 | R1 | should | F02 | - |
-| IAM-09 | R1 | must | F02 | - |
-| IAM-10 | R1 | must | F02 | - |
-| IAM-11 | R1 | must | F02 | - |
+| IAM-03 | R1 | must | F02 | F02-S02 (outlined), F02-S03 (outlined), F02-S04 (outlined) |
+| IAM-04 | R1 | must | F02 | F02-S03 (outlined), F02-S04 (outlined) |
+| IAM-05 | R1 | must | F02 | F02-S03 (outlined), F02-S04 (outlined) |
+| IAM-06 | R1 | must | F02 | F02-S01 (outlined), F02-S04 (outlined) |
+| IAM-07 | R1 | must | F02 | F02-S01 (outlined), F02-S04 (outlined) |
+| IAM-08 | R1 | should | F02 | F02-S01 (outlined), F02-S04 (outlined) |
+| IAM-09 | R1 | must | F02 | F02-S01 (outlined), F02-S02 (outlined), F02-S04 (outlined) |
+| IAM-10 | R1 | must | F02 | F02-S02 (outlined), F02-S04 (outlined) |
+| IAM-11 | R1 | must | F02 | F02-S01 (outlined), F02-S02 (outlined), F02-S03 (outlined), F02-S04 (outlined) |
 | IAM-12 | R2 | should | unowned | - |
 | IAM-13 | R3 | could | unowned | - |
 | CAT-01 | R1 | must | F05 | - |

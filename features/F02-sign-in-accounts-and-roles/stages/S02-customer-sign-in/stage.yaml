@@ -1,0 +1,35 @@
+id: F02-S02
+feature: F02
+title: Customer one-time-code sign-in and abuse prevention
+sequence: 2
+surfaces:
+- api
+status: outlined
+qa_status: not-run
+blocked_reason: null
+released_in: null
+reopened_by: null
+depends_on:
+- F02-S01
+requirements:
+- IAM-01
+- IAM-03
+- IAM-09
+- IAM-10
+- IAM-11
+nfr_focus:
+- NFR-08
+- NFR-10
+handoff:
+  run: null
+  data: null
+  notes: null
+cases: []
+verification:
+  commands: []
+  automation: []
+  manual: []
+  deferred: []
+evidence:
+  last_run: null
+  last_result: null
