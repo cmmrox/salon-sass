@@ -43,7 +43,8 @@ class CustomerAccessController {
             @NotBlank @Size(max = 16) String channel,
             @NotBlank @Size(max = 160) String deviceLabel) {}
 
-    record VerifyRequest(@NotNull UUID challengeId, @NotBlank @Size(max = 32) String code) {}
+    record CustomerCodeVerificationRequest(
+            @NotNull UUID challengeId, @NotBlank @Size(max = 32) String code) {}
 
     @PostMapping(path = "/challenges", consumes = MediaType.APPLICATION_JSON_VALUE)
     @io.swagger.v3.oas.annotations.responses.ApiResponses({
@@ -112,7 +113,7 @@ class CustomerAccessController {
     @PostMapping(path = "/sign-in", consumes = MediaType.APPLICATION_JSON_VALUE)
     @io.swagger.v3.oas.annotations.security.SecurityRequirement(name = "customerDevice")
     ResponseEntity<StaffAccess.Tokens> verify(
-            @Valid @RequestBody VerifyRequest request, HttpServletRequest http) {
+            @Valid @RequestBody CustomerCodeVerificationRequest request, HttpServletRequest http) {
         TenantContext.require();
         String device = devices.verifiedId(cookie(http));
         return ResponseEntity.ok()

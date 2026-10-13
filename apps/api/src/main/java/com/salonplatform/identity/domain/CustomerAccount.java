@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import org.hibernate.annotations.TenantId;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.UUID;
 
 @Entity
@@ -21,6 +22,24 @@ public class CustomerAccount {
 
     @Column(nullable = false)
     public String name;
+
+    public String email;
+    public LocalDate birthday;
+
+    @Column(name = "preferred_language", nullable = false)
+    public String preferredLanguage = "en";
+
+    @Column(name = "notify_sms", nullable = false)
+    public boolean notifySms = true;
+
+    @Column(name = "notify_whatsapp", nullable = false)
+    public boolean notifyWhatsApp = true;
+
+    @Column(name = "notify_email", nullable = false)
+    public boolean notifyEmail = true;
+
+    @Column(name = "marketing_consent", nullable = false)
+    public boolean marketingConsent;
 
     @Column(nullable = false)
     public boolean active;

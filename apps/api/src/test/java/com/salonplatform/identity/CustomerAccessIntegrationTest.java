@@ -93,7 +93,9 @@ class CustomerAccessIntegrationTest extends CustomerHttpFixture {
                 .containsEntry("role", null)
                 .containsEntry("staffId", null)
                 .containsEntry("scope", "own");
-        assertThat((List<String>) body(alpha).get("permissions")).containsExactly("session.manage");
+        assertThat((List<String>) body(alpha).get("permissions"))
+                .containsExactlyInAnyOrder(
+                        "session.manage", "profile.manage", "data.export", "account.delete");
         Map<String, Object> again = signIn("alpha", 20);
         assertThat(
                         body(call("alpha", "GET", "/api/v1/identity/me", null, access(again), null))

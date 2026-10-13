@@ -93,6 +93,15 @@ class CustomerMessageCapture {
         return capture;
     }
 
+    @org.springframework.transaction.event.TransactionalEventListener
+    void erased(com.salonplatform.identity.CustomerDataErased event) {
+        captures.keySet()
+                .removeIf(
+                        k ->
+                                k.tenant().equals(event.tenantId())
+                                        && event.challengeIds().contains(k.challenge()));
+    }
+
     void clear() {
         UUID tenant = TenantContext.require().id();
         captures.keySet().removeIf(k -> k.tenant().equals(tenant));

@@ -156,6 +156,15 @@ verified mobile (read-only), optional valid email, optional nonfuture birthday, 
 updates use optimistic concurrency, returning conflict for a stale version. Customers cannot name
 another customer in profile, export or deletion requests. Staff credentials are refused here.
 
+New profile defaults are language `en`, operational channel preferences
+`{sms:true,whatsapp:true,email:true}` and marketing consent `false`; email and birthday are null.
+Enabling a channel preference neither supplies an address nor grants marketing consent. Updates
+send the full mutable representation and version, with every channel preference and marketing
+consent required; omitted or null optional email/birthday clears it. Blank/whitespace optional email
+also clears it; a nonblank email must be valid. Trim names and trim/lowercase email. Reject unknown
+update fields, including mobile and account/tenant selectors. Customer rights
+use `profile.manage`, `data.export` and `account.delete`, alongside `session.manage`.
+
 Export is a JSON download of the current customer's profile, preferences and signed-in-device
 metadata with a generated time; allowlist fields, never include credentials, other customers or
 audit internals. The synchronous export is the data-copy request at this feature's size. Later
@@ -171,6 +180,8 @@ Retain hashed anti-abuse number/device/address counters until their ordinary win
 deletion and re-registration do not reset code ceilings. Deletion cancels queued deliveries and
 clears local captures. A delivery already in flight rechecks challenge existence before capture
 or delivery completion and cannot recreate deleted identity, challenge or message state.
+Retain the `salon_device` rate-tracking cookie after deletion. It grants no account authority;
+all signed-in-device session credentials are revoked and a fresh code is needed to register again.
 
 ## Browser boundary
 
@@ -194,6 +205,16 @@ never retry a spent refresh credential or restore a family from a delayed respon
 Redirect targets are fixed same-origin paths; errors keep useful form values except credentials.
 Auth failures redirect a protected page to its own sign-in; authorization failures show a friendly
 denial. Customer screens use salon branding and staff screens the neutral platform theme.
+
+Per-kind HttpOnly expiry metadata comes from issued `accessExpiresAt`. Compare it with strictly
+validated API `meta.time` to decide whether missing/expired access with a refresh credential is
+eligible for one renewal. A 401 with future expiry clears that kind without renewal; expiry
+metadata never authorizes access. Origin scheme is `http` only with the explicit local HTTP
+setting and `https` otherwise, matching validated Host and port exactly. Do not derive it from
+forwarded headers or `nextUrl`. BFF export uses a CSRF-checked POST because its underlying API GET
+records a rights audit. If Web Locks are unavailable, show a translated browser-support message
+and block credential-changing actions, including sign-in, sign-out, renewal, password/session
+changes and deletion. Profile reads/updates and exports remain available when already authenticated.
 
 The BFF namespace is `/identity-web/*`; the edge routes `/api/*` directly to Java. Address limits
 must reflect the browser connection without trusting browser forwarding headers. Node request
@@ -265,3 +286,28 @@ Code limit settings are positive integers under `salon.identity.codes`, supplied
 `SALON_IDENTITY_CODE_ADDRESS_LIMIT` and `SALON_IDENTITY_CODE_DAILY_LIMIT` (3/10/20/1000 defaults).
 Nonlocal customer challenge requests return 503 `provider_unavailable` until a real sender is
 configured; local captures certify the API/delivery behavior, not live SMS or WhatsApp activation.
+
+## Implemented customer privacy contract
+
+`GET /api/v1/identity/customers/me` returns
+`{id,version,name,mobile,email,birthday,preferredLanguage,notificationPreferences,marketingConsent}`.
+`PUT` on the same path takes version and mutable fields only, with all three Boolean channel
+preferences and marketing consent required. Email and birthday are nullable. Read/update responses
+are no-store; unknown fields are rejected with field errors. Stale versions return 409 `conflict`.
+
+`GET /customers/me/export` returns no-store JSON
+`{generatedAt,profile,devices}` with attachment filename `customer-data.json`. Device metadata uses
+the existing own-session allowlist. `DELETE /customers/me` takes `{confirm:true}` and answers 204;
+false confirmation returns 400 `confirmation_required`. Staff authority cannot call these routes.
+Audit actions are `identity.profile_updated`, `identity.data_exported` and
+`identity.account_deleted`; profile audit stores versions and changed field names, never values.
+
+Privacy cleanup uses shared `Outbox.eraseMatching(channels, matchingOwner, instant)` inside the
+writable tenant transaction. It scans bounded keyset pages and erases matching identity envelopes
+in every delivery state, including messages whose expired challenge rows were already cleaned up.
+Identity recognizes its own encrypted payload shape; an unreadable recognized envelope rolls back
+deletion with a safe internal-error response. Conditional dispatcher finalization cannot recreate
+erased rows. An opaque `CustomerDataErased(tenantId,challengeIds)` event clears local captures after
+commit; core identity code never imports local hooks. Other numbers/salons and ordinary hashed
+anti-abuse counters remain. V10 adds profile defaults to the existing customer table; it introduces
+no new tenant table or cross-module table access.

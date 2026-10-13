@@ -4,7 +4,7 @@ title: Customer profile, data export and account deletion
 sequence: 3
 surfaces:
 - api
-status: outlined
+status: complete
 qa_status: not-run
 blocked_reason: null
 released_in: null
@@ -20,12 +20,136 @@ nfr_focus:
 - NFR-08
 - NFR-10
 handoff:
-  run: null
-  data: null
-  notes: null
+  run: 'Local only: infra/scripts/local-service.sh start postgres; infra/scripts/local-service.sh start
+    api. Reach alpha.localhost:8090 (beta/gamma for isolation). API is running in persistent foreground
+    session 14019, held by read -r f02_s03_keep_final. Runtime /api/v1/meta commit 506f1b6f94da0bf602c7fcde937562d123bee7cb
+    matches the application commit; health 200, real Clock, 3/10/20/1000 code ceilings and customer/provider
+    controls restored. Stop API before Maven packaging/verify and restart from final artifacts. Preserve
+    the three retained keys in .local/identity-keys.properties (0600), with the existing SALON_IDENTITY_LOCAL_KEY_FILE/default
+    startup path; no new key/dependency.
+
+    Use S02 customer code request/capture/sign-in to obtain customer credentials. All own-profile/data-rights
+    endpoints support the selected salon Host or verified signed bare-API protected access; they reject
+    staff credentials. GET /api/v1/identity/customers/me -> {id,version,name,mobile,email,birthday,preferredLanguage,notificationPreferences:{sms,whatsapp,email},marketingConsent}.
+    Email/birthday are always present and nullable; mobile is read-only. PUT the same path takes full
+    mutable fields and version only; name,preferredLanguage,all three Boolean preferences,marketingConsent
+    and nonnegative version are required. Optional null/omitted email/birthday clears it; blank email
+    also clears. Names trim, email trim/lowercase; names 1..120 codepoints, valid nonblank email, strict
+    ISO nonfuture birthday relative to current salon-local date, languages en/si/ta. Unknown fields, including
+    mobile/id/tenant and nested unknown preferences, yield400 bad_request field errors without a change.
+    Stale version 409 conflict.
+
+    GET /customers/me/export -> {generatedAt,profile,devices}, application/json, Cache-Control:no-store,
+    Content-Disposition:attachment; filename="customer-data.json". Devices include own live session metadata
+    {id,deviceLabel,createdAt,expiresAt,current}; no credential/hash/internal identity state. DELETE /customers/me
+    requires JSON {confirm:true} ->204 and no-store. False confirmation 400 confirmation_required; missing/malformed/extra
+    fields400 bad_request. Signed-in-device/access/refresh credentials and pre-deletion challenges fail
+    immediately; preserve salon_device as a nonauthoritative anti-abuse tracking cookie. The customer
+    principal permissions are session.manage,profile.manage,data.export,account.delete with own scope,
+    null role/staffId and MFA false.
+
+    Existing local hooks and synthetic reset shapes remain unchanged. Deletion clears matching local captures
+    after commit without resetting provider controls or hashed abuse counters. Outbox.eraseMatching(channels,
+    ownerPredicate, instant) joins the caller''s writable tenant transaction, scans bounded100-row keyset
+    pages and erases matching sent/cancelled/pending/sending/dead envelopes, returning only opaque challenge
+    correlation IDs. Identity recognizes its two-field {challengeId,encrypted} envelopes on sms/whatsapp;
+    ordinary nonidentity payloads are skipped. A recognized envelope that cannot decrypt causes safe 500
+    internal_error and rolls back all deletion effects. Conditional dispatcher finalization cannot recreate
+    a removed row. CustomerDataErased(tenantId,challengeIds) is the opaque module event; the local capture
+    listens AFTER_COMMIT. No core import of local hooks, direct identity read of shared tables, or real
+    provider. S04 fourth proxy key/assertion remains later-stage work.'
+  data: 'Fixed synthetic alpha/beta/gamma salons are active and remain the only local tenants. Existing
+    staff fixtures and ignored .local/f02-staff-fixtures.json (0600) are retained; no usable committed
+    credentials or real customer data. All customer records/sessions/challenges/rate fixture state, provider
+    failure/delay controls and capture fixtures were reset after running checks. Immutable audit is intentionally
+    retained; isolate QA evidence by run/time/opaque subject rather than assuming resets clear audit.
+    Old unrelated encrypted delivery history from earlier local walkthroughs may remain according to outbox
+    retention; confirmed privacy deletion erases every recognized envelope for the deleted number, including
+    history whose challenge expired. V10 adds email/birthday and explicit operational notification/language/marketing
+    defaults to the existing tenant customer table; V8/V9 unchanged and the migration/order/restart baseline
+    remains exact.
+
+    Sanitized developer evidence .local/f02-s03-developer-checks.json records 188 passed runtime checks.
+    Private .local/f02-s03-runtime-state.json is ignored 0600 and contains no active customer fixture
+    credential from this stage. The local clock walkthrough advanced platform scheduled_job rows; lead
+    explicitly approved restoring exactly the two inspected unlocked rows, guarded by name/previous next_run_at,
+    to the real application Clock. Exactly 2 rows changed; no other row/history was set. Both handlers
+    then ran normally: identity-security-cleanup next2026-10-13T18:06:47.250102Z, outbox-cleanup next2026-10-13T18:51:47.250102Z,
+    both unlocked. These global rows have names as keys and no salon column; handlers iterate the fixed
+    synthetic salons. Real Clock restored and finalhealth 200/source commit 506f1b6 verified.'
+  notes: 'AC-1 checked on running API: newly verified customers expose empty name, null email/birthday,
+    language en, sms/whatsapp/email=true and marketing=false; same number at alpha/beta gives separate
+    IDs and another alpha customer sees its own profile. Staff, forged and foreign-salon credentials denied
+    for profile/export; verified signed bare-API rights work. Existing two-layer customer isolation tests
+    remain green with the expanded entity.
+
+    AC-2 checked on running API: normalized profile/preferences/explicit consent persist and version increments;
+    blank/overlong name, nonblank invalid email, future/malformed birthday, unsupported language, wrong
+    JSON types, omitted required fields, mobile/id/tenant and nested-field injection produce400 with field
+    errors and leave data unchanged. Colombo birthday2026-10-14 was accepted at clock2026-10-13T20:00Z
+    while London rejected it as future. Optional null/omitted values and blank-email clearing are approved
+    policy and checked in developer HTTP tests/normalization path.
+
+    AC-3 checked on running API: stale version 409; two updates at the same version yield exactly one200/one409
+    and preserve the winning representation. Thirty pooled concurrent profile reads alternate alpha/beta
+    without identity/data mixing. Developer tests retain independent RLS-only/Hibernate-only read/update/delete/no-context/FK
+    coverage of the tenant customer record.
+
+    AC-4 checked on running API: no-store JSON download with fixed attachment filename/generated Clock
+    time, own profile and two own live devices only, exact allowlisted fields. Other-customer/salon sessions,
+    credentials/hash/MFA/challenge/internal audit are absent. Export records identity.data_exported; foreign/staff/forged
+    authority is rejected.
+
+    AC-5 checked on running API: invalid confirmation changes nothing, confirmed deletion 204 immediately
+    denies all old access/refresh credentials and prior challenge/capture, preserves beta''s same-number
+    profile and short code ceiling, fresh code after ordinary window expiry creates a new ID/default profile.
+    Delayed WhatsApp was SENDING during deletion; its later callback neither captured nor recreated outbox/customer
+    state. Actual scheduled expiry removed challenge rows while two encrypted delivered messages remained;
+    deletion erased the matching retained message and preserved the other number''s message/customer.
+    Developer real-HTTP/database checks also prove refresh history/session/profile/challenge erasure in
+    one transaction, corrupt recognized-envelope rollback,111 matching messages across multiple pages,
+    and older in-memory capture removal after commit. Verification/deletion/refresh race tests require
+    every credential returned by an overlap to fail after DELETE 204. If same-device rotation first invalidates
+    deletion authority, DELETE 401 leaves the account intact, then renewed authority can explicitly delete
+    it. Hashed anti-abuse counters and salon_device tracking remain by policy; signed-in-device credentials
+    do not.
+
+    AC-6 checked on running API and retained audit rows after deletion: identity.profile_updated stores
+    only changed field names and before/after versions; identity.data_exported/account_deleted retain
+    opaque actor/customer subject IDs, tenant/time/trace and no name/mobile/email/birthday values. Safe
+    registered problems/field details contain no submitted personal values. Immutable audit insert-only/trigger
+    baseline remains green; no QA/case/spec edits.
+
+    Verification: cd apps/api && ./mvnw -q verify PASS exit0,487 tests, 0 failures/errors/skips, /tmp/f02_s03_verify.log.
+    pnpm contracts:check PASS exit0, generated document/client current, /tmp/f02_s03_contract_check.log.
+    Developer guard, git diff --check and lifecycle validate PASS. Focused profile/customer/isolation/migration/contract
+    suite PASS before full gate. Running local checks 188 PASS, API artifact source506f1b6, persistent
+    session 14019, defaults/real Clock/clean customer and provider controls verified.
+
+    Resolved checks: focused profile tests first exposed unknown-field rejection 400 with empty errors[mobile].
+    Safe declared any-setter field outcomes now survive Jackson wrapping through the existing centralized
+    Problems writer; all baseline strict-type/nested/meta/error-writer assertions still pass. Initial
+    disposable fixture retained old sent payloads and staff passwords between tests; the new profile test
+    class explicitly isolates its own disposable delivery/staff fixtures while product reset remains unchanged.
+    Missing test/source imports were compile-only errors resolved before gates. Recognized corrupt-envelope
+    500 is an expected rollback case, not a passed deletion. No timeout/assertion was weakened.
+
+    Before privacy implementation, QA static drafting identified customer/staff nested VerifyRequest OpenAPI
+    collision. Reproduced focused contract test failed on unexpected challengeToken. Correction a4d7c5a
+    renamed the actual customer DTO CustomerCodeVerificationRequest, regenerated contract/client and exact
+    schema assertions, with full 472-test/contract gates PASS. Final privacy contract separately asserts
+    exact mutable fields, additionalProperties=false, nullable email/birthday input/output and DELETE
+    204. This fixes an implementation contract defect inside unfinished F02; no requirement change.
+
+    No new dependency, security recovery policy, real sender, deployment, web screen, booking/payment
+    retention or mobile UI. No feature QA was executed by this developer. All six criteria checked; none
+    accepted unverified. Lead documented approved profile/outbox/event choices in 2d13c70; application
+    revision remains 506f1b6. Ready for stage-close and S04.'
 cases: []
 verification:
-  commands: []
+  commands:
+  - cd apps/api && ./mvnw -q verify
+  - pnpm contracts:check
   automation: []
   manual: []
   deferred: []

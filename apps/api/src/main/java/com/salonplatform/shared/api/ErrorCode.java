@@ -13,6 +13,7 @@ import org.springframework.http.HttpStatusCode;
  */
 public enum ErrorCode {
 
+    CONFIRMATION_REQUIRED("confirmation_required", "Confirm account deletion to continue."),
     INVALID_CODE("invalid_code", "The verification code could not be verified."),
     CODE_EXPIRED("code_expired", "Please request a new verification code."),
     PROVIDER_UNAVAILABLE("provider_unavailable", "Code delivery is not configured."),
