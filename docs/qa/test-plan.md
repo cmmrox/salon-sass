@@ -104,6 +104,14 @@ shared helper, never by typing a password into a test.
   that only passes on a weekday or before noon. Check behaviour across midnight and for a salon in
   another time zone.
 - **Messages:** read one-time codes and outgoing messages from the local capture, never from a phone.
+- **Staff identity fixtures** (F02-S01): on a fixed synthetic salon's hostname,
+  `POST /local/identity/seed` takes `{accounts:[{email,mobile,password,role,totpSecret?,professionalGrant?}]}`
+  and returns only `{accounts:number}`. Roles use uppercase names. Seeding is idempotent and
+  preserves existing accounts; `DELETE /local/identity` resets that salon's synthetic identity
+  records/rate state while preserving immutable audit and other product data. Both hooks are
+  loopback-only, `local`-only and absent from OpenAPI; nonfixed salons are refused. Supplied fixture
+  credentials/TOTP seeds stay in ignored environment or `.local` files with mode `0600`. Current
+  developer fixtures are `.local/f02-staff-fixtures.json`; never print or commit their contents.
 - **Payments:** the PayHere sandbox only.
 - What a test may never touch is in `docs/operations/environments-and-releases.md`.
 

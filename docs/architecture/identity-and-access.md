@@ -57,6 +57,13 @@ Password sign-in is limited to 10 attempts per normalized identifier and 30 per 
 within 15 minutes, including unknown identifiers. MFA challenges allow five attempts. Failed
 attempts, consumption, limits and security audit entries commit even when the HTTP outcome is an
 error; throwing inside a transaction must not undo these controls.
+Staff rate windows start on the first attempt and last fifteen minutes; a denied request returns
+`Retry-After: 900`. The `identity-security-cleanup` job runs every fifteen minutes to remove expired
+staff rate/MFA challenges and consumed TOTP steps outside the accepted tolerance. Disabled staff
+accounts retain their identifiers; removal does not invent reactivation or recovery behavior.
+
+The current common-password list rejects `passwordpassword`, `password123456789`,
+`123456789012345`, `qwertyuiopasdfgh`, `letmeinletmeinletmein` and `welcome123456789`.
 
 ## Sessions
 
@@ -187,3 +194,19 @@ permissions, preserving sessions across restarts. Tests supply throwaway keys. N
 requires configured keys; never embed a fallback or generated local key in container images.
 Document the environment variables and hooks when each stage hands them over; gates and QA must
 coordinate artifact rebuilds and service restarts as in the environment document.
+
+## Implemented staff API contract
+
+The generated [OpenAPI document](../api/openapi.json) is the detailed request/response contract.
+`POST /api/v1/identity/staff/sign-in` and `/staff/mfa/challenges` return
+`{state,challengeId,challengeToken,expiresAt,credentials}`. Successful password sign-in nests the
+tokens in `credentials`; MFA verification, renewal and password change return tokens directly:
+`{state,sessionId,accessToken,refreshToken,accessExpiresAt,refreshExpiresAt}`. Access expires at the
+same second-precision instant encoded in the signed JWT. Its fixed algorithm is HS256, issuer
+`salon-platform` and audience `salon-api`.
+
+Principal kinds are lowercase (`staff`); role names are uppercase. A list returns
+`{items,page,size,total}` with page 0 to 100,000 and size 1 to 100. Device entries identify the
+current session. Staff changes require the current `version`; audits expose nonsecret before/after
+values. All MFA routes require the salon hostname. Protected principal, staff, session, password
+and audit calls additionally support a verified signed tenant on the bare API address.
