@@ -74,12 +74,13 @@ jobs:
           SALON_VERSION: ${{ steps.names.outputs.version }}
         run: infra/scripts/images-scan.sh
 
+      # Docker's own client, not a third-party action: nothing outside GitHub's own actions runs
+      # with the publish credential. The token reaches docker on its standard input only.
       - name: Sign in to the container registry
-        uses: docker/login-action@v4
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+        env:
+          REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REGISTRY_USER: ${{ github.actor }}
+        run: echo "$REGISTRY_TOKEN" | docker login ghcr.io --username "$REGISTRY_USER" --password-stdin
 
       - name: Publish the images
         env:
