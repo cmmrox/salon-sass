@@ -23,11 +23,97 @@ handoff:
   run: null
   data: null
   notes: null
-cases: []
+cases:
+  - id: TC-F02-S03-001
+    title: a new customer reads its own profile with explicit safe defaults
+    type: api
+    priority: high
+    covers:
+      - AC-1
+  - id: TC-F02-S03-002
+    title: each privacy endpoint rejects foreign salon and staff authority
+    type: tenant-isolation
+    priority: critical
+    covers:
+      - AC-1
+      - AC-4
+      - AC-5
+  - id: TC-F02-S03-003
+    title: complete mutable profile updates normalize persist and clear optional fields
+    type: api
+    priority: high
+    covers:
+      - AC-2
+  - id: TC-F02-S03-004
+    title: invalid or injected profile fields leave saved data unchanged
+    type: api
+    priority: high
+    covers:
+      - AC-2
+  - id: TC-F02-S03-005
+    title: birthday future validation follows salon local date across midnight
+    type: data-integrity
+    priority: high
+    covers:
+      - AC-2
+  - id: TC-F02-S03-006
+    title: stale and concurrent edits preserve exactly one accepted version
+    type: concurrency
+    priority: critical
+    covers:
+      - AC-3
+  - id: TC-F02-S03-007
+    title: concurrent salon profile reads cannot carry a foreign customer
+    type: tenant-isolation
+    priority: critical
+    covers:
+      - AC-3
+  - id: TC-F02-S03-008
+    title: an exported JSON copy contains only the customer allowlist and records audit
+    type: security
+    priority: critical
+    covers:
+      - AC-4
+  - id: TC-F02-S03-009
+    title: invalid deletion confirmation changes no personal data or credential
+    type: security
+    priority: critical
+    covers:
+      - AC-5
+  - id: TC-F02-S03-010
+    title: confirmed deletion erases identity material while preserving other salon and abuse counters
+    type: data-integrity
+    priority: critical
+    covers:
+      - AC-5
+  - id: TC-F02-S03-011
+    title: reverification after deletion creates a fresh customer without old profile
+    type: security
+    priority: critical
+    covers:
+      - AC-5
+  - id: TC-F02-S03-012
+    title: deletion during queued or in-flight delivery never resurrects personal state
+    type: concurrency
+    priority: critical
+    covers:
+      - AC-5
+  - id: TC-F02-S03-013
+    title: deletion racing refresh or verification leaves no authority from the deleted identity
+    type: concurrency
+    priority: critical
+    covers:
+      - AC-5
+  - id: TC-F02-S03-014
+    title: profile export and deletion audit retain only opaque nonsecret rights metadata
+    type: security
+    priority: critical
+    covers:
+      - AC-6
 verification:
   commands:
-  - cd apps/api && ./mvnw -q verify
-  - pnpm contracts:check
+    - cd apps/api && ./mvnw -q verify
+    - pnpm contracts:check
   automation: []
   manual: []
   deferred: []
