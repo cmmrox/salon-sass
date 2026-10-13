@@ -445,10 +445,10 @@ verification:
     - case: TC-F01-S01-040
       reason: "whether a screen looks right is a person's judgement that no assertion replaces"
       performed_on: 2026-10-12
-  deferred:
     - case: TC-F01-S01-057
-      reason: "the repository has no GitHub remote, so no pull request can exist and the workflow has never run (the spec's \"Done criteria\" say so)"
-      unblocked_by: "the owner creates the GitHub remote"
+      reason: "GitHub CI requires an explicitly authorized temporary PR. Independent QA inspected stored green/failing-lint/green job evidence and live runs 38352493389, 38352868747, 38353171634; proof PR 2 closed unmerged and its branch/worktree deleted. Evidence is archived in the retained main Git directory under sdlc-evidence/ci-proof-F01."
+      performed_on: 2026-10-13
+  deferred: []
 evidence:
   last_run: qa/reports/20261012-130333-F01-S01
   last_result: pass
