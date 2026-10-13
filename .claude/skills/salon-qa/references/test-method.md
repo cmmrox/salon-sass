@@ -94,6 +94,12 @@ this product is in `docs/qa/test-plan.md`.
   `summary.json`. Screenshots, traces and recordings go in the same folder.
 - `qa/reports/` is not committed. What is committed is `evidence.last_run` (the folder's path,
   `qa/reports/<folder>`) and `evidence.last_result` in the yaml, the bug files, and `review.md`.
+- Commit automation before the final feature run and record the tested full commit SHA in
+  `feature.yaml` under `integration.qa_revision`. A pass cannot certify later product or automation
+  changes; integrate the verified fixes and rerun the feature before submitting its PR.
+- Preserve report files before a worktree is removed. The cleanup command archives evidence and
+  writes a receipt outside the worktree; the storage location is in
+  `docs/operations/git-delivery.md`.
 - A manual case is evidence only with a `performed_on` date on its entry under
   `verification.manual`. Perform it again when the code it covers changes.
 - Evidence must not contain secrets, tokens or real personal data. Turn off traces and recordings

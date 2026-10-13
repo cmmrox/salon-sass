@@ -21,11 +21,15 @@ Project-specific version rules (for example what happens before the first public
 
 ## What a release is
 
-1. `release-prepare` writes `qa/releases/<version>/release.yaml`: the features and stages newly
-   shipping, and the gates.
+1. `release-prepare` writes `qa/releases/<version>/release.yaml`: the complete, confirmed-merged
+   features and stages newly shipping, and the gates. A release may contain several features.
 2. `release-verify` runs the gates against one revision and writes `RESULTS.md`.
 3. `release-cut` marks the scope released.
 4. Tagging and deployment are separate steps that happen only when the owner asks.
+
+Feature PR merges and subsequent feature development do not wait for a deployment. The owner
+may choose a batch of merged features for staging. Deferred staging checks are reported as not
+certified, and are run when that environment/deployment is requested. Merging is not a release.
 
 Regression covers the whole product delivered so far, not only the new scope: a release is the
 moment to prove that earlier features still work.

@@ -81,6 +81,11 @@ committing as developer or QA, run `python3 qa/scripts/guard.py --role dev --dif
 | `qa/scripts/sdlc validate` | The gate over features, stages, cases, bugs, releases and these skills. Run before every commit that touches `features/`, `qa/`, `docs/` or a skill |
 | `qa/scripts/sdlc generate` | Rewrite the generated documents |
 | `qa/scripts/sdlc run --stage F07-S02` | Run QA automation for exactly one scope (`--feature`, `--suite`, `--release` likewise; `--dry-run` to preview) |
+| `qa/scripts/sdlc pr-check F07` | Check closure, clean branch and unchanged QA revision before a feature PR |
+| `qa/scripts/sdlc merge-sync F07 --check` | Verify the owner's GitHub merge without changing files |
+| `qa/scripts/sdlc merge-sync F07` | Record that verified merge in feature.yaml on a bookkeeping or next feature branch |
+| `qa/scripts/sdlc start-check F08` | Verify preceding feature merges live before the next feature starts |
+| `qa/scripts/sdlc cleanup --branch <exact-branch>` | Preview cleanup of a merged branch and its worktrees; `--apply` archives evidence and removes verified targets |
 
 ## Start every session
 
@@ -103,7 +108,9 @@ committing as developer or QA, run `python3 qa/scripts/guard.py --role dev --dif
 | `stage-close <F-S>` | Lead | Stage `complete`, on the developer's gates |
 | `feature-verify <F>` | QA | Feature `in-qa`, `qa_status` `failing`, `blocked` or `pass` |
 | `bug-fix <F>` or `<F-S>` | Developer | Bugs `fixed`; back to QA |
-| `feature-close <F>` | Lead | Feature `complete` |
+| `feature-close <F>` | Lead | Feature `complete`, ready for its feature PR |
+| `feature-submit <F>` | Lead | One feature PR awaiting the owner's merge |
+| `feature-integrate <F>` | Lead | Confirmed merge recorded; related branches/worktrees cleaned up safely |
 | `stage-verify <F-S>` | QA, only when the owner asks | The stage's `qa_status` `failing`, `blocked` or `pass` |
 | `change-request <title>` | Lead | A `CR-nnn` file; affected stages reopened once approved |
 | `release-prepare <vX.Y.Z>` | Lead, with QA | A release manifest; nothing is run |
@@ -146,8 +153,14 @@ scope asked for is a process violation, the same as running less.
   around a gate, mark something "probably fine", or lower a severity to pass.
 - **Local by default.** Staging or production is touched only when the owner's current message names
   it. Earlier permission does not carry forward.
-- **Never without being asked:** push, open or merge a pull request, push a tag, deploy, publish an
-  app build, send a real message to a real person, or charge a real payment.
+- **One feature PR after QA.** Stage and QA branches integrate into the feature branch. The owner
+  merges its PR into `main`; the next feature waits for the confirmed merge. `complete`, merged
+  and deployed are separate facts. See `references/git-workflow.md`.
+- **Deployment is optional.** Feature closure and merge do not deploy or require staging. The owner
+  may deploy several merged features together; staging-only cases stay explicitly deferred.
+- **Git authorisation:** follow the owner's recorded policy in `docs/operations/git-delivery.md`
+  for pushes, PR creation and cleanup. Never merge the owner's feature PR, push a tag, deploy,
+  publish an app build, send a real message or charge a real payment without the relevant request.
 - **No secrets** in code, logs, test evidence, bug files or skills.
 - **Research before calling something a blocker.** Check the official documentation and the issue
   tracker of the dependency first, and record what was searched.

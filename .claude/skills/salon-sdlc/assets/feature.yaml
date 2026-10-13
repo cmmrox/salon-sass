@@ -4,12 +4,18 @@ title: <feature name, as a customer would say it>
 summary: <one sentence: who can do what once this is delivered>
 release: R1                 # the BRD's band: R1 | R2 | R3
 milestone: M1-web           # delivery milestone, from docs/ROADMAP.md; a later one waits for the earlier one's release
-started_early: null         # lead: the owner's instruction to start before an earlier milestone is released
+started_early: null         # lead: explicit owner exception to portfolio/milestone order; dependencies still require a confirmed merge
 status: backlog             # backlog | planned | in-progress | in-qa | complete | released
 qa_status: not-run          # not-run | failing | blocked | pass   (set by feature-verify, the feature's one QA pass)
 blocked_reason: null
 released_in: null
-depends_on: []              # feature ids that must be complete first
+depends_on: []              # feature ids that must pass QA and be merged into GitHub main first
+integration:               # lead owns branch/PR/merge fields; QA records the tested revision
+  branch: null             # feature integration branch; stages and QA merge into it
+  pull_request: null       # one GitHub PR into main, opened after feature-close
+  qa_revision: null        # full commit SHA tested by independent QA; product/automation must not change afterwards
+  merged_commit: null      # written only by merge-sync after confirming the owner's GitHub merge
+  merged_at: null          # GitHub's merge timestamp; complete does not mean merged or deployed
 surfaces: []                # api | web | mobile | infra | docs
 requirements: []            # functional requirement ids this feature owns; each has one owner
 extends: []                 # requirements another feature owns that this one delivers on one more surface
