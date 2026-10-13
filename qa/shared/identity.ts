@@ -7,6 +7,7 @@ import { answerOf, expectProblem } from './answers';
 import { test as base, expect } from './fixtures';
 import { schemaValidator } from './openapi';
 import { alpha, beta, gamma, type Salon } from './tenants';
+import { SchedulerClockGuard } from './identity-clock-cleanup';
 
 export const IDENTITY = '/api/v1/identity';
 export const ROLES = ['OWNER', 'MANAGER', 'RECEPTIONIST', 'PROFESSIONAL', 'ACCOUNTANT'] as const;
@@ -77,6 +78,7 @@ export function assertTokens(tokens: components['schemas']['Tokens'] | undefined
 }
 
 export class Identity {
+  private schedulerClock:SchedulerClockGuard|undefined;
   constructor(readonly api: ApiClient) {}
   call(salon: Salon | null, method: string, path: string, data?: unknown, tokens?: Tokens, extra: Record<string,string> = {}) {
     return this.api.send(method, path.startsWith('/local/') ? path : `${IDENTITY}${path}`, {
@@ -86,8 +88,11 @@ export class Identity {
     });
   }
   async now(): Promise<string> { const r = await this.api.meta(); expect(r.status()).toBe(200); return (await r.json()).time; }
-  async clock(instant?: string) { const r = await this.api.send(instant?'PUT':'DELETE','/local/clock', {
+  async clock(instant?: string) {
+    if(instant){this.schedulerClock??=await SchedulerClockGuard.snapshot();this.schedulerClock.advanced(instant);}
+    const r = await this.api.send(instant?'PUT':'DELETE','/local/clock', {
     headers: {'Content-Type':'application/json'}, data: instant ? JSON.stringify({instant}) : undefined }); expect(r.status()).toBe(200); }
+  async restoreClockFixture(){await this.clock();if(this.schedulerClock)await this.schedulerClock.restoreAfterRealClock();}
   async reset() { for(const salon of [alpha,beta,gamma]) expect((await this.call(salon,'DELETE','/local/identity')).status()).toBe(204); }
   async seed(salon: Salon, accounts: SeedAccount[]) {
     const r = await this.call(salon,'POST','/local/identity/seed',{accounts}); expect(r.status()).toBe(200);
@@ -130,6 +135,6 @@ export class Identity {
 
 export const test = base.extend<{identity:Identity}>({identity: async({api},use)=>{
   const identity = new Identity(api); await identity.clock(); await identity.reset();
-  try { await use(identity); } finally { await identity.clock(); await identity.reset(); }
+  try { await use(identity); } finally { await identity.restoreClockFixture(); await identity.reset(); }
 }});
 export { expect, alpha, beta, gamma };

@@ -53,3 +53,13 @@ is not, stops with a message that begins `ENVIRONMENT:` (a shell check exits 3).
 the environment, not a failure of the product: start the product and run again. A run stops and
 starts the product's services and empties the local database through the scripts in
 `infra/scripts/`, and leaves the product running when it ends.
+
+F02 future-clock cases use a lead-approved local fixture cleanup in
+`qa/shared/identity-clock-cleanup.ts`. Before setting test time it proves the local database has
+exactly alpha/beta/gamma, snapshots the unlocked `identity-security-cleanup` and `outbox-cleanup`
+rows, and records safe control marks. After restoring real time it changes only `next_run_at`
+values attributable to that case's recorded future clock, under an exact whole-row and unlocked
+transaction guard. It checks affected counts, preserves history/locks/all other records, and
+observes due handlers resume or their original ordinary schedule remain. Unexpected state stops
+cleanup with an environment fault. This is test-fixture cleanup, not a relaxed timing assertion;
+no remote database or application hook is involved.
