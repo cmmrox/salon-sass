@@ -55,7 +55,7 @@ Environment: local only, fixed synthetic alpha/beta/gamma. Credentials are rando
 - **Type:** load
 - **Priority:** high
 - **Covers:** IAM-03, IAM-07, IAM-09
-- **Performed as / preconditions:** Three synthetic salons, five staff roles each, 50 customers and 100 audit entries per salon; ten local concurrent users. Record machine and data volume.
+- **Performed as / preconditions:** Three synthetic salons, five staff roles each, exactly 50 customers and at least 100 retained audit entries per salon; ten local concurrent users. Record machine and actual data volume. Real code sign-ins may use the lead-approved address ceiling of 200 only during synthetic preparation. Restore 3/10/20/1000 defaults and prove API restart/key retention before measurement. Preserve audit and remove mutable fixtures/ignored credentials in finally.
 - **Steps:** Run one read scenario for current principal, own devices, permitted staff/audit and own customer profile. Use real API credentials and collect per-read tagged latency and failures.
 - **Expected:** Each read has p95 below 300 ms with valid response fields and no foreign data. This is the documented local baseline, not production-scale certification. Password hashing, delivery and mutations are outside its target.
-- **Automation:** draft pending final handoff; not executed, no deferral recorded.
+- **Automation:** `qa/checks/F02/F02-read-baseline.sh` surrounds real API preparation and actual `qa/load/F02/identity-reads.js` k6 thresholds with cleanup; not executed, no deferral recorded.

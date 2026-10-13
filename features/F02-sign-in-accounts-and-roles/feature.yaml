@@ -64,7 +64,13 @@ cases:
       - IAM-07
       - IAM-09
 verification:
-  automation: []
+  automation:
+  - id: identity-read-baseline
+    tool: script
+    file: qa/checks/F02/F02-read-baseline.sh
+    covers:
+    - TC-F02-004
+    suites: []
   manual: []
   deferred: []
 evidence:

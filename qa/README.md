@@ -63,3 +63,7 @@ transaction guard. It checks affected counts, preserves history/locks/all other 
 observes due handlers resume or their original ordinary schedule remain. Unexpected state stops
 cleanup with an environment fault. This is test-fixture cleanup, not a relaxed timing assertion;
 no remote database or application hook is involved.
+
+## F02 bounded local read baseline
+
+`TC-F02-004` is registered once as `qa/checks/F02/F02-read-baseline.sh`. The wrapper uses Corepack Playwright for typed real API fixture preparation and runs the actual k6 thresholds in `qa/load/F02/identity-reads.js`. The lead approved an address ceiling of 200 only while creating the synthetic data. It restores the documented 3/10/20/1000 limits, proves the API restarted with those values and retained keys, and then measures ten concurrent users for twenty seconds. There are exactly five staff roles and fifty customers in each fixed salon. Existing immutable audit remains; each salon has at least one hundred entries, with actual totals recorded. Credential files have mode 0600 under ignored `qa/.auth/` and are removed in finally. The ordinary fixture cleanup removes mutable identities. Preparation, authentication, hashing, delivery and mutation time are excluded from the measured per-read p95 below 300 ms. k6 also observes the connection pool. This is a local baseline, with machine and data volume recorded, and does not certify a production target. Draft automation has not been executed.
