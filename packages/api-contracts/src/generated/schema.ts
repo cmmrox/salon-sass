@@ -312,6 +312,11 @@ export interface components {
             professionalGrant?: boolean;
             role: string;
         };
+        CustomerCodeVerificationRequest: {
+            /** Format: uuid */
+            challengeId: string;
+            code: string;
+        };
         Enrollment: {
             /** Format: uuid */
             challengeId?: string;
@@ -593,7 +598,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["VerifyRequest"];
+                "application/json": components["schemas"]["CustomerCodeVerificationRequest"];
             };
         };
         responses: {
