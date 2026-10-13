@@ -56,6 +56,13 @@ only if another eligible reviewer exists. The owner remains the manual merger. P
 separate from these files: report whether it was actually applied, never assume documentation
 configured GitHub. The lifecycle's merge gates still apply when the GitHub plan lacks protection.
 
+GitHub settings were applied and read back on 2026-10-13: `main` requires a PR and up-to-date,
+successful `Verification commands` CI, with administrator bypass disabled, force pushes and
+deletion disabled, and conversation resolution required. Merge commits are enabled; squash and
+rebase merges are disabled. Merged remote PR branches are deleted automatically. No separate
+approving-review count is required because the agent authenticates as the owner. Local branches
+and worktrees still use the guarded cleanup procedure below.
+
 ## Evidence and cleanup
 
 `qa/reports/`, `qa/test-results/` and `qa/playwright-report/` remain uncommitted. Before removing a
