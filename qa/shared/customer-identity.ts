@@ -7,9 +7,7 @@ import { type Salon } from './tenants';
 
 export type CustomerChallenge = components['schemas']['Challenge'];
 export type CodeRequest = components['schemas']['CodeRequest'];
-// Expected shape from S02's final spec. The integrated contract currently collides with staff
-// VerifyRequest; use its generated subset until the developer publishes a uniquely named DTO.
-export type CustomerProof = Pick<components['schemas']['VerifyRequest'],'challengeId'|'code'>;
+export type CustomerProof = components['schemas']['CustomerCodeVerificationRequest'];
 export type Capture = {challengeId:string;channel:string;code:string;attempt:number;deliveredAt:string};
 export type Delivery = {id:string;channel:string;status:string;attempts:number;nextAttemptAt:string|null;leaseUntil:string|null;lastError:string|null;createdAt:string;sentAt:string|null};
 export type ChallengeDevice = {challenge:CustomerChallenge;device:string;mobile:string;channel:'sms'|'whatsapp'};
