@@ -25,7 +25,7 @@ case "${1:-}" in
   '')
     psql_as_owner --file - <"$ROOT/apps/api/src/main/resources/db/local/afterMigrate.sql" \
       || fail "the synthetic salons could not be created"
-    say "salons: alpha, beta and gamma (https://<slug>.${SALON_PLATFORM_DOMAIN}:${SALON_EDGE_HTTPS_PORT})"
+    say "salons: alpha, beta and gamma ($(stack_public_url "<slug>.${SALON_PLATFORM_DOMAIN}"))"
     ;;
   add)
     slug="${2:-}"
@@ -46,7 +46,7 @@ INSERT INTO salon_brand (tenant_id, display_name, brand_colour)
   SELECT id, :'name', :'colour' FROM tenant WHERE slug = :'slug';
 COMMIT;
 SQL
-    say "salon: ${slug} (https://${slug}.${SALON_PLATFORM_DOMAIN}:${SALON_EDGE_HTTPS_PORT})"
+    say "salon: ${slug} ($(stack_public_url "${slug}.${SALON_PLATFORM_DOMAIN}"))"
     ;;
   *)
     fail "usage: infra/scripts/stack-seed.sh [add <slug> [name] [colour]]"

@@ -1,7 +1,7 @@
 ---
 id: CR-005
 title: Local HTTP with TLS verified only on staging
-status: approved
+status: implemented
 requested_by: owner
 requested_on: 2026-10-13
 decided_on: 2026-10-13
