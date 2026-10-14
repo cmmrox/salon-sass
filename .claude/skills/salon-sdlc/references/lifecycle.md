@@ -301,7 +301,9 @@ specs and the requirements, never from what the code happens to do.
 6. Decide suite membership for every automation entry: add `suites: [regression]` to what must keep
    working, and `smoke` to the few that prove the feature is alive.
 7. Commit the cases and automation, with role guard and validation, before the final run. Record
-   `git rev-parse HEAD` as the tested revision. Run `qa/scripts/sdlc run --feature <F>`. It runs every stage's automation of this feature and
+   `git rev-parse HEAD` as the tested revision. Prepare the current environment and evidence context
+   as `docs/operations/verification-evidence.md` describes. Run the full feature with that context.
+   `qa/scripts/sdlc run --feature <F>` runs every stage's automation of this feature and
    then the journeys. No other feature.
 8. Triage every failure as a product defect, an environment fault or a test defect
    (`references/bug-loop.md` in `salon-qa`). File one bug per product defect under
@@ -366,8 +368,14 @@ The product and automation must match `integration.qa_revision`; the path list i
 
 **Gates, in order. Stop at the first that fails, print why, and change nothing:**
 1. Every stage is `complete`, and the feature's `qa_status` is `pass`.
-2. The `verification.commands` of its stages, with duplicates removed, each exit zero, run now.
-3. `qa/scripts/sdlc run --feature <F>` passes, run now. This feature only.
+2. Confirm the current environment/build and fixture prerequisites, then validate recorded
+   developer gates and independent full-feature QA with the closure evidence command in
+   `docs/operations/verification-evidence.md`. Evidence must cover every deduplicated stage
+   command and the exact full feature, and match current certified source, criteria, command
+   definitions and environment context. Legacy, incomplete, changed or unavailable evidence
+   requires the relevant new run; a historical pass alone cannot close the feature.
+3. Confirm every required manual case was performed and every deferred case has an explicit
+   reason and unblocking event. Reused automation evidence does not imply a manual check.
 4. `qa/scripts/sdlc validate` reports nothing.
 5. No suggestion in `review.md` is left without a disposition.
 
