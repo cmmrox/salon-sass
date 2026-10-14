@@ -47,7 +47,9 @@ export async function referenceCustomerShell(page: Page, width: number) {
   expect(shell.background).toBe('rgb(243, 240, 235)');
   const header = await appearance(page.getByTestId('salon-header'));
   expect(header.position).toBe('sticky'); expect(header.background).toBe('rgb(243, 240, 235)');
-  expect(header.height).toBeLessThanOrEqual(72);
+  expect(header.height).toBe(50);
+  const identity = await appearance(page.getByTestId('salon-identity'));
+  expect(identity.width).toBe(32); expect(identity.height).toBe(32); expect(identity.radius).toBe('999px');
   await referenceNavigation(page, 'salon-navigation', width, true);
 }
 export async function referenceNavigation(page: Page, id: string, width: number, customer = false) {

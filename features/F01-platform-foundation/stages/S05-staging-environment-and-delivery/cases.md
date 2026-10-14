@@ -13,7 +13,8 @@ Environment: local only; the synthetic alpha, beta and gamma salons of docs/qa/t
 - **Preconditions:** Final integrated F01 tree is committed; local product is running and all salons are active. Stack cases also require the local HTTP production-like stack seeded; deployment cases require versions N and N+1 from this tested tree.
 - **Steps:**
   1. Inspect version/commit labels, actual UID, env files and edge metadata.
-- **Expected:** Exact tested SHA/version, UID nonzero, no .env files.
+  2. Open the HTTP local production-like customer shell with Chromium; require successful requests for all three packaged Poppins files, loaded/checkable400/500/600 font faces, warm canvas and390px phone/430px desktop composition. Save actual font resource metadata and a rendered screenshot.
+- **Expected:** Exact tested SHA/version, UID nonzero, no .env files. Standalone image actually serves and renders the supplied design fonts and canvas, with no fallback or HTML returned in place of a font. Evidence is local HTTP only; no VPS/TLS certification.
 - **Automation:** `qa/checks/F01/S05-stack.sh`
 
 ### TC-F01-S05-002 Image scanning rejects fixable high and critical vulnerabilities
