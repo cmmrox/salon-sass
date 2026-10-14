@@ -91,7 +91,7 @@ evidence:
   last_result: pass
 integration:
   branch: charithm/feature/F02-prototype-design-fidelity
-  pull_request: null
+  pull_request: https://github.com/cmmrox/salon-sass/pull/5
   qa_revision: e73d99b0bbb38ec4db6b9cc837ea635286a1fed0
   merged_commit: null
   merged_at: null
