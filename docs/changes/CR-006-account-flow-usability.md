@@ -47,3 +47,7 @@ automatically approve QA suggestions.
 ## Decision
 
 Pending the owner's decision.
+
+The owner's 2026-10-14 design correction CR-007 now includes the prototype's accessible confirmation
+sheet/drawer presentation, resolving SUG-F02-01 through that approved visual scope. This request
+remains proposed for SUG-F02-02 role previews and SUG-F02-03 authenticator instructions.

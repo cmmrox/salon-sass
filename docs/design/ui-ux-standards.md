@@ -23,7 +23,7 @@ If a spec contradicts this authority, ask the lead to correct it through a chang
 
 | Element | Final prototype reference |
 | --- | --- |
-| Canvas / secondary / borders | `#F3F0EB` / `#EAE5DC` / `#DDD6CA`; white cards |
+| Canvas / secondary / borders | `#F3F0EB` / `#EAE5DC` / `#DDD6CA`; white cards; ink `#111827` |
 | Typography | Poppins 400/500/600; 15px body; 22px customer title; 26px desktop workspace title |
 | Cards / fields / primary actions | 24px cards, 20px fields, pill actions; fields at least 48px and primary actions 50px |
 | Customer | Centred 430px canvas, compact sticky header and anchored icon navigation |
@@ -34,7 +34,8 @@ If a spec contradicts this authority, ask the lead to correct it through a chang
 The customer header's name is neutral text on the warm canvas. Until logo/cover data is available,
 use a circular initial fallback; a large solid brand banner does not match the reference. Account,
 security and privacy screens inherit its cards, fields and pills; staff/audit lists inherit its
-responsive rows/table grammar. Foundation status/error screens and proxy plain HTML inherit the
+responsive rows/table grammar. Confirmation overlays follow its bottom-sheet phone layout and
+right-side desktop drawer with keyboard focus containment, cancel/Escape and focus return. Foundation status/error screens and proxy plain HTML inherit the
 same warm typography/cards/controls.
 
 ## Visual handoff gate

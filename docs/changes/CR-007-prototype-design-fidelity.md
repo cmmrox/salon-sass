@@ -37,8 +37,10 @@ canvas and responsive workspace. Prior functional/accessibility/overflow checks 
 
 ## Recommendation
 
-Implement now, preserve the supplied HTML and strengthen comparison gates. CR-006 remains proposed;
-this instruction does not separately approve its role-preview/authenticator-copy suggestions.
+Implement now, preserve the supplied HTML and strengthen comparison gates. Confirmation UI adopts
+the prototype bottom-sheet/desktop-drawer grammar, which also addresses SUG-F02-01 from CR-006.
+CR-006 remains proposed for its independent role-preview/authenticator-copy suggestions; those
+are not approved by this visual correction.
 
 ## Decision
 
