@@ -184,7 +184,7 @@ Environment: local only, fixed synthetic alpha/beta/gamma. Credentials are rando
 - **Performed as / preconditions:** A headed browser or inspected timed screenshots; no recording of credentials; all affected user personas.
 - **Steps:** Manually traverse staff MFA, customer codes/profile/devices/privacy and Owner administration by keyboard, including errors and dialog cancellation. Inspect focus order and text contrast across dark/light brands.
 - **Expected:** Every action is keyboard-operable with visible ordered focus and no traps. Contrast and targets meet design standards. Human judgment is required; a performed date is recorded only after actually checking.
-- **Automation:** Manual judgment required; declared with performed_on null, not performed or deferred. Final review will record the actual performed date and masked visual evidence.
+- **Automation:** Manual judgment performed on 2026-10-14. Actual Tab/type-ahead/Tab/Space/Enter interaction, successful saved API readback and 21 inspected masked timed screenshots are recorded in `qa/reports/20261014-F02-manual-complete/manual/keyboard-timing.json` and the adjacent images.
 
 ### TC-F02-S04-019 customer screens use the correct salon brand while workspace stays neutral
 
