@@ -70,3 +70,13 @@ Developer and QA source commits initially share the repair integration checkout 
 with explicit role-separated paths and guards. Final independent QA uses
 `charithm/test/F02-prototype-design-fidelity`, branched from the finished integration revision;
 the lead integrates its result commits with a merge commit. Existing history is preserved.
+
+## Independent QA findings
+
+The initial F01 run on `fe53f54` is preserved as failing/interrupted, never passed. Independent
+QA filed major BUG-F01-002 (migration-only startup incorrectly instantiates the servlet tenant
+filter) and BUG-F01-003 (4.4669:1 success text contrast). Fix both before certification. The
+contrast correction uses existing ink on the reference green surface under the existing AA
+requirement; all palette and accessibility assertions remain. A non-servlet migration process
+must not create servlet filters, while servlet tenant isolation and error mapping remain intact.
+The fixed source receives complete independent F01 and F02 verification.

@@ -39,7 +39,10 @@ security and privacy screens inherit its cards, fields and pills; staff/audit li
 responsive rows/table grammar. Confirmation overlays follow its bottom-sheet phone layout and
 right-side desktop drawer with keyboard focus containment, cancel/Escape and focus return. Foundation status/error screens and proxy plain HTML inherit the
 same warm typography/cards/controls. Muted small text uses white surfaces (4.83:1 contrast);
-use existing ink for small text on the warm canvas (muted would be 4.25:1 there).
+use existing ink for small text on the warm canvas (muted would be 4.25:1 there). The reference
+positive text `#0F7B55` on `#DDF1E6` is only 4.4669:1; normal-size success text uses existing ink
+on that green surface. Keep the reference semantic palette and background; do not lower the AA
+threshold. Accessibility requirements govern this pairing (BUG-F01-003).
 
 ## Visual handoff gate
 
