@@ -31,9 +31,9 @@ Ranked proposals; no implementation is authorized by this review. The lead raise
 
 | Id | Class | Suggestion | Disposition |
 | --- | --- | --- | --- |
-| SUG-F02-01 | should | Place and focus confirmation near the action that opened it | |
-| SUG-F02-02 | should | Preview the fixed role's capabilities before an Owner creates or changes staff access | |
-| SUG-F02-03 | should | Distinguish authenticator code rotation from verification-session expiry in the instructions | |
+| SUG-F02-01 | should | Place and focus confirmation near the action that opened it | CR-006 |
+| SUG-F02-02 | should | Preview the fixed role's capabilities before an Owner creates or changes staff access | CR-006 |
+| SUG-F02-03 | should | Distinguish authenticator code rotation from verification-session expiry in the instructions | CR-006 |
 
 ### SUG-F02-01 Confirmation near the current action
 
