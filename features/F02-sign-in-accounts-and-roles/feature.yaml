@@ -4,7 +4,7 @@ summary: Staff sign in with a password and two-step verification and can do only
   sign in with a one-time code and control their own profile and data.
 release: R1
 milestone: M1-web
-status: in-progress
+status: in-qa
 qa_status: not-run
 released_in: null
 depends_on:
