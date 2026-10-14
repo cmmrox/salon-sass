@@ -200,13 +200,13 @@ Account-kind refusals will be added through final S02 customer fixtures; no cust
 - **Expected:** Scope and financial permission change immediately; Professional staffId is its own id. Demoted live access has current role/permissions; audit now403.
 - **Automation:** `qa/api/F02/S01-staff-access.spec.ts` (draft, not executed)
 
-### TC-F02-S01-019 invalid duplicate and stale staff edits leave accounts unchanged
+### TC-F02-S01-019 staff creation accepts either identifier and refused edits preserve accounts
 
 - **Type:** api
 - **Priority:** high
-- **Covers:** AC-6
+- **Covers:** AC-6, AC-9
 - **Performed as / preconditions:** Alpha Owner and an account created through POST/staff.
-- **Steps:** Table-drive invalid identifiers/no identifier/role/password/boolean, normalized duplicate and stale patch after a valid role update; compare staff state.
+- **Steps:** Create email-only and mobile-only accounts with valid passwords; validate each StaffView and the nonempty PageStaffView; sign in using each supplied identifier.  Table-drive invalid identifiers/no identifier/role/password/boolean, normalized duplicate and stale patch after a valid role update; compare staff state.
 - **Expected:** Creation201, valid patch200; invalids400 field errors, duplicate/stale409 conflict; rejected calls add/change nothing.
 - **Automation:** `qa/api/F02/S01-staff-access.spec.ts` (draft, not executed)
 

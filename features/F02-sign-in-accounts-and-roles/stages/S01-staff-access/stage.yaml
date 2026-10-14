@@ -169,11 +169,12 @@ cases:
       - AC-5
       - AC-6
   - id: TC-F02-S01-019
-    title: invalid duplicate and stale staff edits leave accounts unchanged
+    title: staff creation accepts either identifier and refused edits preserve accounts
     type: api
     priority: high
     covers:
       - AC-6
+      - AC-9
   - id: TC-F02-S01-020
     title: removal and Owner promotion end every existing credential
     type: security

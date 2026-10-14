@@ -31,7 +31,7 @@ S04 AC-8 requires stable test ids. Its Read first design standards section86 exp
 
 ## Actual
 
-The settled Owner form provides `account-oldPassword` and `account-newPassword`; the profile/creation controls similarly derive ids from camelCase property names such as preferredLanguage/marketingConsent. The first visible invalid id fails the unchanged naming check. This is distinct from the earlier loading-scrape test fault: the form is now ready, nonempty and visible.
+The settled Owner form provides `account-oldPassword` and `account-newPassword`; the profile controls similarly derive ids from the camelCase property marketingConsent; the existing language select correctly uses `account-language`. The first visible invalid id fails the unchanged naming check. This is distinct from the earlier loading-scrape test fault: the form is now ready, nonempty and visible.
 
 ## Evidence
 
