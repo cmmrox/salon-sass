@@ -21,7 +21,7 @@ test(`${c(11)} number and daily admission races enqueue only their allowed budge
 });
 test(`${c(12)} restart cannot reset accepted counters or invalidate issuing-device signature`,async({identity})=>{
  const customers=new Customers(identity);await customers.reset();const mobile=syntheticMobile();for(let n=0;n<3;n++)await customers.challenge(alpha,mobile);const issued=await customers.challenge(alpha);const capture=await customers.capture(alpha,issued.challenge.challengeId);
- mark('customer-api-restart-asked');localService('stop','api');localService('start','api');mark('customer-api-restart-returned');
+ mark('customer-api-restart-asked');localService('stop','api');localService('start','api');await identity.api.reconnect();mark('customer-api-restart-returned');
  const before=count('outbox_message');await problem(await customers.request(alpha,{mobile,channel:'sms',deviceLabel:'QA'}),429,'rate_limited');expect(count('outbox_message')).toBe(before);
  const tokens=await json<Tokens>(await customers.verify(alpha,{challengeId:issued.challenge.challengeId,code:capture.code},issued.device),'Tokens');expect((await identity.principal(alpha,tokens)).kind).toBe('customer');
 });
