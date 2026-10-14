@@ -88,6 +88,6 @@ evidence:
 integration:
   branch: charithm/feature/F02-sign-in-accounts-and-roles
   pull_request: null
-  qa_revision: 7bb8991c532db9eadac9a28a4710e7483c283c56
+  qa_revision: 523c2e2e373a8091a7be4ca093a4a691217e2a6f
   merged_commit: null
   merged_at: null
