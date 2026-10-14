@@ -242,7 +242,10 @@ and `application`, never in a controller, a repository or a mapper.
   `trace.id`, `span.id`, and `tenant.id` whenever a salon is bound: a request on its hostname, a
   delivery or a job run for it. A request on a salon's hostname looks its salon up when it starts,
   except `/api/v1/meta`, `/actuator/**` and the OpenAPI document, which must not wait on the
-  database and so carry no `tenant.id`.
+  database and so carry no `tenant.id`. Invalid credentials may be rejected before this lookup
+  and tenant binding; their required request line retains the caller/problem trace and has no
+  `tenant.id`. Logging never performs a registry lookup or trusts an invalid credential to add
+  a tenant tag.
 - Each request writes one line with its method, its path without the query string, its status and
   its duration (`event.duration`, nanoseconds). No line carries a request body, a query string, a
   `Cookie` or an `Authorization` header.

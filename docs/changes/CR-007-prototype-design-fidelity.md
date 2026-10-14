@@ -96,3 +96,20 @@ approved F02 identity contract: invalid bearer UUIDs return generic 401 `invalid
 no tenant leakage; non-credential tenant selectors still return the hostname's own salon. No
 authentication business rule, isolation requirement or accessibility threshold is relaxed.
 These QA fixes are batched before the final frozen-revision feature passes.
+
+The complete diagnostic F01 collection on `3861b3d` passed 30/32 automation groups, including
+deployment/rollback/instance loss under load. Valid F02 collection passed 12/13 after preparing
+fresh local synthetic data; a prior interrupted F02 collection had future scheduler occurrences
+left by F01's clock checks and is preserved as environment-invalid. The remaining visual
+assertion defects measured hidden streaming elements or confused sticky CSS offsets with normal
+flow; QA committed visibility waits and the exact source-defined offset/minimum-height checks,
+without adding geometry tolerance. Stable error-code and invalid-credential checks follow the
+already approved F02 contract.
+
+Independent QA also found major BUG-F01-004: early invalid-bearer rejection returned the correct
+401 but bypassed request logging. Application source `62c209b` adds a guarded sanitized fallback
+using the existing event builder and response trace, with no registry lookup or security reorder.
+Six of ten focused cases failed before the fix; all ten passed afterward. Required developer
+gate receipts, manual evidence and final independent full F01/F02 passes still follow this fix.
+CR-008's source/context-bound evidence workflow replaces duplicate closure runs; it cannot reuse
+the earlier partial/failed collections as passing proof.
