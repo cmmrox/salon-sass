@@ -20,12 +20,18 @@ export const SALON_PATH = '/api/v1/salon';
 export const PROBLEM_JSON = 'application/problem+json';
 
 export class ApiClient {
-  private constructor(private readonly context: APIRequestContext) {}
+  private constructor(private context: APIRequestContext) {}
 
   static async create(): Promise<ApiClient> {
     return new ApiClient(
       await request.newContext({ baseURL: apiUrl, timeout: 15_000, maxRedirects: 0 }),
     );
+  }
+
+  /** Explicit local restart invalidates keep-alive sockets; discard that fixture transport. */
+  async reconnect(): Promise<void> {
+    await this.context.dispose();
+    this.context=await request.newContext({baseURL:apiUrl,timeout:15_000,maxRedirects:0});
   }
 
   get(path: string, headers?: Record<string, string>): Promise<APIResponse> {

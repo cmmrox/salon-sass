@@ -4,6 +4,7 @@ import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { REPO_ROOT, reportDir, apiUrl } from './env';
+import type {ApiClient} from './api-client';
 export const productRoot = process.env.QA_PRODUCT_ROOT ?? REPO_ROOT;
 export const apiLog = path.join(productRoot,'.local/logs/api.log');
 export function localService(action:string,service:string,settings:Record<string,string>={}) {
@@ -11,13 +12,13 @@ export function localService(action:string,service:string,settings:Record<string
     cwd:productRoot,env:{...process.env,...settings},timeout:180000,stdio:'pipe'}); }
   catch { throw new Error(`ENVIRONMENT: local ${action} ${service} control failed`); }
 }
-export async function codeSettings<T>(settings:Record<string,string>,work:()=>Promise<T>):Promise<T>{
+export async function codeSettings<T>(settings:Record<string,string>,work:()=>Promise<T>,connection?:ApiClient):Promise<T>{
   localService('stop','api');
-  try{localService('start','api',settings);return await work();}
+  try{localService('start','api',settings);await connection?.reconnect();return await work();}
   finally{localService('stop','api');localService('start','api',{
     SALON_IDENTITY_CODE_NUMBER_LIMIT:'3',SALON_IDENTITY_CODE_DEVICE_LIMIT:'10',
     SALON_IDENTITY_CODE_ADDRESS_LIMIT:'20',SALON_IDENTITY_CODE_DAILY_LIMIT:'1000',
-  });}
+  });await connection?.reconnect();}
 }
 export function localKeys() {
   const file = process.env.SALON_IDENTITY_LOCAL_KEY_FILE ?? path.join(productRoot,'.local/identity-keys.properties');

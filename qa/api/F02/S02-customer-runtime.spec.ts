@@ -17,7 +17,7 @@ test(`${c(11)} number and daily admission races enqueue only their allowed budge
   const rows=await Promise.all(Array.from({length:8},()=>customers.request(alpha,{mobile:syntheticMobile(),channel:'sms',deviceLabel:'QA'})));
   expect(rows.filter(r=>r.status()===200).length).toBe(5);expect(rows.filter(r=>r.status()===429).length).toBe(3);expect(count('identity_customer_challenge')).toBe(5);expect(count('outbox_message')-initial).toBe(5);
   for(const r of rows.filter(r=>r.status()===429))await problem(r,429,'rate_limited');
- });mark('daily-limit-default-restored',{number:3,device:10,address:20,daily:1000});
+ },identity.api);mark('daily-limit-default-restored',{number:3,device:10,address:20,daily:1000});
 });
 test(`${c(12)} restart cannot reset accepted counters or invalidate issuing-device signature`,async({identity})=>{
  const customers=new Customers(identity);await customers.reset();const mobile=syntheticMobile();for(let n=0;n<3;n++)await customers.challenge(alpha,mobile);const issued=await customers.challenge(alpha);const capture=await customers.capture(alpha,issued.challenge.challengeId);
@@ -41,7 +41,7 @@ test(`${c(13)} an eighty-percent alert occurs once per UTC day and never crosses
   await problem(await identity.call(beta,'GET','/audit',undefined,active.tokens),404,'not_found');expect((await identity.audit(foreign)).items.filter(e=>e.action==='identity.code_volume_alert'&&e.subjectId===nextDay).length).toBe(0);
   const midnight=new Date(Date.parse(`${nextDay}T23:58:00Z`)+121000).toISOString();await identity.clock(midnight);await customers.challenge(alpha);await problem(await customers.request(alpha,{mobile:constrained,channel:'sms',deviceLabel:'QA'}),429,'rate_limited');
   for(let n=0;n<3;n++)await customers.challenge(alpha);expect(await meter()).toBe(initial+2);const newDay=midnight.slice(0,10);expect((await identity.audit(active)).items.filter(e=>e.action==='identity.code_volume_alert'&&e.subjectId===newDay).length).toBe(1);
- });
+ },identity.api);
 });
 test(`${c(16)} failed and silent message providers retry the same request and recover`,async({identity})=>{
  const customers=new Customers(identity);

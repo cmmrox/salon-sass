@@ -178,7 +178,7 @@ test(`${id(23)} sensitive identity actions write paginated secret-free before-af
 
 test(`${id(24)} new identity records fail closed at the database and persist no raw credentials`,async({identity})=>{
  const a=await identity.staff(alpha,'OWNER'),b=await identity.staff(beta,'OWNER');
- for(const actor of [a,b])await refresh(identity,actor);
+ const previousTokens=a.tokens;for(const actor of [a,b])actor.tokens=await refresh(identity,actor);
  const {identitySql}=await import('../../shared/identity-storage');
  const tables=['identity_staff','identity_session','identity_refresh_history','identity_mfa_challenge','identity_mfa_step','identity_rate_bucket','identity_guard'];
  for(const table of tables){
@@ -193,7 +193,7 @@ test(`${id(24)} new identity records fail closed at the database and persist no 
  expect(hash.includes(a.account.password),'password not stored raw').toBe(false);expect(hash.length).toBeGreaterThan(64);
  const secret=identitySql(`SELECT mfa_secret FROM identity_staff WHERE tenant_id='${alpha.id}' AND id='${a.principal.id}'`);expect(secret.length).toBeGreaterThan(32);expect(secret.includes(a.account.totpSecret!),'TOTP secret encrypted').toBe(false);
  const refreshMaterial=identitySql(`SELECT refresh_hash FROM identity_session WHERE tenant_id='${alpha.id}' AND id='${a.tokens.sessionId}'`);expect(refreshMaterial.length).toBeGreaterThanOrEqual(32);expect(refreshMaterial.includes(a.tokens.refreshToken),'refresh hashed').toBe(false);
- for(const table of tables){const contents=identitySql(`SELECT row_to_json(t)::text FROM ${table} t WHERE tenant_id='${alpha.id}'`);for(const credential of [a.account.password,a.account.totpSecret!,a.tokens.accessToken,a.tokens.refreshToken])expect(contents.includes(credential),`${table}: excludes raw credential`).toBe(false);}
+ for(const table of tables){const contents=identitySql(`SELECT row_to_json(t)::text FROM ${table} t WHERE tenant_id='${alpha.id}'`);for(const credential of [a.account.password,a.account.totpSecret!,a.tokens.accessToken,a.tokens.refreshToken,previousTokens.accessToken,previousTokens.refreshToken])expect(contents.includes(credential),`${table}: excludes raw credential`).toBe(false);}
  // Transaction rollback leaves data unchanged; negative writes prove WITH CHECK and composite links.
  const invalid=identitySql(`BEGIN;SET LOCAL app.tenant_id='${alpha.id}';INSERT INTO identity_session(id,tenant_id,created_at,updated_at,account_id,kind,refresh_hash,device_label,expires_at,revoked_at,generation,mfa_verified) SELECT gen_random_uuid(),'${beta.id}'::uuid,created_at,updated_at,account_id,kind,refresh_hash,device_label,expires_at,revoked_at,generation,mfa_verified FROM identity_session LIMIT 1;ROLLBACK;`,null,false);
  expect(invalid.includes('row-level security'),'foreign tenant insert rejected').toBe(true);
@@ -216,7 +216,7 @@ test(`${id(25)} contract and local fixtures expose no accidental auth surface`,a
 
 test(`${id(26)} malformed identity input is refused with field errors and no mutation`,async({identity})=>{
  const owner=await identity.staff(alpha,'OWNER');const before=await identity.list(owner);
- const rows:[string,string,unknown,string][]=[['POST','/staff/sign-in',{identifier:'',password:'',deviceLabel:'QA'},'identifier'],['POST','/staff',{role:'MANAGER',password:'short'},'password'],['PATCH',`/staff/${owner.principal.id}`,{version:'zero',role:'MANAGER'},'version'],['POST','/sessions/refresh',{refreshToken:123},'refreshToken'],['PUT','/staff/password',{oldPassword:owner.account.password,newPassword:true},'newPassword'],['POST','/staff/mfa/enroll',{challengeId:12,challengeToken:false},'challengeId'],['POST','/staff/mfa/verify',{challengeId:randomUUID(),challengeToken:'x',code:12},'code']];
+ const rows:[string,string,unknown,string][]=[['POST','/staff/sign-in',{identifier:'',password:'',deviceLabel:'QA'},'identifier'],['POST','/staff',{email:syntheticAccount().email,role:'MANAGER',password:'short'},'password'],['PATCH',`/staff/${owner.principal.id}`,{version:'zero',role:'MANAGER'},'version'],['POST','/sessions/refresh',{refreshToken:123},'refreshToken'],['PUT','/staff/password',{oldPassword:owner.account.password,newPassword:true},'newPassword'],['POST','/staff/mfa/enroll',{challengeId:12,challengeToken:false},'challengeId'],['POST','/staff/mfa/verify',{challengeId:randomUUID(),challengeToken:'x',code:12},'code']];
  for(const [method,path,data,field]of rows){const p=await problem(await identity.call(alpha,method,path,data,owner.tokens),400,'bad_request');expect(p.errors?.some(e=>e.field===field),`${path}: field identified`).toBe(true);}
  expect(await identity.list(owner)).toEqual(before);
  for(const path of ['/staff','/audit'])for(const query of ['page=-1','size=101'])await problem(await identity.call(alpha,'GET',`${path}?${query}`,undefined,owner.tokens),400,'bad_request');

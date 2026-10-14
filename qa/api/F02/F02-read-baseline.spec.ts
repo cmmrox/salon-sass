@@ -42,7 +42,7 @@ test('TC-F02-004 bounded local reads meet the documented per-read latency baseli
           prepared.push({salon,actor,name:saved.name,version:saved.version});
         }
       }
-    });
+    },identity.api);
     // The measured phase runs a freshly started API with the documented default values.
     expect(apiProcess(),'API restarted after preparation override').not.toBe(oldProcess);
     expect(localKeys()).toEqual(sourceKeys);
