@@ -443,8 +443,8 @@ verification:
       reason: "it needs a root `.env`, which a check must never write into the repository, and a full extra build-and-start cycle on every stage run to protect settings no acceptance criterion names"
       performed_on: 2026-10-13
     - case: TC-F01-S01-040
-      reason: "whether a screen looks right is a person's judgement that no assertion replaces"
-      performed_on: 2026-10-13
+      reason: "Human judgment on source 24c3ab5: all nine loaded, loading, settled and unavailable frames inspected at the required 360/1280 widths, with keyboard retry focus and the existing 320/200% exploration. Evidence: qa/reports/20261014-CR007-manual-fixed/manual-judgment.json."
+      performed_on: 2026-10-14
     - case: TC-F01-S01-057
       reason: "GitHub CI requires an explicitly authorized temporary PR. Independent QA inspected stored green/failing-lint/green job evidence and live runs 38352493389, 38352868747, 38353171634; proof PR 2 closed unmerged and its branch/worktree deleted. Evidence is archived in the retained main Git directory under sdlc-evidence/ci-proof-F01."
       performed_on: 2026-10-13
