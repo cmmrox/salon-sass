@@ -33,8 +33,30 @@ tools, stopped processes and capacity limits promptly. Keep secrets and private 
 New owner instructions steer ongoing work. Preserve its branch, edits, running-process identity,
 completed evidence and remaining steps. Before resuming, inspect those records and the process
 state; continue from the last valid boundary. An interruption alone is not a reason to rebuild
-or rerun completed checks. A source, configuration or fixture change may invalidate evidence;
-apply the evidence rules rather than assuming either validity or failure.
+or rerun completed checks. This includes a token/context limit, compaction, a new agent or client
+session, a machine restart and a later "continue" message.
+
+### Reuse before rerunning
+
+Before starting QA or developer gates, inspect the saved result and tested revision, compare the
+relevant working-tree changes (including untracked files), and check the recorded test conditions.
+If the relevant application code, tests, requirements and test conditions are unchanged and the
+complete passing evidence is intact, reuse it and continue with the next unfinished step. Do not
+restart QA because the session restarted, a commit SHA/date changed, or only review, documentation,
+skill or status metadata changed. A skill edit receives its own validation, not product QA.
+
+When something relevant changed, name the change and the checks it affects before execution.
+Retain unaffected passing results; independently verify a fix and its affected dependencies.
+Repeat a whole feature only when its affected scope warrants that breadth, or when the owner
+explicitly requests it. A failed or incomplete check is unfinished work; finish that scope without
+discarding unrelated completed evidence. Never describe targeted checks as a new full-feature pass.
+
+Persist a short checkpoint in the existing handoff/evidence record: tested revision, report/log
+paths, completed results, remaining work and relevant environment/fixture identity. Verify a
+surviving runner's identity before starting another. Missing or uncertain proof calls for a
+specific inspection first; do not assume that all QA must start over. Follow the project's
+evidence documentation for integrity and tooling limits. Repeating a check without an identified
+invalidating change or an explicit owner request wastes time and tokens without new evidence.
 
 When priorities change, let an already running command reach a safe boundary if appropriate and
 report what remains in progress. Resume dependent work only within the owner's current scope.

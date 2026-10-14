@@ -95,6 +95,8 @@ while work runs, including work delegated to another agent; the lead aggregates 
 1. Run `git status --short` and note the branch. Changes you did not make belong to someone else:
    leave them alone.
 2. Read `features/README.md`. It is the portfolio and says what is next.
+   On resumed work, first apply the saved-evidence check in `references/progress.md`; do not
+   interpret a generated "QA next" label as a reason to repeat a completed pass.
 3. Read the folder of the one stage you are working on: `spec.md` and `stage.yaml`, then every
    project document its "Read first" section names. Do not read other stages' folders; a stage is self-contained so that a session stays small. (Feature-wide QA,
    change requests and releases read across stages; their commands say so.)
@@ -131,7 +133,7 @@ scope asked for is a process violation, the same as running less.
 | --- | --- | --- |
 | `stage-close` | No QA automation: the developer's gates only | Any stage's or feature's automation |
 | `feature-verify` | That feature's stage automation and its feature journeys | Other features |
-| `feature-close` | Validate unchanged full-feature and developer-gate evidence; rerun invalidated evidence | Other features |
+| `feature-close` | Validate saved QA and developer-gate evidence; execute only genuinely invalidated checks | Repeated unchanged QA; other features |
 | `stage-verify`, when the owner asked for a pass on one stage | That stage's automation | Earlier stages of the feature, other features |
 | `release-verify`, or the owner asks for regression or smoke | The regression and smoke suites | - |
 
@@ -143,7 +145,8 @@ scope asked for is a process violation, the same as running less.
   `qa/scripts/sdlc run --feature <F>` for the feature in flight (its stages so far), and
   `qa/scripts/sdlc run --suite regression` for the features already delivered.
 - The developer's own gates (compile, lint, unit and integration tests of the modules touched) are
-  not QA runs. They run every time, through `verification.commands`.
+  not QA runs. Run them for relevant changes through `verification.commands`; reuse intact passing
+  evidence on an unchanged resume or handoff, following `references/progress.md`.
 - Always go through `qa/scripts/sdlc run`. It selects by scope, refuses an empty selection and
   writes the evidence.
 

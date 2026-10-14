@@ -64,7 +64,9 @@ When the documents do not cover something:
    integration branch; the lead integrates closed stages there. Follow `references/git-workflow.md`
    in `salon-sdlc`: unfinished stages do not merge into `main`.
 3. Implement against the acceptance criteria, with tests alongside.
-4. Run the stage's `verification.commands`. If one fails, diagnose before rerunning; a changed
+4. Run the stage's `verification.commands` for the changed implementation; on an unchanged resume,
+   reuse complete passing evidence under `references/progress.md` in `salon-sdlc`.
+   If one fails, diagnose before rerunning; a changed
    result without a known cause is unresolved. For reusable feature-closure evidence, follow
    `docs/operations/verification-evidence.md`; ordinary stage closure retains its own gates.
 5. Start the product and walk through every acceptance criterion yourself, from outside: the
