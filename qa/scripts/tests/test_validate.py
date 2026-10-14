@@ -20,7 +20,11 @@ class ValidateTest(unittest.TestCase):
                               integration={"branch": "charithm/feature/F08-design-repair"})
         repair = {"id": "CR-001", "status": "approved", "features": ["F07", "F08"],
                   "integration_branch": "charithm/feature/F08-design-repair"}
-        return fx.bundle(features=[reopened("F07"), reopened("F08")], change_requests=[repair])
+        stages = [fx.unverified_stage(id=f"{fid}-S01", feature=fid, status="in-progress",
+                                     requirements=["BKG-01"] if fid == "F07" else [],
+                                     _feature_dir=f"features/{fid}-repair") for fid in ("F07", "F08")]
+        return fx.bundle(features=[reopened("F07"), reopened("F08")], stages=stages,
+                         change_requests=[repair])
 
     def test_grouped_repair_preserves_previous_merges_without_certifying_new_work(self):
         from sdlc_lib import flow
