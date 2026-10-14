@@ -226,3 +226,14 @@ Environment: local only, fixed synthetic alpha/beta/gamma. Credentials are rando
 - **Steps:** Submit forged forwarded headers and incoming assertions to the BFF. Inspect how real browser callers share or differ in durable address buckets. Test the API's present malformed, bad-HMAC, wrong host/method/path, duplicate/list/IP-format and expired/future assertion rows; verify an absent assertion uses the actual peer. For a valid bounded assertion use the API application Clock and synthetic address, with no bearer or tenant privilege manufactured.
 - **Expected:** BFF strips incoming assertion/address authority and signs only the trusted socket-derived canonical values, within its total request budget. API refuses every invalid present assertion before any counter or enqueue side effect. A valid address assertion changes only rate accounting, never principal, permission or salon selection. Forwarded/body address values cannot reset direct-client ceilings.
 - **Automation:** `qa/web/F02/S04-resilience-address.spec.ts`; registered with final centralized handles for F02 feature QA.
+
+### TC-F02-S04-023 Identity screens follow supplied customer and salon layouts with accessible confirmation overlays
+
+- **Type:** responsive
+- **Priority:** high
+- **Covers:** AC-9
+- **Performed as / preconditions:** Synthetic beta Owner/customer and alpha Professional; running committed product; supplied HTML final cascade and approved CR-007.
+- **Steps:** Inspect all six sign-in/account/staff/audit routes at 360/390/768/1024/1280/1440. Assert loaded Poppins, warm colours, 24px white cards, 20px/48px fields, 50px pills, customer 430px canvas and sticky header, workspace full width with bottom tabs below900 and 200/236px desktop rail. Check current real routes, icons, active semantics and Professional permission-filtered navigation. Open customer deletion and staff revoke-all confirmation; inspect mobile bottom-sheet/customer430px and workspace desktop460px drawer geometry, modal focus containment, Escape/cancel and focus return. Save masked screenshots.
+- **Expected:** Source-defined visual grammar holds on every implemented screen without fictional future controls. Compact name ellipsis retains complete accessible DOM name and tooltip, with all other clipping/overflow refused. Modal focus starts on cancellation, stays contained by Tab/ShiftTab, and returns to the initiating action after cancel/Escape. Cancelled privacy action changes nothing (TC011). Existing role/isolation/contrast/API/security cases remain authoritative.
+- **Automation:** `qa/web/F02/S04-presentation.spec.ts`; rendered evidence under the run's `design/` folder.
+- **Reference limitation:** Explicit browser policy rejected local file preview and alternative access. Source-defined comparison plus rendered product evidence are recorded; side-by-side reference preview is not claimed.

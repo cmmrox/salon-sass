@@ -173,6 +173,12 @@ cases:
   priority: high
   covers:
   - AC-11
+- id: TC-F01-S03-013
+  title: Public and foundation pages match the supplied reference grammar at all six widths
+  type: responsive
+  priority: high
+  covers:
+  - AC-12
 verification:
   commands:
   - cd apps/api && ./mvnw -q verify
@@ -199,6 +205,7 @@ verification:
     - TC-F01-S03-010
     - TC-F01-S03-011
     - TC-F01-S03-012
+    - TC-F01-S03-013
     suites:
     - regression
     project: web

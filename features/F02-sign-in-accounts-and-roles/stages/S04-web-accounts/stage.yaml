@@ -290,6 +290,12 @@ cases:
   priority: critical
   covers:
   - AC-7
+- id: TC-F02-S04-023
+  title: Identity screens follow supplied customer and salon layouts with accessible confirmation overlays
+  type: responsive
+  priority: high
+  covers:
+  - AC-9
 verification:
   commands:
   - cd apps/api && ./mvnw -q verify
@@ -337,6 +343,7 @@ verification:
     - TC-F02-S04-017
     - TC-F02-S04-019
     - TC-F02-S04-021
+    - TC-F02-S04-023
     suites:
     - regression
   - id: web-resilience-address

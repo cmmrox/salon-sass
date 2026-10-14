@@ -6,17 +6,41 @@ import {alpha,beta,syntheticAccount} from '../../shared/identity';
 import {salons} from '../../shared/tenants';
 import {fit,seriousViolations,testIds,TEST_ID_NAME} from '../../shared/page-checks';
 import {productRoot} from '../../shared/identity-runtime';
+import {DESIGN_WIDTHS,appearance,designScreenshot,referenceAccountControls,referenceCustomerShell,referenceDialog,referenceFit,referenceNavigation,referenceTypeAndPalette} from '../../shared/design-reference';
 const c=(n:number)=>`TC-F02-S04-${String(n).padStart(3,'0')}`;
 const WIDTHS=[360,390,768,1024,1280,1440].map(width=>({width,height:1000}));
 
 test(`${c(16)} responsive layouts keep every control reachable across six widths`,async({identity,accounts})=>{
  test.setTimeout(180000);const staff=await identity.staff(beta,'OWNER'),customer=await accounts.customers.login(beta),context=await accounts.context(beta,[staff,customer]);
  for(const route of screenMap){const page=await accounts.open(context,route);if(!route.endsWith('sign-in'))await accounts.ready(page);else await expect(handle(page,'sign-in-submit')).toBeVisible();
-  for(const viewport of WIDTHS){await page.setViewportSize(viewport);const inspected=await fit(page);expect(inspected.counted).toBeGreaterThan(0);expect(inspected.pageScrolls).toBe(false);expect(inspected.outside).toEqual([]);expect(inspected.clipped).toEqual([]);
+  for(const viewport of WIDTHS){await page.setViewportSize(viewport);const inspected=await referenceFit(page,beta.name);expect(inspected.counted).toBeGreaterThan(0);expect(inspected.pageScrolls).toBe(false);expect(inspected.outside).toEqual([]);expect(inspected.clipped).toEqual([]);
    const targets=await page.locator('button:visible,input:visible,select:visible,a:visible').evaluateAll(elements=>elements.map(element=>{const target=(element as HTMLInputElement).type==='checkbox'?element.closest('label')!:element;const r=target.getBoundingClientRect();return {height:r.height,width:r.width,id:element.getAttribute('data-testid')};}));expect(targets.length).toBeGreaterThan(0);for(const target of targets){expect(target.height,`${target.id} target height`).toBeGreaterThanOrEqual(44);expect(target.width,`${target.id} target width`).toBeGreaterThanOrEqual(44);}
   }await page.close();
  }
  const account=syntheticAccount('OWNER',false);await identity.seed(alpha,[account]);const enrollment=await accounts.context(alpha),page=await accounts.open(enrollment,routes.staffSignIn);await handle(page,'identifier').fill(account.email);await handle(page,'password').fill(account.password);await handle(page,'sign-in-submit').click();await expect(handle(page,'setup-key')).toBeVisible();for(const viewport of WIDTHS){await page.setViewportSize(viewport);expect((await fit(page)).pageScrolls).toBe(false);}
+});
+
+test(`${c(23)} identity screens follow the supplied customer and salon layouts with accessible confirmation overlays`,async({identity,accounts})=>{
+ test.setTimeout(180000);
+ const owner=await identity.staff(beta,'OWNER'),customer=await accounts.customers.login(beta),context=await accounts.context(beta,[owner,customer]);
+ for(const route of screenMap){const page=await accounts.open(context,route);if(!route.endsWith('sign-in'))await accounts.ready(page);else await expect(handle(page,'sign-in-submit')).toBeVisible();
+  for(const viewport of DESIGN_WIDTHS){await page.setViewportSize(viewport);await referenceTypeAndPalette(page);await referenceAccountControls(page);
+   const workspace=route.startsWith('/workspace');
+   if(workspace){const shell=await appearance(page.getByTestId('workspace-shell'));expect(shell.width).toBe(viewport.width);expect(shell.background).toBe('rgb(243, 240, 235)');
+    const header=await appearance(page.getByTestId('workspace-header'));expect(header.position).toBe('sticky');if(viewport.width>=900)expect(header.background).toBe('rgb(255, 255, 255)');
+    await referenceNavigation(page,'workspace-navigation',viewport.width);await expect(handle(page,'title')).toHaveCSS('font-size',viewport.width>=900?'26px':'22px');
+    if(viewport.width>=900){const main=await appearance(page.getByTestId('workspace-main'));expect(main.left).toBe(viewport.width<1200?200:236);}
+   }else{await referenceCustomerShell(page,viewport.width);await expect(handle(page,'title')).toHaveCSS('font-size','22px');}
+   const result=await referenceFit(page,beta.name);expect(result.counted).toBeGreaterThan(0);expect(result.pageScrolls).toBe(false);expect(result.outside).toEqual([]);expect(result.clipped).toEqual([]);
+   await designScreenshot(page,`F02-${route.replaceAll('/','-')}-${viewport.width}`);
+   if(route===routes.customer||route===routes.staff){const trigger=handle(page,route===routes.customer?'delete':'revoke-all');await trigger.click();await referenceDialog(page,workspace,viewport.width);
+    await designScreenshot(page,`F02-confirmation-${workspace?'staff':'customer'}-${viewport.width}`);await page.keyboard.press('Escape');await expect(page.getByRole('dialog')).toHaveCount(0);await expect(trigger).toBeFocused();
+    await trigger.click();await handle(page,'cancel-action').click();await expect(page.getByRole('dialog')).toHaveCount(0);await expect(trigger).toBeFocused();
+   }
+  }await page.close();
+ }
+ const professional=await identity.staff(alpha,'PROFESSIONAL'),limited=await accounts.context(alpha,[professional]),page=await accounts.open(limited,routes.staff);await accounts.ready(page);
+ await expect(page.getByTestId('workspace-staff')).toHaveCount(0);await expect(page.getByTestId('workspace-audit')).toHaveCount(0);await referenceNavigation(page,'workspace-navigation',1280);
 });
 test(`${c(17)} all screens pass automated accessibility checks and announce errors`,async({identity,accounts})=>{
  test.setTimeout(180000);for(const salon of salons){const customer=await accounts.customers.login(salon),owner=await identity.staff(salon,'OWNER'),context=await accounts.context(salon,[customer,owner]);
