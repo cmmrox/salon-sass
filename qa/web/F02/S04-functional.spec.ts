@@ -26,7 +26,7 @@ test(`${c(2)} staff authentication refusals preserve useful input and expose rec
  const frozen=await identity.now();await identity.clock(frozen);const refusedCode=totp(account.totpSecret!,frozen)==='000000'?'000001':'000000';await handle(page,'code').fill(refusedCode);await handle(page,'sign-in-submit').click();await expect(handle(page,'error')).toBeVisible();await expect(handle(page,'code')).toHaveValue('');
  const expires=(await context.cookies()).find(item=>item.name===cookie('staff','challenge_id'));expect(Boolean(expires)).toBe(true);
  await identity.clock(new Date(Date.parse(await identity.now())+301000).toISOString());await handle(page,'code').fill(totp(account.totpSecret!,await identity.now()));await handle(page,'sign-in-submit').click();await expect(handle(page,'error')).toBeVisible();
- await page.goto(routes.staff);await expect(page).toHaveURL('**'+routes.staffSignIn);await identity.clock();
+ await page.goto(routes.staff);await expect(page).toHaveURL(new RegExp(routes.staffSignIn+'$'));await identity.clock();
  for(let index=0;index<11;index++){const response=await accounts.action(context,alpha,'staff','sign-in',{identifier:account.email,password:'Wrong synthetic password',deviceLabel:'QA'});if(index===10){expect(response.status()).toBe(429);expect((await response.json()).retryAfter).toBeGreaterThan(0);}}
  await page.goto(routes.staffSignIn);await handle(page,'identifier').fill(account.email);await handle(page,'password').fill(account.password);await handle(page,'sign-in-submit').click();await expect(handle(page,'retry-wait')).toBeVisible();await expect(handle(page,'sign-in-submit')).toBeDisabled();
 });
@@ -94,5 +94,5 @@ test(`${c(12)} audit screens expose useful identity alerts without personal or c
   // Empty-list presentation alone is arranged at the browser boundary; no real audit is removed.
   await context.route('**/identity-web/staff/audit*',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({items:[],page:0,size:10,total:0})}));await page.reload();await accounts.ready(page);await expect(handle(page,'audit-empty')).toBeVisible();
  }
- });
+ },identity.api);
 });

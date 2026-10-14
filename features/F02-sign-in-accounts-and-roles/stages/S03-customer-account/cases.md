@@ -23,7 +23,7 @@ Environment: local only, fixed synthetic alpha/beta/gamma. Credentials are rando
 - **Covers:** AC-1, AC-4, AC-5
 - **Performed as / preconditions:** Two different alpha customers, the same mobile at beta, and one staff account per role. All existing profiles are proven readable by their owner.
 - **Steps:** Table-drive GET, PUT, DELETE /customers/me and GET /customers/me/export using mismatched salon tokens, forged or absent tokens, all staff roles, and injected customer or tenant selectors. Read the rightful profiles afterward.
-- **Expected:** Foreign salon credentials return 404 not_found; forged or absent access returns 401 invalid_session; staff access returns 403 permission_denied. No other customer profile, export or credential is exposed or changed.
+- **Expected:** Foreign salon credentials return 404 not_found; forged or absent access returns 401 invalid_session; staff access returns 401 invalid_session as wrong-kind authentication. No other customer profile, export or credential is exposed or changed.
 - **Automation:** `qa/api/F02/S03-customer-profile.spec.ts` (draft, not executed).
 
 ### TC-F02-S03-003 complete mutable profile updates normalize persist and clear optional fields

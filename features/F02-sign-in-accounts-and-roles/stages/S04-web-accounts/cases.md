@@ -203,7 +203,7 @@ Environment: local only, fixed synthetic alpha/beta/gamma. Credentials are rando
 - **Covers:** AC-8
 - **Performed as / preconditions:** Prepared local runtime, sign-in/account forms and a dependency control that proves API down and silent behavior.
 - **Steps:** Once for each API condition, submit nonsensitive identifier/mobile/profile data, observe retry and request timing across meta plus action, then restore API and retry safely. Record client/server/control marks.
-- **Expected:** The existing BFF request budget bounds work, useful input remains and translated retry is available. No hung request or unsafe retry of an unknown credential outcome occurs; web recovery requires no restart. PostgreSQL outages are not duplicated.
+- **Expected:** The original shared three-second upstream cancellation budget spans metadata/mutation without resetting; the existing five-second end-to-end unavailable-response limit holds. Record upstream disconnect, server serialization, network, client and control timing separately rather than equating finish logging with exact3000ms. Useful input remains and translated retry is available. No hung request or unsafe retry of an unknown credential outcome occurs; web recovery requires no restart. PostgreSQL outages are not duplicated.
 - **Automation:** `qa/web/F02/S04-resilience-address.spec.ts`; draft uses centralized mapped handles pending final handoff freeze, not executed or deferred.
 
 ### TC-F02-S04-021 translation and test-id inventories cover every new screen state

@@ -319,4 +319,3 @@ Account-kind refusals will be added through final S02 customer fixtures; no cust
 - **Steps:** Start separate local-machine API using qa-nonlocal profile,ephemeral port,Flyway disabled and empty keys; check exit/refusal. Supply three independent throwaway keys and check healthy process denies local identity GET/POST/DELETE hooks; terminate only own process.
 - **Expected:** Missing keys refuse startup with named setting; configured process healthy, local hooks404, primary product unchanged, no real remote environment touched.
 - **Automation:** `qa/checks/F02/S01-nonlocal-secrets.sh` (draft, not executed)
-

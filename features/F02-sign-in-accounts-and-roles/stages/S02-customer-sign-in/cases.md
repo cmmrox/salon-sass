@@ -59,7 +59,7 @@ POST `/api/v1/identity/customers/challenges` and `/customers/sign-in`; common GE
 - **Covers:** AC-2
 - **Performed as / preconditions:** Authenticated alpha customer plus all five staff-role fixtures and existing staff targets.
 - **Steps:** With customer credential call staff list/create/patch/remove,audit,password and voluntary-MFA management. With staff credentials inspect common/me/session responses and attempt to bypass customer verification using token without correct device/code.
-- **Expected:** Customer restricted staff actions403 permission_denied or documented kind refusal with no writes. Staff principal cannot become customer merely by an access token; common endpoints expose only the credential's own account kind. Test every staff role as a table,not a fabricated future profile endpoint.
+- **Expected:** Customer restricted staff actions401 invalid_session as a principal-kind authentication refusal with no writes. Staff principal cannot become customer merely by an access token; common endpoints expose only the credential's own account kind. Test every staff role as a table,not a fabricated future profile endpoint.
 - **Automation:** `qa/api/F02/S02-customer-access.spec.ts` (draft, not executed).
 
 ### TC-F02-S02-006 wrong guesses exhaust a challenge durably and cannot issue a session

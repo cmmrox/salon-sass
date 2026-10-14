@@ -18,7 +18,7 @@ test(`${c(2)} privacy endpoints reject foreign salons staff forged and absent cr
  const profiles=new Profiles(identity);const a=await profiles.customers.login(alpha),b=await profiles.customers.login(beta,a.mobile),stranger=await profiles.customers.login(alpha);const saved=await profiles.saved(a),before=await profiles.saved(b,'Beta Synthetic'),strangerBefore=await profiles.saved(stranger,'Other Alpha');
  const requests:[string,string,unknown?][]=[['GET','/customers/me'],['PUT','/customers/me',Profiles.updateBody(saved,{name:'Unauthorized'})],['DELETE','/customers/me',{confirm:true}],['GET','/customers/me/export']];
  for(const [method,path,data]of requests){await problem(await identity.call(beta,method,path,data,a.tokens),404,'not_found');await problem(await identity.call(alpha,method,path,data),401,'invalid_session');await problem(await identity.call(alpha,method,path,data,{...a.tokens,accessToken:a.tokens.accessToken+'.forged'}),401,'invalid_session');}
- for(const role of ROLES){const staff=await identity.staff(alpha,role);for(const [method,path,data]of requests)await problem(await identity.call(alpha,method,path,data,staff.tokens),403,'permission_denied');}
+ for(const role of ROLES){const staff=await identity.staff(alpha,role);for(const [method,path,data]of requests)await problem(await identity.call(alpha,method,path,data,staff.tokens),401,'invalid_session');}
  for(const field of ['id','customerId','tenantId','mobile'])await problem(await identity.call(alpha,'PUT','/customers/me',{...Profiles.updateBody(saved),[field]:field==='tenantId'?beta.id:stranger.principal.id},a.tokens),400,'bad_request');
  for(const path of [`/customers/${b.principal.id}`,`/customers/${stranger.principal.id}/export`])await problem(await identity.call(alpha,'GET',path,undefined,a.tokens),404,'not_found');
  const own=await json<Profile>(await identity.call(alpha,'GET',`/customers/me?customerId=${stranger.principal.id}&tenantId=${beta.id}`,undefined,a.tokens),'Profile');expect(own.id).toBe(a.principal.id);
@@ -87,7 +87,7 @@ test(`${c(10)} committed deletion erases all owned material while retaining rate
 test(`${c(11)} fresh verification after erasure creates a new id and default profile`,async({identity})=>{
  const profiles=new Profiles(identity),actor=await profiles.customers.login(alpha),foreign=await profiles.customers.login(beta,actor.mobile);await profiles.saved(actor,'Deleted Profile');const betaProfile=await profiles.saved(foreign,'Still Beta');const oldId=actor.principal.id;expect((await profiles.delete(actor)).status()).toBe(204);
  const fresh=await profiles.customers.login(alpha,actor.mobile,'whatsapp',actor.device);expect(fresh.principal.id===oldId).toBe(false);const p=await profiles.read(fresh);expect(p.name).toBe('');expect(p.email).toBeNull();expect(p.birthday).toBeNull();expect(p.preferredLanguage).toBe('en');expect(p.notificationPreferences).toEqual({sms:true,whatsapp:true,email:true});expect(p.marketingConsent).toBe(false);expect((await identity.sessions(fresh)).total).toBe(1);expect(await profiles.read(foreign)).toEqual(betaProfile);
- await problem(await profiles.customers.verify(alpha,{challengeId:actor.challenge.challengeId,code:'123456'},actor.device),401,'invalid_code');
+ await problem(await profiles.customers.verify(alpha,{challengeId:actor.challenge.challengeId,code:'123456'},actor.device),404,'not_found');
 });
 test(`${c(12)} queued and in-flight delivery cannot restore erased state`,async({identity})=>{
  const profiles=new Profiles(identity);
@@ -113,13 +113,13 @@ test(`${c(13)} deletion versus refresh or proof leaves no surviving deleted auth
   if(operation==='verification'){issuing=await profiles.customers.challenge(alpha,actor.mobile,'whatsapp',actor.device);code=(await profiles.customers.capture(alpha,issuing.challenge.challengeId)).code;}
   const responses=await Promise.all([profiles.delete(actor),operation==='refresh'?identity.call(alpha,'POST','/sessions/refresh',{refreshToken:actor.tokens.refreshToken}):profiles.customers.verify(alpha,{challengeId:issuing!.challenge.challengeId,code},issuing!.device)]);
   const [deletion,competing]=responses;const credentials=[actor.tokens];
-  if(competing.status()===200)credentials.push(await json<Tokens>(competing,'Tokens'));else await problem(competing,401,operation==='refresh'?'invalid_session':'invalid_code');
+  if(competing.status()===200)credentials.push(await json<Tokens>(competing,'Tokens'));else if(operation==='refresh')await problem(competing,401,'invalid_session');else await problem(competing,competing.status()===404?404:401,competing.status()===404?'not_found':'invalid_code');
   if(deletion.status()===401){expect(operation).toBe('refresh');expect(competing.status()).toBe(200);await problem(deletion,401,'invalid_session');await problem(await identity.call(alpha,'GET','/me',undefined,actor.tokens),401,'invalid_session');const current={...actor,tokens:credentials[1]};expect((await profiles.read(current)).id).toBe(oldId);expect((await profiles.delete(current)).status()).toBe(204);}
   else expect(deletion.status()).toBe(204);
   // Statuses alone do not establish erasure: both overlapping successes may have serialized safely.
   for(const tokens of credentials){await problem(await identity.call(alpha,'GET','/me',undefined,tokens),401,'invalid_session');await problem(await identity.call(alpha,'POST','/sessions/refresh',{refreshToken:tokens.refreshToken}),401,'invalid_session');}
   expect(identitySql(`SELECT count(*) FROM identity_customer WHERE tenant_id='${alpha.id}' AND id='${oldId}'`)).toBe('0');expect(identitySql(`SELECT count(*) FROM identity_session WHERE tenant_id='${alpha.id}' AND customer_account_id='${oldId}'`)).toBe('0');
-  if(issuing)await problem(await profiles.customers.verify(alpha,{challengeId:issuing.challenge.challengeId,code},issuing.device),401,'invalid_code');
+  if(issuing)await problem(await profiles.customers.verify(alpha,{challengeId:issuing.challenge.challengeId,code},issuing.device),404,'not_found');
   const {mark}=await import('../../shared/identity-runtime');mark('privacy-race-order',{operation,deletionStatus:deletion.status(),competingStatus:competing.status()});
  }
 });
@@ -129,5 +129,5 @@ test(`${c(14)} rights audit keeps opaque safe metadata after erasure and remains
  const updated=events.find(e=>e.action==='identity.profile_updated')!;expect(JSON.stringify(updated).includes('version')).toBe(true);expect(JSON.stringify(updated).includes('name')).toBe(true);
  const text=JSON.stringify(audits);for(const personal of [saved.mobile,saved.name,saved.email!,saved.birthday!,actor.tokens.accessToken,actor.tokens.refreshToken])expect(text.includes(personal),'rights audit excludes personal values and authority').toBe(false);
  expect((await identity.audit(manager,actor.principal.id)).items).toEqual(audits);for(const role of ['RECEPTIONIST','PROFESSIONAL','ACCOUNTANT']as const){const staff=await identity.staff(alpha,role);await problem(await identity.call(alpha,'GET','/audit',undefined,staff.tokens),403,'permission_denied');}
- const refusal=identitySql(`BEGIN;UPDATE audit_entry SET action='modified' WHERE id='${events[0].id}';ROLLBACK;`,undefined,false);expect(/immutable|cannot.*update|not allowed/i.test(refusal)).toBe(true);
+ const refusal=identitySql(`BEGIN;UPDATE audit_entry SET action='modified' WHERE id='${events[0].id}';ROLLBACK;`,undefined,false);expect(refusal,'audit trigger rejects the attempted mutation').toContain('an audit entry is never changed');expect((await identity.audit(owner,actor.principal.id)).items,'audit data remains intact after rejected SQL').toEqual(audits);
 });

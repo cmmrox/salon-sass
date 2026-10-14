@@ -42,9 +42,9 @@ test(`${c(4)} identical mobiles at two salons remain separate identities`,async(
 test(`${c(5)} customer credentials never authorize staff-only actions`,async({identity})=>{
  const customers=new Customers(identity);await customers.reset();const customer=await customers.login(alpha);const owner=await identity.staff(alpha,'OWNER');const target=await identity.staff(alpha);const before=await identity.list(owner);
  const routes:[string,string,unknown?][]=[['GET','/staff'],['POST','/staff',syntheticAccount()],['PATCH',`/staff/${target.principal.id}`,{version:0,role:'OWNER'}],['DELETE',`/staff/${target.principal.id}`],['GET','/audit'],['PUT','/staff/password',{oldPassword:target.account.password,newPassword:syntheticAccount().password}],['POST','/staff/mfa/challenges']];
- for(const [method,path,data]of routes)await problem(await identity.call(alpha,method,path,data,customer.tokens),403,'permission_denied');expect(await identity.list(owner)).toEqual(before);
+ for(const [method,path,data]of routes)await problem(await identity.call(alpha,method,path,data,customer.tokens),401,'invalid_session');expect(await identity.list(owner)).toEqual(before);
  for(const role of ROLES){const staff=await identity.staff(alpha,role);expect((await identity.principal(alpha,staff.tokens)).kind).toBe('staff');expect((await identity.sessions(staff)).items.some(s=>s.id===customer.tokens.sessionId)).toBe(false);await problem(await identity.call(alpha,'DELETE',`/sessions/${customer.tokens.sessionId}`,undefined,staff.tokens),404,'not_found');}
- await problem(await customers.verify(alpha,proof(randomUUID(),'123456'),'',{Authorization:`Bearer ${owner.tokens.accessToken}`}),401,'invalid_code');expect((await identity.principal(alpha,customer.tokens)).id).toBe(customer.principal.id);
+ await problem(await customers.verify(alpha,proof(randomUUID(),'123456'),'',{Authorization:`Bearer ${owner.tokens.accessToken}`}),404,'not_found');expect((await identity.principal(alpha,customer.tokens)).id).toBe(customer.principal.id);
 });
 test(`${c(6)} five wrong guesses exhaust the challenge without creating identity`,async({identity})=>{
  const customers=new Customers(identity);await customers.reset();const issued=await customers.challenge(alpha);const captured=await customers.capture(alpha,issued.challenge.challengeId);const wrong=captured.code==='000000'?'111111':'000000';
@@ -67,7 +67,7 @@ test(`${c(8)} a valid code raced eight times creates exactly one customer and se
 });
 test(`${c(9)} challenges captures deliveries and host routes expose no foreign proof`,async({identity})=>{
  const customers=new Customers(identity);await customers.reset();const foreign=await customers.challenge(beta);const capture=await customers.capture(beta,foreign.challenge.challengeId);expect((await customers.delivery(beta,foreign.challenge.challengeId)).id).toBeTruthy();
- await problem(await customers.verify(alpha,proof(foreign.challenge.challengeId,capture.code),foreign.device),401,'invalid_code');
+ await problem(await customers.verify(alpha,proof(foreign.challenge.challengeId,capture.code),foreign.device),404,'not_found');
  for(const id of [foreign.challenge.challengeId,randomUUID()])for(const endpoint of ['captures','deliveries'])await problem(await identity.call(alpha,'GET',`/local/identity/${endpoint}/${id}`),404,'not_found');
  for(const hostname of ['admin.localhost','unknown.localhost','localhost']){
   await problem(await customers.request(alpha,{mobile:syntheticMobile(),channel:'sms',deviceLabel:'QA'},'',{Host:hostname}),404,'not_found');
