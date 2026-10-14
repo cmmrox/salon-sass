@@ -81,3 +81,7 @@ Current verification: addressed by approved CR-007. The current sheet/drawer rec
 ## Bugs filed during verification and review
 
 BUG-F02-001 audit nullability,002 privacy audit metadata, BUG-F02-003 lost-renewal sign-in recovery, BUG-F02-004 required test-id naming, and BUG-F02-005 optional staff identifier nullability; all major. Their exact states and verification evidence remain in the bug files.005 was found by the actual keyboard Owner path and independently reproduced through both native API identifier variants. Its extended S01-019 creation/list/schema/real-sign-in checks and fresh assertion-failure witness passed after the fix. The completed manual Owner path also passed. All five major bugs are now independently verified on the final complete pass, with evidence in their files and `qa/reports/20261014-115732-F02`. No required defect remains open.
+
+## PR5 review follow-up (2026-10-15)
+
+The earlier complete pass remains historical evidence, but independent bounded browser reproduction confirmed two missed existing-criterion defects: BUG-F02-006 (major), failure feedback hidden behind an open confirmation after three recoverable refusal variations; BUG-F02-007 (major), live self-demotion updates authorization correctly but leaves stale staff/audit navigation links. F02 is reopened with qa_status failing. Existing S04 cases 011/004 now include these variations in their registered functional file. No future capability or visual redesign is proposed; full feature QA waits for committed fixes and prepared frozen source.

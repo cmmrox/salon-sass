@@ -97,3 +97,35 @@ test(`${c(12)} audit screens expose useful identity alerts without personal or c
  }
  },identity.api);
 });
+
+test(`${c(11)} recoverable confirmation refusals keep feedback and recovery accessible`,async({identity,accounts},testInfo)=>{
+ for(const row of [{kind:'customer',action:'delete',status:503,code:'service_unavailable'},{kind:'staff',action:'revoke-all',status:503,code:'service_unavailable'},{kind:'staff',action:'staff-remove',status:409,code:'conflict'}] as const){
+  const actor=row.kind==='customer'?await accounts.customers.login(alpha):await identity.staff(alpha,'OWNER');
+  const context=await accounts.context(alpha,[actor]),page=await accounts.open(context,row.action==='staff-remove'?routes.staffList:row.kind==='customer'?routes.customer:routes.staff);await accounts.ready(page);
+  const original=await accounts.principal(context,alpha,row.kind);let targetId:string|undefined;
+  if(row.action==='staff-remove'){
+   const target=await identity.staff(alpha,'RECEPTIONIST');targetId=target.principal.id;await page.reload();await accounts.ready(page);
+   await page.locator(`[data-testid="account-staff-row"][data-id="${targetId}"]`).getByTestId('account-staff-remove').click();
+  }else await handle(page,row.action).click();
+  await expect(page.getByRole('dialog')).toBeVisible();await context.route(`**/identity-web/${row.kind}/${row.action}`,route=>route.fulfill({status:row.status,contentType:'application/json',body:JSON.stringify({code:row.code})}));
+  const answer=page.waitForResponse(r=>new URL(r.url()).pathname===`/identity-web/${row.kind}/${row.action}`);await handle(page,'confirm-action').click();expect((await answer).status()).toBe(row.status);await expect.poll(async()=>await page.getByRole('dialog').count()===0||await handle(page,'confirm-action').isEnabled()).toBe(true);
+  const dialog=page.getByRole('dialog'),open=await dialog.count()>0;const alert=open?dialog.getByRole('alert'):page.getByRole('alert');
+  await testInfo.attach(`${row.action}-accessible-feedback`,{body:JSON.stringify({action:row.action,status:row.status,dialogOpen:open,modalAlertCount:open?await dialog.getByRole('alert').count():0,pageAlertCount:await page.getByRole('alert').count()}),contentType:'application/json'});
+  expect.soft(await alert.count(),`${row.action}: failure must be announced inside the modal or after dismissal`).toBeGreaterThan(0);
+  if(open){await handle(page,'cancel-action').click();await expect(dialog).toHaveCount(0);}
+  expect((await accounts.principal(context,alpha,row.kind)).id).toBe(original.id);
+  if(targetId)expect((await identity.list(actor as Awaited<ReturnType<typeof identity.staff>>)).some(item=>item.id===targetId&&item.active)).toBe(true);
+ }
+});
+
+test(`${c(4)} live self-demotion removes inaccessible workspace navigation without reload`,async({identity,accounts},testInfo)=>{
+ const owner=await identity.staff(alpha,'OWNER');await identity.staff(alpha,'OWNER');
+ const context=await accounts.context(alpha,[owner]),page=await accounts.open(context,routes.staffList);await accounts.ready(page);
+ await expect(page.getByTestId('workspace-staff')).toBeVisible();await expect(page.getByTestId('workspace-audit')).toBeVisible();
+ const ownRow=page.locator(`[data-testid="account-staff-row"][data-id="${owner.principal.id}"]`);await expect(ownRow).toBeVisible();
+ await ownRow.getByTestId('account-staff-role').selectOption('RECEPTIONIST');await expect(handle(page,'denied')).toBeVisible();
+ const principal=await accounts.principal(context,alpha,'staff');expect(principal.role).toBe('RECEPTIONIST');expect(principal.permissions).not.toContain('staff.list');expect(principal.permissions).not.toContain('audit.list');
+ expect((await accounts.action(context,alpha,'staff','staff')).status()).toBe(403);expect((await accounts.action(context,alpha,'staff','audit')).status()).toBe(403);
+ await testInfo.attach('live-navigation',{body:JSON.stringify({role:principal.role,contentDenied:await handle(page,'denied').isVisible(),staffLinks:await page.getByTestId('workspace-staff').count(),auditLinks:await page.getByTestId('workspace-audit').count()}),contentType:'application/json'});
+ await expect.soft(page.getByTestId('workspace-staff')).toHaveCount(0);await expect.soft(page.getByTestId('workspace-audit')).toHaveCount(0);
+});
