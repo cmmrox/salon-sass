@@ -28,3 +28,7 @@ Other observations: all S01 restart/database-down/database-silent cases passed f
 Environment repair: persistent shell initially selected installed Node22 and local-up refused before starting anything; explicit installed Node24 PATH repaired it. Corepack/pinned QA tools, Chromium and k6 were available. No system software was installed. Service ownership transferred back to lead for combined developer fix/gate window; PostgreSQL and retained keys remain, no broad cleanup.
 
 Pending before pass: combined fixed source/runtime handoff; affected repro verification and complete F02 rerun on newly committed QA revision; all critical/count assertion failure witnesses with restored file proof; actual keyboard/visual review; refreshed primary competitor comparison; final review/bug statuses/report. No manual performed date, deferral or pass is inferred from preparation.
+
+## Fixed-source re-verification SQL wording
+
+On frozen revision26b6bbc the six audit/privacy cases reached their intended audit contract and metadata checks; five passed. S03-014 then rejected the actual database trigger text `an audit entry is never changed` because the draft regex expected other English words. Independent rolled-back SQL against a nonempty audit table returned that exact refusal and zero modified rows. Corrected the expectation to the actual documented migration refusal and added API readback equality after the rejected write; the immutability requirement is unchanged. BUG003's both-kind browser case passed including untouched other-kind cookies and valid principal.
