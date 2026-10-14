@@ -87,7 +87,7 @@ evidence:
   last_result: pass
 integration:
   branch: charithm/feature/F02-sign-in-accounts-and-roles
-  pull_request: null
+  pull_request: https://github.com/cmmrox/salon-sass/pull/4
   qa_revision: 4f9a2a9c68e1ac218b436b486321f6bc6844a311
   merged_commit: null
   merged_at: null
