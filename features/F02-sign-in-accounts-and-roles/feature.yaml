@@ -4,7 +4,7 @@ summary: Staff sign in with a password and two-step verification and can do only
   sign in with a one-time code and control their own profile and data.
 release: R1
 milestone: M1-web
-status: in-progress
+status: in-qa
 qa_status: not-run
 released_in: null
 depends_on:
@@ -26,9 +26,60 @@ requirements:
 nfr_focus:
 - NFR-08
 - NFR-10
-cases: []
+cases:
+  - id: TC-F02-001
+    title: Owner provisioning and removal connects workspace controls to immediate staff access
+    type: functional
+    priority: critical
+    covers:
+      - IAM-06
+      - IAM-07
+      - IAM-08
+      - IAM-09
+      - IAM-11
+  - id: TC-F02-002
+    title: customer sign-in profile download and deletion form one coherent salon journey
+    type: functional
+    priority: critical
+    covers:
+      - IAM-01
+      - IAM-03
+      - IAM-04
+      - IAM-05
+      - IAM-09
+  - id: TC-F02-003
+    title: staff and customer coexistence survives expiry across separate account journeys
+    type: functional
+    priority: critical
+    covers:
+      - IAM-03
+      - IAM-06
+      - IAM-09
+  - id: TC-F02-004
+    title: bounded local reads meet the documented per-read latency baseline
+    type: load
+    priority: high
+    covers:
+      - IAM-03
+      - IAM-07
+      - IAM-09
 verification:
-  automation: []
+  automation:
+  - id: identity-read-baseline
+    tool: script
+    file: qa/checks/F02/F02-read-baseline.sh
+    covers:
+    - TC-F02-004
+    suites: [regression]
+  - id: account-journeys
+    tool: playwright
+    file: qa/web/F02/feature-journeys.spec.ts
+    project: web
+    covers:
+    - TC-F02-001
+    - TC-F02-002
+    - TC-F02-003
+    suites: [regression, smoke]
   manual: []
   deferred: []
 evidence:
@@ -37,6 +88,6 @@ evidence:
 integration:
   branch: charithm/feature/F02-sign-in-accounts-and-roles
   pull_request: null
-  qa_revision: null
+  qa_revision: 4149a059a6edfb3b7e8f45709e1093026755c7e6
   merged_commit: null
   merged_at: null
