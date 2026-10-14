@@ -1,10 +1,11 @@
 /**
  * A salon's brand colour as the page uses it (docs/engineering/web.md, "Branding"). The colour
- * arrives from the API at run time and is applied as two custom properties on the root:
+ * arrives from the API at run time and is applied as three custom properties on the root:
  *
  * - `--color-brand`: the salon's colour;
  * - `--color-on-brand`: the colour of anything drawn on it, computed here for contrast. No
  *   component assumes white.
+ * - `--color-brand-soft`: validated brand plus22 alpha, the selected customer tab tint.
  */
 
 /** A brand colour as the API gives it: `#RRGGBB`. */
@@ -62,5 +63,5 @@ export function brandRootRule(brandColour: string): string {
     throw new Error(`not a #RRGGBB colour: '${brandColour}'`);
   }
   // Exactly as the API gave it, so that the property reads back as the salon's colour.
-  return `:root{--color-brand:${brandColour};--color-on-brand:${contrastColour(brandColour)}}`;
+  return `:root{--color-brand:${brandColour};--color-on-brand:${contrastColour(brandColour)};--color-brand-soft:${brandColour}22}`;
 }

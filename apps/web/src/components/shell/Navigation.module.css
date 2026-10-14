@@ -3,6 +3,7 @@
 .indicator { display: flex; align-items: center; justify-content: center; padding: var(--space-1) var(--space-4); border-radius: var(--radius-pill); }
 .item[aria-current] { color: var(--color-text); font-weight: var(--font-weight-strong); }
 .item[aria-current] .indicator { background: var(--color-secondary); }
+.navigation:not(.workspace) .item[aria-current] .indicator { background: var(--color-brand-soft); }
 .icon { width: var(--size-icon); height: var(--size-icon); flex: none; }
 .workspace { left: 0; transform: none; max-width: none; border-radius: 0; }
 @media (min-width: 900px) {
