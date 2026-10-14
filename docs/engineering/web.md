@@ -67,6 +67,11 @@ One Next.js application serves three surfaces. The hostname decides which.
   served with its loading skeleton and the result is streamed in.
 - The web app waits three seconds for the API, in the proxy and in a page, and then shows the
   unavailable state. A page never hangs on the API.
+  Account BFF calls share that original three-second API cancellation budget across proxy,
+  metadata and mutation work. The response-finish log also includes framework/error serialization
+  after cancellation; measure it separately from upstream wait. The existing F01-S03 AC-8
+  end-to-end unavailable-response deadline is five seconds. Do not equate a three-second upstream
+  timer with an exact 3000 ms HTTP-completion assertion or add a fresh timer for each chained call.
 - `agentRules` is off in `next.config.ts`, so that the framework does not write into
   `apps/web/AGENTS.md`.
 - Local startup uses `apps/web/scripts/serve.mjs`, a custom server around Next.js's request
