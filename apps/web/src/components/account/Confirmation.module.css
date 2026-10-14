@@ -3,4 +3,4 @@
 .content { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
 .content::before { content: ''; display: block; width: var(--size-sheet-handle); height: var(--space-1); border-radius: var(--radius-pill); background: var(--color-border); margin: 0 auto var(--space-2); }
 .title { font-size: var(--font-size-title); font-weight: var(--font-weight-strong); line-height: var(--line-height-heading); }
-@media (min-width: 900px) { .workspace { inset: 0 0 0 auto; width: var(--size-drawer); max-width: 100%; max-height: none; height: 100%; margin: 0; border-radius: 0; padding: var(--space-6) var(--space-8); } .workspace .content::before { display: none; } }
+@media (min-width: 900px) { .workspace { inset: 0 0 0 auto; width: var(--size-drawer); max-width: 100%; max-height: none; height: 100%; margin: 0; border-radius: 0; padding: var(--space-6) var(--space-8); } .workspace .content::before { display: none; } .workspace .title { font-size: var(--font-size-workspace-title); } }
