@@ -650,6 +650,92 @@ class StaffAccessIntegrationTest extends IntegrationTest {
     }
 
     @Test
+    void singleIdentifierStaffCreationSignInAndListsMatchNullableContract() {
+        String ownerToken = token(StaffRole.OWNER);
+        String email = UUID.randomUUID() + "@synthetic.example";
+        String mobile = "+94771234567";
+        List<Map<String, Object>> created = new ArrayList<>();
+        for (var identifiers :
+                List.of(
+                        Map.of("email", "  " + email.toUpperCase(Locale.ROOT) + "  "),
+                        Map.of("mobile", "0771234567"))) {
+            Map<String, Object> request = new HashMap<>(identifiers);
+            request.put("password", password);
+            request.put("role", "PROFESSIONAL");
+            var response = call(alpha, "POST", "/staff", request, ownerToken);
+            status(response, 201);
+            var account = body(response);
+            assertThat(account)
+                    .containsEntry("email", identifiers.containsKey("email") ? email : null)
+                    .containsEntry("mobile", identifiers.containsKey("mobile") ? mobile : null);
+            created.add(account);
+            var signIn =
+                    call(
+                            alpha,
+                            "POST",
+                            "/staff/sign-in",
+                            Map.of(
+                                    "identifier",
+                                    identifiers.containsKey("email") ? email : mobile,
+                                    "password",
+                                    password,
+                                    "deviceLabel",
+                                    "Synthetic identifier check"),
+                            null);
+            status(signIn, 200);
+            var credentials = (Map<String, Object>) body(signIn).get("credentials");
+            status(call(alpha, "GET", "/me", null, (String) credentials.get("accessToken")), 200);
+            status(call(beta, "GET", "/me", null, (String) credentials.get("accessToken")), 404);
+            status(call(alpha, "POST", "/staff", request, ownerToken), 409);
+        }
+        var page = call(alpha, "GET", "/staff?size=100", null, ownerToken);
+        status(page, 200);
+        var items = (List<Map<String, Object>>) body(page).get("items");
+        for (var account : created) assertThat(items).contains(account);
+        status(
+                call(
+                        alpha,
+                        "POST",
+                        "/staff",
+                        Map.of("password", password, "role", "PROFESSIONAL"),
+                        ownerToken),
+                400);
+        status(
+                call(
+                        alpha,
+                        "POST",
+                        "/staff",
+                        Map.of(
+                                "email",
+                                UUID.randomUUID() + "@synthetic.example",
+                                "password",
+                                password,
+                                "role",
+                                "PROFESSIONAL"),
+                        token(StaffRole.MANAGER)),
+                403);
+        Map<String, Object> document = json.readValue(http().get("/v3/api-docs").body(), Map.class);
+        var schemas =
+                (Map<String, Object>)
+                        ((Map<String, Object>) document.get("components")).get("schemas");
+        var staff = (Map<String, Object>) schemas.get("StaffView");
+        var properties = (Map<String, Object>) staff.get("properties");
+        for (String field : List.of("email", "mobile")) {
+            Object types = ((Map<String, Object>) properties.get(field)).get("type");
+            assertThat(types)
+                    .as("Staff %s permits string and null", field)
+                    .isInstanceOf(List.class);
+            assertThat((List<String>) types).containsExactlyInAnyOrder("string", "null");
+            assertThat((List<String>) staff.get("required")).contains(field);
+        }
+        var pageSchema = (Map<String, Object>) schemas.get("PageStaffView");
+        var pageProperties = (Map<String, Object>) pageSchema.get("properties");
+        var array = (Map<String, Object>) pageProperties.get("items");
+        assertThat((Map<String, Object>) array.get("items"))
+                .containsEntry("$ref", "#/components/schemas/StaffView");
+    }
+
+    @Test
     void promotionRequiresFreshMfaAndLastOwnerCannotBeRemoved() {
         String o = token(StaffRole.OWNER);
         Map<String, Object> manager = tokens(StaffRole.MANAGER);

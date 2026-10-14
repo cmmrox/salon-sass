@@ -2,12 +2,12 @@
 id: BUG-F02-005
 title: Staff creation and lists return nullable identifiers forbidden by the generated response schema
 severity: major
-status: open
+status: fixed
 found_by: TC-F02-S01-019
 breaks: AC-9
 found_on: 2026-10-14
-fixed_in: null
-fix_note: null
+fixed_in: 61c55a94bac9cf881ac886091e339ca9830063e1
+fix_note: "Declared serialized staff email/mobile as required nullable strings and regenerated contracts; email-only/mobile-only create, sign-in, list and negative checks plus 504-test API verify and contract check pass."
 developer_note: null
 verified_on: null
 approved_by: null
