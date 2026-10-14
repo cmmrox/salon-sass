@@ -9,7 +9,7 @@ test('TC-F02-S01-027 API restart preserves local keys sessions and failed-attemp
  const actor=await identity.staff();const keys=localKeys();expect(keys.mode).toBe(0o600);const unknown='qa-restart-unknown@example.invalid';
  for(let n=0;n<10;n++)await problem(await identity.call(alpha,'POST','/staff/sign-in',{identifier:unknown,password:actor.account.password,deviceLabel:'QA'}),401,'invalid_credentials');
  const c=await identity.signIn(alpha,actor.account);expect(c.credentials?.sessionId).toBeTruthy();
- mark('api-restart-asked');localService('stop','api');try{localService('start','api');}finally{mark('api-restart-returned');}
+ mark('api-restart-asked');localService('stop','api');try{localService('start','api');await identity.api.reconnect();}finally{mark('api-restart-returned');}
  await expect.poll(async()=>{try{return (await identity.api.health()).status();}catch{return 0;}},{timeout:30000,intervals:[50,100,250]}).toBe(200);
  expect(localKeys().fingerprint===keys.fingerprint,'same generated keys after restart').toBe(true);expect((await identity.principal(alpha,actor.tokens)).id).toBe(actor.principal.id);
  await problem(await identity.call(alpha,'POST','/staff/sign-in',{identifier:unknown,password:actor.account.password,deviceLabel:'QA'}),429,'rate_limited');
