@@ -168,8 +168,8 @@ Environment: local only; the synthetic alpha, beta and gamma salons of docs/qa/t
 - **Performed as:** QA operator on synthetic local data; public caller on each salon hostname.
 - **Preconditions:** Final integrated F01 tree is committed; local product is running and all salons are active. Stack cases also require the local production-like stack seeded and its exported CA; deployment cases require versions N and N+1 from this tested tree.
 - **Steps:**
-  1. Request gamma with query/cookie/authorization marker and trace; read JSON lines.
-- **Expected:** Correct tenant/trace, one request record with method/path/status/duration, no marker.
+  1. Request gamma with query/cookie marker and trace, then with a separate trace and an invalid Bearer marker; read JSON lines.
+- **Expected:** The noncredential request returns 200 and logs exactly one GET with Gamma's tenant and the caller trace. The invalid credential returns 401 `invalid_session`, with identical caller/response/log trace and exactly one GET log before tenant binding (no `tenant.id`). Both log sanitized method/path/status/positive duration and no marker, preserving the approved F02 credential contract.
 - **Automation:** `qa/api/F01/S04-platform-services.spec.ts`
 
 ### TC-F01-S04-015 Background cleanup retains each salon newer messages
