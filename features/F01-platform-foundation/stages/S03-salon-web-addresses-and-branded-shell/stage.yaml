@@ -5,7 +5,7 @@ sequence: 3
 surfaces:
 - api
 - web
-status: built
+status: complete
 qa_status: not-run
 released_in: null
 depends_on:
@@ -17,176 +17,160 @@ nfr_focus:
 - NFR-17
 - NFR-21
 handoff:
-  run: 'Installed Node24/Corepack pnpm and JDK25 remain in use. PostgreSQL salon-local is running. Current
-    API foreground session99029/PID21141 uses retained .local/identity-keys.properties and SPRING_PROFILES_ACTIVE=local
-    SALON_PLATFORM_DOMAIN=localhost /Users/cmmrox/.sdkman/candidates/java/25.0.1.0+8-amzn/bin/java -jar
-    target/salon-api.jar from apps/api. Current web foreground session42871/PID88485 runs from apps/web:
-    SALON_PLATFORM_DOMAIN=localhost SALON_API_BASE_URL=http://localhost:8090 SALON_WEB_LOCAL_HTTP=true
-    SALON_IDENTITY_LOCAL_KEY_FILE=/Users/cmmrox/Personal/Projects/salon-sass/.local/identity-keys.properties
+  run: 'Installed Node24/Corepack pnpm and JDK25 remain in use. PostgreSQL salon-local is running. Current API foreground
+    session99029/PID21141 uses retained .local/identity-keys.properties and SPRING_PROFILES_ACTIVE=local SALON_PLATFORM_DOMAIN=localhost
+    /Users/cmmrox/.sdkman/candidates/java/25.0.1.0+8-amzn/bin/java -jar target/salon-api.jar from apps/api. Current
+    web foreground session42871/PID88485 runs from apps/web: SALON_PLATFORM_DOMAIN=localhost SALON_API_BASE_URL=http://localhost:8090
+    SALON_WEB_LOCAL_HTTP=true SALON_IDENTITY_LOCAL_KEY_FILE=/Users/cmmrox/Personal/Projects/salon-sass/.local/identity-keys.properties
     node scripts/serve.mjs --port3100 (use --port 3100). Browser http://alpha.localhost:3100/ and /sign-in,/account,/workspace/sign-in,/workspace/account,/workspace/staff,/workspace/audit;
-    beta/gamma same host pattern. Keep sessions alive; stop these exact application processes before Maven/web
-    rebuild, then restart. Logs .local/logs/cr007-api-runtime.log and cr007-web-runtime.log.'
-  data: 'Only synthetic alpha/beta/gamma; all three active after the gamma suspend/reactivate check. Retained
-    identity keys and existing fixtures were preserved. Old ignored .local/f02-staff-fixtures.json Owner
-    password is stale; do not reuse it as current credentials. Direct local seed implementation inspected:
-    existing accounts are returned without credential replacement; no reset was used. Three dedicated
-    random alpha Owners were added for screenshots; ALL THREE exact created accounts had access removed
-    through authorized staff-remove BFF and current sessions revoked afterwards. Their private fixtures
-    remain ignored mode0600 at .local/cr007-staff-fixture.json and .local/cr007-dialog-owner.json and
-    .local/cr007-final-size-owner.json, never printed/committed. Synthetic customers0740990701/0702/0703
-    registered through captured local codes and saved name Design check;0740990714 exercised wrong-code
-    feedback. Those customer fixtures remain local for QA''s normal synthetic reset. No Clock/provider/limit
-    overrides or real messages were used.'
-  notes: "CR-007 repair acceptance checked 2026-10-14 on application source 6bb5fd2 (3096a83, e6faafa,\
-    \ f19d2b2, 2afbd77 and 4d01605 included), before independent feature QA. Design mapping: Customer\
-    \ header/tabs/canvas and cards/fields/actions; Salon responsive rail/header/mobile tabs, .setf form\
-    \ measure and .tbl/.row list grammar; Customer .sheet bottom sheets and Salon desktop right drawer.\
-    \ Foundation/unknown/suspended pages extend the same neutral grammar. Prototype final CSS/render source\
-    \ was inspected; a permitted live prototype preview was unavailable after the browser safety rejection\
-    \ recorded by the lead. This is source-defined comparison with actual rendered application evidence,\
-    \ not a claimed side-by-side preview.\n\nCurrent design walkthrough: .local/output/playwright/cr007/observations.json\
-    \ contains 253 observations across all six widths (360,390,768,1024,1280,1440), public/customer/workspace\
-    \ sign-in, platform status, unknown-host page, customer profiles/devices/privacy and Owner account/staff/audit.\
-    \ Every measured layout has zero horizontal overflow and loaded Poppins400/500/600. Customer dark\
-    \ Beta/light Gamma were checked in public/sign-in/protected account; workspace stays neutral. Font/body15,\
-    \ input16/label13, field radius20/min48, cards24/no routine shadow, primary pills50, customer32px\
-    \ initials/50px header, 430px canvas, workspace60px header/200-or236px rail and responsive bottom\
-    \ tabs follow the source contract. Full names remain in accessible DOM/title with only approved compact-header\
-    \ ellipsis. Customer profile saves for all three synthetic salons succeeded; code error, loading skeleton,\
-    \ safe feedback and controlled empty-device presentation were observed. Controlled empty response\
-    \ is developer presentation evidence, not an assertion that the real database was empty.\n\nConfirmation\
-    \ checks: Cancel receives initial focus; Tab/Shift+Tab wrapping, Escape/cancel/backdrop dismissal\
-    \ and focus return checked in the real browser; desktop workspace460px drawer and customer430px bottom\
-    \ sheet at every width. Busy dismissal/focus fallback checked in developer component tests. Screenshots\
-    \ now use viewport capture for native dialog states because fullPage stitching misrepresents fixed\
-    \ overlays. Exact viewport evidence: workspace-confirm-360.png/workspace-confirm-1440.png and alpha-privacy-confirm-360.png/alpha-privacy-confirm-1440.png.\
-    \ Additional customer viewport evidence .local/output/playwright/cr007/customer-viewport-observations.json:13\
-    \ checks/zero overflow. Empty settled workspace sign-in screenshot workspace-empty-sign-in-final-1440.png\
-    \ shows actual unmasked EMPTY fields; no private values are exposed. Screenshot review caught and\
-    \ resolved overly wide auth forms, active rail icon specificity and native Tab escaping; no known\
-    \ correction remains unfinished.\n\nDeveloper gates: pnpm install --frozen-lockfile EXIT0; cd apps/api\
-    \ && JAVA25_HOME=/Users/cmmrox/.sdkman/candidates/java/25.0.1.0+8-amzn ./mvnw -q verify EXIT0 (504\
-    \ tests); pnpm -r lint EXIT0; pnpm -r typecheck EXIT0; pnpm -r test EXIT0 (19 contract and298 web\
-    \ tests); pnpm --filter @salon/web build EXIT0; pnpm contracts:check EXIT0; qa/scripts/sdlc selftest\
-    \ EXIT0. Logs .local/logs/cr007-{install,maven-final,lint,typecheck,tests,build,contracts,selftest}.log.\
-    \ Final API artifact identifies a6db99b: later commits are web/documentation/QA only and do not rewrite\
-    \ an already-built jar. Stop API before the lead repeats Maven packaging, and restart from the completed\
-    \ artifact. No QA automation was run by this developer.\n\nAdditional delivery check: Docker build\
-    \ of apps/web/Dockerfile passed; isolated non-root10001:10001 runtime served all3 real Poppins TTF\
-    \ assets plus OFL license with bytes identical to committed files (.local/cr007-image-assets.json).\
-    \ Asset container salon-cr007-assets-check was stopped and removed; local test image salon-web-cr007-assets\
-    \ remains. The original standalone packaging omitted public assets and is corrected. Poppins files\
-    \ were downloaded from Google Fonts official ofl/poppins source and licensed locally; no package or\
-    \ system software was added.\n\nResolved gate failures: first web test failed because the old contrast\
-    \ helper dark output did not match prototype ink; lead authorized exact fixture migration preserving\
-    \ all>=4.5 assertions. First Maven504 run had one BuildSourceMetadataTest failure because HEAD changed\
-    \ from781fd55 to a6db99b during execution; rerun under stable HEAD passed504. New dialog tests initially\
-    \ needed native-method jsdom stubs/ordered cleanup and explicit this types; initial busy test exposed\
-    \ effect ordering and was corrected. Actual browser Tab escape was fixed with explicit wrapping and\
-    \ rerun successfully. Initial screenshot harness sampled streamed hidden DOM; settled visibility/font\
-    \ waits corrected the measurement. Historical ignored Owner fixture password returned invalid_credentials;\
-    \ existing accounts were left intact and additive isolated synthetic Owners were used instead.\n\n\
-    Historical original handoff below is retained as prior evidence; it is not a claim that every earlier\
-    \ business/security variation was rerun during this visual repair. Current APIs/BFF/cookies/tenant\
-    \ resolution, password/MFA/code authority, privacy contracts and permissions remain unchanged and\
-    \ current full developer unit/integration gates pass. Independent QA will rerun complete F01/F02 journeys.\
-    \ CR-006 role preview/authenticator-copy suggestions remain unimplemented; no next feature, deployment,\
-    \ tag, real message/payment or push occurred.\n\nCurrent F01 criterion scope: AC-1/AC-2/AC-4 checked\
-    \ all three live salon names/root brands and platform status; name neutral and branded circular initial\
-    \ readable with current contrast unit gate. AC-3 checked missing/www/console/two-label/domain-suffix\
-    \ hostnames:404 identical complete neutral body (.local/cr007-current-routing.json). AC-5 checked\
-    \ gamma suspended web503 with no Gamma/brand while alpha/beta200, then reactivated (.local/cr007-current-suspension.json);\
-    \ original API403 proof is retained below. AC-6 forged tenant query/cookie/X-Forwarded-Host/X-Tenant-Id\
-    \ still showed alpha only. AC-7 300 live HTTP requests from50 concurrent workers,100 per salon, zero\
-    \ errors/mismatches. AC-9 responsive rendered pages checked all widths; the original automated accessibility\
-    \ evidence below is retained, with independent QA pending for new styles. AC-10 translations/stable\
-    \ IDs checked through component/inventory gates and rendered pages; dynamic salon name/initials are\
-    \ approved data. AC-11 current contracts check passes. AC-8 actual stopped/silent API variations were\
-    \ not rerun during the visual repair because routing/deadlines were unchanged; original evidence below\
-    \ and current proxy/transport unit gates remain, independent full F01 QA pending. AC-12 current design/viewport/brand/font/navigation/control/confirmation\
-    \ checks described above completed; unknown/foundation pages share the same neutral source tokens\
-    \ and font assets.\n\nHISTORICAL ORIGINAL HANDOFF (prior build evidence only):\nAcceptance criteria,\
-    \ each checked on the running product after local-up.sh from the final build (2026-10-12):\n- AC-1\
-    \ checked. GET / on alpha, beta, gamma.localhost:3100 (and ALPHA.LocalHost) answers 200 with the salon's\n\
-    \  name in salon-name (the h1) and in <title>; no other salon's name or colour anywhere in the body\
-    \ (curl).\n- AC-2 checked in Chromium: --color-brand on the root is #D6086A, #1F2937, #FDE68A; the\
-    \ name on it measures\n  5.12, 14.68 and 13.79 to 1 (white, white, #1b1b1f), from getComputedStyle.\n\
-    - AC-3 checked. An unknown slug, www, console, alpha.beta.localhost and alpha.localhost.example.com\
-    \ each answer\n  404 with byte-identical bodies (same SHA), salon-not-found test ids, no salon name\
-    \ or colour, no script.\n- AC-4 checked. localhost:3100 shows the status page with salon-api and 0.1.0-SNAPSHOT,\
-    \ as /api/v1/meta says.\n- AC-5 checked. After local-salon.sh suspend gamma: the API answers 403 problem+json\
-    \ code salon_suspended with\n  no brand field; the web app answers 503 salon-unavailable, no salon\
-    \ name or colour; alpha and beta unchanged.\n  After activate gamma the next request shows Gamma (200),\
-    \ nothing restarted. Any other path on a suspended\n  salon's hostname also answers 503.\n- AC-6 checked.\
-    \ On alpha's hostname, beta's slug or id in the query, in cookies, in X-Forwarded-Host,\n  X-Tenant-Id,\
-    \ Forwarded and X-Forwarded-Server, and a forged x-salon-resolved header naming beta, each show\n\
-    \  Alpha Studio and nothing of beta.\n- AC-7 checked with k6 (script kept outside the repository):\
-    \ 360 requests for / from 60 virtual users released\n  together, 120 per salon, each checked for its\
-    \ own name and colour and no other's: 0 mismatches, 0 errors.\n- AC-8 checked. API stopped: 503 service\
-    \ unavailable (status-unavailable) in 0.005 s. API frozen with SIGSTOP\n  (accepts connections, answers\
-    \ nothing): 503 in 3.0 s. No salon name or colour, no overlay or stack trace.\n  After start/SIGCONT\
-    \ the next request shows the salon; the web process was not restarted (same pid).\n- AC-9 checked\
-    \ in Chromium at 360 and 1280 with @axe-core/playwright (wcag2a/aa, 2.1, 2.2 aa, best-practice),\n\
-    \  run from a scratch script that loads the qa package's modules; nothing written under qa/. Beta's\
-    \ long-name\n  shell, salon not found and temporarily unavailable (and the alpha and gamma shells,\
-    \ and service unavailable):\n  no horizontal scroll, no violation of any impact.\n- AC-10 checked.\
-    \ Every string comes from apps/web/messages/en.json: the components by the lint rule, the plain\n\
-    \  pages by a unit test that every visible string is in the file. Test ids: salon shell: salon-shell,\n\
-    \  salon-header, salon-name (h1), salon-main, salon-brand (the root style), salon-loading (skeleton);\n\
+    beta/gamma same host pattern. Keep sessions alive; stop these exact application processes before Maven/web rebuild,
+    then restart. Logs .local/logs/cr007-api-runtime.log and cr007-web-runtime.log.'
+  data: 'Only synthetic alpha/beta/gamma; all three active after the gamma suspend/reactivate check. Retained identity
+    keys and existing fixtures were preserved. Old ignored .local/f02-staff-fixtures.json Owner password is stale;
+    do not reuse it as current credentials. Direct local seed implementation inspected: existing accounts are returned
+    without credential replacement; no reset was used. Three dedicated random alpha Owners were added for screenshots;
+    ALL THREE exact created accounts had access removed through authorized staff-remove BFF and current sessions
+    revoked afterwards. Their private fixtures remain ignored mode0600 at .local/cr007-staff-fixture.json and .local/cr007-dialog-owner.json
+    and .local/cr007-final-size-owner.json, never printed/committed. Synthetic customers0740990701/0702/0703 registered
+    through captured local codes and saved name Design check;0740990714 exercised wrong-code feedback. Those customer
+    fixtures remain local for QA''s normal synthetic reset. No Clock/provider/limit overrides or real messages were
+    used.'
+  notes: "CR-007 repair acceptance checked 2026-10-14 on application source 6bb5fd2 (3096a83, e6faafa, f19d2b2,\
+    \ 2afbd77 and 4d01605 included), before independent feature QA. Design mapping: Customer header/tabs/canvas\
+    \ and cards/fields/actions; Salon responsive rail/header/mobile tabs, .setf form measure and .tbl/.row list\
+    \ grammar; Customer .sheet bottom sheets and Salon desktop right drawer. Foundation/unknown/suspended pages\
+    \ extend the same neutral grammar. Prototype final CSS/render source was inspected; a permitted live prototype\
+    \ preview was unavailable after the browser safety rejection recorded by the lead. This is source-defined comparison\
+    \ with actual rendered application evidence, not a claimed side-by-side preview.\n\nCurrent design walkthrough:\
+    \ .local/output/playwright/cr007/observations.json contains 253 observations across all six widths (360,390,768,1024,1280,1440),\
+    \ public/customer/workspace sign-in, platform status, unknown-host page, customer profiles/devices/privacy and\
+    \ Owner account/staff/audit. Every measured layout has zero horizontal overflow and loaded Poppins400/500/600.\
+    \ Customer dark Beta/light Gamma were checked in public/sign-in/protected account; workspace stays neutral.\
+    \ Font/body15, input16/label13, field radius20/min48, cards24/no routine shadow, primary pills50, customer32px\
+    \ initials/50px header, 430px canvas, workspace60px header/200-or236px rail and responsive bottom tabs follow\
+    \ the source contract. Full names remain in accessible DOM/title with only approved compact-header ellipsis.\
+    \ Customer profile saves for all three synthetic salons succeeded; code error, loading skeleton, safe feedback\
+    \ and controlled empty-device presentation were observed. Controlled empty response is developer presentation\
+    \ evidence, not an assertion that the real database was empty.\n\nConfirmation checks: Cancel receives initial\
+    \ focus; Tab/Shift+Tab wrapping, Escape/cancel/backdrop dismissal and focus return checked in the real browser;\
+    \ desktop workspace460px drawer and customer430px bottom sheet at every width. Busy dismissal/focus fallback\
+    \ checked in developer component tests. Screenshots now use viewport capture for native dialog states because\
+    \ fullPage stitching misrepresents fixed overlays. Exact viewport evidence: workspace-confirm-360.png/workspace-confirm-1440.png\
+    \ and alpha-privacy-confirm-360.png/alpha-privacy-confirm-1440.png. Additional customer viewport evidence .local/output/playwright/cr007/customer-viewport-observations.json:13\
+    \ checks/zero overflow. Empty settled workspace sign-in screenshot workspace-empty-sign-in-final-1440.png shows\
+    \ actual unmasked EMPTY fields; no private values are exposed. Screenshot review caught and resolved overly\
+    \ wide auth forms, active rail icon specificity and native Tab escaping; no known correction remains unfinished.\n\
+    \nDeveloper gates: pnpm install --frozen-lockfile EXIT0; cd apps/api && JAVA25_HOME=/Users/cmmrox/.sdkman/candidates/java/25.0.1.0+8-amzn\
+    \ ./mvnw -q verify EXIT0 (504 tests); pnpm -r lint EXIT0; pnpm -r typecheck EXIT0; pnpm -r test EXIT0 (19 contract\
+    \ and298 web tests); pnpm --filter @salon/web build EXIT0; pnpm contracts:check EXIT0; qa/scripts/sdlc selftest\
+    \ EXIT0. Logs .local/logs/cr007-{install,maven-final,lint,typecheck,tests,build,contracts,selftest}.log. Final\
+    \ API artifact identifies a6db99b: later commits are web/documentation/QA only and do not rewrite an already-built\
+    \ jar. Stop API before the lead repeats Maven packaging, and restart from the completed artifact. No QA automation\
+    \ was run by this developer.\n\nAdditional delivery check: Docker build of apps/web/Dockerfile passed; isolated\
+    \ non-root10001:10001 runtime served all3 real Poppins TTF assets plus OFL license with bytes identical to committed\
+    \ files (.local/cr007-image-assets.json). Asset container salon-cr007-assets-check was stopped and removed;\
+    \ local test image salon-web-cr007-assets remains. The original standalone packaging omitted public assets and\
+    \ is corrected. Poppins files were downloaded from Google Fonts official ofl/poppins source and licensed locally;\
+    \ no package or system software was added.\n\nResolved gate failures: first web test failed because the old\
+    \ contrast helper dark output did not match prototype ink; lead authorized exact fixture migration preserving\
+    \ all>=4.5 assertions. First Maven504 run had one BuildSourceMetadataTest failure because HEAD changed from781fd55\
+    \ to a6db99b during execution; rerun under stable HEAD passed504. New dialog tests initially needed native-method\
+    \ jsdom stubs/ordered cleanup and explicit this types; initial busy test exposed effect ordering and was corrected.\
+    \ Actual browser Tab escape was fixed with explicit wrapping and rerun successfully. Initial screenshot harness\
+    \ sampled streamed hidden DOM; settled visibility/font waits corrected the measurement. Historical ignored Owner\
+    \ fixture password returned invalid_credentials; existing accounts were left intact and additive isolated synthetic\
+    \ Owners were used instead.\n\nHistorical original handoff below is retained as prior evidence; it is not a\
+    \ claim that every earlier business/security variation was rerun during this visual repair. Current APIs/BFF/cookies/tenant\
+    \ resolution, password/MFA/code authority, privacy contracts and permissions remain unchanged and current full\
+    \ developer unit/integration gates pass. Independent QA will rerun complete F01/F02 journeys. CR-006 role preview/authenticator-copy\
+    \ suggestions remain unimplemented; no next feature, deployment, tag, real message/payment or push occurred.\n\
+    \nCurrent F01 criterion scope: AC-1/AC-2/AC-4 checked all three live salon names/root brands and platform status;\
+    \ name neutral and branded circular initial readable with current contrast unit gate. AC-3 checked missing/www/console/two-label/domain-suffix\
+    \ hostnames:404 identical complete neutral body (.local/cr007-current-routing.json). AC-5 checked gamma suspended\
+    \ web503 with no Gamma/brand while alpha/beta200, then reactivated (.local/cr007-current-suspension.json); original\
+    \ API403 proof is retained below. AC-6 forged tenant query/cookie/X-Forwarded-Host/X-Tenant-Id still showed\
+    \ alpha only. AC-7 300 live HTTP requests from50 concurrent workers,100 per salon, zero errors/mismatches. AC-9\
+    \ responsive rendered pages checked all widths; the original automated accessibility evidence below is retained,\
+    \ with independent QA pending for new styles. AC-10 translations/stable IDs checked through component/inventory\
+    \ gates and rendered pages; dynamic salon name/initials are approved data. AC-11 current contracts check passes.\
+    \ AC-8 actual stopped/silent API variations were not rerun during the visual repair because routing/deadlines\
+    \ were unchanged; original evidence below and current proxy/transport unit gates remain, independent full F01\
+    \ QA pending. AC-12 current design/viewport/brand/font/navigation/control/confirmation checks described above\
+    \ completed; unknown/foundation pages share the same neutral source tokens and font assets.\n\nHISTORICAL ORIGINAL\
+    \ HANDOFF (prior build evidence only):\nAcceptance criteria, each checked on the running product after local-up.sh\
+    \ from the final build (2026-10-12):\n- AC-1 checked. GET / on alpha, beta, gamma.localhost:3100 (and ALPHA.LocalHost)\
+    \ answers 200 with the salon's\n  name in salon-name (the h1) and in <title>; no other salon's name or colour\
+    \ anywhere in the body (curl).\n- AC-2 checked in Chromium: --color-brand on the root is #D6086A, #1F2937, #FDE68A;\
+    \ the name on it measures\n  5.12, 14.68 and 13.79 to 1 (white, white, #1b1b1f), from getComputedStyle.\n- AC-3\
+    \ checked. An unknown slug, www, console, alpha.beta.localhost and alpha.localhost.example.com each answer\n\
+    \  404 with byte-identical bodies (same SHA), salon-not-found test ids, no salon name or colour, no script.\n\
+    - AC-4 checked. localhost:3100 shows the status page with salon-api and 0.1.0-SNAPSHOT, as /api/v1/meta says.\n\
+    - AC-5 checked. After local-salon.sh suspend gamma: the API answers 403 problem+json code salon_suspended with\n\
+    \  no brand field; the web app answers 503 salon-unavailable, no salon name or colour; alpha and beta unchanged.\n\
+    \  After activate gamma the next request shows Gamma (200), nothing restarted. Any other path on a suspended\n\
+    \  salon's hostname also answers 503.\n- AC-6 checked. On alpha's hostname, beta's slug or id in the query,\
+    \ in cookies, in X-Forwarded-Host,\n  X-Tenant-Id, Forwarded and X-Forwarded-Server, and a forged x-salon-resolved\
+    \ header naming beta, each show\n  Alpha Studio and nothing of beta.\n- AC-7 checked with k6 (script kept outside\
+    \ the repository): 360 requests for / from 60 virtual users released\n  together, 120 per salon, each checked\
+    \ for its own name and colour and no other's: 0 mismatches, 0 errors.\n- AC-8 checked. API stopped: 503 service\
+    \ unavailable (status-unavailable) in 0.005 s. API frozen with SIGSTOP\n  (accepts connections, answers nothing):\
+    \ 503 in 3.0 s. No salon name or colour, no overlay or stack trace.\n  After start/SIGCONT the next request\
+    \ shows the salon; the web process was not restarted (same pid).\n- AC-9 checked in Chromium at 360 and 1280\
+    \ with @axe-core/playwright (wcag2a/aa, 2.1, 2.2 aa, best-practice),\n  run from a scratch script that loads\
+    \ the qa package's modules; nothing written under qa/. Beta's long-name\n  shell, salon not found and temporarily\
+    \ unavailable (and the alpha and gamma shells, and service unavailable):\n  no horizontal scroll, no violation\
+    \ of any impact.\n- AC-10 checked. Every string comes from apps/web/messages/en.json: the components by the\
+    \ lint rule, the plain\n  pages by a unit test that every visible string is in the file. Test ids: salon shell:\
+    \ salon-shell,\n  salon-header, salon-name (h1), salon-main, salon-brand (the root style), salon-loading (skeleton);\n\
     \  salon not found: salon-not-found, salon-not-found-title, salon-not-found-body; temporarily unavailable:\n\
-    \  salon-unavailable, salon-unavailable-title, salon-unavailable-body; service unavailable (unchanged\
-    \ from\n  F01-S01): status-panel, status-heading, status-unavailable, status-unavailable-title,\n\
-    \  status-unavailable-body, status-retry; app-name on the error pages. No existing test id was renamed.\n\
-    - AC-11 checked. docs/api/openapi.json describes the 403 of GET /api/v1/salon with salon_suspended\
-    \ in\n  Problem.code; the generated client types it; pnpm contracts:check passes.\nHow it is built,\
-    \ for the documents:\n- The hostname is forwarded to the API as the Host header of the request to\
-    \ SALON_API_BASE_URL, set to the\n  canonical <slug>.<platform domain> with no port. Node's fetch\
-    \ drops a Host header, so the generated client\n  is given a fetch built on node:http (apps/web/src/lib/api/forward-hostname.ts).\
-    \ No parameter or custom\n  header names the salon; no new dependency.\n- The web app reads Host only;\
-    \ X-Forwarded-Host and Forwarded are ignored. A hostname that is not one label\n  in front of the\
-    \ platform domain, or whose label is not in the slug form (3-30 of a-z, 0-9, -), is\n  \"salon not\
-    \ found\" without calling the API. Reserved slugs are left to the API (404).\n- Status codes (decision\
-    \ 028): proxy.ts answers 404 and both 503s itself, as complete HTML from\n  apps/web/src/lib/plain-page\
-    \ (proved by unit tests and on the running product). The shell is a page reached\n  by rewrite to\
-    \ /salon-site and answers 200; /salon-site asked for from outside answers the app's 404.\n- The plain\
-    \ pages inline styles/tokens.css and styles/base.css from their one source (a Turbopack rule makes\n\
-    \  `*.css?raw` text; vitest.config.mts has the same for tests). Turbopack cannot give a CSS module's\
-    \ source as\n  text (internal error \"inner asset should be CSS processable\"), so the plain pages'\
-    \ layout is in\n  lib/plain-page/plain-page.css: it repeats the rules of the AppShell, Notice and\
-    \ Status modules, in tokens\n  only (a test forbids any colour or size of its own). A change to those\
-    \ modules' layout must be made there too.\n- Caching turned off: the API is asked on every request\
-    \ in the proxy, nothing is memoised. Every response on a\n  salon hostname carries Cache-Control:\
-    \ private, no-cache, no-store, max-age=0, must-revalidate. The shell\n  reads the request's headers,\
-    \ so the framework renders it per request; its prerendered static shell holds\n  only the neutral\
-    \ loading skeleton.\n- The proxy hands the resolved salon to the page in the request header x-salon-resolved,\
-    \ which it first\n  removes from every request. The page does not call the API again. So in the race\
-    \ where a salon is suspended\n  between the proxy's check and the response, that one response shows\
-    \ the brand the API returned a moment\n  before; the next request shows \"temporarily unavailable\"\
-    . There is no second fetch to disagree with the first.\n- The proxy waits at most 3 s for the API\
-    \ (API_TIMEOUT_MS), then answers \"service unavailable\".\n- An unset or unusable SALON_PLATFORM_DOMAIN\
-    \ makes every web request \"service unavailable\", with a warning in\n  the server log (accepted in\
-    \ decision 028).\n- The brand is applied by a <style> rule `:root{--color-brand;--color-on-brand}`\
-    \ rendered with the shell;\n  the contrast colour is the one of white and --color-text (#1b1b1f) that\
-    \ contrasts more\n  (apps/web/src/styles/brand.ts). The colour is used exactly as the API gives it,\
-    \ and only if #RRGGBB.\n- The web app only accepts a brand whose slug equals the hostname's slug;\
-    \ any other answer is \"unavailable\".\n- A web log line about a salon names its slug (T-8), never\
-    \ the error's message.\nDifferent from a document, or to record (the lead corrects the documents):\n\
-    - A bare network address, 127.0.0.1 and [::1] on the web port now answer \"salon not found\" (404),\
-    \ by the\n  hostname rule. qa/checks/F01/S02-listening.sh line 150 still expects 200 there; left untouched,\
-    \ for QA at\n  the feature pass (decision 028). README.md's phone-testing note: a phone on the network\
-    \ now sees that page.\n- docs/engineering/web.md: proxy.ts answers the three non-salon pages itself\
-    \ (plain HTML), the salon is passed\n  to the page in x-salon-resolved, and base.css / plain-page.css\
+    \  salon-unavailable, salon-unavailable-title, salon-unavailable-body; service unavailable (unchanged from\n\
+    \  F01-S01): status-panel, status-heading, status-unavailable, status-unavailable-title,\n  status-unavailable-body,\
+    \ status-retry; app-name on the error pages. No existing test id was renamed.\n- AC-11 checked. docs/api/openapi.json\
+    \ describes the 403 of GET /api/v1/salon with salon_suspended in\n  Problem.code; the generated client types\
+    \ it; pnpm contracts:check passes.\nHow it is built, for the documents:\n- The hostname is forwarded to the\
+    \ API as the Host header of the request to SALON_API_BASE_URL, set to the\n  canonical <slug>.<platform domain>\
+    \ with no port. Node's fetch drops a Host header, so the generated client\n  is given a fetch built on node:http\
+    \ (apps/web/src/lib/api/forward-hostname.ts). No parameter or custom\n  header names the salon; no new dependency.\n\
+    - The web app reads Host only; X-Forwarded-Host and Forwarded are ignored. A hostname that is not one label\n\
+    \  in front of the platform domain, or whose label is not in the slug form (3-30 of a-z, 0-9, -), is\n  \"salon\
+    \ not found\" without calling the API. Reserved slugs are left to the API (404).\n- Status codes (decision 028):\
+    \ proxy.ts answers 404 and both 503s itself, as complete HTML from\n  apps/web/src/lib/plain-page (proved by\
+    \ unit tests and on the running product). The shell is a page reached\n  by rewrite to /salon-site and answers\
+    \ 200; /salon-site asked for from outside answers the app's 404.\n- The plain pages inline styles/tokens.css\
+    \ and styles/base.css from their one source (a Turbopack rule makes\n  `*.css?raw` text; vitest.config.mts has\
+    \ the same for tests). Turbopack cannot give a CSS module's source as\n  text (internal error \"inner asset\
+    \ should be CSS processable\"), so the plain pages' layout is in\n  lib/plain-page/plain-page.css: it repeats\
+    \ the rules of the AppShell, Notice and Status modules, in tokens\n  only (a test forbids any colour or size\
+    \ of its own). A change to those modules' layout must be made there too.\n- Caching turned off: the API is asked\
+    \ on every request in the proxy, nothing is memoised. Every response on a\n  salon hostname carries Cache-Control:\
+    \ private, no-cache, no-store, max-age=0, must-revalidate. The shell\n  reads the request's headers, so the\
+    \ framework renders it per request; its prerendered static shell holds\n  only the neutral loading skeleton.\n\
+    - The proxy hands the resolved salon to the page in the request header x-salon-resolved, which it first\n  removes\
+    \ from every request. The page does not call the API again. So in the race where a salon is suspended\n  between\
+    \ the proxy's check and the response, that one response shows the brand the API returned a moment\n  before;\
+    \ the next request shows \"temporarily unavailable\". There is no second fetch to disagree with the first.\n\
+    - The proxy waits at most 3 s for the API (API_TIMEOUT_MS), then answers \"service unavailable\".\n- An unset\
+    \ or unusable SALON_PLATFORM_DOMAIN makes every web request \"service unavailable\", with a warning in\n  the\
+    \ server log (accepted in decision 028).\n- The brand is applied by a <style> rule `:root{--color-brand;--color-on-brand}`\
+    \ rendered with the shell;\n  the contrast colour is the one of white and --color-text (#1b1b1f) that contrasts\
+    \ more\n  (apps/web/src/styles/brand.ts). The colour is used exactly as the API gives it, and only if #RRGGBB.\n\
+    - The web app only accepts a brand whose slug equals the hostname's slug; any other answer is \"unavailable\"\
+    .\n- A web log line about a salon names its slug (T-8), never the error's message.\nDifferent from a document,\
+    \ or to record (the lead corrects the documents):\n- A bare network address, 127.0.0.1 and [::1] on the web\
+    \ port now answer \"salon not found\" (404), by the\n  hostname rule. qa/checks/F01/S02-listening.sh line 150\
+    \ still expects 200 there; left untouched, for QA at\n  the feature pass (decision 028). README.md's phone-testing\
+    \ note: a phone on the network now sees that page.\n- docs/engineering/web.md: proxy.ts answers the three non-salon\
+    \ pages itself (plain HTML), the salon is passed\n  to the page in x-salon-resolved, and base.css / plain-page.css\
     \ exist. \"The web app waits three seconds for\n  the API\" now also applies to the proxy.\n- docs/architecture/tech-stack.md:\
-    \ the Turbopack `*.css?raw` text rule and its Vitest twin.\n- globals.css now imports styles/base.css;\
-    \ the shared visually-hidden and skeleton styles are in\n  styles/shared.module.css, which Status.module.css\
-    \ and SalonShell.module.css compose from.\nLeft out: nothing in the spec's scope.\n\n\nFinal source-settled\
-    \ proofs: .local/cr007-final-tints.json records18 checks of alpha/beta/gamma across all six widths:\
-    \ derived brandhex+22 selected customer tab background,32px initial/50px header, zerooverflow. .local/cr007-final-primitives.json\
-    \ records6 live workspace checks: header8/28, main28/36/56 at>=1200, compact24/24/48, rail46/text14.5/padding0/14,\
-    \ mobiletabs8/6/items56/gap2, fields10/14/inset1.5/min48. Workspace drawer title26 at1440 and sheet22\
-    \ at360 were rendered and captured after4d01605; only primitive spacing changed subsequently. Latest\
-    \ lint/typecheck/tests298/build all EXIT0 on6bb5fd2; independent QA still pending. No later UI scope\
-    \ remains open.\n"
+    \ the Turbopack `*.css?raw` text rule and its Vitest twin.\n- globals.css now imports styles/base.css; the shared\
+    \ visually-hidden and skeleton styles are in\n  styles/shared.module.css, which Status.module.css and SalonShell.module.css\
+    \ compose from.\nLeft out: nothing in the spec's scope.\n\n\nFinal source-settled proofs: .local/cr007-final-tints.json\
+    \ records18 checks of alpha/beta/gamma across all six widths: derived brandhex+22 selected customer tab background,32px\
+    \ initial/50px header, zerooverflow. .local/cr007-final-primitives.json records6 live workspace checks: header8/28,\
+    \ main28/36/56 at>=1200, compact24/24/48, rail46/text14.5/padding0/14, mobiletabs8/6/items56/gap2, fields10/14/inset1.5/min48.\
+    \ Workspace drawer title26 at1440 and sheet22 at360 were rendered and captured after4d01605; only primitive\
+    \ spacing changed subsequently. Latest lint/typecheck/tests298/build all EXIT0 on6bb5fd2; independent QA still\
+    \ pending. No later UI scope remains open.\n"
 cases:
 - id: TC-F01-S03-001
   title: Each salon hostname renders only its own heading and title
