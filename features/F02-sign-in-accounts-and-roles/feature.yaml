@@ -5,7 +5,7 @@ summary: Staff sign in with a password and two-step verification and can do only
 release: R1
 milestone: M1-web
 status: in-qa
-qa_status: not-run
+qa_status: pass
 released_in: null
 depends_on:
 - F01
@@ -87,12 +87,12 @@ verification:
   manual: []
   deferred: []
 evidence:
-  last_run: qa/reports/20261014-115732-F02
+  last_run: qa/reports/20261015-000506-F02-3e38935bf776
   last_result: pass
 integration:
   branch: charithm/feature/F02-prototype-design-fidelity
   pull_request: null
-  qa_revision: null
+  qa_revision: e73d99b0bbb38ec4db6b9cc837ea635286a1fed0
   merged_commit: null
   merged_at: null
 previous_integration:

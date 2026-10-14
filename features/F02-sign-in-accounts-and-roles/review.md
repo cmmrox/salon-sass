@@ -1,12 +1,24 @@
 # F02 Sign-in, accounts and roles: product review
 
-Reviewed as a customer on 360/390px phones, a receptionist on 768px tablet, a Professional between clients, and an Owner provisioning access. Observations are from actual real-authentication browser flows, keyboard Tab/type-ahead/Tab/Space/Enter interactions and masked timed screenshots. TC-F02-S04-018 passed on 2026-10-14 after the BUG-F02-005 fix: all 21 masked timed screenshots were inspected and saved role, delivery channel, language and consent matched API readback. The final full F02 run passed all 87 automated cases; together with this manual case all 88 are accounted for.
+Reviewed again on 2026-10-15 as a customer on 360/390px phones, a receptionist on a 768px tablet, a Professional between clients, and an Owner provisioning access. The current full F02 pass contains 89 declared cases: 88 automated and the preserved manual TC-F02-S04-018 performed on 2026-10-14 against unchanged presentation source. That manual evidence records 38 keyboard controls, 27 masked viewport captures and two native dialog details; combined with nine F01 status frames the shared manual review inspected 38 images. Original pre-repair manual observations below remain historical where explicitly identified.
 
 Compared with public primary documentation from Fresha, Booksy and Vagaro, refreshed 2026-10-14. No competitor account or real personal data was used.
 
 ## Verdict
 
-The core sign-in, role, device and privacy behavior held in fixed-source affected checks and the completed manual journeys. Both optional staff identifier variants now satisfy the public schema and real sign-in. The final complete F02 run passed all 13 registered entries on the frozen reviewed source. The feature is ready for its local delivery gate. The screens are readable on small phones and tablets, with clear error/success feedback and visible keyboard focus. The most useful usability improvement is to bring confirmation controls into the user's current interaction context.
+The repaired account screens follow the supplied Customer and Salon design grammar, including responsive phone sheets and workspace desktop drawers. Authentication, every-role access, devices, profile, privacy and recovery passed the complete independent F02 run `qa/reports/20261015-000506-F02-3e38935bf776` on `e73d99b0bbb38ec4db6b9cc837ea635286a1fed0`: all 13 registered groups, zero failures, 696.493 seconds. All current required criteria are covered; no blocking F02 bug remains. Two optional explanation proposals remain for the owner.
+
+## Current verification and evidence
+
+The test types remain API/security, tenant isolation/permissions, one-use/concurrent credentials and edits, data integrity/build, local dependency resilience, functional journeys, six-width responsive/branding/accessibility, and one bounded local read baseline. These protect the actual identity and personal-data harms; no new case was added during this continuity pass. Payment, native mobile, regression, smoke, remote deployment, real providers and penetration testing were not run. F02 has no deferred case; local SMS/WhatsApp capture certifies the delivery integration behavior, without certifying real sending.
+
+All six developer commands passed in `qa/reports/20261015-000038-F02-commands-16ecb2ae3ce2`. Root prepared a fresh synthetic local reset after closing F01, preserving private keys and every historical stack volume, then rebuilt/restarted the exact source before QA. This removes F01's future scheduler occurrences without weakening the F02 clock guard. During and after the full pass the source remained clean, declared configuration bytes and modes stayed identical, all 13 log digests and the local integrity receipt remained intact, and local metadata/health reported the tested SHA/UP with the real clock. The credit interruption did not interrupt the runner: it completed, so no duplicate run was started. No new environment fault or product defect occurred in this run.
+
+The ten-user/20-second read baseline used 50 synthetic customers and five staff roles per salon, with retained audit counts Alpha 737, Beta 220 and Gamma 171. Temporary preparation address ceiling 200 was restored to defaults 3/10/20/1000 before measurement. It completed 20,324 HTTP requests with zero failures: principal p95 16.35 ms, devices 17.18 ms, profile 14.91 ms, staff 33.33 ms and audit 33.75 ms, each below the unchanged 300 ms bound. Semantic tenant/allowlist checks all passed. This is a local Apple M4/16 GiB baseline, not production-scale certification.
+
+Reference mapping: Customer compact header/circular identity, 430px canvas, anchored icon tabs, white 24px cards, 20px fields and pill actions; Salon neutral full-width header, 200/236px responsive rail, phone/tablet tabs and reference form/list grammar; confirmations inherit Customer bottom sheets and Salon 460px desktop drawers. Current `design/` captures cover the six implemented routes at 360/390/768/1024/1280/1440 plus customer/staff confirmations, and automation verifies loaded Poppins 400/500/600, exact source-defined tokens/geometry, contrast and accessibility. Independent review inspected current customer 360, workspace 1440 and both confirmation frames; the known background-password screenshot mask overlaps desktop dialog buttons, so the preserved native dialog-detail frame was also inspected. Actual controls and keyboard Cancel focus/containment/return are proven by automation and the preserved performed manual case. The supplied reference preview was refused by browser policy; this is source-defined comparison with rendered product evidence, without a claimed side-by-side reference preview.
+
+All five earlier major F02 defects remain verified and their regression cases passed again: BUG-F02-001 audit schema, BUG-F02-002 privacy metadata, BUG-F02-003 lost-renewal recovery, BUG-F02-004 stable handles and BUG-F02-005 optional staff identifiers. The case definitions and manual inventory were not changed after the full pass.
 
 ## What works well
 
@@ -23,11 +35,11 @@ The core sign-in, role, device and privacy behavior held in fixed-source affecte
 | Clarity and confidence | Good with proposed improvements | Explicit success/error feedback and salon-specific irreversible consequences; role preview and authenticator timing would help first-time users |
 | Recovery | Good | Incorrect-password correction, cancellation, stale edit handling, revocation and both-kind lost-renewal recovery work |
 | Speed as felt | Good | Timed pending request disables its action and gives visible feedback before the settled code screen |
-| Confirmation placement | Needs improvement | Offscreen inserted confirmation is keyboard reachable with clear instructions, but finding Cancel requires seven more Tab presses |
+| Confirmation placement | Good after CR-007 | Native modal opens a phone bottom sheet or desktop drawer, starts on Cancel, contains Tab/Shift+Tab, closes with Escape/cancel and returns focus |
 
 ## Suggestions
 
-Ranked proposals; no implementation is authorized by this review. The lead raised CR-006 for all three and fills Disposition.
+Ranked original proposals. CR-007 addressed confirmation placement under the owner's design correction; the role-preview and authenticator-copy proposals remain in CR-006. The lead fills Disposition.
 
 | Id | Class | Suggestion | Disposition |
 | --- | --- | --- | --- |
@@ -36,6 +48,8 @@ Ranked proposals; no implementation is authorized by this review. The lead raise
 | SUG-F02-03 | should | Distinguish authenticator code rotation from verification-session expiry in the instructions | CR-006 |
 
 ### SUG-F02-01 Confirmation near the current action
+
+Current verification: addressed by approved CR-007. The current sheet/drawer receives Cancel focus, contains keyboard traversal and returns focus after Escape/cancel. TC-F02-S04-023 and the performed manual case passed. The original observation below is preserved as the reason for the proposal.
 
 - **Observed:** The small-phone customer page is roughly 2500px tall. Delete is at the bottom; activating it inserts the confirmation above permissions/profile while focus remains on Delete. All controls remain reachable by keyboard; reaching Cancel took seven further Tab presses around the page. The clear explanation is visible when that earlier section is inspected.
 - **Why it matters:** A customer acting one-handed may initially miss the confirmation and repeat the tap or assume nothing happened.
@@ -66,4 +80,4 @@ Ranked proposals; no implementation is authorized by this review. The lead raise
 
 ## Bugs filed during verification and review
 
-BUG-F02-001 audit nullability,002 privacy audit metadata,003 lost-renewal sign-in recovery,004 required test-id naming, and005 optional staff identifier nullability; all major. Their exact states and verification evidence remain in the bug files.005 was found by the actual keyboard Owner path and independently reproduced through both native API identifier variants. Its extended S01-019 creation/list/schema/real-sign-in checks and fresh assertion-failure witness passed after the fix. The completed manual Owner path also passed. All five major bugs are now independently verified on the final complete pass, with evidence in their files and `qa/reports/20261014-115732-F02`. No required defect remains open.
+BUG-F02-001 audit nullability,002 privacy audit metadata, BUG-F02-003 lost-renewal sign-in recovery, BUG-F02-004 required test-id naming, and BUG-F02-005 optional staff identifier nullability; all major. Their exact states and verification evidence remain in the bug files.005 was found by the actual keyboard Owner path and independently reproduced through both native API identifier variants. Its extended S01-019 creation/list/schema/real-sign-in checks and fresh assertion-failure witness passed after the fix. The completed manual Owner path also passed. All five major bugs are now independently verified on the final complete pass, with evidence in their files and `qa/reports/20261014-115732-F02`. No required defect remains open.
