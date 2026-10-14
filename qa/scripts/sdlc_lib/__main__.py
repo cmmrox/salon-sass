@@ -3,7 +3,7 @@ import argparse
 import sys
 import unittest
 
-from . import flow, generate, integration, model, runner, validate
+from . import evidence, flow, generate, integration, model, runner, validate
 
 
 def cmd_validate(_args):
@@ -56,12 +56,37 @@ def cmd_status(_args):
 def cmd_run(args):
     bundle = model.load()
     try:
+        if args.context and (not args.feature or args.stage or args.suite or args.release):
+            raise evidence.Refusal("--context is supported only for an exact --feature run")
         if args.release:
             return runner.run_release(bundle, args.release, args.dry_run)
         entries = runner.select(bundle, stage=args.stage, feature=args.feature, suite=args.suite)
         label = args.stage or args.feature or args.suite
-        return runner.run(entries, label, args.dry_run)[0]
-    except runner.SelectionError as error:
+        certified = None
+        refresh = None
+        if args.context and not args.dry_run:
+            certified = evidence.certification(bundle, args.feature, args.context, "full-feature-qa")
+            refresh = lambda: evidence.certification(model.load(), args.feature, args.context, "full-feature-qa")
+        return runner.run(entries, label, args.dry_run, certification=certified, certify_again=refresh)[0]
+    except (runner.SelectionError, evidence.Refusal, OSError) as error:
+        print(f"refusing: {error}")
+        return 2
+
+
+def cmd_evidence(args):
+    try:
+        bundle = model.load()
+        if args.command == "closure-check":
+            result = evidence.closure_check(bundle, args.feature, args.context, args.commands_report)
+            print(f"OK {args.feature}: reusable gates and independent feature QA verified; "
+                  f"QA report {result['qa_report']}; commands report {result['commands_report']}")
+            return 0
+        entries = evidence.gates(bundle, args.feature)
+        certified = evidence.certification(bundle, args.feature, args.context, "developer-commands")
+        refresh = lambda: evidence.certification(model.load(), args.feature, args.context, "developer-commands")
+        return runner.run(entries, f"{args.feature}-commands", certification=certified,
+                          certify_again=refresh, stop_first_failure=True)[0]
+    except (evidence.Refusal, runner.SelectionError, OSError) as error:
         print(f"refusing: {error}")
         return 2
 
@@ -112,8 +137,18 @@ def main(argv=None):
     run.add_argument("--feature", help="feature id, for example F07")
     run.add_argument("--suite", help="regression or smoke; only when the owner asks")
     run.add_argument("--release", help="release version, for example v0.1.0: runs every gate of its manifest")
+    run.add_argument("--context", help="workspace-local JSON context for reusable full-feature evidence")
     run.add_argument("--dry-run", action="store_true", help="print what would run and stop")
     run.set_defaults(func=cmd_run)
+    gates = commands.add_parser("verify-commands", help="record deduplicated developer gates; stop at first failure")
+    gates.add_argument("--feature", required=True)
+    gates.add_argument("--context", required=True)
+    gates.set_defaults(func=cmd_evidence)
+    close = commands.add_parser("closure-check", help="verify reusable local gates and exact full-feature QA evidence")
+    close.add_argument("feature")
+    close.add_argument("--context", required=True)
+    close.add_argument("--commands-report", required=True)
+    close.set_defaults(func=cmd_evidence)
     commands.add_parser("selftest", help="run the unit tests of this tooling").set_defaults(func=cmd_selftest)
     for name, help_text in (("pr-check", "check closed feature and tested revision before its PR"),
                             ("start-check", "verify previous feature merges live before starting"),
