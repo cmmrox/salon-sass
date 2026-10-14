@@ -84,6 +84,8 @@ class TenantFilter extends OncePerRequestFilter {
     protected void doFilterInternal(
             HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
+        long started = System.nanoTime();
+        boolean failed = false;
         String host = request.getHeader(HttpHeaders.HOST);
         String candidateSlug = hostnames.slugOf(host).orElse(null);
         String authorization = request.getHeader(HttpHeaders.AUTHORIZATION);
@@ -150,14 +152,25 @@ class TenantFilter extends OncePerRequestFilter {
         } catch (ApplicationProblemException | NotFoundException ex) {
             errors.resolveException(request, response, null, ex);
         } catch (RuntimeException ex) {
-            if (errors.resolveException(request, response, null, ex) == null) throw ex;
+            if (errors.resolveException(request, response, null, ex) == null) {
+                failed = true;
+                throw ex;
+            }
         } catch (IOException | ServletException ex) {
+            failed = true;
             throw ex;
         } catch (Exception ex) {
+            failed = true;
             throw new ServletException(ex);
         } finally {
-            // The salon's id was put on the request's log lines when it was resolved.
-            MDC.remove(TenantContext.LOG_FIELD);
+            try {
+                int status = failed && !response.isCommitted() ? 500 : response.getStatus();
+                RequestLog.writeIfMissing(request, status, System.nanoTime() - started);
+            }
+            finally {
+                // The salon's id was put on the request's log lines when it was resolved.
+                MDC.remove(TenantContext.LOG_FIELD);
+            }
         }
     }
 }
