@@ -2,13 +2,13 @@
 id: BUG-F02-003
 title: A lost renewal response leaves a signed-out account screen without sign-in recovery
 severity: major
-status: open
+status: fixed
 found_by: TC-F02-S04-008
 breaks: AC-4
 found_on: 2026-10-14
-fixed_in: null
-fix_note: null
-developer_note: null
+fixed_in: f7f9937
+fix_note: Unknown-outcome renewal clears the affected kind and requests fresh sign-in instead of leaving an unavailable account screen.
+developer_note: 'Developer regression reproduced both staff/customer unavailable deadends before the fix (two failures; ordinary-outage case passed). Focused seven tests pass after the fix, including once-only renewal, successful/failed clear, fixed same-origin sign-in and kind isolation; ordinary principal outage remains service_unavailable. Type-only assertion correction is 0524f6a. Lead combined all six S04 gates passed (API 503 tests; lint/typecheck/test/build/contracts exit 0) on integrated source. Running product 0d489ff52b54c93a7ca85bfe98449f56234f985a: for staff and customer, forwarded the actual BFF renewal to the API (200 committed), aborted the browser response with connection reset, observed exactly one renewal and successful clear (200), zero affected kind cookies and navigation respectively to /workspace/sign-in and /sign-in. Other-kind cookies stayed byte-identical and its live principal returned 200 at its valid API Clock instant. Sanitized proof is ignored .local/bug003-browser-proof.json and credential-free recovery screenshots are .local/bug003-staff-recovery.png and .local/bug003-customer-recovery.png in the web worktree. Clock restored to real; only isolated walkthrough Manager sessions revoked and its synthetic customer deleted; retained keys, unrelated accounts, audit and scheduler preserved. Repeated setup used fresh synthetic phones after retained abuse limits, without clearing counters. Initial stale S04 Manager fixture was rejected and replaced with a fresh isolated Manager; no product assertion was weakened. API focused package/web build exit 0; actual standalone scan covered 1417 files and all four retained key values, with zero private artifacts. Independent QA re-verification remains pending.'
 verified_on: null
 approved_by: null
 found_in_release: null
