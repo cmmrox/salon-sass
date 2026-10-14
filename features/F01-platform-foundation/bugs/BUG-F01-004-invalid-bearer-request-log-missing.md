@@ -2,14 +2,14 @@
 id: BUG-F01-004
 title: Invalid bearer rejection omits the required request log
 severity: major
-status: fixed
+status: verified
 found_by: TC-F01-S04-014
 breaks: NFR-16
 found_on: 2026-10-14
 fixed_in: 62c209ba393419807d684f3fa7b47b2858e0b4bf
 fix_note: Log early credential denials exactly once before trace cleanup, without binding an untrusted tenant or logging secrets.
 developer_note: null
-verified_on: null
+verified_on: 2026-10-14
 approved_by: null
 found_in_release: null
 ---
@@ -61,6 +61,4 @@ eight entries of `qa/reports/20261014-222648-F01-commands-c5ae238b9793`) passed,
 518-test API suite, 300 web tests, contract checks and 118 workflow selftests. The earlier
 storage-failed command run is retained separately and supplies no passing evidence.
 
-Independent verification is pending. Retain exact 200 tenant/trace logging and invalid-credential
-401/redaction assertions, then verify this case and the complete F01/F02 scopes on the committed
-final source.
+Independently verified 2026-10-14 on e4e254f4463a274fdfd055df67b3056e83a249f0. TC-F01-S04-014 in qa/reports/20261014-232942-F01-2f5e0e96dfa2/028-F01-S04-platform-services.log passed both controls: 200 Gamma has exactly one tenant-tagged caller-trace request record; invalid Bearer 401 has exactly one matching caller/problem trace record, sanitized method/path/status/positive duration and no tenant binding or secret markers. All32 full-feature groups passed; no assertion, timeout or retry policy was relaxed. F02 identity QA is the next separately recorded feature pass.

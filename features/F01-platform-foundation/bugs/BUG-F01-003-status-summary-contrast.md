@@ -2,14 +2,14 @@
 id: BUG-F01-003
 title: Status success summary text fails WCAG AA contrast
 severity: major
-status: fixed
+status: verified
 found_by: TC-F01-S01-036
 breaks: NFR-12
 found_on: 2026-10-14
 fixed_in: c5a18b8
 fix_note: Use existing ink on unchanged positive surfaces for status and account success; failing4.4669 contrast regressions now pass, web300-test gate and live summary measurement meet AA.
 developer_note: null
-verified_on: null
+verified_on: 2026-10-14
 approved_by: null
 found_in_release: null
 ---
@@ -44,4 +44,4 @@ passed; status summary contrast was the sole assertion failure.
 
 ## Re-verification
 
-Pending developer fix; repeat original accessibility case and whole F01 on committed source.
+Independently verified 2026-10-14 on e4e254f4463a274fdfd055df67b3056e83a249f0. TC-F01-S01-036 and all 32 groups in qa/reports/20261014-232942-F01-2f5e0e96dfa2 passed with unchanged serious/critical axe and AA contrast criteria. Current rendered status screenshot design/F01-status-api-service-1280.png uses ink on the retained green success surface; the original 4.4669:1 failure remains preserved.
