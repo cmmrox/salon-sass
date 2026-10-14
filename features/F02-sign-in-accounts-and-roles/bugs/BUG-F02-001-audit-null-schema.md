@@ -2,12 +2,12 @@
 id: BUG-F02-001
 title: Identity audit responses return null values forbidden by their generated schema
 severity: major
-status: open
+status: fixed
 found_by: TC-F02-S01-023
 breaks: AC-9
 found_on: 2026-10-14
-fixed_in: null
-fix_note: null
+fixed_in: 2ec43e0c4428c5a0674c8c4395cd305790d55658
+fix_note: "Declared audit before/after as required nullable objects and regenerated OpenAPI/client; focused contract regression and combined API/contract gates pass."
 developer_note: null
 verified_on: null
 approved_by: null

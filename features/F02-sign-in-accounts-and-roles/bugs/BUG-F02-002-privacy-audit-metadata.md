@@ -2,12 +2,12 @@
 id: BUG-F02-002
 title: Profile update audit output strips its required versions and changed field names
 severity: major
-status: open
+status: fixed
 found_by: TC-F02-S03-014
 breaks: AC-6
 found_on: 2026-10-14
-fixed_in: null
-fix_note: null
+fixed_in: 2ec43e0c4428c5a0674c8c4395cd305790d55658
+fix_note: "Allowlisted nonnegative profile versions and documented changed field names for profile-update audit reads; Owner/Manager, isolation and unexpected-value privacy checks plus combined gates pass."
 developer_note: null
 verified_on: null
 approved_by: null
