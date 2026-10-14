@@ -50,5 +50,5 @@ it('keeps an ordinary account outage recoverable without signing out', async () 
   expect(navigation.replace).not.toHaveBeenCalled();
   expect(screen.queryByTestId('account-sign-in-link')).not.toBeInTheDocument();
   expect(fetch).toHaveBeenCalledTimes(1);
-  expect(fetch.mock.calls[0][0]).toBe('/identity-web/customer/principal');
+  expect(fetch).toHaveBeenCalledWith('/identity-web/customer/principal', expect.any(Object));
 });
