@@ -49,14 +49,18 @@ export class AccountBrowser {
   async ready(page:Page){await expect(handle(page,'logout')).toBeVisible();await expect(handle(page,'loading')).toHaveCount(0);}
   async staffSignIn(page:Page,salon:Salon,account:SeedAccount,identifier=account.email){
     await page.goto(routes.staffSignIn);await handle(page,'identifier').fill(identifier);await handle(page,'password').fill(account.password);
-    await expect(handle(page,'sign-in-submit')).toBeEnabled();await handle(page,'sign-in-submit').click();
-    await expect.poll(async()=>new URL(page.url()).pathname===routes.staff||await handle(page,'code').isVisible()).toBe(true);
-    const outcome=new URL(page.url()).pathname===routes.staff?'authenticated':'mfa';
-    if(outcome==='mfa'){
-      const secret=account.totpSecret??await handle(page,'setup-key').textContent();if(!secret)throw new Error('ENVIRONMENT: authenticator setup is absent');
-      await handle(page,'code').fill(totp(secret,await this.identity.now()));await handle(page,'sign-in-submit').click();await page.waitForURL('**'+routes.staff);
-    }
-    await this.ready(page);return this.actor(page.context(),salon,'staff');
+    let enrollmentStatus:number|undefined;const enrollmentResponse=(response:{url:()=>string;status:()=>number})=>{if(new URL(response.url()).pathname===bff('staff','mfa-enroll'))enrollmentStatus=response.status();};page.on('response',enrollmentResponse);
+    try{
+      await expect(handle(page,'sign-in-submit')).toBeEnabled();await handle(page,'sign-in-submit').click();
+      await expect.poll(async()=>new URL(page.url()).pathname===routes.staff||await handle(page,'code').isVisible()).toBe(true);
+      const outcome=new URL(page.url()).pathname===routes.staff?'authenticated':'mfa';
+      if(outcome==='mfa'){
+        if(!account.totpSecret){await expect.poll(()=>enrollmentStatus,'real enrollment response succeeds before setup is read').toBe(200);await expect(handle(page,'setup-key'),'completed authenticator setup value').toHaveText(/^[A-Z2-7]{32}$/);}
+        const secret=account.totpSecret??await handle(page,'setup-key').textContent();if(!secret)throw new Error('ENVIRONMENT: authenticator setup is absent');
+        await handle(page,'code').fill(totp(secret,await this.identity.now()));await handle(page,'sign-in-submit').click();await page.waitForURL('**'+routes.staff);
+      }
+      await this.ready(page);return this.actor(page.context(),salon,'staff');
+    }finally{page.off('response',enrollmentResponse);}
   }
   async requestCode(page:Page,salon:Salon,mobile=syntheticMobile(),channel:'sms'|'whatsapp'='sms'){
     await page.goto(routes.customerSignIn);await handle(page,'mobile').fill(mobile);await handle(page,'channel').selectOption(channel);
