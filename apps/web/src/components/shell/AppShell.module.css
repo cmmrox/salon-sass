@@ -14,7 +14,7 @@
 }
 
 .name {
-  color: var(--color-text-muted);
+  color: var(--color-text);
   font-size: var(--font-size-large);
   font-weight: var(--font-weight-strong);
   line-height: var(--line-height-heading);

@@ -11,7 +11,7 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Every path except the framework's own static files, the platform's icons and the readiness check
+  // Every path except the framework's own static files, the platform's icons/fonts and the readiness check
   // (app/healthz), which are the same on every hostname and say nothing about any salon.
-  matcher: ['/((?!_next/static|_next/image|favicon\\.ico|icon\\.svg|healthz).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon\\.ico|icon\\.svg|fonts/poppins/|healthz).*)'],
 };

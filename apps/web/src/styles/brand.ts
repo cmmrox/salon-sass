@@ -14,7 +14,7 @@ const HEX_COLOUR = /^#[0-9a-f]{6}$/i;
  * The two colours text on a brand colour can take: white, and the platform's own text colour
  * (`--color-text` in tokens.css). Whichever contrasts more with the brand colour is used.
  */
-export const ON_BRAND_COLOURS = { light: '#ffffff', dark: '#1b1b1f' } as const;
+export const ON_BRAND_COLOURS = { light: '#ffffff', dark: '#111827' } as const;
 
 /** Whether a value is a colour this module accepts: `#RRGGBB`. */
 export function isHexColour(value: unknown): value is string {

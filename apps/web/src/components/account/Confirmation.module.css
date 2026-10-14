@@ -1,0 +1,6 @@
+.dialog { position: fixed; inset: auto 0 0; width: 100%; max-width: var(--size-customer); max-height: 90vh; margin: auto auto 0; padding: var(--space-6) var(--space-6) calc(var(--space-6) + env(safe-area-inset-bottom, 0px)); border: 0; border-radius: var(--radius-sheet); background: var(--color-background); color: var(--color-text); overflow-y: auto; }
+.dialog::backdrop { background: var(--color-backdrop); }
+.content { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
+.content::before { content: ''; display: block; width: var(--size-sheet-handle); height: var(--space-1); border-radius: var(--radius-pill); background: var(--color-border); margin: 0 auto var(--space-2); }
+.title { font-size: var(--font-size-title); font-weight: var(--font-weight-strong); line-height: var(--line-height-heading); }
+@media (min-width: 900px) { .workspace { inset: 0 0 0 auto; width: var(--size-drawer); max-width: 100%; max-height: none; height: 100%; margin: 0; border-radius: 0; padding: var(--space-6) var(--space-8); } .workspace .content::before { display: none; } }

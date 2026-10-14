@@ -10,6 +10,6 @@ export function Field({ name, label, error, ...props }: InputHTMLAttributes<HTML
 export function Button({ children, testId, secondary, danger, ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { testId: string; secondary?: boolean; danger?: boolean }) {
   return <button {...props} className={`${styles.button} ${secondary ? styles.secondary : ''} ${danger ? styles.danger : ''}`} data-testid={testId}>{children}</button>;
 }
-export function Section({ title, children }: { title: string; children: ReactNode }) { return <section className={styles.card}><h2 className={styles.title}>{title}</h2>{children}</section>; }
+export function Section({ title, children }: { title: string; children: ReactNode }) { return <section className={styles.card}><h2 className={styles.sectionTitle}>{title}</h2>{children}</section>; }
 export function Check({ name, label, checked, onChange, disabled }: { name: string; label: string; checked: boolean; disabled?: boolean; onChange: (checked: boolean) => void }) { return <label className={styles.check}><input type="checkbox" disabled={disabled} data-testid={controlTestId(name)} checked={checked} onChange={(event) => onChange(event.target.checked)} />{label}</label>; }
 export function AccountLoading() { const t = useTranslations('account'); return <div className={styles.card} role="status" data-testid="account-loading"><p>{t('loading')}</p>{[1, 2, 3].map((id) => <span key={id} className={styles.skeleton} aria-hidden="true" />)}</div>; }

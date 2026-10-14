@@ -29,7 +29,7 @@ describe('SalonShell', () => {
   it('a light brand gets dark text, never an assumed white', () => {
     const { container } = renderWithMessages(<SalonShell salon={gamma} />);
 
-    expect(rootProperties(container)).toEqual({ '--color-brand': '#FDE68A', '--color-on-brand': '#1b1b1f' });
+    expect(rootProperties(container)).toEqual({ '--color-brand': '#FDE68A', '--color-on-brand': '#111827' });
   });
 
   it('shows nothing of any other salon and no loading state', () => {

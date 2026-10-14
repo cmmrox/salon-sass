@@ -4,7 +4,7 @@
   },
   "status": {
     "heading": "Service status",
-    "loading": "Checking the service…",
+    "loading": "Checking the service\u2026",
     "loaded": {
       "summary": "The service is running.",
       "service": "Service",
@@ -22,7 +22,7 @@
     "home": "Go to the home page"
   },
   "salon": {
-    "loading": "Loading the salon…",
+    "loading": "Loading the salon\u2026",
     "notFound": {
       "title": "Salon not found",
       "body": "There is no salon at this address. Check the address and try again."
@@ -107,7 +107,7 @@
     "next": "Next page",
     "page": "Page {page}",
     "empty": "There are no entries to show.",
-    "loading": "Loading your account…",
+    "loading": "Loading your account\u2026",
     "success": "Your change was saved.",
     "retry": "Try again",
     "denied": "You do not have permission to view this page.",
@@ -125,14 +125,14 @@
     "invalid_session": "Your session has ended. Please sign in again.",
     "confirmation_required": "Confirm the account deletion to continue.",
     "fieldError": "Check this value.",
-    "refreshing": "Restoring your session…",
+    "refreshing": "Restoring your session\u2026",
     "scope": "Your access: {scope}",
     "salon": "Whole salon",
     "own": "Your own records",
     "active": "Active",
     "inactive": "Removed",
     "time": "{time}",
-    "auditEntry": "{action} — {time}",
+    "auditEntry": "{action} \u2014 {time}",
     "mfaNotice": "Setup instructions are shown only here. Keep the key private.",
     "copied": "Setup key copied.",
     "initialPassword": "Initial password",
@@ -156,6 +156,7 @@
       "profile_manage": "Manage your profile",
       "data_export": "Download your personal data",
       "account_delete": "Delete your account"
-    }
+    },
+    "accountHomeHelp": "Manage your profile, preferences, signed-in devices and personal data."
   }
 }
