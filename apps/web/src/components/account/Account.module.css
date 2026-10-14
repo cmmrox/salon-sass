@@ -30,6 +30,9 @@
 .card ul { margin: 0; padding-left: var(--space-6); }
 .card li { margin-bottom: var(--space-2); }
 @media (min-width: 900px) {
+ .workspace .signIn { max-width: var(--size-form); width: 100%; }
+ .workspace .listView { grid-template-columns: minmax(0, 1fr); }
+ .workspace .row .secret { grid-column: 1 / -1; }
  .workspace .title { font-size: var(--font-size-workspace-title); }
  .workspace .card { padding: var(--space-6); }
  .workspace .sections { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }

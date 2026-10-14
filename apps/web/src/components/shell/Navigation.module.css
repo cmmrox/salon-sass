@@ -8,7 +8,7 @@
 @media (min-width: 900px) {
   .workspace { position: sticky; top: var(--size-header); height: calc(100vh - var(--size-header)); flex-direction: column; justify-content: flex-start; gap: var(--space-1); padding: var(--space-4) var(--space-3); border-right: var(--size-border) solid var(--color-border); box-shadow: none; }
   .workspace .item { flex: none; flex-direction: row; justify-content: flex-start; text-align: left; gap: var(--space-3); padding: var(--space-2) var(--space-3); font-size: var(--font-size-body); border-radius: var(--radius-rail); }
-  .workspace .indicator { padding: 0; background: transparent; }
+  .workspace .indicator, .workspace .item[aria-current] .indicator { padding: 0; background: transparent; }
   .workspace .item[aria-current] { background: var(--color-primary); color: var(--color-surface); }
   .workspace .item:hover:not([aria-current]) { background: var(--color-background); }
 }

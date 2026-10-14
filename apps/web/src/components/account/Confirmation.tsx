@@ -12,5 +12,5 @@ export function Confirmation({ title, children, onCancel, workspace = false }: {
     node?.querySelector<HTMLButtonElement>('[data-testid="account-cancel-action"]')?.focus();
     return () => { node?.close(); previous?.focus(); };
   }, []);
-  return <dialog ref={dialog} className={`${styles.dialog} ${workspace ? styles.workspace : ''}`} aria-labelledby={heading} aria-modal="true" data-testid="account-confirmation" onCancel={(event) => { event.preventDefault(); onCancel(); }}><div className={styles.content}><h2 id={heading} className={styles.title}>{title}</h2>{children}</div></dialog>;
+  return <dialog ref={dialog} className={`${styles.dialog} ${workspace ? styles.workspace : ''}`} aria-labelledby={heading} aria-modal="true" data-testid="account-confirmation" onClick={(event) => { const rect = event.currentTarget.getBoundingClientRect(); if (event.target === event.currentTarget && (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom)) onCancel(); }} onCancel={(event) => { event.preventDefault(); onCancel(); }}><div className={styles.content}><h2 id={heading} className={styles.title}>{title}</h2>{children}</div></dialog>;
 }

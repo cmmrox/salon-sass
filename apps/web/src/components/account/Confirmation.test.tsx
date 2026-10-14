@@ -23,3 +23,12 @@ it('routes native Escape cancellation to the controlled state without confirming
  fireEvent(screen.getByRole('dialog'), new Event('cancel', { cancelable: true }));
  expect(cancel).toHaveBeenCalledOnce(); expect(mutate).not.toHaveBeenCalled();
 });
+
+it('cancels only outside the dialog bounds, preserving clicks in its padding', () => {
+ const cancel = vi.fn();
+ renderWithMessages(<Confirmation title="Confirm this action" onCancel={cancel}><Button testId="account-cancel-action">Cancel</Button></Confirmation>);
+ const dialog = screen.getByRole('dialog');
+ vi.spyOn(dialog, 'getBoundingClientRect').mockReturnValue({ left: 100, top: 100, right: 400, bottom: 500, width: 300, height: 400, x: 100, y: 100, toJSON: () => ({}) });
+ fireEvent.click(dialog, { clientX: 120, clientY: 120 }); expect(cancel).not.toHaveBeenCalled();
+ fireEvent.click(dialog, { clientX: 20, clientY: 20 }); expect(cancel).toHaveBeenCalledOnce();
+});

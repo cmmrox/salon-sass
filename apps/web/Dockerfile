@@ -41,6 +41,7 @@ WORKDIR /app
 # cache folder is the user's.
 COPY --from=build /workspace/apps/web/.next/standalone/ ./
 COPY --from=build /workspace/apps/web/.next/static/ ./apps/web/.next/static/
+COPY --from=build /workspace/apps/web/public/ ./apps/web/public/
 RUN mkdir -p apps/web/.next/cache && chown salon:salon apps/web/.next/cache
 USER 10001:10001
 # Inside the container: every interface, one port. NEXT_MANUAL_SIG_HANDLE hands SIGTERM to the
