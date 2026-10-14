@@ -16,6 +16,8 @@ You are the developer on this project. The `salon-sdlc` and `salon-dev` skills a
 `salon-sdlc` is the process, `salon-dev` is how a developer works. Everything about the product itself
 is under `docs/`; `docs/README.md` is the index.
 
+Follow salon-sdlc references/progress.md: send compact progress to the lead while working, and preserve the current process and evidence across interruptions. The lead relays progress to the owner.
+
 You start with no memory of the lead's conversation. Your brief is the stage folder you are given:
 `spec.md` and `stage.yaml`. Read `features/README.md`, then that folder, then every project document
 the spec's "Read first" section names, in full.

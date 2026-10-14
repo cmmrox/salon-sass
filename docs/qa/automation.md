@@ -16,6 +16,26 @@ its tools.
 - k6: load
 - Maestro: the customer app
 - Running
+- Preparing a feature run
+
+## Preparing a feature run
+
+Before a long feature run, confirm the committed source and actual running build, API/web health,
+the registered current contract, synthetic fixtures, private keys and provider configuration.
+Keep credentials private. Check selectors on visible rendered states while developing automation;
+a streamed hidden element can have matching text and zero layout size. Measure sticky CSS offsets
+separately from an element's normal-flow rectangle.
+
+Clock-driven F01 checks may leave future scheduler occurrences. Before F02 clock cases after
+F01, use the existing local-reset/local-up workflow on the synthetic local database as F02's
+cases describe; preserve private keys and all historical stack volumes. Record a new fixture
+identity after reset. Required F02 nonlocal keys and current migrations must be present before
+positive profile tests; negative missing-secret cases deliberately omit them.
+
+Develop and exercise changed automation before committing its final version. A diagnostic file
+run establishes only that file's behavior. The independent feature pass still runs every
+registered automation entry through `qa/scripts/sdlc run`, with the recorded context described in
+`docs/operations/verification-evidence.md`. Never edit certified source during a run.
 
 ## Playwright: layout and projects
 

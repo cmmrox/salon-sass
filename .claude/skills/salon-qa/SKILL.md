@@ -1,6 +1,6 @@
 ---
 name: salon-qa
-description: The QA role in this repository - how to decide what a feature needs testing for and what it does not, write test cases, build trustworthy automation, run exactly the right scope, triage failures, file and re-verify bugs, review usability against competing products, and prepare regression and smoke suites. Use for feature-verify, a stage-verify the owner asked for, release-prepare and release-verify, and for any request to test, QA, verify, automate a test, run regression or smoke, triage a failing test, or review how usable a feature is.
+description: Independently verifies features and fixes. Use for feature QA, requested stage passes, test automation, failure triage, usability review and requested regression, smoke or release verification. Does not build application code.
 ---
 
 # Quality assurance
@@ -57,6 +57,10 @@ developer built.
    failed with the output; report what was not run as not run.
 7. **Local, sandbox and synthetic only.** No real payment, no real message, no real personal data,
    unless the owner's current message says otherwise.
+8. **Prepare before expensive verification.** Confirm the intended source/build, service health,
+   contract/fixture compatibility, required credentials and clock/data preconditions. Fail with
+   the missing precondition before a long run; use `docs/qa/automation.md` for this environment.
+   Exercise new automation while developing it, then commit it before the recorded full pass.
 
 ## Verifying a feature
 
@@ -70,6 +74,10 @@ Commit cases and automation before the final run, and record that commit under
 branch; metadata commits may follow, but product or automation changes require re-verification.
 QA passes locally. The owner may defer staging deployment until several features have merged;
 report staging-only cases as deferred and not certified.
+Record reusable full-feature evidence through `docs/operations/verification-evidence.md`.
+Legacy or partial reports retain their historical meaning but cannot supply its closure proof.
+Complete required manual checks and commit any case/definition updates before the final recorded
+automation run. A later review/evidence-only update can follow without changing certified cases.
 
 ```
 Feature QA: <F>
@@ -77,6 +85,7 @@ Feature QA: <F>
          requirements, the specs' "Read first" documents and docs/qa/
 - [ ] 2. Start the product from the handoffs; a product that will not start is bug number one.
          Something you cannot repair yourself (no emulator, a tool to install): qa_status blocked, with blocked_reason
+         Confirm build identity, current contract, fixtures, credentials and clock/data readiness
 - [ ] 3. Choose the test types for the feature (references/test-design.md, docs/qa/test-types.md) and note why each applies
 - [ ] 4. Write the cases, inside the limits in references/test-design.md: a stage's criteria in that
          stage's cases.md and stage.yaml; the few journeys across stages in the feature's cases.md and feature.yaml
@@ -86,6 +95,8 @@ Feature QA: <F>
 - [ ] 8. Triage every failure (references/bug-loop.md); file one bug per product defect under the
          feature's bugs/; confirm the bugs still open in the stages' bugs/
 - [ ] 9. Explore as a user; write the feature's review.md (references/product-review.md)
+         For UI, compare the mapped reference and rendered screen/state set at representative
+         sizes; report comparison limitations and classify differences before proposing fixes
 - [ ] 10. Record evidence and qa_status on the feature; qa/scripts/sdlc generate && qa/scripts/sdlc validate
 - [ ] 11. python3 qa/scripts/guard.py --role qa --diff; commit
 ```
