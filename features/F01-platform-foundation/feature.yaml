@@ -4,8 +4,8 @@ summary: The platform runs locally and in staging as one deployment in which eve
   salon is reached at its own web address, and every later feature has the services it builds on.
 release: R1
 milestone: M1-web
-status: complete
-qa_status: pass
+status: in-qa
+qa_status: not-run
 released_in: null
 depends_on: []
 surfaces:
