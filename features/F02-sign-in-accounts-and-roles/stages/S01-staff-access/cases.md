@@ -206,7 +206,7 @@ Account-kind refusals will be added through final S02 customer fixtures; no cust
 - **Priority:** high
 - **Covers:** AC-6, AC-9
 - **Performed as / preconditions:** Alpha Owner and an account created through POST/staff.
-- **Steps:** Create email-only and mobile-only accounts with valid passwords; validate each StaffView and the nonempty PageStaffView; sign in using each supplied identifier.  Table-drive invalid identifiers/no identifier/role/password/boolean, normalized duplicate and stale patch after a valid role update; compare staff state.
+- **Steps:** Create email-only and mobile-only accounts with valid passwords; validate normalized supplied/nullable omitted identifiers in each StaffView and the nonempty PageStaffView; sign in using each supplied identifier.  Table-drive invalid identifiers/no identifier/role/password/boolean, normalized duplicate and stale patch after a valid role update; compare staff state.
 - **Expected:** Creation201, valid patch200; invalids400 field errors, duplicate/stale409 conflict; rejected calls add/change nothing.
 - **Automation:** `qa/api/F02/S01-staff-access.spec.ts` (registered for feature QA)
 
