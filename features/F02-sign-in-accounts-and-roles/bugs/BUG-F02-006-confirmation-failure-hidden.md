@@ -2,10 +2,10 @@
 id: BUG-F02-006
 title: Recoverable confirmation failure hides feedback behind the open modal
 severity: major
-status: open
+status: fixed
 found_on: 2026-10-15
-fixed_in: null
-fix_note: null
+fixed_in: d94b166cb119aad39f64973085be47430bf1137e
+fix_note: 'Failed confirmations dismiss before the translated alert and safe reload recovery become accessible; deferred trigger focus restoration handles the busy DOM update without replaying destructive requests. Seven new regressions failed before the fix; focused checks passed 16/16 (.local/logs/f02-review-components-green.log). All six S04 developer commands passed in the complete 10/10 recorded run qa/reports/20261015-010423-F01-commands-55f23c47f02f on this source; independent browser re-verification remains pending.'
 developer_note: null
 verified_on: null
 approved_by: null
