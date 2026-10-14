@@ -744,7 +744,10 @@
             "type": "boolean"
           },
           "email": {
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "id": {
             "format": "uuid",
@@ -754,7 +757,10 @@
             "type": "boolean"
           },
           "mobile": {
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "professionalGrant": {
             "type": "boolean"
@@ -767,6 +773,10 @@
             "type": "integer"
           }
         },
+        "required": [
+          "email",
+          "mobile"
+        ],
         "type": "object"
       },
       "Tokens": {
