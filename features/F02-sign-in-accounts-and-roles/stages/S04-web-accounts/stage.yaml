@@ -346,8 +346,8 @@ verification:
   manual:
   - case: TC-F02-S04-018
     reason: Keyboard focus/order, contrast and real-speed visual interaction require human judgment on the final
-      source; preparation only, not performed.
-    performed_on: null
+      source; actual keyboard traversal and 21 masked timed screenshots inspected on phones/tablets.
+    performed_on: 2026-10-14
   deferred: []
 evidence:
   last_run: null

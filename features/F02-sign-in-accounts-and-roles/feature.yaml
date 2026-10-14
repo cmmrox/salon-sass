@@ -5,7 +5,7 @@ summary: Staff sign in with a password and two-step verification and can do only
 release: R1
 milestone: M1-web
 status: in-qa
-qa_status: failing
+qa_status: pass
 released_in: null
 depends_on:
 - F01
@@ -83,11 +83,11 @@ verification:
   manual: []
   deferred: []
 evidence:
-  last_run: qa/reports/20261014-013535-F02
-  last_result: fail
+  last_run: qa/reports/20261014-115732-F02
+  last_result: pass
 integration:
   branch: charithm/feature/F02-sign-in-accounts-and-roles
   pull_request: null
-  qa_revision: f9045422b9e8eb8cf6a6ede39498cd2924190373
+  qa_revision: 4f9a2a9c68e1ac218b436b486321f6bc6844a311
   merged_commit: null
   merged_at: null
