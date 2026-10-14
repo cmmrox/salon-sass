@@ -8,7 +8,7 @@ requirement detail is in `qa/coverage.md`.
 
 | ID | Feature | Milestone | Status | GitHub merge | Stages done | Requirements | Next |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| F01 | [Platform foundation and tenant isolation](F01-platform-foundation/) | M1-web | in-qa | - | 5/5 | 2 | **lead**: `feature-close F01` |
+| F01 | [Platform foundation and tenant isolation](F01-platform-foundation/) | M1-web | complete | - | 5/5 | 2 | **lead**: `feature-submit F01` |
 | F02 | [Sign-in, accounts and roles](F02-sign-in-accounts-and-roles/) | M1-web | in-qa | - | 4/4 | 10 | **qa**: `feature-verify F02` |
 | F03 | [Operator console: salons, plans and billing](F03-operator-console/) | M1-web | backlog | - | - | 5 | after F02 |
 | F04 | [Salon setup: profile, branding, hours and policies](F04-salon-setup/) | M1-web | backlog | - | - | 6 | after F02 |
@@ -26,16 +26,6 @@ requirement detail is in `qa/coverage.md`.
 | F16 | [Dedicated salon apps and store pipeline](F16-dedicated-salon-apps/) | M2-mobile | backlog | - | - | 4 | after F15 |
 
 ## In flight
-
-### F01 Platform foundation and tenant isolation
-
-| Stage | Title | Surfaces | Status | Stage QA | Blocking bugs | Next |
-| --- | --- | --- | --- | --- | --- | --- |
-| F01-S01 | Walking skeleton and local environment | api, web, infra | complete | pass | 0 | - |
-| F01-S02 | Tenant registry and data isolation | api, infra | complete | pass | 0 | - |
-| F01-S03 | Salon web addresses and branded shell | api, web | complete | - | 0 | - |
-| F01-S04 | Platform services: errors, time, audit trail, background jobs and observability | api | complete | - | 0 | - |
-| F01-S05 | Staging environment and delivery pipeline | infra | complete | - | 0 | - |
 
 ### F02 Sign-in, accounts and roles
 
