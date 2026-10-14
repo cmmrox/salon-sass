@@ -21,6 +21,37 @@ class IdentityContractIntegrationTest extends IntegrationTest {
     @Autowired JsonMapper json;
 
     @Test
+    void auditBeforeAndAfterExplicitlyAllowNullAsSerialized() {
+        Map<String, Object> document = json.readValue(http().get("/v3/api-docs").body(), Map.class);
+        Map<String, Object> schemas =
+                (Map<String, Object>)
+                        ((Map<String, Object>) document.get("components")).get("schemas");
+        Map<String, Object> audit = (Map<String, Object>) schemas.get("AuditView");
+        Map<String, Object> properties = (Map<String, Object>) audit.get("properties");
+        var entry =
+                new StaffAccess.AuditView(
+                        UUID.randomUUID(),
+                        Instant.now(),
+                        "staff",
+                        UUID.randomUUID().toString(),
+                        "identity.sign_in",
+                        "staff",
+                        UUID.randomUUID().toString(),
+                        null,
+                        null);
+        Map<String, Object> wire = json.readValue(json.writeValueAsString(entry), Map.class);
+        for (String field : List.of("before", "after")) {
+            assertThat(wire).containsEntry(field, null);
+            Object types = ((Map<String, Object>) properties.get(field)).get("type");
+            assertThat(types)
+                    .as("Audit %s declares both object and null", field)
+                    .isInstanceOf(List.class);
+            assertThat((List<String>) types).containsExactlyInAnyOrder("object", "null");
+            assertThat((List<String>) audit.get("required")).contains(field);
+        }
+    }
+
+    @Test
     void successStatusesAndPrincipalNullabilityAreExplicit() {
         Map<String, Object> document = json.readValue(http().get("/v3/api-docs").body(), Map.class);
         Map<String, Object> paths = (Map<String, Object>) document.get("paths");

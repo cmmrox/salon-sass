@@ -98,8 +98,18 @@ public class StaffAccess {
             String action,
             String subjectKind,
             String subjectId,
-            Map<String, Object> before,
-            Map<String, Object> after) {}
+            @io.swagger.v3.oas.annotations.media.Schema(
+                            types = {"object", "null"},
+                            requiredMode =
+                                    io.swagger.v3.oas.annotations.media.Schema.RequiredMode
+                                            .REQUIRED)
+                    Map<String, Object> before,
+            @io.swagger.v3.oas.annotations.media.Schema(
+                            types = {"object", "null"},
+                            requiredMode =
+                                    io.swagger.v3.oas.annotations.media.Schema.RequiredMode
+                                            .REQUIRED)
+                    Map<String, Object> after) {}
 
     public record StaffInput(
             String email, String mobile, String password, String role, Boolean professionalGrant) {}
@@ -694,8 +704,8 @@ public class StaffAccess {
                                                             r.action(),
                                                             r.subjectKind(),
                                                             r.subjectId(),
-                                                            safeAuditValues(r.before()),
-                                                            safeAuditValues(r.after())))
+                                                            safeAuditValues(r.action(), r.before()),
+                                                            safeAuditValues(r.action(), r.after())))
                                     .toList(),
                             page,
                             size,
@@ -703,11 +713,34 @@ public class StaffAccess {
                 });
     }
 
-    private Map<String, Object> safeAuditValues(Map<String, Object> input) {
+    private Map<String, Object> safeAuditValues(String action, Map<String, Object> input) {
         if (input == null) return null;
         java.util.HashMap<String, Object> result = new java.util.HashMap<>();
         for (String k : List.of("role", "professionalGrant", "active"))
             if (input.containsKey(k)) result.put(k, input.get(k));
+        if ("identity.profile_updated".equals(action)) {
+            Object version = input.get("version");
+            if ((version instanceof Integer || version instanceof Long)
+                    && ((Number) version).longValue() >= 0) {
+                result.put("version", version);
+            }
+            if (input.get("changedFields") instanceof List<?> fields) {
+                List<String> allowed =
+                        List.of(
+                                "name",
+                                "email",
+                                "birthday",
+                                "preferredLanguage",
+                                "notificationPreferences",
+                                "marketingConsent");
+                result.put(
+                        "changedFields",
+                        fields.stream()
+                                .filter(field -> field instanceof String && allowed.contains(field))
+                                .distinct()
+                                .toList());
+            }
+        }
         return Map.copyOf(result);
     }
 

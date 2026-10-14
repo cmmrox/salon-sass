@@ -305,12 +305,12 @@ export interface components {
             action?: string;
             actorId?: string;
             actorKind?: string;
-            after?: {
+            after: {
                 [key: string]: unknown;
-            };
-            before?: {
+            } | null;
+            before: {
                 [key: string]: unknown;
-            };
+            } | null;
             /** Format: uuid */
             id?: string;
             /** Format: date-time */
