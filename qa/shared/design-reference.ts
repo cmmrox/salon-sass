@@ -7,15 +7,17 @@ import { fit } from './page-checks';
 
 export const DESIGN_WIDTHS = [360, 390, 768, 1024, 1280, 1440].map(width => ({ width, height: 1000 }));
 export async function appearance(element: Locator) {
+  await expect(element).toBeVisible();
   return element.evaluate(el => {
     const s = getComputedStyle(el), r = el.getBoundingClientRect();
     return { background: s.backgroundColor, colour: s.color, radius: s.borderTopLeftRadius, position: s.position,
       font: s.fontFamily, fontSize: s.fontSize, shadow: s.boxShadow, width: r.width, height: r.height,
-      padding: s.padding, gap: s.gap,
+      padding: s.padding, gap: s.gap, offsetTop: s.top, minHeight: s.minHeight,
       left: r.left, right: r.right, bottom: r.bottom, top: r.top };
   });
 }
 export async function referenceTypeAndPalette(page: Page) {
+  await expect(page.getByRole('main')).toBeVisible();
   const values = await page.evaluate(async () => {
     await document.fonts.ready;
     for (const weight of [400, 500, 600]) await document.fonts.load(`${weight} 15px Poppins`);
@@ -73,7 +75,7 @@ export async function referenceNavigation(page: Page, id: string, width: number,
     for(const link of await links.all()){const item=await appearance(link);expect(item.height).toBeGreaterThanOrEqual(56);expect(item.gap).toBe('2px');}
   } else {
     expect(styles.position).toBe('sticky'); expect(styles.width).toBe(width < 1200 ? 200 : 236);
-    expect(styles.top).toBe(60);
+    expect(styles.offsetTop).toBe('60px');
     for(const link of await links.all()){const item=await appearance(link);expect(item.height).toBe(46);expect(item.fontSize).toBe('14.5px');expect(item.padding).toBe('0px 14px');}
   }
 }
@@ -96,6 +98,7 @@ export async function referenceDialog(page: Page, workspace: boolean, width: num
   await page.keyboard.press('Tab'); await expect(page.getByTestId('account-cancel-action')).toBeFocused();
 }
 export async function designScreenshot(page: Page, name: string) {
+  await expect(page.getByRole('main')).toBeVisible();
   const folder = path.join(reportDir, 'design'); fs.mkdirSync(folder, { recursive: true });
   await page.screenshot({ path: path.join(folder, name + '.png'), fullPage: false,
     mask: [page.locator('input'), page.getByTestId('account-setup-key'), page.getByTestId('account-setup-uri')] });

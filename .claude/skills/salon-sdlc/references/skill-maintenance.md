@@ -4,6 +4,15 @@ Three skills serve both Claude Code and Codex: `salon-sdlc` (the lifecycle), `sa
 developer works) and `salon-qa` (how QA works). Only the lead edits them, in their own commit with
 scope `skills`.
 
+## Contents
+
+- What belongs in a skill, and what does not
+- Layout
+- Rules for the content
+- Adding a lesson
+- Differences between the two tools
+- After every change
+
 ## What belongs in a skill, and what does not
 
 A skill holds how work is done: process, roles, method, habits. It holds nothing about this
@@ -48,6 +57,10 @@ keep it identical; `qa/scripts/sdlc validate` fails when a mirror is missing or 
 - No dates, version numbers or addresses in a skill. They live in `docs/`
   (`docs/architecture/tech-stack.md` for versions).
 - No secrets, credentials or personal data.
+- Preserve user scope and existing authorisation. Adopt an external technique only where it
+  improves an observed decision; reconcile it with the project's lifecycle and supplied design.
+  Retain source attribution and any required licence notice in project documentation when
+  incorporating external material. Installing a plugin or hook is a separate change.
 
 ## Adding a lesson
 
@@ -88,3 +101,9 @@ skill or an `AGENTS.md` points to exists. Then try the change: start
 a fresh session, give it a real request the change was meant for, and watch whether the right file
 gets read. The standing set of requests to rerun for this project is
 `docs/operations/skill-evaluation.md`.
+
+For substantial behavior changes, evaluate the relevant scenarios in a fresh independent context
+with the raw request and permitted artifacts, without supplying the expected answer. Inspect the
+actual actions and evidence, then make focused corrections. Format validation proves packaging;
+it does not prove correct decisions. Keep this evaluation proportional to the change and report
+which client was exercised versus which was checked statically.

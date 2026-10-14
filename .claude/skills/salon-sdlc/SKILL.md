@@ -1,6 +1,6 @@
 ---
 name: salon-sdlc
-description: Runs the delivery lifecycle of this repository - feature and stage planning, the developer and QA handoff, stage and feature closure, requirement changes, releases and the Git workflow. Use before any work in this repository, and whenever a request names a feature or stage id (F07, F07-S02), a lifecycle command (feature-new, stage-plan, stage-build, stage-verify, stage-close, feature-verify, feature-close, change-request, release-prepare, release-verify, release-cut), a branch, commit, pull request, requirement change, regression, smoke test or release, or asks to change these skills.
+description: Coordinates feature, stage and release delivery. Use before repository work and for planning, role handoffs, closure, requirement changes, Git delivery, releases or changes to these skills.
 ---
 
 # Delivery lifecycle
@@ -66,6 +66,9 @@ available in the session (they are picked up when a session starts), read the fi
 State the role you are acting in at the start of your work, and act in one role at a time. Before
 committing as developer or QA, run `python3 qa/scripts/guard.py --role dev --diff` (or `--role qa`).
 
+Read [references/progress.md](references/progress.md) at session start. Keep the owner informed
+while work runs, including work delegated to another agent; the lead aggregates role updates.
+
 ## Where state lives
 
 - `features/<feature>/feature.yaml` and `features/<feature>/stages/<stage>/stage.yaml` are the only
@@ -127,7 +130,8 @@ scope asked for is a process violation, the same as running less.
 | Trigger | Runs | Does not run |
 | --- | --- | --- |
 | `stage-close` | No QA automation: the developer's gates only | Any stage's or feature's automation |
-| `feature-verify`, `feature-close` | That feature's stage automation and its feature journeys | Other features |
+| `feature-verify` | That feature's stage automation and its feature journeys | Other features |
+| `feature-close` | Validate unchanged full-feature and developer-gate evidence; rerun invalidated evidence | Other features |
 | `stage-verify`, when the owner asked for a pass on one stage | That stage's automation | Earlier stages of the feature, other features |
 | `release-verify`, or the owner asks for regression or smoke | The regression and smoke suites | - |
 
@@ -184,5 +188,7 @@ scope asked for is a process violation, the same as running less.
   `docs/operations/environments-and-releases.md`.
 - [references/skill-maintenance.md](references/skill-maintenance.md): read before editing any skill,
   agent file, `AGENTS.md` or `CLAUDE.md`.
+- [references/progress.md](references/progress.md): read at session start; progress, long-running
+  commands, interruptions and completion reports for every role.
 - `assets/`: the templates the commands copy (`feature.yaml`, `feature-README.md`, `stage.yaml`,
   `spec.md`, `change-request.md`, `release.yaml`).

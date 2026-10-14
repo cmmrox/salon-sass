@@ -95,8 +95,12 @@ Each criterion is one observable outcome that a test can pass or fail.
   (`alpha.localhost.example.com`). `GET /api/v1/meta` and `GET /actuator/health` still answer 200
   on every one of these hostnames. (NFR-01)
 - AC-3: A tenant chosen by the client is never trusted: a request on `alpha.localhost` that also
-  carries beta's slug or id in a query parameter or in any request header other than `Host`
-  (including `X-Forwarded-Host` and `X-Tenant-Id`) returns alpha's brand. (NFR-01)
+  carries beta's slug or id in a query parameter or a non-credential request header other than
+  `Host` (including `X-Forwarded-Host` and `X-Tenant-Id`) returns alpha's brand. Under the approved
+  F02 identity contract, an invalid `Authorization: Bearer <beta UUID>` is rejected with 401
+  `invalid_session`, revealing no other salon's brand or data; a UUID is not an authentication
+  token and never selects a tenant. This clarifies the old pre-authentication wording against
+  `docs/architecture/identity-and-access.md`, without changing NFR-01 or F02 behaviour. (NFR-01)
 - AC-4: Under load, no response is ever served with another salon's data: at least 300 requests to
   `GET /api/v1/salon`, spread evenly over the three salons' hostnames and released together by at
   least 50 virtual users, each return the salon of their own hostname, with zero mismatches and zero

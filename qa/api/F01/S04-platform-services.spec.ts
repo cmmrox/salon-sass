@@ -32,7 +32,10 @@ test('TC-F01-S04-002 invalid probe bodies name their fields and write no data',a
 
 test('TC-F01-S04-003 the contract lists exactly all documented stable error codes',async()=>{
   const prop=committedContract().components.schemas.Problem.properties!.code as {enum:string[]};
-  expect([...prop.enum].sort()).toEqual(['bad_request','internal_error','method_not_allowed','not_acceptable','not_found','request_rejected','salon_suspended','service_unavailable','unsupported_media_type'].sort());
+  const expected=['bad_request','internal_error','method_not_allowed','not_acceptable','not_found','request_rejected','salon_suspended','service_unavailable','unsupported_media_type',
+    'invalid_client_assertion','confirmation_required','invalid_code','code_expired','provider_unavailable','invalid_credentials','invalid_session','permission_denied','conflict','rate_limited'];
+  expect(new Set(prop.enum).size).toBe(19);
+  expect([...prop.enum].sort()).toEqual(expected.sort());
 });
 
 test('TC-F01-S04-004 instants stay UTC under a different machine timezone',async({api})=>{
@@ -109,9 +112,16 @@ test('TC-F01-S04-013 another salon cannot read a probe and application transacti
 });
 
 test('TC-F01-S04-014 request JSON logs retain tenant and trace while dropping sensitive inputs',async({api})=>{
-  const marker=`sensitive-${randomUUID()}`;const r=await api.send('GET',`/api/v1/salon?private=${marker}`,{headers:{Host:gamma.hostname,...traceHeaders,Cookie:`private=${marker}`,Authorization:`Bearer ${marker}`}});expect(r.status()).toBe(200);
+  const marker=`sensitive-${randomUUID()}`;const r=await api.send('GET',`/api/v1/salon?private=${marker}`,{headers:{Host:gamma.hostname,...traceHeaders,Cookie:`private=${marker}`}});expect(r.status()).toBe(200);
+  await expect.poll(()=>logs().filter(l=>l['trace.id']===trace&&l['http.request.method']==='GET').length).toBe(1);
   const lines=logs().filter(l=>l['trace.id']===trace);expect(lines.length).toBeGreaterThan(0);for(const l of lines){expect(l['tenant.id']).toBe(gamma.id);expect(JSON.stringify(l)).not.toContain(marker);}
   const requests=lines.filter(l=>l['http.request.method']==='GET');expect(requests).toHaveLength(1);expect(requests[0]['url.path']).toBe('/api/v1/salon');expect(requests[0]['http.response.status_code']).toBe(200);expect(requests[0]['event.duration']).toBeGreaterThan(0);
+  const deniedTrace=randomUUID().replaceAll('-','');
+  const denied=await api.send('GET',`/api/v1/salon?private=${marker}`,{headers:{Host:gamma.hostname,traceparent:`00-${deniedTrace}-1234567890abcdef-01`,Cookie:`private=${marker}`,Authorization:`Bearer ${marker}`}});
+  expect(denied.status()).toBe(401);expect(denied.headers()['content-type']).toContain('application/problem+json');const problem=await denied.json();expect(problem.code).toBe('invalid_session');expect(problem.traceId).toBe(deniedTrace);
+  await expect.poll(()=>logs().filter(l=>l['trace.id']===deniedTrace&&l['http.request.method']==='GET').length).toBe(1);
+  const deniedLines=logs().filter(l=>l['trace.id']===deniedTrace);expect(deniedLines.length).toBeGreaterThan(0);for(const line of deniedLines){expect(line['tenant.id']).toBeUndefined();expect(JSON.stringify(line)).not.toContain(marker);}
+  const deniedRequests=deniedLines.filter(l=>l['http.request.method']==='GET');expect(deniedRequests).toHaveLength(1);expect(deniedRequests[0]['url.path']).toBe('/api/v1/salon');expect(deniedRequests[0]['http.response.status_code']).toBe(401);expect(deniedRequests[0]['event.duration']).toBeGreaterThan(0);
 });
 
 test('TC-F01-S04-015 tenant cleanup removes old sent work while keeping newer work',async({api})=>{

@@ -18,6 +18,12 @@ Not applied: payment integrity (no money flow), mobile (F15 later). Regression, 
 
 Environment: local only, fixed synthetic alpha/beta/gamma. Credentials are random and kept in memory. Authentication uses real password/TOTP/code APIs and local message capture. Restore the application clock after each use.
 
+When F01 has just exercised its clock-driven cleanup/journey, prepare F02 with the developer's
+`infra/scripts/local-reset.sh` and `infra/scripts/local-up.sh` on the synthetic local database.
+Retain the private key file and every stack volume. F02's clock guard deliberately refuses
+unrelated future scheduler occurrences; do not relax that guard or treat its precondition
+failure as a product expiry failure.
+
 ## Cases
 
 ### TC-F02-001 Owner provisioning and removal connects workspace controls to immediate staff access

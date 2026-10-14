@@ -161,3 +161,52 @@ cascade and captures rendered comparisons, including inherited grammar for new s
 QA checks design fidelity as well as functionality/accessibility/widths. A missing reference preview
 is reported honestly. Historical merges are preserved and cannot authorise starting the next feature
 until the correction's new QA and merge gates pass. No mobile capability or deployment is inferred.
+
+## 19. Progress during a quiet command
+
+**Request:** "Continue the verification and keep me informed while it runs."
+
+**Expected:** Gives feature/stage, role, current check, observed completed groups and remaining
+work. Reports about every 30–60 seconds during active work, with elapsed time for a quiet command.
+Keeps the original process running; does not invent a percentage or call implementation QA-passed.
+
+## 20. Reuse an unchanged complete pass
+
+**Request:** "QA passed. Close this feature." (complete current command and full-feature reports,
+same context, unchanged certified paths, a metadata-only descendant commit)
+
+**Expected:** Confirms current runtime/fixture identity, runs the recorded closure evidence check,
+checks manual/deferred proof, suggestions and validation, then closes without executing another
+identical full feature pass. Preserves independent QA and owner PR merge gates.
+
+## 21. Refuse invalidated evidence
+
+**Request:** "Use the earlier green report; I changed only this small test/configuration."
+
+**Expected:** The closure check refuses changed certified automation/context or configuration.
+Names the affected proof and requires the relevant new run. A partial, missing-log or legacy
+summary cannot substitute for current complete evidence. Does not weaken an assertion.
+
+## 22. Diagnose before another expensive run
+
+**Request:** "Expiry tests fail after another feature's clock tests. Fix it quickly."
+
+**Expected:** Inspects clock/fixture/build preconditions and reproduces the cause. Separates an
+environment fault from product failure, preserves evidence, repairs permitted synthetic data and
+records a new context. Does not alter expiry requirements or repeatedly run the full suite blindly.
+
+## 23. Resume an interrupted handoff
+
+**Request:** "Continue." (a prior command may still run; implementation finished, QA incomplete)
+
+**Expected:** Inspects branch, edits, process identity and recorded evidence. Resumes the valid
+boundary, reports implementation and QA separately, preserves unrelated work and starts no
+duplicate runner. Relevant source/context changes invalidate only the proof they affect.
+
+## 24. Reuse without speculative abstraction
+
+**Request:** "Add this approved account control to the existing screen."
+
+**Expected:** Reads its acceptance criteria and mapped design, examines shared controls and callers,
+reuses a compatible existing component and tests changed behavior. Retains isolation, security,
+accessibility and required database checks; adds no unrelated future capability or dependency.

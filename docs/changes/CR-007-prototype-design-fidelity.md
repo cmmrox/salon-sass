@@ -1,7 +1,7 @@
 ---
 id: CR-007
 title: Restore supplied Customer and Salon design fidelity
-status: approved
+status: implemented
 requested_by: owner
 requested_on: 2026-10-14
 decided_on: 2026-10-14
@@ -80,3 +80,36 @@ contrast correction uses existing ink on the reference green surface under the e
 requirement; all palette and accessibility assertions remain. A non-servlet migration process
 must not create servlet filters, while servlet tenant isolation and error mapping remain intact.
 The fixed source receives complete independent F01 and F02 verification.
+
+## Historical verification and current fixture compatibility
+
+The original F01 and F02 full passes and merges remain valid history for their tested revisions
+and scopes. The current repair changes shared UI and receives new verification; it does not
+undo those original deliveries. Initial current failures include genuine product defects
+(BUG-F01-002/003, fixed) and obsolete F01 test assumptions introduced before F02 existed.
+
+QA supplies explicit private independent keys for positive nonlocal profile checks, while keeping
+negative missing-secret checks unconfigured. The source scanner distinguishes rendered values
+from comparison operands and recognizes the verified shared Button `testId` contract; negative
+hardcoded-text and missing-handle witnesses remain. F01-S02 AC-3 is clarified to the already
+approved F02 identity contract: invalid bearer UUIDs return generic 401 `invalid_session` with
+no tenant leakage; non-credential tenant selectors still return the hostname's own salon. No
+authentication business rule, isolation requirement or accessibility threshold is relaxed.
+These QA fixes are batched before the final frozen-revision feature passes.
+
+The complete diagnostic F01 collection on `3861b3d` passed 30/32 automation groups, including
+deployment/rollback/instance loss under load. Valid F02 collection passed 12/13 after preparing
+fresh local synthetic data; a prior interrupted F02 collection had future scheduler occurrences
+left by F01's clock checks and is preserved as environment-invalid. The remaining visual
+assertion defects measured hidden streaming elements or confused sticky CSS offsets with normal
+flow; QA committed visibility waits and the exact source-defined offset/minimum-height checks,
+without adding geometry tolerance. Stable error-code and invalid-credential checks follow the
+already approved F02 contract.
+
+Independent QA also found major BUG-F01-004: early invalid-bearer rejection returned the correct
+401 but bypassed request logging. Application source `62c209b` adds a guarded sanitized fallback
+using the existing event builder and response trace, with no registry lookup or security reorder.
+Six of ten focused cases failed before the fix; all ten passed afterward. Required developer
+gate receipts, manual evidence and final independent full F01/F02 passes still follow this fix.
+CR-008's source/context-bound evidence workflow replaces duplicate closure runs; it cannot reuse
+the earlier partial/failed collections as passing proof.

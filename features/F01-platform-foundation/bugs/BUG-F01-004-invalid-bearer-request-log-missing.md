@@ -1,0 +1,64 @@
+---
+id: BUG-F01-004
+title: Invalid bearer rejection omits the required request log
+severity: major
+status: verified
+found_by: TC-F01-S04-014
+breaks: NFR-16
+found_on: 2026-10-14
+fixed_in: 62c209ba393419807d684f3fa7b47b2858e0b4bf
+fix_note: Log early credential denials exactly once before trace cleanup, without binding an untrusted tenant or logging secrets.
+developer_note: null
+verified_on: 2026-10-14
+approved_by: null
+found_in_release: null
+---
+
+# BUG-F01-004 Invalid bearer rejection omits the required request log
+
+## Steps
+
+Role: public local caller. Data: active synthetic Gamma and the local API built from
+`3861b3d03f9124f4df2198a957456c8bdcbbd4b6`; no real credential or personal data.
+
+1. GET `http://gamma.localhost:8090/api/v1/salon` with a unique valid W3C traceparent,
+   synthetic query/Cookie markers and no Authorization. Confirm Gamma's 200 response and its
+   corresponding request log with the caller trace, Gamma tenant, method, path, status and duration.
+2. Repeat on Gamma's actual hostname with a different trace and a synthetic invalid Bearer value.
+3. Read the 401 problem's traceId and inspect ECS request records for both the caller and response
+   trace in `.local/logs/api.log`.
+
+## Expected
+
+The invalid credential returns generic 401 `invalid_session` without salon data, under the
+approved F02 contract. F01-S04 AC-14 and `docs/engineering/backend.md` require each request to
+write one redacted method/path/status/duration line, continuing the caller trace; an error response
+   must not disappear from request observability. The rejection happens before tenant binding,
+   so the denied line has no `tenant.id`; logging must not add a registry lookup or trust the
+   invalid credential. The valid noncredential control retains Gamma's exact tenant tag.
+
+## Actual
+
+The noncredential control returns Gamma's 200 and exactly one correctly tagged request line.
+The invalid Bearer returns 401 `invalid_session` with the exact caller traceId, but there is no
+request record for that trace. The denial therefore lacks the required status/path/duration log.
+Confirmed on the real Gamma URL; the earlier diagnostic's localhost Host override was not a
+valid selected-salon control and is retained separately. This defect is distinct from the old
+test's obsolete expectation that an invalid credential would return 200.
+
+## Evidence
+
+`qa/reports/20261014-164715-F01/S04-014-actual-host-log-reproduction.json` contains the positive
+control, exact matching caller/response trace, 401 outcome and empty denied-request record set.
+The initial failure is preserved in `F01-S04-platform-services.log`. Synthetic marker values and
+credential bytes are absent from the diagnostic evidence.
+
+## Re-verification
+
+The developer reproduced the missing event with six failing request-log assertions, then passed
+all ten focused integration cases. The current recorded F01-S04 developer commands (the first
+eight entries of `qa/reports/20261014-222648-F01-commands-c5ae238b9793`) passed, including the
+518-test API suite, 300 web tests, contract checks and 118 workflow selftests. The earlier
+storage-failed command run is retained separately and supplies no passing evidence.
+
+Independently verified 2026-10-14 on e4e254f4463a274fdfd055df67b3056e83a249f0. TC-F01-S04-014 in qa/reports/20261014-232942-F01-2f5e0e96dfa2/028-F01-S04-platform-services.log passed both controls: 200 Gamma has exactly one tenant-tagged caller-trace request record; invalid Bearer 401 has exactly one matching caller/problem trace record, sanitized method/path/status/positive duration and no tenant binding or secret markers. All32 full-feature groups passed; no assertion, timeout or retry policy was relaxed. F02 identity QA is the next separately recorded feature pass.

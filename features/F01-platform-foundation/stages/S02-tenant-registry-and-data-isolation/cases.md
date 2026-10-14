@@ -118,7 +118,7 @@ Every case is automated; no manual or deferred acceptance cases. Human API/opera
 - **Preconditions:** Product is up with the three synthetic salons; every isolation check proves the target owner’s data exists first.
 - **Steps:**
   1. Confirm beta exists; send forwarded, tenant, origin, cookie and authorization headers individually and together, including beta query parameters.
-- **Expected:** Alpha’s Host returns alpha; no header makes the bare domain resolve to a salon.
+- **Expected:** Noncredential tenant-selector headers return only Alpha under Alpha's Host and cannot make the bare domain resolve to a salon. The invalid Authorization Bearer UUID row is explicitly refused with 401 `invalid_session` and the same generic nonleaking problem, per approved F02 credential validation; it never selects Beta. Combined valid selectors still return Alpha, and combined invalid credentials are refused.
 - **Automation:** `qa/api/F01/S02-salon.spec.ts`
 
 ### TC-F01-S02-009 a request that names two hosts, or a host no hostname is written like, is refused and given no salon's data
