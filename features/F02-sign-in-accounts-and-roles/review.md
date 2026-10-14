@@ -1,12 +1,12 @@
 # F02 Sign-in, accounts and roles: product review
 
-Reviewed as a customer on 360/390px phones, a receptionist on 768px tablet, a Professional between clients, and an Owner provisioning access. Observations are from actual real-authentication browser flows, keyboard Tab/type-ahead/Tab/Space/Enter interactions and masked timed screenshots. TC-F02-S04-018 passed on 2026-10-14 after the BUG-F02-005 fix: all 21 masked timed screenshots were inspected and saved role, delivery channel, language and consent matched API readback. Full automated certification follows the final F02 run.
+Reviewed as a customer on 360/390px phones, a receptionist on 768px tablet, a Professional between clients, and an Owner provisioning access. Observations are from actual real-authentication browser flows, keyboard Tab/type-ahead/Tab/Space/Enter interactions and masked timed screenshots. TC-F02-S04-018 passed on 2026-10-14 after the BUG-F02-005 fix: all 21 masked timed screenshots were inspected and saved role, delivery channel, language and consent matched API readback. The final full F02 run passed all 87 automated cases; together with this manual case all 88 are accounted for.
 
 Compared with public primary documentation from Fresha, Booksy and Vagaro, refreshed 2026-10-14. No competitor account or real personal data was used.
 
 ## Verdict
 
-The core sign-in, role, device and privacy behavior held in fixed-source affected checks and the completed manual journeys. Both optional staff identifier variants now satisfy the public schema and real sign-in. The complete automated F02 rerun remains required before QA passes. The screens are readable on small phones and tablets, with clear error/success feedback and visible keyboard focus. The most useful usability improvement is to bring confirmation controls into the user's current interaction context.
+The core sign-in, role, device and privacy behavior held in fixed-source affected checks and the completed manual journeys. Both optional staff identifier variants now satisfy the public schema and real sign-in. The final complete F02 run passed all 13 registered entries on the frozen reviewed source. The feature is ready for its local delivery gate. The screens are readable on small phones and tablets, with clear error/success feedback and visible keyboard focus. The most useful usability improvement is to bring confirmation controls into the user's current interaction context.
 
 ## What works well
 
@@ -15,9 +15,19 @@ The core sign-in, role, device and privacy behavior held in fixed-source affecte
 - Separate staff/customer sessions, immediate device revocation and explicit salon-specific deletion consequences give useful control without exposing credentials.
 - Keyboard targets inspected in the actual traversal had 3px solid focus indicators. Automated responsive/Axe checks covered all six required widths and the three brands; masked screenshots were inspected for readability and layout.
 
+## Observed usability assessment
+
+| Dimension | Assessment | Actual evidence |
+| --- | --- | --- |
+| Effort and fit | Good | Real keyboard staff/customer flows, WhatsApp choice, saved Sinhala preference and consent; readable 360/390px phones and 768px tablet |
+| Clarity and confidence | Good with proposed improvements | Explicit success/error feedback and salon-specific irreversible consequences; role preview and authenticator timing would help first-time users |
+| Recovery | Good | Incorrect-password correction, cancellation, stale edit handling, revocation and both-kind lost-renewal recovery work |
+| Speed as felt | Good | Timed pending request disables its action and gives visible feedback before the settled code screen |
+| Confirmation placement | Needs improvement | Offscreen inserted confirmation is keyboard reachable with clear instructions, but finding Cancel requires seven more Tab presses |
+
 ## Suggestions
 
-Ranked proposals; no implementation is authorized by this review. The lead fills Disposition.
+Ranked proposals; no implementation is authorized by this review. The lead raised CR-006 for all three and fills Disposition.
 
 | Id | Class | Suggestion | Disposition |
 | --- | --- | --- | --- |
@@ -41,7 +51,7 @@ Ranked proposals; no implementation is authorized by this review. The lead fills
 
 ### SUG-F02-03 Clarify authenticator timing
 
-- **Observed:** The authenticator screen reuses the customer wording that a code expires after five minutes and a new code replaces the previous one. The verification challenge lasts five minutes, while authenticator codes rotate on 30-second steps with the documented clock allowance. Entry itself worked.
+- **Observed:** The authenticator screen reuses the customer wording that a code expires after five minutes and a new code replaces the previous one. The verification challenge lasts five minutes, while authenticator codes rotate on 30-second steps with the documented clock allowance. Entry itself worked; this is a wording proposal, with no acceptance failure.
 - **Why it matters:** A first-time Owner may confuse the time available to complete verification with the life of a displayed authenticator code.
 - **Instead:** Explain that the verification session expires at the shown time and ask for the code currently displayed by the authenticator app. Keep customer SMS/WhatsApp expiry and resend wording separate.
 - **Evidence:** `qa/reports/20261014-F02-manual-complete/manual/tablet-authenticator.png`. [Vagaro verification guidance](https://support.vagaro.com/hc/en-us/articles/115005413687-Two-Factor-or-Two-Step-Authentication) distinguishes verification steps and completion. This wording proposal adds no new code lifetime or authentication mechanism.
@@ -56,4 +66,4 @@ Ranked proposals; no implementation is authorized by this review. The lead fills
 
 ## Bugs filed during verification and review
 
-BUG-F02-001 audit nullability,002 privacy audit metadata,003 lost-renewal sign-in recovery,004 required test-id naming, and005 optional staff identifier nullability; all major. Their exact states and verification evidence remain in the bug files.005 was found by the actual keyboard Owner path and independently reproduced through both native API identifier variants. Its extended S01-019 creation/list/schema/real-sign-in checks and fresh assertion-failure witness passed after the fix. The completed manual Owner path also passed. Final bug verification and certification follow the full run.
+BUG-F02-001 audit nullability,002 privacy audit metadata,003 lost-renewal sign-in recovery,004 required test-id naming, and005 optional staff identifier nullability; all major. Their exact states and verification evidence remain in the bug files.005 was found by the actual keyboard Owner path and independently reproduced through both native API identifier variants. Its extended S01-019 creation/list/schema/real-sign-in checks and fresh assertion-failure witness passed after the fix. The completed manual Owner path also passed. All five major bugs are now independently verified on the final complete pass, with evidence in their files and `qa/reports/20261014-115732-F02`. No required defect remains open.

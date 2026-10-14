@@ -2,14 +2,14 @@
 id: BUG-F02-005
 title: Staff creation and lists return nullable identifiers forbidden by the generated response schema
 severity: major
-status: fixed
+status: verified
 found_by: TC-F02-S01-019
 breaks: AC-9
 found_on: 2026-10-14
 fixed_in: 61c55a94bac9cf881ac886091e339ca9830063e1
 fix_note: "Declared serialized staff email/mobile as required nullable strings and regenerated contracts; email-only/mobile-only create, sign-in, list and negative checks plus 504-test API verify and contract check pass."
 developer_note: null
-verified_on: null
+verified_on: 2026-10-14
 approved_by: null
 found_in_release: null
 ---
@@ -41,4 +41,5 @@ Both valid POSTs returned201. Email-only returned `mobile:null` and failed `/mob
 
 ## Re-verification
 
-Pending. Existing S01-019 now includes email-only and mobile-only valid creation, generated StaffView/PageStaffView validation and real sign-in through each supplied identifier. Preserve the at-least-one identifier validation, permissions and privacy. Recheck the original manual Owner path and the entire F02 feature through the lifecycle; do not loosen the schema validator.
+Verified on 2026-10-14. Extended S01-019 passed both email-only/mobile-only HTTP201 generated StaffView responses, omitted null identifiers, normalized supplied mobile, real sign-in and nonempty PageStaffView results. Original Owner keyboard creation also passed with API role readback. The fresh existing-count failure witness reached its intended assertion with exact restored source; final whole F02 run passed. Evidence: `qa/reports/20261014-115732-F02/summary.json` and the corresponding registered entry logs.
+Targeted ordinary evidence: `qa/reports/20261014-final-staff-fix-normalized/staff-contract-ordinary.log`; fresh witness `qa/reports/F02-witnesses/staff-contract-confirmed.json`; manual proof `qa/reports/20261014-F02-manual-complete/manual/keyboard-timing.json`.

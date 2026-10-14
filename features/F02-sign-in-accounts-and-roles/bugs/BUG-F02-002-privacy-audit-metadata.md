@@ -2,14 +2,14 @@
 id: BUG-F02-002
 title: Profile update audit output strips its required versions and changed field names
 severity: major
-status: fixed
+status: verified
 found_by: TC-F02-S03-014
 breaks: AC-6
 found_on: 2026-10-14
 fixed_in: 2ec43e0c4428c5a0674c8c4395cd305790d55658
 fix_note: "Allowlisted nonnegative profile versions and documented changed field names for profile-update audit reads; Owner/Manager, isolation and unexpected-value privacy checks plus combined gates pass."
 developer_note: null
-verified_on: null
+verified_on: 2026-10-14
 approved_by: null
 found_in_release: null
 ---
@@ -43,4 +43,4 @@ Do not expose profile values to fix this. Extend the audit output allowlist only
 
 ## Re-verification
 
-Pending developer fix. Verify versions/changed field names and absence of personal values through both Owner and Manager reads, then the full F02 feature.
+Verified on 2026-10-14. S03-014 passed through both authorized Owner/Manager audit reads: expected nonnegative versions and allowlisted changed field names remain present, personal values absent, foreign access denied and audit immutable. The final whole F02 run passed. Evidence: `qa/reports/20261014-115732-F02/summary.json` and the corresponding registered entry logs.
