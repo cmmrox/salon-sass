@@ -43,7 +43,7 @@ Ranked original proposals. CR-007 addressed confirmation placement under the own
 
 | Id | Class | Suggestion | Disposition |
 | --- | --- | --- | --- |
-| SUG-F02-01 | should | Place and focus confirmation near the action that opened it | CR-006 |
+| SUG-F02-01 | should | Place and focus confirmation near the action that opened it | CR-007 implemented |
 | SUG-F02-02 | should | Preview the fixed role's capabilities before an Owner creates or changes staff access | CR-006 |
 | SUG-F02-03 | should | Distinguish authenticator code rotation from verification-session expiry in the instructions | CR-006 |
 
