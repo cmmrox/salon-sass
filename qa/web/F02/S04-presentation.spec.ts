@@ -27,10 +27,10 @@ test(`${c(23)} identity screens follow the supplied customer and salon layouts w
   for(const viewport of DESIGN_WIDTHS){await page.setViewportSize(viewport);await referenceTypeAndPalette(page);await referenceAccountControls(page);
    const workspace=route.startsWith('/workspace');
    if(workspace){const shell=await appearance(page.getByTestId('workspace-shell'));expect(shell.width).toBe(viewport.width);expect(shell.background).toBe('rgb(243, 240, 235)');
-    const header=await appearance(page.getByTestId('workspace-header'));expect(header.position).toBe('sticky');if(viewport.width>=900)expect(header.background).toBe('rgb(255, 255, 255)');
+    const header=await appearance(page.getByTestId('workspace-header'));expect(header.position).toBe('sticky');if(viewport.width>=900){expect(header.background).toBe('rgb(255, 255, 255)');expect(header.padding).toBe('8px 28px');}
     await referenceNavigation(page,'workspace-navigation',viewport.width);await expect(handle(page,'title')).toHaveCSS('font-size',viewport.width>=900?'26px':'22px');
-    if(viewport.width>=900){const main=await appearance(page.getByTestId('workspace-main'));expect(main.left).toBe(viewport.width<1200?200:236);}
-   }else{await referenceCustomerShell(page,viewport.width);await expect(handle(page,'title')).toHaveCSS('font-size','22px');}
+    if(viewport.width>=900){const main=await appearance(page.getByTestId('workspace-main'));expect(main.left).toBe(viewport.width<1200?200:236);expect(main.padding).toBe(viewport.width<1200?'24px 24px 48px':'28px 36px 56px');}
+   }else{await referenceCustomerShell(page,viewport.width,beta.brandColour);await expect(handle(page,'title')).toHaveCSS('font-size','22px');}
    const result=await referenceFit(page,beta.name);expect(result.counted).toBeGreaterThan(0);expect(result.pageScrolls).toBe(false);expect(result.outside).toEqual([]);expect(result.clipped).toEqual([]);
    await designScreenshot(page,`F02-${route.replaceAll('/','-')}-${viewport.width}`);
    if(route===routes.customer||route===routes.staff){const trigger=handle(page,route===routes.customer?'delete':'revoke-all');await trigger.click();await referenceDialog(page,workspace,viewport.width);

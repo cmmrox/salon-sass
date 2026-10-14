@@ -143,7 +143,7 @@ test('TC-F01-S03-013 public and foundation pages match the supplied reference gr
   test.setTimeout(180_000);
   for (const s of salons) for (const viewport of DESIGN_WIDTHS) {
     await page.setViewportSize(viewport); await page.goto(salonUrl(s, webUrl)); await expect(page.getByTestId('salon-name')).toHaveText(s.name);
-    await referenceTypeAndPalette(page); await referenceCustomerShell(page, viewport.width);
+    await referenceTypeAndPalette(page); await referenceCustomerShell(page, viewport.width,s.brandColour);
     const result = await referenceFit(page, s.name); expect(result.counted).toBeGreaterThan(0); expect(result.pageScrolls).toBe(false); expect(result.outside).toEqual([]); expect(result.clipped).toEqual([]);
     await designScreenshot(page, `F01-public-${s.slug}-${viewport.width}`);
   }
