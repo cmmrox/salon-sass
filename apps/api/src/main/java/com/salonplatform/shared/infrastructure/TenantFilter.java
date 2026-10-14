@@ -1,21 +1,28 @@
 package com.salonplatform.shared.infrastructure;
 
-import java.io.IOException;
-
+import com.salonplatform.shared.api.ApplicationProblemException;
+import com.salonplatform.shared.api.NotFoundException;
+import com.salonplatform.shared.tenancy.ActiveTenants;
+import com.salonplatform.shared.tenancy.CurrentTenant;
 import com.salonplatform.shared.tenancy.PlatformHostname;
+import com.salonplatform.shared.tenancy.RequestCredential;
+import com.salonplatform.shared.tenancy.SignedTenantVerifier;
 import com.salonplatform.shared.tenancy.TenantContext;
 import com.salonplatform.shared.tenancy.TenantDirectory;
+
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.slf4j.MDC;
 
+import org.slf4j.MDC;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+
+import java.io.IOException;
 
 /**
  * Binds the salon a request's hostname names for the extent of the request, before anything that
@@ -39,42 +46,114 @@ class TenantFilter extends OncePerRequestFilter {
 
     private final TenantDirectory directory;
 
-    TenantFilter(PlatformHostname hostnames, TenantDirectory directory) {
+    private final SignedTenantVerifier verifier;
+    private final ActiveTenants tenants;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    @org.springframework.beans.factory.annotation.Qualifier("handlerExceptionResolver")
+    private org.springframework.web.servlet.HandlerExceptionResolver errors;
+
+    TenantFilter(
+            PlatformHostname hostnames,
+            TenantDirectory directory,
+            SignedTenantVerifier verifier,
+            ActiveTenants tenants) {
+        this.verifier = verifier;
+        this.tenants = tenants;
         this.hostnames = hostnames;
         this.directory = directory;
     }
 
     /**
-     * The service's own endpoints, which need no salon and answer whether or not the database
-     * does (docs/engineering/backend.md): the salon is not looked up for them, so their log lines
-     * carry no {@code tenant.id}.
+     * The service's own endpoints, which need no salon and answer whether or not the database does
+     * (docs/engineering/backend.md): the salon is not looked up for them, so their log lines carry
+     * no {@code tenant.id}.
      */
     static boolean isPlatformEndpoint(HttpServletRequest request) {
         String path = request.getRequestURI();
-        return path.equals("/api/v1/meta") || path.equals("/actuator") || path.startsWith("/actuator/")
-                || path.startsWith("/v3/api-docs") || path.equals("/error");
+        return path.equals("/api/v1/meta")
+                || path.equals("/actuator")
+                || path.startsWith("/actuator/")
+                || path.startsWith("/v3/api-docs")
+                || path.equals("/error");
     }
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
+    protected void doFilterInternal(
+            HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
-        String candidateSlug = hostnames.slugOf(request.getHeader(HttpHeaders.HOST)).orElse(null);
+        String host = request.getHeader(HttpHeaders.HOST);
+        String candidateSlug = hostnames.slugOf(host).orElse(null);
+        String authorization = request.getHeader(HttpHeaders.AUTHORIZATION);
+        String credential =
+                authorization != null && authorization.startsWith("Bearer ")
+                        ? authorization.substring(7)
+                        : "";
         try {
-            TenantContext.callForRequest(candidateSlug, directory, () -> {
-                if (candidateSlug != null && !isPlatformEndpoint(request)) {
-                    TenantContext.resolveEarly();
-                }
-                chain.doFilter(request, response);
-                return null;
-            });
-        }
-        catch (IOException | ServletException | RuntimeException ex) {
+            // Only a raw API address may use token-only tenancy. Unknown/reserved salon hosts
+            // remain closed.
+            String name = host == null ? "" : host.toLowerCase(java.util.Locale.ROOT);
+            boolean nativeAddress =
+                    name.matches("^(localhost|[0-9]{1,3}(\\.[0-9]{1,3}){3})(:[0-9]+)?$")
+                            || name.matches("^\\[[0-9a-f:]+\\](:[0-9]+)?$");
+            boolean publicPath =
+                    request.getRequestURI().contains("/sign-in")
+                            || request.getRequestURI()
+                                    .equals("/api/v1/identity/customers/challenges")
+                            || request.getRequestURI().contains("/mfa/")
+                            || request.getRequestURI().endsWith("/sessions/refresh")
+                            || request.getRequestURI().startsWith("/local/");
+            if (candidateSlug == null
+                    && nativeAddress
+                    && !credential.isBlank()
+                    && !isPlatformEndpoint(request)
+                    && !publicPath) {
+                CurrentTenant tenant =
+                        tenants.findActive(verifier.tenantOf(credential))
+                                .orElseThrow(NotFoundException::new);
+                TenantContext.callAs(
+                        tenant,
+                        () ->
+                                RequestCredential.callWith(
+                                        credential,
+                                        () -> {
+                                            chain.doFilter(request, response);
+                                            return null;
+                                        }));
+            } else {
+                TenantContext.callForRequest(
+                        candidateSlug,
+                        directory,
+                        () -> {
+                            if (candidateSlug != null && !isPlatformEndpoint(request))
+                                TenantContext.resolveEarly();
+                            // A caller supplying a signed identity must match even a public salon
+                            // endpoint.
+                            if (!credential.isBlank()
+                                    && !isPlatformEndpoint(request)
+                                    && !request.getRequestURI().startsWith("/local/")) {
+                                if (!verifier.tenantOf(credential)
+                                        .equals(TenantContext.require().id()))
+                                    throw new NotFoundException();
+                            }
+                            RequestCredential.callWith(
+                                    credential,
+                                    () -> {
+                                        chain.doFilter(request, response);
+                                        return null;
+                                    });
+                            return null;
+                        });
+            }
+        } catch (ApplicationProblemException | NotFoundException ex) {
+            errors.resolveException(request, response, null, ex);
+        } catch (RuntimeException ex) {
+            if (errors.resolveException(request, response, null, ex) == null) throw ex;
+        } catch (IOException | ServletException ex) {
             throw ex;
-        }
-        catch (Exception ex) {
+        } catch (Exception ex) {
             throw new ServletException(ex);
-        }
-        finally {
+        } finally {
             // The salon's id was put on the request's log lines when it was resolved.
             MDC.remove(TenantContext.LOG_FIELD);
         }

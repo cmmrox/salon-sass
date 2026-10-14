@@ -5,8 +5,8 @@ import { messages, renderWithMessages } from '@/test/render';
 
 import { SalonShell, SalonShellLoading } from './SalonShell';
 
-const beta = { slug: 'beta', name: 'Beta Hair, Beauty & Wellness Lounge of Colombo Seven', brandColour: '#1F2937' };
-const gamma = { slug: 'gamma', name: 'Gamma', brandColour: '#FDE68A' };
+const beta = { slug: 'beta', name: 'Beta Hair, Beauty & Wellness Lounge of Colombo Seven', brandColour: '#1F2937', timeZone: 'Asia/Colombo' };
+const gamma = { slug: 'gamma', name: 'Gamma', brandColour: '#FDE68A', timeZone: 'Europe/London' };
 
 /** The custom properties the page puts on the root. */
 function rootProperties(container: HTMLElement): Record<string, string> {

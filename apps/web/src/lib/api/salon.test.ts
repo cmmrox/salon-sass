@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { findSalon, type Salon } from './salon';
 
-const alpha: Salon = { slug: 'alpha', name: 'Alpha Studio', brandColour: '#D6086A' };
+const alpha: Salon = { slug: 'alpha', name: 'Alpha Studio', brandColour: '#D6086A', timeZone: 'Asia/Colombo' };
 
 function clientAnswering(status: number, body: unknown, contentType = 'application/json') {
   const requests: Request[] = [];
@@ -39,14 +39,14 @@ describe('findSalon', () => {
     expect(requests.map((request) => request.url)).toEqual(['http://api.test/api/v1/salon']);
   });
 
-  it('returns only the fields of the brand, whatever else the answer holds', async () => {
+  it('carries the API timezone but excludes unrelated fields', async () => {
     const { client } = clientAnswering(200, { ...alpha, timeZone: 'Europe/London', secret: 'x' });
 
-    await expect(findSalon('alpha', 'alpha.localhost', client)).resolves.toEqual({ kind: 'found', salon: alpha });
+    await expect(findSalon('alpha', 'alpha.localhost', client)).resolves.toEqual({ kind: 'found', salon: { ...alpha, timeZone: 'Europe/London' } });
   });
 
   it('never returns the brand of another salon than the one asked for', async () => {
-    const { client } = clientAnswering(200, { slug: 'beta', name: 'Beta', brandColour: '#1F2937' });
+    const { client } = clientAnswering(200, { slug: 'beta', name: 'Beta', brandColour: '#1F2937', timeZone: 'Asia/Colombo' });
 
     await expect(findSalon('alpha', 'alpha.localhost', client)).resolves.toEqual({ kind: 'unavailable' });
   });
@@ -75,9 +75,9 @@ describe('findSalon', () => {
   });
 
   it.each([
-    ['no name', { slug: 'alpha', brandColour: '#D6086A' }],
-    ['an empty name', { slug: 'alpha', name: ' ', brandColour: '#D6086A' }],
-    ['a colour that is not #RRGGBB', { slug: 'alpha', name: 'Alpha', brandColour: 'red;}' }],
+    ['no name', { slug: 'alpha', brandColour: '#D6086A', timeZone: 'Asia/Colombo' }],
+    ['an empty name', { slug: 'alpha', name: ' ', brandColour: '#D6086A', timeZone: 'Asia/Colombo' }],
+    ['a colour that is not #RRGGBB', { slug: 'alpha', name: 'Alpha', brandColour: 'red;}', timeZone: 'Asia/Colombo' }],
     ['not an object', 'alpha'],
   ])('is unavailable when the brand has %s', async (_, body) => {
     const { client } = clientAnswering(200, body);

@@ -13,6 +13,16 @@ import org.springframework.http.HttpStatusCode;
  */
 public enum ErrorCode {
 
+    INVALID_CLIENT_ASSERTION("invalid_client_assertion", "The client assertion could not be verified."),
+    CONFIRMATION_REQUIRED("confirmation_required", "Confirm account deletion to continue."),
+    INVALID_CODE("invalid_code", "The verification code could not be verified."),
+    CODE_EXPIRED("code_expired", "Please request a new verification code."),
+    PROVIDER_UNAVAILABLE("provider_unavailable", "Code delivery is not configured."),
+    INVALID_CREDENTIALS("invalid_credentials", "The sign-in credentials could not be verified."),
+    INVALID_SESSION("invalid_session", "Please sign in again."),
+    PERMISSION_DENIED("permission_denied", "Your account does not have permission for this action."),
+    CONFLICT("conflict", "The record changed or this change conflicts with an existing record."),
+    RATE_LIMITED("rate_limited", "Please wait before trying again."),
     BAD_REQUEST("bad_request", "The request could not be understood."),
     NOT_FOUND("not_found", "The requested resource was not found."),
     METHOD_NOT_ALLOWED("method_not_allowed", "The method is not allowed for this resource."),

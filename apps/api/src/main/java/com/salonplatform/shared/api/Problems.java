@@ -36,7 +36,12 @@ final class Problems {
 
     /** A request whose body failed validation: 400 {@code bad_request}, with each failing field. */
     static ProblemDetail invalid(HttpStatusCode status, List<FieldProblem> errors) {
-        ProblemDetail problem = of(status);
+        return invalid(status, ErrorCode.forStatus(status), errors);
+    }
+
+    /** A declared business error with safe field details, using the same one-property writer. */
+    static ProblemDetail invalid(HttpStatusCode status, ErrorCode code, List<FieldProblem> errors) {
+        ProblemDetail problem = of(status, code);
         problem.setProperty(ERRORS, List.copyOf(errors));
         return problem;
     }

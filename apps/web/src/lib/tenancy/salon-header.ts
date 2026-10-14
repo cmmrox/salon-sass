@@ -12,7 +12,7 @@ export const SALON_HEADER = 'x-salon-resolved';
 
 /** The salon, as the header carries it: URI-encoded JSON, so that any name fits in a header. */
 export function encodeSalon(salon: Salon): string {
-  return encodeURIComponent(JSON.stringify({ slug: salon.slug, name: salon.name, brandColour: salon.brandColour }));
+  return encodeURIComponent(JSON.stringify({ slug: salon.slug, name: salon.name, brandColour: salon.brandColour, timeZone: salon.timeZone }));
 }
 
 /** The salon the header carries, or null when it carries none or anything else. */
@@ -29,9 +29,9 @@ export function decodeSalon(value: string | null | undefined): Salon | null {
   if (typeof parsed !== 'object' || parsed === null) {
     return null;
   }
-  const { slug, name, brandColour } = parsed as Record<string, unknown>;
-  if (typeof slug !== 'string' || typeof name !== 'string' || name.trim() === '' || !isHexColour(brandColour)) {
+  const { slug, name, brandColour, timeZone } = parsed as Record<string, unknown>;
+  if (typeof slug !== 'string' || typeof name !== 'string' || name.trim() === '' || !isHexColour(brandColour) || typeof timeZone !== 'string') {
     return null;
   }
-  return { slug, name, brandColour };
+  return { slug, name, brandColour, timeZone };
 }

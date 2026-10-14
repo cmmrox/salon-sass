@@ -52,7 +52,10 @@ class DatabaseIsolationCatalogueIntegrationTest {
                 """);
 
         assertThat(tables).extracting(table -> table.get("name")).as("tenant tables")
-                .containsExactlyInAnyOrder("salon_brand", "audit_entry", "outbox_message");
+                .containsExactlyInAnyOrder("salon_brand", "audit_entry", "outbox_message",
+                        "identity_staff", "identity_session", "identity_refresh_history", "identity_mfa_challenge",
+                        "identity_mfa_step", "identity_rate_bucket", "identity_guard",
+                        "identity_customer", "identity_customer_challenge");
         assertThat(tables).allSatisfy(table -> assertThat(table)
                 .as("%s", table.get("name"))
                 .containsEntry("enabled", true).containsEntry("forced", true).containsEntry("policy", true));
@@ -162,7 +165,16 @@ class DatabaseIsolationCatalogueIntegrationTest {
                 .containsExactlyInAnyOrder(
                         org.assertj.core.api.Assertions.tuple("salon_brand", "SELECT"),
                         org.assertj.core.api.Assertions.tuple("audit_entry", "INSERT,SELECT"),
-                        org.assertj.core.api.Assertions.tuple("outbox_message", "DELETE,INSERT,SELECT,UPDATE"));
+                        org.assertj.core.api.Assertions.tuple("outbox_message", "DELETE,INSERT,SELECT,UPDATE"),
+                        org.assertj.core.api.Assertions.tuple("identity_staff", "DELETE,INSERT,SELECT,UPDATE"),
+                        org.assertj.core.api.Assertions.tuple("identity_session", "DELETE,INSERT,SELECT,UPDATE"),
+                        org.assertj.core.api.Assertions.tuple("identity_refresh_history", "DELETE,INSERT,SELECT"),
+                        org.assertj.core.api.Assertions.tuple("identity_mfa_challenge", "DELETE,INSERT,SELECT,UPDATE"),
+                        org.assertj.core.api.Assertions.tuple("identity_mfa_step", "DELETE,INSERT,SELECT"),
+                        org.assertj.core.api.Assertions.tuple("identity_rate_bucket", "DELETE,INSERT,SELECT,UPDATE"),
+                        org.assertj.core.api.Assertions.tuple("identity_guard", "INSERT,SELECT,UPDATE"),
+                        org.assertj.core.api.Assertions.tuple("identity_customer", "DELETE,INSERT,SELECT,UPDATE"),
+                        org.assertj.core.api.Assertions.tuple("identity_customer_challenge", "DELETE,INSERT,SELECT,UPDATE"));
     }
 
     /**
@@ -204,6 +216,9 @@ class DatabaseIsolationCatalogueIntegrationTest {
         "DELETE FROM audit_entry",
         "TRUNCATE audit_entry",
         "TRUNCATE outbox_message",
+        "UPDATE identity_mfa_step SET step=0",
+        "UPDATE identity_refresh_history SET credential_hash='x'",
+        "DELETE FROM identity_guard",
         "SELECT * FROM scheduled_job",
         "INSERT INTO scheduled_job (name, next_run_at, created_at, updated_at) VALUES ('sneaky', now(), now(), now())",
         "UPDATE scheduled_job SET locked_by = NULL, locked_until = NULL",

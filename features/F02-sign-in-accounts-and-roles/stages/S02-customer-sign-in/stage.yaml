@@ -1,0 +1,304 @@
+id: F02-S02
+feature: F02
+title: Customer one-time-code sign-in and abuse prevention
+sequence: 2
+surfaces:
+- api
+status: complete
+qa_status: not-run
+blocked_reason: null
+released_in: null
+reopened_by: null
+depends_on:
+- F02-S01
+requirements:
+- IAM-01
+- IAM-03
+- IAM-09
+- IAM-10
+- IAM-11
+nfr_focus:
+- NFR-08
+- NFR-10
+handoff:
+  run: 'Local only: infra/scripts/local-service.sh start postgres; infra/scripts/local-service.sh start api. Use
+    alpha.localhost:8090, beta.localhost:8090 and gamma.localhost:8090. The final API is running in persistent foreground
+    tool session 23714; startup shell stays open with read -r f02_s02_keep_final. Runtime artifact source is d30c7c9bc5ac8686ad045e7fce9e45603d986fce,
+    confirmed by GET /api/v1/meta; GET /actuator/health is 200. Stop API before Maven packaging/verify, then restart
+    with the same retained keys. The local defaults are restored; no code-limit override is retained and /local/clock
+    is real time.
+
+    Public: POST /api/v1/identity/customers/challenges {mobile,channel:"sms"|"whatsapp",deviceLabel} -> 200 {challengeId,expiresAt},
+    with a new host-only salon_device cookie when needed. POST /api/v1/identity/customers/sign-in {challengeId,code}
+    with the issuing salon_device cookie -> 200 {state,sessionId,accessToken,refreshToken,accessExpiresAt,refreshExpiresAt}.
+    Both require the selected salon hostname. Cookie is HttpOnly, SameSite=Lax, Path=/, Max-Age=31536000, Secure
+    outside local HTTP; no Domain. A malformed, duplicate or foreign-salon cookie is not a verified device. Existing
+    /identity/me and /identity/sessions routes support customer credentials; opaque refresh requires the salon hostname,
+    signed protected access supports bare API. MFA routes remain hostname-selected.
+
+    Local loopback hooks on the salon Host, excluded from OpenAPI: GET /local/identity/captures/{challengeId} ->
+    {challengeId,channel,code,attempt,deliveredAt}, or 404 until captured; poll the hook rather than assuming immediate
+    delivery. GET /local/identity/deliveries/{challengeId} -> OutboxMessageView with status PENDING/SENDING/SENT/CANCELLED/DEAD
+    and safe attempt/error/timing metadata. PUT /local/identity/providers/{sms|whatsapp} {failures:0..50,delayMs:0..60000}
+    -> 204; these are per-salon/channel controls for subsequent provider attempts. DELETE /local/identity/customers
+    -> 204 cancels queued customer delivery, removes customer/challenge/session/history/rate fixture state and clears
+    this salon''s local captures/controls. It preserves staff fixtures and immutable audit. DELETE /local/identity
+    -> 204 additionally resets staff identity fixtures. Reset is allowed only for fixed synthetic alpha/beta/gamma
+    IDs. PUT /local/clock {instant:ISO8601} and DELETE /local/clock set/reset application time; any Host.
+
+    Configuration: salon.identity.codes.number-limit/device-limit/address-limit/daily-limit use SALON_IDENTITY_CODE_NUMBER_LIMIT/DEVICE_LIMIT/ADDRESS_LIMIT/DAILY_LIMIT,
+    defaults 3/10/20/1000, all positive. Limits are accepted requests, with 15-minute number/device/trusted-servlet-peer
+    windows and UTC daily salon budget. The local startup script retains independent SALON_IDENTITY_SIGNING_KEY,
+    SALON_IDENTITY_CHALLENGE_KEY and SALON_IDENTITY_ENCRYPTION_KEY under .local/identity-keys.properties (0600),
+    via SALON_IDENTITY_LOCAL_KEY_FILE. Nonlocal startup requires all three independent 64-hex-character secrets;
+    it has no SMS/WhatsApp adapter and challenge requests return 503 provider_unavailable. No new dependency. The
+    fourth independent proxy key and address assertion are deferred to S04; forwarding headers/body address do not
+    supply S02''s trusted peer.'
+  data: Existing fixed synthetic alpha/beta/gamma salons remain. Existing staff role fixtures (OWNER, MANAGER, RECEPTIONIST,
+    PROFESSIONAL, ACCOUNTANT) and their randomly generated local credentials are retained in ignored .local/f02-staff-fixtures.json
+    (0600); no usable credential is committed or included here. POST /local/identity/seed remains {accounts:[{email,mobile,password,role,professionalGrant,totpSecret}]}
+    on the chosen synthetic salon Host; submitted secrets are never returned. Customers are created only after mobile
+    verification, with empty name, active=true and a unique normalized verified mobile per salon. All customer fixture
+    state/captures/provider controls has been reset at handoff; no customer credentials remain active from the walkthrough.
+    Immutable nonsecret audit remains, including the one explicit daily5 test volume alert for synthetic UTC date2026-10-13;
+    QA should isolate its run/time rather than assume audit is empty after fixture reset. Ignored sanitized developer
+    evidence is .local/f02-s02-developer-checks.json (168 checks); private transient restart credentials are .local/f02-s02-runtime-state.json
+    (0600), not part of the handoff contract. No real person, external provider, payment, remote environment or
+    message was used.
+  notes: 'AC-1 checked on the running API: normalized synthetic mobile, SMS and WhatsApp accepted with only id/expiry;
+    host-only signed random device cookie flags; requested encrypted outbox capture; invalid mobile/channel/numeric
+    string-field bodies400 field errors without delivery. Contract/client generated and checked. Jackson Textual
+    coercion now rejects integer/float/boolean inputs without changing the existing boolean/integer/float strict
+    configuration.
+
+    AC-2 checked on running API: correct issuing-device code creates/reuses one salon customer; alpha and beta same
+    number produce different IDs; five-minute JWT lifetime and thirty-day absolute refresh expiry checked; customer
+    denied staff endpoints and staff could not revoke a customer session. Customer Principal fields are kind=customer,
+    role/staffId=null, scope=own, mfaEnabled=false, permissions=[session.manage]; profile permissions are for S03.
+
+    AC-3 checked on running API: wrong device, foreign challenge, resend invalidation, five wrong guesses then correct-code
+    rejection, expiry and consumed rejection; simultaneous code verification produces exactly one200 and one401.
+    Durable negative-state and concurrent creation assertions also pass in real HTTP integration tests.
+
+    AC-4 checked on running API with production defaults: concurrent number requests accept only remaining budget,3/10/20
+    ceilings hold, forged cookies/body IDs/address and X-Forwarded-For cannot bypass number or trusted-peer budgets,429
+    occurs before enqueue. Actual API stop/restart with retained keys preserves number ceiling; accepted-only counters
+    check all dimensions before any increment/enqueue, denied requests are audit-only. Explicit local daily5/device100/address100
+    override checked daily ceiling and was removed afterwards; final default20 peer ceiling reconfirmed. Retry-After
+    is the positive ceiling of the longest remaining blocked window, including UTC midnight for daily budget; staff
+    remains900.
+
+    AC-5 checked on running API under the explicit synthetic daily5 override: accepted fourth request produces exactly
+    one secret-free identity.code_volume_alert per UTC day, Owner sees its opaque day subject through audit, foreign
+    Host404, tenant.id meter tag present, sixth request denied, midnight admits a new number but does not reset
+    the short number ceiling. Threshold and meter count accepted requests only. Production daily default remains1000;
+    test overrides are not production certification.
+
+    AC-6 checked on running API: own paginated customer sessions, other customer/staff/foreign session404, revoke-all204
+    with immediate denial, concurrent refresh one200/one401 followed by replay-family revocation, access expiry,
+    live renewal, retained-key renewal after real restart, absolute thirty-day expiry401, bare-API signed access
+    and hostname-only opaque renewal. SessionAccess shares S01''s live principal/generation/history checks without
+    combining staff and customer ownership.
+
+    AC-7 checked on running API and external storage inspection: no code/account existence in public challenge,
+    safe errors/audit, encrypted recipient/code envelope and HMAC code hash in customer challenge/outbox, refresh
+    hash-only, runtime credential absent from logs, both new tables forcedRLS. Full developer real-database/HTTP
+    tests independently check RLS-only and Hibernate-only read/update/delete/missing context, foreign composite
+    FK and kind/owner XOR. V9 appends customer_account_id; staff account_id FK remains, check requires exactly the
+    matching kind owner. V8 unchanged. No submitted secret/full phone is written to logs/audit/public errors or
+    generated auth DTOs.
+
+    AC-8 checked on running API: controlled failure retries with attempt2 after backoff without another accepted
+    request; silent12s provider is bounded by existing10s call timeout then recovers on attempt2; delayed WhatsApp
+    crossing expiry finishes CANCELLED and never captures code. In-flight synthetic reset cannot recreate state
+    in integration HTTP tests. Separately started local verification-profile API returned503 provider_unavailable
+    and local hook404; it was stopped. Local capture/control/reset are loopback-only, tenant-bound and generated-contract
+    excluded, also covered by full nonlocal/local guard tests.
+
+    Outbox contract for S03: Outbox.cancel(id,Instant) requires the caller''s writable tenant transaction and affects
+    only matching tenant pending/sending/dead rows; sent and already-cancelled rows stay unchanged. Cancellation
+    clears lease and is explicit CANCELLED, never SENT. Conditional dispatcher result writes cannot resurrect a
+    cancelled message. Provider OutboxCancelled records cancelled outcome without charging a provider failure; actual
+    provider failures retain normal leases/retries/breaker behavior. Local provider rechecks challenge existence/state/expiry
+    after I/O delay and before capture. Business resend/sign-in/provider-expiry paths record identity.code_cancelled
+    when cancellation changed a row. Scheduled expired-challenge cleanup and synthetic reset cancel without an extra
+    identity audit event, as lead accepted; the explicit outbox cancellation state remains. Fixture resets intentionally
+    retain immutable audit. S03 must use this public facade inside its deletion transaction, retain ordinary abuse
+    counters, and clear affected local captures.
+
+    Verification: cd apps/api && ./mvnw -q verify PASS exit0,471 tests0 failures/errors/skips, /tmp/f02_s02_verify_final_isolated.log.
+    pnpm contracts:check PASS exit0, controllers OpenAPI and TypeScript client current, /tmp/f02_s02_contract_check_final.log.
+    git diff --check, developer guard and lifecycle validate PASS. Running local checks168 PASS, sanitized evidence
+    .local/f02-s02-developer-checks.json; final health200/sourcecommit d30c7c9/default limits/real clock/customer-reset
+    verified.
+
+    Failures found and resolved during development: numeric-to-string Jackson coercion violated strict input contract;
+    customizer and focused property test added, complete nested/meta baseline remains green. Restart fixture originally
+    changed generated keys between starts; it now supplies the same random test keys and proves durable counters.
+    Final gate initially had471 tests with1 ProviderLimits breaker fixture failure: existing30s failed-message retries
+    could obtain half-open trial while the clock advanced45->120s, correctly reopen breaker and hold the waiting
+    success. XML showed a failed probe attempt2 while waiting probe remained attempts0. Lead approved this test''s
+    initial-backoff5m isolation; targeted2 tests and exact full gate passed, retaining threshold3,wait60s,concurrency1,
+    all5s deadlines and before/after assertions. No application ordering or timeout was changed.
+
+    Existing S01 contract defect fixed before feature QA in ff3498a: staff POST201 and staff/session DELETE204 documented
+    correctly, optional SignIn branch fields consistently omitted, principal role/staffId required nullable, focused
+    generated contract assertions pass. No QA automation was run or edited, no other feature QA, no new dependency,
+    browser/profile/real-provider/mobile/deployment remain the stated later-stage scope. All acceptance criteria
+    checked; none accepted unverified. Independent feature QA remains after all F02 stages close.'
+cases:
+- id: TC-F02-S02-001
+  title: code requests reveal only a challenge and issue a protected server device cookie
+  type: api
+  priority: high
+  covers:
+  - AC-1
+- id: TC-F02-S02-002
+  title: invalid challenge requests create no delivery and name invalid fields
+  type: api
+  priority: high
+  covers:
+  - AC-1
+- id: TC-F02-S02-003
+  title: a correct code signs in a salon-specific customer with bounded credentials
+  type: security
+  priority: critical
+  covers:
+  - AC-2
+- id: TC-F02-S02-004
+  title: the same mobile at two salons creates unrelated customer identities
+  type: tenant-isolation
+  priority: critical
+  covers:
+  - AC-2
+- id: TC-F02-S02-005
+  title: customer authority cannot perform any staff-only action
+  type: permissions
+  priority: critical
+  covers:
+  - AC-2
+- id: TC-F02-S02-006
+  title: wrong guesses exhaust a challenge durably and cannot issue a session
+  type: security
+  priority: critical
+  covers:
+  - AC-3
+- id: TC-F02-S02-007
+  title: expiry resend and wrong-device verification cannot authorize an old challenge
+  type: security
+  priority: critical
+  covers:
+  - AC-3
+- id: TC-F02-S02-008
+  title: concurrent valid-code reuse creates exactly one customer and session
+  type: concurrency
+  priority: critical
+  covers:
+  - AC-3
+- id: TC-F02-S02-009
+  title: customer challenge and capture routes are isolated from other salons
+  type: tenant-isolation
+  priority: critical
+  covers:
+  - AC-3
+  - AC-7
+  - AC-8
+- id: TC-F02-S02-010
+  title: each request limit prevents extra enqueue and resists forged selectors
+  type: security
+  priority: critical
+  covers:
+  - AC-4
+- id: TC-F02-S02-011
+  title: simultaneous requests cannot cross the number or salon daily ceiling
+  type: concurrency
+  priority: critical
+  covers:
+  - AC-4
+- id: TC-F02-S02-012
+  title: API restart preserves accepted code counters and issuing-device verification
+  type: security
+  priority: critical
+  covers:
+  - AC-4
+- id: TC-F02-S02-013
+  title: the unusual-volume alert is once per salon UTC day and visible only to authorized readers
+  type: security
+  priority: critical
+  covers:
+  - AC-5
+- id: TC-F02-S02-014
+  title: customer session ownership and principal-kind separation survive renewal and revocation
+  type: security
+  priority: critical
+  covers:
+  - AC-6
+- id: TC-F02-S02-015
+  title: customer and challenge storage is tenant-bound encrypted and absent from logs and public errors
+  type: data-integrity
+  priority: critical
+  covers:
+  - AC-7
+- id: TC-F02-S02-016
+  title: failed and silent delivery retries the existing request and recovers without duplicates
+  type: resilience
+  priority: high
+  covers:
+  - AC-8
+- id: TC-F02-S02-017
+  title: an expired challenge is never delivered after provider recovery
+  type: security
+  priority: critical
+  covers:
+  - AC-8
+- id: TC-F02-S02-018
+  title: provider controls are local-only and nonlocal unconfigured sending refuses honestly
+  type: build
+  priority: high
+  covers:
+  - AC-8
+verification:
+  commands:
+  - cd apps/api && ./mvnw -q verify
+  - pnpm contracts:check
+  automation:
+  - id: customer-access
+    tool: playwright
+    file: qa/api/F02/S02-customer-access.spec.ts
+    project: api
+    covers:
+    - TC-F02-S02-001
+    - TC-F02-S02-002
+    - TC-F02-S02-003
+    - TC-F02-S02-004
+    - TC-F02-S02-005
+    - TC-F02-S02-006
+    - TC-F02-S02-007
+    - TC-F02-S02-008
+    - TC-F02-S02-009
+    - TC-F02-S02-010
+    - TC-F02-S02-014
+    - TC-F02-S02-015
+    suites: [regression]
+  - id: customer-runtime
+    tool: playwright
+    file: qa/api/F02/S02-customer-runtime.spec.ts
+    project: api
+    covers:
+    - TC-F02-S02-011
+    - TC-F02-S02-012
+    - TC-F02-S02-013
+    - TC-F02-S02-016
+    - TC-F02-S02-017
+    suites: [regression]
+  - id: nonlocal-provider
+    tool: script
+    file: qa/checks/F02/S02-nonlocal-provider.sh
+    covers:
+    - TC-F02-S02-018
+    suites: [regression]
+  manual: []
+  deferred: []
+evidence:
+  last_run: null
+  last_result: null

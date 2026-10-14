@@ -19,3 +19,10 @@ salon:
 springdoc:
   api-docs:
     enabled: true
+
+# Throwaway independent keys generated for each test context; never usable runtime credentials.
+salon.identity:
+  signing-key: ${random.value}${random.value}
+  challenge-key: ${random.value}${random.value}
+  encryption-key: ${random.value}${random.value}
+  proxy-key: ${random.value}${random.value}

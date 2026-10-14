@@ -11,6 +11,7 @@
 // SALON_LISTEN_ON_NETWORK=true listens on every network interface instead, for testing from a
 // phone on the same network. Anything else, or nothing, keeps it on this machine.
 import { createServer } from 'node:http';
+import { loadIdentityRuntime } from './identity-runtime.mjs';
 import { networkInterfaces } from 'node:os';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -27,6 +28,8 @@ const onNetwork = process.env.SALON_LISTEN_ON_NETWORK === 'true';
 
 // Next.js reads this when it is loaded, so it is set first and Next.js is imported afterwards.
 process.env.NODE_ENV = dev ? 'development' : 'production';
+// Local-only key file handling stays outside every deployed Next.js bundle.
+loadIdentityRuntime(process.env, resolve(dirname(fileURLToPath(import.meta.url)), '../../../.local/identity-keys.properties'));
 const { default: next } = await import('next');
 
 const hasIPv6Loopback = Object.values(networkInterfaces())

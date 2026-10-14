@@ -140,10 +140,14 @@ and `application`, never in a controller, a repository or a mapper.
   database answers again.
 - **Every wait on the database has a limit:** connection 2 s, validation 1 s, connect 2 s, login 2 s,
   socket 30 s. A statement that gets no answer for 30 s fails. Do not add a database call without one.
-- **A request's database work waits at most 3 s** (`salon.database.request-timeout`). When the
-  database is down, or accepts connections and stays silent, any endpoint that needs it answers 503
-  `service_unavailable` within that limit, including a request already in flight, and recovers by
-  itself. Migrations use the same connection limits.
+- **A held database connection has a 3 s network wait timeout** (`salon.database.request-timeout`).
+  This is the driver's configured wait, not an exact three-second HTTP stopwatch deadline: request
+  scheduling, connection acquisition and response handling add time. The endpoint outage deadline
+  remains five seconds, as F01-S02 AC-10 and CR-003 require: a stopped or silent database produces
+  503 `service_unavailable` within five seconds, including in-flight calls, and the API recovers
+  within five seconds of actual database availability without restarting. Record HTTP and control
+  timing separately; do not call an HTTP measurement a database-only wait. Migrations use the same
+  connection limits.
 - **The API finds a database that answers again within a quarter of a second**
   (`salon.database.reconnect-interval`, 250 ms). The pool opens its connections through
   `SteadyReconnectDataSource`, which retries an unreachable or silent database at that interval.
@@ -158,6 +162,10 @@ and `application`, never in a controller, a repository or a mapper.
 - `GET /actuator/info` is served in the `local` profile only and returns 404 in any other.
 - `GET /api/v1/meta` returns the service name, the build's version, the commit it was built from
   and the server time as a UTC instant. It does not touch the database.
+  For real checkouts, a root `.git`-present Maven profile uses native Git lookup from the build's
+  checkout, including linked worktrees. A source archive without `.git` retains the existing
+  unknown-commit fallback. Verify the embedded build revision and HTTP metadata against the
+  actual API source; later documentation or web-only commits do not rewrite an already built jar.
 - `/actuator/health/readiness` and `/actuator/health/liveness` expose only the respective
   application state. On shutdown readiness becomes `OUT_OF_SERVICE` first, with a five-second
   serving delay before graceful shutdown; the edge checks every second and removes the instance
@@ -205,6 +213,12 @@ and `application`, never in a controller, a repository or a mapper.
   30 s and doubles to 1 h; after 10 attempts the message is `dead` with its last error. A delivery
   interrupted by a stop is attempted again when its lease (60 s) runs out. A suspended salon's
   messages wait, unattempted, until it is active again.
+- Identity code work may end `cancelled` on resend, consumption or expiry. `Outbox.cancel` joins
+  a writable tenant transaction and clears its lease; conditional result writes cannot turn it
+  back into sending/sent. A provider `OutboxCancelled` outcome does not count as a provider failure.
+  Ordinary delivery failures retain the existing retry/breaker behavior. Cancellation does not
+  erase payloads by itself; a privacy-erasure operation must use a shared outbox facade to remove
+  identifying payloads as well.
 - **Every provider call** has a time limit (10 s), a limit on calls at once per channel (4), and a
   circuit breaker per channel that opens after 5 consecutive failures and waits 60 s. While it is
   open, the channel's messages wait without using up attempts.

@@ -47,3 +47,6 @@
 .visuallyHidden {
   composes: visuallyHidden from '../../styles/shared.module.css';
 }
+
+.main nav { display: flex; flex-wrap: wrap; gap: var(--space-4); }
+.main a { display: inline-flex; align-items: center; min-height: var(--size-touch-target); color: var(--color-text); }

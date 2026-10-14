@@ -1,3 +1,5 @@
+import Link from 'next/link';
+import type { ReactNode } from 'react';
 import type { Salon } from '@/lib/api/salon';
 import { useTranslations } from 'next-intl';
 
@@ -11,7 +13,8 @@ import styles from './SalonShell.module.css';
  * `--color-on-brand`, styles/brand.ts); nothing here names a colour. Services, booking and
  * navigation arrive in later stages.
  */
-export function SalonShell({ salon }: { salon: Salon }) {
+export function SalonShell({ salon, children }: { salon: Salon; children?: ReactNode }) {
+  const t = useTranslations('account');
   return (
     <>
       <style data-testid="salon-brand">{brandRootRule(salon.brandColour)}</style>
@@ -23,7 +26,7 @@ export function SalonShell({ salon }: { salon: Salon }) {
             </h1>
           </div>
         </header>
-        <main className={styles.main} data-testid="salon-main" />
+        <main className={styles.main} data-testid="salon-main">{children ?? <nav><Link href="/account" data-testid="salon-account">{t('customerTitle')}</Link><Link href="/workspace/sign-in" data-testid="salon-staff-sign-in">{t('staffSignIn')}</Link></nav>}</main>
       </div>
     </>
   );

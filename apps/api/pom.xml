@@ -40,6 +40,9 @@
     </properties>
 
     <dependencies>
+        <dependency><groupId>org.springframework.security</groupId><artifactId>spring-security-crypto</artifactId></dependency>
+        <dependency><groupId>org.springframework.security</groupId><artifactId>spring-security-oauth2-jose</artifactId></dependency>
+        <dependency><groupId>com.eatthepath</groupId><artifactId>java-otp</artifactId><version>1.0.0</version></dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-webmvc</artifactId>
@@ -193,4 +196,29 @@
             </plugin>
         </plugins>
     </build>
+    <profiles>
+        <!-- Native Git understands linked worktrees. Enable it only for a real checkout so source
+             archives keep the plugin's existing no-Git/unknown fallback. ${basedir} is Maven's
+             supported file-activation expression (project properties are not available there). -->
+        <profile>
+            <id>checkout-source-metadata</id>
+            <activation>
+                <file><exists>${basedir}/../../.git</exists></file>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>io.github.git-commit-id</groupId>
+                        <artifactId>git-commit-id-maven-plugin</artifactId>
+                        <configuration>
+                            <!-- Keep lookup inside this checkout instead of dereferencing its
+                                 .git file into the common checkout's HEAD. -->
+                            <dotGitDirectory>${project.basedir}/..</dotGitDirectory>
+                            <useNativeGit>true</useNativeGit>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>

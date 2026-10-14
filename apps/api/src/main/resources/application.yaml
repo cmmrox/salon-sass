@@ -186,3 +186,15 @@ springdoc:
     enabled: false
   paths-to-match: /api/**
   writer-with-order-by-keys: true
+
+# No nonlocal fallback keys. Four independent 32-byte keys encoded as 64 hexadecimal characters.
+salon.identity:
+  signing-key: ${SALON_IDENTITY_SIGNING_KEY:}
+  challenge-key: ${SALON_IDENTITY_CHALLENGE_KEY:}
+  encryption-key: ${SALON_IDENTITY_ENCRYPTION_KEY:}
+  proxy-key: ${SALON_IDENTITY_PROXY_KEY:}
+  codes:
+    number-limit: ${SALON_IDENTITY_CODE_NUMBER_LIMIT:3}
+    device-limit: ${SALON_IDENTITY_CODE_DEVICE_LIMIT:10}
+    address-limit: ${SALON_IDENTITY_CODE_ADDRESS_LIMIT:20}
+    daily-limit: ${SALON_IDENTITY_CODE_DAILY_LIMIT:1000}

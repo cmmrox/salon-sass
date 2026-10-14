@@ -1,18 +1,20 @@
 package com.salonplatform.shared.outbox;
 
-import java.time.Instant;
-import java.util.Optional;
-import java.util.UUID;
-
 import com.salonplatform.shared.observability.Traces;
 import com.salonplatform.shared.tenancy.TenantContext;
 import com.salonplatform.shared.time.SalonTime;
+
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
-import tools.jackson.databind.json.JsonMapper;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
+
+import tools.jackson.databind.json.JsonMapper;
+
+import java.time.Instant;
+import java.util.Optional;
+import java.util.UUID;
 
 /**
  * The way anything leaves the system (docs/engineering/backend.md, "Transactions, outbox and
@@ -23,8 +25,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 @Service
 public class Outbox {
 
-    @PersistenceContext
-    private EntityManager entityManager;
+    @PersistenceContext private EntityManager entityManager;
 
     private final SalonTime time;
 
@@ -50,27 +51,118 @@ public class Outbox {
         return enqueue(channel, payload, time.now());
     }
 
-    /** As {@link #enqueue(String, Object)}, at a time the caller already took for the same change. */
+    /**
+     * As {@link #enqueue(String, Object)}, at a time the caller already took for the same change.
+     */
     public UUID enqueue(String channel, Object payload, Instant at) {
         if (!TransactionSynchronizationManager.isActualTransactionActive()
                 || TransactionSynchronizationManager.isCurrentTransactionReadOnly()) {
             throw new IllegalStateException(
-                    "An outbox message is written in the transaction of the change that causes it; there is none here");
+                    "An outbox message is written in the transaction of the change that causes it;"
+                            + " there is none here");
         }
-        TenantContext.resolved().orElseThrow(() -> new IllegalStateException(
-                "An outbox message belongs to a salon: write it inside work for one (TenantContext)"));
+        TenantContext.resolved()
+                .orElseThrow(
+                        () ->
+                                new IllegalStateException(
+                                        "An outbox message belongs to a salon: write it inside work"
+                                                + " for one (TenantContext)"));
         if (channel == null || channel.isBlank()) {
             throw new IllegalArgumentException("a message has a channel");
         }
         UUID id = UUID.randomUUID();
-        entityManager.persist(new OutboxMessage(id, channel, json.writeValueAsString(payload),
-                traces.currentTraceParent().orElse(null), at));
+        entityManager.persist(
+                new OutboxMessage(
+                        id,
+                        channel,
+                        json.writeValueAsString(payload),
+                        traces.currentTraceParent().orElse(null),
+                        at));
         return id;
     }
 
-    /** One of the current salon's messages. Another salon's is not found, as one that does not exist. */
+    /**
+     * Cancels an undelivered message in the caller's tenant transaction. An in-flight claim cannot
+     * resurrect it.
+     */
+    public boolean cancel(UUID id, Instant at) {
+        if (!TransactionSynchronizationManager.isActualTransactionActive()
+                || TransactionSynchronizationManager.isCurrentTransactionReadOnly())
+            throw new IllegalStateException("Cancellation requires a writable tenant transaction");
+        TenantContext.resolved()
+                .orElseThrow(() -> new IllegalStateException("Cancellation requires a salon"));
+        return entityManager
+                        .createNativeQuery(
+                                "UPDATE outbox_message SET status='cancelled', lease_until=NULL,"
+                                    + " lease_token=NULL, updated_at=:at WHERE tenant_id=:tenant"
+                                    + " AND id=:id AND status IN ('pending','sending','dead')")
+                        .setParameter("tenant", TenantContext.require().id())
+                        .setParameter("id", id)
+                        .setParameter("at", at)
+                        .executeUpdate()
+                == 1;
+    }
+
+    /**
+     * Erases identifying delivery envelopes for one owner inside its privacy transaction. The owner
+     * recognizes its own payloads and returns only an opaque correlation id. Keyset pages remain
+     * bounded even when matched rows are removed. All states, including sent, are erased; absent
+     * rows cannot be recreated by conditional dispatcher finalization.
+     */
+    public java.util.Set<UUID> eraseMatching(
+            java.util.Set<String> channels,
+            java.util.function.Function<String, Optional<UUID>> matchingOwner,
+            Instant at) {
+        if (!TransactionSynchronizationManager.isActualTransactionActive()
+                || TransactionSynchronizationManager.isCurrentTransactionReadOnly())
+            throw new IllegalStateException("Erasure requires a writable tenant transaction");
+        UUID tenant = TenantContext.require().id();
+        java.util.Set<UUID> correlations = new java.util.HashSet<>();
+        UUID after = null;
+        while (true) {
+            String condition = after == null ? "" : " and m.id>:after";
+            var query =
+                    entityManager
+                            .createQuery(
+                                    "select m.id,m.payload from OutboxMessage m where m.channel in"
+                                        + " :channels"
+                                            + condition
+                                            + " order by m.id",
+                                    Object[].class)
+                            .setParameter("channels", channels)
+                            .setMaxResults(100);
+            if (after != null) query.setParameter("after", after);
+            var rows = query.getResultList();
+            if (rows.isEmpty()) break;
+            for (Object[] row : rows) {
+                UUID id = (UUID) row[0];
+                after = id;
+                Optional<UUID> correlation = matchingOwner.apply((String) row[1]);
+                if (correlation.isPresent()) {
+                    cancel(id, at);
+                    entityManager
+                            .createNativeQuery(
+                                    "DELETE FROM outbox_message WHERE tenant_id=:tenant AND id=:id")
+                            .setParameter("tenant", tenant)
+                            .setParameter("id", id)
+                            .executeUpdate();
+                    correlations.add(correlation.get());
+                }
+            }
+        }
+        return java.util.Set.copyOf(correlations);
+    }
+
+    /**
+     * One of the current salon's messages. Another salon's is not found, as one that does not
+     * exist.
+     */
     public Optional<OutboxMessageView> find(UUID id) {
-        return entityManager.createQuery("select m from OutboxMessage m where m.id = :id", OutboxMessage.class)
-                .setParameter("id", id).getResultStream().findFirst().map(OutboxMessage::view);
+        return entityManager
+                .createQuery("select m from OutboxMessage m where m.id = :id", OutboxMessage.class)
+                .setParameter("id", id)
+                .getResultStream()
+                .findFirst()
+                .map(OutboxMessage::view);
     }
 }

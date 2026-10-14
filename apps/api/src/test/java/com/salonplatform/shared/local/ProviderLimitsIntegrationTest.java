@@ -52,8 +52,10 @@ class ProviderLimitsIntegrationTest {
     void anOpenBreakerHoldsTheChannelsMessagesWithoutAttemptsUntilItsWaitHasPassedOnTheClock() {
         try (StartedApplication application = TestDatabase.createEmpty(TestPostgres.shared()).start(
                 ProbeClient.localWithDispatcher("--salon.outbox.breaker.failure-threshold=3",
-                        "--salon.outbox.breaker.wait-duration=60s", "--salon.outbox.provider.concurrency=1"))) {
+                        "--salon.outbox.breaker.wait-duration=60s", "--salon.outbox.provider.concurrency=1",
+                        "--salon.outbox.backoff.initial=5m"))) {
             ProbeClient probes = new ProbeClient(application);
+            // Isolate breaker recovery from retries: these failures are not due again at +120 s.
             Instant start = Instant.now().plus(Duration.ofDays(1));
             probes.setClock(start);
             for (int i = 0; i < 3; i++) {

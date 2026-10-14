@@ -53,3 +53,17 @@ is not, stops with a message that begins `ENVIRONMENT:` (a shell check exits 3).
 the environment, not a failure of the product: start the product and run again. A run stops and
 starts the product's services and empties the local database through the scripts in
 `infra/scripts/`, and leaves the product running when it ends.
+
+F02 future-clock cases use a lead-approved local fixture cleanup in
+`qa/shared/identity-clock-cleanup.ts`. Before setting test time it proves the local database has
+exactly alpha/beta/gamma, snapshots the unlocked `identity-security-cleanup` and `outbox-cleanup`
+rows, and records safe control marks. After restoring real time it changes only `next_run_at`
+values attributable to that case's recorded future clock, under an exact whole-row and unlocked
+transaction guard. It checks affected counts, preserves history/locks/all other records, and
+observes due handlers resume or their original ordinary schedule remain. Unexpected state stops
+cleanup with an environment fault. This is test-fixture cleanup, not a relaxed timing assertion;
+no remote database or application hook is involved.
+
+## F02 bounded local read baseline
+
+`TC-F02-004` is registered once as `qa/checks/F02/F02-read-baseline.sh`. The wrapper uses Corepack Playwright for typed real API fixture preparation and runs the actual k6 thresholds in `qa/load/F02/identity-reads.js`. The lead approved an address ceiling of 200 only while creating the synthetic data. It restores the documented 3/10/20/1000 limits, proves the API restarted with those values and retained keys, and then measures ten concurrent users for twenty seconds. There are exactly five staff roles and fifty customers in each fixed salon. Existing immutable audit remains; each salon has at least one hundred entries, with actual totals recorded. Credential files have mode 0600 under ignored `qa/.auth/` and are removed in finally. The ordinary fixture cleanup removes mutable identities. Preparation, authentication, hashing, delivery and mutation time are excluded from the measured per-read p95 below 300 ms. k6 also observes the connection pool. This is a local baseline, with machine and data volume recorded, and does not certify a production target. Draft automation has not been executed.
