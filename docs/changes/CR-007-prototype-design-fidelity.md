@@ -7,7 +7,7 @@ requested_on: 2026-10-14
 decided_on: 2026-10-14
 requirements: [NFR-21]
 features: [F01, F02]
-stages: [F01-S03, F02-S04]
+stages: [F01-S03, F01-S05, F02-S04]
 integration_branch: charithm/feature/F02-prototype-design-fidelity
 ---
 
@@ -54,3 +54,19 @@ Original F01 PR #3 and F02 PR #4 are merged. Live check confirmed F02 merge
 `b94abb01ea7b16576c9450b911b5c4664e860b32`. This owner-requested cross-feature correction uses one
 scoped follow-up repair PR, separate role commits and independent F01/F02 evidence. Original merge
 records remain historical; repair revisions and PR are recorded here at completion. F03 is not started.
+
+## Local verification support
+
+Independent QA found the retained F01-only stack database contains its old V8 rollout probe,
+while F02 correctly uses V8 for staff identity. Preserve the historical volume and archived
+credentials. The supporting F01-S05 configuration fix adds optional `SALON_STACK_DB_VOLUME`,
+defaulting to the existing volume name; QA explicitly selects a separate synthetic local volume.
+The developer proves default/empty/custom resolution changes only that volume and keeps shell
+overrides scrubbed. QA's rollout fixture chooses the next migration after the current real jar
+and preserves all original entries. No old volume reset, hidden Docker command wrapper, schema
+change, staging connection or deployment is involved. Final independent QA includes these changes.
+
+Developer and QA source commits initially share the repair integration checkout sequentially,
+with explicit role-separated paths and guards. Final independent QA uses
+`charithm/test/F02-prototype-design-fidelity`, branched from the finished integration revision;
+the lead integrates its result commits with a merge commit. Existing history is preserved.

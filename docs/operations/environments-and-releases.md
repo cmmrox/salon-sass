@@ -133,7 +133,14 @@ configuration uses public DNS-challenge certificates; certificate issuance, HTTP
 HSTS are tested only after the owner requests deployment to the VPS staging environment.
 
 Container and network names carry `salon-stack`; its persistent data volume is
-`salon-stack-postgres-data`. This stack never shares the local database.
+`salon-stack-postgres-data` by default. The optional `SALON_STACK_DB_VOLUME` in `.env.stack` may
+name an isolated local QA volume; an absent or empty value preserves the default. This setting
+changes only the PostgreSQL volume, never the edge volumes or the local development database.
+For CR-007, the retained F01 QA volume contains its historical rollout-probe migration V8, which
+conflicts with the real F02 V8. Preserve that volume and select `salon-stack-cr007-postgres-data`
+for current synthetic QA; do not remove or rewrite the historical migrations. The full stack,
+deployment and rollback scripts all use the explicit setting. This stack never shares the local
+database. `infra/scripts/test-stack-db-volume.sh` verifies defaults and custom isolation.
 An administrator provisions a non-superuser owning role and an application role that owns no
 table and cannot bypass RLS. Only the migration container receives the owning role's password;
 API instances receive the application role's credentials. The stack profile exposes no local
