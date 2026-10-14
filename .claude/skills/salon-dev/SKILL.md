@@ -16,6 +16,9 @@ with, and the rules of this particular product, are not in this skill: they are 
 3. `docs/README.md`, for the row that matches each part of the product you are about to touch.
    When in doubt, read the document; the rules in it are requirements, not background.
 4. The `AGENTS.md` in the application folder you are working in, when there is one.
+5. For user-facing work, inspect the supplied design reference before coding. Record the mapped
+   screen, responsive layout and visual states; a passing functional check does not prove design
+   fidelity. Follow `docs/design/ui-ux-standards.md` for the project's reference and comparison gates.
 
 When the documents do not cover something:
 
@@ -61,7 +64,9 @@ When the documents do not cover something:
    built on this one before QA sees it, so this walk-through is the stage's acceptance check. Do not
    hand over something you have not seen work.
 6. Hand over as `stage-build` describes. In `handoff.notes`, account for each acceptance criterion:
-   checked on the running product, or not checked and why. The lead closes the stage on that record.
+   checked on the running product, or not checked and why. For screens, include reference-to-product
+   comparison evidence at representative widths and resolve visual differences before handoff.
+   Report any reference preview limitation explicitly. The lead closes the stage on that record.
 
 ## What you owe QA
 
