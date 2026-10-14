@@ -32,3 +32,12 @@ Pending before pass: combined fixed source/runtime handoff; affected repro verif
 ## Fixed-source re-verification SQL wording
 
 On frozen revision26b6bbc the six audit/privacy cases reached their intended audit contract and metadata checks; five passed. S03-014 then rejected the actual database trigger text `an audit entry is never changed` because the draft regex expected other English words. Independent rolled-back SQL against a nonempty audit table returned that exact refusal and zero modified rows. Corrected the expectation to the actual documented migration refusal and added API readback equality after the rejected write; the immutability requirement is unchanged. BUG003's both-kind browser case passed including untouched other-kind cookies and valid principal.
+
+## Fixed-source full rerun 061212
+
+83/87 automated cases passed; 13 registered entries completed. All product fix cases held. The bounded local load passed10users20seconds, exact5staff/50customers and actual immutable audit1590/304/199, all reads p95under20ms against300ms, zero25243 request failures.
+
+- S04-021 inspected the initial sign-in loading skeleton before the form. Screenshot and accessibility snapshot show one loading id. Add form submit visibility readiness as in the other presentation cases, retaining nonempty inventory and every handle/string assertion.
+- S04-020's outside fault server returned503 on `/api/v1/salon`, which proxy requires before BFF metadata. No mutation started, so its cancellation predicate was never exercised. Serve the observed generated synthetic alpha public salon response only for the proper hostname before delayed metadata/hung mutation; cancellation and timing assertions unchanged.
+- S04-022 used an injected Clock base that runs forward, as LocalClockController/TestClock explicitly document; `fixed` means offset set. Earlier variants consumed the31s future-negative margin. Reapply the exact known base immediately before each variant, with variant labels. Keep30s acceptance policy, ±31s negative inputs and zero-side-effect checks. No tolerance added.
+- Journey002 independent settled probe reproduced2brand nodes after deletion: exactly1 visible; the other sits under a display:none ancestor. Screenshot and accessibility tree show only1correct Beta banner. Use exact1visible brand and correcttext in every retained branch; also wait for the sign-in form. No visible duplicate or foreignbrand product defect was observed. Sanitized probe is in `qa/reports/20261014-fixed-source-triage/journey-settled-probe.log`.

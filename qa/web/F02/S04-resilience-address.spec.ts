@@ -32,12 +32,13 @@ test(`${c(20)} API outage and slow BFF work preserve form values and present saf
  // mutation. A new 3s mutation timer would wait longer than the observed metadata
  // leg; the shared deadline cancels it in the shorter remaining leg. Record actual
  // disconnect separately from response serialization, never a 3000ms finish claim.
- const metaTime=await identity.now();let fake:Awaited<ReturnType<typeof standInForApi>>|undefined;
+ const metaTime=await identity.now();const salonResponse=await identity.api.send('GET','/api/v1/salon',{headers:{Host:alpha.hostname}});expect(salonResponse.status()).toBe(200);const publishedSalon=await salonResponse.json();expect(publishedSalon.slug).toBe(alpha.slug);let fake:Awaited<ReturnType<typeof standInForApi>>|undefined;
  let metadataStarted=0,metadataEnded=0,mutationStarted=0,mutationClosed=0;
  localService('stop','api');
  try{
   fake=await standInForApi((request,response)=>{
-   if(request.url==='/api/v1/meta'){metadataStarted=performance.now();setTimeout(()=>{metadataEnded=performance.now();response.writeHead(200,{'Content-Type':'application/json'});response.end(JSON.stringify({service:'salon-api',version:'qa-fault-seam',commit:'synthetic',time:metaTime}));},2200);}
+   if(request.url==='/api/v1/salon'&&request.headers.host===alpha.hostname){response.writeHead(200,{'Content-Type':'application/json'});response.end(JSON.stringify(publishedSalon));}
+   else if(request.url==='/api/v1/meta'){metadataStarted=performance.now();setTimeout(()=>{metadataEnded=performance.now();response.writeHead(200,{'Content-Type':'application/json'});response.end(JSON.stringify({service:'salon-api',version:'qa-fault-seam',commit:'synthetic',time:metaTime}));},2200);}
    else if(request.url==='/api/v1/identity/staff/sign-in'){mutationStarted=performance.now();response.once('close',()=>{mutationClosed=performance.now();});}
    else{response.writeHead(503);response.end();}
   });
@@ -54,7 +55,7 @@ test(`${c(22)} trusted client address assertions cannot alter tenant authority o
  const invalid=['forged',sign().replace(/.$/,'z'),sign(beta.hostname),sign(alpha.hostname,'GET'),sign(alpha.hostname,'POST','/api/v1/identity/staff/sign-in'),
   sign(alpha.hostname,'POST',target,'192.0.2.20:80'),sign(alpha.hostname,'POST',target,'[::1]'),sign(alpha.hostname,'POST',target,'fe80::1%lo0'),sign(alpha.hostname,'POST',target,'192.0.2.20,192.0.2.21'),
   sign(alpha.hostname,'POST',target,ip,new Date(Date.parse(now)-31000).toISOString()),sign(alpha.hostname,'POST',target,ip,new Date(Date.parse(now)+31000).toISOString()),sign()+','+sign(),'x'.repeat(193)];
- for(const proof of invalid){const before=state();const response=await accounts.customers.request(alpha,{mobile:syntheticMobile(),channel:'sms',deviceLabel:'QA assertion'},'',{'x-salon-client-assertion':proof});expect(response.status()).toBe(400);expect((await response.json()).code).toBe('invalid_client_assertion');expect(state(),'invalid present assertion has no identity/rate/enqueue side effect').toBe(before);}
+ for(const [index,proof] of invalid.entries()){await identity.clock(now);const before=state();const response=await accounts.customers.request(alpha,{mobile:syntheticMobile(),channel:'sms',deviceLabel:'QA assertion'},'',{'x-salon-client-assertion':proof});expect(response.status(),`invalid assertion variant ${index}`).toBe(400);expect((await response.json()).code).toBe('invalid_client_assertion');expect(state(),'invalid present assertion has no identity/rate/enqueue side effect').toBe(before);}
  const valid=await accounts.customers.request(alpha,{mobile:syntheticMobile(),channel:'sms',deviceLabel:'QA assertion'},'',{'x-salon-client-assertion':sign()});expect(valid.status()).toBe(200);expect((await valid.json()).challengeId).toBeTruthy();expect((await identity.call(alpha,'GET','/me',undefined,undefined,{'x-salon-client-assertion':sign()})).status()).toBe(401);
  const before=Number(identitySql(`SELECT coalesce(sum(attempts),0) FROM identity_rate_bucket WHERE tenant_id='${alpha.id}' AND dimension='customer-address'`));const context=await accounts.context(alpha);
  for(let index=0;index<20;index++){const device=await accounts.context(alpha);const response=await accounts.action(device,alpha,'customer','code',{mobile:syntheticMobile(),channel:'sms',deviceLabel:'QA real peer'},{'X-Forwarded-For':`198.51.100.${index+1}`,'X-Real-IP':`203.0.113.${index+1}`,'x-salon-client-assertion':'forged-incoming'});expect(response.status()).toBe(200);}
