@@ -1,7 +1,7 @@
 .shell { display: flex; flex-direction: column; width: 100%; max-width: var(--size-customer); margin: 0 auto; min-height: 100vh; background: var(--color-background); }
-.banner, .bannerLoading { display: flex; align-items: center; gap: var(--space-2); min-height: var(--size-header); padding: var(--space-2) var(--space-3); background: var(--color-background); }
+.banner, .bannerLoading { display: flex; align-items: center; gap: var(--space-2); min-height: var(--size-customer-header); padding: var(--space-2) var(--space-3); background: var(--color-background); }
 .banner { position: sticky; top: 0; z-index: 40; }
-.identity, .identityLoading { width: var(--size-identity); height: var(--size-identity); flex: none; display: grid; place-items: center; border-radius: var(--radius-pill); }
+.identity, .identityLoading { width: var(--size-customer-identity); height: var(--size-customer-identity); flex: none; display: grid; place-items: center; border-radius: var(--radius-pill); }
 .identity { background: var(--color-brand); color: var(--color-on-brand); font-weight: var(--font-weight-strong); }
 .name { font-size: var(--font-size-body); font-weight: var(--font-weight-strong); line-height: var(--line-height-heading); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .main { flex: 1; min-width: 0; padding: var(--space-4) var(--space-4) calc(var(--size-nav) + var(--space-8) + env(safe-area-inset-bottom, 0px)); }

@@ -12,15 +12,15 @@
   --color-border: #DDD6CA;
   --color-text: #111827;
   --color-text-muted: #6B7280;
-  --color-focus: #1d4ed8;
-  --color-positive: #166534;
-  --color-positive-surface: #ecfdf3;
-  --color-caution: #92400e;
-  --color-caution-surface: #fffbeb;
+  --color-focus: #1D5FD0;
+  --color-positive: #0F7B55;
+  --color-positive-surface: #DDF1E6;
+  --color-caution: #8F5A00;
+  --color-caution-surface: #FFF4DC;
   --color-skeleton: #EAE5DC;
 
-  --color-negative: #9f231d;
-  --color-negative-surface: #fff0ee;
+  --color-negative: #B3261E;
+  --color-negative-surface: #FDE9E7;
   --opacity-disabled: 0.55;
 
   /* Space */
@@ -37,6 +37,7 @@
   --size-touch-target: 2.75rem;
   --size-skeleton-line: 1.25rem;
   --size-focus-ring: 0.1875rem;
+  --size-focus-offset: 0.125rem;
   --size-border: 0.0625rem;
 
   --size-customer: 26.875rem;
@@ -45,6 +46,8 @@
   --size-sidebar-compact: 12.5rem;
   --size-header: 3.75rem;
   --size-nav: 5.25rem;
+  --size-customer-header: 3.125rem;
+  --size-customer-identity: 2rem;
   --size-identity: 2.75rem;
   --size-icon: 1.375rem;
   --size-field: 3rem;

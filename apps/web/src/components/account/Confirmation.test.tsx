@@ -32,3 +32,18 @@ it('cancels only outside the dialog bounds, preserving clicks in its padding', (
  fireEvent.click(dialog, { clientX: 120, clientY: 120 }); expect(cancel).not.toHaveBeenCalled();
  fireEvent.click(dialog, { clientX: 20, clientY: 20 }); expect(cancel).toHaveBeenCalledOnce();
 });
+
+it('wraps Tab and Shift+Tab inside the modal action controls', () => {
+ renderWithMessages(<Confirmation title="Confirm this action" onCancel={() => {}}><Button testId="account-confirm-action">Confirm</Button><Button testId="account-cancel-action">Cancel</Button></Confirmation>);
+ const first = screen.getByTestId('account-confirm-action'); const last = screen.getByTestId('account-cancel-action');
+ expect(last).toHaveFocus(); fireEvent.keyDown(last, { key: 'Tab' }); expect(first).toHaveFocus();
+ fireEvent.keyDown(first, { key: 'Tab', shiftKey: true }); expect(last).toHaveFocus();
+});
+
+it('keeps a submitted confirmation open and focuses the dialog while actions are disabled', () => {
+ const cancel = vi.fn();
+ renderWithMessages(<Confirmation busy title="Confirm this action" onCancel={cancel}><Button disabled testId="account-confirm-action">Confirm</Button><Button disabled testId="account-cancel-action">Cancel</Button></Confirmation>);
+ const dialog = screen.getByRole('dialog'); expect(dialog).toHaveFocus();
+ fireEvent(dialog, new Event('cancel', { cancelable: true })); fireEvent.click(dialog, { clientX: 20, clientY: 20 });
+ fireEvent.keyDown(dialog, { key: 'Tab' }); expect(dialog).toHaveFocus(); expect(cancel).not.toHaveBeenCalled(); expect(dialog).toHaveAttribute('open');
+});

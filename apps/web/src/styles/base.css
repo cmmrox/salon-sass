@@ -34,7 +34,7 @@ dd {
 
 :focus-visible {
   outline: var(--size-focus-ring) solid var(--color-focus);
-  outline-offset: var(--size-focus-ring);
+  outline-offset: var(--size-focus-offset);
 }
 
 button, input, select, textarea { font: inherit; }
