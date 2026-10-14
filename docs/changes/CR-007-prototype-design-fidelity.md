@@ -80,3 +80,19 @@ contrast correction uses existing ink on the reference green surface under the e
 requirement; all palette and accessibility assertions remain. A non-servlet migration process
 must not create servlet filters, while servlet tenant isolation and error mapping remain intact.
 The fixed source receives complete independent F01 and F02 verification.
+
+## Historical verification and current fixture compatibility
+
+The original F01 and F02 full passes and merges remain valid history for their tested revisions
+and scopes. The current repair changes shared UI and receives new verification; it does not
+undo those original deliveries. Initial current failures include genuine product defects
+(BUG-F01-002/003, fixed) and obsolete F01 test assumptions introduced before F02 existed.
+
+QA supplies explicit private independent keys for positive nonlocal profile checks, while keeping
+negative missing-secret checks unconfigured. The source scanner distinguishes rendered values
+from comparison operands and recognizes the verified shared Button `testId` contract; negative
+hardcoded-text and missing-handle witnesses remain. F01-S02 AC-3 is clarified to the already
+approved F02 identity contract: invalid bearer UUIDs return generic 401 `invalid_session` with
+no tenant leakage; non-credential tenant selectors still return the hostname's own salon. No
+authentication business rule, isolation requirement or accessibility threshold is relaxed.
+These QA fixes are batched before the final frozen-revision feature passes.

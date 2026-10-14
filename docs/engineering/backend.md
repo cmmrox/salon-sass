@@ -298,3 +298,11 @@ a test: when you write one for a bug, watch it fail first.
 The commands for a stage are the ones in its `stage.yaml` under `verification.commands`. For the API
 that means the Maven wrapper's `verify` (unit, integration and architecture tests) and the contract
 drift check.
+
+## Migration-only startup
+
+The `migrate` profile uses web application type NONE, applies database migrations and exits.
+Servlet request filters are created only for servlet applications; do not make a migration
+context depend on MVC exception resolvers. Servlet tenant authentication still requires its
+resolver and fails closed. The actual non-web migration startup integration test protects this
+boundary, alongside the servlet tenant-isolation and authentication tests (BUG-F01-002).
