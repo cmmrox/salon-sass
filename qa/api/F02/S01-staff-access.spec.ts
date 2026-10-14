@@ -199,7 +199,7 @@ test(`${id(24)} new identity records fail closed at the database and persist no 
  expect(invalid.includes('row-level security'),'foreign tenant insert rejected').toBe(true);
  const foreignRef=identitySql(`BEGIN;SET LOCAL app.tenant_id='${alpha.id}';INSERT INTO identity_session(id,tenant_id,created_at,updated_at,account_id,kind,refresh_hash,device_label,expires_at,revoked_at,generation,mfa_verified) SELECT gen_random_uuid(),tenant_id,created_at,updated_at,'${b.principal.id}'::uuid,kind,refresh_hash,device_label,expires_at,revoked_at,generation,mfa_verified FROM identity_session LIMIT 1;ROLLBACK;`,null,false);
  expect(foreignRef.includes('foreign key'),'foreign account reference rejected').toBe(true);
- const auditId=(await identity.audit(a)).items[0]?.id;expect(auditId).toBeTruthy();const immutable=identitySql(`BEGIN;UPDATE audit_entry SET action='tampered' WHERE id='${auditId}';ROLLBACK;`,undefined,false);expect(/immutable|cannot.*update|not allowed/i.test(immutable),'audit cannot be rewritten').toBe(true);
+ const auditId=(await identity.audit(a)).items[0]?.id;expect(auditId).toBeTruthy();const originalAction=identitySql(`SELECT action FROM audit_entry WHERE id='${auditId}'`);const immutable=identitySql(`BEGIN;UPDATE audit_entry SET action='tampered' WHERE id='${auditId}';ROLLBACK;`,undefined,false);expect(immutable,'audit trigger rejects the attempted mutation').toContain('an audit entry is never changed');expect(identitySql(`SELECT action FROM audit_entry WHERE id='${auditId}'`),'rejected mutation leaves the record intact').toBe(originalAction);
 });
 
 test(`${id(25)} contract and local fixtures expose no accidental auth surface`,async({identity})=>{
