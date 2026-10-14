@@ -10,7 +10,8 @@ export type Kind='staff'|'customer';
 export const routes={staffSignIn:'/workspace/sign-in',staff:'/workspace/account',staffList:'/workspace/staff',audit:'/workspace/audit',customerSignIn:'/sign-in',customer:'/account'};
 export const bff=(kind:Kind,action:string)=>`/identity-web/${kind}/${action}`;
 export const cookie=(kind:Kind,name:string)=>`salon_${kind}_${name}`;
-export const handle=(page:Page,name:string)=>page.getByTestId(`account-${name}`);
+const finalHandle=(name:string)=>({oldPassword:'old-password',newPassword:'new-password',marketingConsent:'marketing-consent'} as Record<string,string>)[name]??name;
+export const handle=(page:Page,name:string)=>page.getByTestId(`account-${finalHandle(name)}`);
 export const brandName=(page:Page)=>page.getByTestId('salon-name');
 export const mutations={staff:['sign-in','mfa-start','mfa-enroll','mfa-verify','password','logout','revoke','revoke-all','staff-create','staff-change','staff-remove','refresh','clear'],
   customer:['code','sign-in','logout','revoke','revoke-all','profile','export','delete','refresh','clear']} as const;
