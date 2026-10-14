@@ -2,12 +2,12 @@
 id: BUG-F01-002
 title: Migration-only container cannot start because tenant filter requires web resolver
 severity: major
-status: open
+status: fixed
 found_by: TC-F01-S05-001
 breaks: AC-1
 found_on: 2026-10-14
-fixed_in: null
-fix_note: null
+fixed_in: c5a18b8
+fix_note: Create TenantFilter only for servlet web applications, preserving required resolver/security handling; focused tests, full508-test Maven and actual local,migrate jar startup pass.
 developer_note: null
 verified_on: null
 approved_by: null

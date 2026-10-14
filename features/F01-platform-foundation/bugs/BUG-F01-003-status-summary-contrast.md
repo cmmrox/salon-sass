@@ -2,12 +2,12 @@
 id: BUG-F01-003
 title: Status success summary text fails WCAG AA contrast
 severity: major
-status: open
+status: fixed
 found_by: TC-F01-S01-036
 breaks: NFR-12
 found_on: 2026-10-14
-fixed_in: null
-fix_note: null
+fixed_in: c5a18b8
+fix_note: Use existing ink on unchanged positive surfaces for status and account success; failing4.4669 contrast regressions now pass, web300-test gate and live summary measurement meet AA.
 developer_note: null
 verified_on: null
 approved_by: null
