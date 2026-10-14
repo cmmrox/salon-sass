@@ -2,12 +2,12 @@
 id: BUG-F02-007
 title: Workspace navigation retains removed permissions after live self-demotion
 severity: major
-status: fixed
+status: verified
 found_on: 2026-10-15
 fixed_in: d94b166cb119aad39f64973085be47430bf1137e
 fix_note: 'Observed live staff permission-set changes refresh the server navigation once across initial load, mutation reload and BroadcastChannel; unchanged or reordered permissions and other-kind events do not refresh. Focused checks passed 16/16 after meaningful failing regressions (.local/logs/f02-review-components-red.log and f02-review-components-green.log). All six S04 developer commands passed in the complete 10/10 recorded run qa/reports/20261015-010423-F01-commands-55f23c47f02f on this source; independent browser re-verification remains pending.'
 developer_note: null
-verified_on: null
+verified_on: 2026-10-15
 approved_by: null
 found_in_release: null
 found_by: TC-F02-S04-004
@@ -38,4 +38,8 @@ The real role mutation succeeds; current principal is RECEPTIONIST with neither 
 
 ## Re-verification
 
-Pending developer fix, exact affected regression rows and full independent F02 verification on frozen final source.
+Independently verified on 2026-10-15 against actual running source `0b3f1d91315705727d76087b19bb57120a086629`, containing fix `d94b166cb119aad39f64973085be47430bf1137e`. The two selected real-browser regressions in `qa/web/F02/S04-functional.spec.ts` passed 2/2 in 7.7 seconds, with original failures preserved separately. Evidence: `qa/reports/20261015-PR5-fixed-reproduction/reproduction.log` (copied byte-for-byte from the original retained execution log); independent scope/digest receipt `.local/cr007-owner-scoped-qa-assessment.json`.
+
+The real Owner self-demotion to Receptionist with a second active Owner retained now removes both navigation links without manual reload; the live principal loses both permissions and direct staff/audit calls remain 403. The developer's 16 focused component checks and the recorded 10/10 developer command collection also passed; these are separately identified developer evidence, not independent browser cases.
+
+The owner explicitly directed reuse of valid unchanged results and no repeated full QA on unchanged files. The prior complete F02 report retains its original revision/evidence identity; no fresh whole-feature pass is claimed from these selected tests. The unnecessary repeated F01 collection was interrupted and remains incomplete. This verified state rests on the actual scoped reproduction plus the owner's scope exception, not on a fabricated full report.
