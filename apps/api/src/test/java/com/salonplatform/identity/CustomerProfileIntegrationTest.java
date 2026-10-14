@@ -4,6 +4,9 @@ import static org.assertj.core.api.Assertions.*;
 
 import com.salonplatform.identity.application.*;
 import com.salonplatform.identity.local.*;
+import com.salonplatform.shared.audit.Actor;
+import com.salonplatform.shared.audit.AuditAction;
+import com.salonplatform.shared.audit.AuditTrail;
 import com.salonplatform.shared.outbox.Outbox;
 import com.salonplatform.shared.tenancy.*;
 import com.salonplatform.testing.Http;
@@ -54,6 +57,120 @@ class CustomerProfileIntegrationTest extends CustomerHttpFixture {
                                 : "b2b2b2b2-0000-4000-8000-000000000002"),
                 salon,
                 ZoneId.of("Asia/Colombo"));
+    }
+
+    @Test
+    void ownerAndManagerAuditExposeOnlyProfileVersionsAndChangedFieldNames() throws Exception {
+        var customer = signIn("alpha", 231);
+        var initial = profile("alpha", customer);
+        status(call("alpha", "PUT", ME, edit(0), access(customer), null), 200);
+        for (String role : List.of("OWNER", "MANAGER")) {
+            String token = staff(role);
+            var response =
+                    call(
+                            "alpha",
+                            "GET",
+                            "/api/v1/identity/audit?subjectId=" + initial.get("id"),
+                            null,
+                            token,
+                            null);
+            status(response, 200);
+            List<Map<String, Object>> entries =
+                    (List<Map<String, Object>>) body(response).get("items");
+            var updated =
+                    entries.stream()
+                            .filter(e -> "identity.profile_updated".equals(e.get("action")))
+                            .findFirst()
+                            .orElseThrow();
+            assertThat((Map<String, Object>) updated.get("before"))
+                    .containsExactlyInAnyOrderEntriesOf(Map.of("version", 0));
+            assertThat((Map<String, Object>) updated.get("after"))
+                    .containsOnlyKeys("version", "changedFields")
+                    .containsEntry("version", 1);
+            assertThat(
+                            (List<String>)
+                                    ((Map<String, Object>) updated.get("after"))
+                                            .get("changedFields"))
+                    .containsExactly(
+                            "name",
+                            "email",
+                            "birthday",
+                            "preferredLanguage",
+                            "notificationPreferences",
+                            "marketingConsent");
+            assertThat(response.body())
+                    .doesNotContain(
+                            mobile(231),
+                            "Synthetic Customer",
+                            "copy@synthetic.example",
+                            "2000-02-29",
+                            access(customer),
+                            (String) customer.get("refreshToken"));
+            status(
+                    call(
+                            "beta",
+                            "GET",
+                            "/api/v1/identity/audit?subjectId=" + initial.get("id"),
+                            null,
+                            token,
+                            null),
+                    404);
+        }
+    }
+
+    @Test
+    void profileAuditAllowlistRejectsUnexpectedValuesAndFieldNames() throws Exception {
+        String subject = UUID.randomUUID().toString();
+        String unexpected = UUID.randomUUID() + "@synthetic.example";
+        TenantContext.callAs(
+                tenant("alpha"),
+                () ->
+                        app.bean(IdentityWork.class)
+                                .run(
+                                        () -> {
+                                            app.bean(AuditTrail.class)
+                                                    .record(
+                                                            new AuditAction(
+                                                                    Actor.system("synthetic"),
+                                                                    "identity.profile_updated",
+                                                                    "customer",
+                                                                    subject,
+                                                                    null,
+                                                                    Map.of(
+                                                                            "version",
+                                                                            unexpected,
+                                                                            "email",
+                                                                            unexpected),
+                                                                    Map.of(
+                                                                            "version",
+                                                                            1L,
+                                                                            "changedFields",
+                                                                            List.of(
+                                                                                    "name",
+                                                                                    unexpected,
+                                                                                    123),
+                                                                            "profile",
+                                                                            Map.of(
+                                                                                    "email",
+                                                                                    unexpected))));
+                                            return null;
+                                        }));
+        String manager = staff("MANAGER");
+        var response =
+                call(
+                        "alpha",
+                        "GET",
+                        "/api/v1/identity/audit?subjectId=" + subject,
+                        null,
+                        manager,
+                        null);
+        status(response, 200);
+        var entry = ((List<Map<String, Object>>) body(response).get("items")).getFirst();
+        assertThat((Map<String, Object>) entry.get("before")).isEmpty();
+        assertThat((Map<String, Object>) entry.get("after"))
+                .containsExactlyInAnyOrderEntriesOf(
+                        Map.of("version", 1, "changedFields", List.of("name")));
+        assertThat(response.body()).doesNotContain(unexpected);
     }
 
     @Test

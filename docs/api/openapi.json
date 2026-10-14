@@ -26,11 +26,17 @@
           },
           "after": {
             "additionalProperties": {},
-            "type": "object"
+            "type": [
+              "object",
+              "null"
+            ]
           },
           "before": {
             "additionalProperties": {},
-            "type": "object"
+            "type": [
+              "object",
+              "null"
+            ]
           },
           "id": {
             "format": "uuid",
@@ -47,6 +53,10 @@
             "type": "string"
           }
         },
+        "required": [
+          "after",
+          "before"
+        ],
         "type": "object"
       },
       "Challenge": {
