@@ -6,9 +6,9 @@
 .main { padding: var(--space-4) var(--space-4) calc(var(--size-nav) + var(--space-8) + env(safe-area-inset-bottom, 0px)); }
 .content { max-width: var(--size-content); margin: 0 auto; }
 @media (min-width: 900px) {
- .header { background: var(--color-surface); border-bottom: var(--size-border) solid var(--color-border); padding: var(--space-2) var(--space-8); }
+ .header { background: var(--color-surface); border-bottom: var(--size-border) solid var(--color-border); padding: var(--space-2) var(--space-workspace-header); }
  .layout { display: grid; grid-template-columns: var(--size-sidebar-compact) minmax(0, 1fr); align-items: start; }
  .main { padding: var(--space-6) var(--space-6) var(--space-12); }
  .content { max-width: var(--size-workspace); }
 }
-@media (min-width: 1200px) { .layout { grid-template-columns: var(--size-sidebar) minmax(0, 1fr); } .main { padding: var(--space-8) var(--space-8) var(--space-12); } }
+@media (min-width: 1200px) { .layout { grid-template-columns: var(--size-sidebar) minmax(0, 1fr); } .main { padding: var(--space-workspace-header) var(--space-workspace-inline) var(--space-workspace-bottom); } }
