@@ -260,7 +260,7 @@ def check_feature_covers_stages(feature, fid, stages):
 
 # --- features ---------------------------------------------------------------------------
 
-def check_integration(scope):
+def check_integration(scope, shared_branch=None):
     findings = []
     integration = scope.get("integration") or {}
     if not isinstance(integration, dict):
@@ -273,7 +273,7 @@ def check_integration(scope):
     if integration.get("pull_request") and not S.PR_URL_RE.fullmatch(str(integration["pull_request"])):
         _add(findings, scope, "integration.pull_request must be a GitHub pull request URL")
     branch = integration.get("branch")
-    if branch and not re.fullmatch(r"[a-z]+/feature/" + re.escape(scope.get("id", "")) + r"-[A-Za-z0-9-]+", str(branch)):
+    if branch and branch != shared_branch and not re.fullmatch(r"[a-z]+/feature/" + re.escape(scope.get("id", "")) + r"-[A-Za-z0-9-]+", str(branch)):
         _add(findings, scope, "integration.branch must name this feature's integration branch")
     if integration.get("merged_at"):
         try:
@@ -293,6 +293,25 @@ def check_integration(scope):
         if scope.get("status") not in S.CLAIMED or scope.get("qa_status") != "pass":
             _add(findings, scope, "merge evidence belongs only to a QA-passed, closed feature")
     return findings
+
+
+def repair_request(feature, bundle):
+    """Only an approved, explicitly grouped repair can share integration history."""
+    return next((r for r in bundle["change_requests"]
+                 if r.get("id") == feature.get("reopened_by")
+                 and r.get("status") in ("approved", "implemented")
+                 and feature.get("id") in _list(r.get("features"))
+                 and re.fullmatch(r"[a-z]+/feature/F[0-9]+-[A-Za-z0-9-]+",
+                                  str(r.get("integration_branch") or ""))), None)
+
+
+def repair_history(feature, bundle):
+    request = repair_request(feature, bundle)
+    previous = feature.get("previous_integration")
+    if not request or not isinstance(previous, dict):
+        return False
+    snapshot = {**feature, "status": "complete", "qa_status": "pass", "integration": previous}
+    return flow.merged(snapshot) and not check_integration(snapshot)
 
 
 def check_features(bundle):
@@ -328,10 +347,16 @@ def check_features(bundle):
                 _add(findings, feature, f"{fid} is '{status}' but milestone {unreleased[0]} is not released; "
                                         "only the owner starts a later milestone early (record it in started_early)")
         findings += check_qa_status(feature, fid)
-        findings += check_integration(feature)
+        repair = repair_request(feature, bundle)
+        findings += check_integration(feature, repair.get("integration_branch") if repair else None)
+        if feature.get("previous_integration") and not repair_history(feature, bundle):
+            _add(findings, feature, "previous integration needs valid merged history and an approved grouped repair")
         if status not in (None, "backlog"):
             pending = [f.get("id") for f in flow.predecessors(feature, bundle["features"])
-                       if not flow.merged(f) and (not feature.get("started_early") or
+                       if not flow.merged(f)
+                       and not (repair_history(feature, bundle) and repair_history(f, bundle)
+                                and feature.get("reopened_by") == f.get("reopened_by"))
+                       and (not feature.get("started_early") or
                                                 f.get("id") in _list(feature.get("depends_on")))]
             if pending:
                 _add(findings, feature, "started before confirmed GitHub merge of " + ", ".join(pending))
