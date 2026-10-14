@@ -77,8 +77,18 @@ public class StaffAccess {
 
     public record StaffView(
             UUID id,
-            String email,
-            String mobile,
+            @io.swagger.v3.oas.annotations.media.Schema(
+                            types = {"string", "null"},
+                            requiredMode =
+                                    io.swagger.v3.oas.annotations.media.Schema.RequiredMode
+                                            .REQUIRED)
+                    String email,
+            @io.swagger.v3.oas.annotations.media.Schema(
+                            types = {"string", "null"},
+                            requiredMode =
+                                    io.swagger.v3.oas.annotations.media.Schema.RequiredMode
+                                            .REQUIRED)
+                    String mobile,
             String role,
             boolean active,
             boolean professionalGrant,

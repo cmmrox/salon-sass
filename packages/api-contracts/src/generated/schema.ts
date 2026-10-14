@@ -553,11 +553,11 @@ export interface components {
         };
         StaffView: {
             active?: boolean;
-            email?: string;
+            email: string | null;
             /** Format: uuid */
             id?: string;
             mfaEnabled?: boolean;
-            mobile?: string;
+            mobile: string | null;
             professionalGrant?: boolean;
             role?: string;
             /** Format: int64 */
