@@ -2,12 +2,12 @@
 id: BUG-F01-004
 title: Invalid bearer rejection omits the required request log
 severity: major
-status: open
+status: fixed
 found_by: TC-F01-S04-014
 breaks: NFR-16
 found_on: 2026-10-14
-fixed_in: null
-fix_note: null
+fixed_in: 62c209ba393419807d684f3fa7b47b2858e0b4bf
+fix_note: Log early credential denials exactly once before trace cleanup, without binding an untrusted tenant or logging secrets.
 developer_note: null
 verified_on: null
 approved_by: null
@@ -55,5 +55,12 @@ credential bytes are absent from the diagnostic evidence.
 
 ## Re-verification
 
-Pending developer fix. Retain exact 200 tenant/trace logging and invalid-credential 401/redaction
-assertions, then verify this case and the complete F01/F02 scopes on the committed final source.
+The developer reproduced the missing event with six failing request-log assertions, then passed
+all ten focused integration cases. The current recorded F01-S04 developer commands (the first
+eight entries of `qa/reports/20261014-222648-F01-commands-c5ae238b9793`) passed, including the
+518-test API suite, 300 web tests, contract checks and 118 workflow selftests. The earlier
+storage-failed command run is retained separately and supplies no passing evidence.
+
+Independent verification is pending. Retain exact 200 tenant/trace logging and invalid-credential
+401/redaction assertions, then verify this case and the complete F01/F02 scopes on the committed
+final source.

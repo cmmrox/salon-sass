@@ -1,7 +1,7 @@
 ---
 id: CR-007
 title: Restore supplied Customer and Salon design fidelity
-status: approved
+status: implemented
 requested_by: owner
 requested_on: 2026-10-14
 decided_on: 2026-10-14
