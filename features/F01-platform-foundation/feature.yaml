@@ -1,12 +1,11 @@
 id: F01
 title: Platform foundation and tenant isolation
-summary: The platform runs locally and in staging as one deployment in which every
-  salon's data is isolated, each salon is reached at its own web address, and every
-  later feature has the services it builds on.
+summary: The platform runs locally and in staging as one deployment in which every salon's data is isolated, each
+  salon is reached at its own web address, and every later feature has the services it builds on.
 release: R1
 milestone: M1-web
-status: complete
-qa_status: pass
+status: in-progress
+qa_status: not-run
 released_in: null
 depends_on: []
 surfaces:
@@ -24,6 +23,7 @@ nfr_focus:
 - NFR-16
 - NFR-17
 - NFR-18
+- NFR-21
 cases:
 - id: TC-F01-001
   title: Salon identity stays bound across shell API audit delivery and cleanup
@@ -51,18 +51,23 @@ verification:
   manual: []
   deferred:
   - case: TC-F01-002
-    reason: First real-host deployment is outside local F01 proof, explicitly deferred
-      by decision 018 and CR-005; public certificate, remote delivery and provider-dependent
-      monitoring are not certified.
-    unblocked_by: Owner decides D-08 hosting and D-02 platform domain, configures
-      the DNS challenge module and credentials, provides host access, and explicitly
-      requests staging deployment.
+    reason: First real-host deployment is outside local F01 proof, explicitly deferred by decision 018 and CR-005;
+      public certificate, remote delivery and provider-dependent monitoring are not certified.
+    unblocked_by: Owner decides D-08 hosting and D-02 platform domain, configures the DNS challenge module and credentials,
+      provides host access, and explicitly requests staging deployment.
 evidence:
   last_run: qa/reports/20261013-152705-F01
   last_result: pass
 integration:
+  branch: charithm/feature/F02-prototype-design-fidelity
+  pull_request: null
+  qa_revision: null
+  merged_commit: null
+  merged_at: null
+previous_integration:
   branch: charithm/feature/F01-platform-foundation
   pull_request: https://github.com/cmmrox/salon-sass/pull/3
   qa_revision: 771c56b89f192deec47ab3d4f68f04a7dbcbf6ce
   merged_commit: 396ce0054fc662cddbf58a6c584fcb7789040edf
   merged_at: '2026-10-13T11:35:17Z'
+reopened_by: CR-007

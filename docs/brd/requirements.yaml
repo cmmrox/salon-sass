@@ -1308,3 +1308,13 @@ requirements:
     area: "Supportability"
     text: "Support staff can reproduce what a salon or customer sees without asking for passwords."
     target: "Per PLT-07"
+  - id: NFR-21
+    module: NFR
+    priority: must
+    release: R1
+    prototype: full
+    status: changed
+    changed_by: CR-007
+    area: "Design fidelity"
+    text: "Customer and salon surfaces follow the owner's supplied HTML design architecture and look and feel; new components extend the same visual grammar, and departures require an owner-approved change."
+    target: "Reference mapping, visual assertions and independent rendered UI comparison before closure"

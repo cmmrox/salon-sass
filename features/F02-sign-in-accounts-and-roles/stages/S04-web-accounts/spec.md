@@ -4,6 +4,18 @@
 
 Staff and customers can complete F02 from responsive web screens on their salon's hostname. Authentication credentials stay on the server and independent staff/customer sessions coexist, with useful error recovery and accessible controls.
 
+## Owner-approved design correction (CR-007)
+
+The supplied HTML's final cascade and `docs/design/ui-ux-standards.md` are the visual authority.
+Repair shared tokens/type, customer and workspace shells, forms/cards/rows/actions and foundation
+status/error pages. Preserve the business/security acceptance criteria below. New screens inherit
+the reference grammar. Do not invent future capabilities or change the prototype.
+
+- AC-9: Source-defined visual checks and rendered comparison evidence show the warm palette,
+  loaded Poppins, pill actions, rounded fields/cards, 430px customer canvas and responsive salon
+  rail/tab layouts at the width matrix, with readable brands, labels and focus. Independent QA
+  records reference mapping/screenshots; unexplained visual departures fail. (NFR-21)
+
 ## Read first
 
 - `docs/architecture/identity-and-access.md`
@@ -14,6 +26,7 @@ Staff and customers can complete F02 from responsive web screens on their salon'
 - `docs/operations/environments-and-releases.md`
 - `docs/qa/test-plan.md`
 - `docs/engineering/web.md`
+- `docs/design/prototype/index.html`
 - `docs/design/ui-ux-standards.md`
 
 ## Requirements covered

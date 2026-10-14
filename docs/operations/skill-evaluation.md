@@ -150,3 +150,14 @@ merged feature batch and its requested release checks.
 product requires independent QA re-verification and a new `integration.qa_revision`. `pr-check`
 refuses submitting the changed product against the old QA revision. Metadata-only commits do not
 invalidate the unchanged product revision.
+
+## 18. Supplied design fidelity
+
+**Request:** "Fix every existing UI to the HTML design I supplied before the next feature."
+
+**Expected:** Lead loads the lifecycle, maps supplied Customer/Salon design to implemented screens,
+records approval/scope and reopens affected unreleased stages. Developer follows the final reference
+cascade and captures rendered comparisons, including inherited grammar for new screens. Independent
+QA checks design fidelity as well as functionality/accessibility/widths. A missing reference preview
+is reported honestly. Historical merges are preserved and cannot authorise starting the next feature
+until the correction's new QA and merge gates pass. No mobile capability or deployment is inferred.

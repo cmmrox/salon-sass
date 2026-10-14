@@ -6,11 +6,11 @@ surfaces:
 - api
 - web
 - infra
-status: complete
+status: in-progress
 qa_status: not-run
 blocked_reason: null
 released_in: null
-reopened_by: null
+reopened_by: CR-007
 depends_on:
 - F02-S01
 - F02-S02
@@ -29,6 +29,7 @@ requirements:
 nfr_focus:
 - NFR-08
 - NFR-10
+- NFR-21
 handoff:
   run: 'Use installed Node 24/Corepack pnpm 12.11.2 and JAVA25_HOME pointing at the installed JDK25. From this worktree:
     infra/scripts/local-service.sh start postgres; start API from apps/api with SPRING_PROFILES_ACTIVE=local SALON_PLATFORM_DOMAIN=localhost
@@ -311,7 +312,8 @@ verification:
     - TC-F02-S04-010
     - TC-F02-S04-011
     - TC-F02-S04-012
-    suites: [regression]
+    suites:
+    - regression
   - id: browser-security
     tool: playwright
     file: qa/web/F02/S04-browser-security.spec.ts
@@ -324,7 +326,8 @@ verification:
     - TC-F02-S04-013
     - TC-F02-S04-014
     - TC-F02-S04-015
-    suites: [regression]
+    suites:
+    - regression
   - id: web-presentation
     tool: playwright
     file: qa/web/F02/S04-presentation.spec.ts
@@ -334,7 +337,8 @@ verification:
     - TC-F02-S04-017
     - TC-F02-S04-019
     - TC-F02-S04-021
-    suites: [regression]
+    suites:
+    - regression
   - id: web-resilience-address
     tool: playwright
     file: qa/web/F02/S04-resilience-address.spec.ts
@@ -342,7 +346,8 @@ verification:
     covers:
     - TC-F02-S04-020
     - TC-F02-S04-022
-    suites: [regression]
+    suites:
+    - regression
   manual:
   - case: TC-F02-S04-018
     reason: Keyboard focus/order, contrast and real-speed visual interaction require human judgment on the final
