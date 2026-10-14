@@ -28,10 +28,12 @@ export async function principalInsideLock(kind: Kind): Promise<Principal> {
     if (!(current instanceof IdentityFailure) || current.code !== 'invalid_session') throw current;
     if (!current.renewable) { await identityRequest(kind, 'clear', {}); throw current; }
     try { await identityRequest(kind, 'refresh', {}); }
-    catch (failure) {
+    catch {
       // The server may have committed rotation before the connection was lost.
       await identityRequest(kind, 'clear', {}).catch(() => undefined);
-      throw failure;
+      // This family cannot safely renew again, even if clearing also lost its response.
+      // Fresh sign-in is the recovery path; an ordinary principal outage stays an outage.
+      throw new IdentityFailure('invalid_session');
     }
     return identityRequest<Principal>(kind, 'principal');
   }
