@@ -86,6 +86,7 @@ test(`${c(23)} prototype defaults to Salon web and labels the deferred Customer 
    const bounds=await page.getByRole('group',{name:'Design reference platform'}).locator('button').evaluateAll(buttons=>buttons.map(button=>{const r=button.getBoundingClientRect();return{left:r.left,right:r.right,top:r.top,bottom:r.bottom,client:button.clientHeight,scroll:button.scrollHeight};}));expect(bounds).toHaveLength(2);
    for(const box of bounds){expect(box.left).toBeGreaterThanOrEqual(0);expect(box.right).toBeLessThanOrEqual(width);expect(box.scroll).toBeLessThanOrEqual(box.client);}
    expect(bounds[0].right<=bounds[1].left||bounds[0].bottom<=bounds[1].top,'platform labels do not overlap').toBe(true);
+   const identity=await page.locator('#bm').boundingBox(),platform=await page.getByRole('group',{name:'Design reference platform'}).boundingBox();expect(identity).not.toBeNull();expect(platform).not.toBeNull();expect(identity!.x+identity!.width<=platform!.x||platform!.x+platform!.width<=identity!.x||identity!.y+identity!.height<=platform!.y||platform!.y+platform!.height<=identity!.y,'identity does not overlap the platform labels').toBe(true);
    await page.screenshot({path:testInfo.outputPath(`prototype-staff-default-${width}.png`)});
    await customer.click();await expect(customer).toHaveAttribute('aria-pressed','true');await expect(page.locator('body')).not.toHaveClass(/adm/);await expect(page.locator('#platform-note')).toContainText('React Native');
    await salon.click();await expect(page.locator('body')).toHaveClass(/adm/);

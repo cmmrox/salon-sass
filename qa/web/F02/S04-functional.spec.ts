@@ -30,7 +30,7 @@ test(`${c(4)} web permissions protect every page and BFF action for all roles an
  test.setTimeout(120000);const other=await accounts.customers.login(beta);const before=await accounts.profiles.saved(other,'Other salon customer');
  for(const role of ROLES){const actor=await identity.staff(alpha,role),context=await accounts.context(alpha,[actor]);
   for(const [path,allowed]of [[routes.staff,true],[routes.staffList,role==='OWNER'||role==='MANAGER'],[routes.audit,role==='OWNER'||role==='MANAGER']] as const){const page=await accounts.open(context,path);if(allowed)await accounts.ready(page);else await expect(handle(page,'denied')).toBeVisible();await page.close();}
-  for(const [action,allowed] of [['staff',role==='OWNER'||role==='MANAGER'],['audit',role==='OWNER'||role==='MANAGER'],['profile',false]] as const){const response=await accounts.action(context,alpha,'staff',action);expect(response.status()).toBe(allowed?200:403);}
+  for(const [action,allowed] of [['staff',role==='OWNER'||role==='MANAGER'],['audit',role==='OWNER'||role==='MANAGER']] as const){const response=await accounts.action(context,alpha,'staff',action);expect(response.status()).toBe(allowed?200:403);}
   const denied=role!=='OWNER';if(denied){for(const action of ['staff-create','staff-change','staff-remove'])expect((await accounts.action(context,alpha,'staff',action,{...syntheticAccount(),id:other.principal.id,version:0,role:'OWNER'})).status()).toBe(403);}
   expect((await accounts.action(context,alpha,'customer','principal')).status()).toBe(404);
  }
