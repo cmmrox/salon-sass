@@ -52,3 +52,25 @@ it('offers staff password and authenticator steps without customer OTP controls'
   await waitFor(() => expect(replace).toHaveBeenCalledWith('/workspace/account'));
   expect(calls).toEqual(['/identity-web/staff/sign-in', '/identity-web/staff/mfa-verify']);
 });
+
+it('reveals the password only on request and offers administrator guidance without a request', async () => {
+  vi.stubGlobal('navigator', { locks: { request: (_name: string, work: () => Promise<unknown>) => work() } });
+  const fetch = vi.fn(); vi.stubGlobal('fetch', fetch);
+  renderWithMessages(<SignIn kind="staff" timeZone="Asia/Colombo" />);
+  const password = screen.getByTestId('account-password');
+  expect(password).toHaveAttribute('type', 'password');
+  fireEvent.change(password, { target: { value: 'Synthetic local password' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Show password' }));
+  expect(password).toHaveAttribute('type', 'text');
+  expect(password).toHaveValue('Synthetic local password');
+  fireEvent.click(screen.getByRole('button', { name: 'Hide password' }));
+  expect(password).toHaveAttribute('type', 'password');
+  const recovery = screen.getByRole('button', { name: 'Forgot password?' });
+  expect(recovery).toHaveAttribute('aria-expanded', 'false');
+  fireEvent.click(recovery);
+  expect(recovery).toHaveAttribute('aria-expanded', 'true');
+  expect(screen.getByTestId('account-password-help')).toHaveTextContent('contact your salon administrator');
+  expect(fetch).not.toHaveBeenCalled();
+  fireEvent.click(recovery);
+  expect(screen.queryByTestId('account-password-help')).not.toBeInTheDocument();
+});

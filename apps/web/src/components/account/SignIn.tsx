@@ -5,13 +5,15 @@ import { useRouter } from 'next/navigation';
 import type { Kind } from '@/lib/identity/server';
 import { IdentityFailure, identityRequest, supportsLocks, withIdentityLock } from '@/lib/identity/browser';
 import { formatInstant } from '@/lib/format';
-import { Button, Field, Section } from './Controls';
+import { Button, Field } from './Controls';
 import styles from './Account.module.css';
+import login from './StaffSignIn.module.css';
 
 type Step = 'initial' | 'enroll_mfa' | 'verify_mfa';
 export function SignIn({ kind, timeZone }: { kind: Kind; timeZone: string }) {
   const t = useTranslations('account'); const router = useRouter();
   const [values, setValues] = useState({ identifier: '', password: '', code: '' });
+  const [showPassword, setShowPassword] = useState(false); const [passwordHelp, setPasswordHelp] = useState(false);
   const [step, setStep] = useState<Step>('initial'); const [expiry, setExpiry] = useState('');
   const [setup, setSetup] = useState<{ secret?: string; otpauthUri?: string }>({});
   const [busy, setBusy] = useState(false); const [failure, setFailure] = useState<IdentityFailure | null>(null);
@@ -25,7 +27,7 @@ export function SignIn({ kind, timeZone }: { kind: Kind; timeZone: string }) {
       await withIdentityLock(kind, async () => {
         if (step === 'initial') {
           const result = await identityRequest<{ state: string; expiresAt?: string }>(kind, 'sign-in', { identifier: values.identifier, password: values.password, deviceLabel: t('defaultDevice') });
-          setValues((v) => ({ ...v, password: '' }));
+          setValues((v) => ({ ...v, password: '' })); setShowPassword(false);
           if (result.state === 'enroll_mfa' || result.state === 'verify_mfa') {
             setStep(result.state); setExpiry(result.expiresAt ?? '');
             if (result.state === 'enroll_mfa') setSetup(await identityRequest(kind, 'mfa-enroll', {}));
@@ -36,16 +38,21 @@ export function SignIn({ kind, timeZone }: { kind: Kind; timeZone: string }) {
           router.replace('/workspace/account'); router.refresh();
         }
       });
-    } catch (e) { const f = e instanceof IdentityFailure ? e : new IdentityFailure('service_unavailable'); setFailure(f); setWait(f.retryAfter); setValues((v) => ({ ...v, password: '', code: '' })); }
+    } catch (e) { const f = e instanceof IdentityFailure ? e : new IdentityFailure('service_unavailable'); setFailure(f); setWait(f.retryAfter); setShowPassword(false); setValues((v) => ({ ...v, password: '', code: '' })); }
     finally { setBusy(false); }
   }
   const message = failure ? (t.has(failure.code as 'service_unavailable') ? t(failure.code as 'service_unavailable') : t('service_unavailable')) : '';
-  return <Section signIn title={step === 'enroll_mfa' || step === 'verify_mfa' ? t('mfaTitle') : t('signIn')}>
+  return <section className={login.card} data-testid="staff-sign-in-card" aria-labelledby="staff-sign-in-title">
+    <header className={login.heading}>
+      <h1 id="staff-sign-in-title" data-testid="account-title">{t('staffTitle')}</h1>
+      <h2>{step === 'initial' ? t('welcomeBack') : t('mfaTitle')}</h2>
+      {step === 'initial' && <p>{t('signInHelp')}</p>}
+    </header>
     {!supported && <p role="status" className={styles.feedback} data-testid="account-browser-support">{t('browser_unsupported')}</p>}
     {failure && <p role="alert" className={styles.feedback} data-testid="account-error">{message}</p>}
     {wait > 0 && <p role="status" data-testid="account-retry-wait">{t('wait', { seconds: wait })}</p>}
-    <form className={styles.form} onSubmit={(e) => { e.preventDefault(); void submit(); }}>
-      {step === 'initial' && <><Field name="identifier" label={t('identifier')} autoComplete="username" required {...field('identifier')} /><Field name="password" label={t('password')} type="password" autoComplete="current-password" required {...field('password')} /></>}
+    <form className={`${styles.form} ${login.form}`} onSubmit={(e) => { e.preventDefault(); void submit(); }}>
+      {step === 'initial' && <><Field name="identifier" label={t('identifier')} autoComplete="username" required {...field('identifier')} /><div className={login.passwordField}><Field name="password" label={t('password')} type={showPassword ? 'text' : 'password'} autoComplete="current-password" required {...field('password')} /><button type="button" className={login.passwordToggle} data-testid="account-password-toggle" aria-label={showPassword ? t('hidePassword') : t('showPassword')} aria-pressed={showPassword} aria-controls="password" onClick={() => setShowPassword(!showPassword)}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" /><circle cx="12" cy="12" r="3" />{showPassword && <path d="m3 3 18 18" />}</svg></button></div><div className={login.recovery}><button type="button" data-testid="account-forgot-password" aria-expanded={passwordHelp} aria-controls="account-password-help" onClick={() => setPasswordHelp(!passwordHelp)}>{t('forgotPassword')}</button></div>{passwordHelp && <p id="account-password-help" data-testid="account-password-help" role="status" className={login.guidance}>{t('passwordHelp')}</p>}</>}
       {step !== 'initial' && <>
         {step === 'enroll_mfa' && <><p>{t('mfaHelp')}</p><p className={styles.muted}>{t('mfaNotice')}</p><label className={styles.field}>{t('setupKey')}<output className={styles.secret} data-testid="account-setup-key">{setup.secret}</output></label><label className={styles.field}>{t('setupUri')}<output className={styles.secret} data-testid="account-setup-uri">{setup.otpauthUri}</output></label><Button type="button" testId="account-copy-key" secondary onClick={() => { void navigator.clipboard.writeText(setup.secret ?? '').then(() => setCopied(true)); }}>{t('copyKey')}</Button>{copied && <p role="status">{t('copied')}</p>}</>}
         <Field name="code" label={t('code')} inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required {...field('code')} />
@@ -55,5 +62,6 @@ export function SignIn({ kind, timeZone }: { kind: Kind; timeZone: string }) {
       <Button type="submit" testId="account-sign-in-submit" disabled={busy || !supported || wait > 0}>{busy ? t('loading') : step !== 'initial' ? t('verify') : t('signIn')}</Button>
       {step !== 'initial' && <Button type="button" testId="account-restart-sign-in" secondary disabled={busy} onClick={() => { setStep('initial'); setSetup({}); setFailure(null); }}>{t('signIn')}</Button>}
     </form>
-  </Section>;
+    <p className={login.secure} data-testid="staff-sign-in-secure"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2" /><path d="M8 10V6a4 4 0 0 1 8 0v4m-4 5v3" /></svg>{t('secureTeam')}</p>
+  </section>;
 }
