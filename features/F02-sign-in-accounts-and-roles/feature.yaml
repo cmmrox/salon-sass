@@ -1,71 +1,70 @@
 id: F02
 title: Sign-in, accounts and roles
-summary: Salon staff sign in on the web with password and MFA, manage accounts
-  and act within their roles. Customer identity/privacy APIs are retained as
-  foundations for the later React Native app; no customer web interface.
+summary: Salon staff sign in on the web with password and MFA, manage accounts and act within their roles.
+  Customer identity/privacy APIs are retained as foundations for the later React Native app; no customer
+  web interface.
 release: R1
 milestone: M1-web
-status: in-qa
+status: complete
 qa_status: pass
 released_in: null
 depends_on:
-  - F01
+- F01
 surfaces:
-  - api
-  - web
+- api
+- web
 requirements:
-  - IAM-01
-  - IAM-03
-  - IAM-04
-  - IAM-05
+- IAM-01
+- IAM-03
+- IAM-04
+- IAM-05
+- IAM-06
+- IAM-07
+- IAM-08
+- IAM-09
+- IAM-10
+- IAM-11
+nfr_focus:
+- NFR-08
+- NFR-10
+- NFR-21
+cases:
+- id: TC-F02-001
+  title: Owner provisioning and removal connects workspace controls to immediate staff access
+  type: functional
+  priority: critical
+  covers:
   - IAM-06
   - IAM-07
   - IAM-08
   - IAM-09
-  - IAM-10
   - IAM-11
-nfr_focus:
-  - NFR-08
-  - NFR-10
-  - NFR-21
-cases:
-  - id: TC-F02-001
-    title: Owner provisioning and removal connects workspace controls to immediate
-      staff access
-    type: functional
-    priority: critical
-    covers:
-      - IAM-06
-      - IAM-07
-      - IAM-08
-      - IAM-09
-      - IAM-11
-  - id: TC-F02-004
-    title: bounded local reads meet the documented per-read latency baseline
-    type: load
-    priority: high
-    covers:
-      - IAM-03
-      - IAM-07
-      - IAM-09
+- id: TC-F02-004
+  title: bounded local reads meet the documented per-read latency baseline
+  type: load
+  priority: high
+  covers:
+  - IAM-03
+  - IAM-07
+  - IAM-09
 verification:
   automation:
-    - id: identity-read-baseline
-      tool: script
-      file: qa/checks/F02/F02-read-baseline.sh
-      covers:
-        - TC-F02-004
-      suites:
-        - regression
-    - id: account-journeys
-      tool: playwright
-      file: qa/web/F02/feature-journeys.spec.ts
-      project: web
-      covers:
-        - TC-F02-001
-      suites:
-        - regression
-        - smoke
+  - id: identity-read-baseline
+    tool: script
+    file: qa/checks/F02/F02-read-baseline.sh
+    covers:
+    - TC-F02-004
+    suites:
+    - regression
+  - id: account-journeys
+    tool: playwright
+    file: qa/web/F02/feature-journeys.spec.ts
+    project: web
+    covers:
+    - TC-F02-001
+    suites:
+    - regression
+    - smoke
   manual: []
   deferred: []
 evidence:
@@ -84,8 +83,8 @@ previous_integration:
   merged_at: '2026-10-14T07:11:47Z'
 reopened_by: CR-010
 integration_history:
-  - branch: charithm/feature/F02-prototype-design-fidelity
-    pull_request: https://github.com/cmmrox/salon-sass/pull/5
-    qa_revision: e73d99b0bbb38ec4db6b9cc837ea635286a1fed0
-    merged_commit: 0ecc2ee12cca6568f83c234f6e81b79fceed9c1e
-    merged_at: '2026-10-15T00:38:18Z'
+- branch: charithm/feature/F02-prototype-design-fidelity
+  pull_request: https://github.com/cmmrox/salon-sass/pull/5
+  qa_revision: e73d99b0bbb38ec4db6b9cc837ea635286a1fed0
+  merged_commit: 0ecc2ee12cca6568f83c234f6e81b79fceed9c1e
+  merged_at: '2026-10-15T00:38:18Z'
