@@ -236,3 +236,24 @@ class ScopedEvidenceTest(unittest.TestCase):
         receipt["retained_qa_paths"] = ["qa/checks/F07/pass.sh"]
         with self.assertRaisesRegex(evidence.Refusal, "only other explicitly assessed"):
             scoped_evidence._delta_reports(delta, self.data, "F07", reviewed, self.path)
+
+    def test_request_completion_after_scoped_qa_keeps_intact_assessment(self):
+        path = "docs/changes/CR-010-scope.md"
+        f = self.fixture
+        f.write(path, "---\nid: CR-010\nstatus: approved\n---\nApproved behavior\n")
+        f.commit()
+        _, commands = f.record("developer-commands")
+        delta, reviewed = self.scoped_report()
+        self.data["reviewed_revision"] = reviewed
+        self.data["features"]["F07"]["changed_paths"] = scoped_evidence._paths(self.base, reviewed)
+        self.data["commands"] = {"report": commands, "revision": reviewed,
+            "summary_sha256": evidence.file_digest(Path(commands) / "summary.json")}
+        self.data["targeted"] = delta
+        self.save()
+        self.check()
+        f.write(path, "---\nid: CR-010\nstatus: implemented\n---\nApproved behavior\n")
+        f.commit()
+        self.check()
+        f.write(path, "---\nid: CR-010\nstatus: implemented\n---\nUnreviewed behavior\n")
+        with self.assertRaisesRegex(evidence.Refusal, "unreviewed change"):
+            self.check()

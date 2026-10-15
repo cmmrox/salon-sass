@@ -69,6 +69,9 @@ def _unchanged(reviewed, target, assessment_path, process_documents, retained_pa
             continue
         if path in retained_paths:
             continue
+        if _request_closure(reviewed, target, path):
+            if Path(path).read_text().strip() == E.git("show", f"{target}:{path}"):
+                continue
         if _process(path):
             if path.startswith("docs/") and process_documents.get(path) != E.file_digest(path):
                 raise E.Refusal(f"unattested process document change: {path}")
