@@ -51,6 +51,8 @@ it('offers staff password and authenticator steps without customer OTP controls'
   fireEvent.submit(screen.getByTestId('account-sign-in-submit').closest('form')!);
   await waitFor(() => expect(replace).toHaveBeenCalledWith('/workspace/account'));
   expect(calls).toEqual(['/identity-web/staff/sign-in', '/identity-web/staff/mfa-verify']);
+  expect(screen.getByTestId('account-identifier')).toBeInTheDocument();
+  expect(screen.queryByTestId('account-code')).not.toBeInTheDocument();
 });
 
 it('reveals the password only on request and offers administrator guidance without a request', async () => {

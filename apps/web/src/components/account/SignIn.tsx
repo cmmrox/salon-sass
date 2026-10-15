@@ -34,7 +34,7 @@ export function SignIn({ kind, timeZone }: { kind: Kind; timeZone: string }) {
           } else { router.replace('/workspace/account'); router.refresh(); }
         } else {
           await identityRequest(kind, 'mfa-verify', { code: values.code });
-          setSetup({}); setValues((v) => ({ ...v, code: '', password: '' }));
+          setSetup({}); setStep('initial'); setExpiry(''); setValues((v) => ({ ...v, code: '', password: '' }));
           router.replace('/workspace/account'); router.refresh();
         }
       });
