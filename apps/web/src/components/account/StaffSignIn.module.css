@@ -19,16 +19,19 @@
 .form input { min-height: var(--size-login-field); border-radius: var(--radius-login-field); background: var(--color-login-field); box-shadow: inset 0 0 0 var(--size-border) var(--color-login-input-border); }
 .form input:focus-visible { box-shadow: inset 0 0 0 var(--size-focus-offset) var(--color-login-accent); }
 .form input[aria-invalid=true] { box-shadow: inset 0 0 0 var(--size-field-inset) var(--color-negative); }
-.form > button[type=submit] { min-height: var(--size-login-field); font-size: var(--font-size-login-action); font-weight: var(--font-weight-medium); background: var(--color-login-action); color: var(--color-surface); border-color: var(--color-login-action); border-radius: var(--radius-login-field); }
+.form > button[type=submit] { min-height: var(--size-login-field); padding: var(--space-2) var(--space-6); font-size: var(--font-size-login-action); font-weight: var(--font-weight-medium); background: var(--color-login-action); color: var(--color-surface); border-color: var(--color-login-action); border-radius: var(--radius-login-field); }
 .passwordField { position: relative; min-width: 0; }
 .passwordField input { padding-right: var(--size-login-toggle); }
 .passwordToggle { position: absolute; right: 0; top: var(--space-login-toggle-top); display: grid; place-items: center; width: var(--size-login-toggle); height: var(--size-login-field); padding: 0; border: 0; background: transparent; color: var(--color-login-muted); border-radius: var(--radius-login-field); cursor: pointer; }
-.passwordToggle svg { width: var(--size-icon); height: var(--size-icon); }
-.recovery { display: flex; justify-content: flex-end; margin-top: var(--space-login-recovery-pull); margin-bottom: var(--space-login-recovery-pull); }
+.icon { display: inline-block; width: var(--size-icon); height: var(--size-icon); flex-shrink: 0; background: currentColor; mask-size: contain; mask-repeat: no-repeat; mask-position: center; }
+.eye { mask-image: url('/icons/feather/eye.svg'); }
+.eyeOff { mask-image: url('/icons/feather/eye-off.svg'); }
+.lock { mask-image: url('/icons/feather/lock.svg'); }
+.recovery { display: flex; justify-content: flex-end; margin-top: var(--space-login-recovery-pull); margin-bottom: 0; }
 .recovery button { border: 0; padding: var(--space-2) 0; min-height: var(--size-touch-target); background: transparent; color: var(--color-login-accent); font-size: var(--font-size-small); text-decoration: underline; text-underline-offset: var(--space-half); cursor: pointer; }
 .guidance { padding: var(--space-3); border-radius: var(--radius-login-field); background: var(--color-surface); color: var(--color-login-ink); font-size: var(--font-size-small); }
 .secure { display: flex; justify-content: center; align-items: center; gap: var(--space-3); margin-top: var(--space-8); color: var(--color-login-muted); font-size: var(--font-size-body); text-align: center; }
-.secure svg { width: var(--size-icon); height: var(--size-icon); flex-shrink: 0; }
+
 @media (max-width: 600px) {
   .content { padding-top: var(--space-8); padding-bottom: var(--space-8); }
   .brand { margin-bottom: var(--space-6); }
