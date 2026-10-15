@@ -175,3 +175,11 @@ package, infrastructure, spec or command changes still invalidate that reuse. An
 request may move to implemented after gates only when its entire remaining frontmatter and body
 are identical. These rules preserve source checks without repeating unchanged product commands
 because QA corrected its own assertions.
+
+Completed scoped runs seal their overall result even when a group fails. An assessment may select
+only explicitly named passing entries from that sealed report; it preserves the overall failure
+and every log. Further receipts may supply the repaired group with disjoint automation ids.
+`retained_qa_paths` plus `retention_reason` permits a later correction confined to other browser
+`.spec.ts` files only; selected files, shared helpers and application changes remain invalidating.
+The independent QA analysis must establish that those other specs are not selected dependencies.
+No retained entry is relabelled as a full-feature pass, and failed/skipped entries never count.

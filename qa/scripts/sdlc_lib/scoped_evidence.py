@@ -40,7 +40,7 @@ def _metadata(path):
     return path.startswith("features/") and Path(path).name in {"feature.yaml", "stage.yaml"}
 
 
-def _historical(report, expected_hash, revision, kind):
+def _historical(report, expected_hash, revision, kind, *, allow_partial=False):
     summary_path = E.local_file(str(Path(report) / "summary.json"))
     if E.file_digest(summary_path) != expected_hash:
         raise E.Refusal("scoped historical summary digest differs")
@@ -52,11 +52,11 @@ def _historical(report, expected_hash, revision, kind):
         raise E.Refusal("scoped historical source/kind differs")
     # The original sealed selection, including argv, must be fully passing and intact.
     # Its definitions are historical; reviewed changed definitions are inventoried below.
-    E.proof(report, cert, [E.definition(row) for row in summary.get("entries", [])])
+    E.proof(report, cert, [E.definition(row) for row in summary.get("entries", [])], allow_partial=allow_partial)
     return summary
 
 
-def _unchanged(reviewed, target, assessment_path, process_documents):
+def _unchanged(reviewed, target, assessment_path, process_documents, retained_paths=()):
     _ancestor(reviewed, target)
     tree = E.git("ls-tree", "-r", target)
     modes = {row.split("\t", 1)[1]: row.split()[0] for row in tree.splitlines()}
@@ -66,6 +66,8 @@ def _unchanged(reviewed, target, assessment_path, process_documents):
     changed.update(filter(None, E.git("ls-files", "--others", "--exclude-standard").splitlines()))
     for path in changed:
         if path == assessment_path:
+            continue
+        if path in retained_paths:
             continue
         if _process(path):
             if path.startswith("docs/") and process_documents.get(path) != E.file_digest(path):
@@ -124,16 +126,16 @@ def _delta_reports(delta, data, fid, reviewed, assessment_path):
     receipts = delta.get("reports")
     if not isinstance(receipts, list) or not receipts or not delta.get("coverage"):
         raise E.Refusal("scoped delta requires passing reports and coverage")
-    passed, features = 0, set()
+    passed, features, selections = 0, set(), set()
     bundle = model.load()
     for receipt in receipts:
         feature = receipt["feature"]
-        if feature in features or feature not in data["features"]:
-            raise E.Refusal("scoped delta report feature is duplicate or unassessed")
+        if feature not in data["features"]:
+            raise E.Refusal("scoped delta report feature is unassessed")
         features.add(feature)
         revision = receipt["revision"]
         _ancestor(revision, reviewed)
-        report = _historical(receipt["report"], receipt["summary_sha256"], revision, "scoped-feature-qa")
+        report = _historical(receipt["report"], receipt["summary_sha256"], revision, "scoped-feature-qa", allow_partial=True)
         if report.get("label") != feature + "-delta" or report["certification"].get("feature") != feature:
             raise E.Refusal("scoped delta report belongs to a different selection")
         ids = receipt["automation_ids"]
@@ -141,13 +143,23 @@ def _delta_reports(delta, data, fid, reviewed, assessment_path):
             expected = runner.select_delta(runner.select(bundle, feature=feature), ids)
         except runner.SelectionError as error:
             raise E.Refusal(str(error)) from error
-        actual = [E.definition(row) for row in report["entries"]]
+        rows = [row for row in report["entries"] if row["id"] in ids]
+        actual = [E.definition(row) for row in rows]
         if actual != expected or ids != [row["id"] for row in expected]:
             raise E.Refusal("scoped delta registered selection differs")
-        for row in report["entries"]:
+        for row in rows:
+            if (feature, row["id"]) in selections or row["outcome"] != "pass" or row["exit_code"] != 0:
+                raise E.Refusal("scoped delta repeats or selects a nonpassing entry")
+            selections.add((feature, row["id"]))
             if re.search(r"(?m)^\s*\d+ (failed|skipped|interrupted|did not run)\b", Path(E.local_file(row["log"])).read_text()):
                 raise E.Refusal("scoped delta log contains incomplete checks")
-        _unchanged(revision, reviewed, assessment_path, data.get("process_documents") or {})
+        retained = receipt.get("retained_qa_paths", [])
+        selected_files = {row.get("file") for row in rows}
+        if retained and (not receipt.get("retention_reason") or len(set(retained)) != len(retained)
+                         or any(not p.startswith("qa/web/") or not p.endswith(".spec.ts")
+                                or p in selected_files or p not in _paths(revision, reviewed) for p in retained)):
+            raise E.Refusal("retained scoped entries may exclude only other explicitly assessed browser specs")
+        _unchanged(revision, reviewed, assessment_path, data.get("process_documents") or {}, retained)
         passed += len(actual)
     if fid not in features:
         raise E.Refusal("scoped delta lacks this feature's report")

@@ -164,13 +164,13 @@ class ScopedEvidenceTest(unittest.TestCase):
         with self.assertRaisesRegex(evidence.Refusal, "incomplete checks"):
             scoped_evidence._delta_reports(delta, self.data, "F07", revision, self.path)
 
-    def test_delta_report_different_feature_or_incomplete_selection_refuses(self):
+    def test_delta_report_different_feature_or_duplicate_ids_refuses(self):
         delta, revision = self.scoped_report()
         delta["reports"][0]["feature"] = "F99"
         with self.assertRaisesRegex(evidence.Refusal, "unassessed"):
             scoped_evidence._delta_reports(delta, self.data, "F07", revision, self.path)
         delta["reports"][0]["feature"] = "F07"
-        delta["reports"][0]["automation_ids"] = ["works"]
+        delta["reports"][0]["automation_ids"] = ["works", "works"]
         with self.assertRaisesRegex(evidence.Refusal, "selection differs"):
             scoped_evidence._delta_reports(delta, self.data, "F07", revision, self.path)
 
@@ -200,3 +200,39 @@ class ScopedEvidenceTest(unittest.TestCase):
         self.assertFalse(scoped_evidence._request_closure(before, after, path))
         with self.assertRaisesRegex(evidence.Refusal, "substantive"):
             scoped_evidence._command_delta({"revision": before}, after)
+
+    def test_sealed_failed_aggregate_can_retain_only_its_passing_entry(self):
+        f = self.fixture
+        f.write("qa/checks/F07/fail.sh", "#!/bin/bash\nexit 1\n")
+        f.feature["verification"]["automation"][0]["file"] = "qa/checks/F07/fail.sh"
+        f.yaml(f.feature_dir + "/feature.yaml", f.feature)
+        f.commit()
+        bundle = model.load()
+        entries = runner.select(bundle, feature="F07")
+        code, report = runner.run(entries, "F07-delta",
+            certification=evidence.scoped_certification(bundle, "F07"),
+            certify_again=lambda: evidence.scoped_certification(model.load(), "F07"))
+        self.assertEqual(code, 1)
+        revision = evidence.git("rev-parse", "HEAD")
+        summary = json.loads((Path(report) / "summary.json").read_text())
+        self.assertEqual(summary["result"], "fail")
+        with self.assertRaisesRegex(evidence.Refusal, "partial, nonpassing"):
+            evidence.proof(report, summary["certification"], entries)
+        receipt = {"feature": "F07", "report": report, "revision": revision,
+                   "summary_sha256": evidence.file_digest(Path(report) / "summary.json"),
+                   "automation_ids": ["works"]}
+        delta = {"reports": [receipt], "coverage": ["retained unaffected group"]}
+        self.assertEqual(scoped_evidence._delta_reports(delta, self.data, "F07", revision, self.path), 1)
+        receipt["automation_ids"] = ["journey"]
+        with self.assertRaisesRegex(evidence.Refusal, "nonpassing entry"):
+            scoped_evidence._delta_reports(delta, self.data, "F07", revision, self.path)
+        receipt["automation_ids"] = ["works"]
+        f.write("qa/web/other.spec.ts", "unrelated browser assertion correction")
+        reviewed = f.commit()
+        with self.assertRaisesRegex(evidence.Refusal, "unreviewed change"):
+            scoped_evidence._delta_reports(delta, self.data, "F07", reviewed, self.path)
+        receipt.update(retained_qa_paths=["qa/web/other.spec.ts"], retention_reason="Independent other spec, no shared/selected dependency changed")
+        self.assertEqual(scoped_evidence._delta_reports(delta, self.data, "F07", reviewed, self.path), 1)
+        receipt["retained_qa_paths"] = ["qa/checks/F07/pass.sh"]
+        with self.assertRaisesRegex(evidence.Refusal, "only other explicitly assessed"):
+            scoped_evidence._delta_reports(delta, self.data, "F07", reviewed, self.path)

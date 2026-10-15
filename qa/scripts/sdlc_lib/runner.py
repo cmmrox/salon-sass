@@ -262,7 +262,7 @@ def run(entries, label, dry_run=False, reports_root="qa/reports", *, certificati
             if not evidence.unchanged(certification, certify_again()):
                 raise evidence.Refusal("certified source or context changed during the run")
         _write_summary(report_dir, summary)
-        if certification is not None and passed:
+        if certification is not None:
             evidence.seal(report_dir)
     except (KeyboardInterrupt, evidence.Refusal, OSError):
         if active_child is not None:
