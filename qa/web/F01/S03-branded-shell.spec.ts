@@ -20,7 +20,7 @@ test('TC-F01-S03-001 each hostname renders only its salon in heading and documen
     expect(response!.status()).toBe(200);
     await expect(page).toHaveURL(/\/workspace\/sign-in$/);await expect(page.getByTestId('account-home')).toHaveText(s.name);await expect(page.getByTestId('account-identifier')).toBeVisible();await expect(page.getByTestId('salon-shell')).toHaveCount(0);
     await expect(page).toHaveTitle(s.name);
-    noOtherBrand(await response!.text(), s);
+    noOtherBrand(await page.content(), s);
     expect(response!.headers()['cache-control']).toContain('no-store');
     for(const alias of ['/sign-in','/account']) {await page.goto(salonUrl(s,webUrl)+alias);await expect(page).toHaveURL(/\/workspace\/sign-in$/);await expect(page.getByTestId('account-identifier')).toBeVisible();await expect(page.getByTestId('account-mobile')).toHaveCount(0);await expect(page.getByTestId('account-profile-save')).toHaveCount(0);}
     await page.reload();
@@ -102,7 +102,7 @@ test('TC-F01-S03-010 long-name and neutral pages fit both widths with no serious
   try {
     suspend('suspend');
     for (const width of WIDTHS) for (const [url,id] of [[salonUrl(beta,webUrl),'account-home'],[onHostname(webUrl,`missing.${PLATFORM_DOMAIN}`),'salon-not-found-title'],[salonUrl(gamma,webUrl),'salon-unavailable-title']]) {
-      await page.setViewportSize(width); await page.goto(url); await expect(page.getByTestId(id)).toBeVisible();
+      await page.setViewportSize(width); await page.goto(url); if(id==='account-home'){await expect(page).toHaveURL(/\/workspace\/sign-in$/);await expect(page.getByTestId('account-identifier')).toBeVisible();}await expect(page.getByTestId(id)).toBeVisible();
       const overflow=await referenceFit(page,id === 'account-home' ? beta.name : undefined); expect(overflow.counted).toBeGreaterThan(0); expect(overflow.pageScrolls).toBe(false); expect(overflow.outside).toEqual([]); expect(overflow.clipped).toEqual([]);
       expect(await seriousViolations(page)).toEqual([]);
     }
