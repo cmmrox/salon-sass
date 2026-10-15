@@ -61,7 +61,7 @@ evidence:
   scoped_assessment: features/F02-sign-in-accounts-and-roles/scoped-qa.json
 integration:
   branch: charithm/feature/F02-staff-web-only
-  pull_request: null
+  pull_request: https://github.com/cmmrox/salon-sass/pull/7
   qa_revision: e4e254f4463a274fdfd055df67b3056e83a249f0
 previous_integration:
   branch: charithm/feature/F01-platform-foundation
