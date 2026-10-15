@@ -8,6 +8,7 @@ import {alpha,beta,syntheticAccount} from '../../shared/identity';
 import {salons} from '../../shared/tenants';
 import {fit,seriousViolations,testIds,TEST_ID_NAME} from '../../shared/page-checks';
 import {productRoot} from '../../shared/identity-runtime';
+import {reportDir} from '../../shared/env';
 import {DESIGN_WIDTHS,appearance,designScreenshot,referenceAccountControls,referenceDialog,referenceFit,referenceNavigation,referenceTypeAndPalette} from '../../shared/design-reference';
 const c=(n:number)=>`TC-F02-S04-${String(n).padStart(3,'0')}`;
 const WIDTHS=[360,390,768,1024,1280,1440].map(width=>({width,height:1000}));
@@ -39,7 +40,7 @@ test(`${c(16)} responsive layouts keep every control reachable across six widths
    const targets=await page.locator('button:visible,input:visible,select:visible,a:visible').evaluateAll(elements=>elements.map(element=>{const target=(element as HTMLInputElement).type==='checkbox'?element.closest('label')!:element;const r=target.getBoundingClientRect();return {height:r.height,width:r.width,id:element.getAttribute('data-testid')};}));expect(targets.length).toBeGreaterThan(0);for(const target of targets){expect(target.height,`${target.id} target height`).toBeGreaterThanOrEqual(44);expect(target.width,`${target.id} target width`).toBeGreaterThanOrEqual(44);}
   }await page.close();
  }
- const account=syntheticAccount('OWNER',false);await identity.seed(alpha,[account]);const enrollment=await accounts.context(alpha),page=await accounts.open(enrollment,routes.staffSignIn);await handle(page,'identifier').fill(account.email);await handle(page,'password').fill(account.password);await handle(page,'sign-in-submit').click();await expect(handle(page,'setup-key')).toBeVisible();for(const viewport of WIDTHS){await page.setViewportSize(viewport);expect((await fit(page)).pageScrolls).toBe(false);}
+ const account=syntheticAccount('OWNER',false);await identity.seed(alpha,[account]);const enrollment=await accounts.context(alpha),page=await accounts.open(enrollment,routes.staffSignIn);await handle(page,'identifier').fill(account.email);await handle(page,'password').fill(account.password);await handle(page,'sign-in-submit').click();await expect(handle(page,'setup-key')).toHaveText(/^[A-Z2-7]{32}$/);for(const viewport of WIDTHS){await page.setViewportSize(viewport);const inspected=await fit(page);expect(inspected.pageScrolls).toBe(false);expect(inspected.outside).toEqual([]);expect(inspected.clipped).toEqual([]);await designScreenshot(page,`CR012-enrollment-${viewport.width}`);}
 });
 
 test(`${c(23)} staff identity screens follow the supplied salon layout with accessible confirmation overlays`,async({identity,accounts})=>{
@@ -64,7 +65,16 @@ test(`${c(23)} staff identity screens follow the supplied salon layout with acce
  }
  const loginContext=await accounts.context(alpha),login=await accounts.open(loginContext,routes.staffSignIn);await login.setViewportSize({width:1536,height:1024});await referenceTypeAndPalette(login);await loginPresentation(login,1536);
  const mockupCard=await appearance(login.getByTestId('staff-sign-in-card'));expect(Math.abs(mockupCard.left-506)).toBeLessThanOrEqual(1);expect(Math.abs(mockupCard.top-231)).toBeLessThanOrEqual(4);expect(Math.abs(mockupCard.height-636)).toBeLessThanOrEqual(6);expect(mockupCard.width).toBe(524);
- await designScreenshot(login,'CR012-login-alpha-1536');await login.close();
+ // Empty initial fields carry no credentials; retain their actual border/icon rendering for fidelity judgment.
+ await expect(handle(login,'identifier')).toHaveValue('');await expect(handle(login,'password')).toHaveValue('');
+ fs.mkdirSync(path.join(reportDir,'design'),{recursive:true});await login.screenshot({path:path.join(reportDir,'design','CR012-login-alpha-1536.png')});await login.close();
+ const keyboardObservations:unknown[]=[];
+ for(const width of [360,768,1536]){const page=await accounts.open(loginContext,routes.staffSignIn);await page.setViewportSize({width,height:1024});await expect(handle(page,'sign-in-submit')).toBeEnabled();
+  await handle(page,'identifier').click();for(const name of ['identifier','password','password-toggle','forgot-password','sign-in-submit']){await expect(handle(page,name)).toBeFocused();const focus=await handle(page,name).evaluate(el=>{const s=getComputedStyle(el);return{outline:s.outlineStyle,outlineWidth:s.outlineWidth,visible:el.matches(':focus-visible')};});keyboardObservations.push({width,name,...focus});if(name!=='identifier')expect(parseFloat(focus.outlineWidth)).toBeGreaterThanOrEqual(2);await handle(page,name).press('Tab');}
+  await handle(page,'password').fill('Synthetic visibility sample');await handle(page,'password').press('Tab');await handle(page,'password-toggle').press('Enter');await expect(handle(page,'password')).toHaveAttribute('type','text');await handle(page,'password-toggle').press('Enter');await expect(handle(page,'password')).toHaveAttribute('type','password');
+  await handle(page,'password-toggle').press('Tab');await handle(page,'forgot-password').press('Enter');await expect(handle(page,'password-help')).toBeVisible();await expect(handle(page,'forgot-password')).toBeFocused();await designScreenshot(page,`CR012-guidance-keyboard-${width}`);await handle(page,'forgot-password').press('Enter');await expect(handle(page,'password-help')).toHaveCount(0);await page.close();
+ }
+ fs.writeFileSync(path.join(reportDir,'CR012-keyboard-observations.json'),JSON.stringify(keyboardObservations,null,2));
  const professional=await identity.staff(alpha,'PROFESSIONAL'),limited=await accounts.context(alpha,[professional]),page=await accounts.open(limited,routes.staff);await accounts.ready(page);
  await expect(page.getByTestId('workspace-staff')).toHaveCount(0);await expect(page.getByTestId('workspace-audit')).toHaveCount(0);await referenceNavigation(page,'workspace-navigation',1280);
 });
@@ -72,7 +82,7 @@ test(`${c(17)} all screens pass automated accessibility checks and announce erro
  test.setTimeout(180000);for(const salon of salons){const owner=await identity.staff(salon,'OWNER'),context=await accounts.context(salon,[owner]);
   for(const route of screenMap){const page=await accounts.open(context,route);if(!route.endsWith('sign-in'))await accounts.ready(page);else await expect(handle(page,'sign-in-submit')).toBeVisible();expect(await seriousViolations(page)).toEqual([]);
    if(route===routes.staff){await handle(page,'revoke-all').click();await expect(handle(page,'confirm-action')).toBeVisible();expect(await seriousViolations(page)).toEqual([]);await handle(page,'cancel-action').click();}
-   if(route===routes.staffSignIn){await handle(page,'identifier').fill(owner.account.email);await handle(page,'password').fill('Wrong synthetic password');await handle(page,'sign-in-submit').click();await expect(handle(page,'error')).toHaveAttribute('role','alert');expect(await seriousViolations(page)).toEqual([]);}
+   if(route===routes.staffSignIn){await handle(page,'forgot-password').click();await expect(handle(page,'password-help')).toBeVisible();expect(await seriousViolations(page)).toEqual([]);await handle(page,'forgot-password').click();await handle(page,'identifier').fill(owner.account.email);await handle(page,'password').fill('Wrong synthetic password');await handle(page,'sign-in-submit').click();await expect(handle(page,'error')).toHaveAttribute('role','alert');expect(await seriousViolations(page)).toEqual([]);await designScreenshot(page,`CR012-error-${salon.slug}`);}
    await page.close();
   }
  }

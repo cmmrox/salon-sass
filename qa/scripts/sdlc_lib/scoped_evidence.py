@@ -109,6 +109,18 @@ def _request_closure(before, after, path):
         return False
 
 
+def _command_substance(raw):
+    """Developer gates precede handoff and manual observation bookkeeping."""
+    data = E._substance(raw)
+    data.pop("handoff", None)
+    verification = data.get("verification")
+    if isinstance(verification, dict) and isinstance(verification.get("manual"), list):
+        verification["manual"] = [
+            {key: value for key, value in row.items() if key not in {"reason", "performed_on"}}
+            if isinstance(row, dict) else row for row in verification["manual"]]
+    return data
+
+
 def _command_delta(command, reviewed):
     """QA's separate package is not executed by product developer commands."""
     changes = _paths(command["revision"], reviewed)
@@ -119,7 +131,7 @@ def _command_delta(command, reviewed):
     for changed in changes:
         if _process(changed) or changed in qa_paths or _request_closure(command["revision"], reviewed, changed):
             continue
-        if _metadata(changed) and E._substance(E.git("show", f"{command['revision']}:{changed}")) == E._substance(E.git("show", f"{reviewed}:{changed}")):
+        if _metadata(changed) and _command_substance(E.git("show", f"{command['revision']}:{changed}")) == _command_substance(E.git("show", f"{reviewed}:{changed}")):
             continue
         raise E.Refusal("developer gates predate a substantive reviewed change")
 

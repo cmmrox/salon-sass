@@ -8,6 +8,7 @@ test(`${c(1)} staff password and authenticator flows reach account only after co
  for(const [role,mfa] of [['MANAGER',false],['OWNER',true],['OWNER',false]] as const){
   const account=syntheticAccount(role,mfa);await identity.seed(alpha,[account]);const context=await accounts.context(alpha),page=await context.newPage();
   const actor=await accounts.staffSignIn(page,alpha,account);expect(actor.principal.role).toBe(role);expect(actor.principal.mfaEnabled).toBe(role==='OWNER');
+  await handle(page,'logout').click();await page.waitForURL('**'+routes.staffSignIn);await expect(handle(page,'identifier')).toBeVisible();await expect(handle(page,'password')).toBeVisible();await expect(handle(page,'code')).toHaveCount(0);await expect(handle(page,'setup-key')).toHaveCount(0);
  }
  const staff=await identity.staff(alpha,'RECEPTIONIST'),context=await accounts.context(alpha,[staff]),page=await accounts.open(context,routes.staff);await accounts.ready(page);
  await handle(page,'mfa-start').click();await expect(handle(page,'setup-key')).toBeVisible();const secret=await handle(page,'setup-key').textContent();expect(Boolean(secret)).toBe(true);

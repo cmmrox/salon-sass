@@ -5,8 +5,8 @@ summary: Salon staff sign in on the web with password and MFA, manage accounts a
   web interface.
 release: R1
 milestone: M1-web
-status: in-progress
-qa_status: not-run
+status: in-qa
+qa_status: pass
 released_in: null
 depends_on:
 - F01
@@ -70,7 +70,7 @@ verification:
 evidence:
   last_run: qa/reports/20261015-000506-F02-3e38935bf776
   last_result: pass
-  scoped_assessment: features/F02-sign-in-accounts-and-roles/scoped-qa.json
+  scoped_assessment: features/F02-sign-in-accounts-and-roles/cr012/scoped-qa.json
 integration:
   branch: charithm/feature/F02-salon-login-design
   pull_request: null
