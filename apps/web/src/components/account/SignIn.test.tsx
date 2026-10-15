@@ -27,3 +27,28 @@ describe('account sign-in', () => {
     expect(replace).not.toHaveBeenCalled();
   });
 });
+
+it('offers staff password and authenticator steps without customer OTP controls', async () => {
+  vi.stubGlobal('navigator', { locks: { request: (_name: string, work: () => Promise<unknown>) => work() } });
+  vi.stubGlobal('BroadcastChannel', undefined);
+  const calls: string[] = [];
+  vi.stubGlobal('fetch', async (url: string) => {
+    calls.push(url);
+    return Response.json(url.endsWith('/sign-in') ? { state: 'verify_mfa', expiresAt: '2026-01-01T00:05:00Z' } : { ok: true });
+  });
+  renderWithMessages(<SignIn kind="staff" timeZone="Asia/Colombo" />);
+  await waitFor(() => expect(screen.getByTestId('account-sign-in-submit')).toBeEnabled());
+  expect(screen.queryByTestId('account-mobile')).not.toBeInTheDocument();
+  expect(screen.queryByTestId('account-channel')).not.toBeInTheDocument();
+  fireEvent.change(screen.getByTestId('account-identifier'), { target: { value: 'owner@alpha.test' } });
+  fireEvent.change(screen.getByTestId('account-password'), { target: { value: 'private test password' } });
+  fireEvent.submit(screen.getByTestId('account-sign-in-submit').closest('form')!);
+  await screen.findByTestId('account-code');
+  expect(screen.queryByTestId('account-resend')).not.toBeInTheDocument();
+  expect(replace).not.toHaveBeenCalled();
+  await waitFor(() => expect(screen.getByTestId('account-sign-in-submit')).toBeEnabled());
+  fireEvent.change(screen.getByTestId('account-code'), { target: { value: '123456' } });
+  fireEvent.submit(screen.getByTestId('account-sign-in-submit').closest('form')!);
+  await waitFor(() => expect(replace).toHaveBeenCalledWith('/workspace/account'));
+  expect(calls).toEqual(['/identity-web/staff/sign-in', '/identity-web/staff/mfa-verify']);
+});

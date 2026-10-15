@@ -2,7 +2,7 @@
   "name": "@salon/web",
   "version": "0.1.0",
   "private": true,
-  "description": "One Next.js application serving the booking site, the staff workspace and the operator console.",
+  "description": "One Next.js application serving salon staff workspaces and the operator console.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

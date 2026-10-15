@@ -10,6 +10,8 @@ describe('workspace route navigation', () => {
   expect(screen.getByTestId('workspace-account')).not.toHaveAttribute('aria-current');
   expect(screen.getByTestId('workspace-audit')).toHaveAttribute('href', '/workspace/audit');
   expect(screen.getByTestId('account-nav')).toBeInTheDocument();
+  expect(screen.queryByTestId('account-other-kind')).not.toBeInTheDocument();
+  expect([...container.querySelectorAll('a')].every((link) => link.getAttribute('href') === '/' || link.getAttribute('href')?.startsWith('/workspace'))).toBe(true);
   expect(container.querySelectorAll('[aria-current]')).toHaveLength(1);
   expect(container.innerHTML).not.toContain(salon.brandColour);
  });

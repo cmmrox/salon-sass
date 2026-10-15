@@ -9,7 +9,6 @@ afterEach(() => { vi.unstubAllGlobals(); vi.clearAllMocks(); });
 
 it.each([
   ['staff', '/workspace/sign-in'],
-  ['customer', '/sign-in'],
 ] as const)('recovers %s sign-in after one committed renewal loses its response', async (kind, destination) => {
   const calls: string[] = [];
   let committedRenewals = 0;
@@ -45,10 +44,10 @@ it('keeps an ordinary account outage recoverable without signing out', async () 
   vi.stubGlobal('BroadcastChannel', undefined);
   const fetch = vi.fn().mockRejectedValue(new TypeError('API unavailable'));
   vi.stubGlobal('fetch', fetch);
-  renderWithMessages(<AccountScreen kind="customer" initialPrincipal={null} timeZone="Asia/Colombo" />);
+  renderWithMessages(<AccountScreen kind="staff" initialPrincipal={null} timeZone="Asia/Colombo" />);
   await screen.findByTestId('account-error');
   expect(navigation.replace).not.toHaveBeenCalled();
   expect(screen.queryByTestId('account-sign-in-link')).not.toBeInTheDocument();
   expect(fetch).toHaveBeenCalledTimes(1);
-  expect(fetch).toHaveBeenCalledWith('/identity-web/customer/principal', expect.any(Object));
+  expect(fetch).toHaveBeenCalledWith('/identity-web/staff/principal', expect.any(Object));
 });

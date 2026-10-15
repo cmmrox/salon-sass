@@ -10,7 +10,7 @@ export function NavigationIcon({ icon }: { icon: NavigationItem['icon'] }) {
   };
   return <svg className={styles.icon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={paths[icon]} /></svg>;
 }
-/** One real route inventory renders as customer tabs or the responsive workspace rail. */
-export function Navigation({ items, label, workspace = false }: { items: NavigationItem[]; label: string; workspace?: boolean }) {
-  return <nav className={`${styles.navigation} ${workspace ? styles.workspace : ''}`} aria-label={label} data-testid={workspace ? 'workspace-navigation' : 'salon-navigation'}>{items.map((item) => <Link key={item.href} href={item.href} data-testid={item.testId} className={styles.item} aria-current={item.current ? 'page' : undefined}><span className={styles.indicator}><NavigationIcon icon={item.icon} /></span><span data-testid={item.alias}>{item.label}</span></Link>)}</nav>;
+/** The permitted staff routes render as responsive tabs or the workspace rail. */
+export function Navigation({ items, label }: { items: NavigationItem[]; label: string }) {
+  return <nav className={`${styles.navigation} ${styles.workspace}`} aria-label={label} data-testid="workspace-navigation">{items.map((item) => <Link key={item.href} href={item.href} data-testid={item.testId} className={styles.item} aria-current={item.current ? 'page' : undefined}><span className={styles.indicator}><NavigationIcon icon={item.icon} /></span><span data-testid={item.alias}>{item.label}</span></Link>)}</nav>;
 }

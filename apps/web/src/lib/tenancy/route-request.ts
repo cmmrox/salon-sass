@@ -6,8 +6,7 @@ import { SALON_HEADER, encodeSalon } from './salon-header';
 import { resolveSite, type Site } from './site';
 
 /**
- * The page an active salon's hostname is rewritten to, at `/`. It is reached only through
- * `proxy.ts`; a request for it from outside is answered as a page that does not exist.
+ * Retired customer shell path. It remains inaccessible, including all child paths.
  */
 export const SALON_SHELL_ROUTE = '/salon-site';
 
@@ -24,7 +23,7 @@ const NOT_STORED = 'private, no-cache, no-store, max-age=0, must-revalidate';
 
 /**
  * What the proxy does with a request: works out the site from the `Host` header alone. An active
- * salon is rewritten to its shell; "salon not found", "temporarily unavailable" and "service
+ * salon enters its staff workspace; "salon not found", "temporarily unavailable" and "service
  * unavailable" are answered here, as complete HTML with their status (decision 028), because the
  * framework answers a page reached by a rewrite with 200. Routing only: it is not a
  * security boundary (docs/engineering/web.md); the API and the database enforce access.
@@ -60,8 +59,13 @@ export async function routeRequest(
       return answer('service-unavailable');
     case 'salon': {
       headers.set(SALON_HEADER, encodeSalon(site.salon));
-      if (path === '/') {
-        return rewrite(request, SALON_SHELL_ROUTE, headers);
+      if (path === '/' || path === '/sign-in' || path === '/account') {
+        const destination = request.nextUrl.clone();
+        destination.pathname = path === '/' ? '/workspace' : '/workspace/sign-in';
+        destination.search = '';
+        const response = NextResponse.redirect(destination, 307);
+        response.headers.set('Cache-Control', NOT_STORED);
+        return response;
       }
       // Any other path on a salon's hostname is the application's, with the salon handed on.
       const response = NextResponse.next({ request: { headers } });

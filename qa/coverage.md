@@ -19,13 +19,13 @@ asked for; the cases of a stage are written at its feature's pass.
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | F01-S01 | complete | pass | NFR-17, NFR-18 | 10 | 63 | 60 | 3 | 0 |
 | F01-S02 | complete | pass | NFR-01, NFR-07, NFR-15 | 12 | 45 | 45 | 0 | 0 |
-| F01-S03 | in-progress | - | BRD-03, NFR-01, NFR-17, NFR-21 | 12 | 13 | 13 | 0 | 0 |
+| F01-S03 | built | - | BRD-03, NFR-01, NFR-17, NFR-21 | 12 | 13 | 13 | 0 | 0 |
 | F01-S04 | complete | - | BKG-15, NFR-01, NFR-10, NFR-15, NFR-16 | 16 | 18 | 18 | 0 | 0 |
 | F01-S05 | complete | - | BRD-03, NFR-01, NFR-07, NFR-16, NFR-18 | 12 | 12 | 12 | 0 | 0 |
 | F02-S01 | complete | - | IAM-06, IAM-07, IAM-08, IAM-09, IAM-11, NFR-08, NFR-10 | 10 | 30 | 30 | 0 | 0 |
 | F02-S02 | complete | - | IAM-01, IAM-03, IAM-09, IAM-10, IAM-11, NFR-08, NFR-10 | 8 | 18 | 18 | 0 | 0 |
 | F02-S03 | complete | - | IAM-03, IAM-04, IAM-05, IAM-11, NFR-08, NFR-10 | 6 | 14 | 14 | 0 | 0 |
-| F02-S04 | in-progress | - | IAM-01, IAM-03, IAM-04, IAM-05, IAM-06, IAM-07, IAM-08, IAM-09, IAM-10, IAM-11, NFR-08, NFR-10, NFR-21 | 9 | 22 | 21 | 1 | 0 |
+| F02-S04 | built | - | IAM-01, IAM-03, IAM-04, IAM-05, IAM-06, IAM-07, IAM-08, IAM-09, IAM-10, IAM-11, NFR-08, NFR-10, NFR-21 | 9 | 22 | 21 | 1 | 0 |
 
 ## Deferred cases
 
@@ -51,17 +51,17 @@ Cases waiting for something else. `feature-verify` and `release-prepare` go thro
 | PLT-10 | R2 | should | unowned | - |
 | PLT-11 | R2 | should | unowned | - |
 | PLT-12 | R3 | could | unowned | - |
-| IAM-01 | R1 | must | F02 | F02-S02 (complete), F02-S04 (in-progress) |
+| IAM-01 | R1 | must | F02 | F02-S02 (complete), F02-S04 (built) |
 | IAM-02 | R1 | must | F15 | - |
-| IAM-03 | R1 | must | F02 | F02-S02 (complete), F02-S03 (complete), F02-S04 (in-progress) |
-| IAM-04 | R1 | must | F02 | F02-S03 (complete), F02-S04 (in-progress) |
-| IAM-05 | R1 | must | F02 | F02-S03 (complete), F02-S04 (in-progress) |
-| IAM-06 | R1 | must | F02 | F02-S01 (complete), F02-S04 (in-progress) |
-| IAM-07 | R1 | must | F02 | F02-S01 (complete), F02-S04 (in-progress) |
-| IAM-08 | R1 | should | F02 | F02-S01 (complete), F02-S04 (in-progress) |
-| IAM-09 | R1 | must | F02 | F02-S01 (complete), F02-S02 (complete), F02-S04 (in-progress) |
-| IAM-10 | R1 | must | F02 | F02-S02 (complete), F02-S04 (in-progress) |
-| IAM-11 | R1 | must | F02 | F02-S01 (complete), F02-S02 (complete), F02-S03 (complete), F02-S04 (in-progress) |
+| IAM-03 | R1 | must | F02 | F02-S02 (complete), F02-S03 (complete), F02-S04 (built) |
+| IAM-04 | R1 | must | F02 | F02-S03 (complete), F02-S04 (built) |
+| IAM-05 | R1 | must | F02 | F02-S03 (complete), F02-S04 (built) |
+| IAM-06 | R1 | must | F02 | F02-S01 (complete), F02-S04 (built) |
+| IAM-07 | R1 | must | F02 | F02-S01 (complete), F02-S04 (built) |
+| IAM-08 | R1 | should | F02 | F02-S01 (complete), F02-S04 (built) |
+| IAM-09 | R1 | must | F02 | F02-S01 (complete), F02-S02 (complete), F02-S04 (built) |
+| IAM-10 | R1 | must | F02 | F02-S02 (complete), F02-S04 (built) |
+| IAM-11 | R1 | must | F02 | F02-S01 (complete), F02-S02 (complete), F02-S03 (complete), F02-S04 (built) |
 | IAM-12 | R2 | should | unowned | - |
 | IAM-13 | R3 | could | unowned | - |
 | CAT-01 | R1 | must | F05 | - |
@@ -183,7 +183,7 @@ Cases waiting for something else. `feature-verify` and `release-prepare` go thro
 | REP-09 | R3 | could | unowned | - |
 | BRD-01 | R1 | must | F04 | - |
 | BRD-02 | R1 | must | F04 | - |
-| BRD-03 | R1 | must | F01 | F01-S03 (in-progress), F01-S05 (complete) |
+| BRD-03 | R1 | must | F01 | F01-S03 (built), F01-S05 (complete) |
 | BRD-04 | R1 | must | F04 | - |
 | BRD-05 | R1 | must | F16 | - |
 | BRD-06 | R1 | must | F16 | - |
