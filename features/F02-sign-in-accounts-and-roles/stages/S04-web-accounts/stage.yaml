@@ -6,7 +6,7 @@ surfaces:
 - api
 - web
 - infra
-status: in-progress
+status: built
 qa_status: not-run
 blocked_reason: null
 released_in: null
@@ -31,30 +31,118 @@ nfr_focus:
 - NFR-10
 - NFR-21
 handoff:
-  run: 'Installed Node24/Corepack pnpm and JDK25 remain in use. PostgreSQL salon-local is running. Current
-    API foreground session99029/PID21141 uses retained .local/identity-keys.properties and SPRING_PROFILES_ACTIVE=local
-    SALON_PLATFORM_DOMAIN=localhost /Users/cmmrox/.sdkman/candidates/java/25.0.1.0+8-amzn/bin/java -jar
-    target/salon-api.jar from apps/api. Current web foreground session42871/PID88485 runs from apps/web:
-    SALON_PLATFORM_DOMAIN=localhost SALON_API_BASE_URL=http://localhost:8090 SALON_WEB_LOCAL_HTTP=true
-    SALON_IDENTITY_LOCAL_KEY_FILE=/Users/cmmrox/Personal/Projects/salon-sass/.local/identity-keys.properties
+  run: 'CR-012 current runtime 2026-10-15: API session81238/PID2865 from apps/api, SPRING_PROFILES_ACTIVE=local
+    SALON_PLATFORM_DOMAIN=localhost SALON_IDENTITY_LOCAL_KEY_FILE=<checkout>/.local/identity-keys.properties
+    JDK25 java -jar target/salon-api.jar; production web session66419/PID2880 from apps/web, SALON_PLATFORM_DOMAIN=localhost
+    SALON_API_BASE_URL=http://localhost:8090 SALON_WEB_LOCAL_HTTP=true SALON_IDENTITY_LOCAL_KEY_FILE=<checkout>/.local/identity-keys.properties
+    node scripts/serve.mjs --port 3100. Scripts PID records refreshed to these exact processes. Health
+    UP; API meta commit11e9955d331548495fd78f5967e4555d97ac2172. Open http://alpha.localhost:3100/; browser
+    reaches /workspace/sign-in. Logs .local/logs/cr012-api-runtime.log and cr012-web-runtime.log. Stop
+    exact processes before rebuilding artifacts. Historical startup below: Installed Node24/Corepack pnpm
+    and JDK25 remain in use. PostgreSQL salon-local is running. Current API foreground session99029/PID21141
+    uses retained .local/identity-keys.properties and SPRING_PROFILES_ACTIVE=local SALON_PLATFORM_DOMAIN=localhost
+    /Users/cmmrox/.sdkman/candidates/java/25.0.1.0+8-amzn/bin/java -jar target/salon-api.jar from apps/api.
+    Current web foreground session42871/PID88485 runs from apps/web: SALON_PLATFORM_DOMAIN=localhost SALON_API_BASE_URL=http://localhost:8090
+    SALON_WEB_LOCAL_HTTP=true SALON_IDENTITY_LOCAL_KEY_FILE=/Users/cmmrox/Personal/Projects/salon-sass/.local/identity-keys.properties
     node scripts/serve.mjs --port3100 (use --port 3100). Browser http://alpha.localhost:3100/ and /sign-in,/account,/workspace/sign-in,/workspace/account,/workspace/staff,/workspace/audit;
     beta/gamma same host pattern. Keep sessions alive; stop these exact application processes before Maven/web
     rebuild, then restart. Logs .local/logs/cr007-api-runtime.log and cr007-web-runtime.log. CR-010 current
     web: persistent exec43141, http://alpha.localhost:3100/ -> staff workspace; log .local/logs/cr010-web-runtime.log.
     Old customer entry URLs now staff aliases.'
-  data: 'Only synthetic alpha/beta/gamma; all three active after the gamma suspend/reactivate check. Retained
-    identity keys and existing fixtures were preserved. Old ignored .local/f02-staff-fixtures.json Owner
-    password is stale; do not reuse it as current credentials. Direct local seed implementation inspected:
-    existing accounts are returned without credential replacement; no reset was used. Three dedicated
-    random alpha Owners were added for screenshots; ALL THREE exact created accounts had access removed
-    through authorized staff-remove BFF and current sessions revoked afterwards. Their private fixtures
-    remain ignored mode0600 at .local/cr007-staff-fixture.json and .local/cr007-dialog-owner.json and
-    .local/cr007-final-size-owner.json, never printed/committed. Synthetic customers0740990701/0702/0703
-    registered through captured local codes and saved name Design check;0740990714 exercised wrong-code
-    feedback. Those customer fixtures remain local for QA''s normal synthetic reset. No Clock/provider/limit
-    overrides or real messages were used.'
-  notes: 'CR-007 repair acceptance checked 2026-10-14 on application source 6bb5fd2 (3096a83, e6faafa,
-    f19d2b2, 2afbd77 and 4d01605 included), before independent feature QA. Design mapping: Customer header/tabs/canvas
+  data: 'CR-012 retained alpha/beta/gamma and existing local identity keys, no reset. Added one synthetic
+    Alpha Owner for developer password/MFA walkthrough; private random fixture .local/cr012-developer-fixture.json
+    mode0600, authenticator enrolled and browser session signed out/revoked. No real sending/payment or
+    provider overrides. Historical fixtures below: Only synthetic alpha/beta/gamma; all three active after
+    the gamma suspend/reactivate check. Retained identity keys and existing fixtures were preserved. Old
+    ignored .local/f02-staff-fixtures.json Owner password is stale; do not reuse it as current credentials.
+    Direct local seed implementation inspected: existing accounts are returned without credential replacement;
+    no reset was used. Three dedicated random alpha Owners were added for screenshots; ALL THREE exact
+    created accounts had access removed through authorized staff-remove BFF and current sessions revoked
+    afterwards. Their private fixtures remain ignored mode0600 at .local/cr007-staff-fixture.json and
+    .local/cr007-dialog-owner.json and .local/cr007-final-size-owner.json, never printed/committed. Synthetic
+    customers0740990701/0702/0703 registered through captured local codes and saved name Design check;0740990714
+    exercised wrong-code feedback. Those customer fixtures remain local for QA''s normal synthetic reset.
+    No Clock/provider/limit overrides or real messages were used.'
+  notes: 'CR-012 developer handoff 2026-10-15. Built against approved mockup and HTML protected-workspace
+    grammar. Tested source11e9955d331548495fd78f5967e4555d97ac2172 includes app5962920/70912e1/11e9955
+    and QA preparationfcbb15a/fe6686c. Checkout /Users/cmmrox/Personal/Projects/salon-sass; tree clean
+    during final sealed commands.
+
+
+    AC-1: Live in-app browser checked invalid password recovery/credential clearing; additive Owner password
+    -> required MFA enrollment -> valid TOTP -> protected account, then enrolled MFA sign-in -> valid
+    TOTP -> account. Found cached enroll_mfa state after logout, added failing-before outcome test, reset
+    step on successful MFA and live confirmed logout returns initial identifier/password screen. Existing
+    rate/expiry/role variants retain original evidence; no new complete security walkthrough claimed.
+
+    AC-2: Live Alpha root and Beta root reach fixed same-host staff sign-in with corresponding salon name.
+    Root/legacy redirect implementation unchanged; unit route coverage passes. No customer mode introduced.
+
+    AC-3/AC-6: Live Owner protected account restored existing workspace header/navigation after sign-in;
+    permission/staff/audit implementation unchanged. Original negative/role/audit evidence retained; current
+    API integration and web component gates pass. No new full permission walkthrough.
+
+    AC-4: Live logout returns standalone initial login with no retained MFA screen; other session/password/device
+    logic unchanged and original evidence retained. Current developer session tests pass.
+
+    AC-5/AC-7: API/BFF/cookies/CSRF/customer rejection/hostname authority unchanged; original browser
+    evidence retained and current518 API tests plus web boundary tests pass. No new claim of all browser
+    negative variants.
+
+    AC-8: Live six-width360/390/768/1024/1280/1440 checks show zero horizontal overflow, loaded local
+    Poppins and54px inputs/action. Label/native ids/testids preserved. Show/hide works, failed sign-in
+    re-hides/clears password, guidance expands as accessible status without network side effect. Beta
+    long full name wraps at360. MFA enrollment and code screen had no overflow at desktop. Browser support/rate/error
+    variants covered by component gates; full independent accessibility check remains QA.
+
+    AC-9: Rendered reference comparison completed against supplied screenshot and protected HTML source.
+    At1536x1024 final production cardx506/y230/w524/h634.5 vs referencex506/y231/w524/h636; initial62px/y90;
+    form438px, action54px. API-resolved Alpha Studio/A and Beta full name/B replace mockup placeholder.
+    Final settled production screenshot .local/output/cr012/alpha-production-1536.jpg and production-observation.json;
+    no dev badge. Six-width dev captures alpha-{width}.jpg and widths.json; beta-360.jpg. Reference preview
+    is supplied screenshot plus source-defined HTML mapping, not a live HTML side-by-side. Protected workspace
+    frame retains original grammar. Taupe#8A705E gives white contrast4.605:1, minimally darker for AA.
+
+
+    Developer gates: sealed qa/scripts/sdlc verify-commands --feature F02 --context .local/cr012-final-context.json
+    PASS6/6 at11e9955, report qa/reports/20261015-134702-F02-commands-fd058793a3dd (all complete raw logs
+    and integrity receipt retained);248.9s. Command1 cd apps/api && ./mvnw -q verify EXIT0(518 tests,0failures/errors);
+    command2 pnpm contracts:check EXIT0; command3 pnpm -r lint EXIT0; command4 pnpm -r typecheck EXIT0;
+    command5 pnpm -r test EXIT0(19 contract+320 web tests); command6 pnpm --filter @salon/web build EXIT0.
+    Runtime-only SALON_* variables were UNSET for commands, JAVA25_HOME=/Users/cmmrox/.sdkman/candidates/java/25.0.1.0+8-amzn;
+    closure must compare same command environment. Runtime configured separately as run field. Context
+    config fingerprints retained identity key file. Driver log .local/logs/cr012-final-commands-env-fixed.log.
+
+
+    Failure record: first new tests failed correctly before implementation (.local/logs/cr012-before-tests.log);
+    that broad run also had transient existing staff-remove focus assertion, unchanged focused and final
+    full tests pass. MFA return assertion failed before fix (.local/logs/cr012-mfa-return-before.log),
+    focused final11/11 passed (.local/logs/cr012-focused-final.log). First sealed run qa/reports/20261015-130759-F02-commands-5c4755e2cb3f
+    retained4passes then unit failure: site.test undefined-domain expected unavailable, received salon
+    because developer globally exported SALON_PLATFORM_DOMAIN=localhost. Corrected verification environment
+    only; no weakening or app/test workaround. Complete rerun passed. Initial screenshot captured streamed
+    loading; replaced with settled captures and final production proof above.
+
+
+    Assets: shared decorative generated interior supplied by lead under CR-012, optimized via installed
+    cwebp-q88 to79534-byte WebP; no published salon cover/logo capability implied. Official Feather eye/eye-off/lock
+    downloaded from github.com/feathericons/feather main/icons and LICENSE, local MIT assets rendered
+    as CSS masks. No package/system dependency added. Forgot password opens approved administrator-contact
+    guidance, no reset API/provider invented. Existing account-* ids remain; new staff-sign-in-* and account-password-toggle/account-forgot-password/account-password-help
+    added.
+
+
+    No known unfinished application correction. No QA automation executed by developer. Lead closes on
+    evidence, independent QA checks affected F02 scope next. No push, deployment, tag, real payment or
+    real message. Observed final command run248.9s; implementation/manual-debug elapsed unavailable across
+    interruption and not estimated.
+
+
+    HISTORICAL HANDOFF BELOW (retained proof, not rerun claims):
+
+
+    CR-007 repair acceptance checked 2026-10-14 on application source 6bb5fd2 (3096a83, e6faafa, f19d2b2,
+    2afbd77 and 4d01605 included), before independent feature QA. Design mapping: Customer header/tabs/canvas
     and cards/fields/actions; Salon responsive rail/header/mobile tabs, .setf form measure and .tbl/.row
     list grammar; Customer .sheet bottom sheets and Salon desktop right drawer. Foundation/unknown/suspended
     pages extend the same neutral grammar. Prototype final CSS/render source was inspected; a permitted
