@@ -8,8 +8,8 @@ requirement detail is in `qa/coverage.md`.
 
 | ID | Feature | Milestone | Status | GitHub merge | Stages done | Requirements | Next |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| F01 | [Platform foundation and tenant isolation](F01-platform-foundation/) | M1-web | in-progress | - | 4/5 | 2 | **lead**: `stage-close F01-S03` |
-| F02 | [Sign-in, accounts and roles](F02-sign-in-accounts-and-roles/) | M1-web | in-progress | - | 3/4 | 10 | **lead**: `stage-close F02-S04` |
+| F01 | [Platform foundation and tenant isolation](F01-platform-foundation/) | M1-web | in-progress | - | 5/5 | 2 | **qa**: `feature-verify F01` |
+| F02 | [Sign-in, accounts and roles](F02-sign-in-accounts-and-roles/) | M1-web | in-progress | - | 4/4 | 10 | **qa**: `feature-verify F02` |
 | F03 | [Operator console: salons, plans and billing](F03-operator-console/) | M1-web | backlog | - | - | 5 | after F02 |
 | F04 | [Salon setup: profile, branding, hours and policies](F04-salon-setup/) | M1-web | backlog | - | - | 6 | after F02 |
 | F05 | [Service catalogue](F05-service-catalogue/) | M1-web | backlog | - | - | 6 | after F04 |
@@ -33,7 +33,7 @@ requirement detail is in `qa/coverage.md`.
 | --- | --- | --- | --- | --- | --- | --- |
 | F01-S01 | Walking skeleton and local environment | api, web, infra | complete | pass | 0 | - |
 | F01-S02 | Tenant registry and data isolation | api, infra | complete | pass | 0 | - |
-| F01-S03 | Salon web addresses and branded shell | api, web | built | - | 0 | **lead**: `stage-close F01-S03` |
+| F01-S03 | Salon web addresses and branded shell | api, web | complete | - | 0 | - |
 | F01-S04 | Platform services: errors, time, audit trail, background jobs and observability | api | complete | - | 0 | - |
 | F01-S05 | Staging environment and delivery pipeline | infra | complete | - | 0 | - |
 
@@ -44,4 +44,4 @@ requirement detail is in `qa/coverage.md`.
 | F02-S01 | Staff sign-in, sessions and role permissions | api, infra | complete | - | 0 | - |
 | F02-S02 | Customer one-time-code sign-in and abuse prevention | api | complete | - | 0 | - |
 | F02-S03 | Customer profile, data export and account deletion | api | complete | - | 0 | - |
-| F02-S04 | Staff workspace and account screens | api, web, infra | built | - | 0 | **lead**: `stage-close F02-S04` |
+| F02-S04 | Staff workspace and account screens | api, web, infra | complete | - | 0 | - |

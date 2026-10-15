@@ -1,7 +1,7 @@
 ---
 id: CR-010
 title: Salon staff web only and deferred React Native customer app
-status: approved
+status: implemented
 requested_by: owner
 requested_on: 2026-10-15
 decided_on: 2026-10-15
