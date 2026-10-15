@@ -2,14 +2,14 @@
 id: BUG-F02-008
 title: Removed customer BFF requests still reach tenant API through web proxy
 severity: major
-status: fixed
+status: verified
 found_by: TC-F02-S04-003
 breaks: AC-5
 found_on: 2026-10-15
 fixed_in: 89ba4cc
 fix_note: 'Reject the retired customer BFF namespace in the web proxy before tenant/API resolution; no-store404 and no cookies on every host. Developer proxy red test reproduced503; 318 web tests, lint/typecheck/build and isolated production HTTP130 rejected calls with zero upstream passed. Logs .local/logs/bug-f02-008-*.log; HTTP evidence .local/bug-f02-008-http.json.'
 developer_note: null
-verified_on: null
+verified_on: 2026-10-15
 approved_by: null
 found_in_release: null
 ---
@@ -44,3 +44,5 @@ The same group passed staff renewal/replay, unsupported-browser controls, CSRF, 
 ## Re-verification
 
 Pending developer fix; rerun unchanged TC-F02-S04-003 through its registered browser-security group with an API stand-in. Required result: every former customer operation GET/POST404, no-store, zero API calls and unchanged cookies; restored direct Java API authority still works.
+
+Verified independently on2026-10-15 against `3f6ec78b25d3445fc3fe6f4c31247c748c61e506`. Unchanged TC-F02-S04-003 passed: every former customer GET/POST operation returns no-store404 while API is replaced by a recording503stand-in; zero upstream requests and unchanged cookie digest. After restoration the same customer Java API authority works. The full browser-security group passed8/8. Evidence: `qa/reports/20261015-095550-F02-delta-76392eb5c4d7`. Original failed diagnostic evidence remains preserved.
