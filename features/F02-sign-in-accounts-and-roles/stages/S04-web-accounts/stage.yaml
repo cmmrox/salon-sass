@@ -523,12 +523,15 @@ verification:
     - regression
   manual:
   - case: TC-F02-S04-018
-    reason: 'Retain only the unaffected staff keyboard/MFA/account/Owner-administration and confirmation-focus
-      portions of the original 2026-10-14 manual review on24c3ab5. The original38-control inventory included
-      now-removed customer journeys and is historical, not a current staff-only count. Evidence: qa/reports/20261014-CR007-manual-fixed/manual-judgment.json.
-      CR010 changed-entry/sidebar design judgment will be recorded separately in review.md and the scoped
-      assessment; no new manual pass is claimed by this definition.'
-    performed_on: 2026-10-14
+    reason: 'CR-012 current manual judgment: inspected source and rendered login together at1536x1024,
+      guidance/visible-focus sequences at360/768/1536, masked enrollment at all six widths and alpha/beta/gamma
+      error states from qa/reports/20261015-135642-F02-delta-462a695fbd8e. Keyboard sequence records15
+      focused controls with visible outlines; Enter toggles visibility/recovery and restores initial guidance.
+      Actual empty-input full-view/focused comparison also required in final delta, linked in review.md.
+      Retain unaffected protected-account/Owner/confirmation focus proof from2026-10-14; no new manual
+      protected-workspace pass is claimed. CUA IAB unavailable and Chrome CDP timed out; sequences captured
+      through registered repository Playwright and visually inspected, with credentials/setup values masked.'
+    performed_on: 2026-10-15
   deferred: []
 evidence:
   last_run: null

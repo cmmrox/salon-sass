@@ -65,7 +65,9 @@ test(`${c(23)} staff identity screens follow the supplied salon layout with acce
  }
  const loginContext=await accounts.context(alpha),login=await accounts.open(loginContext,routes.staffSignIn);await login.setViewportSize({width:1536,height:1024});await referenceTypeAndPalette(login);await loginPresentation(login,1536);
  const mockupCard=await appearance(login.getByTestId('staff-sign-in-card'));expect(Math.abs(mockupCard.left-506)).toBeLessThanOrEqual(1);expect(Math.abs(mockupCard.top-231)).toBeLessThanOrEqual(4);expect(Math.abs(mockupCard.height-636)).toBeLessThanOrEqual(6);expect(mockupCard.width).toBe(524);
- await designScreenshot(login,'CR012-login-alpha-1536');await login.close();
+ // Empty initial fields carry no credentials; retain their actual border/icon rendering for fidelity judgment.
+ await expect(handle(login,'identifier')).toHaveValue('');await expect(handle(login,'password')).toHaveValue('');
+ fs.mkdirSync(path.join(reportDir,'design'),{recursive:true});await login.screenshot({path:path.join(reportDir,'design','CR012-login-alpha-1536.png')});await login.close();
  const keyboardObservations:unknown[]=[];
  for(const width of [360,768,1536]){const page=await accounts.open(loginContext,routes.staffSignIn);await page.setViewportSize({width,height:1024});await expect(handle(page,'sign-in-submit')).toBeEnabled();
   await handle(page,'identifier').click();for(const name of ['identifier','password','password-toggle','forgot-password','sign-in-submit']){await expect(handle(page,name)).toBeFocused();const focus=await handle(page,name).evaluate(el=>{const s=getComputedStyle(el);return{outline:s.outlineStyle,outlineWidth:s.outlineWidth,visible:el.matches(':focus-visible')};});keyboardObservations.push({width,name,...focus});if(name!=='identifier')expect(parseFloat(focus.outlineWidth)).toBeGreaterThanOrEqual(2);await handle(page,name).press('Tab');}
