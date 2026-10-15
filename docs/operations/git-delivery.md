@@ -25,6 +25,15 @@ evidence storage and transition from its earlier local workflow.
 - Tags, staging/production deployments, real messages and payments need their separate requests.
   A push, a passing QA run, or a PR merge does not authorise deployment.
 
+On 2026-10-15 the owner explicitly requested merging all existing work into `main`, checking out
+`main` and deleting unneeded branches. The outstanding F03 work at that point consists solely of
+its outline, S01 specification, supporting policies and previous merge bookkeeping. Consolidate
+that documentation snapshot through a scoped planning PR and merge it after required CI, retaining
+F03's unfinished status and empty implementation/QA evidence. This one-time planning integration
+does not certify or close F03 and does not waive its later implementation, independent feature QA
+or feature-PR gates. The recorded F03 integration branch may be recreated from updated `main`
+when implementation is requested. Remove only branches proved merged by guarded cleanup.
+
 ## Feature and merge records
 
 `feature.yaml` keeps `status` and `qa_status`, and an `integration` mapping:
