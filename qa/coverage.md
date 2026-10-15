@@ -6,7 +6,7 @@
 
 | Release | Requirements | Owned by a feature | Assigned to a stage | Passed QA |
 | --- | --- | --- | --- | --- |
-| R1 | 96 | 96 | 12 | 12 |
+| R1 | 96 | 96 | 17 | 12 |
 | R2 | 40 | 0 | 0 | 0 |
 | R3 | 22 | 0 | 0 | 0 |
 
@@ -39,13 +39,13 @@ Cases waiting for something else. `feature-verify` and `release-prepare` go thro
 
 | Requirement | Release | Priority | Feature | Stages |
 | --- | --- | --- | --- | --- |
-| PLT-01 | R1 | must | F03 | - |
+| PLT-01 | R1 | must | F03 | F03-S01 (outlined) |
 | PLT-02 | R1 | must | F14 | - |
 | PLT-03 | R1 | should | F14 | - |
-| PLT-04 | R1 | must | F03 | - |
-| PLT-05 | R1 | must | F03 | - |
-| PLT-06 | R1 | must | F03 | - |
-| PLT-07 | R1 | must | F03 | - |
+| PLT-04 | R1 | must | F03 | F03-S01 (outlined), F03-S02 (outlined) |
+| PLT-05 | R1 | must | F03 | F03-S02 (outlined) |
+| PLT-06 | R1 | must | F03 | F03-S03 (outlined) |
+| PLT-07 | R1 | must | F03 | F03-S04 (outlined) |
 | PLT-08 | R1 | should | F14 | - |
 | PLT-09 | R2 | should | unowned | - |
 | PLT-10 | R2 | should | unowned | - |
