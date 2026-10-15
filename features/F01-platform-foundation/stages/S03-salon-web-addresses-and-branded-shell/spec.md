@@ -159,9 +159,9 @@ No table changes. No new migration is expected; if one is needed, it follows
 
 | Screen | Prototype source | States |
 | --- | --- | --- |
-| Salon shell (`/` on a salon's hostname) | The salon header of Customer mode in `docs/design/prototype/index.html` | Loading (a skeleton shaped like the header, never another salon's brand), filled, service unavailable |
+| Salon staff entry (`/` redirects to `/workspace`) | Salon mode in `docs/design/prototype/index.html` | Neutral workspace loading/sign-in, authenticated entry, service unavailable |
 | Salon not found | None; follow the application's existing not-found page and the standards' wording rules | One state |
-| Temporarily unavailable | None; plain, in the customer's terms: the salon's site is not available at the moment | One state |
+| Temporarily unavailable | None; plain staff wording: the salon workspace is temporarily unavailable | One state |
 
 The two error pages use the platform's neutral theme, never a salon's colour.
 

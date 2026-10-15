@@ -82,7 +82,8 @@ device id or forwarded address cannot bypass a server rate limit.
 
 List only one's own sessions, paginated; revoke one or all one's sessions. Staff removal, account
 deletion, Owner promotion or password change ends affected credentials immediately. Logout clears
-browser cookies and revokes the server session. Staff and customer sessions coexist independently.
+browser cookies and revokes the server session. Staff browser sessions and future native customer sessions have independent authority; no customer
+browser session is issued.
 
 ## Role permissions
 
@@ -190,8 +191,8 @@ all signed-in-device session credentials are revoked and a fresh code is needed 
 
 ## Browser boundary
 
-Use a Next.js server BFF with generated API client types. Host-only staff and customer access and
-refresh cookies are separate, HttpOnly, SameSite=Lax, Path=/, Secure outside local HTTP. Local HTTP
+Use a Next.js server BFF with generated API client types. Host-only staff access and
+refresh cookies are HttpOnly, SameSite=Lax, Path=/, Secure outside local HTTP. Local HTTP
 alone omits Secure (CR-005); use no Domain cookie. Tokens are returned to the BFF only, never in
 HTML, client JSON, URLs, JavaScript-readable storage or client components. Public API bearer
 responses remain available to future mobile clients.
@@ -204,22 +205,22 @@ Every BFF mutation requires an exact trusted Origin matching this hostname/port 
 cross-site Fetch Metadata, including unauthenticated sign-in (login CSRF). Do not trust arbitrary
 forwarded host/protocol. Refresh is explicit and serialized per browser session; reuse cannot
 restore a revoked session. BFF returns only allowlisted public result fields and field errors.
-Coordinate renewal across tabs for each principal kind, not only within one form or component.
+Coordinate staff renewal across tabs, not only within one form or component.
 If a competing replay revokes the family, clear that kind's cookies and require a fresh sign-in;
 never retry a spent refresh credential or restore a family from a delayed response.
 Redirect targets are fixed same-origin paths; errors keep useful form values except credentials.
 Auth failures redirect a protected page to its own sign-in; authorization failures show a friendly
-denial. Customer screens use salon branding and staff screens the neutral platform theme.
+denial. Web screens use the neutral staff workspace theme; future native screens use salon branding.
 
 Per-kind HttpOnly expiry metadata comes from issued `accessExpiresAt`. Compare it with strictly
 validated API `meta.time` to decide whether missing/expired access with a refresh credential is
 eligible for one renewal. A 401 with future expiry clears that kind without renewal; expiry
 metadata never authorizes access. Origin scheme is `http` only with the explicit local HTTP
 setting and `https` otherwise, matching validated Host and port exactly. Do not derive it from
-forwarded headers or `nextUrl`. BFF export uses a CSRF-checked POST because its underlying API GET
-records a rights audit. If Web Locks are unavailable, show a translated browser-support message
+forwarded headers or `nextUrl`. There is no customer export BFF. If Web Locks are unavailable,
+show a translated browser-support message
 and block credential-changing actions, including sign-in, sign-out, renewal, password/session
-changes and deletion. Profile reads/updates and exports remain available when already authenticated.
+changes. Already-authenticated staff reads remain available.
 
 The BFF namespace is `/identity-web/*`; the edge routes `/api/*` directly to Java. Address limits
 must reflect the browser connection without trusting browser forwarding headers. Node request
@@ -228,7 +229,7 @@ valid Caddy-overwritten forwarded address only if the peer matches explicit
 `SALON_WEB_TRUSTED_PROXIES` CIDRs. Default local trust is empty. Normalize IPv4-mapped IPv6, reject
 lists, ports, brackets and zone identifiers, and never log or return the resulting address.
 
-For staff password sign-in and customer code requests, strip incoming assertion headers and sign
+For staff password sign-in requests, strip incoming assertion headers and sign
 a bounded, versioned HMAC assertion using a fourth independent proxy key shared by API and BFF.
 It binds the canonical API salon hostname without port, uppercase method, exact API pathname,
 normalized address and issued instant. Obtain that instant from the existing API metadata `time`
@@ -289,15 +290,13 @@ CSRF, renewal and credential-secrecy guarantees. Customer-kind requests return 4
 upstream call or cookie issuance. Direct `/api/v1/identity/customers/*` APIs remain available for
 the later native client and API tests. All visible web text uses next-intl message keys.
 
-Cookies are `salon_{kind}_{access,refresh,expires,session,challenge,challenge_id}` plus the separate
-`salon_device` tracking cookie. They are host-only, HttpOnly, SameSite=Lax, Path=/ and Secure
-outside explicit local HTTP. BFF JSON returns public flow/results and field names, never session
-or challenge authority. Each kind uses Web Lock `salon:identity:{kind}` and sends only nonsecret
-change events through BroadcastChannel `salon:identity`. Exports use CSRF-checked BFF POST and
-return a no-store attachment. Staff and customer authority remain independent on the same host.
-Successful native API no-content mutations, including confirmed customer deletion, map to BFF
-HTTP 200 `{ok:true}`. Verify their actual revocation/erasure effects rather than equating a browser
-success response with completed deletion.
+Cookies are `salon_staff_{access,refresh,expires,session,challenge,challenge_id}` plus the
+separate `salon_device` tracking cookie. They are host-only, HttpOnly, SameSite=Lax, Path=/ and
+Secure outside explicit local HTTP. BFF JSON returns allowlisted results, never session or
+challenge authority. Staff uses Web Lock `salon:identity:staff` and nonsecret change events on
+BroadcastChannel `salon:identity`. Native API no-content staff mutations map to BFF HTTP200
+`{ok:true}`; verify the actual revocation rather than relying only on a browser success response.
+Customer profile, export and deletion are direct API foundations only, never web BFF actions.
 
 ## Implemented staff API contract
 
