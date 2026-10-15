@@ -5,8 +5,8 @@ summary: Salon staff sign in on the web with password and MFA, manage accounts a
   web interface.
 release: R1
 milestone: M1-web
-status: in-progress
-qa_status: not-run
+status: in-qa
+qa_status: failing
 released_in: null
 depends_on:
 - F01

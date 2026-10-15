@@ -2,12 +2,12 @@
 id: BUG-F02-009
 title: Prototype identity overlaps the mobile platform label at360px
 severity: minor
-status: open
+status: fixed
 found_by: TC-F02-S04-023
 breaks: AC-9
 found_on: 2026-10-15
-fixed_in: null
-fix_note: null
+fixed_in: "docs/design/prototype/index.html platform selector CSS"
+fix_note: "Place design-platform controls on a complete row in compact headers; constrain both button widths and retain the desktop Salon row."
 developer_note: null
 verified_on: null
 approved_by: null

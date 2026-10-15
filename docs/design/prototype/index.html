@@ -226,6 +226,11 @@ body.adm .main{max-width:none}.mx{max-width:760px;margin:0 auto}
  .blk{padding:5px 7px}
 }
 @media(min-width:900px) and (max-width:1199px){body.adm .shell{grid-template-columns:200px minmax(0,1fr)}body.adm .main{padding:24px 24px 48px}body.adm .g3{grid-template-columns:repeat(2,minmax(0,1fr))}body.adm .setg{grid-template-columns:minmax(0,1fr) 340px}body.adm .gc3{grid-template-columns:repeat(2,minmax(0,1fr))}}
+/* Design platform controls need a complete row beside compact salon identity. */
+.top .sw{order:3;flex:0 0 100%;width:100%;display:grid;grid-template-columns:minmax(0,1.8fr) minmax(0,1fr);margin-left:0}
+.top .sw button{min-width:0;white-space:normal;overflow-wrap:break-word}
+.top #tbell{order:2}
+@media(min-width:900px){body.adm .top .sw{order:0;flex:0 0 auto;width:auto;display:flex}body.adm .top #tbell{order:0}}
 </style></head><body>
 <header class="top"><span id="bm" class="r" style="gap:10px"></span><div id="gsw" class="gsw"><input id="gs" type="search" aria-label="Search bookings or customers" placeholder="Search bookings or customers" oninput="gsearch(this.value)" autocomplete="off"><div id="gsr"></div></div><div class="sw" role="group" aria-label="Design reference platform"><button id="bc" aria-pressed="false" onclick="mode('c')" title="Deferred until salon web is released">Customer mobile design (later)</button><button id="ba" aria-pressed="true" onclick="mode('a')">Salon web</button></div><button class="bell tbb" id="tbell" aria-label="Notifications" onclick="openNotif()"></button></header>
 <p id="platform-note" style="margin:8px 16px;font-size:13px">Design preview: Salon is the staff web application. Customer is a React Native mobile reference for after the salon web release.</p><div id="app"></div><div id="cn"></div><div id="sh"></div><div id="ts"></div>
