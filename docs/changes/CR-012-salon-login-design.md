@@ -1,7 +1,7 @@
 ---
 id: CR-012
 title: Tenant salon login matching the supplied mockup
-status: approved
+status: implemented
 requested_by: owner
 requested_on: 2026-10-15
 decided_on: 2026-10-15
