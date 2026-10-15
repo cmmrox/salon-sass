@@ -66,8 +66,8 @@ integration:
   branch: charithm/feature/F02-prototype-design-fidelity
   pull_request: https://github.com/cmmrox/salon-sass/pull/5
   qa_revision: e4e254f4463a274fdfd055df67b3056e83a249f0
-  merged_commit: null
-  merged_at: null
+  merged_commit: 0ecc2ee12cca6568f83c234f6e81b79fceed9c1e
+  merged_at: '2026-10-15T00:38:18Z'
 previous_integration:
   branch: charithm/feature/F01-platform-foundation
   pull_request: https://github.com/cmmrox/salon-sass/pull/3
