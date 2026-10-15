@@ -247,6 +247,9 @@ complete logs, source identity and conditions are available; current relevant so
 
 **Expected:** Lead inspects handoff, logs, relevant diff and conditions, reuses the gates, validates
 and closes. No duplicate command or QA pass. Stage logs do not substitute for sealed feature proof.
+When roles use different worktrees, resolves logs from the recorded originating checkout and
+retains it through closure, or verifies transferred evidence before using it. Does not assume
+ignored logs arrived with the merge or rerun solely because the lead's checkout lacks them.
 
 ## 29. Missing or changed stage proof
 

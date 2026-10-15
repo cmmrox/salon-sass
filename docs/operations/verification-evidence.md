@@ -70,6 +70,16 @@ result, and the relevant runtime/configuration/fixture conditions. If the tested
 retain its diff identity as well; a commit SHA alone cannot describe uncommitted source. Prefer
 testing committed implementation so the record can be compared without reconstruction.
 
+Ignored logs do not travel with a Git merge. Record the originating checkout's absolute path and
+resolve relative evidence paths against that checkout, never against the lead's worktree. Keep
+the developer worktree and its evidence intact until the lead has read and checked them at closure.
+Do not remove it or overwrite its logs while that handoff is pending. If the lead cannot access
+that checkout (for example, on another machine), transfer the complete gate logs and their
+command/source/result/context record to a location the lead can access before handoff. Verify
+the copied files' checksums against the originals, record the new location, and retain the originals
+until the lead confirms access and verification. Apply the existing guarded cleanup policy after
+closure; a copied log still needs the same source, result and condition checks below.
+
 Before `stage-close`, the lead checks every declared command is accounted for, its complete log
 exists and passed, relevant tracked/untracked source and command definitions are unchanged, and
 its test conditions still apply. Keep all applicable security, contract and persistence gates.

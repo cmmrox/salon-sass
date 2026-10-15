@@ -77,3 +77,7 @@ was copied:
 Start a fresh client session to load the revised skill and agent instructions. Actual elapsed-time
 savings remain to be measured on subsequent feature work; this evaluation does not establish a
 percentage improvement or certify future product quality.
+
+PR review follow-up: the stage-evidence protocol now records the originating checkout and retains
+its ignored logs through closure, with checksum-verified transfer when the lead cannot access it.
+This closes the separate-worktree handoff gap without replacing missing proof with a claimed pass.
