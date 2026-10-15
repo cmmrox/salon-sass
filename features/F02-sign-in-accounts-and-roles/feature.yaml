@@ -1,10 +1,11 @@
 id: F02
 title: Sign-in, accounts and roles
-summary: Staff sign in with a password and two-step verification and can do only what their role allows; customers
-  sign in with a one-time code and control their own profile and data.
+summary: Staff sign in with a password and two-step verification and can do only what
+  their role allows; customers sign in with a one-time code and control their own
+  profile and data.
 release: R1
 milestone: M1-web
-status: in-qa
+status: complete
 qa_status: pass
 released_in: null
 depends_on:
@@ -29,7 +30,8 @@ nfr_focus:
 - NFR-21
 cases:
 - id: TC-F02-001
-  title: Owner provisioning and removal connects workspace controls to immediate staff access
+  title: Owner provisioning and removal connects workspace controls to immediate staff
+    access
   type: functional
   priority: critical
   covers:
