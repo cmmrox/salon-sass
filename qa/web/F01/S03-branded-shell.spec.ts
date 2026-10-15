@@ -15,7 +15,7 @@ function noOtherBrand(body: string, own?: typeof alpha) {
 
 test('TC-F01-S03-001 each hostname renders only its salon in heading and document title', async ({ page, request }) => {
   for (const s of salons) {
-    const entry=await request.get(salonUrl(s,webUrl)+'/',{maxRedirects:0});expect(entry.status()).toBe(307);expect(entry.headers().location).toBe('/workspace');expect(entry.headers()['cache-control']).toContain('no-store');
+    const entry=await request.get(salonUrl(s,webUrl)+'/',{maxRedirects:0});expect(entry.status()).toBe(307);expect(new URL(entry.headers().location,salonUrl(s,webUrl)).href).toBe(salonUrl(s,webUrl)+'/workspace');expect(entry.headers()['cache-control']).toContain('no-store');
     const response = await page.goto(`${salonUrl(s, webUrl)}/`);
     expect(response!.status()).toBe(200);
     await expect(page).toHaveURL(/\/workspace\/sign-in$/);await expect(page.getByTestId('account-home')).toHaveText(s.name);await expect(page.getByTestId('account-identifier')).toBeVisible();await expect(page.getByTestId('salon-shell')).toHaveCount(0);
@@ -67,13 +67,15 @@ test('TC-F01-S03-005 a suspended salon shows a neutral 503 and returns immediate
     expect((await ar.json()).code).toBe('salon_suspended');
     for (const s of [alpha, beta]) expect((await request.get(`${salonUrl(s, webUrl)}/`)).status()).toBe(200);
   } finally { suspend('activate'); }
-  const r = await request.get(`${salonUrl(gamma, webUrl)}/`,{maxRedirects:0}); expect(r.status()).toBe(307);expect(r.headers().location).toBe('/workspace');
+  const r = await request.get(`${salonUrl(gamma, webUrl)}/`,{maxRedirects:0}); expect(r.status()).toBe(307);expect(new URL(r.headers().location,salonUrl(gamma,webUrl)).href).toBe(salonUrl(gamma,webUrl)+'/workspace');
 });
 
-test('TC-F01-S03-006 another salon in client-controlled fields never changes the rendered brand', async ({ page }) => {
+test('TC-F01-S03-006 another salon in client-controlled fields never changes the rendered brand', async ({ page, request }) => {
   await page.goto(`${salonUrl(beta, webUrl)}/`);
   await expect(page.getByTestId('account-home')).toHaveText(beta.name);
   await page.setExtraHTTPHeaders({'X-Forwarded-Host':beta.hostname, 'X-Tenant-Id':beta.id, 'Forwarded':`host=${beta.hostname}`, 'Cookie':`tenant=${beta.slug}; tenant_id=${beta.id}`, 'x-salon-resolved':JSON.stringify(beta)});
+  const forged={'X-Forwarded-Host':beta.hostname,'X-Forwarded-Proto':'https','X-Tenant-Id':beta.id,'Forwarded':`host=${beta.hostname};proto=https`,'Cookie':`tenant=${beta.slug};tenant_id=${beta.id}`};
+  for(const alias of ['/','/sign-in','/account']){const origin=salonUrl(alpha,webUrl),url=origin+alias+'?tenant='+beta.slug;const result=await request.get(url,{maxRedirects:0,headers:forged});expect(result.status()).toBe(307);const location=new URL(result.headers().location,url);expect(location.origin).toBe(origin);expect(location.pathname).toBe(alias==='/'?'/workspace':'/workspace/sign-in');expect(location.search).toBe('');expect(location.hash).toBe('');}
   const response = await page.goto(`${salonUrl(alpha, webUrl)}/?tenant=${beta.slug}&tenantId=${beta.id}`);
   expect(response!.status()).toBe(200);
   await expect(page.getByTestId('account-home')).toHaveText(alpha.name);
@@ -93,7 +95,7 @@ for (const kind of ['stopped','silent'] as const) test(`TC-F01-S03-${kind === 's
     expect(body).not.toMatch(/Exception|stack trace|error-overlay/);
     if (fake) expect(fake.requests()).toBeGreaterThan(0);
   } finally { await fake?.close(); await startApi(); }
-  const r = await request.get(`${salonUrl(alpha, webUrl)}/`,{maxRedirects:0}); expect(r.status()).toBe(307);expect(r.headers().location).toBe('/workspace');
+  const r = await request.get(`${salonUrl(alpha, webUrl)}/`,{maxRedirects:0}); expect(r.status()).toBe(307);expect(new URL(r.headers().location,salonUrl(alpha,webUrl)).href).toBe(salonUrl(alpha,webUrl)+'/workspace');
 });
 
 test('TC-F01-S03-010 long-name and neutral pages fit both widths with no serious accessibility issue', async ({ page }) => {

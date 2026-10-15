@@ -19,7 +19,7 @@ test(`${c(20)} API outage and slow BFF work preserve form values and present saf
    else{paused=apiProcess();execFileSync('kill',['-STOP',paused]);expect(execFileSync('ps',['-p',paused,'-o','stat='],{encoding:'utf8'}).includes('T'),'API is suspended').toBe(true);}
    await handle(signIn,'password').fill(staff.password);const answer=signIn.waitForResponse(r=>new URL(r.url()).pathname===bff('staff','sign-in'));await handle(signIn,'sign-in-submit').click();const response=await answer;await response.finished();expect(response.status()).toBe(503);expect(response.request().timing().responseEnd).toBeLessThan(5000);await expect(handle(signIn,'error')).toBeVisible();await expect(handle(signIn,'identifier')).toHaveValue(staff.email);await expect(handle(signIn,'password')).toHaveValue('');
   }finally{if(paused)execFileSync('kill',['-CONT',paused]);else{localService('start','api');await identity.api.reconnect();}}
-  await expect.poll(async()=> (await identity.api.health()).status(),{timeout:5000}).toBe(200);expect(localKeys()).toEqual(beforeKeys);
+  await expect.poll(async()=> (await identity.api.health()).status(),{timeout:5000}).toBe(200);expect(localKeys()).toEqual(beforeKeys);await identity.seed(alpha,[staff]);await accounts.staffSignIn(signIn,alpha,staff);await signIn.goto(routes.staffSignIn);await handle(signIn,'identifier').fill(staff.email);
  }
  // Outside fault seam: spend most of the one 3s budget on metadata, then hang the
  // mutation. A new 3s mutation timer would wait longer than the observed metadata
