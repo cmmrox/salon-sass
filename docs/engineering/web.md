@@ -9,6 +9,10 @@ exclusively to the later React Native app after M1-web release (CR-010).
 | Workspace | Salon hostname; `/` redirects to `/workspace` | Salon owners and staff |
 | Operator console | Reserved platform hostname, never a tenant | Operator staff |
 
+The exact console hostname, separate operator cookies/BFF, permissions and console route contract
+are in `docs/architecture/operator-console.md`. Console routing is recognized separately from
+salon resolution; bare platform status and other reserved hostnames do not become console aliases.
+
 Legacy `/sign-in` and `/account` redirect to `/workspace/sign-in`. They never render customer
 OTP/profile/privacy UI. `/identity-web/customer/*` returns no-store 404 without upstream API,
 message or customer-cookie work. Existing direct customer Java APIs remain mobile foundations.

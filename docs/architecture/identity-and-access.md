@@ -55,7 +55,9 @@ promotion invalidates their existing sessions. Never allow demotion/removal of t
 
 Owner provisions staff with a strong initial password; account administration is salon-specific.
 F03 will provision the first Owner of a real salon. F02 seeds local synthetic Owners only; no
-public Owner registration or production default credentials. Staff may change their own password
+public Owner registration or production default credentials. Operator identity and the narrow
+initial Owner bootstrap follow `docs/architecture/operator-console.md`; operator credentials never
+authorize these staff/customer endpoints. Staff may change their own password
 after supplying the old password; revoke other sessions and rotate the current one immediately.
 
 Password sign-in is limited to 10 attempts per normalized identifier and 30 per trusted address

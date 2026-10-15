@@ -154,6 +154,10 @@ tables. The tenant role cannot read them; the application reads what a salon is 
 a narrow service. An operator enters a salon's workspace only through a support session with a
 recorded reason and an expiry, visible to the salon's owner and written to the audit log.
 
+Operator authentication, the dedicated platform database connection and the narrowly granted
+initial Owner/brand bootstrap are specified in `docs/architecture/operator-console.md`.
+Initial creation does not grant an operator ongoing access to tenant records or a tenant session.
+
 ## Tests you must write
 
 For every new table and endpoint, an integration test with two tenants that proves:

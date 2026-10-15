@@ -51,8 +51,10 @@ certify a live payment provider, real message delivery or public TLS.
 
 ## Decisions and open questions
 
-- This is the stage outline for owner approval. Every stage remains `outlined`; stage
-  specifications, implementation and QA automation follow that approval.
+- The owner approved proceeding with the outlined delivery plan on 2026-10-15. Stage
+  specifications follow the outline; implementation and independent feature QA follow their gates.
+- The S01 technical policies are in `docs/architecture/operator-console.md`: separate operator
+  authority, atomic first-Owner provisioning, immutable unpriced plans and safe creation retries.
 - The supplied prototype has no operator-console screens. Stage planning must map the console
   to the existing design standards and staff shell conventions without adding customer web UI.
 - BRD decision D-06 (commercial pricing and packaging) remains open. Published tiers or prices

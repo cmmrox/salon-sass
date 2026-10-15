@@ -3,7 +3,7 @@ feature: F03
 title: "Operator access, salon provisioning and plans"
 sequence: 1
 surfaces: [api, web]
-status: outlined
+status: planned
 qa_status: not-run
 blocked_reason: null
 released_in: null
@@ -17,7 +17,13 @@ handoff:
   notes: null
 cases: []
 verification:
-  commands: []
+  commands:
+    - cd apps/api && ./mvnw -q verify
+    - pnpm -r lint
+    - pnpm -r typecheck
+    - pnpm -r test
+    - pnpm --filter @salon/web build
+    - pnpm contracts:check
   automation: []
   manual: []
   deferred: []
