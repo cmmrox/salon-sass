@@ -1,6 +1,6 @@
 # F02-S04 Staff web: acceptance cases
 
-Authority: approved CR-010 and revised spec. Local synthetic alpha/beta/gamma only; private random credentials stay in memory. Customer React Native UI is deferred until M1-web release; retained customer Java API cases in S02/S03 remain authoritative. Obsolete customer-browser OTP/profile/privacy/coexistence cases are removed, not silently deferred. Unaffected passing API and feature evidence is retained under CR-009.
+Authority: approved CR-010, CR-012 and revised spec. Local synthetic alpha/beta/gamma only; private random credentials stay in memory. Customer React Native UI is deferred until M1-web release; retained customer Java API cases in S02/S03 remain authoritative. Obsolete customer-browser OTP/profile/privacy/coexistence cases are removed, not silently deferred. Unaffected passing API and feature evidence is retained under CR-009.
 
 ### TC-F02-S04-001 staff password and authenticator flows reach account only after complete verification
 
@@ -18,8 +18,8 @@ Authority: approved CR-010 and revised spec. Local synthetic alpha/beta/gamma on
 - **Priority:** high
 - **Covers:** AC-1
 - **Performed as / preconditions:** Synthetic salon staff or unauthorized browser; committed local build and healthy seeded API before faults.
-- **Steps:** Submit wrong password/code, expire a challenge, then reach password attempt ceiling.
-- **Expected:** Useful identifier survives; password/code clears; translated recovery, visible retry delay and incomplete-challenge denial hold.
+- **Steps:** Toggle password visibility twice and open/close administrator-contact guidance, checking that neither sends an identity request. Submit wrong password/code, expire a challenge, then reach password attempt ceiling.
+- **Expected:** Visibility reflects its accessible pressed/name state; guidance announces contact with the salon administrator without a reset request. Useful identifier survives; password/code clears; translated recovery, visible retry delay and incomplete-challenge denial hold.
 - **Automation:** `qa/web/F02/S04-functional.spec.ts`
 
 ### TC-F02-S04-003 removed customer browser endpoints return404 without API or cookie side effects
@@ -148,7 +148,7 @@ Authority: approved CR-010 and revised spec. Local synthetic alpha/beta/gamma on
 - **Priority:** high
 - **Covers:** AC-8
 - **Performed as / preconditions:** Synthetic salon staff or unauthorized browser; committed local build and healthy seeded API before faults.
-- **Steps:** Inspect four staff routes and enrollment at360/390/768/1024/1280/1440 with long beta salon name.
+- **Steps:** Inspect four staff routes and enrollment at360/390/768/1024/1280/1440 with long beta salon name. The CR-012 standalone login and MFA states use the complete available width with reachable controls.
 - **Expected:** All controls stay reachable with44-point targets and no horizontal scrolling, clipping or overlap.
 - **Automation:** `qa/web/F02/S04-presentation.spec.ts`
 
@@ -168,8 +168,8 @@ Authority: approved CR-010 and revised spec. Local synthetic alpha/beta/gamma on
 - **Priority:** high
 - **Covers:** AC-8
 - **Performed as / preconditions:** Synthetic salon staff or unauthorized browser; committed local build and healthy seeded API before faults.
-- **Steps:** Manually traverse staff sign-in/MFA/account and Owner staff/audit on phone/tablet/desktop, inspect focus/contrast, cancel dialog by keyboard.
-- **Expected:** Every staff action is keyboard-operable with visible ordered focus and no trap; confirmation initial cancel focus, containment and return hold. Prior2026-10-14 staff evidence is retained; changed entry/sidebar needs current inspection before pass.
+- **Steps:** Manually traverse the changed CR-012 login on phone/tablet/desktop, including password visibility, administrator guidance, errors and MFA; inspect ordered visible focus and taupe action contrast. Retain unchanged staff account/Owner staff/audit confirmation evidence.
+- **Expected:** Every changed login action is keyboard-operable with visible ordered focus and no trap. Prior2026-10-14 unaffected staff confirmation evidence is retained; changed login needs current inspection before pass.
 - **Automation:** Manual judgment; actual performed date and evidence in stage.yaml.
 
 ### TC-F02-S04-019 staff workspace identifies only its salon and keeps the neutral palette
@@ -178,8 +178,8 @@ Authority: approved CR-010 and revised spec. Local synthetic alpha/beta/gamma on
 - **Priority:** high
 - **Covers:** AC-8
 - **Performed as / preconditions:** Synthetic salon staff or unauthorized browser; committed local build and healthy seeded API before faults.
-- **Steps:** Open staff routes for alpha/beta/gamma; inspect full salon header name, neutral canvas and absence of customer shell.
-- **Expected:** Only current salon identity appears, long name fits accessible header and all workspaces use neutral warm palette.
+- **Steps:** Open staff routes for alpha/beta/gamma; inspect the API-resolved login salon name/initial, full protected salon header name, neutral workspace canvas and absence of customer shell.
+- **Expected:** Only current salon identity appears. Login name remains readable, including beta long name; protected header retains approved accessible ellipsis. All protected workspaces keep their neutral warm palette.
 - **Automation:** `qa/web/F02/S04-presentation.spec.ts`
 
 ### TC-F02-S04-020 API outage and slow BFF work preserve form values and present safe retry within budget
@@ -218,6 +218,6 @@ Authority: approved CR-010 and revised spec. Local synthetic alpha/beta/gamma on
 - **Priority:** high
 - **Covers:** AC-9
 - **Performed as / preconditions:** Synthetic salon staff or unauthorized browser; committed local build and healthy seeded API before faults.
-- **Steps:** Map staff screens to Salon reference. Inspect six widths, Poppins/warm tokens, cards/fields/pills, responsive rail/tabs and revoke-all drawer/sheet. Escape/cancel and inspect focus return. Save masked screenshots.
-- **Expected:** Salon web grammar holds without customer430px canvas/navigation. Header keeps full DOM/title under approved ellipsis. Overlay keyboard behavior and real permission-filtered routes remain correct.
+- **Steps:** Map CR-012 sign-in to the supplied1536x1024 mockup and protected staff screens to the HTML Salon reference. Inspect six widths, loaded Poppins, standalone photo/initial/name/translucent card/welcome/fields/toggle/recovery/taupe action/footer. Compare full-view and focused screenshot pairs manually. Protected screens retain cards/fields/pills, responsive rail/tabs and revoke-all drawer/sheet. Escape/cancel and inspect focus return. Save empty or masked-input screenshots.
+- **Expected:** Sign-in matches CR-012 composition at1536x1024 and remains usable across all widths without workspace header/rail. Protected Salon web grammar holds without customer430px canvas/navigation; its header keeps full DOM/title under approved ellipsis. Overlay keyboard behavior and real permission-filtered routes remain correct.
 - **Automation:** `qa/web/F02/S04-presentation.spec.ts`
