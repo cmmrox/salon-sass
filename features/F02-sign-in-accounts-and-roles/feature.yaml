@@ -96,8 +96,8 @@ integration:
   branch: charithm/feature/F02-prototype-design-fidelity
   pull_request: https://github.com/cmmrox/salon-sass/pull/5
   qa_revision: e73d99b0bbb38ec4db6b9cc837ea635286a1fed0
-  merged_commit: null
-  merged_at: null
+  merged_commit: 0ecc2ee12cca6568f83c234f6e81b79fceed9c1e
+  merged_at: '2026-10-15T00:38:18Z'
 previous_integration:
   branch: charithm/feature/F02-sign-in-accounts-and-roles
   pull_request: https://github.com/cmmrox/salon-sass/pull/4

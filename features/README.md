@@ -8,13 +8,13 @@ requirement detail is in `qa/coverage.md`.
 
 | ID | Feature | Milestone | Status | GitHub merge | Stages done | Requirements | Next |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| F01 | [Platform foundation and tenant isolation](F01-platform-foundation/) | M1-web | complete | awaiting owner | 5/5 | 2 | **lead**: `merge-sync F01 (after owner merges the PR)` |
-| F02 | [Sign-in, accounts and roles](F02-sign-in-accounts-and-roles/) | M1-web | complete | awaiting owner | 4/4 | 10 | **lead**: `merge-sync F02 (after owner merges the PR)` |
-| F03 | [Operator console: salons, plans and billing](F03-operator-console/) | M1-web | backlog | - | - | 5 | after F02 |
-| F04 | [Salon setup: profile, branding, hours and policies](F04-salon-setup/) | M1-web | backlog | - | - | 6 | after F02 |
+| F01 | [Platform foundation and tenant isolation](F01-platform-foundation/) | M1-web | complete | merged | 5/5 | 2 | - |
+| F02 | [Sign-in, accounts and roles](F02-sign-in-accounts-and-roles/) | M1-web | complete | merged | 4/4 | 10 | - |
+| F03 | [Operator console: salons, plans and billing](F03-operator-console/) | M1-web | backlog | - | - | 5 | **lead**: `feature-new F03` |
+| F04 | [Salon setup: profile, branding, hours and policies](F04-salon-setup/) | M1-web | backlog | - | - | 6 | after GitHub merge of F03 |
 | F05 | [Service catalogue](F05-service-catalogue/) | M1-web | backlog | - | - | 6 | after F04 |
 | F06 | [Staff, schedules and leave](F06-staff-schedules-and-leave/) | M1-web | backlog | - | - | 4 | after F04, F05 |
-| F07 | [Online booking on the web](F07-online-booking/) | M1-web | backlog | - | - | 15 | after F02, F05, F06 |
+| F07 | [Online booking on the web](F07-online-booking/) | M1-web | backlog | - | - | 15 | after F05, F06 |
 | F08 | [Payments, deposits and refunds](F08-payments-deposits-and-refunds/) | M1-web | backlog | - | - | 8 | after F07 |
 | F09 | [Manage a booking: reschedule, cancel and waitlist](F09-manage-a-booking/) | M1-web | backlog | - | - | 4 | after F08 |
 | F10 | [Salon calendar and front desk](F10-salon-calendar-and-front-desk/) | M1-web | backlog | - | - | 7 | after F08 |
