@@ -52,6 +52,19 @@ CURRENT_CASE=""
 CURRENT_TITLE=""
 CURRENT_FAILED=0
 
+# Scoped synthetic nonlocal startup fixture. Never export keys into missing-secret negative cases.
+with_identity_keys() (
+  local file="${SALON_IDENTITY_LOCAL_KEY_FILE:-$PRODUCT_ROOT/.local/identity-keys.properties}" key value name count=0
+  [ -f "$file" ] || { printf 'ENVIRONMENT: retained synthetic identity key file is absent\n' >&2; exit 3; }
+  while IFS='=' read -r key value; do
+    case "$key" in signing) name=SALON_IDENTITY_SIGNING_KEY;; challenge) name=SALON_IDENTITY_CHALLENGE_KEY;; encryption) name=SALON_IDENTITY_ENCRYPTION_KEY;; proxy) name=SALON_IDENTITY_PROXY_KEY;; *) continue;; esac
+    [[ "$value" =~ ^[0-9a-fA-F]{64}$ ]] || { printf 'ENVIRONMENT: retained identity key format is invalid\n' >&2; exit 3; }
+    export "$name=$value"; count=$((count+1))
+  done < "$file"
+  [ "$count" = 4 ] || { printf 'ENVIRONMENT: all four retained identity fixture keys are required\n' >&2; exit 3; }
+  "$@"
+)
+
 note() { printf '      %s\n' "$*"; }
 
 # A fault of the environment, not of the product. Nothing more is tested.

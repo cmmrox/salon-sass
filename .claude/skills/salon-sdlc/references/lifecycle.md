@@ -282,7 +282,10 @@ specs and the requirements, never from what the code happens to do.
 - Any stage of the feature is not `complete`.
 - You are the agent that built any stage of this feature in this same context.
 
-**Do, on the first pass (`qa_status: not-run`):**
+**Before execution:** apply `references/progress.md`'s saved-evidence check. A resumed session or
+stale status label does not require another pass when complete relevant evidence remains valid.
+
+**Do, on the first pass (`qa_status: not-run`, with no reusable complete pass):**
 1. Branch QA from the feature integration branch containing every closed stage; set `status: in-qa`.
 2. Preflight the environment from the stages' `handoff`. If the product cannot be started, that is
    the first bug.
@@ -301,7 +304,9 @@ specs and the requirements, never from what the code happens to do.
 6. Decide suite membership for every automation entry: add `suites: [regression]` to what must keep
    working, and `smoke` to the few that prove the feature is alive.
 7. Commit the cases and automation, with role guard and validation, before the final run. Record
-   `git rev-parse HEAD` as the tested revision. Run `qa/scripts/sdlc run --feature <F>`. It runs every stage's automation of this feature and
+   `git rev-parse HEAD` as the tested revision. Prepare the current environment and evidence context
+   as `docs/operations/verification-evidence.md` describes. Run the full feature with that context.
+   `qa/scripts/sdlc run --feature <F>` runs every stage's automation of this feature and
    then the journeys. No other feature.
 8. Triage every failure as a product defect, an environment fault or a test defect
    (`references/bug-loop.md` in `salon-qa`). File one bug per product defect under
@@ -318,11 +323,14 @@ specs and the requirements, never from what the code happens to do.
     `python3 qa/scripts/guard.py --role qa --diff`, and commit: `test(<F>): ...`.
 
 **Do, when re-verifying (bugs are `fixed`):**
-1. Rerun the cases of each fixed bug, then the whole feature: `qa/scripts/sdlc run --feature <F>`.
+1. Apply the saved-evidence rule in `references/progress.md`. Independently verify each fixed bug
+   and its affected dependencies; retain unaffected passing results. Record an impact-based reason
+   before selecting a whole-feature rerun.
 2. Set each bug to `verified` or `reopened` with the evidence.
 3. Update the evidence and `qa_status`, generate and validate, guard, commit.
-   Commit any automation edits before the rerun and update `integration.qa_revision` to the
-   tested revision. The lead integrates the QA branch and fixes into the feature integration branch.
+   Commit automation edits before execution. Record actual tested revisions and scope following
+   `docs/operations/verification-evidence.md`; never replace a base full-pass revision with a
+   targeted-pass revision as if the whole feature ran. The lead integrates QA and verified fixes.
 
 **Does not:** edit application code; run any other feature's automation, regression or smoke; set
 the status to `complete`.
@@ -366,8 +374,16 @@ The product and automation must match `integration.qa_revision`; the path list i
 
 **Gates, in order. Stop at the first that fails, print why, and change nothing:**
 1. Every stage is `complete`, and the feature's `qa_status` is `pass`.
-2. The `verification.commands` of its stages, with duplicates removed, each exit zero, run now.
-3. `qa/scripts/sdlc run --feature <F>` passes, run now. This feature only.
+2. Confirm the current environment/build and fixture prerequisites, then validate recorded
+   developer gates and independent full-feature QA with the closure evidence command in
+   `docs/operations/verification-evidence.md`. Evidence must cover every deduplicated stage
+   command and the exact full feature, and match current certified source, criteria, command
+   definitions and environment context. Legacy, incomplete, changed or unavailable evidence
+   requires assessment of the affected proof under `references/progress.md`; never rerun an
+   unchanged product merely to satisfy an overbroad tooling fingerprint. Follow the evidence
+   document's explicit limitations and scoped-handoff procedure rather than claiming a false pass.
+3. Confirm every required manual case was performed and every deferred case has an explicit
+   reason and unblocking event. Reused automation evidence does not imply a manual check.
 4. `qa/scripts/sdlc validate` reports nothing.
 5. No suggestion in `review.md` is left without a disposition.
 
@@ -526,8 +542,8 @@ two suites directly: `qa/scripts/sdlc run --suite smoke`, then `--suite regressi
 | In `release-verify`, or any time before release | `features/<feature>/bugs/` of the feature that owns the failing case | The lead sets that feature back to `status: in-qa`, `qa_status: failing`. Its stages stay `complete` |
 | After release, in a shipped version | `features/<feature>/bugs/`, with `found_in_release: <version>` | Statuses stay `released`. Fixed on a `hotfix` branch and shipped as a PATCH release |
 
-In every case but a stage pass, the developer fixes with `bug-fix <F>`, QA re-verifies with the
-bug's case and `qa/scripts/sdlc run --feature <F>`, and the lead runs `feature-close <F>` again
+In every case but a stage pass, the developer fixes with `bug-fix <F>`, QA re-verifies the affected
+scope under `references/progress.md`, and the lead runs `feature-close <F>` again
 where the feature was set back.
 
 ---

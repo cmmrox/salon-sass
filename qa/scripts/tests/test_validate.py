@@ -9,6 +9,53 @@ def findings(bundle):
 
 
 class ValidateTest(unittest.TestCase):
+    def repair_bundle(self):
+        def reopened(fid):
+            history = {"branch": f"charithm/feature/{fid}-original", "qa_revision": "a" * 40,
+                       "pull_request": "https://github.com/example/salon/pull/1",
+                       "merged_commit": "b" * 40, "merged_at": "2026-01-01T00:00:00Z"}
+            return fx.feature(id=fid, requirements=["BKG-01"] if fid == "F07" else [],
+                              _dir=f"features/{fid}-repair", _path=f"features/{fid}-repair/feature.yaml",
+                              reopened_by="CR-001", previous_integration=history,
+                              integration={"branch": "charithm/feature/F08-design-repair"})
+        repair = {"id": "CR-001", "status": "approved", "features": ["F07", "F08"],
+                  "integration_branch": "charithm/feature/F08-design-repair"}
+        stages = [fx.unverified_stage(id=f"{fid}-S01", feature=fid, status="in-progress",
+                                     requirements=["BKG-01"] if fid == "F07" else [],
+                                     _feature_dir=f"features/{fid}-repair") for fid in ("F07", "F08")]
+        return fx.bundle(features=[reopened("F07"), reopened("F08")], stages=stages,
+                         change_requests=[repair])
+
+    def test_grouped_repair_preserves_previous_merges_without_certifying_new_work(self):
+        from sdlc_lib import flow
+        bundle = self.repair_bundle()
+        self.assertEqual(validate.check_features(bundle), [])
+        self.assertTrue(all(not flow.merged(f) for f in bundle["features"]))
+
+    def test_grouped_repair_requires_owner_approval_and_feature_membership(self):
+        for change in ({"status": "proposed"}, {"features": ["F08"]}):
+            bundle = self.repair_bundle()
+            bundle["change_requests"][0].update(change)
+            self.assertTrue(validate.check_features(bundle))
+
+    def test_grouped_repair_requires_complete_valid_previous_merge_evidence(self):
+        for key, value in (("merged_commit", None), ("qa_revision", "bad"),
+                           ("merged_at", "not-a-date"), ("pull_request", "https://bad.test/1")):
+            bundle = self.repair_bundle()
+            bundle["features"][0]["previous_integration"][key] = value
+            self.assertTrue(validate.check_features(bundle))
+
+    def test_grouped_repair_does_not_allow_an_unmerged_new_feature_to_start(self):
+        bundle = self.repair_bundle()
+        bundle["features"].append(fx.feature(id="F09", requirements=[], depends_on=["F08"]))
+        found = validate.check_features(bundle)
+        self.assertTrue(any("started before confirmed GitHub merge" in f for f in found), found)
+
+    def test_grouped_repair_does_not_allow_an_arbitrary_shared_branch(self):
+        bundle = self.repair_bundle()
+        bundle["features"][0]["integration"]["branch"] = "charithm/feature/F99-other"
+        self.assertTrue(validate.check_features(bundle))
+
     def assertFinding(self, bundle, fragment):
         found = findings(bundle)
         self.assertTrue(any(fragment in f for f in found), f"expected a finding containing {fragment!r}, got {found}")

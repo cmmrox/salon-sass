@@ -8,12 +8,25 @@ salon's name and brand colour. A hostname that belongs to no salon gets a "salon
 suspended salon gets a "temporarily unavailable" page, and neither says anything about any other
 salon. The API learns what a suspended salon answers.
 
+## Owner-approved design correction (CR-007)
+
+The supplied HTML's final cascade and `docs/design/ui-ux-standards.md` are the visual authority.
+Repair shared tokens/type, customer and workspace shells, forms/cards/rows/actions and foundation
+status/error pages. Preserve the business/security acceptance criteria below. New screens inherit
+the reference grammar. Do not invent future capabilities or change the prototype.
+
+- AC-12: Source-defined visual checks and rendered comparison evidence show the warm palette,
+  loaded Poppins, pill actions, rounded fields/cards, 430px customer canvas and responsive salon
+  rail/tab layouts at the width matrix, with readable brands, labels and focus. Independent QA
+  records reference mapping/screenshots; unexplained visual departures fail. (NFR-21)
+
 ## Read first
 
 - `docs/engineering/web.md`: tenant routing, structure, where things live, branding, text and
   accessibility, tests
 - `docs/architecture/multi-tenancy.md`: rules T-5 and T-8, "Salons and their hostnames" (the exact
   hostname rule, the reserved slugs), "How the tenant reaches the database"
+- `docs/design/prototype/index.html`
 - `docs/design/ui-ux-standards.md`: sources of truth, tokens and branding, states every screen has,
   the width matrix, accessibility, test ids, wording
 - `docs/architecture/ARCHITECTURE.md`: web addresses
@@ -80,9 +93,10 @@ app's local port; hostnames are the synthetic salons' of `docs/qa/test-plan.md`.
   200 with that salon's name as the page's main heading and as the document title, and no other
   salon's name or colour anywhere in the response. The hostname is matched without regard to case.
   (BRD-03, NFR-01)
-- AC-2: On each of the three salons' pages the brand colour custom property on the root equals that
-  salon's colour from `docs/qa/test-plan.md`, and the salon's name drawn on it has a contrast of at
-  least 4.5 to 1: on the default pink, on beta's dark colour and on gamma's light colour. (NFR-17)
+- AC-2: Each salon's root brand property equals its fixture colour. The compact header's circular
+  identity fallback uses that brand and a computed foreground with at least 4.5 to 1 contrast for
+  pink, dark and light brands; the salon name uses readable neutral text on the warm header as in
+  the reference. A full-width brand-colour banner is not the reference. (NFR-17, NFR-21)
 - AC-3: `GET /` on a hostname that resolves to no salon answers 404 with the "salon not found"
   page, with the same body for each of: an unknown slug, a reserved slug (`www`, `console`), two
   labels in front of the platform domain (`alpha.beta.localhost`) and a hostname that only contains

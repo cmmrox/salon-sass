@@ -43,7 +43,7 @@ export function SignIn({ kind, timeZone }: { kind: Kind; timeZone: string }) {
     finally { setBusy(false); }
   }
   const message = failure ? (t.has(failure.code as 'service_unavailable') ? t(failure.code as 'service_unavailable') : t('service_unavailable')) : '';
-  return <Section title={step === 'enroll_mfa' || step === 'verify_mfa' ? t('mfaTitle') : t('signIn')}>
+  return <Section signIn title={step === 'enroll_mfa' || step === 'verify_mfa' ? t('mfaTitle') : t('signIn')}>
     {!supported && <p role="status" className={styles.feedback} data-testid="account-browser-support">{t('browser_unsupported')}</p>}
     {failure && <p role="alert" className={styles.feedback} data-testid="account-error">{message}</p>}
     {wait > 0 && <p role="status" data-testid="account-retry-wait">{t('wait', { seconds: wait })}</p>}

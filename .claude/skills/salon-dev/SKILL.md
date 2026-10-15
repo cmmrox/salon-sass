@@ -1,6 +1,6 @@
 ---
 name: salon-dev
-description: The developer role in this repository - how to build a stage from its spec, what to read first, the engineering habits every change must follow, how to check and hand over a stage that QA will not test until the feature is finished, and how to fix a bug QA filed. Use when writing, changing or reviewing application code, database migrations, API contracts, infrastructure or unit and integration tests, when running stage-build or bug-fix, and when a spec or a project document turns out to be wrong.
+description: Builds stages and fixes filed product bugs. Use for application code, migrations, contracts, infrastructure, unit or integration tests, stage-build and bug-fix. QA automation and project process changes belong to other roles.
 ---
 
 # Building a stage
@@ -16,6 +16,9 @@ with, and the rules of this particular product, are not in this skill: they are 
 3. `docs/README.md`, for the row that matches each part of the product you are about to touch.
    When in doubt, read the document; the rules in it are requirements, not background.
 4. The `AGENTS.md` in the application folder you are working in, when there is one.
+5. For user-facing work, inspect the supplied design reference before coding. Record the mapped
+   screen, responsive layout and visual states; a passing functional check does not prove design
+   fidelity. Follow `docs/design/ui-ux-standards.md` for the project's reference and comparison gates.
 
 When the documents do not cover something:
 
@@ -27,18 +30,24 @@ When the documents do not cover something:
 
 ## Habits for every change
 
-1. **Search before creating.** Reuse the existing component, service, hook or utility. Two things
-   that look 70% alike are one thing with a parameter.
+1. **Search before creating.** Trace the affected callers, tests, fixtures and configuration.
+   Reuse a compatible component, service, hook or utility, then the standard platform or an
+   installed dependency. Introduce an abstraction when real callers need it; visual similarity
+   alone does not establish a shared contract. Keep the change complete and easy to read.
 2. **Follow the project's rules exactly where they are strict** (isolation, money, time, migrations,
    contracts, security) and use judgement where they leave room. The documents say which is which.
-3. **Change the contract and the data model first**, then build inward to outward: domain rules,
-   service, API, then screens.
+3. **Build one acceptance behavior at a time.** Update its contract and data model before its
+   consumers, then connect the necessary layers so the behavior can be exercised. Short feedback
+   loops find a wrong assumption before it spreads across the stage.
 4. **Tests ship with the change.** Unit tests for rules, integration tests against the real kind of
    database the product uses, and the negative cases (wrong owner, wrong role, bad input) for
    anything new. Anything that stores or returns one organisation's data ships with the test that
    another organisation cannot reach it. A test asserts an outcome the spec promises; a test that
    still passes when the feature is removed is not a test. QA does not test your stage when you
    hand it over, so until the feature's QA pass these tests are all that guards it.
+   For risky new logic and bug fixes, observe a meaningful failing test before implementing the
+   fix. Assert promised behavior through stable interfaces, with independent expected values;
+   retain database-level checks where persistence, isolation or integrity is the promise.
 5. **Generated files are regenerated, never edited by hand,** and committed with the change that
    caused them.
 6. **Nothing secret in code, logs, tests or commits.**
@@ -55,13 +64,24 @@ When the documents do not cover something:
    integration branch; the lead integrates closed stages there. Follow `references/git-workflow.md`
    in `salon-sdlc`: unfinished stages do not merge into `main`.
 3. Implement against the acceptance criteria, with tests alongside.
-4. Run the stage's `verification.commands` until green.
+4. Run the stage's `verification.commands` for the changed implementation; on an unchanged resume,
+   reuse complete passing evidence under `references/progress.md` in `salon-sdlc`.
+   If one fails, diagnose before rerunning; a changed
+   result without a known cause is unresolved. For reusable feature-closure evidence, follow
+   `docs/operations/verification-evidence.md`; ordinary stage closure retains its own gates.
 5. Start the product and walk through every acceptance criterion yourself, from outside: the
    screen, the endpoint, the command, including the criterion's negative case. Later stages are
    built on this one before QA sees it, so this walk-through is the stage's acceptance check. Do not
    hand over something you have not seen work.
 6. Hand over as `stage-build` describes. In `handoff.notes`, account for each acceptance criterion:
-   checked on the running product, or not checked and why. The lead closes the stage on that record.
+   checked on the running product, or not checked and why. For screens, include reference-to-product
+   comparison evidence at representative widths and resolve visual differences before handoff.
+   Report any reference preview limitation explicitly. The lead closes the stage on that record.
+
+For visual work, inspect the complete mapped screen/state set together, including representative
+device sizes. Correct confirmed differences in one batch and confirm that batch. End refinement
+when the approved design and acceptance criteria hold; a fresh defect needs diagnosis, while a
+new design preference belongs to the lead's scope process.
 
 ## What you owe QA
 
@@ -81,9 +101,12 @@ as you build it:
 ## Fixing a bug from QA
 
 Bugs arrive together, after the feature's QA pass, and may be in any of its stages. Reproduce each
-one first. Add a unit or integration test that fails for the reason in the bug, then fix
+one first, compare a working path, and trace the failing input to its cause. Test one hypothesis
+at a time. Add a unit or integration test that fails for the reason in the bug, then fix
 the cause, not the symptom the test happens to check. Never edit anything under `qa/`. If the test
 or the expectation is wrong, say so in `developer_note` on the bug and leave it for QA to decide.
+When repeated fixes fail, revisit the cause and affected interfaces with the lead before another
+patch. Record the failing and passing evidence and any unchecked behavior in the handoff.
 
 ## When reality differs from a document
 

@@ -27,6 +27,16 @@ device and the conditions they would really have.
 - **Consistency:** does it look and behave like the features before it?
 - **The customer's interest:** does it do the job the customer is paying for, better than before?
 
+## Check the supplied design
+
+For each delivered screen, compare the running product with the supplied design reference at
+matching widths and states. Check composition, typography, colours, spacing, controls and
+navigation, using the project rules in `docs/design/ui-ux-standards.md`. Functional success,
+accessibility and lack of overflow do not prove visual fidelity. Record the mapping and comparison
+evidence; report an unavailable reference preview honestly. An unexplained departure from an
+approved design is a defect, not an optional review suggestion. New screens inherit the reference's
+visual grammar unless the owner approves a different direction.
+
 ## Compare with what they use today
 
 For the flow this feature delivers, look at how the established products handle it. For each

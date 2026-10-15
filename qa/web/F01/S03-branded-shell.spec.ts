@@ -6,6 +6,7 @@ import { alpha, beta, gamma, salons, salonUrl, onHostname, PLATFORM_DOMAIN } fro
 import { WIDTHS, fit, seriousViolations, stringsShown, testIds, TEST_ID_NAME } from '@qa/page-checks';
 import { allMessages } from '@qa/strings';
 import { startApi, stopApi, standInForApi } from '@qa/services';
+import { DESIGN_WIDTHS, designScreenshot, referenceCustomerShell, referenceFit, referenceTypeAndPalette } from '@qa/design-reference';
 
 const suspend = (action: string) => execFileSync(path.join(REPO_ROOT, 'infra/scripts/local-salon.sh'), [action, gamma.slug]);
 function noOtherBrand(body: string, own?: typeof alpha) {
@@ -32,11 +33,13 @@ test('TC-F01-S03-002 every salon colour is applied with readable foreground cont
   for (const s of salons) {
     await page.goto(`${salonUrl(s, webUrl)}/`);
     await expect(page.getByTestId('salon-name')).toHaveText(s.name);
-    const colours = await page.getByTestId('salon-name').evaluate(el => {
+    const colours = await page.getByTestId('salon-identity').evaluate(el => {
       const style = getComputedStyle(el);
-      return {brand: getComputedStyle(document.documentElement).getPropertyValue('--color-brand').trim(), foreground: style.color};
+      return {brand: getComputedStyle(document.documentElement).getPropertyValue('--color-brand').trim(), foreground: style.color, background: style.backgroundColor};
     });
     expect(colours.brand.toUpperCase()).toBe(s.brandColour);
+    expect(colours.background).toBe(`rgb(${s.brandColour.slice(1).match(/../g)!.map(v => parseInt(v,16)).join(', ')})`);
+    await expect(page.getByTestId('salon-name')).toHaveCSS('color', 'rgb(17, 24, 39)');
     const channel = (v: number) => v / 255 <= .04045 ? v / 255 / 12.92 : ((v / 255 + .055) / 1.055) ** 2.4;
     const luminance = (rgb: number[]) => .2126*channel(rgb[0])+.7152*channel(rgb[1])+.0722*channel(rgb[2]);
     const fg = colours.foreground.match(/[\d.]+/g)!.slice(0,3).map(Number);
@@ -108,7 +111,7 @@ test('TC-F01-S03-010 long-name and neutral pages fit both widths with no serious
     suspend('suspend');
     for (const width of WIDTHS) for (const [url,id] of [[salonUrl(beta,webUrl),'salon-name'],[onHostname(webUrl,`missing.${PLATFORM_DOMAIN}`),'salon-not-found-title'],[salonUrl(gamma,webUrl),'salon-unavailable-title']]) {
       await page.setViewportSize(width); await page.goto(url); await expect(page.getByTestId(id)).toBeVisible();
-      const overflow=await fit(page); expect(overflow.counted).toBeGreaterThan(0); expect(overflow.pageScrolls).toBe(false); expect(overflow.outside).toEqual([]); expect(overflow.clipped).toEqual([]);
+      const overflow=await referenceFit(page,id === 'salon-name' ? beta.name : undefined); expect(overflow.counted).toBeGreaterThan(0); expect(overflow.pageScrolls).toBe(false); expect(overflow.outside).toEqual([]); expect(overflow.clipped).toEqual([]);
       expect(await seriousViolations(page)).toEqual([]);
     }
   } finally { suspend('activate'); }
@@ -120,7 +123,9 @@ test('TC-F01-S03-011 strings and readable result handles on all pages follow the
     for (const [url,id] of [[salonUrl(beta,webUrl),'salon-name'],[onHostname(webUrl,`missing.${PLATFORM_DOMAIN}`),'salon-not-found-title'],[salonUrl(gamma,webUrl),'salon-unavailable-title']]) {
       await page.goto(url); await expect(page.getByTestId(id)).toBeVisible();
       const values=await stringsShown(page); expect(values.length).toBeGreaterThan(0);
-      for(const value of values) expect([...allMessages(),beta.name]).toContain(value);
+      const identity=page.getByTestId('salon-identity');const initials=await identity.count()?await identity.innerText():null;
+      if(initials)expect(initials).toMatch(/^[\p{L}]{1,2}$/u);
+      for(const value of values) expect([...allMessages(),beta.name,...(initials?[initials]:[])]).toContain(value);
       const ids=await testIds(page); expect(ids.length).toBeGreaterThan(2); for(const id of ids) expect(id).toMatch(TEST_ID_NAME);
     }
   } finally { suspend('activate'); }
@@ -132,4 +137,23 @@ test('TC-F01-S03-012 the salon contract and client describe a suspended salon', 
   const contract=committedContract(); const operation=contract.paths['/api/v1/salon'].get as {responses:Record<string,unknown>};
   expect(operation.responses['403']).toBeTruthy();
   const code=contract.components.schemas.Problem.properties!.code as {enum:string[]}; expect(code.enum).toContain('salon_suspended');
+});
+
+test('TC-F01-S03-013 public and foundation pages match the supplied reference grammar at all six widths', async ({ page }) => {
+  test.setTimeout(180_000);
+  for (const s of salons) for (const viewport of DESIGN_WIDTHS) {
+    await page.setViewportSize(viewport); await page.goto(salonUrl(s, webUrl)); await expect(page.getByTestId('salon-name')).toBeVisible(); await expect(page.getByTestId('salon-name')).toHaveText(s.name);
+    await referenceTypeAndPalette(page); await referenceCustomerShell(page, viewport.width,s.brandColour);
+    const result = await referenceFit(page, s.name); expect(result.counted).toBeGreaterThan(0); expect(result.pageScrolls).toBe(false); expect(result.outside).toEqual([]); expect(result.clipped).toEqual([]);
+    await designScreenshot(page, `F01-public-${s.slug}-${viewport.width}`);
+  }
+  try {
+    suspend('suspend');
+    for (const viewport of DESIGN_WIDTHS) for (const [url,id] of [[webUrl,'status-api-service'],[onHostname(webUrl,`missing.${PLATFORM_DOMAIN}`),'salon-not-found-title'],[salonUrl(gamma,webUrl),'salon-unavailable-title']]) {
+      await page.setViewportSize(viewport); await page.goto(url); await expect(page.getByTestId(id)).toBeVisible(); await referenceTypeAndPalette(page);
+      await expect(page.locator('body')).toHaveCSS('background-color','rgb(243, 240, 235)');
+      const result = await fit(page); expect(result.counted).toBeGreaterThan(0); expect(result.pageScrolls).toBe(false); expect(result.outside).toEqual([]); expect(result.clipped).toEqual([]);
+      await designScreenshot(page, `F01-${id}-${viewport.width}`);
+    }
+  } finally { suspend('activate'); }
 });

@@ -47,6 +47,13 @@ the live start check. The merge commit is included in `origin/main`, and the PR 
 QA revision without changes to the certified paths listed in `docs/architecture/repository-structure.md`.
 The live check also requires successful `Verification commands` CI on the PR's head revision.
 
+For owner-directed proportional re-verification (CR-009), `evidence.scoped_assessment` may point to
+the independent committed assessment described in `docs/operations/verification-evidence.md`.
+Its original full QA revision stays in `integration.qa_revision`; targeted verification has its own
+`reviewed_revision`. Submission and merge gates validate that assessment and refuse subsequent
+unreviewed product changes. This preserves both actual tested scopes without repeating unaffected
+QA or presenting a targeted check as a new full pass.
+
 A merge happens after the PR's own metadata commit. Record its resulting SHA on a bookkeeping,
 release or next feature branch, while the next feature is still in the backlog. That record is
 included in the next PR; it is not pushed directly to `main` and does not need its own PR solely
@@ -101,3 +108,15 @@ already in the historical baseline. F02 still waits for that F01 PR's confirmed 
 Legacy merged S02-S04 branches/worktrees may be cleaned only by the same guarded command once
 their commits are in `origin/main`. Keep active S05 and any dirty worktree. Never reset, rewrite,
 or force-move the existing branches to make the transition look like it happened earlier.
+
+## Reopening already merged features
+
+CR-007 is the owner's grouped correction of the existing F01/F02 UI. Preserve each original
+verified merge in `previous_integration`, set `reopened_by: CR-007`, and start new integration
+records on the change request's explicit `integration_branch`. Both affected features share its
+follow-up PR and independently recorded QA revisions. Validation permits existing merged features
+to be repaired together only when their historical merge records are structurally valid and the
+same approved change request explicitly lists them and the shared branch. The live merge checks
+remain required. Historical merge records do not authorise starting F03: its start gate requires
+both repaired features closed, QA-passed and their new PR merge confirmed. This is repair of
+already merged work, not an exception to new-feature dependency or QA gates.

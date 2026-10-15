@@ -188,7 +188,7 @@ networks:
 
 volumes:
   postgres-data:
-    name: salon-stack-postgres-data
+    name: ${SALON_STACK_DB_VOLUME:-salon-stack-postgres-data}
   edge-data:
     name: salon-stack-edge-data
   edge-config:

@@ -58,6 +58,11 @@ function scan(file) {
   };
   const literalText = (node) =>
     ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node) ? node.text : ts.isTemplateExpression(node) ? node.head.text + node.templateSpans.map((span) => span.literal.text).join('') : null;
+  const controls=path.join(root,'src/components/account/Controls.tsx');
+  const buttonContract=fs.existsSync(controls)&&/data-testid=\{testId\}/.test(fs.readFileSync(controls,'utf8'));
+  const importsButton=source.statements.some(statement=>ts.isImportDeclaration(statement)&&ts.isStringLiteral(statement.moduleSpecifier)&&
+    /(?:^@\/components\/account\/Controls$|^\.\/Controls$)/.test(statement.moduleSpecifier.text)&&statement.importClause?.namedBindings&&ts.isNamedImports(statement.importClause.namedBindings)&&
+    statement.importClause.namedBindings.elements.some(element=>element.name.text==='Button'&&(element.propertyName?.text??element.name.text)==='Button'));
 
   /** String literals an expression can evaluate to: `'a'`, `x ? 'a' : 'b'`, `x && 'a'`, `x ?? 'a'`. */
   const literalsOf = (expression) => {
@@ -65,7 +70,10 @@ function scan(file) {
     if (literalText(expression) !== null) return [expression];
     if (ts.isParenthesizedExpression(expression)) return literalsOf(expression.expression);
     if (ts.isConditionalExpression(expression)) return [...literalsOf(expression.whenTrue), ...literalsOf(expression.whenFalse)];
-    if (ts.isBinaryExpression(expression)) return [...literalsOf(expression.left), ...literalsOf(expression.right)];
+    if (ts.isBinaryExpression(expression)) {
+      if(expression.operatorToken.kind===ts.SyntaxKind.AmpersandAmpersandToken)return literalsOf(expression.right);
+      if([ts.SyntaxKind.BarBarToken,ts.SyntaxKind.QuestionQuestionToken,ts.SyntaxKind.PlusToken].includes(expression.operatorToken.kind))return [...literalsOf(expression.left),...literalsOf(expression.right)];
+    }
     return [];
   };
 
@@ -85,10 +93,11 @@ function scan(file) {
     const attributes = attributesOf(opening);
     const role = attributes.get('role')?.initializer;
     const roleName = role && ts.isStringLiteral(role) ? role.text : null;
-    const pressable = PRESSABLE_TAGS.has(tag) || (roleName && PRESSABLE_ROLES.has(roleName)) || attributes.has('onClick') || attributes.has('href');
+    const wrappedButton=tag==='Button'&&importsButton;
+    const pressable = wrappedButton || PRESSABLE_TAGS.has(tag) || (roleName && PRESSABLE_ROLES.has(roleName)) || attributes.has('onClick') || attributes.has('href');
     if (pressable) {
       counts.pressable += 1;
-      const testId = attributes.get('data-testid');
+      const testId = attributes.get('data-testid')??(wrappedButton&&buttonContract?attributes.get('testId'):undefined);
       const value = testId?.initializer;
       const empty = !testId || !value || (ts.isStringLiteral(value) && value.text.trim() === '');
       if (empty) {

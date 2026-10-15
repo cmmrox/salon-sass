@@ -1,4 +1,7 @@
 .notice {
+  padding: var(--space-6);
+  background: var(--color-surface);
+  border-radius: var(--radius-medium);
   display: flex;
   flex-direction: column;
   gap: var(--space-3);

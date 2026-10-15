@@ -24,9 +24,20 @@ Environment: local only; the synthetic alpha, beta and gamma salons of docs/qa/t
 - **Performed as:** QA operator on synthetic local data; public caller on each salon hostname.
 - **Preconditions:** Final integrated F01 tree is committed; local product is running and all salons are active. Stack cases also require the local production-like stack seeded and its exported CA; deployment cases require versions N and N+1 from this tested tree.
 - **Steps:**
-  1. Read root brand colour and computed name foreground for each salon.
-- **Expected:** Exact brand token; foreground/background contrast at least 4.5:1.
+  1. Read root brand colour and the circular identity's actual background/foreground for each salon; inspect the neutral header name.
+- **Expected:** Exact brand token and identity background; foreground/background contrast at least 4.5:1. Name uses neutral ink on warm canvas, as approved CR-007.
 - **Automation:** `qa/web/F01/S03-branded-shell.spec.ts`
+
+### TC-F01-S03-013 Public and foundation pages match the supplied reference grammar at all six widths
+
+- **Type:** responsive
+- **Priority:** high
+- **Covers:** AC-12
+- **Performed as / preconditions:** Public synthetic caller; running local product with three salons. Published HTML final cascade and CR-007 are the expected-result source.
+- **Steps:** At 360/390/768/1024/1280/1440 inspect every salon public shell, bare-domain status, unknown and suspended pages. Verify actually loaded Poppins 400/500/600, 15px body, exact warm palette, 430px customer canvas, compact sticky neutral header and fixed icon navigation containing real current routes. Save rendered screenshots. Restore gamma activation.
+- **Expected:** Reference palette/type and responsive composition hold, with the final render's 32px decorative circular identity and 50px compact customer header; no horizontal overflow or clipped content. Only compact identity headers may ellipsize, retaining full DOM name and full-name tooltip; verify this narrow exception explicitly. Brand contrast remains covered by TC002. Foundation pages inherit warm type and surfaces. No fictional booking/catalogue routes appear.
+- **Automation:** `qa/web/F01/S03-branded-shell.spec.ts`; rendered evidence under the run's `design/` folder.
+- **Reference limitation:** Browser policy explicitly rejected local file preview and alternative access; this pass uses the source-defined final reference contract and rendered product screenshots, and does not claim a side-by-side preview.
 
 ### TC-F01-S03-003 Unknown reserved and lookalike hosts share the neutral not-found page
 

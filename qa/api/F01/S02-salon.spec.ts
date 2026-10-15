@@ -304,17 +304,21 @@ test('TC-F01-S02-008 a salon named in a request header other than Host is never 
   const headers = headersNaming(beta);
   expect(headers.length).toBeGreaterThanOrEqual(30);
   for (const header of headers) {
-    expectBrandOf(await ask(hostOf(alpha), { headers: [header] }), alpha, `alpha with "${header}"`);
+    const answer=await ask(hostOf(alpha), { headers: [header] });
+    if(header.startsWith('Authorization:')){expect(answer.status).toBe(401);expect(expectProblem(answer,'invalid credential is refused').code).toBe('invalid_session');expectNothingOfOtherSalons(answer,null,'invalid bearer reveals no salon');}
+    else expectBrandOf(answer, alpha, `alpha with "${header}"`);
   }
   // Every one of them at once, and with the query parameters too.
-  expectBrandOf(await ask(hostOf(alpha), { headers }), alpha, 'alpha with every such header at once');
+  const selectors=headers.filter(header=>!header.startsWith('Authorization:'));
+  expectBrandOf(await ask(hostOf(alpha), { headers:selectors }), alpha, 'alpha with every noncredential header at once');
   expectBrandOf(
-    await ask(hostOf(alpha), { headers, target: `${SALON_PATH}?tenantId=${beta.id}&slug=${beta.slug}` }),
+    await ask(hostOf(alpha), { headers:selectors, target: `${SALON_PATH}?tenantId=${beta.id}&slug=${beta.slug}` }),
     alpha,
     'alpha with every such header and beta in the query',
   );
+  const refused=await ask(hostOf(alpha),{headers,target:`${SALON_PATH}?tenantId=${beta.id}&slug=${beta.slug}`});expect(refused.status).toBe(401);expect(expectProblem(refused,'invalid credential with all selectors').code).toBe('invalid_session');expectNothingOfOtherSalons(refused,null,'credential rejection discloses no salon');
   // A forwarded header cannot make a hostname that names no salon name one.
-  const nobody = await ask(`Host: ${PLATFORM_DOMAIN}:${port}`, { headers: headersNaming(alpha) });
+  const nobody = await ask(`Host: ${PLATFORM_DOMAIN}:${port}`, { headers: headersNaming(alpha).filter(header=>!header.startsWith('Authorization:')) });
   expect(nobody.status, 'the bare platform domain with headers naming alpha').toBe(404);
   expectNothingOfOtherSalons(nobody, null, 'the bare platform domain with headers naming alpha');
 });

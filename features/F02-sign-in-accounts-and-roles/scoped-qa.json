@@ -1,0 +1,88 @@
+{
+  "version": 1,
+  "kind": "independent-scoped-qa",
+  "reviewed_revision": "0b3f1d91315705727d76087b19bb57120a086629",
+  "qa_identity": {
+    "agent": "/root/final_verification",
+    "role": "independent salon_qa",
+    "recorded_at_utc": "2026-10-14T19:55:00.855763+00:00"
+  },
+  "owner_instruction": "Do not repeat QA for unchanged files; reuse valid prior results.",
+  "features": {
+    "F01": {
+      "base_report": "qa/reports/20261014-232942-F01-2f5e0e96dfa2",
+      "base_revision": "e4e254f4463a274fdfd055df67b3056e83a249f0",
+      "base_summary_sha256": "2693c013df9e194a8552a0047459564319414bfdcf0660c0d4cc9eff7ec95793",
+      "changed_paths": [
+        "apps/web/src/components/account/AccountRecovery.test.tsx",
+        "apps/web/src/components/account/AccountScreen.tsx",
+        "apps/web/src/components/account/Confirmation.tsx",
+        "features/F01-platform-foundation/bugs/BUG-F01-002-migration-nonweb-filter-startup.md",
+        "features/F01-platform-foundation/bugs/BUG-F01-003-status-summary-contrast.md",
+        "features/F01-platform-foundation/bugs/BUG-F01-004-invalid-bearer-request-log-missing.md",
+        "features/F01-platform-foundation/feature.yaml",
+        "features/F01-platform-foundation/review.md",
+        "features/F02-sign-in-accounts-and-roles/bugs/BUG-F02-006-confirmation-failure-hidden.md",
+        "features/F02-sign-in-accounts-and-roles/bugs/BUG-F02-007-workspace-navigation-stale.md",
+        "features/F02-sign-in-accounts-and-roles/feature.yaml",
+        "features/F02-sign-in-accounts-and-roles/review.md",
+        "features/F02-sign-in-accounts-and-roles/stages/S04-web-accounts/cases.md",
+        "features/README.md",
+        "qa/web/F02/S04-functional.spec.ts"
+      ],
+      "impact": "The product delta is limited to AccountScreen, Confirmation and a developer component test; the account components are imported through AccountPage, not F01 status/plain/salon foundation routes. No F01 backend, tenant routing, stack, public design or registered automation changed. Other paths in the exact inventory are feature/bug/review/generated metadata or F02 scoped case/automation additions. Retain original32/32 full proof as unaffected under owner instruction."
+    },
+    "F02": {
+      "base_report": "qa/reports/20261015-000506-F02-3e38935bf776",
+      "base_revision": "e73d99b0bbb38ec4db6b9cc837ea635286a1fed0",
+      "base_summary_sha256": "a816d7f2989d2a5d0839543254bf89d205e257f293d734559ab7f50a5b317340",
+      "changed_paths": [
+        "apps/web/src/components/account/AccountRecovery.test.tsx",
+        "apps/web/src/components/account/AccountScreen.tsx",
+        "apps/web/src/components/account/Confirmation.tsx",
+        "features/F01-platform-foundation/feature.yaml",
+        "features/F02-sign-in-accounts-and-roles/bugs/BUG-F02-006-confirmation-failure-hidden.md",
+        "features/F02-sign-in-accounts-and-roles/bugs/BUG-F02-007-workspace-navigation-stale.md",
+        "features/F02-sign-in-accounts-and-roles/feature.yaml",
+        "features/F02-sign-in-accounts-and-roles/review.md",
+        "features/F02-sign-in-accounts-and-roles/stages/S04-web-accounts/cases.md",
+        "features/README.md",
+        "qa/coverage.md",
+        "qa/web/F02/S04-functional.spec.ts"
+      ],
+      "impact": "The product delta changes recoverable account confirmation errors/focus restoration and live staff permission navigation only. New independent real-browser rows passed both exact original defects: delete503/revoke-all503/staff-remove409 accessible feedback with refused state intact, and real Owner self-demotion with a second Owner retained removing stale links while principal/403 boundaries remain correct. QA additions expand existing S04 cases004/011 and registered functional file; no other criteria or test conditions are claimed changed. Retain original13/13 full proof plus this independently verified affected delta under owner instruction."
+    }
+  },
+  "targeted": {
+    "log": "qa/reports/20261015-PR5-fixed-reproduction/reproduction.log",
+    "sha256": "2edb3ad5fe8077448f90dd3849ce607f9015e74fa71678a2bf78eb41c9403b23",
+    "passed": 2,
+    "failed": 0,
+    "coverage": [
+      "Recoverable customer-delete503, staff-revoke-all503 and staff-remove409 show accessible feedback and retain refused state",
+      "Real self-demotion with second Owner retained removes staff/audit links while principal and BFF403 boundaries hold"
+    ]
+  },
+  "commands": {
+    "report": "qa/reports/20261015-010423-F01-commands-55f23c47f02f",
+    "revision": "d94b166cb119aad39f64973085be47430bf1137e",
+    "summary_sha256": "9a9fc645a4e67b8ea3af4336c102908efb05a297c0e8619d3603625ded68ec0f"
+  },
+  "limits": [
+    "No fresh whole-feature certification on0b3f1d is claimed",
+    "No new native manual traversal, full accessibility/width matrix, broadcast multi-tab browser variation or full account suite was run after the two fixes; prior results and developer focused regressions supply retained related evidence under owner scope exception",
+    "No manufactured merged-full summary or rewritten base qa_revision",
+    "Original base full report and fixture identities are retained; different synthetic resets are not declared identical test generations.",
+    "Developer focused16/16 related component regressions are supporting developer evidence at .local/logs/f02-review-components-green.log (sha256 e8ccbe72c7fe31d1da87bb2dc2dd0a0a690d5013b35cfae1c38300f62ec852d1), distinct from independent browser proof.",
+    "The superseded repeat qa/reports/20261015-011303-F01-3bcb75c887d4 is incomplete11/32 and is not used as passing evidence.",
+    "No additional application test, runtime reset or whole-feature run occurred for this assessment."
+  ],
+  "process_documents": {
+    "docs/README.md": "d0651bb5b704b536259b832d0b897f632a1b3032f472832320fd4034d7c709bd",
+    "docs/changes/CR-009-resume-without-duplicate-qa.md": "72f94036aa879154d81e8ddd99f8897f91236c262224d7536eee225b5ed8e01a",
+    "docs/decisions/DECISION_LOG.md": "52d84582b55fc7d0ec4277d6220e40a30446d8b79e6742974c203ef3e937193f",
+    "docs/operations/git-delivery.md": "d1b05fb94d83fc1da61351a839ab9e06dac70778f8c8a29539e46a5bcccd680b",
+    "docs/operations/skill-evaluation.md": "6f95769d2a096121a9f7c2ca7199589afb271d6172a81a40d3770f2a76f093fc",
+    "docs/operations/verification-evidence.md": "6a757c29a3ca4fd810802b3ef0157db139912ca12b6086d326be4826bc5e0944"
+  }
+}

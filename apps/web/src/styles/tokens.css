@@ -7,23 +7,34 @@
  */
 :root {
   /* Colour */
-  --color-background: #f6f6f7;
+  --color-background: #F3F0EB;
   --color-surface: #ffffff;
-  --color-border: #d9d9de;
-  --color-text: #1b1b1f;
-  --color-text-muted: #55555e;
-  --color-focus: #1d4ed8;
-  --color-positive: #166534;
-  --color-positive-surface: #ecfdf3;
-  --color-caution: #92400e;
-  --color-caution-surface: #fffbeb;
-  --color-skeleton: #e4e4e9;
+  --color-border: #DDD6CA;
+  --color-text: #111827;
+  --color-text-muted: #6B7280;
+  --color-focus: #1D5FD0;
+  --color-positive: #0F7B55;
+  --color-positive-surface: #DDF1E6;
+  --color-caution: #8F5A00;
+  --color-caution-surface: #FFF4DC;
+  --color-skeleton: #EAE5DC;
 
-  --color-negative: #9f231d;
-  --color-negative-surface: #fff0ee;
+  --color-negative: #B3261E;
+  --color-negative-surface: #FDE9E7;
   --opacity-disabled: 0.55;
 
   /* Space */
+  --space-half: 0.125rem;
+  --space-nav-inline: 0.375rem;
+  --space-field-block: 0.625rem;
+  --space-field-inline: 0.875rem;
+  --space-workspace-header: 1.75rem;
+  --space-workspace-inline: 2.25rem;
+  --space-workspace-bottom: 3.5rem;
+  --size-tab: 3.5rem;
+  --size-rail-row: 2.875rem;
+  --size-field-inset: 0.09375rem;
+  --font-size-rail: 0.90625rem;
   --space-1: 0.25rem;
   --space-2: 0.5rem;
   --space-3: 0.75rem;
@@ -33,28 +44,60 @@
   --space-12: 3rem;
 
   /* Size */
-  --size-content: 32rem;
+  --size-content: 47.5rem;
   --size-touch-target: 2.75rem;
   --size-skeleton-line: 1.25rem;
   --size-focus-ring: 0.1875rem;
+  --size-focus-offset: 0.125rem;
   --size-border: 0.0625rem;
 
+  --size-customer: 26.875rem;
+  --size-workspace: 80rem;
+  --size-sidebar: 14.75rem;
+  --size-sidebar-compact: 12.5rem;
+  --size-header: 3.75rem;
+  --size-nav: 5.25rem;
+  --size-customer-header: 3.125rem;
+  --size-customer-identity: 2rem;
+  --size-identity: 2.75rem;
+  --size-icon: 1.375rem;
+  --size-field: 3rem;
+  --size-action: 3.125rem;
+  --font-size-workspace-title: 1.625rem;
+  --font-size-nav: 0.6875rem;
+  --font-weight-medium: 500;
+  --color-primary: #141413;
+  --color-backdrop: rgb(20 20 19 / 28%);
+  --size-form: 35rem;
+  --size-drawer: 28.75rem;
+  --radius-sheet: 2rem 2rem 0 0;
+  --size-sheet-handle: 2.5rem;
+  --font-size-label: 0.8125rem;
+  --font-size-input: 1rem;
+  --color-secondary: #EAE5DC;
+  --color-outer-canvas: #DDD6CA;
+  --shadow-navigation: 0 -8px 24px rgb(20 20 19 / 8%);
+
   /* Radius */
-  --radius-small: 0.375rem;
-  --radius-medium: 0.75rem;
+  --radius-small: 1.25rem;
+  --radius-medium: 1.5rem;
+
+  --radius-pill: 999px;
+  --radius-nav: 1.5rem 1.5rem 0 0;
+  --radius-rail: 0.875rem;
 
   /* Type */
-  --font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', 'Noto Sans Sinhala', 'Noto Sans Tamil',
+  --font-family: 'Poppins', system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', 'Noto Sans Sinhala', 'Noto Sans Tamil',
     sans-serif;
   --font-size-small: 0.875rem;
-  --font-size-body: 1rem;
-  --font-size-large: 1.25rem;
-  --font-size-title: 1.5rem;
+  --font-size-body: 0.9375rem;
+  --font-size-large: 1rem;
+  --font-size-title: 1.375rem;
   --font-weight-regular: 400;
   --font-weight-strong: 600;
   --line-height-body: 1.5;
   --line-height-heading: 1.25;
 
   /* Shadow */
-  --shadow-surface: 0 1px 2px rgb(27 27 31 / 8%);
+  --shadow-surface: none;
 }

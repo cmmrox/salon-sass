@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import type { components } from '@salon/api-contracts';
@@ -9,6 +9,7 @@ import { ensurePrincipal, identityRequest, IdentityFailure, principalInsideLock,
 import { formatInstant, formatPhone } from '@/lib/format';
 import { AccountLoading, Button, Check, Field, Section } from './Controls';
 import styles from './Account.module.css';
+import { Confirmation } from './Confirmation';
 type Profile = components['schemas']['Profile'];
 type Staff = components['schemas']['StaffView'];
 type Device = components['schemas']['SessionView'];
@@ -23,8 +24,17 @@ export function AccountScreen({ kind, initialPrincipal, timeZone, view = 'accoun
   const [password, setPassword] = useState({ oldPassword: '', newPassword: '' }); const [setup, setSetup] = useState<{ secret?: string; otpauthUri?: string }>({}); const [code, setCode] = useState('');
   const [confirm, setConfirm] = useState<{ action: string; body: unknown } | null>(null);
   const [newStaff, setNewStaff] = useState({ email: '', mobile: '', password: '', role: 'RECEPTIONIST', professionalGrant: false });
+  const observedPermissions = useRef(initialPrincipal?.permissions);
+  const updatePrincipal = useCallback((next: Principal) => {
+    const previous = observedPermissions.current;
+    observedPermissions.current = next.permissions;
+    setPrincipal(next);
+    // The server frame owns permission-filtered navigation. Refresh it once per live change,
+    // including renewal from an initially missing principal, without discarding account drafts.
+    if (kind === 'staff' && (!previous || previous.length !== next.permissions.length || next.permissions.some((permission) => !previous.includes(permission)))) router.refresh();
+  }, [kind, router]);
   async function load(nextPage = page) {
-    const p = await ensurePrincipal(kind); setPrincipal(p);
+    const p = await ensurePrincipal(kind); updatePrincipal(p);
     if (view === 'account') {
       if (kind === 'customer' && !profile) setProfile(await identityRequest(kind, 'profile'));
       setDevices(await identityRequest(kind, `sessions?page=${nextPage}`));
@@ -36,6 +46,9 @@ export function AccountScreen({ kind, initialPrincipal, timeZone, view = 'accoun
     setBusy(true); setError(null); setSuccess(false);
     try { await work(); setSuccess(true); }
     catch (failure) {
+      // A native modal makes the page feedback inert. Dismiss it before announcing the
+      // refusal; recovery reloads current state and never replays a destructive mutation.
+      setConfirm(null);
       const f = failure instanceof IdentityFailure ? failure : new IdentityFailure('service_unavailable'); setError(f);
       if (f.code === 'invalid_session') { router.replace(kind === 'staff' ? '/workspace/sign-in' : '/sign-in'); router.refresh(); }
     } finally { setBusy(false); }
@@ -46,9 +59,9 @@ export function AccountScreen({ kind, initialPrincipal, timeZone, view = 'accoun
   useEffect(() => {
     if (typeof BroadcastChannel === 'undefined') return;
     const channel = new BroadcastChannel('salon:identity');
-    channel.onmessage = (event) => { if (event.data?.kind === kind) void identityRequest<Principal>(kind, 'principal').then(setPrincipal).catch(() => { router.refresh(); }); };
+    channel.onmessage = (event) => { if (event.data?.kind === kind) void identityRequest<Principal>(kind, 'principal').then(updatePrincipal).catch(() => { router.refresh(); }); };
     return () => channel.close();
-  }, [kind, router]);
+  }, [kind, router, updatePrincipal]);
   async function mutate(action: string, body: unknown = {}) {
     await withIdentityLock(kind, async () => { await principalInsideLock(kind); await identityRequest(kind, action, body); });
     if (['logout', 'revoke-all', 'delete'].includes(action) || (action === 'revoke' && devices.items?.some((d) => d.current && d.id === (body as { id?: string }).id))) { router.replace(kind === 'staff' ? '/workspace/sign-in' : '/sign-in'); router.refresh(); return; }
@@ -60,9 +73,9 @@ export function AccountScreen({ kind, initialPrincipal, timeZone, view = 'accoun
   if (!principal.permissions.includes(required)) return <>{feedback}<p role="alert" data-testid="account-denied">{t('denied')}</p></>;
   const list = view === 'staff' ? staff : view === 'audit' ? audit : devices;
   const pager = <div className={styles.actions}><Button testId="account-page-previous" secondary disabled={busy || page === 0} onClick={() => void perform(async () => { await load(page - 1); setPage(page - 1); })}>{t('previous')}</Button><p data-testid="account-page">{t('page', { page: page + 1 })}</p><Button testId="account-page-next" secondary disabled={busy || (page + 1) * 10 >= (list.total ?? 0)} onClick={() => void perform(async () => { await load(page + 1); setPage(page + 1); })}>{t('next')}</Button></div>;
-  return <>{feedback}
-    <nav className={styles.nav} aria-label={t('staffTitle')}>{kind === 'staff' && <><Link href="/workspace/account" data-testid="workspace-account" className={styles.link}>{t('account')}</Link>{principal.permissions.includes('staff.list') && <Link href="/workspace/staff" className={styles.link} data-testid="workspace-staff">{t('staff')}</Link>}{principal.permissions.includes('audit.list') && <Link href="/workspace/audit" className={styles.link} data-testid="workspace-audit">{t('audit')}</Link>}</>}<Button testId="account-logout" disabled={busy || !supported} onClick={() => void perform(() => mutate('logout'))}>{t('logout')}</Button></nav>
-    {confirm && <Section title={t('confirmation')}><p>{confirm.action === 'delete' ? t('deleteHelp') : confirm.action === 'staff-remove' ? t('confirmRemoval') : t('confirmRevoke')}</p><div className={styles.actions}><Button testId="account-confirm-action" danger disabled={busy || !supported} onClick={() => void perform(() => mutate(confirm.action, confirm.body))}>{confirm.action === 'delete' ? t('confirmDelete') : t('confirmRevoke')}</Button><Button testId="account-cancel-action" secondary disabled={busy} onClick={() => setConfirm(null)}>{t('cancel')}</Button></div></Section>}
+  return <div className={`${styles.sections} ${view !== 'account' ? styles.listView : ''}`}>{feedback}
+    <div className={styles.actions}><Button testId="account-logout" secondary disabled={busy || !supported} onClick={() => void perform(() => mutate('logout'))}>{t('logout')}</Button></div>
+    {confirm && <Confirmation busy={busy} workspace={kind === 'staff'} title={t('confirmation')} onCancel={() => { if (!busy) setConfirm(null); }}><p>{confirm.action === 'delete' ? t('deleteHelp') : confirm.action === 'staff-remove' ? t('confirmRemoval') : t('confirmRevoke')}</p><div className={styles.actions}><Button testId="account-confirm-action" danger disabled={busy || !supported} onClick={() => void perform(() => mutate(confirm.action, confirm.body))}>{confirm.action === 'delete' ? t('confirmDelete') : t('confirmRevoke')}</Button><Button testId="account-cancel-action" secondary disabled={busy} onClick={() => setConfirm(null)}>{t('cancel')}</Button></div></Confirmation>}
     {view === 'account' && <>
       <Section title={t('permissions')}><p data-testid="account-scope">{t('scope', { scope: t(principal.scope === 'own' ? 'own' : 'salon') })}</p>{kind === 'staff' && <p data-testid="account-role">{t(principal.role as 'OWNER')}</p>}<ul data-testid="account-permissions">{principal.permissions.map((permission) => <li key={permission}>{t(('permissionLabels.' + permission.replaceAll('.', '_')) as 'permissionLabels.session_manage')}</li>)}</ul></Section>
       {kind === 'staff' && <>
@@ -87,5 +100,5 @@ export function AccountScreen({ kind, initialPrincipal, timeZone, view = 'accoun
       {principal.permissions.includes('staff.manage') && <form className={styles.form} onSubmit={(e) => { e.preventDefault(); void perform(async () => { try { await mutate('staff-create', newStaff); } finally { setNewStaff((v) => ({ ...v, password: '' })); } }); }}><h3>{t('createStaff')}</h3>{(['email', 'mobile', 'password'] as const).map((name) => <Field key={name} name={`staff-${name}`} label={t(name === 'password' ? 'initialPassword' : name)} type={name === 'password' ? 'password' : name === 'email' ? 'email' : 'tel'} value={newStaff[name]} required={name === 'password'} error={error?.fields.includes(name)} onChange={(e) => setNewStaff({ ...newStaff, [name]: e.target.value })} />)}<label className={styles.field}>{t('role')}<select className={styles.input} data-testid="account-staff-new-role" value={newStaff.role} onChange={(e) => setNewStaff({ ...newStaff, role: e.target.value })}>{['OWNER', 'MANAGER', 'RECEPTIONIST', 'PROFESSIONAL', 'ACCOUNTANT'].map((role) => <option key={role} value={role}>{t(role as 'OWNER')}</option>)}</select></label><Button testId="account-staff-create" disabled={busy || !supported}>{t('createStaff')}</Button></form>}
     </Section>}
     {view === 'audit' && <Section title={t('audit')}>{!(audit.items?.length) && <p data-testid="account-audit-empty">{t('empty')}</p>}{audit.items?.map((entry) => <div className={styles.row} key={entry.id} data-testid="account-audit-row" data-id={entry.id}><p>{t('auditEntry', { action: entry.action ?? '', time: entry.occurredAt ? formatInstant(entry.occurredAt, timeZone) : '' })}</p><p>{entry.actorKind}</p><pre className={styles.secret}>{JSON.stringify({ before: entry.before, after: entry.after }, null, 2)}</pre></div>)}{pager}</Section>}
-  </>;
+  </div>;
 }

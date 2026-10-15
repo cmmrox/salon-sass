@@ -1,3 +1,6 @@
+@font-face { font-family: 'Poppins'; font-style: normal; font-weight: 400; font-display: swap; src: url('/fonts/poppins/Poppins-Regular.ttf') format('truetype'); }
+@font-face { font-family: 'Poppins'; font-style: normal; font-weight: 500; font-display: swap; src: url('/fonts/poppins/Poppins-Medium.ttf') format('truetype'); }
+@font-face { font-family: 'Poppins'; font-style: normal; font-weight: 600; font-display: swap; src: url('/fonts/poppins/Poppins-SemiBold.ttf') format('truetype'); }
 /* The page's base rules, on top of the tokens. The application's pages get them through
    app/globals.css; the plain HTML answers of proxy.ts inline them (lib/plain-page). */
 *,
@@ -31,5 +34,12 @@ dd {
 
 :focus-visible {
   outline: var(--size-focus-ring) solid var(--color-focus);
-  outline-offset: var(--size-focus-ring);
+  outline-offset: var(--size-focus-offset);
 }
+
+button, input, select, textarea { font: inherit; }
+h1, h2, h3 { letter-spacing: -0.02em; }
+h2, h3 { font-size: var(--font-size-large); font-weight: var(--font-weight-strong); }
+a { color: inherit; }
+
+body:has([data-testid="salon-shell"]), body:has([data-testid="salon-loading"]) { background: var(--color-outer-canvas); }

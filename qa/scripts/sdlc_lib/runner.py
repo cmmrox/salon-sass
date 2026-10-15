@@ -8,7 +8,11 @@ asks for it. Selection is pure and tested; execution is a thin loop over subproc
 import datetime
 import json
 import os
+import signal
 import subprocess
+import time
+import threading
+import uuid
 
 from . import schema as S
 
@@ -62,6 +66,8 @@ def select(bundle, stage=None, feature=None, suite=None):
 def command(entry):
     """The argv that runs one automation entry, from the repository root."""
     tool, path = entry.get("tool"), entry.get("file")
+    if tool == "command":
+        return ["bash", "-c", entry["cmd"]]
     if tool == "playwright":
         argv = ["pnpm", "--dir", "qa", "exec", "playwright", "test", os.path.relpath(path, "qa")]
         return argv + (["--project", entry["project"]] if entry.get("project") else [])
@@ -74,45 +80,192 @@ def command(entry):
     raise SelectionError(f"automation {entry.get('id')} has unknown tool '{tool}'")
 
 
-def run(entries, label, dry_run=False, reports_root="qa/reports"):
-    """Runs the entries in order. Returns (exit code, report directory or None)."""
+def _write_summary(report_dir, summary):
+    """Atomic replacement leaves the last complete progress snapshot after interruption."""
+    target = os.path.join(report_dir, "summary.json")
+    temporary = target + ".tmp"
+    with open(temporary, "w", encoding="utf-8") as handle:
+        json.dump(summary, handle, indent=2)
+        handle.flush()
+        os.fsync(handle.fileno())
+    os.replace(temporary, target)
+
+
+def _process_start(pid):
+    """An OS start mark helps distinguish an active process from a recycled PID."""
+    try:
+        found = subprocess.run(["ps", "-p", str(pid), "-o", "lstart="],
+                               capture_output=True, text=True)
+        return found.stdout.strip() if found.returncode == 0 else None
+    except OSError:
+        return None
+
+
+def _cancel_process_tree(child, grace_seconds=2):
+    """Cancellation only: never impose a deadline on ordinary test execution."""
+    result = {"term_sent": False, "kill_sent": False, "reaped": False}
+    group = child.pid if os.name == "posix" else None
+
+    def send(sig, force_kill=False):
+        try:
+            if group is not None:
+                os.killpg(group, sig)  # Every child was spawned in its own session.
+            elif child.poll() is None:
+                child.kill() if force_kill else child.terminate()
+            return True
+        except ProcessLookupError:
+            return False
+
+    result["term_sent"] = send(signal.SIGTERM)
+    deadline = time.monotonic() + grace_seconds
+    try:
+        child.wait(timeout=grace_seconds)
+        result["reaped"] = True
+    except subprocess.TimeoutExpired:
+        pass
+    # The direct child may exit while a grandchild ignores TERM. Retain its own
+    # group's grace period, then remove only that group with KILL.
+    if group is not None:
+        while time.monotonic() < deadline:
+            try:
+                os.killpg(group, 0)
+            except ProcessLookupError:
+                return result
+            time.sleep(min(0.05, max(0, deadline - time.monotonic())))
+    result["kill_sent"] = send(getattr(signal, "SIGKILL", signal.SIGTERM), force_kill=True)
+    if not result["reaped"]:
+        try:
+            child.wait(timeout=grace_seconds)
+            result["reaped"] = True
+        except subprocess.TimeoutExpired:
+            pass  # Keep interrupted evidence, never hang indefinitely on cancellation.
+    return result
+
+
+def run(entries, label, dry_run=False, reports_root="qa/reports", *, certification=None,
+        certify_again=None, stop_first_failure=False, heartbeat_seconds=30):
+    """Returns (exit code, report directory). Existing callers need no new arguments.
+
+    A heartbeat is a subprocess wait interval, never a test timeout or retry. Raw
+    child output stays in its log; progress prints only scope, counts and timings.
+    """
+    from . import evidence
     if not entries:
-        # A run that selects nothing has verified nothing. It must never look like a pass.
-        print(f"refusing: {label} selects no automation; there is nothing to run")
+        print(f"refusing: {label} selects no automation; there is nothing to run", flush=True)
         return 2, None
     plan = [(entry, command(entry)) for entry in entries]
-    print(f"{label}: {len(plan)} automation entr{'y' if len(plan) == 1 else 'ies'}")
+    print(f"{label}: {len(plan)} automation entr{'y' if len(plan) == 1 else 'ies'}", flush=True)
     for entry, argv in plan:
-        print(f"  {entry['scope']} {entry.get('id')}: {' '.join(argv)}")
+        # Commands retain the legacy plan output; heartbeat never repeats child logs.
+        print(f"  {entry['scope']} {entry.get('id')}: {' '.join(argv)}", flush=True)
     if dry_run:
         return 0, None
 
     stamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-    report_dir = os.path.join(reports_root, f"{stamp}-{label.replace(' ', '-')}")
-    os.makedirs(report_dir, exist_ok=True)
+    run_id = uuid.uuid4().hex[:12]
+    report_dir = os.path.join(reports_root, f"{stamp}-{label.replace(' ', '-')}-{run_id}")
+    os.makedirs(report_dir, exist_ok=False)
     env = {**os.environ, "QA_REPORT_DIR": os.path.abspath(report_dir)}
-    results = []
-    for entry, argv in plan:
-        log_path = os.path.join(report_dir, f"{entry['scope']}-{entry.get('id')}.log")
-        with open(log_path, "w", encoding="utf-8") as log:
-            try:
-                code = subprocess.run(argv, env=env, stdout=log, stderr=subprocess.STDOUT).returncode
-            except FileNotFoundError:
-                # A missing tool is an environment fault, reported as such rather than as a test failure.
-                log.write(f"tool not found on PATH: {argv[0]}\n")
-                code = 127
-        outcome = "pass" if code == 0 else ("tool-missing" if code == 127 else "fail")
-        print(f"  {outcome.upper():12} {entry['scope']} {entry.get('id')}")
-        results.append({
-            "scope": entry["scope"], "id": entry.get("id"), "tool": entry.get("tool"),
-            "file": entry.get("file"), "covers": entry.get("covers") or [],
-            "exit_code": code, "outcome": outcome, "log": log_path,
-        })
-    passed = all(r["outcome"] == "pass" for r in results)
-    summary = {"label": label, "result": "pass" if passed else "fail", "entries": results}
-    with open(os.path.join(report_dir, "summary.json"), "w", encoding="utf-8") as handle:
-        json.dump(summary, handle, indent=2)
-    print(f"{'PASS' if passed else 'FAIL'}: report in {report_dir}")
+    started = time.monotonic()
+    try:
+        source_revision = evidence.git("rev-parse", "HEAD")
+    except evidence.Refusal:
+        source_revision = None  # Legacy execution can work outside a Git checkout.
+    summary = {"label": label, "run_id": run_id, "source_revision": source_revision,
+               "state": "running", "result": "running",
+               "selected_count": len(entries), "selection_sha256": evidence.selection_digest(entries),
+               "entries": [], "started_at": datetime.datetime.now(datetime.timezone.utc).isoformat()}
+    if certification is not None:
+        summary["certification"] = certification
+        summary["source_revision"] = certification.get("source_revision")
+    summary["runner"] = {"pid": os.getpid(), "process_start": _process_start(os.getpid()),
+                         "started_at": summary["started_at"]}
+    results = summary["entries"]
+
+    def progress(index, entry, entry_started):
+        elapsed = time.monotonic() - started
+        passed = sum(r["outcome"] == "pass" for r in results)
+        identity = (summary.get("current") or {}) if (summary.get("current") or {}).get("index") == index else {}
+        summary.update(elapsed_seconds=round(elapsed, 3), completed=len(results), passed=passed,
+                       failed=len(results) - passed,
+                       current={**identity, "scope": entry["scope"], "id": entry.get("id"), "index": index,
+                                "elapsed_seconds": round(time.monotonic() - entry_started, 3)})
+        _write_summary(report_dir, summary)
+        print(f"  PROGRESS {label} {index}/{len(plan)} {entry['scope']} {entry.get('id')} "
+              f"completed={len(results)} pass={passed} fail={len(results)-passed} "
+              f"elapsed={elapsed:.1f}s entry={time.monotonic()-entry_started:.1f}s", flush=True)
+
+    previous_term = None
+    active_child = None
+    if threading.current_thread() is threading.main_thread():
+        previous_term = signal.getsignal(signal.SIGTERM)
+        def terminated(signum, _frame):
+            summary["interrupted_signal"] = signum
+            raise KeyboardInterrupt
+        signal.signal(signal.SIGTERM, terminated)
+    try:
+        for index, (entry, argv) in enumerate(plan, 1):
+            entry_started = time.monotonic()
+            progress(index, entry, entry_started)
+            log_path = os.path.join(report_dir, f"{index:03d}-{entry['scope']}-{entry.get('id')}.log")
+            with open(log_path, "w", encoding="utf-8") as log:
+                child = None
+                try:
+                    child = subprocess.Popen(argv, env=env, stdout=log, stderr=subprocess.STDOUT,
+                                             start_new_session=os.name == "posix")
+                    active_child = child
+                    summary["current"].update(child_pid=child.pid,
+                        child_pgid=child.pid if os.name == "posix" else None,
+                        child_started_at=datetime.datetime.now(datetime.timezone.utc).isoformat(), log=log_path)
+                    _write_summary(report_dir, summary)  # Persist identity immediately after spawn.
+                    summary["current"]["process_start"] = _process_start(child.pid)
+                    _write_summary(report_dir, summary)
+                    while True:
+                        try:
+                            code = child.wait(timeout=heartbeat_seconds)
+                            break
+                        except subprocess.TimeoutExpired:
+                            progress(index, entry, entry_started)
+                except FileNotFoundError:
+                    log.write(f"tool not found on PATH: {argv[0]}\n")
+                    code = 127
+                except KeyboardInterrupt:
+                    if child is not None:
+                        summary["cancellation"] = _cancel_process_tree(child)
+                        active_child = None
+                    raise
+            outcome = "pass" if code == 0 else ("tool-missing" if code == 127 else "fail")
+            print(f"  {outcome.upper():12} {entry['scope']} {entry.get('id')}", flush=True)
+            results.append({**entry, "argv": argv, "exit_code": code, "outcome": outcome,
+                            "log": log_path, "log_sha256": evidence.file_digest(log_path),
+                            "elapsed_seconds": round(time.monotonic() - entry_started, 3)})
+            progress(index, entry, entry_started)
+            active_child = None
+            if stop_first_failure and code != 0:
+                break
+        passed = len(results) == len(entries) and all(r["outcome"] == "pass" for r in results)
+        summary.update(state="complete", result="pass" if passed else "fail", current=None,
+                       finished_at=datetime.datetime.now(datetime.timezone.utc).isoformat())
+        if certification is not None:
+            if certify_again is None:
+                raise evidence.Refusal("reusable evidence requires a final source/context check")
+            if not evidence.unchanged(certification, certify_again()):
+                raise evidence.Refusal("certified source or context changed during the run")
+        _write_summary(report_dir, summary)
+        if certification is not None and passed:
+            evidence.seal(report_dir)
+    except (KeyboardInterrupt, evidence.Refusal, OSError):
+        if active_child is not None:
+            summary["cancellation"] = _cancel_process_tree(active_child)
+        summary.update(state="interrupted", result="interrupted",
+                       elapsed_seconds=round(time.monotonic() - started, 3))
+        # An interrupted or invalidated run has no reusable certification receipt.
+        _write_summary(report_dir, summary)
+        raise
+    finally:
+        if previous_term is not None:
+            signal.signal(signal.SIGTERM, previous_term)
+    print(f"{'PASS' if passed else 'FAIL'}: report in {report_dir}", flush=True)
     return (0 if passed else 1), report_dir
 
 

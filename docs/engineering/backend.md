@@ -242,7 +242,10 @@ and `application`, never in a controller, a repository or a mapper.
   `trace.id`, `span.id`, and `tenant.id` whenever a salon is bound: a request on its hostname, a
   delivery or a job run for it. A request on a salon's hostname looks its salon up when it starts,
   except `/api/v1/meta`, `/actuator/**` and the OpenAPI document, which must not wait on the
-  database and so carry no `tenant.id`.
+  database and so carry no `tenant.id`. Invalid credentials may be rejected before this lookup
+  and tenant binding; their required request line retains the caller/problem trace and has no
+  `tenant.id`. Logging never performs a registry lookup or trusts an invalid credential to add
+  a tenant tag.
 - Each request writes one line with its method, its path without the query string, its status and
   its duration (`event.duration`, nanoseconds). No line carries a request body, a query string, a
   `Cookie` or an `Authorization` header.
@@ -298,3 +301,11 @@ a test: when you write one for a bug, watch it fail first.
 The commands for a stage are the ones in its `stage.yaml` under `verification.commands`. For the API
 that means the Maven wrapper's `verify` (unit, integration and architecture tests) and the contract
 drift check.
+
+## Migration-only startup
+
+The `migrate` profile uses web application type NONE, applies database migrations and exits.
+Servlet request filters are created only for servlet applications; do not make a migration
+context depend on MVC exception resolvers. Servlet tenant authentication still requires its
+resolver and fails closed. The actual non-web migration startup integration test protects this
+boundary, alongside the servlet tenant-isolation and authentication tests (BUG-F01-002).

@@ -5,15 +5,37 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { salons } from './tenants.ts';
 import {root,report,settings,base,url,run,script,curl,db,versions} from './stack-settings.mjs';
+import { chromium } from '@playwright/test';
 let failures=0;
 async function one(id,title,fn){console.log(`--- ${id} ${title}`);try{await fn();console.log(`PASS ${id} ${title}`);}catch(e){failures++;console.error(`FAIL ${id} ${title}: ${e.message}`);}}
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 async function until(fn,limit=15000){const end=Date.now()+limit;while(Date.now()<end){if(await fn())return;await sleep(100);}throw Error('expected observable outcome did not arrive within limit');}
 assert.equal(settings.SALON_STACK_ENV||'local','local','ENVIRONMENT: QA stack must use local HTTP');
 const sha=run('git',['rev-parse','HEAD']).trim();
-await one('TC-F01-S05-001','images are unprivileged and report the tested commit',()=>{
+await one('TC-F01-S05-001','images are unprivileged, report the tested commit and ship reference fonts',async()=>{
   for(const kind of ['api','web']){const version=versions()[`SALON_${kind.toUpperCase()}_1_VERSION`];const image=`${settings.SALON_IMAGE_PREFIX||''}salon-${kind}:${version}`;const info=JSON.parse(run('docker',['image','inspect',image]))[0];assert(info.Config.User&&!['0','root'].includes(info.Config.User.split(':')[0]));assert.equal(info.Config.Labels['org.opencontainers.image.revision'],sha);assert.equal(info.Config.Labels['org.opencontainers.image.version'],version);assert.notEqual(run('docker',['run','--rm','--network','none','--entrypoint','id',image,'-u']).trim(),'0');assert.equal(run('docker',['run','--rm','--network','none','--user','0','--entrypoint','find',image,'/','-xdev','(','-name','.env','-o','-name','.env.*',')','-print'],{stdio:['pipe','pipe','ignore']}).trim(),'');}
   const meta=JSON.parse(curl('alpha','/api/v1/meta').body);assert.equal(meta.commit,sha);assert.equal(meta.version,versions().SALON_API_1_VERSION);
+  const browser=await chromium.launch();
+  try {
+    const page=await browser.newPage({viewport:{width:390,height:844}}), resources=[];
+    page.on('response',response=>{if(new URL(response.url()).pathname.startsWith('/fonts/poppins/'))resources.push({path:new URL(response.url()).pathname,status:response.status(),type:response.headers()['content-type']});});
+    const response=await page.goto(url('alpha'));assert.equal(response.status(),200);
+    await page.getByTestId('salon-name').waitFor();
+    const rendered=await page.evaluate(async()=>{
+      for(const weight of [400,500,600])await document.fonts.load(`${weight} 15px Poppins`);
+      await document.fonts.ready;
+      const shell=document.querySelector('[data-testid="salon-shell"]'),style=getComputedStyle(shell);
+      return {family:getComputedStyle(document.body).fontFamily,width:shell.getBoundingClientRect().width,background:style.backgroundColor,
+        loaded:Array.from(document.fonts).filter(face=>face.family.replaceAll(/['"]/g,'')==='Poppins'&&face.status==='loaded').map(face=>face.weight),
+        checked:[400,500,600].map(weight=>document.fonts.check(`${weight} 15px Poppins`))};
+    });
+    assert.equal(rendered.family.split(',')[0].replaceAll(/['"]/g,'').trim(),'Poppins');assert.equal(rendered.width,390);assert.equal(rendered.background,'rgb(243, 240, 235)');
+    assert.deepEqual(rendered.checked,[true,true,true]);for(const weight of ['400','500','600'])assert(rendered.loaded.includes(weight));
+    for(const name of ['Regular','Medium','SemiBold']){const found=resources.find(resource=>resource.path.endsWith(`Poppins-${name}.ttf`));assert(found,`packaged ${name} font was actually requested`);assert.equal(found.status,200);assert(!found.type?.includes('html'));}
+    await page.setViewportSize({width:1280,height:844});assert.equal(await page.getByTestId('salon-shell').evaluate(el=>el.getBoundingClientRect().width),430);
+    fs.mkdirSync(path.join(report,'design'),{recursive:true});await page.screenshot({path:path.join(report,'design/F01-production-like-fonts.png')});
+    fs.writeFileSync(path.join(report,'design/F01-production-like-fonts.json'),JSON.stringify({resources,rendered,desktopWidth:430},null,2));
+  } finally {await browser.close();}
 });
 await one('TC-F01-S05-002','image scanner passes clean images and refuses a fixable vulnerable image',()=>{
   const version=versions().SALON_API_1_VERSION;const output=script('images-scan',[`${settings.SALON_IMAGE_PREFIX||''}salon-api:${version}`,`${settings.SALON_IMAGE_PREFIX||''}salon-web:${version}`]);fs.writeFileSync(path.join(report,'images-scan.log'),output);

@@ -102,8 +102,10 @@ folders a tool generates, or credentials. Review the staged diff before committi
 - The owner reviews and merges with a merge commit. Do not merge the feature PR yourself. Required
   CI checks must pass; configure the repository's protection according to
   `docs/operations/git-delivery.md`. Do not require an unavailable separate human reviewer.
-- Any subsequent product, automation or delivery change requires feature QA again. Update the
-  QA revision before presenting the final PR for merge.
+- Subsequent product, automation or delivery changes require an impact assessment and verification
+  of affected checks under `references/progress.md`. Preserve unaffected passing evidence; do not
+  rerun QA for unchanged code or metadata-only commits. Record each actually tested revision
+  before presenting the final PR for merge; a targeted pass is not a new full-feature pass.
 - Process, documentation, release and hotfix changes outside feature development use separate,
   scoped PRs with their appropriate checks; a skill update does not run product feature QA.
 

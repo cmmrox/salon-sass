@@ -42,8 +42,8 @@ Environment: local only, fixed synthetic alpha/beta/gamma. Credentials are rando
 - **Priority:** critical
 - **Covers:** AC-3
 - **Performed as / preconditions:** All five alpha staff roles, an alpha customer, beta identities and a revoked session; final BFF route handoff.
-- **Steps:** Table-drive workspace account/staff/audit and customer account URLs and direct BFF actions. Owner administers staff/grants, Manager reads staff/audit, other roles use own account controls. Include wrong kind, salon, revoked and signed-out rows.
-- **Expected:** Server permissions follow the exact role matrix. Typing a URL or invoking BFF cannot bypass a hidden control. Refusals give friendly denial or own sign-in recovery and expose or change no foreign data.
+- **Steps:** Table-drive workspace account/staff/audit and customer account URLs and direct BFF actions. With a second active Owner retained, demote the signed-in Owner to Receptionist through the real staff row and inspect live navigation without reload. Owner administers staff/grants, Manager reads staff/audit, other roles use own account controls. Include wrong kind, salon, revoked and signed-out rows.
+- **Expected:** Server permissions follow the exact role matrix. Typing a URL or invoking BFF cannot bypass a hidden control. Refusals give friendly denial or own sign-in recovery and expose or change no foreign data. A live principal losing staff/audit permissions removes those navigation links without a manual reload; verify actual principal and BFF 403 controls first.
 - **Automation:** `qa/web/F02/S04-functional.spec.ts`; registered with final centralized handles for F02 feature QA.
 
 ### TC-F02-S04-005 web devices password rotation and logout revoke server authority immediately
@@ -112,8 +112,8 @@ Environment: local only, fixed synthetic alpha/beta/gamma. Credentials are rando
 - **Priority:** high
 - **Covers:** AC-6
 - **Performed as / preconditions:** Alpha has a customer profile and beta has a separate same-number account; browser downloads are enabled.
-- **Steps:** Download JSON and inspect filename/content. Open deletion explanation, cancel and verify unchanged state; then confirm, use another device and read beta.
-- **Expected:** The file is the own allowlisted copy. Irreversible salon-specific effects are clear before confirmation. Cancel changes nothing; deletion clears customer authority, returns to salon sign-in and revokes all its devices while beta remains.
+- **Steps:** Download JSON and inspect filename/content. Open deletion explanation, cancel and verify unchanged state; then confirm, use another device and read beta. Table-drive recoverable delete 503, revoke-all 503 and staff-removal 409 responses at the browser boundary, verifying announced failure/recovery stays accessible and refused mutations leave identity/target unchanged.
+- **Expected:** The file is the own allowlisted copy. Irreversible salon-specific effects are clear before confirmation. Cancel changes nothing; deletion clears customer authority, returns to salon sign-in and revokes all its devices while beta remains. On recoverable confirmation refusal, either the dialog exposes the announced error/recovery or it dismisses to accessible feedback; never leave failure only behind the modal or automatically retry a destructive unknown outcome.
 - **Automation:** `qa/web/F02/S04-functional.spec.ts`; registered with final centralized handles for F02 feature QA.
 
 ### TC-F02-S04-012 audit screens expose useful identity alerts without personal or credential values
@@ -184,7 +184,7 @@ Environment: local only, fixed synthetic alpha/beta/gamma. Credentials are rando
 - **Performed as / preconditions:** A headed browser or inspected timed screenshots; no recording of credentials; all affected user personas.
 - **Steps:** Manually traverse staff MFA, customer codes/profile/devices/privacy and Owner administration by keyboard, including errors and dialog cancellation. Inspect focus order and text contrast across dark/light brands.
 - **Expected:** Every action is keyboard-operable with visible ordered focus and no traps. Contrast and targets meet design standards. Human judgment is required; a performed date is recorded only after actually checking.
-- **Automation:** Manual judgment performed on 2026-10-14. Actual Tab/type-ahead/Tab/Space/Enter interaction, successful saved API readback and 21 inspected masked timed screenshots are recorded in `qa/reports/20261014-F02-manual-complete/manual/keyboard-timing.json` and the adjacent images.
+- **Automation:** Manual judgment refreshed on 2026-10-14 against committed source `24c3ab54bf966b58fbc19cfe56ab2a032198f7c9`. Actual Tab/type-ahead/Space/Enter traversed 38 controls with 3px solid focus: Owner password refusal/recovery, real MFA enrollment/verification/password change, Professional creation with API role readback, SMS/WhatsApp and wrong-code recovery, profile/Sinhala/consent save with API readback, device revocation, and privacy cancellation. Cancel receives dialog focus; Tab/Shift+Tab stays contained; Escape/cancel returns to the trigger. Inspected 27 masked viewport frames plus two native dialog detail frames across phone/tablet/desktop and default/dark/light brands. The original background-mask artifact is preserved; detail captures expose the actual dialog controls without the mask overlap. Evidence: `qa/reports/20261014-CR007-manual-fixed/manual-judgment.json`, `manual/keyboard-timing.json`, `first-capture-masked-dialog-background/` and `manual/*-detail.png`. Original pre-repair manual evidence remains historical.
 
 ### TC-F02-S04-019 customer screens use the correct salon brand while workspace stays neutral
 
@@ -226,3 +226,14 @@ Environment: local only, fixed synthetic alpha/beta/gamma. Credentials are rando
 - **Steps:** Submit forged forwarded headers and incoming assertions to the BFF. Inspect how real browser callers share or differ in durable address buckets. Test the API's present malformed, bad-HMAC, wrong host/method/path, duplicate/list/IP-format and expired/future assertion rows; verify an absent assertion uses the actual peer. For a valid bounded assertion use the API application Clock and synthetic address, with no bearer or tenant privilege manufactured.
 - **Expected:** BFF strips incoming assertion/address authority and signs only the trusted socket-derived canonical values, within its total request budget. API refuses every invalid present assertion before any counter or enqueue side effect. A valid address assertion changes only rate accounting, never principal, permission or salon selection. Forwarded/body address values cannot reset direct-client ceilings.
 - **Automation:** `qa/web/F02/S04-resilience-address.spec.ts`; registered with final centralized handles for F02 feature QA.
+
+### TC-F02-S04-023 Identity screens follow supplied customer and salon layouts with accessible confirmation overlays
+
+- **Type:** responsive
+- **Priority:** high
+- **Covers:** AC-9
+- **Performed as / preconditions:** Synthetic beta Owner/customer and alpha Professional; running committed product; supplied HTML final cascade and approved CR-007.
+- **Steps:** Inspect all six sign-in/account/staff/audit routes at 360/390/768/1024/1280/1440. Assert loaded Poppins, warm colours, 24px white cards, 20px/48px fields, 50px pills, customer 430px canvas and sticky header, workspace full width with bottom tabs below900 and 200/236px desktop rail. Check current real routes, icons, active semantics and Professional permission-filtered navigation. Open customer deletion and staff revoke-all confirmation; inspect mobile bottom-sheet/customer430px and workspace desktop460px drawer geometry, modal focus containment, Escape/cancel and focus return. Save masked screenshots.
+- **Expected:** Source-defined visual grammar holds on every implemented screen without fictional future controls. Compact name ellipsis retains complete accessible DOM name and tooltip, with all other clipping/overflow refused. Modal focus starts on cancellation, stays contained by Tab/ShiftTab, and returns to the initiating action after cancel/Escape. Cancelled privacy action changes nothing (TC011). Existing role/isolation/contrast/API/security cases remain authoritative.
+- **Automation:** `qa/web/F02/S04-presentation.spec.ts`; rendered evidence under the run's `design/` folder.
+- **Reference limitation:** Explicit browser policy rejected local file preview and alternative access. Source-defined comparison plus rendered product evidence are recorded; side-by-side reference preview is not claimed.

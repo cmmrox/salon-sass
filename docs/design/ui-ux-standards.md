@@ -3,17 +3,56 @@
 Consistency across stages is a delivery requirement, not a polish pass. A customer should not be
 able to tell which screens were built in which stage.
 
-## Sources of truth, in order
+## Design authority
 
-1. The stage's `spec.md`.
-2. The prototype, `docs/design/prototype/index.html`: screens, flow, wording and states.
-   Open it in a browser and use both modes (Customer and Salon). It is a single-file demonstration:
-   copy its behaviour and look, never its code.
-3. The business rules read from it, BRD section 4 (BR-01 to BR-22). Where the BRD's requirements
-   change a prototype rule (for example, policies become per-salon settings), the requirement wins.
-4. The existing components and tokens in the codebase.
+The owner's supplied `docs/design/prototype/index.html` is the visual and interaction reference
+for both Customer and Salon modes. Follow its final CSS cascade, including the later mobile polish
+and responsive workspace overrides. Match composition, typography, colours, spacing, control
+shapes and navigation. A stage spec limits delivered capabilities; it does not authorise a new
+visual direction. Approved business/security requirements govern behaviour where they change a
+prototype rule. A visual departure requires the owner's explicit instruction recorded by the lead.
 
-When these disagree, stop and ask the lead. Do not pick one silently.
+For a screen absent from the prototype, extend its visual grammar through shared components.
+Existing components are reusable only when they conform to the reference. The supplied HTML is
+immutable unless the owner requests its revision; do not copy demonstration data or inline handlers
+into production. Show only available routes. Future catalogue, booking, branding and native mobile
+capabilities stay in their roadmap features; Customer mode remains their mobile design reference.
+If a spec contradicts this authority, ask the lead to correct it through a change request.
+
+## Reference contract
+
+| Element | Final prototype reference |
+| --- | --- |
+| Canvas / secondary / borders | `#F3F0EB` / `#EAE5DC` / `#DDD6CA`; white cards; ink `#111827`, muted `#6B7280` |
+| Typography | Poppins 400/500/600; 15px body; 22px customer title; 26px desktop workspace title |
+| Cards / fields / primary actions | 24px cards, 20px fields, pill actions; fields at least 48px and primary actions 50px |
+| Customer | Centred 430px canvas, compact sticky header and anchored icon navigation |
+| Salon | Full width; below 900px main area up to 760px and bottom navigation; desktop sticky white header, sidebar and main area up to 1280px |
+| Sidebar | 200px at 900–1199px; 236px at 1200px and above |
+| Branding | Customer actions and identity accents use the published salon colour and readable computed foreground; workspace stays neutral |
+
+The customer header's name is neutral text on the warm canvas. Customer and workspace header
+names use the reference's single-line ellipsis, retaining the complete DOM/accessible name and
+full-name tooltip; this deliberate header truncation is distinct from clipped controls/content. Until logo/cover data is available,
+use a circular initial fallback; a large solid brand banner does not match the reference. Account,
+security and privacy screens inherit its cards, fields and pills; staff/audit lists inherit its
+responsive rows/table grammar. Confirmation overlays follow its bottom-sheet phone layout and
+right-side desktop drawer with keyboard focus containment, cancel/Escape and focus return. Foundation status/error screens and proxy plain HTML inherit the
+same warm typography/cards/controls. Muted small text uses white surfaces (4.83:1 contrast);
+use existing ink for small text on the warm canvas (muted would be 4.25:1 there). The reference
+positive text `#0F7B55` on `#DDF1E6` is only 4.4669:1; normal-size success text uses existing ink
+on that green surface. Keep the reference semantic palette and background; do not lower the AA
+threshold. Accessibility requirements govern this pairing (BUG-F01-003).
+
+## Visual handoff gate
+
+Map each implemented screen to its reference screen, or name the reference components it extends.
+Compare representative customer phone and salon desktop screenshots, then verify the width matrix
+and states. Check loaded font, canvas width, colours, radii, navigation position, spacing, long names,
+keyboard focus and brand contrast. Keep evidence with developer handoff and QA review. Functional,
+responsive and accessibility passes alone cannot establish design similarity. If a browser cannot
+preview the reference, report the limitation and compare its source-defined contract with rendered
+product evidence; never claim a side-by-side preview occurred.
 
 ## Build order for a screen
 

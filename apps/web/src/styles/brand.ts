@@ -1,10 +1,11 @@
 /**
  * A salon's brand colour as the page uses it (docs/engineering/web.md, "Branding"). The colour
- * arrives from the API at run time and is applied as two custom properties on the root:
+ * arrives from the API at run time and is applied as three custom properties on the root:
  *
  * - `--color-brand`: the salon's colour;
  * - `--color-on-brand`: the colour of anything drawn on it, computed here for contrast. No
  *   component assumes white.
+ * - `--color-brand-soft`: validated brand plus22 alpha, the selected customer tab tint.
  */
 
 /** A brand colour as the API gives it: `#RRGGBB`. */
@@ -14,7 +15,7 @@ const HEX_COLOUR = /^#[0-9a-f]{6}$/i;
  * The two colours text on a brand colour can take: white, and the platform's own text colour
  * (`--color-text` in tokens.css). Whichever contrasts more with the brand colour is used.
  */
-export const ON_BRAND_COLOURS = { light: '#ffffff', dark: '#1b1b1f' } as const;
+export const ON_BRAND_COLOURS = { light: '#ffffff', dark: '#111827' } as const;
 
 /** Whether a value is a colour this module accepts: `#RRGGBB`. */
 export function isHexColour(value: unknown): value is string {
@@ -62,5 +63,5 @@ export function brandRootRule(brandColour: string): string {
     throw new Error(`not a #RRGGBB colour: '${brandColour}'`);
   }
   // Exactly as the API gave it, so that the property reads back as the salon's colour.
-  return `:root{--color-brand:${brandColour};--color-on-brand:${contrastColour(brandColour)}}`;
+  return `:root{--color-brand:${brandColour};--color-on-brand:${contrastColour(brandColour)};--color-brand-soft:${brandColour}22}`;
 }

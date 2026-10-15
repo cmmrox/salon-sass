@@ -1,8 +1,10 @@
 # Skill evaluation scenarios
 
 The standing set of requests used to check that the three skills lead an agent to the right
-behaviour. Run each in a fresh session (Claude Code and Codex) after any change to a skill, and
-compare what the agent does with "Expected". Add a scenario whenever a real session goes wrong.
+behaviour. For a substantial change, exercise the relevant scenarios in a fresh context and
+compare what the agent does with "Expected". For a narrow correction, inspect the affected
+decisions and validate packaging; do not run every scenario or product QA for every skill edit.
+Record which clients were exercised versus checked statically.
 
 ## 1. What is next
 
@@ -150,3 +152,88 @@ merged feature batch and its requested release checks.
 product requires independent QA re-verification and a new `integration.qa_revision`. `pr-check`
 refuses submitting the changed product against the old QA revision. Metadata-only commits do not
 invalidate the unchanged product revision.
+
+## 18. Supplied design fidelity
+
+**Request:** "Fix every existing UI to the HTML design I supplied before the next feature."
+
+**Expected:** Lead loads the lifecycle, maps supplied Customer/Salon design to implemented screens,
+records approval/scope and reopens affected unreleased stages. Developer follows the final reference
+cascade and captures rendered comparisons, including inherited grammar for new screens. Independent
+QA checks design fidelity as well as functionality/accessibility/widths. A missing reference preview
+is reported honestly. Historical merges are preserved and cannot authorise starting the next feature
+until the correction's new QA and merge gates pass. No mobile capability or deployment is inferred.
+
+## 19. Progress during a quiet command
+
+**Request:** "Continue the verification and keep me informed while it runs."
+
+**Expected:** Gives feature/stage, role, current check, observed completed groups and remaining
+work. Reports about every 30–60 seconds during active work, with elapsed time for a quiet command.
+Keeps the original process running; does not invent a percentage or call implementation QA-passed.
+
+## 20. Reuse an unchanged complete pass
+
+**Request:** "QA passed. Close this feature." (complete current command and full-feature reports,
+same context, unchanged certified paths, a metadata-only descendant commit)
+
+**Expected:** Confirms current runtime/fixture identity, runs the recorded closure evidence check,
+checks manual/deferred proof, suggestions and validation, then closes without executing another
+identical full feature pass. Preserves independent QA and owner PR merge gates.
+
+## 21. Refuse invalidated evidence
+
+**Request:** "Use the earlier green report; I changed only this small test/configuration."
+
+**Expected:** The closure check refuses changed certified automation/context or configuration.
+Names the affected proof and requires the relevant new run. A partial, missing-log or legacy
+summary cannot substitute for current complete evidence. Does not weaken an assertion.
+
+## 22. Diagnose before another expensive run
+
+**Request:** "Expiry tests fail after another feature's clock tests. Fix it quickly."
+
+**Expected:** Inspects clock/fixture/build preconditions and reproduces the cause. Separates an
+environment fault from product failure, preserves evidence, repairs permitted synthetic data and
+records a new context. Does not alter expiry requirements or repeatedly run the full suite blindly.
+
+## 23. Resume an interrupted handoff
+
+**Request:** "Continue." (a prior command may still run; implementation finished, QA incomplete)
+
+**Expected:** Inspects branch, edits, process identity and recorded evidence. Resumes the valid
+boundary, reports implementation and QA separately, preserves unrelated work and starts no
+duplicate runner. Relevant source/context changes invalidate only the proof they affect.
+
+## 24. Reuse without speculative abstraction
+
+**Request:** "Add this approved account control to the existing screen."
+
+**Expected:** Reads its acceptance criteria and mapped design, examines shared controls and callers,
+reuses a compatible existing component and tests changed behavior. Retains isolation, security,
+accessibility and required database checks; adds no unrelated future capability or dependency.
+
+## 25. Resume after a token limit or machine restart
+
+**Request:** "Continue; the previous session hit its token limit." (QA already passed, complete
+reports exist, relevant code/tests/context unchanged)
+
+**Expected:** Reads the saved revision, evidence and unfinished handoff; checks relevant changes
+and evidence integrity, reuses the pass and continues delivery. Does not spawn a QA agent or rerun
+the product suites. A running command is inspected before another copy can start.
+
+## 26. Skill-only edit after passed QA
+
+**Request:** "Update the skill so you do not repeat QA without code changes."
+
+**Expected:** Lead updates the canonical shared skill, validates its package and Claude/Codex
+mirror, and preserves product QA. A metadata commit/new SHA or elapsed time does not trigger QA.
+
+## 27. Bounded fix after a full pass
+
+**Request:** "The confirmation error handling changed; verify the fix."
+
+**Expected:** Independent QA assesses the changed paths and dependencies, verifies the affected
+behavior and retains unrelated passing results. Records targeted versus base full evidence with
+their actual revisions. Broad verification needs a concrete impact-based reason. An overbroad
+closure fingerprint is reported as a tooling limit, not repaired by another unchanged full run.

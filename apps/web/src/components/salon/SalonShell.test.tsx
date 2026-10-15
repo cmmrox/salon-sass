@@ -23,13 +23,13 @@ describe('SalonShell', () => {
     expect(screen.getByTestId('salon-name')).toHaveTextContent(beta.name);
     expect(screen.getByRole('banner')).toContainElement(screen.getByTestId('salon-name'));
     expect(screen.getByRole('main')).toBeInTheDocument();
-    expect(rootProperties(container)).toEqual({ '--color-brand': '#1F2937', '--color-on-brand': '#ffffff' });
+    expect(rootProperties(container)).toEqual({ '--color-brand': '#1F2937', '--color-on-brand': '#ffffff', '--color-brand-soft': '#1F293722' });
   });
 
   it('a light brand gets dark text, never an assumed white', () => {
     const { container } = renderWithMessages(<SalonShell salon={gamma} />);
 
-    expect(rootProperties(container)).toEqual({ '--color-brand': '#FDE68A', '--color-on-brand': '#1b1b1f' });
+    expect(rootProperties(container)).toEqual({ '--color-brand': '#FDE68A', '--color-on-brand': '#111827', '--color-brand-soft': '#FDE68A22' });
   });
 
   it('shows nothing of any other salon and no loading state', () => {

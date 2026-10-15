@@ -24,6 +24,7 @@ nfr_focus:
 - NFR-16
 - NFR-17
 - NFR-18
+- NFR-21
 cases:
 - id: TC-F01-001
   title: Salon identity stays bound across shell API audit delivery and cleanup
@@ -58,11 +59,19 @@ verification:
       the DNS challenge module and credentials, provides host access, and explicitly
       requests staging deployment.
 evidence:
-  last_run: qa/reports/20261013-152705-F01
+  scoped_assessment: features/F02-sign-in-accounts-and-roles/scoped-qa.json
+  last_run: qa/reports/20261014-232942-F01-2f5e0e96dfa2
   last_result: pass
 integration:
+  branch: charithm/feature/F02-prototype-design-fidelity
+  pull_request: https://github.com/cmmrox/salon-sass/pull/5
+  qa_revision: e4e254f4463a274fdfd055df67b3056e83a249f0
+  merged_commit: null
+  merged_at: null
+previous_integration:
   branch: charithm/feature/F01-platform-foundation
   pull_request: https://github.com/cmmrox/salon-sass/pull/3
   qa_revision: 771c56b89f192deec47ab3d4f68f04a7dbcbf6ce
   merged_commit: 396ce0054fc662cddbf58a6c584fcb7789040edf
   merged_at: '2026-10-13T11:35:17Z'
+reopened_by: CR-007

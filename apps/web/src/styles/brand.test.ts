@@ -62,8 +62,8 @@ describe('contrastColour', () => {
 
 describe('brandRootRule', () => {
   it('sets the brand colour, exactly as given, and its contrast colour on the root', () => {
-    expect(brandRootRule('#D6086A')).toBe(':root{--color-brand:#D6086A;--color-on-brand:#ffffff}');
-    expect(brandRootRule('#FDE68A')).toBe(':root{--color-brand:#FDE68A;--color-on-brand:#1b1b1f}');
+    expect(brandRootRule('#D6086A')).toBe(':root{--color-brand:#D6086A;--color-on-brand:#ffffff;--color-brand-soft:#D6086A22}');
+    expect(brandRootRule('#FDE68A')).toBe(':root{--color-brand:#FDE68A;--color-on-brand:#111827;--color-brand-soft:#FDE68A22}');
   });
 
   it('refuses anything that is not #RRGGBB, so nothing else reaches the style sheet', () => {

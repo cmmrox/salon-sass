@@ -29,8 +29,8 @@ Rules that follow:
   never hide it.
 - An environment fault you cannot repair yourself is not a failure of the product and not a reason
   to defer cases. Set `qa_status: blocked` with `blocked_reason`; the lead removes the blocker.
-- Rerun only what changed: a repaired fixture reruns the tests that used it; changed application
-  code reruns the feature.
+- Apply the saved-evidence and affected-scope rule in `salon-sdlc`'s `references/progress.md`;
+  a repaired fixture or product fix does not automatically invalidate the entire feature.
 - A check of a time limit that fails once in several runs is a result that changes between runs.
   Before anything else, find where the time went: in the product, or in the test's own work around
   it. If the run did not record enough to tell, that is a test defect to repair first.
@@ -106,8 +106,10 @@ product is right, not when it has been tried enough times. If the same bug is re
 For each `fixed` bug:
 
 1. Repeat the bug's own steps by hand or with its case. The original symptom is gone.
-2. Run the case that found it, then the whole feature: `qa/scripts/sdlc run --feature <F>`. A fix
-   that breaks a neighbour in the same feature is `reopened`.
+2. Run the case that found it and checks covering affected dependencies, using the shared
+   saved-evidence rule. Record the changed paths, impact rationale and selected checks. A full
+   feature run needs a scope-based reason; it is not automatic after each fix. A fix that breaks
+   a neighbour in the same feature is `reopened`.
 3. Check that the case would catch it again. If the bug was found by exploring and no case covers
    it, add one.
 4. Set `verified` with the run folder as evidence, or `reopened` with what still happens.
