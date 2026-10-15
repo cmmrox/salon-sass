@@ -11,7 +11,7 @@ modules:
   CAT: "Service catalogue"
   STF: "Staff and rota"
   BKG: "Booking engine"
-  APP: "Customer app and booking site"
+  APP: "Customer React Native app"
   PAY: "Payments, checkout and refunds"
   NOT: "Notifications and messaging"
   CRM: "Customer records"
@@ -111,15 +111,17 @@ requirements:
     priority: must
     release: R1
     prototype: none
-    status: active
-    text: "Customers sign in with their mobile number and a one-time code delivered by SMS or WhatsApp. There are no customer passwords."
+    status: changed
+    changed_by: CR-010
+    text: "Customers sign in to the React Native mobile app with their mobile number and a one-time code delivered by SMS or WhatsApp. There are no customer passwords or customer web sign-in screens. The mobile app starts after M1 salon administration web is released."
   - id: IAM-02
     module: IAM
     priority: must
     release: R1
     prototype: partial
-    status: active
-    text: "Customers can browse services and availability without signing in. Verification happens at the “Your details” step. On the web, a guest can manage a booking through a one-time code or a signed link sent to the booked number."
+    status: changed
+    changed_by: CR-010
+    text: "In the later React Native customer app, customers can browse services and availability without signing in. Verification happens at Your details; customers manage bookings within the app using verified identity or a secure app link. No customer booking website is provided."
   - id: IAM-03
     module: IAM
     priority: must
@@ -132,8 +134,9 @@ requirements:
     priority: must
     release: R1
     prototype: partial
-    status: active
-    text: "Customer profile: name, mobile, email, optional birthday, preferred language, notification preferences and marketing consent."
+    status: changed
+    changed_by: CR-010
+    text: "The later React Native customer app provides name, mobile, email, optional birthday, preferred language, notification preferences and marketing consent. Existing profile APIs are backend foundations, not a customer web account."
   - id: IAM-05
     module: IAM
     priority: must
@@ -454,8 +457,9 @@ requirements:
     priority: must
     release: R1
     prototype: partial
-    status: active
-    text: "Every booking records its channel: app, website, shared link, Instagram, Google, WhatsApp, phone, walk-in."
+    status: changed
+    changed_by: CR-010
+    text: "Every booking records its channel: customer app, staff web, shared app link, Instagram, Google, WhatsApp, phone or walk-in. Existing historical channel labels may be retained as data; no customer website is delivered."
   - id: BKG-17
     module: BKG
     priority: should
@@ -545,8 +549,9 @@ requirements:
     priority: must
     release: R1
     prototype: partial
-    status: active
-    text: "The same booking flow is available on the salon’s web address without installing anything. Links open the app when it is installed."
+    status: changed
+    changed_by: CR-010
+    text: "Customer booking and self-service are available only in the React Native mobile app after the salon administration web milestone is released. Salon web addresses serve staff administration; app links have no customer website fallback."
   - id: APP-07
     module: APP
     priority: must
@@ -895,8 +900,9 @@ requirements:
     priority: must
     release: R1
     prototype: none
-    status: active
-    text: "Each salon has a shareable booking link and QR code for the booking site and the app, suitable for Instagram, Google Business Profile, WhatsApp and printed material."
+    status: changed
+    changed_by: CR-010
+    text: "Each salon has shareable app booking links and QR codes for the later React Native app, suitable for Instagram, Google Business Profile, WhatsApp and printed material. No customer booking website is provided."
   - id: MKT-02
     module: MKT
     priority: should
@@ -1035,15 +1041,17 @@ requirements:
     priority: must
     release: R1
     prototype: none
-    status: active
-    text: "Every salon receives a platform subdomain with a secure certificate at onboarding."
+    status: changed
+    changed_by: CR-010
+    text: "Every salon receives a platform subdomain for its staff administration web workspace with a secure certificate at onboarding; local development remains HTTP under CR-005. No customer web booking site is provided."
   - id: BRD-04
     module: BRD
     priority: must
     release: R1
     prototype: partial
-    status: active
-    text: "Branding, content and enabled features are delivered to the app and site from the API, so that publishing a brand change does not require an app release."
+    status: changed
+    changed_by: CR-010
+    text: "Branding, content and enabled features are delivered from the API to the salon administration web application and later React Native customer app, so publishing a brand change does not require an app release."
   - id: BRD-05
     module: BRD
     priority: must
@@ -1098,8 +1106,9 @@ requirements:
     priority: should
     release: R2
     prototype: none
-    status: active
-    text: "Links on the salon’s domain open its dedicated app when installed; the booking site shows an install prompt."
+    status: changed
+    changed_by: CR-010
+    text: "Links on the salon domain open the dedicated React Native app when installed and direct users to its store listing when needed. No customer booking website or browser booking fallback is provided."
   - id: BRD-13
     module: BRD
     priority: should
@@ -1314,7 +1323,7 @@ requirements:
     release: R1
     prototype: full
     status: changed
-    changed_by: CR-007
     area: "Design fidelity"
-    text: "Customer and salon surfaces follow the owner's supplied HTML design architecture and look and feel; new components extend the same visual grammar, and departures require an owner-approved change."
+    changed_by: CR-010
+    text: "The supplied HTML prototype is visual authority: Salon mode maps to the salon staff web workspace, while Customer mode is only the deferred React Native mobile design reference. Extend the mapped visual grammar for missing screens, verify responsive layouts and accessibility, and never infer a customer web application from the HTML preview."
     target: "Reference mapping, visual assertions and independent rendered UI comparison before closure"

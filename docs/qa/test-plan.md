@@ -1,5 +1,10 @@
 # Test plan
 
+CR-010 platform scope: current web QA covers salon staff and operator interfaces only.
+Customer browser sign-in, account and booking expectations are superseded. Retain direct
+customer API coverage as mobile foundations; native UI QA begins only after M1-web release.
+
+
 How this product is tested: the tools, where the automation lives, the data it runs on, the targets
 it must meet, and what its severities look like here. QA tests a feature once, when all its stages
 are closed; a stage is closed on the developer's own gates. The method (who tests what, what a pass

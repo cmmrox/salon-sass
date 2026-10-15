@@ -1,5 +1,9 @@
 # Mobile rules (`apps/mobile`)
 
+Customer UI is React Native (Expo), only after every salon administration M1-web feature is
+released. There is no customer website or browser fallback. Customer mode in the HTML prototype
+is a deferred mobile design reference, not authorisation to start the mobile app (CR-010).
+
 One Expo codebase produces every customer app. Read BRD section 7.4 before changing anything about
 how apps are built or published; the store rules there are the reason for this design.
 

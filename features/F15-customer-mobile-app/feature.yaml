@@ -1,16 +1,46 @@
 id: F15
-title: "Customer mobile app"
-summary: "A customer installs the app, opens their salon in it, books, pays for and manages appointments as on the web, and receives push notifications. Built on the API the web milestone delivered; its first stage creates the app shell."
+title: Customer mobile app
+summary: 'After all salon administration web features are released, build the React Native customer app:
+  salon entry, sign-in, profile, booking, payments, appointment management and push, using the shared
+  API.'
 release: R1
 milestone: M2-mobile
 status: backlog
 qa_status: not-run
 released_in: null
-depends_on: [F09, F11]
-surfaces: [api, mobile]
-requirements: [APP-04, APP-05, APP-11, BRD-09]
-extends: [APP-01, APP-02, APP-03, APP-06, APP-07, APP-08, APP-09, APP-10, IAM-01, IAM-05, BRD-04, NOT-02, NOT-08]
-nfr_focus: [NFR-14]
+depends_on:
+- F09
+- F11
+surfaces:
+- api
+- mobile
+requirements:
+- APP-04
+- APP-05
+- APP-11
+- BRD-09
+- APP-01
+- APP-02
+- APP-06
+- APP-07
+- APP-09
+- APP-10
+- IAM-02
+- MKT-01
+extends:
+- APP-03
+- APP-08
+- IAM-01
+- IAM-05
+- BRD-04
+- NOT-02
+- NOT-08
+- IAM-03
+- IAM-04
+- IAM-09
+- IAM-10
+nfr_focus:
+- NFR-14
 cases: []
 verification:
   automation: []

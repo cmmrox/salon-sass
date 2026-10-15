@@ -1,239 +1,223 @@
-# F02-S04 Web accounts: acceptance cases
+# F02-S04 Staff web: acceptance cases
 
-Expected outcomes come from the final specs, feature requirements and Read first documents. The feature metadata and recorded runner reports hold execution status; stage QA status remains unchanged during whole-feature verification.
-
-Environment: local only, fixed synthetic alpha/beta/gamma. Credentials are random and kept in memory. Authentication uses real password/TOTP/code APIs and local message capture. Restore the application clock after each use.
-
-## Cases
+Authority: approved CR-010 and revised spec. Local synthetic alpha/beta/gamma only; private random credentials stay in memory. Customer React Native UI is deferred until M1-web release; retained customer Java API cases in S02/S03 remain authoritative. Obsolete customer-browser OTP/profile/privacy/coexistence cases are removed, not silently deferred. Unaffected passing API and feature evidence is retained under CR-009.
 
 ### TC-F02-S04-001 staff password and authenticator flows reach account only after complete verification
 
 - **Type:** functional
 - **Priority:** high
 - **Covers:** AC-1
-- **Performed as / preconditions:** Staff fixtures include an unenrolled Owner, enrolled Owner and non-Owner at a salon hostname.
-- **Steps:** Complete password-only sign-in, required Owner enrollment and TOTP verification, and voluntary staff enrollment from account. Compare the visible account with API principal.
-- **Expected:** Only completed verification reaches workspace account. Translated forms clear sensitive values on success; setup key is transient and available only under authorized enrollment.
-- **Automation:** `qa/web/F02/S04-functional.spec.ts`; registered with final centralized handles for F02 feature QA.
+- **Performed as / preconditions:** Synthetic salon staff or unauthorized browser; committed local build and healthy seeded API before faults.
+- **Steps:** Seed enrolled/unenrolled Owners and non-Owner; sign in with password and actual required TOTP. Enroll a Receptionist from account.
+- **Expected:** Protected workspace appears only after full verification; API principal matches; transient setup vanishes.
+- **Automation:** `qa/web/F02/S04-functional.spec.ts`
 
 ### TC-F02-S04-002 staff authentication refusals preserve useful input and expose recovery
 
 - **Type:** functional
 - **Priority:** high
 - **Covers:** AC-1
-- **Performed as / preconditions:** Staff sign-in and MFA forms with a known identifier, local clock and controlled rate state.
-- **Steps:** Exercise wrong password/code, expired challenge and rate limit. Use back and refresh during MFA, then recover when eligible.
-- **Expected:** The screen gives translated field errors, expiry and retry instructions. Useful identifier input remains, credentials clear safely, and incomplete MFA cannot open a protected page.
-- **Automation:** `qa/web/F02/S04-functional.spec.ts`; registered with final centralized handles for F02 feature QA.
+- **Performed as / preconditions:** Synthetic salon staff or unauthorized browser; committed local build and healthy seeded API before faults.
+- **Steps:** Submit wrong password/code, expire a challenge, then reach password attempt ceiling.
+- **Expected:** Useful identifier survives; password/code clears; translated recovery, visible retry delay and incomplete-challenge denial hold.
+- **Automation:** `qa/web/F02/S04-functional.spec.ts`
 
-### TC-F02-S04-003 customer SMS WhatsApp and resend screens preserve the number and explain proof lifetime
+### TC-F02-S04-003 removed customer browser endpoints return404 without API or cookie side effects
 
-- **Type:** functional
-- **Priority:** high
-- **Covers:** AC-2
-- **Performed as / preconditions:** An anonymous alpha customer, local captures and the public salon shell.
-- **Steps:** Browse signed out. Request SMS and WhatsApp, try wrong/expired/resent proof, resend and complete a valid code flow.
-- **Expected:** Public browsing remains available. The branded flow explains retry and expiry, retains number and delivery choice on error, and reaches the own account without account-existence messages or a customer password.
-- **Automation:** `qa/web/F02/S04-functional.spec.ts`; registered with final centralized handles for F02 feature QA.
+- **Type:** security
+- **Priority:** critical
+- **Covers:** AC-5
+- **Performed as / preconditions:** Synthetic salon staff or unauthorized browser; committed local build and healthy seeded API before faults.
+- **Steps:** Keep an API-issued customer credential cookie. Stop API and use a recording stand-in; GET/POST former customer principal/sessions/profile/staff/audit/code/sign-in/logout/revoke/revoke-all/export/delete/refresh/clear/unknown BFF operations. Restore API.
+- **Expected:** Every operation returns no-store404, recording stand-in receives zero calls and cookie digest is unchanged. Direct Java customer API principal still works afterward. This new critical boundary prevents accidental customer web delivery or real message requests.
+- **Automation:** `qa/web/F02/S04-browser-security.spec.ts`
 
 ### TC-F02-S04-004 web permissions protect every page and BFF action for all roles and kinds
 
 - **Type:** permissions
 - **Priority:** critical
 - **Covers:** AC-3
-- **Performed as / preconditions:** All five alpha staff roles, an alpha customer, beta identities and a revoked session; final BFF route handoff.
-- **Steps:** Table-drive workspace account/staff/audit and customer account URLs and direct BFF actions. With a second active Owner retained, demote the signed-in Owner to Receptionist through the real staff row and inspect live navigation without reload. Owner administers staff/grants, Manager reads staff/audit, other roles use own account controls. Include wrong kind, salon, revoked and signed-out rows.
-- **Expected:** Server permissions follow the exact role matrix. Typing a URL or invoking BFF cannot bypass a hidden control. Refusals give friendly denial or own sign-in recovery and expose or change no foreign data. A live principal losing staff/audit permissions removes those navigation links without a manual reload; verify actual principal and BFF 403 controls first.
-- **Automation:** `qa/web/F02/S04-functional.spec.ts`; registered with final centralized handles for F02 feature QA.
+- **Performed as / preconditions:** Synthetic salon staff or unauthorized browser; committed local build and healthy seeded API before faults.
+- **Steps:** Loop every staff role across account/staff/audit pages and BFF actions; try customer-kind, foreign-salon and revoked credentials. Retain beta profile readback as isolation sentinel. Self-demote a real Owner while another Owner remains.
+- **Expected:** Only current permissions permit protected content; wrong authority cannot expose data. Live self-demotion removes stale staff/audit navigation and denies both BFF lists immediately.
+- **Automation:** `qa/web/F02/S04-functional.spec.ts`
 
 ### TC-F02-S04-005 web devices password rotation and logout revoke server authority immediately
 
 - **Type:** functional
 - **Priority:** high
 - **Covers:** AC-4
-- **Performed as / preconditions:** Staff and customer have two devices and paginated own device lists.
-- **Steps:** Identify current device, revoke another or all, sign in again, change password with old-password proof, and sign out. Verify each visible result through API state.
-- **Expected:** Own devices paginate and identify current session. Revocation is immediate, password rotates credentials, and sign-out clears cookies and server authority. Other account/kind devices are unaffected.
-- **Automation:** `qa/web/F02/S04-functional.spec.ts`; registered with final centralized handles for F02 feature QA.
+- **Performed as / preconditions:** Synthetic salon staff or unauthorized browser; committed local build and healthy seeded API before faults.
+- **Steps:** Revoke another staff device, paginate actual sessions, change password, inspect old credential, then log out.
+- **Expected:** Current marker is correct; revoked authority is refused; rotated credentials replace old access; logout revokes immediately.
+- **Automation:** `qa/web/F02/S04-functional.spec.ts`
 
-### TC-F02-S04-006 staff and customer cookies coexist and independent signout preserves the other account
+### TC-F02-S04-006 salon web entry and legacy account paths expose only staff access
 
-- **Type:** security
-- **Priority:** critical
-- **Covers:** AC-4
-- **Performed as / preconditions:** One alpha browser has both authenticated staff and customer families.
-- **Steps:** Open both account surfaces, sign out staff and use customer; sign in staff, sign out customer and use staff. Inspect cookie families and API principal.
-- **Expected:** Distinct host-only cookie families coexist. Each sign-out clears/revokes only its own kind, with the other session still valid.
-- **Automation:** `qa/web/F02/S04-browser-security.spec.ts`; registered with final centralized handles for F02 feature QA.
+- **Type:** functional
+- **Priority:** high
+- **Covers:** AC-2
+- **Performed as / preconditions:** Synthetic salon staff or unauthorized browser; committed local build and healthy seeded API before faults.
+- **Steps:** Open tenant root with authenticated staff. Open legacy /sign-in and /account. Open protected staff account with only customer API cookies.
+- **Expected:** Root reaches staff account; aliases reach staff password sign-in. No customer OTP/profile/canvas renders. Customer cookies cannot authorize staff workspace.
+- **Automation:** `qa/web/F02/S04-browser-security.spec.ts`
 
-### TC-F02-S04-007 simultaneous tabs coordinate renewal once for each principal kind
+### TC-F02-S04-007 simultaneous staff tabs coordinate renewal once
 
 - **Type:** concurrency
 - **Priority:** critical
 - **Covers:** AC-4
-- **Performed as / preconditions:** Two tabs share a browser session for each principal kind; access is expired using the application clock.
-- **Steps:** Release protected renewal flows together for staff and customer rows. Observe renewal count and current family afterward.
-- **Expected:** The per-kind Web Lock serializes honest renewal and rechecks server state after acquiring the lock. At most one fresh rotation occurs and both tabs recover without accidental replay revocation or extra devices.
-- **Automation:** `qa/web/F02/S04-browser-security.spec.ts`; registered with final centralized handles for F02 feature QA.
+- **Performed as / preconditions:** Synthetic salon staff or unauthorized browser; committed local build and healthy seeded API before faults.
+- **Steps:** Open two staff tabs, advance actual API access expiry and reload simultaneously. Inspect refresh request/history counts.
+- **Expected:** One rotation serves both honest tabs, one principal/session remains and clock restores.
+- **Automation:** `qa/web/F02/S04-browser-security.spec.ts`
 
 ### TC-F02-S04-008 replay revocation and unknown refresh outcome cannot restore signed-out authority
 
 - **Type:** security
 - **Priority:** critical
 - **Covers:** AC-4
-- **Performed as / preconditions:** A browser family and a controlled lost or delayed renewal response; a second tab can sign out or delete.
-- **Steps:** Exercise replay revocation, a future-expiry 401 and an unknown refresh outcome. Try another protected action; sign out or delete while a response is delayed.
-- **Expected:** The affected kind clears cookies and requires fresh sign-in. Spent credentials are never retried and a delayed response cannot restore authority. The other principal kind is unaffected.
-- **Automation:** `qa/web/F02/S04-browser-security.spec.ts`; registered with final centralized handles for F02 feature QA.
+- **Performed as / preconditions:** Synthetic salon staff or unauthorized browser; committed local build and healthy seeded API before faults.
+- **Steps:** Replay spent refresh; drop committed refresh response; race delayed renewal with logout. Preserve unrelated customer API cookies and read direct API authority.
+- **Expected:** Revoked access cannot renew, unknown outcome is attempted once and affected staff cookies clear. Logout cannot restore authority. Unrelated API foundations remain intact; customer BFF remains404.
+- **Automation:** `qa/web/F02/S04-browser-security.spec.ts`
 
 ### TC-F02-S04-009 unsupported Web Locks disable credential changes with a clear explanation
 
 - **Type:** functional
 - **Priority:** high
 - **Covers:** AC-4, AC-8
-- **Performed as / preconditions:** A new browser context lacks Web Locks; an already authenticated profile is arranged separately.
-- **Steps:** Open credential flows and try sign-in, logout, password change, device revocation, renewal and deletion. Use profile read/update and export.
-- **Expected:** Credential-changing controls are disabled with a translated support explanation. No unsafe fallback runs; authenticated profile actions and export remain usable.
-- **Automation:** `qa/web/F02/S04-browser-security.spec.ts`; registered with final centralized handles for F02 feature QA.
+- **Performed as / preconditions:** Synthetic salon staff or unauthorized browser; committed local build and healthy seeded API before faults.
+- **Steps:** Disable Web Locks at browser boundary; inspect sign-in and staff security controls.
+- **Expected:** Translated browser support explanation appears and credential mutations are disabled.
+- **Automation:** `qa/web/F02/S04-browser-security.spec.ts`
 
-### TC-F02-S04-010 customer profile screens save every mutable field and recover stale edits
-
-- **Type:** functional
-- **Priority:** high
-- **Covers:** AC-5
-- **Performed as / preconditions:** An alpha account and two tabs that initially read the same profile version.
-- **Steps:** Save all mutable fields and preferences, including explicit consent. Save tab A, then submit stale tab B; use refresh and back. Check UI error presentation without repeating S03's API input matrix.
-- **Expected:** Verified mobile is read-only, consent is distinct from notifications, and success matches persisted API values. Stale edits show conflict and recovery without silent overwrite or lost useful form input.
-- **Automation:** `qa/web/F02/S04-functional.spec.ts`; registered with final centralized handles for F02 feature QA.
-
-### TC-F02-S04-011 data download and deletion confirmation clearly complete or cancel the customer request
+### TC-F02-S04-011 recoverable staff confirmation refusals keep feedback and recovery accessible
 
 - **Type:** functional
 - **Priority:** high
 - **Covers:** AC-6
-- **Performed as / preconditions:** Alpha has a customer profile and beta has a separate same-number account; browser downloads are enabled.
-- **Steps:** Download JSON and inspect filename/content. Open deletion explanation, cancel and verify unchanged state; then confirm, use another device and read beta. Table-drive recoverable delete 503, revoke-all 503 and staff-removal 409 responses at the browser boundary, verifying announced failure/recovery stays accessible and refused mutations leave identity/target unchanged.
-- **Expected:** The file is the own allowlisted copy. Irreversible salon-specific effects are clear before confirmation. Cancel changes nothing; deletion clears customer authority, returns to salon sign-in and revokes all its devices while beta remains. On recoverable confirmation refusal, either the dialog exposes the announced error/recovery or it dismisses to accessible feedback; never leave failure only behind the modal or automatically retry a destructive unknown outcome.
-- **Automation:** `qa/web/F02/S04-functional.spec.ts`; registered with final centralized handles for F02 feature QA.
+- **Performed as / preconditions:** Synthetic salon staff or unauthorized browser; committed local build and healthy seeded API before faults.
+- **Steps:** Intercept staff revoke-all with503 and staff removal with409. Confirm action, inspect modal/announced feedback and cancel recovery. Read current principal/target through actual APIs.
+- **Expected:** Feedback is accessible inside modal or after dismissal; refused authority and active staff target remain unchanged. No unsafe automatic retry.
+- **Automation:** `qa/web/F02/S04-functional.spec.ts`
 
 ### TC-F02-S04-012 audit screens expose useful identity alerts without personal or credential values
 
 - **Type:** functional
 - **Priority:** high
 - **Covers:** AC-6
-- **Performed as / preconditions:** Owner and Manager audit has known identity and volume-alert rows.
-- **Steps:** Arrange identity and volume-alert entries through actual APIs with a fresh synthetic UTC day and daily preparation ceiling of 5, restored afterwards. Read and paginate audit, inspect actor/action/time and safe role/grant transitions; arrange the empty-list presentation at the browser boundary without removing real audit.
-- **Expected:** Authorized readers see useful secret-free audit with salon-zone dates and clear empty guidance. Other salon or personal/credential values are absent; role refusals are covered by the BFF matrix.
-- **Automation:** `qa/web/F02/S04-functional.spec.ts`; registered with final centralized handles for F02 feature QA.
+- **Performed as / preconditions:** Synthetic salon staff or unauthorized browser; committed local build and healthy seeded API before faults.
+- **Steps:** Create synthetic identity/volume-alert audit with a fresh UTC day and preparation ceiling5; restore defaults. Read Owner/Manager audit and pagination; arrange empty presentation without deleting audit.
+- **Expected:** Useful actor/action/time rows and volume alert remain secret-free, paginated and salon-zoned; empty guidance is present.
+- **Automation:** `qa/web/F02/S04-functional.spec.ts`
 
 ### TC-F02-S04-013 all browser mutation routes reject CSRF before any side effect
 
 - **Type:** security
 - **Priority:** critical
 - **Covers:** AC-7
-- **Performed as / preconditions:** A final inventory of all BFF mutations and baseline API state/cookies for signed-in and signed-out contexts.
-- **Steps:** Table-drive missing/wrong Origin, wrong scheme/port and cross-site Fetch Metadata across sign-in, MFA, codes, logout, password, staff, profile, export, deletion and renewal. Inspect counters, records and cookies afterward.
-- **Expected:** Every mutation rejects CSRF before an API side effect or credential issuance, including login CSRF. Forwarded host/protocol cannot redefine trusted Origin.
-- **Automation:** `qa/web/F02/S04-browser-security.spec.ts`; registered with final centralized handles for F02 feature QA.
+- **Performed as / preconditions:** Synthetic salon staff or unauthorized browser; committed local build and healthy seeded API before faults.
+- **Steps:** Across every staff BFF mutation submit missing/wrong Origin, wrong scheme/port, cross-site Fetch Metadata and forged forwarding. Compare database/cookie digests before/after.
+- **Expected:** 403 request_rejected precedes all API/cookie side effects, including sign-in. Removed customer routes have the stricter404 boundary in003.
+- **Automation:** `qa/web/F02/S04-browser-security.spec.ts`
 
 ### TC-F02-S04-014 browser cookies and every client surface exclude session and challenge authority
 
 - **Type:** security
 - **Priority:** critical
 - **Covers:** AC-7
-- **Performed as / preconditions:** Authenticated staff/customer flows plus authorized Owner enrollment; final cookie inventory and synthetic secret values.
-- **Steps:** Inspect cookie flags, HTML, client JSON, URLs, browser storage, console and client chunks. Check transient setup instructions separately. Recursively scan actual ignored `.next/standalone` output, including symlinked dependencies, for environment/local-key copies and retained four secret values in text or decoded bytes. Assert a nonempty artifact inventory and report only paths/counts, never secret values.
-- **Expected:** Distinct session cookies are host-only HttpOnly SameSite with Path=/ and local HTTP Secure exception. Access/refresh/challenge authority never reaches a readable client surface. Authorized setup instructions remain transient, unlinked and unstored. Real TLS is outside local scope.
-- **Automation:** `qa/web/F02/S04-browser-security.spec.ts`; registered with final centralized handles for F02 feature QA.
+- **Performed as / preconditions:** Synthetic salon staff or unauthorized browser; committed local build and healthy seeded API before faults.
+- **Steps:** Exercise actual Owner enrollment/sign-in. Inspect host-only cookie flags, HTML/client JSON/storage/URLs/console/chunks and standalone artifact inventory.
+- **Expected:** HttpOnly SameSite staff credentials never appear in client-readable surfaces; transient setup is unstored/unlinked; standalone contains no retained secret/key files. Local HTTP Secure exception only.
+- **Automation:** `qa/web/F02/S04-browser-security.spec.ts`
 
 ### TC-F02-S04-015 redirect and hostname input cannot choose the bearer destination or another salon
 
 - **Type:** tenant-isolation
 - **Priority:** critical
 - **Covers:** AC-7
-- **Performed as / preconditions:** Alpha and beta browser identities plus controlled redirect, hostname and foreign-id input.
-- **Steps:** Try external, protocol-relative and backslash redirect targets, body/query/cookie tenant selectors, forwarded host/protocol and foreign ids. Follow results and read beta afterward.
-- **Expected:** Redirects stay fixed and same origin; bearers go only to configured API. Validated Host selects the salon. No credential leaves its origin and no foreign record is revealed or changed.
-- **Automation:** `qa/web/F02/S04-browser-security.spec.ts`; registered with final centralized handles for F02 feature QA.
+- **Performed as / preconditions:** Synthetic salon staff or unauthorized browser; committed local build and healthy seeded API before faults.
+- **Steps:** Send external/protocol-relative/backslash return targets and forged tenant query/cookie/forwarded fields. Attempt foreign staff removal.
+- **Expected:** Navigation and bearer destination remain fixed same origin; validated Host selects tenant and beta profile stays intact.
+- **Automation:** `qa/web/F02/S04-browser-security.spec.ts`
 
 ### TC-F02-S04-016 responsive layouts keep every control reachable across six widths
 
 - **Type:** responsive
 - **Priority:** high
 - **Covers:** AC-8
-- **Performed as / preconditions:** Final screen inventory with full, empty, error and loading rows; shared presentation states checked once.
-- **Steps:** At 360, 390, 768, 1024, 1280 and 1440 inspect staff sign-in/MFA/account/staff/audit and customer sign-in/account/privacy/devices. Use long lists and names; measure overflow, reachable actions and 44-point targets.
-- **Expected:** Every distinct screen remains usable with no horizontal overflow, clipping or overlap. Customer phone and workspace tablet paths work; shared components do not create duplicate state tests.
-- **Automation:** `qa/web/F02/S04-presentation.spec.ts`; registered with final centralized handles for F02 feature QA.
+- **Performed as / preconditions:** Synthetic salon staff or unauthorized browser; committed local build and healthy seeded API before faults.
+- **Steps:** Inspect four staff routes and enrollment at360/390/768/1024/1280/1440 with long beta salon name.
+- **Expected:** All controls stay reachable with44-point targets and no horizontal scrolling, clipping or overlap.
+- **Automation:** `qa/web/F02/S04-presentation.spec.ts`
 
 ### TC-F02-S04-017 all screens pass automated accessibility checks and announce errors
 
 - **Type:** accessibility
 - **Priority:** high
 - **Covers:** AC-8
-- **Performed as / preconditions:** Distinct final screens in filled, error and dialog states; all three customer brands.
-- **Steps:** Run Axe scans and inspect semantic labels, error associations, announcements and focus-hiding overlays.
-- **Expected:** No serious or critical Axe violations; labels, error association and live announcements are present. Manual keyboard/focus checks complement the automated scan.
-- **Automation:** `qa/web/F02/S04-presentation.spec.ts`; registered with final centralized handles for F02 feature QA.
+- **Performed as / preconditions:** Synthetic salon staff or unauthorized browser; committed local build and healthy seeded API before faults.
+- **Steps:** Scan staff routes across three salons, error and confirmation dialog states with Axe.
+- **Expected:** No serious/critical violations; labels and error announcements remain semantic.
+- **Automation:** `qa/web/F02/S04-presentation.spec.ts`
 
 ### TC-F02-S04-018 keyboard journeys have visible focus sensible order and readable contrast
 
 - **Type:** accessibility
 - **Priority:** high
 - **Covers:** AC-8
-- **Performed as / preconditions:** A headed browser or inspected timed screenshots; no recording of credentials; all affected user personas.
-- **Steps:** Manually traverse staff MFA, customer codes/profile/devices/privacy and Owner administration by keyboard, including errors and dialog cancellation. Inspect focus order and text contrast across dark/light brands.
-- **Expected:** Every action is keyboard-operable with visible ordered focus and no traps. Contrast and targets meet design standards. Human judgment is required; a performed date is recorded only after actually checking.
-- **Automation:** Manual judgment refreshed on 2026-10-14 against committed source `24c3ab54bf966b58fbc19cfe56ab2a032198f7c9`. Actual Tab/type-ahead/Space/Enter traversed 38 controls with 3px solid focus: Owner password refusal/recovery, real MFA enrollment/verification/password change, Professional creation with API role readback, SMS/WhatsApp and wrong-code recovery, profile/Sinhala/consent save with API readback, device revocation, and privacy cancellation. Cancel receives dialog focus; Tab/Shift+Tab stays contained; Escape/cancel returns to the trigger. Inspected 27 masked viewport frames plus two native dialog detail frames across phone/tablet/desktop and default/dark/light brands. The original background-mask artifact is preserved; detail captures expose the actual dialog controls without the mask overlap. Evidence: `qa/reports/20261014-CR007-manual-fixed/manual-judgment.json`, `manual/keyboard-timing.json`, `first-capture-masked-dialog-background/` and `manual/*-detail.png`. Original pre-repair manual evidence remains historical.
+- **Performed as / preconditions:** Synthetic salon staff or unauthorized browser; committed local build and healthy seeded API before faults.
+- **Steps:** Manually traverse staff sign-in/MFA/account and Owner staff/audit on phone/tablet/desktop, inspect focus/contrast, cancel dialog by keyboard.
+- **Expected:** Every staff action is keyboard-operable with visible ordered focus and no trap; confirmation initial cancel focus, containment and return hold. Prior2026-10-14 staff evidence is retained; changed entry/sidebar needs current inspection before pass.
+- **Automation:** Manual judgment; actual performed date and evidence in stage.yaml.
 
-### TC-F02-S04-019 customer screens use the correct salon brand while workspace stays neutral
+### TC-F02-S04-019 staff workspace identifies only its salon and keeps the neutral palette
 
 - **Type:** branding
 - **Priority:** high
 - **Covers:** AC-8
-- **Performed as / preconditions:** Published alpha, beta and gamma brand data and each customer account screen.
-- **Steps:** Compare customer sign-in/account/privacy/devices with each salon's name, title and theme, including long names and dark/light contrast. Inspect workspace screens for neutral styling.
-- **Expected:** Customer screens show only their own correct salon identity with readable text; workspace stays neutral and long names fit.
-- **Automation:** `qa/web/F02/S04-presentation.spec.ts`; registered with final centralized handles for F02 feature QA.
+- **Performed as / preconditions:** Synthetic salon staff or unauthorized browser; committed local build and healthy seeded API before faults.
+- **Steps:** Open staff routes for alpha/beta/gamma; inspect full salon header name, neutral canvas and absence of customer shell.
+- **Expected:** Only current salon identity appears, long name fits accessible header and all workspaces use neutral warm palette.
+- **Automation:** `qa/web/F02/S04-presentation.spec.ts`
 
 ### TC-F02-S04-020 API outage and slow BFF work preserve form values and present safe retry within budget
 
 - **Type:** resilience
 - **Priority:** high
 - **Covers:** AC-8
-- **Performed as / preconditions:** Prepared local runtime, sign-in/account forms and a dependency control that proves API down and silent behavior.
-- **Steps:** Once for each API condition, submit nonsensitive identifier/mobile/profile data, observe retry and request timing across meta plus action, then restore API and retry safely. Record client/server/control marks.
-- **Expected:** The original shared three-second upstream cancellation budget spans metadata/mutation without resetting; the existing five-second end-to-end unavailable-response limit holds. Record upstream disconnect, server serialization, network, client and control timing separately rather than equating finish logging with exact3000ms. Useful input remains and translated retry is available. No hung request or unsafe retry of an unknown credential outcome occurs; web recovery requires no restart. PostgreSQL outages are not duplicated.
-- **Automation:** `qa/web/F02/S04-resilience-address.spec.ts`; registered with final centralized handles for F02 feature QA.
+- **Performed as / preconditions:** Synthetic salon staff or unauthorized browser; committed local build and healthy seeded API before faults.
+- **Steps:** Stop then suspend API while submitting staff password form; retain identifier and inspect bounded503. Use slow metadata plus hanging mutation recording stand-in.
+- **Expected:** No hang; useful identifier remains and password clears. Five-second end-to-end unavailable limit and shared three-second upstream budget remain; restored API needs no web restart.
+- **Automation:** `qa/web/F02/S04-resilience-address.spec.ts`
 
 ### TC-F02-S04-021 translation and test-id inventories cover every new screen state
 
 - **Type:** build
 - **Priority:** high
 - **Covers:** AC-8
-- **Performed as / preconditions:** Final build/source, locale JSON and a known nonempty screen/control inventory.
-- **Steps:** Inspect stable test ids and translation references for every new interactive/result element. Check centralized translation keys and render English states. Verify en/si/ta preferredLanguage persistence in TC-F02-S04-010; the English-first design does not require a global locale chooser in F02.
-- **Expected:** No missing strings, unresolved translation keys or missing stable handles. The check proves there were screens/controls to inspect and can fail on a missing contract.
-- **Automation:** `qa/web/F02/S04-presentation.spec.ts`; registered with final centralized handles for F02 feature QA.
-
+- **Performed as / preconditions:** Synthetic salon staff or unauthorized browser; committed local build and healthy seeded API before faults.
+- **Steps:** Inspect nonempty staff component/translation/test-id inventory and rendered staff routes.
+- **Expected:** No hardcoded UI text, missing translation or unstable handle; every form control has a stable handle. Removed customer UI strings do not create delivered screens.
+- **Automation:** `qa/web/F02/S04-presentation.spec.ts`
 
 ### TC-F02-S04-022 trusted client address assertions cannot alter tenant authority or evade abuse limits
 
 - **Type:** security
 - **Priority:** critical
 - **Covers:** AC-7
-- **Performed as / preconditions:** Local BFF/API with the final fourth-key assertion contract, real socket peer, empty local trusted-proxy list and controlled synthetic code limits.
-- **Steps:** Submit forged forwarded headers and incoming assertions to the BFF. Inspect how real browser callers share or differ in durable address buckets. Test the API's present malformed, bad-HMAC, wrong host/method/path, duplicate/list/IP-format and expired/future assertion rows; verify an absent assertion uses the actual peer. For a valid bounded assertion use the API application Clock and synthetic address, with no bearer or tenant privilege manufactured.
-- **Expected:** BFF strips incoming assertion/address authority and signs only the trusted socket-derived canonical values, within its total request budget. API refuses every invalid present assertion before any counter or enqueue side effect. A valid address assertion changes only rate accounting, never principal, permission or salon selection. Forwarded/body address values cannot reset direct-client ceilings.
-- **Automation:** `qa/web/F02/S04-resilience-address.spec.ts`; registered with final centralized handles for F02 feature QA.
+- **Performed as / preconditions:** Synthetic salon staff or unauthorized browser; committed local build and healthy seeded API before faults.
+- **Steps:** Call retained Java customer API with malformed/HMAC/host/method/path/IP/time assertion variants, one valid assertion and foreign-host forgery.
+- **Expected:** Invalid present assertions produce400 without rate/enqueue state changes; valid proof changes only address accounting, never authority. Removed browser customer code-rate exercise is deleted under CR010.
+- **Automation:** `qa/web/F02/S04-resilience-address.spec.ts`
 
-### TC-F02-S04-023 Identity screens follow supplied customer and salon layouts with accessible confirmation overlays
+### TC-F02-S04-023 staff identity screens follow supplied Salon layout with accessible confirmation overlays
 
 - **Type:** responsive
 - **Priority:** high
 - **Covers:** AC-9
-- **Performed as / preconditions:** Synthetic beta Owner/customer and alpha Professional; running committed product; supplied HTML final cascade and approved CR-007.
-- **Steps:** Inspect all six sign-in/account/staff/audit routes at 360/390/768/1024/1280/1440. Assert loaded Poppins, warm colours, 24px white cards, 20px/48px fields, 50px pills, customer 430px canvas and sticky header, workspace full width with bottom tabs below900 and 200/236px desktop rail. Check current real routes, icons, active semantics and Professional permission-filtered navigation. Open customer deletion and staff revoke-all confirmation; inspect mobile bottom-sheet/customer430px and workspace desktop460px drawer geometry, modal focus containment, Escape/cancel and focus return. Save masked screenshots.
-- **Expected:** Source-defined visual grammar holds on every implemented screen without fictional future controls. Compact name ellipsis retains complete accessible DOM name and tooltip, with all other clipping/overflow refused. Modal focus starts on cancellation, stays contained by Tab/ShiftTab, and returns to the initiating action after cancel/Escape. Cancelled privacy action changes nothing (TC011). Existing role/isolation/contrast/API/security cases remain authoritative.
-- **Automation:** `qa/web/F02/S04-presentation.spec.ts`; rendered evidence under the run's `design/` folder.
-- **Reference limitation:** Explicit browser policy rejected local file preview and alternative access. Source-defined comparison plus rendered product evidence are recorded; side-by-side reference preview is not claimed.
+- **Performed as / preconditions:** Synthetic salon staff or unauthorized browser; committed local build and healthy seeded API before faults.
+- **Steps:** Map staff screens to Salon reference. Inspect six widths, Poppins/warm tokens, cards/fields/pills, responsive rail/tabs and revoke-all drawer/sheet. Escape/cancel and inspect focus return. Save masked screenshots.
+- **Expected:** Salon web grammar holds without customer430px canvas/navigation. Header keeps full DOM/title under approved ellipsis. Overlay keyboard behavior and real permission-filtered routes remain correct.
+- **Automation:** `qa/web/F02/S04-presentation.spec.ts`

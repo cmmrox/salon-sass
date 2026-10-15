@@ -66,7 +66,7 @@ html,body{font-family:Poppins,system-ui,sans-serif}
 h1,h2,h3{letter-spacing:-.02em}h1{font-weight:600}
 .btn{border-radius:999px;min-height:54px;padding:0 28px;font-weight:500}.btn.o{background:transparent;border:1.5px solid var(--ink);color:var(--ink)}.btn.d{border-color:var(--red);color:var(--red);background:transparent}.btn.sm{padding:0 18px}
 .chip,.sw,.sw button,.pl{border-radius:999px}.chip{border:1.5px solid var(--ink);background:transparent}.chip[aria-pressed=true]{background:var(--ink);color:#fff}
-.sw{background:#fff;border:0}.sw [aria-pressed=true]{background:var(--ink)}
+.sw{background:#fff;border:0}.sw button{white-space:normal;font-size:12px;padding:6px 10px}.top{flex-wrap:wrap}.top .sw{flex-shrink:1}.sw [aria-pressed=true]{background:var(--ink)}
 .card,.row,.dy,.sl button,.bn{border-radius:24px}.card,.row{background:#fff;border:0;box-shadow:none}.row{padding:16px 18px}.row[aria-pressed=true]{background:#fff;box-shadow:inset 0 0 0 2px var(--ink)}
 .row[aria-pressed=true] .ck,.sl [aria-pressed=true]{background:var(--ink);border-color:var(--ink);color:#fff}
 .ck{border:1.5px solid var(--ink);background:transparent}
@@ -227,8 +227,8 @@ body.adm .main{max-width:none}.mx{max-width:760px;margin:0 auto}
 }
 @media(min-width:900px) and (max-width:1199px){body.adm .shell{grid-template-columns:200px minmax(0,1fr)}body.adm .main{padding:24px 24px 48px}body.adm .g3{grid-template-columns:repeat(2,minmax(0,1fr))}body.adm .setg{grid-template-columns:minmax(0,1fr) 340px}body.adm .gc3{grid-template-columns:repeat(2,minmax(0,1fr))}}
 </style></head><body>
-<header class="top"><span id="bm" class="r" style="gap:10px"></span><div id="gsw" class="gsw"><input id="gs" type="search" aria-label="Search bookings or customers" placeholder="Search bookings or customers" oninput="gsearch(this.value)" autocomplete="off"><div id="gsr"></div></div><div class="sw" role="group" aria-label="Switch view"><button id="bc" aria-pressed="true" onclick="mode('c')">Customer</button><button id="ba" aria-pressed="false" onclick="mode('a')">Salon</button></div><button class="bell tbb" id="tbell" aria-label="Notifications" onclick="openNotif()"></button></header>
-<div id="app"></div><div id="cn"></div><div id="sh"></div><div id="ts"></div>
+<header class="top"><span id="bm" class="r" style="gap:10px"></span><div id="gsw" class="gsw"><input id="gs" type="search" aria-label="Search bookings or customers" placeholder="Search bookings or customers" oninput="gsearch(this.value)" autocomplete="off"><div id="gsr"></div></div><div class="sw" role="group" aria-label="Design reference platform"><button id="bc" aria-pressed="false" onclick="mode('c')" title="Deferred until salon web is released">Customer mobile design (later)</button><button id="ba" aria-pressed="true" onclick="mode('a')">Salon web</button></div><button class="bell tbb" id="tbell" aria-label="Notifications" onclick="openNotif()"></button></header>
+<p id="platform-note" style="margin:8px 16px;font-size:13px">Design preview: Salon is the staff web application. Customer is a React Native mobile reference for after the salon web release.</p><div id="app"></div><div id="cn"></div><div id="sh"></div><div id="ts"></div>
 <script>
 const $=s=>document.querySelector(s),fm=n=>'Rs. '+n.toLocaleString('en-LK'),T=m=>{let h=Math.floor(m/60);return(h%12||12)+':'+String(m%60).padStart(2,'0')+' '+(h<12?'AM':'PM')};
 const OPEN=540,CLOSE=1080,NOW=660,HOLD=600,BR=[780,840];
@@ -258,7 +258,7 @@ let A=[{id:'VL-10431',st:'n',d:0,s:600,du:135,sv:'Hair Coloring',cu:'Dilani Jaya
 {id:'VL-10435',st:'n',d:0,s:960,du:30,sv:'Haircut',cu:'Amal De Silva',ph:'077 100 8841',status:'confirmed',pay:'Deposit',paid:500,tot:2500,src:'Online'},
 {id:'VL-10436',st:'t',d:1,s:840,du:60,sv:'Pedicure',cu:'Maya Senanayake',ph:'075 330 2216',status:'confirmed',pay:'Paid',paid:3500,tot:3500,src:'Online'}];
 let Q=[{id:1,n:'Nadeesha Peiris',sv:'Facial',m:60,state:'Waiting',w:7},{id:2,n:'Kasun Bandara',sv:'Haircut',m:30,state:'Waiting',w:12}],W=[];
-let S={m:'c',v:'landing',step:0,sel:[],cat:'All',q:'',staff:'any',d:0,slot:null,hold:null,other:null,pay:'deposit',cu:{name:'',ph:'',em:'',note:''},touched:0,tok:0,paying:false,done:null,resch:null,load:0,state:'',leave:{},av:'today',wi:null,saved:0},tm=null,seq=10482;
+let S={m:'a',v:'landing',step:0,sel:[],cat:'All',q:'',staff:'any',d:0,slot:null,hold:null,other:null,pay:'deposit',cu:{name:'',ph:'',em:'',note:''},touched:0,tok:0,paying:false,done:null,resch:null,load:0,state:'',leave:{},av:'today',wi:null,saved:0},tm=null,seq=10482;
 const live=a=>!['cancelled','noshow'].includes(a.status),sv=id=>SV.find(s=>s.id==id),stf=id=>ST.find(s=>s.id==id);
 const cats=()=>S.sel.map(i=>sv(i).c),dur=()=>S.sel.reduce((a,i)=>a+sv(i).m+sv(i).b,0),tot=()=>S.sel.reduce((a,i)=>a+sv(i).p,0),show=()=>S.sel.reduce((a,i)=>a+sv(i).m,0);
 const elig=cs=>ST.filter(s=>cs.every(c=>s.sk.includes(c))),dep=()=>Math.min(Math.round(tot()*.2/100)*100,2000);

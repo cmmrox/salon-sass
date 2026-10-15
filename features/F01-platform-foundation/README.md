@@ -1,5 +1,9 @@
 # F01 Platform foundation and tenant isolation
 
+CR-010: salon web addresses enter the staff workspace; the public customer shell is removed.
+Customer UI belongs to the later React Native milestone.
+
+
 ## What the customer gets
 
 Nothing a salon's customer can see yet, and everything they will rely on: one deployment that many

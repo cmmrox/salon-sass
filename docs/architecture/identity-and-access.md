@@ -1,5 +1,10 @@
 # Identity and access
 
+CR-010 platform boundary: web authentication is staff-only. Existing customer Java APIs and
+principal isolation remain foundations for the later React Native app. Customer browser policies
+and customer BFF descriptions in historical design sections below are superseded; no customer
+browser token, OTP, profile, export or deletion flow is exposed. Mobile starts after M1 release.
+
 F02's technical policies. Requirements remain in `docs/brd/requirements.yaml`; isolation and
 transactions follow the architecture and backend documents. Decision 035 owns these choices.
 
@@ -275,19 +280,14 @@ the API uses its real servlet peer. The header confers no tenant or session auth
 
 ## Implemented web boundary
 
-Customer routes are `/sign-in` and `/account`; staff routes are `/workspace/sign-in`,
-`/workspace/account`, `/workspace/staff` and `/workspace/audit`. `/workspace` enters the account
-flow. The public salon shell links to customer accounts and staff sign-in. Customer surfaces use
-salon branding; staff surfaces use the neutral workspace. All visible account text uses next-intl
-English message keys under the project's English-first policy; stored preferred language still
-supports `en`, `si` and `ta`.
+Staff routes are `/workspace/sign-in`, `/workspace/account`, `/workspace/staff` and
+`/workspace/audit`. Tenant `/` enters `/workspace`; old `/sign-in` and `/account` redirect to
+staff sign-in. No customer web navigation or public salon shell is delivered. Workspace is neutral.
 
-The fixed BFF namespace is `/identity-web/{staff|customer}/{action}`. GET allows principal,
-sessions, staff, audit and profile reads; POST handles sign-in/code/MFA, password and device
-changes, profile updates, export/deletion, staff management, refresh and cookie clearing. API
-permissions and principal kind are checked on each protected action. Generated API types remain
-the contract, and only explicit fields are forwarded. The Node HTTP transport preserves the salon
-Host and sets the actual JSON body length, including confirmed DELETE requests to the API.
+The web BFF accepts only `/identity-web/staff/{action}`, with existing permission, Origin,
+CSRF, renewal and credential-secrecy guarantees. Customer-kind requests return 404 before any
+upstream call or cookie issuance. Direct `/api/v1/identity/customers/*` APIs remain available for
+the later native client and API tests. All visible web text uses next-intl message keys.
 
 Cookies are `salon_{kind}_{access,refresh,expires,session,challenge,challenge_id}` plus the separate
 `salon_device` tracking cookie. They are host-only, HttpOnly, SameSite=Lax, Path=/ and Secure

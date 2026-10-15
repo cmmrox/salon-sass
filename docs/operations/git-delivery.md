@@ -111,8 +111,8 @@ or force-move the existing branches to make the transition look like it happened
 
 ## Reopening already merged features
 
-CR-007 is the owner's grouped correction of the existing F01/F02 UI. Preserve each original
-verified merge in `previous_integration`, set `reopened_by: CR-007`, and start new integration
+CR-007 and CR-010 are owner-approved grouped corrections of the existing F01/F02 UI. Preserve each original
+verified merge in `previous_integration`, set `reopened_by` to the approved correction id, and start new integration
 records on the change request's explicit `integration_branch`. Both affected features share its
 follow-up PR and independently recorded QA revisions. Validation permits existing merged features
 to be repaired together only when their historical merge records are structurally valid and the
@@ -120,3 +120,7 @@ same approved change request explicitly lists them and the shared branch. The li
 remain required. Historical merge records do not authorise starting F03: its start gate requires
 both repaired features closed, QA-passed and their new PR merge confirmed. This is repair of
 already merged work, not an exception to new-feature dependency or QA gates.
+
+CR-010 retains original PR #3/#4 in `previous_integration` and the merged PR #5 repair in
+`integration_history`, while the new `integration` records the staff-only web correction. F03
+waits for that correction to be independently verified, closed and merged by the owner.

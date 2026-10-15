@@ -7,7 +7,7 @@ writing a product review; the method is in the `salon-qa` skill, `references/pro
 
 | Person | Situation |
 | --- | --- |
-| A customer | On a small Android phone, on mobile data, booking in a spare minute, in the phone's browser. Has never seen this salon's site |
+| A customer | On a small Android phone, on mobile data, booking in a spare minute, in the later React Native app after salon web release. No customer website is delivered |
 | A receptionist | At the front desk on a busy Saturday, phone ringing, a walk-in waiting, using a tablet |
 | A professional | Between clients, checking the next appointment one-handed |
 | A salon owner | At the end of the day, wanting to know what was earned and what needs attention |

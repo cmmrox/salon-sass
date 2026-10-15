@@ -1,5 +1,9 @@
 # F02 Sign-in, accounts and roles
 
+CR-010: web delivery is staff-only. Customer OTP/profile/privacy APIs remain foundations for the
+later React Native app; no customer browser interface is delivered. See `docs/ROADMAP.md`.
+
+
 ## What the customer gets
 
 Customers sign in to one salon with a mobile code and manage their own profile, preferences,
