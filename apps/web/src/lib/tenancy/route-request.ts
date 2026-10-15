@@ -43,6 +43,11 @@ export async function routeRequest(
   headers.delete(SALON_HEADER);
 
   const path = request.nextUrl.pathname;
+  // This retired namespace has no tenant surface. Reject it before salon lookup so even an
+  // unavailable API cannot turn removed customer operations into upstream calls or 503s.
+  if (path === '/identity-web/customer' || path.startsWith('/identity-web/customer/')) {
+    return NextResponse.json({ code: 'not_found' }, { status: 404, headers: { 'Cache-Control': NOT_STORED } });
+  }
   if (path === INTERNAL_PREFIX || path.startsWith(`${INTERNAL_PREFIX}/`)) {
     return rewrite(request, NOWHERE, headers);
   }

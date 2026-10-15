@@ -31,6 +31,30 @@ function handedOn(response: Response): Salon | null {
 }
 
 describe('routeRequest', () => {
+  it.each(['GET', 'POST'])('rejects removed customer BFF %s before tenant resolution on every hostname', async (method) => {
+    const resolve = resolving({ kind: 'unavailable' });
+    for (const host of ['alpha.localhost:3100', 'gamma.localhost:3100', 'missing.localhost:3100', 'localhost:3100', 'alpha.localhost.example.com']) {
+      for (const action of ['', '/', '/principal', '/sessions', '/profile', '/code', '/sign-in', '/refresh', '/clear', '/export', '/delete', '/logout', '/unknown']) {
+        const req = new NextRequest(`http://alpha.localhost:3100/identity-web/customer${action}?salon=beta`, { method, headers: { host, cookie: 'salon_customer_access=old; salon_staff_access=private', [SALON_HEADER]: encodeSalon(beta) } });
+        const response = await routeRequest(req, resolve);
+        expect(response.status).toBe(404);
+        expect(await response.json()).toEqual({ code: 'not_found' });
+        expect(response.headers.get('cache-control')).toContain('no-store');
+        expect(response.headers.has('set-cookie')).toBe(false);
+        expect(response.headers.has('x-middleware-request-' + SALON_HEADER)).toBe(false);
+      }
+    }
+    expect(resolve).not.toHaveBeenCalled();
+  });
+
+  it.each(['/identity-web/staff/principal', '/identity-web/customer-like/principal', '/identity-web/customers/principal'])('retains host resolution and unavailable status for other namespaces: %s', async (path) => {
+    const resolve = resolving({ kind: 'unavailable' });
+    const response = await routeRequest(request(path), resolve);
+    expect(resolve).toHaveBeenCalledExactlyOnceWith('alpha.localhost:3100');
+    expect(response.status).toBe(503);
+    expect(await response.text()).toContain('data-testid="status-unavailable"');
+  });
+
   it.each([['/', '/workspace'], ['/sign-in', '/workspace/sign-in'], ['/account', '/workspace/sign-in']])('redirects %s to staff entry %s without a customer surface', async (path, destination) => {
     const resolve = resolving({ kind: 'salon', salon: alpha });
     const response = await routeRequest(request(`${path}?returnTo=https://outside.test&salon=beta`), resolve);
