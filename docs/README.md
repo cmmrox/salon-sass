@@ -13,6 +13,7 @@ it is about this product it is in this folder, and nowhere else.
 | Plan a feature or a stage | `ROADMAP.md`, `brd/requirements.yaml`, `architecture/ARCHITECTURE.md`, `design/prototype/index.html` |
 | Store, read, cache, log or schedule any salon's data | `architecture/multi-tenancy.md` |
 | Build sign-in, sessions or permissions | `architecture/identity-and-access.md`, `architecture/multi-tenancy.md` |
+| Build operator access, salon provisioning or plan definitions | `architecture/operator-console.md`, `architecture/multi-tenancy.md` |
 | Change the API (`apps/api`) | `engineering/backend.md`, `architecture/multi-tenancy.md` |
 | Change the web app (`apps/web`) | `engineering/web.md`, `design/ui-ux-standards.md` |
 | Change the customer app (`apps/mobile`) | `engineering/mobile.md`, `design/ui-ux-standards.md` |
@@ -39,6 +40,7 @@ full before starting; this table is for everything the spec did not anticipate.
 | `architecture/repository-structure.md` | What lives where in the repository, and who may change it |
 | `architecture/multi-tenancy.md` | The ten isolation rules, the checklists for a new table and a new endpoint, and the rules for jobs, caches, files and logs |
 | `architecture/identity-and-access.md` | F02 security policies, permissions, authentication contracts and account privacy |
+| `architecture/operator-console.md` | Operator authority, console hostname, platform database privileges, atomic salon/Owner bootstrap and immutable plan definitions |
 | `architecture/glossary.md` | The words of the business, as the code and the screens use them |
 | `engineering/backend.md` | Rules for the API: modules, API conventions, persistence, migrations, booking integrity, virtual threads, security, tests |
 | `engineering/web.md` | Rules for the web app: staff workspace and operator console, tenant routing, branding, sessions, tests |

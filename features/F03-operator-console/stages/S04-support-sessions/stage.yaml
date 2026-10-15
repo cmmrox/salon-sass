@@ -1,0 +1,26 @@
+id: F03-S04
+feature: F03
+title: "Audited support sessions"
+sequence: 4
+surfaces: [api, web]
+status: outlined
+qa_status: not-run
+blocked_reason: null
+released_in: null
+reopened_by: null
+depends_on: [F03-S03]
+requirements: [PLT-07]
+nfr_focus: [NFR-20]
+handoff:
+  run: null
+  data: null
+  notes: null
+cases: []
+verification:
+  commands: []
+  automation: []
+  manual: []
+  deferred: []
+evidence:
+  last_run: null
+  last_result: null

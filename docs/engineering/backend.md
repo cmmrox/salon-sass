@@ -26,7 +26,7 @@ One deployable, divided into modules by business area. The module list follows t
 
 | Module | Owns |
 | --- | --- |
-| `platform` | Tenants, plans, entitlements, subscriptions, operator users. No `tenant_id` |
+| `platform` | Tenants and their provisioning/contact profile, plans, entitlements, subscriptions, operator users. No `tenant_id` |
 | `shared` | Tenant context, errors, time, money, audit trail, outbox, jobs. No business rules |
 | `identity` | Staff accounts, roles, sessions, customer one-time-code sign-in |
 | `catalogue` | Services, categories, variants, tax settings |
@@ -36,7 +36,7 @@ One deployable, divided into modules by business area. The module list follows t
 | `notification` | Templates, channels, delivery log, preferences |
 | `customer` | Customer records, notes, consents |
 | `reporting` | Read models and reports |
-| `branding` | Brand settings, business profile, web addresses, app registry |
+| `branding` | Brand settings and published salon presentation, web addresses, app registry; canonical provisioning/contact profile remains in `platform` (decision 042) |
 
 The base Java package is the placeholder in `docs/architecture/tech-stack.md`.
 

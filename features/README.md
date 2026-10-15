@@ -8,13 +8,13 @@ requirement detail is in `qa/coverage.md`.
 
 | ID | Feature | Milestone | Status | GitHub merge | Stages done | Requirements | Next |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| F01 | [Platform foundation and tenant isolation](F01-platform-foundation/) | M1-web | complete | awaiting owner | 5/5 | 2 | **lead**: `merge-sync F01 (after owner merges the PR)` |
-| F02 | [Sign-in, accounts and roles](F02-sign-in-accounts-and-roles/) | M1-web | complete | awaiting owner | 4/4 | 10 | **lead**: `merge-sync F02 (after owner merges the PR)` |
-| F03 | [Operator console: salons, plans and billing](F03-operator-console/) | M1-web | backlog | - | - | 5 | after F02 |
-| F04 | [Salon setup: profile, branding, hours and policies](F04-salon-setup/) | M1-web | backlog | - | - | 6 | after F02 |
+| F01 | [Platform foundation and tenant isolation](F01-platform-foundation/) | M1-web | complete | merged | 5/5 | 2 | - |
+| F02 | [Sign-in, accounts and roles](F02-sign-in-accounts-and-roles/) | M1-web | complete | merged | 4/4 | 10 | - |
+| F03 | [Operator console: salons, plans and billing](F03-operator-console/) | M1-web | in-progress | - | 0/4 | 5 | **developer**: `stage-build F03-S01` |
+| F04 | [Salon setup: profile, branding, hours and policies](F04-salon-setup/) | M1-web | backlog | - | - | 6 | after GitHub merge of F03 |
 | F05 | [Service catalogue](F05-service-catalogue/) | M1-web | backlog | - | - | 6 | after F04 |
 | F06 | [Staff, schedules and leave](F06-staff-schedules-and-leave/) | M1-web | backlog | - | - | 4 | after F04, F05 |
-| F07 | [Booking engine and staff booking foundations](F07-online-booking/) | M1-web | backlog | - | - | 7 | after F02, F05, F06 |
+| F07 | [Booking engine and staff booking foundations](F07-online-booking/) | M1-web | backlog | - | - | 7 | after F05, F06 |
 | F08 | [Payments, deposits and refunds](F08-payments-deposits-and-refunds/) | M1-web | backlog | - | - | 8 | after F07 |
 | F09 | [Manage a booking: reschedule, cancel and waitlist](F09-manage-a-booking/) | M1-web | backlog | - | - | 4 | after F08 |
 | F10 | [Salon calendar and front desk](F10-salon-calendar-and-front-desk/) | M1-web | backlog | - | - | 7 | after F08 |
@@ -27,4 +27,11 @@ requirement detail is in `qa/coverage.md`.
 
 ## In flight
 
-No feature is in flight.
+### F03 Operator console: salons, plans and billing
+
+| Stage | Title | Surfaces | Status | Stage QA | Blocking bugs | Next |
+| --- | --- | --- | --- | --- | --- | --- |
+| F03-S01 | Operator access, salon provisioning and plans | api, web | planned | - | 0 | **developer**: `stage-build F03-S01` |
+| F03-S02 | Entitlements and subscription billing | api, web | outlined | - | 0 | **lead**: `stage-plan F03-S02` |
+| F03-S03 | Salon lifecycle, export and retention | api, web | outlined | - | 0 | **lead**: `stage-plan F03-S03` |
+| F03-S04 | Audited support sessions | api, web | outlined | - | 0 | **lead**: `stage-plan F03-S04` |
