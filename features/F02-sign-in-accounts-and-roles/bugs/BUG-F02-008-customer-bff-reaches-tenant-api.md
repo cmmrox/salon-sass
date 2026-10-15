@@ -2,12 +2,12 @@
 id: BUG-F02-008
 title: Removed customer BFF requests still reach tenant API through web proxy
 severity: major
-status: open
+status: fixed
 found_by: TC-F02-S04-003
 breaks: AC-5
 found_on: 2026-10-15
-fixed_in: null
-fix_note: null
+fixed_in: 89ba4cc
+fix_note: 'Reject the retired customer BFF namespace in the web proxy before tenant/API resolution; no-store404 and no cookies on every host. Developer proxy red test reproduced503; 318 web tests, lint/typecheck/build and isolated production HTTP130 rejected calls with zero upstream passed. Logs .local/logs/bug-f02-008-*.log; HTTP evidence .local/bug-f02-008-http.json.'
 developer_note: null
 verified_on: null
 approved_by: null
