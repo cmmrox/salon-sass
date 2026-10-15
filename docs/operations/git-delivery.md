@@ -47,6 +47,13 @@ the live start check. The merge commit is included in `origin/main`, and the PR 
 QA revision without changes to the certified paths listed in `docs/architecture/repository-structure.md`.
 The live check also requires successful `Verification commands` CI on the PR's head revision.
 
+For owner-directed proportional re-verification (CR-009), `evidence.scoped_assessment` may point to
+the independent committed assessment described in `docs/operations/verification-evidence.md`.
+Its original full QA revision stays in `integration.qa_revision`; targeted verification has its own
+`reviewed_revision`. Submission and merge gates validate that assessment and refuse subsequent
+unreviewed product changes. This preserves both actual tested scopes without repeating unaffected
+QA or presenting a targeted check as a new full pass.
+
 A merge happens after the PR's own metadata commit. Record its resulting SHA on a bookkeeping,
 release or next feature branch, while the next feature is still in the backlog. That record is
 included in the next PR; it is not pushed directly to `main` and does not need its own PR solely

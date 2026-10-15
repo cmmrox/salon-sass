@@ -28,9 +28,10 @@ no product requirement, stage or acceptance criterion changes.
   retain unaffected results after a bounded fix. Independent QA and original full-feature coverage
   remain required, with targeted checks reported separately.
 - Preserve unfinished/failed evidence honestly. A partial run is never promoted to a pass.
-- Remove blanket rerun instructions from the lifecycle, bug loop and Git handoff. Document the
-  existing single-report closure tool's inability to certify combined base/targeted evidence;
-  do not spend another full product run satisfying an overbroad fingerprint.
+- Remove blanket rerun instructions from the lifecycle, bug loop and Git handoff. Extend closure
+  and submission checks to validate an explicit independent scoped assessment alongside intact
+  base full/command receipts and targeted evidence; do not repeat unaffected product QA merely
+  to satisfy a conservative fingerprint. Preserve the original full-run identities and limits.
 - Apply the same canonical instructions through the existing Codex symlinks. Validate instruction
   consistency and packaging only; this skill edit does not trigger product QA.
 

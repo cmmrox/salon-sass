@@ -287,6 +287,9 @@ def closure_check(bundle, fid, context, commands_report):
     report = (feature.get("evidence") or {}).get("last_run")
     if not isinstance(report, str) or not report:
         raise Refusal("feature QA report is missing")
+    if (feature.get("evidence") or {}).get("scoped_assessment"):
+        from . import scoped_evidence
+        return scoped_evidence.check(feature)
     entries = runner.select(bundle, feature=fid)
     if not entries:
         raise Refusal("feature selects no QA automation")

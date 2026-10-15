@@ -5,7 +5,7 @@ summary: The platform runs locally and in staging as one deployment in which eve
 release: R1
 milestone: M1-web
 status: in-qa
-qa_status: not-run
+qa_status: pass
 released_in: null
 depends_on: []
 surfaces:
@@ -56,6 +56,7 @@ verification:
     unblocked_by: Owner decides D-08 hosting and D-02 platform domain, configures the DNS challenge module and credentials,
       provides host access, and explicitly requests staging deployment.
 evidence:
+  scoped_assessment: features/F02-sign-in-accounts-and-roles/scoped-qa.json
   last_run: qa/reports/20261014-232942-F01-2f5e0e96dfa2
   last_result: pass
 integration:

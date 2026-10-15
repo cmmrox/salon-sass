@@ -122,14 +122,25 @@ their actual tested revision/results/log paths, and any limits. A shared-code ch
 broader checks; a new commit SHA alone does not. Interrupted results remain incomplete; preserve
 them and finish the unfinished affected scope without discarding valid completed work.
 
-The current automated `closure-check` and `pr-check` use a conservative repository-wide product
-fingerprint and expect a single complete feature report. They cannot certify a composition of a
-base full pass and targeted checks. Do not manufacture a full report, change its tested SHA, drop
-paths from its context or rerun unaffected QA merely to bypass that limitation. For owner-directed
-proportional verification, retain a separate independent QA assessment and report that automated
-closure remains unsupported for that composition. Keep original full-run metadata intact; record
-targeted verification separately. A tooling limitation is not a product test failure or evidence
-that an unchanged feature needs another full run.
+By default `closure-check` and `pr-check` retain the conservative single-full-report check. For an
+explicit independent base-plus-delta decision, record `evidence.scoped_assessment` as the committed
+feature-local `scoped-qa.json` path. Both affected features may refer to the same grouped repair
+assessment. Keep original `integration.qa_revision`, `evidence.last_run` and base report contexts
+intact; the separate `reviewed_revision` names the revision tested by the targeted checks.
+
+The assessment records QA identity/authority, exact base-to-reviewed changed paths per feature,
+impact rationale, original full-report revision and digest, developer-command proof, targeted
+passing log/digest/counts and limits. The checker validates original full/command integrity receipts
+and every log, ancestry, declared diff inventory, required commands and targeted result. It refuses
+later unreviewed product, automation, criteria or configuration changes. Narrow process/metadata
+changes may follow; they do not become a new product certification. It does not rerun tests or
+claim the historical fixture generation is today's runtime. QA's dependency judgment remains an
+explicit independent assessment, not an automatic inference from filenames.
+
+Never manufacture a full report, rewrite its tested SHA or drop relevant context to satisfy a
+gate. Missing or changed proof must be investigated specifically; a tooling limitation alone is
+not evidence that unchanged product QA needs to run again. Retain the local reports/receipts even
+when the assessment itself is committed, and include base and targeted scopes in the PR.
 
 ## Progress and interruption
 
