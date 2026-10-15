@@ -224,6 +224,15 @@ def certification(bundle, fid, context, kind):
             "context": context_fingerprint(context)}
 
 
+def scoped_certification(bundle, fid):
+    """Seal an affected automation selection without claiming a full feature pass."""
+    _, stages = feature_scopes(bundle, fid)
+    if not stages or any(s.get("status") not in S.CLAIMED for s in stages):
+        raise Refusal("scoped feature QA requires all stages already closed")
+    return {"version": VERSION, "kind": "scoped-feature-qa", "feature": fid,
+            "source_revision": git("rev-parse", "HEAD"), "source": source_fingerprint(bundle, fid)}
+
+
 def unchanged(before, after):
     return all(before.get(k) == after.get(k) for k in ("version", "kind", "feature", "source", "context"))
 

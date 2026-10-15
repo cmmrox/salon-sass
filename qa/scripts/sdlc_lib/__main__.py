@@ -69,6 +69,9 @@ def cmd_run(args):
             label += "-delta"
         certified = None
         refresh = None
+        if args.only and not args.dry_run:
+            certified = evidence.scoped_certification(bundle, args.feature)
+            refresh = lambda: evidence.scoped_certification(model.load(), args.feature)
         if args.context and not args.dry_run:
             certified = evidence.certification(bundle, args.feature, args.context, "full-feature-qa")
             refresh = lambda: evidence.certification(model.load(), args.feature, args.context, "full-feature-qa")

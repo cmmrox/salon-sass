@@ -159,3 +159,19 @@ For an approved affected-scope follow-up under CR-009, use `qa/scripts/sdlc run 
 `F02-delta` report and refuses `--context`, stage, release or suite certification with it. A delta
 report supplements independently assessed retained results; it never constitutes a full-feature
 pass. Keep the full original report and an explicit scoped assessment.
+
+Scoped selections receive kind `scoped-feature-qa`, a source fingerprint and sealed passing runner
+receipt, with a final source check. They do not claim the full selection or identical historical
+environments. `targeted.reports` in the independent assessment lists each feature, report,
+revision, summary digest and exact registered automation ids. Closure checks every raw log and
+selection; counts refer to automation entries, preserving each tool's own case/request totals.
+Legacy single-log assessments remain valid for their originally declared scope.
+
+Developer commands execute the product workspace, while QA automation lives in a separate
+package. A later change confined to `qa/web`, `qa/api`, `qa/mobile`, `qa/load`, `qa/checks` or
+`qa/shared` may reuse those product-command results only with an exact `commands.reused_qa_paths`
+inventory and `reuse_reason`, followed by current independent sealed delta execution. Application,
+package, infrastructure, spec or command changes still invalidate that reuse. An approved change
+request may move to implemented after gates only when its entire remaining frontmatter and body
+are identical. These rules preserve source checks without repeating unchanged product commands
+because QA corrected its own assertions.
