@@ -102,6 +102,9 @@ message or customer-cookie work. Existing direct customer Java APIs remain mobil
 - The workspace and the console use the platform's own neutral theme, not the salon's.
 - A brand change is a draft until the salon publishes it. The future React Native app consumes the published brand; no customer website is created.
 
+Staff sign-in uses the dedicated CR-012 layout without the protected workspace rail/header. It
+shows the hostname-resolved salon name/initial and a shared decorative interior fallback.
+
 ## Sessions
 
 - Tokens live in secure, HTTP-only cookies set by the server. Nothing sensitive in local storage.

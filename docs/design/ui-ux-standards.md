@@ -21,6 +21,16 @@ into production. Show only available routes. Future catalogue, booking, branding
 capabilities stay in their roadmap features; Customer mode remains their mobile design reference.
 If a spec contradicts this authority, ask the lead to correct it through a change request.
 
+## Staff sign-in exception (CR-012)
+
+The owner's `docs/design/references/staff-sign-in.png` governs tenant staff login only: full-screen
+warm interior photo, centered API-resolved salon initial/name, translucent white card, welcome
+headings, labelled fields, visibility toggle, administrator recovery guidance, taupe action and
+secure-team footer. Match its composition at 1536x1024 and adapt across the width matrix. Use
+Poppins and accessible tokenized colors; login radii/heading scale replace workspace rail/pills.
+Published logo/cover support stays in F04; the interior is a shared decorative fallback. Protected
+screens continue to follow the HTML prototype below.
+
 ## Reference contract
 
 | Element | Final prototype reference |

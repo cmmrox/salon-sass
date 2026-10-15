@@ -61,6 +61,8 @@ full before starting; this table is for everything the spec did not anticipate.
 | `changes/CR-008-skill-productivity-and-progress.md` | Owner-approved shared skill upgrades, progress visibility and guarded evidence reuse |
 | `changes/CR-009-resume-without-duplicate-qa.md` | Owner-directed reuse of passed QA across interruptions and scoped verification of actual changes |
 | `changes/CR-010-staff-web-only.md` | Owner-approved salon staff web only, deferred React Native customer app and platform mapping |
+| `changes/CR-012-salon-login-design.md` | Owner-approved tenant login mockup and scoped repair |
+| `design/references/staff-sign-in.png` | Owner-supplied tenant login visual reference |
 | `changes/CR-011-efficient-feature-delivery.md` | Owner-approved reduction of repeated gates, QA preparation delays and context overhead |
 | `changes/CR-005-local-http-staging-tls.md` | Owner-approved change: local HTTP-only stack and staging-only TLS verification |
 

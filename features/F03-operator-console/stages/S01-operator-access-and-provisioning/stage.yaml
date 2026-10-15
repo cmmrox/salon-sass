@@ -1,15 +1,19 @@
 id: F03-S01
 feature: F03
-title: "Operator access, salon provisioning and plans"
+title: Operator access, salon provisioning and plans
 sequence: 1
-surfaces: [api, web]
-status: planned
+surfaces:
+- api
+- web
+status: outlined
 qa_status: not-run
 blocked_reason: null
 released_in: null
 reopened_by: null
 depends_on: []
-requirements: [PLT-01, PLT-04]
+requirements:
+- PLT-01
+- PLT-04
 nfr_focus: []
 handoff:
   run: null
@@ -18,12 +22,12 @@ handoff:
 cases: []
 verification:
   commands:
-    - cd apps/api && ./mvnw -q verify
-    - pnpm -r lint
-    - pnpm -r typecheck
-    - pnpm -r test
-    - pnpm --filter @salon/web build
-    - pnpm contracts:check
+  - cd apps/api && ./mvnw -q verify
+  - pnpm -r lint
+  - pnpm -r typecheck
+  - pnpm -r test
+  - pnpm --filter @salon/web build
+  - pnpm contracts:check
   automation: []
   manual: []
   deferred: []
