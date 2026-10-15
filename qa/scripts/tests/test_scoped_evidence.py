@@ -82,6 +82,23 @@ class ScopedEvidenceTest(unittest.TestCase):
         with self.assertRaisesRegex(evidence.Refusal, "unreviewed change"):
             self.check()
 
+    def test_command_substance_retains_definitions_but_allows_observation_metadata(self):
+        original = {"handoff": {"notes": "before"}, "verification": {
+            "commands": ["test"], "automation": [{"id": "web"}],
+            "manual": [{"case": "TC-F07-001", "reason": "keyboard", "performed_on": None}]}}
+        import copy
+        import yaml
+        changed = copy.deepcopy(original)
+        changed["handoff"]["notes"] = "observed after build"
+        changed["verification"]["manual"][0].update(reason="observed keyboard", performed_on="2026-10-15")
+        left = scoped_evidence._command_substance(yaml.safe_dump(original))
+        self.assertEqual(left, scoped_evidence._command_substance(yaml.safe_dump(changed)))
+        for key, value in (("commands", ["other"]), ("automation", [{"id": "different"}]),
+                           ("manual", [{"case": "TC-F07-002"}])):
+            altered = copy.deepcopy(changed)
+            altered["verification"][key] = value
+            self.assertNotEqual(left, scoped_evidence._command_substance(yaml.safe_dump(altered)))
+
     def test_missing_inventory_and_relabelled_base_refuse(self):
         self.data["features"]["F07"]["changed_paths"] = []
         self.save()
