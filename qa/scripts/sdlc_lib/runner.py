@@ -21,6 +21,16 @@ class SelectionError(Exception):
     pass
 
 
+def select_delta(entries, ids):
+    """Select explicitly registered automation; never certify a full feature pass."""
+    requested = set(ids)
+    known = {entry.get("id") for entry in entries}
+    if not requested or requested - known:
+        raise SelectionError("--only needs registered automation ids in this feature; unknown: "
+                             + ", ".join(sorted(requested - known)))
+    return [entry for entry in entries if entry.get("id") in requested]
+
+
 def _entries(scope):
     verification = scope.get("verification") if isinstance(scope.get("verification"), dict) else {}
     automation = verification.get("automation")

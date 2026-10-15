@@ -56,12 +56,17 @@ def cmd_status(_args):
 def cmd_run(args):
     bundle = model.load()
     try:
+        if args.only and (not args.feature or args.stage or args.suite or args.release or args.context):
+            raise evidence.Refusal("--only requires --feature and cannot certify full-feature evidence")
         if args.context and (not args.feature or args.stage or args.suite or args.release):
             raise evidence.Refusal("--context is supported only for an exact --feature run")
         if args.release:
             return runner.run_release(bundle, args.release, args.dry_run)
         entries = runner.select(bundle, stage=args.stage, feature=args.feature, suite=args.suite)
         label = args.stage or args.feature or args.suite
+        if args.only:
+            entries = runner.select_delta(entries, args.only)
+            label += "-delta"
         certified = None
         refresh = None
         if args.context and not args.dry_run:
@@ -138,6 +143,7 @@ def main(argv=None):
     run.add_argument("--suite", help="regression or smoke; only when the owner asks")
     run.add_argument("--release", help="release version, for example v0.1.0: runs every gate of its manifest")
     run.add_argument("--context", help="workspace-local JSON context for reusable full-feature evidence")
+    run.add_argument("--only", action="append", help="registered automation id within --feature; repeat for scoped delta verification, never full certification")
     run.add_argument("--dry-run", action="store_true", help="print what would run and stop")
     run.set_defaults(func=cmd_run)
     gates = commands.add_parser("verify-commands", help="record deduplicated developer gates; stop at first failure")
