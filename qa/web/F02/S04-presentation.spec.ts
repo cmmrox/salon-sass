@@ -2,6 +2,7 @@ import {createServer} from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import ts from 'typescript';
+import type {Page} from '@playwright/test';
 import {test,expect,handle,routes,screenMap} from '../../shared/identity-browser';
 import {alpha,beta,syntheticAccount} from '../../shared/identity';
 import {salons} from '../../shared/tenants';
@@ -10,6 +11,26 @@ import {productRoot} from '../../shared/identity-runtime';
 import {DESIGN_WIDTHS,appearance,designScreenshot,referenceAccountControls,referenceDialog,referenceFit,referenceNavigation,referenceTypeAndPalette} from '../../shared/design-reference';
 const c=(n:number)=>`TC-F02-S04-${String(n).padStart(3,'0')}`;
 const WIDTHS=[360,390,768,1024,1280,1440].map(width=>({width,height:1000}));
+
+/** The owner's CR-012 screenshot governs sign-in; protected screens retain HTML grammar. */
+async function loginPresentation(page:Page,width:number){
+ const screen=page.getByTestId('staff-sign-in-screen'),card=page.getByTestId('staff-sign-in-card');
+ await expect(screen).toBeVisible();await expect(card).toBeVisible();
+ for(const id of ['workspace-shell','workspace-header','workspace-navigation'])await expect(page.getByTestId(id)).toHaveCount(0);
+ const frame=await appearance(screen);expect(frame.width).toBe(width);expect(frame.left).toBe(0);
+ const background=await screen.evaluate(el=>{const s=getComputedStyle(el);return{image:s.backgroundImage,size:s.backgroundSize};});
+ expect(background.image).toMatch(/url\(.+staff-sign-in-interior\.webp/);expect(background.size).toBe('cover');
+ const panel=await appearance(card);expect(panel.width).toBeLessThanOrEqual(524);expect(Math.abs(panel.left+panel.width/2-width/2)).toBeLessThanOrEqual(1);
+ expect(parseFloat(panel.radius)).toBeGreaterThanOrEqual(20);expect(parseFloat(panel.radius)).toBeLessThanOrEqual(24);expect(panel.background).toMatch(/^rgba\(255, 255, 255, 0\.\d+\)$/);
+ const initial=await appearance(page.getByTestId('staff-sign-in-initial'));expect(initial.width).toBe(62);expect(initial.height).toBe(62);
+ await expect(handle(page,'title')).toHaveText('Staff workspace');await expect(card.getByRole('heading',{name:'Welcome back',exact:true})).toBeVisible();
+ await expect(card.getByText('Sign in to your salon workspace.',{exact:true})).toBeVisible();await expect(page.getByTestId('staff-sign-in-secure')).toContainText('Secure access for your salon team');
+ const title=await appearance(handle(page,'title'));if(width<=600)expect(title.fontSize).toBe('28px');else{expect(parseFloat(title.fontSize)).toBeGreaterThanOrEqual(40);expect(parseFloat(title.fontSize)).toBeLessThanOrEqual(42);}
+ for(const field of [handle(page,'identifier'),handle(page,'password')]){const s=await appearance(field);expect(s.height).toBeGreaterThanOrEqual(52);expect(s.radius).toBe('10px');}
+ const submit=await appearance(handle(page,'sign-in-submit'));expect(submit.height).toBeGreaterThanOrEqual(52);expect(submit.radius).toBe('10px');
+ const taupe=submit.background.match(/\d+/g)!.map(Number);expect(taupe).toHaveLength(3);expect(taupe[0]).toBeGreaterThan(taupe[1]);expect(taupe[1]).toBeGreaterThan(taupe[2]);expect(taupe[0]).toBeLessThan(180);expect(taupe[2]).toBeGreaterThan(70);
+ await expect(handle(page,'password-toggle')).toBeVisible();await expect(handle(page,'forgot-password')).toBeVisible();
+}
 
 test(`${c(16)} responsive layouts keep every control reachable across six widths`,async({identity,accounts})=>{
  test.setTimeout(180000);const staff=await identity.staff(beta,'OWNER'),context=await accounts.context(beta,[staff]);
@@ -25,9 +46,10 @@ test(`${c(23)} staff identity screens follow the supplied salon layout with acce
  test.setTimeout(180000);
  const owner=await identity.staff(beta,'OWNER'),context=await accounts.context(beta,[owner]);
  for(const route of screenMap){const page=await accounts.open(context,route);if(!route.endsWith('sign-in'))await accounts.ready(page);else await expect(handle(page,'sign-in-submit')).toBeVisible();
-  for(const viewport of DESIGN_WIDTHS){await page.setViewportSize(viewport);await referenceTypeAndPalette(page);await referenceAccountControls(page);
+  for(const viewport of DESIGN_WIDTHS){await page.setViewportSize(viewport);await referenceTypeAndPalette(page);
+   if(route===routes.staffSignIn)await loginPresentation(page,viewport.width);else await referenceAccountControls(page);
    const workspace=route.startsWith('/workspace');
-   if(workspace){const shell=await appearance(page.getByTestId('workspace-shell'));expect(shell.width).toBe(viewport.width);expect(shell.background).toBe('rgb(243, 240, 235)');
+   if(workspace&&route!==routes.staffSignIn){const shell=await appearance(page.getByTestId('workspace-shell'));expect(shell.width).toBe(viewport.width);expect(shell.background).toBe('rgb(243, 240, 235)');
     const header=await appearance(page.getByTestId('workspace-header'));expect(header.position).toBe('sticky');if(viewport.width>=900){expect(header.background).toBe('rgb(255, 255, 255)');expect(header.padding).toBe('8px 28px');expect(header.minHeight).toBe('60px');}
     await referenceNavigation(page,'workspace-navigation',viewport.width);await expect(handle(page,'title')).toHaveCSS('font-size',viewport.width>=900?'26px':'22px');
     if(viewport.width>=900){const main=await appearance(page.getByTestId('workspace-main'));expect(main.left).toBe(viewport.width<1200?200:236);expect(main.padding).toBe(viewport.width<1200?'24px 24px 48px':'28px 36px 56px');}
@@ -40,6 +62,9 @@ test(`${c(23)} staff identity screens follow the supplied salon layout with acce
    }
   }await page.close();
  }
+ const loginContext=await accounts.context(alpha),login=await accounts.open(loginContext,routes.staffSignIn);await login.setViewportSize({width:1536,height:1024});await referenceTypeAndPalette(login);await loginPresentation(login,1536);
+ const mockupCard=await appearance(login.getByTestId('staff-sign-in-card'));expect(Math.abs(mockupCard.left-506)).toBeLessThanOrEqual(1);expect(Math.abs(mockupCard.top-231)).toBeLessThanOrEqual(4);expect(Math.abs(mockupCard.height-636)).toBeLessThanOrEqual(6);expect(mockupCard.width).toBe(524);
+ await designScreenshot(login,'CR012-login-alpha-1536');await login.close();
  const professional=await identity.staff(alpha,'PROFESSIONAL'),limited=await accounts.context(alpha,[professional]),page=await accounts.open(limited,routes.staff);await accounts.ready(page);
  await expect(page.getByTestId('workspace-staff')).toHaveCount(0);await expect(page.getByTestId('workspace-audit')).toHaveCount(0);await referenceNavigation(page,'workspace-navigation',1280);
 });
@@ -56,9 +81,10 @@ test(`${c(19)} staff workspace identifies only its salon and keeps the neutral p
  const colours:string[]=[];
  for(const salon of salons){const staff=await identity.staff(salon,'MANAGER'),context=await accounts.context(salon,[staff]);
   for(const route of screenMap){const page=await accounts.open(context,route);if(!route.endsWith('sign-in'))await accounts.ready(page);else await expect(handle(page,'sign-in-submit')).toBeVisible();
-   await expect(handle(page,'home')).toHaveText(salon.name);await expect(page.getByTestId('salon-shell')).toHaveCount(0);
+   if(route===routes.staffSignIn){await expect(page.getByTestId('staff-sign-in-name')).toHaveText(salon.name);await expect(page.getByTestId('staff-sign-in-initial')).toHaveText(Array.from(salon.name)[0]);await expect(page.getByTestId('workspace-shell')).toHaveCount(0);}
+   else await expect(handle(page,'home')).toHaveText(salon.name);await expect(page.getByTestId('salon-shell')).toHaveCount(0);
    for(const other of salons.filter(s=>s!==salon))expect((await page.locator('body').innerText()).includes(other.name)).toBe(false);
-   const surface=await appearance(page.getByTestId('workspace-shell'));colours.push(surface.background);await page.close();
+   if(route!==routes.staffSignIn){const surface=await appearance(page.getByTestId('workspace-shell'));colours.push(surface.background);}await page.close();
   }
  }
  expect(new Set(colours).size,'all staff workspaces share the neutral canvas').toBe(1);expect(colours[0]).toBe('rgb(243, 240, 235)');

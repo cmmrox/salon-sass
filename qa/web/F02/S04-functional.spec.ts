@@ -16,6 +16,15 @@ test(`${c(1)} staff password and authenticator flows reach account only after co
 });
 test(`${c(2)} staff authentication refusals preserve useful input and expose recovery`,async({identity,accounts})=>{
  const account=syntheticAccount('OWNER');await identity.seed(alpha,[account]);const context=await accounts.context(alpha),page=await accounts.open(context,routes.staffSignIn);
+ // CR-012 recovery and visibility are local controls, never credential-reset requests.
+ await expect(handle(page,'sign-in-submit')).toBeEnabled();
+ await handle(page,'password').fill('Synthetic visibility sample');
+ await expect(handle(page,'password')).toHaveAttribute('type','password');
+ let requests=0;const observed=(request:{url:()=>string})=>{if(new URL(request.url()).pathname.startsWith('/identity-web/'))requests++;};page.on('request',observed);
+ await handle(page,'password-toggle').click();await expect(handle(page,'password')).toHaveAttribute('type','text');await expect(handle(page,'password-toggle')).toHaveAttribute('aria-pressed','true');await expect(handle(page,'password-toggle')).toHaveAccessibleName('Hide password');
+ await handle(page,'password-toggle').click();await expect(handle(page,'password')).toHaveAttribute('type','password');await expect(handle(page,'password-toggle')).toHaveAttribute('aria-pressed','false');await expect(handle(page,'password-toggle')).toHaveAccessibleName('Show password');
+ await handle(page,'forgot-password').click();await expect(handle(page,'forgot-password')).toHaveAttribute('aria-expanded','true');await expect(handle(page,'password-help')).toBeVisible();await expect(handle(page,'password-help')).toHaveAttribute('role','status');await expect(handle(page,'password-help')).toContainText('salon administrator');
+ await handle(page,'forgot-password').click();await expect(handle(page,'password-help')).toHaveCount(0);await expect(handle(page,'forgot-password')).toHaveAttribute('aria-expanded','false');expect(requests,'visibility and administrator guidance must not send identity requests').toBe(0);page.off('request',observed);
  await handle(page,'identifier').fill(account.email);await handle(page,'password').fill('A wrong synthetic password');await handle(page,'sign-in-submit').click();
  await expect(handle(page,'error')).toBeVisible();await expect(handle(page,'identifier')).toHaveValue(account.email);await expect(handle(page,'password')).toHaveValue('');
  await handle(page,'password').fill(account.password);await handle(page,'sign-in-submit').click();await expect(handle(page,'code')).toBeVisible();

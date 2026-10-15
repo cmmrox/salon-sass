@@ -33,6 +33,13 @@
   },
   "account": {
     "staffTitle": "Staff workspace",
+    "welcomeBack": "Welcome back",
+    "signInHelp": "Sign in to your salon workspace.",
+    "secureTeam": "Secure access for your salon team",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "forgotPassword": "Forgot password?",
+    "passwordHelp": "For help accessing your account, contact your salon administrator. Password recovery is not available online.",
     "signIn": "Sign in",
     "staffSignIn": "Staff sign-in",
     "account": "Account and security",

@@ -52,3 +52,22 @@ visual authority, retained at `docs/design/references/staff-sign-in.png`.
 
 Use one scoped F02 repair PR and separate lead/developer/QA commits. Local-only runtime is HTTP.
 No deployment, tag, real payment or real message is authorized. The owner merges the PR.
+
+## Decorative asset provenance
+
+Generated with the built-in Image Gen tool from the supplied second screenshot on 2026-10-15.
+The application asset is `apps/web/public/images/staff-sign-in-interior.webp`; the original generated
+1536x1024 PNG is retained outside Git. The photograph is decorative; all identity, text and form
+controls are live application content. Prompt:
+
+> Create a clean background asset for the existing salon staff login application by removing ALL
+> user interface and branding from the reference mockup: remove central white card, every text
+> label, form fields, button, logo and S circle. Reconstruct the cream plaster wall and natural soft
+> light seamlessly in their place. Preserve the reference interior composition closely: warm ivory
+> minimalist beauty salon, large thin brass arch mirror cropped at left, cream salon chair bottom
+> left, light floating shelf left with small amber bottles and cream vase with olive branches, pale
+> stone tiled floor along bottom, soft sunlight and subtle plant shadows across right cream wall,
+> tall olive plant cropped at far right in cream stone planter. Center 60 percent must remain empty
+> pale warm ivory wall for separately implemented live UI. Photorealistic upscale architecture
+> photography, same muted warm beige/ivory/taupe palette, no people, no text, no UI, no logos.
+> Landscape 3:2 ratio. Output only the background image.
