@@ -18,7 +18,7 @@ counts as evidence and what a pass means. The product's own tools, test data and
 
 | Level | Owner | Proves | Runs |
 | --- | --- | --- | --- |
-| Unit, integration, architecture, contract | Developer | The code does what the developer intended | Relevant builds through `verification.commands`; reuse valid evidence at handoffs |
+| Unit, integration, architecture, contract | Developer | The code does what the developer intended | Focused checks during development; declared gates before handoff, reused at closure when valid |
 | Acceptance, on the running product | Developer | Each acceptance criterion of the stage holds when used from outside | Before handing a stage over; recorded in `handoff.notes`, which the stage is closed on |
 | Feature QA | QA | Every stage meets its acceptance criteria and requirements from outside, and the stages work together as something a person can use | Initial `feature-verify`; reuse at `feature-close`; scoped re-verification for relevant changes |
 | Stage QA | QA | One stage, ahead of its feature | Only when the owner asks: `stage-verify` |
@@ -26,6 +26,8 @@ counts as evidence and what a pass means. The product's own tools, test data and
 
 QA tests a feature once, when all its stages are closed. Nothing is tested by QA stage by stage
 unless the owner asks for it.
+Independent preparation may happen earlier under the lifecycle's preparation section. Prepared
+cases are not performed cases and do not change feature/stage QA status.
 
 QA tests through the same doors a user or a client application uses. QA does not repeat the
 developer's unit tests and does not rely on them. A criterion about the build itself (every string

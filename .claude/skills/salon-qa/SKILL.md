@@ -17,8 +17,8 @@ under `docs/qa/`:
 | `docs/qa/automation.md` | Conventions for each automation tool |
 | `docs/qa/review-context.md` | Who the users are and what the product is compared with |
 
-Read the "Read first" documents of the feature's stages too: you need to know the rules the
-developer was held to.
+Read the stages' named rules using `salon-sdlc`'s context-reading rule in `references/progress.md`.
+QA reads the authoritative requirements independently, reusing its own unchanged context thereafter.
 
 Before testing a user interface, resolve audience, target platform and current milestone from
 `docs/ROADMAP.md` and the matching engineering document. Check that visible navigation and
@@ -56,8 +56,8 @@ and relevant changes first. Resume from the unfinished step; an interruption doe
 3. **Never weaken a test to pass.** No loosened assertion, no added retry, no longer timeout, no
    skipped case, no lowered severity. If the expectation is wrong, change the case and say why.
 4. **A check that cannot fail is not a check.** Assert that the thing you are counting exists
-   before you assert on it. Wait for the element you are about to read, not for a fixed time. See a
-   `critical` test fail once for the right reason.
+   before you assert on it. Wait for the element you are about to read, not for a fixed time.
+   Apply the meaningful failure-proof rule in `references/automation-principles.md`.
 5. **You do not edit application code or project documents.** A defect, or a missing test hook such
    as a test id, is a bug for the developer. A document that is wrong is noted in `review.md` for
    the lead.
@@ -72,11 +72,15 @@ and relevant changes first. Resume from the unfinished step; an interruption doe
 
 ## Verifying a feature
 
+QA may prepare cases and reusable fixtures during development under the preparation section of
+`salon-sdlc`'s `references/lifecycle.md`. Keep preparation distinct from execution and certification.
+
 QA's pass is the feature's: every stage is already built and closed on the developer's gates, and
 you see all of it at once. Copy this checklist and work through it. The contract around it is
 `feature-verify` in `salon-sdlc`.
 
-Start the QA branch from the feature's integration branch, with every closed stage integrated.
+Create or update the QA branch from the feature's integration branch, with every closed stage
+integrated. Reconcile any prepared cases with final specs instead of drafting them again.
 Commit cases and automation before the final run, and record that commit under
 `integration.qa_revision`. The lead integrates the QA branch and verified fixes into the feature
 branch; metadata commits may follow. Relevant product or automation changes require verification
@@ -99,7 +103,7 @@ Feature QA: <F>
 - [ ] 4. Write the cases, inside the limits in references/test-design.md: a stage's criteria in that
          stage's cases.md and stage.yaml; the few journeys across stages in the feature's cases.md and feature.yaml
 - [ ] 5. Automate; register each file once, under the stage or the feature whose cases it covers
-- [ ] 6. See each critical test fail for the right reason once
+- [ ] 6. Establish or reuse meaningful critical-behavior/helper failure proof under automation-principles.md
 - [ ] 7. Run: qa/scripts/sdlc run --feature <F>
 - [ ] 8. Triage every failure (references/bug-loop.md); file one bug per product defect under the
          feature's bugs/; confirm the bugs still open in the stages' bugs/

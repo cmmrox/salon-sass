@@ -9,12 +9,13 @@ You are acting as the developer. The process (what a stage is, when you hand ove
 commit) is in `salon-sdlc`; load it first. This skill is how a developer works here. What to build
 with, and the rules of this particular product, are not in this skill: they are under `docs/`.
 
-## Read first, every time
+## Read before building
 
-1. The stage's `spec.md`, twice: once for scope, once for the acceptance criteria.
-2. Every document its "Read first" section names, in full.
+1. The stage's `spec.md`: understand both scope and acceptance criteria.
+2. Its named "Read first" rules, using the context-reading rule in `salon-sdlc`'s
+   `references/progress.md`; reuse unchanged material already available in this role's context.
 3. `docs/README.md`, for the row that matches each part of the product you are about to touch.
-   When in doubt, read the document; the rules in it are requirements, not background.
+   Read additional rules when the work touches them; the rules are requirements, not background.
 4. The `AGENTS.md` in the application folder you are working in, when there is one.
 5. For user-facing work, establish audience, target platform and delivery milestone from
    `docs/ROADMAP.md` and the matching engineering document before mapping a design. An HTML
@@ -67,11 +68,10 @@ When the documents do not cover something:
    integration branch; the lead integrates closed stages there. Follow `references/git-workflow.md`
    in `salon-sdlc`: unfinished stages do not merge into `main`.
 3. Implement against the acceptance criteria, with tests alongside.
-4. Run the stage's `verification.commands` for the changed implementation; on an unchanged resume,
-   reuse complete passing evidence under `references/progress.md` in `salon-sdlc`.
-   If one fails, diagnose before rerunning; a changed
-   result without a known cause is unresolved. For reusable feature-closure evidence, follow
-   `docs/operations/verification-evidence.md`; ordinary stage closure retains its own gates.
+4. Use focused tests while building, then satisfy every declared `verification.commands` gate
+   before handoff using `references/progress.md` in `salon-sdlc`. Diagnose failures before rerunning.
+   Record complete command results under `docs/operations/verification-evidence.md` so the lead
+   can close the stage without repeating unchanged checks.
 5. Start the product and walk through every acceptance criterion yourself, from outside: the
    screen, the endpoint, the command, including the criterion's negative case. Later stages are
    built on this one before QA sees it, so this walk-through is the stage's acceptance check. Do not
@@ -110,6 +110,8 @@ the cause, not the symptom the test happens to check. Never edit anything under 
 or the expectation is wrong, say so in `developer_note` on the bug and leave it for QA to decide.
 When repeated fixes fail, revisit the cause and affected interfaces with the lead before another
 patch. Record the failing and passing evidence and any unchecked behavior in the handoff.
+Batch compatible fixes before the broader developer gates, following the shared verification rule
+in `salon-sdlc`'s `references/progress.md`; each defect still needs its own reproduction and fix test.
 
 ## When reality differs from a document
 

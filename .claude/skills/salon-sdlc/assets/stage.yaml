@@ -18,10 +18,11 @@ nfr_focus: []               # non-functional requirements of the feature that th
 handoff:
   run: null                 # commands that start the product and reach what this stage built
   data: null                # the accounts and seed data that exist
-  notes: null               # each acceptance criterion: checked on the running product, or not and
-                            # why; what is left out; anything that differs from a document under docs/
+  notes: null               # criterion-to-result/evidence; gate commands, tested source, log paths,
+                            # results and relevant conditions; gaps and differences from docs/
 
-# Written by QA at the feature pass. Each case is described in cases.md under a "### TC-..." heading.
+# Written by QA during preparation or the feature pass; preparation does not set a QA result.
+# Each case is described in cases.md under a "### TC-..." heading.
 cases: []
 #  - id: TC-F00-S01-001
 #    title: <what is proved>

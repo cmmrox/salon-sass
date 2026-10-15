@@ -96,6 +96,8 @@ folders a tool generates, or credentials. Review the staged diff before committi
 - Run `qa/scripts/sdlc pr-check F07` before pushing the final branch and creating the PR. Record
   its URL in `integration.pull_request`, regenerate/validate and push the metadata commit. That
   metadata commit does not change the product or automation tested at `integration.qa_revision`.
+  Complete that metadata before waiting on CI, batch subsequent bookkeeping, and update the PR
+  body for progress. Always check the final head's required CI; an earlier green run is insufficient.
 - Include what customers can do, the developer gates, the QA result and tested revision, verified
   bugs, manual/deferred cases, unresolved minor issues, and the deployment status. Attach the PR
   to the current chat when the tool supports it. Staging is not a merge prerequisite.
@@ -138,8 +140,8 @@ folders a tool generates, or credentials. Review the staged diff before committi
   Different features proceed in portfolio order; only an explicit owner exception recorded in
   `started_early` changes that order, and a dependency still needs its confirmed merge.
 - QA may draft cases from the specs while the stages are still being built, on the feature's
-  `test` branch in its own worktree. Drafting is not a pass: nothing is run or recorded until
-  `feature-verify`.
+  `test` branch in its own worktree. Follow lifecycle.md's QA preparation section for isolated
+  helper checks and ownership. Drafting never records an acceptance pass or changes QA status.
 
 ## Never
 

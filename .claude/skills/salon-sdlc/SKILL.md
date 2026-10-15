@@ -97,9 +97,9 @@ while work runs, including work delegated to another agent; the lead aggregates 
 2. Read `features/README.md`. It is the portfolio and says what is next.
    On resumed work, first apply the saved-evidence check in `references/progress.md`; do not
    interpret a generated "QA next" label as a reason to repeat a completed pass.
-3. Read the folder of the one stage you are working on: `spec.md` and `stage.yaml`, then every
-   project document its "Read first" section names. Do not read other stages' folders; a stage is self-contained so that a session stays small. (Feature-wide QA,
-   change requests and releases read across stages; their commands say so.)
+3. Read the folder of the one stage you are working on: `spec.md` and `stage.yaml`, then its named
+   project rules using `references/progress.md`'s context-reading rule. Do not read other stages'
+   folders unless the work spans them. Feature QA, QA preparation, changes and releases may do so.
 4. Load the role skill: `salon-dev` to build or fix, `salon-qa` to test.
 5. Run the lifecycle command for the work, from [references/lifecycle.md](references/lifecycle.md).
 
@@ -131,7 +131,7 @@ scope asked for is a process violation, the same as running less.
 
 | Trigger | Runs | Does not run |
 | --- | --- | --- |
-| `stage-close` | No QA automation: the developer's gates only | Any stage's or feature's automation |
+| `stage-close` | Validate developer-gate evidence; run missing or invalidated gates only | Repeated unchanged gates; QA automation |
 | `feature-verify` | That feature's stage automation and its feature journeys | Other features |
 | `feature-close` | Validate saved QA and developer-gate evidence; execute only genuinely invalidated checks | Repeated unchanged QA; other features |
 | `stage-verify`, when the owner asked for a pass on one stage | That stage's automation | Earlier stages of the feature, other features |
@@ -147,6 +147,9 @@ scope asked for is a process violation, the same as running less.
 - The developer's own gates (compile, lint, unit and integration tests of the modules touched) are
   not QA runs. Run them for relevant changes through `verification.commands`; reuse intact passing
   evidence on an unchanged resume or handoff, following `references/progress.md`.
+- During an authorised feature build, the lead may delegate independent QA preparation against
+  approved specs while development continues. Follow the preparation section in
+  `references/lifecycle.md`; preparation does not start a stage pass or certify unfinished work.
 - Always go through `qa/scripts/sdlc run`. It selects by scope, refuses an empty selection and
   writes the evidence.
 

@@ -23,11 +23,16 @@ feature folder you are given: its `README.md` and `feature.yaml`, every stage's 
 `stage.yaml` with its `handoff`, and the text of the feature's requirements. Expected results come
 from those, never from what the code currently does.
 
+When delegated QA preparation during development, follow the preparation section of lifecycle.md;
+prepare against approved specs without executing a stage pass or changing QA status. Use isolated
+fixtures and explicit ownership; preserve concurrent developer work.
+
 Run the command you were given (`feature-verify`, `stage-verify`, `release-prepare` or
 `release-verify`) exactly as `references/lifecycle.md` in `salon-sdlc` describes, and follow the
 feature checklist in `salon-qa`, inside the limits on how much to test in its
 `references/test-design.md`. Run only the scope you were asked for, through `qa/scripts/sdlc run`.
 A pass on one stage, regression and smoke run only when the request says the owner asked for them.
+For `release-prepare`, perform only the QA work delegated by the lead; the lead owns the command.
 
 You may write under `qa/`, and `cases.md`, `review.md`, `bugs/` and the QA fields of `stage.yaml`
 and `feature.yaml`. A hook blocks file edits anywhere else, and the guard check before each commit
