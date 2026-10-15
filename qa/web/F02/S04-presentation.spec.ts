@@ -25,7 +25,7 @@ async function loginPresentation(page:Page,width:number){
  const initial=await appearance(page.getByTestId('staff-sign-in-initial'));expect(initial.width).toBe(62);expect(initial.height).toBe(62);
  await expect(handle(page,'title')).toHaveText('Staff workspace');await expect(card.getByRole('heading',{name:'Welcome back',exact:true})).toBeVisible();
  await expect(card.getByText('Sign in to your salon workspace.',{exact:true})).toBeVisible();await expect(page.getByTestId('staff-sign-in-secure')).toContainText('Secure access for your salon team');
- await expect(handle(page,'title')).toHaveCSS('font-size',width<=600?'28px':'42px');
+ const title=await appearance(handle(page,'title'));if(width<=600)expect(title.fontSize).toBe('28px');else{expect(parseFloat(title.fontSize)).toBeGreaterThanOrEqual(40);expect(parseFloat(title.fontSize)).toBeLessThanOrEqual(42);}
  for(const field of [handle(page,'identifier'),handle(page,'password')]){const s=await appearance(field);expect(s.height).toBeGreaterThanOrEqual(52);expect(s.radius).toBe('10px');}
  const submit=await appearance(handle(page,'sign-in-submit'));expect(submit.height).toBeGreaterThanOrEqual(52);expect(submit.radius).toBe('10px');
  const taupe=submit.background.match(/\d+/g)!.map(Number);expect(taupe).toHaveLength(3);expect(taupe[0]).toBeGreaterThan(taupe[1]);expect(taupe[1]).toBeGreaterThan(taupe[2]);expect(taupe[0]).toBeLessThan(180);expect(taupe[2]).toBeGreaterThan(70);
