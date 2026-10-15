@@ -42,8 +42,8 @@ Environment: local only, fixed synthetic alpha/beta/gamma. Credentials are rando
 - **Priority:** critical
 - **Covers:** AC-3
 - **Performed as / preconditions:** All five alpha staff roles, an alpha customer, beta identities and a revoked session; final BFF route handoff.
-- **Steps:** Table-drive workspace account/staff/audit and customer account URLs and direct BFF actions. Owner administers staff/grants, Manager reads staff/audit, other roles use own account controls. Include wrong kind, salon, revoked and signed-out rows.
-- **Expected:** Server permissions follow the exact role matrix. Typing a URL or invoking BFF cannot bypass a hidden control. Refusals give friendly denial or own sign-in recovery and expose or change no foreign data.
+- **Steps:** Table-drive workspace account/staff/audit and customer account URLs and direct BFF actions. With a second active Owner retained, demote the signed-in Owner to Receptionist through the real staff row and inspect live navigation without reload. Owner administers staff/grants, Manager reads staff/audit, other roles use own account controls. Include wrong kind, salon, revoked and signed-out rows.
+- **Expected:** Server permissions follow the exact role matrix. Typing a URL or invoking BFF cannot bypass a hidden control. Refusals give friendly denial or own sign-in recovery and expose or change no foreign data. A live principal losing staff/audit permissions removes those navigation links without a manual reload; verify actual principal and BFF 403 controls first.
 - **Automation:** `qa/web/F02/S04-functional.spec.ts`; registered with final centralized handles for F02 feature QA.
 
 ### TC-F02-S04-005 web devices password rotation and logout revoke server authority immediately
@@ -112,8 +112,8 @@ Environment: local only, fixed synthetic alpha/beta/gamma. Credentials are rando
 - **Priority:** high
 - **Covers:** AC-6
 - **Performed as / preconditions:** Alpha has a customer profile and beta has a separate same-number account; browser downloads are enabled.
-- **Steps:** Download JSON and inspect filename/content. Open deletion explanation, cancel and verify unchanged state; then confirm, use another device and read beta.
-- **Expected:** The file is the own allowlisted copy. Irreversible salon-specific effects are clear before confirmation. Cancel changes nothing; deletion clears customer authority, returns to salon sign-in and revokes all its devices while beta remains.
+- **Steps:** Download JSON and inspect filename/content. Open deletion explanation, cancel and verify unchanged state; then confirm, use another device and read beta. Table-drive recoverable delete 503, revoke-all 503 and staff-removal 409 responses at the browser boundary, verifying announced failure/recovery stays accessible and refused mutations leave identity/target unchanged.
+- **Expected:** The file is the own allowlisted copy. Irreversible salon-specific effects are clear before confirmation. Cancel changes nothing; deletion clears customer authority, returns to salon sign-in and revokes all its devices while beta remains. On recoverable confirmation refusal, either the dialog exposes the announced error/recovery or it dismisses to accessible feedback; never leave failure only behind the modal or automatically retry a destructive unknown outcome.
 - **Automation:** `qa/web/F02/S04-functional.spec.ts`; registered with final centralized handles for F02 feature QA.
 
 ### TC-F02-S04-012 audit screens expose useful identity alerts without personal or credential values

@@ -39,6 +39,9 @@ developer built.
 
 ## Rules for every QA pass
 
+Before execution, apply `references/progress.md` in `salon-sdlc`: inspect saved passing evidence
+and relevant changes first. Resume from the unfinished step; an interruption does not erase QA.
+
 1. **Run only the scope you were asked for.** A feature pass runs that feature's automation. A pass
    on one stage, regression and smoke run only when the owner asks. Always through
    `qa/scripts/sdlc run`. The table is in `salon-sdlc`.
@@ -71,7 +74,8 @@ you see all of it at once. Copy this checklist and work through it. The contract
 Start the QA branch from the feature's integration branch, with every closed stage integrated.
 Commit cases and automation before the final run, and record that commit under
 `integration.qa_revision`. The lead integrates the QA branch and verified fixes into the feature
-branch; metadata commits may follow, but product or automation changes require re-verification.
+branch; metadata commits may follow. Relevant product or automation changes require verification
+of their affected scope, preserving unaffected results under the shared resume rule.
 QA passes locally. The owner may defer staging deployment until several features have merged;
 report staging-only cases as deferred and not certified.
 Record reusable full-feature evidence through `docs/operations/verification-evidence.md`.

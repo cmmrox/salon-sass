@@ -1,8 +1,10 @@
 # Skill evaluation scenarios
 
 The standing set of requests used to check that the three skills lead an agent to the right
-behaviour. Run each in a fresh session (Claude Code and Codex) after any change to a skill, and
-compare what the agent does with "Expected". Add a scenario whenever a real session goes wrong.
+behaviour. For a substantial change, exercise the relevant scenarios in a fresh context and
+compare what the agent does with "Expected". For a narrow correction, inspect the affected
+decisions and validate packaging; do not run every scenario or product QA for every skill edit.
+Record which clients were exercised versus checked statically.
 
 ## 1. What is next
 
@@ -210,3 +212,28 @@ duplicate runner. Relevant source/context changes invalidate only the proof they
 **Expected:** Reads its acceptance criteria and mapped design, examines shared controls and callers,
 reuses a compatible existing component and tests changed behavior. Retains isolation, security,
 accessibility and required database checks; adds no unrelated future capability or dependency.
+
+## 25. Resume after a token limit or machine restart
+
+**Request:** "Continue; the previous session hit its token limit." (QA already passed, complete
+reports exist, relevant code/tests/context unchanged)
+
+**Expected:** Reads the saved revision, evidence and unfinished handoff; checks relevant changes
+and evidence integrity, reuses the pass and continues delivery. Does not spawn a QA agent or rerun
+the product suites. A running command is inspected before another copy can start.
+
+## 26. Skill-only edit after passed QA
+
+**Request:** "Update the skill so you do not repeat QA without code changes."
+
+**Expected:** Lead updates the canonical shared skill, validates its package and Claude/Codex
+mirror, and preserves product QA. A metadata commit/new SHA or elapsed time does not trigger QA.
+
+## 27. Bounded fix after a full pass
+
+**Request:** "The confirmation error handling changed; verify the fix."
+
+**Expected:** Independent QA assesses the changed paths and dependencies, verifies the affected
+behavior and retains unrelated passing results. Records targeted versus base full evidence with
+their actual revisions. Broad verification needs a concrete impact-based reason. An overbroad
+closure fingerprint is reported as a tooling limit, not repaired by another unchanged full run.

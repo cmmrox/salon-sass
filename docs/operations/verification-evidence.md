@@ -6,6 +6,7 @@
 - Prepare a context
 - Record developer gates and independent QA
 - Close against unchanged evidence
+- Resume and affected-scope evidence
 - Progress and interruption
 
 ## Purpose and limits
@@ -21,6 +22,9 @@ context remain unchanged. Old reports remain historical evidence; they have no r
 The tooling cannot infer actual service or database state from Git: the lead/QA must check build
 identity, health and fixture prerequisites before recording or reusing evidence. When those
 conditions are uncertain or changed, prepare the environment and rerun the relevant checks.
+
+CR-009 governs reuse and proportional re-verification after a complete pass. A restart or a
+metadata-only edit does not invalidate product QA. Inspect existing proof before any execution.
 
 ## Prepare a context
 
@@ -103,6 +107,40 @@ Metadata-only commits can follow a passed source revision. Missing, tampered, in
 wrong-scope or legacy evidence refuses; run the invalidated scope before closing. Do not hand-edit
 a report to repair a refusal. Review dispositions and required manual/deferred proof remain
 the lead's closure gates. This command does not change status, create a PR or deploy.
+
+## Resume and affected-scope evidence
+
+Read the existing feature evidence, bug verification and handoff before running anything. Compare
+the recorded tested revision with current relevant tracked and untracked paths; inspect the
+context and report integrity. Preserve passing results across token limits, compaction, client or
+machine restarts. Review, skill, status and documentation changes trigger only their own applicable
+validation unless they actually change requirements, test meaning or product execution.
+
+For a product/test/configuration change, QA records the exact changed paths, affected behavior and
+dependencies, retained base full reports with their original revisions, newly executed checks with
+their actual tested revision/results/log paths, and any limits. A shared-code change may justify
+broader checks; a new commit SHA alone does not. Interrupted results remain incomplete; preserve
+them and finish the unfinished affected scope without discarding valid completed work.
+
+By default `closure-check` and `pr-check` retain the conservative single-full-report check. For an
+explicit independent base-plus-delta decision, record `evidence.scoped_assessment` as the committed
+feature-local `scoped-qa.json` path. Both affected features may refer to the same grouped repair
+assessment. Keep original `integration.qa_revision`, `evidence.last_run` and base report contexts
+intact; the separate `reviewed_revision` names the revision tested by the targeted checks.
+
+The assessment records QA identity/authority, exact base-to-reviewed changed paths per feature,
+impact rationale, original full-report revision and digest, developer-command proof, targeted
+passing log/digest/counts and limits. The checker validates original full/command integrity receipts
+and every log, ancestry, declared diff inventory, required commands and targeted result. It refuses
+later unreviewed product, automation, criteria or configuration changes. Narrow process/metadata
+changes may follow; they do not become a new product certification. It does not rerun tests or
+claim the historical fixture generation is today's runtime. QA's dependency judgment remains an
+explicit independent assessment, not an automatic inference from filenames.
+
+Never manufacture a full report, rewrite its tested SHA or drop relevant context to satisfy a
+gate. Missing or changed proof must be investigated specifically; a tooling limitation alone is
+not evidence that unchanged product QA needs to run again. Retain the local reports/receipts even
+when the assessment itself is committed, and include base and targeted scopes in the PR.
 
 ## Progress and interruption
 

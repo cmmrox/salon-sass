@@ -18,9 +18,9 @@ counts as evidence and what a pass means. The product's own tools, test data and
 
 | Level | Owner | Proves | Runs |
 | --- | --- | --- | --- |
-| Unit, integration, architecture, contract | Developer | The code does what the developer intended | Every build, through `verification.commands`; again at `stage-close` and `feature-close` |
+| Unit, integration, architecture, contract | Developer | The code does what the developer intended | Relevant builds through `verification.commands`; reuse valid evidence at handoffs |
 | Acceptance, on the running product | Developer | Each acceptance criterion of the stage holds when used from outside | Before handing a stage over; recorded in `handoff.notes`, which the stage is closed on |
-| Feature QA | QA | Every stage meets its acceptance criteria and requirements from outside, and the stages work together as something a person can use | `feature-verify`, `feature-close` |
+| Feature QA | QA | Every stage meets its acceptance criteria and requirements from outside, and the stages work together as something a person can use | Initial `feature-verify`; reuse at `feature-close`; scoped re-verification for relevant changes |
 | Stage QA | QA | One stage, ahead of its feature | Only when the owner asks: `stage-verify` |
 | Regression and smoke | QA | What was delivered earlier still works | Only when the owner asks, and at `release-verify` |
 
@@ -96,7 +96,8 @@ this product is in `docs/qa/test-plan.md`.
   `qa/reports/<folder>`) and `evidence.last_result` in the yaml, the bug files, and `review.md`.
 - Commit automation before the final feature run and record the tested full commit SHA in
   `feature.yaml` under `integration.qa_revision`. A pass cannot certify later product or automation
-  changes; integrate the verified fixes and rerun the feature before submitting its PR.
+  changes without re-verification of the affected scope. Preserve base full-pass evidence and
+  distinguish later targeted verification from a full run; follow `salon-sdlc`'s resume rule.
 - Preserve report files before a worktree is removed. The cleanup command archives evidence and
   writes a receipt outside the worktree; the storage location is in
   `docs/operations/git-delivery.md`.

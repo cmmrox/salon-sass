@@ -4,7 +4,7 @@ summary: Staff sign in with a password and two-step verification and can do only
   sign in with a one-time code and control their own profile and data.
 release: R1
 milestone: M1-web
-status: complete
+status: in-qa
 qa_status: pass
 released_in: null
 depends_on:
@@ -87,6 +87,7 @@ verification:
   manual: []
   deferred: []
 evidence:
+  scoped_assessment: features/F02-sign-in-accounts-and-roles/scoped-qa.json
   last_run: qa/reports/20261015-000506-F02-3e38935bf776
   last_result: pass
 integration:

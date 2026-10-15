@@ -57,6 +57,13 @@ def feature(bundle, fid):
 
 
 def qa_unchanged(scope, target):
+    if (scope.get("evidence") or {}).get("scoped_assessment"):
+        from . import evidence, scoped_evidence
+        try:
+            scoped_evidence.check(scope, target)
+            return
+        except evidence.Refusal as error:
+            raise Refusal(str(error)) from None
     revision = (scope.get("integration") or {}).get("qa_revision")
     if not S.COMMIT_RE.fullmatch(str(revision or "")) or not ancestor(revision, target):
         raise Refusal("QA revision is missing or is not an ancestor of the proposed revision")

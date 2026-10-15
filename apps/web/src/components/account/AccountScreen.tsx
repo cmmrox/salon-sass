@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import type { components } from '@salon/api-contracts';
@@ -24,8 +24,17 @@ export function AccountScreen({ kind, initialPrincipal, timeZone, view = 'accoun
   const [password, setPassword] = useState({ oldPassword: '', newPassword: '' }); const [setup, setSetup] = useState<{ secret?: string; otpauthUri?: string }>({}); const [code, setCode] = useState('');
   const [confirm, setConfirm] = useState<{ action: string; body: unknown } | null>(null);
   const [newStaff, setNewStaff] = useState({ email: '', mobile: '', password: '', role: 'RECEPTIONIST', professionalGrant: false });
+  const observedPermissions = useRef(initialPrincipal?.permissions);
+  const updatePrincipal = useCallback((next: Principal) => {
+    const previous = observedPermissions.current;
+    observedPermissions.current = next.permissions;
+    setPrincipal(next);
+    // The server frame owns permission-filtered navigation. Refresh it once per live change,
+    // including renewal from an initially missing principal, without discarding account drafts.
+    if (kind === 'staff' && (!previous || previous.length !== next.permissions.length || next.permissions.some((permission) => !previous.includes(permission)))) router.refresh();
+  }, [kind, router]);
   async function load(nextPage = page) {
-    const p = await ensurePrincipal(kind); setPrincipal(p);
+    const p = await ensurePrincipal(kind); updatePrincipal(p);
     if (view === 'account') {
       if (kind === 'customer' && !profile) setProfile(await identityRequest(kind, 'profile'));
       setDevices(await identityRequest(kind, `sessions?page=${nextPage}`));
@@ -37,6 +46,9 @@ export function AccountScreen({ kind, initialPrincipal, timeZone, view = 'accoun
     setBusy(true); setError(null); setSuccess(false);
     try { await work(); setSuccess(true); }
     catch (failure) {
+      // A native modal makes the page feedback inert. Dismiss it before announcing the
+      // refusal; recovery reloads current state and never replays a destructive mutation.
+      setConfirm(null);
       const f = failure instanceof IdentityFailure ? failure : new IdentityFailure('service_unavailable'); setError(f);
       if (f.code === 'invalid_session') { router.replace(kind === 'staff' ? '/workspace/sign-in' : '/sign-in'); router.refresh(); }
     } finally { setBusy(false); }
@@ -47,9 +59,9 @@ export function AccountScreen({ kind, initialPrincipal, timeZone, view = 'accoun
   useEffect(() => {
     if (typeof BroadcastChannel === 'undefined') return;
     const channel = new BroadcastChannel('salon:identity');
-    channel.onmessage = (event) => { if (event.data?.kind === kind) void identityRequest<Principal>(kind, 'principal').then(setPrincipal).catch(() => { router.refresh(); }); };
+    channel.onmessage = (event) => { if (event.data?.kind === kind) void identityRequest<Principal>(kind, 'principal').then(updatePrincipal).catch(() => { router.refresh(); }); };
     return () => channel.close();
-  }, [kind, router]);
+  }, [kind, router, updatePrincipal]);
   async function mutate(action: string, body: unknown = {}) {
     await withIdentityLock(kind, async () => { await principalInsideLock(kind); await identityRequest(kind, action, body); });
     if (['logout', 'revoke-all', 'delete'].includes(action) || (action === 'revoke' && devices.items?.some((d) => d.current && d.id === (body as { id?: string }).id))) { router.replace(kind === 'staff' ? '/workspace/sign-in' : '/sign-in'); router.refresh(); return; }
