@@ -4,18 +4,15 @@ import {alpha,beta,syntheticAccount,json,type Tokens,problem,totp} from '../../s
 import {identitySql} from '../../shared/identity-storage';
 import {salonUrl} from '../../shared/tenants';
 import {webUrl} from '../../shared/env';
+import {localService} from '../../shared/identity-runtime';
+import {standInForApi} from '../../shared/services';
 import {assertIdentityArtifactsSafe} from '../../shared/identity-artifact-secrecy';
 const c=(n:number)=>`TC-F02-S04-${String(n).padStart(3,'0')}`;
 const digest=(value:unknown)=>createHash('sha256').update(JSON.stringify(value)).digest('hex');
 const totals=()=>identitySql(`SELECT jsonb_build_object('staff',(SELECT count(*) FROM identity_staff),'customers',(SELECT count(*) FROM identity_customer),'sessions',(SELECT count(*) FROM identity_session),'history',(SELECT count(*) FROM identity_refresh_history),'challenges',(SELECT count(*) FROM identity_customer_challenge),'mfa',(SELECT count(*) FROM identity_mfa_challenge),'rates',(SELECT coalesce(sum(attempts),0) FROM identity_rate_bucket),'outbox',(SELECT count(*) FROM outbox_message),'audit',(SELECT count(*) FROM audit_entry))`);
 
-test(`${c(6)} staff and customer cookies coexist and independent signout preserves the other account`,async({identity,accounts})=>{
- const staff=await identity.staff(),customer=await accounts.customers.login(alpha),context=await accounts.context(alpha,[staff,customer]);const s=await accounts.open(context,routes.staff),p=await accounts.open(context,routes.customer);await accounts.ready(s);await accounts.ready(p);
- await handle(s,'logout').click();await s.waitForURL('**'+routes.staffSignIn);expect((await accounts.principal(context,alpha,'customer')).id).toBe(customer.principal.id);await p.reload();await accounts.ready(p);
- await accounts.staffSignIn(s,alpha,staff.account);await handle(p,'logout').click();await p.waitForURL('**'+routes.customerSignIn);expect((await accounts.principal(context,alpha,'staff')).id).toBe(staff.principal.id);
-});
-test(`${c(7)} simultaneous tabs coordinate renewal once for each principal kind`,async({identity,accounts})=>{
- for(const kind of ['staff','customer'] as const){const actor=kind==='staff'?await identity.staff():await accounts.customers.login(alpha);const context=await accounts.context(alpha,[actor]),a=await accounts.open(context,kind==='staff'?routes.staff:routes.customer),b=await accounts.open(context,kind==='staff'?routes.staff:routes.customer);await accounts.ready(a);await accounts.ready(b);
+test(`${c(7)} simultaneous staff tabs coordinate renewal once`,async({identity,accounts})=>{
+ for(const kind of ['staff'] as const){const actor=kind==='staff'?await identity.staff():await accounts.customers.login(alpha);const context=await accounts.context(alpha,[actor]),a=await accounts.open(context,routes.staff),b=await accounts.open(context,routes.staff);await accounts.ready(a);await accounts.ready(b);
   const before=Number(identitySql(`SELECT count(*) FROM identity_refresh_history WHERE tenant_id='${alpha.id}' AND session_id='${actor.tokens.sessionId}'`));let renewals=0;context.on('request',request=>{if(new URL(request.url()).pathname===bff(kind,'refresh'))renewals++;});
   await identity.clock(new Date(Date.parse(actor.tokens.accessExpiresAt)+1000).toISOString());await Promise.all([a.reload(),b.reload()]);await Promise.all([accounts.ready(a),accounts.ready(b)]);
   expect(renewals,'one honest cross-tab renewal').toBe(1);expect(Number(identitySql(`SELECT count(*) FROM identity_refresh_history WHERE tenant_id='${alpha.id}' AND session_id='${actor.tokens.sessionId}'`))-before).toBe(1);
@@ -23,14 +20,14 @@ test(`${c(7)} simultaneous tabs coordinate renewal once for each principal kind`
  }
 });
 test(`${c(8)} replay revocation and unknown refresh outcome cannot restore signed-out authority`,async({identity,accounts})=>{
- for(const kind of ['staff','customer'] as const){
-  const actor=kind==='staff'?await identity.staff():await accounts.customers.login(alpha),context=await accounts.context(alpha,[actor]),path=kind==='staff'?routes.staff:routes.customer,signin=kind==='staff'?routes.staffSignIn:routes.customerSignIn;
+ for(const kind of ['staff'] as const){
+  const actor=kind==='staff'?await identity.staff():await accounts.customers.login(alpha),context=await accounts.context(alpha,[actor]),path=routes.staff,signin=routes.staffSignIn;
   const rotated=await json<Tokens>(await identity.call(alpha,'POST','/sessions/refresh',{refreshToken:actor.tokens.refreshToken}),'Tokens');await accounts.arrange(context,alpha,{...actor,tokens:rotated});
   await problem(await identity.call(alpha,'POST','/sessions/refresh',{refreshToken:actor.tokens.refreshToken}),401,'invalid_session');let attempts=0;context.on('request',request=>{if(new URL(request.url()).pathname===bff(kind,'refresh'))attempts++;});const page=await accounts.open(context,path);await page.waitForURL('**'+signin);expect(attempts,'future expiry revoked access does not renew').toBe(0);expect((await context.cookies()).some(item=>item.name===cookie(kind,'refresh'))).toBe(false);
   const fresh=kind==='staff'?await identity.staff():await accounts.customers.login(alpha);await identity.clock(new Date(Date.parse(fresh.tokens.accessExpiresAt)+1000).toISOString());
   const otherKind:Kind=kind==='staff'?'customer':'staff',other=otherKind==='staff'?await identity.staff():await accounts.customers.login(alpha),lost=await accounts.context(alpha,[fresh,other]);let rotations=0;
   const otherCookies=digest((await lost.cookies()).filter(item=>item.name.startsWith(`salon_${otherKind}_`)));
-  await lost.route('**'+bff(kind,'refresh'),async route=>{rotations++;await route.fetch();await route.abort('connectionreset');});const lostPage=await accounts.open(lost,path);await lostPage.waitForURL('**'+signin);expect(rotations,'committed renewal is attempted once').toBe(1);await lostPage.goto(path);await lostPage.waitForURL('**'+signin);expect(rotations,'lost authority is never retried').toBe(1);expect((await lost.cookies()).some(item=>item.name.startsWith(`salon_${kind}_`)),'affected family cookies cleared').toBe(false);expect(digest((await lost.cookies()).filter(item=>item.name.startsWith(`salon_${otherKind}_`))),'other family cookies preserved').toBe(otherCookies);expect((await accounts.principal(lost,alpha,otherKind)).id,'other family remains authorized').toBe(other.principal.id);await identity.clock();
+  await lost.route('**'+bff(kind,'refresh'),async route=>{rotations++;await route.fetch();await route.abort('connectionreset');});const lostPage=await accounts.open(lost,path);await lostPage.waitForURL('**'+signin);expect(rotations,'committed renewal is attempted once').toBe(1);await lostPage.goto(path);await lostPage.waitForURL('**'+signin);expect(rotations,'lost authority is never retried').toBe(1);expect((await lost.cookies()).some(item=>item.name.startsWith(`salon_${kind}_`)),'affected family cookies cleared').toBe(false);expect(digest((await lost.cookies()).filter(item=>item.name.startsWith(`salon_${otherKind}_`))),'other family cookies preserved').toBe(otherCookies);expect((await identity.principal(alpha,other.tokens)).id,'customer API foundation remains authorized').toBe(other.principal.id);expect((await accounts.action(lost,alpha,otherKind,'principal')).status()).toBe(404);await identity.clock();
   const delayed=kind==='staff'?await identity.staff():await accounts.customers.login(alpha),shared=await accounts.context(alpha,[delayed]);const a=await accounts.open(shared,path),b=await accounts.open(shared,path);await accounts.ready(a);await accounts.ready(b);
   let release!:()=>void,seen!:()=>void;const arrived=new Promise<void>(resolve=>seen=resolve),gate=new Promise<void>(resolve=>release=resolve);
   await shared.route('**'+bff(kind,'refresh'),async route=>{const response=await route.fetch();seen();await gate;await route.fulfill({response});});await identity.clock(new Date(Date.parse(delayed.tokens.accessExpiresAt)+1000).toISOString());const renewing=a.reload();await arrived;
@@ -38,14 +35,13 @@ test(`${c(8)} replay revocation and unknown refresh outcome cannot restore signe
  }
 });
 test(`${c(9)} unsupported Web Locks disable credential changes with a clear explanation`,async({identity,accounts})=>{
- const staff=await identity.staff(),customer=await accounts.customers.login(alpha);const context=await accounts.context(alpha,[staff,customer],{unsupported:true});
- for(const path of [routes.staffSignIn,routes.customerSignIn]){const page=await accounts.open(context,path);await expect(handle(page,'browser-support')).toBeVisible();await expect(handle(page,'sign-in-submit')).toBeDisabled();}
- for(const [path,controls]of [[routes.staff,['logout','password-save','mfa-start','revoke-all']],[routes.customer,['logout','delete','revoke-all']]] as const){const page=await accounts.open(context,path);await accounts.ready(page);await expect(handle(page,'browser-support')).toBeVisible();for(const control of controls)await expect(handle(page,control)).toBeDisabled();}
- const page=await accounts.open(context,routes.customer);await accounts.ready(page);await handle(page,'name').fill('Supported profile edit');await handle(page,'profile-save').click();await expect(handle(page,'success')).toBeVisible();expect((await accounts.profiles.read(customer)).name).toBe('Supported profile edit');await expect(handle(page,'export')).toBeEnabled();const download=page.waitForEvent('download');await handle(page,'export').click();expect((await download).suggestedFilename()).toBe('customer-data.json');
+ const staff=await identity.staff();const context=await accounts.context(alpha,[staff],{unsupported:true});
+ for(const path of [routes.staffSignIn]){const page=await accounts.open(context,path);await expect(handle(page,'browser-support')).toBeVisible();await expect(handle(page,'sign-in-submit')).toBeDisabled();}
+ for(const [path,controls]of [[routes.staff,['logout','password-save','mfa-start','revoke-all']]] as const){const page=await accounts.open(context,path);await accounts.ready(page);await expect(handle(page,'browser-support')).toBeVisible();for(const control of controls)await expect(handle(page,control)).toBeDisabled();}
 });
 test(`${c(13)} all browser mutation routes reject CSRF before any side effect`,async({identity,accounts})=>{
  test.setTimeout(120000);const owner=await identity.staff(alpha,'OWNER'),customer=await accounts.customers.login(alpha),context=await accounts.context(alpha,[owner,customer]);const origin=salonUrl(alpha,webUrl);
- for(const kind of ['staff','customer'] as const)for(const action of mutations[kind])for(const headers of [
+ for(const kind of ['staff'] as const)for(const action of mutations[kind])for(const headers of [
   {},{Origin:salonUrl(beta,webUrl)},{Origin:origin.replace('http:','https:')},{Origin:origin.replace(/:\d+$/,':65534')},{Origin:origin,'Sec-Fetch-Site':'cross-site'},
   {Origin:salonUrl(beta,webUrl),'X-Forwarded-Host':beta.hostname,'X-Forwarded-Proto':'http'},
  ] as Record<string,string>[]){const before=totals(),beforeCookies=digest(await context.cookies());const response=await context.request.post(origin+bff(kind,action),{headers,data:{confirm:true,identifier:owner.account.email,password:owner.account.password,mobile:customer.mobile,code:'000000'}});expect(response.status(),`${kind}/${action}: rejected CSRF`).toBe(403);expect((await response.json()).code).toBe('request_rejected');expect(totals()).toBe(before);expect(digest(await context.cookies()),'no cookie side effect').toBe(beforeCookies);}
@@ -57,8 +53,8 @@ test(`${c(14)} browser cookies and every client surface exclude session and chal
  const challenge=(await context.cookies()).filter(item=>item.name.startsWith('salon_staff_challenge'));expect(challenge.length).toBe(2);const values=challenge.map(item=>item.value);
  const storage=()=>page.evaluate(()=>JSON.stringify({local:{...localStorage},session:{...sessionStorage},readable:document.cookie,url:location.href}));for(const value of [...values,setup!])expect((await storage()).includes(value),'setup and challenge are unstored/unlinked').toBe(false);
  for(const value of values)expect((await page.content()).includes(value),'no challenge authority in HTML').toBe(false);
- await handle(page,'code').fill(totp(setup!,await identity.now()));await handle(page,'sign-in-submit').click();await page.waitForURL('**'+routes.staff);await accounts.ready(page);await accounts.customerSignIn(page,alpha);
- const cookies=await context.cookies();const sensitive=cookies.filter(item=>/^salon_(staff|customer)_(access|refresh|challenge)$/.test(item.name));expect(sensitive.length).toBe(4);
+ await handle(page,'code').fill(totp(setup!,await identity.now()));await handle(page,'sign-in-submit').click();await page.waitForURL('**'+routes.staff);await accounts.ready(page);
+ const cookies=await context.cookies();const sensitive=cookies.filter(item=>/^salon_(staff|customer)_(access|refresh|challenge)$/.test(item.name));expect(sensitive.length).toBe(2);
  for(const item of cookies.filter(item=>/^salon_(staff|customer)_/.test(item.name))){expect(item.httpOnly).toBe(true);expect(item.sameSite).toBe('Lax');expect(item.path).toBe('/');expect(item.domain).toBe(alpha.hostname);expect(item.secure).toBe(false);}
  await expect.poll(()=>bodies.length).toBeGreaterThan(0);const chunks=await page.locator('script[src]').evaluateAll(scripts=>scripts.map(script=>(script as HTMLScriptElement).src));expect(chunks.length).toBeGreaterThan(0);const chunkContents:string[]=[];for(const url of chunks){const response=await context.request.get(url);expect(response.status()).toBe(200);chunkContents.push(await response.text());}
  const client=[await page.content(),await storage(),...bodies,...logs,...chunkContents];for(const secret of [...values,...sensitive.map(item=>item.value)])expect(client.some(text=>text.includes(secret)),'no credential in client-readable surface').toBe(false);
@@ -71,4 +67,30 @@ test(`${c(15)} redirect and hostname input cannot choose the bearer destination 
  for(const input of ['tenantId','salonId','hostname']){const response=await accounts.action(context,alpha,'staff',`principal?${input}=${beta.id}`,undefined,{'X-Forwarded-Host':beta.hostname,'X-Forwarded-Proto':'https'});expect(response.status()).toBe(200);expect((await response.json()).id).toBe(staff.principal.id);}
  const own=await accounts.context(alpha,[staff]);const principal=await accounts.action(own,alpha,'staff','principal?tenantId='+beta.id,undefined,{'X-Forwarded-Host':beta.hostname});expect(principal.status()).toBe(200);expect((await principal.json()).id).toBe(staff.principal.id);
  const owner=await identity.staff(alpha,'OWNER'),ownerContext=await accounts.context(alpha,[owner]);expect((await accounts.action(ownerContext,alpha,'staff','staff-remove',{id:foreign.principal.id,tenantId:beta.id})).status()).toBe(404);expect(await accounts.profiles.read(foreign)).toEqual(saved);
+});
+
+test(`${c(3)} removed customer browser endpoints return404 without API or cookie side effects`,async({identity,accounts})=>{
+ const customer=await accounts.customers.login(alpha),context=await accounts.context(alpha,[customer]);
+ const before=digest(await context.cookies());
+ localService('stop','api');let fake:Awaited<ReturnType<typeof standInForApi>>|undefined;
+ try {
+  fake=await standInForApi((_request,response)=>{response.writeHead(503);response.end();});
+  for(const action of ['principal','sessions','profile','staff','audit',...mutations.customer,'unknown']) {
+   for(const method of ['GET','POST'] as const) {
+    const response=await context.request.fetch(salonUrl(alpha,webUrl)+bff('customer',action),{method,headers:{Origin:salonUrl(alpha,webUrl)},...(method==='POST'?{data:{mobile:customer.mobile,confirm:true}}:{})});
+    expect(response.status(),`${method} customer/${action}`).toBe(404);
+    expect(response.headers()['cache-control']).toContain('no-store');
+   }
+  }
+  expect(fake.requests(),'removed BFF never reaches any API endpoint').toBe(0);
+  expect(digest(await context.cookies()),'removed routes do not issue or mutate cookies').toBe(before);
+ } finally {await fake?.close();localService('start','api');await identity.api.reconnect();}
+ expect((await identity.principal(alpha,customer.tokens)).id,'future native API authority stays intact').toBe(customer.principal.id);
+});
+
+test(`${c(6)} salon web entry and legacy account paths expose only staff access`,async({identity,accounts})=>{
+ const actor=await identity.staff(alpha),context=await accounts.context(alpha,[actor]),page=await accounts.open(context,'/');
+ await page.waitForURL('**'+routes.staff);await accounts.ready(page);expect((await accounts.principal(context,alpha,'staff')).id).toBe(actor.principal.id);
+ for(const alias of ['/sign-in','/account']){await page.goto(alias);await page.waitForURL('**'+routes.staffSignIn);await expect(handle(page,'identifier')).toBeVisible();await expect(handle(page,'mobile')).toHaveCount(0);await expect(handle(page,'profile-save')).toHaveCount(0);await expect(page.getByTestId('salon-shell')).toHaveCount(0);}
+ const customer=await accounts.customers.login(beta),foreign=await accounts.context(beta,[customer]),denied=await accounts.open(foreign,routes.staff);await denied.waitForURL('**'+routes.staffSignIn);await expect(handle(denied,'identifier')).toBeVisible();expect((await accounts.action(foreign,beta,'staff','principal')).status()).toBe(401);
 });

@@ -1,5 +1,27 @@
 # F01 Platform foundation and tenant isolation: product review
 
+## Current CR-010 independent scoped review (2026-10-15)
+
+The web application now serves salon administrators and relevant staff only. Tenant root and legacy account links reach staff access; customer OTP/profile/privacy screens are absent. Every former customer BFF GET/POST returns no-store404 with zero upstream API calls and unchanged cookies, including when the API is unavailable. The Customer HTML preview is explicitly a later React Native design; Salon web is the default. Mobile implementation waits until M1-web is released.
+
+Final tested source: `3f6ec78b25d3445fc3fe6f4c31247c748c61e506`. F01 scoped report `qa/reports/20261015-095342-F01-delta-bf8315318646` passed3/3groups (12shell callbacks, one cross-stage journey and300concurrent entry iterations, zero wrong salons/errors). F02 scoped report `qa/reports/20261015-095550-F02-delta-76392eb5c4d7` passed5/5groups/24callbacks. Combined37Playwright callbacks plus the300iteration scenario, distinct from8automation groups. Final developer-command report `qa/reports/20261015-094736-F01-commands-cba54c3ab5ea` passed10/10. Original full F01/F02 and PR5two-fix evidence were independently checked intact and retained; this is base-plus-delta verification, not a new full feature pass. Exact path impact, source/log digests and limits are in `features/F02-sign-in-accounts-and-roles/scoped-qa.json`.
+
+Chosen types: functional staff journeys; tenant isolation/permissions and security for every authority boundary; concurrency for staff tabs and shared tenant routing; resilience for API down/silent/shared-budget behavior; responsive/accessibility/branding/build for the changed staff shell and prototype. Unchanged Java customer identity/privacy API, data integrity/provider/load and foundation evidence is retained. No payment or native mobile feature exists in this repair; no regression/smoke or remote work was requested.
+
+Cases were migrated under approved CR010: removed obsolete customer browser OTP/profile/privacy/coexistence journeys; retained S02/S03 Java customer API cases; repurposed S04-003 to zero-upstream customer boundary and S04-006 to staff-only aliases. Current automated scope contains every changed criterion. Original S04-018 staff manual evidence is retained only where unaffected; current human judgment is separate in `qa/reports/CR010-final-manual/judgment-observations.json`.
+
+Manual review used actual keyboard password/Tab/Enter/navigation/logout and confirmation cancellation at360/768/1440, with19focus observations (3px solid outlines), six current staff screenshots, final prototype screenshots and current reference-mapped staff/confirmation frames. Inspected current768staff entry,360staff account,1440long-name workspace and360/1440prototype. Warm Poppins/cards/pills and desktop rail/compact bottom tabs match Salon reference; no customer canvas/navigation appears. The compact prototype label overlap is repaired. Comparison is with actual locally rendered HTML and source contract; no competitor refresh or new mobile traversal is claimed. Existing competitor findings below remain historical.
+
+Bugs found: BUG-F02-008 major (proxy reached tenant API before rejecting customer BFF) and BUG-F02-009 minor (prototype logo covered the mobile label at360px); both independently verified after fixes. Original diagnostic report `qa/reports/20261015-094132-F02-delta-19fef4dae9b3` remains a failed report, never closure evidence. Final shared proxy changed after diagnosis, so all8affected browser groups were legitimately reverified on final source; unchanged API suites were not repeated.
+
+Environment/test repairs: preserved persistent service sessions and private keys. An earlier documented reset completed API/database but refused an unmanaged existing web port; current build/health was checked and retained. Final documented reset exited0, rebuilt/restarted exact source, retained key bytes/mode and every stack volume, and removed only synthetic local data before F02 clock checks. Fixture evidence: `qa/reports/CR010-final-fixture-refresh.json`. Repaired test-only stale streamed redirect observations and an obsolete removed staff/profile row; no retries, thresholds or authority assertions weakened. Manual harness404preparation and duplicate hidden streamed DOM observations were corrected without product changes.
+
+Ranked suggestions remain proposals: F02role capability preview and authenticator timing copy (should, CR006); F01operator diagnostics (should, CR004), oversized exceptional status heading (idea/backlog). No new suggestion was adopted as a requirement here. F01real hosting/TLS case remains deferred to explicit staging authorization; F02has no deferred case. Local repair QA passes; owner PR merge and release/deployment remain separate.
+
+## Historical review before CR-010
+
+The following review describes the superseded customer-web interpretation and original evidence. It is retained for provenance and does not describe current delivered web scope.
+
 Reviewed again 2026-10-14 as a customer using a 360-pixel phone, an operator, and a client developer.
 Compared with public Fresha and Booksy documentation; no accounts, real data or remote deployment.
 

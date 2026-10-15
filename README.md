@@ -1,5 +1,9 @@
 # Salon SaaS platform
 
+The web application is for salon owners, administrators and staff (plus the operator console).
+Customers use a later React Native app, developed only after the salon web milestone is released.
+There is no customer website. See `docs/ROADMAP.md` and CR-010.
+
 A white-label, multi-tenant salon management platform: each salon gets its own web address, its own
 branding, a staff workspace and a customer app, all served from one deployment. The product name is
 not decided yet; `salon` is a placeholder.

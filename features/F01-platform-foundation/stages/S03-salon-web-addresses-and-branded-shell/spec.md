@@ -2,23 +2,14 @@
 
 ## Objective
 
-After this stage a salon's web address shows that salon. The web app works out the salon from the
-hostname of the request, asks the API for its published brand, and renders a public shell with the
-salon's name and brand colour. A hostname that belongs to no salon gets a "salon not found" page, a
-suspended salon gets a "temporarily unavailable" page, and neither says anything about any other
-salon. The API learns what a suspended salon answers.
+CR-010 replaces the former public customer shell with the salon staff workspace entry. Resolve
+each salon from Host before routing; active tenant `/` redirects to `/workspace`, and staff
+authentication protects workspace data. Customer UI is only the later React Native app. Preserve
+unknown/suspended/unavailable states, tenant isolation, no-store and API contracts. NFR-21 maps
+web screens to Salon mode, not the customer 430px canvas.
 
-## Owner-approved design correction (CR-007)
-
-The supplied HTML's final cascade and `docs/design/ui-ux-standards.md` are the visual authority.
-Repair shared tokens/type, customer and workspace shells, forms/cards/rows/actions and foundation
-status/error pages. Preserve the business/security acceptance criteria below. New screens inherit
-the reference grammar. Do not invent future capabilities or change the prototype.
-
-- AC-12: Source-defined visual checks and rendered comparison evidence show the warm palette,
-  loaded Poppins, pill actions, rounded fields/cards, 430px customer canvas and responsive salon
-  rail/tab layouts at the width matrix, with readable brands, labels and focus. Independent QA
-  records reference mapping/screenshots; unexplained visual departures fail. (NFR-21)
+- AC-12: Rendered comparison follows the warm palette, Poppins, rounded controls and responsive
+  Salon workspace layout; neutral foundation errors remain accessible. (NFR-21)
 
 ## Read first
 
@@ -48,13 +39,11 @@ the reference grammar. Do not invent future capabilities or change the prototype
 ## Scope
 
 **Web (`apps/web`)**
-- `proxy.ts` and the booking surface resolve the salon from the request's `Host` header, by the
+- `proxy.ts` and the workspace surface resolve the salon from the request's `Host` header, by the
   exact hostname rule of `docs/architecture/multi-tenancy.md`, using the same platform domain
   setting as the API (`SALON_PLATFORM_DOMAIN`).
-- The public shell for an active salon: the salon's name as the page's main heading and in the
-  document title, the brand colour applied through CSS custom properties on the root, and the text
-  on the brand colour in a computed contrast colour. Take the look of the salon header from the
-  prototype's Customer mode; the shell has no services, booking or navigation yet.
+- Active tenant root redirects to fixed same-host `/workspace`; its staff sign-in and authenticated
+  pages identify only the resolved salon. No customer public shell or customer navigation.
 - A translated "salon not found" page and a translated "temporarily unavailable" page.
 - The "service unavailable" state of F01-S01 when the API cannot be reached while a salon is being
   resolved.
@@ -75,10 +64,10 @@ the reference grammar. Do not invent future capabilities or change the prototype
 ## Out of scope
 
 - Services, the booking flow, navigation, logo and cover image on the shell: F04 and F05 onward.
-- The workspace under `/workspace` and its sign-in: F02. The operator console on its reserved
+- Staff workspace functionality and sign-in are provided by F02; this correction routes into them. The operator console on its reserved
   hostname: F03. Until then `console.<platform domain>` is a hostname that resolves to no salon.
 - Suspending or reactivating a salon through an endpoint, and what staff of a suspended salon may
-  still read (PLT-05, PLT-06): F03. This stage only defines what the public sees.
+  still read (PLT-05, PLT-06): F03. This stage defines tenant routing and neutral status responses.
 - Editing a brand, drafts and publishing: F04.
 - Certificates, and trusting a forwarded hostname behind the edge: F01-S05.
 - A domain the salon owns: a later release.
@@ -89,14 +78,11 @@ the reference grammar. Do not invent future capabilities or change the prototype
 Each criterion is one observable outcome that a test can pass or fail. "The web port" is the web
 app's local port; hostnames are the synthetic salons' of `docs/qa/test-plan.md`.
 
-- AC-1: `GET /` on `alpha.localhost`, `beta.localhost` and `gamma.localhost` (the web port) answers
-  200 with that salon's name as the page's main heading and as the document title, and no other
-  salon's name or colour anywhere in the response. The hostname is matched without regard to case.
-  (BRD-03, NFR-01)
-- AC-2: Each salon's root brand property equals its fixture colour. The compact header's circular
-  identity fallback uses that brand and a computed foreground with at least 4.5 to 1 contrast for
-  pink, dark and light brands; the salon name uses readable neutral text on the warm header as in
-  the reference. A full-width brand-colour banner is not the reference. (NFR-17, NFR-21)
+- AC-1: `GET /` on alpha/beta/gamma hostnames answers a no-store same-host redirect to
+  `/workspace`. Following it without staff credentials reaches staff sign-in with that salon's
+  identity only. Matching is case insensitive. (BRD-03, NFR-01)
+- AC-2: Staff entry uses the neutral responsive Salon workspace. Customer branding/canvas and
+  customer web navigation are absent; the resolved salon name stays accessible. (NFR-17, NFR-21)
 - AC-3: `GET /` on a hostname that resolves to no salon answers 404 with the "salon not found"
   page, with the same body for each of: an unknown slug, a reserved slug (`www`, `console`), two
   labels in front of the platform domain (`alpha.beta.localhost`) and a hostname that only contains
@@ -115,8 +101,8 @@ app's local port; hostnames are the synthetic salons' of `docs/qa/test-plan.md`.
   `X-Forwarded-Host` and `X-Tenant-Id`) shows alpha, on the web port and nothing of beta. (NFR-01)
 - AC-7: Under load no page is rendered with another salon's brand: at least 300 requests for `/`,
   spread evenly over the three salons' hostnames and released together by at least 50 virtual
-  users, each return the name and colour of their own hostname's salon, with zero mismatches and
-  zero errors. (NFR-01)
+  users, each resolve to their own salon workspace with fixed redirects and zero cross-tenant
+  identity mismatches or errors (follow redirects to verify rendered identity). (NFR-01)
 - AC-8: With the API stopped, and with the API accepting connections and answering nothing, `GET /`
   on a salon's hostname answers within 5 seconds with status 503 and the plain "service unavailable"
   state: not the "salon not found" page, no salon's name or colour, no error overlay or stack trace.
@@ -149,7 +135,7 @@ app's local port; hostnames are the synthetic salons' of `docs/qa/test-plan.md`.
   hostname, and say which in the handoff.
 - The contrast colour is computed from the brand colour by one function in the formatting or
   styling module, with unit tests for a dark, a light and a mid colour. No component assumes white.
-- Status codes: 200 for a salon's shell, 404 for "salon not found", 503 for "temporarily
+- Status codes: fixed same-host redirect for active tenant root, 200 for staff entry, 404 for "salon not found", 503 for "temporarily
   unavailable" and for "service unavailable". If the framework cannot give a page one of these
   codes, stop and ask the lead.
 - API: the tenant context distinguishes "no such salon" (404 `not_found`, as now) from "suspended"
@@ -173,9 +159,9 @@ No table changes. No new migration is expected; if one is needed, it follows
 
 | Screen | Prototype source | States |
 | --- | --- | --- |
-| Salon shell (`/` on a salon's hostname) | The salon header of Customer mode in `docs/design/prototype/index.html` | Loading (a skeleton shaped like the header, never another salon's brand), filled, service unavailable |
+| Salon staff entry (`/` redirects to `/workspace`) | Salon mode in `docs/design/prototype/index.html` | Neutral workspace loading/sign-in, authenticated entry, service unavailable |
 | Salon not found | None; follow the application's existing not-found page and the standards' wording rules | One state |
-| Temporarily unavailable | None; plain, in the customer's terms: the salon's site is not available at the moment | One state |
+| Temporarily unavailable | None; plain staff wording: the salon workspace is temporarily unavailable | One state |
 
 The two error pages use the platform's neutral theme, never a salon's colour.
 

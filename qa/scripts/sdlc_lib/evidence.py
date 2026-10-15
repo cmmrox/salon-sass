@@ -224,6 +224,15 @@ def certification(bundle, fid, context, kind):
             "context": context_fingerprint(context)}
 
 
+def scoped_certification(bundle, fid):
+    """Seal an affected automation selection without claiming a full feature pass."""
+    _, stages = feature_scopes(bundle, fid)
+    if not stages or any(s.get("status") not in S.CLAIMED for s in stages):
+        raise Refusal("scoped feature QA requires all stages already closed")
+    return {"version": VERSION, "kind": "scoped-feature-qa", "feature": fid,
+            "source_revision": git("rev-parse", "HEAD"), "source": source_fingerprint(bundle, fid)}
+
+
 def unchanged(before, after):
     return all(before.get(k) == after.get(k) for k in ("version", "kind", "feature", "source", "context"))
 
@@ -238,7 +247,7 @@ def seal(report):
     (receipts / f"{key}.json").write_text(json.dumps({"sha256": file_digest(summary)}))
 
 
-def proof(report, expected, entries):
+def proof(report, expected, entries, *, allow_partial=False):
     path = Path(local_file(str(Path(report) / "summary.json")))
     try:
         summary = json.loads(path.read_text())
@@ -254,17 +263,22 @@ def proof(report, expected, entries):
             raise Refusal("evidence source identity is inconsistent; run the relevant scope again")
         if not unchanged(saved, expected):
             raise Refusal("source, cases, commands or context changed; run the relevant scope again")
-        if (summary.get("result") != "pass" or summary.get("state") != "complete" or
+        if (summary.get("result") not in ({"pass", "fail"} if allow_partial else {"pass"}) or summary.get("state") != "complete" or
                 summary.get("selection_sha256") != selection_digest(entries) or
                 summary.get("selected_count") != len(entries) or len(summary.get("entries") or []) != len(entries)):
             raise Refusal("evidence is partial, nonpassing or does not match the exact scope")
         for row, entry in zip(summary["entries"], entries):
-            if (definition(row) != definition(entry) or row.get("argv") != runner.command(entry) or
-                    row.get("outcome") != "pass" or row.get("exit_code") != 0):
+            passed = row.get("outcome") == "pass" and row.get("exit_code") == 0
+            failed = (allow_partial and row.get("outcome") == "fail"
+                      and isinstance(row.get("exit_code"), int) and row["exit_code"] != 0)
+            if (definition(row) != definition(entry) or row.get("argv") != runner.command(entry) or not (passed or failed)):
                 raise Refusal("evidence entries do not match the exact passing selection")
             log = local_file(row["log"])
             if Path(log).parent.resolve() != path.parent.resolve() or row.get("log_sha256") != file_digest(log):
                 raise Refusal("evidence log is missing or changed; run the relevant scope again")
+        all_pass = all(row.get("outcome") == "pass" for row in summary["entries"])
+        if (summary["result"] == "pass") != all_pass:
+            raise Refusal("evidence overall result differs from its entries")
         return saved
     except (OSError, ValueError, KeyError, TypeError) as error:
         if isinstance(error, Refusal):

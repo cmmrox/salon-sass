@@ -20,6 +20,11 @@ under `docs/qa/`:
 Read the "Read first" documents of the feature's stages too: you need to know the rules the
 developer was held to.
 
+Before testing a user interface, resolve audience, target platform and current milestone from
+`docs/ROADMAP.md` and the matching engineering document. Check that visible navigation and
+reachable routes stay within that scope. A browser-rendered reference is not proof that its
+screens belong to a web application; report an incorrect platform mapping as a scope defect.
+
 ## What QA is here
 
 You are the person who decides whether the people this product is for get something that works and

@@ -1,12 +1,17 @@
 # Web rules (`apps/web`)
 
-One Next.js application serves three surfaces. The hostname decides which.
+One Next.js application serves the salon staff workspace and operator console. The hostname
+identifies the salon; only owners, admins and relevant staff sign in here. Customer UI belongs
+exclusively to the later React Native app after M1-web release (CR-010).
 
 | Surface | Reached at | Users |
 | --- | --- | --- |
-| Booking site | The salon's subdomain, later its own domain | Customers, without installing anything |
-| Workspace | The same hostname, under `/workspace`, behind sign-in | Salon staff |
-| Operator console | A reserved platform hostname that never resolves to a tenant | Operator staff |
+| Workspace | Salon hostname; `/` redirects to `/workspace` | Salon owners and staff |
+| Operator console | Reserved platform hostname, never a tenant | Operator staff |
+
+Legacy `/sign-in` and `/account` redirect to `/workspace/sign-in`. They never render customer
+OTP/profile/privacy UI. `/identity-web/customer/*` returns no-store 404 without upstream API,
+message or customer-cookie work. Existing direct customer Java APIs remain mobile foundations.
 
 ## Tenant routing
 
@@ -27,21 +32,19 @@ One Next.js application serves three surfaces. The hostname decides which.
   as complete HTML from `src/lib/plain-page/`, with no script. Next.js 16 resets a status the proxy
   sets for a page reached by rewrite, and has no 503 for a page. Neither page reveals whether a
   salon exists elsewhere, and both use the neutral theme.
-- An active salon's `/` is rewritten to the page `/salon-site`, which answers 200. The proxy hands
-  it the salon it resolved in the request header `x-salon-resolved`, which it first removes from
-  every incoming request; the page does not call the API again. `/salon-site` asked for from
-  outside answers the application's 404.
+- An active salon's `/` redirects to the fixed same-host `/workspace`; unauthenticated entry
+  reaches `/workspace/sign-in`. `/salon-site` is not publicly reachable and returns 404.
 - Nothing about a salon is cached: every response on a salon's hostname carries `Cache-Control:
   private, no-cache, no-store, max-age=0, must-revalidate`, and the shell is rendered per request.
 - Never read a tenant from a query parameter, a cookie the browser can set, or local storage.
 
 ## Structure
 
-- Route groups per surface: `(booking)`, `(workspace)`, `(console)`. A component used by more than
+- Route groups per surface: `(workspace)`, `(console)`; legacy route aliases contain no customer UI. A component used by more than
   one surface lives in a shared folder; a surface never imports from another surface.
 - Pages and layouts compose; they do not hold business rules. Data access goes through the
   generated client in `packages/api-contracts`, wrapped in one small module per API area.
-- Server components fetch for first render, so the public booking pages are fast and indexable.
+- Server components fetch for first render in the staff workspace.
   Client components are for interaction only.
 - No money arithmetic, availability logic or policy logic in the browser. Show what the API returns.
 - Forms validate for the user's convenience and the API validates for real. Show the API's field
@@ -51,7 +54,7 @@ One Next.js application serves three surfaces. The hostname decides which.
 
 | Thing | Place |
 | --- | --- |
-| Pages and layouts | `apps/web/src/app/`, in the route groups `(booking)`, `(workspace)`, `(console)` |
+| Pages and layouts | `apps/web/src/app/`, in the route groups `(workspace)`, `(console)`; legacy route aliases contain no customer UI |
 | Strings | `apps/web/messages/<locale>.json`, read through `next-intl`. There is no locale in the URL |
 | Tokens | `apps/web/src/styles/tokens.css`, as CSS custom properties; components style with CSS Modules |
 | Base styles shared by pages and plain pages | `apps/web/src/styles/base.css` |
@@ -93,13 +96,13 @@ One Next.js application serves three surfaces. The hostname decides which.
   custom properties on the root. Components use the tokens; none hard-codes a brand colour.
 - The text colour on the brand colour is computed for contrast. Never assume white.
 - The workspace and the console use the platform's own neutral theme, not the salon's.
-- A brand change is a draft until the salon publishes it. The public site shows the published brand.
+- A brand change is a draft until the salon publishes it. The future React Native app consumes the published brand; no customer website is created.
 
 ## Sessions
 
 - Tokens live in secure, HTTP-only cookies set by the server. Nothing sensitive in local storage.
-- A staff session and a customer session are different things with different cookies, even on the
-  same hostname.
+- Web issues staff session cookies only. Customer tokens belong to the future native client;
+  direct API principal kinds remain isolated.
 
 ## Text, formats and accessibility
 

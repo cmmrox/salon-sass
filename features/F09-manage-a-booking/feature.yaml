@@ -1,14 +1,23 @@
 id: F09
-title: "Manage a booking: reschedule, cancel and waitlist"
-summary: "A customer sees their bookings, reschedules or cancels within the salon's policy with the refund shown first, and can join a waitlist."
+title: 'Manage a booking: reschedule, cancel and waitlist'
+summary: A customer sees their bookings, reschedules or cancels within the salon's policy with the refund
+  shown first, and can join a waitlist. M1 delivers staff web controls and shared backend capability;
+  customer self-service screens belong to F15 React Native after M1 release.
 release: R1
 milestone: M1-web
 status: backlog
 qa_status: not-run
 released_in: null
-depends_on: [F08]
-surfaces: [api, web]
-requirements: [BKG-07, BKG-08, BKG-17, APP-03]
+depends_on:
+- F08
+surfaces:
+- api
+- web
+requirements:
+- BKG-07
+- BKG-08
+- BKG-17
+- APP-03
 nfr_focus: []
 cases: []
 verification:

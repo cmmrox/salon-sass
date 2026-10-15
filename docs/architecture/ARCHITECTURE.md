@@ -9,11 +9,11 @@ are in `docs/engineering/` and `docs/architecture/multi-tenancy.md`, and are not
 
 ```
    Customers                      Salon staff                 Operator
-   web address or app             workspace                   console
+   React Native app (after M1 release)             workspace                   console
         |                              |                          |
         +---------------+--------------+--------------------------+
                         |
-            Next.js web app (one application, three surfaces by hostname)
+            Next.js staff workspace and operator console (no customer website)
             Expo customer app (one codebase: container app and dedicated apps)
                         |
                   REST API, /api/v1   (contract generated, shared by web and app)
@@ -42,7 +42,7 @@ row-level security does not already give.
 
 | Address | Serves |
 | --- | --- |
-| A subdomain of the platform per salon | That salon's booking site, and its workspace under `/workspace` |
+| A subdomain of the platform per salon | That salon's staff workspace under `/workspace`; root enters it |
 | A domain the salon owns (later release) | The same, through a custom-hostname service at the edge that issues the certificate |
 | A reserved console hostname | The operator console; never resolves to a tenant |
 

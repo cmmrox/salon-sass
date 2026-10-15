@@ -1,5 +1,10 @@
 # Test plan
 
+CR-010 platform scope: current web QA covers salon staff and operator interfaces only.
+Customer browser sign-in, account and booking expectations are superseded. Retain direct
+customer API coverage as mobile foundations; native UI QA begins only after M1-web release.
+
+
 How this product is tested: the tools, where the automation lives, the data it runs on, the targets
 it must meet, and what its severities look like here. QA tests a feature once, when all its stages
 are closed; a stage is closed on the developer's own gates. The method (who tests what, what a pass
@@ -151,9 +156,9 @@ of NFR-04's production scale. QA creates synthetic fixtures through local hooks 
 
 ## Platforms
 
-- **Web:** the booking site is the only customer surface during milestone `M1-web`, so every
-  customer-facing screen is tested at 360 pixels wide first. The full width matrix is in
-  `docs/design/ui-ux-standards.md`. The workspace must be usable at 768.
+- **Web (`M1-web`):** salon owner/admin/staff workspace and operator console only. There is no
+  customer booking site. Test the full width matrix in `docs/design/ui-ux-standards.md`, including
+  staff access on phones and the workspace at 768.
 - **Customer app (from `M2-mobile`):** Android is the primary platform for the launch market and
   every feature with a mobile surface passes there. iOS is run when a feature touches something that differs by
   platform, and before a release.

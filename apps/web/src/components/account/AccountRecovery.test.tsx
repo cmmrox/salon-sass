@@ -8,7 +8,6 @@ const navigation = vi.hoisted(() => ({ replace: vi.fn(), refresh: vi.fn() }));
 vi.mock('next/navigation', () => ({ useRouter: () => navigation }));
 const owner: Principal = { id: 'owner', kind: 'staff', role: 'OWNER', staffId: 'owner', scope: 'salon', mfaEnabled: true, permissions: ['session.manage', 'staff.list', 'staff.manage', 'audit.list'] };
 const receptionist: Principal = { ...owner, role: 'RECEPTIONIST', permissions: ['session.manage'] };
-const customer: Principal = { ...owner, kind: 'customer', role: null, staffId: null, scope: 'own', permissions: ['session.manage', 'account.delete'] };
 const person = { id: 'owner', role: 'OWNER', email: 'synthetic@alpha.test', version: 0, active: true };
 
 beforeEach(() => {
@@ -20,18 +19,16 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.clearAllMocks(); Reflect.deleteProperty(HTMLDialogElement.prototype, 'showModal'); Reflect.deleteProperty(HTMLDialogElement.prototype, 'close'); });
 
 it.each([
-  ['customer', 'delete', 'account', 503, 'service_unavailable'],
   ['staff', 'revoke-all', 'account', 503, 'service_unavailable'],
   ['staff', 'staff-remove', 'staff', 409, 'conflict'],
 ] as const)('exposes failed %s %s confirmation and reloads without replaying it', async (kind, action, view, status, code) => {
   let mutations = 0; let reads = 0;
   vi.stubGlobal('fetch', async (url: string) => {
     if (url.endsWith(`/${action}`)) { mutations++; return Response.json({ code }, { status }); }
-    if (url.endsWith('/principal')) return Response.json(kind === 'staff' ? owner : customer);
-    if (url.endsWith('/profile')) return Response.json({ name: 'Saved profile', mobile: '+94740000001', version: 0, preferredLanguage: 'en', notificationPreferences: { sms: true, whatsapp: true, email: true }, marketingConsent: false });
+    if (url.endsWith('/principal')) return Response.json(owner);
     reads++; return Response.json({ items: view === 'staff' ? [person] : [], total: view === 'staff' ? 1 : 0 });
   });
-  renderWithMessages(<AccountScreen kind={kind} initialPrincipal={kind === 'staff' ? owner : customer} timeZone="Asia/Colombo" view={view} />);
+  renderWithMessages(<AccountScreen kind={kind} initialPrincipal={owner} timeZone="Asia/Colombo" view={view} />);
   const trigger = await screen.findByTestId(`account-${action}`); trigger.focus(); fireEvent.click(trigger);
   expect(screen.getByRole('dialog')).toBeInTheDocument();
   fireEvent.click(screen.getByTestId('account-confirm-action'));

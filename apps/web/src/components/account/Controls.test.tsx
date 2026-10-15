@@ -64,30 +64,6 @@ it('uses kebab-case handles in the real password form while sending camelCase AP
   expect(screen.getByTestId('account-mfa-enabled')).toBeVisible();
 });
 
-it('keeps the existing language handle and camelCase profile fields when marketing consent changes', async () => {
-  const principal: Principal = { id: 'customer', staffId: null, role: null, mfaEnabled: false, kind: 'customer', permissions: ['session.manage', 'profile.manage'], scope: 'own' };
-  const profile = { version: 0, name: 'Synthetic customer', mobile: '+94770000001', email: null, birthday: null, preferredLanguage: 'en', notificationPreferences: { sms: true, whatsapp: false, email: false }, marketingConsent: false };
-  const bodies: Record<string, unknown>[] = [];
-  vi.stubGlobal('navigator', { locks: { request: (_name: string, work: () => Promise<unknown>) => work() } });
-  vi.stubGlobal('BroadcastChannel', undefined);
-  vi.stubGlobal('fetch', async (url: string, options?: RequestInit) => {
-    if (url.endsWith('/principal')) return Response.json(principal);
-    if (url.endsWith('/profile')) {
-      if (options?.body) { const body = JSON.parse(options.body as string); bodies.push(body); return Response.json({ ...profile, ...body, version: 1 }); }
-      return Response.json(profile);
-    }
-    return Response.json({ items: [], total: 0 });
-  });
-  renderWithMessages(<AccountScreen kind="customer" initialPrincipal={principal} timeZone="Asia/Colombo" />);
-  const consent = await screen.findByTestId('account-marketing-consent');
-  fireEvent.change(screen.getByTestId('account-language'), { target: { value: 'si' } });
-  fireEvent.click(consent);
-  fireEvent.submit(screen.getByTestId('account-profile-save').closest('form')!);
-  await waitFor(() => expect(bodies).toEqual([{ version: 0, name: profile.name, email: null, birthday: null, preferredLanguage: 'si', notificationPreferences: profile.notificationPreferences, marketingConsent: true }]));
-  expect(bodies[0]).not.toHaveProperty('preferred-language');
-  expect(bodies[0]).not.toHaveProperty('marketing-consent');
-});
-
 it('preserves staff creation handles on the actual Owner form', async () => {
   const principal: Principal = { id: 'owner', staffId: 'owner', kind: 'staff', role: 'OWNER', permissions: ['staff.list', 'staff.manage'], scope: 'salon', mfaEnabled: true };
   vi.stubGlobal('navigator', { locks: { request: (_name: string, work: () => Promise<unknown>) => work() } });

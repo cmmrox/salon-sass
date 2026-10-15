@@ -150,3 +150,36 @@ its count is not a case count or an overall implementation percentage. Progress 
 an interruption; a complete final result is still required. Preserve process identity and check
 whether it is running before starting another copy. The lead relays concise owner-visible
 updates under `salon-sdlc`'s progress guidance rather than exposing private log contents.
+
+## Scoped follow-up automation
+
+For an approved affected-scope follow-up under CR-009, use `qa/scripts/sdlc run --feature F02
+--only web-functional --only browser-security` (one shell command on a single line). Each
+`--only` value must be a registered automation id in that feature. The runner labels this a
+`F02-delta` report and refuses `--context`, stage, release or suite certification with it. A delta
+report supplements independently assessed retained results; it never constitutes a full-feature
+pass. Keep the full original report and an explicit scoped assessment.
+
+Scoped selections receive kind `scoped-feature-qa`, a source fingerprint and sealed passing runner
+receipt, with a final source check. They do not claim the full selection or identical historical
+environments. `targeted.reports` in the independent assessment lists each feature, report,
+revision, summary digest and exact registered automation ids. Closure checks every raw log and
+selection; counts refer to automation entries, preserving each tool's own case/request totals.
+Legacy single-log assessments remain valid for their originally declared scope.
+
+Developer commands execute the product workspace, while QA automation lives in a separate
+package. A later change confined to `qa/web`, `qa/api`, `qa/mobile`, `qa/load`, `qa/checks` or
+`qa/shared` may reuse those product-command results only with an exact `commands.reused_qa_paths`
+inventory and `reuse_reason`, followed by current independent sealed delta execution. Application,
+package, infrastructure, spec or command changes still invalidate that reuse. An approved change
+request may move to implemented after gates only when its entire remaining frontmatter and body
+are identical. These rules preserve source checks without repeating unchanged product commands
+because QA corrected its own assertions.
+
+Completed scoped runs seal their overall result even when a group fails. An assessment may select
+only explicitly named passing entries from that sealed report; it preserves the overall failure
+and every log. Further receipts may supply the repaired group with disjoint automation ids.
+`retained_qa_paths` plus `retention_reason` permits a later correction confined to other browser
+`.spec.ts` files only; selected files, shared helpers and application changes remain invalidating.
+The independent QA analysis must establish that those other specs are not selected dependencies.
+No retained entry is relabelled as a full-feature pass, and failed/skipped entries never count.

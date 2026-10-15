@@ -237,3 +237,11 @@ mirror, and preserves product QA. A metadata commit/new SHA or elapsed time does
 behavior and retains unrelated passing results. Records targeted versus base full evidence with
 their actual revisions. Broad verification needs a concrete impact-based reason. An overbroad
 closure fingerprint is reported as a tooling limit, not repaired by another unchanged full run.
+
+## CR-010 platform mapping evaluation
+
+A fresh independent Codex context received the raw owner request and shared skill paths. It
+resolved staff-only web, deferred React Native customer UI and M1 release ordering without
+clarification, and identified stale test-plan, F01 design-map and browser-policy paragraphs.
+Those paragraphs were corrected before verification. Claude uses the same symlinked skill source;
+this evaluation exercised Codex only, with Claude packaging checked statically by validation.

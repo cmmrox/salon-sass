@@ -25,7 +25,7 @@ asked for; the cases of a stage are written at its feature's pass.
 | F02-S01 | complete | - | IAM-06, IAM-07, IAM-08, IAM-09, IAM-11, NFR-08, NFR-10 | 10 | 30 | 30 | 0 | 0 |
 | F02-S02 | complete | - | IAM-01, IAM-03, IAM-09, IAM-10, IAM-11, NFR-08, NFR-10 | 8 | 18 | 18 | 0 | 0 |
 | F02-S03 | complete | - | IAM-03, IAM-04, IAM-05, IAM-11, NFR-08, NFR-10 | 6 | 14 | 14 | 0 | 0 |
-| F02-S04 | complete | - | IAM-01, IAM-03, IAM-04, IAM-05, IAM-06, IAM-07, IAM-08, IAM-09, IAM-10, IAM-11, NFR-08, NFR-10, NFR-21 | 9 | 23 | 22 | 1 | 0 |
+| F02-S04 | complete | - | IAM-01, IAM-03, IAM-04, IAM-05, IAM-06, IAM-07, IAM-08, IAM-09, IAM-10, IAM-11, NFR-08, NFR-10, NFR-21 | 9 | 22 | 21 | 1 | 0 |
 
 ## Deferred cases
 
@@ -52,7 +52,7 @@ Cases waiting for something else. `feature-verify` and `release-prepare` go thro
 | PLT-11 | R2 | should | unowned | - |
 | PLT-12 | R3 | could | unowned | - |
 | IAM-01 | R1 | must | F02 | F02-S02 (complete), F02-S04 (complete) |
-| IAM-02 | R1 | must | F07 | - |
+| IAM-02 | R1 | must | F15 | - |
 | IAM-03 | R1 | must | F02 | F02-S02 (complete), F02-S03 (complete), F02-S04 (complete) |
 | IAM-04 | R1 | must | F02 | F02-S03 (complete), F02-S04 (complete) |
 | IAM-05 | R1 | must | F02 | F02-S03 (complete), F02-S04 (complete) |
@@ -108,16 +108,16 @@ Cases waiting for something else. `feature-verify` and `release-prepare` go thro
 | BKG-21 | R3 | could | unowned | - |
 | BKG-22 | R3 | could | unowned | - |
 | BKG-23 | R3 | could | unowned | - |
-| APP-01 | R1 | must | F07 | - |
-| APP-02 | R1 | must | F07 | - |
+| APP-01 | R1 | must | F15 | - |
+| APP-02 | R1 | must | F15 | - |
 | APP-03 | R1 | must | F09 | - |
 | APP-04 | R1 | must | F15 | - |
 | APP-05 | R1 | must | F15 | - |
-| APP-06 | R1 | must | F07 | - |
-| APP-07 | R1 | must | F07 | - |
+| APP-06 | R1 | must | F15 | - |
+| APP-07 | R1 | must | F15 | - |
 | APP-08 | R1 | must | F08 | - |
-| APP-09 | R1 | must | F07 | - |
-| APP-10 | R1 | must | F07 | - |
+| APP-09 | R1 | must | F15 | - |
+| APP-10 | R1 | must | F15 | - |
 | APP-11 | R1 | must | F15 | - |
 | APP-12 | R2 | should | unowned | - |
 | APP-13 | R2 | should | unowned | - |
@@ -163,7 +163,7 @@ Cases waiting for something else. `feature-verify` and `release-prepare` go thro
 | CRM-06 | R2 | should | unowned | - |
 | CRM-07 | R2 | should | unowned | - |
 | CRM-08 | R2 | should | unowned | - |
-| MKT-01 | R1 | must | F07 | - |
+| MKT-01 | R1 | must | F15 | - |
 | MKT-02 | R1 | should | F11 | - |
 | MKT-03 | R2 | should | unowned | - |
 | MKT-04 | R2 | should | unowned | - |

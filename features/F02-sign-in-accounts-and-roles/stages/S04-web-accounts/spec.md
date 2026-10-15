@@ -1,20 +1,10 @@
-# F02-S04 Staff workspace and customer account screens
+# F02-S04 Staff workspace and account screens
 
 ## Objective
 
-Staff and customers can complete F02 from responsive web screens on their salon's hostname. Authentication credentials stay on the server and independent staff/customer sessions coexist, with useful error recovery and accessible controls.
-
-## Owner-approved design correction (CR-007)
-
-The supplied HTML's final cascade and `docs/design/ui-ux-standards.md` are the visual authority.
-Repair shared tokens/type, customer and workspace shells, forms/cards/rows/actions and foundation
-status/error pages. Preserve the business/security acceptance criteria below. New screens inherit
-the reference grammar. Do not invent future capabilities or change the prototype.
-
-- AC-9: Source-defined visual checks and rendered comparison evidence show the warm palette,
-  loaded Poppins, pill actions, rounded fields/cards, 430px customer canvas and responsive salon
-  rail/tab layouts at the width matrix, with readable brands, labels and focus. Independent QA
-  records reference mapping/screenshots; unexplained visual departures fail. (NFR-21)
+CR-010 supersedes customer web scope in the original stage and CR-007. Salon owners and relevant
+staff use a responsive web backend. Customers use only the later React Native app, after every
+M1-web feature is released. Existing S02/S03 Java APIs remain backend foundations.
 
 ## Read first
 
@@ -31,44 +21,81 @@ the reference grammar. Do not invent future capabilities or change the prototype
 
 ## Requirements covered
 
-| Requirement | Text | Covered in full or in part |
-| --- | --- | --- |
-| IAM-01, IAM-03 to IAM-11 | F02 authentication, profile, privacy, roles, devices, abuse controls and audit requirements | web journeys over closed S01-S03 APIs |
+Staff web delivery: IAM-06 to IAM-09 and IAM-11. Customer IAM-01/IAM-03/IAM-04/IAM-05/IAM-10
+remain API foundations covered by S02/S03, with their customer interface deferred to F15.
+NFR-21 applies using Salon mode in the prototype, never Customer mode for web screens.
 
 ## Scope
 
-Translated responsive staff sign-in/MFA enrollment and verification, workspace account/security/devices, Owner staff access management and Owner/Manager audit views; branded customer sign-in/code/resend/account/profile/privacy/devices; a server BFF using generated client, safe scoped cookies, exact-origin CSRF checks, credential renewal and friendly denial/offline states; API/infra support for authenticated trusted-client-address assertions and an independent proxy key; developer component/security tests.
+Staff password sign-in, required Owner/optional staff MFA, account password/security/devices,
+Owner staff management, Owner/Manager audit and a staff-only server BFF. Fixed same-host legacy
+aliases prevent the old customer links from exposing customer functionality. Remove obsolete
+customer web components, navigation and BFF actions. Do not remove customer Java APIs or data.
 
 ## Out of scope
 
-Business dashboards/calendar/services/revenue screens in later features, operator console (F03), booking details integration (F07), MFA recovery/disable, mobile app, arbitrary permission editing, real messaging and deployment. Existing public shell stays browseable without sign-in.
+Customer web application, customer browser OTP/profile/privacy/export/deletion, native app
+implementation, future business dashboards, operator console (F03), real messaging and deployment.
 
 ## Acceptance criteria
 
-- AC-1: On a salon hostname staff can sign in by email or mobile/password, enroll required Owner or voluntary staff authenticator verification, verify a valid code and reach their workspace account. Wrong credentials/codes, expiry and rate limits give translated recovery instructions and field errors; no incomplete MFA challenge reaches a protected page. (IAM-06, IAM-09)
-- AC-2: Customers can request SMS/WhatsApp verification, enter a single-use code, resend safely with a visible retry/expiry explanation and reach their own branded account. Wrong/expired/resent codes and delivery failures keep the mobile choice for retry without revealing whether an account exists; public browsing needs no sign-in. (IAM-01, IAM-03, IAM-10)
-- AC-3: Protected web pages and BFF actions check the current server principal/permission: Owner manages staff roles/removal and the specific Professional grant, Manager can list staff/audit only, and other roles see only their permitted account controls. Wrong-kind, wrong-role, foreign-salon and revoked credentials cannot reveal protected data by typing a URL or calling BFF directly. (IAM-03, IAM-07, IAM-08, IAM-09, IAM-11)
-- AC-4: Staff/customer own device lists identify the current device, paginate, revoke another or all devices, and sign out with immediate server revocation; password change verifies the old password and rotates credentials. Separate staff/customer cookies on one host allow both sessions without either sign-out disturbing the other, and expiry/renewal returns safely to the intended same-origin flow. Renewal coordination covers simultaneous browser tabs for each principal kind; a replay-revoked family clears cookies and requests fresh sign-in without retrying the spent credential. (IAM-06, IAM-09)
-- AC-5: The customer account loads and updates all mutable profile fields, read-only verified mobile, language/preferences and explicit marketing consent with translated field validation, success and stale-version conflict recovery; changes never affect another customer/salon, and refresh/back/second-tab does not silently overwrite saved data. (IAM-03, IAM-04)
-- AC-6: The customer can download an allowlisted personal-data JSON file and confirm account deletion after a clear explanation. Cancelling changes nothing; successful deletion clears customer cookies, returns to the salon sign-in and invalidates every device while another salon's account remains. Owner/Manager can read identity and volume-alert audit entries without secrets. (IAM-03, IAM-05, IAM-10, IAM-11)
-- AC-7: All web credentials use distinct host-only HttpOnly SameSite staff/customer cookies, Secure outside explicitly local HTTP. Access/refresh/challenge authority is absent from HTML/client responses/storage/URLs; authenticator enrollment alone may transiently display its setup key and URI after valid enrollment authority, without storing it or making a navigation URL; every BFF mutation including sign-in rejects wrong/missing Origin and cross-site Fetch Metadata, tenant comes only from resolved host, and user redirect input cannot send credentials to another origin. (IAM-03, IAM-06, IAM-09)
-- AC-8: Every new screen has loading/empty/error/slow/success states where applicable, translated strings, stable test ids, semantic labels, announced errors, visible keyboard focus, 44-point targets and no horizontal overflow at 360/390/768/1024/1280/1440. Customer screens apply alpha/beta/gamma brands with readable contrast/long names; workspace remains neutral. API loss preserves nonsensitive entered data and provides safe retry within the existing three-second limit. (IAM-01, IAM-04, IAM-06)
+- AC-1: On a salon hostname staff sign in with email or mobile/password, enroll required Owner or
+  voluntary staff MFA, verify a valid code and reach their workspace account. Invalid/expired
+  credentials, MFA and rate limits give translated recovery without bypassing MFA. (IAM-06, IAM-09)
+- AC-2: Tenant `/` redirects to fixed same-host `/workspace`; unauthenticated entry reaches
+  `/workspace/sign-in`. Legacy `/sign-in` and `/account` redirect to staff sign-in. No customer
+  OTP, account, booking site or customer/staff switch is reachable or linked. (APP-06, NFR-21)
+- AC-3: Protected pages and BFF actions check the current principal/permission: Owner manages
+  staff roles/removal and Professional grant, Manager reads staff/audit, others see only permitted
+  controls. Wrong-kind, wrong-role, foreign-salon and revoked credentials reveal no protected data.
+  (IAM-03, IAM-07, IAM-08, IAM-09, IAM-11)
+- AC-4: Staff device lists identify the current device, paginate and revoke one/all devices.
+  Logout revokes immediately; password change verifies the old password and rotates credentials.
+  Coordinated cross-tab renewal and replay revocation cannot restore a signed-out session. (IAM-09)
+- AC-5: Every former `/identity-web/customer/{action}` GET/POST returns no-store 404 without
+  calling an upstream API, issuing customer cookies, requesting a code or exposing profile data.
+  Direct customer Java APIs retain existing security and compatibility for later mobile. (APP-06)
+- AC-6: Owner/Manager audit reads remain secret-free. Refused device/staff mutations show clear
+  accessible errors and retain refused state; real role changes immediately update navigation
+  and server permissions. (IAM-07, IAM-09, IAM-11)
+- AC-7: Staff credentials use host-only HttpOnly SameSite cookies, Secure outside explicit local
+  HTTP. HTML/client/storage/URLs never contain tokens or challenges; transient authorized MFA
+  enrollment may show its setup URI/key. All BFF mutations enforce exact Origin and Fetch Metadata;
+  resolved Host selects tenant, and configured API destination alone receives credentials. (IAM-09)
+- AC-8: Screens have applicable loading/empty/error/slow/success states, translated text, stable
+  test ids, announced errors, keyboard focus, 44-point targets and no horizontal overflow at
+  360/390/768/1024/1280/1440. Workspace remains neutral; salon names remain readable/accessible.
+  API loss provides safe retry within the existing cancellation budget. (IAM-06, NFR-21)
+- AC-9: Rendered comparison evidence shows warm palette, loaded Poppins, pills, rounded fields/cards
+  and responsive Salon rail/tab layout. Customer's 430px canvas is not a web reference. (NFR-21)
 
 ## Design notes
 
-Follow the identity/browser policies and established components/tokens. The prototype has no actual sign-in/MFA/device/privacy screens; use its form/card/navigation visual grammar and the existing shell, with neutral staff and salon-branded customer surfaces. Reuse one responsive form/device/error presentation where possible. Browser credential mutations use a Web Lock per principal kind across tabs; after acquiring it, recheck the server principal before renewal, and carry only nonsecret events through BroadcastChannel. Hold the same lock for sign-in/logout/password rotation/current-session revocation/deletion to prevent delayed honest responses restoring signed-out state. Without Web Locks, disable all credential-changing actions and show a translated browser-support explanation; already-authenticated profile reads/updates and exports remain available. Unknown-outcome refresh is not retried. Use per-kind HttpOnly issued accessExpiresAt metadata and strict API meta.time to decide eligibility for one renewal only when access is missing/expired; future-expiry 401 clears that kind without renewal. Expiry metadata never authorizes access. BFF credentials never cross the client boundary, mutating requests require exact hostname/port Origin, and only configured API destination receives bearer credentials. Generated types remain the API truth; list chosen route/cookie names in handoff.
+Extend Salon mode's form/card/table/drawer grammar for account screens. Show only available staff
+routes. Keep existing Web Locks and nonsecret BroadcastChannel coordination; unsupported browsers
+show the translated support explanation for credential changes. Expiry metadata never authorizes
+access; unknown-outcome refresh is not retried. Preserve the three-second shared API cancellation
+budget, trusted client-address assertions, explicit local HTTP configuration, host-only routing,
+server permissions, field allowlists and generated API contract. `/identity-web/staff/*` stays
+outside `/api/*` for edge routing. No API/data migration is required by this correction.
 
 ## API and data changes
 
-Carry the existing API salon timeZone through the public salon pick/header so device/audit dates use salon time zone. Use Next.js same-origin BFF route handlers or server actions under a fixed auth/account namespace, exclusively forwarding explicit allowlisted fields and the principal-kind cookie to the generated S01-S03 API client. Origin scheme comes only from the explicit local HTTP setting (http locally, https otherwise), matching validated Host and port exactly; never derive authority from nextUrl or forwarded headers. BFF export is a CSRF-checked POST forwarding the API GET that records rights audit. Report any missing API contract to lead rather than inventing it. Implement safe host-derived requests through the existing forward-hostname utility and configurable-base client. BFF sets/clears host-only cookies on token issuance/rotation/revocation; direct client JSON strips access/refresh credentials and enrollment authority. For rate-limited mutations, capture the real client address at Node request diagnostics (socket directly locally; one Caddy-overwritten forwarded address only from an explicit trusted-proxy CIDR allowlist), strip incoming assertion/forwarded headers, and sign a bounded assertion over canonical host/method/path/address/issued instant using a fourth independent 32-byte proxy key. Obtain the issued instant from existing API meta.time within the same total three-second request budget, so the injected API Clock/test clock governs the thirty-second assertion window. API accepts the rate address only after strict parsing and constant-time HMAC validation; a present invalid assertion fails before rate accounting or side effects, while an absent assertion uses the real servlet peer address, never a body/header-provided address. Canonical format is versioned and binds normalized host without port, uppercase method, exact fixed pathname, one valid normalized IP (IPv4-mapped IPv6 consistently normalized) and ISO issued instant. Reject lists/ports/brackets/zone identifiers and invalid addresses; local trusted-proxy list is empty. Assertions grant no tenant or principal authority. Wire retained local proxy key without replacing existing keys, explicit nonlocal API/BFF proxy key and web trusted-proxy settings, and the explicit local HTTP cookie flag through existing startup/stack files. Use `/identity-web/*` outside `/api/*` because the stack edge routes /api directly to Java. Every BFF call uses only configured API destination.
+No Java API, schema or generated contract changes. Remove the customer BFF surface only; retain
+staff request signing, permission checks, cookie and exact-Origin boundaries.
 
 ## UI and UX
 
-Routes: `/workspace/sign-in`, `/workspace` account entry, `/workspace/account` (password/MFA/devices), `/workspace/staff` (Owner management; Manager read-only), `/workspace/audit` (Owner/Manager), `/sign-in` (customer code flow) and `/account` (profile/devices/export/delete). Link customer account and staff sign-in from the public shell without copying business navigation for unavailable future features. Enrollment shows the authenticator URI or QR plus a copyable setup key only during enrollment; never persist it to browser storage or URLs. Sensitive form fields clear on successful submission; disable duplicate submissions. Loading skeletons, empty device/audit/staff lists, permission denial, field errors, offline retry, rate wait and confirmed success are observable.
+`/workspace` enters `/workspace/account`; `/workspace/sign-in`, `/workspace/staff` and
+`/workspace/audit` retain their existing permissions. The two legacy customer URLs are fixed staff
+sign-in aliases; `/salon-site` remains externally 404. No customer navigation is shown.
 
 ## Risks and test focus
 
-Functional journeys, every-role BFF permissions, tenant isolation and kind separation, CSRF and cookies/credential secrecy, browser refresh/back/tabs/renewal races, account deletion/export, accessibility and all responsive widths/brands, resilience under API/provider outage. Developer uses unit/component tests and running-browser checks; independent QA later verifies all F02 stages and cross-stage journeys.
+Verify changed root/legacy routing, customer BFF rejection without upstream side effects, tenant
+isolation/status pages, staff password/MFA, permissions, sessions/CSRF and responsive accessibility.
+Independent scoped QA retains unaffected API/backend evidence under CR-009, updates obsolete web
+expectations, and records exactly what ran. No unrequested regression or staging checks.
 
 ## Verification commands
 

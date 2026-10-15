@@ -5,7 +5,7 @@
 | Path | Holds | Changed by |
 | --- | --- | --- |
 | `apps/api` | The API: one deployable, a modular monolith | Developer |
-| `apps/web` | One Next.js application serving three surfaces by hostname: each salon's public booking site, each salon's staff workspace, and the operator console | Developer |
+| `apps/web` | One Next.js application serving salon owner/admin/staff workspaces and the operator console; no customer web interface | Developer |
 | `apps/web/scripts/` | The local custom server (`serve.mjs`); local startup is described in `docs/operations/environments-and-releases.md` | Developer |
 | `apps/mobile` | The customer app: one Expo codebase for the shared container app and a dedicated app per salon. Created in milestone `M2-mobile` | Developer |
 | `packages/api-contracts` | The TypeScript client generated from the API's OpenAPI document, used by the web app and the customer app | Developer (generated) |

@@ -6,7 +6,9 @@ able to tell which screens were built in which stage.
 ## Design authority
 
 The owner's supplied `docs/design/prototype/index.html` is the visual and interaction reference
-for both Customer and Salon modes. Follow its final CSS cascade, including the later mobile polish
+with an explicit platform mapping: Salon mode is the owner/admin/staff web workspace; Customer
+mode is a deferred React Native mobile design, never customer web. M1-web must finish and be
+released before mobile implementation (CR-010). Follow its final CSS cascade, including the later mobile polish
 and responsive workspace overrides. Match composition, typography, colours, spacing, control
 shapes and navigation. A stage spec limits delivered capabilities; it does not authorise a new
 visual direction. Approved business/security requirements govern behaviour where they change a
@@ -14,7 +16,7 @@ prototype rule. A visual departure requires the owner's explicit instruction rec
 
 For a screen absent from the prototype, extend its visual grammar through shared components.
 Existing components are reusable only when they conform to the reference. The supplied HTML is
-immutable unless the owner requests its revision; do not copy demonstration data or inline handlers
+preserved except for owner-approved revisions (CR-010 labels platforms and defaults to Salon); do not copy demonstration data or inline handlers
 into production. Show only available routes. Future catalogue, booking, branding and native mobile
 capabilities stay in their roadmap features; Customer mode remains their mobile design reference.
 If a spec contradicts this authority, ask the lead to correct it through a change request.
@@ -26,7 +28,7 @@ If a spec contradicts this authority, ask the lead to correct it through a chang
 | Canvas / secondary / borders | `#F3F0EB` / `#EAE5DC` / `#DDD6CA`; white cards; ink `#111827`, muted `#6B7280` |
 | Typography | Poppins 400/500/600; 15px body; 22px customer title; 26px desktop workspace title |
 | Cards / fields / primary actions | 24px cards, 20px fields, pill actions; fields at least 48px and primary actions 50px |
-| Customer | Centred 430px canvas, compact sticky header and anchored icon navigation |
+| Customer (later React Native only) | Centred 430px canvas, compact sticky header and anchored icon navigation |
 | Salon | Full width; below 900px main area up to 760px and bottom navigation; desktop sticky white header, sidebar and main area up to 1280px |
 | Sidebar | 200px at 900–1199px; 236px at 1200px and above |
 | Branding | Customer actions and identity accents use the published salon colour and readable computed foreground; workspace stays neutral |
@@ -47,7 +49,8 @@ threshold. Accessibility requirements govern this pairing (BUG-F01-003).
 ## Visual handoff gate
 
 Map each implemented screen to its reference screen, or name the reference components it extends.
-Compare representative customer phone and salon desktop screenshots, then verify the width matrix
+Compare the implemented platform only: salon phone/tablet/desktop during M1, customer native
+screens during M2. Then verify the width matrix
 and states. Check loaded font, canvas width, colours, radii, navigation position, spacing, long names,
 keyboard focus and brand contrast. Keep evidence with developer handoff and QA review. Functional,
 responsive and accessibility passes alone cannot establish design similarity. If a browser cannot

@@ -1,21 +1,20 @@
 /** Centralized S04 draft map. Confirm against the final handoff before product execution. */
 import type { Browser, BrowserContext, Page } from '@playwright/test';
 import { test as apiTest, expect, totp, json, type Principal, type Identity, type Actor, type SeedAccount, type Tokens } from './identity';
-import { Customers, syntheticMobile } from './customer-identity';
+import { Customers } from './customer-identity';
 import { Profiles } from './customer-profile';
 import { webUrl } from './env';
 import { salonUrl, type Salon } from './tenants';
 
 export type Kind='staff'|'customer';
-export const routes={staffSignIn:'/workspace/sign-in',staff:'/workspace/account',staffList:'/workspace/staff',audit:'/workspace/audit',customerSignIn:'/sign-in',customer:'/account'};
+export const routes={staffSignIn:'/workspace/sign-in',staff:'/workspace/account',staffList:'/workspace/staff',audit:'/workspace/audit'};
 export const bff=(kind:Kind,action:string)=>`/identity-web/${kind}/${action}`;
 export const cookie=(kind:Kind,name:string)=>`salon_${kind}_${name}`;
 const finalHandle=(name:string)=>({oldPassword:'old-password',newPassword:'new-password',marketingConsent:'marketing-consent'} as Record<string,string>)[name]??name;
 export const handle=(page:Page,name:string)=>page.getByTestId(`account-${finalHandle(name)}`);
-export const brandName=(page:Page)=>page.getByTestId('salon-name');
 export const mutations={staff:['sign-in','mfa-start','mfa-enroll','mfa-verify','password','logout','revoke','revoke-all','staff-create','staff-change','staff-remove','refresh','clear'],
   customer:['code','sign-in','logout','revoke','revoke-all','profile','export','delete','refresh','clear']} as const;
-export const screenMap=[routes.staffSignIn,routes.staff,routes.staffList,routes.audit,routes.customerSignIn,routes.customer];
+export const screenMap=[routes.staffSignIn,routes.staff,routes.staffList,routes.audit];
 
 export class AccountBrowser {
   private readonly contexts:BrowserContext[]=[];
@@ -61,17 +60,6 @@ export class AccountBrowser {
       }
       await this.ready(page);return this.actor(page.context(),salon,'staff');
     }finally{page.off('response',enrollmentResponse);}
-  }
-  async requestCode(page:Page,salon:Salon,mobile=syntheticMobile(),channel:'sms'|'whatsapp'='sms'){
-    await page.goto(routes.customerSignIn);await handle(page,'mobile').fill(mobile);await handle(page,'channel').selectOption(channel);
-    await expect(handle(page,'sign-in-submit')).toBeEnabled();await handle(page,'sign-in-submit').click();await expect(handle(page,'code')).toBeVisible();
-    const id=(await page.context().cookies(salonUrl(salon,webUrl))).find(c=>c.name===cookie('customer','challenge_id'))?.value;
-    if(!id)throw new Error('ENVIRONMENT: web code challenge cookie absent');
-    return {mobile,channel,id,capture:await this.customers.capture(salon,id)};
-  }
-  async customerSignIn(page:Page,salon:Salon,mobile=syntheticMobile(),channel:'sms'|'whatsapp'='sms'){
-    const proof=await this.requestCode(page,salon,mobile,channel);await handle(page,'code').fill(proof.capture.code);await handle(page,'sign-in-submit').click();
-    await page.waitForURL('**'+routes.customer);await this.ready(page);return this.actor(page.context(),salon,'customer');
   }
   async confirm(page:Page,action:string){await handle(page,action).click();await expect(handle(page,'confirm-action')).toBeVisible();await handle(page,'confirm-action').click();}
   async close(){for(const context of this.contexts)await context.close();}

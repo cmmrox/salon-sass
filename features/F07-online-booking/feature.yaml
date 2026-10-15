@@ -1,15 +1,31 @@
 id: F07
-title: "Online booking on the web"
-summary: "A customer opens the salon's web address, chooses services, a professional and a time, and holds and confirms a booking that can never overlap another."
+title: Booking engine and staff booking foundations
+summary: Staff create bookings using shared availability, holds and conflict prevention. Customer-facing
+  booking screens are delivered later in the React Native app.
 release: R1
 milestone: M1-web
 status: backlog
 qa_status: not-run
 released_in: null
-depends_on: [F02, F05, F06]
-surfaces: [api, web]
-requirements: [BKG-01, BKG-03, BKG-04, BKG-05, BKG-06, BKG-14, BKG-16, APP-01, APP-02, APP-06, APP-07, APP-09, APP-10, IAM-02, MKT-01]
-nfr_focus: [NFR-03, NFR-05, NFR-12]
+depends_on:
+- F02
+- F05
+- F06
+surfaces:
+- api
+- web
+requirements:
+- BKG-01
+- BKG-03
+- BKG-04
+- BKG-05
+- BKG-06
+- BKG-14
+- BKG-16
+nfr_focus:
+- NFR-03
+- NFR-05
+- NFR-12
 cases: []
 verification:
   automation: []

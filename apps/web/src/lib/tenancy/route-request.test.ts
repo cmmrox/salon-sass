@@ -31,25 +31,45 @@ function handedOn(response: Response): Salon | null {
 }
 
 describe('routeRequest', () => {
-  it("rewrites / on an active salon's hostname to its shell, with the salon handed on and nothing stored", async () => {
-    const resolve = resolving({ kind: 'salon', salon: alpha });
+  it.each(['GET', 'POST'])('rejects removed customer BFF %s before tenant resolution on every hostname', async (method) => {
+    const resolve = resolving({ kind: 'unavailable' });
+    for (const host of ['alpha.localhost:3100', 'gamma.localhost:3100', 'missing.localhost:3100', 'localhost:3100', 'alpha.localhost.example.com']) {
+      for (const action of ['', '/', '/principal', '/sessions', '/profile', '/code', '/sign-in', '/refresh', '/clear', '/export', '/delete', '/logout', '/unknown']) {
+        const req = new NextRequest(`http://alpha.localhost:3100/identity-web/customer${action}?salon=beta`, { method, headers: { host, cookie: 'salon_customer_access=old; salon_staff_access=private', [SALON_HEADER]: encodeSalon(beta) } });
+        const response = await routeRequest(req, resolve);
+        expect(response.status).toBe(404);
+        expect(await response.json()).toEqual({ code: 'not_found' });
+        expect(response.headers.get('cache-control')).toContain('no-store');
+        expect(response.headers.has('set-cookie')).toBe(false);
+        expect(response.headers.has('x-middleware-request-' + SALON_HEADER)).toBe(false);
+      }
+    }
+    expect(resolve).not.toHaveBeenCalled();
+  });
 
-    const response = await routeRequest(request('/'), resolve);
-
+  it.each(['/identity-web/staff/principal', '/identity-web/customer-like/principal', '/identity-web/customers/principal'])('retains host resolution and unavailable status for other namespaces: %s', async (path) => {
+    const resolve = resolving({ kind: 'unavailable' });
+    const response = await routeRequest(request(path), resolve);
     expect(resolve).toHaveBeenCalledExactlyOnceWith('alpha.localhost:3100');
-    expect(isRewrite(response)).toBe(true);
-    expect(new URL(getRewrittenUrl(response)!).pathname).toBe(SALON_SHELL_ROUTE);
-    expect(new URL(getRewrittenUrl(response)!).host).toBe('alpha.localhost:3100');
-    expect(response.status).toBe(200);
-    expect(handedOn(response)).toEqual(alpha);
+    expect(response.status).toBe(503);
+    expect(await response.text()).toContain('data-testid="status-unavailable"');
+  });
+
+  it.each([['/', '/workspace'], ['/sign-in', '/workspace/sign-in'], ['/account', '/workspace/sign-in']])('redirects %s to staff entry %s without a customer surface', async (path, destination) => {
+    const resolve = resolving({ kind: 'salon', salon: alpha });
+    const response = await routeRequest(request(`${path}?returnTo=https://outside.test&salon=beta`), resolve);
+    expect(resolve).toHaveBeenCalledExactlyOnceWith('alpha.localhost:3100');
+    expect(response.status).toBe(307);
+    expect(response.headers.get('location')).toBe(`http://alpha.localhost:3100${destination}`);
     expect(response.headers.get('cache-control')).toContain('no-store');
+    expect(await response.text()).not.toContain('salon-shell');
   });
 
   it('reads the salon from Host only: the query, cookies and other headers naming another salon change nothing', async () => {
     const resolve = resolving({ kind: 'salon', salon: alpha });
 
     const response = await routeRequest(
-      request(`/?salon=beta&tenantId=b2b2b2b2-0000-4000-8000-000000000002`, {
+      request(`/workspace/sign-in?salon=beta&tenantId=b2b2b2b2-0000-4000-8000-000000000002`, {
         cookie: 'salon=beta; tenant=b2b2b2b2-0000-4000-8000-000000000002',
         'x-forwarded-host': 'beta.localhost:3100',
         'x-tenant-id': 'b2b2b2b2-0000-4000-8000-000000000002',
@@ -61,13 +81,13 @@ describe('routeRequest', () => {
     expect(resolve).toHaveBeenCalledExactlyOnceWith('alpha.localhost:3100');
     expect(handedOn(response)).toEqual(alpha);
     // The rewrite carries no query: nothing the client sent reaches the shell that way either.
-    expect(new URL(getRewrittenUrl(response)!).search).toBe('');
+    expect(response.headers.get('x-middleware-next')).toBe('1');
   });
 
   it('a salon header the client sends never reaches a page', async () => {
     const forged = { [SALON_HEADER]: encodeSalon(beta) };
 
-    const onSalon = await routeRequest(request('/', forged), resolving({ kind: 'salon', salon: alpha }));
+    const onSalon = await routeRequest(request('/workspace/sign-in', forged), resolving({ kind: 'salon', salon: alpha }));
     expect(handedOn(onSalon)).toEqual(alpha);
 
     const onPlatform = await routeRequest(request('/', forged), resolving({ kind: 'platform' }));
@@ -86,7 +106,7 @@ describe('routeRequest', () => {
     ['temporarily unavailable', { kind: 'suspended' }, 503, 'salon-unavailable'],
     ['service unavailable', { kind: 'unavailable' }, 503, 'status-unavailable'],
   ] as const)('answers %s itself, as complete HTML with its status and nothing stored', async (_, site, status, testId) => {
-    for (const path of ['/', '/anything/else']) {
+    for (const path of ['/', '/sign-in', '/account', '/workspace/sign-in', '/anything/else']) {
       const response = await routeRequest(request(path), resolving(site));
 
       expect(isRewrite(response)).toBe(false);

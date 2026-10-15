@@ -1,8 +1,8 @@
 id: F02
 title: Sign-in, accounts and roles
-summary: Staff sign in with a password and two-step verification and can do only what
-  their role allows; customers sign in with a one-time code and control their own
-  profile and data.
+summary: Salon staff sign in on the web with password and MFA, manage accounts and act within their roles.
+  Customer identity/privacy APIs are retained as foundations for the later React Native app; no customer
+  web interface.
 release: R1
 milestone: M1-web
 status: complete
@@ -30,8 +30,7 @@ nfr_focus:
 - NFR-21
 cases:
 - id: TC-F02-001
-  title: Owner provisioning and removal connects workspace controls to immediate staff
-    access
+  title: Owner provisioning and removal connects workspace controls to immediate staff access
   type: functional
   priority: critical
   covers:
@@ -40,24 +39,6 @@ cases:
   - IAM-08
   - IAM-09
   - IAM-11
-- id: TC-F02-002
-  title: customer sign-in profile download and deletion form one coherent salon journey
-  type: functional
-  priority: critical
-  covers:
-  - IAM-01
-  - IAM-03
-  - IAM-04
-  - IAM-05
-  - IAM-09
-- id: TC-F02-003
-  title: staff and customer coexistence survives expiry across separate account journeys
-  type: functional
-  priority: critical
-  covers:
-  - IAM-03
-  - IAM-06
-  - IAM-09
 - id: TC-F02-004
   title: bounded local reads meet the documented per-read latency baseline
   type: load
@@ -81,27 +62,29 @@ verification:
     project: web
     covers:
     - TC-F02-001
-    - TC-F02-002
-    - TC-F02-003
     suites:
     - regression
     - smoke
   manual: []
   deferred: []
 evidence:
-  scoped_assessment: features/F02-sign-in-accounts-and-roles/scoped-qa.json
   last_run: qa/reports/20261015-000506-F02-3e38935bf776
   last_result: pass
+  scoped_assessment: features/F02-sign-in-accounts-and-roles/scoped-qa.json
 integration:
-  branch: charithm/feature/F02-prototype-design-fidelity
-  pull_request: https://github.com/cmmrox/salon-sass/pull/5
+  branch: charithm/feature/F02-staff-web-only
+  pull_request: https://github.com/cmmrox/salon-sass/pull/7
   qa_revision: e73d99b0bbb38ec4db6b9cc837ea635286a1fed0
-  merged_commit: 0ecc2ee12cca6568f83c234f6e81b79fceed9c1e
-  merged_at: '2026-10-15T00:38:18Z'
 previous_integration:
   branch: charithm/feature/F02-sign-in-accounts-and-roles
   pull_request: https://github.com/cmmrox/salon-sass/pull/4
   qa_revision: 4f9a2a9c68e1ac218b436b486321f6bc6844a311
   merged_commit: b94abb01ea7b16576c9450b911b5c4664e860b32
   merged_at: '2026-10-14T07:11:47Z'
-reopened_by: CR-007
+reopened_by: CR-010
+integration_history:
+- branch: charithm/feature/F02-prototype-design-fidelity
+  pull_request: https://github.com/cmmrox/salon-sass/pull/5
+  qa_revision: e73d99b0bbb38ec4db6b9cc837ea635286a1fed0
+  merged_commit: 0ecc2ee12cca6568f83c234f6e81b79fceed9c1e
+  merged_at: '2026-10-15T00:38:18Z'
