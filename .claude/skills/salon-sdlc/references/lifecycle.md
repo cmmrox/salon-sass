@@ -10,6 +10,7 @@ status it leaves behind. Each section stands alone; read only the one you are ru
 - `stage-plan`
 - `stage-build`
 - `stage-close`
+- QA preparation during a build
 - `feature-verify` (and re-verifying fixes)
 - `bug-fix`
 - `feature-close`
@@ -32,7 +33,8 @@ qa_status (a feature; a stage only when the owner asked for a stage pass): not-r
 integration (feature.yaml): branch, pull_request, qa_revision, merged_commit, merged_at
 ```
 
-`complete` means QA-passed and closed, ready for the feature PR. Only the owner's confirmed
+For a feature, `complete` means QA-passed and closed, ready for the feature PR. For a stage it
+means closed on the developer's gates; it does not imply a stage QA pass. Only the owner's confirmed
 GitHub merge permits the next feature to start. Deployment is a separate, optional action.
 
 **QA happens once, on the whole feature.** A stage is built, handed over and closed on the
@@ -90,7 +92,8 @@ Fix every finding before going on. `features/README.md` and `qa/coverage.md` are
 tool output.
 
 **Verification commands** (`verification.commands` in `stage.yaml`) are the developer's gates. Each
-entry is run in its own shell from the repository root, in order, and must exit zero.
+required execution runs in its own shell from the repository root, in order, and must exit zero.
+Apply the shared execution/reuse rule in `references/progress.md` at every handoff and closure.
 
 **Before the first commit of a session**, check the repository has a history: if `git log` shows no
 commits, stop and tell the lead. The first commit is the lead's, made on `main` at the owner's request.
@@ -181,9 +184,9 @@ stage will need.
 
 **Role:** Developer. Load `salon-dev`.
 
-**Reads, and only these:** `features/README.md`; this stage's `spec.md` and `stage.yaml`; every
-document its "Read first" section names, in full, and any other that `docs/README.md` lists for a
-part of the product the stage touches; the source the stage changes. Not other stages' folders.
+**Reads:** `features/README.md`; this stage's `spec.md` and `stage.yaml`; its named project rules
+and other rules for the affected product areas; the source it changes. Apply the context-reading
+rule in `references/progress.md`. Do not explore unrelated stages.
 
 **Refuse if:**
 - The status is `outlined`: there is no spec yet.
@@ -201,8 +204,8 @@ part of the product the stage touches; the source the stage changes. Not other s
    status. Commit it with your first commit.
 3. Implement the spec with unit and integration tests. Follow `salon-dev` and the project documents. Commit as often as is
    useful: `feat(<F-S>): ...`.
-4. Run every command in `verification.commands` until all are green. If a command names a script
-   the spec says this stage creates, create it; never remove a command to get past it.
+4. Satisfy every command in `verification.commands` under the shared execution/reuse rule. If a
+   command names a script the spec says this stage creates, create it; never remove a gate to pass.
 5. Check each acceptance criterion yourself against the running product, from outside: the screen,
    the endpoint, the command. QA does not see this stage until the whole feature is built, so this
    is the only check between your code and the stages built on it. Do not hand over something you
@@ -214,7 +217,8 @@ part of the product the stage touches; the source the stage changes. Not other s
      you could not and why; anything deliberately left out; and anything that turned out different
      from a document under `docs/` (the lead corrects the document; you do not edit project
      documents or skills).
-   Facts only. Do not explain how the code works.
+   Include the developer-gate record required by `docs/operations/verification-evidence.md`.
+   Prefer concise criterion-to-result/evidence rows. Do not explain how the code works.
 7. Set `status: built`, generate and validate, run
    `python3 qa/scripts/guard.py --role dev --diff`, and commit: `chore(<F-S>): hand over`.
    It is now the lead's turn.
@@ -237,7 +241,8 @@ about to be built on it, so this command's job is to refuse work that is not who
 `handoff.notes` as different from them, record any decision in the decision log, and do whatever
 else the spec's "Done criteria" assign to the lead.
 
-**Gates, in order. Stop at the first that fails, print why, and change nothing:**
+**Gates, in order. Stop at the first unresolved failure, print why, and leave status unchanged.
+Gather missing gate evidence and record the assessment as described below:**
 1. The status is `built`.
 2. `qa_status` is `not-run`, or `pass` when the owner asked for a stage pass. `failing` or `blocked`
    means a stage pass was started and has not finished: it finishes first.
@@ -246,7 +251,9 @@ else the spec's "Done criteria" assign to the lead.
 4. `handoff` is filled in, and `handoff.notes` accounts for every acceptance criterion in the spec:
    checked on the running product, or not checked for a reason you accept. A criterion that is
    missing from the notes sends the stage back to the developer.
-5. Every command in `verification.commands` exits zero, run now.
+5. Every command in `verification.commands` has complete passing evidence for the current relevant
+   source and conditions. Inspect the handoff record under `docs/operations/verification-evidence.md`
+   and the shared reuse rule. Execute missing or invalidated gates only; unresolved failures refuse closure.
 6. `qa/scripts/sdlc validate` reports nothing.
 7. Every item under the spec's "Done criteria" holds.
 
@@ -263,6 +270,25 @@ else the spec's "Done criteria" assign to the lead.
 
 **Does not:** run QA automation or ask QA for a pass; fix a failing gate by editing `stage.yaml` by
 hand.
+
+---
+
+## QA preparation during a build
+
+During an authorised feature build, the lead may delegate preparation to an independent QA agent
+against approved stage specs and contracts. QA can draft cases, plan risk coverage and prepare
+reusable fixtures/automation without waiting for all stages to close. No extra lifecycle status
+or command is needed. Do not derive expected behavior from unfinished implementation.
+
+Use the feature's QA branch and explicit path ownership; preserve developer edits and serialize
+shared yaml updates through the lead. Exercise test helpers on isolated synthetic fixtures where
+available, not as an unrequested acceptance pass on a stage. Do not run stage/feature automation,
+mark cases performed, set `in-qa`/`pass` or block stage closure on this preparation. Report uncertain
+contracts and missing test hooks early to the lead. Unfinished implementation is not itself a bug.
+
+Keep runtime-mutating checks (shared clock, service stops, database resets) separate from concurrent
+developer work unless their environments are isolated. Once all stages close, integrate the finished
+source into the QA branch, reconcile prepared cases with final specs, and begin `feature-verify`.
 
 ---
 
@@ -286,7 +312,8 @@ specs and the requirements, never from what the code happens to do.
 stale status label does not require another pass when complete relevant evidence remains valid.
 
 **Do, on the first pass (`qa_status: not-run`, with no reusable complete pass):**
-1. Branch QA from the feature integration branch containing every closed stage; set `status: in-qa`.
+1. Create or update the QA branch from the feature integration branch containing every closed stage;
+   preserve prepared cases/fixtures and reconcile them with the final specs. Set `status: in-qa`.
 2. Preflight the environment from the stages' `handoff`. If the product cannot be started, that is
    the first bug.
 3. Choose the test types for the feature (`docs/qa/test-types.md`), starting from each spec's
@@ -299,7 +326,8 @@ stale status label does not require another pass when complete relevant evidence
      crosses stages and surfaces the way a real person would (for example: find a service on the
      web, hold a time, pay the deposit, see the booking on the salon's calendar). A few, not one
      per combination.
-5. Automate every case that can be automated. Register each file once, under
+5. Automate cases according to the automated/manual/deferred rules in `salon-qa`'s test design.
+   Reuse compatible helpers and cases; register each file once, under
    `verification.automation` of the stage or the feature whose cases it covers.
 6. Decide suite membership for every automation entry: add `suites: [regression]` to what must keep
    working, and `smoke` to the few that prove the feature is alive.
@@ -348,14 +376,18 @@ stage's, during a stage pass the owner asked for.
 **Do, for each such bug:**
 1. Reproduce it from the bug's own steps.
 2. Add a unit or integration test that fails because of it, then fix the cause.
-3. Run the `verification.commands` of the stage the code belongs to.
+3. Run the focused fix test and record its result; broader gates follow the completed fix batch.
 4. On the bug file set `status: fixed`, `fixed_in: <commit>` and a one-line `fix_note`.
 5. If you believe the product is right and the test or the expectation is wrong, change nothing
    under `qa/`. Write your reasoning in `developer_note`, leave the status as it is, and tell the lead.
 6. Guard, then commit: `fix(<F>): ...` (or the stage id, when the fix belongs to one stage) with
    `Fixes BUG-...` in the body.
 
-When every bug in the scope is `fixed` or disputed, it is QA's turn again. Do not change `qa_status`.
+Before returning the batch to QA, satisfy the affected stages' `verification.commands` under the
+shared execution/reuse rule in `references/progress.md`. Deduplicate identical commands and record
+complete results for the final relevant source. A focused test alone does not satisfy a broader
+declared gate. When every bug is `fixed` or disputed and gates hold, it is QA's turn again.
+Do not change `qa_status`.
 
 ---
 
@@ -409,8 +441,9 @@ authorises pushes and PR creation, submit it as the next step without another pe
 
 **Do:** push the feature integration branch, create one PR into `main` with the QA summary,
 tested revision and explicit manual/deferred cases; record `integration.pull_request`, generate,
-validate and push its metadata commit. Attach the created PR to the chat. Reuse an existing open
-PR for this feature rather than creating duplicates. Required CI must pass before the owner's merge.
+validate and push its metadata commit before waiting on CI. Batch remaining delivery metadata;
+use the PR body for progress updates rather than repeated bookkeeping commits. Attach the created
+PR to the chat and reuse an existing feature PR. Required CI must pass on the final PR head before the owner's merge.
 The owner merges it; the next feature waits. Nothing deploys.
 
 ---

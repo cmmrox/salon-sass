@@ -27,13 +27,20 @@ layout and conventions are in `docs/qa/automation.md`.
 - **A test that passes on retry has failed.** Retries are off; find the cause.
 - **Assert there was something to count before asserting on the count.** A scrape that found nothing
   must fail, not report "0 of 0 correct".
-- **See it fail, where it matters.** When a new `critical` test, or any test built on a count or a
-  scrape, goes green first time, point it at the wrong expectation once and watch it go red. Then
-  restore it. Do not build a second, negative copy of a check to prove the first.
+- **Prove meaningful failure detection.** For a new critical behavior or a new/changed shared
+  verification helper, establish that the check rejects a realistic violation for the intended
+  reason. An observed regression failure before the fix is sufficient. Otherwise use a controlled
+  negative fixture or isolated faulty response, without editing application code or weakening the
+  committed expectation. Record and reuse this proof while the assertion and relevant mechanism
+  remain unchanged. A shared-helper proof may cover callers only for that mechanism, not distinct
+  security or integrity invariants. Do not add an extra failure run merely because a test uses a
+  count/scrape, and do not treat an arbitrary inverted expectation as proof of defect detection.
 - **Scope an assertion to what it is about.** "No error text anywhere on the page" fires on correct
   pages and gets ignored.
 - **Assert the outcome, not the arrival.** That a screen opened proves only that it opened.
-- **Check twice where data changed:** where the user would see it, and once more through the API.
+- **Verify persistence where it matters:** check the visible outcome and authoritative stored/API
+  state for critical writes. Reuse that check in the journey rather than repeating every field
+  assertion already proved at the API level.
 - **When your own test goes red, establish whether the product or the test is wrong before changing
   either.**
 - **A missing credential or fixture fails loudly**, naming what is missing. Never skip, and never
@@ -108,3 +115,7 @@ While writing a test, running that one file directly is fine. The recorded resul
 always comes from `qa/scripts/sdlc run`, which selects by scope, refuses an empty selection and
 writes the evidence. A missing tool is reported as an environment fault, not as a pass and not as a
 product failure.
+Reuse existing authentication, tenant, clock, outage and readiness helpers before adding one.
+Keep their fixtures deterministic and isolated. Concurrent checks must not share mutable clocks,
+service controls or resettable data; otherwise run them sequentially. Preserve complete logs and
+use the shared execution/reuse rule rather than rerunning just to recover diagnostic output.

@@ -6,8 +6,8 @@
 
 ## Read first
 
-The project documents that hold the rules for this stage. The developer reads each one in full
-before building, and QA before the feature pass.
+The project documents that hold the rules for this stage. Developer and QA apply the shared
+context-reading rule in `salon-sdlc` before their work.
 
 - `docs/<area>/<document>.md`: <what to take from it for this stage>
 

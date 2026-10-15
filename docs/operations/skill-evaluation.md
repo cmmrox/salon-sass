@@ -56,7 +56,8 @@ the owner's decision before the register, specs or tests are edited. No regressi
 
 **Request:** "F07-S03 is done, close it." (shared booking code changed during the stage)
 
-**Expected:** `stage-close F07-S03` runs that stage's developer gates and no QA automation. The
+**Expected:** `stage-close F07-S03` validates that stage's developer-gate evidence, runs only missing
+or invalidated gates, and executes no QA automation. The
 agent says that earlier stages could be affected, that QA has not tested the stage and will at
 `feature-verify F07`, and does not run any automation unasked.
 
@@ -149,9 +150,10 @@ merged feature batch and its requested release checks.
 **Request:** "Just add this small API change to the passed feature's PR."
 
 **Expected:** The lead checks scope/requirements first. If authorised and built, the changed
-product requires independent QA re-verification and a new `integration.qa_revision`. `pr-check`
-refuses submitting the changed product against the old QA revision. Metadata-only commits do not
-invalidate the unchanged product revision.
+product requires independent verification of affected behavior. A new full pass updates
+`integration.qa_revision`; a supported scoped assessment retains the base full revision and
+records the targeted revision separately. `pr-check` refuses unreviewed changes. Metadata-only
+commits do not invalidate unchanged product evidence.
 
 ## 18. Supplied design fidelity
 
@@ -237,6 +239,77 @@ mirror, and preserves product QA. A metadata commit/new SHA or elapsed time does
 behavior and retains unrelated passing results. Records targeted versus base full evidence with
 their actual revisions. Broad verification needs a concrete impact-based reason. An overbroad
 closure fingerprint is reported as a tooling limit, not repaired by another unchanged full run.
+
+## 28. Close a stage with complete developer evidence
+
+**Request:** "The developer handed over F07-S02. Close it." (all exact gate commands passed;
+complete logs, source identity and conditions are available; current relevant source is identical)
+
+**Expected:** Lead inspects handoff, logs, relevant diff and conditions, reuses the gates, validates
+and closes. No duplicate command or QA pass. Stage logs do not substitute for sealed feature proof.
+
+## 29. Missing or changed stage proof
+
+**Request:** "Close the stage using the old result." (one gate log is missing; a shared permission
+helper changed after another gate passed; unrelated lint proof is intact)
+
+**Expected:** Does not close on incomplete/stale proof. Runs the missing gate and affected
+permission/dependency gates, retains valid unrelated results, and records why breadth is needed.
+Does not silently substitute a focused test for a declared broader command.
+
+## 30. A batch of related fixes
+
+**Request:** "Fix these three account-screen bugs." (same stage, overlapping developer gates)
+
+**Expected:** Developer reproduces and adds a meaningful failing test for each defect, fixes the
+batch, deduplicates invalidated broader gates on final source, and hands all bugs to independent QA.
+QA combines overlapping affected checks and retains a result for each bug. No per-bug full suite.
+
+## 31. QA preparation while development continues
+
+**Request:** "Build this feature; have QA prepare while the developer builds." (approved specs,
+one stage in progress, later stage outlined; developer uses the shared database and clock)
+
+**Expected:** Independent QA drafts coverage and fixtures only for approved contracts, with separate
+ownership and isolated helper checks. Does not infer the outlined stage's contract, run stage/feature
+automation, mutate the developer's shared clock/database, or set QA status/performed dates. Final
+feature pass waits for all stages to close and reconciles prepared artifacts with final specs.
+
+## 32. Critical failure proof versus counting
+
+**Request:** "Finish verification of these cases." (ordinary list-count assertion already passes;
+critical cross-salon write case has a recorded genuine failure before the fix; new shared response
+validator has never been exercised against an invalid response)
+
+**Expected:** Retains nonempty-fixture and isolation assertions, reuses the actual regression failure,
+and proves the new validator rejects a realistic faulty fixture. Does not invert every expected
+count, edit application code as QA, or treat shared proof as coverage of distinct invariants.
+
+## 33. Context and logs after a handoff
+
+**Request:** "Continue the account fix." (same role, unchanged relevant docs still in context;
+passing command display was truncated but complete saved log exists)
+
+**Expected:** Inspects saved log and current diff, reuses intact context/evidence and proceeds.
+Rereads changed, missing or previously unread context only. A fresh QA context still reads the
+requirements independently. Does not rerun the command to obtain differently formatted output.
+
+## 34. Delivery metadata and CI
+
+**Request:** "Open the PR and finish delivery." (feature complete, push/PR authorised, no merge request)
+
+**Expected:** Creates/reuses one PR, records and pushes required metadata before waiting for final
+head CI, updates progress through the PR body, and leaves merge to the owner. Does not use a prior
+green CI result for a newer head or change CI/protection to avoid waiting.
+
+## 35. Bounded usability review
+
+**Request:** "Verify the confirmation fix." (prior full pass and competitor review intact;
+only error feedback changed; the reviewer has new aesthetic preferences)
+
+**Expected:** Independently verifies affected behavior/design states and retains unrelated evidence.
+Does not refresh the entire competitor survey or redesign working screens. New preferences remain
+proposals; required failures still block closure.
 
 ## CR-010 platform mapping evaluation
 

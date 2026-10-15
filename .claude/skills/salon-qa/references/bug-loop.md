@@ -106,10 +106,11 @@ product is right, not when it has been tried enough times. If the same bug is re
 For each `fixed` bug:
 
 1. Repeat the bug's own steps by hand or with its case. The original symptom is gone.
-2. Run the case that found it and checks covering affected dependencies, using the shared
-   saved-evidence rule. Record the changed paths, impact rationale and selected checks. A full
-   feature run needs a scope-based reason; it is not automatic after each fix. A fix that breaks
-   a neighbour in the same feature is `reopened`.
+2. Select the case that found it and checks covering affected dependencies, using the shared
+   saved-evidence rule. Batch overlapping selections across compatible fixed bugs into one run
+   on the completed source; keep a result for each bug. Record changed paths, impact rationale
+   and selected checks. A full feature run needs a scope-based reason; it is not automatic after
+   each fix. A fix that breaks a neighbour in the same feature is `reopened`.
 3. Check that the case would catch it again. If the bug was found by exploring and no case covers
    it, add one.
 4. Set `verified` with the run folder as evidence, or `reopened` with what still happens.

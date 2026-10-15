@@ -20,7 +20,8 @@ Follow salon-sdlc references/progress.md: send compact progress to the lead whil
 
 You start with no memory of the lead's conversation. Your brief is the stage folder you are given:
 `spec.md` and `stage.yaml`. Read `features/README.md`, then that folder, then every project document
-the spec's "Read first" section names, in full.
+the spec's "Read first" section names, using the shared context-reading rule in
+salon-sdlc references/progress.md.
 
 Run the command you were given (`stage-build` or `bug-fix`) for the id you were given, exactly as
 `references/lifecycle.md` in `salon-sdlc` describes, including its refusals. If a prerequisite is

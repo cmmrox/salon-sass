@@ -4,6 +4,7 @@
 
 - Purpose and limits
 - Prepare a context
+- Reuse developer gates at stage closure
 - Record developer gates and independent QA
 - Close against unchanged evidence
 - Resume and affected-scope evidence
@@ -14,11 +15,12 @@
 CR-008 replaces duplicate full-feature execution at feature closure with a checked evidence
 handoff. Independent QA still runs the entire feature after its stages close. Developer gates,
 manual cases, unresolved bugs, scope, tenant isolation and owner merge/deployment gates retain
-their meaning. Stage closure retains its fresh developer-command gates.
+their meaning. CR-011 also permits checked reuse of developer gates at stage closure.
 
 Evidence is local execution proof, not staging certification. It is reusable only when its
 certified source, acceptance criteria, command/automation definitions and declared environment
-context remain unchanged. Old reports remain historical evidence; they have no reusable proof.
+context remain unchanged. Legacy full-feature reports without the required receipts remain
+historical evidence, not reusable certification. Ordinary stage evidence follows the protocol below.
 The tooling cannot infer actual service or database state from Git: the lead/QA must check build
 identity, health and fixture prerequisites before recording or reusing evidence. When those
 conditions are uncertain or changed, prepare the environment and rerun the relevant checks.
@@ -59,6 +61,29 @@ The retained F01 stack volume is historical and must be preserved. The current r
 uses its isolated QA stack volume. F01-to-F02 local synthetic reset is described in
 `docs/qa/automation.md`; do not erase a retained stack volume to obtain a pass. Context values
 must contain no credentials or personal data; private file contents stay on the machine.
+
+## Reuse developer gates at stage closure
+
+For an ordinary stage handoff, record a compact gate table in `stage.yaml` `handoff.notes` with
+each exact `verification.commands` entry, its tested source revision, complete log path and exit
+result, and the relevant runtime/configuration/fixture conditions. If the tested tree was dirty,
+retain its diff identity as well; a commit SHA alone cannot describe uncommitted source. Prefer
+testing committed implementation so the record can be compared without reconstruction.
+
+Before `stage-close`, the lead checks every declared command is accounted for, its complete log
+exists and passed, relevant tracked/untracked source and command definitions are unchanged, and
+its test conditions still apply. Keep all applicable security, contract and persistence gates.
+Reuse valid results; execute missing or invalidated commands, and diagnose and correct failures
+before a meaningful rerun. If dependency impact
+is uncertain, inspect it first and run the broader affected gates when uncertainty remains.
+No stage QA run is implied. A summary saying "tests passed" without recoverable command/source/
+result evidence is insufficient. Record the closure assessment in the existing handoff/evidence,
+without changing the original tested identity or adding a new status field.
+
+This stage record supports stage closure only. It does not replace the sealed full-feature
+developer-command and independent QA receipts required below. Feature closure must use those
+receipts or the supported independent scoped assessment; ordinary stage logs are not promoted
+into reusable full-feature certification. No new runner command or evidence format is introduced.
 
 ## Record developer gates and independent QA
 

@@ -4,6 +4,8 @@ Passing its tests does not make a feature good. After the cases have run, use wh
 way its users will, compare it with what they use today, and write down what would make it better.
 This is the part of QA that the developer cannot do for themselves. It is done once, for the whole
 feature, at `feature-verify`: a stage is not reviewed on its own.
+On a fix/reopened feature, review the affected flows and retain valid observations for unchanged
+ones. End refinement when approved criteria and design hold; new preferences remain proposals.
 
 Who the users are, what matters to them in particular, and which products to compare with are in
 `docs/qa/review-context.md`. Read it first.
@@ -43,6 +45,9 @@ For the flow this feature delivers, look at how the established products handle 
 comparison, note what they do, what we do, and which is better for our user. "They have it and we
 do not" is only a finding when our users would miss it. Use public pages and documentation only; do
 not create accounts with real personal data.
+Use the comparisons needed for this feature's decisions. Reuse dated findings where their scope
+still applies; refresh when a decision depends on current behavior. A bounded bug fix does not
+require a new competitor survey. Do not describe an unrefreshed observation as current.
 
 ## Classify every finding
 
