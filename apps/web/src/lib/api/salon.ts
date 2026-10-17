@@ -1,6 +1,6 @@
 import type { ApiClient, Salon as ContractSalon } from '@salon/api-contracts';
 
-import { isHexColour } from '@/styles/brand';
+import { DEFAULT_BRAND_COLOUR, isHexColour } from '@/styles/brand';
 
 import { requestSignal, createServerApiClient } from './client';
 import { describeFailure } from './failure';
@@ -28,6 +28,8 @@ export type SalonLookup =
  *
  * Only an answer that is exactly the contract's is believed. In particular a brand is returned
  * only when it is the brand of the salon that was asked for; anything else is "unavailable".
+ * The one exception is the colour (CR-013 AC-10): a salon whose colour is missing or not
+ * `#RRGGBB` is still that salon, with the prototype's default accent, so its staff can sign in.
  *
  * @param slug the salon's slug, as the hostname names it
  * @param hostname the salon's hostname, `<slug>.<platform domain>`, sent to the API as `Host`
@@ -47,7 +49,7 @@ export async function findSalon(
     });
     if (response.status === 200) {
       return isSalon(data, slug)
-        ? { kind: 'found', salon: { slug: data.slug, name: data.name, brandColour: data.brandColour, timeZone: data.timeZone } }
+        ? { kind: 'found', salon: { slug: data.slug, name: data.name, brandColour: isHexColour(data.brandColour) ? data.brandColour : DEFAULT_BRAND_COLOUR, timeZone: data.timeZone } }
         : unavailable(slug, 'the API answered with something that is not this salon');
     }
     const code = typeof error === 'object' && error !== null ? (error as { code?: unknown }).code : undefined;
@@ -63,7 +65,7 @@ export async function findSalon(
   }
 }
 
-function isSalon(value: unknown, slug: string): value is Salon {
+function isSalon(value: unknown, slug: string): value is Omit<Salon, 'brandColour'> & { brandColour?: unknown } {
   if (typeof value !== 'object' || value === null) {
     return false;
   }
@@ -72,7 +74,7 @@ function isSalon(value: unknown, slug: string): value is Salon {
     candidate.slug === slug &&
     typeof candidate.name === 'string' &&
     candidate.name.trim() !== '' &&
-    isHexColour(candidate.brandColour) && typeof candidate.timeZone === 'string'
+    typeof candidate.timeZone === 'string'
   );
 }
 
