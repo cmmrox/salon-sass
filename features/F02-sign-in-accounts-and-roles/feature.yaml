@@ -5,7 +5,7 @@ summary: Salon staff sign in on the web with password and MFA, manage accounts a
   for the later React Native app; no customer web interface.
 release: R1
 milestone: M1-web
-status: in-qa
+status: complete
 qa_status: pass
 released_in: null
 depends_on:

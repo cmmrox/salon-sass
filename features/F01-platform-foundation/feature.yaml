@@ -5,7 +5,7 @@ summary: The platform runs locally and in staging as one deployment in which eve
   later feature has the services it builds on.
 release: R1
 milestone: M1-web
-status: in-qa
+status: complete
 qa_status: pass
 released_in: null
 depends_on: []
