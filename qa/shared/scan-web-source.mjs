@@ -35,7 +35,10 @@ const PRESSABLE_ROLES = new Set(['button', 'link', 'checkbox', 'radio', 'switch'
 // source in src/components/ui/ forwards the caller's props, data-testid included, so the test id is
 // required where they are used, not in the primitive.
 const PRESSABLE_UI = new Set(['Button', 'Input', 'NativeSelect', 'Checkbox', 'Textarea', 'Switch', 'RadioGroupItem', 'SelectTrigger',
-  'SheetTrigger', 'SheetClose', 'DialogTrigger', 'DialogClose', 'TabsTrigger', 'DropdownMenuTrigger', 'DropdownMenuItem', 'Toggle']);
+  'SheetTrigger', 'SheetClose', 'DialogTrigger', 'DialogClose', 'TabsTrigger', 'DropdownMenuTrigger', 'DropdownMenuItem', 'Toggle',
+  // CR-017
+  'InputGroupInput', 'InputGroupButton', 'InputGroupTextarea', 'InputOTP', 'PaginationLink', 'PaginationPrevious', 'PaginationNext',
+  'SidebarTrigger', 'SidebarMenuButton', 'SidebarInput', 'SelectItem']);
 // Keys of the page metadata a browser shows.
 const METADATA_KEYS = new Set(['title', 'description']);
 
@@ -108,7 +111,8 @@ function scan(file) {
     const uiComponent=pressableUi.has(tag)&&!attributes.has('asChild');
     const pressable = wrappedButton || uiComponent || PRESSABLE_TAGS.has(tag) || (roleName && PRESSABLE_ROLES.has(roleName)) || attributes.has('onClick') || attributes.has('href');
     // A shadcn/ui primitive's own element that spreads the caller's props forwards their data-testid.
-    const forwards = inUiPrimitives && !uiComponent && opening.attributes.properties.some(attribute=>ts.isJsxSpreadAttribute(attribute)&&attribute.expression.getText(source)==='props');
+    // (CR-017: also when the primitive's element is itself a shadcn/ui component, as InputGroupButton is a Button.)
+    const forwards = inUiPrimitives && opening.attributes.properties.some(attribute=>ts.isJsxSpreadAttribute(attribute)&&attribute.expression.getText(source)==='props');
     if (pressable && !forwards) {
       counts.pressable += 1;
       const testId = attributes.get('data-testid')??(wrappedButton&&buttonContract?attributes.get('testId'):undefined);

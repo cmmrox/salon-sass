@@ -182,12 +182,32 @@ cases:
   priority: high
   covers:
   - AC-14
+  - AC-15
 - id: TC-F01-S03-016
-  title: Every shell and foundation screen renders as the pre-CR-016 build did
+  title: Every shell and foundation screen renders as the accepted CR-016 build did, apart from the changes CR-017 lists
   type: responsive
   priority: high
   covers:
   - AC-14
+  - AC-15
+- id: TC-F01-S03-017
+  title: The Sidebar is a rail from 900px and a keyboard and screen-reader operable sheet below it, showing only permitted routes
+  type: functional
+  priority: high
+  covers:
+  - AC-15
+- id: TC-F01-S03-018
+  title: The component map and the generated plain-page CSS are guarded by tests that fail on a violation
+  type: build
+  priority: high
+  covers:
+  - AC-15
+- id: TC-F01-S03-019
+  title: Every shell and foundation screen and state uses the shadcn/ui component the web.md map names for each job
+  type: functional
+  priority: high
+  covers:
+  - AC-15
 verification:
   commands:
   - cd apps/api && ./mvnw -q verify
@@ -240,23 +260,49 @@ verification:
     - TC-F01-S03-015
     suites:
     - regression
+  - id: sidebar-navigation
+    tool: playwright
+    file: qa/web/F01/S03-sidebar-navigation.spec.ts
+    project: web
+    covers:
+    - TC-F01-S03-017
+    suites:
+    - regression
+  - id: component-rules
+    tool: script
+    file: qa/checks/F01/S03-component-rules.sh
+    covers:
+    - TC-F01-S03-018
+    suites:
+    - regression
   manual:
   - case: TC-F01-S03-016
-    reason: 'CR-016 side-by-side judgment, performed 2026-10-17 by independent QA. The pre-CR-016 product (fefc4fd, product
-      source identical to the QA-passed CR-013 build 8fd1939) was built in a scratch worktree outside the repository and
-      served on :3101 against the same API and sessions as the rebuilt product (:3100, de69786, product source identical to
-      858cac3); each state was captured from both back to back and compared pixel by pixel. F01 rows: platform status
-      (loaded, and unavailable with the API stopped), the application not-found page, the plain salon-not-found,
-      salon-unavailable (gamma suspended) and service-unavailable (API stopped) pages, and the signed-in workspace shell
-      (header, rail or bottom tabs, account, staff and audit) for alpha, beta and gamma at 360/390/768/1024/1280/1440:
-      every F01 pair pixel-identical, identical test-id sets and text, no horizontal overflow. The status loading
-      skeleton (API silent) was inspected on the new build only. Needs a second build of an earlier revision, so it is a
-      one-time migration judgment rather than regression automation; TC-F01-S03-015 keeps the rendered contract
-      automated. Evidence qa/reports/20261017-CR016-manual/ (pixel-comparison.json sha256
-      4920c28746fdf56de6a8c32c069ced3bb2a56a031d8fcf8be2af3f58de5304f4, pairs/facts.json sha256
-      184c81f2702309e44874c1141217aa08c560b17b2a9b6fde91ecaaaa7a45dd49, capture and compare scripts). Inputs masked in
-      every capture; the HTML prototype itself was not previewed side by side (the accepted rendered build is the reference).'
-    performed_on: 2026-10-17
+    reason: 'Re-performed for CR-017 on 2026-10-18 by independent QA. The accepted CR-016 product (79ec9d2) was built in a
+      scratch worktree outside the repository and served on :3101 against the same API and sessions as the CR-017 product
+      (:3100, built from 0b84f53, product identical to 29fb3d1); every state captured from both back to back. F01 rows
+      pixel-identical at all six widths: application not-found, the plain salon-not-found, salon-unavailable and
+      service-unavailable pages and the status page with the API stopped (30 pairs). Differences, each one CR-017 lists:
+      the status summary is now the positive Alert (taller, 16px semibold); below 900px the header gains the menu button
+      and the bottom tab bar is gone (navigation in the Sidebar sheet, captured on the new build at 360/390/768 for three
+      brands, current route in the brand fill); from 900px the rail looks as before. Test-id sets change only by the ids
+      the F01-S03 and F02-S04 handoffs list; no horizontal overflow in any capture. One-time migration judgment (needs a
+      second build); TC-F01-S03-015 and -017 keep the rendered contract automated. Evidence qa/reports/20261018-CR017-manual/
+      (pixel-comparison.json sha256 1b7a05a64bc66e54e8afde1f940083aeb352deb613b94db1bd194b48f11c88a7, pairs/facts.json sha256 f22dc47ed0e8dafa394a76a297da4ba0874015a6c1b98a7ba5d6cbd723b5a157, side/, unmasked/). Inputs masked in the pair
+      captures; overlays re-captured unmasked with empty fields.'
+    performed_on: 2026-10-18
+  - case: TC-F01-S03-019
+    reason: 'Owner-requested component-map review, performed 2026-10-18 by independent QA on the CR-017 product: every
+      rendered state of the shell and foundation screens (signed-in workspace on account, staff and audit at six widths
+      for three brands, the phone Sidebar sheet, status loaded/loading/unavailable, application not-found and the three
+      plain pages) inventoried by data-slot and checked against docs/engineering/web.md "Styling" rule 1: navigation is
+      the Sidebar (sidebar, sidebar-menu-button, sidebar-trigger, sidebar-inset; sheet below 900px), containers Card,
+      status summary and unavailable state Alert, retry Button asChild, loading Skeleton, the plain pages carry the Card,
+      Alert and Button slots and classes; no raw button, input, select, textarea, table, dialog or role-built control
+      outside a shadcn/ui component in any state (pairs/facts.json raw lists empty). Plain text, headings, the app
+      not-found home link (a navigation link, not an action) and the prototype glyphs are as the map allows. Needs human
+      judgment of each element''s job against the map, so manual; TC-F01-S03-017/-018 and the developer composition test
+      automate the enforceable part. Evidence qa/reports/20261018-CR017-manual/pairs/facts.json sha256 f22dc47ed0e8dafa394a76a297da4ba0874015a6c1b98a7ba5d6cbd723b5a157.'
+    performed_on: 2026-10-18
   deferred: []
 evidence:
   last_run: null

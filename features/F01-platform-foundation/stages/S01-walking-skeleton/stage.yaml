@@ -443,8 +443,8 @@ verification:
       reason: "it needs a root `.env`, which a check must never write into the repository, and a full extra build-and-start cycle on every stage run to protect settings no acceptance criterion names"
       performed_on: 2026-10-13
     - case: TC-F01-S01-040
-      reason: "Re-performed after CR-016 (the status page is rebuilt from shadcn/ui under F01-S03) on 2026-10-17 by independent QA on de69786 (product identical to 858cac3): loaded, loading (API silent) and unavailable frames inspected at 360 and 1280, the retry action keyboard-focused with a solid 3px #1D5FD0 outline; loaded and unavailable pixel-identical at all six widths to the pre-CR-016 build (TC-F01-S03-016). Evidence: qa/reports/20261017-CR016-manual/keyboard/status-*.png and pixel-comparison.json. The CR-007 judgment on 24c3ab5 (20261014-CR007-manual-fixed) is historical."
-      performed_on: 2026-10-17
+      reason: "Re-performed after CR-017 (the reachable summary is now a positive Alert) on 2026-10-18 by independent QA on the product built from 0b84f53 (identical to 29fb3d1): loaded (positive Alert, role status), loading (API silent, Skeleton) and unavailable (caution Alert) frames inspected at 360 and 1280; the retry action keyboard-focused with a solid 3px #1D5FD0 outline; unavailable pixel-identical to the CR-016 build at six widths, loaded differing only in the CR-017 summary. Evidence: qa/reports/20261018-CR017-manual/keyboard/status-*.png and pixel-comparison.json. The CR-016 judgment (20261017-CR016-manual) is historical."
+      performed_on: 2026-10-18
     - case: TC-F01-S01-057
       reason: "GitHub CI requires an explicitly authorized temporary PR. Independent QA inspected stored green/failing-lint/green job evidence and live runs 38352493389, 38352868747, 38353171634; proof PR 2 closed unmerged and its branch/worktree deleted. Evidence is archived in the retained main Git directory under sdlc-evidence/ci-proof-F01."
       performed_on: 2026-10-13

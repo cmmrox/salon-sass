@@ -52,47 +52,68 @@ export async function referenceFit(page: Page, fullName?: string) {
   }
   return { ...result, clipped: result.clipped.filter(value => !ids.some(id => value.startsWith(`${id} (`))) };
 }
-export async function referenceCustomerShell(page: Page, width: number, brand: string) {
-  const shell = await appearance(page.getByTestId('salon-shell'));
-  expect(shell.width).toBe(Math.min(width, 430)); expect(shell.left).toBe((width - shell.width) / 2);
-  expect(shell.background).toBe('rgb(243, 240, 235)');
-  const header = await appearance(page.getByTestId('salon-header'));
-  expect(header.position).toBe('sticky'); expect(header.background).toBe('rgb(243, 240, 235)');
-  expect(header.height).toBe(50);
-  const identity = await appearance(page.getByTestId('salon-identity'));
-  expect(identity.width).toBe(32); expect(identity.height).toBe(32); expect(identity.radius).toBe('999px');
-  await referenceNavigation(page, 'salon-navigation', width, true);
-  const tint=await page.getByTestId('salon-navigation').locator('[aria-current="page"] svg').evaluate(el=>getComputedStyle(el.parentElement!).backgroundColor);
-  const parts=tint.match(/[\d.]+/g)!.map(Number), rgb=brand.slice(1).match(/../g)!.map(value=>parseInt(value,16));
-  expect(parts.slice(0,3)).toEqual(rgb);expect(parts[3]).toBeCloseTo(34/255,3);
-}
-export async function referenceNavigation(page: Page, id: string, width: number, customer = false) {
-  const nav = page.getByTestId(id); await expect(nav).toBeVisible();
-  const styles = await appearance(nav), links = nav.getByRole('link');
+/** The workspace navigation's routes: only these, each once (CR-010). */
+const NAVIGATION_ROUTES = ['/workspace/account', '/workspace/staff', '/workspace/audit'];
+async function navigationLinks(nav: Locator) {
+  const links = nav.getByRole('link');
   const hrefs = await links.evaluateAll(elements => elements.map(el => el.getAttribute('href')));
   expect(hrefs.length).toBeGreaterThan(0);
-  const allowed = ['/', '/account', '/sign-in', '/workspace/sign-in', '/workspace/account', '/workspace/staff', '/workspace/audit'];
-  for (const href of hrefs) expect(allowed).toContain(href);
+  for (const href of hrefs) expect(NAVIGATION_ROUTES).toContain(href);
   expect(new Set(hrefs).size).toBe(hrefs.length);
-  expect(await nav.locator('svg').count()).toBe(hrefs.length);
+  expect(await nav.locator('svg').count(), 'each route keeps its prototype glyph').toBe(hrefs.length);
   await expect(nav.locator('[aria-current="page"]')).toHaveCount(1);
-  if (customer || width < 900) {
-    expect(styles.position).toBe('fixed'); expect(styles.bottom).toBe(page.viewportSize()!.height);
-    expect(styles.width).toBe(customer ? Math.min(width, 430) : width);
-    expect(styles.padding).toBe('8px 6px');
-    for(const link of await links.all()){const item=await appearance(link);expect(item.height).toBeGreaterThanOrEqual(56);expect(item.gap).toBe('2px');}
-  } else {
-    expect(styles.position).toBe('sticky'); expect(styles.width).toBe(width < 1200 ? 200 : 236);
-    expect(styles.offsetTop).toBe('60px');
-    for(const link of await links.all()){const item=await appearance(link);expect(item.height).toBe(46);expect(item.fontSize).toBe('14.5px');expect(item.padding).toBe('0px 14px');}
+  for (const link of await links.all()) {
+    const item = await appearance(link);
+    expect(item.height, 'rail item height').toBe(46); expect(item.fontSize).toBe('14.5px'); expect(item.padding).toBe('0px 14px');
   }
+  return links;
 }
+/**
+ * The workspace navigation (CR-017, F01-S03 AC-15): the shadcn/ui Sidebar. From 900px a fixed rail
+ * below the 60px header, 200px wide (236px from 1200px), white with a line on its right; below 900px
+ * no navigation is on the page until the header's menu button opens the Sidebar's sheet from the
+ * left, which focuses the current route and, on Escape, closes and gives focus back to the button.
+ */
+export async function referenceNavigation(page: Page, id: string, width: number) {
+  // The Sidebar animates its width when the viewport crosses a breakpoint: measure the settled layout.
+  await page.evaluate(() => Promise.all(document.getAnimations().map(a => a.finished.catch(() => undefined))));
+  const menu = page.getByTestId('workspace-menu');
+  if (width >= 900) {
+    await expect(menu, 'no menu button beside the rail').toBeHidden();
+    const nav = page.getByTestId(id); await expect(nav).toBeVisible();
+    const rail = await nav.evaluate(el => { const c = el.closest('[data-slot="sidebar-container"]'); if (!c) return null; const s = getComputedStyle(c), r = c.getBoundingClientRect();
+      const inner = c.querySelector('[data-slot="sidebar-inner"]'); return { position: s.position, left: r.left, top: r.top, width: r.width, border: `${s.borderRightWidth} ${s.borderRightColor}`, background: inner ? getComputedStyle(inner).backgroundColor : '' }; });
+    expect(rail, 'the navigation sits in the shadcn/ui Sidebar').not.toBeNull();
+    expect(rail!.position).toBe('fixed'); expect(rail!.left).toBe(0); expect(rail!.top, 'below the 60px header').toBe(60);
+    expect(rail!.width).toBe(width < 1200 ? 200 : 236); expect(rail!.border).toBe('1px rgb(221, 214, 202)'); expect(rail!.background).toBe('rgb(255, 255, 255)');
+    await navigationLinks(nav);
+    return;
+  }
+  await expect(page.getByTestId(id), 'no navigation on the page until the menu opens').toHaveCount(0);
+  await expect(page.locator('[data-slot="sidebar-container"]:visible')).toHaveCount(0);
+  await expect(menu).toBeVisible(); await expect(menu).toHaveAttribute('aria-expanded', 'false');
+  const button = await appearance(menu); expect(button.height).toBeGreaterThanOrEqual(44); expect(button.width).toBeGreaterThanOrEqual(44);
+  await menu.click();
+  const sheet = page.getByRole('dialog', { name: 'Staff workspace' }); await expect(sheet).toBeVisible();
+  await expect(menu).toHaveAttribute('aria-expanded', 'true');
+  const box = await appearance(sheet); expect(box.left).toBe(0); expect(box.width).toBe(288); expect(box.height).toBe(page.viewportSize()!.height);
+  const nav = sheet.getByTestId(id); await expect(nav).toBeVisible();
+  await navigationLinks(nav);
+  await expect(nav.locator('[aria-current="page"]'), 'the sheet opens on the current route').toBeFocused();
+  await page.keyboard.press('Escape'); await expect(sheet).toHaveCount(0);
+  await expect(menu, 'focus returns to the menu button').toBeFocused(); await expect(menu).toHaveAttribute('aria-expanded', 'false');
+}
+/**
+ * Cards, fields and actions of the account screens. Since CR-017 a field's visible surface is the
+ * Input, the Input Group around a password, or the Select trigger; actions are pill Buttons.
+ */
 export async function referenceAccountControls(page: Page) {
-  const cards = page.locator('main section'); expect(await cards.count()).toBeGreaterThan(0);
+  const cards = page.locator('main section[data-slot="card"]'); expect(await cards.count()).toBeGreaterThan(0);
   for (const card of await cards.all()) { const s = await appearance(card); expect(s.background).toBe('rgb(255, 255, 255)'); expect(s.radius).toBe('24px'); expect(s.shadow).toBe('none'); }
-  const fields = page.locator('main input:not([type="checkbox"]), main select');
-  for (const field of await fields.all()) { const s = await appearance(field); expect(s.radius).toBe('20px'); expect(s.height).toBeGreaterThanOrEqual(48); expect(s.fontSize).toBe('16px');expect(s.padding).toBe('10px 14px');expect(s.shadow).toContain('inset');expect(s.shadow).toContain('1.5px'); }
-  const buttons = page.locator('main button'); expect(await buttons.count()).toBeGreaterThan(0);
+  const surfaces = page.locator('main [data-slot="input"], main [data-slot="input-group"], main [data-slot="select-trigger"]');
+  for (const field of await surfaces.all()) { const s = await appearance(field); expect(s.radius).toBe('20px'); expect(s.height).toBeGreaterThanOrEqual(48); expect(s.background).toBe('rgb(255, 255, 255)'); }
+  for (const typed of await page.locator('main input:visible').all()) await expect(typed).toHaveCSS('font-size', '16px');
+  const buttons = page.locator('main [data-slot="button"]:not([data-slot="input-group"] *)'); expect(await buttons.count()).toBeGreaterThan(0);
   for (const button of await buttons.all()) { const s = await appearance(button); expect(s.radius).toBe('999px'); expect(s.height).toBeGreaterThanOrEqual(50); }
 }
 export async function referenceDialog(page: Page, workspace: boolean, width: number) {
@@ -106,7 +127,9 @@ export async function referenceDialog(page: Page, workspace: boolean, width: num
   await page.keyboard.press('Tab'); await expect(page.getByTestId('account-cancel-action')).toBeFocused();
 }
 export async function designScreenshot(page: Page, name: string) {
-  await expect(page.getByRole('main')).toBeVisible();
+  // An open modal (Sheet) hides the page, main landmark included, from assistive technology: wait for the modal instead.
+  if (await page.getByRole('dialog').count()) await expect(page.getByRole('dialog').first()).toBeVisible();
+  else await expect(page.getByRole('main')).toBeVisible();
   const folder = path.join(reportDir, 'design'); fs.mkdirSync(folder, { recursive: true });
   await page.screenshot({ path: path.join(folder, name + '.png'), fullPage: false,
     mask: [page.locator('input'), page.getByTestId('account-setup-key'), page.getByTestId('account-setup-uri')] });

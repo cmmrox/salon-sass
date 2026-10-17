@@ -183,7 +183,7 @@ CR-016 rebuilds the web app on Tailwind CSS 4 and shadcn/ui with no intended vis
 - **Expected:** Warm canvas `#F3F0EB`, Poppins 400/500/600 at 15px and the prototype's tokens everywhere; sticky 60px header (white with a border from 900px), the 200/236px rail from 900/1200px and fixed bottom tabs below 900px; the selected rail item filled with the brand and a readable foreground, the phone tab a soft brand tint with ink text; the header names the salon; test ids follow the convention; no horizontal overflow or clipping. Keyboard focus draws a solid 3px `#1D5FD0` outline offset 2px. Status card white, 24px radius, no shadow, 22px heading; the not-found page neutral with no salon's colour. The plain pages answer 404/503/503 with their handles, no `<script>`, the theme inlined and no salon's name or colour.
 - **Automation:** `qa/web/F01/S03-shadcn-shell.spec.ts`; screenshots under the run's `design/` folder.
 
-### TC-F01-S03-016 Every shell and foundation screen renders as the pre-CR-016 build did
+### TC-F01-S03-016 Every shell and foundation screen renders as the accepted CR-016 build did, apart from the changes CR-017 lists
 
 - **Type:** responsive
 - **Priority:** high
@@ -192,3 +192,37 @@ CR-016 rebuilds the web app on Tailwind CSS 4 and shadcn/ui with no intended vis
 - **Steps:** Capture each state from the old and the new build back to back at the six widths: platform status (loaded, unavailable), application not-found, the three plain pages, and the signed-in workspace shell on account, staff and audit for alpha, beta and gamma. Compare each pair pixel by pixel, and their test-id sets, visible text and overflow.
 - **Expected:** Pairs pixel-identical; any difference is explained by data or by a change CR-016 requires, and is classified. Same test ids and text, no overflow.
 - **Manual:** performed 2026-10-17; it needs a second build of an earlier revision, so it is a one-time migration judgment rather than regression automation. Evidence `qa/reports/20261017-CR016-manual/`.
+
+## CR-017 cases (reconciled 2026-10-18)
+
+CR-017 makes the workspace navigation the shadcn/ui Sidebar (rail from 900px, its sheet from a header menu button below 900px, no bottom tabs), the status summary an Alert, and the plain pages Tailwind-generated. TC-F01-S03-015 now opens the sheet below 900px and expects the selected item in the brand fill there as on the rail; its shared navigation helper checks the Sidebar rail and sheet instead of the tab bar. TC-F01-S03-014 expects the generated plain-page CSS in place of `plain-page.css`. TC-F01-S03-016 is re-performed against the accepted CR-016 build: pixel identity is kept only where CR-017 changes nothing; every other difference must be one CR-017 lists (decision 048).
+
+### TC-F01-S03-017 The Sidebar is a rail from 900px and a keyboard and screen-reader operable sheet below it, showing only permitted routes
+
+- **Type:** functional
+- **Priority:** high
+- **Covers:** AC-15
+- **Performed as / preconditions:** A synthetic Manager of beta (long name, dark brand) and a Receptionist of alpha, signed in through the API; a public caller for the status page.
+- **Steps:** At 360 and 768: read the header's menu button (name, expanded state) and confirm no navigation is on the page; Tab once from the page start; press Enter; read the sheet's name and description, the navigation landmark and the current route; Tab and Shift+Tab repeatedly; Escape; reopen by pointer and click the backdrop once the sheet has taken focus; reopen by Enter, move to "Activity log" and press Enter. At 899, 900 and 1280: confirm the menu button or the rail, Tab through the rail, press Ctrl+B and Cmd+B, read the rail width. For the Receptionist at 390 (sheet) and 1280 (rail): read the routes. Open the bare platform domain and read the summary.
+- **Expected:** Below 900px the menu button, named "Menu", is the first Tab stop with the solid 3px `#1D5FD0` outline and `aria-expanded` false; no navigation or tab bar until it opens. Enter opens a dialog named "Staff workspace" with its description, holding the "Staff workspace" navigation, focus on the current route (`aria-current="page"`), with no serious accessibility violation; focus stays inside both ways; Escape, the backdrop and choosing a route each close it with focus back on the menu button and `aria-expanded` false, and choosing a route navigates there. 899 shows the menu button; from 900 the rail (200px, 236px from 1200px) with the routes in order after the salon name, unchanged by Ctrl/Cmd+B. A Receptionist sees only "Account and security", in the rail and in the sheet. The status summary is an Alert (`data-slot="alert"`) with `role="status"` on the positive surface `#DDF1E6`, and nothing in the page is announced as an alert.
+- **Automation:** `qa/web/F01/S03-sidebar-navigation.spec.ts`. Seen failing on the CR-016 build for the intended reasons (no menu button; the summary not an Alert): `qa/reports/20261018-CR017-manual/failure-proof.log`.
+
+### TC-F01-S03-018 The component map and the generated plain-page CSS are guarded by tests that fail on a violation
+
+- **Type:** build
+- **Priority:** high
+- **Covers:** AC-15
+- **Performed as / preconditions:** QA operator; committed tree with its dependencies installed. Violations are made in a copy of the committed `apps/web` outside the repository.
+- **Steps:** Confirm `plain-page.css` and `ui/native-select.tsx` are gone and the generated CSS carries its GENERATED header. Run `src/components/composition.test.tsx` and `src/lib/plain-page/plain-page-css.test.ts` on the unaltered copy; then, one at a time, add a raw `<button>` to AppShell, import Native Select in an app page, add a raw `<select>` to the account screen, hand-edit the generated CSS, and add a class to `classes.ts` without regenerating; run the matching test after each and restore; run both again.
+- **Expected:** Both tests pass on the unaltered and restored copy, and fail, naming the altered file or rule, for each violation.
+- **Automation:** `qa/checks/F01/S03-component-rules.sh`
+
+### TC-F01-S03-019 Every shell and foundation screen and state uses the shadcn/ui component the web.md map names for each job
+
+- **Type:** functional
+- **Priority:** high
+- **Covers:** AC-15
+- **Performed as / preconditions:** QA operator, at the owner's request; rendered states of the CR-017 product at six widths for three brands.
+- **Steps:** For every state (workspace shell on account, staff and audit, the phone Sidebar sheet, status loaded, loading and unavailable, application not-found, the three plain pages), list each element by job and the shadcn/ui component it renders (`data-slot`), and any control not inside a shadcn/ui component; compare with `docs/engineering/web.md`, "Styling", rule 1.
+- **Expected:** Each job uses the component the map names (Sidebar for navigation, Card, Alert, Button, Skeleton); no native or hand-built control; plain text, headings, layout and the prototype glyphs only where the map allows.
+- **Manual:** performed 2026-10-18; judging an element's job against the map needs a person. Evidence `qa/reports/20261018-CR017-manual/pairs/facts.json`.

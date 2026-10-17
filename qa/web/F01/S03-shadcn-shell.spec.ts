@@ -19,7 +19,6 @@ import {productRoot} from '../../shared/identity-runtime';
 
 /** The prototype's keyboard focus outline (`--in`): 3px solid #1D5FD0, offset 2px, on every brand. */
 const FOCUS={style:'solid',width:'3px',colour:'rgb(29, 95, 208)',offset:'2px'};
-const INK=[17,24,39];
 type Rgb=[number,number,number];
 const hex=(value:string)=>value.slice(1).match(/../g)!.map(part=>parseInt(part,16)) as Rgb;
 const channels=(css:string)=>{const parts=css.match(/[\d.]+/g)?.map(Number)??[];return {rgb:parts.slice(0,3),alpha:parts.length>3?parts[3]:1};};
@@ -49,21 +48,24 @@ test('TC-F01-S03-015 the rebuilt shell, navigation and foundation pages keep the
   for(const viewport of DESIGN_WIDTHS){
    const label=`${salon.slug} at ${viewport.width}`;
    await workspace.setViewportSize(viewport);await accounts.ready(workspace);await referenceTypeAndPalette(workspace);
-   for(const id of ['workspace-shell','workspace-header','workspace-navigation','workspace-main'])await expect(workspace.getByTestId(id),`${label}: ${id}`).toBeVisible();
+   // The Sidebar animates its width when the viewport crosses 1200px; measure the settled layout.
+   await workspace.evaluate(()=>Promise.all(document.getAnimations().map(a=>a.finished.catch(()=>undefined))));
+   // CR-017: below 900px the navigation lives in the Sidebar's sheet, opened from the header's menu button (TC-F01-S03-017).
+   for(const id of ['workspace-shell','workspace-header','workspace-main',viewport.width>=900?'workspace-navigation':'workspace-menu'])await expect(workspace.getByTestId(id),`${label}: ${id}`).toBeVisible();
    await expect(handle(workspace,'home'),`${label}: the header names the salon`).toHaveText(salon.name);
    const shell=await appearance(workspace.getByTestId('workspace-shell'));expect(shell.background,`${label}: warm canvas`).toBe('rgb(243, 240, 235)');expect(shell.width).toBe(viewport.width);
    const header=await appearance(workspace.getByTestId('workspace-header'));expect(header.position,`${label}: sticky header`).toBe('sticky');expect(header.minHeight,`${label}: header height`).toBe('60px');
    if(viewport.width>=900){expect(header.background,`${label}: white header from 900px`).toBe('rgb(255, 255, 255)');const main=await appearance(workspace.getByTestId('workspace-main'));expect(main.left,`${label}: rail width`).toBe(viewport.width<1200?200:236);}
    await referenceNavigation(workspace,'workspace-navigation',viewport.width);
-   // The selected item: a brand fill with a readable foreground on the rail, a soft brand tile with ink on phone tabs.
+   // The selected Sidebar item (AC-15): a brand fill with a readable foreground, on the rail and in the phone sheet.
+   if(viewport.width<900){await workspace.getByTestId('workspace-menu').click();await expect(workspace.getByRole('dialog',{name:'Staff workspace'})).toBeVisible();}
    const current=workspace.getByTestId('workspace-navigation').locator('[aria-current="page"]');await expect(current).toHaveCount(1);
-   if(viewport.width>=900){const item=await appearance(current);expect(channels(item.background).rgb,`${label}: selected rail item is the brand`).toEqual(hex(salon.brandColour));expect(contrast(channels(item.colour).rgb,hex(salon.brandColour)),`${label}: selected rail text readable`).toBeGreaterThanOrEqual(4.5);}
-   else{const tile=channels(await current.locator('svg').first().evaluate(el=>getComputedStyle(el.parentElement!).backgroundColor));expect(tile.rgb,`${label}: selected tab tile is the brand tint`).toEqual(hex(salon.brandColour));expect(tile.alpha).toBeGreaterThan(0);expect(tile.alpha).toBeLessThanOrEqual(0.25);
-    expect(channels((await appearance(current)).colour).rgb,`${label}: selected tab text is ink`).toEqual(INK);}
+   const item=await appearance(current);expect(channels(item.background).rgb,`${label}: selected item is the brand`).toEqual(hex(salon.brandColour));expect(contrast(channels(item.colour).rgb,hex(salon.brandColour)),`${label}: selected item text readable`).toBeGreaterThanOrEqual(4.5);
+   if(viewport.width<900){await designScreenshot(workspace,`CR017-F01-sheet-${salon.slug}-${viewport.width}`);await workspace.keyboard.press('Escape');await expect(workspace.getByRole('dialog')).toHaveCount(0);await expect(workspace.getByTestId('workspace-menu')).toBeFocused();}
    const ids=await testIds(workspace);expect(ids.length).toBeGreaterThan(3);for(const id of ids)expect(id).toMatch(TEST_ID_NAME);
    const result=await referenceFit(workspace,salon.name);expect(result.counted).toBeGreaterThan(0);expect(result.pageScrolls,`${label}: no horizontal scroll`).toBe(false);expect(result.outside).toEqual([]);expect(result.clipped).toEqual([]);
-   await tabTo(workspace,workspace.getByTestId('workspace-navigation').getByRole('link').first(),label);await expectKeyboardFocus(workspace,`${label} navigation`);
-   await designScreenshot(workspace,`CR016-F01-shell-${salon.slug}-${viewport.width}`);
+   await tabTo(workspace,viewport.width>=900?workspace.getByTestId('workspace-navigation').getByRole('link').first():workspace.getByTestId('workspace-menu'),label);await expectKeyboardFocus(workspace,`${label} navigation`);
+   await designScreenshot(workspace,`CR017-F01-shell-${salon.slug}-${viewport.width}`);
   }
   await workspace.close();
  }
