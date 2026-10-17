@@ -32,6 +32,13 @@ async function loginPresentation(page:Page,width:number){
  await expect(handle(page,'password-toggle')).toBeVisible();await expect(handle(page,'forgot-password')).toBeVisible();
 }
 
+/** The open confirmation: a modal overlay hides the page behind it from assistive technology (CR-016's
+ * Sheet does so through aria-hidden), so the capture waits for the dialog, not for the page's main landmark. */
+async function dialogScreenshot(page:Page,name:string){
+ await expect(page.getByRole('dialog')).toBeVisible();const folder=path.join(reportDir,'design');fs.mkdirSync(folder,{recursive:true});
+ await page.screenshot({path:path.join(folder,name+'.png'),fullPage:false,mask:[page.locator('input')]});
+}
+
 test(`${c(16)} responsive layouts keep every control reachable across six widths`,async({identity,accounts})=>{
  test.setTimeout(180000);const staff=await identity.staff(beta,'OWNER'),context=await accounts.context(beta,[staff]);
  for(const route of screenMap){const page=await accounts.open(context,route);if(!route.endsWith('sign-in'))await accounts.ready(page);else await expect(handle(page,'sign-in-submit')).toBeVisible();
@@ -57,7 +64,7 @@ test(`${c(23)} staff identity screens follow the supplied salon layout with acce
    const result=await referenceFit(page,beta.name);expect(result.counted).toBeGreaterThan(0);expect(result.pageScrolls).toBe(false);expect(result.outside).toEqual([]);expect(result.clipped).toEqual([]);
    await designScreenshot(page,`F02-${route.replaceAll('/','-')}-${viewport.width}`);
    if(route===routes.staff){const trigger=handle(page,'revoke-all');await trigger.click();await referenceDialog(page,workspace,viewport.width);
-    await designScreenshot(page,`F02-confirmation-${workspace?'staff':'customer'}-${viewport.width}`);await page.keyboard.press('Escape');await expect(page.getByRole('dialog')).toHaveCount(0);await expect(trigger).toBeFocused();
+    await dialogScreenshot(page,`F02-confirmation-${workspace?'staff':'customer'}-${viewport.width}`);await page.keyboard.press('Escape');await expect(page.getByRole('dialog')).toHaveCount(0);await expect(trigger).toBeFocused();
     await trigger.click();await handle(page,'cancel-action').click();await expect(page.getByRole('dialog')).toHaveCount(0);await expect(trigger).toBeFocused();
    }
   }await page.close();
