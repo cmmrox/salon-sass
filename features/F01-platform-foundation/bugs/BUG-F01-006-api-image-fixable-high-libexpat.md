@@ -2,12 +2,12 @@
 id: BUG-F01-006
 title: The API production image ships libexpat 2.8.5 with a fixable high vulnerability, so the image scan refuses it
 severity: major
-status: open
+status: fixed
 found_by: TC-F01-S05-002
 breaks: AC-2
 found_on: 2026-10-18
-fixed_in: null
-fix_note: null
+fixed_in: 09b7d80
+fix_note: "The API runtime stage installs libexpat >= 2.9.0-r0 from Alpine 3.24 (apk add --no-cache --upgrade), failing the build if absent; images-scan.sh exits 0 for both images."
 developer_note: null
 verified_on: null
 approved_by: null
