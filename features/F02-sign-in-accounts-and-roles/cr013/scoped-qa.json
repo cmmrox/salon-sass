@@ -210,9 +210,9 @@
     "reports": [
       {
         "feature": "F02",
-        "report": "qa/reports/20261017-145139-F02-delta-c5bbab4cb12f",
+        "report": "qa/reports/20261017-150612-F02-delta-48bf0f166789",
         "revision": "516953e68e72a814ec0a6db2b4765f2fadb55fd2",
-        "summary_sha256": "3c82ca8c7cbe1c778d0b8e1c149f13afc1e6df56fb4e42a75601eb2f022813a4",
+        "summary_sha256": "2ee6883b71829eab6f1c8d428b194bbf0c40147bd53fc27cbf3487d21fd89d60",
         "automation_ids": [
           "staff-access",
           "staff-runtime",
@@ -235,7 +235,8 @@
       "All 14 registered F02 automation entries pass at 516953e (runtime meta 516953e): staff-access 26, staff-runtime 3, nonlocal-identity TC-F02-S01-030, customer-access 12, customer-runtime 5, nonlocal-provider TC-F02-S02-018, customer-profile 14, web-functional 7, browser-security 8, web-presentation 6, web-resilience-address 2, web-theme-entry 4, identity-read-baseline (every p95 31-60 ms under 300 ms, zero failed requests, semantic checks 100%), account-journeys 1.",
       "BUG-F02-012 also: frozen-API sign-in 10/10 at 503 in 3.002-3.007 s on the fix build (qa/reports/20261017-BUG-F02-012-frozen-api-probe/probe.txt).",
       "Earlier sealed reports on the same scope are preserved and not counted: 20261017-063102 (BUG-F02-010/011), 20261017-090358 (environment), 20261017-091035 (test defect; BUG-F02-012 observed), 20261017-092347 and 20261017-094849 (passes before later QA definition edits).",
-      "Owner-requested regression 20261017-095745-regression-b151743995aa 15/19 at QA revision 28268b5, the four triaged entries passing in 20261017-143246-F01-delta-baf914700098 and 20261017-143743-F02-delta-f06314968ba1; regression evidence is reported separately from this F02 assessment."
+      "Owner-requested regression 20261017-095745-regression-b151743995aa 15/19 at QA revision 28268b5, the four triaged entries passing in 20261017-143246-F01-delta-baf914700098 and 20261017-143743-F02-delta-f06314968ba1; regression evidence is reported separately from this F02 assessment.",
+      "The identical 14-entry delta was re-run from the main checkout at 516953e (report 20261017-150612-F02-delta-48bf0f166789, 14/14 pass) so that its integrity receipt shares the workspace of the base and developer-command reports; the QA-worktree run 20261017-145139-F02-delta-c5bbab4cb12f gave the same 14/14 result."
     ]
   },
   "manual": {
