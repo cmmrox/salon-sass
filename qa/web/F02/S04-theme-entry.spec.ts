@@ -6,6 +6,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {createServer} from 'node:http';
+import {execFileSync} from 'node:child_process';
 import type {Locator,Page} from '@playwright/test';
 import {test,expect,handle,routes} from '../../shared/identity-browser';
 import {alpha,beta,gamma,problem} from '../../shared/identity';
@@ -20,6 +21,9 @@ const c=(n:number)=>`TC-F02-S04-${String(n).padStart(3,'0')}`;
 const DEFAULT_ACCENT='#D6086A';
 /** The prototype's final ink and line tokens (AC-10). */
 const INK='#111827',LINE='#DDD6CA';
+/** The prototype's keyboard focus outline (`--in`), kept on every brand (spec, CR-013 theme and entry). */
+const FOCUS='#1D5FD0';
+const WHITE:Rgb=[255,255,255];
 /** CR-012's retired taupe action and the retired black workspace accent. */
 const RETIRED={taupe:'rgb(138, 112, 94)',black:'rgb(20, 20, 19)'};
 
@@ -54,7 +58,25 @@ async function signInAccent(page:Page,brand:string){
  expect(await accentLines(handle(page,'identifier')),'resting field line is the shared line colour').toContain(rgb(LINE));
  await handle(page,'identifier').focus();await expect(handle(page,'identifier')).toBeFocused();
  expect(await accentLines(handle(page,'identifier')),'focused field accent is the brand').toContain(rgb(brand));
+ // Text in the brand colour is the brand only at 4.5:1 or more on white, otherwise ink.
+ const brandText=contrast(hex(brand),WHITE)>=4.5?brand:INK;
+ await expect(handle(page,'forgot-password'),'recovery control text').toHaveCSS('color',rgb(brandText));
+ // The keyboard focus outline stays the prototype blue on every brand.
+ await handle(page,'password').focus();await page.keyboard.press('Tab');await expect(handle(page,'password-toggle')).toBeFocused();
+ const outline=await handle(page,'password-toggle').evaluate(el=>{const s=getComputedStyle(el);return {style:s.outlineStyle,colour:s.outlineColor,visible:el.matches(':focus-visible')};});
+ expect(outline.visible,'keyboard focus is focus-visible').toBe(true);expect(outline.style,'keyboard focus draws an outline').not.toBe('none');expect(outline.colour,'keyboard focus outline is the prototype blue').toBe(rgb(FOCUS));
  await expectNoRetired(screen,RETIRED.taupe,'sign-in');
+}
+/** The workspace account page's accents at one width: selected navigation, primary action and field focus. */
+async function workspaceAccent(page:Page,salon:Salon,brand:string,width:number,ready:(page:Page)=>Promise<void>){
+ await page.setViewportSize({width,height:1000});await ready(page);await expect(handle(page,'home')).toHaveText(salon.name);
+ const current=page.getByTestId('workspace-navigation').locator('[aria-current="page"]');await expect(current).toHaveCount(1);
+ if(width>=900)await expectOnBrand(current,brand,`${salon.slug} selected navigation at ${width}`);
+ else{const tile=channels(await current.locator('svg').first().evaluate(el=>getComputedStyle(el.parentElement!).backgroundColor));
+  expect(tile.rgb,`${salon.slug} selected tab tile is the brand's soft tint`).toEqual(hex(brand));expect(tile.alpha).toBeGreaterThan(0);expect(tile.alpha).toBeLessThanOrEqual(0.25);}
+ await expectOnBrand(handle(page,'password-save'),brand,`${salon.slug} primary action at ${width}`);
+ await handle(page,'oldPassword').focus();await expect(handle(page,'oldPassword')).toBeFocused();expect(await accentLines(handle(page,'oldPassword')),`${salon.slug} focused field accent at ${width}`).toContain(rgb(brand));
+ await expectNoRetired(page.getByTestId('workspace-shell'),RETIRED.black,`${salon.slug} workspace at ${width}`,false);
 }
 
 test(`${c(24)} sign-in and workspace draw every accent in the salon's own brand colour with a readable foreground`,async({identity,accounts})=>{
@@ -64,25 +86,38 @@ test(`${c(24)} sign-in and workspace draw every accent in the salon's own brand 
   const staff=await identity.staff(salon,'MANAGER'),signedOut=await accounts.context(salon),signedIn=await accounts.context(salon,[staff]);
   const login=await accounts.open(signedOut,routes.staffSignIn);await expect(signInName(login)).toHaveText(salon.name);await signInAccent(login,salon.brandColour);await login.close();
   for(const width of [1280,390]){
-   const page=await accounts.open(signedIn,routes.staff);await page.setViewportSize({width,height:1000});await accounts.ready(page);await expect(handle(page,'home')).toHaveText(salon.name);
-   const current=page.getByTestId('workspace-navigation').locator('[aria-current="page"]');await expect(current).toHaveCount(1);
-   if(width>=900)await expectOnBrand(current,salon.brandColour,`${salon.slug} selected navigation at ${width}`);
-   else{const tile=channels(await current.locator('svg').first().evaluate(el=>getComputedStyle(el.parentElement!).backgroundColor));
-    expect(tile.rgb,`${salon.slug} selected tab tile is the brand's soft tint`).toEqual(hex(salon.brandColour));expect(tile.alpha).toBeGreaterThan(0);expect(tile.alpha).toBeLessThanOrEqual(0.25);}
-   await expectOnBrand(handle(page,'password-save'),salon.brandColour,`${salon.slug} primary action at ${width}`);
-   await handle(page,'oldPassword').focus();await expect(handle(page,'oldPassword')).toBeFocused();expect(await accentLines(handle(page,'oldPassword')),`${salon.slug} focused field accent at ${width}`).toContain(rgb(salon.brandColour));
-   await expectNoRetired(page.getByTestId('workspace-shell'),RETIRED.black,`${salon.slug} workspace at ${width}`,false);await page.close();
+   const page=await accounts.open(signedIn,routes.staff);await workspaceAccent(page,salon,salon.brandColour,width,p=>accounts.ready(p));await page.close();
   }
  }
 });
 
-test(`${c(25)} a salon colour change shows on the next sign-in request and an invalid colour falls back to the default accent`,async({identity,accounts})=>{
- test.setTimeout(120000);
+/** Sets one local salon's stored colour through the lead's local-only hook in the product checkout. */
+function setColour(salon:Salon,colour:string){
+ try{execFileSync(path.join(productRoot,'infra/scripts/local-salon.sh'),['colour',salon.slug,colour],{cwd:productRoot,stdio:'pipe',timeout:60000});}
+ catch{throw new Error(`ENVIRONMENT: local-salon.sh colour ${salon.slug} ${colour} failed`);}
+}
+async function storedColour(identity:{api:{send:(method:string,path:string,options:{headers:Record<string,string>})=>Promise<import('@playwright/test').APIResponse>}},salon:Salon){
+ const answer=await identity.api.send('GET','/api/v1/salon',{headers:{Host:salon.hostname}});expect(answer.status()).toBe(200);return (await answer.json()).brandColour as string;
+}
+
+test(`${c(25)} a salon colour change shows on both screens on the next request and an invalid colour falls back to the default accent`,async({identity,accounts})=>{
+ test.setTimeout(180000);
+ // Part 1, real data: change alpha's stored colour twice with the running web app untouched, then restore it.
+ const original=await storedColour(identity,alpha);expect(original,'alpha starts from its seeded colour').toBe(alpha.brandColour);
+ const manager=await identity.staff(alpha,'MANAGER'),signedOut=await accounts.context(alpha),signedIn=await accounts.context(alpha,[manager]);
+ try{
+  for(const colour of ['#0E7490','#A7F3D0']){setColour(alpha,colour);expect(await storedColour(identity,alpha)).toBe(colour);
+   const login=await accounts.open(signedOut,routes.staffSignIn);await expect(signInName(login)).toHaveText(alpha.name);await signInAccent(login,colour);await login.close();
+   const page=await accounts.open(signedIn,routes.staff);await workspaceAccent(page,alpha,colour,1280,p=>accounts.ready(p));await page.close();
+  }
+ }finally{setColour(alpha,original);}
+ expect(await storedColour(identity,alpha),'alpha colour restored').toBe(original);
+ // Part 2, the web's defence: the database cannot hold an invalid colour, so a stand-in on the API's
+ // port serves alpha's published brand with each invalid value. The page must still render, in the default.
  const published=await identity.api.send('GET','/api/v1/salon',{headers:{Host:alpha.hostname}});expect(published.status()).toBe(200);const brand=await published.json();expect(brand.slug).toBe(alpha.slug);
- // Each row's served colour, and the accent the sign-in must show for it. The first row differs
- // from every fixture and from the default, so a cached or hard-coded accent fails it.
- const rows:[string,unknown,string][]=[['changed dark','#0E7490','#0E7490'],['changed light','#A7F3D0','#A7F3D0'],['malformed','not-a-colour',DEFAULT_ACCENT],['injection','#fff;}body{display:none',DEFAULT_ACCENT],['missing',undefined,DEFAULT_ACCENT]];
- let served:unknown=rows[0][1],calls=0;const context=await accounts.context(alpha);
+ // The first row is the seam's control: a valid colour served the same way must render as itself.
+ const rows:[string,unknown,string][]=[['valid control','#0E7490','#0E7490'],['malformed','not-a-colour',DEFAULT_ACCENT],['injection','#fff;}body{display:none',DEFAULT_ACCENT],['missing',undefined,DEFAULT_ACCENT]];
+ let served:unknown,calls=0;
  localService('stop','api');let fake:Awaited<ReturnType<typeof standInForApi>>|undefined;
  try{
   const meta=metaAnswer('salon-api','qa-brand-stand-in');
@@ -92,7 +127,7 @@ test(`${c(25)} a salon colour change shows on the next sign-in request and an in
    else{response.writeHead(503);response.end();}
   });
   for(const [label,colour,accent] of rows){served=colour;const before=calls;
-   const page=await accounts.open(context,routes.staffSignIn);await expect(signInName(page),label).toHaveText(alpha.name);expect(calls,`${label}: the brand was read for this request`).toBeGreaterThan(before);
+   const page=await accounts.open(signedOut,routes.staffSignIn);await expect(signInName(page),label).toHaveText(alpha.name);expect(calls,`${label}: the brand was read for this request`).toBeGreaterThan(before);
    await signInAccent(page,accent);await page.close();
   }
  }finally{await fake?.close();localService('start','api');await identity.api.reconnect();}
