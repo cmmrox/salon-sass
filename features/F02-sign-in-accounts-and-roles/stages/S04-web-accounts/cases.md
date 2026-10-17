@@ -272,3 +272,27 @@ Authority: approved CR-010, CR-012, CR-013 and revised spec. Local synthetic alp
 - **Expected:** Each surface is filled with exactly the brand, and its text reaches at least 4.5:1 against it, for every valid brand colour a salon can choose. Every row and surface is measured before the verdict, so a failure names every unreadable pairing. Alpha ends on its original colour.
 - **Automation:** `qa/web/F02/S04-theme-entry.spec.ts`
 
+
+## CR-016 cases (reconciled 2026-10-17)
+
+CR-016 rebuilds the staff screens from shadcn/ui and Tailwind with no intended visual or behaviour change (AC-12, AC-13). TC-F02-S04-001 to -028 keep their meaning and are rerun; their shared design helper reads the prototype's tokens under shadcn/ui's variable names (F01-S03 AC-13), values unchanged. TC-F02-S04-018 is re-performed on the rebuilt screens.
+
+### TC-F02-S04-029 staff screens and the confirmation overlay are shadcn/ui components with the overlay's dismissal and focus behaviour
+
+- **Type:** functional
+- **Priority:** high
+- **Covers:** AC-12
+- **Performed as / preconditions:** A synthetic Owner of alpha signed in through the API, with a Professional in the salon so the staff list carries its grant checkbox; a signed-out browser for sign-in. shadcn/ui components mark their root with `data-slot`.
+- **Steps:** Open sign-in, account, staff and audit and list the rendered components and every button, input, select, textarea, table, dialog, checkbox and switch; refuse a sign-in with a wrong password. On the staff list read the grant checkbox. At 390 and 1280 open the sign-out-all confirmation three times and close it by Escape, by the backdrop and by Cancel; each time Tab and Shift+Tab three times, and record when the overlay leaves the document and when focus reaches the opener.
+- **Expected:** Sign-in is a Card, Avatar, Label, Input and Button; account Card, Label, Input, Button; staff also NativeSelect and Checkbox; audit Card and Button; every control belongs to a shadcn/ui component, no native checkbox or `<dialog>`; the refusal is the Alert with `role=alert`. The checkbox is named by its label, which is a 44px target. The overlay is the Sheet with its overlay: a bottom sheet at most 90% high on a phone, a 460px full-height right drawer on a desktop; focus starts on Cancel and stays inside however far a keyboard user tabs; Escape, the backdrop and Cancel each close it, nothing is confirmed, and focus returns to the opener (the measured delay is recorded in `CR016-focus-return.json`).
+- **Automation:** `qa/web/F02/S04-shadcn-composition.spec.ts`. Seen failing on the pre-CR-016 build for the intended reason (no shadcn/ui components on sign-in): `qa/reports/20261017-CR016-manual/failure-proof-TC029.log`.
+
+### TC-F02-S04-030 every staff screen and state renders as the pre-CR-016 build did, apart from the mandated checkbox
+
+- **Type:** responsive
+- **Priority:** high
+- **Covers:** AC-13
+- **Performed as / preconditions:** QA operator; synthetic Owners, Managers and a Professional seeded through the local hook (credentials in memory). The pre-CR-016 product (`fefc4fd`) is built in a scratch worktree outside the repository and served on a second port against the same API; the same sessions and data serve both builds.
+- **Steps:** Capture from both builds back to back: sign-in, recovery guidance and refused sign-in, MFA challenge and Owner MFA enrolment (key masked), account with devices, staff with Owner controls, audit and the confirmation overlay, for alpha, beta and gamma at the six widths (refusal and MFA states at 390 and 1280). Compare pixel by pixel, plus test-id sets, visible text and overflow.
+- **Expected:** Pairs pixel-identical except what AC-12 requires (the shadcn/ui Checkbox in place of the native box) and data that differs between captures; same test ids, translations and states; no overflow. Each difference is classified.
+- **Manual:** performed 2026-10-17; a one-time migration judgment that needs a second build of an earlier revision. Evidence `qa/reports/20261017-CR016-manual/`.
