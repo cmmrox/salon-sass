@@ -1,5 +1,10 @@
 # F02 Sign-in, accounts and roles: product review
 
+## Closure receipts after BUG-F01-006 (2026-10-18)
+
+After 2fc8425 only F01's API image Dockerfile, documents and metadata changed; no F02 behaviour is affected. The F02 web entries were re-executed at 18bb512 so that the closure receipts match the reviewed tree. Sealed delta `qa/reports/20261018-022929-F02-delta-4999a18c34fe`: 7 of 8 entries pass. TC-F02-S04-029 failed once (backdrop at 1280). Repeats showed why: the case clicked the drawer's backdrop within tens of milliseconds of it opening, before Radix listens for a click outside the sheet (3 of 8 repeats missed). Clicks from 50 ms onward close it every time (24 of 24 at 390 and 1280), so no person can hit this; it is a test defect, not a product one. The case now waits two frames and a task before that click, and its expectations are unchanged. It passed 8 of 8 repeats, then sealed in `qa/reports/20261018-025615-F02-delta-33a3f679c901` at `c522818`. QA status remains pass.
+
+
 ## Current CR-017 independent review of the staff screens (2026-10-18)
 
 Reviewed as: a receptionist on a 768px tablet and a 390px phone, a salon owner at a 1280-1440px desk and a professional on a 360px phone; signed out (sign-in, recovery, refused sign-in, MFA challenge, Owner enrolment) and signed in (account and devices, staff with Owner controls and a Professional, the role Select open, audit, confirmation, a Receptionist's denied page), for alpha, beta and gamma.
