@@ -1,7 +1,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
-export const root=path.resolve(import.meta.dirname,'../..');
+/** The QA checkout: its automation and load scripts. */
+export const qaRoot=path.resolve(import.meta.dirname,'../..');
+function qaLocal(name){try{const line=fs.readFileSync(path.join(qaRoot,'qa/.env.local'),'utf8').split('\n').find(l=>l.startsWith(name+'='));return line?line.slice(name.length+1).trim():undefined;}catch{return undefined;}}
+/** The checkout that owns the stack (.env.stack, .stack/, infra scripts, the commit its images are built from): QA_PRODUCT_ROOT, else the QA checkout. */
+export const root=path.resolve(process.env.QA_PRODUCT_ROOT||qaLocal('QA_PRODUCT_ROOT')||qaRoot);
 export const report=process.env.QA_REPORT_DIR||path.join(root,'qa/reports/adhoc');
 export function readEnv(file){return Object.fromEntries(fs.readFileSync(file,'utf8').split('\n').filter(l=>/^[A-Z_0-9]+=/.test(l)).map(l=>{const i=l.indexOf('=');return[l.slice(0,i),l.slice(i+1).replace(/^"|"$/g,'')];}));}
 export const settings=readEnv(path.join(root,'.env.stack'));

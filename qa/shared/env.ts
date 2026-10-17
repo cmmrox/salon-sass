@@ -26,7 +26,14 @@ function readEnvFile(file: string): Record<string, string> {
 }
 
 const qaLocal = readEnvFile(path.join(QA_ROOT, '.env.local'));
-const productLocal = readEnvFile(path.join(REPO_ROOT, '.env'));
+
+/**
+ * The checkout whose running product is under test: its infra scripts, process records, logs and
+ * root .env. QA_PRODUCT_ROOT (shell, then qa/.env.local) when QA runs in its own worktree while the
+ * lead runs the product from another checkout; otherwise this checkout.
+ */
+export const PRODUCT_ROOT = path.resolve(process.env.QA_PRODUCT_ROOT || qaLocal.QA_PRODUCT_ROOT || REPO_ROOT);
+const productLocal = readEnvFile(path.join(PRODUCT_ROOT, '.env'));
 
 function setting(name: string): string | undefined {
   return process.env[name] || qaLocal[name] || productLocal[name] || undefined;

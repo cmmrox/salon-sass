@@ -17,24 +17,25 @@ await one('TC-F01-S05-001','images are unprivileged, report the tested commit an
   const meta=JSON.parse(curl('alpha','/api/v1/meta').body);assert.equal(meta.commit,sha);assert.equal(meta.version,versions().SALON_API_1_VERSION);
   const browser=await chromium.launch();
   try {
+    // CR-010/CR-012: the salon entry is the staff sign-in (no customer 430px shell); full width at every size.
     const page=await browser.newPage({viewport:{width:390,height:844}}), resources=[];
     page.on('response',response=>{if(new URL(response.url()).pathname.startsWith('/fonts/poppins/'))resources.push({path:new URL(response.url()).pathname,status:response.status(),type:response.headers()['content-type']});});
     const response=await page.goto(url('alpha'));assert.equal(response.status(),200);
-    await page.getByTestId('salon-name').waitFor();
+    await page.getByTestId('staff-sign-in-name').waitFor();assert.equal((await page.getByTestId('staff-sign-in-name').textContent()).trim(),salons[0].name);
     const rendered=await page.evaluate(async()=>{
       for(const weight of [400,500,600])await document.fonts.load(`${weight} 15px Poppins`);
       await document.fonts.ready;
-      const shell=document.querySelector('[data-testid="salon-shell"]'),style=getComputedStyle(shell);
-      return {family:getComputedStyle(document.body).fontFamily,width:shell.getBoundingClientRect().width,background:style.backgroundColor,
+      const screen=document.querySelector('[data-testid="staff-sign-in-screen"]');
+      return {family:getComputedStyle(document.body).fontFamily,width:screen.getBoundingClientRect().width,canvas:getComputedStyle(document.documentElement).getPropertyValue('--color-background').trim().toUpperCase(),
         loaded:Array.from(document.fonts).filter(face=>face.family.replaceAll(/['"]/g,'')==='Poppins'&&face.status==='loaded').map(face=>face.weight),
         checked:[400,500,600].map(weight=>document.fonts.check(`${weight} 15px Poppins`))};
     });
-    assert.equal(rendered.family.split(',')[0].replaceAll(/['"]/g,'').trim(),'Poppins');assert.equal(rendered.width,390);assert.equal(rendered.background,'rgb(243, 240, 235)');
+    assert.equal(rendered.family.split(',')[0].replaceAll(/['"]/g,'').trim(),'Poppins');assert.equal(rendered.width,390);assert.equal(rendered.canvas,'#F3F0EB');
     assert.deepEqual(rendered.checked,[true,true,true]);for(const weight of ['400','500','600'])assert(rendered.loaded.includes(weight));
     for(const name of ['Regular','Medium','SemiBold']){const found=resources.find(resource=>resource.path.endsWith(`Poppins-${name}.ttf`));assert(found,`packaged ${name} font was actually requested`);assert.equal(found.status,200);assert(!found.type?.includes('html'));}
-    await page.setViewportSize({width:1280,height:844});assert.equal(await page.getByTestId('salon-shell').evaluate(el=>el.getBoundingClientRect().width),430);
+    await page.setViewportSize({width:1280,height:844});assert.equal(await page.getByTestId('staff-sign-in-screen').evaluate(el=>el.getBoundingClientRect().width),1280);
     fs.mkdirSync(path.join(report,'design'),{recursive:true});await page.screenshot({path:path.join(report,'design/F01-production-like-fonts.png')});
-    fs.writeFileSync(path.join(report,'design/F01-production-like-fonts.json'),JSON.stringify({resources,rendered,desktopWidth:430},null,2));
+    fs.writeFileSync(path.join(report,'design/F01-production-like-fonts.json'),JSON.stringify({resources,rendered,desktopWidth:1280},null,2));
   } finally {await browser.close();}
 });
 await one('TC-F01-S05-002','image scanner passes clean images and refuses a fixable vulnerable image',()=>{

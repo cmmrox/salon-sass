@@ -235,7 +235,7 @@ cases:
   covers:
   - AC-1
 - id: TC-F01-S03-002
-  title: Brand foreground contrasts correctly for pink dark and light brands
+  title: Signed-out staff entry identifies its own salon with no workspace or customer shell
   type: branding
   priority: high
   covers:

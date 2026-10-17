@@ -11,7 +11,9 @@
 
 QA_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 REPO_ROOT="$(cd "$QA_ROOT/.." && pwd)"
-SCRIPTS="$REPO_ROOT/infra/scripts"
+# The product checkout under test: QA_PRODUCT_ROOT (shell, then qa/.env.local), else this checkout.
+_QA_PRODUCT_ROOT="${QA_PRODUCT_ROOT:-$(sed -n 's/^[[:space:]]*QA_PRODUCT_ROOT[[:space:]]*=[[:space:]]*//p' "$QA_ROOT/.env.local" 2>/dev/null | tail -n 1)}"
+SCRIPTS="${_QA_PRODUCT_ROOT:-$REPO_ROOT}/infra/scripts"
 # The checkout whose scripts are under test, and where those scripts keep their process ids and
 # their lock. Derived from SCRIPTS, so that a check run against another checkout's scripts (to see
 # it fail on an older version of them) looks at that checkout's state and not this one's.
@@ -21,7 +23,7 @@ RUN_DIR="$PRODUCT_ROOT/.local/run"
 _setting() {
   local name="$1" file value
   if [ -n "${!name:-}" ]; then printf '%s' "${!name}"; return; fi
-  for file in "$QA_ROOT/.env.local" "$REPO_ROOT/.env"; do
+  for file in "$QA_ROOT/.env.local" "$PRODUCT_ROOT/.env"; do
     [ -f "$file" ] || continue
     value="$(sed -n "s/^[[:space:]]*${name}[[:space:]]*=[[:space:]]*//p" "$file" | tail -n 1)"
     value="${value%\"}"; value="${value#\"}"
