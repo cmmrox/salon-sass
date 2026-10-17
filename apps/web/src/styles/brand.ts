@@ -16,7 +16,7 @@
 /** The prototype's default brand (`--ac`), for a salon without a valid colour of its own. */
 export const DEFAULT_BRAND_COLOUR = '#D6086A';
 
-/** The surface brand-coloured text is drawn on: the white card (`--color-surface` in tokens.css). */
+/** The surface brand-coloured text is drawn on: the white card (`--card` in theme.css). */
 export const BRAND_TEXT_SURFACE = '#ffffff';
 
 /** The least contrast normal-size text may have (WCAG 2.2 AA). */
@@ -27,7 +27,7 @@ const HEX_COLOUR = /^#[0-9a-f]{6}$/i;
 
 /**
  * The colours text on a brand colour can take: white, the platform's own text colour
- * (`--color-text` in tokens.css) and, only when neither of those is readable, pure black.
+ * (`--foreground` in theme.css) and, only when neither of those is readable, pure black.
  */
 export const ON_BRAND_COLOURS = { light: '#ffffff', dark: '#111827', black: '#000000' } as const;
 

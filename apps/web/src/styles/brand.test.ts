@@ -53,10 +53,10 @@ describe('contrastColour', () => {
     expect(contrastRatio(colour, contrastColour(colour))).toBeGreaterThanOrEqual(4.5);
   });
 
-  it('the dark choice is the platform text colour of tokens.css', () => {
-    const tokens = readFileSync(join(__dirname, 'tokens.css'), 'utf8');
+  it('the dark choice is the platform text colour of theme.css', () => {
+    const theme = readFileSync(join(__dirname, 'theme.css'), 'utf8');
 
-    expect(tokens).toContain(`--color-text: ${ON_BRAND_COLOURS.dark};`);
+    expect(theme).toContain(`--foreground: ${ON_BRAND_COLOURS.dark};`);
   });
 });
 
@@ -122,10 +122,10 @@ describe('brandTextColour', () => {
     expect(brandTextColour('#FDE68A')).toBe(ON_BRAND_COLOURS.dark);
   });
 
-  it('measures against the white surface of tokens.css', () => {
-    const tokens = readFileSync(join(__dirname, 'tokens.css'), 'utf8');
+  it('measures against the white surface of theme.css', () => {
+    const theme = readFileSync(join(__dirname, 'theme.css'), 'utf8');
 
-    expect(tokens).toContain(`--color-surface: ${BRAND_TEXT_SURFACE};`);
+    expect(theme).toContain(`--card: ${BRAND_TEXT_SURFACE};`);
   });
 });
 

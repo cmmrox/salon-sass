@@ -1,2 +1,118 @@
-@import '../styles/tokens.css';
-@import '../styles/base.css';
+/*
+ * The application's one style sheet (docs/engineering/web.md, "Styling"): Tailwind, the theme,
+ * the theme's Tailwind names and the base rules. Nothing else is imported by the application.
+ */
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import '../styles/theme.css';
+
+/* There is no dark mode (the prototype has none): `dark:` only ever matches inside `.dark`, which
+   nothing sets, so a variant written by the shadcn/ui CLI never follows the system setting. */
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  /* The prototype's workspace breakpoints: the rail from 900px, the wide rail from 1200px. */
+  --breakpoint-rail: 900px;
+  --breakpoint-wide: 1200px;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-positive: var(--positive);
+  --color-positive-surface: var(--positive-surface);
+  --color-caution: var(--caution);
+  --color-caution-surface: var(--caution-surface);
+  --color-negative-surface: var(--negative-surface);
+  --color-backdrop: var(--backdrop);
+  --color-surface-translucent: var(--surface-translucent);
+
+  --font-sans: var(--font-family);
+
+  --text-small: var(--font-size-small);
+  --text-body: var(--font-size-body);
+  --text-large: var(--font-size-large);
+  --text-title: var(--font-size-title);
+  --text-workspace-title: var(--font-size-workspace-title);
+  --text-label: var(--font-size-label);
+  --text-input: var(--font-size-input);
+  --text-nav: var(--font-size-nav);
+  --text-rail: var(--font-size-rail);
+
+  --leading-body: var(--line-height-body);
+  --leading-heading: var(--line-height-heading);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-field: var(--radius-small);
+  --radius-card: var(--radius-medium);
+  --radius-action: var(--radius-pill);
+  --radius-rail-item: var(--radius-rail);
+
+  --spacing-header: var(--size-header);
+  --spacing-tab: var(--size-tab);
+  --spacing-rail-row: var(--size-rail-row);
+  --spacing-icon: var(--size-icon);
+  --spacing-touch: var(--size-touch-target);
+  --spacing-action: var(--size-action);
+  --spacing-field: var(--size-field);
+  --spacing-skeleton-line: var(--size-skeleton-line);
+  --container-content: var(--size-content);
+  --container-workspace: var(--size-workspace);
+
+  --shadow-tabs: var(--shadow-navigation);
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-family);
+    font-size: var(--font-size-body);
+    font-weight: var(--font-weight-regular);
+    line-height: var(--line-height-body);
+  }
+
+  :focus-visible {
+    outline: var(--size-focus-ring) solid var(--ring);
+    outline-offset: var(--size-focus-offset);
+  }
+
+  h1,
+  h2,
+  h3 {
+    letter-spacing: var(--letter-spacing-heading);
+  }
+
+  h2,
+  h3 {
+    font-size: var(--font-size-large);
+    font-weight: var(--font-weight-strong);
+  }
+
+  a {
+    color: inherit;
+    text-decoration-line: underline;
+  }
+}

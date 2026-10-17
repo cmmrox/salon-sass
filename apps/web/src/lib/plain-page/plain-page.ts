@@ -1,7 +1,6 @@
 import messages from '../../../messages/en.json';
 import { defaultLocale } from '../../i18n/config';
-import baseStyles from '../../styles/base.css?raw';
-import tokenStyles from '../../styles/tokens.css?raw';
+import themeStyles from '../../styles/theme.css?raw';
 
 import layoutStyles from './plain-page.css?raw';
 
@@ -11,15 +10,17 @@ import layoutStyles from './plain-page.css?raw';
  * here and answered by `proxy.ts` with their status, because the framework gives a page it renders
  * after a rewrite the status 200 (decision 028).
  *
- * They look as the application's own pages do: the same strings (messages/en.json), the same tokens
- * and base rules inlined from their one source (styles/tokens.css, styles/base.css), and the
- * layout of the components whose markup they repeat (plain-page.css, in tokens only). They need no
- * script, and show nothing of any salon, in the platform's neutral theme.
+ * They look as the application's own pages do: the same strings (messages/en.json), the theme
+ * inlined from its one source (styles/theme.css), and the base rules and layout of the components
+ * whose markup they repeat (plain-page.css, in theme variables only). They cannot render React
+ * components or use Tailwind's output, so this is the one hand-written style sheet besides the
+ * theme (docs/engineering/web.md, "Styling"). They need no script, and show nothing of any salon,
+ * in the platform's neutral theme.
  */
 export type PlainPage = 'salon-not-found' | 'salon-unavailable' | 'service-unavailable';
 
 /** The style sheets inlined, in order. Each class name is defined by one of them only. */
-export const PLAIN_PAGE_STYLE_SHEETS = [tokenStyles, baseStyles, layoutStyles];
+export const PLAIN_PAGE_STYLE_SHEETS = [themeStyles, layoutStyles];
 
 const STATUS: Record<PlainPage, number> = {
   'salon-not-found': 404,

@@ -1,7 +1,10 @@
 import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 
-import styles from './Status.module.css';
+import { Alert, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Card, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 
 /** What the status page knows about the API at this moment. */
 export type StatusState =
@@ -13,12 +16,16 @@ export type StatusState =
 export function StatusPanel({ children }: { children: ReactNode }) {
   const t = useTranslations('status');
   return (
-    <section className={styles.panel} aria-labelledby="status-heading" data-testid="status-panel">
-      <h1 id="status-heading" className={styles.heading} data-testid="status-heading">
-        {t('heading')}
-      </h1>
-      {children}
-    </section>
+    <Card asChild>
+      <section aria-labelledby="status-heading" data-testid="status-panel">
+        <CardTitle asChild>
+          <h1 id="status-heading" data-testid="status-heading">
+            {t('heading')}
+          </h1>
+        </CardTitle>
+        {children}
+      </section>
+    </Card>
   );
 }
 
@@ -28,45 +35,48 @@ export function StatusBody({ state, retryHref }: { state: StatusState; retryHref
 
   if (state.kind === 'loading') {
     return (
-      <div className={styles.loading} role="status" data-testid="status-loading">
-        <span className={styles.visuallyHidden}>{t('loading')}</span>
-        <span className={styles.skeletonLine} aria-hidden="true" />
-        <span className={styles.skeletonLine} aria-hidden="true" />
-        <span className={styles.skeletonLine} aria-hidden="true" />
+      <div className="flex flex-col gap-3" role="status" data-testid="status-loading">
+        <span className="sr-only">{t('loading')}</span>
+        <Skeleton aria-hidden="true" />
+        <Skeleton aria-hidden="true" />
+        <Skeleton aria-hidden="true" />
       </div>
     );
   }
 
   if (state.kind === 'unavailable') {
     return (
-      <div className={styles.unavailable} role="alert" data-testid="status-unavailable">
-        <h2 className={styles.stateTitle} data-testid="status-unavailable-title">
-          {t('unavailable.title')}
-        </h2>
+      <Alert variant="caution" data-testid="status-unavailable">
+        <AlertTitle asChild>
+          <h2 data-testid="status-unavailable-title">{t('unavailable.title')}</h2>
+        </AlertTitle>
         <p data-testid="status-unavailable-body">{t('unavailable.body')}</p>
         {/* A plain link, not a client-side one: a full reload makes the page ask the API again. */}
-        <a className={styles.action} href={retryHref} data-testid="status-retry">
-          {t('unavailable.retry')}
-        </a>
-      </div>
+        <Button asChild variant="outline" size="sm" className="self-start bg-card font-semibold">
+          <a href={retryHref} data-testid="status-retry">
+            {t('unavailable.retry')}
+          </a>
+        </Button>
+      </Alert>
     );
   }
 
   return (
-    <div className={styles.loaded} data-testid="status-loaded">
-      <p className={styles.summary} data-testid="status-summary">
+    <div className="flex flex-col gap-3" data-testid="status-loaded">
+      {/* Ink on the positive surface: the positive text colour is not AA there (BUG-F01-003). */}
+      <p className="rounded-field bg-positive-surface px-3 py-2 font-semibold text-foreground" data-testid="status-summary">
         {t('loaded.summary')}
       </p>
-      <dl className={styles.facts}>
-        <div className={styles.fact}>
-          <dt className={styles.factName}>{t('loaded.service')}</dt>
-          <dd className={styles.factValue} data-testid="status-api-service">
+      <dl className="flex flex-col gap-2">
+        <div className="flex flex-wrap justify-between gap-x-4 gap-y-1">
+          <dt className="text-muted-foreground">{t('loaded.service')}</dt>
+          <dd className="font-semibold wrap-anywhere" data-testid="status-api-service">
             {state.service}
           </dd>
         </div>
-        <div className={styles.fact}>
-          <dt className={styles.factName}>{t('loaded.version')}</dt>
-          <dd className={styles.factValue} data-testid="status-api-version">
+        <div className="flex flex-wrap justify-between gap-x-4 gap-y-1">
+          <dt className="text-muted-foreground">{t('loaded.version')}</dt>
+          <dd className="font-semibold wrap-anywhere" data-testid="status-api-version">
             {state.version}
           </dd>
         </div>

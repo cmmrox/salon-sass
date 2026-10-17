@@ -1,0 +1,173 @@
+/*
+ * The theme: every colour, radius, size and font the web app may use, as CSS variables
+ * (docs/engineering/web.md, "Styling"; docs/design/ui-ux-standards.md). Plain CSS with no Tailwind
+ * directive, so the proxy's plain pages can inline it from this one source (lib/plain-page).
+ * app/globals.css maps these to Tailwind's names in `@theme inline`; components use those names
+ * (`bg-primary`, `rounded-card`) and never a raw value.
+ *
+ * The values are the prototype's final tokens under shadcn/ui's variable names. A salon's brand
+ * arrives from the API at run time and is put on the root by BrandStyle (styles/brand.ts):
+ * `--color-brand`, `--color-on-brand`, `--color-brand-soft` and `--color-brand-text`. `--primary`
+ * and `--accent` read them, so every salon screen takes its accent from the salon (CR-013). No
+ * value here is a brand colour; the plain pages and the operator console stay neutral.
+ */
+
+@font-face { font-family: 'Poppins'; font-style: normal; font-weight: 400; font-display: swap; src: url('/fonts/poppins/Poppins-Regular.ttf') format('truetype'); }
+@font-face { font-family: 'Poppins'; font-style: normal; font-weight: 500; font-display: swap; src: url('/fonts/poppins/Poppins-Medium.ttf') format('truetype'); }
+@font-face { font-family: 'Poppins'; font-style: normal; font-weight: 600; font-display: swap; src: url('/fonts/poppins/Poppins-SemiBold.ttf') format('truetype'); }
+
+/* shadcn/ui's theme variables, with the prototype's values. */
+:root {
+  --background: #F3F0EB;
+  --foreground: #111827;
+  --card: #ffffff;
+  --card-foreground: #111827;
+  --popover: #ffffff;
+  --popover-foreground: #111827;
+  --primary: var(--color-brand);
+  --primary-foreground: var(--color-on-brand);
+  --secondary: #EAE5DC;
+  --secondary-foreground: #111827;
+  --muted: #EAE5DC;
+  /* Muted text only on white: 4.83:1 there, 4.25:1 on the canvas (ui-ux-standards.md). */
+  --muted-foreground: #6B7280;
+  --accent: var(--color-brand-soft);
+  /* The soft tint is the brand at 22 alpha over a light surface; ink reads on it. */
+  --accent-foreground: #111827;
+  --destructive: #B3261E;
+  --border: #DDD6CA;
+  --input: #DDD6CA;
+  /* The keyboard focus outline, never the brand. */
+  --ring: #1D5FD0;
+  /* Fields; cards are --radius-medium, actions --radius-pill. */
+  --radius: 1.25rem;
+}
+
+/* The prototype's own named tokens, which shadcn/ui has no name for. */
+:root {
+  /* Status colours. Positive text is not AA on its surface: normal-size success text uses ink. */
+  --positive: #0F7B55;
+  --positive-surface: #DDF1E6;
+  --caution: #8F5A00;
+  --caution-surface: #FFF4DC;
+  --negative-surface: #FDE9E7;
+  --backdrop: rgb(20 20 19 / 28%);
+  --opacity-disabled: 0.55;
+
+  /* Type */
+  --font-family: 'Poppins', system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', 'Noto Sans Sinhala', 'Noto Sans Tamil',
+    sans-serif;
+  --font-size-small: 0.875rem;
+  --font-size-body: 0.9375rem;
+  --font-size-large: 1rem;
+  --font-size-title: 1.375rem;
+  --font-size-workspace-title: 1.625rem;
+  --font-size-label: 0.8125rem;
+  --font-size-input: 1rem;
+  --font-size-nav: 0.6875rem;
+  --font-size-rail: 0.90625rem;
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-strong: 600;
+  --line-height-body: 1.5;
+  --line-height-heading: 1.25;
+  --letter-spacing-heading: -0.02em;
+
+  /* Radius */
+  --radius-small: 1.25rem;
+  --radius-medium: 1.5rem;
+  --radius-pill: 999px;
+  --radius-nav: 1.5rem 1.5rem 0 0;
+  --radius-rail: 0.875rem;
+  --radius-sheet: 2rem 2rem 0 0;
+
+  /* Size. `--spacing` is Tailwind's spacing unit, the same value as Tailwind's own, so that the
+     plain pages (which get no Tailwind output) lay out on the same scale. */
+  --spacing: 0.25rem;
+  --size-content: 47.5rem;
+  --size-workspace: 80rem;
+  --size-sidebar: 14.75rem;
+  --size-sidebar-compact: 12.5rem;
+  --size-header: 3.75rem;
+  --size-nav: 5.25rem;
+  --size-tab: 3.5rem;
+  --size-rail-row: 2.875rem;
+  --size-icon: 1.375rem;
+  --size-touch-target: 2.75rem;
+  --size-field: 3rem;
+  --size-action: 3.125rem;
+  --size-skeleton-line: 1.25rem;
+  --size-focus-ring: 0.1875rem;
+  --size-focus-offset: 0.125rem;
+  --size-border: 0.0625rem;
+  --size-field-inset: 0.09375rem;
+  --size-customer: 26.875rem;
+  --size-form: 35rem;
+  --size-drawer: 28.75rem;
+  --size-sheet-handle: 2.5rem;
+
+  /* Shadow */
+  --shadow-surface: none;
+  --shadow-navigation: 0 -8px 24px rgb(20 20 19 / 8%);
+}
+
+/* CR-012 staff sign-in composition. Its colours are the shared ones above with the salon's brand
+   accent (CR-013); only its translucent card over the interior photograph is its own. */
+:root {
+  --surface-translucent: rgb(255 255 255 / 88%);
+  --size-login-card: 32.75rem;
+  --size-login-initial: 3.875rem;
+  --size-login-field: 3.375rem;
+  --size-login-toggle: 3.375rem;
+  --space-login-top: 5.625rem;
+  --space-login-card-block: 2.875rem;
+  --space-login-card-inline: 2.625rem;
+  --space-login-brand-gap: 2.25rem;
+  --space-login-heading-gap: 0.375rem;
+  --space-login-form-top: 1.875rem;
+  --space-login-recovery-pull: -1.25rem;
+  --space-login-toggle-top: 1.875rem;
+  --font-size-login-title: 2.5rem;
+  --font-size-login-welcome: 1.75rem;
+  --font-size-login-name: 2rem;
+  --font-size-login-initial: 2.5rem;
+  --font-size-login-help: 1.125rem;
+  --font-size-login-label: 1.0625rem;
+  --font-size-login-action: 1.3125rem;
+  --letter-spacing-login-name: 0.12em;
+  --radius-login-card: 1.375rem;
+  --radius-login-field: 0.625rem;
+  --shadow-login-card: 0 12px 44px rgb(77 57 37 / 5%);
+}
+
+/*
+ * F02-S04 (CR-016) removes this block. The former token names that only the account screens'
+ * remaining CSS Modules (components/account/*.module.css) still read, each pointing at the theme
+ * above so they keep their exact look. Nothing new may use them.
+ */
+:root {
+  --color-background: var(--background);
+  --color-surface: var(--card);
+  --color-border: var(--border);
+  --color-text: var(--foreground);
+  --color-text-muted: var(--muted-foreground);
+  --color-negative: var(--destructive);
+  --color-negative-surface: var(--negative-surface);
+  --color-positive-surface: var(--positive-surface);
+  --color-caution: var(--caution);
+  --color-caution-surface: var(--caution-surface);
+  --color-skeleton: var(--muted);
+  --color-backdrop: var(--backdrop);
+  --color-surface-translucent: var(--surface-translucent);
+  --space-half: 0.125rem;
+  --space-field-block: 0.625rem;
+  --space-field-inline: 0.875rem;
+  --space-workspace-header: 1.75rem;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-12: 3rem;
+}
