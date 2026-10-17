@@ -134,6 +134,28 @@ test(`${c(25)} a salon colour change shows on both screens on the next request a
  await expect.poll(async()=>(await identity.api.health()).status(),{timeout:5000}).toBe(200);
 });
 
+test(`${c(28)} text on a mid-tone brand fill stays readable on the sign-in action, primary button and selected navigation`,async({identity,accounts})=>{
+ test.setTimeout(180000);
+ // Valid #RRGGBB brands where neither white nor ink #111827 reaches 4.5:1 (AC-8, AC-10): #808080 gives
+ // white 3.95 and ink 4.49; #C34BB4 at most 4.21. A salon may choose either; its staff must still read the action.
+ const original=await storedColour(identity,alpha);expect(original,'alpha starts from its seeded colour').toBe(alpha.brandColour);
+ const manager=await identity.staff(alpha,'MANAGER'),signedOut=await accounts.context(alpha),signedIn=await accounts.context(alpha,[manager]);
+ const failures:string[]=[];
+ const readable=async(element:Locator,brand:string,label:string)=>{const s=await appearance(element);expect(s.background,`${label} background is the salon's brand`).toBe(rgb(brand));const ratio=contrast(channels(s.colour).rgb,hex(brand));if(ratio<4.5)failures.push(`${label}: ${s.colour} on ${brand} is ${ratio.toFixed(2)}:1`);};
+ try{
+  for(const colour of ['#808080','#C34BB4']){setColour(alpha,colour);expect(await storedColour(identity,alpha)).toBe(colour);
+   const login=await accounts.open(signedOut,routes.staffSignIn);await expect(signInName(login)).toHaveText(alpha.name);await expect(handle(login,'sign-in-submit')).toBeEnabled();
+   await readable(handle(login,'sign-in-submit'),colour,`${colour} sign-in action`);await login.close();
+   const page=await accounts.open(signedIn,routes.staff);await page.setViewportSize({width:1280,height:1000});await accounts.ready(page);
+   const current=page.getByTestId('workspace-navigation').locator('[aria-current="page"]');await expect(current).toHaveCount(1);
+   await readable(handle(page,'password-save'),colour,`${colour} workspace primary button`);await readable(current,colour,`${colour} selected navigation`);await page.close();
+  }
+ }finally{setColour(alpha,original);}
+ expect(await storedColour(identity,alpha),'alpha colour restored').toBe(original);
+ // Every row and surface was measured before judging, so one report names every unreadable pairing.
+ expect(failures,'text on brand fills reaches 4.5:1').toEqual([]);
+});
+
 /** The product's own account loading message, so a frame showing it is caught even without its test id. */
 function loadingMessage(){const file=path.join(productRoot,'apps/web/messages/en.json');const messages=JSON.parse(fs.readFileSync(file,'utf8')) as {account?:{loading?:string}};return messages.account?.loading??'';}
 
