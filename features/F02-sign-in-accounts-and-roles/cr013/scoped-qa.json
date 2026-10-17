@@ -1,11 +1,11 @@
 {
   "version": 1,
   "kind": "independent-scoped-qa",
-  "reviewed_revision": "c78b90933f73dd5d56adfa72fa2cef7ace11fd20",
+  "reviewed_revision": "516953e68e72a814ec0a6db2b4765f2fadb55fd2",
   "qa_identity": {
     "agent": "salon-qa subagent (fresh context, built no stage)",
     "role": "independent salon_qa",
-    "recorded_at_utc": "2026-10-17T03:58:53.455525+00:00"
+    "recorded_at_utc": "2026-10-17T09:34:03.996102+00:00"
   },
   "owner_instruction": "Approved CR-013 (owner, 2026-10-17): one salon theme across sign-in and workspace and direct entry; the owner asked to review the features implemented so far and do the relevant QA. Independent re-verification of F02's changed scope under CR-009, product review of the salon web screens, and the regression suite. Local only.",
   "features": {
@@ -43,6 +43,7 @@
         "apps/web/public/images/staff-sign-in-interior.webp",
         "apps/web/src/app/(booking)/account/page.tsx",
         "apps/web/src/app/(booking)/layout.tsx",
+        "apps/web/src/app/(booking)/page.tsx",
         "apps/web/src/app/(booking)/salon-site/page.tsx",
         "apps/web/src/app/(booking)/salon-site/salon.ts",
         "apps/web/src/app/(booking)/sign-in/page.tsx",
@@ -107,6 +108,8 @@
         "docs/changes/CR-011-efficient-feature-delivery.md",
         "docs/changes/CR-012-salon-login-design.md",
         "docs/changes/CR-013-one-salon-theme-and-direct-entry.md",
+        "docs/changes/CR-014-authenticator-step-secondary-action.md",
+        "docs/changes/CR-015-sign-out-confirmation-wording.md",
         "docs/decisions/DECISION_LOG.md",
         "docs/design/prototype/index.html",
         "docs/design/references/staff-sign-in.png",
@@ -120,7 +123,9 @@
         "docs/operations/verification-evidence.md",
         "docs/qa/review-context.md",
         "docs/qa/test-plan.md",
+        "features/BACKLOG.md",
         "features/F01-platform-foundation/README.md",
+        "features/F01-platform-foundation/bugs/BUG-F01-005-scan-error-reported-as-vulnerabilities.md",
         "features/F01-platform-foundation/cases.md",
         "features/F01-platform-foundation/feature.yaml",
         "features/F01-platform-foundation/review.md",
@@ -128,6 +133,7 @@
         "features/F01-platform-foundation/stages/S03-salon-web-addresses-and-branded-shell/spec.md",
         "features/F01-platform-foundation/stages/S03-salon-web-addresses-and-branded-shell/stage.yaml",
         "features/F01-platform-foundation/stages/S05-staging-environment-and-delivery/cases.md",
+        "features/F01-platform-foundation/stages/S05-staging-environment-and-delivery/spec.md",
         "features/F02-sign-in-accounts-and-roles/README.md",
         "features/F02-sign-in-accounts-and-roles/bugs/BUG-F02-006-confirmation-failure-hidden.md",
         "features/F02-sign-in-accounts-and-roles/bugs/BUG-F02-007-workspace-navigation-stale.md",
@@ -138,6 +144,7 @@
         "features/F02-sign-in-accounts-and-roles/bugs/BUG-F02-012-sign-in-hangs-past-budget.md",
         "features/F02-sign-in-accounts-and-roles/cases.md",
         "features/F02-sign-in-accounts-and-roles/cr012/scoped-qa.json",
+        "features/F02-sign-in-accounts-and-roles/cr013/scoped-qa.json",
         "features/F02-sign-in-accounts-and-roles/feature.yaml",
         "features/F02-sign-in-accounts-and-roles/review.md",
         "features/F02-sign-in-accounts-and-roles/scoped-qa.json",
@@ -159,6 +166,9 @@
         "features/README.md",
         "infra/scripts/local-salon.sh",
         "qa/api/F01/S04-platform-services.spec.ts",
+        "qa/checks/F01/S05-fixture-build.sh",
+        "qa/checks/F02/S01-nonlocal-secrets.sh",
+        "qa/checks/F02/S02-nonlocal-provider.sh",
         "qa/coverage.md",
         "qa/load/F01/S03-web-rush.js",
         "qa/scripts/sdlc_lib/__main__.py",
@@ -187,35 +197,45 @@
         "qa/web/F02/S04-theme-entry.spec.ts",
         "qa/web/F02/feature-journeys.spec.ts"
       ],
-      "impact": "CR-013 and its bug fix change only the web app (tokens and brand style, staff sign-in and shell styles, the proxy's server-side entry decision in route-request.ts/entry.ts, salon lookup in salon.ts) plus the local-only colour hook infra/scripts/local-salon.sh. Java API, schema, generated contracts and other infrastructure are unchanged since the base full report, so its API, customer/privacy, database, provider and read-baseline proof is retained. The proxy and salon lookup sit in front of every web page and BFF route, so all six registered F02 web groups were re-executed: functional, browser-security, presentation, resilience-address, theme-entry (new TC-F02-S04-024..027) and account journeys."
+      "impact": "CR-013 and its three bug fixes change only the web app (tokens and brand style, staff sign-in and shell styles, the proxy's server-side entry decision in route-request.ts/entry.ts, salon lookup in salon.ts, the upstream client deadline in client.ts/forward-hostname.ts) plus the local-only colour hook infra/scripts/local-salon.sh; Java API, schema and generated contracts are unchanged since the base. QA's shared helpers that every F02 entry imports also changed (env.ts product root/.env, identity-runtime.ts, services.ts, checks.sh, identity-browser.ts readiness), so all 14 registered F02 entries were re-executed at the reviewed revision: the six web groups, the five API suites, the two nonlocal checks and the identity read baseline."
     }
   },
   "commands": {
-    "report": "qa/reports/20261017-143951-F02-commands-8d9b9f74195f",
-    "revision": "9dba61112adfb2dfac98e6620751e2f2fbce40a5",
-    "summary_sha256": "7bc228be9d5f23e22a6fa76cbd8152f22dbc5e71bccc23b7da56595b134631e3"
+    "report": "qa/reports/20261017-144614-F02-commands-1fb3bcf33ab4",
+    "revision": "516953e68e72a814ec0a6db2b4765f2fadb55fd2",
+    "summary_sha256": "1f9f2d7d0faa04f8b734668f6bf6529705fca3fe0251f0abde107ef43ea363a2",
+    "reused_qa_paths": []
   },
   "targeted": {
     "reports": [
       {
         "feature": "F02",
-        "report": "qa/reports/20261017-094849-F02-delta-584884e9bba2",
-        "revision": "c78b90933f73dd5d56adfa72fa2cef7ace11fd20",
-        "summary_sha256": "9e50a9d0b751ddf3a1211b2191489481a4d85fb7758ca3ff0e7dbf58a1a41c59",
+        "report": "qa/reports/20261017-145139-F02-delta-c5bbab4cb12f",
+        "revision": "516953e68e72a814ec0a6db2b4765f2fadb55fd2",
+        "summary_sha256": "3c82ca8c7cbe1c778d0b8e1c149f13afc1e6df56fb4e42a75601eb2f022813a4",
         "automation_ids": [
+          "staff-access",
+          "staff-runtime",
+          "nonlocal-identity",
+          "customer-access",
+          "customer-runtime",
+          "nonlocal-provider",
+          "customer-profile",
           "web-functional",
           "browser-security",
           "web-presentation",
           "web-resilience-address",
           "web-theme-entry",
+          "identity-read-baseline",
           "account-journeys"
         ]
       }
     ],
     "coverage": [
-      "Six registered F02 web groups, 28 Playwright tests, all passing on the final build c78b909: web-functional 7, browser-security 8, web-presentation 6, web-resilience-address 2, web-theme-entry 4, account-journeys 1. BUG-F02-012 additionally: frozen-API sign-in 10/10 at 503 in 3.002-3.007 s (qa/reports/20261017-BUG-F02-012-frozen-api-probe/probe.txt).",
-      "Earlier sealed reports on the same scope are preserved and not counted: 20261017-063102 (BUG-F02-010/011), 20261017-090358 (environment), 20261017-091035 (test defect; BUG-F02-012 observed), 20261017-092347 (pass before the BUG-F02-012 fix).",
-      "Owner-requested regression 20261017-095745-regression-b151743995aa 15/19, with the four triaged entries passing in 20261017-143246-F01-delta-baf914700098 and 20261017-143743-F02-delta-f06314968ba1."
+      "All 14 registered F02 automation entries pass at 516953e (runtime meta 516953e): staff-access 26, staff-runtime 3, nonlocal-identity TC-F02-S01-030, customer-access 12, customer-runtime 5, nonlocal-provider TC-F02-S02-018, customer-profile 14, web-functional 7, browser-security 8, web-presentation 6, web-resilience-address 2, web-theme-entry 4, identity-read-baseline (every p95 31-60 ms under 300 ms, zero failed requests, semantic checks 100%), account-journeys 1.",
+      "BUG-F02-012 also: frozen-API sign-in 10/10 at 503 in 3.002-3.007 s on the fix build (qa/reports/20261017-BUG-F02-012-frozen-api-probe/probe.txt).",
+      "Earlier sealed reports on the same scope are preserved and not counted: 20261017-063102 (BUG-F02-010/011), 20261017-090358 (environment), 20261017-091035 (test defect; BUG-F02-012 observed), 20261017-092347 and 20261017-094849 (passes before later QA definition edits).",
+      "Owner-requested regression 20261017-095745-regression-b151743995aa 15/19 at QA revision 28268b5, the four triaged entries passing in 20261017-143246-F01-delta-baf914700098 and 20261017-143743-F02-delta-f06314968ba1; regression evidence is reported separately from this F02 assessment."
     ]
   },
   "manual": {
@@ -225,10 +245,10 @@
     "judgment": "TC-F02-S04-018 keyboard-only traversal of sign-in at 360/768/1536 and the workspace account at 390/1280 on alpha, beta (dark) and gamma (light): ordered focus with no trap, 3px #1D5FD0 outline on every stop, brand inset ring on fields, action contrast 5.12/14.68/14.24, recovery text brand/brand/ink, announced errors. 120 screenshots inspected."
   },
   "limits": [
-    "Base full report plus independent affected delta, not a fresh full-feature certification.",
-    "Running API/web built from f62146f; application source identical to the developer's fix 3b8df96. The local database was reset with local-reset.sh (identity keys and every stack volume preserved) after a QA diagnostic F01 run left the scheduler a month ahead; synthetic fixtures were recreated by the tests.",
-    "Comparison with the design is from rendered screens and the prototype source; no native assistive-technology session; no staging or real messages.",
-    "All F02 bugs (010, 011, 012) verified. BUG-F01-005 (minor, F01, pre-existing scan-message defect) is open and does not affect F02."
+    "Base full report plus one independent full-scope delta of every F02 entry at the reviewed revision; not a fresh full-feature certification, and the scoped runner accepts no --context.",
+    "All F02 bugs (010, 011, 012) verified. BUG-F01-005 (minor, F01, pre-existing scan-message defect) is open and does not affect F02.",
+    "Local database reset once with local-reset.sh after a QA diagnostic F01 run left the scheduler a month ahead; identity keys (same digest, 0600) and every stack volume preserved. Synthetic fixtures only; real clock; no provider override.",
+    "Comparison with the design is from rendered screens and the prototype source; no native assistive-technology session; no staging, real messages or payments."
   ],
   "process_documents": {}
 }
