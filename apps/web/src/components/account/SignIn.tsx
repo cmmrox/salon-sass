@@ -8,11 +8,11 @@ import { formatInstant } from '@/lib/format';
 import { Alert } from '@/components/ui/alert';
 import { Button as UiButton } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { Button, Field } from './Controls';
+import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
+import { Spinner } from '@/components/ui/spinner';
+import { Button, CodeField, glyph, PasswordField, TextField } from './Controls';
 
-/** A feather glyph drawn as a mask in the current text colour. */
-const glyph = 'inline-block size-icon shrink-0 bg-current mask-contain mask-center mask-no-repeat';
+const secret = 'rounded-field bg-background p-3 font-mono text-small whitespace-pre-wrap wrap-anywhere';
 
 type Step = 'initial' | 'enroll_mfa' | 'verify_mfa';
 export function SignIn({ kind, timeZone }: { kind: Kind; timeZone: string }) {
@@ -26,7 +26,7 @@ export function SignIn({ kind, timeZone }: { kind: Kind; timeZone: string }) {
   const [supported, setSupported] = useState<boolean | null>(null); const [wait, setWait] = useState(0); const [copied, setCopied] = useState(false);
   useEffect(() => { Promise.resolve().then(() => setSupported(supportsLocks())); }, []);
   useEffect(() => { if (!wait) return; const id = setTimeout(() => setWait(wait - 1), 1000); return () => clearTimeout(id); }, [wait]);
-  const field = (name: keyof typeof values) => ({ value: values[name], onChange: (e: React.ChangeEvent<HTMLInputElement>) => setValues({ ...values, [name]: e.target.value }), error: failure?.fields.includes(name) });
+  const field = (name: 'identifier' | 'password') => ({ value: values[name], onChange: (e: React.ChangeEvent<HTMLInputElement>) => setValues({ ...values, [name]: e.target.value }), error: failure?.fields.includes(name) });
   async function submit() {
     setBusy(true); setFailure(null);
     try {
@@ -56,18 +56,16 @@ export function SignIn({ kind, timeZone }: { kind: Kind; timeZone: string }) {
     </header>
     {supported === false && <Alert variant="notice" role="status" className="mb-4" data-testid="account-browser-support">{t('browser_unsupported')}</Alert>}
     {failure && <Alert variant="notice" className="mb-4" data-testid="account-error">{message}</Alert>}
-    {wait > 0 && <p role="status" className="mb-4" data-testid="account-retry-wait">{t('wait', { seconds: wait })}</p>}
-    <form className="flex min-w-0 flex-col gap-6" onSubmit={(e) => { e.preventDefault(); void submit(); }}>
-      {step === 'initial' && <><Field login name="identifier" label={t('identifier')} autoComplete="username" required {...field('identifier')} /><div className="relative min-w-0"><Field login name="password" label={t('password')} type={showPassword ? 'text' : 'password'} autoComplete="current-password" required inputClassName="pr-(--size-login-toggle)" {...field('password')} /><UiButton type="button" variant="ghost" size="icon" className="absolute top-(--space-login-toggle-top) right-0 h-(--size-login-field) w-(--size-login-toggle) rounded-(--radius-login-field) max-login:top-7" data-testid="account-password-toggle" aria-label={showPassword ? t('hidePassword') : t('showPassword')} aria-pressed={showPassword} aria-controls="password" onClick={() => setShowPassword(!showPassword)}><span className={`${glyph} ${showPassword ? 'mask-(--icon-eye-off)' : 'mask-(--icon-eye)'}`} aria-hidden="true" /></UiButton></div><div className="-mt-5 mb-0 flex justify-end"><UiButton type="button" variant="link" size="link" data-testid="account-forgot-password" aria-expanded={passwordHelp} aria-controls="account-password-help" onClick={() => setPasswordHelp(!passwordHelp)}>{t('forgotPassword')}</UiButton></div>{passwordHelp && <Alert id="account-password-help" data-testid="account-password-help" role="status" className="block rounded-(--radius-login-field) p-3 text-small">{t('passwordHelp')}</Alert>}</>}
+    {wait > 0 && <Alert variant="notice" role="status" className="mb-4" data-testid="account-retry-wait">{t('wait', { seconds: wait })}</Alert>}
+    <form className="min-w-0" onSubmit={(e) => { e.preventDefault(); void submit(); }}><FieldGroup className="gap-6">
+      {step === 'initial' && <><TextField login name="identifier" label={t('identifier')} autoComplete="username" required {...field('identifier')} /><PasswordField login name="password" label={t('password')} autoComplete="current-password" required shown={showPassword} onShownChange={setShowPassword} {...field('password')} /><div className="-mt-5 mb-0 flex justify-end"><UiButton type="button" variant="link" size="link" data-testid="account-forgot-password" aria-expanded={passwordHelp} aria-controls="account-password-help" onClick={() => setPasswordHelp(!passwordHelp)}>{t('forgotPassword')}</UiButton></div>{passwordHelp && <Alert id="account-password-help" data-testid="account-password-help" role="status" className="block rounded-(--radius-login-field) p-3 text-small">{t('passwordHelp')}</Alert>}</>}
       {step !== 'initial' && <>
-        {step === 'enroll_mfa' && <><p>{t('mfaHelp')}</p><p className="text-small text-muted-foreground">{t('mfaNotice')}</p><Label size="login">{t('setupKey')}<output className="rounded-field bg-background p-3 font-mono text-small whitespace-pre-wrap wrap-anywhere" data-testid="account-setup-key">{setup.secret}</output></Label><Label size="login">{t('setupUri')}<output className="rounded-field bg-background p-3 font-mono text-small whitespace-pre-wrap wrap-anywhere" data-testid="account-setup-uri">{setup.otpauthUri}</output></Label><Button type="button" testId="account-copy-key" secondary onClick={() => { void navigator.clipboard.writeText(setup.secret ?? '').then(() => setCopied(true)); }}>{t('copyKey')}</Button>{copied && <p role="status">{t('copied')}</p>}</>}
-        <Field login name="code" label={t('code')} inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required {...field('code')} />
-        {expiry && <p data-testid="account-code-expiry">{t('expires', { time: formatInstant(expiry, timeZone) })}</p>}
-        <p className="text-small text-muted-foreground">{t('codeHelp')}</p>
+        {step === 'enroll_mfa' && <><p>{t('mfaHelp')}</p><Alert variant="notice" role={undefined} className="text-small" data-testid="account-mfa-notice">{t('mfaNotice')}</Alert><Field><FieldLabel size="login" htmlFor="account-setup-key">{t('setupKey')}</FieldLabel><output id="account-setup-key" className={secret} data-testid="account-setup-key">{setup.secret}</output></Field><Field><FieldLabel size="login" htmlFor="account-setup-uri">{t('setupUri')}</FieldLabel><output id="account-setup-uri" className={secret} data-testid="account-setup-uri">{setup.otpauthUri}</output></Field><Button type="button" testId="account-copy-key" secondary onClick={() => { void navigator.clipboard.writeText(setup.secret ?? '').then(() => setCopied(true)); }}>{t('copyKey')}</Button>{copied && <Alert variant="success" role="status" data-testid="account-copied">{t('copied')}</Alert>}</>}
+        <CodeField login label={t('code')} value={values.code} onChange={(code) => setValues({ ...values, code })} error={failure?.fields.includes('code')} description={<>{expiry && <span className="block" data-testid="account-code-expiry">{t('expires', { time: formatInstant(expiry, timeZone) })}</span>}<span className="block">{t('codeHelp')}</span></>} />
       </>}
-      <Button type="submit" testId="account-sign-in-submit" className="min-h-(--size-login-field) rounded-(--radius-login-field) py-2 text-login-action" disabled={busy || !supported || wait > 0}>{busy ? t('loading') : step !== 'initial' ? t('verify') : t('signIn')}</Button>
+      <Button type="submit" testId="account-sign-in-submit" className="min-h-(--size-login-field) rounded-(--radius-login-field) py-2 text-login-action" disabled={busy || !supported || wait > 0} aria-busy={busy || undefined}>{busy ? <><Spinner />{t('loading')}</> : step !== 'initial' ? t('verify') : t('signIn')}</Button>
       {step !== 'initial' && <Button type="button" testId="account-restart-sign-in" secondary disabled={busy} onClick={() => { setStep('initial'); setSetup({}); setFailure(null); }}>{t('signIn')}</Button>}
-    </form>
+    </FieldGroup></form>
     <p className="mt-8 flex items-center justify-center gap-3 text-center text-body text-muted-foreground max-login:text-small" data-testid="staff-sign-in-secure"><span className={`${glyph} mask-(--icon-lock)`} aria-hidden="true" />{t('secureTeam')}</p>
   </section></Card>;
 }

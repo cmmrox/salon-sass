@@ -12,7 +12,7 @@ describe('cn', () => {
   it('lets a later theme utility of the same kind replace an earlier one', () => {
     expect(cn('rounded-card', 'rounded-field')).toBe('rounded-field');
     expect(cn('min-h-field', 'min-h-action')).toBe('min-h-action');
-    expect(cn('shadow-field', 'shadow-tabs')).toBe('shadow-tabs');
+    expect(cn('shadow-field', 'shadow-popover')).toBe('shadow-popover');
     expect(cn('leading-heading', 'leading-body')).toBe('leading-body');
     expect(cn('max-w-content', 'max-w-workspace')).toBe('max-w-workspace');
     expect(cn('rail:p-4', 'rail:p-6')).toBe('rail:p-6');

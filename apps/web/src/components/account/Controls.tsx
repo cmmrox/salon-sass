@@ -1,28 +1,106 @@
 'use client';
 import { useTranslations } from 'next-intl';
-import type { ComponentProps, InputHTMLAttributes, ReactNode } from 'react';
+import { REGEXP_ONLY_DIGITS } from 'input-otp';
+import { useState, type ComponentProps, type ReactNode } from 'react';
+import { Alert } from '@/components/ui/alert';
 import { Button as UiButton } from '@/components/ui/button';
 import { Card, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Field, FieldDescription, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from '@/components/ui/input-group';
+import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 
-const controlTestId = (name: string) => `account-${name.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase()}`;
+export const controlTestId = (name: string) => `account-${name.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase()}`;
+
+/** A feather glyph drawn as a mask in the current text colour (CR-012). */
+export const glyph = 'inline-block size-icon shrink-0 bg-current mask-contain mask-center mask-no-repeat';
+
+type FieldText = { name: string; label: string; error?: boolean; login?: boolean; description?: ReactNode };
+
+/** The refused-input message under a field, tied to it by `aria-describedby`; the page's Alert announces the refusal. */
+function Refused({ name }: { name: string }) {
+  const t = useTranslations('account');
+  return <FieldError id={`${name}-error`} role={undefined} data-testid={`${controlTestId(name)}-error`}>{t('fieldError')}</FieldError>;
+}
+
+const describedBy = (name: string, error?: boolean, description?: ReactNode) => [description ? `${name}-description` : '', error ? `${name}-error` : ''].filter(Boolean).join(' ') || undefined;
+
+/** A labelled text field with its help and its refused-input message (shadcn/ui Field). `login` is the staff sign-in's larger field (CR-012). */
+export function TextField({ name, label, error, login = false, description, ...props }: Omit<ComponentProps<typeof Input>, 'size' | 'name'> & FieldText) {
+  return (
+    <Field data-invalid={error || undefined}>
+      <FieldLabel size={login ? 'login' : 'default'} htmlFor={name}>{label}</FieldLabel>
+      <Input {...props} size={login ? 'login' : 'default'} id={name} name={name} data-testid={controlTestId(name)} aria-invalid={Boolean(error)} aria-describedby={describedBy(name, error, description)} />
+      {description && <FieldDescription id={`${name}-description`}>{description}</FieldDescription>}
+      {error && <Refused name={name} />}
+    </Field>
+  );
+}
 
 /**
- * A labelled field with its refused-input message tied to it. `login` is the staff sign-in's larger
- * field (CR-012); `inputClassName` leaves room for a control drawn on the field.
+ * A password field with the visibility toggle drawn on it (shadcn/ui Input Group). The toggle is
+ * `<test id>-toggle`, named "Show password"/"Hide password", pressed while the password is shown.
+ * Pass `shown` and `onShownChange` to control it (the sign-in hides it again after each attempt).
  */
-export function Field({ name, label, error, login = false, inputClassName, ...props }: Omit<InputHTMLAttributes<HTMLInputElement>, 'size'> & { name: string; label: string; error?: boolean; login?: boolean; inputClassName?: string }) {
+export function PasswordField({ name, label, error, login = false, description, shown, onShownChange, ...props }: Omit<ComponentProps<typeof Input>, 'size' | 'name' | 'type'> & FieldText & { shown?: boolean; onShownChange?: (shown: boolean) => void }) {
   const t = useTranslations('account');
+  const [ownShown, setOwnShown] = useState(false);
+  const visible = shown ?? ownShown;
+  const toggle = () => { onShownChange?.(!visible); if (shown === undefined) setOwnShown(!visible); };
   return (
-    <Label size={login ? 'login' : 'default'} htmlFor={name}>
-      {label}
-      <Input {...props} size={login ? 'login' : 'default'} className={inputClassName} id={name} name={name} data-testid={controlTestId(name)} aria-invalid={Boolean(error)} aria-describedby={error ? `${name}-error` : undefined} />
-      {error && <span id={`${name}-error`} className="text-destructive" data-testid={`${controlTestId(name)}-error`}>{t('fieldError')}</span>}
-    </Label>
+    <Field data-invalid={error || undefined}>
+      <FieldLabel size={login ? 'login' : 'default'} htmlFor={name}>{label}</FieldLabel>
+      <InputGroup size={login ? 'login' : 'default'}>
+        <InputGroupInput {...props} type={visible ? 'text' : 'password'} size={login ? 'login' : 'default'} id={name} name={name} data-testid={controlTestId(name)} aria-invalid={Boolean(error)} aria-describedby={describedBy(name, error, description)} />
+        <InputGroupAddon align="inline-end">
+          <InputGroupButton size="icon-sm" className={cn('text-muted-foreground', login && 'min-w-(--size-login-toggle) rounded-(--radius-login-field)')} data-testid={`${controlTestId(name)}-toggle`} aria-label={visible ? t('hidePassword') : t('showPassword')} aria-pressed={visible} aria-controls={name} onClick={toggle}>
+            <span className={`${glyph} ${visible ? 'mask-(--icon-eye-off)' : 'mask-(--icon-eye)'}`} aria-hidden="true" />
+          </InputGroupButton>
+        </InputGroupAddon>
+      </InputGroup>
+      {description && <FieldDescription id={`${name}-description`}>{description}</FieldDescription>}
+      {error && <Refused name={name} />}
+    </Field>
+  );
+}
+
+/**
+ * The six-digit authenticator code (shadcn/ui Input OTP): one real input, `account-code`, named by
+ * its label, digits only, drawn as six slots.
+ */
+export function CodeField({ name = 'code', label, error, login = false, description, value, onChange, disabled }: Omit<FieldText, 'name'> & { name?: string; value: string; onChange: (value: string) => void; disabled?: boolean }) {
+  return (
+    <Field data-invalid={error || undefined}>
+      <FieldLabel size={login ? 'login' : 'default'} htmlFor={name}>{label}</FieldLabel>
+      <InputOTP id={name} name={name} data-testid={controlTestId(name)} maxLength={6} pattern={REGEXP_ONLY_DIGITS} inputMode="numeric" autoComplete="one-time-code" required value={value} onChange={onChange} disabled={disabled} aria-invalid={Boolean(error)} aria-describedby={describedBy(name, error, description)}>
+        <InputOTPGroup>
+          {[0, 1, 2, 3, 4, 5].map((index) => <InputOTPSlot key={index} index={index} size={login ? 'login' : 'default'} aria-invalid={Boolean(error)} />)}
+        </InputOTPGroup>
+      </InputOTP>
+      {description && <FieldDescription id={`${name}-description`}>{description}</FieldDescription>}
+      {error && <Refused name={name} />}
+    </Field>
+  );
+}
+
+/** A choice from a list (shadcn/ui Select) with its label; its trigger carries the test id, each option `<optionTestId>-<value>`. */
+export function ChoiceField({ id, label, testId, optionTestId, value, options, onChange, disabled }: { id: string; label: string; testId: string; optionTestId: string; value: string; options: { value: string; label: string }[]; onChange: (value: string) => void; disabled?: boolean }) {
+  return (
+    <Field>
+      <FieldLabel htmlFor={id}>{label}</FieldLabel>
+      <Select value={value} onValueChange={onChange} disabled={disabled}>
+        <SelectTrigger id={id} data-testid={testId}>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent position="popper" sideOffset={4}>
+          {options.map((option) => <SelectItem key={option.value} value={option.value} data-testid={`${optionTestId}-${option.value.toLowerCase()}`}>{option.label}</SelectItem>)}
+        </SelectContent>
+      </Select>
+    </Field>
   );
 }
 
@@ -45,14 +123,20 @@ export function Section({ title, children }: { title: string; children: ReactNod
   );
 }
 
-/** A checkbox whose whole label is its 44px target. */
-export function Check({ name, label, checked, onChange, disabled, className }: { name: string; label: string; checked: boolean; disabled?: boolean; onChange: (checked: boolean) => void; className?: string }) {
+/** A check box beside its label (shadcn/ui Field, horizontal); the label is the 44px target. */
+export function Check({ name, id = name, label, checked, onChange, disabled, className }: { name: string; id?: string; label: string; checked: boolean; disabled?: boolean; onChange: (checked: boolean) => void; className?: string }) {
   return (
-    <Label className={cn('min-h-touch flex-row items-center gap-3 text-body font-normal', className)}>
-      <Checkbox disabled={disabled} data-testid={controlTestId(name)} checked={checked} onCheckedChange={(state) => onChange(state === true)} />
-      {label}
-    </Label>
+    <Field orientation="horizontal" data-disabled={disabled || undefined} className={className}>
+      <Checkbox id={id} disabled={disabled} data-testid={controlTestId(name)} checked={checked} onCheckedChange={(state) => onChange(state === true)} />
+      <FieldLabel htmlFor={id} className="min-h-touch justify-center text-body font-normal">{label}</FieldLabel>
+    </Field>
   );
+}
+
+/** The page this member may not see: an Alert (the server's denial and the client's after a role change). */
+export function Denied() {
+  const t = useTranslations('account');
+  return <Alert variant="notice" role="alert" data-testid="account-denied">{t('denied')}</Alert>;
 }
 
 /** Data still pending after the salon's page is shown; `inline` sits inside a section's card. */

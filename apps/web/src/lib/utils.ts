@@ -9,11 +9,11 @@ import { extendTailwindMerge } from 'tailwind-merge';
 const twMerge = extendTailwindMerge({
   extend: {
     theme: {
-      text: ['small', 'body', 'large', 'title', 'workspace-title', 'label', 'field', 'nav', 'rail', 'login-title', 'login-welcome', 'login-name', 'login-initial', 'login-help', 'login-label', 'login-action'],
+      text: ['small', 'body', 'large', 'title', 'workspace-title', 'label', 'field', 'rail', 'login-title', 'login-welcome', 'login-name', 'login-initial', 'login-help', 'login-label', 'login-action'],
       leading: ['body', 'heading'],
       radius: ['field', 'card', 'action', 'rail-item', 'checkbox'],
-      shadow: ['tabs', 'field', 'field-focus', 'field-invalid'],
-      spacing: ['header', 'tab', 'rail-row', 'icon', 'touch', 'action', 'field', 'skeleton-line'],
+      shadow: ['popover', 'field', 'field-focus', 'field-invalid'],
+      spacing: ['header', 'rail-row', 'icon', 'touch', 'action', 'field', 'skeleton-line'],
       container: ['content', 'workspace'],
       breakpoint: ['rail', 'wide', 'login'],
     },
