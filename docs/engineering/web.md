@@ -98,7 +98,9 @@ message or customer-cookie work. Existing direct customer Java APIs remain mobil
 
 - A salon's brand (name, logo, cover, colour) arrives from the API and is applied through CSS
   custom properties on the root. Components use the tokens; none hard-codes a brand colour.
-- The text colour on the brand colour is computed for contrast. Never assume white.
+- The text colour on the brand colour is computed for contrast. Never assume white. It is white or
+  ink, whichever contrasts more, when that reaches 4.5:1; otherwise pure black, which always does
+  (at least 4.58:1) for mid-tone brands such as `#808080` (BUG-F02-013).
 - Every salon screen, sign-in and workspace alike, uses the salon's colour as its accent
   (CR-013), with the prototype's `#D6086A` when the salon has none. Only the operator console uses
   the platform's neutral theme, because it belongs to no salon.
