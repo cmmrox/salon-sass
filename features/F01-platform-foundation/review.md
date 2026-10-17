@@ -1,5 +1,45 @@
 # F01 Platform foundation and tenant isolation: product review
 
+## Current CR-016 independent review (2026-10-17)
+
+Reviewed as: a salon owner at a 1280-1440px desk, a receptionist on a 768px tablet and a professional on a 360/390px phone, signed in to alpha (`#D6086A`, default), beta (`#1F2937`, dark, long name) and gamma (`#FDE68A`, light); and a caller on the bare platform domain, an unknown host and a suspended salon.
+Compared with: the accepted pre-CR-016 build of this product (`fefc4fd`, rendered side by side). The competitor findings below are not refreshed: CR-016 changes how the screens are built, not what is compared with Fresha or Booksy.
+
+### Verdict
+
+The Tailwind CSS 4 and shadcn/ui rebuild is invisible to the people who use it, which is what CR-016 promised. Every F01 screen and state (status loaded and unavailable, application not-found and the three plain pages, 36 pairs) is pixel-identical to the accepted build at all six widths, and so is the signed-in workspace shell (header, rail or phone tabs) on account, staff and audit for all three salons, with the same test ids and wording. The one difference on those signed-in pages is inside alpha's staff list, F02-S04's Professional-grant checkbox (TC-F02-S04-030); TC-F01-S03-016's manual record, which lists the shell among its rows, means the shell itself. The setup is the documented one and is guarded: the styling-rules test fails, naming the file, for each of the four violations AC-13 lists. No product defect was found. QA status: pass, on base-plus-delta evidence for the lead's closure.
+
+### Verification in this pass
+
+- Tested revision `79ec9d21516bbfb7871a52733e73335a647a11b6` on branch `charithm/test/CR-016-feature-qa` (product source identical to the developer-gated `858cac3`; the QA commits change only QA files). Running product: local API (meta `033cc61`, Java unchanged) and production web rebuilt from this tree; production-like stack images N and N+1 built at `1530cea`.
+- Developer gates: `qa/reports/20261017-225523-F01-commands-0c672da5c8e5`, 10/10 at `033cc61` (Maven 518 tests, lint, typecheck, unit tests, web build, contracts, selftest, image build, workflow lint).
+- Sealed F01 delta `qa/reports/20261017-231346-F01-delta-9faa7cb28a8b` at `1530cea`, 11/11 entries pass: web-status-page 8, web-status-page-api-down 11, strings-and-test-ids (TC-F01-S01-055), browser-hostnames 1, branded-shell 12, web-rush (300 iterations from 60 virtual users, 603/603 checks, no cross-salon page), styling-setup (TC-F01-S03-014, new), shadcn-shell (TC-F01-S03-015, new), production-like-stack (10 cases), deployment-traffic (TC-F01-S05-008/009) and the salon-isolation journey.
+- Retained under CR-009, not rerun: S01 API, database, migration, profile, CI, contract and local-script checks; S02 API, database, load, seed, listening and contract checks; S04 platform services and nonlocal hooks. A CSS rebuild cannot reach their source, contracts or scripts; the impact assessment is in the lead's draft `qa/reports/cr016-assessment-draft/scoped-qa.json`.
+- Manual: TC-F01-S03-016 (pixel comparison, below) and TC-F01-S01-040 (status page states) performed 2026-10-17. Evidence `qa/reports/20261017-CR016-manual/`.
+- Triage before the passing run (`qa/reports/20261017-230554-F01-delta-e9d15d94b63c`, 8/11, preserved, not counted): strings-and-test-ids was a QA scanner defect (it flagged the shadcn/ui primitives, which forward the caller's `data-testid`, and missed shadcn/ui controls at their use sites; repaired in `1530cea` with two new failure alterations); the two S05 checks were an environment fault (the stack still ran images from `c78b909` and `QA_STACK_NEXT` was unset; repaired by building N and N+1 at the tested tree and restarting the stack with its data kept). Two shared helpers read the theme tokens under their pre-CR-016 names; they now read the shadcn/ui names AC-13 introduced, with the same expected values.
+
+### What works well
+
+- Pixel-for-pixel continuity: the rail, phone tabs, sticky header, cards, status panel and plain pages render exactly as before, for a dark, a light and the default brand.
+- The plain proxy pages still answer 404/503 with no script, inline the theme and show no salon.
+- One keyboard outline everywhere (solid 3px `#1D5FD0`, offset 2px), including the status page's retry action.
+- The styling rules are enforced by a test that really fails, and the source scan now holds every shadcn/ui control to a test id where it is used.
+
+### Suggestions
+
+No new suggestion. SUG-F01-01 (CR-004) and SUG-F01-02 (backlog) below stand.
+
+### Notes for the lead (documents)
+
+- `docs/qa/automation.md` could record the method used here for a change meant to be invisible: build the last accepted revision in a scratch worktree, serve it on a second port against the same API and sessions, and compare screenshot pairs and test-id/text inventories.
+- Shared QA helpers now read theme tokens by their shadcn/ui names (`--background`, `--foreground`, `--ring`, `--destructive`, ...); the source scan treats `src/components/ui/` primitives that spread `props` as forwarding the caller's `data-testid`.
+- The draft assessment must be committed by the lead (QA may not write `features/*/scoped-qa.json`) and both features' `evidence.scoped_assessment` pointed at it.
+
+### Bugs filed from this review
+
+- None. BUG-F01-005 (minor, pre-existing scanner message) stays open; the image scan completed normally in this pass.
+
+
 ## Current CR-010 independent scoped review (2026-10-15)
 
 The web application now serves salon administrators and relevant staff only. Tenant root and legacy account links reach staff access; customer OTP/profile/privacy screens are absent. Every former customer BFF GET/POST returns no-store404 with zero upstream API calls and unchanged cookies, including when the API is unavailable. The Customer HTML preview is explicitly a later React Native design; Salon web is the default. Mobile implementation waits until M1-web is released.
