@@ -124,6 +124,11 @@ because the owner set one standard for all Next.js work in this product.
   their margins, and links lose their underline (the base layer restores the underline on `a`).
   Set what a screen needs with utilities. Tailwind 4's `hover:` applies only on devices that can
   hover.
+- `cn()` in `apps/web/src/lib/utils.ts` extends tailwind-merge with the theme's own Tailwind names
+  (font sizes such as `text-field` and `text-small`, the named radii, shadows, spacing, containers
+  and breakpoints), so that a theme font size is not mistaken for a colour and two theme radii
+  replace each other. A name added to `@theme inline` in `globals.css` is added there too;
+  `lib/utils.test.ts` covers it.
 
 **Rules.**
 
@@ -185,6 +190,14 @@ because the owner set one standard for all Next.js work in this product.
     colour value (hex, `rgb()`, `hsl()`, `oklch()`, `color-mix()` and the like) in any `.tsx` file or
     any code under `src/components` and `src/app`. `src/styles/brand.ts`, which computes brand
     colours, is the one code file that holds colour values. Fix the code, never the test.
+    `src/components/account/composition.test.tsx` enforces rule 1 for the staff account screens: no
+    raw `button`, `input`, `select`, `textarea`, `table` or `dialog` element, and the expected
+    shadcn/ui `data-slot`s rendered on each screen.
+11. As built for F02-S04: the confirmation overlay is the shadcn/ui Sheet, a bottom sheet on phones
+    (capped by `--size-sheet-max-height`) and, with `rail:` classes, a full-height right drawer of
+    `--size-drawer` from 900px. Radix restores focus to the opener on a timer after the sheet
+    closes, so a test waits for focus rather than reading it synchronously. Form check boxes are the
+    shadcn/ui Checkbox, never a native box; selects are `NativeSelect`.
 
 ## Branding
 
