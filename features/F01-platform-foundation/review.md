@@ -46,7 +46,7 @@ Every state was inventoried by `data-slot`: the shell on account, staff and audi
 
 | Id | Class | Suggestion | Disposition |
 | --- | --- | --- | --- |
-| SUG-F01-03 | idea | Give the phone navigation sheet a visible close button | |
+| SUG-F01-03 | idea | Give the phone navigation sheet a visible close button | backlog |
 
 #### SUG-F01-03 A visible close button on the phone navigation sheet
 

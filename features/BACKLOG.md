@@ -54,3 +54,4 @@ Added by the lead at `stage-close` and `feature-close`, from suggestions classed
 | Return focus to the opener in the same frame a confirmation closes | SUG-F02-09 | Radix restores focus on a timer; one frame on the page body today |
 | Send a credential the API calls non-renewable straight to sign-in on the server | SUG-F02-10 | Avoids briefly painting an empty workspace frame |
 | Make the API integration tests bind and connect on the same loopback address | Developer, CR-017 F01-S03 gates | A random test port collided with an IDE language server on 127.0.0.1 and failed one test once |
+| Give the phone navigation sheet a visible close button | SUG-F01-03 | A `SheetClose` icon button labelled from the translations; today it closes on Escape, backdrop or a route |

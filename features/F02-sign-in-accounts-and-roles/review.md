@@ -60,7 +60,7 @@ Ranked, most valuable first. Earlier suggestions stand.
 
 | Id | Class | Suggestion | Disposition |
 | --- | --- | --- | --- |
-| SUG-F02-11 | should | Stop Item rows squeezing long text into a narrow column beside their actions | |
+| SUG-F02-11 | should | Stop Item rows squeezing long text into a narrow column beside their actions | CR-018 |
 
 #### SUG-F02-11 Stop Item rows squeezing long text beside their actions
 
