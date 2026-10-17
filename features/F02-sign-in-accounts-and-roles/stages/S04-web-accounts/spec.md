@@ -144,6 +144,13 @@ and use the brand where the workspace now uses `--color-primary` as an accent. D
 server (session cookie/principal), so the browser never paints a generic frame before a redirect.
 The operator console keeps the neutral platform theme.
 
+Text drawn in the brand colour (links, the recovery control) uses it only when it reaches 4.5:1
+against its background; otherwise it is ink `#111827`, which may keep a brand underline or
+indicator. Fills, rings and focus outlines use the brand itself; anything drawn on a fill uses the
+computed foreground. The phone's selected tab is a soft brand tint behind the icon with ink text.
+For tests, `infra/scripts/local-salon.sh colour <slug> <#RRGGBB>` sets one local salon's stored
+colour (local only, owning role, nothing else changed; `local-reset.sh` restores the seed).
+
 ## CR-012 login mapping
 
 The owner's `docs/design/references/staff-sign-in.png` overrides the HTML grammar only for staff
