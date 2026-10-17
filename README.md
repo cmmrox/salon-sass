@@ -28,6 +28,7 @@ infra/scripts/local-reset.sh    # delete the local database's data and start aga
 infra/scripts/local-service.sh stop api      # one service: <start|stop> <postgres|api|web>
 infra/scripts/local-service.sh pause postgres   # for tests: PostgreSQL stays up and answers nothing; `resume postgres` ends it
 infra/scripts/local-salon.sh suspend gamma      # for tests: suspends one local salon; `activate gamma` ends it
+infra/scripts/local-salon.sh colour beta '#0F766E'   # for tests: sets one local salon's brand colour
 ```
 
 | Service | Address | Change it with |
@@ -42,6 +43,10 @@ Three synthetic salons, `alpha`, `beta` and `gamma`, are seeded in the local env
 reached at `<slug>.localhost` on the API's and the web app's ports, with no hosts file. The web app
 shows a salon at its own address, the status page at `localhost`, and "salon not found" at any
 other hostname.
+
+`local-salon.sh colour <slug> <#RRGGBB>` sets one local salon's stored brand colour, as the owning
+role, and nothing else; both the sign-in and the workspace show it on the next request. It refuses
+an unknown slug or a colour that is not `#RRGGBB`, and `local-reset.sh` restores the seeded colours.
 
 `local-salon.sh <suspend|activate> <slug>` is a hook for tests, for the local environment only. It
 changes that one salon's status in the local database, as the owning role, and nothing else; the
