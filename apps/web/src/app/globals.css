@@ -63,7 +63,6 @@
   --text-workspace-title: var(--font-size-workspace-title);
   --text-label: var(--font-size-label);
   --text-field: var(--font-size-input);
-  --text-nav: var(--font-size-nav);
   --text-rail: var(--font-size-rail);
   --text-login-title: var(--font-size-login-title);
   --text-login-welcome: var(--font-size-login-welcome);
@@ -87,7 +86,6 @@
   --radius-checkbox: var(--checkbox-radius);
 
   --spacing-header: var(--size-header);
-  --spacing-tab: var(--size-tab);
   --spacing-rail-row: var(--size-rail-row);
   --spacing-icon: var(--size-icon);
   --spacing-touch: var(--size-touch-target);
@@ -97,7 +95,7 @@
   --container-content: var(--size-content);
   --container-workspace: var(--size-workspace);
 
-  --shadow-tabs: var(--shadow-navigation);
+  --shadow-popover: var(--shadow-menu);
   --shadow-field: var(--field-ring);
   --shadow-field-focus: var(--field-ring-focus);
   --shadow-field-invalid: var(--field-ring-invalid);

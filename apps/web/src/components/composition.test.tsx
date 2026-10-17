@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 import { fireEvent, screen } from '@testing-library/react';
 import type { AnchorHTMLAttributes } from 'react';
@@ -26,15 +26,6 @@ const web = join(__dirname, '..', '..');
 const RAW_ELEMENT = /<(button|input|select|textarea|table|dialog)\b/g;
 const NATIVE_SELECT = /from\s+['"][^'"]*\/native-select['"]|\bNativeSelect\w*\b/g;
 const COMMENT = /\/\*[\s\S]*?\*\/|(?<![:'"\w])\/\/[^\n]*/g;
-
-/**
- * F02-S04's account screens still use Native Select: CR-017 reopened that stage to replace it with
- * Select, and it removes this allowance when it does. An allowance that no longer matches a
- * violation fails below, so it cannot outlive the fix. Nothing else may be listed here.
- */
-const PENDING_F02_S04: Record<string, string[]> = {
-  'src/components/account/AccountScreen.tsx': ['Native Select'],
-};
 
 /** Every rule a set of product component files breaks, one line each. */
 export function compositionViolations(files: SourceFile[]): string[] {
@@ -64,23 +55,16 @@ function productComponents(): SourceFile[] {
     .map((path) => ({ path, content: readFileSync(join(web, path), 'utf8') }));
 }
 
-const pending = (line: string) => Object.entries(PENDING_F02_S04).some(([path, rules]) => line.startsWith(`${path}:`) && rules.some((rule) => line.includes(rule)));
-
 describe('every product component (src/components and src/app)', () => {
   it('writes no raw control, table or dialog element and no Native Select', () => {
     const files = productComponents();
     expect(files.length).toBeGreaterThan(20);
     expect(files.map((file) => file.path)).toEqual(expect.arrayContaining(['src/app/not-found.tsx', 'src/components/shell/Navigation.tsx', 'src/components/account/AccountScreen.tsx']));
-    expect(compositionViolations(files).filter((line) => !pending(line))).toEqual([]);
+    expect(compositionViolations(files)).toEqual([]);
   });
 
-  it('lists in the F02-S04 allowance only what is still there to fix', () => {
-    const found = compositionViolations(productComponents());
-    for (const [path, rules] of Object.entries(PENDING_F02_S04)) {
-      for (const rule of rules) {
-        expect(found.some((line) => line.startsWith(`${path}:`) && line.includes(rule)), `${path}: ${rule} is fixed; remove it from PENDING_F02_S04`).toBe(true);
-      }
-    }
+  it('has no Native Select to use: ui/native-select.tsx is gone (CR-017)', () => {
+    expect(existsSync(join(web, 'src', 'components', 'ui', 'native-select.tsx'))).toBe(false);
   });
 
   it('catches each violation', () => {

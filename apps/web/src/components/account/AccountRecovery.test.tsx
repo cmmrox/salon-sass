@@ -2,6 +2,7 @@ import { act, cleanup, fireEvent, screen, waitFor } from '@testing-library/react
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import type { Principal } from '@/lib/identity/server';
 import { messages, renderWithMessages } from '@/test/render';
+import { chooseOption } from '@/test/select';
 import { AccountScreen } from './AccountScreen';
 
 const navigation = vi.hoisted(() => ({ replace: vi.fn(), refresh: vi.fn() }));
@@ -60,7 +61,7 @@ it('refreshes navigation after self-demotion and denies the now-protected conten
     return live === owner ? Response.json({ items: [person], total: 1 }) : Response.json({ code: 'forbidden' }, { status: 403 });
   });
   renderWithMessages(<AccountScreen kind="staff" initialPrincipal={owner} timeZone="Asia/Colombo" view="staff" />);
-  fireEvent.change(await screen.findByTestId('account-staff-role'), { target: { value: 'RECEPTIONIST' } });
+  await chooseOption(await screen.findByTestId('account-staff-role'), messages.account.RECEPTIONIST);
   expect(await screen.findByTestId('account-denied')).toHaveTextContent(messages.account.denied);
   expect(screen.queryByTestId('account-staff-create')).not.toBeInTheDocument();
   expect(navigation.refresh).toHaveBeenCalledTimes(1);

@@ -77,7 +77,6 @@
   --font-size-workspace-title: 1.625rem;
   --font-size-label: 0.8125rem;
   --font-size-input: 1rem;
-  --font-size-nav: 0.6875rem;
   --font-size-rail: 0.90625rem;
   --font-weight-regular: 400;
   --font-weight-medium: 500;
@@ -91,7 +90,6 @@
   --radius-small: 1.25rem;
   --radius-medium: 1.5rem;
   --radius-pill: 999px;
-  --radius-nav: 1.5rem 1.5rem 0 0;
   --radius-rail: 0.875rem;
   --radius-sheet: 2rem 2rem 0 0;
   /* shadcn/ui's checkbox corner; the prototype has no checkbox. */
@@ -105,8 +103,6 @@
   /* The Sidebar's phone sheet (below 900px): shadcn/ui's own width; the prototype has none. */
   --size-sidebar-sheet: 18rem;
   --size-header: 3.75rem;
-  --size-nav: 5.25rem;
-  --size-tab: 3.5rem;
   --size-rail-row: 2.875rem;
   --size-icon: 1.375rem;
   --size-touch-target: 2.75rem;
@@ -127,7 +123,8 @@
   /* Shadow. Fields draw their outline as an inset ring: the line colour, the brand when focused
      (the keyboard outline stays --ring), the negative colour when refused. */
   --shadow-surface: none;
-  --shadow-navigation: 0 -8px 24px rgb(20 20 19 / 8%);
+  /* A list that opens over the page (the Select's options). */
+  --shadow-menu: 0 12px 32px rgb(20 20 19 / 12%);
   --field-ring: inset 0 0 0 var(--size-field-inset) var(--border);
   --field-ring-focus: inset 0 0 0 var(--size-focus-offset) var(--color-brand);
   --field-ring-invalid: inset 0 0 0 var(--size-field-inset) var(--destructive);
