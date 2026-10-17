@@ -19,6 +19,7 @@ M1-web feature is released. Existing S02/S03 Java APIs remain backend foundation
 - `docs/design/prototype/index.html`
 - `docs/design/ui-ux-standards.md`
 - `docs/changes/CR-012-salon-login-design.md`
+- `docs/changes/CR-013-one-salon-theme-and-direct-entry.md`
 
 ## Requirements covered
 
@@ -65,15 +66,28 @@ implementation, future business dashboards, operator console (F03), real messagi
   resolved Host selects tenant, and configured API destination alone receives credentials. (IAM-09)
 - AC-8: Screens have applicable loading/empty/error/slow/success states, translated text, stable
   test ids, announced errors, keyboard focus, 44-point targets and no horizontal overflow at
-  360/390/768/1024/1280/1440. Workspace remains neutral; salon names remain readable/accessible.
+  360/390/768/1024/1280/1440. Salon names remain readable/accessible.
   API loss provides safe retry within the existing cancellation budget. (IAM-06, NFR-21)
 - AC-9: Staff sign-in matches the owner's CR-012 mockup: full-screen warm salon interior,
   API-resolved salon name/initial, centered translucent card, welcome headings, labelled email/mobile
   and password fields, accessible password visibility toggle, functional administrator-contact
-  recovery guidance, taupe action and secure-team footer. No workspace rail/header on sign-in.
+  recovery guidance, primary action and secure-team footer. No workspace rail/header on sign-in.
   Password/MFA, errors and small-screen states remain usable. Protected workspace screens retain
   warm palette, loaded Poppins, pills, rounded fields/cards and responsive Salon rail/tab layout.
   Customer's 430px canvas is not a web reference. (NFR-21)
+- AC-10 (CR-013): Sign-in and workspace share one theme, the prototype's final tokens (canvas
+  `#F3F0EB`, secondary `#EAE5DC`, lines `#DDD6CA`, white cards, ink `#141413`, muted `#6B7280`).
+  Wherever the prototype uses its accent (`--ac`, `--acs`, `--onac`): the sign-in action, initial
+  ring, links and field focus, and the workspace's primary actions, selected navigation item,
+  selected chips and focus accents use the salon's API brand colour, its soft tint and its computed
+  readable foreground. A salon without a valid colour gets `#D6086A`. Changing a salon's colour
+  changes both screens with no rebuild; the CR-012 taupe palette and the black accent are gone.
+  Checked with a dark and a light salon colour and the default. (NFR-21, BRD-01)
+- AC-11 (CR-013): Loading `/`, `/workspace` or any protected workspace URL without a usable session
+  arrives at `/workspace/sign-in` with no intermediate frame: no generic "Salon" name, no "Loading
+  your account…" card or skeleton is painted on the way. A signed-in member's first painted frame is
+  their workspace with the salon's resolved name. A loading state remains only where data is truly
+  pending after the page is shown, and it carries the salon's identity and theme. (NFR-21, IAM-09)
 
 ## Design notes
 
@@ -120,6 +134,15 @@ pnpm contracts:check
 - Every verification command passes; generated contracts/client are current and committed.
 - Lead records actual endpoint/hook/configuration shapes and any documented discrepancies before closure.
 - No application secrets, real data, paid sending or unverified completion enters the handoff.
+
+## CR-013 theme and entry
+
+One theme for every salon screen: the prototype's final tokens with the salon's brand colour as the
+accent (`brandRootRule` already computes `--color-brand`, `--color-on-brand`, `--color-brand-soft`);
+the default is `#D6086A`. Retire the `--color-login-*` colour tokens in favour of the shared ones
+and use the brand where the workspace now uses `--color-primary` as an accent. Decide entry on the
+server (session cookie/principal), so the browser never paints a generic frame before a redirect.
+The operator console keeps the neutral platform theme.
 
 ## CR-012 login mapping
 

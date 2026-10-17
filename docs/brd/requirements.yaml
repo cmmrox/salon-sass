@@ -1324,6 +1324,6 @@ requirements:
     prototype: full
     status: changed
     area: "Design fidelity"
-    changed_by: CR-012
-    text: "The supplied HTML prototype is visual authority: Salon mode maps to the salon staff web workspace, while Customer mode is only the deferred React Native mobile design reference. Extend the mapped visual grammar for missing screens, verify responsive layouts and accessibility, and never infer a customer web application from the HTML preview. The owner-approved CR-012 mockup governs tenant staff sign-in with hostname-resolved salon identity and a dedicated responsive login composition."
+    changed_by: CR-013
+    text: "The supplied HTML prototype is visual authority: Salon mode maps to the salon staff web workspace, while Customer mode is only the deferred React Native mobile design reference. Extend the mapped visual grammar for missing screens, verify responsive layouts and accessibility, and never infer a customer web application from the HTML preview. The owner-approved CR-012 mockup governs the composition of tenant staff sign-in with hostname-resolved salon identity. Sign-in and workspace share one theme, the prototype's final tokens, whose accent is the salon's brand colour with a computed readable foreground and the prototype default #D6086A when a salon has none. Entering the salon web application shows the requested screen directly, never an intermediate generic loading frame."
     target: "Reference mapping, visual assertions and independent rendered UI comparison before closure"

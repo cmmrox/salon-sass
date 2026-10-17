@@ -6,11 +6,11 @@ surfaces:
 - api
 - web
 - infra
-status: complete
+status: in-progress
 qa_status: not-run
 blocked_reason: null
 released_in: null
-reopened_by: CR-012
+reopened_by: CR-013
 depends_on:
 - F02-S01
 - F02-S02
