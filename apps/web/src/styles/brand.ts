@@ -26,10 +26,10 @@ const READABLE = 4.5;
 const HEX_COLOUR = /^#[0-9a-f]{6}$/i;
 
 /**
- * The two colours text on a brand colour can take: white, and the platform's own text colour
- * (`--color-text` in tokens.css). Whichever contrasts more with the brand colour is used.
+ * The colours text on a brand colour can take: white, the platform's own text colour
+ * (`--color-text` in tokens.css) and, only when neither of those is readable, pure black.
  */
-export const ON_BRAND_COLOURS = { light: '#ffffff', dark: '#111827' } as const;
+export const ON_BRAND_COLOURS = { light: '#ffffff', dark: '#111827', black: '#000000' } as const;
 
 /** Whether a value is a colour this module accepts: `#RRGGBB`. */
 export function isHexColour(value: unknown): value is string {
@@ -59,11 +59,17 @@ export function contrastRatio(first: string, second: string): number {
   return (Math.max(one, other) + 0.05) / (Math.min(one, other) + 0.05);
 }
 
-/** The colour to draw text in on a brand colour: whichever of {@link ON_BRAND_COLOURS} contrasts more. */
+/**
+ * The colour to draw text in on a brand colour, at least 4.5:1 for every `#RRGGBB`
+ * (BUG-F02-013): white or the platform's ink, whichever contrasts more, as before; when neither
+ * reaches 4.5:1 (mid-tones such as #808080), pure black, which then always does (at least about
+ * 4.58:1 across the colour space, since white falls short only on a light enough colour).
+ */
 export function contrastColour(brandColour: string): string {
   const onLight = contrastRatio(brandColour, ON_BRAND_COLOURS.dark);
   const onDark = contrastRatio(brandColour, ON_BRAND_COLOURS.light);
-  return onDark >= onLight ? ON_BRAND_COLOURS.light : ON_BRAND_COLOURS.dark;
+  const best = onDark >= onLight ? ON_BRAND_COLOURS.light : ON_BRAND_COLOURS.dark;
+  return Math.max(onDark, onLight) >= READABLE ? best : ON_BRAND_COLOURS.black;
 }
 
 /**
