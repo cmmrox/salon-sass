@@ -102,9 +102,19 @@ message or customer-cookie work. Existing direct customer Java APIs remain mobil
 - Every salon screen, sign-in and workspace alike, uses the salon's colour as its accent
   (CR-013), with the prototype's `#D6086A` when the salon has none. Only the operator console uses
   the platform's neutral theme, because it belongs to no salon.
-- Entry decides on the server: a workspace request without a usable session is redirected to
-  sign-in before anything renders, and a signed-in one renders with the salon's resolved identity.
-  No generic name or account skeleton is painted on the way.
+- Entry decides on the server, in the proxy (`src/lib/tenancy/route-request.ts`,
+  `src/lib/identity/entry.ts`), with real HTTP 307s: a page's own `redirect()` streams as a client
+  meta redirect after a shell is painted, under `cacheComponents`. `/workspace` decides on the
+  presence of the session cookies, with no API call; a protected workspace page costs one
+  `/identity/me` call from the proxy, inside the same three-second budget, and the page checks the
+  session again. The server never renews a session: an expired access cookie with a refresh
+  credential renders the workspace and the browser renews under its cross-tab lock. Known limit
+  (decision 045): if that refresh credential was already revoked elsewhere, the visitor sees their
+  salon's named workspace briefly before the browser sends them to sign-in. No generic name or
+  account skeleton is painted on the way.
+- The brand is applied by `BrandStyle` from `brandRootRule` (`src/styles/brand.ts`):
+  `--color-brand`, `--color-on-brand`, `--color-brand-soft` and `--color-brand-text`, the brand
+  when it reaches 4.5:1 on white and ink otherwise, for text drawn in the brand colour.
 - A brand change is a draft until the salon publishes it. The future React Native app consumes the published brand; no customer website is created.
 
 Staff sign-in uses the dedicated CR-012 layout without the protected workspace rail/header. It

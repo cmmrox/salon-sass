@@ -17,7 +17,8 @@ export function SignIn({ kind, timeZone }: { kind: Kind; timeZone: string }) {
   const [step, setStep] = useState<Step>('initial'); const [expiry, setExpiry] = useState('');
   const [setup, setSetup] = useState<{ secret?: string; otpauthUri?: string }>({});
   const [busy, setBusy] = useState(false); const [failure, setFailure] = useState<IdentityFailure | null>(null);
-  const [supported, setSupported] = useState(false); const [wait, setWait] = useState(0); const [copied, setCopied] = useState(false);
+  // Unknown until the browser is inspected: controls stay disabled, but no unsupported warning flashes.
+  const [supported, setSupported] = useState<boolean | null>(null); const [wait, setWait] = useState(0); const [copied, setCopied] = useState(false);
   useEffect(() => { Promise.resolve().then(() => setSupported(supportsLocks())); }, []);
   useEffect(() => { if (!wait) return; const id = setTimeout(() => setWait(wait - 1), 1000); return () => clearTimeout(id); }, [wait]);
   const field = (name: keyof typeof values) => ({ value: values[name], onChange: (e: React.ChangeEvent<HTMLInputElement>) => setValues({ ...values, [name]: e.target.value }), error: failure?.fields.includes(name) });
@@ -48,7 +49,7 @@ export function SignIn({ kind, timeZone }: { kind: Kind; timeZone: string }) {
       <h2>{step === 'initial' ? t('welcomeBack') : t('mfaTitle')}</h2>
       {step === 'initial' && <p>{t('signInHelp')}</p>}
     </header>
-    {!supported && <p role="status" className={styles.feedback} data-testid="account-browser-support">{t('browser_unsupported')}</p>}
+    {supported === false && <p role="status" className={styles.feedback} data-testid="account-browser-support">{t('browser_unsupported')}</p>}
     {failure && <p role="alert" className={styles.feedback} data-testid="account-error">{message}</p>}
     {wait > 0 && <p role="status" data-testid="account-retry-wait">{t('wait', { seconds: wait })}</p>}
     <form className={`${styles.form} ${login.form}`} onSubmit={(e) => { e.preventDefault(); void submit(); }}>

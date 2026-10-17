@@ -3,7 +3,7 @@ import { join } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { brandRootRule, contrastColour, contrastRatio, isHexColour, ON_BRAND_COLOURS, relativeLuminance } from './brand';
+import { BRAND_TEXT_SURFACE, brandRootRule, brandTextColour, contrastColour, contrastRatio, DEFAULT_BRAND_COLOUR, isHexColour, ON_BRAND_COLOURS, relativeLuminance, salonBrandRule } from './brand';
 
 describe('relativeLuminance and contrastRatio', () => {
   it('match WCAG for black and white', () => {
@@ -62,14 +62,54 @@ describe('contrastColour', () => {
 
 describe('brandRootRule', () => {
   it('sets the brand colour, exactly as given, and its contrast colour on the root', () => {
-    expect(brandRootRule('#D6086A')).toBe(':root{--color-brand:#D6086A;--color-on-brand:#ffffff;--color-brand-soft:#D6086A22}');
-    expect(brandRootRule('#FDE68A')).toBe(':root{--color-brand:#FDE68A;--color-on-brand:#111827;--color-brand-soft:#FDE68A22}');
+    expect(brandRootRule('#D6086A')).toBe(':root{--color-brand:#D6086A;--color-on-brand:#ffffff;--color-brand-soft:#D6086A22;--color-brand-text:#D6086A}');
+    expect(brandRootRule('#1F2937')).toBe(':root{--color-brand:#1F2937;--color-on-brand:#ffffff;--color-brand-soft:#1F293722;--color-brand-text:#1F2937}');
+    expect(brandRootRule('#FDE68A')).toBe(':root{--color-brand:#FDE68A;--color-on-brand:#111827;--color-brand-soft:#FDE68A22;--color-brand-text:#111827}');
   });
 
   it('refuses anything that is not #RRGGBB, so nothing else reaches the style sheet', () => {
     for (const value of ['red', '#fff;}body{display:none', '</style><script>', '#D6086A ']) {
       expect(() => brandRootRule(value), value).toThrow(/#RRGGBB/);
     }
+  });
+});
+
+describe('brandTextColour', () => {
+  // The three synthetic salons: the default pink, a dark and a light colour.
+  it.each(['#D6086A', '#1F2937', '#FDE68A', '#FFFFFF', '#808080'])('text in %s brand is readable on the white card', (colour) => {
+    expect(contrastRatio(brandTextColour(colour), BRAND_TEXT_SURFACE)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it('keeps a readable brand and replaces only one that is too light', () => {
+    expect(brandTextColour('#D6086A')).toBe('#D6086A');
+    expect(brandTextColour('#1F2937')).toBe('#1F2937');
+    expect(brandTextColour('#FDE68A')).toBe(ON_BRAND_COLOURS.dark);
+  });
+
+  it('measures against the white surface of tokens.css', () => {
+    const tokens = readFileSync(join(__dirname, 'tokens.css'), 'utf8');
+
+    expect(tokens).toContain(`--color-surface: ${BRAND_TEXT_SURFACE};`);
+  });
+});
+
+describe('salonBrandRule', () => {
+  it('uses the salon\'s own valid colour', () => {
+    expect(salonBrandRule('#1F2937')).toBe(brandRootRule('#1F2937'));
+    expect(salonBrandRule('#fde68a')).toBe(brandRootRule('#fde68a'));
+  });
+
+  it('gives a salon without a valid colour the prototype default', () => {
+    expect(DEFAULT_BRAND_COLOUR).toBe('#D6086A');
+    for (const value of [undefined, null, '', 'red', '#fff', '#D6086A ', '</style><script>', 0xd6086a]) {
+      expect(salonBrandRule(value), String(value)).toBe(brandRootRule('#D6086A'));
+    }
+  });
+
+  it('is the prototype\'s final default brand rule', () => {
+    const prototype = readFileSync(join(__dirname, '..', '..', '..', '..', 'docs', 'design', 'prototype', 'index.html'), 'utf8');
+
+    expect(prototype).toContain(`:root{--ac:${DEFAULT_BRAND_COLOUR};`);
   });
 });
 

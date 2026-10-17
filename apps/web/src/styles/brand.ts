@@ -5,8 +5,22 @@
  * - `--color-brand`: the salon's colour;
  * - `--color-on-brand`: the colour of anything drawn on it, computed here for contrast. No
  *   component assumes white.
- * - `--color-brand-soft`: validated brand plus22 alpha, the selected customer tab tint.
+ * - `--color-brand-soft`: validated brand plus 22 alpha, the prototype's soft tint (`--acs`);
+ * - `--color-brand-text`: the brand as a text colour on a white surface (links), or the platform
+ *   text colour when the brand is too light to read there.
+ *
+ * Every salon screen, sign-in and workspace alike, takes its accent from these (CR-013). A salon
+ * without a valid colour gets the prototype's default, {@link DEFAULT_BRAND_COLOUR}.
  */
+
+/** The prototype's default brand (`--ac`), for a salon without a valid colour of its own. */
+export const DEFAULT_BRAND_COLOUR = '#D6086A';
+
+/** The surface brand-coloured text is drawn on: the white card (`--color-surface` in tokens.css). */
+export const BRAND_TEXT_SURFACE = '#ffffff';
+
+/** The least contrast normal-size text may have (WCAG 2.2 AA). */
+const READABLE = 4.5;
 
 /** A brand colour as the API gives it: `#RRGGBB`. */
 const HEX_COLOUR = /^#[0-9a-f]{6}$/i;
@@ -53,7 +67,15 @@ export function contrastColour(brandColour: string): string {
 }
 
 /**
- * The rule that puts a brand on the root: `:root{--color-brand:…;--color-on-brand:…}`. Only a
+ * The colour brand-coloured text (a link) takes on a white surface: the brand itself when it is
+ * readable there, otherwise the platform's text colour, so a light brand never makes a link unreadable.
+ */
+export function brandTextColour(brandColour: string): string {
+  return contrastRatio(brandColour, BRAND_TEXT_SURFACE) >= READABLE ? brandColour : ON_BRAND_COLOURS.dark;
+}
+
+/**
+ * The rule that puts a brand on the root: `:root{--color-brand:…;--color-on-brand:…;…}`. Only a
  * `#RRGGBB` colour is accepted, so nothing else can reach the style sheet.
  *
  * @throws Error when the colour is not `#RRGGBB`
@@ -63,5 +85,13 @@ export function brandRootRule(brandColour: string): string {
     throw new Error(`not a #RRGGBB colour: '${brandColour}'`);
   }
   // Exactly as the API gave it, so that the property reads back as the salon's colour.
-  return `:root{--color-brand:${brandColour};--color-on-brand:${contrastColour(brandColour)};--color-brand-soft:${brandColour}22}`;
+  return `:root{--color-brand:${brandColour};--color-on-brand:${contrastColour(brandColour)};--color-brand-soft:${brandColour}22;--color-brand-text:${brandTextColour(brandColour)}}`;
+}
+
+/**
+ * The brand rule of a salon screen: the salon's colour when it is a valid `#RRGGBB`, otherwise
+ * the prototype's default. Never throws, so a salon screen always has its accent.
+ */
+export function salonBrandRule(brandColour: unknown): string {
+  return brandRootRule(isHexColour(brandColour) ? brandColour : DEFAULT_BRAND_COLOUR);
 }

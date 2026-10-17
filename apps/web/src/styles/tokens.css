@@ -2,8 +2,11 @@
  * Design tokens: every colour, space, radius, type size and shadow a component may use
  * (docs/design/ui-ux-standards.md). Components refer to these and never to a raw value.
  *
- * This is the platform's neutral palette. A salon's brand colour arrives from the API at run time
- * and is applied as custom properties on the root by the stage that builds the branded shell.
+ * This is the platform's palette, the prototype's final tokens. A salon's brand colour arrives from
+ * the API at run time and is put on the root of every salon screen, sign-in and workspace alike, as
+ * `--color-brand`, `--color-on-brand`, `--color-brand-soft` and `--color-brand-text` (styles/brand.ts,
+ * CR-013). It is the accent wherever the prototype uses `--ac`, `--acs` and `--onac`; no component
+ * hard-codes a brand colour, and the plain proxy pages stay in this neutral palette.
  */
 :root {
   /* Colour */
@@ -66,7 +69,6 @@
   --font-size-workspace-title: 1.625rem;
   --font-size-nav: 0.6875rem;
   --font-weight-medium: 500;
-  --color-primary: #141413;
   --color-backdrop: rgb(20 20 19 / 28%);
   --size-form: 35rem;
   --size-drawer: 28.75rem;
@@ -102,16 +104,10 @@
   --shadow-surface: none;
 }
 
-/* CR-012 public staff sign-in reference, scoped away from the protected workspace. */
+/* CR-012 staff sign-in composition. Its colours are the shared ones above with the salon's brand
+   accent (CR-013); only its translucent card over the interior photograph is its own. */
 :root {
-  --color-login-ink: #272727;
-  --color-login-muted: #626262;
-  --color-login-accent: #8A705E;
-  --color-login-action: #8A705E;
-  --color-login-card: rgb(255 255 255 / 88%);
-  --color-login-field: rgb(255 255 255 / 72%);
-  --color-login-border: #D8CDC3;
-  --color-login-input-border: #D5D5D5;
+  --color-surface-translucent: rgb(255 255 255 / 88%);
   --size-login-card: 32.75rem;
   --size-login-initial: 3.875rem;
   --size-login-field: 3.375rem;

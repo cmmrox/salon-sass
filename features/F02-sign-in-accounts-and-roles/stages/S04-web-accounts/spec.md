@@ -75,15 +75,15 @@ implementation, future business dashboards, operator console (F03), real messagi
   Password/MFA, errors and small-screen states remain usable. Protected workspace screens retain
   warm palette, loaded Poppins, pills, rounded fields/cards and responsive Salon rail/tab layout.
   Customer's 430px canvas is not a web reference. (NFR-21)
-- AC-10 (CR-013): Sign-in and workspace share one theme, the prototype's final tokens (canvas
-  `#F3F0EB`, secondary `#EAE5DC`, lines `#DDD6CA`, white cards, ink `#141413`, muted `#6B7280`).
+- AC-10: (CR-013) Sign-in and workspace share one theme, the prototype's final tokens (canvas
+  `#F3F0EB`, secondary `#EAE5DC`, lines `#DDD6CA`, white cards, ink `#111827`, muted `#6B7280`).
   Wherever the prototype uses its accent (`--ac`, `--acs`, `--onac`): the sign-in action, initial
   ring, links and field focus, and the workspace's primary actions, selected navigation item,
   selected chips and focus accents use the salon's API brand colour, its soft tint and its computed
   readable foreground. A salon without a valid colour gets `#D6086A`. Changing a salon's colour
   changes both screens with no rebuild; the CR-012 taupe palette and the black accent are gone.
   Checked with a dark and a light salon colour and the default. (NFR-21, BRD-01)
-- AC-11 (CR-013): Loading `/`, `/workspace` or any protected workspace URL without a usable session
+- AC-11: (CR-013) Loading `/`, `/workspace` or any protected workspace URL without a usable session
   arrives at `/workspace/sign-in` with no intermediate frame: no generic "Salon" name, no "Loading
   your account…" card or skeleton is painted on the way. A signed-in member's first painted frame is
   their workspace with the salon's resolved name. A loading state remains only where data is truly
@@ -143,6 +143,14 @@ the default is `#D6086A`. Retire the `--color-login-*` colour tokens in favour o
 and use the brand where the workspace now uses `--color-primary` as an accent. Decide entry on the
 server (session cookie/principal), so the browser never paints a generic frame before a redirect.
 The operator console keeps the neutral platform theme.
+
+Text drawn in the brand colour (links, the recovery control) uses it only when it reaches 4.5:1
+against its background; otherwise it is ink `#111827`, which may keep a brand underline or
+indicator. Fills, the initial ring and the field focus ring use the brand itself; the keyboard
+`:focus-visible` outline stays the prototype's `#1D5FD0` everywhere, for visibility on any brand; anything drawn on a fill uses the
+computed foreground. The phone's selected tab is a soft brand tint behind the icon with ink text.
+For tests, `infra/scripts/local-salon.sh colour <slug> <#RRGGBB>` sets one local salon's stored
+colour (local only, owning role, nothing else changed; `local-reset.sh` restores the seed).
 
 ## CR-012 login mapping
 

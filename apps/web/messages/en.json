@@ -90,6 +90,7 @@
     "page": "Page {page}",
     "empty": "There are no entries to show.",
     "loading": "Loading your account\u2026",
+    "listLoading": "Loading\u2026",
     "success": "Your change was saved.",
     "retry": "Try again",
     "denied": "You do not have permission to view this page.",

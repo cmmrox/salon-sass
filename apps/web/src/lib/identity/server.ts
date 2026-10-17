@@ -1,5 +1,5 @@
 import { createHmac } from 'node:crypto';
-import type { components } from '@salon/api-contracts';
+import type { ApiClient, components } from '@salon/api-contracts';
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerApiClient, requestSignal } from '@/lib/api/client';
 import { currentRequest } from '@/lib/observability/request-context';
@@ -33,6 +33,18 @@ export function proxyKey(): Buffer {
 export function assertion(host: string, path: string, ip: string, time: string): string {
   const proof = ['v1', host, 'POST', path, ip, time].join('\n');
   return `v1;${ip};${time};${createHmac('sha256', proxyKey()).update(proof).digest('hex')}`;
+}
+export type Credentials = { access?: string; refresh?: string; expiry?: string };
+/**
+ * Whether a refresh family may renew: only when the access credential is gone or answered 401
+ * and, if it is still present, its recorded expiry has passed by the API's clock. Expiry metadata
+ * never authorizes access; `unknown` means the API's clock could not be read.
+ */
+export async function renewal(client: ApiClient, { access, refresh, expiry }: Credentials, status: number): Promise<'renewable' | 'spent' | 'unknown'> {
+  if (!refresh || !(status === 401 || !access)) return 'spent';
+  const meta = await client.GET('/api/v1/meta', { signal: requestSignal() });
+  if (!meta.data || !strictInstant(meta.data.time)) return 'unknown';
+  return !access || (strictInstant(expiry) && Date.parse(expiry) <= Date.parse(meta.data.time)) ? 'renewable' : 'spent';
 }
 function output(data: unknown, status = 200) { return NextResponse.json(data, { status, headers: { 'Cache-Control': 'private, no-store' } }); }
 function problem(code: string, status: number, extra: Record<string, unknown> = {}) { return output({ code, ...extra }, status); }
@@ -80,12 +92,8 @@ export async function handleIdentity(request: NextRequest, kind: Kind, action: s
       const answer = await client.GET('/api/v1/identity/me', options);
       principal = answer.data;
       if (!principal || principal.kind !== kind) {
-        let renewable = false;
         const expiry = request.cookies.get(cookieName(kind, 'expires'))?.value;
-        if (refresh && (answer.response.status === 401 || !access)) {
-          const meta = await client.GET('/api/v1/meta', { signal: requestSignal() });
-          renewable = Boolean(meta.data && strictInstant(meta.data.time) && (!access || (strictInstant(expiry) && Date.parse(expiry) <= Date.parse(meta.data.time))));
-        }
+        const renewable = await renewal(client, { access, refresh, expiry }, answer.response.status) === 'renewable';
         if (action === 'refresh' && renewable) {
           const rotated = await client.POST('/api/v1/identity/sessions/refresh', { body: { refreshToken: refresh! }, signal: requestSignal() });
           const verified = rotated.data ? await client.GET('/api/v1/identity/me', { headers: { Authorization: `Bearer ${rotated.data.accessToken}` }, signal: requestSignal() }) : null;
