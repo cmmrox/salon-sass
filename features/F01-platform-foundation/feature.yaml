@@ -5,8 +5,8 @@ summary: The platform runs locally and in staging as one deployment in which eve
   later feature has the services it builds on.
 release: R1
 milestone: M1-web
-status: complete
-qa_status: pass
+status: in-progress
+qa_status: not-run
 released_in: null
 depends_on: []
 surfaces:
@@ -74,7 +74,7 @@ previous_integration:
   qa_revision: 771c56b89f192deec47ab3d4f68f04a7dbcbf6ce
   merged_commit: 396ce0054fc662cddbf58a6c584fcb7789040edf
   merged_at: '2026-10-13T11:35:17Z'
-reopened_by: CR-016
+reopened_by: CR-017
 integration_history:
 - branch: charithm/feature/F02-staff-web-only
   pull_request: https://github.com/cmmrox/salon-sass/pull/7
