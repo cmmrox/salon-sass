@@ -27,6 +27,7 @@ web screens to Salon mode, not the customer 430px canvas.
   after a rebuild
 - QA, at the feature pass: `docs/qa/test-plan.md` (the synthetic salons), `docs/qa/test-types.md`,
   `docs/qa/automation.md`
+- `docs/changes/CR-016-tailwind-and-shadcn-ui.md`: Tailwind CSS and shadcn/ui for every web screen
 
 ## Requirements covered
 
@@ -118,6 +119,23 @@ app's local port; hostnames are the synthetic salons' of `docs/qa/test-plan.md`.
   (NFR-17)
 - AC-11: The OpenAPI document describes the 403 answer of `GET /api/v1/salon` with the code
   `salon_suspended`, the generated client exposes it, and `pnpm contracts:check` passes. (NFR-17)
+- AC-13: (CR-016) Tailwind CSS 4 and shadcn/ui are set up as `docs/engineering/web.md`, "Styling",
+  says: `apps/web/postcss.config.mjs`, `apps/web/components.json`, `src/app/globals.css` as the one
+  style sheet the application imports, `src/styles/theme.css` holding the prototype's final tokens
+  under shadcn/ui's variable names with `--primary` and `--accent` reading the salon brand
+  variables, and `cn()` in `src/lib/utils.ts`. No `*.module.css` and no other style sheet remains
+  under `apps/web/src` except `plain-page.css`. `src/styles/styling-rules.test.ts` passes, and fails
+  when a CSS Module, a second style sheet, an arbitrary colour class or a hex colour in a component
+  file is introduced. (NFR-21)
+- AC-14: (CR-016) The workspace shell (sticky header, 200px/236px rail, phone bottom tabs),
+  navigation, platform status page, application not-found page, Notice and Status components and
+  the operator console layout are built from shadcn/ui components and Tailwind utilities, and look
+  as they did: at 360, 390, 768, 1024, 1280 and 1440 the rendered screens keep the prototype's
+  palette, loaded Poppins, radii, sizes and responsive layout, the same test ids and translated
+  strings, the `#1D5FD0` keyboard focus outline and no horizontal overflow, with a dark, a light and
+  the default salon colour. The plain "salon not found", "temporarily unavailable" and "service
+  unavailable" pages keep their status codes, no script and their look, inlining `theme.css`.
+  (NFR-21, BRD-03)
 
 ## Design notes
 

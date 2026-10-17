@@ -12,7 +12,7 @@ this table in step when a major version changes.
 | Persistence | Spring Data JPA, Hibernate 7 with `@TenantId`, Flyway migrations |
 | Database | PostgreSQL 18 or later: row-level security, exclusion constraints |
 | Build | Maven wrapper for the API; one pnpm workspace for the web app, the customer app and packages. `qa/` is a separate package with its own lock file, so QA can add test dependencies without touching the product's |
-| Web | Next.js 16 (App Router), TypeScript. The request proxy file is `proxy.ts` (formerly `middleware.ts`) |
+| Web | Next.js 16 (App Router), TypeScript, Tailwind CSS 4 and shadcn/ui (CR-016). The request proxy file is `proxy.ts` (formerly `middleware.ts`) |
 | Customer app | Expo SDK 57, React Native 0.86, Expo Router; EAS Build, Submit and Update. Not built until milestone `M2-mobile` |
 | API contract | An OpenAPI document generated from the API's controllers and committed; a TypeScript client generated from it |
 | Background work | Database-backed job scheduler and transactional outbox. No message broker |
@@ -39,8 +39,9 @@ Set by stage F01-S01. Exact versions are in the build files (`apps/api/pom.xml`,
 | Architecture tests | ArchUnit | Module boundaries fail the build |
 | Integration database | Testcontainers with the same PostgreSQL image as the local environment | Row-level security and exclusion constraints exist only in PostgreSQL |
 | Web translation | `next-intl`, files in `apps/web/messages/<locale>.json`, no locale in the URL | |
-| Web styling | CSS custom properties as tokens (`apps/web/src/styles/tokens.css`) with CSS Modules; no utility-class framework | A salon's brand is applied by changing custom properties at run time |
-| CSS as text | A Turbopack rule in `next.config.ts` imports `*.css?raw` as a string, with the same rule in `vitest.config.mts`; used only for the proxy's plain pages (decision 028). It does not work for CSS Modules | The plain pages inline the one source of the tokens and base styles instead of a copy |
+| Web styling | Tailwind CSS 4 (`tailwindcss`, `@tailwindcss/postcss`, `tw-animate-css`), configured in CSS with no `tailwind.config.*`; the theme's CSS variables in `apps/web/src/styles/theme.css` (decision 046, CR-016; replaces CSS Modules) | The owner's standard for all Next.js work. The salon's brand is still applied by changing CSS variables at run time |
+| Web components | shadcn/ui, through its CLI (`shadcn` 4.x, run as `pnpm dlx shadcn@4 add <component>` in `apps/web`), with `radix-ui` primitives, `class-variance-authority`, `clsx`, `tailwind-merge` and `lucide-react` icons. Components are copied into `apps/web/src/components/ui/` and committed | Accessible primitives maintained upstream; one component set for every screen. Rules in `docs/engineering/web.md`, "Styling" |
+| CSS as text | A Turbopack rule in `next.config.ts` imports `*.css?raw` as a string, with the same rule in `vitest.config.mts`; used only for the proxy's plain pages (decision 028), which inline `theme.css` and `plain-page.css`. It gives a style sheet's source before PostCSS, so it cannot carry Tailwind output | The plain pages inline the one source of the theme instead of a copy |
 | Web lint and tests | ESLint with `eslint-config-next`; Vitest with jsdom and Testing Library | |
 | Request validation | `spring-boot-starter-validation` (Jakarta Bean Validation) | Field errors on problem bodies |
 | Identity cryptography | Spring-managed `spring-security-crypto`, `spring-security-oauth2-jose`; `java-otp` pinned in `apps/api/pom.xml` | Maintained password/JWT/TOTP implementations; policies in `architecture/identity-and-access.md` |

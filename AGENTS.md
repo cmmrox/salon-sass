@@ -45,6 +45,9 @@ A project fact is never written into a skill, and a skill never restates a docum
   `python3 qa/scripts/guard.py --role dev --diff` (or `--role qa`) before committing in either role.
 - **Requirements change through a change request** under `docs/changes/`. QA's suggestions are
   proposals; nothing is built from one until the owner approves it.
+- **Web UI is Tailwind CSS and shadcn/ui, always** (CR-016). Every Next.js screen and component is
+  built from shadcn/ui components and Tailwind utilities on the prototype's theme; no CSS Modules or
+  hand-built look-alikes: `docs/engineering/web.md`, "Styling".
 - **A request can only ever see its own salon.** Tenant isolation comes first in every design and
   every test: `docs/architecture/multi-tenancy.md`.
 - **Local by default.** Staging, production, real payments and real messages are touched only when

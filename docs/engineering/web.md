@@ -60,9 +60,12 @@ message or customer-cookie work. Existing direct customer Java APIs remain mobil
 | --- | --- |
 | Pages and layouts | `apps/web/src/app/`, in the route groups `(workspace)`, `(console)`; legacy route aliases contain no customer UI |
 | Strings | `apps/web/messages/<locale>.json`, read through `next-intl`. There is no locale in the URL |
-| Tokens | `apps/web/src/styles/tokens.css`, as CSS custom properties; components style with CSS Modules |
-| Base styles shared by pages and plain pages | `apps/web/src/styles/base.css` |
-| The proxy's plain HTML pages | `apps/web/src/lib/plain-page/`. They inline `tokens.css` and `base.css` from their one source; their layout is repeated in `plain-page.css`, in tokens only (a test forbids any colour or size of its own), because Turbopack cannot give a CSS module's source as text. A layout change to the AppShell, Notice or Status modules is made there too |
+| Theme (every colour, radius, size and font, as CSS variables) | `apps/web/src/styles/theme.css`, plain CSS with no Tailwind directive, so the plain pages can inline it. See "Styling" |
+| The application's one style sheet | `apps/web/src/app/globals.css`: Tailwind, the theme, `@theme inline` and the base layer |
+| shadcn/ui components | `apps/web/src/components/ui/`, added by the shadcn CLI and committed; configured by `apps/web/components.json` |
+| Product components | `apps/web/src/components/<area>/`, built from `ui/` components and Tailwind utilities |
+| Class name helper | `cn()` in `apps/web/src/lib/utils.ts` (`clsx` with `tailwind-merge`) |
+| The proxy's plain HTML pages | `apps/web/src/lib/plain-page/`. They inline `theme.css` from its one source, and their own layout in `plain-page.css`, in theme variables only (a test forbids any colour or size of its own). They are the one place outside `globals.css` with hand-written CSS: see "Styling" |
 | Formatting of money, dates and phone numbers | `apps/web/src/lib/format/` |
 | Calls to the API | `apps/web/src/lib/api/`, wrapping the generated client |
 
@@ -94,10 +97,79 @@ message or customer-cookie work. Existing direct customer Java APIs remain mobil
   or query value is logged. The standalone server uses the same request instrumentation as
   the local custom server.
 
+## Styling (CR-016)
+
+Every screen and component of the web app is built with **Tailwind CSS and shadcn/ui**, and
+nothing else. This holds for every feature, including the operator console and every later
+workspace screen. It replaces CSS Modules (decision 046, replacing decision 014's styling choice),
+because the owner set one standard for all Next.js work in this product.
+
+**Setup.** Versions are in `apps/web/package.json`; the tools are in `docs/architecture/tech-stack.md`.
+
+- Tailwind CSS 4 through `@tailwindcss/postcss` in `apps/web/postcss.config.mjs`. There is no
+  `tailwind.config.*`: the theme is configured in CSS.
+- `apps/web/src/app/globals.css` is the only style sheet the application imports. It holds, in this
+  order: `@import "tailwindcss"`, `@import "tw-animate-css"`, the import of `src/styles/theme.css`,
+  `@theme inline` (which maps the theme variables to Tailwind's colour, radius, font and size
+  names), and `@layer base`.
+- shadcn/ui is configured by `apps/web/components.json`: React Server Components and TSX on, CSS
+  variables on, `lucide` icons, and the aliases `@/components`, `@/components/ui`, `@/lib/utils`
+  and `@/hooks`. Add a component from `apps/web` with
+  `pnpm dlx shadcn@<version in tech-stack.md> add <component>`, and commit what it writes.
+
+**Rules.**
+
+1. Use the shadcn/ui component when one exists for the job: Button, Input, Label, Textarea,
+   Checkbox, Select, Form field, Card, Alert, Badge, Avatar, Skeleton, Separator, Table, Tabs,
+   Dialog, Sheet, Drawer, Dropdown Menu, Tooltip, Sonner and so on. Add it with the CLI before
+   building the screen. Never hand-build a look-alike, and never install a second component library.
+2. Product components in `src/components/<area>/` compose `ui/` components with Tailwind utilities.
+   Variants that recur go into the `ui/` component with `cva`, not into each screen.
+3. A `ui/` component may be edited after the CLI writes it, to carry the prototype's look (classes
+   and variants only). Keep its accessibility behaviour: roles, focus management, keyboard
+   handling, `aria-*` and the primitives it is built on.
+4. No CSS Modules, no new style sheet, no `<style>` element other than `BrandStyle`, and no `style`
+   prop for a visual value. The only exception is a value that exists only at run time and that no
+   utility can name.
+5. No raw value in a component. A colour, radius, font, shadow or prototype-specific size comes
+   from the theme, as a Tailwind name (`bg-primary`, `rounded-card`) or as a theme variable
+   (`w-(--size-sidebar)`). An arbitrary colour (`bg-[#D6086A]`, `text-[rgb(...)]`) fails the
+   styling test. Tailwind's spacing scale is used for ordinary spacing.
+6. The theme is the prototype's final tokens, under shadcn/ui's variable names. Do not use shadcn's
+   base colours or its default palette. The required mapping:
+
+   | shadcn/ui variable | Value |
+   | --- | --- |
+   | `--background` / `--foreground` | Canvas `#F3F0EB` / ink `#111827` |
+   | `--card`, `--popover` (and their foregrounds) | `#ffffff` / ink |
+   | `--secondary`, `--muted` | `#EAE5DC`; `--muted-foreground` `#6B7280` (only on white, see `ui-ux-standards.md`) |
+   | `--border`, `--input` | `#DDD6CA` |
+   | `--primary` / `--primary-foreground` | `var(--color-brand)` / `var(--color-on-brand)`, set per salon by `BrandStyle` |
+   | `--accent` / `--accent-foreground` | `var(--color-brand-soft)` / a foreground that reaches 4.5:1 on it |
+   | `--destructive` | `#B3261E` |
+   | `--ring` | `#1D5FD0`, the keyboard focus outline |
+   | `--radius` and the named radii | Cards 24px, fields 20px, actions pill, as in `ui-ux-standards.md` |
+
+   Status colours (positive, caution, negative surfaces), sizes and the sign-in composition's
+   values keep their prototype names in `theme.css` and are mapped in `@theme inline` too.
+7. There is no dark mode. The prototype has none; do not add `dark:` variants.
+8. Poppins is loaded from `public/fonts/poppins/` by the `@font-face` rules in `theme.css`, and is
+   the theme's `--font-sans`.
+9. **The one exception is the plain proxy pages** (`src/lib/plain-page/`). They are complete HTML
+   strings answered by `proxy.ts` with no script, so they cannot render React components, and
+   Turbopack's `?raw` import gives a style sheet's source before Tailwind runs. They inline
+   `theme.css` and their own `plain-page.css`, which uses theme variables only. Their look follows
+   the shadcn/ui Card and Alert of the application; a change to those is made there too.
+10. `src/styles/styling-rules.test.ts` enforces rules 4, 5 and 9. It fails on any `*.module.css`,
+    any style sheet other than `globals.css`, `theme.css` and `plain-page.css`, any style sheet
+    import outside the root layout and the plain pages, an arbitrary colour in a class name, or a
+    hex or `rgb()` colour in a component file. Fix the code, never the test.
+
 ## Branding
 
 - A salon's brand (name, logo, cover, colour) arrives from the API and is applied through CSS
-  custom properties on the root. Components use the tokens; none hard-codes a brand colour.
+  custom properties on the root, which the theme's `--primary` and `--accent` read. Components use
+  the theme; none hard-codes a brand colour.
 - The text colour on the brand colour is computed for contrast. Never assume white. It is white or
   ink, whichever contrasts more, when that reaches 4.5:1; otherwise pure black, which always does
   (at least 4.58:1) for mid-tone brands such as `#808080` (BUG-F02-013).
@@ -142,7 +214,7 @@ shows the hostname-resolved salon name/initial and a shared decorative interior 
 ## Tests
 
 - Unit and component tests with Vitest and Testing Library for logic and for components with
-  states or branches.
+  states or branches. Assert behaviour, roles and test ids, not utility class names.
 - Give every interactive element a `data-testid`, named as `docs/design/ui-ux-standards.md` says.
   QA's browser tests depend on them, and QA cannot add them.
 - The gates are lint, type check, unit tests and a production build, as listed in the stage's

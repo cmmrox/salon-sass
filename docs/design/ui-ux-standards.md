@@ -72,15 +72,20 @@ product evidence; never claim a side-by-side preview occurred.
 ## Build order for a screen
 
 1. Find the prototype screen and list its states: loading, empty, filled, error, disabled.
-2. Search the codebase for components that already do part of it.
-3. Build from tokens and existing components. Add a new component only when nothing fits, and add
-   it to the shared set, not to the screen.
+2. Search the codebase for components that already do part of it. On the web, check the shadcn/ui
+   components first (`apps/web/src/components/ui/`, then the shadcn/ui catalogue) and add the one
+   that fits with its CLI (`docs/engineering/web.md`, "Styling"). The prototype decides how it
+   looks; shadcn/ui decides how it is built.
+3. Build from theme tokens and existing components. Add a new component only when nothing fits, and
+   add it to the shared set, not to the screen.
 4. Check it at every width in the matrix and in every state before handing over.
 
 ## Tokens and branding
 
 - Colours, spacing, radii, type sizes and shadows are tokens. No raw hex value and no magic number
-  in a component.
+  in a component. On the web the tokens are the theme's CSS variables, used through Tailwind
+  utilities (CR-016); where they live and how they map to shadcn/ui's names is in
+  `docs/engineering/web.md`, "Styling".
 - Two kinds of colour: the platform's palette (the prototype's final tokens), and the salon's brand
   colour, which arrives at run time and is the accent of every salon screen, sign-in included.
   Anything drawn on the brand colour uses the computed contrast colour.
@@ -163,7 +168,10 @@ Use the prototype's wording where it exists. One name for one thing everywhere: 
 
 ## Red flags
 
-- A new component that looks like an existing one.
+- A new component that looks like an existing one, or a hand-built control where a shadcn/ui
+  component exists (CR-016).
+- A CSS Module, a new style sheet or a `style` prop for a visual value in the web app (CR-016).
+- shadcn/ui's default grey palette or radius showing through instead of the prototype's tokens.
 - A colour, size or string typed straight into a screen.
 - A screen checked only at desktop width, only with the default brand, or only with data in it.
 - A generic placeholder frame ("Salon", an account skeleton) painted before the screen the visitor
