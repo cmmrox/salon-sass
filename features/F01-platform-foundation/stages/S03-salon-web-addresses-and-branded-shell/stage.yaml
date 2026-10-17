@@ -5,7 +5,7 @@ sequence: 3
 surfaces:
 - api
 - web
-status: built
+status: complete
 qa_status: not-run
 released_in: null
 depends_on:

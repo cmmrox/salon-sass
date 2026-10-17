@@ -120,6 +120,9 @@ because the owner set one standard for all Next.js work in this product.
   `cn`, ignoring the utils alias. Point the new component at `@/lib/utils` and remove the `cn`
   package; there is one `cn()`. Then remove any `dark:` classes and the CLI's focus ring in favour of
   the theme's focus outline, and map its colours to the theme (rule 6).
+  The CLI also appends `hsl` `:root` and `.dark` variable blocks after a `---break---` marker in
+  `globals.css` (delete them; the theme is `theme.css`), and asks before overwriting an existing
+  `ui/` file: answer no, or a component already adapted to the theme is lost.
 - Tailwind's preflight resets browser defaults: lists lose their markers, headings and `pre` lose
   their margins, and links lose their underline (the base layer restores the underline on `a`).
   Set what a screen needs with utilities. Tailwind 4's `hover:` applies only on devices that can
@@ -168,8 +171,15 @@ because the owner set one standard for all Next.js work in this product.
 2. Product components in `src/components/<area>/` compose `ui/` components with Tailwind utilities.
    Variants that recur go into the `ui/` component with `cva`, not into each screen.
 3. A `ui/` component may be edited after the CLI writes it, to carry the prototype's look (classes
-   and variants only). Keep its accessibility behaviour: roles, focus management, keyboard
-   handling, `aria-*` and the primitives it is built on.
+   and variants). Keep its accessibility behaviour: roles, focus management, keyboard handling,
+   `aria-*` and the primitives it is built on. Behaviour edits are limited to what the product
+   needs and are listed in the stage handoff: translated strings passed by the caller instead of
+   the CLI's English, no persistence cookie, sizes from the theme instead of a `style` prop, unused
+   parts removed, and where focus lands on open and close. As built (CR-017), `ui/sidebar.tsx`
+   focuses the current route when its phone sheet opens and returns focus to the trigger, keeps no
+   cookie, takes its labels from the caller, reads its widths from the theme and has no
+   `SidebarRail`; `hooks/use-mobile.ts` is the CLI's hook rewritten with `useSyncExternalStore`, with
+   the `rail` breakpoint (900px).
 4. No CSS Modules, no new style sheet, no `<style>` element other than `BrandStyle`, and no `style`
    prop for a visual value. The only exception is a value that exists only at run time and that no
    utility can name.
@@ -211,7 +221,10 @@ because the owner set one standard for all Next.js work in this product.
 9. **The plain proxy pages** (`src/lib/plain-page/`) are complete HTML strings answered by
    `proxy.ts` with no script, so they cannot render React components. Their markup carries the same
    Tailwind utility classes as the shadcn/ui Card and Alert they mirror, and their CSS is generated
-   by Tailwind from the theme and those classes by the script named in `apps/web/package.json`. The
+   by Tailwind from the theme and those classes by the script named in `apps/web/package.json`
+   (it compiles `globals.css` with `source(none)` and an `@source` for the pages' classes, so the
+   pages share preflight and the base layer; the output holds real `@layer` and `@property` rules
+   and preflight's own colour values, and is exempt from the colour scan as generated output). The
    generated file is committed, regenerated after any change to the pages or the theme, never edited
    by hand, and a test fails when it is stale (CR-017). No hand-written CSS remains apart from the
    theme (`theme.css`) and the Tailwind entry (`globals.css`).
