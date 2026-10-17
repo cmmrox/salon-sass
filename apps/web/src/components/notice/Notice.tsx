@@ -1,13 +1,12 @@
 import type { ReactNode } from 'react';
 
 import { AppShell } from '@/components/shell/AppShell';
-
-import styles from './Notice.module.css';
+import { Card, CardTitle } from '@/components/ui/card';
 
 /**
  * A page that only says something: a title, a sentence, and what the person can do. In the
  * platform's neutral theme, never a salon's. Its test ids are `<testId>`, `<testId>-title` and
- * `<testId>-body`.
+ * `<testId>-body`. The proxy's plain pages repeat this markup (lib/plain-page).
  */
 export function Notice({
   testId,
@@ -22,13 +21,13 @@ export function Notice({
 }) {
   return (
     <AppShell>
-      <div className={styles.notice} data-testid={testId}>
-        <h1 className={styles.title} data-testid={`${testId}-title`}>
-          {title}
-        </h1>
+      <Card className="gap-3" data-testid={testId}>
+        <CardTitle asChild className="wrap-anywhere">
+          <h1 data-testid={`${testId}-title`}>{title}</h1>
+        </CardTitle>
         <p data-testid={`${testId}-body`}>{body}</p>
         {children}
-      </div>
+      </Card>
     </AppShell>
   );
 }

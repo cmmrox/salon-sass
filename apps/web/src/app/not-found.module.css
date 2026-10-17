@@ -1,8 +1,0 @@
-.home {
-  display: inline-flex;
-  align-items: center;
-  align-self: flex-start;
-  min-height: var(--size-touch-target);
-  color: var(--color-text);
-  font-weight: var(--font-weight-strong);
-}

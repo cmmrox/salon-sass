@@ -26,8 +26,8 @@ const nextConfig: NextConfig = {
   turbopack: {
     rules: {
       // `import text from './x.css?raw'` gives a style sheet's source as a string, for the plain
-      // HTML answers of proxy.ts, which inline the same style sheets the pages use.
-      // Plain style sheets only: Turbopack cannot give a CSS module's source as text.
+      // HTML answers of proxy.ts, which inline the theme (styles/theme.css) and plain-page.css.
+      // The source is read before PostCSS, so it never carries Tailwind's output.
       '*.css': { condition: { query: '?raw' }, type: 'text' },
     },
   },

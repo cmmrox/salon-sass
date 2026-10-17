@@ -3,13 +3,11 @@ import { useTranslations } from 'next-intl';
 
 import { Notice } from '@/components/notice/Notice';
 
-import styles from './not-found.module.css';
-
 export default function NotFound() {
   const t = useTranslations('notFound');
   return (
     <Notice testId="not-found" title={t('title')} body={t('body')}>
-      <Link className={styles.home} href="/" data-testid="not-found-home">
+      <Link className="inline-flex min-h-touch items-center self-start font-semibold text-foreground" href="/" data-testid="not-found-home">
         {t('home')}
       </Link>
     </Notice>

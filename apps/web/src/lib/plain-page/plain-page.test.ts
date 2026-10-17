@@ -99,9 +99,13 @@ describe('the plain pages', () => {
   it.each(PAGES)('%s: nothing of any salon, and no brand colour', (page) => {
     const html = plainPageHtml(page);
 
-    for (const leak of ['Alpha Studio', 'Beta Hair', 'Gamma', '#D6086A', '#1F2937', '#FDE68A', '--color-brand']) {
+    for (const leak of ['Alpha Studio', 'Beta Hair', 'Gamma', '#D6086A', '#1F2937', '#FDE68A']) {
       expect(html, leak).not.toContain(leak);
     }
+    // The inlined theme reads the brand variables (`--primary: var(--color-brand)`), but nothing on
+    // these pages sets one, so they stay unset and the pages neutral.
+    expect(html).not.toMatch(/--color-(brand|on-brand)[\w-]*\s*:/);
+    expect(html).not.toContain('data-testid="salon-brand"');
   });
 
   it('the not-found page is the same whatever the hostname was: it takes no input', () => {
@@ -110,9 +114,9 @@ describe('the plain pages', () => {
 });
 
 describe('the plain pages\' styles', () => {
-  it('inline the neutral theme from its one source, tokens.css', () => {
-    const tokens = readFileSync(join(__dirname, '..', '..', 'styles', 'tokens.css'), 'utf8');
-    const declarations = tokens.match(/--[a-z0-9-]+:\s*[^;]+;/g) ?? [];
+  it('inline the neutral theme from its one source, theme.css', () => {
+    const theme = readFileSync(join(__dirname, '..', '..', 'styles', 'theme.css'), 'utf8');
+    const declarations = theme.match(/--[a-z0-9-]+:\s*[^;]+;/g) ?? [];
     const html = plainPageHtml('salon-not-found');
 
     expect(declarations.length).toBeGreaterThan(10);
@@ -122,7 +126,7 @@ describe('the plain pages\' styles', () => {
   });
 
   it('lay the pages out in tokens only: no colour, size or space of their own', () => {
-    const layout = PLAIN_PAGE_STYLE_SHEETS[2]!.replace(/\/\*[\s\S]*?\*\//g, '');
+    const layout = PLAIN_PAGE_STYLE_SHEETS[1]!.replace(/\/\*[\s\S]*?\*\//g, '');
 
     expect(layout).toMatch(/var\(--/);
     expect(layout).not.toMatch(/#[0-9a-f]{3,8}\b/i);
@@ -134,7 +138,7 @@ describe('the plain pages\' styles', () => {
     const style = parse('salon-not-found').querySelector('style')?.textContent ?? '';
 
     expect(style).not.toContain('composes');
-    expect(style).not.toContain('@import');
+    expect(style).not.toMatch(/@import|@theme|@layer|@apply|@tailwind|@custom-variant/);
     expect(style).not.toContain('</');
   });
 

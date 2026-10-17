@@ -5,7 +5,7 @@ sequence: 3
 surfaces:
 - api
 - web
-status: in-progress
+status: complete
 qa_status: not-run
 released_in: null
 depends_on:
@@ -17,49 +17,186 @@ nfr_focus:
 - NFR-17
 - NFR-21
 handoff:
-  run: 'Installed Node24/Corepack pnpm and JDK25 remain in use. PostgreSQL salon-local is running. Current
-    API foreground session99029/PID21141 uses retained .local/identity-keys.properties and SPRING_PROFILES_ACTIVE=local
-    SALON_PLATFORM_DOMAIN=localhost /Users/cmmrox/.sdkman/candidates/java/25.0.1.0+8-amzn/bin/java -jar
-    target/salon-api.jar from apps/api. Current web foreground session42871/PID88485 runs from apps/web:
-    SALON_PLATFORM_DOMAIN=localhost SALON_API_BASE_URL=http://localhost:8090 SALON_WEB_LOCAL_HTTP=true
-    SALON_IDENTITY_LOCAL_KEY_FILE=/Users/cmmrox/Personal/Projects/salon-sass/.local/identity-keys.properties
-    node scripts/serve.mjs --port3100 (use --port 3100). Browser http://alpha.localhost:3100/ and /sign-in,/account,/workspace/sign-in,/workspace/account,/workspace/staff,/workspace/audit;
-    beta/gamma same host pattern. Keep sessions alive; stop these exact application processes before Maven/web
-    rebuild, then restart. Logs .local/logs/cr007-api-runtime.log and cr007-web-runtime.log. CR-010 current
-    web: persistent exec43141, http://alpha.localhost:3100/ -> staff workspace; log .local/logs/cr010-web-runtime.log.
-    Old customer entry URLs now staff aliases.'
-  data: 'Only synthetic alpha/beta/gamma; all three active after the gamma suspend/reactivate check. Retained
-    identity keys and existing fixtures were preserved. Old ignored .local/f02-staff-fixtures.json Owner
-    password is stale; do not reuse it as current credentials. Direct local seed implementation inspected:
-    existing accounts are returned without credential replacement; no reset was used. Three dedicated
-    random alpha Owners were added for screenshots; ALL THREE exact created accounts had access removed
-    through authorized staff-remove BFF and current sessions revoked afterwards. Their private fixtures
-    remain ignored mode0600 at .local/cr007-staff-fixture.json and .local/cr007-dialog-owner.json and
-    .local/cr007-final-size-owner.json, never printed/committed. Synthetic customers0740990701/0702/0703
-    registered through captured local codes and saved name Design check;0740990714 exercised wrong-code
-    feedback. Those customer fixtures remain local for QA''s normal synthetic reset. No Clock/provider/limit
-    overrides or real messages were used.'
-  notes: "CR-007 repair acceptance checked 2026-10-14 on application source 6bb5fd2 (3096a83, e6faafa,\
-    \ f19d2b2, 2afbd77 and 4d01605 included), before independent feature QA. Design mapping: Customer\
-    \ header/tabs/canvas and cards/fields/actions; Salon responsive rail/header/mobile tabs, .setf form\
-    \ measure and .tbl/.row list grammar; Customer .sheet bottom sheets and Salon desktop right drawer.\
-    \ Foundation/unknown/suspended pages extend the same neutral grammar. Prototype final CSS/render source\
-    \ was inspected; a permitted live prototype preview was unavailable after the browser safety rejection\
-    \ recorded by the lead. This is source-defined comparison with actual rendered application evidence,\
-    \ not a claimed side-by-side preview.\n\nCurrent design walkthrough: .local/output/playwright/cr007/observations.json\
-    \ contains 253 observations across all six widths (360,390,768,1024,1280,1440), public/customer/workspace\
-    \ sign-in, platform status, unknown-host page, customer profiles/devices/privacy and Owner account/staff/audit.\
-    \ Every measured layout has zero horizontal overflow and loaded Poppins400/500/600. Customer dark\
-    \ Beta/light Gamma were checked in public/sign-in/protected account; workspace stays neutral. Font/body15,\
-    \ input16/label13, field radius20/min48, cards24/no routine shadow, primary pills50, customer32px\
-    \ initials/50px header, 430px canvas, workspace60px header/200-or236px rail and responsive bottom\
-    \ tabs follow the source contract. Full names remain in accessible DOM/title with only approved compact-header\
-    \ ellipsis. Customer profile saves for all three synthetic salons succeeded; code error, loading skeleton,\
-    \ safe feedback and controlled empty-device presentation were observed. Controlled empty response\
-    \ is developer presentation evidence, not an assertion that the real database was empty.\n\nConfirmation\
-    \ checks: Cancel receives initial focus; Tab/Shift+Tab wrapping, Escape/cancel/backdrop dismissal\
-    \ and focus return checked in the real browser; desktop workspace460px drawer and customer430px bottom\
-    \ sheet at every width. Busy dismissal/focus fallback checked in developer component tests. Screenshots\
+  run: 'Origin checkout /Users/cmmrox/Personal/Projects/salon-sass, branch charithm/feature/F01-S03-cr-016-tailwind-shadcn.
+    Postgres salon-local on 5440. Both apps were started by infra/scripts/local-service.sh with the repository''s
+    local settings (SALON_PLATFORM_DOMAIN=localhost, SALON_API_BASE_URL=http://localhost:8090, SALON_WEB_LOCAL_HTTP=true,
+    retained .local/identity-keys.properties): API PID 17499 (java -jar target/salon-api.jar built from
+    1cff8f3, port 8090), web PID 9293 (node scripts/serve.mjs --port 3100, production build of 1cff8f3).
+    Restart either with infra/scripts/local-service.sh stop|start api|web (start rebuilds). Browse http://alpha.localhost:3100/
+    (beta, gamma likewise) -> /workspace/sign-in; http://localhost:3100/ is the status page; an unknown
+    host (nosuchsalon.localhost:3100) is salon-not-found; infra/scripts/local-salon.sh suspend|activate
+    gamma shows salon-unavailable.'
+  data: 'Only the synthetic alpha (#D6086A, default pink), beta (#1F2937, dark) and gamma (#FDE68A, light)
+    salons, all active; no colour or status left changed (gamma was suspended and reactivated twice for
+    AC-5/AC-9). The earlier ignored developer fixtures (.local/cr010-*, cr012-*, cr013-*) are stale after
+    QA''s reset: sign-in refused them. Three additive synthetic OWNER accounts (one per salon, with TOTP)
+    were created through the documented local hook POST /local/identity/seed; their credentials are only
+    in ignored .local/cr016-dev-fixture.json (mode 0600), never printed or committed. They hold several
+    web sessions from the captures; QA''s normal synthetic reset removes them. No clock, provider or limit
+    override, no real message or payment.'
+  notes: "CR-016 developer handoff, 2026-10-17. Tested revision 1cff8f380ffe9dd0dbe9fb59d407035c7e5bab74\
+    \ (clean tree); the hand-over commit changes only stage metadata and generated documents.\n\nDeveloper\
+    \ gates (each run once on 1cff8f3 from the origin checkout above; logs under .local/logs/ of that\
+    \ checkout):\n| Command | Log | Result |\n| cd apps/api && ./mvnw -q verify (JAVA25_HOME=~/.sdkman/candidates/java/25.0.1.0+8-amzn;\
+    \ API stopped first, restarted after) | cr016-maven-verify.log | EXIT 0, 518 tests, 0 failures/errors/skipped\
+    \ |\n| pnpm install --frozen-lockfile | cr016-install.log | EXIT 0 |\n| pnpm -r lint | cr016-lint.log\
+    \ | EXIT 0 |\n| pnpm -r typecheck | cr016-typecheck.log | EXIT 0 |\n| pnpm -r test | cr016-tests.log\
+    \ | EXIT 0, 19 contract + 413 web tests |\n| pnpm --filter @salon/web build | cr016-build.log | EXIT\
+    \ 0, no warnings |\n| pnpm contracts:check | cr016-contracts.log | EXIT 0, contract current |\n| qa/scripts/sdlc\
+    \ selftest | cr016-selftest.log | EXIT 0 |\nRevision file cr016-gates-revision.txt. Conditions: local\
+    \ profile, the three synthetic salons, retained identity keys, no overrides. No QA automation was\
+    \ run by this developer.\n\nBuilt: Tailwind CSS 4.3.3 through @tailwindcss/postcss (postcss.config.mjs,\
+    \ no tailwind.config); shadcn/ui configured by components.json (style new-york, rsc and tsx on, cssVariables,\
+    \ lucide, aliases @/components, @/components/ui, @/lib/utils, @/lib, @/hooks). src/app/globals.css\
+    \ is the only sheet the app imports (tailwindcss, tw-animate-css, ../styles/theme.css, @custom-variant\
+    \ dark matching only inside .dark, which nothing sets, @theme inline, @layer base). src/styles/theme.css:\
+    \ Poppins @font-face; the prototype's final tokens under shadcn names (--background #F3F0EB, --foreground\
+    \ #111827, --card/--popover #ffffff, --secondary/--muted #EAE5DC, --muted-foreground #6B7280, --border/--input\
+    \ #DDD6CA, --destructive #B3261E, --ring #1D5FD0, --radius 1.25rem, --primary var(--color-brand),\
+    \ --primary-foreground var(--color-on-brand), --accent var(--color-brand-soft), --accent-foreground\
+    \ ink); the prototype's named tokens; and a block marked for F02-S04 to remove that keeps the former\
+    \ names only its three CSS Modules read. cn() in src/lib/utils.ts. shadcn/ui components added with\
+    \ pnpm dlx shadcn@4.22.0 add: button, card, alert, skeleton, adapted by classes and variants only\
+    \ (pill 50px actions with default/outline/destructive variants, 24px card without border or shadow,\
+    \ 20px state panels with caution/positive/destructive variants, still skeleton, the theme focus outline\
+    \ instead of the CLI ring, dark: variants removed; asChild on Card, CardTitle and AlertTitle so a\
+    \ section/h1/h2 keeps its semantics). Rebuilt from them and Tailwind utilities: AppShell, WorkspaceShell\
+    \ (sticky 60px header; 200px rail from 900px, 236px from 1200px), Navigation (fixed phone bottom tabs\
+    \ below 900px, sticky rail above), Status/LiveStatus and the status page, Notice, the app not-found\
+    \ page. Removed the AppShell, Navigation, WorkspaceShell, Status, Notice and not-found CSS Modules,\
+    \ styles/shared.module.css, styles/tokens.css and styles/base.css. The plain proxy pages inline theme.css\
+    \ and a tokens-only plain-page.css (base rules plus the Card, Alert and Button look). Tests moved\
+    \ to theme.css: styles/theme.test.ts, styles/positive-contrast.test.tsx (renamed to .tsx: it now renders\
+    \ the status summary), lib/plain-page/plain-page.test.ts and styles/brand.test.ts (it read tokens.css\
+    \ too). New src/styles/styling-rules.test.ts (web.md \"Styling\" rule 10) and test helper src/test/theme.ts.\
+    \ No test id renamed, no string changed, no API, contract or schema change.\n\nNew dependencies (apps/web):\
+    \ radix-ui 1.8.1, class-variance-authority 0.7.1, clsx 2.1.1, tailwind-merge 3.7.0, lucide-react 1.58.0;\
+    \ dev: tailwindcss 4.3.3, @tailwindcss/postcss 4.3.3, postcss 8.5.30, tw-animate-css 1.4.0. No system\
+    \ software installed.\n\nVisual handoff gate (ui-ux-standards.md): the screen mapping is the accepted\
+    \ CR-007/CR-010/CR-012/CR-013 one (Salon mode header, rail and bottom tabs; card, field and pill grammar;\
+    \ CR-012 sign-in; neutral foundation pages), unchanged. Method: the pre-change commit fefc4fd was\
+    \ built in a scratch git worktree and served temporarily on port 3101 (stopped and removed afterwards)\
+    \ against the same API and the same signed-in session, and every screen/state was captured from both\
+    \ builds back to back at 360/390/768/1024/1280/1440. Result: 84 of 84 screenshot pairs pixel-identical\
+    \ (exact) across status, app not-found, plain not-found, alpha/beta/gamma sign-in (beta also with\
+    \ recovery help and password shown, and the error state), alpha/beta/gamma workspace account, alpha\
+    \ staff list, beta audit, and gamma's confirmation drawer/sheet open; the old and new plain salon-not-found,\
+    \ salon-unavailable and service-unavailable HTML rendered under the same origin: 18 of 18 pixel-identical.\
+    \ The computed-style diff (52 properties per element plus placeholder, marker, pseudo-element and\
+    \ backdrop styles) has no remaining visible difference; the residue is preflight's appearance: button\
+    \ on buttons that set their own background and border, vertical-align on an svg inside a flex box,\
+    \ padding on native option elements, and transparent extra layers in box-shadow strings. Rendered\
+    \ facts: zero horizontal overflow in all 102 new observations; Poppins 400/500/600 loaded; keyboard\
+    \ focus 3px solid #1D5FD0, offset 2px; the rail's current item is filled with the brand and its computed\
+    \ foreground (alpha #D6086A/white, beta #1F2937/white, gamma #FDE68A/ink), the phone's current tab\
+    \ tinted brand+22 alpha; header 60px sticky, white with a border from 900px; main padding 16/16/116,\
+    \ 24/24/48 from 900px, 28/36/56 from 1200px; status card 24px radius, heading 22px. Evidence: .local/output/playwright/cr016/\
+    \ (pairs/pairs.json with ref-/new- PNGs, pairs-style-diff.txt, pixel-comparison.txt, plainshots/).\
+    \ The HTML prototype itself was not previewed side by side; the comparison is against the previously\
+    \ accepted rendered product, which CR-007/CR-010 compared with the prototype's source-defined contract.\n\
+    \nAcceptance criteria, checked on the running product (1cff8f3):\n- AC-1 checked: GET / on alpha/beta/gamma\
+    \ and ALPHA.LocalHost answers 307 Location /workspace with Cache-Control private, no-cache, no-store,\
+    \ max-age=0, must-revalidate; following it ends at /workspace/sign-in 200 with only that salon's name\
+    \ (.local/output/playwright/cr016/ac-http.jsonl).\n- AC-2 checked: sign-in and workspace render the\
+    \ responsive Salon workspace and the CR-012 sign-in with the salon's brand accent and no customer\
+    \ canvas or navigation; pixel-identical to the pre-change build for all three brands.\n- AC-3 checked:\
+    \ nosuchsalon, www, console, alpha.beta and alpha.localhost.example.com answer 404 with an identical\
+    \ body (sha256 prefix 112325d079194a74), the salon-not-found, -title and -body test ids, and no salon\
+    \ name, colour or script.\n- AC-4 checked: localhost:3100 answers 200 with status-api-service salon-api\
+    \ and status-api-version 0.1.0-SNAPSHOT, as /api/v1/meta says.\n- AC-5 checked: after local-salon.sh\
+    \ suspend gamma, the API answered 403 problem details with code salon_suspended and no brand field;\
+    \ the web answered 503 on / and /workspace/sign-in with salon-unavailable, -title and -body, no Gamma,\
+    \ no #FDE68A, no script; alpha and beta reached their sign-in (200); after activate gamma the next\
+    \ request reached gamma's sign-in, nothing restarted (ac5-ac9.txt).\n- AC-6 checked: on alpha, beta\
+    \ in a query parameter, a cookie, X-Forwarded-Host, X-Tenant-Id, Forwarded and X-Salon-Resolved showed\
+    \ Alpha Studio and nothing of beta.\n- AC-7 checked with k6 (script outside the repository): 300 iterations\
+    \ for / from 60 VUs released together, 100 per salon, redirects followed: 900 of 900 checks (reached\
+    \ sign-in, own name, no other salon) passed, 0 failed requests (.local/logs/cr016-ac7-k6.log, cr016-ac7-summary.json).\n\
+    - AC-8 checked: API frozen with SIGSTOP: 503 service-unavailable (status-unavailable test ids) in\
+    \ 3.0s; API stopped: 503 in 0.003s; no salon name or colour, no overlay or stack trace; after SIGCONT\
+    \ and after the restart the next request showed Alpha Studio; web PID 9293 unchanged (ac8.txt).\n\
+    - AC-9 checked with @axe-core/playwright (wcag2a/aa, 2.1, 2.2 aa, best-practice; loaded from the qa\
+    \ package by a scratch script, nothing written under qa/): beta sign-in, beta workspace, status, salon-not-found\
+    \ and salon-unavailable at 360 and 1280: no violation of any impact, no horizontal overflow (ac9-axe.json).\n\
+    - AC-10 checked: no string or test id changed; the lint rule, the i18n and plain-page unit tests pass;\
+    \ the rendered text and test-id sets equal the pre-change build in every captured state.\n- AC-11\
+    \ checked: pnpm contracts:check EXIT 0; no API change.\n- AC-12 checked: warm palette, Poppins, rounded\
+    \ controls and responsive workspace pixel-identical to the accepted build; neutral foundation pages\
+    \ pass axe.\n- AC-13 checked: the files listed above; no *.module.css and no other sheet under apps/web/src\
+    \ except plain-page.css, apart from F02-S04's three modules (Account, Confirmation, StaffSignIn),\
+    \ which the test allows explicitly by name with a comment that F02-S04 (CR-016) removes them and the\
+    \ allowance. styling-rules.test.ts passes (7 tests) and was observed to fail on the real tree for\
+    \ each introduced violation: a CSS Module, a second style sheet, bg-[#D6086A], a hex colour in AppShell.tsx\
+    \ and a style sheet import; the restored tree passes (.local/logs/cr016-styling-rules-negative.log).\n\
+    - AC-14 checked: see the visual handoff gate above (all six widths, dark, light and default brands,\
+    \ test ids, strings, #1D5FD0 focus, no overflow); the plain pages keep 404/503, no script and their\
+    \ look, inlining theme.css.\n\nLeft out, or for the lead:\n- Operator console layout: (console)/layout.tsx\
+    \ renders its children only and no console route exists, so there was nothing to convert; it is unchanged.\
+    \ The theme's --primary and --accent read the brand variables, which only BrandStyle sets, so on a\
+    \ page without a salon (status, not-found, plain pages, a future console) a primary-coloured component\
+    \ would be transparent. No document defines the console's neutral accent; F03 needs that decision\
+    \ before it uses Button's default variant.\n- F02-S04's account screens are untouched in look. Account.module.css\
+    \ changed only to inline the one composes from the removed shared.module.css and to restore what Tailwind's\
+    \ preflight resets there (list-style: disc on the permissions list, 1em margins on the staff form\
+    \ h3 and the audit row pre); F02-S04 should keep those looks when it rebuilds. theme.test.ts and positive-contrast.test.tsx\
+    \ still read Account.module.css and StaffSignIn.module.css for F02-S04's accents; F02-S04 moves those\
+    \ checks with the modules.\n- Kept the prototype's own navigation SVG glyphs rather than lucide equivalents,\
+    \ whose paths differ visibly; lucide-react is installed for new icons. shadcn's Sidebar was not used\
+    \ for the rail: on phones it is an off-canvas sheet, not the prototype's bottom tabs. The status summary\
+    \ stays a <p> (an Alert would add role=alert).\n- Not run: the Docker image build (not a declared\
+    \ gate). Confirmation's busy state and other F02-S04 states that need mutations were not captured;\
+    \ they are F02-S04's screens and were not restyled.\n\nDifferent from a document, or to record (the\
+    \ lead corrects the documents):\n- shadcn CLI 4.22.0 writes import { cn } from \"cn\" and adds the\
+    \ npm package cn (github.com/shadcn-ui/cn, a clsx plus tailwind-merge replacement) instead of using\
+    \ components.json's utils alias. Following web.md, I removed the package and pointed the four components\
+    \ at @/lib/utils. Every later shadcn add will do the same until the documents choose one; tech-stack.md\
+    \ and web.md should say which.\n- pnpm 12's default minimum release age (one day) rejected lucide-react\
+    \ 1.59.0 (published that morning), and pnpm add tried to write a minimumReleaseAgeExclude entry into\
+    \ pnpm-workspace.yaml; I reverted that and pinned 1.58.0. tech-stack.md says shadcn@4 and web.md shadcn@<version\
+    \ in tech-stack.md>; I ran 4.22.0 and chose style new-york (web.md names no style).\n- web.md rule\
+    \ 6 says status colours keep their prototype names in theme.css. In practice theme.css names them\
+    \ --positive, --positive-surface, --caution, --caution-surface, --negative-surface, --backdrop and\
+    \ --surface-translucent, and @theme inline maps them to --color-*, because Tailwind re-emits an @theme\
+    \ inline variable whose value names the same variable as a self-reference (--color-x: var(--color-x)).\
+    \ Sizes keep their --size-* names; their Tailwind names are --spacing-header, -tab, -rail-row, -icon,\
+    \ -touch, -action, -field, -skeleton-line, --container-content and -workspace, --radius-card, -field,\
+    \ -action and -rail-item, --text-small, -body, -large, -title, -workspace-title, -label, -input, -nav\
+    \ and -rail, --leading-body and -heading, and --shadow-tabs.\n- The prototype's workspace breakpoints\
+    \ are Tailwind breakpoints rail (900px) and wide (1200px), in @theme inline; web.md does not mention\
+    \ them.\n- theme.css also defines --spacing: 0.25rem (equal to Tailwind's own) so plain-page.css lays\
+    \ out on the same scale with calc(var(--spacing) * n), and --font-weight-regular, -medium, -strong\
+    \ and --letter-spacing-heading for the plain pages' base rules.\n- Tailwind's preflight removes link\
+    \ underlines; the base layer restores text-decoration-line: underline on a, as the old pages had by\
+    \ browser default. Tailwind v4's hover: variant applies only on hover-capable devices.\n- styling-rules.test.ts\
+    \ reads \"component file\" as every .tsx plus the code under src/components and src/app (src/styles/brand.ts\
+    \ legitimately holds hex values), and treats hsl(), oklch(), color-mix() and similar functions as\
+    \ colours too.\n- plain-page.test.ts: the leak check now refuses a declaration of a brand variable\
+    \ (--color-brand...:) rather than the substring --color-brand, because the inlined theme reads var(--color-brand)\
+    \ without setting it.\n\nTiming (observed, local time): reading and baseline capture 19:30-19:45;\
+    \ implementation and visual comparison, including one correction batch, 19:45-20:24; developer gates\
+    \ 20:25-20:31; acceptance walk-through 20:31-20:36; no delivery wait.\n\nHISTORICAL HANDOFFS BELOW\
+    \ (prior CR-007/CR-010 evidence, retained; not rerun unless stated above):\nCR-007 repair acceptance\
+    \ checked 2026-10-14 on application source 6bb5fd2 (3096a83, e6faafa, f19d2b2, 2afbd77 and 4d01605\
+    \ included), before independent feature QA. Design mapping: Customer header/tabs/canvas and cards/fields/actions;\
+    \ Salon responsive rail/header/mobile tabs, .setf form measure and .tbl/.row list grammar; Customer\
+    \ .sheet bottom sheets and Salon desktop right drawer. Foundation/unknown/suspended pages extend the\
+    \ same neutral grammar. Prototype final CSS/render source was inspected; a permitted live prototype\
+    \ preview was unavailable after the browser safety rejection recorded by the lead. This is source-defined\
+    \ comparison with actual rendered application evidence, not a claimed side-by-side preview.\n\nCurrent\
+    \ design walkthrough: .local/output/playwright/cr007/observations.json contains 253 observations across\
+    \ all six widths (360,390,768,1024,1280,1440), public/customer/workspace sign-in, platform status,\
+    \ unknown-host page, customer profiles/devices/privacy and Owner account/staff/audit. Every measured\
+    \ layout has zero horizontal overflow and loaded Poppins400/500/600. Customer dark Beta/light Gamma\
+    \ were checked in public/sign-in/protected account; workspace stays neutral. Font/body15, input16/label13,\
+    \ field radius20/min48, cards24/no routine shadow, primary pills50, customer32px initials/50px header,\
+    \ 430px canvas, workspace60px header/200-or236px rail and responsive bottom tabs follow the source\
+    \ contract. Full names remain in accessible DOM/title with only approved compact-header ellipsis.\
+    \ Customer profile saves for all three synthetic salons succeeded; code error, loading skeleton, safe\
+    \ feedback and controlled empty-device presentation were observed. Controlled empty response is developer\
+    \ presentation evidence, not an assertion that the real database was empty.\n\nConfirmation checks:\
+    \ Cancel receives initial focus; Tab/Shift+Tab wrapping, Escape/cancel/backdrop dismissal and focus\
+    \ return checked in the real browser; desktop workspace460px drawer and customer430px bottom sheet\
+    \ at every width. Busy dismissal/focus fallback checked in developer component tests. Screenshots\
     \ now use viewport capture for native dialog states because fullPage stitching misrepresents fixed\
     \ overlays. Exact viewport evidence: workspace-confirm-360.png/workspace-confirm-1440.png and alpha-privacy-confirm-360.png/alpha-privacy-confirm-1440.png.\
     \ Additional customer viewport evidence .local/output/playwright/cr007/customer-viewport-observations.json:13\

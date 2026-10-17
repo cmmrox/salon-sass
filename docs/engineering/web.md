@@ -112,10 +112,18 @@ because the owner set one standard for all Next.js work in this product.
   order: `@import "tailwindcss"`, `@import "tw-animate-css"`, the import of `src/styles/theme.css`,
   `@theme inline` (which maps the theme variables to Tailwind's colour, radius, font and size
   names), and `@layer base`.
-- shadcn/ui is configured by `apps/web/components.json`: React Server Components and TSX on, CSS
-  variables on, `lucide` icons, and the aliases `@/components`, `@/components/ui`, `@/lib/utils`
-  and `@/hooks`. Add a component from `apps/web` with
+- shadcn/ui is configured by `apps/web/components.json`: style `new-york`, React Server Components
+  and TSX on, CSS variables on, `lucide` icons, and the aliases `@/components`, `@/components/ui`,
+  `@/lib`, `@/lib/utils` and `@/hooks`. Add a component from `apps/web` with
   `pnpm dlx shadcn@<version in tech-stack.md> add <component>`, and commit what it writes.
+- **After every `shadcn add`:** the CLI writes `import { cn } from "cn"` and adds the npm package
+  `cn`, ignoring the utils alias. Point the new component at `@/lib/utils` and remove the `cn`
+  package; there is one `cn()`. Then remove any `dark:` classes and the CLI's focus ring in favour of
+  the theme's focus outline, and map its colours to the theme (rule 6).
+- Tailwind's preflight resets browser defaults: lists lose their markers, headings and `pre` lose
+  their margins, and links lose their underline (the base layer restores the underline on `a`).
+  Set what a screen needs with utilities. Tailwind 4's `hover:` applies only on devices that can
+  hover.
 
 **Rules.**
 
@@ -150,11 +158,22 @@ because the owner set one standard for all Next.js work in this product.
    | `--ring` | `#1D5FD0`, the keyboard focus outline |
    | `--radius` and the named radii | Cards 24px, fields 20px, actions pill, as in `ui-ux-standards.md` |
 
-   Status colours (positive, caution, negative surfaces), sizes and the sign-in composition's
-   values keep their prototype names in `theme.css` and are mapped in `@theme inline` too.
+   The other prototype tokens are in `theme.css` too and are mapped in `@theme inline`. A variable
+   in `@theme inline` must not read a variable of its own name (Tailwind would emit
+   `--color-x: var(--color-x)`), so `theme.css` names status colours without the prefix
+   (`--positive`, `--positive-surface`, `--caution`, `--caution-surface`, `--negative-surface`,
+   `--backdrop`, `--surface-translucent`) and `@theme inline` maps them to `--color-*`. Sizes keep
+   their `--size-*` names and map to Tailwind's namespaces (`--spacing-header`, `--radius-card`,
+   `--text-body`, `--container-workspace` and so on): read `globals.css` for the list before adding
+   one, and add a missing one there rather than an arbitrary value.
+   The workspace breakpoints are Tailwind breakpoints: `rail` (900px, the rail replaces the phone's
+   bottom tabs) and `wide` (1200px, the wider rail and spacing).
 7. There is no dark mode. The prototype has none; do not add `dark:` variants.
 8. Poppins is loaded from `public/fonts/poppins/` by the `@font-face` rules in `theme.css`, and is
-   the theme's `--font-sans`.
+   the theme's `--font-sans`. Icons: the navigation keeps the prototype's own SVG glyphs; a new icon
+   comes from `lucide-react`. The workspace rail and phone tabs are the product's `Navigation`, not
+   shadcn/ui's Sidebar, whose phone form is an off-canvas sheet rather than the prototype's bottom
+   tabs.
 9. **The one exception is the plain proxy pages** (`src/lib/plain-page/`). They are complete HTML
    strings answered by `proxy.ts` with no script, so they cannot render React components, and
    Turbopack's `?raw` import gives a style sheet's source before Tailwind runs. They inline
@@ -163,7 +182,9 @@ because the owner set one standard for all Next.js work in this product.
 10. `src/styles/styling-rules.test.ts` enforces rules 4, 5 and 9. It fails on any `*.module.css`,
     any style sheet other than `globals.css`, `theme.css` and `plain-page.css`, any style sheet
     import outside the root layout and the plain pages, an arbitrary colour in a class name, or a
-    hex or `rgb()` colour in a component file. Fix the code, never the test.
+    colour value (hex, `rgb()`, `hsl()`, `oklch()`, `color-mix()` and the like) in any `.tsx` file or
+    any code under `src/components` and `src/app`. `src/styles/brand.ts`, which computes brand
+    colours, is the one code file that holds colour values. Fix the code, never the test.
 
 ## Branding
 
@@ -176,6 +197,12 @@ because the owner set one standard for all Next.js work in this product.
 - Every salon screen, sign-in and workspace alike, uses the salon's colour as its accent
   (CR-013), with the prototype's `#D6086A` when the salon has none. Only the operator console uses
   the platform's neutral theme, because it belongs to no salon.
+- A page without a salon (the platform status page, not-found, the plain pages, the operator
+  console) has no `BrandStyle`, so `--color-brand` and with it `--primary` and `--accent` are unset.
+  Such a page must not use a primary-coloured component until it sets the neutral accent on its
+  root: ink `#111827` as `--color-brand`, white as `--color-on-brand`, `#EAE5DC` as
+  `--color-brand-soft` and ink as `--color-brand-text`, from named constants beside the brand rule
+  in `src/styles/brand.ts` (decision 047). The operator console (F03) does this in its layout.
 - Entry decides on the server, in the proxy (`src/lib/tenancy/route-request.ts`,
   `src/lib/identity/entry.ts`), with real HTTP 307s: a page's own `redirect()` streams as a client
   meta redirect after a shell is painted, under `cacheComponents`. `/workspace` decides on the
