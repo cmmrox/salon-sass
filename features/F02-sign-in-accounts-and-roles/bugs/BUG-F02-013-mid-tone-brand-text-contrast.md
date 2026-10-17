@@ -2,12 +2,12 @@
 id: BUG-F02-013
 title: Text on a mid-tone brand fill falls below 4.5:1 because the foreground is only ever white or ink
 severity: major
-status: open
+status: fixed
 found_by: TC-F02-S04-028
 breaks: AC-10
 found_on: 2026-10-17
-fixed_in: null
-fix_note: null
+fixed_in: c618f87
+fix_note: 'contrastColour keeps white or ink #111827 wherever one reaches 4.5:1 (unchanged salons) and otherwise uses #000000; 5-step RGB sweep 9,364 of 140,608 below 4.5:1 before, 0 after. Running product (alpha via local-salon.sh, restored to #D6086A): #808080 ink 4.49 -> black 5.32, #C34BB4 white 4.21 -> black 4.99 on the sign-in action, primary button and selected navigation. Evidence .local/logs/bug-f02-013-before.log, bug-f02-013-summary.log, bug-f02-013-after-runtime.log.'
 developer_note: null
 verified_on: null
 approved_by: null
