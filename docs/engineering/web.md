@@ -164,6 +164,7 @@ because the owner set one standard for all Next.js work in this product.
    | Divider | Separator |
    | Confirmation, side panel | Sheet (bottom sheet on phones, right drawer from 900px), Dialog or Alert Dialog |
    | Person or salon initial | Avatar |
+   | One-time secret shown for copying (authenticator setup key and URI) | No shadcn/ui component: a labelled `<output>` inside a Field, styled with Tailwind (CR-017) |
    | Hint on hover or focus | Tooltip |
    | Sections switched in place | Tabs |
 
@@ -179,8 +180,13 @@ because the owner set one standard for all Next.js work in this product.
    focuses the current route when its phone sheet opens and returns focus to the trigger, keeps no
    cookie, takes its labels from the caller, reads its widths from the theme and has no
    `SidebarRail`; `hooks/use-mobile.ts` is the CLI's hook rewritten with `useSyncExternalStore`, with
-   the `rail` breakpoint (900px).
-4. No CSS Modules, no new style sheet, no `<style>` element other than `BrandStyle`, and no `style`
+   the `rail` breakpoint (900px). `ui/pagination.tsx` uses Button controls (the lists page in place),
+   takes its words from the caller and adds `PaginationCurrent`; `ui/spinner.tsx` is decorative
+   unless given a translated label; `ui/input-otp.tsx` renders no `noscript` style; `ui/input-group.tsx`
+   carries the theme's field size and addon padding; a caller may drop `FieldError`'s role where a
+   surrounding Alert already announces the refusal.
+4. No CSS Modules, no new style sheet, no `<style>` element other than `BrandStyle` (the `input-otp`
+   library inserts its own runtime `<style>` for Input OTP; that one is the library's), and no `style`
    prop for a visual value. The only exception is a value that exists only at run time and that no
    utility can name.
 5. No raw value in a component. A colour, radius, font, shadow or prototype-specific size comes
@@ -241,8 +247,9 @@ because the owner set one standard for all Next.js work in this product.
     `--size-sheet-max-height`) and, with `rail:` classes, a full-height right drawer of
     `--size-drawer` from 900px. Radix restores focus to the opener on a timer after the sheet or
     Select closes, so a test waits for focus rather than reading it synchronously. A test drives a
-    shadcn/ui Select by opening its trigger and choosing the option by role, never with
-    `selectOption`.
+    shadcn/ui Select by opening its trigger and choosing the option by role and name (or its
+    `account-role-option-<role>` test id), never with `selectOption`; Radix renders a hidden native
+    select inside a form, which is not the control.
 
 ## Branding
 
