@@ -11,7 +11,8 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  /* The prototype's workspace breakpoints: the rail from 900px, the wide rail from 1200px. */
+  /* The prototype's workspace breakpoints: the Sidebar is a fixed rail from 900px (its phone sheet
+     below, hooks/use-mobile.ts), the wide rail from 1200px. */
   --breakpoint-rail: 900px;
   --breakpoint-wide: 1200px;
   /* The staff sign-in's phone composition is `max-login:`, below 601px (the prototype's 600px and less). */
@@ -35,6 +36,14 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
   --color-positive: var(--positive);
   --color-positive-surface: var(--positive-surface);
   --color-caution: var(--caution);

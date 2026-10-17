@@ -1,4 +1,19 @@
+'use client';
+
 import Link from 'next/link';
+import { MenuIcon } from 'lucide-react';
+import { useEffect, type ComponentProps } from 'react';
+
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarTrigger,
+  useSidebar,
+} from '@/components/ui/sidebar';
 
 export type NavigationItem = { href: string; label: string; testId: string; icon: 'home' | 'account' | 'staff' | 'audit'; current?: boolean; alias?: string };
 
@@ -14,30 +29,71 @@ export function NavigationIcon({ icon }: { icon: NavigationItem['icon'] }) {
 }
 
 /**
- * The permitted staff routes: below 900px a fixed bottom tab bar, from 900px the workspace's
- * sticky rail. The current route is filled with the salon's brand (its soft tint on phones).
+ * A route chosen in the phone sheet replaces the page, and with it this menu button. The new
+ * page's button takes the focus back, as the sheet gives it back when it closes on the same page.
  */
-export function Navigation({ items, label }: { items: NavigationItem[]; label: string }) {
+let focusTriggerOnMount = false;
+
+const keepRailOpen = () => {};
+
+/**
+ * The workspace's Sidebar state. The rail is always shown from 900px (the prototype's rail does not
+ * collapse, and the menu button exists only below 900px), so only the phone sheet opens and closes.
+ */
+export function NavigationProvider(props: Omit<ComponentProps<typeof SidebarProvider>, 'open' | 'onOpenChange' | 'defaultOpen'>) {
+  return <SidebarProvider open onOpenChange={keepRailOpen} {...props} />;
+}
+
+/** The sticky header's menu button below 900px: it opens the navigation's sheet. */
+export function NavigationTrigger({ label }: { label: string }) {
+  const { triggerRef } = useSidebar();
+  useEffect(() => {
+    if (focusTriggerOnMount) {
+      focusTriggerOnMount = false;
+      triggerRef.current?.focus();
+    }
+  }, [triggerRef]);
   return (
-    <nav
-      className="fixed bottom-0 left-0 z-30 flex w-full justify-around bg-card px-1.5 pt-2 pb-[calc(var(--spacing)*2+env(safe-area-inset-bottom,0px))] shadow-tabs rail:sticky rail:top-header rail:h-[calc(100vh-var(--size-header))] rail:flex-col rail:justify-start rail:gap-1 rail:border-r rail:border-border rail:px-3 rail:py-4 rail:shadow-none"
-      aria-label={label}
-      data-testid="workspace-navigation"
-    >
-      {items.map((item) => (
-        <Link
-          key={item.href}
-          href={item.href}
-          data-testid={item.testId}
-          aria-current={item.current ? 'page' : undefined}
-          className="group flex min-h-tab min-w-0 flex-1 flex-col items-center justify-center gap-0.5 p-0 text-center text-nav font-medium text-muted-foreground no-underline wrap-anywhere aria-[current=page]:font-semibold aria-[current=page]:text-foreground rail:min-h-rail-row rail:flex-none rail:flex-row rail:justify-start rail:gap-3 rail:rounded-rail-item rail:px-3.5 rail:text-left rail:text-rail rail:aria-[current=page]:bg-primary rail:aria-[current=page]:text-primary-foreground rail:not-aria-[current=page]:hover:bg-background"
-        >
-          <span className="flex items-center justify-center rounded-action px-4 py-1 group-aria-[current=page]:bg-accent rail:p-0 rail:group-aria-[current=page]:bg-transparent">
-            <NavigationIcon icon={item.icon} />
-          </span>
-          <span data-testid={item.alias}>{item.label}</span>
-        </Link>
-      ))}
-    </nav>
+    <SidebarTrigger className="-ml-2.5 flex-none text-foreground rail:hidden" aria-label={label} data-testid="workspace-menu">
+      <MenuIcon aria-hidden="true" />
+    </SidebarTrigger>
+  );
+}
+
+/**
+ * The permitted staff routes in the shadcn/ui Sidebar (CR-017): from 900px the workspace's fixed
+ * rail below the sticky header, below 900px its sheet. The current route is filled with the
+ * salon's brand. Choosing a route closes the sheet.
+ */
+export function Navigation({ items, label, description }: { items: NavigationItem[]; label: string; description: string }) {
+  const { isMobile, setOpenMobile } = useSidebar();
+  return (
+    <Sidebar sheetTitle={label} sheetDescription={description} className="top-header">
+      <SidebarContent>
+        <nav aria-label={label} data-testid="workspace-navigation">
+          <SidebarMenu>
+            {items.map((item) => (
+              <SidebarMenuItem key={item.href}>
+                <SidebarMenuButton asChild isActive={Boolean(item.current)}>
+                  <Link
+                    href={item.href}
+                    data-testid={item.testId}
+                    aria-current={item.current ? 'page' : undefined}
+                    onClick={() => {
+                      if (!isMobile) return;
+                      focusTriggerOnMount = !item.current;
+                      setOpenMobile(false);
+                    }}
+                  >
+                    <NavigationIcon icon={item.icon} />
+                    <span data-testid={item.alias}>{item.label}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        </nav>
+      </SidebarContent>
+    </Sidebar>
   );
 }

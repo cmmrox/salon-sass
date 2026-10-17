@@ -111,10 +111,14 @@ describe('the salon theme', () => {
   });
 
   it('draws the workspace navigation\'s current route in the salon brand', () => {
-    const navigation = read('components/shell/Navigation.tsx');
-    expect(navigation).toContain('rail:aria-[current=page]:bg-primary');
-    expect(navigation).toContain('rail:aria-[current=page]:text-primary-foreground');
-    expect(navigation).toContain('group-aria-[current=page]:bg-accent');
+    // The Sidebar (CR-017): the current route's menu button is active, and an active button is
+    // filled with the sidebar's primary colours, which are the salon's brand and its readable colour.
+    expect(read('components/shell/Navigation.tsx')).toContain('isActive={Boolean(item.current)}');
+    expect(read('components/ui/sidebar.tsx')).toContain('data-[active=true]:bg-sidebar-primary data-[active=true]:text-sidebar-primary-foreground');
+    expect(tailwindNames().get('--color-sidebar-primary')).toBe('var(--sidebar-primary)');
+    expect(tailwindNames().get('--color-sidebar-primary-foreground')).toBe('var(--sidebar-primary-foreground)');
+    expect(declarations(themeSheet).get('--sidebar-primary')).toBe('var(--color-brand)');
+    expect(declarations(themeSheet).get('--sidebar-primary-foreground')).toBe('var(--color-on-brand)');
     expect(read('components/ui/button.tsx')).toContain('border-primary bg-primary text-primary-foreground');
   });
 });

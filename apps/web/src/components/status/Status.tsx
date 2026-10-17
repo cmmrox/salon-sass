@@ -63,10 +63,13 @@ export function StatusBody({ state, retryHref }: { state: StatusState; retryHref
 
   return (
     <div className="flex flex-col gap-3" data-testid="status-loaded">
-      {/* Ink on the positive surface: the positive text colour is not AA there (BUG-F01-003). */}
-      <p className="rounded-field bg-positive-surface px-3 py-2 font-semibold text-foreground" data-testid="status-summary">
-        {t('loaded.summary')}
-      </p>
+      {/* The positive Alert: ink on the positive surface, since the positive text colour is not AA
+          there (BUG-F01-003). A status, not an alert: it says nothing went wrong. */}
+      <Alert variant="positive" role="status" data-testid="status-summary">
+        <AlertTitle asChild>
+          <p>{t('loaded.summary')}</p>
+        </AlertTitle>
+      </Alert>
       <dl className="flex flex-col gap-2">
         <div className="flex flex-wrap justify-between gap-x-4 gap-y-1">
           <dt className="text-muted-foreground">{t('loaded.service')}</dt>

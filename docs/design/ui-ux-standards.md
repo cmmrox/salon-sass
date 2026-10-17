@@ -41,7 +41,7 @@ screens continue to follow the HTML prototype below.
 | Typography | Poppins 400/500/600; 15px body; 22px customer title; 26px desktop workspace title |
 | Cards / fields / primary actions | 24px cards, 20px fields, pill actions; fields at least 48px and primary actions 50px |
 | Customer (later React Native only) | Centred 430px canvas, compact sticky header and anchored icon navigation |
-| Salon | Full width; below 900px main area up to 760px and the navigation in the shadcn/ui Sidebar's sheet, opened from a menu button in the sticky header (CR-017, replacing the prototype's bottom navigation); desktop sticky white header, sidebar and main area up to 1280px |
+| Salon | Full width; below 900px main area up to 760px and the navigation in the shadcn/ui Sidebar's sheet, opened from a menu button in the sticky header (CR-017, replacing the prototype's bottom navigation; the sheet is 18rem wide and the phone main area keeps 48px of bottom padding, product choices the prototype does not define); desktop sticky white header, sidebar and main area up to 1280px |
 | Sidebar | 200px at 900–1199px; 236px at 1200px and above |
 | Accent and branding (CR-013) | Wherever the prototype uses `--ac`/`--acs`/`--onac` (primary actions, selected navigation, chips and slots, focus, progress, identity accents), sign-in and workspace use the salon's brand colour, its soft tint and its computed readable foreground. Default `#D6086A` when a salon has none. Only the operator console stays neutral |
 

@@ -39,6 +39,16 @@
   --input: #DDD6CA;
   /* The keyboard focus outline, never the brand. */
   --ring: #1D5FD0;
+  /* The workspace navigation (ui/sidebar.tsx, CR-017): the prototype's white rail with muted
+     items, the current item filled with the salon's brand, hover on the canvas. */
+  --sidebar: var(--card);
+  --sidebar-foreground: var(--muted-foreground);
+  --sidebar-primary: var(--color-brand);
+  --sidebar-primary-foreground: var(--color-on-brand);
+  --sidebar-accent: var(--background);
+  --sidebar-accent-foreground: var(--foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
   /* Fields; cards are --radius-medium, actions --radius-pill. */
   --radius: 1.25rem;
 }
@@ -87,13 +97,13 @@
   /* shadcn/ui's checkbox corner; the prototype has no checkbox. */
   --checkbox-radius: 0.25rem;
 
-  /* Size. `--spacing` is Tailwind's spacing unit, the same value as Tailwind's own, so that the
-     plain pages (which get no Tailwind output) lay out on the same scale. */
-  --spacing: 0.25rem;
+  /* Size */
   --size-content: 47.5rem;
   --size-workspace: 80rem;
   --size-sidebar: 14.75rem;
   --size-sidebar-compact: 12.5rem;
+  /* The Sidebar's phone sheet (below 900px): shadcn/ui's own width; the prototype has none. */
+  --size-sidebar-sheet: 18rem;
   --size-header: 3.75rem;
   --size-nav: 5.25rem;
   --size-tab: 3.5rem;

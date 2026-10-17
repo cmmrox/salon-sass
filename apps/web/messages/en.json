@@ -45,6 +45,8 @@
     "account": "Account and security",
     "staff": "Staff access",
     "audit": "Activity log",
+    "menu": "Menu",
+    "menuHelp": "Choose a page of the staff workspace.",
     "identifier": "Email or mobile number",
     "password": "Password",
     "oldPassword": "Current password",

@@ -51,3 +51,6 @@ Added by the lead at `stage-close` and `feature-close`, from suggestions classed
 | Give an automation check a way to report an environment fault to the runner, which today records only a missing tool that way | QA of F01-S01 | Lifecycle tooling |
 | Agree client retry guidance for temporary 503 responses | SUG-F01-S02-01 | Consider with the public shell; requires owner approval before changing requirements |
 | Evaluate tenant-aware conditional reads when the public brand payload grows | SUG-F01-S02-02 | Consider with F04 branding; cache and validator keys must include the salon |
+| Return focus to the opener in the same frame a confirmation closes | SUG-F02-09 | Radix restores focus on a timer; one frame on the page body today |
+| Send a credential the API calls non-renewable straight to sign-in on the server | SUG-F02-10 | Avoids briefly painting an empty workspace frame |
+| Make the API integration tests bind and connect on the same loopback address | Developer, CR-017 F01-S03 gates | A random test port collided with an IDE language server on 127.0.0.1 and failed one test once |
