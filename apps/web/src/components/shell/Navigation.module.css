@@ -2,13 +2,13 @@
 .item { display: flex; flex: 1; min-width: 0; min-height: var(--size-tab); flex-direction: column; justify-content: center; align-items: center; gap: var(--space-half); padding: 0; color: var(--color-text-muted); text-decoration: none; text-align: center; font-size: var(--font-size-nav); font-weight: var(--font-weight-medium); overflow-wrap: anywhere; }
 .indicator { display: flex; align-items: center; justify-content: center; padding: var(--space-1) var(--space-4); border-radius: var(--radius-pill); }
 .item[aria-current] { color: var(--color-text); font-weight: var(--font-weight-strong); }
-.item[aria-current] .indicator { background: var(--color-secondary); }
+.item[aria-current] .indicator { background: var(--color-brand-soft); }
 .icon { width: var(--size-icon); height: var(--size-icon); flex: none; }
 .workspace { left: 0; transform: none; max-width: none; border-radius: 0; }
 @media (min-width: 900px) {
   .workspace { position: sticky; top: var(--size-header); height: calc(100vh - var(--size-header)); flex-direction: column; justify-content: flex-start; gap: var(--space-1); padding: var(--space-4) var(--space-3); border-right: var(--size-border) solid var(--color-border); box-shadow: none; }
   .workspace .item { flex: none; flex-direction: row; justify-content: flex-start; text-align: left; gap: var(--space-3); min-height: var(--size-rail-row); padding: 0 var(--space-field-inline); font-size: var(--font-size-rail); border-radius: var(--radius-rail); }
   .workspace .indicator, .workspace .item[aria-current] .indicator { padding: 0; background: transparent; }
-  .workspace .item[aria-current] { background: var(--color-primary); color: var(--color-surface); }
+  .workspace .item[aria-current] { background: var(--color-brand); color: var(--color-on-brand); }
   .workspace .item:hover:not([aria-current]) { background: var(--color-background); }
 }
