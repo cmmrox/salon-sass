@@ -25,7 +25,7 @@ asked for; the cases of a stage are written at its feature's pass.
 | F02-S01 | complete | - | IAM-06, IAM-07, IAM-08, IAM-09, IAM-11, NFR-08, NFR-10 | 10 | 30 | 30 | 0 | 0 |
 | F02-S02 | complete | - | IAM-01, IAM-03, IAM-09, IAM-10, IAM-11, NFR-08, NFR-10 | 8 | 18 | 18 | 0 | 0 |
 | F02-S03 | complete | - | IAM-03, IAM-04, IAM-05, IAM-11, NFR-08, NFR-10 | 6 | 14 | 14 | 0 | 0 |
-| F02-S04 | complete | - | IAM-01, IAM-03, IAM-04, IAM-05, IAM-06, IAM-07, IAM-08, IAM-09, IAM-10, IAM-11, NFR-08, NFR-10, NFR-21 | 14 | 29 | 27 | 2 | 0 |
+| F02-S04 | complete | - | IAM-01, IAM-03, IAM-04, IAM-05, IAM-06, IAM-07, IAM-08, IAM-09, IAM-10, IAM-11, NFR-08, NFR-10, NFR-21 | 14 | 31 | 28 | 3 | 0 |
 
 ## Deferred cases
 

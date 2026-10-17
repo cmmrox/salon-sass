@@ -70,12 +70,16 @@ async function signInAccent(page:Page,brand:string){
 /** The workspace account page's accents at one width: selected navigation, primary action and field focus. */
 async function workspaceAccent(page:Page,salon:Salon,brand:string,width:number,ready:(page:Page)=>Promise<void>){
  await page.setViewportSize({width,height:1000});await ready(page);await expect(handle(page,'home')).toHaveText(salon.name);
+ // CR-017 (F01-S03 AC-15): the selected Sidebar item is filled with the brand, on the rail and in the phone sheet.
+ if(width<900){await page.getByTestId('workspace-menu').click();await expect(page.getByRole('dialog',{name:'Staff workspace'})).toBeVisible();}
  const current=page.getByTestId('workspace-navigation').locator('[aria-current="page"]');await expect(current).toHaveCount(1);
- if(width>=900)await expectOnBrand(current,brand,`${salon.slug} selected navigation at ${width}`);
- else{const tile=channels(await current.locator('svg').first().evaluate(el=>getComputedStyle(el.parentElement!).backgroundColor));
-  expect(tile.rgb,`${salon.slug} selected tab tile is the brand's soft tint`).toEqual(hex(brand));expect(tile.alpha).toBeGreaterThan(0);expect(tile.alpha).toBeLessThanOrEqual(0.25);}
+ await expectOnBrand(current,brand,`${salon.slug} selected navigation at ${width}`);
+ // The sheet hands focus back to its menu button after it closes (web.md rule 11): wait for it before focusing a field.
+ if(width<900){await page.keyboard.press('Escape');await expect(page.getByRole('dialog')).toHaveCount(0);await expect(page.getByTestId('workspace-menu')).toBeFocused();}
  await expectOnBrand(handle(page,'password-save'),brand,`${salon.slug} primary action at ${width}`);
- await handle(page,'oldPassword').focus();await expect(handle(page,'oldPassword')).toBeFocused();expect(await accentLines(handle(page,'oldPassword')),`${salon.slug} focused field accent at ${width}`).toContain(rgb(brand));
+ await handle(page,'oldPassword').focus();await expect(handle(page,'oldPassword')).toBeFocused();
+ // CR-017: the password field is an Input Group, whose surface draws the focus accent around the input.
+ expect(await accentLines(page.locator('[data-slot="input-group"]').filter({has:handle(page,'oldPassword')})),`${salon.slug} focused field accent at ${width}`).toContain(rgb(brand));
  await expectNoRetired(page.getByTestId('workspace-shell'),RETIRED.black,`${salon.slug} workspace at ${width}`,false);
 }
 

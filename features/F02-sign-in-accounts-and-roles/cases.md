@@ -20,6 +20,8 @@ Not applied: payment integrity (no money flow), mobile (F15 later). Regression, 
 
 CR-016 (2026-10-17): the staff screens are rebuilt from shadcn/ui and Tailwind (S04 AC-12, AC-13). Types chosen for the changed web scope: `functional` (AC-12 composition and the overlay's dismissal and focus, TC-F02-S04-029), `responsive` (AC-13 pixel comparison with the pre-CR-016 build, TC-F02-S04-030, manual) and `accessibility` (TC-F02-S04-018 keyboard judgment, re-performed); every existing S04 web group and the account journey are rerun. Retained under CR-009, not rerun: the S01-S03 Java API suites, nonlocal checks and the identity read baseline, whose Java source, contracts and QA definitions are unchanged since their passing run at 8fd1939; the web BFF they do not touch is covered by the rerun web groups.
 
+CR-017 (2026-10-18): the sign-in and account screens use the full shadcn/ui component map (S04 AC-14). Types added: `functional` (component map, Select, Input OTP and Input Group by keyboard and screen reader, Spinner, denied Alert, TC-F02-S04-031; the owner-requested component-map review, TC-F02-S04-032, manual), `responsive` (TC-F02-S04-030 re-performed against the CR-016 build) and `accessibility` (TC-F02-S04-018 re-performed). Every S04 web group and the account journey are rerun; the S01-S03 API suites, nonlocal checks and read baseline stay retained under CR-009.
+
 Environment: local only, fixed synthetic alpha/beta/gamma. Credentials are random and kept in memory. Authentication uses real password/TOTP/code APIs and local message capture. Restore the application clock after each use.
 
 When F01 has just exercised its clock-driven cleanup/journey, prepare F02 with the developer's

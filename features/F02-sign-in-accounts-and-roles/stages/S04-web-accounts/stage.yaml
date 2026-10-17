@@ -276,11 +276,24 @@ cases:
   covers:
   - AC-12
 - id: TC-F02-S04-030
-  title: every staff screen and state renders as the pre-CR-016 build did, apart from the mandated checkbox
+  title: every staff screen and state renders as the accepted CR-016 build did, apart from the changes CR-017 lists
   type: responsive
   priority: high
   covers:
   - AC-13
+  - AC-14
+- id: TC-F02-S04-031
+  title: sign-in and account screens use the shadcn/ui component for every job, operable by keyboard and screen reader
+  type: functional
+  priority: high
+  covers:
+  - AC-14
+- id: TC-F02-S04-032
+  title: every sign-in and account screen and state uses the shadcn/ui component the web.md map names for each job
+  type: functional
+  priority: high
+  covers:
+  - AC-14
 verification:
   commands:
   - cd apps/api && ./mvnw -q verify
@@ -359,38 +372,54 @@ verification:
     - TC-F02-S04-029
     suites:
     - regression
+  - id: component-map
+    tool: playwright
+    file: qa/web/F02/S04-component-map.spec.ts
+    project: web
+    covers:
+    - TC-F02-S04-031
+    suites:
+    - regression
   manual:
   - case: TC-F02-S04-018
-    reason: 'Re-performed after CR-016 on 2026-10-17 by independent QA on the rebuilt product (de69786, product source
-      identical to developer-gated 858cac3). Synthetic MANAGER per salon seeded through the local hook, credentials in
-      memory only. Keyboard-only traversal of staff sign-in at 360/768/1536 and the workspace account at 390/1280 for
-      alpha (#D6086A), beta (dark #1F2937) and gamma (light #FDE68A): sign-in order identifier, password, visibility
-      toggle, recovery, sign-in, then out of the page and back to the identifier (no trap); account order header name,
-      navigation, sign out, password fields and action, authenticator, device and sign-out-all actions, then wraps. All
-      147 stops :focus-visible with a solid 3px #1D5FD0 outline, offset 2px, inside the viewport, none hidden behind the
-      phone tabs in the inspected captures; the status page retry shows the same outline. 156 focus captures and
-      observations qa/reports/20261017-CR016-manual/keyboard/keyboard-observations.json sha256
-      af3589aea4da46eabf4de661027d4d9467ffc02433835c8ea8817566d11d322a, a sample inspected by eye. Contrast and the
-      announced error are automated in TC-F02-S04-024/028 and 017. Machine-captured keyboard sequences through repository
-      Playwright, not a native assistive-technology session. The CR-013 judgment is historical.'
-    performed_on: 2026-10-17
+    reason: 'Re-performed after CR-017 on 2026-10-18 by independent QA on the product built from 0b84f53 (identical to
+      29fb3d1). Synthetic MANAGER per salon seeded through the local hook, credentials in memory only. Keyboard-only
+      traversal of staff sign-in at 360/768/1536 and the workspace account at 390/1280 for alpha (#D6086A), beta (dark
+      #1F2937) and gamma (light #FDE68A): sign-in order identifier, password, visibility toggle, recovery, sign-in, then
+      out and back (no trap); account order on a phone menu button, salon name, sign out, current password and its
+      toggle, new password and its toggle, change password, authenticator, device and sign-out-all actions; from 1280 the
+      salon name, the three rail routes, then the same. All 150 stops :focus-visible with a solid 3px #1D5FD0 outline in
+      view; the status retry the same. Select, Input OTP and Sidebar sheet keyboard and screen-reader behaviour is
+      automated in TC-F02-S04-031 and TC-F01-S03-017. Observations qa/reports/20261018-CR017-manual/keyboard/keyboard-observations.json sha256 948fd9bfdc9f4cc28a6f6cdeff6059e224299c9d595c71688d9cff6d9ae83ded,
+      a sample of captures inspected by eye. Machine-captured sequences through repository Playwright, not a native
+      assistive-technology session. The CR-016 judgment is historical.'
+    performed_on: 2026-10-18
   - case: TC-F02-S04-030
-    reason: 'CR-016 side-by-side judgment, performed 2026-10-17 by independent QA: the pre-CR-016 product (fefc4fd, product
-      identical to the QA-passed CR-013 build 8fd1939) on :3101 and the rebuilt product (de69786) on :3100, same API,
-      sessions and data, captured back to back and compared pixel by pixel. Staff sign-in, recovery guidance, refused
-      sign-in, MFA challenge, Owner MFA enrolment (key masked), account with devices, staff with Owner controls and a
-      Professional, audit and the confirmation sheet/drawer, for alpha, beta and gamma at the six widths where
-      applicable: 162 pairs in all (F01 and F02), 155 pixel-identical. Differences: alpha staff at each width, the
-      Professional grant control only, now the shadcn/ui Checkbox required by AC-12 (24px, 4px radius, 1px #6B7280 line
-      instead of the native box; it sits 4px further left and its label text 7px further left because the native
-      control carried user-agent margins of 3-4px; the 44px label target is unchanged); beta MFA challenge at 1280, only
-      the code expiry minute (data). Test-id sets identical in all 162 states, visible text identical apart from the
-      portalled overlay order, the random setup key and that expiry, no horizontal overflow in 324 captures. Needs a
-      second build of an earlier revision, so it is a one-time migration judgment; the rendered contract stays automated
-      in TC-F02-S04-016/023/024/029. Evidence qa/reports/20261017-CR016-manual/ (pixel-comparison.json sha256
-      4920c28746fdf56de6a8c32c069ced3bb2a56a031d8fcf8be2af3f58de5304f4, pairs/facts.json with secrets redacted sha256
-      184c81f2702309e44874c1141217aa08c560b17b2a9b6fde91ecaaaa7a45dd49, crop-*.png).'
-    performed_on: 2026-10-17
+    reason: 'Re-performed for CR-017 on 2026-10-18 by independent QA: the accepted CR-016 product (79ec9d2) on :3101 and the
+      CR-017 product on :3100, same API, sessions and data, captured back to back. Every F02 state differs, and each
+      difference inspected is one CR-017 lists: the password field''s toggle inside an Input Group (sign-in otherwise
+      unchanged: the CR-012 composition, card, headings, initial, recovery and footer, in the 54px field box), the code
+      as six Input OTP slots with the expiry and help as Field descriptions, the enrolment notice as an Alert, role and
+      status Badges, outlined Item rows, Pagination with chevrons, the MFA-enabled and denied Alerts, the Select trigger
+      with its chevron and a white option list, the Professional grant as a horizontal Field, the Separator, and the
+      phone header menu button instead of bottom tabs. The confirmation sheet and drawer themselves are unchanged. Prototype
+      tokens, Poppins and radii hold (automated). Overlays re-captured unmasked with empty fields (unmasked/). Test-id
+      sets change only by ids the handoffs list; no horizontal overflow. Evidence qa/reports/20261018-CR017-manual/ (pixel-comparison.json sha256 1b7a05a64bc66e54e8afde1f940083aeb352deb613b94db1bd194b48f11c88a7,
+      pairs/facts.json with secrets redacted sha256 f22dc47ed0e8dafa394a76a297da4ba0874015a6c1b98a7ba5d6cbd723b5a157, side/, unmasked/).'
+    performed_on: 2026-10-18
+  - case: TC-F02-S04-032
+    reason: 'Owner-requested component-map review, performed 2026-10-18 by independent QA on the CR-017 product: every
+      rendered sign-in and account state (sign-in, recovery guidance, refused sign-in, MFA challenge and Owner enrolment,
+      account with devices, staff with Owner controls and a Professional, the open role Select, audit, the confirmation,
+      the Receptionist denied page; six widths, three brands) inventoried by data-slot against docs/engineering/web.md
+      "Styling" rule 1: Field/FieldLabel/FieldDescription, Input Group with InputGroupButton toggles, Input OTP (six slots),
+      Select (trigger, content, items), horizontal Field with Checkbox, ItemGroup/Item, Badge, Pagination, Alert (refusal,
+      enrolment notice, MFA enabled, denied), Spinner while busy (TC-F02-S04-031), Separator, Avatar, Card, Sheet; no raw
+      control outside a shadcn/ui component and no Native Select in any state. Allowed plain HTML: headings, the
+      permissions list, the audit JSON pre, the setup key and URI as labelled outputs (the map''s own row). Not reachable
+      with real data, covered by the developer''s composition tests: Empty (every list holds at least its viewer) and the
+      retry-wait Alert (needs a rate-limit lockout of the shared salon). Evidence qa/reports/20261018-CR017-manual/pairs/facts.json sha256 f22dc47ed0e8dafa394a76a297da4ba0874015a6c1b98a7ba5d6cbd723b5a157.'
+    performed_on: 2026-10-18
   deferred: []
 evidence:
   last_run: null

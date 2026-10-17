@@ -287,7 +287,7 @@ CR-016 rebuilds the staff screens from shadcn/ui and Tailwind with no intended v
 - **Expected:** Sign-in is a Card, Avatar, Label, Input and Button; account Card, Label, Input, Button; staff also NativeSelect and Checkbox; audit Card and Button; every control belongs to a shadcn/ui component, no native checkbox or `<dialog>`; the refusal is the Alert with `role=alert`. The checkbox is named by its label, which is a 44px target. The overlay is the Sheet with its overlay: a bottom sheet at most 90% high on a phone, a 460px full-height right drawer on a desktop; focus starts on Cancel and stays inside however far a keyboard user tabs; Escape, the backdrop and Cancel each close it, nothing is confirmed, and focus returns to the opener (the measured delay is recorded in `CR016-focus-return.json`).
 - **Automation:** `qa/web/F02/S04-shadcn-composition.spec.ts`. Seen failing on the pre-CR-016 build for the intended reason (no shadcn/ui components on sign-in): `qa/reports/20261017-CR016-manual/failure-proof-TC029.log`.
 
-### TC-F02-S04-030 every staff screen and state renders as the pre-CR-016 build did, apart from the mandated checkbox
+### TC-F02-S04-030 every staff screen and state renders as the accepted CR-016 build did, apart from the changes CR-017 lists
 
 - **Type:** responsive
 - **Priority:** high
@@ -296,3 +296,27 @@ CR-016 rebuilds the staff screens from shadcn/ui and Tailwind with no intended v
 - **Steps:** Capture from both builds back to back: sign-in, recovery guidance and refused sign-in, MFA challenge and Owner MFA enrolment (key masked), account with devices, staff with Owner controls, audit and the confirmation overlay, for alpha, beta and gamma at the six widths (refusal and MFA states at 390 and 1280). Compare pixel by pixel, plus test-id sets, visible text and overflow.
 - **Expected:** Pairs pixel-identical except what AC-12 requires (the shadcn/ui Checkbox in place of the native box) and data that differs between captures; same test ids, translations and states; no overflow. Each difference is classified.
 - **Manual:** performed 2026-10-17; a one-time migration judgment that needs a second build of an earlier revision. Evidence `qa/reports/20261017-CR016-manual/`.
+
+## CR-017 cases (reconciled 2026-10-18)
+
+CR-017 (AC-14) replaces the role `<select>` with the shadcn/ui Select, and adds Field, Input Group, Input OTP, Item, Badge, Empty, Pagination, Alert, Spinner and Separator. Updated, with expected results unchanged in meaning: roles are chosen by opening the Select trigger and choosing the option (`account-role-option-<role>`), never `selectOption` (TC-F02-001, TC-F02-S04-004); the password field's surface and focus accent are its Input Group (TC-F02-S04-023, -024, -025); Radix's aria-hidden form select is not a control and a check box's target is its own label (TC-F02-S04-016, -021, -029); TC-F02-S04-029 expects the widened component map's slots; the header is exactly 60px from 900px because the fixed rail starts there (TC-F02-S04-023). TC-F02-S04-030 is re-performed against the accepted CR-016 build: every difference must be one CR-017 lists. TC-F02-S04-018 is re-performed.
+
+### TC-F02-S04-031 sign-in and account screens use the shadcn/ui component for every job, operable by keyboard and screen reader
+
+- **Type:** functional
+- **Priority:** high
+- **Covers:** AC-14
+- **Performed as / preconditions:** Synthetic beta Manager (wrong password), Owner with MFA, Owner and Professional; an alpha Receptionist; signed out and signed in through the API.
+- **Steps:** Sign-in: read the identifier and password fields, Tab to the visibility toggle and press Enter twice; submit a wrong password while the answer is briefly held. MFA challenge: read the code field, type `12ab34` then `5678`. Account: read both password fields and their toggles, the role, the device list and pager, the MFA notice. Staff: read the list, row badges, Separator and the Professional grant; on the create form's role Select press Enter, read the list and options, press Escape; press Enter, ArrowDown, Enter. As the Receptionist open the staff page.
+- **Expected:** Identifier an Input in a Field; password an Input Group control in a Field, its toggle inside the group with `aria-pressed`, the 3px `#1D5FD0` outline, Enter switching the type. A busy sign-in shows the Spinner in the button (`aria-busy`), the refusal is an Alert with `role="alert"`. The code is an Input OTP of six slots, named, digits only, at most six. Account toggles named and pressed-state aware; the role a Badge; devices Items in an ItemGroup (`listitem`) with the current-device Badge; the pager a Pagination named "Pages" with the current page marked; MFA enabled an Alert. Staff rows Items with Badges; the Separator; the grant a named Checkbox. The role Select is a combobox named "Role" with the focus outline; Enter opens a list of at least five named options at least 44px tall; Escape closes it unchanged with focus back on the trigger; Enter, ArrowDown, Enter chooses the next option, closes the list, returns focus and the trigger shows the choice. No visible native select. The Receptionist gets the denied Alert (`role="alert"`) and no rows.
+- **Automation:** `qa/web/F02/S04-component-map.spec.ts`. Seen failing on the CR-016 build for the intended reason (sign-in not built from Field): `qa/reports/20261018-CR017-manual/failure-proof.log`.
+
+### TC-F02-S04-032 every sign-in and account screen and state uses the shadcn/ui component the web.md map names for each job
+
+- **Type:** functional
+- **Priority:** high
+- **Covers:** AC-14
+- **Performed as / preconditions:** QA operator, at the owner's request; rendered states of the CR-017 product at six widths for three brands.
+- **Steps:** For every sign-in and account state, list each element by job and the shadcn/ui component it renders (`data-slot`), and any control not inside a shadcn/ui component; compare with `docs/engineering/web.md`, "Styling", rule 1.
+- **Expected:** Each job uses the component the map names; no native or hand-built control and no Native Select; plain HTML only where the map allows (headings, plain-text lists, the setup key and URI outputs).
+- **Manual:** performed 2026-10-18; judging an element's job against the map needs a person. Evidence `qa/reports/20261018-CR017-manual/pairs/facts.json`.
