@@ -97,6 +97,7 @@ Sign-in maps to the CR-012 mockup composition with the CR-013 colour decision; p
 
 - BUG-F02-010 minor: an invalid or missing brand colour gives "Service unavailable" instead of the default accent (AC-10). Verified.
 - BUG-F02-011 minor: the server-side entry redirect leaves a revoked staff family's cookies in the browser (AC-4). Verified.
+- BUG-F02-013 major (AC-10/AC-8, raised in the PR #11 review): text on mid-tone brand fills such as `#808080` and `#C34BB4` was below 4.5:1 because the foreground was only ever white or ink; latent since F01-S03, exposed by CR-013. New TC-F02-S04-028. Fixed in `c618f87` (black when neither white nor ink reaches 4.5:1); verified in `qa/reports/20261017-160221-F02-delta-fbc5edc57254` on `8fd1939`, all 14 F02 entries passing.
 - BUG-F01-005 minor (F01, found by the regression, pre-existing): `images-scan.sh` reports a scanner failure as fixable vulnerabilities.
 - BUG-F02-012 major: staff sign-in can hang until an unresponsive API resumes instead of 503 within the 3 s budget (AC-8). Fixed in `881ca87`; verified in `qa/reports/20261017-094849-F02-delta-584884e9bba2` (6 groups, 28 tests pass) plus 10/10 frozen-API sign-ins at 503 in about 3.0 s.
 
