@@ -2,12 +2,12 @@
 id: BUG-F02-011
 title: Server-side entry redirects a revoked staff session to sign-in but leaves its credential cookies in the browser
 severity: minor
-status: open
+status: fixed
 found_by: TC-F02-S04-008
 breaks: AC-4
 found_on: 2026-10-17
-fixed_in: null
-fix_note: null
+fixed_in: 3b8df96
+fix_note: 'The proxy''s signed-out 307 for a protected page now clears all salon_staff_* cookies through the BFF''s clearCookies (host-only, Max-Age=0, HttpOnly, SameSite=lax, Path=/, Secure outside local HTTP); no API call or renewal added. Evidence .local/logs/bug-f02-011-repro-prefix.log and bug-f02-011-after-headers.log.'
 developer_note: null
 verified_on: null
 approved_by: null

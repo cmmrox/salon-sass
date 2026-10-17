@@ -2,12 +2,12 @@
 id: BUG-F02-010
 title: A salon brand without a valid colour makes sign-in "Service unavailable" instead of using the default accent
 severity: minor
-status: open
+status: fixed
 found_by: TC-F02-S04-025
 breaks: AC-10
 found_on: 2026-10-17
-fixed_in: null
-fix_note: null
+fixed_in: 3b8df96
+fix_note: 'findSalon keeps a salon whose brandColour is missing or not #RRGGBB, with the #D6086A default (slug, name and time zone stay strict); stand-in check on :3101 rendered sign-in 200 in the default accent for not-a-colour, the injection value and a missing colour. Evidence .local/logs/bug-f02-010-after.log.'
 developer_note: null
 verified_on: null
 approved_by: null
