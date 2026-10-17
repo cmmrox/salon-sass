@@ -7,12 +7,6 @@ import { declarations, globalSheet, tailwindNames, themeSheet, themeValue } from
  * the salon's brand as the accent. */
 const source = join(__dirname, '..');
 const read = (file: string) => readFileSync(join(source, file), 'utf8');
-const rule = (sheet: string, selector: string) => {
-  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const match = new RegExp(`(?:^|\\n|\\})\\s*${escaped}\\s*\\{([^}]+)\\}`).exec(sheet);
-  expect(match, selector).not.toBeNull();
-  return match![1]!;
-};
 const modules = (dir: string): string[] => readdirSync(dir).flatMap((name) => {
   const path = join(dir, name);
   return statSync(path).isDirectory() ? modules(path) : name.endsWith('.module.css') ? [path] : [];
@@ -65,42 +59,55 @@ describe('the salon theme', () => {
     expect(themeSheet.replace(/\/\*[\s\S]*?\*\//g, '')).not.toMatch(/@import|@theme|@layer|@apply|@tailwind/);
   });
 
+  it('gives no font size the name of a colour, so a text-* utility is never ambiguous', () => {
+    const names = tailwindNames();
+    const sizes = [...names.keys()].filter((name) => name.startsWith('--text-')).map((name) => name.slice('--text-'.length));
+    const colours = new Set([...names.keys()].filter((name) => name.startsWith('--color-')).map((name) => name.slice('--color-'.length)));
+    expect(sizes.filter((size) => colours.has(size))).toEqual([]);
+  });
+
   it('loads the three Poppins weights the prototype uses', () => {
     for (const [weight, file] of [['400', 'Regular'], ['500', 'Medium'], ['600', 'SemiBold']]) {
       expect(themeSheet).toContain(`font-weight: ${weight}; font-display: swap; src: url('/fonts/poppins/Poppins-${file}.ttf')`);
     }
   });
 
-  it('has retired the separate sign-in palette and the black accent', () => {
+  it('has retired the separate sign-in palette, the black accent and every CSS Module', () => {
     expect(themeSheet).not.toMatch(/--color-login-/);
     expect(themeSheet).not.toMatch(/--color-primary\b/);
     expect(themeSheet).not.toMatch(/#8A705E|#141413/i);
-    for (const file of modules(join(source, 'components'))) {
-      expect(readFileSync(file, 'utf8'), file).not.toMatch(/--color-login-|--color-primary\b|--color-action\b/);
+    expect(modules(source)).toEqual([]);
+  });
+
+  it('keeps no former token name beside the shadcn/ui ones', () => {
+    for (const name of ['--color-text', '--color-surface', '--color-background', '--color-border', '--space-4', '--font-weight-strong']) {
+      expect(declarations(themeSheet).has(name), name).toBe(name === '--font-weight-strong');
     }
   });
 
-  it('no remaining component style sheet holds a raw colour', () => {
-    for (const file of modules(join(source, 'components'))) {
-      expect(readFileSync(file, 'utf8'), file).not.toMatch(/#[0-9a-f]{3,8}\b|rgba?\(/i);
-    }
+  it('draws the sign-in accents in the salon brand (CR-012, CR-013)', () => {
+    const signIn = read('components/account/SignIn.tsx');
+    const frame = read('components/account/StaffSignInFrame.tsx');
+    const button = read('components/ui/button.tsx');
+    // The sign-in action is the default (brand) action; the recovery control is the brand link.
+    expect(signIn).toMatch(/testId="account-sign-in-submit"(?![^>]*secondary)/);
+    expect(button).toContain('default: "border-primary bg-primary text-primary-foreground"');
+    expect(signIn).toMatch(/variant="link"[^>]*data-testid="account-forgot-password"/);
+    expect(button).toMatch(/link: "[^"]*text-link[^"]*decoration-primary/);
+    expect(declarations(themeSheet).get('--link')).toBe('var(--color-brand-text)');
+    expect(tailwindNames().get('--color-link')).toBe('var(--link)');
+    expect(frame).toMatch(/data-testid="staff-sign-in-initial"/);
+    expect(frame).toContain('border-2 border-primary');
+    expect(frame).toMatch(/data-testid="staff-sign-in-screen"/);
+    expect(frame).toContain('text-foreground');
   });
 
-  // F02-S04 (CR-016) rebuilds the sign-in and account screens from shadcn/ui and moves these two.
-  it('draws the sign-in accents in the salon brand', () => {
-    const sheet = read('components/account/StaffSignIn.module.css');
-    expect(rule(sheet, '.form > button[type=submit]')).toMatch(/background: var\(--color-brand\);.*color: var\(--color-on-brand\);.*border-color: var\(--color-brand\);/);
-    expect(rule(sheet, '.initial')).toContain('solid var(--color-brand)');
-    expect(rule(sheet, '.recovery button')).toContain('color: var(--color-brand-text)');
-    expect(rule(sheet, '.form input:focus-visible')).toContain('var(--color-brand)');
-    expect(rule(sheet, '.screen')).toContain('color: var(--color-text)');
-  });
-
-  it('draws the account accents in the salon brand', () => {
-    const account = read('components/account/Account.module.css');
-    expect(rule(account, '.button')).toMatch(/border: var\(--size-border\) solid var\(--color-brand\);.*background: var\(--color-brand\); color: var\(--color-on-brand\);/);
-    expect(rule(account, '.input:focus-visible')).toContain('var(--color-brand)');
-    expect(rule(account, '.check input')).toContain('accent-color: var(--color-brand)');
+  it('draws the fields\' focus and the checked box in the salon brand, and refusal in the negative colour', () => {
+    expect(read('components/ui/input.tsx')).toContain('focus-visible:shadow-field-focus aria-invalid:shadow-field-invalid');
+    expect(declarations(themeSheet).get('--field-ring-focus')).toBe('inset 0 0 0 var(--size-focus-offset) var(--color-brand)');
+    expect(declarations(themeSheet).get('--field-ring-invalid')).toBe('inset 0 0 0 var(--size-field-inset) var(--destructive)');
+    expect(declarations(themeSheet).get('--field-ring')).toBe('inset 0 0 0 var(--size-field-inset) var(--border)');
+    expect(read('components/ui/checkbox.tsx')).toContain('data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground');
   });
 
   it('draws the workspace navigation\'s current route in the salon brand', () => {

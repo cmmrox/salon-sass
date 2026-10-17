@@ -22,17 +22,6 @@ const STYLE_SHEET_IMPORTS: Record<string, string[]> = {
   'src/lib/plain-page/plain-page.ts': ['../../styles/theme.css?raw', './plain-page.css?raw'],
 };
 
-/**
- * F02-S04 (CR-016) rebuilds the staff sign-in, account, staff, audit and confirmation screens from
- * shadcn/ui and removes these three CSS Modules, and this allowance with them. Nothing else is let
- * through: not another module, not another importer.
- */
-const F02_S04_REMAINING_MODULES = [
-  'src/components/account/Account.module.css',
-  'src/components/account/Confirmation.module.css',
-  'src/components/account/StaffSignIn.module.css',
-];
-
 const STYLE_SHEET = /\.(css|scss|sass|less|styl)$/;
 const TEST_FILE = /\.test\.[cm]?[jt]sx?$|^src\/test\//;
 const CODE_FILE = /\.[cm]?[jt]sx?$/;
@@ -55,15 +44,15 @@ export function violations(files: SourceFile[]): string[] {
   const found: string[] = [];
   for (const { path, content } of files) {
     if (STYLE_SHEET.test(path)) {
-      if (path.endsWith('.module.css') && !F02_S04_REMAINING_MODULES.includes(path)) {
+      if (path.endsWith('.module.css')) {
         found.push(`${path}: a CSS Module; build it from shadcn/ui components and Tailwind utilities`);
-      } else if (!STYLE_SHEETS.includes(path) && !F02_S04_REMAINING_MODULES.includes(path)) {
+      } else if (!STYLE_SHEETS.includes(path)) {
         found.push(`${path}: a style sheet other than globals.css, theme.css and plain-page.css`);
       }
     }
     if (CODE_FILE.test(path) && !path.endsWith('styles/styling-rules.test.ts')) {
       for (const [, target] of content.replace(COMMENT, '').matchAll(STYLE_SHEET_IMPORT)) {
-        const allowed = STYLE_SHEET_IMPORTS[path]?.includes(target!) || isRemainingModuleImport(path, target!);
+        const allowed = STYLE_SHEET_IMPORTS[path]?.includes(target!);
         if (!allowed) {
           found.push(`${path}: imports the style sheet ${target}; only the root layout and the plain pages import one`);
         }
@@ -79,14 +68,6 @@ export function violations(files: SourceFile[]): string[] {
     }
   }
   return found;
-}
-
-/** An import of one of F02-S04's three remaining modules, by a file beside it. */
-function isRemainingModuleImport(importer: string, target: string): boolean {
-  if (!target.startsWith('./') || !importer.startsWith('src/components/account/')) {
-    return false;
-  }
-  return F02_S04_REMAINING_MODULES.includes(`src/components/account/${target.slice(2)}`);
 }
 
 /** Every file under a directory, as paths from apps/web. */
@@ -107,24 +88,18 @@ describe('the styling rules (docs/engineering/web.md, "Styling")', () => {
     expect(violations(filesUnder(webRoot, join(webRoot, 'src')))).toEqual([]);
   });
 
-  it('allow only the three style sheets, and only F02-S04\'s three remaining modules besides', () => {
+  it('allow exactly the three style sheets, with no exception', () => {
     const sheets = filesUnder(webRoot, join(webRoot, 'src')).map((file) => file.path).filter((path) => STYLE_SHEET.test(path));
-    for (const path of sheets) {
-      expect([...STYLE_SHEETS, ...F02_S04_REMAINING_MODULES], path).toContain(path);
-    }
-    for (const path of STYLE_SHEETS) {
-      expect(sheets, path).toContain(path);
-    }
+    expect(sheets.sort()).toEqual([...STYLE_SHEETS].sort());
   });
 });
 
 describe('the styling rules catch', () => {
   const component = (content: string, path = 'src/components/shell/Example.tsx') => violations([{ path, content }]);
 
-  it('a CSS Module, anywhere else than F02-S04\'s three', () => {
+  it('a CSS Module, anywhere', () => {
     expect(violations([{ path: 'src/components/shell/Example.module.css', content: '.x { color: inherit; }' }])).toHaveLength(1);
-    expect(violations([{ path: 'src/components/account/Other.module.css', content: '' }])).toHaveLength(1);
-    expect(violations([{ path: 'src/components/account/Account.module.css', content: '' }])).toEqual([]);
+    expect(violations([{ path: 'src/components/account/Account.module.css', content: '' }])).toHaveLength(1);
   });
 
   it('a second style sheet', () => {
@@ -141,7 +116,7 @@ describe('the styling rules catch', () => {
     expect(violations([{ path: 'src/app/layout.tsx', content: "import './other.css';" }])).toHaveLength(1);
     expect(violations([{ path: 'src/app/layout.tsx', content: "import './globals.css';" }])).toEqual([]);
     expect(violations([{ path: 'src/lib/plain-page/plain-page.ts', content: "import theme from '../../styles/theme.css?raw';" }])).toEqual([]);
-    expect(violations([{ path: 'src/components/account/SignIn.tsx', content: "import styles from './Account.module.css';" }])).toEqual([]);
+    expect(violations([{ path: 'src/components/account/SignIn.tsx', content: "import styles from './Account.module.css';" }])).toHaveLength(1);
     expect(violations([{ path: 'src/components/shell/X.tsx', content: "import styles from '../account/Account.module.css';" }])).toHaveLength(1);
   });
 
