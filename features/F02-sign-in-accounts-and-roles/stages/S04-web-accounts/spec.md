@@ -75,7 +75,7 @@ implementation, future business dashboards, operator console (F03), real messagi
   Password/MFA, errors and small-screen states remain usable. Protected workspace screens retain
   warm palette, loaded Poppins, pills, rounded fields/cards and responsive Salon rail/tab layout.
   Customer's 430px canvas is not a web reference. (NFR-21)
-- AC-10 (CR-013): Sign-in and workspace share one theme, the prototype's final tokens (canvas
+- AC-10: (CR-013) Sign-in and workspace share one theme, the prototype's final tokens (canvas
   `#F3F0EB`, secondary `#EAE5DC`, lines `#DDD6CA`, white cards, ink `#111827`, muted `#6B7280`).
   Wherever the prototype uses its accent (`--ac`, `--acs`, `--onac`): the sign-in action, initial
   ring, links and field focus, and the workspace's primary actions, selected navigation item,
@@ -83,7 +83,7 @@ implementation, future business dashboards, operator console (F03), real messagi
   readable foreground. A salon without a valid colour gets `#D6086A`. Changing a salon's colour
   changes both screens with no rebuild; the CR-012 taupe palette and the black accent are gone.
   Checked with a dark and a light salon colour and the default. (NFR-21, BRD-01)
-- AC-11 (CR-013): Loading `/`, `/workspace` or any protected workspace URL without a usable session
+- AC-11: (CR-013) Loading `/`, `/workspace` or any protected workspace URL without a usable session
   arrives at `/workspace/sign-in` with no intermediate frame: no generic "Salon" name, no "Loading
   your account…" card or skeleton is painted on the way. A signed-in member's first painted frame is
   their workspace with the salon's resolved name. A loading state remains only where data is truly
