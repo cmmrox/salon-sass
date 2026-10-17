@@ -1,8 +1,8 @@
 id: F02
 title: Sign-in, accounts and roles
-summary: Salon staff sign in on the web with password and MFA, manage accounts and act within their roles.
-  Customer identity/privacy APIs are retained as foundations for the later React Native app; no customer
-  web interface.
+summary: Salon staff sign in on the web with password and MFA, manage accounts and
+  act within their roles. Customer identity/privacy APIs are retained as foundations
+  for the later React Native app; no customer web interface.
 release: R1
 milestone: M1-web
 status: complete
@@ -30,7 +30,8 @@ nfr_focus:
 - NFR-21
 cases:
 - id: TC-F02-001
-  title: Owner provisioning and removal connects workspace controls to immediate staff access
+  title: Owner provisioning and removal connects workspace controls to immediate staff
+    access
   type: functional
   priority: critical
   covers:
@@ -75,8 +76,8 @@ integration:
   branch: charithm/feature/F02-salon-login-design
   pull_request: https://github.com/cmmrox/salon-sass/pull/10
   qa_revision: e73d99b0bbb38ec4db6b9cc837ea635286a1fed0
-  merged_commit: null
-  merged_at: null
+  merged_commit: 8873128279c73f79712b777232afc2898d936e5b
+  merged_at: '2026-10-17T00:08:18Z'
 previous_integration:
   branch: charithm/feature/F02-sign-in-accounts-and-roles
   pull_request: https://github.com/cmmrox/salon-sass/pull/4
