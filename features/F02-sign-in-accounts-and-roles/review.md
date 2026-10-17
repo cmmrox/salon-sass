@@ -47,8 +47,8 @@ Ranked, most valuable first. Earlier SUG-F02-02..08 stand.
 
 | Id | Class | Suggestion | Disposition |
 | --- | --- | --- | --- |
-| SUG-F02-09 | idea | Return focus to the opener in the same frame the confirmation closes | |
-| SUG-F02-10 | idea | Send a credential the API calls non-renewable straight to sign-in on the server | |
+| SUG-F02-09 | idea | Return focus to the opener in the same frame the confirmation closes | backlog |
+| SUG-F02-10 | idea | Send a credential the API calls non-renewable straight to sign-in on the server | backlog |
 
 #### SUG-F02-09 Return focus in the same frame the confirmation closes
 
