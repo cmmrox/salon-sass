@@ -81,8 +81,10 @@ app's local port; hostnames are the synthetic salons' of `docs/qa/test-plan.md`.
 - AC-1: `GET /` on alpha/beta/gamma hostnames answers a no-store same-host redirect to
   `/workspace`. Following it without staff credentials reaches staff sign-in with that salon's
   identity only. Matching is case insensitive. (BRD-03, NFR-01)
-- AC-2: Staff entry uses the neutral responsive Salon workspace. Customer branding/canvas and
+- AC-2: Staff entry uses the responsive Salon workspace. Customer branding/canvas and
   customer web navigation are absent; the resolved salon name stays accessible. (NFR-17, NFR-21)
+  CR-013 note: the workspace and sign-in now use the salon's brand colour as their accent; only
+  the platform error and status pages stay neutral.
 - AC-3: `GET /` on a hostname that resolves to no salon answers 404 with the "salon not found"
   page, with the same body for each of: an unknown slug, a reserved slug (`www`, `console`), two
   labels in front of the platform domain (`alpha.beta.localhost`) and a hostname that only contains

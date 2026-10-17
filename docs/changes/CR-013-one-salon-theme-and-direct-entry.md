@@ -1,7 +1,7 @@
 ---
 id: CR-013
 title: One salon theme across sign-in and workspace, and direct entry without a loading frame
-status: approved
+status: implemented
 requested_by: owner
 requested_on: 2026-10-17
 decided_on: 2026-10-17

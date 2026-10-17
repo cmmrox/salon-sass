@@ -115,6 +115,9 @@ message or customer-cookie work. Existing direct customer Java APIs remain mobil
 - The brand is applied by `BrandStyle` from `brandRootRule` (`src/styles/brand.ts`):
   `--color-brand`, `--color-on-brand`, `--color-brand-soft` and `--color-brand-text`, the brand
   when it reaches 4.5:1 on white and ink otherwise, for text drawn in the brand colour.
+- A salon whose API colour is missing or not `#RRGGBB` keeps its name and identity and gets the
+  default `#D6086A` (BUG-F02-010); the database refuses an invalid stored colour, so this guards
+  only against a malformed API answer.
 - A brand change is a draft until the salon publishes it. The future React Native app consumes the published brand; no customer website is created.
 
 Staff sign-in uses the dedicated CR-012 layout without the protected workspace rail/header. It

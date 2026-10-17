@@ -32,11 +32,11 @@ Ranked, most valuable first. Earlier SUG-F02-02 and SUG-F02-03 (CR-006) still ap
 
 | Id | Class | Suggestion | Disposition |
 | --- | --- | --- | --- |
-| SUG-F02-04 | should | Name the second button on the authenticator step for what it does ("Use a different account") instead of "Sign in" | |
-| SUG-F02-05 | should | Say what a sign-out confirmation will sign out ("Sign out all devices?", "Sign out this device?") | |
-| SUG-F02-06 | idea | Give the light-brand sign-in initial a ring readable on the photograph | |
-| SUG-F02-07 | idea | Do not repeat the page title as the first card heading on Staff access and Activity log | |
-| SUG-F02-08 | idea | Add a "skip to content" link before the workspace navigation | |
+| SUG-F02-04 | should | Name the second button on the authenticator step for what it does ("Use a different account") instead of "Sign in" || CR-014 |
+| SUG-F02-05 | should | Say what a sign-out confirmation will sign out ("Sign out all devices?", "Sign out this device?") || CR-015 |
+| SUG-F02-06 | idea | Give the light-brand sign-in initial a ring readable on the photograph || backlog |
+| SUG-F02-07 | idea | Do not repeat the page title as the first card heading on Staff access and Activity log || backlog |
+| SUG-F02-08 | idea | Add a "skip to content" link before the workspace navigation || backlog |
 
 #### SUG-F02-04 Name the authenticator step's second button for what it does
 

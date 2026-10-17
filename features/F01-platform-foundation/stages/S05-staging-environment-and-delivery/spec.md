@@ -125,7 +125,8 @@ outside local acceptance and remain deferred in `TC-F01-002`.
 - AC-2: `images-scan.sh` exits zero on the images built from the stage's tree, and exits non-zero,
   naming the vulnerability, when given an image that has a critical or high vulnerability with a
   fix. (NFR-07)
-- AC-3: In the local stack, `http://alpha.stack.localhost:8089/` shows alpha's shell and
+- AC-3: In the local stack, `http://alpha.stack.localhost:8089/` reaches alpha's entry (since
+  CR-010/CR-012 a no-store redirect to `/workspace` and on to alpha's staff sign-in) and
   `http://alpha.stack.localhost:8089/api/v1/salon` returns alpha's brand. The same holds for beta
   and gamma, the bare platform domain shows the status page, and an unknown slug and `console` get
   the salon-not-found page of F01-S03. No local HTTPS, certificate, redirect or HSTS assertion is
