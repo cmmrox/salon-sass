@@ -9,7 +9,8 @@
     "start": "next start",
     "lint": "eslint --max-warnings 0",
     "typecheck": "next typegen && tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "plain-page:css": "node scripts/plain-page-css.mjs"
   },
   "dependencies": {
     "@salon/api-contracts": "workspace:*",

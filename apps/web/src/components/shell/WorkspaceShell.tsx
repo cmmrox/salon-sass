@@ -2,11 +2,13 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 import type { Salon } from '@/lib/api/salon';
-import { Navigation, type NavigationItem } from './Navigation';
+import { SidebarInset } from '@/components/ui/sidebar';
+import { Navigation, NavigationProvider, NavigationTrigger, type NavigationItem } from './Navigation';
 
 /**
- * The prototype's Salon workspace frame: a sticky header with the salon's name, the navigation
- * (bottom tabs below 900px, a 200px rail from 900px and 236px from 1200px) and the main area.
+ * The prototype's Salon workspace frame: a sticky header with the salon's name, the shadcn/ui
+ * Sidebar (a 200px rail from 900px and 236px from 1200px; below 900px its sheet, opened from the
+ * header's menu button) and the main area (CR-017).
  */
 export function WorkspaceShell({ salon, children, permissions = [], view = 'account', signIn = false }: { salon: Salon; children: ReactNode; permissions?: string[]; view?: 'account' | 'staff' | 'audit'; signIn?: boolean }) {
   const t = useTranslations('account');
@@ -14,18 +16,19 @@ export function WorkspaceShell({ salon, children, permissions = [], view = 'acco
   if (permissions.includes('staff.list')) items.push({ href: '/workspace/staff', label: t('staff'), icon: 'staff', testId: 'workspace-staff', current: view === 'staff' });
   if (permissions.includes('audit.list')) items.push({ href: '/workspace/audit', label: t('audit'), icon: 'audit', testId: 'workspace-audit', current: view === 'audit' });
   return (
-    <div className="min-h-screen bg-background" data-testid="workspace-shell">
-      <header className="sticky top-0 z-40 flex min-h-header items-center justify-between gap-4 bg-background px-4 py-2 rail:border-b rail:border-border rail:bg-card rail:px-7" data-testid="workspace-header">
+    <NavigationProvider className="flex-col bg-background" data-testid="workspace-shell">
+      <header className="sticky top-0 z-40 flex min-h-header items-center gap-2 bg-background px-4 py-2 rail:border-b rail:border-border rail:bg-card rail:px-7 rail:py-0" data-testid="workspace-header">
+        <NavigationTrigger label={t('menu')} />
         <Link className="block min-h-touch min-w-0 truncate leading-(--size-touch-target) font-semibold text-foreground no-underline" href="/" data-testid="account-home" title={salon.name}>
           {salon.name}
         </Link>
       </header>
-      <div className="min-w-0 rail:grid rail:grid-cols-[var(--size-sidebar-compact)_minmax(0,1fr)] rail:items-start wide:grid-cols-[var(--size-sidebar)_minmax(0,1fr)]">
-        <Navigation items={items} label={t('staffTitle')} />
-        <main className="min-w-0 px-4 pt-4 pb-[calc(var(--size-nav)+var(--spacing)*8+env(safe-area-inset-bottom,0px))] rail:p-6 rail:pb-12 wide:px-9 wide:pt-7 wide:pb-14" data-testid="workspace-main">
-          <div className="mx-auto min-w-0 max-w-content rail:max-w-workspace">{children}</div>
-        </main>
+      <div className="flex min-w-0 flex-1">
+        <Navigation items={items} label={t('staffTitle')} description={t('menuHelp')} />
+        <SidebarInset className="min-w-0 px-4 pt-4 pb-12 rail:p-6 rail:pb-12 wide:px-9 wide:pt-7 wide:pb-14" data-testid="workspace-main">
+          <div className="mx-auto w-full min-w-0 max-w-content rail:max-w-workspace">{children}</div>
+        </SidebarInset>
       </div>
-    </div>
+    </NavigationProvider>
   );
 }
