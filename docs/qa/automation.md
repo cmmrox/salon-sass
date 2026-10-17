@@ -107,21 +107,6 @@ Use Playwright's request context through `qa/shared/api-client.ts`.
   are optional helpers for exploring a screen and drafting tests. The cases still come from the
   acceptance criteria, and the healer may repair a locator that drifted but must never change an
   assertion or skip a test.
-- Shared helpers read theme values by their shadcn/ui variable names (`--background`,
-  `--foreground`, `--primary`, `--ring`, `--destructive` and so on, `docs/engineering/web.md`,
-  "Styling"), never by the retired pre-CR-016 token names.
-- The source scan treats a `src/components/ui/` primitive that spreads its `props` onto the element
-  as forwarding the caller's `data-testid`; the test id is then required where the primitive is
-  used, not inside it.
-- A modal (the shadcn/ui Sheet or Dialog) hides the page behind it from assistive technology while
-  it is open, so a capture or assertion taken during it waits for the dialog, not for the page's
-  `main` landmark.
-- **Comparing with the accepted build** (for a change meant to be invisible, such as CR-016): build
-  the last accepted revision in a scratch worktree, serve it on a second port (for example `:3101`)
-  against the same API and the same browser sessions as the product on `:3100`, and compare
-  screenshot pairs for every screen and state at each width, plus the test-id and text inventories.
-  Record it as a manual case with the pairs and their pixel differences, remove any secret shown on
-  screen from the evidence, and remove the worktree and the second server afterwards.
 
 ## Shell checks
 
