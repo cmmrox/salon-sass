@@ -75,7 +75,7 @@ evidence:
 integration:
   branch: charithm/feature/F02-unified-theme
   pull_request: null
-  qa_revision: c78b90933f73dd5d56adfa72fa2cef7ace11fd20
+  qa_revision: e73d99b0bbb38ec4db6b9cc837ea635286a1fed0
   merged_commit: null
   merged_at: null
 previous_integration:
