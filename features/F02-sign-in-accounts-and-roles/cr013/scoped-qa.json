@@ -1,11 +1,11 @@
 {
   "version": 1,
   "kind": "independent-scoped-qa",
-  "reviewed_revision": "516953e68e72a814ec0a6db2b4765f2fadb55fd2",
+  "reviewed_revision": "8fd1939b141cddcf21567db7bdcfcbb1ccfffe4e",
   "qa_identity": {
     "agent": "salon-qa subagent (fresh context, built no stage)",
     "role": "independent salon_qa",
-    "recorded_at_utc": "2026-10-17T09:34:03.996102+00:00"
+    "recorded_at_utc": "2026-10-17T10:49:40.030558+00:00"
   },
   "owner_instruction": "Approved CR-013 (owner, 2026-10-17): one salon theme across sign-in and workspace and direct entry; the owner asked to review the features implemented so far and do the relevant QA. Independent re-verification of F02's changed scope under CR-009, product review of the salon web screens, and the regression suite. Local only.",
   "features": {
@@ -142,6 +142,7 @@
         "features/F02-sign-in-accounts-and-roles/bugs/BUG-F02-010-invalid-brand-colour-unavailable.md",
         "features/F02-sign-in-accounts-and-roles/bugs/BUG-F02-011-revoked-cookies-kept-on-entry.md",
         "features/F02-sign-in-accounts-and-roles/bugs/BUG-F02-012-sign-in-hangs-past-budget.md",
+        "features/F02-sign-in-accounts-and-roles/bugs/BUG-F02-013-mid-tone-brand-text-contrast.md",
         "features/F02-sign-in-accounts-and-roles/cases.md",
         "features/F02-sign-in-accounts-and-roles/cr012/scoped-qa.json",
         "features/F02-sign-in-accounts-and-roles/cr013/scoped-qa.json",
@@ -197,22 +198,22 @@
         "qa/web/F02/S04-theme-entry.spec.ts",
         "qa/web/F02/feature-journeys.spec.ts"
       ],
-      "impact": "CR-013 and its three bug fixes change only the web app (tokens and brand style, staff sign-in and shell styles, the proxy's server-side entry decision in route-request.ts/entry.ts, salon lookup in salon.ts, the upstream client deadline in client.ts/forward-hostname.ts) plus the local-only colour hook infra/scripts/local-salon.sh; Java API, schema and generated contracts are unchanged since the base. QA's shared helpers that every F02 entry imports also changed (env.ts product root/.env, identity-runtime.ts, services.ts, checks.sh, identity-browser.ts readiness), so all 14 registered F02 entries were re-executed at the reviewed revision: the six web groups, the five API suites, the two nonlocal checks and the identity read baseline."
+      "impact": "CR-013 and its three bug fixes change only the web app (tokens and brand style, staff sign-in and shell styles, the proxy's server-side entry decision in route-request.ts/entry.ts, salon lookup in salon.ts, the upstream client deadline in client.ts/forward-hostname.ts, the readable foreground on brand fills in brand.ts) plus the local-only colour hook infra/scripts/local-salon.sh; Java API, schema and generated contracts are unchanged since the base. QA's shared helpers that every F02 entry imports also changed (env.ts product root/.env, identity-runtime.ts, services.ts, checks.sh, identity-browser.ts readiness), so all 14 registered F02 entries were re-executed at the reviewed revision: the six web groups, the five API suites, the two nonlocal checks and the identity read baseline."
     }
   },
   "commands": {
-    "report": "qa/reports/20261017-144614-F02-commands-1fb3bcf33ab4",
-    "revision": "516953e68e72a814ec0a6db2b4765f2fadb55fd2",
-    "summary_sha256": "1f9f2d7d0faa04f8b734668f6bf6529705fca3fe0251f0abde107ef43ea363a2",
+    "report": "qa/reports/20261017-155420-F02-commands-14cbcf70a02f",
+    "revision": "8fd1939b141cddcf21567db7bdcfcbb1ccfffe4e",
+    "summary_sha256": "b9779ee491cfd97f277b23b0188cd935d33642c0ae9bfb8a67be32e79708937b",
     "reused_qa_paths": []
   },
   "targeted": {
     "reports": [
       {
         "feature": "F02",
-        "report": "qa/reports/20261017-150612-F02-delta-48bf0f166789",
-        "revision": "516953e68e72a814ec0a6db2b4765f2fadb55fd2",
-        "summary_sha256": "2ee6883b71829eab6f1c8d428b194bbf0c40147bd53fc27cbf3487d21fd89d60",
+        "report": "qa/reports/20261017-160221-F02-delta-fbc5edc57254",
+        "revision": "8fd1939b141cddcf21567db7bdcfcbb1ccfffe4e",
+        "summary_sha256": "4f3953a85d855ae8c09728c5b1f3664031f96854fc34ee0b7377478b9df8d50f",
         "automation_ids": [
           "staff-access",
           "staff-runtime",
@@ -232,11 +233,11 @@
       }
     ],
     "coverage": [
-      "All 14 registered F02 automation entries pass at 516953e (runtime meta 516953e): staff-access 26, staff-runtime 3, nonlocal-identity TC-F02-S01-030, customer-access 12, customer-runtime 5, nonlocal-provider TC-F02-S02-018, customer-profile 14, web-functional 7, browser-security 8, web-presentation 6, web-resilience-address 2, web-theme-entry 4, identity-read-baseline (every p95 31-60 ms under 300 ms, zero failed requests, semantic checks 100%), account-journeys 1.",
-      "BUG-F02-012 also: frozen-API sign-in 10/10 at 503 in 3.002-3.007 s on the fix build (qa/reports/20261017-BUG-F02-012-frozen-api-probe/probe.txt).",
-      "Earlier sealed reports on the same scope are preserved and not counted: 20261017-063102 (BUG-F02-010/011), 20261017-090358 (environment), 20261017-091035 (test defect; BUG-F02-012 observed), 20261017-092347 and 20261017-094849 (passes before later QA definition edits).",
-      "Owner-requested regression 20261017-095745-regression-b151743995aa 15/19 at QA revision 28268b5, the four triaged entries passing in 20261017-143246-F01-delta-baf914700098 and 20261017-143743-F02-delta-f06314968ba1; regression evidence is reported separately from this F02 assessment.",
-      "The identical 14-entry delta was re-run from the main checkout at 516953e (report 20261017-150612-F02-delta-48bf0f166789, 14/14 pass) so that its integrity receipt shares the workspace of the base and developer-command reports; the QA-worktree run 20261017-145139-F02-delta-c5bbab4cb12f gave the same 14/14 result."
+      "All 14 registered F02 automation entries pass at 8fd1939 from the main checkout (runtime meta 8fd1939): staff-access 26, staff-runtime 3, nonlocal-identity TC-F02-S01-030, customer-access 12, customer-runtime 5, nonlocal-provider TC-F02-S02-018, customer-profile 14, web-functional 7, browser-security 8, web-presentation 6, web-resilience-address 2, web-theme-entry 5 (TC-F02-S04-024..028), identity-read-baseline (zero failed thresholds), account-journeys 1.",
+      "BUG-F02-013 (major, AC-10/AC-8; latent since F01-S03, exposed by CR-013): new TC-F02-S04-028 sets the valid mid-tone brands #808080 and #C34BB4 through local-salon.sh colour and requires text at 4.5:1 or more on the sign-in action, workspace primary button and selected navigation; it failed on 516953e (4.49:1 and 4.21:1) and passes on 8fd1939, with alpha restored to #D6086A.",
+      "BUG-F02-010, 011 and 012 verified earlier; BUG-F02-012 also by 10/10 frozen-API sign-ins at 503 in about 3.0 s.",
+      "Earlier sealed deltas are preserved and not counted: 20261017-063102, 090358, 091035, 092347, 094849 (QA worktree) and 20261017-150612-F02-delta-48bf0f166789 (main checkout, 516953e, before BUG-F02-013).",
+      "Owner-requested regression 20261017-095745-regression-b151743995aa 15/19 with the four triaged entries passing in 20261017-143246-F01-delta-baf914700098 and 20261017-143743-F02-delta-f06314968ba1; reported separately from this F02 assessment."
     ]
   },
   "manual": {
@@ -247,7 +248,7 @@
   },
   "limits": [
     "Base full report plus one independent full-scope delta of every F02 entry at the reviewed revision; not a fresh full-feature certification, and the scoped runner accepts no --context.",
-    "All F02 bugs (010, 011, 012) verified. BUG-F01-005 (minor, F01, pre-existing scan-message defect) is open and does not affect F02.",
+    "All F02 bugs (010, 011, 012, 013) verified. BUG-F01-005 (minor, F01, pre-existing scan-message defect) is open and does not affect F02.",
     "Local database reset once with local-reset.sh after a QA diagnostic F01 run left the scheduler a month ahead; identity keys (same digest, 0600) and every stack volume preserved. Synthetic fixtures only; real clock; no provider override.",
     "Comparison with the design is from rendered screens and the prototype source; no native assistive-technology session; no staging, real messages or payments."
   ],
