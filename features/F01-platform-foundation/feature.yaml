@@ -6,7 +6,7 @@ summary: The platform runs locally and in staging as one deployment in which eve
 release: R1
 milestone: M1-web
 status: in-qa
-qa_status: not-run
+qa_status: failing
 released_in: null
 depends_on: []
 surfaces:
