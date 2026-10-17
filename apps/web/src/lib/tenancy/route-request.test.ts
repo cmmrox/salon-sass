@@ -154,3 +154,48 @@ describe('the proxy runs on', () => {
     },
   );
 });
+
+describe('workspace entry decided before anything renders (CR-013)', () => {
+  const salonSite = () => resolving({ kind: 'salon', salon: alpha });
+  const deciding = (kind: 'signed-out' | 'signed-in' | 'pending') => vi.fn(async () => (kind === 'signed-in' ? { kind, principal: { kind: 'staff', permissions: [] } as never } : { kind }));
+
+  it.each(['/workspace', '/workspace/account', '/workspace/staff', '/workspace/audit'])('redirects %s without any staff credential to sign-in, asking the API nothing', async (path) => {
+    const decide = deciding('signed-in');
+    const response = await routeRequest(request(`${path}?next=https://outside.test`, { cookie: 'salon_customer_access=other; unrelated=1' }), salonSite(), decide);
+    expect(response.status).toBe(307);
+    expect(response.headers.get('location')).toBe('http://alpha.localhost:3100/workspace/sign-in');
+    expect(response.headers.get('cache-control')).toContain('no-store');
+    expect(decide).not.toHaveBeenCalled();
+  });
+
+  it('enters /workspace at the account when a credential is present; the account decides on it', async () => {
+    const decide = deciding('signed-out');
+    const response = await routeRequest(request('/workspace', { cookie: 'salon_staff_refresh=family' }), salonSite(), decide);
+    expect(response.status).toBe(307);
+    expect(response.headers.get('location')).toBe('http://alpha.localhost:3100/workspace/account');
+    expect(decide).not.toHaveBeenCalled();
+  });
+
+  it.each(['/workspace/account', '/workspace/staff', '/workspace/audit'])('redirects %s with an unusable session to sign-in', async (path) => {
+    const decide = deciding('signed-out');
+    const response = await routeRequest(request(path, { cookie: 'salon_staff_access=revoked; salon_staff_refresh=spent; salon_staff_expires=2026-01-01T00:05:00Z' }), salonSite(), decide);
+    expect(response.status).toBe(307);
+    expect(response.headers.get('location')).toBe('http://alpha.localhost:3100/workspace/sign-in');
+    expect(decide).toHaveBeenCalledExactlyOnceWith(expect.anything(), { access: 'revoked', refresh: 'spent', expiry: '2026-01-01T00:05:00Z' });
+    expect(response.headers.has('set-cookie')).toBe(false);
+  });
+
+  it.each(['signed-in', 'pending'] as const)('lets a %s member reach the salon\'s page, with the salon handed on', async (kind) => {
+    const response = await routeRequest(request('/workspace/account', { cookie: 'salon_staff_access=private' }), salonSite(), deciding(kind));
+    expect(response.status).toBe(200);
+    expect(isRewrite(response)).toBe(false);
+    expect(handedOn(response)).toEqual(alpha);
+  });
+
+  it('never decides entry for sign-in itself or for other hostnames\' answers', async () => {
+    const decide = deciding('signed-out');
+    expect((await routeRequest(request('/workspace/sign-in'), salonSite(), decide)).status).toBe(200);
+    expect((await routeRequest(request('/workspace/account'), resolving({ kind: 'suspended' }), decide)).status).toBe(503);
+    expect(decide).not.toHaveBeenCalled();
+  });
+});

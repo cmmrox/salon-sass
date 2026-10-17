@@ -84,6 +84,11 @@ product evidence; never claim a side-by-side preview occurred.
 - Two kinds of colour: the platform's palette (the prototype's final tokens), and the salon's brand
   colour, which arrives at run time and is the accent of every salon screen, sign-in included.
   Anything drawn on the brand colour uses the computed contrast colour.
+- Brand tokens: `--color-brand` (fills, the sign-in initial ring, the field focus ring),
+  `--color-on-brand` (anything on a brand fill), `--color-brand-soft` (selected tints, the phone's
+  selected tab) and `--color-brand-text` (links and other text in the brand colour, ink when the
+  brand is under 4.5:1 on white). The keyboard focus outline stays the prototype's `#1D5FD0`.
+  The sign-in card uses `--color-surface-translucent`.
 - Test every salon screen with at least two salons' brands: a dark brand colour and a light one.
   A screen that only works on the default pink is broken.
 - Images uploaded by a salon are resized and cropped by the system. A layout must survive a very

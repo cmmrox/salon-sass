@@ -9,8 +9,17 @@ describe('account sign-in', () => {
   it('blocks credential changes with a clear explanation when safe tab locks are absent', async () => {
     vi.stubGlobal('navigator', {});
     renderWithMessages(<SignIn kind="staff" timeZone="Asia/Colombo" />);
-    expect(screen.getByTestId('account-browser-support')).toHaveTextContent('browser');
+    // Controls are disabled from the first render; the explanation follows once the browser is inspected.
     expect(screen.getByTestId('account-sign-in-submit')).toBeDisabled();
+    expect(await screen.findByTestId('account-browser-support')).toHaveTextContent('browser');
+    expect(screen.getByTestId('account-sign-in-submit')).toBeDisabled();
+  });
+  it('flashes no unsupported-browser warning before a supporting browser is inspected (CR-013)', async () => {
+    vi.stubGlobal('navigator', { locks: { request: (_name: string, work: () => Promise<unknown>) => work() } });
+    renderWithMessages(<SignIn kind="staff" timeZone="Asia/Colombo" />);
+    expect(screen.queryByTestId('account-browser-support')).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.getByTestId('account-sign-in-submit')).toBeEnabled());
+    expect(screen.queryByTestId('account-browser-support')).not.toBeInTheDocument();
   });
   it('shows field feedback for wrong credentials and clears the password', async () => {
     vi.stubGlobal('navigator', { locks: { request: (_name: string, work: () => Promise<unknown>) => work() } });
