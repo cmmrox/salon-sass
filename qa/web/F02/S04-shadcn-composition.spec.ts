@@ -90,7 +90,10 @@ test(`${c(29)} staff screens and the confirmation overlay are shadcn/ui componen
    await handle(page,'cancel-action').focus();
    await watchFocusReturn(opener);
    if(dismissal==='escape')await page.keyboard.press('Escape');
-   else if(dismissal==='backdrop'){const point=width>=900?{x:20,y:450}:{x:Math.round(width/2),y:12};await page.mouse.click(point.x,point.y);}
+   // Radix starts listening for a pointer outside the sheet only after the opened sheet has painted: a click
+   // in the first ~50 ms is ignored (no person is that fast). Wait two frames and a task, as a person's click would.
+   else if(dismissal==='backdrop'){await page.evaluate(()=>new Promise<void>(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>setTimeout(resolve,0)))));
+    const point=width>=900?{x:20,y:450}:{x:Math.round(width/2),y:12};await page.mouse.click(point.x,point.y);}
    else await handle(page,'cancel-action').click();
    await expect(sheet,`${width} ${dismissal}: the overlay closes`).toHaveCount(0);
    await expect(opener,`${width} ${dismissal}: focus returns to the opener`).toBeFocused();
