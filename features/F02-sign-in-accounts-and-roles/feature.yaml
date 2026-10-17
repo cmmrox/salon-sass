@@ -76,8 +76,8 @@ integration:
   branch: charithm/feature/F02-unified-theme
   pull_request: https://github.com/cmmrox/salon-sass/pull/11
   qa_revision: e73d99b0bbb38ec4db6b9cc837ea635286a1fed0
-  merged_commit: null
-  merged_at: null
+  merged_commit: c4028379f500ca11c4b2cd8be107e887edf34abb
+  merged_at: '2026-10-17T11:21:41Z'
 previous_integration:
   branch: charithm/feature/F02-sign-in-accounts-and-roles
   pull_request: https://github.com/cmmrox/salon-sass/pull/4
