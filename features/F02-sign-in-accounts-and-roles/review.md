@@ -86,7 +86,7 @@ Sign-in maps to the CR-012 mockup composition with the CR-013 colour decision; p
 
 - BUG-F02-010 minor: an invalid or missing brand colour gives "Service unavailable" instead of the default accent (AC-10). Verified.
 - BUG-F02-011 minor: the server-side entry redirect leaves a revoked staff family's cookies in the browser (AC-4). Verified.
-- BUG-F02-012 major: staff sign-in can hang until an unresponsive API resumes instead of 503 within the 3 s budget (AC-8). Open; intermittent.
+- BUG-F02-012 major: staff sign-in can hang until an unresponsive API resumes instead of 503 within the 3 s budget (AC-8). Fixed in `881ca87`; verified in `qa/reports/20261017-094849-F02-delta-584884e9bba2` (6 groups, 28 tests pass) plus 10/10 frozen-API sign-ins at 503 in about 3.0 s.
 
 Test and environment repairs in this pass: `accounts.ready()` now also waits for CR-013's in-section `account-list-loading` (it waited only for the retired whole-account frame, so TC-F02-S04-008's race advanced the clock mid-load); the F01 journey now restores the scheduler occurrence its 31-day clock jump creates (a diagnostic run of it left both jobs a month ahead, failing six F02 clock cases environmentally in `20261017-090358`; repaired with the documented `local-reset.sh`); QA helpers honour `QA_PRODUCT_ROOT`. No assertion was weakened.
 
