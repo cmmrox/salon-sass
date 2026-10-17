@@ -7,11 +7,12 @@ Compared with: the dated Fresha/Booksy/Vagaro findings below (2026-10-14), not r
 
 ### Verdict
 
-The salon web screens now look like one product that belongs to the salon. Sign-in and workspace share the warm prototype palette, Poppins, pills and rounded cards, and the salon's own colour drives the action, the selected navigation and the field focus on both. Entering is direct: signed out, `/`, `/workspace` and every protected URL reach sign-in through server redirects with no painted "Salon"/"Loading your account…" frame; signed in, the first frame is the named workspace. No horizontal scroll at any width, every keyboard stop shows the 3px blue outline, and the dark and light brands stay readable (action contrast 14.68 and 14.24). Two minor defects keep F02 `failing`: BUG-F02-010 and BUG-F02-011. The one change that would most improve it is to make the authenticator step and the sign-out confirmations say exactly what will happen (SUG-F02-04, SUG-F02-05).
+The salon web screens now look like one product that belongs to the salon. Sign-in and workspace share the warm prototype palette, Poppins, pills and rounded cards, and the salon's own colour drives the action, the selected navigation and the field focus on both. Entering is direct: signed out, `/`, `/workspace` and every protected URL reach sign-in through server redirects with no painted "Salon"/"Loading your account…" frame; signed in, the first frame is the named workspace. No horizontal scroll at any width, every keyboard stop shows the 3px blue outline, and the dark and light brands stay readable (action contrast 14.68 and 14.24). The two minor defects found first (BUG-F02-010, BUG-F02-011) are fixed and verified. F02 stays `failing` on BUG-F02-012 (major, AC-8): with the API frozen, staff sign-in once hung 164 s instead of answering 503 within the 3 s budget (1 of 4 observed runs). The one change that would most improve it is to make the authenticator step and the sign-out confirmations say exactly what will happen (SUG-F02-04, SUG-F02-05).
 
 ### Verification in this pass
 
-- Scoped F02 web delta `qa/reports/20261017-063102-F02-delta-ff3abe97e455` on `be7e550` (application identical to developer-gated `756fdef`; running API rebuilt by `local-service.sh` reports `be188ca`, same application tree): 6 groups, 27 Playwright tests, 25 pass. web-functional 7/7, web-presentation 6/6, web-resilience-address 2/2, account-journeys 1/1, browser-security 7/8 (TC-F02-S04-008 → BUG-F02-011), web-theme-entry 3/4 (TC-F02-S04-025 invalid-colour rows → BUG-F02-010; its colour-hook half and the valid-colour control passed).
+- Final scoped F02 web delta `qa/reports/20261017-092347-F02-delta-b0a937960444` on `b7f5c3d`, against the bug-fix handoff (running API/web from `f62146f`, application identical to the fix `3b8df96`): 6 groups, 28 Playwright tests, all pass (functional 7, security 8, presentation 6, resilience 2, theme-entry 4, journeys 1). BUG-F02-010 and BUG-F02-011 verified. Assessment draft for the lead to commit: `qa/reports/cr013-assessment-draft/scoped-qa.json` (QA may not write `features/*/scoped-qa.json`).
+- First delta `qa/reports/20261017-063102-F02-delta-ff3abe97e455` on `be7e550` (CR-013 build before fixes): 6 groups, 28 Playwright tests, 26 pass. web-functional 7/7, web-presentation 6/6, web-resilience-address 2/2, account-journeys 1/1, browser-security 7/8 (TC-F02-S04-008 → BUG-F02-011), web-theme-entry 3/4 (TC-F02-S04-025 invalid-colour rows → BUG-F02-010; its colour-hook half and the valid-colour control passed).
 - Retained under CR-009, not rerun: F02 API automation (S01–S03), nonlocal checks and the read baseline from the base full report `qa/reports/20261015-000506-F02-3e38935bf776` on `e73d99b`. Java API, schema, contracts and infrastructure (other than the new local colour hook) are unchanged since then.
 - New cases TC-F02-S04-024..027 (AC-10, AC-11). The paint recorder behind TC-026/027 was proved on synthetic pages: it reports a painted "Salon" header and loading card before a client redirect, and passes a straight server redirect.
 - TC-F02-S04-018 performed manually 2026-10-17 on alpha, beta and gamma.
@@ -83,8 +84,11 @@ Sign-in maps to the CR-012 mockup composition with the CR-013 colour decision; p
 
 ### Bugs filed from this pass
 
-- BUG-F02-010 minor: an invalid or missing brand colour gives "Service unavailable" instead of the default accent (AC-10).
-- BUG-F02-011 minor: the server-side entry redirect leaves a revoked staff family's cookies in the browser (AC-4).
+- BUG-F02-010 minor: an invalid or missing brand colour gives "Service unavailable" instead of the default accent (AC-10). Verified.
+- BUG-F02-011 minor: the server-side entry redirect leaves a revoked staff family's cookies in the browser (AC-4). Verified.
+- BUG-F02-012 major: staff sign-in can hang until an unresponsive API resumes instead of 503 within the 3 s budget (AC-8). Open; intermittent.
+
+Test and environment repairs in this pass: `accounts.ready()` now also waits for CR-013's in-section `account-list-loading` (it waited only for the retired whole-account frame, so TC-F02-S04-008's race advanced the clock mid-load); the F01 journey now restores the scheduler occurrence its 31-day clock jump creates (a diagnostic run of it left both jobs a month ahead, failing six F02 clock cases environmentally in `20261017-090358`; repaired with the documented `local-reset.sh`); QA helpers honour `QA_PRODUCT_ROOT`. No assertion was weakened.
 
 ## CR-010 independent scoped review (2026-10-15, historical)
 

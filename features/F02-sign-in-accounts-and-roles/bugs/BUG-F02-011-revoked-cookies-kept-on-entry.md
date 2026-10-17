@@ -2,14 +2,14 @@
 id: BUG-F02-011
 title: Server-side entry redirects a revoked staff session to sign-in but leaves its credential cookies in the browser
 severity: minor
-status: fixed
+status: verified
 found_by: TC-F02-S04-008
 breaks: AC-4
 found_on: 2026-10-17
 fixed_in: 3b8df96
 fix_note: 'The proxy''s signed-out 307 for a protected page now clears all salon_staff_* cookies through the BFF''s clearCookies (host-only, Max-Age=0, HttpOnly, SameSite=lax, Path=/, Secure outside local HTTP); no API call or renewal added. Evidence .local/logs/bug-f02-011-repro-prefix.log and bug-f02-011-after-headers.log.'
 developer_note: null
-verified_on: null
+verified_on: 2026-10-17
 approved_by: null
 found_in_release: null
 ---
@@ -41,4 +41,4 @@ No authority is restored. But the stale credentials stay in the browser, and eve
 
 ## Re-verification
 
-<QA, after a fix.>
+Verified 2026-10-17 on the handoff: running API/web from `f62146f` (application identical to the fix `3b8df96`), QA revision `b7f5c3d`. Recorded F02-delta `qa/reports/20261017-092347-F02-delta-b0a937960444`, group `browser-security` 8/8: TC-F02-S04-008 sends a replay-revoked family to sign-in with no renewal attempt and no `salon_staff_refresh` cookie left, and its lost-renewal and logout-race parts pass. TC-F02-S04-007 (coordinated renewal) and TC-F02-S04-026 (no intermediate frame for revoked cookies) still pass. The assertion had failed in `qa/reports/20261017-063102-F02-delta-ff3abe97e455`.
