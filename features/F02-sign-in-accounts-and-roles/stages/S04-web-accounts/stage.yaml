@@ -434,7 +434,7 @@ cases:
   covers:
   - AC-8
 - id: TC-F02-S04-019
-  title: staff workspace identifies only its salon and keeps the neutral palette
+  title: staff screens identify only their own salon on the shared warm canvas
   type: branding
   priority: high
   covers:
@@ -463,6 +463,30 @@ cases:
   priority: high
   covers:
   - AC-9
+- id: TC-F02-S04-024
+  title: sign-in and workspace draw every accent in the salon's own brand colour with a readable foreground
+  type: branding
+  priority: high
+  covers:
+  - AC-10
+- id: TC-F02-S04-025
+  title: a salon colour change shows on the next sign-in request and an invalid colour falls back to the default accent
+  type: branding
+  priority: high
+  covers:
+  - AC-10
+- id: TC-F02-S04-026
+  title: entering without a usable session reaches sign-in with no intermediate frame
+  type: functional
+  priority: high
+  covers:
+  - AC-11
+- id: TC-F02-S04-027
+  title: a signed-in member's first painted frame is their workspace with the salon's resolved name
+  type: functional
+  priority: high
+  covers:
+  - AC-11
 verification:
   commands:
   - cd apps/api && ./mvnw -q verify
@@ -521,6 +545,17 @@ verification:
     - TC-F02-S04-022
     suites:
     - regression
+  - id: web-theme-entry
+    tool: playwright
+    file: qa/web/F02/S04-theme-entry.spec.ts
+    project: web
+    covers:
+    - TC-F02-S04-024
+    - TC-F02-S04-025
+    - TC-F02-S04-026
+    - TC-F02-S04-027
+    suites:
+    - regression
   manual:
   - case: TC-F02-S04-018
     reason: 'CR-012 current manual judgment: inspected source and rendered login together at1536x1024,
@@ -530,7 +565,9 @@ verification:
       Actual empty-input full-view/focused comparison also required in final delta, linked in review.md.
       Retain unaffected protected-account/Owner/confirmation focus proof from2026-10-14; no new manual
       protected-workspace pass is claimed. CUA IAB unavailable and Chrome CDP timed out; sequences captured
-      through registered repository Playwright and visually inspected, with credentials/setup values masked.'
+      through registered repository Playwright and visually inspected, with credentials/setup values masked.
+      CR-013 (prepared 2026-10-17, not performed): the brand-accent login and workspace focus/contrast
+      for alpha, beta (dark) and gamma (light) need a fresh inspection at feature-verify.'
     performed_on: 2026-10-15
   deferred: []
 evidence:

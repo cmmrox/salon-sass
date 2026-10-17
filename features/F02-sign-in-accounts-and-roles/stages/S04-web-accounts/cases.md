@@ -1,6 +1,6 @@
 # F02-S04 Staff web: acceptance cases
 
-Authority: approved CR-010, CR-012 and revised spec. Local synthetic alpha/beta/gamma only; private random credentials stay in memory. Customer React Native UI is deferred until M1-web release; retained customer Java API cases in S02/S03 remain authoritative. Obsolete customer-browser OTP/profile/privacy/coexistence cases are removed, not silently deferred. Unaffected passing API and feature evidence is retained under CR-009.
+Authority: approved CR-010, CR-012, CR-013 and revised spec. Local synthetic alpha/beta/gamma only; private random credentials stay in memory. Customer React Native UI is deferred until M1-web release; retained customer Java API cases in S02/S03 remain authoritative. Obsolete customer-browser OTP/profile/privacy/coexistence cases are removed, not silently deferred. Unaffected passing API and feature evidence is retained under CR-009.
 
 ### TC-F02-S04-001 staff password and authenticator flows reach account only after complete verification
 
@@ -168,18 +168,18 @@ Authority: approved CR-010, CR-012 and revised spec. Local synthetic alpha/beta/
 - **Priority:** high
 - **Covers:** AC-8
 - **Performed as / preconditions:** Synthetic salon staff or unauthorized browser; committed local build and healthy seeded API before faults.
-- **Steps:** Manually traverse the changed CR-012 login on phone/tablet/desktop, including password visibility, administrator guidance, errors and MFA; inspect ordered visible focus and taupe action contrast. Retain unchanged staff account/Owner staff/audit confirmation evidence.
-- **Expected:** Every changed login action is keyboard-operable with visible ordered focus and no trap. Prior2026-10-14 unaffected staff confirmation evidence is retained; changed login needs current inspection before pass.
+- **Steps:** Manually traverse the changed CR-012 login on phone/tablet/desktop, including password visibility, administrator guidance, errors and MFA; inspect ordered visible focus and the brand-accent action, initial ring, link and field focus for alpha (default `#D6086A`), beta (dark) and gamma (light) (CR-013). Retain unchanged staff account/Owner staff/audit confirmation evidence.
+- **Expected:** Every changed login action is keyboard-operable with visible ordered focus and no trap; focus and the brand accent stay readable on dark and light brands. Prior2026-10-14 unaffected staff confirmation evidence is retained; the CR-013 login and workspace accent need current inspection before pass.
 - **Automation:** Manual judgment; actual performed date and evidence in stage.yaml.
 
-### TC-F02-S04-019 staff workspace identifies only its salon and keeps the neutral palette
+### TC-F02-S04-019 staff screens identify only their own salon on the shared warm canvas
 
 - **Type:** branding
 - **Priority:** high
 - **Covers:** AC-8
 - **Performed as / preconditions:** Synthetic salon staff or unauthorized browser; committed local build and healthy seeded API before faults.
-- **Steps:** Open staff routes for alpha/beta/gamma; inspect the API-resolved login salon name/initial, full protected salon header name, neutral workspace canvas and absence of customer shell.
-- **Expected:** Only current salon identity appears. Login name remains readable, including beta long name; protected header retains approved accessible ellipsis. All protected workspaces keep their neutral warm palette.
+- **Steps:** Open staff routes for alpha/beta/gamma; inspect the API-resolved login salon name/initial, full protected salon header name, workspace canvas and absence of customer shell.
+- **Expected:** Only current salon identity appears. Login name remains readable, including beta long name; protected header retains approved accessible ellipsis. All protected workspaces share the warm `#F3F0EB` canvas; their accent is the salon's brand (CR-013, TC-F02-S04-024), so "workspace stays neutral" no longer holds.
 - **Automation:** `qa/web/F02/S04-presentation.spec.ts`
 
 ### TC-F02-S04-020 API outage and slow BFF work preserve form values and present safe retry within budget
@@ -218,6 +218,46 @@ Authority: approved CR-010, CR-012 and revised spec. Local synthetic alpha/beta/
 - **Priority:** high
 - **Covers:** AC-9
 - **Performed as / preconditions:** Synthetic salon staff or unauthorized browser; committed local build and healthy seeded API before faults.
-- **Steps:** Map CR-012 sign-in to the supplied1536x1024 mockup and protected staff screens to the HTML Salon reference. Inspect six widths, loaded Poppins, standalone photo/initial/name/translucent card/welcome/fields/toggle/recovery/taupe action/footer. Compare full-view and focused screenshot pairs manually. Protected screens retain cards/fields/pills, responsive rail/tabs and revoke-all drawer/sheet. Escape/cancel and inspect focus return. Save empty or masked-input screenshots.
+- **Steps:** Map CR-012 sign-in to the supplied1536x1024 mockup and protected staff screens to the HTML Salon reference. Inspect six widths, loaded Poppins, shared theme tokens, standalone photo/initial/name/translucent card/welcome/fields/toggle/recovery/action/footer. Accent colours belong to TC-F02-S04-024 (CR-013 retired the CR-012 taupe). Compare full-view and focused screenshot pairs manually. Protected screens retain cards/fields/pills, responsive rail/tabs and revoke-all drawer/sheet. Escape/cancel and inspect focus return. Save empty or masked-input screenshots.
 - **Expected:** Sign-in matches CR-012 composition at1536x1024 and remains usable across all widths without workspace header/rail. Protected Salon web grammar holds without customer430px canvas/navigation; its header keeps full DOM/title under approved ellipsis. Overlay keyboard behavior and real permission-filtered routes remain correct.
 - **Automation:** `qa/web/F02/S04-presentation.spec.ts`
+
+### TC-F02-S04-024 sign-in and workspace draw every accent in the salon's own brand colour with a readable foreground
+
+- **Type:** branding
+- **Priority:** high
+- **Covers:** AC-10
+- **Performed as / preconditions:** Signed-out browser and a Manager of each synthetic salon; committed local build and healthy seeded API. Rows: alpha `#D6086A` (the default colour), beta `#1F2937` (dark), gamma `#FDE68A` (light).
+- **Steps:** For each salon open staff sign-in: read the welcome heading's ink and the resting identifier field's line, the action's background and text colour, the initial's ring, and the identifier field's focus accent; scan the sign-in for the retired taupe `#8A705E`. Sign in and open the account at 1280px and 390px: read the selected navigation item (desktop) or its tab tile (phone), the primary action (`password-save`) and a focused password field; scan the workspace's surfaces for the retired black accent `#141413`.
+- **Expected:** The sign-in action, desktop selected navigation and workspace primary action are filled with exactly the salon's brand, their text at least 4.5:1 on it. The sign-in heading is ink `#111827` and its resting field line `#DDD6CA`, the workspace's own tokens. The initial ring and focused fields draw the brand. The phone tab tile is the brand's soft tint. No taupe on sign-in and no black accent surface in the workspace, for every salon; the shared tokens (canvas, secondary, lines, ink `#111827`, muted) are covered by TC-F02-S04-023.
+- **Automation:** `qa/web/F02/S04-theme-entry.spec.ts`
+
+### TC-F02-S04-025 a salon colour change shows on the next sign-in request and an invalid colour falls back to the default accent
+
+- **Type:** branding
+- **Priority:** high
+- **Covers:** AC-10
+- **Performed as / preconditions:** Signed-out browser on alpha. The API is stopped and a stand-in on its port serves alpha's published brand with a chosen `brandColour`, and meta; the API is restarted afterwards. Rows: `#0E7490` then `#A7F3D0` (changed, neither a fixture nor the default), then `not-a-colour`, a style-injection value, and no colour (each expects `#D6086A`).
+- **Steps:** For each row, set the served colour and open staff sign-in in a new page of the same running web app without restarting or rebuilding it; confirm the brand was requested for that page and read the action, initial ring and field focus accent.
+- **Expected:** Each changed colour appears on the very next request; every invalid or missing colour gives `#D6086A` with a readable foreground and the page still renders. No rebuild or restart between rows.
+- **Automation:** `qa/web/F02/S04-theme-entry.spec.ts`. The workspace half of "changing a salon's colour changes both screens" needs a local brand-colour hook that does not exist yet (reported to the lead); the workspace's use of each salon's stored colour is TC-F02-S04-024.
+
+### TC-F02-S04-026 entering without a usable session reaches sign-in with no intermediate frame
+
+- **Type:** functional
+- **Priority:** high
+- **Covers:** AC-11
+- **Performed as / preconditions:** Alpha browser with no session cookies, then with the cookies of a Manager whose sessions were all revoked through the API (`/me` answers 401 `invalid_session`). A recorder samples every frame of every document just before paint from navigation start, and records the main-frame document responses. Before the product, the recorder is shown to catch a synthetic page that paints a "Salon" header and loading card before a client redirect, and to pass a server redirect.
+- **Steps:** Open `/`, `/workspace`, `/workspace/account`, `/workspace/staff`, `/workspace/audit`, `/account` and `/sign-in` in turn.
+- **Expected:** Every hop before `/workspace/sign-in` is a server redirect and only that one document renders. No recorded frame shows `account-loading`, the account loading message, a workspace shell/header/navigation, or any salon name other than "Alpha Studio"; the first non-blank frame is the sign-in with the salon's name.
+- **Automation:** `qa/web/F02/S04-theme-entry.spec.ts`
+
+### TC-F02-S04-027 a signed-in member's first painted frame is their workspace with the salon's resolved name
+
+- **Type:** functional
+- **Priority:** high
+- **Covers:** AC-11
+- **Performed as / preconditions:** A signed-in Manager of alpha and of beta (long name); the frame recorder of TC-F02-S04-026.
+- **Steps:** Alpha: open `/`, `/workspace`, `/workspace/account`, `/workspace/staff`, `/workspace/audit`. Beta: open `/`.
+- **Expected:** Redirect hops are server redirects and only the landing page renders (`/` and `/workspace` land on `/workspace/account`). The first non-blank frame is the workspace with the salon's full name; no frame shows the sign-in, a generic "Salon" or another salon's name, and any loading state appears only inside the workspace already showing the salon's name.
+- **Automation:** `qa/web/F02/S04-theme-entry.spec.ts`
