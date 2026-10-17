@@ -2,14 +2,14 @@
 id: BUG-F02-013
 title: Text on a mid-tone brand fill falls below 4.5:1 because the foreground is only ever white or ink
 severity: major
-status: fixed
+status: verified
 found_by: TC-F02-S04-028
 breaks: AC-10
 found_on: 2026-10-17
 fixed_in: c618f87
 fix_note: 'contrastColour keeps white or ink #111827 wherever one reaches 4.5:1 (unchanged salons) and otherwise uses #000000; 5-step RGB sweep 9,364 of 140,608 below 4.5:1 before, 0 after. Running product (alpha via local-salon.sh, restored to #D6086A): #808080 ink 4.49 -> black 5.32, #C34BB4 white 4.21 -> black 4.99 on the sign-in action, primary button and selected navigation. Evidence .local/logs/bug-f02-013-before.log, bug-f02-013-summary.log, bug-f02-013-after-runtime.log.'
 developer_note: null
-verified_on: null
+verified_on: 2026-10-17
 approved_by: null
 found_in_release: null
 ---
@@ -53,4 +53,4 @@ TC-F02-S04-028 (`qa/web/F02/S04-theme-entry.spec.ts`), single diagnostic run on 
 
 ## Re-verification
 
-<QA, after a fix.>
+Verified 2026-10-17 on `8fd1939` (fix `c618f87`, runtime meta `8fd1939`). Sealed F02-delta `qa/reports/20261017-160221-F02-delta-fbc5edc57254` from the main checkout, summary sha256 `4f3953a85d855ae8c09728c5b1f3664031f96854fc34ee0b7377478b9df8d50f`: all 14 F02 entries pass. web-theme-entry 5/5 includes TC-F02-S04-028, so `#808080` and `#C34BB4` now give text at 4.5:1 or more on the sign-in action, workspace primary button and selected navigation; TC-F02-S04-024 (alpha default, beta dark, gamma light) still passes. Alpha ended on `#D6086A`. The same check had failed on `516953e` at 4.49:1 and 4.21:1.
