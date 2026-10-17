@@ -53,6 +53,9 @@
   --negative-surface: #FDE9E7;
   --backdrop: rgb(20 20 19 / 28%);
   --opacity-disabled: 0.55;
+  /* Text drawn in the salon's colour (links, the recovery control): the brand when it reaches
+     4.5:1 on white, otherwise ink (styles/brand.ts). */
+  --link: var(--color-brand-text);
 
   /* Type */
   --font-family: 'Poppins', system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', 'Noto Sans Sinhala', 'Noto Sans Tamil',
@@ -72,6 +75,7 @@
   --line-height-body: 1.5;
   --line-height-heading: 1.25;
   --letter-spacing-heading: -0.02em;
+  --font-family-mono: monospace;
 
   /* Radius */
   --radius-small: 1.25rem;
@@ -80,6 +84,8 @@
   --radius-nav: 1.5rem 1.5rem 0 0;
   --radius-rail: 0.875rem;
   --radius-sheet: 2rem 2rem 0 0;
+  /* shadcn/ui's checkbox corner; the prototype has no checkbox. */
+  --checkbox-radius: 0.25rem;
 
   /* Size. `--spacing` is Tailwind's spacing unit, the same value as Tailwind's own, so that the
      plain pages (which get no Tailwind output) lay out on the same scale. */
@@ -105,10 +111,16 @@
   --size-form: 35rem;
   --size-drawer: 28.75rem;
   --size-sheet-handle: 2.5rem;
+  /* The phone confirmation sheet's tallest extent. */
+  --size-sheet-max-height: 90vh;
 
-  /* Shadow */
+  /* Shadow. Fields draw their outline as an inset ring: the line colour, the brand when focused
+     (the keyboard outline stays --ring), the negative colour when refused. */
   --shadow-surface: none;
   --shadow-navigation: 0 -8px 24px rgb(20 20 19 / 8%);
+  --field-ring: inset 0 0 0 var(--size-field-inset) var(--border);
+  --field-ring-focus: inset 0 0 0 var(--size-focus-offset) var(--color-brand);
+  --field-ring-invalid: inset 0 0 0 var(--size-field-inset) var(--destructive);
 }
 
 /* CR-012 staff sign-in composition. Its colours are the shared ones above with the salon's brand
@@ -138,36 +150,10 @@
   --radius-login-card: 1.375rem;
   --radius-login-field: 0.625rem;
   --shadow-login-card: 0 12px 44px rgb(77 57 37 / 5%);
-}
-
-/*
- * F02-S04 (CR-016) removes this block. The former token names that only the account screens'
- * remaining CSS Modules (components/account/*.module.css) still read, each pointing at the theme
- * above so they keep their exact look. Nothing new may use them.
- */
-:root {
-  --color-background: var(--background);
-  --color-surface: var(--card);
-  --color-border: var(--border);
-  --color-text: var(--foreground);
-  --color-text-muted: var(--muted-foreground);
-  --color-negative: var(--destructive);
-  --color-negative-surface: var(--negative-surface);
-  --color-positive-surface: var(--positive-surface);
-  --color-caution: var(--caution);
-  --color-caution-surface: var(--caution-surface);
-  --color-skeleton: var(--muted);
-  --color-backdrop: var(--backdrop);
-  --color-surface-translucent: var(--surface-translucent);
-  --space-half: 0.125rem;
-  --space-field-block: 0.625rem;
-  --space-field-inline: 0.875rem;
-  --space-workspace-header: 1.75rem;
-  --space-1: 0.25rem;
-  --space-2: 0.5rem;
-  --space-3: 0.75rem;
-  --space-4: 1rem;
-  --space-6: 1.5rem;
-  --space-8: 2rem;
-  --space-12: 3rem;
+  /* The shared decorative interior behind every salon's sign-in, and the feather glyphs drawn as
+     masks in the current text colour. */
+  --sign-in-interior: url('/images/staff-sign-in-interior.webp');
+  --icon-eye: url('/icons/feather/eye.svg');
+  --icon-eye-off: url('/icons/feather/eye-off.svg');
+  --icon-lock: url('/icons/feather/lock.svg');
 }

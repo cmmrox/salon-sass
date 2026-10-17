@@ -14,6 +14,8 @@
   /* The prototype's workspace breakpoints: the rail from 900px, the wide rail from 1200px. */
   --breakpoint-rail: 900px;
   --breakpoint-wide: 1200px;
+  /* The staff sign-in's phone composition is `max-login:`, below 601px (the prototype's 600px and less). */
+  --breakpoint-login: 601px;
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -40,8 +42,10 @@
   --color-negative-surface: var(--negative-surface);
   --color-backdrop: var(--backdrop);
   --color-surface-translucent: var(--surface-translucent);
+  --color-link: var(--link);
 
   --font-sans: var(--font-family);
+  --font-mono: var(--font-family-mono);
 
   --text-small: var(--font-size-small);
   --text-body: var(--font-size-body);
@@ -49,9 +53,16 @@
   --text-title: var(--font-size-title);
   --text-workspace-title: var(--font-size-workspace-title);
   --text-label: var(--font-size-label);
-  --text-input: var(--font-size-input);
+  --text-field: var(--font-size-input);
   --text-nav: var(--font-size-nav);
   --text-rail: var(--font-size-rail);
+  --text-login-title: var(--font-size-login-title);
+  --text-login-welcome: var(--font-size-login-welcome);
+  --text-login-name: var(--font-size-login-name);
+  --text-login-initial: var(--font-size-login-initial);
+  --text-login-help: var(--font-size-login-help);
+  --text-login-label: var(--font-size-login-label);
+  --text-login-action: var(--font-size-login-action);
 
   --leading-body: var(--line-height-body);
   --leading-heading: var(--line-height-heading);
@@ -64,6 +75,7 @@
   --radius-card: var(--radius-medium);
   --radius-action: var(--radius-pill);
   --radius-rail-item: var(--radius-rail);
+  --radius-checkbox: var(--checkbox-radius);
 
   --spacing-header: var(--size-header);
   --spacing-tab: var(--size-tab);
@@ -77,6 +89,9 @@
   --container-workspace: var(--size-workspace);
 
   --shadow-tabs: var(--shadow-navigation);
+  --shadow-field: var(--field-ring);
+  --shadow-field-focus: var(--field-ring-focus);
+  --shadow-field-invalid: var(--field-ring-invalid);
 }
 
 @layer base {

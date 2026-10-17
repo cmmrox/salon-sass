@@ -1,49 +1,59 @@
-import { cleanup, fireEvent, screen } from '@testing-library/react';
-import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { act, cleanup, fireEvent, screen } from '@testing-library/react';
+import { afterEach, expect, it, vi } from 'vitest';
 import { renderWithMessages } from '@/test/render';
 import { Confirmation } from './Confirmation';
 import { Button } from './Controls';
-beforeEach(() => {
- Object.defineProperty(HTMLDialogElement.prototype, 'showModal', { configurable: true, value: function (this: HTMLDialogElement) { this.open = true; } });
- Object.defineProperty(HTMLDialogElement.prototype, 'close', { configurable: true, value: function (this: HTMLDialogElement) { this.open = false; } });
-});
-afterEach(() => { cleanup(); Reflect.deleteProperty(HTMLDialogElement.prototype, 'showModal'); Reflect.deleteProperty(HTMLDialogElement.prototype, 'close'); });
-it('focuses the safe cancellation action and returns focus to the initiating control', () => {
- const trigger = document.createElement('button'); document.body.append(trigger); trigger.focus();
- const cancel = vi.fn();
- const { unmount } = renderWithMessages(<Confirmation title="Confirm this action" onCancel={cancel}><Button testId="account-confirm-action" danger>Confirm</Button><Button testId="account-cancel-action" secondary onClick={cancel}>Cancel</Button></Confirmation>);
- expect(screen.getByRole('dialog', { name: 'Confirm this action' })).toHaveAttribute('open');
- expect(screen.getByTestId('account-cancel-action')).toHaveFocus();
- fireEvent.click(screen.getByTestId('account-cancel-action')); expect(cancel).toHaveBeenCalledOnce();
- unmount(); expect(trigger).toHaveFocus(); trigger.remove();
-});
-it('routes native Escape cancellation to the controlled state without confirming a mutation', () => {
- const cancel = vi.fn(); const mutate = vi.fn();
- renderWithMessages(<Confirmation title="Confirm this action" onCancel={cancel}><Button testId="account-confirm-action" onClick={mutate}>Confirm</Button><Button testId="account-cancel-action">Cancel</Button></Confirmation>);
- fireEvent(screen.getByRole('dialog'), new Event('cancel', { cancelable: true }));
- expect(cancel).toHaveBeenCalledOnce(); expect(mutate).not.toHaveBeenCalled();
+
+// Radix restores focus after its own cleanup tick.
+const settle = () => act(() => new Promise((resolve) => setTimeout(resolve, 20)));
+afterEach(() => { cleanup(); document.body.innerHTML = ''; });
+
+const actions = (busy = false, confirm = vi.fn(), cancel = vi.fn()) => <><Button testId="account-confirm-action" danger disabled={busy} onClick={confirm}>Confirm</Button><Button testId="account-cancel-action" secondary disabled={busy} onClick={cancel}>Cancel</Button></>;
+
+it('is a labelled modal dialog that focuses the safe cancellation action and returns focus to the initiating control', async () => {
+  const trigger = document.createElement('button'); document.body.append(trigger); trigger.focus();
+  const cancel = vi.fn();
+  const { unmount } = renderWithMessages(<Confirmation title="Confirm this action" onCancel={cancel}>{actions(false, vi.fn(), cancel)}</Confirmation>);
+  const dialog = screen.getByRole('dialog', { name: 'Confirm this action' });
+  expect(dialog).toHaveAttribute('aria-modal', 'true');
+  expect(dialog).toHaveAttribute('data-testid', 'account-confirmation');
+  expect(screen.getByTestId('account-cancel-action')).toHaveFocus();
+  fireEvent.click(screen.getByTestId('account-cancel-action')); expect(cancel).toHaveBeenCalledOnce();
+  unmount(); await settle();
+  expect(trigger).toHaveFocus();
 });
 
-it('cancels only outside the dialog bounds, preserving clicks in its padding', () => {
- const cancel = vi.fn();
- renderWithMessages(<Confirmation title="Confirm this action" onCancel={cancel}><Button testId="account-cancel-action">Cancel</Button></Confirmation>);
- const dialog = screen.getByRole('dialog');
- vi.spyOn(dialog, 'getBoundingClientRect').mockReturnValue({ left: 100, top: 100, right: 400, bottom: 500, width: 300, height: 400, x: 100, y: 100, toJSON: () => ({}) });
- fireEvent.click(dialog, { clientX: 120, clientY: 120 }); expect(cancel).not.toHaveBeenCalled();
- fireEvent.click(dialog, { clientX: 20, clientY: 20 }); expect(cancel).toHaveBeenCalledOnce();
+it('routes Escape to cancellation without confirming a mutation', () => {
+  const cancel = vi.fn(); const mutate = vi.fn();
+  renderWithMessages(<Confirmation title="Confirm this action" onCancel={cancel}>{actions(false, mutate)}</Confirmation>);
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+  expect(cancel).toHaveBeenCalledOnce(); expect(mutate).not.toHaveBeenCalled();
+});
+
+it('cancels on a press outside the sheet, and not on a press inside it', async () => {
+  const cancel = vi.fn();
+  renderWithMessages(<Confirmation title="Confirm this action" onCancel={cancel}>{actions()}</Confirmation>);
+  await settle();
+  // A whole press: in jsdom Radix completes an outside press on the click that follows it.
+  const press = (target: Element) => { fireEvent.pointerDown(target); fireEvent.mouseDown(target); fireEvent.mouseUp(target); fireEvent.click(target); };
+  press(screen.getByTestId('account-cancel-action').parentElement!); expect(cancel).not.toHaveBeenCalled();
+  press(document.querySelector('[data-slot="sheet-overlay"]')!); expect(cancel).toHaveBeenCalledOnce();
 });
 
 it('wraps Tab and Shift+Tab inside the modal action controls', () => {
- renderWithMessages(<Confirmation title="Confirm this action" onCancel={() => {}}><Button testId="account-confirm-action">Confirm</Button><Button testId="account-cancel-action">Cancel</Button></Confirmation>);
- const first = screen.getByTestId('account-confirm-action'); const last = screen.getByTestId('account-cancel-action');
- expect(last).toHaveFocus(); fireEvent.keyDown(last, { key: 'Tab' }); expect(first).toHaveFocus();
- fireEvent.keyDown(first, { key: 'Tab', shiftKey: true }); expect(last).toHaveFocus();
+  renderWithMessages(<Confirmation title="Confirm this action" onCancel={() => {}}>{actions()}</Confirmation>);
+  const first = screen.getByTestId('account-confirm-action'); const last = screen.getByTestId('account-cancel-action');
+  expect(last).toHaveFocus(); fireEvent.keyDown(last, { key: 'Tab' }); expect(first).toHaveFocus();
+  fireEvent.keyDown(first, { key: 'Tab', shiftKey: true }); expect(last).toHaveFocus();
 });
 
-it('keeps a submitted confirmation open and focuses the dialog while actions are disabled', () => {
- const cancel = vi.fn();
- renderWithMessages(<Confirmation busy title="Confirm this action" onCancel={cancel}><Button disabled testId="account-confirm-action">Confirm</Button><Button disabled testId="account-cancel-action">Cancel</Button></Confirmation>);
- const dialog = screen.getByRole('dialog'); expect(dialog).toHaveFocus();
- fireEvent(dialog, new Event('cancel', { cancelable: true })); fireEvent.click(dialog, { clientX: 20, clientY: 20 });
- fireEvent.keyDown(dialog, { key: 'Tab' }); expect(dialog).toHaveFocus(); expect(cancel).not.toHaveBeenCalled(); expect(dialog).toHaveAttribute('open');
+it('keeps a submitted confirmation open and focuses the sheet while its actions are disabled', async () => {
+  const cancel = vi.fn();
+  renderWithMessages(<Confirmation busy title="Confirm this action" onCancel={cancel}>{actions(true)}</Confirmation>);
+  await settle();
+  const dialog = screen.getByRole('dialog'); expect(dialog).toHaveFocus();
+  const overlay = document.querySelector('[data-slot="sheet-overlay"]')!;
+  fireEvent.keyDown(dialog, { key: 'Escape' }); fireEvent.pointerDown(overlay); fireEvent.click(overlay);
+  fireEvent.keyDown(dialog, { key: 'Tab' }); expect(dialog).toHaveFocus();
+  expect(cancel).not.toHaveBeenCalled(); expect(screen.getByRole('dialog')).toBeInTheDocument();
 });

@@ -14,6 +14,10 @@ const alertVariants = cva(
         caution: "bg-caution-surface *:data-[slot=alert-title]:text-caution",
         positive: "bg-positive-surface",
         destructive: "bg-negative-surface",
+        // A message in the flow of a form or list: caution text on its surface, or a confirmation
+        // in ink on the positive surface. Its content flows inline (a retry beside a link).
+        notice: "block bg-caution-surface text-caution wrap-anywhere",
+        success: "block bg-positive-surface text-foreground wrap-anywhere",
       },
     },
     defaultVariants: {

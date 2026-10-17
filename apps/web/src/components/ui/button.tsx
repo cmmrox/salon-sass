@@ -14,10 +14,16 @@ const buttonVariants = cva(
         default: "border-primary bg-primary text-primary-foreground",
         outline: "border-foreground bg-transparent text-foreground",
         destructive: "border-destructive bg-transparent text-destructive",
+        // An icon-only control drawn on a field, such as the password visibility toggle.
+        ghost: "border-transparent bg-transparent text-muted-foreground",
+        // Text in the salon's colour (ink when the brand is too light), underlined in the brand.
+        link: "rounded-none border-0 bg-transparent font-normal text-link underline decoration-primary underline-offset-2",
       },
       size: {
         default: "min-h-action px-6 py-3",
         sm: "min-h-action px-4 py-2",
+        icon: "p-0",
+        link: "min-h-touch px-0 py-2 text-small",
       },
     },
     defaultVariants: {

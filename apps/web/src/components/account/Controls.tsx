@@ -1,16 +1,64 @@
 'use client';
 import { useTranslations } from 'next-intl';
-import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from 'react';
-import styles from './Account.module.css';
+import type { ComponentProps, InputHTMLAttributes, ReactNode } from 'react';
+import { Button as UiButton } from '@/components/ui/button';
+import { Card, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
+
 const controlTestId = (name: string) => `account-${name.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase()}`;
-export function Field({ name, label, error, ...props }: InputHTMLAttributes<HTMLInputElement> & { name: string; label: string; error?: boolean }) {
+
+/**
+ * A labelled field with its refused-input message tied to it. `login` is the staff sign-in's larger
+ * field (CR-012); `inputClassName` leaves room for a control drawn on the field.
+ */
+export function Field({ name, label, error, login = false, inputClassName, ...props }: Omit<InputHTMLAttributes<HTMLInputElement>, 'size'> & { name: string; label: string; error?: boolean; login?: boolean; inputClassName?: string }) {
   const t = useTranslations('account');
-  return <label className={styles.field} htmlFor={name}>{label}<input {...props} id={name} name={name} className={styles.input} data-testid={controlTestId(name)} aria-invalid={Boolean(error)} aria-describedby={error ? `${name}-error` : undefined} />{error && <span id={`${name}-error`} className={styles.error} data-testid={`${controlTestId(name)}-error`}>{t('fieldError')}</span>}</label>;
+  return (
+    <Label size={login ? 'login' : 'default'} htmlFor={name}>
+      {label}
+      <Input {...props} size={login ? 'login' : 'default'} className={inputClassName} id={name} name={name} data-testid={controlTestId(name)} aria-invalid={Boolean(error)} aria-describedby={error ? `${name}-error` : undefined} />
+      {error && <span id={`${name}-error`} className="text-destructive" data-testid={`${controlTestId(name)}-error`}>{t('fieldError')}</span>}
+    </Label>
+  );
 }
-export function Button({ children, testId, secondary, danger, ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { testId: string; secondary?: boolean; danger?: boolean }) {
-  return <button {...props} className={`${styles.button} ${secondary ? styles.secondary : ''} ${danger ? styles.danger : ''}`} data-testid={testId}>{children}</button>;
+
+/** An account action: the brand's pill, an ink outline (`secondary`) or the negative outline (`danger`). */
+export function Button({ testId, secondary, danger, ...props }: ComponentProps<typeof UiButton> & { testId: string; secondary?: boolean; danger?: boolean }) {
+  return <UiButton {...props} variant={danger ? 'destructive' : secondary ? 'outline' : 'default'} data-testid={testId} />;
 }
-export function Section({ title, children, signIn = false }: { title: string; children: ReactNode; signIn?: boolean }) { return <section className={`${styles.card} ${signIn ? styles.signIn : ''}`}><h2 className={styles.sectionTitle}>{title}</h2>{children}</section>; }
-export function Check({ name, label, checked, onChange, disabled }: { name: string; label: string; checked: boolean; disabled?: boolean; onChange: (checked: boolean) => void }) { return <label className={styles.check}><input type="checkbox" disabled={disabled} data-testid={controlTestId(name)} checked={checked} onChange={(event) => onChange(event.target.checked)} />{label}</label>; }
+
+/** One white card of the workspace, with its heading. */
+export function Section({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <Card asChild className="p-4 rail:p-6">
+      <section>
+        <CardTitle asChild className="text-large leading-heading wrap-anywhere">
+          <h2>{title}</h2>
+        </CardTitle>
+        {children}
+      </section>
+    </Card>
+  );
+}
+
+/** A checkbox whose whole label is its 44px target. */
+export function Check({ name, label, checked, onChange, disabled, className }: { name: string; label: string; checked: boolean; disabled?: boolean; onChange: (checked: boolean) => void; className?: string }) {
+  return (
+    <Label className={cn('min-h-touch flex-row items-center gap-3 text-body font-normal', className)}>
+      <Checkbox disabled={disabled} data-testid={controlTestId(name)} checked={checked} onCheckedChange={(state) => onChange(state === true)} />
+      {label}
+    </Label>
+  );
+}
+
 /** Data still pending after the salon's page is shown; `inline` sits inside a section's card. */
-export function AccountLoading({ inline = false }: { inline?: boolean }) { const t = useTranslations('account'); return <div className={inline ? styles.loading : styles.card} role="status" data-testid={inline ? 'account-list-loading' : 'account-loading'}><p>{t(inline ? 'listLoading' : 'loading')}</p>{[1, 2, 3].map((id) => <span key={id} className={styles.skeleton} aria-hidden="true" />)}</div>; }
+export function AccountLoading({ inline = false }: { inline?: boolean }) {
+  const t = useTranslations('account');
+  const lines = [1, 2, 3].map((id) => <Skeleton key={id} className="h-field" aria-hidden="true" />);
+  if (inline) return <div className="flex min-w-0 flex-col gap-3" role="status" data-testid="account-list-loading"><p>{t('listLoading')}</p>{lines}</div>;
+  return <Card className="p-4 rail:p-6" role="status" data-testid="account-loading"><p>{t('loading')}</p>{lines}</Card>;
+}
