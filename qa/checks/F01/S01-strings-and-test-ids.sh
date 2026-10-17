@@ -59,13 +59,16 @@ altered "a link with an empty test id" "$STATUS" "s.replace('data-testid=\"statu
 altered "a button added with no test id" "$STATUS" "s.replace('<p data-testid=\"status-unavailable-body\">', '<button type=\"button\" onClick={undefined}>{t(\\'unavailable.retry\\')}</button><p data-testid=\"status-unavailable-body\">')"
 altered "a shared Button with its testId removed" "src/components/account/AccountScreen.tsx" "s.replace(' testId=\"account-logout\"', '')"
 altered "a broken shared Button forwarding contract" "src/components/account/Controls.tsx" "s.replace(' data-testid={testId}', '')"
+# CR-016: shadcn/ui primitives forward the caller's props; the test id is required where they are used.
+altered "a shadcn/ui Input used with no test id" "src/components/account/Controls.tsx" "s.replace(' data-testid={controlTestId(name)} aria-invalid', ' aria-invalid', 1)"
+altered "a shadcn/ui primitive that no longer forwards its props" "src/components/ui/input.tsx" "s.replace('      {...props}', '', 1)"
 altered "the home link of the not-found page with its test id removed" "src/app/not-found.tsx" "s.replace(' data-testid=\"not-found-home\"', '')"
 altered "a page title typed into the layout" "src/app/layout.tsx" "s.replace(\"title: t('name')\", \"title: 'Salon'\")"
 altered "an empty string in the translation file" "messages/en.json" "s.replace('\"Try again\"', '\"\"')" "messages/en.json"
 
 # Comparisons are boolean conditions, not text. The existing nonempty committed AccountScreen
 # contains comparison operands and real Button.testId uses, and must scan clean.
-expect_contains "valid comparison/Button fixture exists" "kind === 'staff'" "$(cat "$REPO_ROOT/apps/web/src/components/account/AccountScreen.tsx")"
+expect_contains "valid comparison/Button fixture exists" "view === 'staff'" "$(cat "$REPO_ROOT/apps/web/src/components/account/AccountScreen.tsx")"
 expect_contains "valid wrapped-button fixture exists" 'testId="account-logout"' "$(cat "$REPO_ROOT/apps/web/src/components/account/AccountScreen.tsx")"
 
 # 2. The committed web app.
