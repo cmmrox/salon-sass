@@ -1,5 +1,84 @@
 # F02 Sign-in, accounts and roles: product review
 
+## Current CR-017 independent review of the staff screens (2026-10-18)
+
+Reviewed as: a receptionist on a 768px tablet and a 390px phone, a salon owner at a 1280-1440px desk and a professional on a 360px phone; signed out (sign-in, recovery, refused sign-in, MFA challenge, Owner enrolment) and signed in (account and devices, staff with Owner controls and a Professional, the role Select open, audit, confirmation, a Receptionist's denied page), for alpha, beta and gamma.
+Compared with: the accepted CR-016 build (`79ec9d2`, side by side), the owner's CR-012 sign-in reference and the prototype's tokens. Competitor findings below are not refreshed.
+
+### Verdict
+
+The account screens now use the shadcn/ui component for every job. They feel more like a finished product: roles and states read at a glance as Badges, rows are clearly bounded Items, the pager shows where you are, and the authenticator code is six slots that refuse letters. Sign-in keeps the CR-012 composition; the only change there is the eye toggle sitting inside the 54px field. The role Select works fully from the keyboard and announces itself correctly: a combobox named "Role", Enter opens it, the arrows move, Enter chooses, Escape cancels, and focus returns each time. No product defect was found in F02. QA status: pass, on base-plus-delta evidence for the lead's closure.
+
+### Verification in this pass
+
+- Tested revision `2fc8425` (product identical to `29fb3d1`). Developer gates: `qa/reports/20261018-014949-F01-commands-fcd90bc3cfa8`, 10/10, a superset of F02's six gates.
+- Sealed F02 delta `qa/reports/20261018-020402-F02-delta-ed7240fe5e86`, 8/8 entries pass: web-functional 7, browser-security 8, web-presentation 6, web-resilience-address 2, web-theme-entry 5, shadcn-composition 1, component-map 1 (new, TC-F02-S04-031) and account-journeys 1. These rerun groups also cover what the developer did not re-exercise: rate-limit lockout, cross-tab renewal and replay revocation, the frozen-API budget, and no upstream call for removed customer actions.
+- Retained under CR-009, not rerun: the S01-S03 Java API suites, the nonlocal checks and the read baseline.
+- Manual, performed 2026-10-18: TC-F02-S04-030 (comparison with the CR-016 build), TC-F02-S04-032 (the owner's component-map review) and TC-F02-S04-018 (keyboard: 150 stops, all with the 3px `#1D5FD0` outline, no trap).
+- Expectations CR-017 made wrong were corrected without changing their meaning:
+  - Roles are now chosen through the Select's trigger and option rather than `selectOption`.
+  - The password field's radius and focus accent are read on its Input Group.
+  - Radix's aria-hidden form select is not treated as a control, and the checkbox's target is its own label.
+  - The header is exactly 60px from 900px.
+  - A field is focused only after the closing sheet has handed focus back.
+- Two timing effects needed the tests to wait; neither is a product defect:
+  - Select options measure 42px only while the opening zoom runs; settled, they are 44px.
+  - A backdrop click in the same instant the sheet opens is ignored (Radix); a click a moment later closes it.
+
+### Component-map review (owner's request)
+
+Every state was inventoried by `data-slot`; no raw or native control appears in any state, and there is no Native Select. Jobs map as follows:
+
+| Job | Component in the product |
+| --- | --- |
+| Labelled input | Field, FieldLabel, FieldDescription and FieldError |
+| Password with visibility | Input Group with InputGroupButton |
+| Authenticator code | Input OTP, 6 slots |
+| Role choice | Select |
+| Professional grant | horizontal Field with Checkbox |
+| Device, staff and audit rows | ItemGroup and Item |
+| Role, state and current device | Badge |
+| Pager | Pagination |
+| Refusal, enrolment notice, MFA enabled and denied | Alert |
+| Busy sign-in | Spinner |
+| Divider | Separator |
+| Initial | Avatar |
+| Containers | Card |
+| Confirmation | Sheet |
+
+Allowed plain HTML: headings, the permissions list, the audit JSON, and the setup key and URI as labelled outputs (the map's own row). Two states cannot be reached with real data: Empty, because every list holds at least the viewer, and the retry-wait Alert, which needs a rate-limit lockout of a shared salon. The developer's composition tests cover both.
+
+### How the new controls feel
+
+- **Sign-in and MFA:** the eye inside the field and the six code slots are familiar from banking and authenticator apps. The active slot shows the brand ring plus the blue keyboard outline, which reads well even on gamma's pale yellow.
+- **Staff and devices:** Badges and Item rows make each member's role and state much easier to scan. However, when a row's actions sit beside the text, a long email or a device's "Created" date is squeezed into a narrow column and breaks across 4-6 lines. This happens on the staff list at 1280 (the card is only about 450px wide on a 1280px screen, as it was before CR-017) and on devices at 390. See SUG-F02-11.
+- **Role Select:** the white list with a check mark is clearer than the native picker on desktop. On a phone it can open upward over the form, which is acceptable.
+
+### Suggestions
+
+Ranked, most valuable first. Earlier suggestions stand.
+
+| Id | Class | Suggestion | Disposition |
+| --- | --- | --- | --- |
+| SUG-F02-11 | should | Stop Item rows squeezing long text into a narrow column beside their actions | |
+
+#### SUG-F02-11 Stop Item rows squeezing long text beside their actions
+
+- **Observed:** on Staff access at 1280, the second member's email breaks across six lines in a column about 80px wide next to the Role select and Remove button, while the first member's row stacks its controls below. On Account at 390 the device's "Created" date takes four lines beside "Sign out this device". Captures: `side/beta-staff-1280.png`, `side/beta-account-390.png`, `unmasked/select-gamma-1280.png`.
+- **Why it matters:** an owner checking who has access reads email addresses; broken mid-word they are slow to read and easy to misread. Real emails are shorter than the synthetic ones, but many are not short.
+- **Instead:** let `ItemActions` wrap below `ItemContent` when the row is narrower than a set width (or always on the staff list). Also give the staff card the workspace's content width on a desk (it is about 450px inside a 1280px page).
+- **Evidence:** the captures above, in `qa/reports/20261018-CR017-manual/`.
+
+### Notes for the lead (documents)
+
+- The F02-S04 handoff says "options and pager controls 44px+"; this is true once the Select's opening animation settles.
+- Commit the draft `qa/reports/cr017-assessment-draft/scoped-qa.json` (F02 can use it as is; F01 needs its stack re-verification first) and point the features' `evidence.scoped_assessment` at it.
+
+### Bugs filed from this pass
+
+- None in F02.
+
+
 ## Current CR-016 independent review of the staff screens (2026-10-17)
 
 Reviewed as: a receptionist on a 768px tablet and a 390px phone, a salon owner at a 1280-1440px desk and a professional on a 360px phone; signed out (sign-in, recovery guidance, refused sign-in, MFA challenge and Owner enrolment) and signed in (account and devices, staff with Owner controls and a Professional, audit, the sign-out confirmation), for alpha (default), beta (dark, long name) and gamma (light). Synthetic accounts seeded through the local hook; credentials kept in memory.
