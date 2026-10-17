@@ -2,12 +2,12 @@
 id: BUG-F02-012
 title: Staff sign-in can hang until an unresponsive API resumes instead of answering 503 within the three-second budget
 severity: major
-status: open
+status: fixed
 found_by: TC-F02-S04-020
 breaks: AC-8
 found_on: 2026-10-17
-fixed_in: null
-fix_note: null
+fixed_in: 881ca87
+fix_note: 'Root cause: the API deadline reached the socket only through copied Requests whose abort signals follow their parent weakly; a GC while the API was silent dropped the abort. withTraceparent now enforces the request budget with a strongly held timer and hands its signal to the transport directly (fetchForHostname uses it as given). Evidence .local/logs/bug-f02-012-before.log (11/11 red with forced GC), bug-f02-012-repro-prefix.log (frozen API: no answer in 30 s, 3/3), bug-f02-012-after-runtime.log (503 in about 3.0 s, 5/5).'
 developer_note: null
 verified_on: null
 approved_by: null
