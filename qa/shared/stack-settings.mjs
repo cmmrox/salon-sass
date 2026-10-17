@@ -5,6 +5,8 @@ import { execFileSync } from 'node:child_process';
 export const qaRoot=path.resolve(import.meta.dirname,'../..');
 function qaLocal(name){try{const line=fs.readFileSync(path.join(qaRoot,'qa/.env.local'),'utf8').split('\n').find(l=>l.startsWith(name+'='));return line?line.slice(name.length+1).trim():undefined;}catch{return undefined;}}
 /** The checkout that owns the stack (.env.stack, .stack/, infra scripts, the commit its images are built from): QA_PRODUCT_ROOT, else the QA checkout. */
+/** A salon's rendered entry page. Since CR-010 a salon's `/` answers a no-store 307 to `/workspace` (F01-S03 AC-1); signed out, that ends at the staff sign-in naming the salon. */
+export const ENTRY='/workspace/sign-in';
 export const root=path.resolve(process.env.QA_PRODUCT_ROOT||qaLocal('QA_PRODUCT_ROOT')||qaRoot);
 export const report=process.env.QA_REPORT_DIR||path.join(root,'qa/reports/adhoc');
 export function readEnv(file){return Object.fromEntries(fs.readFileSync(file,'utf8').split('\n').filter(l=>/^[A-Z_0-9]+=/.test(l)).map(l=>{const i=l.indexOf('=');return[l.slice(0,i),l.slice(i+1).replace(/^"|"$/g,'')];}));}

@@ -38,7 +38,7 @@ Environment: local only; the synthetic alpha, beta and gamma salons of docs/qa/t
 - **Preconditions:** Final integrated F01 tree is committed; local product is running and all salons are active. Stack cases also require the local HTTP production-like stack seeded; deployment cases require versions N and N+1 from this tested tree.
 - **Steps:**
   1. Request each salon and neutral hostname on the HTTP edge.
-- **Expected:** Correct salon pages/API; bare host status200; unknown and console404. Staging TLS is deferred to TC-F01-002 under CR-005.
+- **Expected:** Each salon's `/` answers a no-store 307 to its own `/workspace` (CR-010, F01-S03 AC-1) and its entry page (the staff sign-in) names that salon; its API returns its brand; bare host status 200; unknown and console 404. Staging TLS is deferred to TC-F01-002 under CR-005. Reconciled 2026-10-17: the former 200 salon shell at `/` no longer exists.
 - **Automation:** `qa/checks/F01/S05-stack.sh`
 
 ### TC-F01-S05-004 New salon gets HTTP immediately without edge restart
@@ -50,7 +50,7 @@ Environment: local only; the synthetic alpha, beta and gamma salons of docs/qa/t
 - **Preconditions:** Final integrated F01 tree is committed; local product is running and all salons are active. Stack cases also require the local HTTP production-like stack seeded; deployment cases require versions N and N+1 from this tested tree.
 - **Steps:**
   1. Add unique synthetic salon via stack-seed; immediately read web/API; compare edge identity.
-- **Expected:** New brand on first HTTP request, same edge process.
+- **Expected:** The new salon's entry page names it on the first HTTP request, its API returns its brand, same edge process.
 - **Automation:** `qa/checks/F01/S05-stack.sh`
 
 ### TC-F01-S05-005 Only edge is published and forged tenant fields do not switch salons
@@ -62,7 +62,7 @@ Environment: local only; the synthetic alpha, beta and gamma salons of docs/qa/t
 - **Preconditions:** Final integrated F01 tree is committed; local product is running and all salons are active. Stack cases also require the local HTTP production-like stack seeded; deployment cases require versions N and N+1 from this tested tree.
 - **Steps:**
   1. Inspect published container ports; request alpha web/API with beta selectors.
-- **Expected:** Only the HTTP edge port; alpha stays alpha.
+- **Expected:** Only the HTTP edge port; alpha's entry page and API stay alpha with beta's selectors.
 - **Automation:** `qa/checks/F01/S05-stack.sh`
 
 ### TC-F01-S05-006 Production-like roles enforce least privilege idempotently
@@ -109,7 +109,7 @@ Environment: local only; the synthetic alpha, beta and gamma salons of docs/qa/t
 - **Performed as:** QA operator on synthetic local data; public caller on each salon hostname.
 - **Preconditions:** Final integrated F01 tree is committed; local product is running and all salons are active. Stack cases also require the local HTTP production-like stack seeded; deployment cases require versions N and N+1 from this tested tree.
 - **Steps:**
-  1. Under 50 VUs stop one API/web, confirm surviving reads, start them and wait readiness.
+  1. Under 50 VUs stop one API/web, confirm beta's entry page and gamma's API still answer 200 from the surviving instances, start them and wait readiness.
 - **Expected:** Zero failed GET/cross-tenant result; return without edge action.
 - **Automation:** `qa/checks/F01/S05-deployment.sh`
 
@@ -133,7 +133,7 @@ Environment: local only; the synthetic alpha, beta and gamma salons of docs/qa/t
 - **Performed as:** QA operator on synthetic local data; public caller on each salon hostname.
 - **Preconditions:** Final integrated F01 tree is committed; local product is running and all salons are active. Stack cases also require the local HTTP production-like stack seeded; deployment cases require versions N and N+1 from this tested tree.
 - **Steps:**
-  1. View alpha with trace and secret markers; read web/API JSON logs and collector spans/metrics.
+  1. View alpha's entry page with trace and secret markers; read web/API JSON logs and collector spans/metrics.
 - **Expected:** One alpha web line, same API trace/id, collector API spans carry alpha, S04 meters exist, no query/cookie/token value logged.
 - **Automation:** `qa/checks/F01/S05-stack.sh`
 
