@@ -46,7 +46,7 @@ current staff sign-in at the same address.
 ## Decision on the theme
 
 - The prototype's final effective tokens are the platform theme for the salon web application:
-  warm canvas `#F3F0EB`, secondary surface `#EAE5DC`, lines `#DDD6CA`, white cards, ink `#141413`
+  warm canvas `#F3F0EB`, secondary surface `#EAE5DC`, lines `#DDD6CA`, white cards, ink `#111827`
   and muted `#6B7280`, Poppins, pills and rounded cards and fields, with the status colours as they
   are.
 - **The accent is the salon's brand colour**, with its computed readable foreground. It is used

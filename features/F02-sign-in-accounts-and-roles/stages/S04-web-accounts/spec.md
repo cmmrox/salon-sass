@@ -76,7 +76,7 @@ implementation, future business dashboards, operator console (F03), real messagi
   warm palette, loaded Poppins, pills, rounded fields/cards and responsive Salon rail/tab layout.
   Customer's 430px canvas is not a web reference. (NFR-21)
 - AC-10 (CR-013): Sign-in and workspace share one theme, the prototype's final tokens (canvas
-  `#F3F0EB`, secondary `#EAE5DC`, lines `#DDD6CA`, white cards, ink `#141413`, muted `#6B7280`).
+  `#F3F0EB`, secondary `#EAE5DC`, lines `#DDD6CA`, white cards, ink `#111827`, muted `#6B7280`).
   Wherever the prototype uses its accent (`--ac`, `--acs`, `--onac`): the sign-in action, initial
   ring, links and field focus, and the workspace's primary actions, selected navigation item,
   selected chips and focus accents use the salon's API brand colour, its soft tint and its computed
