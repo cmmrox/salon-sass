@@ -443,6 +443,24 @@ cases:
   priority: high
   covers:
   - AC-12
+- id: TC-F01-S03-014
+  title: Tailwind CSS 4 and shadcn/ui are set up and the styling rules test fails on each introduced violation
+  type: build
+  priority: high
+  covers:
+  - AC-13
+- id: TC-F01-S03-015
+  title: The rebuilt shell, navigation and foundation pages keep the reference look at six widths and three brands
+  type: responsive
+  priority: high
+  covers:
+  - AC-14
+- id: TC-F01-S03-016
+  title: Every shell and foundation screen renders as the pre-CR-016 build did
+  type: responsive
+  priority: high
+  covers:
+  - AC-14
 verification:
   commands:
   - cd apps/api && ./mvnw -q verify
@@ -480,7 +498,38 @@ verification:
     - TC-F01-S03-007
     suites:
     - regression
-  manual: []
+  - id: styling-setup
+    tool: script
+    file: qa/checks/F01/S03-styling-setup.sh
+    covers:
+    - TC-F01-S03-014
+    suites:
+    - regression
+  - id: shadcn-shell
+    tool: playwright
+    file: qa/web/F01/S03-shadcn-shell.spec.ts
+    project: web
+    covers:
+    - TC-F01-S03-015
+    suites:
+    - regression
+  manual:
+  - case: TC-F01-S03-016
+    reason: 'CR-016 side-by-side judgment, performed 2026-10-17 by independent QA. The pre-CR-016 product (fefc4fd, product
+      source identical to the QA-passed CR-013 build 8fd1939) was built in a scratch worktree outside the repository and
+      served on :3101 against the same API and sessions as the rebuilt product (:3100, de69786, product source identical to
+      858cac3); each state was captured from both back to back and compared pixel by pixel. F01 rows: platform status
+      (loaded, and unavailable with the API stopped), the application not-found page, the plain salon-not-found,
+      salon-unavailable (gamma suspended) and service-unavailable (API stopped) pages, and the signed-in workspace shell
+      (header, rail or bottom tabs, account, staff and audit) for alpha, beta and gamma at 360/390/768/1024/1280/1440:
+      every F01 pair pixel-identical, identical test-id sets and text, no horizontal overflow. The status loading
+      skeleton (API silent) was inspected on the new build only. Needs a second build of an earlier revision, so it is a
+      one-time migration judgment rather than regression automation; TC-F01-S03-015 keeps the rendered contract
+      automated. Evidence qa/reports/20261017-CR016-manual/ (pixel-comparison.json sha256
+      4920c28746fdf56de6a8c32c069ced3bb2a56a031d8fcf8be2af3f58de5304f4, pairs/facts.json sha256
+      184c81f2702309e44874c1141217aa08c560b17b2a9b6fde91ecaaaa7a45dd49, capture and compare scripts). Inputs masked in
+      every capture; the HTML prototype itself was not previewed side by side (the accepted rendered build is the reference).'
+    performed_on: 2026-10-17
   deferred: []
 evidence:
   last_run: null

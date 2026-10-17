@@ -26,7 +26,7 @@ await one('TC-F01-S05-001','images are unprivileged, report the tested commit an
       for(const weight of [400,500,600])await document.fonts.load(`${weight} 15px Poppins`);
       await document.fonts.ready;
       const screen=document.querySelector('[data-testid="staff-sign-in-screen"]');
-      return {family:getComputedStyle(document.body).fontFamily,width:screen.getBoundingClientRect().width,canvas:getComputedStyle(document.documentElement).getPropertyValue('--color-background').trim().toUpperCase(),
+      return {family:getComputedStyle(document.body).fontFamily,width:screen.getBoundingClientRect().width,canvas:getComputedStyle(document.documentElement).getPropertyValue('--background').trim().toUpperCase(),
         loaded:Array.from(document.fonts).filter(face=>face.family.replaceAll(/['"]/g,'')==='Poppins'&&face.status==='loaded').map(face=>face.weight),
         checked:[400,500,600].map(weight=>document.fonts.check(`${weight} 15px Poppins`))};
     });

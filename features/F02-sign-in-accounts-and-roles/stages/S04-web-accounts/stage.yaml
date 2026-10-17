@@ -494,6 +494,18 @@ cases:
   covers:
   - AC-8
   - AC-10
+- id: TC-F02-S04-029
+  title: staff screens and the confirmation overlay are shadcn/ui components with the overlay's dismissal and focus behaviour
+  type: functional
+  priority: high
+  covers:
+  - AC-12
+- id: TC-F02-S04-030
+  title: every staff screen and state renders as the pre-CR-016 build did, apart from the mandated checkbox
+  type: responsive
+  priority: high
+  covers:
+  - AC-13
 verification:
   commands:
   - cd apps/api && ./mvnw -q verify
@@ -564,20 +576,45 @@ verification:
     - TC-F02-S04-028
     suites:
     - regression
+  - id: shadcn-composition
+    tool: playwright
+    file: qa/web/F02/S04-shadcn-composition.spec.ts
+    project: web
+    covers:
+    - TC-F02-S04-029
+    suites:
+    - regression
   manual:
   - case: TC-F02-S04-018
-    reason: 'CR-013 manual judgment performed 2026-10-17 on the running local build (API/web from be188ca, application
-      source identical to developer-gated 756fdef). Synthetic MANAGER per salon seeded through the local hook; random
-      credentials only in ignored 0600 .local/cr013-qa-tc018-fixture.json. Keyboard-only traversal of staff sign-in at
-      360/768/1536 and the workspace account at 390/1280 for alpha (#D6086A), beta (dark #1F2937) and gamma (light #FDE68A):
-      ordered focus identifier, password, visibility toggle, recovery, sign-in, then wraps; no trap; every stop
-      :focus-visible with a 3px #1D5FD0 outline in view; fields add the 2px brand inset ring. Action contrast 5.12/14.68/14.24
-      (gamma ink text); recovery text brand for alpha/beta (5.12/14.68 on white) and ink with brand underline for gamma;
-      desktop selected rail item brand fill with readable text, phone tab soft tint with ink; wrong-password error announced
-      (role alert) with focus kept on the password. 120 focus screenshots and observations
-      qa/reports/20261017-F02-TC018-manual/TC018-observations.json sha256 0eac0e5577b20a833bfc11293c9580b52df36024c546a3cc02c939d99b623155, visually inspected. Machine-captured
-      keyboard sequences through repository Playwright, not a native assistive-technology session. Earlier CR-012 and 2026-10-14
-      protected-account evidence is historical.'
+    reason: 'Re-performed after CR-016 on 2026-10-17 by independent QA on the rebuilt product (de69786, product source
+      identical to developer-gated 858cac3). Synthetic MANAGER per salon seeded through the local hook, credentials in
+      memory only. Keyboard-only traversal of staff sign-in at 360/768/1536 and the workspace account at 390/1280 for
+      alpha (#D6086A), beta (dark #1F2937) and gamma (light #FDE68A): sign-in order identifier, password, visibility
+      toggle, recovery, sign-in, then out of the page and back to the identifier (no trap); account order header name,
+      navigation, sign out, password fields and action, authenticator, device and sign-out-all actions, then wraps. All
+      147 stops :focus-visible with a solid 3px #1D5FD0 outline, offset 2px, inside the viewport, none hidden behind the
+      phone tabs in the inspected captures; the status page retry shows the same outline. 156 focus captures and
+      observations qa/reports/20261017-CR016-manual/keyboard/keyboard-observations.json sha256
+      af3589aea4da46eabf4de661027d4d9467ffc02433835c8ea8817566d11d322a, a sample inspected by eye. Contrast and the
+      announced error are automated in TC-F02-S04-024/028 and 017. Machine-captured keyboard sequences through repository
+      Playwright, not a native assistive-technology session. The CR-013 judgment is historical.'
+    performed_on: 2026-10-17
+  - case: TC-F02-S04-030
+    reason: 'CR-016 side-by-side judgment, performed 2026-10-17 by independent QA: the pre-CR-016 product (fefc4fd, product
+      identical to the QA-passed CR-013 build 8fd1939) on :3101 and the rebuilt product (de69786) on :3100, same API,
+      sessions and data, captured back to back and compared pixel by pixel. Staff sign-in, recovery guidance, refused
+      sign-in, MFA challenge, Owner MFA enrolment (key masked), account with devices, staff with Owner controls and a
+      Professional, audit and the confirmation sheet/drawer, for alpha, beta and gamma at the six widths where
+      applicable: 162 pairs in all (F01 and F02), 155 pixel-identical. Differences: alpha staff at each width, the
+      Professional grant control only, now the shadcn/ui Checkbox required by AC-12 (24px, 4px radius, 1px #6B7280 line
+      instead of the native box; it sits 4px further left and its label text 7px further left because the native
+      control carried user-agent margins of 3-4px; the 44px label target is unchanged); beta MFA challenge at 1280, only
+      the code expiry minute (data). Test-id sets identical in all 162 states, visible text identical apart from the
+      portalled overlay order, the random setup key and that expiry, no horizontal overflow in 324 captures. Needs a
+      second build of an earlier revision, so it is a one-time migration judgment; the rendered contract stays automated
+      in TC-F02-S04-016/023/024/029. Evidence qa/reports/20261017-CR016-manual/ (pixel-comparison.json sha256
+      4920c28746fdf56de6a8c32c069ced3bb2a56a031d8fcf8be2af3f58de5304f4, pairs/facts.json with secrets redacted sha256
+      184c81f2702309e44874c1141217aa08c560b17b2a9b6fde91ecaaaa7a45dd49, crop-*.png).'
     performed_on: 2026-10-17
   deferred: []
 evidence:

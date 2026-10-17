@@ -21,6 +21,8 @@ S01/S02 cases are reused. Their superseded brand/error/network/migration expecta
 
 Across-stage restart and deployment risks are exercised by S04 AC-11 and S05 AC-8/AC-9 rather than repeated in a second journey.
 
+CR-016 (2026-10-17): Tailwind CSS 4 and shadcn/ui replace the CSS Modules with no intended visual or behaviour change. Types chosen for the changed web scope: `build` (AC-13 setup and its guarding test, TC-F01-S03-014), `responsive`/`branding`/`accessibility` (AC-14 rendered contract at six widths and three brands with the keyboard outline, TC-F01-S03-015; a one-time pixel comparison with the pre-CR-016 build, TC-F01-S03-016, manual), and a rerun of every existing web, browser and build entry the rebuilt web feeds (S01 status pages and string/test-id scan, S02 browser hostnames, S03 shell and web rush, the S05 production-like stack and deployment, which build the web image, and the journey). Retained under CR-009, not rerun: the Java API, database, migration, contract and platform-service entries (S01 API/database/profile/CI/contract checks, S02 API/database/load/seed/contract, S04): their source, contract and infrastructure scripts are unchanged since their last passing runs, so the CSS rebuild cannot reach them.
+
 ## Cases
 
 ### TC-F01-001 Salon identity stays bound across shell API audit delivery and cleanup

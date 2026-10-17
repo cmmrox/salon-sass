@@ -158,3 +158,37 @@ Environment: local only; the synthetic alpha, beta and gamma salons of docs/qa/t
   1. Inspect salon 403 and error enumeration; shared contract drift checks run as S01/S02 automation.
 - **Expected:** 403 documented and salon_suspended exposed; contract check passes.
 - **Automation:** `qa/web/F01/S03-branded-shell.spec.ts`
+
+## CR-016 cases (reconciled 2026-10-17)
+
+CR-016 rebuilds the web app on Tailwind CSS 4 and shadcn/ui with no intended visual or behaviour change. TC-F01-S03-001 to -013 are unchanged in meaning and are rerun. The shared design helper now reads the prototype's tokens under shadcn/ui's variable names (AC-13); their values are unchanged.
+
+### TC-F01-S03-014 Tailwind CSS 4 and shadcn/ui are set up and the styling rules test fails on each introduced violation
+
+- **Type:** build
+- **Priority:** high
+- **Covers:** AC-13
+- **Performed as / preconditions:** QA operator; committed tree with its dependencies installed. Nothing in the repository is altered: violations are made in a copy of the committed `apps/web` in a temporary folder outside it.
+- **Steps:** Read the committed `postcss.config.mjs`, `components.json`, `src/app/globals.css`, `src/styles/theme.css` and `src/lib/utils.ts`; list every style sheet and every style-sheet import under `apps/web/src`. Run `src/styles/styling-rules.test.ts` on the unaltered copy; then, one at a time, add a CSS Module, a second style sheet, a component with `bg-[#D6086A]` and a component holding the hex colour `'#D6086A'`, and run it again; remove each and run it once more.
+- **Expected:** Tailwind's PostCSS plugin with no `tailwind.config`, Tailwind 4; `components.json` names `globals.css`, CSS variables and the `@/components/ui` and `@/lib/utils` aliases; `globals.css` imports Tailwind and the theme; `theme.css` holds `--background #F3F0EB`, `--foreground #111827`, `--card #FFFFFF`, `--secondary #EAE5DC`, `--muted-foreground #6B7280`, `--border #DDD6CA`, `--destructive #B3261E`, `--ring #1D5FD0`, with `--primary`, `--primary-foreground` and `--accent` reading the brand variables; `cn()` built on tailwind-merge. The only style sheets are `globals.css`, `theme.css` and `plain-page.css`, no CSS Module; only the root layout imports a style sheet, and the plain pages read theirs as text. The test passes on the unaltered and the restored copy and fails, naming the added file, for each violation.
+- **Automation:** `qa/checks/F01/S03-styling-setup.sh`
+
+### TC-F01-S03-015 The rebuilt shell, navigation and foundation pages keep the reference look at six widths and three brands
+
+- **Type:** responsive
+- **Priority:** high
+- **Covers:** AC-14
+- **Performed as / preconditions:** A synthetic Manager of each salon, signed in through the API; a public caller for the foundation pages. Rows: alpha `#D6086A` (default), beta `#1F2937` (dark, long name), gamma `#FDE68A` (light). Gamma is suspended and the API stopped briefly for the plain pages, and both are restored.
+- **Steps:** At 360/390/768/1024/1280/1440 open each salon's workspace account: read the theme tokens and loaded Poppins, the shell, header, navigation and main area, the selected navigation item, the test ids and the fit; Tab to the first navigation link. At the same widths open the platform status page and the application not-found page (`/salon-site` on alpha), and Tab to the not-found page's link. Request the plain salon-not-found, temporarily-unavailable and service-unavailable pages.
+- **Expected:** Warm canvas `#F3F0EB`, Poppins 400/500/600 at 15px and the prototype's tokens everywhere; sticky 60px header (white with a border from 900px), the 200/236px rail from 900/1200px and fixed bottom tabs below 900px; the selected rail item filled with the brand and a readable foreground, the phone tab a soft brand tint with ink text; the header names the salon; test ids follow the convention; no horizontal overflow or clipping. Keyboard focus draws a solid 3px `#1D5FD0` outline offset 2px. Status card white, 24px radius, no shadow, 22px heading; the not-found page neutral with no salon's colour. The plain pages answer 404/503/503 with their handles, no `<script>`, the theme inlined and no salon's name or colour.
+- **Automation:** `qa/web/F01/S03-shadcn-shell.spec.ts`; screenshots under the run's `design/` folder.
+
+### TC-F01-S03-016 Every shell and foundation screen renders as the pre-CR-016 build did
+
+- **Type:** responsive
+- **Priority:** high
+- **Covers:** AC-14
+- **Performed as / preconditions:** QA operator. The last pre-CR-016 product (`fefc4fd`, identical to the QA-passed CR-013 build) is built in a scratch worktree outside the repository and served on a second port against the same API; the same sessions and data are used for both builds.
+- **Steps:** Capture each state from the old and the new build back to back at the six widths: platform status (loaded, unavailable), application not-found, the three plain pages, and the signed-in workspace shell on account, staff and audit for alpha, beta and gamma. Compare each pair pixel by pixel, and their test-id sets, visible text and overflow.
+- **Expected:** Pairs pixel-identical; any difference is explained by data or by a change CR-016 requires, and is classified. Same test ids and text, no overflow.
+- **Manual:** performed 2026-10-17; it needs a second build of an earlier revision, so it is a one-time migration judgment rather than regression automation. Evidence `qa/reports/20261017-CR016-manual/`.

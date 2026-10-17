@@ -5,8 +5,8 @@ summary: Salon staff sign in on the web with password and MFA, manage accounts a
   for the later React Native app; no customer web interface.
 release: R1
 milestone: M1-web
-status: in-progress
-qa_status: not-run
+status: in-qa
+qa_status: pass
 released_in: null
 depends_on:
 - F01
@@ -75,7 +75,7 @@ evidence:
 integration:
   branch: charithm/feature/F02-tailwind-shadcn
   pull_request: null
-  qa_revision: null
+  qa_revision: e73d99b0bbb38ec4db6b9cc837ea635286a1fed0
   merged_commit: null
   merged_at: null
 previous_integration:
