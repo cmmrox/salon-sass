@@ -2,14 +2,14 @@
 id: BUG-F02-012
 title: Staff sign-in can hang until an unresponsive API resumes instead of answering 503 within the three-second budget
 severity: major
-status: fixed
+status: verified
 found_by: TC-F02-S04-020
 breaks: AC-8
 found_on: 2026-10-17
 fixed_in: 881ca87
 fix_note: 'Root cause: the API deadline reached the socket only through copied Requests whose abort signals follow their parent weakly; a GC while the API was silent dropped the abort. withTraceparent now enforces the request budget with a strongly held timer and hands its signal to the transport directly (fetchForHostname uses it as given). Evidence .local/logs/bug-f02-012-before.log (11/11 red with forced GC), bug-f02-012-repro-prefix.log (frozen API: no answer in 30 s, 3/3), bug-f02-012-after-runtime.log (503 in about 3.0 s, 5/5).'
 developer_note: null
-verified_on: null
+verified_on: 2026-10-17
 approved_by: null
 found_in_release: null
 ---
@@ -41,4 +41,4 @@ Intermittent: 1 of 3 observed runs of this step. It answered 503 in about 3 s in
 
 ## Re-verification
 
-<QA, after a fix.>
+Verified 2026-10-17 on the handoff: running API/web from `881ca87` (merged as `c78b909`, identical source; the API restarted during the run reports `c78b909`), QA revision `c78b909`. Recorded F02-delta `qa/reports/20261017-094849-F02-delta-584884e9bba2`: all 6 web groups, 28 tests pass, including TC-F02-S04-020 (down and frozen API, shared-budget seam). Because the defect was intermittent (1 of 4), the frozen-API step was also repeated 10 times directly: freeze the API (`kill -STOP`), POST `/identity-web/staff/sign-in` with same-origin headers, resume. All 10 answered 503 in 3.002–3.007 s; the same request with the API live answered 400 in 0.08 s, so it passes CSRF and the 503 comes from the upstream deadline. Log `qa/reports/20261017-BUG-F02-012-frozen-api-probe/probe.txt`.

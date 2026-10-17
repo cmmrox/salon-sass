@@ -8,7 +8,7 @@ require_database
 WORK="$(mktemp -d)"; PID=""
 restore(){ if [ -n "$PID" ];then kill "$PID" 2>/dev/null||true;wait "$PID" 2>/dev/null||true;fi;rm -rf "$WORK"; }
 trap restore EXIT
-SCRIPTS="${QA_PRODUCT_ROOT:-$REPO_ROOT}/infra/scripts"
+# SCRIPTS is resolved by shared/checks.sh: QA_PRODUCT_ROOT from the shell or qa/.env.local, else this checkout.
 . "$SCRIPTS/lib/common.sh"
 load_settings
 resolve_java_home || environment_fault "installed JDK25 required"
