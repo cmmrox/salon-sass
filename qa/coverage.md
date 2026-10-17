@@ -6,7 +6,7 @@
 
 | Release | Requirements | Owned by a feature | Assigned to a stage | Passed QA |
 | --- | --- | --- | --- | --- |
-| R1 | 96 | 96 | 17 | 0 |
+| R1 | 96 | 96 | 17 | 10 |
 | R2 | 40 | 0 | 0 | 0 |
 | R3 | 22 | 0 | 0 | 0 |
 
@@ -19,13 +19,13 @@ asked for; the cases of a stage are written at its feature's pass.
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | F01-S01 | complete | pass | NFR-17, NFR-18 | 10 | 63 | 60 | 3 | 0 |
 | F01-S02 | complete | pass | NFR-01, NFR-07, NFR-15 | 12 | 45 | 45 | 0 | 0 |
-| F01-S03 | complete | - | BRD-03, NFR-01, NFR-17, NFR-21 | 15 | 16 | 15 | 1 | 0 |
+| F01-S03 | complete | - | BRD-03, NFR-01, NFR-17, NFR-21 | 15 | 19 | 17 | 2 | 0 |
 | F01-S04 | complete | - | BKG-15, NFR-01, NFR-10, NFR-15, NFR-16 | 16 | 18 | 18 | 0 | 0 |
 | F01-S05 | complete | - | BRD-03, NFR-01, NFR-07, NFR-16, NFR-18 | 12 | 12 | 12 | 0 | 0 |
 | F02-S01 | complete | - | IAM-06, IAM-07, IAM-08, IAM-09, IAM-11, NFR-08, NFR-10 | 10 | 30 | 30 | 0 | 0 |
 | F02-S02 | complete | - | IAM-01, IAM-03, IAM-09, IAM-10, IAM-11, NFR-08, NFR-10 | 8 | 18 | 18 | 0 | 0 |
 | F02-S03 | complete | - | IAM-03, IAM-04, IAM-05, IAM-11, NFR-08, NFR-10 | 6 | 14 | 14 | 0 | 0 |
-| F02-S04 | complete | - | IAM-01, IAM-03, IAM-04, IAM-05, IAM-06, IAM-07, IAM-08, IAM-09, IAM-10, IAM-11, NFR-08, NFR-10, NFR-21 | 14 | 29 | 27 | 2 | 0 |
+| F02-S04 | complete | - | IAM-01, IAM-03, IAM-04, IAM-05, IAM-06, IAM-07, IAM-08, IAM-09, IAM-10, IAM-11, NFR-08, NFR-10, NFR-21 | 14 | 31 | 28 | 3 | 0 |
 
 ## Deferred cases
 

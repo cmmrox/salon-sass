@@ -6,7 +6,7 @@
 # plugin), components.json, src/app/globals.css as the one style sheet the application imports,
 # src/styles/theme.css holding the prototype's final tokens under shadcn/ui's names with --primary
 # and --accent reading the salon brand variables, cn() in src/lib/utils.ts; no *.module.css and no
-# other style sheet under apps/web/src except plain-page.css. src/styles/styling-rules.test.ts
+# other style sheet under apps/web/src except the generated plain-page CSS (CR-017). src/styles/styling-rules.test.ts
 # passes on the committed tree and fails when a CSS Module, a second style sheet, an arbitrary
 # colour class or a hex colour in a component file is introduced.
 #
@@ -72,14 +72,14 @@ expect_contains "cn() merges with tailwind-merge" "tailwind-merge" "$utils"
 
 sheets="$(git -C "$REPO_ROOT" ls-tree -r --name-only HEAD apps/web/src | grep -E '\.(css|scss|sass|less|styl)$' | sort | tr '\n' ' ')"
 expect_equal "style sheets under apps/web/src" \
-  "apps/web/src/app/globals.css apps/web/src/lib/plain-page/plain-page.css apps/web/src/styles/theme.css " "$sheets"
+  "apps/web/src/app/globals.css apps/web/src/lib/plain-page/plain-page.generated.css apps/web/src/styles/theme.css " "$sheets"
 expect_equal "CSS Modules under apps/web" "" "$(git -C "$REPO_ROOT" ls-tree -r --name-only HEAD apps/web | grep -E '\.module\.(css|scss|sass)$' || true)"
 # Imports of a style sheet in application code (tests and type declarations excluded): only the root layout imports one;
-# the plain pages read the theme and their own sheet as text (`?raw`) to inline them.
+# the plain pages read the theme and their Tailwind-generated sheet as text (`?raw`) to inline them (CR-017).
 imports="$(git -C "$REPO_ROOT" grep -n -E "(import|require)[^'\"]*['\"][^'\"]+\.(css|scss|sass|less|styl)(\?[^'\"]*)?['\"]" HEAD -- 'apps/web/src/*.ts' 'apps/web/src/*.tsx' \
   | grep -v -E '\.test\.tsx?:|\.d\.ts:' | sed -E 's/^HEAD:apps\/web\///; s/:[0-9]+:/: /' | sort)"
 expected_imports="$(printf '%s\n' "src/app/layout.tsx: import './globals.css';" \
-  "src/lib/plain-page/plain-page.ts: import planeSheet from './plain-page.css?raw';" \
+  "src/lib/plain-page/plain-page.ts: import generatedSheet from './plain-page.generated.css?raw';" \
   "src/lib/plain-page/plain-page.ts: import themeSheet from '../../styles/theme.css?raw';" | sort)"
 # Compare the files and targets only, so a renamed local binding is not a failure.
 targets() { sed -E "s/^([^:]+): .*['\"]([^'\"]+)['\"].*/\1 \2/" | sort; }

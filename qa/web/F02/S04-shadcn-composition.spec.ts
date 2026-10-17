@@ -14,21 +14,23 @@ import {reportDir} from '../../shared/env';
 import {appearance} from '../../shared/design-reference';
 const c=(n:number)=>`TC-F02-S04-${String(n).padStart(3,'0')}`;
 
-/** The shadcn/ui components each screen is composed of (AC-12's examples, as each screen uses them). */
+/** The shadcn/ui components each screen is composed of: AC-12's examples, widened by CR-017 (AC-14) to the web.md component map. */
 const COMPOSITION:Record<string,string[]>={
- [routes.staffSignIn]:['card','avatar','label','input','button'],
- [routes.staff]:['card','label','input','button'],
- [routes.staffList]:['card','label','input','native-select','checkbox','button'],
- [routes.audit]:['card','button'],
+ [routes.staffSignIn]:['card','avatar','field-group','field','field-label','input','input-group','button'],
+ [routes.staff]:['card','badge','field','field-label','input-group','button','alert','item-group','item','pagination'],
+ [routes.staffList]:['card','badge','item-group','item','field','field-label','select-trigger','checkbox','separator','input','button','pagination'],
+ [routes.audit]:['card','item-group','item','pagination'],
 };
 /** Native or role-built controls a user can press or type into, which must each be a shadcn/ui component. */
-const CONTROLS='button,input,select,textarea,dialog,table,[role="checkbox"],[role="dialog"],[role="switch"]';
+const CONTROLS='button,input,select,textarea,dialog,table,[role="checkbox"],[role="dialog"],[role="switch"],[role="combobox"]';
 
 async function composition(page:Page){
  return page.evaluate(controls=>({slots:[...new Set(Array.from(document.querySelectorAll('[data-slot]')).map(el=>el.getAttribute('data-slot')!))],
   controls:Array.from(document.querySelectorAll(controls)).length,
-  bare:Array.from(document.querySelectorAll(controls)).filter(el=>!el.closest('[data-slot]')).map(el=>`${el.tagName.toLowerCase()}#${el.getAttribute('data-testid')??el.getAttribute('role')??''}`),
-  nativeCheckboxes:document.querySelectorAll('input[type="checkbox"]').length,nativeDialogs:document.querySelectorAll('dialog').length}),CONTROLS);
+  // Radix's aria-hidden form select behind a Select is not a control (web.md rule 11).
+  bare:Array.from(document.querySelectorAll(controls)).filter(el=>!el.closest('[aria-hidden="true"]')&&!el.closest('[data-slot]')).map(el=>`${el.tagName.toLowerCase()}#${el.getAttribute('data-testid')??el.getAttribute('role')??''}`),
+  nativeCheckboxes:document.querySelectorAll('input[type="checkbox"]').length,nativeDialogs:document.querySelectorAll('dialog').length,
+  nativeSelects:Array.from(document.querySelectorAll('select')).filter(el=>!el.closest('[aria-hidden="true"]')).length+document.querySelectorAll('[data-slot^="native-select"]').length}),CONTROLS);
 }
 /** When the overlay leaves the document, when focus reaches the opener, and where focus sat in between. */
 async function watchFocusReturn(opener:Locator){
@@ -56,7 +58,7 @@ test(`${c(29)} staff screens and the confirmation overlay are shadcn/ui componen
   expect(found.controls,`${route}: there are controls to inspect`).toBeGreaterThan(0);
   for(const slot of COMPOSITION[route]!)expect(found.slots,`${route}: built with the shadcn/ui ${slot}`).toContain(slot);
   expect(found.bare,`${route}: every control is a shadcn/ui component`).toEqual([]);
-  expect(found.nativeCheckboxes,`${route}: no native checkbox`).toBe(0);expect(found.nativeDialogs,`${route}: no native dialog`).toBe(0);
+  expect(found.nativeCheckboxes,`${route}: no native checkbox`).toBe(0);expect(found.nativeSelects,`${route}: no native or Native Select (CR-017)`).toBe(0);expect(found.nativeDialogs,`${route}: no native dialog`).toBe(0);
   if(route===routes.staffSignIn){
    // The refused sign-in's message is the shadcn/ui Alert, announced.
    await handle(page,'identifier').fill(owner.account.email);await handle(page,'password').fill('Wrong synthetic password');await handle(page,'sign-in-submit').click();
@@ -64,8 +66,10 @@ test(`${c(29)} staff screens and the confirmation overlay are shadcn/ui componen
   }
   if(route===routes.staffList){
    const checkbox=page.getByRole('checkbox').first();await expect(checkbox).toBeVisible();await expect(checkbox).toHaveAttribute('data-slot','checkbox');
-   const name=(await checkbox.evaluate(el=>el.closest('label')?.textContent??'')).trim();expect(name.length,'the checkbox is named by its label').toBeGreaterThan(0);await expect(checkbox).toHaveAccessibleName(name);
-   const target=await checkbox.evaluate(el=>{const r=el.closest('label')!.getBoundingClientRect();return {height:r.height,width:r.width};});expect(target.height,'the checkbox label is its 44px target').toBeGreaterThanOrEqual(44);expect(target.width).toBeGreaterThanOrEqual(44);
+   // CR-017: a horizontal Field, the Checkbox beside its FieldLabel (label[for]), which is the 44px target.
+   const label=await checkbox.evaluate(el=>{const l=el.id?document.querySelector(`label[for="${el.id}"]`):null;if(!l)return null;const r=l.getBoundingClientRect();return {text:(l.textContent??'').trim(),height:r.height,width:r.width,field:el.closest('[data-slot="field"]')?.getAttribute('data-orientation')??null};});
+   expect(label,'the checkbox has its own label').not.toBeNull();expect(label!.text.length).toBeGreaterThan(0);await expect(checkbox).toHaveAccessibleName(label!.text);expect(label!.field,'inside a horizontal Field').toBe('horizontal');
+   expect(label!.height,'the checkbox label is its 44px target').toBeGreaterThanOrEqual(44);expect(label!.width).toBeGreaterThanOrEqual(44);
   }
   await page.close();
  }

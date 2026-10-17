@@ -1,5 +1,5 @@
 /** Centralized S04 draft map. Confirm against the final handoff before product execution. */
-import type { Browser, BrowserContext, Page } from '@playwright/test';
+import type { Browser, BrowserContext, Locator, Page } from '@playwright/test';
 import { test as apiTest, expect, totp, json, type Principal, type Identity, type Actor, type SeedAccount, type Tokens } from './identity';
 import { Customers } from './customer-identity';
 import { Profiles } from './customer-profile';
@@ -61,6 +61,11 @@ export class AccountBrowser {
       }
       await this.ready(page);return this.actor(page.context(),salon,'staff');
     }finally{page.off('response',enrollmentResponse);}
+  }
+  /** Chooses a staff role in a shadcn/ui Select (CR-017): open its trigger, choose the option; never `selectOption` (web.md rule 11). */
+  async chooseRole(page:Page,trigger:Locator,role:string){
+    await trigger.click();const option=page.getByTestId(`account-role-option-${role.toLowerCase()}`);await expect(option).toBeVisible();await option.click();
+    await expect(page.getByRole('listbox')).toHaveCount(0);
   }
   async confirm(page:Page,action:string){await handle(page,action).click();await expect(handle(page,'confirm-action')).toBeVisible();await handle(page,'confirm-action').click();}
   async close(){for(const context of this.contexts)await context.close();}
