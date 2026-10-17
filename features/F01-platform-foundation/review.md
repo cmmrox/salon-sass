@@ -1,5 +1,12 @@
 # F01 Platform foundation and tenant isolation: product review
 
+## BUG-F01-006 re-verification (2026-10-18)
+
+BUG-F01-006 is verified at 18bb512. The API production image now carries `libexpat-2.9.0-r0`, and `images-scan.sh` passes both images. The S05 production-like stack (12/12 cases) and deployment checks pass with images N and N+1 built at that tree. Sealed F01 delta `qa/reports/20261018-022325-F01-delta-9149b677b3ef`: 13/13 entries pass. Developer gates `qa/reports/20261018-021645-F01-commands-7797ee59cdeb`: 10/10. The web entries were re-executed at the same tree only so that the closure receipts match the reviewed tree; CR-017's results are otherwise unchanged. QA status: pass.
+
+Reviewed revision `c522818`. The F02 re-run at 18bb512 found a timing defect in TC-F02-S04-029, repaired in `c522818` (see F02's review). The grouped assessment draft is `qa/reports/cr017-assessment-draft/scoped-qa.json`.
+
+
 ## Current CR-017 independent review (2026-10-18)
 
 Reviewed as: a professional on a 360/390px phone, a receptionist on a 768px tablet and a salon owner at a 1280-1440px desk, signed in to alpha (`#D6086A`), beta (`#1F2937`, long name) and gamma (`#FDE68A`); a caller on the platform domain, an unknown host and a suspended salon.
