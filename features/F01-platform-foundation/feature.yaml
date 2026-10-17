@@ -61,7 +61,7 @@ verification:
 evidence:
   last_run: qa/reports/20261014-232942-F01-2f5e0e96dfa2
   last_result: pass
-  scoped_assessment: features/F02-sign-in-accounts-and-roles/cr016/scoped-qa.json
+  scoped_assessment: features/F02-sign-in-accounts-and-roles/cr017/scoped-qa.json
 integration:
   branch: charithm/feature/F02-tailwind-shadcn
   pull_request: null
