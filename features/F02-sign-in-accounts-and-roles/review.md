@@ -73,6 +73,15 @@ Ranked, most valuable first. Earlier SUG-F02-02 and SUG-F02-03 (CR-006) still ap
 - **Instead:** A visually hidden "Skip to content" link that appears on focus.
 - **Evidence:** `TC018-observations.json` workspace sequences.
 
+### Regression (owner-requested, 2026-10-17)
+
+`--suite regression` over F01 and F02 at QA revision `28268b5` against the `c78b909` build (local runtime and production-like stack both on `c78b909`; stack N `0.1.0-SNAPSHOT`, N+1 `qa-cr013-next`): `qa/reports/20261017-095745-regression-b151743995aa`, 15 of 19 entries pass. The 4 failures were triaged, none a product regression:
+
+- F02-S01 nonlocal-identity and F02-S02 nonlocal-provider (exit 3): QA harness fault; the checks re-derived the product root from the shell variable only. Repaired; `qa/reports/20261017-143743-F02-delta-f06314968ba1` passes both.
+- F01-S05 deployment-traffic: TC-008 ran without the documented N+1 rollout-probe fixture (`S05-fixture-build.sh`, a missed preparation step); TC-009 expected a 200 salon page at `/`, which CR-010 made a no-store 307. Traffic itself had zero failed requests (32,491 and 1,816). TC-008's failure left the stack on N+1.
+- F01-S05 production-like-stack: TC-003/004/005/010/011 had the same stale `/` expectation, made worse by the stack being left on N+1; TC-002 was Trivy timing out on an image layer. All images rescan clean. The scan script reported that timeout as fixable vulnerabilities: BUG-F01-005 (minor, pre-existing).
+- After the fixture, a rollback to N and the reconciliation (the root's 307 is asserted, page reads use the salon-named entry `/workspace/sign-in`), `qa/reports/20261017-143246-F01-delta-baf914700098` passes all 12 F01-S05 cases including the rollout and rollback under 50 VUs.
+
 ### Design reference comparison
 
 Sign-in maps to the CR-012 mockup composition with the CR-013 colour decision; protected screens map to the HTML prototype's Salon mode (rail ≥900px, bottom tabs below, white cards, pill actions, brand-filled selected rail item, soft-tint phone tab). Compared from rendered screens and the prototype's source cascade, not a side-by-side preview. No unexplained departure was found. The F01 neutral pages keep the warm canvas and the placeholder product name "Salon" (the product is unnamed); they are not salon screens, so CR-013's accent does not apply.
@@ -80,12 +89,14 @@ Sign-in maps to the CR-012 mockup composition with the CR-013 colour decision; p
 ### Notes for the lead (documents)
 
 - F01-S03 AC-2 still reads "Staff entry uses the neutral responsive Salon workspace"; CR-013 replaced "workspace stays neutral" for the salon web application but listed only F02.
+- F01-S05 AC-3 still says the stack's `/` "shows alpha's shell"; since CR-010 it is a no-store 307 to `/workspace` (F01-S03 AC-1). The stack cases were reconciled to that.
 - `docs/design/ui-ux-standards.md` and `docs/engineering/web.md` describe decision 045 and the brand tokens correctly; neither states what the web does when the API returns an invalid brand colour (BUG-F02-010 follows AC-10).
 
 ### Bugs filed from this pass
 
 - BUG-F02-010 minor: an invalid or missing brand colour gives "Service unavailable" instead of the default accent (AC-10). Verified.
 - BUG-F02-011 minor: the server-side entry redirect leaves a revoked staff family's cookies in the browser (AC-4). Verified.
+- BUG-F01-005 minor (F01, found by the regression, pre-existing): `images-scan.sh` reports a scanner failure as fixable vulnerabilities.
 - BUG-F02-012 major: staff sign-in can hang until an unresponsive API resumes instead of 503 within the 3 s budget (AC-8). Fixed in `881ca87`; verified in `qa/reports/20261017-094849-F02-delta-584884e9bba2` (6 groups, 28 tests pass) plus 10/10 frozen-API sign-ins at 503 in about 3.0 s.
 
 Test and environment repairs in this pass: `accounts.ready()` now also waits for CR-013's in-section `account-list-loading` (it waited only for the retired whole-account frame, so TC-F02-S04-008's race advanced the clock mid-load); the F01 journey now restores the scheduler occurrence its 31-day clock jump creates (a diagnostic run of it left both jobs a month ahead, failing six F02 clock cases environmentally in `20261017-090358`; repaired with the documented `local-reset.sh`); QA helpers honour `QA_PRODUCT_ROOT`. No assertion was weakened.
