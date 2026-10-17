@@ -2,14 +2,14 @@
 id: BUG-F02-010
 title: A salon brand without a valid colour makes sign-in "Service unavailable" instead of using the default accent
 severity: minor
-status: fixed
+status: verified
 found_by: TC-F02-S04-025
 breaks: AC-10
 found_on: 2026-10-17
 fixed_in: 3b8df96
 fix_note: 'findSalon keeps a salon whose brandColour is missing or not #RRGGBB, with the #D6086A default (slug, name and time zone stay strict); stand-in check on :3101 rendered sign-in 200 in the default accent for not-a-colour, the injection value and a missing colour. Evidence .local/logs/bug-f02-010-after.log.'
 developer_note: null
-verified_on: null
+verified_on: 2026-10-17
 approved_by: null
 found_in_release: null
 ---
@@ -41,4 +41,4 @@ Reaching this needs the API to send an invalid colour: today the database CHECK 
 
 ## Re-verification
 
-<QA, after a fix.>
+Verified 2026-10-17 on the handoff: running API/web from `f62146f` (application identical to the fix `3b8df96`), QA revision `b7f5c3d`. Recorded F02-delta `qa/reports/20261017-092347-F02-delta-b0a937960444`, group `web-theme-entry` 4/4: TC-F02-S04-025's stand-in rows `not-a-colour`, the injection value and a missing colour each render sign-in with alpha's name in `#D6086A` and a readable foreground, after the valid-colour control rendered `#0E7490`; its colour-hook half and TC-F02-S04-024 also pass. The same rows had failed in `qa/reports/20261017-063102-F02-delta-ff3abe97e455`.

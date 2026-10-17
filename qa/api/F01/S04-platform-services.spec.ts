@@ -19,9 +19,9 @@ test('TC-F01-S04-001 problem answers carry caller trace and leak no refused inpu
   ];
   for(const [method,url,headers,data,status,code] of cases){const r=await api.send(method,url,{headers:{Host:alpha.hostname,...traceHeaders,...headers},data});expect(r.status()).toBe(status);expect(r.headers()['content-type']).toContain('application/problem+json');const p=await r.json();expect(p.code).toBe(code);expect(p.traceId).toBe(trace);expect(await r.text()).not.toMatch(/private-marker|broken-secret-marker|Exception|com\.salonplatform|stackTrace/);}
   service('stop','postgres');try{const r=await api.send('GET','/api/v1/salon',{headers:{Host:alpha.hostname,...traceHeaders}});expect(r.status()).toBe(503);const p=await r.json();expect(p.code).toBe('service_unavailable');expect(p.traceId).toBe(trace);}finally{service('start','postgres');}
-  const {execFileSync}=await import('node:child_process'); const path=await import('node:path'); const {REPO_ROOT}=await import('@qa/env');
-  execFileSync(path.join(REPO_ROOT,'infra/scripts/local-salon.sh'),['suspend',gamma.slug]);
-  try{const r=await api.send('GET','/api/v1/salon',{headers:{Host:gamma.hostname,...traceHeaders}});expect(r.status()).toBe(403);expect((await r.json()).traceId).toBe(trace);}finally{execFileSync(path.join(REPO_ROOT,'infra/scripts/local-salon.sh'),['activate',gamma.slug]);}
+  const {execFileSync}=await import('node:child_process'); const path=await import('node:path'); const {PRODUCT_ROOT}=await import('@qa/env');
+  execFileSync(path.join(PRODUCT_ROOT,'infra/scripts/local-salon.sh'),['suspend',gamma.slug],{cwd:PRODUCT_ROOT});
+  try{const r=await api.send('GET','/api/v1/salon',{headers:{Host:gamma.hostname,...traceHeaders}});expect(r.status()).toBe(403);expect((await r.json()).traceId).toBe(trace);}finally{execFileSync(path.join(PRODUCT_ROOT,'infra/scripts/local-salon.sh'),['activate',gamma.slug],{cwd:PRODUCT_ROOT});}
 });
 
 test('TC-F01-S04-002 invalid probe bodies name their fields and write no data',async({api})=>{

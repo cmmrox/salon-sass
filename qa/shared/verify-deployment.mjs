@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import {spawn} from 'node:child_process';
-import {root,report,settings,base,run,script,curl,db,versions} from './stack-settings.mjs';
+import {root,qaRoot,report,settings,base,run,script,curl,db,versions} from './stack-settings.mjs';
 const sha=run('git',['rev-parse','HEAD']).trim(),old=versions().SALON_API_1_VERSION,next=process.env.QA_STACK_NEXT;
 assert(next,'ENVIRONMENT: QA_STACK_NEXT must name the N+1 images built from the tested tree');
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
@@ -14,7 +14,7 @@ assert(fixtureMigration,'ENVIRONMENT: fixture migration provenance is absent or 
 async function traffic(label,action){const summary=path.join(report,`traffic-${label}.json`),log=path.join(report,`traffic-${label}.log`);let output='';const edge=JSON.parse(run('docker',['inspect','salon-stack-edge']))[0].NetworkSettings.Networks;
 const [network,detail]=Object.entries(edge)[0];
 const name=`salon-qa-traffic-${process.pid}-${label}`;
-const child=spawn('docker',['run','--rm','--name',name,'--network',network,'--user','0:0','-p','127.0.0.1:6565:6565','-v',`${root}:/qa:ro`,'-v',`${report}:/report`,'-e',`QA_STACK_EDGE_IP=${detail.IPAddress}`,'-e',`QA_STACK_URL=${base}`,'-e',`QA_STACK_SHA=${sha}`,'-e',`QA_VERSION_N=${old}`,'-e',`QA_VERSION_NEXT=${next}`,'-e',`QA_K6_SUMMARY=/report/traffic-${label}.json`,'grafana/k6:1.8.2','run','--address','0.0.0.0:6565','--quiet','--log-format','raw','/qa/qa/load/F01/S05-deployment-traffic.js'],{cwd:root});
+const child=spawn('docker',['run','--rm','--name',name,'--network',network,'--user','0:0','-p','127.0.0.1:6565:6565','-v',`${qaRoot}:/qa:ro`,'-v',`${report}:/report`,'-e',`QA_STACK_EDGE_IP=${detail.IPAddress}`,'-e',`QA_STACK_URL=${base}`,'-e',`QA_STACK_SHA=${sha}`,'-e',`QA_VERSION_N=${old}`,'-e',`QA_VERSION_NEXT=${next}`,'-e',`QA_K6_SUMMARY=/report/traffic-${label}.json`,'grafana/k6:1.8.2','run','--address','0.0.0.0:6565','--quiet','--log-format','raw','/qa/qa/load/F01/S05-deployment-traffic.js'],{cwd:root});
 const stop=()=>run('docker',['kill','--signal','SIGINT',name]);child.stdout.on('data',b=>{output+=b;});child.stderr.on('data',b=>{output+=b;});const completion=new Promise(resolve=>child.on('exit',(code,signal)=>resolve({code,signal})));try{
 await until(async()=>{try{const r=await fetch('http://127.0.0.1:6565/v1/metrics/http_reqs');const j=await r.json();return j.data.attributes.sample.count>=300;}catch{return false;}});const began=Date.now();await action();const ended=Date.now();await until(async()=>{try{const r=await fetch('http://127.0.0.1:6565/v1/metrics/http_reqs');const j=await r.json();return j.data.attributes.sample.count>=600;}catch{return false;}});stop();await completion;fs.writeFileSync(log,output);const data=JSON.parse(fs.readFileSync(summary,'utf8'));for(const [name,metric] of Object.entries(data.metrics))for(const [threshold,result] of Object.entries(metric.thresholds||{}))assert(result.ok,`${label} ${name}: ${threshold}`);assert.equal(data.metrics.http_req_failed.values.rate,0);assert.equal(data.metrics.cross_tenant.values.count,0);assert(data.metrics.own_tenant.values.count>=300);assert.equal(data.metrics.checks.values.rate,1);return{began,ended,output,data};
 }finally{if(child.exitCode===null){try{stop();}catch{}};fs.writeFileSync(log,output);}}

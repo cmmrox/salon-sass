@@ -3,9 +3,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
-import { REPO_ROOT, reportDir, apiUrl } from './env';
+import { PRODUCT_ROOT, reportDir, apiUrl } from './env';
 import type {ApiClient} from './api-client';
-export const productRoot = process.env.QA_PRODUCT_ROOT ?? REPO_ROOT;
+export const productRoot = PRODUCT_ROOT;
 export const apiLog = path.join(productRoot,'.local/logs/api.log');
 export function localService(action:string,service:string,settings:Record<string,string>={}) {
   try { execFileSync(path.join(productRoot,'infra/scripts/local-service.sh'),[action,service],{

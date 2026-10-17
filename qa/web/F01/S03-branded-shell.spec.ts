@@ -1,14 +1,14 @@
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { expect, test } from '@qa/fixtures';
-import { REPO_ROOT, webUrl } from '@qa/env';
+import { PRODUCT_ROOT, webUrl } from '@qa/env';
 import { alpha, beta, gamma, salons, salonUrl, onHostname, PLATFORM_DOMAIN } from '@qa/tenants';
 import { WIDTHS, fit, seriousViolations, stringsShown, testIds, TEST_ID_NAME } from '@qa/page-checks';
 import { allMessages } from '@qa/strings';
 import { startApi, stopApi, standInForApi } from '@qa/services';
-import { DESIGN_WIDTHS, designScreenshot, referenceNavigation, referenceFit, referenceTypeAndPalette } from '@qa/design-reference';
+import { DESIGN_WIDTHS, designScreenshot, referenceFit, referenceTypeAndPalette } from '@qa/design-reference';
 
-const suspend = (action: string) => execFileSync(path.join(REPO_ROOT, 'infra/scripts/local-salon.sh'), [action, gamma.slug]);
+const suspend = (action: string) => execFileSync(path.join(PRODUCT_ROOT, 'infra/scripts/local-salon.sh'), [action, gamma.slug], { cwd: PRODUCT_ROOT });
 function noOtherBrand(body: string, own?: typeof alpha) {
   for (const s of salons.filter(s => s !== own)) for (const value of [s.name, s.brandColour, s.id]) expect(body).not.toContain(value);
 }
@@ -18,24 +18,25 @@ test('TC-F01-S03-001 each hostname renders only its salon in heading and documen
     const entry=await request.get(salonUrl(s,webUrl)+'/',{maxRedirects:0});expect(entry.status()).toBe(307);expect(new URL(entry.headers().location,salonUrl(s,webUrl)).href).toBe(salonUrl(s,webUrl)+'/workspace');expect(entry.headers()['cache-control']).toContain('no-store');
     const response = await page.goto(`${salonUrl(s, webUrl)}/`);
     expect(response!.status()).toBe(200);
-    await expect(page).toHaveURL(/\/workspace\/sign-in$/);await expect(page.getByTestId('account-home')).toHaveText(s.name);await expect(page.getByTestId('account-identifier')).toBeVisible();await expect(page.getByTestId('salon-shell')).toHaveCount(0);
+    await expect(page).toHaveURL(/\/workspace\/sign-in$/);await expect(page.getByTestId('staff-sign-in-name')).toHaveText(s.name);await expect(page.getByTestId('account-identifier')).toBeVisible();await expect(page.getByTestId('salon-shell')).toHaveCount(0);
     await expect(page).toHaveTitle(s.name);
     noOtherBrand(await page.content(), s);
     expect(response!.headers()['cache-control']).toContain('no-store');
     for(const alias of ['/sign-in','/account']) {await page.goto(salonUrl(s,webUrl)+alias);await expect(page).toHaveURL(/\/workspace\/sign-in$/);await expect(page.getByTestId('account-identifier')).toBeVisible();await expect(page.getByTestId('account-mobile')).toHaveCount(0);await expect(page.getByTestId('account-profile-save')).toHaveCount(0);}
     await page.reload();
-    await expect(page.getByTestId('account-home')).toHaveText(s.name);
+    await expect(page.getByTestId('staff-sign-in-name')).toHaveText(s.name);
   }
   const uppercase = await request.get(`${webUrl}/workspace/sign-in`, {headers: {Host: alpha.hostname.toUpperCase()}});
   expect(uppercase.status()).toBe(200);
   expect(await uppercase.text()).toContain(alpha.name);
 });
 
-test('TC-F01-S03-002 salon staff pages identify their own salon on the neutral canvas', async ({ page }) => {
+test('TC-F01-S03-002 signed-out staff entry identifies its own salon with no workspace or customer shell', async ({ page }) => {
+  // CR-012 AC-9 and CR-013 AC-11: signed-out entry is the standalone staff sign-in, no workspace frame.
   for (const s of salons) {
-    await page.goto(`${salonUrl(s, webUrl)}/`);await expect(page.getByTestId('account-home')).toHaveText(s.name);
-    await expect(page.getByTestId('workspace-shell')).toHaveCSS('background-color','rgb(243, 240, 235)');
-    await expect(page.getByTestId('salon-shell')).toHaveCount(0);await expect(page.getByTestId('salon-navigation')).toHaveCount(0);
+    await page.goto(`${salonUrl(s, webUrl)}/`);await expect(page).toHaveURL(/\/workspace\/sign-in$/);
+    await expect(page.getByTestId('staff-sign-in-name')).toHaveText(s.name);await expect(page.getByTestId('staff-sign-in-initial')).toHaveText(Array.from(s.name)[0]);
+    for (const id of ['workspace-shell','workspace-header','workspace-navigation','salon-shell','salon-navigation']) await expect(page.getByTestId(id),`${s.slug}: ${id} absent`).toHaveCount(0);
   }
 });
 
@@ -72,13 +73,13 @@ test('TC-F01-S03-005 a suspended salon shows a neutral 503 and returns immediate
 
 test('TC-F01-S03-006 another salon in client-controlled fields never changes the rendered brand', async ({ page, request }) => {
   await page.goto(`${salonUrl(beta, webUrl)}/`);
-  await expect(page.getByTestId('account-home')).toHaveText(beta.name);
+  await expect(page.getByTestId('staff-sign-in-name')).toHaveText(beta.name);
   await page.setExtraHTTPHeaders({'X-Forwarded-Host':beta.hostname, 'X-Tenant-Id':beta.id, 'Forwarded':`host=${beta.hostname}`, 'Cookie':`tenant=${beta.slug}; tenant_id=${beta.id}`, 'x-salon-resolved':JSON.stringify(beta)});
   const forged={'X-Forwarded-Host':beta.hostname,'X-Forwarded-Proto':'https','X-Tenant-Id':beta.id,'Forwarded':`host=${beta.hostname};proto=https`,'Cookie':`tenant=${beta.slug};tenant_id=${beta.id}`};
   for(const alias of ['/','/sign-in','/account']){const origin=salonUrl(alpha,webUrl),url=origin+alias+'?tenant='+beta.slug;const result=await request.get(url,{maxRedirects:0,headers:forged});expect(result.status()).toBe(307);const location=new URL(result.headers().location,url);expect(location.origin).toBe(origin);expect(location.pathname).toBe(alias==='/'?'/workspace':'/workspace/sign-in');expect(location.search).toBe('');expect(location.hash).toBe('');}
   const response = await page.goto(`${salonUrl(alpha, webUrl)}/?tenant=${beta.slug}&tenantId=${beta.id}`);
   expect(response!.status()).toBe(200);
-  await expect(page.getByTestId('account-home')).toHaveText(alpha.name);
+  await expect(page.getByTestId('staff-sign-in-name')).toHaveText(alpha.name);
   await expect(page).toHaveTitle(alpha.name);
   noOtherBrand(await page.locator('body').innerText(),alpha);
   for (const other of salons.filter(s => s !== alpha)) expect(await page.content()).not.toContain(other.brandColour);
@@ -101,9 +102,9 @@ for (const kind of ['stopped','silent'] as const) test(`TC-F01-S03-${kind === 's
 test('TC-F01-S03-010 long-name and neutral pages fit both widths with no serious accessibility issue', async ({ page }) => {
   try {
     suspend('suspend');
-    for (const width of WIDTHS) for (const [url,id] of [[salonUrl(beta,webUrl),'account-home'],[onHostname(webUrl,`missing.${PLATFORM_DOMAIN}`),'salon-not-found-title'],[salonUrl(gamma,webUrl),'salon-unavailable-title']]) {
-      await page.setViewportSize(width); await page.goto(url); if(id==='account-home'){await expect(page).toHaveURL(/\/workspace\/sign-in$/);await expect(page.getByTestId('account-identifier')).toBeVisible();}await expect(page.getByTestId(id)).toBeVisible();
-      const overflow=await referenceFit(page,id === 'account-home' ? beta.name : undefined); expect(overflow.counted).toBeGreaterThan(0); expect(overflow.pageScrolls).toBe(false); expect(overflow.outside).toEqual([]); expect(overflow.clipped).toEqual([]);
+    for (const width of WIDTHS) for (const [url,id] of [[salonUrl(beta,webUrl),'staff-sign-in-name'],[onHostname(webUrl,`missing.${PLATFORM_DOMAIN}`),'salon-not-found-title'],[salonUrl(gamma,webUrl),'salon-unavailable-title']]) {
+      await page.setViewportSize(width); await page.goto(url); if(id==='staff-sign-in-name'){await expect(page).toHaveURL(/\/workspace\/sign-in$/);await expect(page.getByTestId('account-identifier')).toBeVisible();}await expect(page.getByTestId(id)).toBeVisible();
+      const overflow=await referenceFit(page,id === 'staff-sign-in-name' ? beta.name : undefined); expect(overflow.counted).toBeGreaterThan(0); expect(overflow.pageScrolls).toBe(false); expect(overflow.outside).toEqual([]); expect(overflow.clipped).toEqual([]);
       expect(await seriousViolations(page)).toEqual([]);
     }
   } finally { suspend('activate'); }
@@ -112,10 +113,10 @@ test('TC-F01-S03-010 long-name and neutral pages fit both widths with no serious
 test('TC-F01-S03-011 strings and readable result handles on all pages follow the shared contract', async ({ page }) => {
   try {
     suspend('suspend');
-    for (const [url,id] of [[salonUrl(beta,webUrl),'account-home'],[onHostname(webUrl,`missing.${PLATFORM_DOMAIN}`),'salon-not-found-title'],[salonUrl(gamma,webUrl),'salon-unavailable-title']]) {
+    for (const [url,id] of [[salonUrl(beta,webUrl),'staff-sign-in-name'],[onHostname(webUrl,`missing.${PLATFORM_DOMAIN}`),'salon-not-found-title'],[salonUrl(gamma,webUrl),'salon-unavailable-title']]) {
       await page.goto(url); await expect(page.getByTestId(id)).toBeVisible();
       const values=await stringsShown(page); expect(values.length).toBeGreaterThan(0);
-      const identity=page.getByTestId('salon-identity');const initials=await identity.count()?await identity.innerText():null;
+      const identity=page.getByTestId(id==='staff-sign-in-name'?'staff-sign-in-initial':'salon-identity');const initials=await identity.count()?await identity.innerText():null;
       if(initials)expect(initials).toMatch(/^[\p{L}]{1,2}$/u);
       for(const value of values) expect([...allMessages(),beta.name,...(initials?[initials]:[])]).toContain(value);
       const ids=await testIds(page); expect(ids.length).toBeGreaterThan(2); for(const id of ids) expect(id).toMatch(TEST_ID_NAME);
@@ -134,8 +135,10 @@ test('TC-F01-S03-012 the salon contract and client describe a suspended salon', 
 test('TC-F01-S03-013 staff entry and foundation pages match the supplied reference grammar at all six widths', async ({ page }) => {
   test.setTimeout(180_000);
   for (const s of salons) for (const viewport of DESIGN_WIDTHS) {
-    await page.setViewportSize(viewport); await page.goto(salonUrl(s, webUrl)); await expect(page.getByTestId('account-home')).toBeVisible(); await expect(page.getByTestId('account-home')).toHaveText(s.name);
-    await referenceTypeAndPalette(page); await referenceNavigation(page,'workspace-navigation',viewport.width);await expect(page.getByTestId('workspace-shell')).toHaveCSS('background-color','rgb(243, 240, 235)');await expect(page.getByTestId('salon-shell')).toHaveCount(0);
+    // Signed out, staff entry is the CR-012 sign-in (no workspace rail/header, CR-013 AC-11); the signed-in
+    // workspace's responsive rail and tabs are TC-F02-S04-023, its brand accent TC-F02-S04-024.
+    await page.setViewportSize(viewport); await page.goto(salonUrl(s, webUrl)); await expect(page).toHaveURL(/\/workspace\/sign-in$/); await expect(page.getByTestId('staff-sign-in-name')).toHaveText(s.name);
+    await referenceTypeAndPalette(page); for (const id of ['workspace-shell','workspace-header','workspace-navigation','salon-shell']) await expect(page.getByTestId(id)).toHaveCount(0);
     const result = await referenceFit(page, s.name); expect(result.counted).toBeGreaterThan(0); expect(result.pageScrolls).toBe(false); expect(result.outside).toEqual([]); expect(result.clipped).toEqual([]);
     await designScreenshot(page, `F01-public-${s.slug}-${viewport.width}`);
   }
