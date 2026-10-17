@@ -146,7 +146,8 @@ The operator console keeps the neutral platform theme.
 
 Text drawn in the brand colour (links, the recovery control) uses it only when it reaches 4.5:1
 against its background; otherwise it is ink `#111827`, which may keep a brand underline or
-indicator. Fills, rings and focus outlines use the brand itself; anything drawn on a fill uses the
+indicator. Fills, the initial ring and the field focus ring use the brand itself; the keyboard
+`:focus-visible` outline stays the prototype's `#1D5FD0` everywhere, for visibility on any brand; anything drawn on a fill uses the
 computed foreground. The phone's selected tab is a soft brand tint behind the icon with ink text.
 For tests, `infra/scripts/local-salon.sh colour <slug> <#RRGGBB>` sets one local salon's stored
 colour (local only, owning role, nothing else changed; `local-reset.sh` restores the seed).
