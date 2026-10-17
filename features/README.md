@@ -9,7 +9,7 @@ requirement detail is in `qa/coverage.md`.
 | ID | Feature | Milestone | Status | GitHub merge | Stages done | Requirements | Next |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | F01 | [Platform foundation and tenant isolation](F01-platform-foundation/) | M1-web | complete | merged | 5/5 | 2 | - |
-| F02 | [Sign-in, accounts and roles](F02-sign-in-accounts-and-roles/) | M1-web | complete | awaiting owner | 4/4 | 10 | **lead**: `merge-sync F02 (after owner merges the PR)` |
+| F02 | [Sign-in, accounts and roles](F02-sign-in-accounts-and-roles/) | M1-web | in-qa | awaiting owner | 4/4 | 10 | **developer**: `bug-fix F02` |
 | F03 | [Operator console: salons, plans and billing](F03-operator-console/) | M1-web | backlog | - | 0/4 | 5 | after F02 |
 | F04 | [Salon setup: profile, branding, hours and policies](F04-salon-setup/) | M1-web | backlog | - | - | 6 | after F02 |
 | F05 | [Service catalogue](F05-service-catalogue/) | M1-web | backlog | - | - | 6 | after F04 |
@@ -27,4 +27,11 @@ requirement detail is in `qa/coverage.md`.
 
 ## In flight
 
-No feature is in flight.
+### F02 Sign-in, accounts and roles
+
+| Stage | Title | Surfaces | Status | Stage QA | Blocking bugs | Next |
+| --- | --- | --- | --- | --- | --- | --- |
+| F02-S01 | Staff sign-in, sessions and role permissions | api, infra | complete | - | 0 | - |
+| F02-S02 | Customer one-time-code sign-in and abuse prevention | api | complete | - | 0 | - |
+| F02-S03 | Customer profile, data export and account deletion | api | complete | - | 0 | - |
+| F02-S04 | Staff workspace and account screens | api, web, infra | complete | - | 0 | - |
