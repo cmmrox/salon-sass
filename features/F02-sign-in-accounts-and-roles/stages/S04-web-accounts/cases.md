@@ -261,3 +261,14 @@ Authority: approved CR-010, CR-012, CR-013 and revised spec. Local synthetic alp
 - **Steps:** Alpha: open `/`, `/workspace`, `/workspace/account`, `/workspace/staff`, `/workspace/audit`. Beta: open `/`.
 - **Expected:** Redirect hops are server redirects and only the landing page renders (`/` and `/workspace` land on `/workspace/account`). The first non-blank frame is the workspace with the salon's full name; no frame shows the sign-in, a generic "Salon" or another salon's name, and any loading state appears only inside the workspace already showing the salon's name.
 - **Automation:** `qa/web/F02/S04-theme-entry.spec.ts`
+
+### TC-F02-S04-028 text on a mid-tone brand fill stays readable on the sign-in action, primary button and selected navigation
+
+- **Type:** accessibility
+- **Priority:** high
+- **Covers:** AC-8, AC-10
+- **Performed as / preconditions:** Signed-out browser and a signed-in Manager on alpha; the running web app is never restarted. Alpha's stored colour is set with the local-only hook `infra/scripts/local-salon.sh colour alpha <#RRGGBB>` in the product checkout and restored to its original (read from `/api/v1/salon` first) even on failure. Rows: `#808080` and `#C34BB4`, valid brand colours where neither white nor ink `#111827` reaches 4.5:1 (white 3.95 / ink 4.49 for `#808080`; at most 4.21 for `#C34BB4`).
+- **Steps:** For each row, open staff sign-in and read the action's background and text colour; open the workspace account at 1280px and read the primary action (`password-save`) and the selected navigation item.
+- **Expected:** Each surface is filled with exactly the brand, and its text reaches at least 4.5:1 against it, for every valid brand colour a salon can choose. Every row and surface is measured before the verdict, so a failure names every unreadable pairing. Alpha ends on its original colour.
+- **Automation:** `qa/web/F02/S04-theme-entry.spec.ts`
+
