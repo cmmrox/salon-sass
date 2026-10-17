@@ -16,16 +16,24 @@ export async function appearance(element: Locator) {
       left: r.left, right: r.right, bottom: r.bottom, top: r.top };
   });
 }
+/**
+ * Where each prototype token lives on the root. Since CR-016 (F01-S03 AC-13) theme.css holds the
+ * prototype's final values under shadcn/ui's variable names; the values are unchanged.
+ */
+const THEME_TOKENS: Record<string, string> = {
+  background: '--background', secondary: '--secondary', border: '--border', text: '--foreground', 'text-muted': '--muted-foreground',
+  focus: '--ring', positive: '--positive', 'positive-surface': '--positive-surface', caution: '--caution',
+  'caution-surface': '--caution-surface', negative: '--destructive', 'negative-surface': '--negative-surface' };
 export async function referenceTypeAndPalette(page: Page) {
   await expect(page.getByRole('main')).toBeVisible();
-  const values = await page.evaluate(async () => {
+  const values = await page.evaluate(async (TOKEN_NAMES) => {
     await document.fonts.ready;
     for (const weight of [400, 500, 600]) await document.fonts.load(`${weight} 15px Poppins`);
     const root = getComputedStyle(document.documentElement), body = getComputedStyle(document.body);
     return { font: body.fontFamily, size: body.fontSize,
       loaded: Array.from(document.fonts).filter(f => f.family.replaceAll(/['"]/g, '') === 'Poppins' && f.status === 'loaded').map(f => f.weight),
-      colours: Object.fromEntries(['background','secondary','border','text','text-muted','focus','positive','positive-surface','caution','caution-surface','negative','negative-surface'].map(key => [key, root.getPropertyValue(`--color-${key}`).trim().toUpperCase()])) };
-  });
+      colours: Object.fromEntries(Object.entries(TOKEN_NAMES).map(([key, name]) => [key, root.getPropertyValue(name).trim().toUpperCase()])) };
+  }, THEME_TOKENS);
   expect(values.font.split(',')[0].replaceAll(/['"]/g, '').trim()).toBe('Poppins');
   expect(values.size).toBe('15px');
   for (const weight of ['400','500','600']) expect(values.loaded).toContain(weight);
