@@ -18,6 +18,7 @@ M1-web feature is released. Existing S02/S03 Java APIs remain backend foundation
 - `docs/engineering/web.md`
 - `docs/design/prototype/index.html`
 - `docs/design/ui-ux-standards.md`
+- `docs/changes/CR-012-salon-login-design.md`
 
 ## Requirements covered
 
@@ -66,8 +67,13 @@ implementation, future business dashboards, operator console (F03), real messagi
   test ids, announced errors, keyboard focus, 44-point targets and no horizontal overflow at
   360/390/768/1024/1280/1440. Workspace remains neutral; salon names remain readable/accessible.
   API loss provides safe retry within the existing cancellation budget. (IAM-06, NFR-21)
-- AC-9: Rendered comparison evidence shows warm palette, loaded Poppins, pills, rounded fields/cards
-  and responsive Salon rail/tab layout. Customer's 430px canvas is not a web reference. (NFR-21)
+- AC-9: Staff sign-in matches the owner's CR-012 mockup: full-screen warm salon interior,
+  API-resolved salon name/initial, centered translucent card, welcome headings, labelled email/mobile
+  and password fields, accessible password visibility toggle, functional administrator-contact
+  recovery guidance, taupe action and secure-team footer. No workspace rail/header on sign-in.
+  Password/MFA, errors and small-screen states remain usable. Protected workspace screens retain
+  warm palette, loaded Poppins, pills, rounded fields/cards and responsive Salon rail/tab layout.
+  Customer's 430px canvas is not a web reference. (NFR-21)
 
 ## Design notes
 
@@ -114,3 +120,9 @@ pnpm contracts:check
 - Every verification command passes; generated contracts/client are current and committed.
 - Lead records actual endpoint/hook/configuration shapes and any documented discrepancies before closure.
 - No application secrets, real data, paid sending or unverified completion enters the handoff.
+
+## CR-012 login mapping
+
+The owner's `docs/design/references/staff-sign-in.png` overrides the HTML grammar only for staff
+sign-in. Salon identity comes from hostname resolution; the shared photo is not a published cover.
+Recovery explains contacting the administrator without claiming to reset a password.
