@@ -182,7 +182,37 @@ describe('workspace entry decided before anything renders (CR-013)', () => {
     expect(response.status).toBe(307);
     expect(response.headers.get('location')).toBe('http://alpha.localhost:3100/workspace/sign-in');
     expect(decide).toHaveBeenCalledExactlyOnceWith(expect.anything(), { access: 'revoked', refresh: 'spent', expiry: '2026-01-01T00:05:00Z' });
-    expect(response.headers.has('set-cookie')).toBe(false);
+  });
+
+  // BUG-F02-011: the revoked family's credentials do not survive the redirect.
+  it.each([['true', ''], ['false', ' Secure;']])('clears every staff credential cookie, host-only, on an unusable session (local HTTP %s)', async (localHttp) => {
+    vi.stubEnv('SALON_WEB_LOCAL_HTTP', localHttp);
+    try {
+      const response = await routeRequest(request('/workspace/account', { cookie: 'salon_staff_access=revoked; salon_staff_refresh=spent; salon_staff_expires=2026-01-01T00:05:00Z; salon_staff_session=s1' }), salonSite(), deciding('signed-out'));
+      expect(response.status).toBe(307);
+      const cleared = response.headers.getSetCookie();
+      for (const name of ['access', 'refresh', 'expires', 'session', 'challenge', 'challenge_id']) {
+        const cookie = cleared.find((value) => value.startsWith(`salon_staff_${name}=;`));
+        expect(cookie, name).toBeDefined();
+        expect(cookie).toMatch(/Max-Age=0/i);
+        expect(cookie).toMatch(/Path=\//);
+        expect(cookie).toMatch(/HttpOnly/i);
+        expect(cookie).toMatch(/SameSite=lax/i);
+        expect(cookie).not.toMatch(/Domain=/i);
+        expect(/;\s*Secure/i.test(cookie!)).toBe(localHttp === 'false');
+      }
+      expect(cleared.some((value) => value.startsWith('salon_customer'))).toBe(false);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it('sets no cookie when there was no credential, or the session is usable or only renewable', async () => {
+    expect((await routeRequest(request('/workspace/account'), salonSite(), deciding('signed-out'))).headers.getSetCookie()).toEqual([]);
+    for (const kind of ['signed-in', 'pending'] as const) {
+      expect((await routeRequest(request('/workspace/account', { cookie: 'salon_staff_refresh=family' }), salonSite(), deciding(kind))).headers.getSetCookie()).toEqual([]);
+    }
+    expect((await routeRequest(request('/workspace', { cookie: 'salon_staff_refresh=family' }), salonSite(), deciding('signed-out'))).headers.getSetCookie()).toEqual([]);
   });
 
   it.each(['signed-in', 'pending'] as const)('lets a %s member reach the salon\'s page, with the salon handed on', async (kind) => {

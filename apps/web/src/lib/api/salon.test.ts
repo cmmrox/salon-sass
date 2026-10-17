@@ -77,12 +77,25 @@ describe('findSalon', () => {
   it.each([
     ['no name', { slug: 'alpha', brandColour: '#D6086A', timeZone: 'Asia/Colombo' }],
     ['an empty name', { slug: 'alpha', name: ' ', brandColour: '#D6086A', timeZone: 'Asia/Colombo' }],
-    ['a colour that is not #RRGGBB', { slug: 'alpha', name: 'Alpha', brandColour: 'red;}', timeZone: 'Asia/Colombo' }],
     ['not an object', 'alpha'],
+    ['no time zone', { slug: 'alpha', name: 'Alpha', brandColour: '#D6086A' }],
   ])('is unavailable when the brand has %s', async (_, body) => {
     const { client } = clientAnswering(200, body);
 
     await expect(findSalon('alpha', 'alpha.localhost', client)).resolves.toEqual({ kind: 'unavailable' });
+  });
+
+  // CR-013 AC-10, BUG-F02-010: a salon without a valid colour is still the salon, in the default accent.
+  it.each([
+    ['a colour that is not #RRGGBB', 'not-a-colour'],
+    ['a style-sheet injection', '#fff;}body{display:none'],
+    ['a short colour', '#fff'],
+    ['no colour', undefined],
+    ['a colour that is not text', 0xd6086a],
+  ])('gives a salon with %s the default brand colour', async (_, brandColour) => {
+    const { client } = clientAnswering(200, { slug: 'alpha', name: 'Alpha Studio', timeZone: 'Asia/Colombo', ...(brandColour === undefined ? {} : { brandColour }) });
+
+    await expect(findSalon('alpha', 'alpha.localhost', client)).resolves.toEqual({ kind: 'found', salon: { slug: 'alpha', name: 'Alpha Studio', brandColour: '#D6086A', timeZone: 'Asia/Colombo' } });
   });
 
   it('is unavailable when the API cannot be reached', async () => {

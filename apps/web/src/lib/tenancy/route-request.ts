@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 import { createServerApiClient } from '@/lib/api/client';
 import { hasCredentials, workspaceEntry, type Entry } from '@/lib/identity/entry';
-import { cookieName, requestHost, type Credentials } from '@/lib/identity/server';
+import { clearCookies, cookieName, requestHost, type Credentials } from '@/lib/identity/server';
 import { plainPageHtml, plainPageStatus, type PlainPage } from '@/lib/plain-page/plain-page';
 
 import { SALON_HEADER, encodeSalon } from './salon-header';
@@ -104,8 +104,13 @@ export async function routeRequest(
       }
       if (PROTECTED.has(path)) {
         const credentials = credentialsOf(request);
-        if (!hasCredentials(credentials) || (await decide(request, credentials)).kind === 'signed-out') {
-          return redirect(request, SIGN_IN);
+        if (!hasCredentials(credentials)) return redirect(request, SIGN_IN);
+        if ((await decide(request, credentials)).kind === 'signed-out') {
+          // The same clearing the BFF does for a session that cannot renew (BUG-F02-011): the
+          // revoked family's credentials leave the browser with the redirect, host-only.
+          const response = redirect(request, SIGN_IN);
+          clearCookies(response, 'staff');
+          return response;
         }
       }
       // Any other path on a salon's hostname is the application's, with the salon handed on.
