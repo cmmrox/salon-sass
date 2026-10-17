@@ -434,7 +434,7 @@ cases:
   covers:
   - AC-8
 - id: TC-F02-S04-019
-  title: staff workspace identifies only its salon and keeps the neutral palette
+  title: staff screens identify only their own salon on the shared warm canvas
   type: branding
   priority: high
   covers:
@@ -463,6 +463,30 @@ cases:
   priority: high
   covers:
   - AC-9
+- id: TC-F02-S04-024
+  title: sign-in and workspace draw every accent in the salon's own brand colour with a readable foreground
+  type: branding
+  priority: high
+  covers:
+  - AC-10
+- id: TC-F02-S04-025
+  title: a salon colour change shows on both screens on the next request and an invalid colour falls back to the default accent
+  type: branding
+  priority: high
+  covers:
+  - AC-10
+- id: TC-F02-S04-026
+  title: entering without a usable session reaches sign-in with no intermediate frame
+  type: functional
+  priority: high
+  covers:
+  - AC-11
+- id: TC-F02-S04-027
+  title: a signed-in member's first painted frame is their workspace with the salon's resolved name
+  type: functional
+  priority: high
+  covers:
+  - AC-11
 verification:
   commands:
   - cd apps/api && ./mvnw -q verify
@@ -521,17 +545,32 @@ verification:
     - TC-F02-S04-022
     suites:
     - regression
+  - id: web-theme-entry
+    tool: playwright
+    file: qa/web/F02/S04-theme-entry.spec.ts
+    project: web
+    covers:
+    - TC-F02-S04-024
+    - TC-F02-S04-025
+    - TC-F02-S04-026
+    - TC-F02-S04-027
+    suites:
+    - regression
   manual:
   - case: TC-F02-S04-018
-    reason: 'CR-012 current manual judgment: inspected source and rendered login together at1536x1024,
-      guidance/visible-focus sequences at360/768/1536, masked enrollment at all six widths and alpha/beta/gamma
-      error states from qa/reports/20261015-135642-F02-delta-462a695fbd8e. Keyboard sequence records15
-      focused controls with visible outlines; Enter toggles visibility/recovery and restores initial guidance.
-      Actual empty-input full-view/focused comparison also required in final delta, linked in review.md.
-      Retain unaffected protected-account/Owner/confirmation focus proof from2026-10-14; no new manual
-      protected-workspace pass is claimed. CUA IAB unavailable and Chrome CDP timed out; sequences captured
-      through registered repository Playwright and visually inspected, with credentials/setup values masked.'
-    performed_on: 2026-10-15
+    reason: 'CR-013 manual judgment performed 2026-10-17 on the running local build (API/web from be188ca, application
+      source identical to developer-gated 756fdef). Synthetic MANAGER per salon seeded through the local hook; random
+      credentials only in ignored 0600 .local/cr013-qa-tc018-fixture.json. Keyboard-only traversal of staff sign-in at
+      360/768/1536 and the workspace account at 390/1280 for alpha (#D6086A), beta (dark #1F2937) and gamma (light #FDE68A):
+      ordered focus identifier, password, visibility toggle, recovery, sign-in, then wraps; no trap; every stop
+      :focus-visible with a 3px #1D5FD0 outline in view; fields add the 2px brand inset ring. Action contrast 5.12/14.68/14.24
+      (gamma ink text); recovery text brand for alpha/beta (5.12/14.68 on white) and ink with brand underline for gamma;
+      desktop selected rail item brand fill with readable text, phone tab soft tint with ink; wrong-password error announced
+      (role alert) with focus kept on the password. 120 focus screenshots and observations
+      qa/reports/20261017-F02-TC018-manual/TC018-observations.json sha256 0eac0e5577b20a833bfc11293c9580b52df36024c546a3cc02c939d99b623155, visually inspected. Machine-captured
+      keyboard sequences through repository Playwright, not a native assistive-technology session. Earlier CR-012 and 2026-10-14
+      protected-account evidence is historical.'
+    performed_on: 2026-10-17
   deferred: []
 evidence:
   last_run: null
