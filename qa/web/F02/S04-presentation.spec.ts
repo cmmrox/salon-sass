@@ -13,7 +13,7 @@ import {DESIGN_WIDTHS,appearance,designScreenshot,referenceAccountControls,refer
 const c=(n:number)=>`TC-F02-S04-${String(n).padStart(3,'0')}`;
 const WIDTHS=[360,390,768,1024,1280,1440].map(width=>({width,height:1000}));
 
-/** The owner's CR-012 screenshot governs sign-in; protected screens retain HTML grammar. */
+/** The owner's CR-012 screenshot governs sign-in composition; its colours are the shared theme with the brand accent (CR-013, TC-F02-S04-024). */
 async function loginPresentation(page:Page,width:number){
  const screen=page.getByTestId('staff-sign-in-screen'),card=page.getByTestId('staff-sign-in-card');
  await expect(screen).toBeVisible();await expect(card).toBeVisible();
@@ -29,7 +29,6 @@ async function loginPresentation(page:Page,width:number){
  const title=await appearance(handle(page,'title'));if(width<=600)expect(title.fontSize).toBe('28px');else{expect(parseFloat(title.fontSize)).toBeGreaterThanOrEqual(40);expect(parseFloat(title.fontSize)).toBeLessThanOrEqual(42);}
  for(const field of [handle(page,'identifier'),handle(page,'password')]){const s=await appearance(field);expect(s.height).toBeGreaterThanOrEqual(52);expect(s.radius).toBe('10px');}
  const submit=await appearance(handle(page,'sign-in-submit'));expect(submit.height).toBeGreaterThanOrEqual(52);expect(submit.radius).toBe('10px');
- const taupe=submit.background.match(/\d+/g)!.map(Number);expect(taupe).toHaveLength(3);expect(taupe[0]).toBeGreaterThan(taupe[1]);expect(taupe[1]).toBeGreaterThan(taupe[2]);expect(taupe[0]).toBeLessThan(180);expect(taupe[2]).toBeGreaterThan(70);
  await expect(handle(page,'password-toggle')).toBeVisible();await expect(handle(page,'forgot-password')).toBeVisible();
 }
 
@@ -87,7 +86,7 @@ test(`${c(17)} all screens pass automated accessibility checks and announce erro
   }
  }
 });
-test(`${c(19)} staff workspace identifies only its salon and keeps the neutral palette`,async({identity,accounts})=>{
+test(`${c(19)} staff screens identify only their own salon on the shared warm canvas`,async({identity,accounts})=>{
  const colours:string[]=[];
  for(const salon of salons){const staff=await identity.staff(salon,'MANAGER'),context=await accounts.context(salon,[staff]);
   for(const route of screenMap){const page=await accounts.open(context,route);if(!route.endsWith('sign-in'))await accounts.ready(page);else await expect(handle(page,'sign-in-submit')).toBeVisible();
@@ -97,7 +96,7 @@ test(`${c(19)} staff workspace identifies only its salon and keeps the neutral p
    if(route!==routes.staffSignIn){const surface=await appearance(page.getByTestId('workspace-shell'));colours.push(surface.background);}await page.close();
   }
  }
- expect(new Set(colours).size,'all staff workspaces share the neutral canvas').toBe(1);expect(colours[0]).toBe('rgb(243, 240, 235)');
+ expect(new Set(colours).size,'all staff workspaces share the warm canvas; the accent is the brand (TC-F02-S04-024)').toBe(1);expect(colours[0]).toBe('rgb(243, 240, 235)');
 });
 test(`${c(21)} translation and test-id inventories cover every new screen state`,async({identity,accounts})=>{
  const source=path.join(productRoot,'apps/web/src/components/account');const files=fs.readdirSync(source).filter(file=>file.endsWith('.tsx')&&!file.endsWith('.test.tsx'));expect(files.length).toBeGreaterThan(0);

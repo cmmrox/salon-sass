@@ -21,13 +21,15 @@ into production. Show only available routes. Future catalogue, booking, branding
 capabilities stay in their roadmap features; Customer mode remains their mobile design reference.
 If a spec contradicts this authority, ask the lead to correct it through a change request.
 
-## Staff sign-in exception (CR-012)
+## Staff sign-in composition (CR-012, CR-013)
 
-The owner's `docs/design/references/staff-sign-in.png` governs tenant staff login only: full-screen
-warm interior photo, centered API-resolved salon initial/name, translucent white card, welcome
-headings, labelled fields, visibility toggle, administrator recovery guidance, taupe action and
-secure-team footer. Match its composition at 1536x1024 and adapt across the width matrix. Use
-Poppins and accessible tokenized colors; login radii/heading scale replace workspace rail/pills.
+The owner's `docs/design/references/staff-sign-in.png` governs the composition of tenant staff
+login only: full-screen warm interior photo, centered API-resolved salon initial/name, translucent
+white card, welcome headings, labelled fields, visibility toggle, administrator recovery guidance,
+primary action and secure-team footer. Match its composition at 1536x1024 and adapt across the
+width matrix. Login radii/heading scale replace workspace rail/pills. Its colours are not its own
+(CR-013): ink, muted text, lines, fields, focus, the initial ring, links and the action use the same
+tokens as the workspace, with the salon's brand accent; the mockup's taupe is not used.
 Published logo/cover support stays in F04; the interior is a shared decorative fallback. Protected
 screens continue to follow the HTML prototype below.
 
@@ -41,7 +43,7 @@ screens continue to follow the HTML prototype below.
 | Customer (later React Native only) | Centred 430px canvas, compact sticky header and anchored icon navigation |
 | Salon | Full width; below 900px main area up to 760px and bottom navigation; desktop sticky white header, sidebar and main area up to 1280px |
 | Sidebar | 200px at 900–1199px; 236px at 1200px and above |
-| Branding | Customer actions and identity accents use the published salon colour and readable computed foreground; workspace stays neutral |
+| Accent and branding (CR-013) | Wherever the prototype uses `--ac`/`--acs`/`--onac` (primary actions, selected navigation, chips and slots, focus, progress, identity accents), sign-in and workspace use the salon's brand colour, its soft tint and its computed readable foreground. Default `#D6086A` when a salon has none. Only the operator console stays neutral |
 
 The customer header's name is neutral text on the warm canvas. Customer and workspace header
 names use the reference's single-line ellipsis, retaining the complete DOM/accessible name and
@@ -79,9 +81,15 @@ product evidence; never claim a side-by-side preview occurred.
 
 - Colours, spacing, radii, type sizes and shadows are tokens. No raw hex value and no magic number
   in a component.
-- Two kinds of colour: the platform's neutral palette, and the salon's brand colour, which arrives
-  at run time. Anything drawn on the brand colour uses the computed contrast colour.
-- Test every customer screen with at least two salons' brands: a dark brand colour and a light one.
+- Two kinds of colour: the platform's palette (the prototype's final tokens), and the salon's brand
+  colour, which arrives at run time and is the accent of every salon screen, sign-in included.
+  Anything drawn on the brand colour uses the computed contrast colour.
+- Brand tokens: `--color-brand` (fills, the sign-in initial ring, the field focus ring),
+  `--color-on-brand` (anything on a brand fill), `--color-brand-soft` (selected tints, the phone's
+  selected tab) and `--color-brand-text` (links and other text in the brand colour, ink when the
+  brand is under 4.5:1 on white). The keyboard focus outline stays the prototype's `#1D5FD0`.
+  The sign-in card uses `--color-surface-translucent`.
+- Test every salon screen with at least two salons' brands: a dark brand colour and a light one.
   A screen that only works on the default pink is broken.
 - Images uploaded by a salon are resized and cropped by the system. A layout must survive a very
   wide logo, a missing cover and a long salon name.
@@ -158,4 +166,6 @@ Use the prototype's wording where it exists. One name for one thing everywhere: 
 - A new component that looks like an existing one.
 - A colour, size or string typed straight into a screen.
 - A screen checked only at desktop width, only with the default brand, or only with data in it.
+- A generic placeholder frame ("Salon", an account skeleton) painted before the screen the visitor
+  asked for, when the server could already decide where they belong (CR-013).
 - An interactive element with no test id.

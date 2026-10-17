@@ -10,7 +10,7 @@ status: complete
 qa_status: not-run
 blocked_reason: null
 released_in: null
-reopened_by: CR-012
+reopened_by: CR-013
 depends_on:
 - F02-S01
 - F02-S02
@@ -31,7 +31,7 @@ nfr_focus:
 - NFR-10
 - NFR-21
 handoff:
-  run: 'CR-012 current runtime 2026-10-15: API session81238/PID2865 from apps/api, SPRING_PROFILES_ACTIVE=local
+  run: 'CR-013 current runtime 2026-10-17 (checkout /Users/cmmrox/Personal/Projects/salon-sass, source 756fdef): infra/scripts/local-service.sh start api|web (stop the same before rebuilding). API PID54422 java -jar target/salon-api.jar (JDK25 selected by the build), health UP; production web PID52092 node scripts/serve.mjs --port 3100 from the final build. Open http://alpha.localhost:3100/ (beta, gamma likewise): signed out it is 307 / -> /workspace -> /workspace/sign-in; signed in /workspace/account. Colour hook: infra/scripts/local-salon.sh colour <slug> <#RRGGBB> (local only, owner role, refuses a non-salon or non-#RRGGBB, changes only salon_brand.brand_colour and updated_at, stores upper case); local-reset.sh restores seeded alpha #D6086A, beta #1F2937, gamma #FDE68A. Earlier runtime records below are historical. CR-012 current runtime 2026-10-15: API session81238/PID2865 from apps/api, SPRING_PROFILES_ACTIVE=local
     SALON_PLATFORM_DOMAIN=localhost SALON_IDENTITY_LOCAL_KEY_FILE=<checkout>/.local/identity-keys.properties
     JDK25 java -jar target/salon-api.jar; production web session66419/PID2880 from apps/web, SALON_PLATFORM_DOMAIN=localhost
     SALON_API_BASE_URL=http://localhost:8090 SALON_WEB_LOCAL_HTTP=true SALON_IDENTITY_LOCAL_KEY_FILE=<checkout>/.local/identity-keys.properties
@@ -49,7 +49,7 @@ handoff:
     rebuild, then restart. Logs .local/logs/cr007-api-runtime.log and cr007-web-runtime.log. CR-010 current
     web: persistent exec43141, http://alpha.localhost:3100/ -> staff workspace; log .local/logs/cr010-web-runtime.log.
     Old customer entry URLs now staff aliases.'
-  data: 'CR-012 retained alpha/beta/gamma and existing local identity keys, no reset. Added one synthetic
+  data: 'CR-013: no reset. Added one synthetic MANAGER per salon (alpha, beta, gamma) through POST /local/identity/seed; random credentials only in ignored .local/cr013-dev-fixture.json mode0600, never printed. Their browser sessions were signed out or left to expire; no other account changed. beta colour temporarily set to #0F766E with the new hook for the AC-10 change check and restored to #1F2937 (API confirmed); alpha/gamma untouched. Earlier fixture records below are historical. CR-012 retained alpha/beta/gamma and existing local identity keys, no reset. Added one synthetic
     Alpha Owner for developer password/MFA walkthrough; private random fixture .local/cr012-developer-fixture.json
     mode0600, authenticator enrolled and browser session signed out/revoked. No real sending/payment or
     provider overrides. Historical fixtures below: Only synthetic alpha/beta/gamma; all three active after
@@ -63,7 +63,7 @@ handoff:
     customers0740990701/0702/0703 registered through captured local codes and saved name Design check;0740990714
     exercised wrong-code feedback. Those customer fixtures remain local for QA''s normal synthetic reset.
     No Clock/provider/limit overrides or real messages were used.'
-  notes: "CR-012 developer handoff 2026-10-15. Built against approved mockup and HTML protected-workspace\
+  notes: "bug-fix F02 2026-10-17 BUG-F02-013, fix c618f87 on charithm/bugfix/F02-brand-foreground-contrast, checkout /Users/cmmrox/Personal/Projects/salon-sass. contrastColour(): white or ink #111827 as before when the better one reaches 4.5:1, otherwise #000000 (ON_BRAND_COLOURS.black); brandTextColour already falls back to ink on white (17.7:1), so no gap there. Red first: brand.test.ts sweep of the RGB cube at step 5 (140,608 colours) plus #808080 and #C34BB4 failed (9,364 colours below 4.5:1; .local/logs/bug-f02-013-before.log), now passing; a further case proves every colour where white or ink reached 4.5:1 keeps the previous choice. Running product: alpha set with local-salon.sh colour to #808080 then #C34BB4: sign-in action, workspace primary button and selected navigation black text at 5.32:1 and 4.99:1 (were ink 4.49 and white 4.21); alpha restored to #D6086A, white 5.12:1 (.local/logs/bug-f02-013-after-runtime.log). Gates on c618f87, logs .local/logs/bug013-*.log: pnpm -r lint EXIT0; pnpm -r typecheck EXIT0; pnpm -r test EXIT0 (19 contracts, 391 web); pnpm --filter @salon/web build EXIT0; pnpm contracts:check EXIT0; cd apps/api && ./mvnw -q verify first run EXIT1 on a timing assertion only: SalonEndpointDatabaseSilentIntegrationTest had two requests at 5.077 s and 5.075 s against a 5 s limit while the database was frozen (Java unchanged; this suite passed three times earlier today; .local/logs/bug013-maven-run1-flaky.log); rerun EXIT0, 518 tests, 0 failures (bug013-maven.log). The lead may want that margin examined separately. API and web restarted from this build. Fixture MANAGERs re-seeded idempotently.\n\nbug-fix F02 2026-10-17 BUG-F02-012, fix 881ca87 on charithm/bugfix/F02-sign-in-frozen-api-deadline, checkout /Users/cmmrox/Personal/Projects/salon-sass. Root cause: requestSignal() deadlines reached the outgoing socket only through openapi-fetch, withTraceparent and transport copies of the Request; undici copies follow their parent signal through a weakly held controller, so a GC while the API was silent dropped the abort and the call waited for the API to resume (intermittent, predates CR-013). Fix: withTraceparent enforces the shared request budget with a strong timer (remainingBudget) and passes its signal explicitly; fetchForHostname uses init.signal as given; the caller's original signal is forwarded. Red first: lib/api/deadline.test.ts (stand-in API silent, headers-only, unread; hostname transport, platform fetch, handleIdentity sign-in; caller abort) 11/11 failing with forced GC, all passing without GC (.local/logs/bug-f02-012-before.log), now 11/11 passing. Running product: API frozen with SIGSTOP plus static-file load on the web: pre-fix web gave no answer in 30 s 3/3 (.local/logs/bug-f02-012-repro-prefix.log); fixed web 503 in about 3.0 s 7/7 (bug-f02-012-after-runtime.log, bug-f02-012-final-runtime.log); API always resumed; normal sign-in, renewal and logout re-checked. Gates on 881ca87, logs .local/logs/bug012-*.log: mvnw -q verify EXIT0 (518 tests; API stopped then restarted); pnpm -r lint EXIT0; pnpm -r typecheck EXIT0; pnpm -r test EXIT0 (19 contracts, 386 web); pnpm --filter @salon/web build EXIT0 (web stopped then restarted); pnpm contracts:check EXIT0. Fixture: synthetic MANAGERs re-seeded idempotently after QA's identity reset (private .local/cr013-dev-fixture.json).\n\nbug-fix F02 2026-10-17 (BUG-F02-010, BUG-F02-011), fix 3b8df96 on charithm/bugfix/F02-cr013-entry-cookies-default-brand, checkout /Users/cmmrox/Personal/Projects/salon-sass. Red first: 7 failing unit cases (.local/logs/bug-f02-010-011-before.log), now passing. Running product: BUG-011 reproduced on the pre-fix 756fdef web, then fixed on the rebuilt 3b8df96 web (307 to sign-in with six host-only clearing Set-Cookie headers; no staff cookies left; renewal and logout entry unchanged); BUG-010 through a stand-in API :8091 and a second web :3101 (invalid, injection and missing colour render sign-in 200 in #D6086A; stand-ins stopped). Gates on 3b8df96, logs .local/logs/bugfix-f02-*.log: mvnw -q verify EXIT0 (518 tests, API stopped then restarted); pnpm -r lint EXIT0; pnpm -r typecheck EXIT0; pnpm -r test EXIT0 (19 contracts, 375 web); pnpm --filter @salon/web build EXIT0 (web stopped then restarted); pnpm contracts:check EXIT0. Fixture: the three synthetic MANAGERs were re-seeded idempotently after QA's identity reset (same private .local/cr013-dev-fixture.json). Earlier CR-013 handoff follows.\n\nCR-013 developer handoff 2026-10-17, tested source 756fdef9a5b29d23cd74daf4000f56db07311d4c (tree clean; this handoff commit changes only stage metadata).\n\nAC-10 checked on the running product (Playwright from outside, .local/output/playwright/cr013/observations-theme.json, screenshots *-sign-in-1440/390.png and *-account-1440/390.png). One shared theme, with prototype tokens canvas F3F0EB, secondary EAE5DC, lines DDD6CA, white cards, ink 111827 and muted 6B7280. Every salon screen gets its brand from a style rule built from the API colour (BrandStyle via salonBrandRule): --color-brand, --color-on-brand, --color-brand-soft and --color-brand-text. alpha D6086A (default), beta 1F2937 (dark) and gamma FDE68A (light) were each measured on sign-in and workspace. The sign-in action fill and its border, the initial ring, the field inset focus, the workspace primary button, the selected desktop rail item and the field inset focus all equal the brand. Text on brand fills is white for alpha and beta and ink for gamma. The recovery link is the brand colour for alpha and beta, and ink with a brand underline for gamma, because gamma is under 4.5:1 on white. The phone selected tab is the brand soft tint behind the icon, with ink text. The global :focus-visible outline stays the prototype blue 1D5FD0, as the lead agreed. Sign-in card text is ink, help text is muted on a measured card pixel of rgb 252,251,250 (about 4.65:1), and card and field lines are DDD6CA. Changing the colour without a rebuild: local-salon.sh colour beta 0F766E changed both beta screens on the next request, and was then restored. A salon without a valid colour gets D6086A: the DB CHECK and strict web resolution keep an invalid colour from reaching a screen, so this is covered by the salonBrandRule and AccountFrame unit tests. Retired tokens: --color-login-ink, -muted, -accent, -action, -field, -border and -input-border, and --color-primary. --color-login-card is renamed --color-surface-translucent, and the size, space and type login tokens are kept. theme.test.ts asserts the token values, that no raw colour appears in a component module, and the accent mapping. The width matrix (360, 390, 768, 1024, 1280 and 1440) on beta and gamma covered sign-in and the account, staff and audit pages: 48 checks with no horizontal overflow.\n\nAC-11 checked on the running product (.local/output/playwright/cr013/observations-entry.json, screencast frames frames-*/ and sheet-entry.png). Signed out, on alpha, beta and gamma, every one of /, /workspace, /workspace/account, /workspace/staff and /workspace/audit is answered by server 307s straight to /workspace/sign-in, and the first painted frame is the sign-in screen. Revoked or stale cookies reach sign-in the same way: the proxy checks the session with the API before rendering. Signed in, the documents for /, /workspace, account, staff and audit render the workspace shell with the salon name in server HTML. They contain no app-name, no account-loading card and no unsupported-browser warning, and the first screencast frame is that workspace. The only pending state is the in-section list skeleton, account-list-loading (\"Loading...\"), inside the branded workspace. An expired access cookie with a live refresh family renders the salon workspace and renews under the browser lock: verified, the family rotated and the device list loaded. After logout, revisiting reaches sign-in by 307.\n\nDesign: a page redirect() under cacheComponents streams as a client meta redirect after the shell, so entry is decided in proxy.ts (routeRequest) with real 307s. /workspace is decided on cookie presence alone, with no API call. Protected pages call the API with workspaceEntry: /identity/me, plus /meta only when renewal is possible, inside the same request's three-second deadline. The page re-checks with the same function, so a signed-in protected page load now makes one extra /identity/me call within that budget. Renewal is never performed on the server, so Web Locks coordination and replay revocation are unchanged. The shared renewal() helper replaces the identical inline check in handleIdentity. (workspace)/layout.tsx sets instant=false and AccountPage has no Suspense fallbacks, so no generic AppShell frame exists.\n\nKnown limit: when the access cookie has expired but a revoked refresh family remains, the server cannot tell whether that family is spent without spending it. That visitor sees their salon's workspace frame for a moment before the browser renewal sends them to sign-in. The frame is branded and named, not the generic one.\n\nOther changes: the unsupported-browser warning no longer flashes on first render (support is unknown until inspected; controls stay disabled until then). New test id account-list-loading and message account.listLoading. local-salon.sh colour action added at the lead's request.\n\nDocs for the lead: the README, test-plan and environments docs should name the colour hook. docs/engineering/web.md Branding could record that entry is decided in proxy.ts, with the re-check and the extra /identity/me call. ui-ux-standards could mention --color-brand-text and --color-surface-translucent.\n\nDeveloper gates (checkout above, Node 24.12.0, Corepack pnpm 12.11.2, JDK25 from the build; logs in .local/logs):\n- cd apps/api && ./mvnw -q verify: EXIT 0, 518 surefire tests and 0 failures, cr013-maven.log, run fresh with the API stopped.\n- pnpm -r lint: EXIT 0, cr013-lint.log.\n- pnpm -r typecheck: EXIT 0, cr013-typecheck.log.\n- pnpm -r test: EXIT 0, 19 contracts and 367 web tests, cr013-tests.log.\n- pnpm --filter @salon/web build: EXIT 0 with the web stopped, workspace routes dynamic, cr013-web-build.log.\n- pnpm contracts:check: EXIT 0, current, cr013-contracts.log.\nNew tests: lib/identity/entry.test.ts (mutation-checked: making every 401 pending fails 3 cases), lib/tenancy/route-request.test.ts entry cases, styles/theme.test.ts, the brand.test.ts brandTextColour and salonBrandRule cases, AccountFrame brand cases, AccountEntry.test.tsx, and the SignIn no-flash case. Walkthrough scripts are in .local/output/playwright/cr013/scripts.\n\nTimings: implementation about 20 minutes, walkthrough and rework about 15 minutes, gates about 5 minutes. Exact timings are unknown.\n\nCR-012 developer handoff 2026-10-15. Built against approved mockup and HTML protected-workspace\
     \ grammar. Tested source11e9955d331548495fd78f5967e4555d97ac2172 includes app5962920/70912e1/11e9955\
     \ and QA preparationfcbb15a/fe6686c. Checkout /Users/cmmrox/Personal/Projects/salon-sass; tree clean\
     \ during final sealed commands.\n\nAC-1: Live in-app browser checked invalid password recovery/credential\
@@ -434,7 +434,7 @@ cases:
   covers:
   - AC-8
 - id: TC-F02-S04-019
-  title: staff workspace identifies only its salon and keeps the neutral palette
+  title: staff screens identify only their own salon on the shared warm canvas
   type: branding
   priority: high
   covers:
@@ -463,6 +463,37 @@ cases:
   priority: high
   covers:
   - AC-9
+- id: TC-F02-S04-024
+  title: sign-in and workspace draw every accent in the salon's own brand colour with a readable foreground
+  type: branding
+  priority: high
+  covers:
+  - AC-10
+- id: TC-F02-S04-025
+  title: a salon colour change shows on both screens on the next request and an invalid colour falls back to the default accent
+  type: branding
+  priority: high
+  covers:
+  - AC-10
+- id: TC-F02-S04-026
+  title: entering without a usable session reaches sign-in with no intermediate frame
+  type: functional
+  priority: high
+  covers:
+  - AC-11
+- id: TC-F02-S04-027
+  title: a signed-in member's first painted frame is their workspace with the salon's resolved name
+  type: functional
+  priority: high
+  covers:
+  - AC-11
+- id: TC-F02-S04-028
+  title: text on a mid-tone brand fill stays readable on the sign-in action, primary button and selected navigation
+  type: accessibility
+  priority: high
+  covers:
+  - AC-8
+  - AC-10
 verification:
   commands:
   - cd apps/api && ./mvnw -q verify
@@ -521,17 +552,33 @@ verification:
     - TC-F02-S04-022
     suites:
     - regression
+  - id: web-theme-entry
+    tool: playwright
+    file: qa/web/F02/S04-theme-entry.spec.ts
+    project: web
+    covers:
+    - TC-F02-S04-024
+    - TC-F02-S04-025
+    - TC-F02-S04-026
+    - TC-F02-S04-027
+    - TC-F02-S04-028
+    suites:
+    - regression
   manual:
   - case: TC-F02-S04-018
-    reason: 'CR-012 current manual judgment: inspected source and rendered login together at1536x1024,
-      guidance/visible-focus sequences at360/768/1536, masked enrollment at all six widths and alpha/beta/gamma
-      error states from qa/reports/20261015-135642-F02-delta-462a695fbd8e. Keyboard sequence records15
-      focused controls with visible outlines; Enter toggles visibility/recovery and restores initial guidance.
-      Actual empty-input full-view/focused comparison also required in final delta, linked in review.md.
-      Retain unaffected protected-account/Owner/confirmation focus proof from2026-10-14; no new manual
-      protected-workspace pass is claimed. CUA IAB unavailable and Chrome CDP timed out; sequences captured
-      through registered repository Playwright and visually inspected, with credentials/setup values masked.'
-    performed_on: 2026-10-15
+    reason: 'CR-013 manual judgment performed 2026-10-17 on the running local build (API/web from be188ca, application
+      source identical to developer-gated 756fdef). Synthetic MANAGER per salon seeded through the local hook; random
+      credentials only in ignored 0600 .local/cr013-qa-tc018-fixture.json. Keyboard-only traversal of staff sign-in at
+      360/768/1536 and the workspace account at 390/1280 for alpha (#D6086A), beta (dark #1F2937) and gamma (light #FDE68A):
+      ordered focus identifier, password, visibility toggle, recovery, sign-in, then wraps; no trap; every stop
+      :focus-visible with a 3px #1D5FD0 outline in view; fields add the 2px brand inset ring. Action contrast 5.12/14.68/14.24
+      (gamma ink text); recovery text brand for alpha/beta (5.12/14.68 on white) and ink with brand underline for gamma;
+      desktop selected rail item brand fill with readable text, phone tab soft tint with ink; wrong-password error announced
+      (role alert) with focus kept on the password. 120 focus screenshots and observations
+      qa/reports/20261017-F02-TC018-manual/TC018-observations.json sha256 0eac0e5577b20a833bfc11293c9580b52df36024c546a3cc02c939d99b623155, visually inspected. Machine-captured
+      keyboard sequences through repository Playwright, not a native assistive-technology session. Earlier CR-012 and 2026-10-14
+      protected-account evidence is historical.'
+    performed_on: 2026-10-17
   deferred: []
 evidence:
   last_run: null

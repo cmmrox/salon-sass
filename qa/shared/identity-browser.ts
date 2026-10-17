@@ -45,7 +45,8 @@ export class AccountBrowser {
   }
   async actor(context:BrowserContext,salon:Salon,kind:Kind):Promise<Actor>{return {salon,tokens:await this.tokens(context,salon,kind),principal:await this.identity.principal(salon,await this.tokens(context,salon,kind))};}
   async open(context:BrowserContext,path:string){const page=await context.newPage();await page.goto(path);return page;}
-  async ready(page:Page){await expect(handle(page,'logout')).toBeVisible();await expect(handle(page,'loading')).toHaveCount(0);}
+  /** Signed-in controls shown and nothing pending: the page frame (`loading`) and, since CR-013, the in-section lists (`list-loading`). */
+  async ready(page:Page){await expect(handle(page,'logout')).toBeVisible();await expect(handle(page,'loading')).toHaveCount(0);await expect(handle(page,'list-loading')).toHaveCount(0);}
   async staffSignIn(page:Page,salon:Salon,account:SeedAccount,identifier=account.email){
     await page.goto(routes.staffSignIn);await handle(page,'identifier').fill(identifier);await handle(page,'password').fill(account.password);
     let enrollmentStatus:number|undefined;const enrollmentResponse=(response:{url:()=>string;status:()=>number})=>{if(new URL(response.url()).pathname===bff('staff','mfa-enroll'))enrollmentStatus=response.status();};page.on('response',enrollmentResponse);

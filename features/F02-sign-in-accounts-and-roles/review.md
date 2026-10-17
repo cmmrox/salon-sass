@@ -1,6 +1,109 @@
 # F02 Sign-in, accounts and roles: product review
 
-## Current CR-010 independent scoped review (2026-10-15)
+## Current CR-013 independent review of the salon web screens (2026-10-17)
+
+Reviewed as: a receptionist on a 768px tablet and a 390px phone, a salon owner at a 1280–1440px desk, and a professional on a 360px phone; signed out and signed in; dark brand (beta `#1F2937`, long name) and light brand (gamma `#FDE68A`), alpha's default `#D6086A` in automation. Screens: F01 bare-domain status, unknown-host "Salon not found", suspended-salon "Temporarily unavailable"; F02 staff sign-in (with recovery guidance and authenticator step), workspace account, staff access and activity log, and the sign-out confirmation drawer/sheet. Every screen at 360/390/768/1024/1280/1440: 66 captures in `qa/reports/20261017-F01-F02-review/` (`review-notes.json`), plus 120 keyboard captures for TC-F02-S04-018 in `qa/reports/20261017-F02-TC018-manual/`. Owners were synthetic, enrolled with a seeded authenticator secret; credentials in an ignored 0600 file only.
+Compared with: the dated Fresha/Booksy/Vagaro findings below (2026-10-14), not refreshed: CR-013 changes the theme and entry, not what those products are compared on.
+
+### Verdict
+
+The salon web screens now look like one product that belongs to the salon. Sign-in and workspace share the warm prototype palette, Poppins, pills and rounded cards, and the salon's own colour drives the action, the selected navigation and the field focus on both. Entering is direct: signed out, `/`, `/workspace` and every protected URL reach sign-in through server redirects with no painted "Salon"/"Loading your account…" frame; signed in, the first frame is the named workspace. No horizontal scroll at any width, every keyboard stop shows the 3px blue outline, and the dark and light brands stay readable (action contrast 14.68 and 14.24). The two minor defects found first (BUG-F02-010, BUG-F02-011) are fixed and verified. F02 stays `failing` on BUG-F02-012 (major, AC-8): with the API frozen, staff sign-in once hung 164 s instead of answering 503 within the 3 s budget (1 of 4 observed runs). The one change that would most improve it is to make the authenticator step and the sign-out confirmations say exactly what will happen (SUG-F02-04, SUG-F02-05).
+
+### Verification in this pass
+
+- Closure evidence (reviewed revision `516953e`, runtime meta `516953e`): sealed F02-delta `qa/reports/20261017-145139-F02-delta-c5bbab4cb12f` re-executed all 14 registered F02 entries, because QA's shared helpers changed since the base. All pass: staff-access 26, staff-runtime 3, nonlocal-identity, customer-access 12, customer-runtime 5, nonlocal-provider, customer-profile 14, web-functional 7, browser-security 8, web-presentation 6, web-resilience-address 2, web-theme-entry 4, identity-read-baseline (p95 31–60 ms against 300 ms, zero failures) and account-journeys 1. The runs listed below are earlier history on the way there.
+- Final scoped F02 web delta `qa/reports/20261017-092347-F02-delta-b0a937960444` on `b7f5c3d`, against the bug-fix handoff (running API/web from `f62146f`, application identical to the fix `3b8df96`): 6 groups, 28 Playwright tests, all pass (functional 7, security 8, presentation 6, resilience 2, theme-entry 4, journeys 1). BUG-F02-010 and BUG-F02-011 verified. Assessment draft for the lead to commit: `qa/reports/cr013-assessment-draft/scoped-qa.json` (QA may not write `features/*/scoped-qa.json`).
+- First delta `qa/reports/20261017-063102-F02-delta-ff3abe97e455` on `be7e550` (CR-013 build before fixes): 6 groups, 28 Playwright tests, 26 pass. web-functional 7/7, web-presentation 6/6, web-resilience-address 2/2, account-journeys 1/1, browser-security 7/8 (TC-F02-S04-008 → BUG-F02-011), web-theme-entry 3/4 (TC-F02-S04-025 invalid-colour rows → BUG-F02-010; its colour-hook half and the valid-colour control passed).
+- Retained under CR-009, not rerun: F02 API automation (S01–S03), nonlocal checks and the read baseline from the base full report `qa/reports/20261015-000506-F02-3e38935bf776` on `e73d99b`. Java API, schema, contracts and infrastructure (other than the new local colour hook) are unchanged since then.
+- New cases TC-F02-S04-024..027 (AC-10, AC-11). The paint recorder behind TC-026/027 was proved on synthetic pages: it reports a painted "Salon" header and loading card before a client redirect, and passes a straight server redirect.
+- TC-F02-S04-018 performed manually 2026-10-17 on alpha, beta and gamma.
+- Not run: regression is part 3 of this request and reported separately; no staging, no native mobile.
+
+### What works well
+
+- One theme. Sign-in ink, lines and fields match the workspace; the CR-012 taupe and the black workspace accent are gone.
+- The salon's colour really is the salon's. On gamma's light yellow the action and selected item switch to ink text (14.24:1), and the recovery link drops to ink with a yellow underline rather than becoming unreadable.
+- Direct entry with no intermediate frame, by server 307s, on every entry path and for revoked sessions.
+- Keyboard: a sensible order on sign-in (identifier, password, visibility, recovery, sign in) and in the workspace (name, navigation, sign out, forms, devices), and a consistent visible outline that does not depend on the brand.
+- Long names: beta's 52-character name wraps on sign-in and ellipsizes in the workspace header with the full name kept for assistive technology.
+
+### Suggestions
+
+Ranked, most valuable first. Earlier SUG-F02-02 and SUG-F02-03 (CR-006) still apply and are not repeated.
+
+| Id | Class | Suggestion | Disposition |
+| --- | --- | --- | --- |
+| SUG-F02-04 | should | Name the second button on the authenticator step for what it does ("Use a different account") instead of "Sign in" || CR-014 |
+| SUG-F02-05 | should | Say what a sign-out confirmation will sign out ("Sign out all devices?", "Sign out this device?") || CR-015 |
+| SUG-F02-06 | idea | Give the light-brand sign-in initial a ring readable on the photograph || backlog |
+| SUG-F02-07 | idea | Do not repeat the page title as the first card heading on Staff access and Activity log || backlog |
+| SUG-F02-08 | idea | Add a "skip to content" link before the workspace navigation || backlog |
+
+#### SUG-F02-04 Name the authenticator step's second button for what it does
+
+- **Observed:** After the password, the authenticator step shows "Verify code" and, below it, a pill button labelled "Sign in" (`F02-gamma-mfa-390.png`). It abandons the challenge and returns to the password form.
+- **Why it matters:** A receptionist who has just typed a password and is now asked for a code sees two actions that both sound like "continue"; pressing "Sign in" loses the step they were on.
+- **Instead:** Label it "Use a different account" (or "Back"), styled as a secondary text action.
+- **Evidence:** `qa/reports/20261017-F01-F02-review/F02-gamma-mfa-390.png`; Fresha and Booksy partner sign-in offer one primary action on the code step (2026-10-14 findings below).
+
+#### SUG-F02-05 Say what a sign-out confirmation will sign out
+
+- **Observed:** "Sign out all devices" opens a drawer titled "Confirm this action" with the line "Confirm sign-out" and a "Confirm sign-out" button (`F02-gamma-confirm-1440.png`, `-360.png`). The same wording appears for one device.
+- **Why it matters:** The product review rule is that before anything irreversible, what is about to happen must be plain. An owner signing out every device (including tablets at the front desk) should see that it is every device.
+- **Instead:** Title and button from the action: "Sign out all devices?" with "You will be signed out here and on every other device"; "Sign out this device?" for one.
+- **Evidence:** the two screenshots above, two taps from account.
+
+#### SUG-F02-06 A readable initial ring on a light brand
+
+- **Observed:** On gamma's `#FDE68A` the sign-in initial's ring is a pale yellow line on a beige photograph (`F02-gamma-signin-*.png`), barely visible; dark brands are clear.
+- **Why it matters:** The initial is the salon's identity mark on the first screen staff see; on light brands it nearly disappears.
+- **Instead:** Keep the brand ring and add a thin ink or white outer line when the brand is under 3:1 on the card surface.
+- **Evidence:** `F02-gamma-signin-1440.png` vs `F02-beta-signin-1440.png`.
+
+#### SUG-F02-07 Avoid repeating the page title
+
+- **Observed:** Staff access and Activity log show the same text as h1 and as the first card's h2 ("Staff access / Staff access").
+- **Why it matters:** Screen-reader users hear the title twice; sighted users see a redundant heading on a phone where space is short.
+- **Instead:** Name the card for its content ("People with access", "Recent activity") or drop the card heading.
+- **Evidence:** `review-notes.json` headings for every width.
+
+#### SUG-F02-08 Skip link before the workspace navigation
+
+- **Observed:** Keyboard users pass the salon name and three navigation items before reaching the page's first control on every page.
+- **Why it matters:** Small now, but it grows with every feature that adds navigation (calendar, services, reports).
+- **Instead:** A visually hidden "Skip to content" link that appears on focus.
+- **Evidence:** `TC018-observations.json` workspace sequences.
+
+### Regression (owner-requested, 2026-10-17)
+
+`--suite regression` over F01 and F02 at QA revision `28268b5` against the `c78b909` build (local runtime and production-like stack both on `c78b909`; stack N `0.1.0-SNAPSHOT`, N+1 `qa-cr013-next`): `qa/reports/20261017-095745-regression-b151743995aa`, 15 of 19 entries pass. The 4 failures were triaged, none a product regression:
+
+- F02-S01 nonlocal-identity and F02-S02 nonlocal-provider (exit 3): QA harness fault; the checks re-derived the product root from the shell variable only. Repaired; `qa/reports/20261017-143743-F02-delta-f06314968ba1` passes both.
+- F01-S05 deployment-traffic: TC-008 ran without the documented N+1 rollout-probe fixture (`S05-fixture-build.sh`, a missed preparation step); TC-009 expected a 200 salon page at `/`, which CR-010 made a no-store 307. Traffic itself had zero failed requests (32,491 and 1,816). TC-008's failure left the stack on N+1.
+- F01-S05 production-like-stack: TC-003/004/005/010/011 had the same stale `/` expectation, made worse by the stack being left on N+1; TC-002 was Trivy timing out on an image layer. All images rescan clean. The scan script reported that timeout as fixable vulnerabilities: BUG-F01-005 (minor, pre-existing).
+- After the fixture, a rollback to N and the reconciliation (the root's 307 is asserted, page reads use the salon-named entry `/workspace/sign-in`), `qa/reports/20261017-143246-F01-delta-baf914700098` passes all 12 F01-S05 cases including the rollout and rollback under 50 VUs.
+
+### Design reference comparison
+
+Sign-in maps to the CR-012 mockup composition with the CR-013 colour decision; protected screens map to the HTML prototype's Salon mode (rail ≥900px, bottom tabs below, white cards, pill actions, brand-filled selected rail item, soft-tint phone tab). Compared from rendered screens and the prototype's source cascade, not a side-by-side preview. No unexplained departure was found. The F01 neutral pages keep the warm canvas and the placeholder product name "Salon" (the product is unnamed); they are not salon screens, so CR-013's accent does not apply.
+
+### Notes for the lead (documents)
+
+- F01-S03 AC-2 still reads "Staff entry uses the neutral responsive Salon workspace"; CR-013 replaced "workspace stays neutral" for the salon web application but listed only F02.
+- F01-S05 AC-3 still says the stack's `/` "shows alpha's shell"; since CR-010 it is a no-store 307 to `/workspace` (F01-S03 AC-1). The stack cases were reconciled to that.
+- `docs/design/ui-ux-standards.md` and `docs/engineering/web.md` describe decision 045 and the brand tokens correctly; neither states what the web does when the API returns an invalid brand colour (BUG-F02-010 follows AC-10).
+
+### Bugs filed from this pass
+
+- BUG-F02-010 minor: an invalid or missing brand colour gives "Service unavailable" instead of the default accent (AC-10). Verified.
+- BUG-F02-011 minor: the server-side entry redirect leaves a revoked staff family's cookies in the browser (AC-4). Verified.
+- BUG-F02-013 major (AC-10/AC-8, raised in the PR #11 review): text on mid-tone brand fills such as `#808080` and `#C34BB4` was below 4.5:1 because the foreground was only ever white or ink; latent since F01-S03, exposed by CR-013. New TC-F02-S04-028. Fixed in `c618f87` (black when neither white nor ink reaches 4.5:1); verified in `qa/reports/20261017-160221-F02-delta-fbc5edc57254` on `8fd1939`, all 14 F02 entries passing.
+- BUG-F01-005 minor (F01, found by the regression, pre-existing): `images-scan.sh` reports a scanner failure as fixable vulnerabilities.
+- BUG-F02-012 major: staff sign-in can hang until an unresponsive API resumes instead of 503 within the 3 s budget (AC-8). Fixed in `881ca87`; verified in `qa/reports/20261017-094849-F02-delta-584884e9bba2` (6 groups, 28 tests pass) plus 10/10 frozen-API sign-ins at 503 in about 3.0 s.
+
+Test and environment repairs in this pass: `accounts.ready()` now also waits for CR-013's in-section `account-list-loading` (it waited only for the retired whole-account frame, so TC-F02-S04-008's race advanced the clock mid-load); the F01 journey now restores the scheduler occurrence its 31-day clock jump creates (a diagnostic run of it left both jobs a month ahead, failing six F02 clock cases environmentally in `20261017-090358`; repaired with the documented `local-reset.sh`); QA helpers honour `QA_PRODUCT_ROOT`. No assertion was weakened.
+
+## CR-010 independent scoped review (2026-10-15, historical)
 
 The web application now serves salon administrators and relevant staff only. Tenant root and legacy account links reach staff access; customer OTP/profile/privacy screens are absent. Every former customer BFF GET/POST returns no-store404 with zero upstream API calls and unchanged cookies, including when the API is unavailable. The Customer HTML preview is explicitly a later React Native design; Salon web is the default. Mobile implementation waits until M1-web is released.
 

@@ -32,7 +32,7 @@ Across-stage restart and deployment risks are exercised by S04 AC-11 and S05 AC-
 - **Preconditions:** Final integrated F01 tree is committed; local product is running and all salons are active. Stack cases also require the local HTTP production-like stack seeded; deployment cases require versions N and N+1 from this tested tree.
 - **Steps:**
   1. For each salon open web, read brand, create probe; await delivery and verify trace/tenant; try each foreign probe; advance cleanup and revisit web.
-- **Expected:** Only own brand/probe/audit/logs; foreign ids 404; all expired work removed by each salon job; shell identity retained.
+- **Expected:** Only own brand/probe/audit/logs; foreign ids 404; all expired work removed by each salon job; the signed-out entry (staff sign-in, CR-012) still names that salon.
 - **Automation:** `qa/web/F01/journey-salon-isolation.spec.ts`
 ### TC-F01-002 First real staging deployment serves salon subdomains with public TLS
 

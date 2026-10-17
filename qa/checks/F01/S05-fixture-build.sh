@@ -35,9 +35,9 @@ from pathlib import Path
 p=Path(sys.argv[1]);a=zipfile.ZipFile(p/'original.jar');b=zipfile.ZipFile(p/'fixture.jar')
 extra=set(b.namelist())-set(a.namelist());assert len(extra)==1
 import re
-name=extra.pop();assert re.fullmatch(r'db/migration/V\d+__qa_rollout_probe.sql',name)
+added=extra.pop();assert re.fullmatch(r'db/migration/V\d+__qa_rollout_probe.sql',added)
 original_versions=[int(m.group(1)) for n in a.namelist() if (m:=re.search(r'(?:^|/)db/migration/V(\d+)__',n))]
-assert int(re.search(r'/V(\d+)__',name).group(1))==max(original_versions)+1
+assert int(re.search(r'/V(\d+)__',added).group(1))==max(original_versions)+1
 for name in a.namelist():assert a.read(name)==b.read(name),name
-print(f'fixture provenance: all original jar entry bytes unchanged; only QA migration {name} added')
+print(f'fixture provenance: all original jar entry bytes unchanged; only QA migration {added} added')
 PY

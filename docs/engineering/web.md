@@ -98,8 +98,28 @@ message or customer-cookie work. Existing direct customer Java APIs remain mobil
 
 - A salon's brand (name, logo, cover, colour) arrives from the API and is applied through CSS
   custom properties on the root. Components use the tokens; none hard-codes a brand colour.
-- The text colour on the brand colour is computed for contrast. Never assume white.
-- The workspace and the console use the platform's own neutral theme, not the salon's.
+- The text colour on the brand colour is computed for contrast. Never assume white. It is white or
+  ink, whichever contrasts more, when that reaches 4.5:1; otherwise pure black, which always does
+  (at least 4.58:1) for mid-tone brands such as `#808080` (BUG-F02-013).
+- Every salon screen, sign-in and workspace alike, uses the salon's colour as its accent
+  (CR-013), with the prototype's `#D6086A` when the salon has none. Only the operator console uses
+  the platform's neutral theme, because it belongs to no salon.
+- Entry decides on the server, in the proxy (`src/lib/tenancy/route-request.ts`,
+  `src/lib/identity/entry.ts`), with real HTTP 307s: a page's own `redirect()` streams as a client
+  meta redirect after a shell is painted, under `cacheComponents`. `/workspace` decides on the
+  presence of the session cookies, with no API call; a protected workspace page costs one
+  `/identity/me` call from the proxy, inside the same three-second budget, and the page checks the
+  session again. The server never renews a session: an expired access cookie with a refresh
+  credential renders the workspace and the browser renews under its cross-tab lock. Known limit
+  (decision 045): if that refresh credential was already revoked elsewhere, the visitor sees their
+  salon's named workspace briefly before the browser sends them to sign-in. No generic name or
+  account skeleton is painted on the way.
+- The brand is applied by `BrandStyle` from `brandRootRule` (`src/styles/brand.ts`):
+  `--color-brand`, `--color-on-brand`, `--color-brand-soft` and `--color-brand-text`, the brand
+  when it reaches 4.5:1 on white and ink otherwise, for text drawn in the brand colour.
+- A salon whose API colour is missing or not `#RRGGBB` keeps its name and identity and gets the
+  default `#D6086A` (BUG-F02-010); the database refuses an invalid stored colour, so this guards
+  only against a malformed API answer.
 - A brand change is a draft until the salon publishes it. The future React Native app consumes the published brand; no customer website is created.
 
 Staff sign-in uses the dedicated CR-012 layout without the protected workspace rail/header. It

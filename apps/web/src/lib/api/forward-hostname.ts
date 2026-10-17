@@ -12,11 +12,16 @@ import { request as httpsRequest } from 'node:https';
  *
  * Only what the client put on the request is sent: nothing of the browser's request reaches the API.
  *
+ * A signal given in `init` is used as it is, not through the copied request's signal, which
+ * follows it only weakly (BUG-F02-012); it ends the call in any phase: connecting, waiting for the
+ * answer or reading its body.
+ *
  * @param hostname the salon's hostname, `<slug>.<platform domain>`, without a port
  */
 export function fetchForHostname(hostname: string): typeof fetch {
   return async (input, init) => {
     const request = new Request(input, init);
+    const signal = init?.signal ?? request.signal;
     const url = new URL(request.url);
     const send = url.protocol === 'https:' ? httpsRequest : httpRequest;
     const headers: Record<string, string> = {};
@@ -27,16 +32,16 @@ export function fetchForHostname(hostname: string): typeof fetch {
     const body = request.body ? Buffer.from(await request.arrayBuffer()) : undefined;
     // Node does not default DELETE to chunked transfer; explicit length preserves its JSON body.
     if (body) headers['content-length'] = String(body.byteLength);
-    request.signal.throwIfAborted();
+    signal.throwIfAborted();
 
     return new Promise<Response>((resolve, reject) => {
-      const outgoing = send(url, { method: request.method, headers, signal: request.signal }, (incoming) => {
+      const outgoing = send(url, { method: request.method, headers, signal }, (incoming) => {
         readBody(incoming).then(
           (content) => resolve(toResponse(incoming, content)),
-          (error: unknown) => reject(request.signal.aborted ? request.signal.reason : error),
+          (error: unknown) => reject(signal.aborted ? signal.reason : error),
         );
       });
-      outgoing.on('error', (error) => reject(request.signal.aborted ? request.signal.reason : error));
+      outgoing.on('error', (error) => reject(signal.aborted ? signal.reason : error));
       outgoing.end(body);
     });
   };

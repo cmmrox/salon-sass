@@ -1,5 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
+import { createServerApiClient } from '@/lib/api/client';
+import { hasCredentials, workspaceEntry, type Entry } from '@/lib/identity/entry';
+import { clearCookies, cookieName, requestHost, type Credentials } from '@/lib/identity/server';
 import { plainPageHtml, plainPageStatus, type PlainPage } from '@/lib/plain-page/plain-page';
 
 import { SALON_HEADER, encodeSalon } from './salon-header';
@@ -21,6 +24,28 @@ const INTERNAL_PREFIX = SALON_SHELL_ROUTE;
  */
 const NOT_STORED = 'private, no-cache, no-store, max-age=0, must-revalidate';
 
+/** Staff sign-in, where a visitor without a usable session belongs. */
+const SIGN_IN = '/workspace/sign-in';
+
+/** The protected workspace pages, whose entry is decided here before anything renders (CR-013). */
+const PROTECTED = new Set(['/workspace/account', '/workspace/staff', '/workspace/audit']);
+
+/** How entry to a protected page is decided: the request's staff session, checked with the API. */
+export type DecideEntry = (request: NextRequest, credentials: Credentials) => Promise<Entry>;
+
+function credentialsOf(request: NextRequest): Credentials {
+  return {
+    access: request.cookies.get(cookieName('staff', 'access'))?.value,
+    refresh: request.cookies.get(cookieName('staff', 'refresh'))?.value,
+    expiry: request.cookies.get(cookieName('staff', 'expires'))?.value,
+  };
+}
+
+const decideEntry: DecideEntry = (request, credentials) => {
+  const host = requestHost(request.headers.get('host'));
+  return workspaceEntry('staff', credentials, host ? createServerApiClient({ hostname: host.hostname }) : null);
+};
+
 /**
  * What the proxy does with a request: works out the site from the `Host` header alone. An active
  * salon enters its staff workspace; "salon not found", "temporarily unavailable" and "service
@@ -32,12 +57,19 @@ const NOT_STORED = 'private, no-cache, no-store, max-age=0, must-revalidate';
  * ignored, and the header that hands a resolved salon to the page is removed from every request
  * before the proxy sets it itself.
  *
+ * Workspace entry is decided here too (CR-013), because a page's own redirect streams after the
+ * framework's shell and would paint a frame first: `/workspace` and every protected page answer a
+ * request without a usable staff session with a redirect to sign-in. The pages check the session
+ * again; this decision only chooses where the request goes.
+ *
  * @param request the incoming request
  * @param resolve how the site is worked out from the `Host` header
+ * @param decide how entry to a protected page is decided from the request's staff session
  */
 export async function routeRequest(
   request: NextRequest,
   resolve: (hostHeader: string | null) => Promise<Site> = resolveSite,
+  decide: DecideEntry = decideEntry,
 ): Promise<NextResponse> {
   const headers = new Headers(request.headers);
   headers.delete(SALON_HEADER);
@@ -65,12 +97,21 @@ export async function routeRequest(
     case 'salon': {
       headers.set(SALON_HEADER, encodeSalon(site.salon));
       if (path === '/' || path === '/sign-in' || path === '/account') {
-        const destination = request.nextUrl.clone();
-        destination.pathname = path === '/' ? '/workspace' : '/workspace/sign-in';
-        destination.search = '';
-        const response = NextResponse.redirect(destination, 307);
-        response.headers.set('Cache-Control', NOT_STORED);
-        return response;
+        return redirect(request, path === '/' ? '/workspace' : SIGN_IN);
+      }
+      if (path === '/workspace') {
+        return redirect(request, hasCredentials(credentialsOf(request)) ? '/workspace/account' : SIGN_IN);
+      }
+      if (PROTECTED.has(path)) {
+        const credentials = credentialsOf(request);
+        if (!hasCredentials(credentials)) return redirect(request, SIGN_IN);
+        if ((await decide(request, credentials)).kind === 'signed-out') {
+          // The same clearing the BFF does for a session that cannot renew (BUG-F02-011): the
+          // revoked family's credentials leave the browser with the redirect, host-only.
+          const response = redirect(request, SIGN_IN);
+          clearCookies(response, 'staff');
+          return response;
+        }
       }
       // Any other path on a salon's hostname is the application's, with the salon handed on.
       const response = NextResponse.next({ request: { headers } });
@@ -78,6 +119,16 @@ export async function routeRequest(
       return response;
     }
   }
+}
+
+function redirect(request: NextRequest, pathname: string): NextResponse {
+  // The same origin as the request; nothing of the query is carried to the destination.
+  const destination = request.nextUrl.clone();
+  destination.pathname = pathname;
+  destination.search = '';
+  const response = NextResponse.redirect(destination, 307);
+  response.headers.set('Cache-Control', NOT_STORED);
+  return response;
 }
 
 function rewrite(request: NextRequest, pathname: string, headers: Headers): NextResponse {

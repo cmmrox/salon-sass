@@ -117,6 +117,10 @@ shared helper, never by typing a password into a test.
   loopback-only, `local`-only and absent from OpenAPI; nonfixed salons are refused. Supplied fixture
   credentials/TOTP seeds stay in ignored environment or `.local` files with mode `0600`. Current
   developer fixtures are `.local/f02-staff-fixtures.json`; never print or commit their contents.
+- **Brand colour** (CR-013): `infra/scripts/local-salon.sh colour <slug> <#RRGGBB>` sets a local
+  salon's stored colour; check the sign-in and the workspace with a dark and a light colour, then
+  put the seeded colour back (alpha `#D6086A`; read the others from `/api/v1/salon` first). A
+  salon without a valid colour cannot be stored, so the `#D6086A` default is covered by unit tests.
 - **Payments:** the PayHere sandbox only.
 - **Customer code capture** (F02-S02), on the issuing salon Host: poll
   `GET /local/identity/captures/{challengeId}` until 200; 404 means it has not captured a live code.

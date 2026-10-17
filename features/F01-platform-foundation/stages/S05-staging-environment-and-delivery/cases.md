@@ -13,7 +13,7 @@ Environment: local only; the synthetic alpha, beta and gamma salons of docs/qa/t
 - **Preconditions:** Final integrated F01 tree is committed; local product is running and all salons are active. Stack cases also require the local HTTP production-like stack seeded; deployment cases require versions N and N+1 from this tested tree.
 - **Steps:**
   1. Inspect version/commit labels, actual UID, env files and edge metadata.
-  2. Open the HTTP local production-like customer shell with Chromium; require successful requests for all three packaged Poppins files, loaded/checkable400/500/600 font faces, warm canvas and390px phone/430px desktop composition. Save actual font resource metadata and a rendered screenshot.
+  2. Open alpha's entry on the HTTP local production-like stack with Chromium (the staff sign-in since CR-010/CR-012; there is no customer web shell); require successful requests for all three packaged Poppins files, loaded/checkable 400/500/600 font faces, the warm canvas token `#F3F0EB`, alpha's name, and a full-width sign-in at 390px and 1280px. Save actual font resource metadata and a rendered screenshot. Reconciled 2026-10-17: the former 430px customer canvas is not a web reference (F02-S04 AC-9).
 - **Expected:** Exact tested SHA/version, UID nonzero, no .env files. Standalone image actually serves and renders the supplied design fonts and canvas, with no fallback or HTML returned in place of a font. Evidence is local HTTP only; no VPS/TLS certification.
 - **Automation:** `qa/checks/F01/S05-stack.sh`
 
@@ -38,7 +38,7 @@ Environment: local only; the synthetic alpha, beta and gamma salons of docs/qa/t
 - **Preconditions:** Final integrated F01 tree is committed; local product is running and all salons are active. Stack cases also require the local HTTP production-like stack seeded; deployment cases require versions N and N+1 from this tested tree.
 - **Steps:**
   1. Request each salon and neutral hostname on the HTTP edge.
-- **Expected:** Correct salon pages/API; bare host status200; unknown and console404. Staging TLS is deferred to TC-F01-002 under CR-005.
+- **Expected:** Each salon's `/` answers a no-store 307 to its own `/workspace` (CR-010, F01-S03 AC-1) and its entry page (the staff sign-in) names that salon; its API returns its brand; bare host status 200; unknown and console 404. Staging TLS is deferred to TC-F01-002 under CR-005. Reconciled 2026-10-17: the former 200 salon shell at `/` no longer exists.
 - **Automation:** `qa/checks/F01/S05-stack.sh`
 
 ### TC-F01-S05-004 New salon gets HTTP immediately without edge restart
@@ -50,7 +50,7 @@ Environment: local only; the synthetic alpha, beta and gamma salons of docs/qa/t
 - **Preconditions:** Final integrated F01 tree is committed; local product is running and all salons are active. Stack cases also require the local HTTP production-like stack seeded; deployment cases require versions N and N+1 from this tested tree.
 - **Steps:**
   1. Add unique synthetic salon via stack-seed; immediately read web/API; compare edge identity.
-- **Expected:** New brand on first HTTP request, same edge process.
+- **Expected:** The new salon's entry page names it on the first HTTP request, its API returns its brand, same edge process.
 - **Automation:** `qa/checks/F01/S05-stack.sh`
 
 ### TC-F01-S05-005 Only edge is published and forged tenant fields do not switch salons
@@ -62,7 +62,7 @@ Environment: local only; the synthetic alpha, beta and gamma salons of docs/qa/t
 - **Preconditions:** Final integrated F01 tree is committed; local product is running and all salons are active. Stack cases also require the local HTTP production-like stack seeded; deployment cases require versions N and N+1 from this tested tree.
 - **Steps:**
   1. Inspect published container ports; request alpha web/API with beta selectors.
-- **Expected:** Only the HTTP edge port; alpha stays alpha.
+- **Expected:** Only the HTTP edge port; alpha's entry page and API stay alpha with beta's selectors.
 - **Automation:** `qa/checks/F01/S05-stack.sh`
 
 ### TC-F01-S05-006 Production-like roles enforce least privilege idempotently
@@ -109,7 +109,7 @@ Environment: local only; the synthetic alpha, beta and gamma salons of docs/qa/t
 - **Performed as:** QA operator on synthetic local data; public caller on each salon hostname.
 - **Preconditions:** Final integrated F01 tree is committed; local product is running and all salons are active. Stack cases also require the local HTTP production-like stack seeded; deployment cases require versions N and N+1 from this tested tree.
 - **Steps:**
-  1. Under 50 VUs stop one API/web, confirm surviving reads, start them and wait readiness.
+  1. Under 50 VUs stop one API/web, confirm beta's entry page and gamma's API still answer 200 from the surviving instances, start them and wait readiness.
 - **Expected:** Zero failed GET/cross-tenant result; return without edge action.
 - **Automation:** `qa/checks/F01/S05-deployment.sh`
 
@@ -133,7 +133,7 @@ Environment: local only; the synthetic alpha, beta and gamma salons of docs/qa/t
 - **Performed as:** QA operator on synthetic local data; public caller on each salon hostname.
 - **Preconditions:** Final integrated F01 tree is committed; local product is running and all salons are active. Stack cases also require the local HTTP production-like stack seeded; deployment cases require versions N and N+1 from this tested tree.
 - **Steps:**
-  1. View alpha with trace and secret markers; read web/API JSON logs and collector spans/metrics.
+  1. View alpha's entry page with trace and secret markers; read web/API JSON logs and collector spans/metrics.
 - **Expected:** One alpha web line, same API trace/id, collector API spans carry alpha, S04 meters exist, no query/cookie/token value logged.
 - **Automation:** `qa/checks/F01/S05-stack.sh`
 
