@@ -190,7 +190,7 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        delete: operations["revoke"];
+        delete: operations["revoke_1"];
         options?: never;
         head?: never;
         patch?: never;
@@ -581,6 +581,22 @@ export interface paths {
         patch: operations["changeSubscription"];
         trace?: never;
     };
+    "/api/v1/operator/salons/{id}/support-sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["start"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/operator/salons/{id}/suspension": {
         parameters: {
             query?: never;
@@ -639,6 +655,54 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["operatorSignIn"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/operator/support-sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/operator/support-sessions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["end_1"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/operator/support-sessions/{id}/entry-codes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["entryCode"];
         delete?: never;
         options?: never;
         head?: never;
@@ -705,6 +769,70 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/salon/support-sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/salon/support-sessions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["revoke"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/support/entry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["enter"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/support/session": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["end"];
         options?: never;
         head?: never;
         patch?: never;
@@ -783,6 +911,15 @@ export interface components {
             professionalGrant?: boolean;
             role: string;
         };
+        Credential: {
+            accessToken: string;
+            /** Format: date-time */
+            expiresAt: string;
+            /** Format: date-time */
+            issuedAt: string;
+            /** Format: uuid */
+            sessionId: string;
+        };
         CustomerCodeVerificationRequest: {
             /** Format: uuid */
             challengeId: string;
@@ -814,6 +951,21 @@ export interface components {
             plan: components["schemas"]["PlanRef"];
             subscription: components["schemas"]["SubscriptionState"];
             usage: components["schemas"]["Usage"];
+        };
+        Entry: {
+            /** Format: date-time */
+            codeExpiresAt: string;
+            /** @description Single-use; exchanged once on the salon's host within 60 seconds */
+            entryCode: string;
+            /** @description The salon's workspace support entry page with the code in its fragment */
+            entryUrl: string;
+            /** Format: date-time */
+            expiresAt: string;
+            /** Format: uuid */
+            id: string;
+        };
+        EntryRequest: {
+            code: string;
         };
         EventActor: {
             displayName: string | null;
@@ -995,6 +1147,11 @@ export interface components {
             permissions: string[];
             role: string;
         };
+        OperatorRef: {
+            displayName: string;
+            /** Format: uuid */
+            id: string;
+        };
         OperatorRefreshRequest: {
             refreshToken: string;
         };
@@ -1135,6 +1292,11 @@ export interface components {
             whatsapp: boolean;
         };
         Principal: {
+            /**
+             * Format: date-time
+             * @description When a support session (kind support) ends; null for every other kind
+             */
+            expiresAt: string | null;
             /** Format: uuid */
             id: string;
             kind: string;
@@ -1151,7 +1313,7 @@ export interface components {
              * @description The stable reason. Branch on this.
              * @enum {string}
              */
-            code: "invalid_client_assertion" | "confirmation_required" | "invalid_code" | "code_expired" | "provider_unavailable" | "invalid_credentials" | "invalid_session" | "permission_denied" | "conflict" | "rate_limited" | "slug_taken" | "plan_key_taken" | "idempotency_conflict" | "salon_read_only" | "entitlement_exceeded" | "invalid_state" | "bad_request" | "not_found" | "method_not_allowed" | "not_acceptable" | "unsupported_media_type" | "request_rejected" | "service_unavailable" | "salon_suspended" | "internal_error";
+            code: "invalid_client_assertion" | "confirmation_required" | "invalid_code" | "code_expired" | "provider_unavailable" | "invalid_credentials" | "invalid_session" | "permission_denied" | "conflict" | "rate_limited" | "slug_taken" | "plan_key_taken" | "idempotency_conflict" | "salon_read_only" | "entitlement_exceeded" | "invalid_state" | "support_read_only" | "support_session_active" | "bad_request" | "not_found" | "method_not_allowed" | "not_acceptable" | "unsupported_media_type" | "request_rejected" | "service_unavailable" | "salon_suspended" | "internal_error";
             /** @description A sentence for a person. Do not branch on it. */
             detail?: string;
             /** @description For a request body that failed validation (`bad_request`): each field that failed, when the failure has a field. Never the value that was refused. */
@@ -1290,6 +1452,13 @@ export interface components {
             /** Format: int64 */
             total: number;
         };
+        SalonRef: {
+            hostname: string;
+            /** Format: uuid */
+            id: string;
+            name: string | null;
+            slug: string;
+        };
         SalonRequest: {
             address?: string | null;
             contactEmail?: string | null;
@@ -1305,6 +1474,31 @@ export interface components {
             slug: string;
             subscription: components["schemas"]["SalonSubscriptionRequest"];
             timeZone: string;
+        };
+        SalonSession: {
+            /** Format: date-time */
+            endedAt: string | null;
+            /** @enum {string|null} */
+            endedBy: "operator" | "admin" | "owner" | "expiry" | null;
+            /** Format: date-time */
+            expiresAt: string;
+            /** Format: uuid */
+            id: string;
+            operatorName: string;
+            reason: string;
+            /** Format: date-time */
+            startedAt: string;
+            /** @enum {string} */
+            state: "active" | "ended";
+        };
+        SalonSessionPage: {
+            items: components["schemas"]["SalonSession"][];
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            size: number;
+            /** Format: int64 */
+            total: number;
         };
         SalonSubscriptionRequest: {
             /** Format: int64 */
@@ -1324,15 +1518,31 @@ export interface components {
             /** @enum {string} */
             status: "active" | "suspended" | "closed" | "deleted";
         };
+        SessionPage: {
+            items: components["schemas"]["SessionView"][];
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            size: number;
+            /** Format: int64 */
+            total: number;
+        };
         SessionView: {
             /** Format: date-time */
-            createdAt?: string;
-            current?: boolean;
-            deviceLabel?: string;
+            endedAt: string | null;
+            /** @enum {string|null} */
+            endedBy: "operator" | "admin" | "owner" | "expiry" | null;
             /** Format: date-time */
-            expiresAt?: string;
+            expiresAt: string;
             /** Format: uuid */
-            id?: string;
+            id: string;
+            operator: components["schemas"]["OperatorRef"];
+            reason: string;
+            salon: components["schemas"]["SalonRef"];
+            /** Format: date-time */
+            startedAt: string;
+            /** @enum {string} */
+            state: "active" | "ended";
         };
         SignIn: {
             /** Format: uuid */
@@ -1359,6 +1569,14 @@ export interface components {
             role?: string;
             /** Format: int64 */
             version?: number;
+        };
+        StartRequest: {
+            /**
+             * Format: int32
+             * @default 30
+             */
+            durationMinutes: number;
+            reason: string;
         };
         StartSubscriptionRequest: {
             /** @description Required, and only allowed, when the salon has no currency of its own */
@@ -1885,7 +2103,7 @@ export interface operations {
             };
         };
     };
-    revoke: {
+    revoke_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -2900,6 +3118,41 @@ export interface operations {
             };
         };
     };
+    start: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StartRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Entry"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     suspend: {
         parameters: {
             query?: never;
@@ -3066,6 +3319,100 @@ export interface operations {
             };
         };
     };
+    list_1: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+                salonId?: string;
+                state?: "active" | "ended";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionPage"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    end_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    entryCode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Entry"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     getSalon: {
         parameters: {
             query?: never;
@@ -3202,6 +3549,127 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["InvoiceDetail"];
                 };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalonSessionPage"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    revoke: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    enter: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EntryRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Credential"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    end: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Any error: problem details with a stable `code`. */
             default: {

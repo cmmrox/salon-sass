@@ -203,11 +203,16 @@ class SupportSessionIntegrationTest extends IntegrationTest {
         TestSalon suspended = billing.legacy(null);
         owner.update("UPDATE tenant SET status = 'suspended' WHERE id = ?", suspended.id());
         refused(start(suspended.id(), Map.of("reason", "Look at a suspended salon"), support.token()), 409, "invalid_state");
-        TestSalon closed = billing.legacy(null);
+        // A salon with no tenant rows, so the shared database's deletion job has nothing of it to remove;
+        // it ends as a deleted tombstone, which is refused too.
+        TestSalon closed = new com.salonplatform.testing.TestSalons(owner).createWithoutBrand("active");
         Instant now = CLOCK.instant().truncatedTo(ChronoUnit.MILLIS);
         owner.update("UPDATE tenant SET status = 'closed', closed_at = ?, delete_at = ? WHERE id = ?",
                 java.sql.Timestamp.from(now), java.sql.Timestamp.from(now.plus(Duration.ofDays(30))), closed.id());
         refused(start(closed.id(), Map.of("reason", "Look at a closed salon"), support.token()), 409, "invalid_state");
+        owner.update("UPDATE tenant SET status = 'deleted', deleted_at = ? WHERE id = ?", java.sql.Timestamp.from(now),
+                closed.id());
+        refused(start(closed.id(), Map.of("reason", "Look at a deleted salon"), support.token()), 409, "invalid_state");
         assertThat(count("SELECT count(*) FROM support_session WHERE salon_id IN (?, ?)", suspended.id(), closed.id()))
                 .isZero();
 

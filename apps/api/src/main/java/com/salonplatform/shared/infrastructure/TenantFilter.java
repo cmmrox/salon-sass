@@ -57,8 +57,9 @@ class TenantFilter extends OncePerRequestFilter {
 
     private final SignedTenantVerifier verifier;
     private final ActiveTenants tenants;
-    private final SupportCredentials support;
-    private final SupportRequestAudit supportAudit;
+    // Resolved per request, not when the server starts its filters: they reach the persistence layer.
+    private final org.springframework.beans.factory.ObjectProvider<SupportCredentials> support;
+    private final org.springframework.beans.factory.ObjectProvider<SupportRequestAudit> supportAudit;
 
     @org.springframework.beans.factory.annotation.Autowired
     @org.springframework.beans.factory.annotation.Qualifier("requestMappingHandlerMapping")
@@ -74,8 +75,8 @@ class TenantFilter extends OncePerRequestFilter {
             TenantDirectory directory,
             SignedTenantVerifier verifier,
             ActiveTenants tenants,
-            SupportCredentials support,
-            SupportRequestAudit supportAudit) {
+            org.springframework.beans.factory.ObjectProvider<SupportCredentials> support,
+            org.springframework.beans.factory.ObjectProvider<SupportRequestAudit> supportAudit) {
         this.support = support;
         this.supportAudit = supportAudit;
         this.verifier = verifier;
@@ -148,7 +149,10 @@ class TenantFilter extends OncePerRequestFilter {
                 errors.resolveException(request, response, null, ex);
             }
             finally {
-                supportAudit.record(grant, request.getMethod(), routeOf(request), response.getStatus());
+                SupportRequestAudit audit = supportAudit.getIfAvailable();
+                if (audit != null) {
+                    audit.record(grant, request.getMethod(), routeOf(request), response.getStatus());
+                }
             }
             return null;
         });
@@ -249,8 +253,9 @@ class TenantFilter extends OncePerRequestFilter {
                                     && !RequestPaths.under(request, "/local")) {
                                 // A support credential (F03-S04) is verified against its live
                                 // session and bound to this salon only; it never becomes a staff one.
-                                Optional<SupportGrant> grant =
-                                        support.verify(credential, () -> TenantContext.require().id());
+                                SupportCredentials supports = support.getIfAvailable();
+                                Optional<SupportGrant> grant = supports == null ? Optional.empty()
+                                        : supports.verify(credential, () -> TenantContext.require().id());
                                 if (grant.isPresent()) {
                                     underSupport(grant.get(), credential, request, response, chain);
                                     return null;

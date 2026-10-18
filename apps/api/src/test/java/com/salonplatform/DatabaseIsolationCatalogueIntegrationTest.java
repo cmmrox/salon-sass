@@ -204,7 +204,9 @@ class DatabaseIsolationCatalogueIntegrationTest {
         List<String> bootstrap = List.of("identity_bootstrap_owner", "branding_bootstrap_brand",
                 "identity_active_staff_count", "outbox_enqueue_for_salon", "identity_revoke_closed_salon_sessions",
                 "outbox_cancel_closed_salon", "identity_erase_salon_rows", "branding_erase_salon_rows",
-                "audit_erase_salon_rows", "outbox_erase_salon_rows");
+                "audit_erase_salon_rows", "outbox_erase_salon_rows",
+                // F03-S04: a support session's entries in the salon's audit trail, from the platform connection.
+                "audit_record_support");
         assertThat(functions).extracting(function -> function.get("name"))
                 .containsExactlyInAnyOrderElementsOf(java.util.stream.Stream.concat(tenantPaths.stream(),
                         bootstrap.stream()).toList());
@@ -250,7 +252,10 @@ class DatabaseIsolationCatalogueIntegrationTest {
                         org.assertj.core.api.Assertions.tuple("billing_reminder", "INSERT,SELECT"),
                         org.assertj.core.api.Assertions.tuple("salon_lifecycle_event", "INSERT,SELECT"),
                         org.assertj.core.api.Assertions.tuple("salon_export", "INSERT,SELECT,UPDATE"),
-                        org.assertj.core.api.Assertions.tuple("salon_export_part", "DELETE,INSERT,SELECT"));
+                        org.assertj.core.api.Assertions.tuple("salon_export_part", "DELETE,INSERT,SELECT"),
+                        // F03-S04: support sessions and entry codes; only their end and consumption are updated.
+                        org.assertj.core.api.Assertions.tuple("support_session", "INSERT,SELECT"),
+                        org.assertj.core.api.Assertions.tuple("support_entry_code", "INSERT,SELECT"));
         // F03-S02: on the registry it may update only the plan, the access state, the version and the time;
         // F03-S03 adds the lifecycle status and the closure and deletion instants.
         List<String> tenantColumns = owner.queryForList("""
@@ -259,6 +264,14 @@ class DatabaseIsolationCatalogueIntegrationTest {
                 """, String.class, TestPostgres.PLATFORM_USER);
         assertThat(tenantColumns).containsExactly("access_state", "closed_at", "delete_at", "deleted_at", "plan_id", "status",
                 "updated_at", "version");
+        List<String> supportColumns = owner.queryForList("""
+                SELECT table_name || '.' || column_name FROM information_schema.role_column_grants
+                 WHERE grantee = ? AND table_name IN ('support_session', 'support_entry_code') AND privilege_type = 'UPDATE'
+                 ORDER BY 1
+                """, String.class, TestPostgres.PLATFORM_USER);
+        assertThat(supportColumns).containsExactly("support_entry_code.consumed_at", "support_entry_code.updated_at",
+                "support_session.ended_at", "support_session.ended_by", "support_session.ended_by_id",
+                "support_session.updated_at");
     }
 
     /** The product's grants: what the application's role is refused, table by table. */
