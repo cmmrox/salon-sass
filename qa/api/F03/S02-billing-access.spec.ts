@@ -1,22 +1,21 @@
 /**
- * F03-S02 subscription creation and operator billing authority.
- * Cases TC-F03-S02-001, -002, -022 (cases.md). TC-F03-S02-003 joins this file at feature-verify,
- * when the unbilled legacy salon hook's path is in the S02 handoff.
+ * F03-S02 subscription creation, an unbilled legacy salon, and operator billing authority.
+ * Cases TC-F03-S02-001, -002, -003, -022 (cases.md).
  *
- * Prepared during the F03 build against the S02 spec and operator-console.md, "Subscriptions,
- * invoices and entitlements". No real charge or message is involved.
+ * Written against the S02 spec and operator-console.md, "Subscriptions, invoices and entitlements",
+ * with the unbilled-salon hook of the S02 handoff. No real charge or message is involved.
  */
 import { randomUUID } from 'node:crypto';
 
 import { Customers } from '../../shared/customer-identity';
-import { ROLES, type Tokens } from '../../shared/identity';
+import { ROLES, json, syntheticAccount, type Tokens } from '../../shared/identity';
 import {
-  test, expect, alpha, DAY, NON_CONSOLE_HOSTS, fieldsOf, operatorJson, operatorProblem, salonInput,
-  type OperatorActor, type Operator,
+  test, expect, alpha, DAY, WRONG_HOSTS, fieldsOf, operatorJson, operatorProblem, salonInput,
+  type Entitlements, type OperatorActor, type Operator, type Subscription,
 } from '../../shared/operator';
 
 const id = (n: number) => `TC-F03-S02-${String(n).padStart(3, '0')}`;
-type Subscription = { version: number; state: string; monthlyAmount: number; currency: string; paymentMethod: string; trialEndsAt: string };
+const ENTITLEMENTS = '/api/v1/salon/entitlements';
 
 function billingActions(salonId: string, invoiceId: string, planId: string, version: number) {
   return [
@@ -31,8 +30,8 @@ function billingActions(salonId: string, invoiceId: string, planId: string, vers
 }
 
 async function state(operator: Operator, admin: OperatorActor, salonId: string) {
-  const subscription = await operatorJson<Subscription>(await operator.subscription(admin, salonId), 'subscription');
-  const invoices = await operatorJson<{ total: number }>(await operator.call('GET', `/salons/${salonId}/invoices`, { tokens: admin.tokens }), 'invoicePage');
+  const subscription = await operator.subscription(admin, salonId);
+  const invoices = await operator.invoices(admin, salonId);
   return { subscription, invoices: invoices.total, plan: (await operator.salonDetail(admin, salonId)).plan };
 }
 
@@ -42,10 +41,12 @@ test(`${id(1)} A salon created with a subscription is trialing until exactly 14 
   const plan = await operator.plan(admin);
   for (const subscription of [{ monthlyAmount: 0, paymentMethod: 'card' }, { monthlyAmount: 100_000_000, paymentMethod: 'bank_transfer' }] as const) {
     const { created } = await operator.salon(admin, plan.id, { subscription });
-    const read = await operatorJson<Subscription>(await operator.subscription(admin, created.id), 'subscription');
+    const read = await operator.subscription(admin, created.id);
     expect(read).toMatchObject({ state: 'trialing', monthlyAmount: subscription.monthlyAmount, currency: 'LKR', paymentMethod: subscription.paymentMethod });
     expect(Date.parse(read.trialEndsAt) - Date.parse(created.createdAt), 'trial ends exactly 14 days after creation').toBe(14 * DAY);
     expect(typeof read.version).toBe('number');
+    expect(read.plan).toEqual({ id: plan.id, key: plan.key, name: plan.name });
+    expect(read.readOnlyAt).toBeNull();
   }
 });
 
@@ -76,19 +77,25 @@ test(`${id(2)} A missing or invalid monthly amount or method creates no salon`, 
   expect((await operator.salonPage(admin, '?size=1')).total, 'no salon created').toBe(before);
 });
 
-test(`${id(22)} Support, staff and customers are refused every operator billing action on any host`, async ({ operator, identity }) => {
+test(`${id(22)} Support, staff and customers are refused every operator billing action on any host`, async ({ operator, identity, clock }) => {
   const admin = await operator.actor();
   const support = await operator.actor('OPERATOR_SUPPORT');
   const plan = await operator.plan(admin);
   const other = await operator.plan(admin, { staffSeats: 10 });
   const { created } = await operator.salon(admin, plan.id);
   const version = await operator.version(admin, created.id);
-  // An invoice id that exists is not needed for a refusal; an unknown one proves no lookup happens first.
-  const actions = billingActions(created.id, randomUUID(), other.id, version);
+  // An open invoice exists, so refusals are not explained by an unknown id (trial end crossed).
+  await clock.set((await operator.subscription(admin, created.id)).trialEndsAt);
+  await operator.runBilling();
+  await operator.renew(admin);
+  const invoices = await operator.invoices(admin, created.id);
+  expect(invoices.total, 'the salon has an invoice').toBe(1);
+  const actions = billingActions(created.id, invoices.items[0].id, other.id, version);
   const before = await state(operator, admin, created.id);
   const tenant: { name: string; tokens: Tokens }[] = [];
   for (const role of ROLES) tenant.push({ name: role, tokens: (await identity.staff(alpha, role)).tokens });
   tenant.push({ name: 'customer', tokens: (await new Customers(identity).login(alpha)).tokens });
+  await operator.renew(support);
   for (const action of actions) {
     const send = (tokens: Tokens | undefined, host?: string) => operator.call(action.method, action.route, {
       tokens, data: action.data, host, headers: action.key ? { 'Idempotency-Key': randomUUID() } : {} });
@@ -96,8 +103,35 @@ test(`${id(22)} Support, staff and customers are refused every operator billing 
       await operatorProblem(await send(support.tokens), 403, 'permission_denied');
       for (const actor of tenant) await operatorProblem(await send(actor.tokens), 401, 'invalid_session');
       await operatorProblem(await send(undefined), 401, 'invalid_session');
-      for (const host of NON_CONSOLE_HOSTS) await operatorProblem(await send(admin.tokens, host), 404, 'not_found');
+      for (const host of WRONG_HOSTS) await operatorProblem(await send(admin.tokens, host), 404, 'not_found');
     });
   }
   expect(await state(operator, admin, created.id), 'denied calls changed nothing').toEqual(before);
+});
+
+test(`${id(3)} An unbilled legacy salon works without a subscription until an Admin starts one, once`, async ({ operator, identity, clock }) => {
+  const start = '2026-11-10T09:00:00.000Z';
+  await clock.set(start);
+  const admin = await operator.actor();
+  const legacy = await operator.unbilledSalon();
+  await operatorProblem(await operator.subscriptionRaw(admin, legacy.id), 404, 'not_found');
+  const detail = await operator.salonDetail(admin, legacy.id);
+  expect({ plan: detail.plan, currency: detail.currency, status: detail.status }, 'a legacy salon: no plan, no currency').toEqual({ plan: null, currency: null, status: 'active' });
+  const owner = await identity.staff(legacy, 'OWNER');
+  const entitlements = await json<Entitlements>(await identity.api.send('GET', ENTITLEMENTS, { headers: { Host: legacy.hostname, Authorization: `Bearer ${owner.tokens.accessToken}` } }), 'Entitlements');
+  expect(entitlements.subscription, 'no subscription').toBeNull();
+  expect((await identity.call(legacy, 'POST', '/staff', syntheticAccount('MANAGER'), owner.tokens)).status(), 'the salon works normally').toBe(201);
+  // A salon without a currency must be given one when billing starts (decision 051).
+  const body = { monthlyAmount: 150000, paymentMethod: 'bank_transfer' };
+  expect(fieldsOf(await operatorProblem(await operator.startSubscription(admin, legacy.id, body), 400, 'bad_request'))).toContain('currency');
+  await operatorProblem(await operator.subscriptionRaw(admin, legacy.id), 404, 'not_found');
+  const key = randomUUID();
+  const started = await operatorJson<Subscription>(await operator.startSubscription(admin, legacy.id, { ...body, currency: 'LKR' }, key), 'subscription', 201);
+  expect(started).toMatchObject({ state: 'trialing', monthlyAmount: 150000, currency: 'LKR', paymentMethod: 'bank_transfer' });
+  expect(Date.parse(started.trialEndsAt) - Date.parse(start), 'its own 14-day trial from the start').toBeGreaterThanOrEqual(14 * DAY);
+  expect(Date.parse(started.trialEndsAt) - Date.parse(start), 'its own 14-day trial from the start').toBeLessThan(14 * DAY + 60_000);
+  const replay = await operatorJson<Subscription>(await operator.startSubscription(admin, legacy.id, { ...body, currency: 'LKR' }, key), 'subscription', 201);
+  expect(replay, 'the same key replays the original').toEqual(started);
+  await operatorProblem(await operator.startSubscription(admin, legacy.id, { ...body, currency: 'LKR' }), 409, 'invalid_state');
+  expect(await operator.subscription(admin, legacy.id), 'the second start changed nothing').toEqual(started);
 });

@@ -340,7 +340,36 @@ verification:
     covers:
     - TC-F03-S02-001
     - TC-F03-S02-002
+    - TC-F03-S02-003
     - TC-F03-S02-022
+  - id: billing-cycle
+    tool: playwright
+    file: qa/api/F03/S02-billing-cycle.spec.ts
+    project: api
+    covers:
+    - TC-F03-S02-004
+    - TC-F03-S02-005
+    - TC-F03-S02-006
+    - TC-F03-S02-007
+    - TC-F03-S02-008
+    - TC-F03-S02-009
+    - TC-F03-S02-010
+    - TC-F03-S02-011
+    - TC-F03-S02-012
+    - TC-F03-S02-013
+    - TC-F03-S02-016
+    - TC-F03-S02-019
+    - TC-F03-S02-028
+  - id: entitlements
+    tool: playwright
+    file: qa/api/F03/S02-entitlements.spec.ts
+    project: api
+    covers:
+    - TC-F03-S02-014
+    - TC-F03-S02-015
+    - TC-F03-S02-017
+    - TC-F03-S02-018
+    - TC-F03-S02-020
   manual: []
   deferred: []
 evidence:

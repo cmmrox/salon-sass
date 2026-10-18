@@ -13,7 +13,7 @@ import { apiUrl } from '../../shared/env';
 import { localService, mark } from '../../shared/identity-runtime';
 import { committedContract } from '../../shared/openapi';
 import {
-  test, expect, alpha, beta, gamma, PENDING, operatorAccount, operatorJson, operatorProblem, planInput, salonInput,
+  test, expect, alpha, beta, gamma, CONTRACT, operatorAccount, operatorJson, operatorProblem, planInput, salonInput,
   type Plan,
 } from '../../shared/operator';
 
@@ -110,7 +110,7 @@ test(`${id(39)} Local operator hooks are loopback-only, absent from the contract
   const external = Object.values(os.networkInterfaces()).flat().find(a => a && a.family === 'IPv4' && !a.internal)?.address;
   if (!external) throw new Error('ENVIRONMENT: no non-loopback IPv4 address to call the hooks through');
   const port = new URL(apiUrl).port;
-  for (const hook of Object.values(PENDING.hooks)) {
+  for (const hook of Object.values(CONTRACT.hooks)) {
     const url = `http://${external}:${port}${hook.path.replace(/\{[a-z]+\}/g, randomUUID())}`;
     const status = await fetch(url, { method: hook.method, headers: { Host: 'console.localhost', 'Content-Type': 'application/json' },
       body: hook.method === 'GET' ? undefined : '{}', signal: AbortSignal.timeout(5_000) }).then(r => r.status, () => 'unreachable');
@@ -124,7 +124,6 @@ test(`${id(39)} Local operator hooks are loopback-only, absent from the contract
   await operator.identity.api.reconnect();
   expect((await operator.login(account)).principal.role, 'fixture operator survives a local restart').toBe('OPERATOR_SUPPORT');
   expect(await Promise.all([alpha, beta, gamma].map(async s => (await operator.identity.api.salon(s)).json()))).toEqual(fixed);
-  // The non-local start (hooks 404, no default operator) needs the S01 handoff's operator secret
-  // variables; it is completed at feature-verify and fails loudly until then.
-  throw new Error('ENVIRONMENT: TC-F03-S01-039 non-local profile step awaits the operator secret variable names from the S01 handoff');
+  // The non-local start (hooks 404, no default operator created) is the second half of this case,
+  // in qa/checks/F03/S01-database-boundary.sh, which starts a separate API process.
 });

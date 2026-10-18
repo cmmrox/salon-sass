@@ -1,11 +1,13 @@
 /**
- * F03 operator console fixtures: operator accounts, sign-in with MFA, plans and salons, the test
- * clock without F02's three-salon guard, and the operator tables every F03 test shares.
+ * F03 operator console fixtures: operator accounts, sign-in with MFA, plans and salons, billing,
+ * lifecycle and export helpers, the local hooks, the test clock without F02's three-salon guard,
+ * and the read-only database observer every F03 test shares.
  *
- * Prepared during the F03 build against the approved specs and docs/architecture/operator-console.md.
- * Routes, bodies and codes come from those documents. What the documents leave to the stage
- * handoffs (fixture-hook paths and bodies, generated schema names) is kept in PENDING below and is
- * confirmed at feature-verify; nothing else in a test spells one out.
+ * Routes, bodies and codes come from the stage specs and docs/architecture/operator-console.md.
+ * What those documents left to the stage handoffs is in CONTRACT below, confirmed against the
+ * F03-S01, S02 and S03 handoffs (stage.yaml `handoff.run`) and the generated contract. What the
+ * S04 handoff has not named yet is in PENDING_S04; a test that needs one of those values stops with
+ * an `ENVIRONMENT:` message until it is filled in.
  *
  * Credentials and TOTP seeds are generated in memory and never logged or written to evidence.
  */
@@ -16,67 +18,130 @@ import type { APIResponse } from '@playwright/test';
 
 import { answerOf, expectProblem } from './answers';
 import { reportDir } from './env';
-import { test as identityTest, expect, totp, syntheticAccount, type Identity, type SeedAccount, type Tokens } from './identity';
+import { test as identityTest, expect, json, totp, syntheticAccount, type Identity, type SeedAccount, type Tokens } from './identity';
 import { identitySql } from './identity-storage';
-import { schemaValidator } from './openapi';
+import { committedContract, schemaValidator } from './openapi';
 import { PLATFORM_DOMAIN, alpha, beta, gamma, type Salon } from './tenants';
+import type { components } from '@contracts/schema';
 
 /** The console's exact hostname (operator-console.md, "Authority and hostname"). */
 export const CONSOLE_HOST = `console.${PLATFORM_DOMAIN}`;
+/** The bare platform host: provider events and the Owner's export link (S02, S03 handoffs). */
+export const PLATFORM_HOST = PLATFORM_DOMAIN;
 export const OPERATOR = '/api/v1/operator';
 
+type Hook = { method: 'GET' | 'POST' | 'PUT' | 'DELETE'; path: string };
+
 /**
- * Awaiting the stage handoffs. The policy fixes that these hooks exist under /local/operator, are
- * loopback- and local-only and are outside OpenAPI; their exact paths and bodies are named by the
- * developer (S01: seed, reset, bootstrap failure; S02/S03: the rest).
+ * The contract the specs left to the handoffs, as the handoffs name it. Hooks are loopback-only,
+ * `local`-only and outside OpenAPI; they answer on any host.
  */
-export const PENDING = {
+export const CONTRACT = {
   hooks: {
-    seed: { method: 'POST', path: '/local/operator/seed' },
-    reset: { method: 'DELETE', path: '/local/operator' },
-    bootstrapFailure: { method: 'PUT', path: '/local/operator/bootstrap-failure' },
-    disableOperator: { method: 'PUT', path: '/local/operator/accounts/{id}/disabled' },
-    unbilledSalon: { method: 'POST', path: '/local/operator/unbilled-salons' },
-    runJob: { method: 'POST', path: '/local/operator/jobs/{job}/run' },
-    interruptJob: { method: 'PUT', path: '/local/operator/jobs/{job}/interrupt' },
-    providerOutcome: { method: 'PUT', path: '/local/operator/billing-provider/outcome' },
-    providerSign: { method: 'POST', path: '/local/operator/billing-provider/sign' },
-    emails: { method: 'GET', path: '/local/operator/emails' },
-    clearEmails: { method: 'DELETE', path: '/local/operator/emails' },
-    backgroundState: { method: 'GET', path: '/local/operator/salons/{id}/background' },
-    localReset: { method: 'POST', path: '/local/operator/reset-to-baseline' },
-  },
-  /** Generated contract schema names; `schemaValidator` fails loudly if a name is wrong. */
+    // F03-S01
+    seed: { method: 'POST', path: '/local/operator/seed' },                       // {accounts:[{email,displayName,role,password,totpSecret|null}]} -> 200 {accounts}
+    fixtures: { method: 'DELETE', path: '/local/operator/fixtures' },              // 204: fixture operators' MFA, sessions, rate buckets; bootstrap fault off
+    bootstrapFailure: { method: 'PUT', path: '/local/operator/bootstrap-failure' },// {step: owner|brand|receipt|null} -> 200 {step}
+    // F03-S02
+    operatorActive: { method: 'PUT', path: '/local/operator/operators/active' },   // {email,active} -> 204, 404 for a non-fixture operator
+    unbilledSalon: { method: 'POST', path: '/local/operator/unbilled-salons' },    // {slug?} -> 201 {id,slug,hostname}
+    billingRun: { method: 'POST', path: '/local/operator/billing/run' },           // -> {at,changed:[...],failed:[...]}
+    billingInterrupt: { method: 'PUT', path: '/local/operator/billing/interrupt' },// {point:"after-invoice-issue"|null} -> {point}; one-shot
+    providerOutcome: { method: 'PUT', path: '/local/operator/billing/provider-outcomes/{salonId}' }, // {outcome} -> {salonId,outcome}; sticky
+    providerSign: { method: 'POST', path: '/local/operator/billing/provider-events/signature' },    // raw body -> {header,signature}
+    emails: { method: 'GET', path: '/local/operator/emails' },                     // ?recipient= -> {items:[CapturedEmail]}
+    clearEmails: { method: 'DELETE', path: '/local/operator/emails' },             // ?recipient= -> 204
+    // F03-S03
+    exportRun: { method: 'POST', path: '/local/operator/exports/run' },            // -> {at,exports:[...],failed:[...]}
+    deletionRun: { method: 'POST', path: '/local/operator/deletions/run' },        // -> {at,salons:[...],waiting:[...],failed:[...]}
+    exportInterrupt: { method: 'PUT', path: '/local/operator/exports/interrupt' }, // {afterTables:1..1000|null}; one-shot
+    deletionInterrupt: { method: 'PUT', path: '/local/operator/deletions/interrupt' }, // {afterBatches:1..100000|null}; one-shot
+    background: { method: 'GET', path: '/local/operator/salons/{salonId}/background' },
+    localReset: { method: 'POST', path: '/local/operator/reset' },                 // -> {removedSalons,salonIds,jobsRescheduled,clock:"real"}
+  } satisfies Record<string, Hook>,
+  /** Generated contract schema names (docs/api/openapi.json). `schemaValidator` fails loudly on a wrong one. */
   schemas: {
     signIn: 'OperatorSignIn',
     enrollment: 'OperatorEnrollment',
     tokens: 'OperatorTokens',
     principal: 'OperatorPrincipal',
-    plan: 'Plan',
-    planPage: 'PagePlanSummary',
+    plan: 'PlanDefinition',
+    planPage: 'PlanPage',
     salonCreated: 'SalonCreated',
-    salon: 'OperatorSalon',
-    salonPage: 'PageSalonSummary',
-    subscription: 'Subscription',
-    invoicePage: 'PageInvoiceSummary',
-    lifecyclePage: 'PageLifecycleEvent',
-    supportStart: 'SupportSessionStarted',
-    supportCredential: 'SupportCredential',
-    entryCode: 'SupportEntryCode',
+    salon: 'SalonDetail',
+    salonPage: 'SalonPage',
+    subscription: 'SubscriptionView',
+    invoicePage: 'InvoicePage',
+    invoice: 'InvoiceDetail',
+    payment: 'PaymentView',
+    entitlements: 'Entitlements',
+    acknowledged: 'Acknowledged',
+    lifecyclePage: 'LifecyclePage',
+    exportView: 'ExportView',
+    linkView: 'LinkView',
   },
-  /** Platform tables added by S01-S04 migrations, for read-only database observations. */
-  tables: { platformAudit: 'platform_audit_entry', receipts: 'platform_idempotency_receipt', plans: 'platform_plan' },
-  /** The S02 provider-event signature header name. */
-  signatureHeader: 'X-Billing-Signature',
+  /** Provider events: `POST /api/v1/billing/provider-events` on the bare platform host (S02 handoff). */
+  providerEvents: '/api/v1/billing/provider-events',
+  signatureHeader: 'X-Salon-Billing-Signature',
+  /** The Owner's export link routes on the bare platform host (S03 handoff). */
+  exportLink: (token: string) => `/api/v1/exports/${token}`,
+  exportLinkMetadata: (token: string) => `/api/v1/exports/${token}/metadata`,
+  /** Operator BFF cookies (operator-console.md). */
+  cookies: ['access', 'refresh', 'expires', 'session', 'challenge', 'challenge_id'].map(n => `salon_operator_${n}`),
 } as const;
+
+/**
+ * F03-S04 is being built. Its spec's API table names the routes (SUPPORT below); the handoff names
+ * what the spec leaves open: generated schema names, the shape of the support credential the entry
+ * exchange returns, the list filter parameter names and the BFF action. Fill PENDING_S04 from the
+ * S04 handoff at feature-verify; until then a test that needs a value stops with `ENVIRONMENT:`.
+ */
+export const SUPPORT = {
+  start: (salonId: string) => `/salons/${salonId}/support-sessions`,
+  entryCodes: (sessionId: string) => `/support-sessions/${sessionId}/entry-codes`,
+  end: (sessionId: string) => `/support-sessions/${sessionId}`,
+  list: '/support-sessions',
+  entry: '/api/v1/support/entry',
+  salonSessions: '/api/v1/salon/support-sessions',
+  cookies: ['salon_support_access', 'salon_support_session'],
+} as const;
+export const PENDING_S04 = {
+  schemas: {
+    supportStart: null as string | null,       // 201 {id,expiresAt,entryCode,entryUrl}
+    entryCode: null as string | null,          // 201 a fresh code
+    supportSessionPage: null as string | null, // GET /operator/support-sessions
+    salonSupportSessionPage: null as string | null, // GET /salon/support-sessions
+  },
+  /** Where the entry exchange's answer holds the support access token, e.g. 'accessToken'. */
+  credentialField: null as string | null,
+  /** Query parameter names of the operator list's salon and state filters. */
+  listSalonParam: null as string | null,
+  listStateParam: null as string | null,
+  /** The salon-host BFF action that exchanges an entry code. */
+  entryBffAction: null as string | null,
+};
+export function pendingS04<K extends Exclude<keyof typeof PENDING_S04, 'schemas'>>(key: K): string {
+  const value = PENDING_S04[key];
+  if (value === null) throw new Error(`ENVIRONMENT: the F03-S04 handoff has not yet named ${key} (qa/shared/operator.ts PENDING_S04)`);
+  return value;
+}
+/** A support response checked against the generated schema the S04 handoff names. */
+export async function supportJson<T>(response: APIResponse, schema: keyof typeof PENDING_S04.schemas, status = 200): Promise<T> {
+  const name = PENDING_S04.schemas[schema];
+  if (name === null) throw new Error(`ENVIRONMENT: the F03-S04 handoff has not yet named the ${schema} schema (qa/shared/operator.ts PENDING_S04)`);
+  const answer = await answerOf(response);
+  expect(answer.status, `${schema}: HTTP status (body ${answer.status >= 400 ? answer.body.slice(0, 200) : 'withheld'})`).toBe(status);
+  const body = JSON.parse(answer.body);
+  expect(Boolean(schemaValidator(name)(body)), `${schema}: generated contract shape`).toBe(true);
+  return body as T;
+}
 
 export type OperatorRole = 'OPERATOR_ADMIN' | 'OPERATOR_SUPPORT';
 export type OperatorAccount = { email: string; password: string; role: OperatorRole; displayName: string; totpSecret?: string };
-export type OperatorSignIn = { state: string; challengeId: string; challengeToken: string; expiresAt?: string; credentials?: Tokens | null };
+export type OperatorSignIn = components['schemas']['OperatorSignIn'];
 export type OperatorPrincipal = { id: string; kind: string; role: OperatorRole; permissions: string[]; mfaEnabled: boolean };
 export type OperatorActor = { account: OperatorAccount; tokens: Tokens; principal: OperatorPrincipal };
-export type Plan = { id: string; key: string; name: string; staffSeats: number; branches: number; messageAllowance: number;
-  customDomain: boolean; dedicatedApp: boolean; createdAt: string; updatedAt: string };
+export type Plan = components['schemas']['PlanDefinition'];
 export type PlanInput = Omit<Plan, 'id' | 'createdAt' | 'updatedAt'>;
 export type Page<T> = { items: T[]; page: number; size: number; total: number };
 export type SalonInput = {
@@ -85,25 +150,39 @@ export type SalonInput = {
   owner: { name: string; email: string; password: string };
   subscription?: { monthlyAmount: number; paymentMethod: 'card' | 'bank_transfer' };
 };
-export type SalonCreated = { id: string; slug: string; hostname: string; planId: string; createdAt: string };
-export type SalonDetail = {
-  id: string; name: string; slug: string; hostname: string; status: string; country: string | null; currency: string | null;
-  timeZone: string | null; defaultLanguage: string | null; contactEmail: string | null; contactPhone: string | null;
-  address: string | null; plan: { id: string; key: string; name: string } | null; ownerEmail: string | null;
-  createdAt: string; updatedAt: string; version?: number;
-};
+export type SalonCreated = components['schemas']['SalonCreated'];
+export type SalonDetail = components['schemas']['SalonDetail'];
+export type SalonSummary = components['schemas']['SalonSummary'];
+export type Subscription = components['schemas']['SubscriptionView'];
+export type InvoiceSummary = components['schemas']['InvoiceSummary'];
+export type Invoice = components['schemas']['InvoiceDetail'];
+export type Payment = components['schemas']['PaymentView'];
+export type Entitlements = components['schemas']['Entitlements'];
+export type LifecycleEvent = components['schemas']['LifecycleEvent'];
+export type ExportView = components['schemas']['ExportView'];
+export type CapturedEmail = { messageId: string; salonId: string; recipient: string; kind: string; subject: string; body: string; links: string[]; deliveredAt: string };
+export type BillingPass = { at: string; changed: { salonId: string; issued: string[]; reminders: string[]; charges: string[]; states: string[] }[]; failed: string[] };
+export type ExportPass = { at: string; exports: { salonId: string; exportId: string; tablesStored: number; ready: boolean }[]; failed: string[] };
+export type DeletionPass = { at: string; salons: { salonId: string; batches: number; rows: number; deleted: boolean }[]; waiting: string[]; failed: string[] };
+export type Background = { salonId: string; status: string; accessState: string;
+  outbox: { waiting: number; delivered: number; cancelled: number; dead: number };
+  jobs: { due: number; run: number; skipped: number; failed: number; lastRunAt: string | null; lastSkippedAt: string | null } };
 
-/** The exact key sets the contract promises (S01 API table); a field outside them is a failure. */
+/** The exact key sets the contract promises; a field outside them is a failure. */
 export const SALON_CREATED_KEYS = ['createdAt', 'hostname', 'id', 'planId', 'slug'];
-export const SALON_DETAIL_KEYS = ['address', 'contactEmail', 'contactPhone', 'country', 'createdAt', 'currency', 'defaultLanguage',
-  'hostname', 'id', 'name', 'ownerEmail', 'plan', 'slug', 'status', 'timeZone', 'updatedAt'];
+/** S01's sixteen fields, S02's `version` and S03's `closedAt`, `deleteAt`, `deletedAt`. */
+export const SALON_DETAIL_KEYS = ['address', 'closedAt', 'contactEmail', 'contactPhone', 'country', 'createdAt', 'currency', 'defaultLanguage',
+  'deleteAt', 'deletedAt', 'hostname', 'id', 'name', 'ownerEmail', 'plan', 'slug', 'status', 'timeZone', 'updatedAt', 'version'];
+export const SALON_SUMMARY_KEYS = ['createdAt', 'hostname', 'id', 'name', 'plan', 'slug', 'status'];
 export const PLAN_KEYS = ['branches', 'createdAt', 'customDomain', 'dedicatedApp', 'id', 'key', 'messageAllowance', 'name', 'staffSeats', 'updatedAt'];
 export const PRINCIPAL_KEYS = ['id', 'kind', 'mfaEnabled', 'permissions', 'role'];
 
-/** Permissions after F03-S04 (operator-console.md permission tables). */
+/** Permissions of the finished feature (operator-console.md permission tables, S01 to S04). */
 export const OPERATOR_PERMISSIONS: Record<OperatorRole, string[]> = {
-  OPERATOR_ADMIN: ['operator.session.manage', 'operator.salon.read', 'operator.salon.create', 'operator.plan.read', 'operator.plan.create'],
-  OPERATOR_SUPPORT: ['operator.session.manage', 'operator.salon.read'],
+  OPERATOR_ADMIN: ['operator.session.manage', 'operator.salon.read', 'operator.salon.create', 'operator.plan.read', 'operator.plan.create',
+    'operator.billing.read', 'operator.billing.manage', 'operator.salon.suspend', 'operator.salon.close', 'operator.export.read',
+    'operator.support.read', 'operator.support.revoke'],
+  OPERATOR_SUPPORT: ['operator.session.manage', 'operator.salon.read', 'operator.support.start'],
 };
 
 /** Hosts that must never reach operator authority (S01 AC-2). The console host itself is the control. */
@@ -111,6 +190,8 @@ export const NON_CONSOLE_HOSTS = [
   alpha.hostname, PLATFORM_DOMAIN, '127.0.0.1', `api.${PLATFORM_DOMAIN}`, `admin.${PLATFORM_DOMAIN}`, `support.${PLATFORM_DOMAIN}`,
   `www.${PLATFORM_DOMAIN}`, `a.${CONSOLE_HOST}`, `${CONSOLE_HOST}.example.com`, `x${CONSOLE_HOST}`, `console-x.${PLATFORM_DOMAIN}`,
 ];
+/** A short set of the same, for rows repeated over many actions. */
+export const WRONG_HOSTS = [alpha.hostname, PLATFORM_DOMAIN, `admin.${PLATFORM_DOMAIN}`, `${CONSOLE_HOST}.example.com`];
 export const FORGED_FORWARDING: Record<string, string>[] = [
   {}, { 'X-Forwarded-Host': CONSOLE_HOST }, { Forwarded: `host=${CONSOLE_HOST}` },
 ];
@@ -119,6 +200,9 @@ const hex = (bytes: number) => randomBytes(bytes).toString('hex');
 /** A unique slug or plan key in the 3-30 character grammar, never reserved, never reused. */
 export const uniqueSlug = (prefix = 'qa') => `${prefix}-${hex(6)}`;
 export const strongPassword = () => `QA ${hex(20)}`;
+export const DAY = 86_400_000;
+export const SECOND = 1_000;
+export const plusMs = (instant: string, ms: number) => new Date(Date.parse(instant) + ms).toISOString();
 
 export function base32Secret(): string {
   return syntheticAccount('OWNER', true).totpSecret!;
@@ -151,8 +235,24 @@ export function ownerOf(input: SalonInput): SeedAccount {
 }
 
 /** A provisioned salon in the shape `qa/shared/tenants.ts` uses, so identity helpers can address it. */
-export function provisionedSalon(created: SalonCreated, input: SalonInput): Salon {
-  return { slug: created.slug, id: created.id, name: input.name, brandColour: '', hostname: created.hostname, timeZone: input.timeZone };
+export function provisionedSalon(created: { id: string; slug: string; hostname: string }, input?: SalonInput): Salon {
+  return { slug: created.slug, id: created.id, name: input?.name ?? '', brandColour: '', hostname: created.hostname, timeZone: input?.timeZone ?? 'Asia/Colombo' };
+}
+
+/**
+ * The provisioned Owner's first sign-in at its own salon: enrollment, then a session. The account
+ * keeps its TOTP seed so the Owner can sign in again after the test clock moves.
+ */
+export async function ownerSession(identity: Identity, salon: Salon, input: SalonInput) {
+  const account = ownerOf(input);
+  const challenge = await identity.signIn(salon, account);
+  expect(challenge.state, 'a new Owner must enroll MFA first').toBe('enroll_mfa');
+  expect(challenge.credentials ?? null, 'no session before enrollment').toBeNull();
+  const enrollment = await json<components['schemas']['Enrollment']>(await identity.call(salon, 'POST', '/staff/mfa/enroll',
+    { challengeId: challenge.challengeId, challengeToken: challenge.challengeToken }), 'Enrollment');
+  account.totpSecret = enrollment.secret!;
+  const tokens = await identity.verify(salon, challenge, account.totpSecret);
+  return { salon, account, tokens };
 }
 
 /**
@@ -170,36 +270,77 @@ export function bootstrapRows(slug: string) {
   const sub = `(SELECT id FROM tenant WHERE slug = ${sqlLiteral(slug)})`;
   return { tenant, staff: countRows('identity_staff', `tenant_id IN ${sub}`), brand: countRows('salon_brand', `tenant_id IN ${sub}`) };
 }
+/** Every table with a `tenant_id` column, from the catalogue rather than the product's registry. */
+export function tenantTables(): string[] {
+  const out = identitySql(`SELECT table_name FROM information_schema.columns WHERE table_schema = 'public' AND column_name = 'tenant_id' ORDER BY 1`);
+  const tables = out.split('\n').filter(Boolean);
+  expect(tables.length, 'the catalogue lists tenant tables').toBeGreaterThan(0);
+  return tables;
+}
+/** Row counts per tenant table for one salon. */
+export function tenantRowCounts(salonId: string): Record<string, number> {
+  return Object.fromEntries(tenantTables().map(t => [t, countRows(t, `tenant_id = ${sqlLiteral(salonId)}`)]));
+}
+/** Platform audit entries for a subject, as `action` strings in order (S01 AC-16, S02 AC-14, S03 AC-11). */
+export type PlatformAuditRow = { action: string; actorKind: string; actorId: string; subjectKind: string; subjectId: string; traceId: string | null; details: string; at: string };
+export function platformAuditWhere(where: string): PlatformAuditRow[] {
+  const rows = identitySql(`SELECT coalesce(json_agg(json_build_object('action', action, 'actorKind', actor_kind, 'actorId', actor_id,
+    'subjectKind', subject_kind, 'subjectId', subject_id, 'traceId', trace_id, 'details', coalesce(details::text, ''), 'at', created_at)
+    ORDER BY created_at, id), '[]'::json) FROM platform_audit_entry WHERE ${where}`);
+  return JSON.parse(rows || '[]');
+}
+export const platformAudit = (subjectId: string) => platformAuditWhere(`subject_id = ${sqlLiteral(subjectId)}`);
 
-export async function operatorJson<T>(response: APIResponse, schema: keyof typeof PENDING.schemas, status = 200): Promise<T> {
+export async function operatorJson<T>(response: APIResponse, schema: keyof typeof CONTRACT.schemas, status = 200): Promise<T> {
   const answer = await answerOf(response);
   expect(answer.status, `${schema}: HTTP status (body ${answer.status >= 400 ? answer.body.slice(0, 200) : 'withheld'})`).toBe(status);
   expect(answer.contentType, `${schema}: content type`).toBe('application/json');
   const body = JSON.parse(answer.body);
-  const validate = schemaValidator(PENDING.schemas[schema]);
+  const validate = schemaValidator(CONTRACT.schemas[schema]);
   // A credential-bearing body is never printed; only whether it matched.
   expect(Boolean(validate(body)), `${schema}: generated contract shape`).toBe(true);
   return body as T;
 }
 
-/** Problem details with a stable code. Codes are strings here because S01-S04 register new ones. */
+/** Problem details with a stable code. Codes are strings here because S04 registers new ones. */
 export async function operatorProblem(response: APIResponse, status: number, code: string) {
   const answer = await answerOf(response);
   expect(answer.status, `HTTP status for ${code} (body ${answer.body.slice(0, 200)})`).toBe(status);
   const problem = expectProblem(answer, code);
   expect(problem.code).toBe(code);
-  return problem as typeof problem & { errors?: { field?: string; name?: string }[] };
+  return problem as typeof problem & { errors?: { field?: string }[] };
 }
 
-/** The field names a 400 names, whichever of the documented field-error shapes is used. */
-export function fieldsOf(problem: { errors?: { field?: string; name?: string }[] } & Record<string, unknown>): string[] {
-  const errors = (problem.errors ?? (problem as { fieldErrors?: { field?: string }[] }).fieldErrors ?? []) as { field?: string; name?: string }[];
-  return errors.map(error => error.field ?? error.name ?? '').filter(Boolean);
+/** The field names a 400 names (Problem.errors[].field, a dotted path when nested). */
+export function fieldsOf(problem: { errors?: { field?: string }[] }): string[] {
+  return (problem.errors ?? []).map(error => error.field ?? '').filter(Boolean);
 }
 
 export function expectNoStore(response: APIResponse, label: string) {
   expect(response.headers()['cache-control'] ?? '', `${label}: no-store`).toContain('no-store');
 }
+
+/** Every mutating route a salon host serves, from the committed contract (identity and salon APIs). */
+export function tenantMutationRoutes(): { method: string; path: string }[] {
+  const out: { method: string; path: string }[] = [];
+  for (const [route, ops] of Object.entries(committedContract().paths)) {
+    if (!route.startsWith('/api/v1/identity') && !route.startsWith('/api/v1/salon')) continue;
+    for (const method of Object.keys(ops as object)) {
+      if (['post', 'put', 'patch', 'delete'].includes(method)) out.push({ method: method.toUpperCase(), path: route });
+    }
+  }
+  expect(out.length, 'the contract has mutating tenant routes').toBeGreaterThan(0);
+  return out;
+}
+
+/** A request on a salon host by full API path, with an optional bearer. */
+export function onSalonHost(identity: Identity, salon: Salon, method: string, route: string, tokens?: Tokens, data?: unknown) {
+  return identity.api.send(method, route, { headers: { Host: salon.hostname, ...(tokens ? { Authorization: `Bearer ${tokens.accessToken}` } : {}),
+    ...(data === undefined ? {} : { 'Content-Type': 'application/json' }) }, data: data === undefined ? undefined : JSON.stringify(data) });
+}
+
+/** A problem body without its per-request fields, for "the same answer as an unknown one". */
+export const comparable = (text: string) => text.replace(/"(traceId|instance)":"[^"]*"/g, '');
 
 export class Operator {
   constructor(readonly identity: Identity) {}
@@ -215,35 +356,47 @@ export class Operator {
     });
   }
 
-  hook(name: keyof typeof PENDING.hooks, data?: unknown, params: Record<string, string> = {}) {
-    const hook = PENDING.hooks[name];
+  hook(name: keyof typeof CONTRACT.hooks, data?: unknown, params: Record<string, string> = {}, query = '', raw?: string) {
+    const hook = CONTRACT.hooks[name];
     const route = Object.entries(params).reduce<string>((p, [k, v]) => p.replace(`{${k}}`, encodeURIComponent(v)), hook.path);
-    return this.call(hook.method, route, { data });
+    return this.call(hook.method, `${route}${query}`, { data, raw });
+  }
+
+  private async hookOk<T>(name: keyof typeof CONTRACT.hooks, status: number, data?: unknown, params: Record<string, string> = {}, query = ''): Promise<T> {
+    const r = await this.hook(name, data, params, query);
+    if (r.status() === 404 && !Object.keys(params).length) throw new Error(`ENVIRONMENT: the local hook ${CONTRACT.hooks[name].path} is not available (local profile, loopback)`);
+    expect(r.status(), `hook ${name} (${(await r.text()).slice(0, 200)})`).toBe(status);
+    return (status === 204 ? undefined : await r.json()) as T;
   }
 
   /**
-   * Back to the synthetic baseline (operator-console.md, "Local test hooks", Local reset): removes
-   * every salon created after the baseline, resets hook-created operators, returns the clock to real
-   * time and reschedules pushed-ahead jobs. Alpha, Beta and Gamma are untouched, so F01/F02 guards
-   * run unchanged afterwards. Called in every F03 test's teardown.
+   * Back to the synthetic baseline (S03 handoff): removes every salon created after the baseline,
+   * resets hook-created operators, returns the clock to real time and reschedules pushed-ahead
+   * jobs. Alpha, Beta and Gamma are untouched, so F01/F02 guards run unchanged afterwards. Called
+   * in every F03 test's teardown, after disarming every one-shot fault a failed test may have left.
    */
   async resetToBaseline() {
-    const r = await this.hook('localReset');
-    if (r.status() === 404) throw new Error('ENVIRONMENT: the F03 local reset hook is not available (confirm its path in the S03 handoff)');
-    expect([200, 204], 'local reset to the synthetic baseline').toContain(r.status());
+    await this.hookOk('billingInterrupt', 200, { point: null });
+    await this.hookOk('exportInterrupt', 200, { afterTables: null });
+    await this.hookOk('deletionInterrupt', 200, { afterBatches: null });
+    const result = await this.hookOk<{ removedSalons: number; clock: string }>('localReset', 200);
+    expect(result.clock, 'local reset returned the clock to real time').toBe('real');
   }
 
-  async reset() {
-    const r = await this.hook('reset');
-    if (r.status() === 404) throw new Error('ENVIRONMENT: the operator fixture reset hook is not available (confirm its path in the S01 handoff)');
-    expect(r.status()).toBe(204);
-  }
+  async resetFixtures() { await this.hookOk('fixtures', 204); }
 
   async seed(...accounts: OperatorAccount[]) {
-    const r = await this.hook('seed', { accounts });
-    if (r.status() === 404) throw new Error('ENVIRONMENT: the operator seed hook is not available (confirm its path in the S01 handoff)');
-    expect(r.status(), 'operator fixtures seeded').toBe(200);
+    const body = await this.hookOk<{ accounts: number }>('seed', 200,
+      { accounts: accounts.map(a => ({ email: a.email, displayName: a.displayName, role: a.role, password: a.password, totpSecret: a.totpSecret ?? null })) });
+    expect(body.accounts).toBe(accounts.length);
   }
+
+  async bootstrapFailure(step: 'owner' | 'brand' | 'receipt' | null) {
+    expect(await this.hookOk('bootstrapFailure', 200, { step })).toEqual({ step });
+  }
+
+  /** Disables or re-enables a hook-created operator (S02 handoff). */
+  async setActive(account: OperatorAccount, active: boolean) { await this.hookOk('operatorActive', 204, { email: account.email, active }); }
 
   async now(): Promise<string> { return this.identity.now(); }
 
@@ -262,7 +415,7 @@ export class Operator {
     return operatorJson(await this.call('POST', '/mfa/challenges', { data: { challengeId: challenge.challengeId, challengeToken: challenge.challengeToken } }), 'enrollment');
   }
 
-  verifyRaw(challenge: OperatorSignIn, code: string) {
+  verifyRaw(challenge: Pick<OperatorSignIn, 'challengeId' | 'challengeToken'>, code: string) {
     return this.call('POST', '/mfa/verify', { data: { challengeId: challenge.challengeId, challengeToken: challenge.challengeToken, code } });
   }
 
@@ -301,6 +454,18 @@ export class Operator {
     return this.login(account);
   }
 
+  /**
+   * Fresh credentials for an actor after the test clock moved: access lasts five minutes and a
+   * session seven days. Renewal first; a full sign-in (a new TOTP step) when the session ended.
+   */
+  async renew(actor: OperatorActor): Promise<OperatorActor> {
+    const r = await this.refreshRaw(actor.tokens.refreshToken);
+    if (r.status() === 200) { actor.tokens = await this.tokens(r); return actor; }
+    const fresh = await this.login(actor.account);
+    actor.tokens = fresh.tokens;
+    return actor;
+  }
+
   refreshRaw(refreshToken: string) { return this.call('POST', '/sessions/refresh', { data: { refreshToken } }); }
   signOut(tokens: Tokens) { return this.call('POST', '/sessions/sign-out', { tokens }); }
 
@@ -326,7 +491,7 @@ export class Operator {
     return operatorJson(await this.call('GET', `/salons/${id}`, { tokens: actor.tokens }), 'salon');
   }
 
-  async salonPage(actor: OperatorActor, query = ''): Promise<Page<SalonDetail>> {
+  async salonPage(actor: OperatorActor, query = ''): Promise<Page<SalonSummary>> {
     return operatorJson(await this.call('GET', `/salons${query}`, { tokens: actor.tokens }), 'salonPage');
   }
 
@@ -334,15 +499,76 @@ export class Operator {
     return operatorJson(await this.call('GET', `/plans${query}`, { tokens: actor.tokens }), 'planPage');
   }
 
-  // S02-S04 routes, exactly as their specs' API tables name them.
-  subscription(actor: OperatorActor | null, salonId: string, extra: { host?: string } = {}) {
+  async version(actor: OperatorActor, salonId: string): Promise<number> {
+    return (await this.salonDetail(actor, salonId)).version;
+  }
+
+  // ---- F03-S02 billing (S02 API table and handoff) ----
+  subscriptionRaw(actor: OperatorActor | null, salonId: string, extra: { host?: string } = {}) {
     return this.call('GET', `/salons/${salonId}/subscription`, { tokens: actor?.tokens, ...extra });
   }
-  async version(actor: OperatorActor, salonId: string): Promise<number> {
-    const detail = await this.salonDetail(actor, salonId);
-    expect(typeof detail.version, 'salon detail exposes version').toBe('number');
-    return detail.version!;
+  async subscription(actor: OperatorActor, salonId: string): Promise<Subscription> {
+    return operatorJson(await this.subscriptionRaw(actor, salonId), 'subscription');
   }
+  startSubscription(actor: OperatorActor | null, salonId: string, data: Record<string, unknown>, key: string = randomUUID()) {
+    return this.call('POST', `/salons/${salonId}/subscription`, { tokens: actor?.tokens, data, headers: { 'Idempotency-Key': key } });
+  }
+  changeSubscription(actor: OperatorActor | null, salonId: string, data: Record<string, unknown>) {
+    return this.call('PATCH', `/salons/${salonId}/subscription`, { tokens: actor?.tokens, data });
+  }
+  movePlan(actor: OperatorActor | null, salonId: string, version: number, planId: string) {
+    return this.call('PUT', `/salons/${salonId}/plan`, { tokens: actor?.tokens, data: { version, planId } });
+  }
+  async invoices(actor: OperatorActor, salonId: string, query = '?size=100'): Promise<Page<InvoiceSummary>> {
+    return operatorJson(await this.call('GET', `/salons/${salonId}/invoices${query}`, { tokens: actor.tokens }), 'invoicePage');
+  }
+  async invoice(actor: OperatorActor, invoiceId: string): Promise<Invoice> {
+    return operatorJson(await this.call('GET', `/invoices/${invoiceId}`, { tokens: actor.tokens }), 'invoice');
+  }
+  recordTransfer(actor: OperatorActor | null, invoiceId: string, data: Record<string, unknown>, key: string = randomUUID()) {
+    return this.call('POST', `/invoices/${invoiceId}/payments`, { tokens: actor?.tokens, data, headers: { 'Idempotency-Key': key } });
+  }
+  /** Pays an invoice by an exact transfer received on the clock's current date. */
+  async pay(actor: OperatorActor, invoice: { id: string; amount: number }): Promise<Payment> {
+    const receivedOn = (await this.now()).slice(0, 10);
+    return operatorJson(await this.recordTransfer(actor, invoice.id, { reference: `QA-${hex(4)}`, amount: invoice.amount, receivedOn }), 'payment', 201);
+  }
+  async runBilling(): Promise<BillingPass> { return this.hookOk('billingRun', 200); }
+  async armBillingInterrupt(point: 'after-invoice-issue' | null) { expect(await this.hookOk('billingInterrupt', 200, { point })).toEqual({ point }); }
+  async providerOutcome(salonId: string, outcome: 'success' | 'failure') {
+    expect(await this.hookOk('providerOutcome', 200, { outcome }, { salonId })).toEqual({ salonId, outcome });
+  }
+  /** The local provider key's signature of the exact body (the key never leaves the API). */
+  async sign(body: string): Promise<string> {
+    const r = await this.hook('providerSign', undefined, {}, '', body);
+    if (r.status() === 404) throw new Error('ENVIRONMENT: the provider signing hook is not available (no local provider key?)');
+    expect(r.status()).toBe(200);
+    const signed = await r.json() as { header: string; signature: string };
+    expect(signed.header.toLowerCase(), 'the documented signature header').toBe(CONTRACT.signatureHeader.toLowerCase());
+    expect(signed.signature).toMatch(/^[0-9a-f]{64}$/);
+    return signed.signature;
+  }
+  postEvent(body: string, signature: string | null, host: string = PLATFORM_HOST) {
+    return this.identity.api.send('POST', CONTRACT.providerEvents, {
+      headers: { Host: host, 'Content-Type': 'application/json', ...(signature === null ? {} : { [CONTRACT.signatureHeader]: signature }) }, data: body });
+  }
+  async emails(recipient: string): Promise<CapturedEmail[]> {
+    return (await this.hookOk<{ items: CapturedEmail[] }>('emails', 200, undefined, {}, `?recipient=${encodeURIComponent(recipient)}`)).items;
+  }
+  /** Captured emails of a kind, waiting for the outbox to deliver `count` of them, then proving no more arrive. */
+  async emailsOfKind(recipient: string, kind: string, count: number): Promise<CapturedEmail[]> {
+    await expect.poll(async () => (await this.emails(recipient)).filter(e => e.kind === kind).length,
+      { message: `${count} ${kind} email(s) to the Owner contact`, timeout: 15_000, intervals: [250, 500, 1000] }).toBeGreaterThanOrEqual(count);
+    const found = (await this.emails(recipient)).filter(e => e.kind === kind);
+    expect(found.length, `exactly ${count} ${kind} email(s)`).toBe(count);
+    return found;
+  }
+  async unbilledSalon(slug?: string): Promise<Salon> {
+    const created = await this.hookOk<{ id: string; slug: string; hostname: string }>('unbilledSalon', 201, slug ? { slug } : {});
+    return provisionedSalon(created);
+  }
+
+  // ---- F03-S03 lifecycle and export (S03 API table and handoff) ----
   suspend(actor: OperatorActor | null, salonId: string, version: number, reason = 'QA suspension reason', extra: { host?: string } = {}) {
     return this.call('POST', `/salons/${salonId}/suspension`, { tokens: actor?.tokens, data: { version, reason }, ...extra });
   }
@@ -352,16 +578,51 @@ export class Operator {
   close(actor: OperatorActor | null, salonId: string, version: number, confirmSlug: string, reason = 'QA closure reason', extra: { host?: string } = {}) {
     return this.call('POST', `/salons/${salonId}/closure`, { tokens: actor?.tokens, data: { version, confirmSlug, reason }, ...extra });
   }
+  async lifecycle(actor: OperatorActor, salonId: string, query = '?size=100'): Promise<Page<LifecycleEvent>> {
+    return operatorJson(await this.call('GET', `/salons/${salonId}/lifecycle${query}`, { tokens: actor.tokens }), 'lifecyclePage');
+  }
+  async exportStatus(actor: OperatorActor, salonId: string): Promise<ExportView> {
+    return operatorJson(await this.call('GET', `/salons/${salonId}/export`, { tokens: actor.tokens }), 'exportView');
+  }
+  archiveRaw(actor: OperatorActor | null, salonId: string, extra: { host?: string } = {}) {
+    return this.call('GET', `/salons/${salonId}/export/archive`, { tokens: actor?.tokens, ...extra });
+  }
+  linkRaw(token: string, host: string = PLATFORM_HOST) { return this.identity.api.getOn(host, CONTRACT.exportLink(token)); }
+  linkMetadataRaw(token: string, host: string = PLATFORM_HOST) { return this.identity.api.getOn(host, CONTRACT.exportLinkMetadata(token)); }
+  async runExports(): Promise<ExportPass> { return this.hookOk('exportRun', 200); }
+  async runDeletions(): Promise<DeletionPass> { return this.hookOk('deletionRun', 200); }
+  async armExportInterrupt(afterTables: number | null) { expect(await this.hookOk('exportInterrupt', 200, { afterTables })).toEqual({ afterTables }); }
+  async armDeletionInterrupt(afterBatches: number | null) { expect(await this.hookOk('deletionInterrupt', 200, { afterBatches })).toEqual({ afterBatches }); }
+  async background(salonId: string): Promise<Background> { return this.hookOk('background', 200, undefined, { salonId }); }
+
+  // ---- F03-S04 support sessions (S04 API table; handoff details in PENDING_S04) ----
   startSupport(actor: OperatorActor | null, salonId: string, data: Record<string, unknown> = { reason: 'QA support reason text' }, extra: { host?: string } = {}) {
-    return this.call('POST', `/salons/${salonId}/support-sessions`, { tokens: actor?.tokens, data, ...extra });
+    return this.call('POST', SUPPORT.start(salonId), { tokens: actor?.tokens, data, ...extra });
+  }
+  newEntryCode(actor: OperatorActor | null, sessionId: string) { return this.call('POST', SUPPORT.entryCodes(sessionId), { tokens: actor?.tokens }); }
+  endSupport(actor: OperatorActor | null, sessionId: string) { return this.call('DELETE', SUPPORT.end(sessionId), { tokens: actor?.tokens }); }
+  supportList(actor: OperatorActor, filters: { salonId?: string; state?: string } = {}) {
+    const query = [filters.salonId ? `${pendingS04('listSalonParam')}=${filters.salonId}` : '', filters.state ? `${pendingS04('listStateParam')}=${filters.state}` : '']
+      .filter(Boolean).join('&');
+    return this.call('GET', `${SUPPORT.list}${query ? `?${query}` : ''}`, { tokens: actor.tokens });
   }
   /** Exchanges an entry code directly with the API on a host (the BFF path is a browser case). */
   exchange(code: string, host: string) {
-    return this.call('POST', '/api/v1/support/entry', { data: { code }, host });
+    return this.call('POST', SUPPORT.entry, { data: { code }, host });
+  }
+  /** The support access token from a successful exchange, as `Tokens` for the identity helpers. */
+  async supportCredential(response: APIResponse): Promise<Tokens> {
+    expect([200, 201], 'the exchange issued a credential').toContain(response.status());
+    const body = await response.json() as Record<string, unknown>;
+    const field = pendingS04('credentialField');
+    const access = field.split('.').reduce<unknown>((v, k) => (v as Record<string, unknown> | undefined)?.[k], body);
+    expect(typeof access, 'a support access token').toBe('string');
+    return { accessToken: access as string } as Tokens;
   }
 }
 
 export type SupportStart = { id: string; expiresAt: string; entryCode: string; entryUrl: string };
+export type SupportSession = { id: string; salonId?: string; reason: string; state: string; expiresAt: string };
 
 /**
  * The application's one clock (docs/qa/test-plan.md). F02's guard requires exactly the three fixed
@@ -393,12 +654,10 @@ function clockMark(name: string, instant: string) {
   fs.appendFileSync(path.join(reportDir, 'F03-control-marks.jsonl'), JSON.stringify({ name, instant, at: Date.now() }) + '\n');
 }
 
-export const DAY = 86_400_000;
-
 export const test = identityTest.extend<{ operator: Operator; clock: TestClock }>({
   operator: async ({ identity }, use) => {
     const operator = new Operator(identity);
-    await operator.reset();
+    await operator.resetFixtures();
     try { await use(operator); } finally { await operator.resetToBaseline(); }
   },
   clock: async ({ identity }, use) => {

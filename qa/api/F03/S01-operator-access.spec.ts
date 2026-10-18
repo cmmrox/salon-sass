@@ -2,8 +2,9 @@
  * F03-S01 operator access: MFA sign-in, host binding, operator and tenant authority, sessions and
  * password ceilings. Cases TC-F03-S01-001 to -009, -011 to -013, -015, -016 (cases.md).
  *
- * Prepared during the F03 build against the S01 spec and operator-console.md; fixture-hook paths
- * and schema names live in qa/shared/operator.ts PENDING and are confirmed at feature-verify.
+ * Written against the S01 spec and operator-console.md, with hook paths and schema names from the
+ * S01/S02 handoffs (qa/shared/operator.ts CONTRACT). Permissions are the finished feature's: from
+ * S04 Support reads the salon directory and detail (operator-console.md, "Support sessions").
  */
 import { randomUUID } from 'node:crypto';
 
@@ -61,7 +62,7 @@ test(`${id(2)} A first-time operator must enroll MFA before any session exists`,
   expect(enroll.state).toBe('enroll_mfa');
   await operatorProblem(await operator.call('GET', '/me', { headers: { Authorization: `Bearer ${enroll.challengeToken}` } }), 401, 'invalid_session');
   const setup = await operator.enrollment(enroll);
-  expect(setup.secret).toMatch(/^[A-Z2-7]{32}$/);
+  expect(setup.secret, 'a base32 TOTP seed').toMatch(/^[A-Z2-7]{16,}=*$/);
   expect(setup.otpauthUri.startsWith('otpauth://totp/')).toBe(true);
   // Setup belongs to enrollment only: a verification challenge yields no secret.
   const verifyChallenge = await operator.signIn(admin);
@@ -220,10 +221,11 @@ test(`${id(11)} Expired, signed-out, revoked and disabled operator sessions auth
   await operatorProblem(await operator.refreshRaw(absolute.tokens.refreshToken), 401, 'invalid_session');
   await clock.real();
   const disabled = await operator.actor('OPERATOR_SUPPORT');
-  const r = await operator.hook('disableOperator', { disabled: true }, { id: disabled.principal.id });
-  if (r.status() === 404) throw new Error('ENVIRONMENT: the disable-operator hook is not available (confirm its path in the S02 handoff)');
-  expect(r.status()).toBeLessThan(300);
+  expect((await operator.call('GET', '/me', { tokens: disabled.tokens })).status(), 'usable before it is disabled').toBe(200);
+  await operator.setActive(disabled.account, false);
   await operatorProblem(await operator.call('GET', '/me', { tokens: disabled.tokens }), 401, 'invalid_session');
+  await operatorProblem(await operator.refreshRaw(disabled.tokens.refreshToken), 401, 'invalid_session');
+  await operatorProblem(await operator.signInRaw(disabled.account), 401, 'invalid_credentials');
 });
 
 test(`${id(12)} Refresh rotates once and reuse revokes the whole family`, async ({ operator }) => {
@@ -247,12 +249,18 @@ test(`${id(13)} Concurrent renewals never leave two usable refresh families`, as
 });
 
 test(`${id(15)} Address ceiling holds across distinct emails and forged forwarding headers`, async ({ operator }) => {
+  // Without an assertion the API counts the trusted peer address; forwarding headers choose nothing.
   const attempt = (n: number, extra: Record<string, string> = {}) => operator.signInRaw(
     { email: `absent-${n}-${randomUUID()}@example.invalid`, password: 'QA wrong password value' },
     { headers: { 'X-Forwarded-For': `192.0.2.${(n % 250) + 1}`, ...extra } });
-  for (let n = 0; n < 30; n++) await operatorProblem(await attempt(n), 401, 'invalid_credentials');
-  // A forged staff assertion (identity-and-access.md, `x-salon-client-assertion`) cannot choose the operator bucket.
-  for (const extra of [{}, { 'X-Forwarded-For': '198.51.100.7' }, { 'x-salon-client-assertion': 'v1.forged.assertion' }] as Record<string, string>[]) {
+  for (let n = 0; n < 29; n++) await operatorProblem(await attempt(n), 401, 'invalid_credentials');
+  // A present invalid assertion (a forged or a staff one) fails before rate accounting
+  // (identity-and-access.md, address assertion), so it neither counts nor chooses a bucket.
+  for (const forged of ['v1.forged.assertion', `v1;192.0.2.9;${new Date().toISOString()};${'0'.repeat(64)}`]) {
+    await operatorProblem(await attempt(50, { 'x-salon-client-assertion': forged }), 400, 'invalid_client_assertion');
+  }
+  await operatorProblem(await attempt(29), 401, 'invalid_credentials');
+  for (const extra of [{}, { 'X-Forwarded-For': '198.51.100.7' }, { Forwarded: 'for=198.51.100.8' }] as Record<string, string>[]) {
     const r = await attempt(99, extra);
     await operatorProblem(r, 429, 'rate_limited');
     expect(Number(r.headers()['retry-after'])).toBeGreaterThan(0);

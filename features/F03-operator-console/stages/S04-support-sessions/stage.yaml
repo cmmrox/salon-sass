@@ -136,7 +136,12 @@ verification:
     - TC-F03-S04-002
     - TC-F03-S04-003
     - TC-F03-S04-004
+    - TC-F03-S04-007
+    - TC-F03-S04-008
     - TC-F03-S04-009
+    - TC-F03-S04-011
+    - TC-F03-S04-012
+    - TC-F03-S04-013
     - TC-F03-S04-014
   manual: []
   deferred: []
