@@ -15,6 +15,10 @@ public final class MovableClock extends Clock {
         this.now = now;
     }
 
+    public void set(Instant instant) {
+        now = instant;
+    }
+
     public void advance(Duration by) {
         now = now.plus(by);
     }

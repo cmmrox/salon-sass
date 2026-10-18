@@ -193,6 +193,10 @@ public final class OperatorTestSupport {
         salon.put("address", "1 Synthetic Road\nColombo 07");
         salon.put("planId", planId);
         salon.put("owner", owner);
+        Map<String, Object> subscription = new LinkedHashMap<>();
+        subscription.put("monthlyAmount", 250000);
+        subscription.put("paymentMethod", "bank_transfer");
+        salon.put("subscription", subscription);
         return salon;
     }
 }
