@@ -39,14 +39,30 @@ public class SalonBilling {
     public record Usage(long staffSeats) {
     }
 
-    @Schema(requiredProperties = {"state", "trialEndsAt", "readOnlyAt", "pastDueSince"})
+    @Schema(requiredProperties = {"state", "trialEndsAt", "readOnlyAt", "pastDueSince", "notice"})
     public record SubscriptionState(
             @Schema(allowableValues = {"trialing", "active", "past_due", "read_only"}) String state,
             Instant trialEndsAt,
             @Schema(types = {"string", "null"}, format = "date-time", requiredMode = Schema.RequiredMode.REQUIRED)
             Instant readOnlyAt,
             @Schema(types = {"string", "null"}, format = "date-time", requiredMode = Schema.RequiredMode.REQUIRED)
-            Instant pastDueSince) {
+            Instant pastDueSince,
+            @Schema(types = {"string", "null"}, allowableValues = {"trial_ending", "past_due", "read_only"},
+                    requiredMode = Schema.RequiredMode.REQUIRED,
+                    description = "The workspace banner to show, decided with the application clock")
+            String notice) {
+    }
+
+    /** The trial-ending banner shows from three days before trial end. */
+    static final java.time.Duration TRIAL_NOTICE = java.time.Duration.ofDays(3);
+
+    static String notice(String state, Instant trialEndsAt, Instant now) {
+        return switch (state) {
+            case "read_only" -> "read_only";
+            case "past_due" -> "past_due";
+            case "trialing" -> now.isBefore(trialEndsAt.minus(TRIAL_NOTICE)) ? null : "trial_ending";
+            default -> null;
+        };
     }
 
     @Schema(requiredProperties = {"plan", "limits", "features", "usage", "subscription"})
@@ -90,7 +106,8 @@ public class SalonBilling {
                     salonId).stream().findFirst().orElse(new Entitlements(null, null, null, null, null));
             SubscriptionState state = ledger.subscriptionOf(salonId, false)
                     .map(subscription -> new SubscriptionState(subscription.state().value(), subscription.trialEndsAt(),
-                            ledger.readOnlyAt(subscription, now), ledger.pastDueSince(subscription, now)))
+                            ledger.readOnlyAt(subscription, now), ledger.pastDueSince(subscription, now),
+                            notice(subscription.state().value(), subscription.trialEndsAt(), now)))
                     .orElse(null);
             return new Entitlements(limits.plan(), limits.limits(), limits.features(),
                     new Usage(provisioning.activeStaffCount(salonId)), state);

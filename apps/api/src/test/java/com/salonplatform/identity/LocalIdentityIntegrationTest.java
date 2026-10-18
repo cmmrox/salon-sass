@@ -18,7 +18,7 @@ class LocalIdentityIntegrationTest {
     @TempDir Path directory;
 
     @Test
-    void localSeedIsIdempotentSecretFreeAndCannotResetOtherSalons() throws Exception {
+    void localSeedIsIdempotentSecretFreeAndResetsOnlyItsOwnSalon() throws Exception {
         TestDatabase db = TestDatabase.createEmpty(TestPostgres.shared());
         String password = UUID.randomUUID() + " synthetic";
         String secret;
@@ -58,14 +58,34 @@ class LocalIdentityIntegrationTest {
                                     .queryForObject(
                                             "SELECT count(*) FROM identity_staff", Long.class))
                     .isEqualTo(15);
+            // F03-S02: the fixtures also work for a provisioned salon, and only for its own records.
             String foreign =
                     new TestSalons(db.asOwner()).create("Other", "#111111").host(app.port());
+            assertThat(
+                            app.http()
+                                    .postJsonOnHost(
+                                            foreign,
+                                            "/local/identity/seed",
+                                            json.writeValueAsString(
+                                                    Map.of("accounts", List.of(accounts.get(1)))))
+                                    .status())
+                    .isEqualTo(200);
+            assertThat(
+                            db.asOwner()
+                                    .queryForObject(
+                                            "SELECT count(*) FROM identity_staff", Long.class))
+                    .isEqualTo(16);
             assertThat(
                             app.http()
                                     .sendOnHost(
                                             "DELETE", foreign, "/local/identity", Map.of(), null)
                                     .status())
-                    .isEqualTo(404);
+                    .isEqualTo(204);
+            assertThat(
+                            db.asOwner()
+                                    .queryForObject(
+                                            "SELECT count(*) FROM identity_staff", Long.class))
+                    .isEqualTo(15);
             assertThat(
                             app.http()
                                     .sendOnHost(

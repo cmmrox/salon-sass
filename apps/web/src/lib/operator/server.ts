@@ -94,9 +94,10 @@ function failure(r: { error?: { code?: string; errors?: { field?: string }[] }; 
   });
 }
 
-const READS = new Set(['principal', 'plans', 'plan', 'salons', 'salon']);
+const READS = new Set(['principal', 'plans', 'plan', 'salons', 'salon', 'subscription', 'invoices', 'invoice']);
 const PUBLIC = new Set(['sign-in', 'mfa-enroll', 'mfa-verify']);
-const MUTATIONS = new Set(['sign-in', 'mfa-enroll', 'mfa-verify', 'refresh', 'sign-out', 'clear', 'plan-create', 'salon-create']);
+const MUTATIONS = new Set(['sign-in', 'mfa-enroll', 'mfa-verify', 'refresh', 'sign-out', 'clear', 'plan-create', 'salon-create',
+  'subscription-start', 'subscription-change', 'plan-move', 'payment-record']);
 
 /** One allowlisted console operation; neither an upstream URL nor a tenant selector comes from input. */
 export async function handleOperator(request: NextRequest, action: string): Promise<NextResponse> {
@@ -173,6 +174,68 @@ export async function handleOperator(request: NextRequest, action: string): Prom
           : await client.GET('/api/v1/operator/salons/{id}', { ...options, params: { path: { id } } });
         return r.data ? output(r.data) : failure(r);
       }
+      case 'subscription':
+      case 'invoices':
+      case 'invoice': {
+        const id = query.get('id') ?? '';
+        if (!UUID.test(id)) return problem('bad_request', 400, { errors: [{ field: 'id' }] });
+        if (action === 'subscription') {
+          const r = await client.GET('/api/v1/operator/salons/{id}/subscription', { ...options, params: { path: { id } } });
+          return r.data ? output(r.data) : failure(r);
+        }
+        if (action === 'invoice') {
+          const r = await client.GET('/api/v1/operator/invoices/{id}', { ...options, params: { path: { id } } });
+          return r.data ? output(r.data) : failure(r);
+        }
+        const r = await client.GET('/api/v1/operator/salons/{id}/invoices', {
+          ...options,
+          params: { path: { id }, query: { page: Number(query.get('page') ?? 0), size: Number(query.get('size') ?? 20) } },
+        });
+        return r.data ? output(r.data) : failure(r);
+      }
+      case 'subscription-start':
+      case 'subscription-change':
+      case 'plan-move':
+      case 'payment-record': {
+        const id = text('id');
+        if (!UUID.test(id)) return problem('bad_request', 400, { errors: [{ field: 'id' }] });
+        // Amounts arrive as minor units, or as the operator's text when it was not a number, which the
+        // API refuses with a field error; nothing is computed here.
+        const amount = (name: string) => body[name] as number;
+        if (action === 'subscription-change') {
+          const r = await client.PATCH('/api/v1/operator/salons/{id}/subscription', {
+            ...options,
+            params: { path: { id } },
+            body: {
+              version: body.version as number,
+              ...(body.monthlyAmount !== undefined ? { monthlyAmount: amount('monthlyAmount') } : {}),
+              ...(text('paymentMethod') ? { paymentMethod: text('paymentMethod') as 'card' | 'bank_transfer' } : {}),
+            },
+          });
+          return r.data ? output(r.data) : failure(r);
+        }
+        if (action === 'plan-move') {
+          const r = await client.PUT('/api/v1/operator/salons/{id}/plan', { ...options, params: { path: { id } }, body: { version: body.version as number, planId: text('planId') } });
+          return r.data ? output(r.data) : failure(r);
+        }
+        const key = text('idempotencyKey');
+        if (!UUID.test(key)) return problem('bad_request', 400, { errors: [{ field: 'Idempotency-Key' }] });
+        const idempotent = { headers, signal: requestSignal() };
+        if (action === 'subscription-start') {
+          const r = await client.POST('/api/v1/operator/salons/{id}/subscription', {
+            ...idempotent,
+            params: { path: { id }, header: { 'Idempotency-Key': key } },
+            body: { monthlyAmount: amount('monthlyAmount'), paymentMethod: text('paymentMethod') as 'card' | 'bank_transfer', ...(text('currency') ? { currency: text('currency') } : {}) },
+          });
+          return r.data ? output(r.data, 201) : failure(r);
+        }
+        const r = await client.POST('/api/v1/operator/invoices/{id}/payments', {
+          ...idempotent,
+          params: { path: { id }, header: { 'Idempotency-Key': key } },
+          body: { reference: text('reference'), amount: amount('amount'), receivedOn: text('receivedOn') },
+        });
+        return r.data ? output(r.data, 201) : failure(r);
+      }
       case 'sign-in': {
         const ip = currentRequest()?.clientAddress;
         const meta = await client.GET('/api/v1/meta', { signal: requestSignal() });
@@ -222,6 +285,7 @@ export async function handleOperator(request: NextRequest, action: string): Prom
           return r.data ? output(r.data, 201) : failure(r);
         }
         const owner = (typeof body.owner === 'object' && body.owner !== null ? body.owner : {}) as Record<string, unknown>;
+        const subscription = (typeof body.subscription === 'object' && body.subscription !== null ? body.subscription : {}) as Record<string, unknown>;
         const ownerText = (name: string) => (typeof owner[name] === 'string' ? (owner[name] as string) : '');
         const optional = (name: string) => (text(name).trim() === '' ? null : text(name));
         const r = await client.POST('/api/v1/operator/salons', {
@@ -230,6 +294,7 @@ export async function handleOperator(request: NextRequest, action: string): Prom
             name: text('name'), slug: text('slug'), country: text('country'), currency: text('currency'), timeZone: text('timeZone'),
             defaultLanguage: text('defaultLanguage') as 'en' | 'si' | 'ta', contactEmail: optional('contactEmail'), contactPhone: optional('contactPhone'), address: optional('address'),
             planId: text('planId'), owner: { name: ownerText('name'), email: ownerText('email'), password: ownerText('password') },
+            subscription: { monthlyAmount: subscription.monthlyAmount as number, paymentMethod: (typeof subscription.paymentMethod === 'string' ? subscription.paymentMethod : '') as 'card' | 'bank_transfer' },
           },
         });
         return r.data ? output({ id: r.data.id, slug: r.data.slug, hostname: r.data.hostname, planId: r.data.planId, createdAt: r.data.createdAt }, 201) : failure(r);
