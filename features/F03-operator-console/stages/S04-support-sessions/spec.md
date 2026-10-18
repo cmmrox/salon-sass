@@ -95,8 +95,8 @@ the request's transaction or, for reads, in a separate bounded write that never 
 | `POST /api/v1/operator/support-sessions/{id}/entry-codes` | -> 201 a fresh code for the operator's own active session |
 | `DELETE /api/v1/operator/support-sessions/{id}` | Own session (Support) or any (Admin) -> 204 |
 | `GET /api/v1/operator/support-sessions` | Paginated; Admin all, Support own; filter by salon and state |
-| `POST /api/v1/support/entry` | Salon host; `{code}` -> support credential to the BFF only |
-| `GET /api/v1/salon/support-sessions`, `DELETE .../{id}` | Owner only, salon host |
+| `POST /api/v1/support/entry` | Salon host; `{code}` -> 200 support credential to the BFF only |
+| `GET /api/v1/salon/support-sessions`, `DELETE .../{id}` | Owner only, salon host; DELETE -> 204 |
 
 `GET /api/v1/identity/me` returns kind `support` with the session's expiry for a support principal.
 Register `support_read_only` and `support_session_active`. Append migrations for support sessions

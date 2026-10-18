@@ -348,7 +348,7 @@ audit records the same start, end and revocation. Operator email addresses are n
 
 | Permission | `OPERATOR_ADMIN` | `OPERATOR_SUPPORT` |
 | --- | --- | --- |
-| `operator.salon.read` (directory and detail, to choose a salon) | yes | yes, from S04 |
+| `operator.salon.read` (directory, detail and lifecycle history, to choose and understand a salon) | yes | yes, from S04 |
 | `operator.support.start`, ending one's own session | no | yes |
 | `operator.support.read`, `operator.support.revoke` (every session) | yes | no |
 
