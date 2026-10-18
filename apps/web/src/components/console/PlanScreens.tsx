@@ -15,7 +15,7 @@ import { Item, ItemContent, ItemDescription, ItemGroup, ItemTitle } from '@/comp
 import { Spinner } from '@/components/ui/spinner';
 import { formatInstant, viewerTimeZone } from '@/lib/format';
 import { operatorRead, operatorRequest, OperatorFailure, withOperatorLock, principalInsideLock } from '@/lib/operator/browser';
-import { ConsoleFailure, ConsoleLoading, ConsoleTextField, uncertain } from './ConsoleControls';
+import { ConsoleFailure, ConsoleLoading, ConsoleTextField, consoleTestId, uncertain } from './ConsoleControls';
 import { ConsoleSheet } from './ConsoleSheet';
 import { DirectoryPager, DirectorySearch } from './DirectoryControls';
 import { PAGE_SIZE, useDirectory } from './useDirectory';
@@ -47,7 +47,7 @@ export function PlanDirectory() {
   return (
     <div className="flex min-w-0 flex-col gap-6" data-testid="console-plans">
       <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
-        <h1 className="m-0 text-workspace-title leading-heading" data-testid="console-plans-title">{t('plans')}</h1>
+        <h1 className="m-0 text-workspace-title leading-heading font-semibold" data-testid="console-plans-title">{t('plans')}</h1>
         <CreatePlan onCreated={() => void load(0, '')} />
       </div>
       <DirectorySearch area="plans" help={t('searchPlansHelp')} busy={loading} onSearch={(q) => void load(0, q)} />
@@ -60,12 +60,12 @@ export function PlanDirectory() {
         <ItemGroup className="gap-2" data-testid="console-plans-list" aria-busy={loading || undefined}>
           {data.items.map((plan) => (
             <Item asChild variant="outline" className="bg-card" key={plan.id} data-testid="console-plan-row" data-id={plan.id}>
-              <Link href={`/console/plans/${plan.id}`}>
+              <Link href={`/console/plans/${plan.id}`} className="no-underline">
                 <ItemContent>
                   <ItemTitle className="wrap-anywhere">{plan.name}</ItemTitle>
                   <ItemDescription className="wrap-anywhere">{plan.key}</ItemDescription>
                   <div className="flex flex-wrap gap-2">
-                    {LIMITS.map((limit) => <Badge key={limit} variant="secondary">{t('labelValue', { label: t(limit), value: plan[limit].toLocaleString('en-LK') })}</Badge>)}
+                    {LIMITS.map((limit) => <Badge key={limit} variant="secondary" className="max-w-full whitespace-normal wrap-anywhere">{t('labelValue', { label: t(limit), value: plan[limit].toLocaleString('en-LK') })}</Badge>)}
                   </div>
                 </ItemContent>
               </Link>
@@ -117,7 +117,7 @@ function CreatePlan({ onCreated }: { onCreated: () => void }) {
         trigger={<Button data-testid="console-create-plan">{t('createPlan')}</Button>}>
         {failure && <ConsoleFailure failure={failure} />}
         {failure && uncertain(failure) && <Alert variant="notice" role="status" data-testid="console-uncertain">{t('uncertain')}</Alert>}
-        <form className="flex min-w-0 flex-col gap-5" onSubmit={(event) => { event.preventDefault(); void submit(); }}>
+        <form className="flex min-w-0 flex-col gap-5" noValidate onSubmit={(event) => { event.preventDefault(); void submit(); }}>
           <FieldGroup className="gap-4">
             <ConsoleTextField name="planKey" label={t('planKey')} description={t('planKeyHelp')} required maxLength={30} autoComplete="off" value={values.key} error={field('key')} onChange={(e) => setValues({ ...values, key: e.target.value })} />
             <ConsoleTextField name="planName" label={t('planName')} required maxLength={120} autoComplete="off" value={values.name} error={field('name')} onChange={(e) => setValues({ ...values, name: e.target.value })} />
@@ -178,14 +178,14 @@ export function PlanDetail({ id }: { id: string }) {
             <p className="m-0 font-mono wrap-anywhere" data-testid="console-plan-key">{plan.key}</p>
             <h2 className="m-0 text-large">{t('limits')}</h2>
             <dl className="m-0 grid gap-3 rail:grid-cols-3">
-              {LIMITS.map((limit) => <div key={limit} className="rounded-field bg-background p-3"><dt className="text-small">{t(limit)}</dt><dd className="m-0 text-large font-semibold" data-testid={`console-plan-${limit}`}>{plan[limit].toLocaleString('en-LK')}</dd></div>)}
+              {LIMITS.map((limit) => <div key={limit} className="rounded-field bg-background p-3"><dt className="text-small">{t(limit)}</dt><dd className="m-0 text-large font-semibold" data-testid={consoleTestId(`plan-${limit}`)}>{plan[limit].toLocaleString('en-LK')}</dd></div>)}
             </dl>
             <h2 className="m-0 text-large">{t('features')}</h2>
             <div className="flex flex-wrap gap-2">
-              {FEATURES.map((feature) => <Badge key={feature} variant={plan[feature] ? 'positive' : 'outline'} data-testid={`console-plan-${feature}`}>{t('labelValue', { label: t(feature), value: plan[feature] ? t('included') : t('notIncluded') })}</Badge>)}
+              {FEATURES.map((feature) => <Badge key={feature} className="max-w-full whitespace-normal wrap-anywhere" variant={plan[feature] ? 'positive' : 'outline'} data-testid={consoleTestId(`plan-${feature}`)}>{t('labelValue', { label: t(feature), value: plan[feature] ? t('included') : t('notIncluded') })}</Badge>)}
             </div>
             <p className="m-0 text-small">{t('created', { time: formatInstant(plan.createdAt, viewerTimeZone()) })}</p>
-            <Alert role={undefined} className="text-small">{t('immutable')}</Alert>
+            <Alert role={undefined} className="bg-background text-small" data-testid="console-plan-immutable">{t('immutable')}</Alert>
           </section>
         </Card>
       )}

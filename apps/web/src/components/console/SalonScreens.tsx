@@ -33,7 +33,7 @@ export function SalonDirectory({ platformDomain }: { platformDomain: string }) {
   return (
     <div className="flex min-w-0 flex-col gap-6" data-testid="console-salons">
       <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
-        <h1 className="m-0 text-workspace-title leading-heading" data-testid="console-salons-title">{t('salons')}</h1>
+        <h1 className="m-0 text-workspace-title leading-heading font-semibold" data-testid="console-salons-title">{t('salons')}</h1>
         <CreateSalon platformDomain={platformDomain} onCreated={() => void load(0, '')} />
       </div>
       <DirectorySearch area="salons" help={t('searchSalonsHelp')} busy={loading} onSearch={(q) => void load(0, q)} />
@@ -46,13 +46,13 @@ export function SalonDirectory({ platformDomain }: { platformDomain: string }) {
         <ItemGroup className="gap-2" data-testid="console-salons-list" aria-busy={loading || undefined}>
           {data.items.map((salon) => (
             <Item asChild variant="outline" className="bg-card" key={salon.id} data-testid="console-salon-row" data-id={salon.id}>
-              <Link href={`/console/salons/${salon.id}`}>
+              <Link href={`/console/salons/${salon.id}`} className="no-underline">
                 <ItemContent>
                   <ItemTitle className="wrap-anywhere">{salon.name ?? t('notConfigured')}</ItemTitle>
                   <ItemDescription className="wrap-anywhere">{salon.hostname}</ItemDescription>
                   <div className="flex flex-wrap gap-2">
                     <Badge variant={salon.status === 'active' ? 'positive' : 'outline'} data-testid="console-salon-status">{salon.status === 'active' ? t('statusActive') : t('statusSuspended')}</Badge>
-                    <Badge variant="secondary" data-testid="console-salon-plan">{salon.plan ? salon.plan.name : t('noPlan')}</Badge>
+                    <Badge variant="secondary" className="max-w-full whitespace-normal wrap-anywhere" data-testid="console-salon-plan">{salon.plan ? salon.plan.name : t('noPlan')}</Badge>
                   </div>
                 </ItemContent>
               </Link>
@@ -125,7 +125,7 @@ function CreateSalon({ platformDomain, onCreated }: { platformDomain: string; on
         trigger={<Button data-testid="console-create-salon">{t('createSalon')}</Button>}>
         {failure && <ConsoleFailure failure={failure} />}
         {failure && uncertain(failure) && <Alert variant="notice" role="status" data-testid="console-uncertain">{t('uncertain')}</Alert>}
-        <form className="flex min-w-0 flex-col gap-6" onSubmit={(event) => { event.preventDefault(); void submit(); }}>
+        <form className="flex min-w-0 flex-col gap-6" noValidate onSubmit={(event) => { event.preventDefault(); void submit(); }}>
           <FieldSet>
             <FieldLegend>{t('profile')}</FieldLegend>
             <FieldGroup className="gap-4">
@@ -206,11 +206,11 @@ export function SalonDetail({ id }: { id: string }) {
               <CardTitle asChild className="text-workspace-title leading-heading wrap-anywhere"><h1 id="console-salon-name" data-testid="console-salon-name">{salon.name ?? t('notConfigured')}</h1></CardTitle>
               <div className="flex flex-wrap gap-2">
                 <Badge variant={salon.status === 'active' ? 'positive' : 'outline'} data-testid="console-salon-status">{salon.status === 'active' ? t('statusActive') : t('statusSuspended')}</Badge>
-                <Badge variant="secondary" data-testid="console-salon-plan">{salon.plan ? t('planLabel', { name: salon.plan.name, key: salon.plan.key }) : t('noPlan')}</Badge>
+                <Badge variant="secondary" className="max-w-full whitespace-normal wrap-anywhere" data-testid="console-salon-plan">{salon.plan ? t('planLabel', { name: salon.plan.name, key: salon.plan.key }) : t('noPlan')}</Badge>
               </div>
             </div>
-            <div className="flex min-w-0 flex-wrap items-center gap-2 rounded-field bg-background p-3">
-              <span className="min-w-0 flex-1 font-mono wrap-anywhere" data-testid="console-salon-hostname">{salon.hostname}</span>
+            <div className="flex min-w-0 flex-col items-start gap-2 rounded-field bg-background p-3 rail:flex-row rail:items-center">
+              <span className="w-full min-w-0 flex-1 font-mono wrap-anywhere" data-testid="console-salon-hostname">{salon.hostname}</span>
               <Button variant="outline" size="sm" data-testid="console-copy-hostname" onClick={() => { void navigator.clipboard?.writeText(salon.hostname).then(() => setCopied(true)); }}><Copy aria-hidden="true" />{t('copyHostname')}</Button>
             </div>
             {copied && <Alert variant="success" role="status" data-testid="console-hostname-copied">{t('hostnameCopied')}</Alert>}
@@ -219,9 +219,9 @@ export function SalonDetail({ id }: { id: string }) {
               <div><dt className="text-small">{t('currency')}</dt>{value(salon.currency, 'console-salon-currency')}</div>
               <div><dt className="text-small">{t('timeZone')}</dt>{value(salon.timeZone, 'console-salon-time-zone')}</div>
               <div><dt className="text-small">{t('defaultLanguage')}</dt>{value(salon.defaultLanguage ? t(`language_${salon.defaultLanguage}` as 'language_en') : null, 'console-salon-language')}</div>
-              <div><dt className="text-small">{t('contactEmail')}</dt>{value(salon.contactEmail, 'console-salon-contact-email')}</div>
-              <div><dt className="text-small">{t('contactPhone')}</dt>{value(salon.contactPhone ? formatPhone(salon.contactPhone) : null, 'console-salon-contact-phone')}</div>
-              <div className="rail:col-span-2"><dt className="text-small">{t('address')}</dt>{value(salon.address, 'console-salon-address')}</div>
+              <div><dt className="text-small">{t('contactEmailLabel')}</dt>{value(salon.contactEmail, 'console-salon-contact-email')}</div>
+              <div><dt className="text-small">{t('contactPhoneLabel')}</dt>{value(salon.contactPhone ? formatPhone(salon.contactPhone) : null, 'console-salon-contact-phone')}</div>
+              <div className="rail:col-span-2"><dt className="text-small">{t('addressLabel')}</dt>{value(salon.address, 'console-salon-address')}</div>
               <div><dt className="text-small">{t('ownerContact')}</dt>{value(salon.ownerEmail, 'console-salon-owner-email')}</div>
               <div><dt className="text-small">{t('createdLabel')}</dt><dd className="m-0" data-testid="console-salon-created-at">{formatInstant(salon.createdAt, viewerTimeZone())}</dd></div>
             </dl>

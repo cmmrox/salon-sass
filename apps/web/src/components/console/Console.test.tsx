@@ -182,10 +182,10 @@ describe('detail pages', () => {
   it('shows a plan\'s exact limits and explicit features, and not found without a retry', async () => {
     stubApi(() => Response.json(PLAN));
     renderWithMessages(<PlanDetail id={PLAN.id} />);
-    expect(await screen.findByTestId('console-plan-staffSeats')).toHaveTextContent('5');
-    expect(screen.getByTestId('console-plan-messageAllowance')).toHaveTextContent('0');
-    expect(screen.getByTestId('console-plan-customDomain')).toHaveTextContent('Not included');
-    expect(screen.getByTestId('console-plan-dedicatedApp')).toHaveTextContent('Included');
+    expect(await screen.findByTestId('console-plan-staff-seats')).toHaveTextContent('5');
+    expect(screen.getByTestId('console-plan-message-allowance')).toHaveTextContent('0');
+    expect(screen.getByTestId('console-plan-custom-domain')).toHaveTextContent('Not included');
+    expect(screen.getByTestId('console-plan-dedicated-app')).toHaveTextContent('Included');
   });
 
   it('answers an unknown plan as not found, with no retry to offer', async () => {

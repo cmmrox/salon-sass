@@ -270,6 +270,9 @@
     "browser_unsupported": "This browser cannot keep console sessions safe across tabs. Use a current browser to sign in or out.",
     "createdLabel": "Created",
     "labelValue": "{label}: {value}",
-    "planLabel": "{name} ({key})"
+    "planLabel": "{name} ({key})",
+    "contactEmailLabel": "Contact email",
+    "contactPhoneLabel": "Contact mobile",
+    "addressLabel": "Address"
   }
 }

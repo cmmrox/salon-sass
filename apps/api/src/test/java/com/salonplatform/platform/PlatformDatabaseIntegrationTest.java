@@ -48,6 +48,13 @@ class PlatformDatabaseIntegrationTest {
                 LEGACY);
     }
 
+    /** AC-20: an ordinary (non-local) start creates no operator account and no plan. */
+    @Test
+    void startingTheApplicationCreatesNoDefaultOperator() {
+        assertThat(owner.queryForObject("SELECT count(*) FROM operator_user", Integer.class)).isZero();
+        assertThat(owner.queryForObject("SELECT count(*) FROM plan", Integer.class)).isZero();
+    }
+
     @ParameterizedTest
     @ValueSource(strings = {
         "SELECT * FROM salon_brand",

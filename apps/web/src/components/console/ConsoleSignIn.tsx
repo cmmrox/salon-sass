@@ -68,7 +68,7 @@ export function ConsoleSignIn() {
         </header>
         {supported === false && <Alert variant="notice" role="status" data-testid="console-browser-support">{t('browser_unsupported')}</Alert>}
         {failure && <ConsoleFailure failure={failure} />}
-        <form className="min-w-0" noValidate={false} onSubmit={(event) => { event.preventDefault(); void submit(); }}>
+        <form className="min-w-0" noValidate onSubmit={(event) => { event.preventDefault(); void submit(); }}>
           <FieldGroup className="gap-5">
             {step === 'password' && <>
               <ConsoleTextField name="email" type="email" autoComplete="username" required label={t('email')} value={values.email} error={failure?.fields.includes('email')} onChange={(e) => setValues({ ...values, email: e.target.value })} />

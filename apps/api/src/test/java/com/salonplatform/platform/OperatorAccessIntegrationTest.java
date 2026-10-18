@@ -111,6 +111,18 @@ class OperatorAccessIntegrationTest extends IntegrationTest {
         status(http().getOnHost(console.host(), "/api/v1/salon"), 404);
     }
 
+    // --- AC-20: local hooks ----------------------------------------------------------------------------
+
+    @Test
+    void theOperatorFixtureHooksDoNotExistOutsideTheLocalProfile() {
+        for (String[] call : new String[][] {{"POST", "/local/operator/seed"}, {"DELETE", "/local/operator/fixtures"},
+            {"PUT", "/local/operator/bootstrap-failure"}, {"GET", "/local/operator/bootstrap-failure"}}) {
+            Http.Exchange answer = http().sendOnHost(call[0], "localhost:" + port(), call[1],
+                    Map.of("Content-Type", "application/json"), call[0].equals("GET") || call[0].equals("DELETE") ? null : "{}");
+            assertThat(answer.status()).as("%s %s", call[0], call[1]).isEqualTo(404);
+        }
+    }
+
     // --- AC-1: password then mandatory MFA ---------------------------------------------------------
 
     @Test

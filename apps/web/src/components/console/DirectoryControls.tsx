@@ -2,27 +2,28 @@
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Search } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { Field, FieldDescription, FieldLabel } from '@/components/ui/field';
-import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group';
+import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from '@/components/ui/input-group';
 import { Pagination, PaginationContent, PaginationCurrent, PaginationItem, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
 
-/** A literal search of the directory, submitted on Enter or the button. */
+/** A literal search of the directory, submitted on Enter or the search button inside the field (Input Group). */
 export function DirectorySearch({ area, help, busy, onSearch }: { area: 'salons' | 'plans'; help: string; busy: boolean; onSearch: (query: string) => void }) {
   const t = useTranslations('console');
   const [value, setValue] = useState('');
   const id = `console-${area}-search`;
   return (
-    <form role="search" className="flex min-w-0 flex-col gap-2 rail:flex-row rail:items-end" onSubmit={(event) => { event.preventDefault(); onSearch(value); }}>
-      <Field className="min-w-0 flex-1">
+    <form role="search" className="min-w-0" onSubmit={(event) => { event.preventDefault(); onSearch(value); }}>
+      <Field className="min-w-0">
         <FieldLabel htmlFor={id}>{t('search')}</FieldLabel>
         <InputGroup>
           <InputGroupAddon><Search aria-hidden="true" /></InputGroupAddon>
           <InputGroupInput id={id} type="search" maxLength={120} data-testid={id} aria-describedby={`${id}-help`} value={value} onChange={(event) => setValue(event.target.value)} />
+          <InputGroupAddon align="inline-end">
+            <InputGroupButton type="submit" variant="outline" className="rounded-action" data-testid={`${id}-submit`} disabled={busy}>{t('searchAction')}</InputGroupButton>
+          </InputGroupAddon>
         </InputGroup>
         <FieldDescription id={`${id}-help`}>{help}</FieldDescription>
       </Field>
-      <Button type="submit" variant="outline" className="self-start rail:mb-7" data-testid={`${id}-submit`} disabled={busy}>{t('searchAction')}</Button>
     </form>
   );
 }
