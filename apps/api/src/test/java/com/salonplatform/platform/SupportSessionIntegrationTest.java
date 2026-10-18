@@ -226,6 +226,15 @@ class SupportSessionIntegrationTest extends IntegrationTest {
                 BillingTestSupport.staffRequest(BillingTestSupport.email("ro"), "RECEPTIONIST", billing.password), token),
                 403, "support_read_only");
         BillingTestSupport.status(billing.salonCall(readOnly, "DELETE", "/api/v1/support/session", null, token), 204);
+        // The Owner of a read-only salon can still revoke support access.
+        StaffAccount readOnlyOwner = billing.staff(readOnly, StaffRole.OWNER, BillingTestSupport.email("roo"));
+        Map<String, Object> another = started(readOnly.id(), support.token());
+        BillingTestSupport.status(billing.salonCall(readOnly, "DELETE", "/api/v1/salon/support-sessions/" + another.get("id"),
+                null, billing.token(readOnly, readOnlyOwner)), 204);
+        // Staff changes in the same salon stay refused as read-only.
+        refused(billing.identityCall(readOnly, "POST", "/staff",
+                BillingTestSupport.staffRequest(BillingTestSupport.email("ro2"), "RECEPTIONIST", billing.password),
+                billing.token(readOnly, readOnlyOwner)), 403, "salon_read_only");
     }
 
     @Test

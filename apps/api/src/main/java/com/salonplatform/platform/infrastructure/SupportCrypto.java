@@ -57,7 +57,7 @@ public class SupportCrypto {
     public static final String KIND = "support";
 
     /** The claims of a verified support credential. */
-    public record Claims(UUID salonId, UUID sessionId, UUID operatorId, Instant expiresAt) {
+    public record Claims(UUID salonId, UUID sessionId, UUID operatorId, Instant issuedAt, Instant expiresAt) {
     }
 
     private final Clock clock;
@@ -129,7 +129,7 @@ public class SupportCrypto {
             }
             return Optional.of(new Claims(UUID.fromString(jwt.getClaimAsString("tenant")),
                     UUID.fromString(jwt.getClaimAsString("session")), UUID.fromString(jwt.getSubject()),
-                    jwt.getExpiresAt()));
+                    jwt.getIssuedAt(), jwt.getExpiresAt()));
         }
         catch (RuntimeException ex) {
             return Optional.empty();
@@ -138,7 +138,8 @@ public class SupportCrypto {
 
     /** Whether claims are within their time: issued no later than now and not yet expired. */
     public boolean current(Claims claims) {
-        return clock.instant().isBefore(claims.expiresAt());
+        Instant now = clock.instant();
+        return !claims.issuedAt().isAfter(now) && now.isBefore(claims.expiresAt());
     }
 
     /** A fresh entry code: 256 random bits, URL-safe Base64 without padding (43 characters). */
