@@ -72,7 +72,7 @@ export function SupportAccessScreen({ timeZone }: { timeZone: string }) {
         {items.length > 0 && (
           <ItemGroup className="gap-2" data-testid="support-access-list">
             {items.map((session) => (
-              <Item variant="outline" role="listitem" key={session.id} data-testid="support-access-row" data-id={session.id} data-state={session.state}>
+              <Item variant="outline" role="listitem" key={session.id} className="flex-wrap" data-testid="support-access-row" data-id={session.id} data-state={session.state}>
                 <ItemContent className="min-w-0">
                   <ItemTitle className="wrap-anywhere" data-testid="support-access-operator">
                     {session.operatorName}
@@ -85,7 +85,7 @@ export function SupportAccessScreen({ timeZone }: { timeZone: string }) {
                   </p>
                 </ItemContent>
                 {session.state === 'active' && (
-                  <ItemActions>
+                  <ItemActions className="w-full rail:w-auto">
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button variant="destructive" data-testid="support-access-revoke" data-id={session.id} disabled={busy !== null}>{busy === session.id ? <><Spinner />{t('revoking')}</> : t('revoke')}</Button>

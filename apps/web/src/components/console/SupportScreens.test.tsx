@@ -119,7 +119,7 @@ describe('support sessions list', () => {
     stubApi(() => Response.json({ code: 'service_unavailable' }, { status: 503 }));
     renderWithMessages(<SupportSessionList admin />);
     expect(await screen.findByTestId('console-error')).toBeInTheDocument();
-    await chooseOption(screen.getByTestId('console-support-state'), 'Ended');
+    await chooseOption(screen.getByTestId('console-support-filter'), 'Ended');
     await waitFor(() => expect(calls.at(-1)?.url).toBe('/operator-web/support-sessions?page=0&size=20&state=ended'));
   });
 });

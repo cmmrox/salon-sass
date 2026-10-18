@@ -160,7 +160,7 @@ export async function routeRequest(
         // The support view (F03-S04): an ended, expired or revoked session leaves it for the entry
         // page, its cookies cleared host-only; a staff session in the same browser is left alone.
         if ((await decide(request, support, 'support')).kind === 'signed-out') {
-          const response = redirect(request, SUPPORT_ENTRY);
+          const response = redirect(request, SUPPORT_ENTRY, 'ended');
           clearCookies(response, 'support');
           return response;
         }
@@ -205,11 +205,13 @@ async function routeConsole(request: NextRequest, path: string, headers: Headers
   return response;
 }
 
-function redirect(request: NextRequest, pathname: string): NextResponse {
-  // The same origin as the request; nothing of the query is carried to the destination.
+function redirect(request: NextRequest, pathname: string, fragment = ''): NextResponse {
+  // The same origin as the request; nothing of the query is carried to the destination. A fixed
+  // fragment may name the state the destination shows (the support entry page's `#ended`).
   const destination = request.nextUrl.clone();
   destination.pathname = pathname;
   destination.search = '';
+  destination.hash = fragment;
   const response = NextResponse.redirect(destination, 307);
   response.headers.set('Cache-Control', NOT_STORED);
   return response;

@@ -37,7 +37,7 @@ export async function AccountPage({ kind: requested, view, signIn }: PageProps) 
   const access = support ? supportAccess : store.get(cookieName(kind, 'access'))?.value;
   const client = createServerApiClient({ hostname: host.hostname });
   const entry = await workspaceEntry(kind, support ? { access } : { access, refresh: store.get(cookieName(kind, 'refresh'))?.value, expiry: store.get(cookieName(kind, 'expires'))?.value }, client);
-  if (entry.kind === 'signed-out') redirect(support ? '/workspace/support' : '/workspace/sign-in');
+  if (entry.kind === 'signed-out') redirect(support ? '/workspace/support#ended' : '/workspace/sign-in');
   const principal = entry.kind === 'signed-in' ? entry.principal : null;
   const entitlements = principal && access && client ? await readEntitlements(client, access) : null;
   const banner = <BillingBanner entitlements={entitlements} timeZone={salon.timeZone} />;

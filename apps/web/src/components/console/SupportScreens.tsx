@@ -167,7 +167,7 @@ export function SupportSessionList({ admin }: { admin: boolean }) {
         <p className="m-0">{admin ? t('supportListAdmin') : t('supportListOwn')}</p>
       </div>
       <div className="max-w-sm">
-        <ConsoleChoiceField name="supportState" label={t('supportFilter')} value={state}
+        <ConsoleChoiceField name="supportFilter" label={t('supportFilter')} value={state}
           options={[{ value: 'active', label: t('supportActive') }, { value: 'ended', label: t('supportEndedState') }, { value: 'all', label: t('supportAll') }]}
           onChange={(value) => setState(value as 'all' | 'active' | 'ended')} />
       </div>
@@ -182,7 +182,7 @@ export function SupportSessionList({ admin }: { admin: boolean }) {
       {items.length > 0 && (
         <ItemGroup className="gap-2" data-testid="console-support-list" aria-busy={loading || undefined}>
           {items.map((session) => (
-            <Item variant="outline" role="listitem" key={session.id} className="bg-card" data-testid="console-support-row" data-id={session.id} data-state={session.state}>
+            <Item variant="outline" role="listitem" key={session.id} className="flex-wrap bg-card" data-testid="console-support-row" data-id={session.id} data-state={session.state}>
               <ItemContent className="min-w-0">
                 <ItemTitle className="wrap-anywhere" data-testid="console-support-salon">
                   {session.salon.name ?? session.salon.slug}
@@ -198,7 +198,7 @@ export function SupportSessionList({ admin }: { admin: boolean }) {
                 {links[session.id] && <EntryLink entry={links[session.id]!} testId="console-support-link" />}
               </ItemContent>
               {session.state === 'active' && (
-                <ItemActions className="flex-wrap">
+                <ItemActions className="w-full flex-wrap rail:w-auto">
                   {!admin && <Button variant="outline" data-testid="console-support-open" data-id={session.id} disabled={busy !== null} onClick={() => void act(session, 'support-entry-code')}>{busy === session.id ? <Spinner /> : null}{t('supportNewLink')}</Button>}
                   <AlertDialog>
                     <AlertDialogTrigger asChild>

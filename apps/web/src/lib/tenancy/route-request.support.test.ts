@@ -33,7 +33,7 @@ describe('the support view in the proxy (F03-S04)', () => {
     const decide = vi.fn(async () => ({ kind: 'signed-out' as const }));
     const response = await routeRequest(request('/workspace/audit', 'salon_support_access=ended; salon_staff_access=t'), salonSite(), decide);
     expect(response.status).toBe(307);
-    expect(response.headers.get('location')).toBe('http://alpha.localhost:3100/workspace/support');
+    expect(response.headers.get('location')).toBe('http://alpha.localhost:3100/workspace/support#ended');
     const cleared = response.headers.getSetCookie();
     expect(cleared.filter((cookie) => /^salon_support_(access|session)=;/.test(cookie) && /Max-Age=0/i.test(cookie) && /HttpOnly/i.test(cookie))).toHaveLength(2);
     expect(cleared.some((cookie) => cookie.startsWith('salon_staff_'))).toBe(false);
