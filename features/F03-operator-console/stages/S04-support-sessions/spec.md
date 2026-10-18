@@ -52,8 +52,8 @@ Support, which holds only until S04 is built. Feature QA tests the final behavio
   errors, a suspended or closed salon is 409 `invalid_state`, and a second active session by the same operator
   for the same salon is 409 `support_session_active`. Admin cannot start one. (PLT-07)
 - AC-2: The entry code opens the salon's workspace in the support view once, within 60 seconds; a
-  reused, expired, altered or other-salon code, a missing or foreign Origin, or a code presented on
-  another host issues nothing. The code never appears in server logs or a request URL. (PLT-07, NFR-20)
+  reused, expired, altered or other-salon code is 401 `invalid_code`, a missing or foreign Origin is
+  refused as for every BFF mutation, and a code presented on another host is 404; none issues anything. The code never appears in server logs or a request URL. (PLT-07, NFR-20)
 - AC-3: In the support view the operator sees the workspace pages and data the Owner can read,
   with a persistent banner naming the session's end time; every mutation through the API or the UI
   answers 403 `support_read_only` and changes nothing, and no password, MFA material or token is

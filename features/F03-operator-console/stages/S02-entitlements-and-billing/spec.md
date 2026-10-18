@@ -45,6 +45,8 @@ subscription state and the invoices in the workspace.
   `email` outbox channel with a local capturing fake.
 - Web: console subscription card on the salon detail, invoice list, record-transfer and plan-move
   sheets; workspace "Plan and billing" page for the Owner and a state banner for every staff member.
+- The existing F02 customer code-capture and identity hooks work for provisioned salons, not only
+  Alpha, Beta and Gamma, so read-only privacy rights can be checked on a billed salon (AC-8).
 - Local hooks (loopback-only, `local` profile, outside OpenAPI; see `operator-console.md`, "Local
   test hooks"): fake provider outcome and signed events, email capture, running the billing job
   now, an interrupted-job fault, an unbilled legacy salon fixture and disabling a fixture operator.
@@ -98,7 +100,8 @@ subscription state and the invoices in the workspace.
 - AC-12: Every staff member of a salon can read its plan features and limits, staff-seat usage and
   subscription state from the API, and only its own; the workspace shows a banner to all staff for
   a trial ending within 3 days, `past_due` and `read_only`, and the Owner sees the "Plan and billing"
-  page with limits, usage and invoices. Other roles get 403 on invoices. (PLT-04, PLT-05)
+  page with limits, usage and invoices. Other roles get 403 on invoices, and the customer principal gets 403 `permission_denied` on
+  entitlements and invoices. (PLT-04, PLT-05)
 - AC-13: Support operators, every salon staff role and the customer principal are refused every
   operator billing action and read; operator billing routes on any host but the console are 404
   before side effects. Denied actions change nothing. (PLT-05)
