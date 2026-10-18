@@ -162,6 +162,31 @@
         ],
         "type": "object"
       },
+      "ClosureRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "confirmSlug": {
+            "description": "The salon's slug, typed exactly, to confirm an irreversible closure",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 500,
+            "minLength": 10,
+            "type": "string"
+          },
+          "version": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "confirmSlug",
+          "reason",
+          "version"
+        ],
+        "type": "object"
+      },
       "CodeRequest": {
         "properties": {
           "channel": {
@@ -344,6 +369,32 @@
         ],
         "type": "object"
       },
+      "EventActor": {
+        "properties": {
+          "displayName": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "operator",
+              "system"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "displayName",
+          "id",
+          "kind"
+        ],
+        "type": "object"
+      },
       "Export": {
         "properties": {
           "devices": {
@@ -364,6 +415,56 @@
           "devices",
           "generatedAt",
           "profile"
+        ],
+        "type": "object"
+      },
+      "ExportView": {
+        "properties": {
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "deleteAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "readyAt": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "sizeBytes": {
+            "format": "int64",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "ready",
+              "deleted"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "createdAt",
+          "deleteAt",
+          "readyAt",
+          "sha256",
+          "sizeBytes",
+          "status"
         ],
         "type": "object"
       },
@@ -559,6 +660,93 @@
         ],
         "type": "object"
       },
+      "LifecycleEvent": {
+        "properties": {
+          "actor": {
+            "$ref": "#/components/schemas/EventActor"
+          },
+          "at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "suspended",
+              "reactivated",
+              "closed",
+              "deleted"
+            ],
+            "type": "string"
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "actor",
+          "at",
+          "id",
+          "kind",
+          "reason"
+        ],
+        "type": "object"
+      },
+      "LifecyclePage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/LifecycleEvent"
+            },
+            "type": "array"
+          },
+          "page": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "size": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "total": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "page",
+          "size",
+          "total"
+        ],
+        "type": "object"
+      },
+      "LifecycleRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "reason": {
+            "maxLength": 500,
+            "minLength": 10,
+            "type": "string"
+          },
+          "version": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "reason",
+          "version"
+        ],
+        "type": "object"
+      },
       "Limits": {
         "properties": {
           "branches": {
@@ -578,6 +766,32 @@
           "branches",
           "messageAllowance",
           "staffSeats"
+        ],
+        "type": "object"
+      },
+      "LinkView": {
+        "properties": {
+          "deleteAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "readyAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "sha256": {
+            "type": "string"
+          },
+          "sizeBytes": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "deleteAt",
+          "readyAt",
+          "sha256",
+          "sizeBytes"
         ],
         "type": "object"
       },
@@ -1500,6 +1714,14 @@
               "null"
             ]
           },
+          "closedAt": {
+            "description": "When the salon was closed (F03-S03)",
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "contactEmail": {
             "type": [
               "string",
@@ -1529,6 +1751,22 @@
             ]
           },
           "defaultLanguage": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "deleteAt": {
+            "description": "When a closed salon's data is deleted: 30 days after closure",
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "deletedAt": {
+            "description": "When a closed salon's data was deleted",
+            "format": "date-time",
             "type": [
               "string",
               "null"
@@ -1564,6 +1802,12 @@
             "type": "string"
           },
           "status": {
+            "enum": [
+              "active",
+              "suspended",
+              "closed",
+              "deleted"
+            ],
             "type": "string"
           },
           "timeZone": {
@@ -1580,12 +1824,15 @@
         },
         "required": [
           "address",
+          "closedAt",
           "contactEmail",
           "contactPhone",
           "country",
           "createdAt",
           "currency",
           "defaultLanguage",
+          "deleteAt",
+          "deletedAt",
           "hostname",
           "id",
           "name",
@@ -1785,6 +2032,12 @@
             "type": "string"
           },
           "status": {
+            "enum": [
+              "active",
+              "suspended",
+              "closed",
+              "deleted"
+            ],
             "type": "string"
           }
         },
@@ -2210,6 +2463,87 @@
         ]
       }
     },
+    "/api/v1/exports/{token}": {
+      "get": {
+        "operationId": "download",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/zip": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "The export archive"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "tags": [
+          "export-download-controller"
+        ]
+      }
+    },
+    "/api/v1/exports/{token}/metadata": {
+      "get": {
+        "operationId": "metadata",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LinkView"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "tags": [
+          "export-download-controller"
+        ]
+      }
+    },
     "/api/v1/identity/audit": {
       "get": {
         "operationId": "audit",
@@ -2444,7 +2778,7 @@
     },
     "/api/v1/identity/customers/me/export": {
       "get": {
-        "operationId": "export",
+        "operationId": "export_1",
         "responses": {
           "200": {
             "content": {
@@ -3609,6 +3943,137 @@
         ]
       }
     },
+    "/api/v1/operator/salons/{id}/closure": {
+      "post": {
+        "operationId": "close",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClosureRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SalonDetail"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "tags": [
+          "operator-lifecycle-controller"
+        ]
+      }
+    },
+    "/api/v1/operator/salons/{id}/export": {
+      "get": {
+        "operationId": "export",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExportView"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "tags": [
+          "operator-lifecycle-controller"
+        ]
+      }
+    },
+    "/api/v1/operator/salons/{id}/export/archive": {
+      "get": {
+        "operationId": "archive",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/zip": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "The export archive"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "tags": [
+          "operator-lifecycle-controller"
+        ]
+      }
+    },
     "/api/v1/operator/salons/{id}/invoices": {
       "get": {
         "operationId": "listInvoices",
@@ -3668,6 +4133,68 @@
         },
         "tags": [
           "operator-billing-controller"
+        ]
+      }
+    },
+    "/api/v1/operator/salons/{id}/lifecycle": {
+      "get": {
+        "operationId": "history",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "maximum": 100000,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LifecyclePage"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "tags": [
+          "operator-lifecycle-controller"
         ]
       }
     },
@@ -3863,6 +4390,104 @@
         },
         "tags": [
           "operator-billing-controller"
+        ]
+      }
+    },
+    "/api/v1/operator/salons/{id}/suspension": {
+      "delete": {
+        "operationId": "reactivate",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LifecycleRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SalonDetail"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "tags": [
+          "operator-lifecycle-controller"
+        ]
+      },
+      "post": {
+        "operationId": "suspend",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LifecycleRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SalonDetail"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "tags": [
+          "operator-lifecycle-controller"
         ]
       }
     },

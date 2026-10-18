@@ -281,10 +281,12 @@ public class SalonExports {
         for (Map.Entry<TenantDataModule, TenantDataModule.Table> entry : tables()) {
             TenantDataModule module = entry.getKey();
             String table = entry.getValue().name();
-            Boolean present = database.inTransaction(status -> database.jdbc().queryForObject(
-                    "SELECT EXISTS (SELECT 1 FROM salon_export_part WHERE export_id = ? AND table_name = ?)",
-                    Boolean.class, export.exportId(), table));
-            if (Boolean.TRUE.equals(present)) {
+            Boolean needed = database.inTransaction(status -> database.jdbc().queryForObject("""
+                    SELECT e.status = 'pending' AND NOT EXISTS (SELECT 1 FROM salon_export_part p
+                                                                 WHERE p.export_id = e.id AND p.table_name = ?)
+                      FROM salon_export e WHERE e.id = ?
+                    """, Boolean.class, table, export.exportId()));
+            if (!Boolean.TRUE.equals(needed)) {
                 continue;
             }
             List<String> rows;
@@ -301,12 +303,23 @@ public class SalonExports {
             byte[] sealed = key.seal(content, "export-part:" + export.exportId() + ":" + table);
             Instant at = clock.instant();
             int count = rows.size();
-            database.inTransaction(status -> database.jdbc().update("""
-                    INSERT INTO salon_export_part (export_id, table_name, module, row_count, content, created_at, updated_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
-                    ON CONFLICT (export_id, table_name) DO NOTHING
-                    """, export.exportId(), table, module.module(), count, sealed, Timestamp.from(at),
-                    Timestamp.from(at)));
+            // The export row is share-locked first: a concurrent run that is writing the archive holds it
+            // for update, so this waits for it and then stores nothing for an export that is no longer
+            // pending (its parts are already gone).
+            database.inTransaction(status -> {
+                String state = database.jdbc().queryForList("SELECT status FROM salon_export WHERE id = ? FOR SHARE",
+                        String.class, export.exportId()).stream().findFirst().orElse(null);
+                if (!"pending".equals(state)) {
+                    return 0;
+                }
+                return database.jdbc().update("""
+                        INSERT INTO salon_export_part (export_id, table_name, module, row_count, content, created_at,
+                            updated_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                        ON CONFLICT (export_id, table_name) DO NOTHING
+                        """, export.exportId(), table, module.module(), count, sealed, Timestamp.from(at),
+                        Timestamp.from(at));
+            });
             stored++;
             faults.exportTableStored(stored);
         }

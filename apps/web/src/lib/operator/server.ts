@@ -69,6 +69,20 @@ function output(data: unknown, status = 200) {
 function problem(code: string, status: number, extra: Record<string, unknown> = {}) {
   return output({ code, ...extra }, status);
 }
+/** An export archive passed through as a download: its name from the API, never cached. */
+export function archive(bytes: ArrayBuffer, upstream: Response) {
+  const disposition = upstream.headers.get('content-disposition');
+  const name = /filename="?([A-Za-z0-9._-]+)"?/.exec(disposition ?? '')?.[1] ?? 'salon-export.zip';
+  return new NextResponse(bytes, {
+    status: 200,
+    headers: {
+      'Content-Type': 'application/zip',
+      'Content-Disposition': `attachment; filename="${name}"`,
+      'Cache-Control': 'private, no-store',
+      ...(upstream.headers.get('x-content-sha256') ? { 'X-Content-SHA256': upstream.headers.get('x-content-sha256')! } : {}),
+    },
+  });
+}
 function setCookie(response: NextResponse, name: (typeof OPERATOR_COOKIES)[number], value: string, maxAge: number) {
   response.cookies.set(operatorCookie(name), value, { httpOnly: true, secure: !localHttp(), sameSite: 'lax', path: '/', maxAge });
 }
@@ -94,10 +108,10 @@ function failure(r: { error?: { code?: string; errors?: { field?: string }[] }; 
   });
 }
 
-const READS = new Set(['principal', 'plans', 'plan', 'salons', 'salon', 'subscription', 'invoices', 'invoice']);
+const READS = new Set(['principal', 'plans', 'plan', 'salons', 'salon', 'subscription', 'invoices', 'invoice', 'lifecycle', 'export', 'export-archive']);
 const PUBLIC = new Set(['sign-in', 'mfa-enroll', 'mfa-verify']);
 const MUTATIONS = new Set(['sign-in', 'mfa-enroll', 'mfa-verify', 'refresh', 'sign-out', 'clear', 'plan-create', 'salon-create',
-  'subscription-start', 'subscription-change', 'plan-move', 'payment-record']);
+  'subscription-start', 'subscription-change', 'plan-move', 'payment-record', 'salon-suspend', 'salon-reactivate', 'salon-close']);
 
 /** One allowlisted console operation; neither an upstream URL nor a tenant selector comes from input. */
 export async function handleOperator(request: NextRequest, action: string): Promise<NextResponse> {
@@ -191,6 +205,41 @@ export async function handleOperator(request: NextRequest, action: string): Prom
           ...options,
           params: { path: { id }, query: { page: Number(query.get('page') ?? 0), size: Number(query.get('size') ?? 20) } },
         });
+        return r.data ? output(r.data) : failure(r);
+      }
+      case 'lifecycle':
+      case 'export':
+      case 'export-archive': {
+        const id = query.get('id') ?? '';
+        if (!UUID.test(id)) return problem('bad_request', 400, { errors: [{ field: 'id' }] });
+        if (action === 'lifecycle') {
+          const r = await client.GET('/api/v1/operator/salons/{id}/lifecycle', {
+            ...options,
+            params: { path: { id }, query: { page: Number(query.get('page') ?? 0), size: Number(query.get('size') ?? 20) } },
+          });
+          return r.data ? output(r.data) : failure(r);
+        }
+        if (action === 'export') {
+          const r = await client.GET('/api/v1/operator/salons/{id}/export', { ...options, params: { path: { id } } });
+          return r.data ? output(r.data) : failure(r);
+        }
+        const r = await client.GET('/api/v1/operator/salons/{id}/export/archive', { ...options, params: { path: { id } }, parseAs: 'arrayBuffer' });
+        return r.data ? archive(r.data as ArrayBuffer, r.response) : failure(r as unknown as Parameters<typeof failure>[0]);
+      }
+      case 'salon-suspend':
+      case 'salon-reactivate':
+      case 'salon-close': {
+        const id = text('id');
+        if (!UUID.test(id)) return problem('bad_request', 400, { errors: [{ field: 'id' }] });
+        const params = { path: { id } };
+        const version = body.version as number;
+        if (action === 'salon-close') {
+          const r = await client.POST('/api/v1/operator/salons/{id}/closure', { ...options, params, body: { version, confirmSlug: text('confirmSlug'), reason: text('reason') } });
+          return r.data ? output(r.data) : failure(r);
+        }
+        const r = action === 'salon-suspend'
+          ? await client.POST('/api/v1/operator/salons/{id}/suspension', { ...options, params, body: { version, reason: text('reason') } })
+          : await client.DELETE('/api/v1/operator/salons/{id}/suspension', { ...options, params, body: { version, reason: text('reason') } });
         return r.data ? output(r.data) : failure(r);
       }
       case 'subscription-start':
