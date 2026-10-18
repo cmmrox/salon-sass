@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 import { createServerApiClient } from '@/lib/api/client';
 import { hasCredentials, workspaceEntry, type Entry } from '@/lib/identity/entry';
-import { clearCookies, cookieName, requestHost, type Credentials } from '@/lib/identity/server';
+import { clearCookies, cookieName, requestHost, type Credentials, type Kind } from '@/lib/identity/server';
 import { plainPageHtml, plainPageStatus, type PlainPage } from '@/lib/plain-page/plain-page';
 import { hasOperatorCredentials, operatorEntry, type OperatorEntry } from '@/lib/operator/entry';
 import { consoleHostname, isCanonicalPath, isConsoleHost, isConsolePath, isUnder } from '@/lib/operator/host';
@@ -33,13 +33,16 @@ const NOT_STORED = 'private, no-cache, no-store, max-age=0, must-revalidate';
 const SIGN_IN = '/workspace/sign-in';
 
 /** The protected workspace pages, whose entry is decided here before anything renders (CR-013). */
-const PROTECTED = new Set(['/workspace/account', '/workspace/staff', '/workspace/audit', '/workspace/billing']);
+const PROTECTED = new Set(['/workspace/account', '/workspace/staff', '/workspace/audit', '/workspace/billing', '/workspace/support-access']);
+
+/** The support entry page (F03-S04), where a support view starts and where it lands when it ends. */
+const SUPPORT_ENTRY = '/workspace/support';
 
 /** The console's sign-in, and where its root and bare `/console` lead (docs/architecture/operator-console.md). */
 const CONSOLE_SIGN_IN = '/console/sign-in';
 const CONSOLE_HOME = '/console/salons';
 /** The protected console pages: the directories and their detail pages. */
-const CONSOLE_PROTECTED = ['/console/salons', '/console/plans'];
+const CONSOLE_PROTECTED = ['/console/salons', '/console/plans', '/console/support'];
 
 /** How entry to a protected console page is decided: the request's operator session, checked with the API. */
 export type DecideConsoleEntry = (request: NextRequest) => Promise<OperatorEntry>;
@@ -50,8 +53,11 @@ const decideConsoleEntry: DecideConsoleEntry = (request) => {
   return operatorEntry(operatorCredentialsOf(request), createServerApiClient({ hostname: consoleHostname(domain) }));
 };
 
-/** How entry to a protected page is decided: the request's staff session, checked with the API. */
-export type DecideEntry = (request: NextRequest, credentials: Credentials) => Promise<Entry>;
+/**
+ * How entry to a protected page is decided: the request's staff session, or its support session
+ * (F03-S04), checked with the API.
+ */
+export type DecideEntry = (request: NextRequest, credentials: Credentials, kind?: Kind) => Promise<Entry>;
 
 function credentialsOf(request: NextRequest): Credentials {
   return {
@@ -61,9 +67,14 @@ function credentialsOf(request: NextRequest): Credentials {
   };
 }
 
-const decideEntry: DecideEntry = (request, credentials) => {
+/** A support session's credential: one access cookie, no refresh. It takes precedence over a staff session. */
+function supportCredentialsOf(request: NextRequest): Credentials {
+  return { access: request.cookies.get(cookieName('support', 'access'))?.value };
+}
+
+const decideEntry: DecideEntry = (request, credentials, kind = 'staff') => {
   const host = requestHost(request.headers.get('host'));
-  return workspaceEntry('staff', credentials, host ? createServerApiClient({ hostname: host.hostname }) : null);
+  return workspaceEntry(kind, credentials, host ? createServerApiClient({ hostname: host.hostname }) : null);
 };
 
 /**
@@ -141,10 +152,19 @@ export async function routeRequest(
       if (path === '/' || path === '/sign-in' || path === '/account') {
         return redirect(request, path === '/' ? '/workspace' : SIGN_IN);
       }
+      const support = supportCredentialsOf(request);
       if (path === '/workspace') {
-        return redirect(request, hasCredentials(credentialsOf(request)) ? '/workspace/account' : SIGN_IN);
+        return redirect(request, hasCredentials(support) || hasCredentials(credentialsOf(request)) ? '/workspace/account' : SIGN_IN);
       }
-      if (PROTECTED.has(path)) {
+      if (PROTECTED.has(path) && hasCredentials(support)) {
+        // The support view (F03-S04): an ended, expired or revoked session leaves it for the entry
+        // page, its cookies cleared host-only; a staff session in the same browser is left alone.
+        if ((await decide(request, support, 'support')).kind === 'signed-out') {
+          const response = redirect(request, SUPPORT_ENTRY);
+          clearCookies(response, 'support');
+          return response;
+        }
+      } else if (PROTECTED.has(path)) {
         const credentials = credentialsOf(request);
         if (!hasCredentials(credentials)) return redirect(request, SIGN_IN);
         if ((await decide(request, credentials)).kind === 'signed-out') {

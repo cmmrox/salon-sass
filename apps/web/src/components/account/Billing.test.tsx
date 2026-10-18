@@ -14,7 +14,7 @@ vi.mock('next/navigation', () => ({ useRouter: () => navigation }));
 vi.mock('next/link', () => ({ default: (props: AnchorHTMLAttributes<HTMLAnchorElement>) => <a {...props} /> }));
 
 const salon = { slug: 'alpha', name: 'Alpha Studio', brandColour: '#D6086A', timeZone: 'Asia/Colombo' };
-const owner: Principal = { id: 'owner', kind: 'staff', role: 'OWNER', staffId: 'owner', scope: 'salon', mfaEnabled: true, permissions: ['session.manage', 'staff.list', 'staff.manage', 'audit.list', 'entitlement.read', 'invoice.read'] };
+const owner: Principal = { id: 'owner', kind: 'staff', role: 'OWNER', staffId: 'owner', scope: 'salon', mfaEnabled: true, expiresAt: null, permissions: ['session.manage', 'staff.list', 'staff.manage', 'audit.list', 'entitlement.read', 'invoice.read'] };
 const entitlements = (subscription: Entitlements['subscription']): Entitlements => ({
   plan: { key: 'basic', name: 'Basic' },
   limits: { staffSeats: 5, branches: 1, messageAllowance: 100 },

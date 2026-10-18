@@ -9,7 +9,7 @@ import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/u
 import { Item, ItemContent, ItemDescription, ItemGroup, ItemTitle } from '@/components/ui/item';
 import { Pagination, PaginationContent, PaginationCurrent, PaginationItem, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
 import { formatDate, formatMoney } from '@/lib/format';
-import { ensurePrincipal, identityRequest, IdentityFailure } from '@/lib/identity/browser';
+import { ensurePrincipal, leaveEndedSession, identityRequest, IdentityFailure } from '@/lib/identity/browser';
 import type { Kind } from '@/lib/identity/server';
 import { AccountLoading, Button, Section } from './Controls';
 import type { Entitlements } from './BillingBanner';
@@ -43,7 +43,7 @@ export function BillingScreen({ kind, timeZone }: { kind: Kind; timeZone: string
       setEntitlements(plan); setInvoices(list); setPage(next);
     } catch (failure) {
       const f = failure instanceof IdentityFailure ? failure : new IdentityFailure('service_unavailable');
-      if (f.code === 'invalid_session') { router.replace('/workspace/sign-in'); router.refresh(); return; }
+      if (f.code === 'invalid_session') { leaveEndedSession(kind, router); return; }
       setError(f);
     } finally { setBusy(false); }
   }, [kind, router]);

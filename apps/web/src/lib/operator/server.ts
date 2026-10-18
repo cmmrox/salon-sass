@@ -109,10 +109,11 @@ function failure(r: { error?: { code?: string; errors?: { field?: string }[] }; 
   });
 }
 
-const READS = new Set(['principal', 'plans', 'plan', 'salons', 'salon', 'subscription', 'invoices', 'invoice', 'lifecycle', 'export', 'export-archive']);
+const READS = new Set(['principal', 'plans', 'plan', 'salons', 'salon', 'subscription', 'invoices', 'invoice', 'lifecycle', 'export', 'export-archive', 'support-sessions']);
 const PUBLIC = new Set(['sign-in', 'mfa-enroll', 'mfa-verify']);
 const MUTATIONS = new Set(['sign-in', 'mfa-enroll', 'mfa-verify', 'refresh', 'sign-out', 'clear', 'plan-create', 'salon-create',
-  'subscription-start', 'subscription-change', 'plan-move', 'payment-record', 'salon-suspend', 'salon-reactivate', 'salon-close']);
+  'subscription-start', 'subscription-change', 'plan-move', 'payment-record', 'salon-suspend', 'salon-reactivate', 'salon-close',
+  'support-start', 'support-entry-code', 'support-end']);
 
 /** One allowlisted console operation; neither an upstream URL nor a tenant selector comes from input. */
 export async function handleOperator(request: NextRequest, action: string): Promise<NextResponse> {
@@ -227,6 +228,35 @@ export async function handleOperator(request: NextRequest, action: string): Prom
         }
         const r = await client.GET('/api/v1/operator/salons/{id}/export/archive', { ...options, params: { path: { id } }, parseAs: 'arrayBuffer' });
         return r.data ? archive(r.data as ArrayBuffer, r.response) : failure(r as unknown as Parameters<typeof failure>[0]);
+      }
+      case 'support-sessions': {
+        // Forwarded as typed; the API names a bad page, size, salon or state as a field error.
+        const salonId = query.get('salonId');
+        const state = query.get('state');
+        const r = await client.GET('/api/v1/operator/support-sessions', {
+          ...options,
+          params: { query: { page: Number(query.get('page') ?? 0), size: Number(query.get('size') ?? 20), ...(salonId ? { salonId } : {}), ...(state ? { state: state as 'active' | 'ended' } : {}) } },
+        });
+        return r.data ? output(r.data) : failure(r);
+      }
+      case 'support-start':
+      case 'support-entry-code':
+      case 'support-end': {
+        const id = text('id');
+        if (!UUID.test(id)) return problem('bad_request', 400, { errors: [{ field: 'id' }] });
+        if (action === 'support-start') {
+          const r = await client.POST('/api/v1/operator/salons/{id}/support-sessions', {
+            ...options, params: { path: { id } }, body: { reason: text('reason'), durationMinutes: body.durationMinutes as number },
+          });
+          // The entry code is meant for this operator's browser: it opens the salon's workspace once.
+          return r.data ? output({ id: r.data.id, expiresAt: r.data.expiresAt, entryUrl: r.data.entryUrl, codeExpiresAt: r.data.codeExpiresAt }, 201) : failure(r);
+        }
+        if (action === 'support-entry-code') {
+          const r = await client.POST('/api/v1/operator/support-sessions/{id}/entry-codes', { ...options, params: { path: { id } } });
+          return r.data ? output({ id: r.data.id, expiresAt: r.data.expiresAt, entryUrl: r.data.entryUrl, codeExpiresAt: r.data.codeExpiresAt }, 201) : failure(r);
+        }
+        const r = await client.DELETE('/api/v1/operator/support-sessions/{id}', { ...options, params: { path: { id } } });
+        return r.response.ok ? output({ ok: true }) : failure(r);
       }
       case 'salon-suspend':
       case 'salon-reactivate':
