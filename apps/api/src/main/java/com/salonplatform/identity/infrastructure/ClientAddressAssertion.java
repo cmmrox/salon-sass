@@ -50,13 +50,14 @@ public final class ClientAddressAssertion {
         String proof = headers.nextElement();
         if (headers.hasMoreElements() || proof == null || proof.length() > MAX_LENGTH)
             throw invalid();
-        if (!"POST".equals(request.getMethod()) || !MUTATIONS.contains(request.getRequestURI()))
+        String path = com.salonplatform.shared.api.RequestPaths.path(request);
+        if (!"POST".equals(request.getMethod()) || path == null || !MUTATIONS.contains(path))
             throw invalid();
         return verify(
                 proof,
                 TenantContext.require().slug() + "." + platformDomain,
                 request.getMethod(),
-                request.getRequestURI());
+                path);
     }
 
     String verify(String proof, String host, String method, String path) {

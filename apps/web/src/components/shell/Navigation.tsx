@@ -15,7 +15,7 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 
-export type NavigationItem = { href: string; label: string; testId: string; icon: 'home' | 'account' | 'staff' | 'audit'; current?: boolean; alias?: string };
+export type NavigationItem = { href: string; label: string; testId: string; icon: 'home' | 'account' | 'staff' | 'audit' | 'salons' | 'plans'; current?: boolean; alias?: string };
 
 /** The prototype's own navigation glyphs, drawn in the current text colour. */
 export function NavigationIcon({ icon }: { icon: NavigationItem['icon'] }) {
@@ -24,6 +24,9 @@ export function NavigationIcon({ icon }: { icon: NavigationItem['icon'] }) {
     account: 'M20 21v-2a7 7 0 0 0-14 0v2M17 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z',
     staff: 'M16 21v-2a6 6 0 0 0-12 0v2M14 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0ZM20 21v-2a6 6 0 0 0-3-5.2M17 3.2a4 4 0 0 1 0 7.6',
     audit: 'M8 3h8v4H8ZM8 5H5v16h14V5h-3M8 12h8M8 16h6',
+    // The prototype's own list and bars glyphs, for the operator console's salons and plans.
+    salons: 'M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01',
+    plans: 'M5 20V10M12 20V4M19 20v-7',
   };
   return <svg className="size-icon flex-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={paths[icon]} /></svg>;
 }

@@ -50,12 +50,14 @@ say "postgres: starting"
 stack_compose up --detach --wait postgres >"$STACK_LOG_DIR/up.log" 2>&1 \
   || { tail -n 30 "$STACK_LOG_DIR/up.log" >&2; fail "PostgreSQL did not start. See .stack/logs/up.log"; }
 
-say "postgres: the owning role and the application's role (infra/postgres/provision-roles.sql)"
+say "postgres: the owning role, the application's role and the platform role (infra/postgres/provision-roles.sql)"
 stack_compose \
   SALON_DB_NAME="$(file_setting SALON_DB_NAME)" \
   SALON_DB_USER="$(file_setting SALON_DB_USER)" SALON_DB_PASSWORD="$(file_setting SALON_DB_PASSWORD)" \
   SALON_DB_APP_USER="$(file_setting SALON_DB_APP_USER)" SALON_DB_APP_PASSWORD="$(file_setting SALON_DB_APP_PASSWORD)" \
+  SALON_DB_PLATFORM_USER="$(file_setting SALON_DB_PLATFORM_USER)" SALON_DB_PLATFORM_PASSWORD="$(file_setting SALON_DB_PLATFORM_PASSWORD)" \
   exec -T -e SALON_DB_NAME -e SALON_DB_USER -e SALON_DB_PASSWORD -e SALON_DB_APP_USER -e SALON_DB_APP_PASSWORD \
+  -e SALON_DB_PLATFORM_USER -e SALON_DB_PLATFORM_PASSWORD \
   postgres sh -c 'psql --no-psqlrc --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" --file -' \
   <"$ROOT/infra/postgres/provision-roles.sql" >>"$STACK_LOG_DIR/up.log" 2>&1 \
   || { tail -n 30 "$STACK_LOG_DIR/up.log" >&2; fail "the database's roles could not be provisioned. See .stack/logs/up.log"; }

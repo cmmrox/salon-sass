@@ -115,6 +115,11 @@ branding, without a second editable profile source or a reverse branding-to-plat
 Existing synthetic tenants remain unchanged; newly added profile/assignment
 columns are nullable for them and shown as unassigned until explicitly configured.
 
+Supported countries are the JDK's ISO 3166-1 alpha-2 codes and supported currencies the active
+ISO 4217 codes with exactly two minor digits, held in one platform constant (decision 050, NFR-13).
+The create form defaults to LK, LKR, `Asia/Colombo` and English. The first Owner's name is kept in
+identity's nullable `identity_staff.name`.
+
 Use the existing database slug grammar/reserved list, lowercase normalized before uniqueness.
 The first Owner needs a name, email and initial password conforming to the existing identity
 policy. Provision an active Owner without an enrolled secret or session; its first salon sign-in
@@ -137,7 +142,7 @@ and key. Store an HMAC request fingerprint (including credential-sensitive input
 result in the same transaction; never store plaintext request bodies or contact/Owner profile
 values. Salon creation returns only `{id,slug,hostname,planId,createdAt}`; its separate protected
 detail read supplies the profile. Use a secret independent
-from signing/encryption keys for fingerprints. Same key and normalized payload replay the original
+from signing/encryption keys for fingerprints (`SALON_OPERATOR_FINGERPRINT_KEY`). Same key and normalized payload replay the original
 201/id with no second audit or side effect; changed payload returns 409 `idempotency_conflict`.
 Keep successful receipts for the life of their subject in S01; failed transactions reserve no key.
 Parallel keys targeting the same slug/plan key yield one record and 409 `slug_taken`/`plan_key_taken`

@@ -15,11 +15,19 @@ public class SalonApiApplication {
      */
     public static final String MIGRATE_PROFILE = "migrate";
 
+    /**
+     * With this profile the application creates one operator account from a protected file and stops
+     * (application-operator-bootstrap.yaml): the explicit offline command of
+     * docs/architecture/operator-console.md. It never runs as part of an ordinary start.
+     */
+    public static final String OPERATOR_BOOTSTRAP_PROFILE = "operator-bootstrap";
+
     public static void main(String[] args) {
         // Before anything reads the time zone; UtcTimeZone does the same for every other start.
         UtcTimeZone.apply();
         ConfigurableApplicationContext context = SpringApplication.run(SalonApiApplication.class, args);
-        if (context.getEnvironment().matchesProfiles(MIGRATE_PROFILE)) {
+        if (context.getEnvironment().matchesProfiles(MIGRATE_PROFILE)
+                || context.getEnvironment().matchesProfiles(OPERATOR_BOOTSTRAP_PROFILE)) {
             // The migrations ran while the context started; a failed one would have failed the start.
             System.exit(SpringApplication.exit(context));
         }

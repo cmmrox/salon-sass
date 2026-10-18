@@ -7,7 +7,11 @@
 -- cannot create roles or databases, and owns nothing. What it may read is granted by the
 -- migrations (apps/api/src/main/resources/db/migration), table by table.
 --
--- psql variables: app_user, app_password (local-only values from .env.example), db_name.
+-- The platform runtime role (F03-S01) is created the same way: the operator console's separately
+-- configured role. Its grants come from the migrations, platform table by platform table.
+--
+-- psql variables: app_user, app_password, platform_user, platform_password (local-only values from
+-- .env.example), db_name.
 \set ON_ERROR_STOP on
 
 SELECT format('CREATE ROLE %I', :'app_user')
@@ -18,3 +22,12 @@ ALTER ROLE :"app_user" WITH LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICAT
     PASSWORD :'app_password';
 
 GRANT CONNECT ON DATABASE :"db_name" TO :"app_user";
+
+SELECT format('CREATE ROLE %I', :'platform_user')
+ WHERE NOT EXISTS (SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = :'platform_user')
+\gexec
+
+ALTER ROLE :"platform_user" WITH LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS INHERIT
+    PASSWORD :'platform_password';
+
+GRANT CONNECT ON DATABASE :"db_name" TO :"platform_user";

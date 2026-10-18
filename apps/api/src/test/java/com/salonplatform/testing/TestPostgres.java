@@ -18,6 +18,11 @@ public final class TestPostgres {
 
     public static final String APP_PASSWORD = "salon-app-test";
 
+    /** The platform runtime role (F03-S01): owns nothing, cannot bypass row-level security. */
+    public static final String PLATFORM_USER = "salon_platform";
+
+    public static final String PLATFORM_PASSWORD = "salon-platform-test";
+
     private static final PostgreSQLContainer SHARED = newContainer();
 
     static {

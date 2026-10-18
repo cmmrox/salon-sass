@@ -277,6 +277,166 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/operator/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["operatorMe"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/operator/mfa/challenges": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["operatorEnroll"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/operator/mfa/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["operatorVerify"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/operator/plans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listPlans"];
+        put?: never;
+        post: operations["createPlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/operator/plans/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getPlan"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/operator/salons": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listSalons"];
+        put?: never;
+        post: operations["createSalon"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/operator/salons/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getSalon_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/operator/sessions/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["operatorRefresh"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/operator/sessions/sign-out": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["operatorSignOut"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/operator/sign-in": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["operatorSignIn"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/salon": {
         parameters: {
             query?: never;
@@ -407,6 +567,61 @@ export interface components {
             sms: boolean;
             whatsapp: boolean;
         };
+        OperatorChallengeRequest: {
+            /** Format: uuid */
+            challengeId: string;
+            challengeToken: string;
+        };
+        OperatorEnrollment: {
+            /** Format: uuid */
+            challengeId: string;
+            /** Format: date-time */
+            expiresAt: string;
+            otpauthUri: string;
+            secret: string;
+        };
+        OperatorPrincipal: {
+            /** Format: uuid */
+            id: string;
+            kind: string;
+            mfaEnabled: boolean;
+            permissions: string[];
+            role: string;
+        };
+        OperatorRefreshRequest: {
+            refreshToken: string;
+        };
+        OperatorSignIn: {
+            /** Format: uuid */
+            challengeId: string;
+            challengeToken: string;
+            credentials: components["schemas"]["OperatorTokens"];
+            /** Format: date-time */
+            expiresAt: string;
+            state: string;
+        };
+        OperatorSignInRequest: {
+            deviceLabel: string;
+            email: string;
+            password: string;
+        };
+        OperatorTokens: {
+            /** Format: date-time */
+            accessExpiresAt: string;
+            accessToken: string;
+            /** Format: date-time */
+            refreshExpiresAt: string;
+            refreshToken: string;
+            /** Format: uuid */
+            sessionId: string;
+            state: string;
+        };
+        OperatorVerifyRequest: {
+            /** Format: uuid */
+            challengeId: string;
+            challengeToken: string;
+            code: string;
+        };
         PageAuditView: {
             items?: components["schemas"]["AuditView"][];
             /** Format: int32 */
@@ -438,6 +653,51 @@ export interface components {
             newPassword: string;
             oldPassword: string;
         };
+        PlanDefinition: {
+            /** Format: int32 */
+            branches: number;
+            /** Format: date-time */
+            createdAt: string;
+            customDomain: boolean;
+            dedicatedApp: boolean;
+            /** Format: uuid */
+            id: string;
+            key: string;
+            /** Format: int32 */
+            messageAllowance: number;
+            name: string;
+            /** Format: int32 */
+            staffSeats: number;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        PlanPage: {
+            items: components["schemas"]["PlanDefinition"][];
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            size: number;
+            /** Format: int64 */
+            total: number;
+        };
+        PlanRequest: {
+            /** Format: int32 */
+            branches: number;
+            customDomain: boolean;
+            dedicatedApp: boolean;
+            key: string;
+            /** Format: int32 */
+            messageAllowance: number;
+            name: string;
+            /** Format: int32 */
+            staffSeats: number;
+        };
+        PlanSummary: {
+            /** Format: uuid */
+            id: string;
+            key: string;
+            name: string;
+        };
         Preferences: {
             email: boolean;
             sms: boolean;
@@ -460,7 +720,7 @@ export interface components {
              * @description The stable reason. Branch on this.
              * @enum {string}
              */
-            code: "invalid_client_assertion" | "confirmation_required" | "invalid_code" | "code_expired" | "provider_unavailable" | "invalid_credentials" | "invalid_session" | "permission_denied" | "conflict" | "rate_limited" | "bad_request" | "not_found" | "method_not_allowed" | "not_acceptable" | "unsupported_media_type" | "request_rejected" | "service_unavailable" | "salon_suspended" | "internal_error";
+            code: "invalid_client_assertion" | "confirmation_required" | "invalid_code" | "code_expired" | "provider_unavailable" | "invalid_credentials" | "invalid_session" | "permission_denied" | "conflict" | "rate_limited" | "slug_taken" | "plan_key_taken" | "idempotency_conflict" | "bad_request" | "not_found" | "method_not_allowed" | "not_acceptable" | "unsupported_media_type" | "request_rejected" | "service_unavailable" | "salon_suspended" | "internal_error";
             /** @description A sentence for a person. Do not branch on it. */
             detail?: string;
             /** @description For a request body that failed validation (`bad_request`): each field that failed, when the failure has a field. Never the value that was refused. */
@@ -526,6 +786,79 @@ export interface components {
              * @example Asia/Colombo
              */
             timeZone: string;
+        };
+        SalonCreated: {
+            /** Format: date-time */
+            createdAt: string;
+            hostname: string;
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            planId: string;
+            slug: string;
+        };
+        SalonDetail: {
+            address: string | null;
+            contactEmail: string | null;
+            contactPhone: string | null;
+            country: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            currency: string | null;
+            defaultLanguage: string | null;
+            hostname: string;
+            /** Format: uuid */
+            id: string;
+            name: string | null;
+            ownerEmail: string | null;
+            plan: components["schemas"]["PlanSummary"];
+            slug: string;
+            status: string;
+            timeZone: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        SalonOwnerRequest: {
+            /** Format: email */
+            email: string;
+            name: string;
+            /** Format: password */
+            password: string;
+        };
+        SalonPage: {
+            items: components["schemas"]["SalonSummary"][];
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            size: number;
+            /** Format: int64 */
+            total: number;
+        };
+        SalonRequest: {
+            address?: string | null;
+            contactEmail?: string | null;
+            contactPhone?: string | null;
+            country: string;
+            currency: string;
+            /** @enum {string} */
+            defaultLanguage: "en" | "si" | "ta";
+            name: string;
+            owner: components["schemas"]["SalonOwnerRequest"];
+            /** Format: uuid */
+            planId: string;
+            slug: string;
+            timeZone: string;
+        };
+        SalonSummary: {
+            /** Format: date-time */
+            createdAt: string;
+            hostname: string;
+            /** Format: uuid */
+            id: string;
+            name: string | null;
+            plan: components["schemas"]["PlanSummary"];
+            slug: string;
+            status: string;
         };
         SessionView: {
             /** Format: date-time */
@@ -1283,6 +1616,395 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Meta"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    operatorMe: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperatorPrincipal"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    operatorEnroll: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OperatorChallengeRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperatorEnrollment"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    operatorVerify: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OperatorVerifyRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperatorTokens"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listPlans: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanPage"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    createPlan: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlanRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanDefinition"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanDefinition"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listSalons: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalonPage"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    createSalon: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SalonRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalonCreated"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getSalon_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalonDetail"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    operatorRefresh: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OperatorRefreshRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperatorTokens"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    operatorSignOut: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    operatorSignIn: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Private server-authenticated rate-address assertion of the console's BFF; absent uses the servlet peer, an invalid proof is refused before rate accounting. */
+                "x-salon-client-assertion"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OperatorSignInRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperatorSignIn"];
                 };
             };
             /** @description Any error: problem details with a stable `code`. */

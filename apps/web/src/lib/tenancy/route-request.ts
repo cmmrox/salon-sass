@@ -4,6 +4,11 @@ import { createServerApiClient } from '@/lib/api/client';
 import { hasCredentials, workspaceEntry, type Entry } from '@/lib/identity/entry';
 import { clearCookies, cookieName, requestHost, type Credentials } from '@/lib/identity/server';
 import { plainPageHtml, plainPageStatus, type PlainPage } from '@/lib/plain-page/plain-page';
+import { hasOperatorCredentials, operatorEntry, type OperatorEntry } from '@/lib/operator/entry';
+import { consoleHostname, isCanonicalPath, isConsoleHost, isConsolePath, isUnder } from '@/lib/operator/host';
+import { clearOperatorCookies, credentialsOf as operatorCredentialsOf } from '@/lib/operator/server';
+
+import { platformDomainOf } from './hostname';
 
 import { SALON_HEADER, encodeSalon } from './salon-header';
 import { resolveSite, type Site } from './site';
@@ -29,6 +34,21 @@ const SIGN_IN = '/workspace/sign-in';
 
 /** The protected workspace pages, whose entry is decided here before anything renders (CR-013). */
 const PROTECTED = new Set(['/workspace/account', '/workspace/staff', '/workspace/audit']);
+
+/** The console's sign-in, and where its root and bare `/console` lead (docs/architecture/operator-console.md). */
+const CONSOLE_SIGN_IN = '/console/sign-in';
+const CONSOLE_HOME = '/console/salons';
+/** The protected console pages: the directories and their detail pages. */
+const CONSOLE_PROTECTED = ['/console/salons', '/console/plans'];
+
+/** How entry to a protected console page is decided: the request's operator session, checked with the API. */
+export type DecideConsoleEntry = (request: NextRequest) => Promise<OperatorEntry>;
+
+const decideConsoleEntry: DecideConsoleEntry = (request) => {
+  let domain: string;
+  try { domain = platformDomainOf(process.env.SALON_PLATFORM_DOMAIN); } catch { return Promise.resolve({ kind: 'pending' }); }
+  return operatorEntry(operatorCredentialsOf(request), createServerApiClient({ hostname: consoleHostname(domain) }));
+};
 
 /** How entry to a protected page is decided: the request's staff session, checked with the API. */
 export type DecideEntry = (request: NextRequest, credentials: Credentials) => Promise<Entry>;
@@ -70,6 +90,7 @@ export async function routeRequest(
   request: NextRequest,
   resolve: (hostHeader: string | null) => Promise<Site> = resolveSite,
   decide: DecideEntry = decideEntry,
+  decideConsole: DecideConsoleEntry = decideConsoleEntry,
 ): Promise<NextResponse> {
   const headers = new Headers(request.headers);
   headers.delete(SALON_HEADER);
@@ -81,6 +102,21 @@ export async function routeRequest(
     return NextResponse.json({ code: 'not_found' }, { status: 404, headers: { 'Cache-Control': NOT_STORED } });
   }
   if (path === INTERNAL_PREFIX || path.startsWith(`${INTERNAL_PREFIX}/`)) {
+    return rewrite(request, NOWHERE, headers);
+  }
+
+  // A path not in its one canonical form (a path parameter, a percent-escape, an empty segment)
+  // could be routed while a check here reads it as something else: it is nobody's page.
+  if (!isCanonicalPath(path)) {
+    return rewrite(request, NOWHERE, headers);
+  }
+  let platformDomain: string | null = null;
+  try { platformDomain = platformDomainOf(process.env.SALON_PLATFORM_DOMAIN); } catch { platformDomain = null; }
+  if (platformDomain && isConsoleHost(request.headers.get('host'), platformDomain)) {
+    return routeConsole(request, path, headers, decideConsole);
+  }
+  // The console's pages and BFF exist on the exact console hostname only, before any lookup.
+  if (isConsolePath(path)) {
     return rewrite(request, NOWHERE, headers);
   }
 
@@ -119,6 +155,28 @@ export async function routeRequest(
       return response;
     }
   }
+}
+
+/**
+ * The console hostname: never a salon, never resolved as one. Its root and `/console` lead to the
+ * salon directory; a protected page without a usable operator session is redirected to sign-in
+ * before anything renders; every path that is not the console's is not found.
+ */
+async function routeConsole(request: NextRequest, path: string, headers: Headers, decide: DecideConsoleEntry): Promise<NextResponse> {
+  if (path === '/' || path === '/console' || path === '/console/') return redirect(request, CONSOLE_HOME);
+  if (!isConsolePath(path)) return rewrite(request, NOWHERE, headers);
+  if (CONSOLE_PROTECTED.some((prefix) => isUnder(path, prefix))) {
+    const credentials = operatorCredentialsOf(request);
+    if (!hasOperatorCredentials(credentials)) return redirect(request, CONSOLE_SIGN_IN);
+    if ((await decide(request)).kind === 'signed-out') {
+      const response = redirect(request, CONSOLE_SIGN_IN);
+      clearOperatorCookies(response);
+      return response;
+    }
+  }
+  const response = NextResponse.next({ request: { headers } });
+  response.headers.set('Cache-Control', NOT_STORED);
+  return response;
 }
 
 function redirect(request: NextRequest, pathname: string): NextResponse {
