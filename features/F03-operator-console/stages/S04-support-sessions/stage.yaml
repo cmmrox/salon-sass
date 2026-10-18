@@ -3,7 +3,7 @@ feature: F03
 title: "Audited support sessions"
 sequence: 4
 surfaces: [api, web]
-status: planned
+status: complete
 qa_status: not-run
 blocked_reason: null
 released_in: null
@@ -12,9 +12,135 @@ depends_on: [F03-S03]
 requirements: [PLT-07]
 nfr_focus: [NFR-20]
 handoff:
-  run: null
-  data: null
-  notes: null
+  run: |
+    infra/scripts/local-up.sh   (PostgreSQL 5440, API 8090, web 3100); after a rebuild: infra/scripts/local-service.sh stop|start api|web. V16 migrates on start.
+    Console (console.localhost:3100): /console/salons/{id} has the Support session card (Support only: Start support session sheet, then Open workspace);
+      /console/support lists Support sessions (Admin: every session, Revoke; Support: its own, New entry link, End session).
+    Workspace (<slug>.localhost:3100): /workspace/support#<code> is the support entry page; every /workspace page in the support view carries the support
+      banner; /workspace/support-access is the Owner's Support access page; support entries appear in /workspace/audit.
+    Operator API (console host only): POST /api/v1/operator/salons/{id}/support-sessions {reason, durationMinutes?=30} -> 201 {id,expiresAt,entryCode,entryUrl,codeExpiresAt} (Support);
+      POST /support-sessions/{id}/entry-codes -> 201 same shape (own open session); DELETE /support-sessions/{id} -> 204 (Support own, Admin any);
+      GET /support-sessions?page&size&salonId&state=active|ended -> {items:[{id,salon:{id,slug,name,hostname},operator:{id,displayName},reason,startedAt,expiresAt,endedAt,endedBy,state}],page,size,total}.
+    Salon host API: POST /api/v1/support/entry {code} -> 200 {accessToken,sessionId,issuedAt,expiresAt} (the BFF keeps accessToken in cookies; never in client JSON);
+      DELETE /api/v1/support/session -> 204 (the support credential ends its own session; added, not in the spec table);
+      GET /api/v1/salon/support-sessions?page&size -> {items:[{id,operatorName,reason,startedAt,expiresAt,endedAt,endedBy,state}],...}, DELETE /api/v1/salon/support-sessions/{id} -> 204 (Owner, support.manage);
+      GET /api/v1/identity/me under a support credential -> kind support, role null, staffId null, the Owner's read permissions, expiresAt.
+    BFF: workspace /identity-web/support/{entry (POST {code}), end (POST), clear (POST), principal, staff, audit, entitlements, invoices (GET)}; every other support POST 403 support_read_only;
+      /identity-web/staff/{support-sessions (GET ?page), support-revoke (POST {id})} for the Owner; console /operator-web/{support-sessions (GET ?page&size&salonId&state),
+      support-start (POST {id,reason,durationMinutes}), support-entry-code (POST {id}), support-end (POST {id})}.
+    Cookies (salon host, host-only, HttpOnly, SameSite=Lax, Path=/, Secure outside local HTTP, Max-Age = session lifetime): salon_support_access (the credential), salon_support_session (session id).
+    Local hook (loopback, local profile, not in OpenAPI): POST /local/operator/support-sessions/expire -> {at, ended} (one pass of the expiry job at the test clock's instant);
+      POST /local/operator/reset also removes support sessions and entry codes of removed salons. Job: platform job support-session-expiry every minute.
+    New settings: SALON_SUPPORT_SIGNING_KEY (64 hex, independent of every other key, required outside local; local retains one in .local/support-keys.properties, mode 0600,
+      SALON_SUPPORT_LOCAL_KEY_FILE); SALON_SUPPORT_LINK_ORIGIN (default https://%s with the salon hostname; local http://%s:3100). Compose, .env.stack.example and .env.example list them;
+      the web artifact scan refuses the key and the retained file. The web needs no support key.
+  data: |
+    Retained local database: V16 applied in place. The API walkthrough starts with POST /local/operator/reset, so earlier F03 walkthrough salons were removed;
+      alpha/beta/gamma registry rows and audit counts compared unchanged before and after; no support session was ever started on alpha/beta/gamma.
+    Left by the final runs (synthetic, random credentials not recorded): hook-created operators f03s4-admin-*/f03s4-support-*/f03s4-support2-*/f03s4-ui-admin-*/f03s4-ui-support-*@example.test
+      (UI Support display name "Nimal Perera (Support)"); plans f03s4-*, f03s4ui-*; salons f03s4-{main,other,ro,susp,closed,later}-d34217 (ro is access_state read_only,
+      susp suspended, closed and later closed) and f03s4ui-8a5e62, with seeded staff seed-<role>-<slug>@example.test. Their support sessions are ended, revoked or expired,
+      except a few left active until they expire (at most 120 minutes). POST /local/operator/reset removes them. The test clock is on real time.
+  notes: |
+    Developer gates (verification.commands), run from the repository root by /Users/cmmrox/Personal/Projects/salon-sass/apps/api/target/f03-s04-evidence/run-gates.sh on a clean tree at
+    8ef164905482dd5020ac5a7561d9d52057c34bdb (gates2/summary.txt records revision and dirty=0); complete logs in /Users/cmmrox/Personal/Projects/salon-sass/apps/api/target/f03-s04-evidence/gates2/<n>.log (ignored path; never /tmp).
+    | command | revision | result | log |
+    | cd apps/api && ./mvnw -q verify | 8ef1649 | exit 0; 686 tests, 0 failures, 0 errors (surefire summaries in gates2/surefire) | gates2/1.log |
+    | pnpm -r lint | 8ef1649 | exit 0 | gates2/2.log |
+    | pnpm -r typecheck | 8ef1649 | exit 0 | gates2/3.log |
+    | pnpm -r test | 8ef1649 | exit 0; web 665 + contracts 19 | gates2/4.log |
+    | pnpm --filter @salon/web build | 8ef1649 | exit 0; artifact scan clean (12 known key values, support key included) | gates2/5.log |
+    | pnpm contracts:check | 8ef1649 | exit 0; document and client current | gates2/6.log |
+    The first full run (gates/, d4e2924) passed 2-6 and failed the API verify on two app-start tests (ForwardedHeaders, TwoDispatchers): the shared test
+    PostgreSQL ran out of connections because the new support test's movable-clock context stayed cached; fixed with @DirtiesContext(AFTER_CLASS) on that test
+    (8ef1649, which also added the stack/scan key wiring), and every gate rerun on a clean tree (gates2/). Conditions: JDK 25 via the build's toolchain (machine
+    default 21), Node 24.12 with Corepack pnpm, Docker Testcontainers postgres:18.6; the local API and web were stopped during the gates and restarted from the same
+    revision afterwards (GET /api/v1/meta commit 8ef16490...).
+
+    Acceptance criteria, checked on the running local product from outside after the gates, on the runtime built from 8ef1649:
+    /Users/cmmrox/Personal/Projects/salon-sass/apps/api/target/f03-s04-evidence/api-walkthrough.{cjs,json,log} 59/59 (API and workspace BFF) and ui-walkthrough.{cjs,json,log} 70/70 (browser) with screens/*.png (92 screenshots).
+    Integration: SupportSessionIntegrationTest (13, two salons each), SupportCryptoTest (4); web: lib/identity/support.test.ts, lib/tenancy/route-request.support.test.ts,
+    components/support/Support.test.tsx, components/console/SupportScreens.test.tsx.
+    AC-1 checked: reason 9/501 chars and durationMinutes 4, 121, "30", 30.5 -> 400 naming the field, nothing created; default 30 (expiresAt = start + 30 min),
+      5 and 120 accepted; Admin 403 permission_denied; second open session for the same operator and salon 409 support_session_active (5 simultaneous starts:
+      one 201, four 409); suspended and closed (and deleted) salons 409 invalid_state; a read_only salon gets one.
+    AC-2 checked: the code opens the salon once (200 through the BFF, no token in the body); reused, 61 s old (test clock), altered and other-salon codes
+      401 invalid_code with no cookie; console host and bare platform host 404; missing/foreign Origin, cross-site and same-site Fetch Metadata 403 before any API
+      call; 6 simultaneous exchanges of one code: one 200, five 401. Browser: the fragment leaves the address at once; cookies are HttpOnly, host-only, SameSite=Lax;
+      document.cookie and storage empty. The code and the credential appear in no API or web log line of the run.
+    AC-3 checked: /identity/me kind support with the session expiry; staff, audit, entitlements and invoices read as the Owner reads them (same staff list);
+      staff create/change/remove, password, sign-out, MFA, refresh, entry, Owner revocation and an unknown route all 403 support_read_only, nothing changed,
+      through the API and the BFF; in a read_only salon the refusal is support_read_only too. Browser: banner "Support view, read only" with "Ends at HH:MM" in the
+      salon zone (Asia/Colombo); account page shows the read permissions with no password, MFA, devices or sign-out; staff page shows the Owner's controls disabled
+      with the reason; no password, MFA material or token in any response.
+    AC-4 checked: the support credential is 401 on operator endpoints and the console BFF, 403 on customer endpoints, 404 on another salon's host, 401 on the bare
+      API address; a staff credential cannot start (401), mint codes for (401) or end (401) a session; an operator credential alone opens no workspace (401).
+    AC-5 checked: End session in the workspace (BFF clears both cookies; next request 401 invalid_session; the workspace redirects to /workspace/support#ended);
+      ending in the console; Admin revocation (an unused code then 401 invalid_code); Owner revocation (204); expiry (test clock: 2 s before 200, at the instant 401;
+      the expiry pass records the end once). An ended session gets no new code (409 invalid_state) and cannot be ended again (409). Another Support operator's end
+      or code request 403 permission_denied. A support credential on a salon that becomes suspended 403 salon_suspended, closed 404 not_found.
+    AC-6 checked: the salon's audit list shows support.session_started (operatorName, reason, expiresAt), support.session_entered, support.request per API
+      request (method, route template such as /api/v1/identity/staff/{id}, status, time) and support.session_ended (endedBy operator|admin|owner|expiry); actor
+      kind support (session id), operator (Admin) or staff (Owner); Owner and Manager see them, Receptionist and Accountant 403; another salon's list holds none of
+      them; no operator email, raw path id, code or credential in any entry. Browser: entries in words in the Activity log for the Owner and the Manager.
+    AC-7 checked: the Owner's list has active and past sessions with operator name, reason, start, end and state; Revoke through an Alert Dialog (204, success
+      notice, no active row left); Manager and Receptionist 403; the support view itself is denied the page; another salon's session 404 and untouched; the Owner of
+      a read_only salon can still revoke.
+    AC-8 checked: Support reads the directory, detail and lifecycle history; plans, export, billing and lifecycle actions 403; Admin lists every session with
+      salon, operator, reason and state (salonId and state filters) and revokes; Support lists its own only; platform audit has support.session_started,
+      support.entry_code_issued, support.session_ended, support.session_revoked and support.session_expired with a 32-hex trace id, salonId, and no email or code.
+      Browser: Support's console navigation is Salons and Support sessions (no denial landing, no Create salon); the Admin's is Salons, Plans and Support sessions.
+    AC-9 checked: two operators on one salon and one operator on two salons: each credential 404 on the other salon; ending one leaves the others working.
+    AC-10 checked (browser, 360/390/768/1024/1280/1440): console Support card and sheet (validation field error, success with Open workspace in a new tab, 409),
+      console Support sessions as Support and as Admin (Active/Ended/All filter, New entry link, End/Revoke in an Alert Dialog), entry page (loading, success,
+      refused, ended, none, unavailable with the API stopped), banner on account, staff, audit and billing, Owner Support access (list, revoke, revoked): no horizontal
+      scroll or clipped control, every field labelled, sheets and Alert Dialogs open from the keyboard with focus kept inside and returned on Escape, End session
+      reachable by keyboard, the banner role alert, not dismissable, sticky under the header when scrolled; no script error. Loading uses Skeleton/Spinner
+      (component-tested).
+
+    Visual handoff: no support screen exists in the prototype. They extend the final Salon-mode grammar: console white 24px Card, Badge words, Item rows,
+    pill Buttons incl. destructive, Field + Textarea/Select, bottom sheet / 460px right drawer Sheet, Alert, Empty, Pagination, Skeleton, Spinner; workspace
+    banner is a caution-surface Alert that spans the main area and sticks under the header (it does not cover the rail); entry page reuses the staff sign-in
+    composition (CR-012) with a translucent card; navigation uses the prototype's clock glyph. Compared in screens/*.png at the width matrix; fixed during review:
+    the banner overlapping the 1280 rail, row actions squeezing text on phones, the nav label "Support view".
+
+    Differs from or adds to the documents (for the lead):
+    - Lead-accepted: DELETE /api/v1/salon/support-sessions/{id} is on the read-only allowlist (an Owner of a read_only salon can revoke), and the API refuses a
+      support JWT whose iat is in the future.
+    - Added DELETE /api/v1/support/session (salon host, support credential only): the banner's End session; the one mutation a support credential may make. Also
+      exempt from the read-only rule, with POST /api/v1/support/entry.
+    - Support credential: JWT HS256 with SALON_SUPPORT_SIGNING_KEY; iss salon-support, aud salon-api, kind support, sub operator id, claims tenant and session,
+      exp = session expiry, no refresh. Verified per request by the tenant filter through a shared seam (shared.tenancy.SupportCredentials, implemented by platform
+      SupportSessions, resolved lazily per request): signature, claims and time, salon = host (404 otherwise), then the stored session open and its operator
+      active (401 invalid_session otherwise); the principal carries the stored expiry. Every mutation but DELETE /api/v1/support/session is refused 403
+      support_read_only by that one filter rule, before the salon's read-only rule. Entry codes: 256 random bits base64url (43 chars), SHA-256 stored, 60 s,
+      consumed in one conditional UPDATE bound to the host's salon; a code presented on the wrong salon is not consumed.
+    - Platform tables support_session (one open per operator and salon by a partial unique index; a trigger forbids changing or deleting a session and reopening an
+      ended one) and support_entry_code; the platform role has SELECT/INSERT and UPDATE of the end/consumption columns only. No new tenant table (the S03 exporter/
+      eraser contract test still covers all 12). audit_entry gains actor kind support (constraint), platform_audit_entry gains actor kind staff (Owner revocation).
+      SECURITY DEFINER audit_record_support (platform role only; support.* actions only; nothing for a deleted salon) writes the salon's start/entry/end entries in
+      the platform transaction; per-request entries are a separate bounded tenant write (2 s) after the response is produced, never failing the read.
+    - Identity: Owner gains permission support.manage; the support principal holds entitlement.read, staff.list, audit.list, invoice.read, calendar.read,
+      customer.read, financial.read (the Owner's reads); Principal gains nullable expiresAt (support only). The support principal is refused own-account and
+      support-access reads (403 permission_denied) — the Support access page is the Owner's oversight tool. The identity audit list now includes support.* entries.
+    - Operator permissions: Support gets operator.salon.read and operator.support.start; Admin gets operator.support.read and operator.support.revoke.
+    - Workspace: support cookies take precedence over a staff session in the same browser (which is left untouched); an ended view redirects to
+      /workspace/support#ended. Closing or suspending a salon does not end its open support sessions; they are refused (404/403) and expire normally.
+    - Entry link: SALON_SUPPORT_LINK_ORIGIN with the salon hostname; the console BFF returns entryUrl (with the code in its fragment) to the console page and never
+      entryCode separately; the link opens in a new tab with rel noopener noreferrer.
+    - shadcn/ui: Alert Dialog added with the CLI (4.22.0) and adapted (one cn(), theme backdrop/card/radius, no motion, unused media part removed); the CLI's cn package
+      was not kept.
+    - Test ids: console-nav-support; console-support-{card,start,sheet,reason,duration,submit,cancel} (+ console-support-reason-error), console-support-started{,-help,-open},
+      console-support (page), console-support-{filter,list,row(data-id,data-state),salon,state,hostname,operator,reason,times,open(data-id),end(data-id),link,link-help,
+      link-open,confirm,confirm-cancel,confirm-end,notice,empty}, console-support-{total,pagination,previous,page,next}; workspace support-banner(data-expires-at),
+      support-banner-{title,ends,end,error}, workspace-support-band, support-entry(data-state), support-entry-{title,loading,success,refused,unavailable,ended,none},
+      workspace-support-access (nav), support-access, support-access-{loading,empty,error,retry,revoked,list,row(data-id,data-state),operator,state,reason,times,revoke,
+      confirm,confirm-cancel,confirm-revoke,pagination,previous,page,next}, account-support-view, account-audit-support, account-read-only gains data-reason
+      (support|billing).
+    - Messages: English only (decision 051).
+    Not done: Sinhala and Tamil messages; the customer-app half of NFR-20 (F15). Local reset does not end open support sessions on alpha/beta/gamma (none are
+      started by these walkthroughs).
+    Elapsed: about 13:48Z to 21:35Z on 2026-10-18 wall clock, including several usage-limit interruptions of unknown length; split unknown.
 cases: []
 verification:
   commands:

@@ -29,7 +29,7 @@ asked for; the cases of a stage are written at its feature's pass.
 | F03-S01 | complete | - | PLT-01, PLT-04 | 20 | 0 | 0 | 0 | 0 |
 | F03-S02 | complete | - | PLT-04, PLT-05 | 16 | 0 | 0 | 0 | 0 |
 | F03-S03 | complete | - | PLT-06 | 12 | 0 | 0 | 0 | 0 |
-| F03-S04 | planned | - | PLT-07, NFR-20 | 10 | 0 | 0 | 0 | 0 |
+| F03-S04 | complete | - | PLT-07, NFR-20 | 10 | 0 | 0 | 0 | 0 |
 
 ## Deferred cases
 
@@ -49,7 +49,7 @@ Cases waiting for something else. `feature-verify` and `release-prepare` go thro
 | PLT-04 | R1 | must | F03 | F03-S01 (complete), F03-S02 (complete) |
 | PLT-05 | R1 | must | F03 | F03-S02 (complete) |
 | PLT-06 | R1 | must | F03 | F03-S03 (complete) |
-| PLT-07 | R1 | must | F03 | F03-S04 (planned) |
+| PLT-07 | R1 | must | F03 | F03-S04 (complete) |
 | PLT-08 | R1 | should | F14 | - |
 | PLT-09 | R2 | should | unowned | - |
 | PLT-10 | R2 | should | unowned | - |

@@ -41,3 +41,5 @@ salon.billing:
   provider-key: ${random.value}${random.value}
 salon.export:
   key: ${random.value}${random.value}
+salon.support:
+  signing-key: ${random.value}${random.value}

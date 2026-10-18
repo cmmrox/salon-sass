@@ -155,6 +155,10 @@ class LocalReset {
             owner.update("DELETE FROM salon_export_part WHERE export_id IN (SELECT e.id FROM salon_export e WHERE e.salon_id = ?)", id);
             owner.update("DELETE FROM salon_export WHERE salon_id = ?", id);
             owner.update("DELETE FROM salon_lifecycle_event WHERE salon_id = ?", id);
+            owner.execute("ALTER TABLE support_session DISABLE TRIGGER support_session_guarded");
+            owner.update("DELETE FROM support_entry_code WHERE session_id IN (SELECT s.id FROM support_session s WHERE s.salon_id = ?)", id);
+            owner.update("DELETE FROM support_session WHERE salon_id = ?", id);
+            owner.execute("ALTER TABLE support_session ENABLE TRIGGER support_session_guarded");
             owner.update("DELETE FROM tenant WHERE id = ?", id);
             owner.execute("ALTER TABLE tenant ENABLE TRIGGER tenant_lifecycle");
             owner.execute("ALTER TABLE platform_audit_entry ENABLE TRIGGER platform_audit_entry_append_only");

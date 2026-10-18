@@ -249,6 +249,11 @@ public class StaffAccess {
         return a;
     }
 
+    /** A read a support session (F03-S04) may make as the Owner would; otherwise the staff check. */
+    private void readable(String permission) {
+        if (!SessionAccess.supportMay(permission)) permitted(permission);
+    }
+
     private Principal principal(StaffAccount a) {
         StaffRole r = role(a);
         return new Principal(
@@ -646,7 +651,7 @@ public class StaffAccess {
         pagination(page, size);
         return work(
                 () -> {
-                    permitted("staff.list");
+                    readable("staff.list");
                     List<StaffAccount> rows =
                             em.createQuery(
                                             "select a from StaffAccount a order by"
@@ -733,7 +738,7 @@ public class StaffAccess {
         pagination(page, size);
         return work(
                 () -> {
-                    permitted("audit.list");
+                    readable("audit.list");
                     AuditTrail.AuditPage rows = audit.identityPage(page, size, subjectId);
                     return new Page<>(
                             rows.items().stream()
@@ -761,6 +766,18 @@ public class StaffAccess {
         java.util.HashMap<String, Object> result = new java.util.HashMap<>();
         for (String k : List.of("role", "professionalGrant", "active"))
             if (input.containsKey(k)) result.put(k, input.get(k));
+        if (action != null && action.startsWith("support."))
+            for (String k :
+                    List.of(
+                            "operatorName",
+                            "reason",
+                            "expiresAt",
+                            "method",
+                            "route",
+                            "status",
+                            "endedBy"))
+                if (input.get(k) instanceof String || input.get(k) instanceof Number)
+                    result.put(k, input.get(k));
         if ("identity.profile_updated".equals(action)) {
             Object version = input.get("version");
             if ((version instanceof Integer || version instanceof Long)

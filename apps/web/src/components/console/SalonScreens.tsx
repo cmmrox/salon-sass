@@ -20,6 +20,7 @@ import { ConsoleSheet } from './ConsoleSheet';
 import { DirectoryPager, DirectorySearch } from './DirectoryControls';
 import { SubscriptionCard } from './BillingScreens';
 import { ExportCard, LifecycleCard, SalonStatusBadge } from './LifecycleScreens';
+import { SupportCard } from './SupportScreens';
 import type { Plan } from './PlanScreens';
 import { useIdempotencyKey } from './PlanScreens';
 import { PAGE_SIZE, useDirectory } from './useDirectory';
@@ -29,14 +30,14 @@ type Detail = components['schemas']['SalonDetail'];
 type Created = components['schemas']['SalonCreated'];
 
 /** The salon directory: search by name or web address, rows with status and plan, paging, Create salon. */
-export function SalonDirectory({ platformDomain }: { platformDomain: string }) {
+export function SalonDirectory({ platformDomain, permissions = ['operator.salon.create'] }: { platformDomain: string; permissions?: string[] }) {
   const t = useTranslations('console');
   const { query, page, data, loading, failure, load } = useDirectory<Summary>('salons');
   return (
     <div className="flex min-w-0 flex-col gap-6" data-testid="console-salons">
       <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
         <h1 className="m-0 text-workspace-title leading-heading font-semibold" data-testid="console-salons-title">{t('salons')}</h1>
-        <CreateSalon platformDomain={platformDomain} onCreated={() => void load(0, '')} />
+        {permissions.includes('operator.salon.create') && <CreateSalon platformDomain={platformDomain} onCreated={() => void load(0, '')} />}
       </div>
       <DirectorySearch area="salons" help={t('searchSalonsHelp')} busy={loading} onSearch={(q) => void load(0, q)} />
       {failure && <ConsoleFailure failure={failure} busy={loading} onRetry={() => void load(page, query)} />}
@@ -186,7 +187,7 @@ function CreateSalon({ platformDomain, onCreated }: { platformDomain: string; on
 }
 
 /** One salon's provisioning profile and plan. Read-only; no automatic workspace entry. */
-export function SalonDetail({ id }: { id: string }) {
+export function SalonDetail({ id, permissions = [] }: { id: string; permissions?: string[] }) {
   const t = useTranslations('console');
   const router = useRouter();
   const [salon, setSalon] = useState<Detail | null>(null);
@@ -239,9 +240,11 @@ export function SalonDetail({ id }: { id: string }) {
           </section>
         </Card>
       )}
-      {salon && <LifecycleCard salon={salon} onChanged={() => void load()} />}
-      {salon && (salon.status === 'closed' || salon.status === 'deleted') && <ExportCard key={`${salon.id}-export-${salon.version}`} salon={salon} />}
-      {salon && <SubscriptionCard salon={salon} onSalonChanged={() => void load()} />}
+      {/* Each card for the operator whose permissions it needs: Support finds salons and starts support sessions (F03-S04). */}
+      {salon && permissions.includes('operator.support.start') && <SupportCard salon={salon} />}
+      {salon && permissions.includes('operator.salon.suspend') && <LifecycleCard salon={salon} onChanged={() => void load()} />}
+      {salon && permissions.includes('operator.export.read') && (salon.status === 'closed' || salon.status === 'deleted') && <ExportCard key={`${salon.id}-export-${salon.version}`} salon={salon} />}
+      {salon && permissions.includes('operator.billing.read') && <SubscriptionCard salon={salon} onSalonChanged={() => void load()} />}
     </div>
   );
 }

@@ -81,9 +81,12 @@ public class AuditTrail {
 
     public record AuditPage(List<AuditRecord> items,long total) {}
 
-    /** Identity's protected audit facade: tenant filtering is still applied by Hibernate and RLS. */
+    /**
+     * Identity's protected audit facade: the salon's identity entries and its support-session entries
+     * (F03-S04). Tenant filtering is still applied by Hibernate and RLS.
+     */
     public AuditPage identityPage(int page,int size,String subjectId) {
-        String condition=" e.action like 'identity.%'";
+        String condition=" (e.action like 'identity.%' or e.action like 'support.%')";
         if(subjectId!=null)condition+=" and e.subjectId=:subject";
         var query=entityManager.createQuery("select e from AuditEntry e where"+condition+" order by e.createdAt desc,e.id",AuditEntry.class);
         var count=entityManager.createQuery("select count(e) from AuditEntry e where"+condition,Long.class);

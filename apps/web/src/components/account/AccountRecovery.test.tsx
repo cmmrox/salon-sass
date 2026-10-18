@@ -7,7 +7,7 @@ import { AccountScreen } from './AccountScreen';
 
 const navigation = vi.hoisted(() => ({ replace: vi.fn(), refresh: vi.fn() }));
 vi.mock('next/navigation', () => ({ useRouter: () => navigation }));
-const owner: Principal = { id: 'owner', kind: 'staff', role: 'OWNER', staffId: 'owner', scope: 'salon', mfaEnabled: true, permissions: ['session.manage', 'staff.list', 'staff.manage', 'audit.list'] };
+const owner: Principal = { id: 'owner', kind: 'staff', role: 'OWNER', staffId: 'owner', scope: 'salon', mfaEnabled: true, expiresAt: null, permissions: ['session.manage', 'staff.list', 'staff.manage', 'audit.list'] };
 const receptionist: Principal = { ...owner, role: 'RECEPTIONIST', permissions: ['session.manage'] };
 const person = { id: 'owner', role: 'OWNER', email: 'synthetic@alpha.test', version: 0, active: true };
 

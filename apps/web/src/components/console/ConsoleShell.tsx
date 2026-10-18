@@ -4,19 +4,20 @@ import { SidebarInset } from '@/components/ui/sidebar';
 import { Navigation, NavigationProvider, NavigationTrigger, type NavigationItem } from '@/components/shell/Navigation';
 import { ConsoleSignOut } from './ConsoleSignOut';
 
-export type ConsoleView = 'salons' | 'plans' | 'none';
+export type ConsoleView = 'salons' | 'plans' | 'support' | 'none';
 
 /**
  * The operator console frame: the final Salon-mode workspace grammar (sticky white header from
  * 900px, the shadcn/ui Sidebar as a rail from 900px and its sheet below), in the platform's neutral
- * theme. Only the sections the operator may use appear: Salons and Plans for an Admin, none for
- * Support, who sees the access-denied state. Sign out is always in the header.
+ * theme. Only the sections the operator may use appear: Salons, Plans and Support sessions for an
+ * Admin; Salons and Support sessions for Support (F03-S04). Sign out is always in the header.
  */
 export function ConsoleShell({ children, permissions = [], view = 'none', signedIn = true }: { children: ReactNode; permissions?: string[]; view?: ConsoleView; signedIn?: boolean }) {
   const t = useTranslations('console');
   const items: NavigationItem[] = [];
   if (permissions.includes('operator.salon.read')) items.push({ href: '/console/salons', label: t('salons'), icon: 'salons', testId: 'console-nav-salons', current: view === 'salons' });
   if (permissions.includes('operator.plan.read')) items.push({ href: '/console/plans', label: t('plans'), icon: 'plans', testId: 'console-nav-plans', current: view === 'plans' });
+  if (permissions.includes('operator.support.start') || permissions.includes('operator.support.read')) items.push({ href: '/console/support', label: t('supportSessions'), icon: 'support', testId: 'console-nav-support', current: view === 'support' });
   return (
     <NavigationProvider className="flex-col bg-background" data-testid="console-shell">
       <header className="sticky top-0 z-40 flex min-h-header items-center gap-2 bg-background px-4 py-2 rail:border-b rail:border-border rail:bg-card rail:px-7 rail:py-0" data-testid="console-header">

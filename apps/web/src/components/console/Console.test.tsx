@@ -13,6 +13,7 @@ vi.mock('next/navigation', () => ({ useRouter: () => ({ replace, refresh: vi.fn(
 vi.mock('next/link', () => ({ default: (props: AnchorHTMLAttributes<HTMLAnchorElement>) => <a {...props} /> }));
 
 const PLAN = { id: '11111111-0000-4000-8000-000000000001', key: 'fixture-basic', name: 'Synthetic Basic', staffSeats: 5, branches: 1, messageAllowance: 0, customDomain: false, dedicatedApp: true, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z' };
+const ADMIN_PERMISSIONS = ['operator.billing.manage', 'operator.billing.read', 'operator.export.read', 'operator.plan.create', 'operator.plan.read', 'operator.salon.close', 'operator.salon.create', 'operator.salon.read', 'operator.salon.suspend', 'operator.session.manage', 'operator.support.read', 'operator.support.revoke'];
 type Call = { url: string; body: Record<string, unknown> | null };
 let calls: Call[];
 
@@ -173,7 +174,7 @@ describe('detail pages', () => {
     stubApi((url) => url.startsWith('/operator-web/subscription') ? Response.json({ code: 'not_found' }, { status: 404 })
       : url.startsWith('/operator-web/lifecycle') ? Response.json({ items: [], page: 0, size: 10, total: 0 })
         : Response.json({ id: 's', version: 0, name: null, slug: 'legacy', hostname: 'legacy.localhost', status: 'active', country: null, currency: null, timeZone: 'Asia/Colombo', defaultLanguage: null, contactEmail: null, contactPhone: null, address: null, plan: null, ownerEmail: null, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', closedAt: null, deleteAt: null, deletedAt: null }));
-    renderWithMessages(<SalonDetail id="s" />);
+    renderWithMessages(<SalonDetail id="s" permissions={ADMIN_PERMISSIONS} />);
     expect(await screen.findByTestId('console-salon-name')).toHaveTextContent('Not configured');
     expect(screen.getByTestId('console-salon-country')).toHaveTextContent('Not configured');
     expect(screen.getByTestId('console-salon-plan')).toHaveTextContent('No plan assigned');

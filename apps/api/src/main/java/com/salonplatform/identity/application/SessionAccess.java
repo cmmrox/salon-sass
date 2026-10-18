@@ -52,6 +52,10 @@ public class SessionAccess {
     }
 
     public Auth auth() {
+        // A support session (F03-S04) is never a staff or customer session: what it may read is
+        // checked by the use cases that serve it; everything else answers permission denied.
+        if (RequestSupport.current().isPresent())
+            throw new ApplicationProblemException(403, ErrorCode.PERMISSION_DENIED);
         IdentityCrypto.Claims claims = crypto.verify(RequestCredential.require());
         if (!claims.tenantId().equals(TenantContext.require().id())) throw new NotFoundException();
         AccessSession s =
@@ -115,7 +119,27 @@ public class SessionAccess {
     }
 
     public Principal me() {
+        Optional<SupportGrant> support = RequestSupport.current();
+        if (support.isPresent()) return supportPrincipal(support.get());
         return work.run(() -> principal(auth()));
+    }
+
+    /** The read-only principal of a support session: the Owner's reads, its own expiry, no staff id. */
+    public static Principal supportPrincipal(SupportGrant grant) {
+        return new Principal(
+                grant.sessionId(),
+                "support",
+                null,
+                StaffRole.SUPPORT_READS,
+                "salon",
+                null,
+                false,
+                grant.expiresAt());
+    }
+
+    /** Whether the current request is a support session holding this read permission. */
+    public static boolean supportMay(String permission) {
+        return RequestSupport.current().isPresent() && StaffRole.SUPPORT_READS.contains(permission);
     }
 
     private Principal principal(Auth a) {

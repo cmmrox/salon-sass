@@ -463,11 +463,13 @@ class OperatorProvisioningIntegrationTest extends IntegrationTest {
             status(create("/salons", OperatorTestSupport.salon(slug, plan, "d@example.test", "owner synthetic v5"), token,
                     UUID.randomUUID().toString()), 401);
         }
-        for (String path : List.of("/plans", "/salons", "/plans/" + plan)) {
+        // F03-S04: Support reads the salon directory (operator.salon.read); plans stay the Admin's.
+        for (String path : List.of("/plans", "/plans/" + plan)) {
             Http.Exchange denied = console.call("GET", path, null, support);
             status(denied, 403);
             assertThat(console.body(denied)).containsEntry("code", "permission_denied");
         }
+        status(console.call("GET", "/salons", null, support), 200);
         status(create("/plans", OperatorTestSupport.plan(OperatorTestSupport.uniqueKey("d")), support,
                 UUID.randomUUID().toString()), 403);
         status(create("/salons", OperatorTestSupport.salon(slug, plan, "d@example.test", "owner synthetic v5"), support,

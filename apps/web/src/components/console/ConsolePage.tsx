@@ -11,6 +11,7 @@ import { ConsoleShell, type ConsoleView } from './ConsoleShell';
 import { PlanDetail, PlanDirectory } from './PlanScreens';
 import { SalonDetail, SalonDirectory } from './SalonScreens';
 import { InvoiceList } from './BillingScreens';
+import { SupportSessionList } from './SupportScreens';
 
 /**
  * A protected console page, decided on the server before anything is sent: without a usable operator
@@ -25,12 +26,13 @@ export async function ConsolePage({ view, id, section }: { view: Exclude<Console
   if (entry.kind === 'signed-out') redirect('/console/sign-in');
   if (entry.kind === 'pending') return <ConsoleShell><ConsolePending /></ConsoleShell>;
   const permissions = entry.principal.permissions;
-  const required = section === 'invoices' ? 'operator.billing.read' : view === 'salons' ? 'operator.salon.read' : 'operator.plan.read';
-  if (!permissions.includes(required)) return <ConsoleShell permissions={permissions}><ConsoleDenied /></ConsoleShell>;
+  const required = section === 'invoices' ? ['operator.billing.read'] : view === 'salons' ? ['operator.salon.read'] : view === 'support' ? ['operator.support.start', 'operator.support.read'] : ['operator.plan.read'];
+  if (!required.some((permission) => permissions.includes(permission))) return <ConsoleShell permissions={permissions}><ConsoleDenied /></ConsoleShell>;
   const platformDomain = platformDomainOf(process.env.SALON_PLATFORM_DOMAIN);
   return (
     <ConsoleShell permissions={permissions} view={view}>
-      {view === 'salons' ? (id ? (section === 'invoices' ? <InvoiceList id={id} /> : <SalonDetail id={id} />) : <SalonDirectory platformDomain={platformDomain} />) : id ? <PlanDetail id={id} /> : <PlanDirectory />}
+      {view === 'support' ? <SupportSessionList admin={permissions.includes('operator.support.read')} />
+        : view === 'salons' ? (id ? (section === 'invoices' ? <InvoiceList id={id} /> : <SalonDetail id={id} permissions={permissions} />) : <SalonDirectory platformDomain={platformDomain} permissions={permissions} />) : id ? <PlanDetail id={id} /> : <PlanDirectory />}
     </ConsoleShell>
   );
 }

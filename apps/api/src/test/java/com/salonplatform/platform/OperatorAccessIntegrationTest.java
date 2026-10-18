@@ -401,19 +401,24 @@ class OperatorAccessIntegrationTest extends IntegrationTest {
     }
 
     @Test
-    void supportHasOnlyItsOwnPrincipalAndSessionOperations() {
+    void supportHasItsOwnPrincipalSalonReadsAndSupportSessionsOnly() {
+        // F03-S04 grants Support the salon directory and detail (operator.salon.read) and its own support
+        // sessions, superseding S01's denial of salon reads; plans stay the Admin's.
         Operator support = console.create("OPERATOR_SUPPORT");
         Map<String, Object> tokens = console.signIn(support);
         String token = (String) tokens.get("accessToken");
         Http.Exchange me = console.call("GET", "/me", null, token);
         status(me, 200);
         assertThat(console.body(me)).containsEntry("role", "OPERATOR_SUPPORT")
-                .containsEntry("permissions", List.of("operator.session.manage"));
-        for (String path : List.of("/plans", "/salons", "/plans/" + UUID.randomUUID(), "/salons/" + UUID.randomUUID())) {
+                .containsEntry("permissions", List.of("operator.salon.read", "operator.session.manage",
+                        "operator.support.start"));
+        for (String path : List.of("/plans", "/plans/" + UUID.randomUUID())) {
             Http.Exchange denied = console.call("GET", path, null, token);
             status(denied, 403);
             assertThat(code(denied)).isEqualTo("permission_denied");
         }
+        status(console.call("GET", "/salons", null, token), 200);
+        status(console.call("GET", "/salons/" + UUID.randomUUID(), null, token), 404);
         status(console.call("POST", "/sessions/refresh", Map.of("refreshToken", tokens.get("refreshToken")), null), 200);
     }
 
