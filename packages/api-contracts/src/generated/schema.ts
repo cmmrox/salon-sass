@@ -1182,7 +1182,7 @@ export interface components {
         };
         SubscriptionState: {
             /**
-             * @description The workspace banner to show, decided with the application clock
+             * @description The workspace banner to show, decided by the API at the time of the request
              * @enum {string|null}
              */
             notice: "trial_ending" | "past_due" | "read_only" | null;

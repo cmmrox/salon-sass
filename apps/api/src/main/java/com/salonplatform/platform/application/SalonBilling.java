@@ -49,7 +49,7 @@ public class SalonBilling {
             Instant pastDueSince,
             @Schema(types = {"string", "null"}, allowableValues = {"trial_ending", "past_due", "read_only"},
                     requiredMode = Schema.RequiredMode.REQUIRED,
-                    description = "The workspace banner to show, decided with the application clock")
+                    description = "The workspace banner to show, decided by the API at the time of the request")
             String notice) {
     }
 
