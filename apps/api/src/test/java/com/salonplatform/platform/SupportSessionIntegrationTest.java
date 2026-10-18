@@ -37,6 +37,7 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 import org.springframework.core.env.Environment;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.PlatformTransactionManager;
 
@@ -49,6 +50,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  * access (AC-7), the console's oversight (AC-8) and separation of simultaneous sessions (AC-9). Every
  * check uses at least two salons: what is done in one leaves the other unchanged.
  */
+// Its movable clock makes a context of its own; it is closed after this class so that its connection
+// pool does not hold the shared test database's connection slots while later tests start applications.
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class SupportSessionIntegrationTest extends IntegrationTest {
 
     static final MovableClock CLOCK = new MovableClock(Instant.now().truncatedTo(ChronoUnit.SECONDS));
