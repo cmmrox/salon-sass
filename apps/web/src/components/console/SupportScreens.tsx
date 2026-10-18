@@ -191,9 +191,9 @@ export function SupportSessionList({ admin }: { admin: boolean }) {
                 <ItemDescription className="line-clamp-none wrap-anywhere" data-testid="console-support-hostname">{session.salon.hostname}</ItemDescription>
                 <p className="m-0 wrap-anywhere" data-testid="console-support-operator">{t('supportOperator', { name: session.operator.displayName })}</p>
                 <p className="m-0 wrap-anywhere whitespace-pre-line" data-testid="console-support-reason">{session.reason}</p>
-                <p className="m-0 text-small" data-testid="console-support-times">
-                  {t('supportStarted', { time: formatInstant(session.startedAt, zone) })}{' · '}
-                  {session.state === 'active' ? t('supportEnds', { time: formatInstant(session.expiresAt, zone) }) : t('supportEndedAt', { time: formatInstant(session.endedAt ?? session.expiresAt, zone) })}
+                <p className="m-0 flex flex-wrap gap-x-3 text-small" data-testid="console-support-times">
+                  <span>{t('supportStarted', { time: formatInstant(session.startedAt, zone) })}</span>
+                  <span>{session.state === 'active' ? t('supportEnds', { time: formatInstant(session.expiresAt, zone) }) : t('supportEndedAt', { time: formatInstant(session.endedAt ?? session.expiresAt, zone) })}</span>
                 </p>
                 {links[session.id] && <EntryLink entry={links[session.id]!} testId="console-support-link" />}
               </ItemContent>

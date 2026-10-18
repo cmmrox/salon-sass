@@ -79,9 +79,9 @@ export function SupportAccessScreen({ timeZone }: { timeZone: string }) {
                     <Badge variant={session.state === 'active' ? 'positive' : 'outline'} data-testid="support-access-state">{session.state === 'active' ? t('stateActive') : t(`endedBy.${session.endedBy ?? 'expiry'}` as 'endedBy.expiry')}</Badge>
                   </ItemTitle>
                   <ItemDescription className="line-clamp-none wrap-anywhere whitespace-pre-line" data-testid="support-access-reason">{session.reason}</ItemDescription>
-                  <p className="m-0 text-small" data-testid="support-access-times">
-                    {t('started', { time: formatInstant(session.startedAt, timeZone) })}{' · '}
-                    {session.state === 'active' ? t('endsAt', { time: formatInstant(session.expiresAt, timeZone) }) : t('endedAt', { time: formatInstant(session.endedAt ?? session.expiresAt, timeZone) })}
+                  <p className="m-0 flex flex-wrap gap-x-3 text-small" data-testid="support-access-times">
+                    <span>{t('started', { time: formatInstant(session.startedAt, timeZone) })}</span>
+                    <span>{session.state === 'active' ? t('endsAt', { time: formatInstant(session.expiresAt, timeZone) }) : t('endedAt', { time: formatInstant(session.endedAt ?? session.expiresAt, timeZone) })}</span>
                   </p>
                 </ItemContent>
                 {session.state === 'active' && (

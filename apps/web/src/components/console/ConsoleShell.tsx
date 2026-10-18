@@ -9,8 +9,8 @@ export type ConsoleView = 'salons' | 'plans' | 'support' | 'none';
 /**
  * The operator console frame: the final Salon-mode workspace grammar (sticky white header from
  * 900px, the shadcn/ui Sidebar as a rail from 900px and its sheet below), in the platform's neutral
- * theme. Only the sections the operator may use appear: Salons and Plans for an Admin, none for
- * Support, who sees the access-denied state. Sign out is always in the header.
+ * theme. Only the sections the operator may use appear: Salons, Plans and Support sessions for an
+ * Admin; Salons and Support sessions for Support (F03-S04). Sign out is always in the header.
  */
 export function ConsoleShell({ children, permissions = [], view = 'none', signedIn = true }: { children: ReactNode; permissions?: string[]; view?: ConsoleView; signedIn?: boolean }) {
   const t = useTranslations('console');
