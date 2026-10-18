@@ -180,7 +180,9 @@ public class SalonLifecycle {
                 throw new ApplicationProblemException(400, ErrorCode.BAD_REQUEST,
                         List.of(new FieldProblem("confirmSlug", "must be the salon's web address (slug), typed exactly")));
             }
-            Instant now = clock.instant();
+            // Millisecond precision, so the deletion instant (exactly 30 days later) can be reached exactly
+            // with a clock or a test that counts in milliseconds.
+            Instant now = clock.instant().truncatedTo(java.time.temporal.ChronoUnit.MILLIS);
             Instant deleteAt = LifecycleTerms.deleteAt(now);
             database.jdbc().update("""
                     UPDATE tenant SET status = 'closed', closed_at = ?, delete_at = ?, version = version + 1,
