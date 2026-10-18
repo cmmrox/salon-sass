@@ -352,4 +352,14 @@ audit records the same start, end and revocation. Operator email addresses are n
 | `operator.support.start`, ending one's own session | no | yes |
 | `operator.support.read`, `operator.support.revoke` (every session) | yes | no |
 
+As built (F03-S04, decision 053): the entry exchange returns `{accessToken,sessionId,issuedAt,expiresAt}`
+to the BFF only (`/identity-web/support/entry`); the credential is checked against the stored
+session on every request and one issued in the future is refused. The single mutation a support
+credential may make is `DELETE /api/v1/support/session` (End session from the banner). The Owner's
+Support access page is denied to the support view, and the Owner gains `support.manage`; the Owner's
+revocation is on the read-only allowlist. In one browser a support cookie takes precedence over a
+staff session on that salon. Suspending or closing a salon leaves open support sessions to expire,
+but their credentials are refused at once (403 `salon_suspended` or 404). Operator session lists
+filter by `salonId` and `state` (`active`, `ended`).
+
 Reproducing what a customer sees in the customer app (NFR-20's customer half) waits for F15.
