@@ -121,9 +121,14 @@ export async function routeRequest(
   }
 
   const site = await resolve(request.headers.get('host'));
+  // The Owner's export download page and its BFF (F03-S03) exist on the bare platform host only.
+  const exportPath = isUnder(path, '/exports') || isUnder(path, '/platform-web');
   switch (site.kind) {
-    case 'platform':
-      return NextResponse.next({ request: { headers } });
+    case 'platform': {
+      const response = NextResponse.next({ request: { headers } });
+      if (exportPath) response.headers.set('Cache-Control', NOT_STORED);
+      return response;
+    }
     case 'not-found':
       return answer('salon-not-found');
     case 'suspended':
@@ -131,6 +136,7 @@ export async function routeRequest(
     case 'unavailable':
       return answer('service-unavailable');
     case 'salon': {
+      if (exportPath) return rewrite(request, NOWHERE, headers);
       headers.set(SALON_HEADER, encodeSalon(site.salon));
       if (path === '/' || path === '/sign-in' || path === '/account') {
         return redirect(request, path === '/' ? '/workspace' : SIGN_IN);

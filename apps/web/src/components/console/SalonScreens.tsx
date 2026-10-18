@@ -19,6 +19,7 @@ import { ConsoleChoiceField, ConsoleFailure, ConsoleLoading, ConsolePasswordFiel
 import { ConsoleSheet } from './ConsoleSheet';
 import { DirectoryPager, DirectorySearch } from './DirectoryControls';
 import { SubscriptionCard } from './BillingScreens';
+import { ExportCard, LifecycleCard, SalonStatusBadge } from './LifecycleScreens';
 import type { Plan } from './PlanScreens';
 import { useIdempotencyKey } from './PlanScreens';
 import { PAGE_SIZE, useDirectory } from './useDirectory';
@@ -52,7 +53,7 @@ export function SalonDirectory({ platformDomain }: { platformDomain: string }) {
                   <ItemTitle className="wrap-anywhere">{salon.name ?? t('notConfigured')}</ItemTitle>
                   <ItemDescription className="wrap-anywhere">{salon.hostname}</ItemDescription>
                   <div className="flex flex-wrap gap-2">
-                    <Badge variant={salon.status === 'active' ? 'positive' : 'outline'} data-testid="console-salon-status">{salon.status === 'active' ? t('statusActive') : t('statusSuspended')}</Badge>
+                    <SalonStatusBadge status={salon.status} />
                     <Badge variant="secondary" className="max-w-full whitespace-normal wrap-anywhere" data-testid="console-salon-plan">{salon.plan ? salon.plan.name : t('noPlan')}</Badge>
                   </div>
                 </ItemContent>
@@ -215,7 +216,7 @@ export function SalonDetail({ id }: { id: string }) {
             <div className="flex min-w-0 flex-col gap-2">
               <CardTitle asChild className="text-workspace-title leading-heading wrap-anywhere"><h1 id="console-salon-name" data-testid="console-salon-name">{salon.name ?? t('notConfigured')}</h1></CardTitle>
               <div className="flex flex-wrap gap-2">
-                <Badge variant={salon.status === 'active' ? 'positive' : 'outline'} data-testid="console-salon-status">{salon.status === 'active' ? t('statusActive') : t('statusSuspended')}</Badge>
+                <SalonStatusBadge status={salon.status} />
                 <Badge variant="secondary" className="max-w-full whitespace-normal wrap-anywhere" data-testid="console-salon-plan">{salon.plan ? t('planLabel', { name: salon.plan.name, key: salon.plan.key }) : t('noPlan')}</Badge>
               </div>
             </div>
@@ -238,6 +239,8 @@ export function SalonDetail({ id }: { id: string }) {
           </section>
         </Card>
       )}
+      {salon && <LifecycleCard salon={salon} onChanged={() => void load()} />}
+      {salon && (salon.status === 'closed' || salon.status === 'deleted') && <ExportCard key={`${salon.id}-export-${salon.version}`} salon={salon} />}
       {salon && <SubscriptionCard salon={salon} onSalonChanged={() => void load()} />}
     </div>
   );

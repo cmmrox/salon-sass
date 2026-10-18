@@ -51,3 +51,12 @@ export function minorUnitsText(minor: number): string {
   const cents = minor % 100;
   return cents ? `${whole}.${String(cents).padStart(2, '0')}` : String(whole);
 }
+
+/** A file size the API gave in bytes, in the locale's units (B, kB, MB), for an export archive. */
+export function formatBytes(bytes: number, locale = 'en-LK'): string {
+  const units = ['byte', 'kilobyte', 'megabyte', 'gigabyte'] as const;
+  let value = bytes;
+  let unit = 0;
+  while (value >= 1000 && unit < units.length - 1) { value /= 1000; unit++; }
+  return new Intl.NumberFormat(locale, { style: 'unit', unit: units[unit], unitDisplay: 'short', maximumFractionDigits: unit === 0 ? 0 : 1 }).format(value);
+}

@@ -170,7 +170,9 @@ describe('the salon directory', () => {
 
 describe('detail pages', () => {
   it('shows a legacy salon\'s unconfigured values as not configured and its hostname to copy', async () => {
-    stubApi((url) => url.startsWith('/operator-web/subscription') ? Response.json({ code: 'not_found' }, { status: 404 }) : Response.json({ id: 's', version: 0, name: null, slug: 'legacy', hostname: 'legacy.localhost', status: 'active', country: null, currency: null, timeZone: 'Asia/Colombo', defaultLanguage: null, contactEmail: null, contactPhone: null, address: null, plan: null, ownerEmail: null, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z' }));
+    stubApi((url) => url.startsWith('/operator-web/subscription') ? Response.json({ code: 'not_found' }, { status: 404 })
+      : url.startsWith('/operator-web/lifecycle') ? Response.json({ items: [], page: 0, size: 10, total: 0 })
+        : Response.json({ id: 's', version: 0, name: null, slug: 'legacy', hostname: 'legacy.localhost', status: 'active', country: null, currency: null, timeZone: 'Asia/Colombo', defaultLanguage: null, contactEmail: null, contactPhone: null, address: null, plan: null, ownerEmail: null, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', closedAt: null, deleteAt: null, deletedAt: null }));
     renderWithMessages(<SalonDetail id="s" />);
     expect(await screen.findByTestId('console-salon-name')).toHaveTextContent('Not configured');
     expect(screen.getByTestId('console-salon-country')).toHaveTextContent('Not configured');

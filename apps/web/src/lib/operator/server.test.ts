@@ -148,3 +148,35 @@ describe('the console BFF', () => {
     expect(r.status).toBe(503);
   });
 });
+
+describe('the console BFF lifecycle actions (F03-S03)', () => {
+  const signedIn = 'salon_operator_access=private-operator-access';
+  it('forwards suspend, reactivate and close with only their fields', async () => {
+    for (const [action, method, path] of [['salon-suspend', 'POST', 'suspension'], ['salon-reactivate', 'DELETE', 'suspension'], ['salon-close', 'POST', 'closure']] as const) {
+      calls = [];
+      const r = await run(request(action, { cookies: signedIn, body: { id: UUID, version: 3, reason: 'A reason long enough', confirmSlug: 'alpha', extra: 'dropped' } }), action);
+      expect(r.status).toBe(200);
+      const upstream = calls.find((call) => call.path === `/api/v1/operator/salons/${UUID}/${path}`)!;
+      expect(upstream.method).toBe(method);
+      expect(JSON.parse(upstream.body)).toEqual(action === 'salon-close' ? { version: 3, confirmSlug: 'alpha', reason: 'A reason long enough' } : { version: 3, reason: 'A reason long enough' });
+    }
+  });
+
+  it('reads the history and export, and refuses a malformed salon id before any upstream call', async () => {
+    for (const action of ['lifecycle', 'export', 'export-archive']) {
+      calls = [];
+      expect((await run(request(action, { method: 'GET', cookies: signedIn, query: '?id=nope' }), action)).status).toBe(400);
+      expect(calls.filter((call) => call.path.includes('/salons/'))).toEqual([]);
+    }
+    const r = await run(request('lifecycle', { method: 'GET', cookies: signedIn, query: `?id=${UUID}&page=1&size=10` }), 'lifecycle');
+    expect(r.status).toBe(200);
+    expect(calls.at(-1)!.path).toBe(`/api/v1/operator/salons/${UUID}/lifecycle?page=1&size=10`);
+  });
+
+  it('passes a refused archive through as its code', async () => {
+    answer = (call) => call.path === '/api/v1/operator/me' ? { status: 200, data: principal } : { status: 409, data: { code: 'invalid_state' } };
+    const r = await run(request('export-archive', { method: 'GET', cookies: signedIn, query: `?id=${UUID}` }), 'export-archive');
+    expect(r.status).toBe(409);
+    expect((await r.json()).code).toBe('invalid_state');
+  });
+});
