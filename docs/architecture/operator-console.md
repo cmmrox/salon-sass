@@ -306,6 +306,18 @@ Deletion that fails part-way resumes on the next run and never deletes another s
 | --- | --- | --- |
 | `operator.salon.suspend`, `operator.salon.close`, `operator.export.read` | yes | no |
 
+As built (F03-S03, decision 052): the exporter/eraser contract lives in `shared`, because platform
+already depends on identity and branding; each module registers both for its tenant tables, and a
+test fails when a table with `tenant_id` is unregistered. Module erasers are guarded database
+functions that refuse a salon not closed for 30 days. A trigger forbids reopening a closed salon,
+changing a retired slug or removing a `deleted` tombstone. Deletion waits while an export is being
+built. The export-ready email uses its own `platform-email` outbox channel, the only one still
+delivered for a closed salon, with its link encrypted in the outbox; the Owner's page at
+`/exports#<token>` on the platform host reads `GET /api/v1/exports/{token}/metadata` and the archive,
+and request logs and traces show the token as `{token}`. Closure instants keep millisecond
+precision. The local reset uses the owning role's connection in the `local` profile only; the
+runtime platform role has no delete rights on billing or audit.
+
 ## Support sessions (F03-S04)
 
 **Grant.** An operator with `operator.support.start` starts a support session for one salon with
