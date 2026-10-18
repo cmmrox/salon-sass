@@ -163,3 +163,142 @@ F03-S01's lead handoff adds actual variable names, role/pool setup, bootstrap/fi
 console URLs to the environment document after the implementation reports them. Local startup
 and the local stack must provision required roles/secrets without resetting retained data. Nothing
 in this policy creates a real environment, sends a real message or approves commercial terms.
+
+## Subscriptions, invoices and entitlements (F03-S02)
+
+The owner set these billing terms on 2026-10-18 (decision 049). They are operating terms for the
+platform's own subscription billing, not published commercial tiers: D-06 (pricing and packaging)
+stays open, and no tier, list price or discount is inferred from the BRD's commercial hypothesis.
+
+**Price.** Plans stay immutable and unpriced. Each subscription carries an operator-entered monthly
+amount in the salon's currency, as an integer in minor units (0–100,000,000; LKR has two minor
+digits like every supported currency). The amount is required when a salon is created from S02
+onwards and when a subscription is started for an existing salon. A changed amount applies from
+the next invoice; an issued invoice never changes.
+
+**Cycle.** A new salon starts a 14-day trial at its creation instant. The first invoice is issued
+at trial end, and one invoice per calendar month after that, anchored to the trial-end instant in
+the salon's time zone (a 31st anchor falls on the month's last day). Billing is monthly only.
+Every invoice is due 7 days after issue. Existing synthetic salons without a subscription are
+`unbilled`: fully usable, shown as having no subscription, and billed only after an Admin starts
+one (which begins its own 14-day trial).
+
+**States.** A subscription is `trialing`, `active` (no unpaid invoice past due), `past_due` (an
+invoice unpaid after its due instant) or `read_only` (an invoice still unpaid 14 days after its
+due instant). Paying every overdue invoice returns `past_due` or `read_only` to `active` at once.
+State changes are applied by an idempotent platform job that compares instants with the
+application clock, and also immediately after a payment is recorded. No transition is skipped or
+repeated when the job runs late, twice or concurrently.
+
+**Payment.** A subscription's payment method is `card` (a recurring charge through the platform
+billing provider) or `bank_transfer`. The billing provider is an interface with a local fake whose
+outcome a loopback hook can set; no real provider is chosen while D-06 is open, and nothing charges
+a real card. A charge is attempted when an invoice is issued, and retried on each reminder day
+while unpaid; each attempt carries a stable idempotency key, so a repeated or late provider result
+pays an invoice at most once. Provider results arrive as signed events with unique ids; a repeated
+event id is acknowledged without effect, and an event for an unknown or already-paid invoice is
+recorded without changing it. An Admin records a bank transfer against one open invoice with its
+reference, the exact amount and the received date (not in the future); partial or excess amounts
+are refused. Recording requires an `Idempotency-Key` as in salon creation.
+
+**Reminders.** The salon's Owner contact (the provisioned Owner email) receives an email through
+the outbox's `email` channel: a failed-charge notice after each failed charge, and overdue
+reminders on the due date (if unpaid), 3 days and 10 days after it; then the read-only notice at
+14 days. Each reminder is sent once per invoice and kind, even if the job repeats. Locally the
+`email` channel is a capturing fake, as for `sms` and `whatsapp`; nothing is sent for real.
+
+**Invoices.** An invoice has a platform-wide sequential number (`INV-000001`), the salon, the plan
+key and name at issue, the billing period, amount and currency, issue and due instants, status
+(`open`, `paid`) and its payments (method, reference or provider event, amount, paid instant).
+Invoices and payments are platform records; they are kept after a salon is closed and deleted.
+
+**Read-only.** A `read_only` salon keeps sign-in, MFA, session renewal, sign-out, password change
+and customer privacy rights, and every read. Every other tenant mutation answers 403
+`salon_read_only` before any change. The tenant registry carries the access state, changed only
+by billing and lifecycle transitions and read on every request; nothing caches it.
+
+**Entitlements.** Platform exposes one public entitlements facade that other modules call inside
+their own transactions: the plan's limits and features, and the salon's current usage. Staff seats
+count active staff accounts, enforced by identity on staff creation (409 `entitlement_exceeded`
+naming the limit); branches, message allowance, custom domain and dedicated app are enforced by
+the features that create those things (F04, F11, F16) through the same facade. An Admin may move a
+salon to another plan; the move is refused with 409 `entitlement_exceeded` when current usage
+exceeds the new plan's limits. Staff of the salon read their entitlements and subscription state
+from the API; nothing in a client is the source of an entitlement.
+
+| Permission | `OPERATOR_ADMIN` | `OPERATOR_SUPPORT` |
+| --- | --- | --- |
+| `operator.billing.read` (subscription, invoices) | yes | no |
+| `operator.billing.manage` (start subscription, amount, method, plan move, record transfer) | yes | no |
+
+## Suspension, closure, export and retention (F03-S03)
+
+**Suspension.** An Admin suspends a salon with a reason (10–500 characters). A suspended salon
+behaves as decision 027 and 032 describe: 403 `salon_suspended` on every salon endpoint, the web's
+"temporarily unavailable" page, waiting messages and skipped jobs. Its staff and customer sessions
+are refused while suspended, not revoked. Billing continues to issue invoices and record payments.
+Reactivation (with a reason) returns the salon to the access state its billing implies (`active`,
+or `read_only` if an invoice is that overdue). Suspending a suspended salon, or reactivating an
+active one, is 409 `invalid_state` with no change.
+
+**Closure.** An Admin closes a salon by typing its slug to confirm, with a reason. Closure is
+irreversible. A closed salon answers 404 `not_found` on its hostname as if it did not exist, its
+sessions and pending outbox messages are cancelled, its jobs stop and billing stops (open invoices
+stay open as records; no new invoice is issued). Its slug is retired: it is never reusable.
+
+**Export.** Closure schedules a full export of the salon's tenant data in the same transaction. A
+platform job builds one ZIP archive containing a JSON file per tenant table, written by each
+owning module through a registered exporter, with a manifest of tables, row counts, the salon's
+profile and the export instant. Secrets (password hashes, MFA secrets, token or challenge hashes,
+encrypted delivery payloads) are excluded and the manifest says so. The archive is stored encrypted
+at rest in a platform table (no object storage exists yet; decision 049), with a SHA-256 checksum.
+When it is ready the Owner contact receives an email with a download link valid until deletion;
+the link carries a 256-bit token stored only as a hash, opens a platform-host download page and
+each download is audited. An Admin may download the same archive from the console. Exporters for
+tables added by later features are part of those features' definition of done.
+
+**Retention.** Tenant data is deleted 30 days after closure by an idempotent platform job: every
+tenant row of the salon through each owning module's registered eraser, its brand, outbox messages,
+jobs, audit entries and the export archive. The tenant registry row remains as a `deleted`
+tombstone with its retired slug and timestamps; platform audit, invoices and payments remain.
+Deletion that fails part-way resumes on the next run and never deletes another salon's rows.
+
+| Permission | `OPERATOR_ADMIN` | `OPERATOR_SUPPORT` |
+| --- | --- | --- |
+| `operator.salon.suspend`, `operator.salon.close`, `operator.export.read` | yes | no |
+
+## Support sessions (F03-S04)
+
+**Grant.** An operator with `operator.support.start` starts a support session for one salon with
+a reason (10–500 characters) and a duration of 5–120 minutes (default 30). One operator has at
+most one active session per salon (409 `support_session_active`). A session is refused for a
+suspended or closed salon. The session ends at its expiry, when the operator ends it, when an
+Admin revokes it in the console or when the salon's Owner revokes it in the workspace; every end
+takes effect on the next request.
+
+**Entry.** Starting a session returns a single-use entry code valid for 60 seconds, bound to the
+session. The console opens `https://<slug>.<platform>/workspace/support#<code>`; the fragment never
+reaches a server or a log. The page removes it from the address at once and posts it to the salon
+host's BFF, which exchanges it with the API for a support credential and keeps that credential in
+host-only HttpOnly cookies named `salon_support_{access,session}`. The exchange applies the exact
+Origin and Fetch Metadata checks. A consumed, expired or foreign-salon code issues nothing.
+
+**Authority.** The support credential has kind `support`, issuer `salon-support`, the salon as its
+only tenant, the session's expiry and no refresh. It reads what the salon's Owner can read through
+the existing staff read endpoints and workspace pages, and nothing else: every mutation answers
+403 `support_read_only`, and operator, customer and other salons' endpoints refuse it. It never
+becomes a staff session and never reveals passwords, MFA material or tokens.
+
+**Audit.** The salon's audit trail records the session's start (operator display name, reason,
+expiry), its end and how it ended, and every API request made under it (method, route template,
+outcome, time). The Owner and Manager see these entries in the workspace audit list; the Owner
+sees active and past sessions on a Support access page and may revoke an active one. The platform
+audit records the same start, end and revocation. Operator email addresses are not shown to salons.
+
+| Permission | `OPERATOR_ADMIN` | `OPERATOR_SUPPORT` |
+| --- | --- | --- |
+| `operator.salon.read` (directory and detail, to choose a salon) | yes | yes, from S04 |
+| `operator.support.start`, ending one's own session | no | yes |
+| `operator.support.read`, `operator.support.revoke` (every session) | yes | no |
+
+Reproducing what a customer sees in the customer app (NFR-20's customer half) waits for F15.
