@@ -157,7 +157,7 @@ test(`${id(9)} Expiry, operator end, Admin revoke and Owner revoke each end supp
     ['admin revoke', async s => { expect((await operator.endSupport(await operator.renew(admin), s.id)).status()).toBe(204); }],
     ['owner revoke', async s => {
       const ownerNow = await identity.login(target.salon, owner.account);
-      expect([200, 204]).toContain((await onSalonHost(identity, target.salon, 'DELETE', `${SUPPORT.salonSessions}/${s.id}`, ownerNow.tokens)).status());
+      expect((await onSalonHost(identity, target.salon, 'DELETE', `${SUPPORT.salonSessions}/${s.id}`, ownerNow.tokens)).status(), 'Owner revoke').toBe(204);
     }],
     ['expiry', async () => { await clock.advance(5 * 60_000 + 1_000); }],
   ];
@@ -188,7 +188,7 @@ test(`${id(11)} The salon audit shows start, every request and end to Owner and 
   const tokens = await enter(operator, session.entryCode, target.salon);
   for (let n = 0; n < 3; n++) expect((await reads(identity, target.salon, tokens)).status()).toBe(200);
   await operatorProblem(await onSalonHost(identity, target.salon, 'POST', '/api/v1/identity/staff', tokens, syntheticAccount('MANAGER')), 403, 'support_read_only');
-  expect([200, 204]).toContain((await onSalonHost(identity, target.salon, 'DELETE', `${SUPPORT.salonSessions}/${session.id}`, owner.tokens)).status());
+  expect((await onSalonHost(identity, target.salon, 'DELETE', `${SUPPORT.salonSessions}/${session.id}`, owner.tokens)).status(), 'Owner revoke').toBe(204);
   const audit = async (tokens: Tokens, salon: Salon) => onSalonHost(identity, salon, 'GET', '/api/v1/identity/audit?size=100', tokens);
   const readers: { role: Role; tokens: Tokens }[] = [{ role: 'OWNER', tokens: owner.tokens }];
   for (const role of ROLES.filter(r => r !== 'OWNER')) readers.push({ role, tokens: (await identity.staff(target.salon, role)).tokens });
@@ -232,7 +232,7 @@ test(`${id(12)} The Owner lists and revokes the salon's support sessions and oth
   const text = JSON.stringify(listed.items);
   for (const value of [a.account.displayName, b.account.displayName, REASON]) expect(text).toContain(value);
   for (const value of [a.account.email, b.account.email]) expect(text, 'no operator email').not.toContain(value);
-  expect([200, 204]).toContain((await onSalonHost(identity, target.salon, 'DELETE', `${SUPPORT.salonSessions}/${active.id}`, owner.tokens)).status());
+  expect((await onSalonHost(identity, target.salon, 'DELETE', `${SUPPORT.salonSessions}/${active.id}`, owner.tokens)).status(), 'Owner revoke').toBe(204);
   await operatorProblem(await reads(identity, target.salon, tokens), 401, 'invalid_session');
 });
 

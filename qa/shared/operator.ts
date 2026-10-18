@@ -612,7 +612,7 @@ export class Operator {
   }
   /** The support access token from a successful exchange, as `Tokens` for the identity helpers. */
   async supportCredential(response: APIResponse): Promise<Tokens> {
-    expect([200, 201], 'the exchange issued a credential').toContain(response.status());
+    expect(response.status(), 'the exchange issued a credential (200, S04 spec)').toBe(200);
     const body = await response.json() as Record<string, unknown>;
     const field = pendingS04('credentialField');
     const access = field.split('.').reduce<unknown>((v, k) => (v as Record<string, unknown> | undefined)?.[k], body);

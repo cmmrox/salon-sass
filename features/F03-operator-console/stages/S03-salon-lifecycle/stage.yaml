@@ -266,8 +266,22 @@ verification:
     covers:
     - TC-F03-S03-001
     - TC-F03-S03-003
+    - TC-F03-S03-004
     - TC-F03-S03-005
     - TC-F03-S03-013
+  - id: export-retention
+    tool: playwright
+    file: qa/api/F03/S03-export-retention.spec.ts
+    project: api
+    covers:
+    - TC-F03-S03-006
+    - TC-F03-S03-007
+    - TC-F03-S03-008
+    - TC-F03-S03-009
+    - TC-F03-S03-010
+    - TC-F03-S03-011
+    - TC-F03-S03-012
+    - TC-F03-S03-014
   manual: []
   deferred: []
 evidence:
