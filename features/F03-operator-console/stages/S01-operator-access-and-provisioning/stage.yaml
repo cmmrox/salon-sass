@@ -442,6 +442,24 @@ verification:
     file: qa/checks/F03/S01-build-artifacts.sh
     covers:
     - TC-F03-S01-040
+  - id: console-screens
+    tool: playwright
+    file: qa/web/F03/S01-console-screens.spec.ts
+    project: web
+    covers:
+    - TC-F03-S01-032
+    - TC-F03-S01-033
+    - TC-F03-S01-034
+    - TC-F03-S01-035
+  - id: console-security
+    tool: playwright
+    file: qa/web/F03/S01-console-security.spec.ts
+    project: web
+    covers:
+    - TC-F03-S01-005
+    - TC-F03-S01-030
+    - TC-F03-S01-031
+    - TC-F03-S01-038
   manual: []
   deferred: []
 evidence:

@@ -376,6 +376,16 @@ verification:
     project: api
     covers:
     - TC-F03-S02-023
+  - id: billing-screens
+    tool: playwright
+    file: qa/web/F03/S02-billing-screens.spec.ts
+    project: web
+    covers:
+    - TC-F03-S02-021
+    - TC-F03-S02-024
+    - TC-F03-S02-025
+    - TC-F03-S02-026
+    - TC-F03-S02-027
   manual: []
   deferred: []
 evidence:
