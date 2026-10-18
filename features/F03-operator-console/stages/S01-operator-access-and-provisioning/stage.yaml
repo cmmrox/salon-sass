@@ -336,7 +336,7 @@ cases:
   covers:
   - AC-18
 - id: TC-F03-S01-035
-  title: Support sees salon directory access only, and Admin sees only Salons, Plans and Sign out
+  title: Each operator role sees exactly its console navigation and Support no management actions
   type: permissions
   priority: high
   covers:

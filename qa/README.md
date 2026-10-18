@@ -70,13 +70,18 @@ no remote database or application hook is involved.
 
 ## F03 preparation (during the build)
 
-F03 automation was prepared against the approved stage specs before the stages closed and has not
-been executed. `qa/shared/operator.ts` holds the operator fixtures; every path, schema name or
-header the specs leave to a stage handoff (local `/local/operator` hooks, generated schema names,
-the provider signature header) is in its `PENDING` map and is confirmed at `feature-verify`. A
-missing hook stops a test with an `ENVIRONMENT:` message rather than a product failure. Every F03
-test ends with the S03 local reset hook, which removes salons created after the synthetic
-baseline, resets hook-created operators, returns the test clock to real time and reschedules
-pushed-ahead jobs, so F01/F02 fixture guards and regression run unchanged afterwards. Browser,
-shell and journey files named as planned in the F03 `cases.md` files are written at feature-verify
-from the handoffs' test ids.
+F03 automation was prepared during the build and has not been executed. `qa/shared/operator.ts`
+holds the operator fixtures; `CONTRACT` holds what the S01-S03 handoffs named (local
+`/local/operator` hooks and bodies, generated schema names, the provider signature header), and
+`PENDING_S04` what the S04 handoff still has to name (schema names, credential shape, list filter
+names, the entry BFF action, test ids). A missing hook or an unnamed S04 value stops a test with an
+`ENVIRONMENT:` message rather than a product failure. `qa/shared/billing.ts` drives billing through
+the test clock and the run-job hook, `qa/shared/console-browser.ts` bridges real operator
+credentials into the console, `qa/shared/zip.ts` reads export archives and
+`qa/shared/product-logs.ts` searches the local API and web logs from an offset. Every F03 test
+ends by disarming the one-shot job faults and calling the S03 local reset
+(`POST /local/operator/reset`), which removes salons created after the synthetic baseline, resets
+hook-created operators, returns the test clock to real time and reschedules pushed-ahead jobs, so
+F01/F02 fixture guards and regression run unchanged afterwards. The shell checks in
+`qa/checks/F03/` start separate API processes from the built jar on a free port with jobs and
+outbox delivery off, so they never act on the running product's data.
