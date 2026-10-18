@@ -34,7 +34,7 @@ class SalonSupportController {
     }
 
     @GetMapping
-    ResponseEntity<SupportSessions.SalonSessionPage> list(
+    ResponseEntity<SupportSessions.SalonSupportSessionPage> listSalonSupportSessions(
             @Parameter(schema = @Schema(type = "integer", minimum = "0", maximum = "100000", defaultValue = "0"))
             @RequestParam(required = false) String page,
             @Parameter(schema = @Schema(type = "integer", minimum = "1", maximum = "100", defaultValue = "20"))
@@ -44,7 +44,7 @@ class SalonSupportController {
     }
 
     @DeleteMapping("/{id}")
-    ResponseEntity<Void> revoke(@PathVariable String id) {
+    ResponseEntity<Void> revokeSalonSupportSession(@PathVariable String id) {
         UUID session;
         try {
             session = UUID.fromString(id);

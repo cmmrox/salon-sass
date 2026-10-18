@@ -63,25 +63,25 @@ public class SupportSessions implements SupportCredentials {
     }
 
     @Schema(requiredProperties = {"id", "expiresAt", "entryCode", "entryUrl", "codeExpiresAt"})
-    public record Entry(UUID id, Instant expiresAt,
+    public record SupportEntry(UUID id, Instant expiresAt,
             @Schema(description = "Single-use; exchanged once on the salon's host within 60 seconds") String entryCode,
             @Schema(description = "The salon's workspace support entry page with the code in its fragment") String entryUrl,
             Instant codeExpiresAt) {
     }
 
     @Schema(requiredProperties = {"id", "slug", "name", "hostname"})
-    public record SalonRef(UUID id, String slug,
+    public record SupportSalonRef(UUID id, String slug,
             @Schema(types = {"string", "null"}, requiredMode = Schema.RequiredMode.REQUIRED) String name,
             String hostname) {
     }
 
     @Schema(requiredProperties = {"id", "displayName"})
-    public record OperatorRef(UUID id, String displayName) {
+    public record SupportOperatorRef(UUID id, String displayName) {
     }
 
     @Schema(requiredProperties = {"id", "salon", "operator", "reason", "startedAt", "expiresAt", "endedAt", "endedBy",
         "state"})
-    public record SessionView(UUID id, SalonRef salon, OperatorRef operator, String reason, Instant startedAt,
+    public record SupportSessionView(UUID id, SupportSalonRef salon, SupportOperatorRef operator, String reason, Instant startedAt,
             Instant expiresAt,
             @Schema(types = {"string", "null"}, format = "date-time", requiredMode = Schema.RequiredMode.REQUIRED)
             Instant endedAt,
@@ -91,12 +91,12 @@ public class SupportSessions implements SupportCredentials {
     }
 
     @Schema(requiredProperties = {"items", "page", "size", "total"})
-    public record SessionPage(List<SessionView> items, int page, int size, long total) {
+    public record SupportSessionPage(List<SupportSessionView> items, int page, int size, long total) {
     }
 
     @Schema(requiredProperties = {"id", "operatorName", "reason", "startedAt", "expiresAt", "endedAt", "endedBy",
         "state"})
-    public record SalonSession(UUID id, String operatorName, String reason, Instant startedAt, Instant expiresAt,
+    public record SalonSupportSession(UUID id, String operatorName, String reason, Instant startedAt, Instant expiresAt,
             @Schema(types = {"string", "null"}, format = "date-time", requiredMode = Schema.RequiredMode.REQUIRED)
             Instant endedAt,
             @Schema(types = {"string", "null"}, allowableValues = {"operator", "admin", "owner", "expiry"},
@@ -105,11 +105,11 @@ public class SupportSessions implements SupportCredentials {
     }
 
     @Schema(requiredProperties = {"items", "page", "size", "total"})
-    public record SalonSessionPage(List<SalonSession> items, int page, int size, long total) {
+    public record SalonSupportSessionPage(List<SalonSupportSession> items, int page, int size, long total) {
     }
 
     @Schema(requiredProperties = {"accessToken", "sessionId", "issuedAt", "expiresAt"})
-    public record Credential(String accessToken, UUID sessionId, Instant issuedAt, Instant expiresAt) {
+    public record SupportCredential(String accessToken, UUID sessionId, Instant issuedAt, Instant expiresAt) {
     }
 
     /** One stored session row. */
@@ -157,7 +157,7 @@ public class SupportSessions implements SupportCredentials {
      * 409 {@code invalid_state}; a second open session of the same operator for the same salon is 409
      * {@code support_session_active}.
      */
-    public Entry start(UUID salonId, StartInput input) {
+    public SupportEntry start(UUID salonId, StartInput input) {
         List<FieldProblem> errors = new ArrayList<>();
         String reason = LifecycleTerms.reason(input.reason());
         if (reason == null) {
@@ -218,7 +218,7 @@ public class SupportSessions implements SupportCredentials {
     }
 
     /** A fresh entry code for the operator's own open session. */
-    public Entry entryCode(UUID sessionId) {
+    public SupportEntry entryCode(UUID sessionId) {
         return work.run(() -> {
             var operator = access.require(OperatorPermission.SUPPORT_START);
             Row row = find(sessionId).filter(each -> each.operatorId().equals(operator.id()))
@@ -256,7 +256,7 @@ public class SupportSessions implements SupportCredentials {
     }
 
     /** Admin: every session; Support: its own. Filtered by salon and state. */
-    public SessionPage list(Paging paging, String salonFilter, String stateFilter) {
+    public SupportSessionPage list(Paging paging, String salonFilter, String stateFilter) {
         List<FieldProblem> errors = new ArrayList<>();
         UUID salon = null;
         if (salonFilter != null) {
@@ -292,31 +292,31 @@ public class SupportSessions implements SupportCredentials {
             List<Object> page = new ArrayList<>(java.util.Arrays.asList(args));
             page.add(paging.size());
             page.add(paging.offset());
-            List<SessionView> items = database.jdbc().query(SELECT + where
+            List<SupportSessionView> items = database.jdbc().query(SELECT + where
                     + " ORDER BY s.started_at DESC, s.id LIMIT ? OFFSET ?", (row, n) -> view(row(row), now), page.toArray());
             Long total = database.jdbc().queryForObject("SELECT count(*) FROM support_session s" + where, Long.class, args);
-            return new SessionPage(items, paging.page(), paging.size(), total == null ? 0 : total);
+            return new SupportSessionPage(items, paging.page(), paging.size(), total == null ? 0 : total);
         });
     }
 
     // --- the salon's Owner, on the salon's host -----------------------------------------------------
 
     /** The salon's own sessions, active and past, for its Owner. */
-    public SalonSessionPage salonList(Paging paging) {
+    public SalonSupportSessionPage salonList(Paging paging) {
         UUID salonId = TenantContext.require().id();
         identity.require("support.manage");
         return database.inTransaction(status -> {
             Instant now = clock.instant();
-            List<SalonSession> items = database.jdbc().query(SELECT
+            List<SalonSupportSession> items = database.jdbc().query(SELECT
                     + " WHERE s.salon_id = ? ORDER BY s.started_at DESC, s.id LIMIT ? OFFSET ?", (row, n) -> {
                         Row each = row(row);
-                        SessionView view = view(each, now);
-                        return new SalonSession(each.id(), each.operatorName(), each.reason(), each.startedAt(),
+                        SupportSessionView view = view(each, now);
+                        return new SalonSupportSession(each.id(), each.operatorName(), each.reason(), each.startedAt(),
                                 each.expiresAt(), view.endedAt(), view.endedBy(), view.state());
                     }, salonId, paging.size(), paging.offset());
             Long total = database.jdbc().queryForObject("SELECT count(*) FROM support_session WHERE salon_id = ?",
                     Long.class, salonId);
-            return new SalonSessionPage(items, paging.page(), paging.size(), total == null ? 0 : total);
+            return new SalonSupportSessionPage(items, paging.page(), paging.size(), total == null ? 0 : total);
         });
     }
 
@@ -339,12 +339,12 @@ public class SupportSessions implements SupportCredentials {
      * the salon it was issued for, while its session is open. Anything else is 401 {@code invalid_code}
      * and issues nothing.
      */
-    public Credential enter(String code) {
+    public SupportCredential enter(String code) {
         UUID salonId = TenantContext.require().id();
         if (!SupportCrypto.codeShaped(code)) {
             throw new ApplicationProblemException(401, ErrorCode.INVALID_CODE);
         }
-        Credential credential = database.inTransaction(status -> {
+        SupportCredential credential = database.inTransaction(status -> {
             Instant now = clock.instant();
             Timestamp at = Timestamp.from(now);
             // Consumed in one statement: of simultaneous exchanges exactly one updates the row.
@@ -371,7 +371,7 @@ public class SupportSessions implements SupportCredentials {
             after.put("expiresAt", expiresAt.toString());
             salonAudit(salonId, "support", sessionId.toString(), "support.session_entered", sessionId, null, after, now);
             Instant issued = now.truncatedTo(java.time.temporal.ChronoUnit.SECONDS);
-            return new Credential(crypto.credential(salonId, sessionId, operatorId, issued, expiresAt), sessionId, issued,
+            return new SupportCredential(crypto.credential(salonId, sessionId, operatorId, issued, expiresAt), sessionId, issued,
                     expiresAt);
         });
         if (credential == null) {
@@ -466,12 +466,12 @@ public class SupportSessions implements SupportCredentials {
                 row.getString("ended_by"));
     }
 
-    private SessionView view(Row row, Instant now) {
+    private SupportSessionView view(Row row, Instant now) {
         boolean open = row.open(now);
         Instant endedAt = row.endedAt() != null ? row.endedAt() : open ? null : row.expiresAt();
         String endedBy = row.endedBy() != null ? row.endedBy() : open ? null : "expiry";
-        return new SessionView(row.id(), new SalonRef(row.salonId(), row.slug(), row.salonName(), hostname(row.slug())),
-                new OperatorRef(row.operatorId(), row.operatorName()), row.reason(), row.startedAt(), row.expiresAt(),
+        return new SupportSessionView(row.id(), new SupportSalonRef(row.salonId(), row.slug(), row.salonName(), hostname(row.slug())),
+                new SupportOperatorRef(row.operatorId(), row.operatorName()), row.reason(), row.startedAt(), row.expiresAt(),
                 endedAt, endedBy, open ? ACTIVE : ENDED);
     }
 
@@ -530,7 +530,7 @@ public class SupportSessions implements SupportCredentials {
                 (row, n) -> row.getBoolean(1), operatorId).stream().findFirst().orElse(false));
     }
 
-    private Entry code(UUID sessionId, String slug, Instant expiresAt, Instant now) {
+    private SupportEntry code(UUID sessionId, String slug, Instant expiresAt, Instant now) {
         String code = crypto.newCode();
         Instant codeExpiresAt = now.plus(CODE_LIFE);
         database.jdbc().update("""
@@ -538,7 +538,7 @@ public class SupportSessions implements SupportCredentials {
                 VALUES (?, ?, ?, ?, ?, ?)
                 """, UUID.randomUUID(), sessionId, SupportCrypto.codeHash(code), Timestamp.from(codeExpiresAt),
                 Timestamp.from(now), Timestamp.from(now));
-        return new Entry(sessionId, expiresAt, code, String.format(linkOrigin, hostname(slug)) + "/workspace/support#" + code,
+        return new SupportEntry(sessionId, expiresAt, code, String.format(linkOrigin, hostname(slug)) + "/workspace/support#" + code,
                 codeExpiresAt);
     }
 

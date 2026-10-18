@@ -243,32 +243,6 @@
         ],
         "type": "object"
       },
-      "Credential": {
-        "properties": {
-          "accessToken": {
-            "type": "string"
-          },
-          "expiresAt": {
-            "format": "date-time",
-            "type": "string"
-          },
-          "issuedAt": {
-            "format": "date-time",
-            "type": "string"
-          },
-          "sessionId": {
-            "format": "uuid",
-            "type": "string"
-          }
-        },
-        "required": [
-          "accessToken",
-          "expiresAt",
-          "issuedAt",
-          "sessionId"
-        ],
-        "type": "object"
-      },
       "CustomerCodeVerificationRequest": {
         "properties": {
           "challengeId": {
@@ -392,38 +366,6 @@
           "plan",
           "subscription",
           "usage"
-        ],
-        "type": "object"
-      },
-      "Entry": {
-        "properties": {
-          "codeExpiresAt": {
-            "format": "date-time",
-            "type": "string"
-          },
-          "entryCode": {
-            "description": "Single-use; exchanged once on the salon's host within 60 seconds",
-            "type": "string"
-          },
-          "entryUrl": {
-            "description": "The salon's workspace support entry page with the code in its fragment",
-            "type": "string"
-          },
-          "expiresAt": {
-            "format": "date-time",
-            "type": "string"
-          },
-          "id": {
-            "format": "uuid",
-            "type": "string"
-          }
-        },
-        "required": [
-          "codeExpiresAt",
-          "entryCode",
-          "entryUrl",
-          "expiresAt",
-          "id"
         ],
         "type": "object"
       },
@@ -1011,22 +953,6 @@
           "mfaEnabled",
           "permissions",
           "role"
-        ],
-        "type": "object"
-      },
-      "OperatorRef": {
-        "properties": {
-          "displayName": {
-            "type": "string"
-          },
-          "id": {
-            "format": "uuid",
-            "type": "string"
-          }
-        },
-        "required": [
-          "displayName",
-          "id"
         ],
         "type": "object"
       },
@@ -2000,33 +1926,6 @@
         ],
         "type": "object"
       },
-      "SalonRef": {
-        "properties": {
-          "hostname": {
-            "type": "string"
-          },
-          "id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "name": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "slug": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "hostname",
-          "id",
-          "name",
-          "slug"
-        ],
-        "type": "object"
-      },
       "SalonRequest": {
         "additionalProperties": false,
         "properties": {
@@ -2105,94 +2004,6 @@
         ],
         "type": "object"
       },
-      "SalonSession": {
-        "properties": {
-          "endedAt": {
-            "format": "date-time",
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "endedBy": {
-            "enum": [
-              "operator",
-              "admin",
-              "owner",
-              "expiry"
-            ],
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "expiresAt": {
-            "format": "date-time",
-            "type": "string"
-          },
-          "id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "operatorName": {
-            "type": "string"
-          },
-          "reason": {
-            "type": "string"
-          },
-          "startedAt": {
-            "format": "date-time",
-            "type": "string"
-          },
-          "state": {
-            "enum": [
-              "active",
-              "ended"
-            ],
-            "type": "string"
-          }
-        },
-        "required": [
-          "endedAt",
-          "endedBy",
-          "expiresAt",
-          "id",
-          "operatorName",
-          "reason",
-          "startedAt",
-          "state"
-        ],
-        "type": "object"
-      },
-      "SalonSessionPage": {
-        "properties": {
-          "items": {
-            "items": {
-              "$ref": "#/components/schemas/SalonSession"
-            },
-            "type": "array"
-          },
-          "page": {
-            "format": "int32",
-            "type": "integer"
-          },
-          "size": {
-            "format": "int32",
-            "type": "integer"
-          },
-          "total": {
-            "format": "int64",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "items",
-          "page",
-          "size",
-          "total"
-        ],
-        "type": "object"
-      },
       "SalonSubscriptionRequest": {
         "additionalProperties": false,
         "properties": {
@@ -2266,36 +2077,7 @@
         ],
         "type": "object"
       },
-      "SessionPage": {
-        "properties": {
-          "items": {
-            "items": {
-              "$ref": "#/components/schemas/SessionView"
-            },
-            "type": "array"
-          },
-          "page": {
-            "format": "int32",
-            "type": "integer"
-          },
-          "size": {
-            "format": "int32",
-            "type": "integer"
-          },
-          "total": {
-            "format": "int64",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "items",
-          "page",
-          "size",
-          "total"
-        ],
-        "type": "object"
-      },
-      "SessionView": {
+      "SalonSupportSession": {
         "properties": {
           "endedAt": {
             "format": "date-time",
@@ -2324,14 +2106,11 @@
             "format": "uuid",
             "type": "string"
           },
-          "operator": {
-            "$ref": "#/components/schemas/OperatorRef"
+          "operatorName": {
+            "type": "string"
           },
           "reason": {
             "type": "string"
-          },
-          "salon": {
-            "$ref": "#/components/schemas/SalonRef"
           },
           "startedAt": {
             "format": "date-time",
@@ -2350,12 +2129,63 @@
           "endedBy",
           "expiresAt",
           "id",
-          "operator",
+          "operatorName",
           "reason",
-          "salon",
           "startedAt",
           "state"
         ],
+        "type": "object"
+      },
+      "SalonSupportSessionPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SalonSupportSession"
+            },
+            "type": "array"
+          },
+          "page": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "size": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "total": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "page",
+          "size",
+          "total"
+        ],
+        "type": "object"
+      },
+      "SessionView": {
+        "properties": {
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "current": {
+            "type": "boolean"
+          },
+          "deviceLabel": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
         "type": "object"
       },
       "SignIn": {
@@ -2620,6 +2450,199 @@
           "state",
           "trialEndsAt",
           "version"
+        ],
+        "type": "object"
+      },
+      "SupportCredential": {
+        "properties": {
+          "accessToken": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "issuedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "sessionId": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "accessToken",
+          "expiresAt",
+          "issuedAt",
+          "sessionId"
+        ],
+        "type": "object"
+      },
+      "SupportEntry": {
+        "properties": {
+          "codeExpiresAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "entryCode": {
+            "description": "Single-use; exchanged once on the salon's host within 60 seconds",
+            "type": "string"
+          },
+          "entryUrl": {
+            "description": "The salon's workspace support entry page with the code in its fragment",
+            "type": "string"
+          },
+          "expiresAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "codeExpiresAt",
+          "entryCode",
+          "entryUrl",
+          "expiresAt",
+          "id"
+        ],
+        "type": "object"
+      },
+      "SupportOperatorRef": {
+        "properties": {
+          "displayName": {
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "displayName",
+          "id"
+        ],
+        "type": "object"
+      },
+      "SupportSalonRef": {
+        "properties": {
+          "hostname": {
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "slug": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "hostname",
+          "id",
+          "name",
+          "slug"
+        ],
+        "type": "object"
+      },
+      "SupportSessionPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SupportSessionView"
+            },
+            "type": "array"
+          },
+          "page": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "size": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "total": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "page",
+          "size",
+          "total"
+        ],
+        "type": "object"
+      },
+      "SupportSessionView": {
+        "properties": {
+          "endedAt": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "endedBy": {
+            "enum": [
+              "operator",
+              "admin",
+              "owner",
+              "expiry"
+            ],
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "expiresAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "operator": {
+            "$ref": "#/components/schemas/SupportOperatorRef"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "salon": {
+            "$ref": "#/components/schemas/SupportSalonRef"
+          },
+          "startedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "active",
+              "ended"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "endedAt",
+          "endedBy",
+          "expiresAt",
+          "id",
+          "operator",
+          "reason",
+          "salon",
+          "startedAt",
+          "state"
         ],
         "type": "object"
       },
@@ -3300,7 +3323,7 @@
     },
     "/api/v1/identity/sessions/{id}": {
       "delete": {
-        "operationId": "revoke_1",
+        "operationId": "revoke",
         "parameters": [
           {
             "in": "path",
@@ -4699,7 +4722,7 @@
     },
     "/api/v1/operator/salons/{id}/support-sessions": {
       "post": {
-        "operationId": "start",
+        "operationId": "startSupportSession",
         "parameters": [
           {
             "in": "path",
@@ -4725,7 +4748,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Entry"
+                  "$ref": "#/components/schemas/SupportEntry"
                 }
               }
             },
@@ -4961,7 +4984,7 @@
     },
     "/api/v1/operator/support-sessions": {
       "get": {
-        "operationId": "list_1",
+        "operationId": "listSupportSessions",
         "parameters": [
           {
             "in": "query",
@@ -5012,7 +5035,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SessionPage"
+                  "$ref": "#/components/schemas/SupportSessionPage"
                 }
               }
             },
@@ -5036,7 +5059,7 @@
     },
     "/api/v1/operator/support-sessions/{id}": {
       "delete": {
-        "operationId": "end_1",
+        "operationId": "endSupportSession",
         "parameters": [
           {
             "in": "path",
@@ -5069,7 +5092,7 @@
     },
     "/api/v1/operator/support-sessions/{id}/entry-codes": {
       "post": {
-        "operationId": "entryCode",
+        "operationId": "issueSupportEntryCode",
         "parameters": [
           {
             "in": "path",
@@ -5085,7 +5108,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Entry"
+                  "$ref": "#/components/schemas/SupportEntry"
                 }
               }
             },
@@ -5294,7 +5317,7 @@
     },
     "/api/v1/salon/support-sessions": {
       "get": {
-        "operationId": "list",
+        "operationId": "listSalonSupportSessions",
         "parameters": [
           {
             "in": "query",
@@ -5324,7 +5347,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SalonSessionPage"
+                  "$ref": "#/components/schemas/SalonSupportSessionPage"
                 }
               }
             },
@@ -5348,7 +5371,7 @@
     },
     "/api/v1/salon/support-sessions/{id}": {
       "delete": {
-        "operationId": "revoke",
+        "operationId": "revokeSalonSupportSession",
         "parameters": [
           {
             "in": "path",
@@ -5381,7 +5404,7 @@
     },
     "/api/v1/support/entry": {
       "post": {
-        "operationId": "enter",
+        "operationId": "enterSupportSession",
         "requestBody": {
           "content": {
             "application/json": {
@@ -5397,7 +5420,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Credential"
+                  "$ref": "#/components/schemas/SupportCredential"
                 }
               }
             },
@@ -5421,7 +5444,7 @@
     },
     "/api/v1/support/session": {
       "delete": {
-        "operationId": "end",
+        "operationId": "endCurrentSupportSession",
         "responses": {
           "200": {
             "description": "OK"

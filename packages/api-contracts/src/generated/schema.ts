@@ -190,7 +190,7 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        delete: operations["revoke_1"];
+        delete: operations["revoke"];
         options?: never;
         head?: never;
         patch?: never;
@@ -590,7 +590,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["start"];
+        post: operations["startSupportSession"];
         delete?: never;
         options?: never;
         head?: never;
@@ -668,7 +668,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["list_1"];
+        get: operations["listSupportSessions"];
         put?: never;
         post?: never;
         delete?: never;
@@ -687,7 +687,7 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        delete: operations["end_1"];
+        delete: operations["endSupportSession"];
         options?: never;
         head?: never;
         patch?: never;
@@ -702,7 +702,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["entryCode"];
+        post: operations["issueSupportEntryCode"];
         delete?: never;
         options?: never;
         head?: never;
@@ -781,7 +781,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["list"];
+        get: operations["listSalonSupportSessions"];
         put?: never;
         post?: never;
         delete?: never;
@@ -800,7 +800,7 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        delete: operations["revoke"];
+        delete: operations["revokeSalonSupportSession"];
         options?: never;
         head?: never;
         patch?: never;
@@ -815,7 +815,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["enter"];
+        post: operations["enterSupportSession"];
         delete?: never;
         options?: never;
         head?: never;
@@ -832,7 +832,7 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        delete: operations["end"];
+        delete: operations["endCurrentSupportSession"];
         options?: never;
         head?: never;
         patch?: never;
@@ -911,15 +911,6 @@ export interface components {
             professionalGrant?: boolean;
             role: string;
         };
-        Credential: {
-            accessToken: string;
-            /** Format: date-time */
-            expiresAt: string;
-            /** Format: date-time */
-            issuedAt: string;
-            /** Format: uuid */
-            sessionId: string;
-        };
         CustomerCodeVerificationRequest: {
             /** Format: uuid */
             challengeId: string;
@@ -951,18 +942,6 @@ export interface components {
             plan: components["schemas"]["PlanRef"];
             subscription: components["schemas"]["SubscriptionState"];
             usage: components["schemas"]["Usage"];
-        };
-        Entry: {
-            /** Format: date-time */
-            codeExpiresAt: string;
-            /** @description Single-use; exchanged once on the salon's host within 60 seconds */
-            entryCode: string;
-            /** @description The salon's workspace support entry page with the code in its fragment */
-            entryUrl: string;
-            /** Format: date-time */
-            expiresAt: string;
-            /** Format: uuid */
-            id: string;
         };
         EntryRequest: {
             code: string;
@@ -1146,11 +1125,6 @@ export interface components {
             mfaEnabled: boolean;
             permissions: string[];
             role: string;
-        };
-        OperatorRef: {
-            displayName: string;
-            /** Format: uuid */
-            id: string;
         };
         OperatorRefreshRequest: {
             refreshToken: string;
@@ -1452,13 +1426,6 @@ export interface components {
             /** Format: int64 */
             total: number;
         };
-        SalonRef: {
-            hostname: string;
-            /** Format: uuid */
-            id: string;
-            name: string | null;
-            slug: string;
-        };
         SalonRequest: {
             address?: string | null;
             contactEmail?: string | null;
@@ -1474,31 +1441,6 @@ export interface components {
             slug: string;
             subscription: components["schemas"]["SalonSubscriptionRequest"];
             timeZone: string;
-        };
-        SalonSession: {
-            /** Format: date-time */
-            endedAt: string | null;
-            /** @enum {string|null} */
-            endedBy: "operator" | "admin" | "owner" | "expiry" | null;
-            /** Format: date-time */
-            expiresAt: string;
-            /** Format: uuid */
-            id: string;
-            operatorName: string;
-            reason: string;
-            /** Format: date-time */
-            startedAt: string;
-            /** @enum {string} */
-            state: "active" | "ended";
-        };
-        SalonSessionPage: {
-            items: components["schemas"]["SalonSession"][];
-            /** Format: int32 */
-            page: number;
-            /** Format: int32 */
-            size: number;
-            /** Format: int64 */
-            total: number;
         };
         SalonSubscriptionRequest: {
             /** Format: int64 */
@@ -1518,8 +1460,24 @@ export interface components {
             /** @enum {string} */
             status: "active" | "suspended" | "closed" | "deleted";
         };
-        SessionPage: {
-            items: components["schemas"]["SessionView"][];
+        SalonSupportSession: {
+            /** Format: date-time */
+            endedAt: string | null;
+            /** @enum {string|null} */
+            endedBy: "operator" | "admin" | "owner" | "expiry" | null;
+            /** Format: date-time */
+            expiresAt: string;
+            /** Format: uuid */
+            id: string;
+            operatorName: string;
+            reason: string;
+            /** Format: date-time */
+            startedAt: string;
+            /** @enum {string} */
+            state: "active" | "ended";
+        };
+        SalonSupportSessionPage: {
+            items: components["schemas"]["SalonSupportSession"][];
             /** Format: int32 */
             page: number;
             /** Format: int32 */
@@ -1529,20 +1487,13 @@ export interface components {
         };
         SessionView: {
             /** Format: date-time */
-            endedAt: string | null;
-            /** @enum {string|null} */
-            endedBy: "operator" | "admin" | "owner" | "expiry" | null;
+            createdAt?: string;
+            current?: boolean;
+            deviceLabel?: string;
             /** Format: date-time */
-            expiresAt: string;
+            expiresAt?: string;
             /** Format: uuid */
-            id: string;
-            operator: components["schemas"]["OperatorRef"];
-            reason: string;
-            salon: components["schemas"]["SalonRef"];
-            /** Format: date-time */
-            startedAt: string;
-            /** @enum {string} */
-            state: "active" | "ended";
+            id?: string;
         };
         SignIn: {
             /** Format: uuid */
@@ -1619,6 +1570,65 @@ export interface components {
             trialEndsAt: string;
             /** Format: int64 */
             version: number;
+        };
+        SupportCredential: {
+            accessToken: string;
+            /** Format: date-time */
+            expiresAt: string;
+            /** Format: date-time */
+            issuedAt: string;
+            /** Format: uuid */
+            sessionId: string;
+        };
+        SupportEntry: {
+            /** Format: date-time */
+            codeExpiresAt: string;
+            /** @description Single-use; exchanged once on the salon's host within 60 seconds */
+            entryCode: string;
+            /** @description The salon's workspace support entry page with the code in its fragment */
+            entryUrl: string;
+            /** Format: date-time */
+            expiresAt: string;
+            /** Format: uuid */
+            id: string;
+        };
+        SupportOperatorRef: {
+            displayName: string;
+            /** Format: uuid */
+            id: string;
+        };
+        SupportSalonRef: {
+            hostname: string;
+            /** Format: uuid */
+            id: string;
+            name: string | null;
+            slug: string;
+        };
+        SupportSessionPage: {
+            items: components["schemas"]["SupportSessionView"][];
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            size: number;
+            /** Format: int64 */
+            total: number;
+        };
+        SupportSessionView: {
+            /** Format: date-time */
+            endedAt: string | null;
+            /** @enum {string|null} */
+            endedBy: "operator" | "admin" | "owner" | "expiry" | null;
+            /** Format: date-time */
+            expiresAt: string;
+            /** Format: uuid */
+            id: string;
+            operator: components["schemas"]["SupportOperatorRef"];
+            reason: string;
+            salon: components["schemas"]["SupportSalonRef"];
+            /** Format: date-time */
+            startedAt: string;
+            /** @enum {string} */
+            state: "active" | "ended";
         };
         Tokens: {
             /** Format: date-time */
@@ -2103,7 +2113,7 @@ export interface operations {
             };
         };
     };
-    revoke_1: {
+    revoke: {
         parameters: {
             query?: never;
             header?: never;
@@ -3118,7 +3128,7 @@ export interface operations {
             };
         };
     };
-    start: {
+    startSupportSession: {
         parameters: {
             query?: never;
             header?: never;
@@ -3139,7 +3149,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Entry"];
+                    "application/json": components["schemas"]["SupportEntry"];
                 };
             };
             /** @description Any error: problem details with a stable `code`. */
@@ -3319,7 +3329,7 @@ export interface operations {
             };
         };
     };
-    list_1: {
+    listSupportSessions: {
         parameters: {
             query?: {
                 page?: number;
@@ -3339,7 +3349,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SessionPage"];
+                    "application/json": components["schemas"]["SupportSessionPage"];
                 };
             };
             /** @description Any error: problem details with a stable `code`. */
@@ -3353,7 +3363,7 @@ export interface operations {
             };
         };
     };
-    end_1: {
+    endSupportSession: {
         parameters: {
             query?: never;
             header?: never;
@@ -3382,7 +3392,7 @@ export interface operations {
             };
         };
     };
-    entryCode: {
+    issueSupportEntryCode: {
         parameters: {
             query?: never;
             header?: never;
@@ -3399,7 +3409,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Entry"];
+                    "application/json": components["schemas"]["SupportEntry"];
                 };
             };
             /** @description Any error: problem details with a stable `code`. */
@@ -3561,7 +3571,7 @@ export interface operations {
             };
         };
     };
-    list: {
+    listSalonSupportSessions: {
         parameters: {
             query?: {
                 page?: number;
@@ -3579,7 +3589,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SalonSessionPage"];
+                    "application/json": components["schemas"]["SalonSupportSessionPage"];
                 };
             };
             /** @description Any error: problem details with a stable `code`. */
@@ -3593,7 +3603,7 @@ export interface operations {
             };
         };
     };
-    revoke: {
+    revokeSalonSupportSession: {
         parameters: {
             query?: never;
             header?: never;
@@ -3622,7 +3632,7 @@ export interface operations {
             };
         };
     };
-    enter: {
+    enterSupportSession: {
         parameters: {
             query?: never;
             header?: never;
@@ -3641,7 +3651,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Credential"];
+                    "application/json": components["schemas"]["SupportCredential"];
                 };
             };
             /** @description Any error: problem details with a stable `code`. */
@@ -3655,7 +3665,7 @@ export interface operations {
             };
         };
     };
-    end: {
+    endCurrentSupportSession: {
         parameters: {
             query?: never;
             header?: never;

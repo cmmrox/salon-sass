@@ -42,25 +42,25 @@ class OperatorSupportController {
     }
 
     @PostMapping(path = "/salons/{id}/support-sessions", consumes = MediaType.APPLICATION_JSON_VALUE)
-    ResponseEntity<SupportSessions.Entry> start(@PathVariable String id, @RequestBody StartRequest request) {
+    ResponseEntity<SupportSessions.SupportEntry> startSupportSession(@PathVariable String id, @RequestBody StartRequest request) {
         return ResponseEntity.status(201).cacheControl(CacheControl.noStore()).body(sessions.start(
                 OperatorRequests.id(id), new SupportSessions.StartInput(request.reason(), request.durationMinutes())));
     }
 
     @PostMapping("/support-sessions/{id}/entry-codes")
-    ResponseEntity<SupportSessions.Entry> entryCode(@PathVariable String id) {
+    ResponseEntity<SupportSessions.SupportEntry> issueSupportEntryCode(@PathVariable String id) {
         return ResponseEntity.status(201).cacheControl(CacheControl.noStore())
                 .body(sessions.entryCode(OperatorRequests.id(id)));
     }
 
     @DeleteMapping("/support-sessions/{id}")
-    ResponseEntity<Void> end(@PathVariable String id) {
+    ResponseEntity<Void> endSupportSession(@PathVariable String id) {
         sessions.end(OperatorRequests.id(id));
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/support-sessions")
-    ResponseEntity<SupportSessions.SessionPage> list(
+    ResponseEntity<SupportSessions.SupportSessionPage> listSupportSessions(
             @Parameter(schema = @Schema(type = "integer", minimum = "0", maximum = "100000", defaultValue = "0"))
             @RequestParam(required = false) String page,
             @Parameter(schema = @Schema(type = "integer", minimum = "1", maximum = "100", defaultValue = "20"))

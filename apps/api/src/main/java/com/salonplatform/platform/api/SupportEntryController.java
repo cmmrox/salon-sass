@@ -37,12 +37,12 @@ class SupportEntryController {
     }
 
     @PostMapping(path = "/entry", consumes = MediaType.APPLICATION_JSON_VALUE)
-    ResponseEntity<SupportSessions.Credential> enter(@RequestBody EntryRequest request) {
+    ResponseEntity<SupportSessions.SupportCredential> enterSupportSession(@RequestBody EntryRequest request) {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(sessions.enter(request.code()));
     }
 
     @DeleteMapping("/session")
-    ResponseEntity<Void> end() {
+    ResponseEntity<Void> endCurrentSupportSession() {
         sessions.endCurrent();
         return ResponseEntity.noContent().build();
     }
