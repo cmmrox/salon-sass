@@ -56,9 +56,10 @@ after closure while the platform keeps its billing and audit records.
   `read_only` when an invoice is 14 or more days overdue; existing unexpired sessions work again.
   Suspending a suspended salon or reactivating a non-suspended one is 409 `invalid_state`. (PLT-06)
 - AC-3: While suspended, invoices are still issued and payments recorded; customer messages wait
-  unattempted and tenant jobs are skipped, then resume on reactivation. (PLT-06)
-- AC-4: Closing requires the exact slug typed as confirmation and a reason; a wrong slug or a
-  closed salon is refused without change. After closure the salon's hostname answers 404 as an
+  unattempted and tenant jobs are skipped, then resume on reactivation, as observed through the
+  salon background-state hook. (PLT-06)
+- AC-4: Closing requires the exact slug typed as confirmation and a reason; a wrong slug is a 400
+  field error on `confirmSlug` and closing a closed salon is 409 `invalid_state`, without change. After closure the salon's hostname answers 404 as an
   unknown salon, its sessions and pending messages are cancelled, its jobs stop, no further invoice
   is issued, and its slug cannot be used for a new salon. (PLT-06)
 - AC-5: Closure schedules one export; the job produces a ZIP whose manifest lists every tenant

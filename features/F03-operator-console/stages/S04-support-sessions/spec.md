@@ -62,8 +62,8 @@ Support, which holds only until S04 is built. Feature QA tests the final behavio
   salon and the console; a salon staff credential cannot start or use support sessions, and an
   operator credential alone cannot open any workspace. (PLT-07)
 - AC-5: At expiry, or when the operator ends the session, an Admin revokes it in the console or the
-  Owner revokes it in the workspace, the next support request fails and the workspace leaves the
-  support view; an ended session cannot be renewed or reopened with its code. (PLT-07)
+  Owner revokes it in the workspace, the next support request fails with 401 `invalid_session` and the workspace
+  leaves the support view; an ended session cannot be renewed or reopened with its code. (PLT-07)
 - AC-6: The salon's audit list shows the session start (operator display name, reason, expiry),
   every API request under it (method, route template, outcome, time) and its end with how it ended,
   to the Owner and Manager and no other role, and never in another salon; no operator email or

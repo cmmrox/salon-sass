@@ -76,8 +76,8 @@ subscription state and the invoices in the workspace.
   signed event and a late success after a manual payment each pay an invoice at most once and
   record no second payment; invalid signatures are refused without effect. (PLT-05)
 - AC-6: An Admin records a bank transfer with reference, exact amount and received date against an
-  open invoice; it becomes `paid`. A partial or excess amount, a future date, a paid invoice or an
-  invoice of another salon is refused without change, and repeating the same Idempotency-Key and
+  open invoice; it becomes `paid`. A partial or excess amount or a future date is a 400 field error,
+  a paid invoice is 409 `invalid_state` and an unknown invoice id is 404, each without change, and repeating the same Idempotency-Key and
   input returns the original result with one payment and one audit. (PLT-05)
 - AC-7: An invoice unpaid at its due instant makes the subscription `past_due`; reminder emails go
   to the Owner contact once each on the due date, 3 days and 10 days after it; at 14 days after the
