@@ -39,7 +39,8 @@ after closure while the platform keeps its billing and audit records.
 - Web: console lifecycle actions on the salon detail with confirmation sheets, lifecycle history,
   export status and download; the platform-host download page.
 - Local hooks (`operator-console.md`, "Local test hooks"): running the export and deletion jobs now
-  and interrupting either part-way; the export email through S02's email capture.
+  and interrupting either part-way; a salon's background state; a local reset to the synthetic
+  baseline; the export email through S02's email capture.
 
 ## Out of scope
 
