@@ -84,7 +84,7 @@ cases:
   covers:
   - AC-6
 - id: TC-F03-S02-012
-  title: Partial, excess, future-dated, paid or foreign invoice transfers are refused without change
+  title: Partial, excess, future-dated or paid-invoice transfers are refused without change
   type: payment-integrity
   priority: critical
   covers:
@@ -195,7 +195,15 @@ verification:
   - pnpm -r test
   - pnpm --filter @salon/web build
   - pnpm contracts:check
-  automation: []
+  automation:
+  - id: billing-access
+    tool: playwright
+    file: qa/api/F03/S02-billing-access.spec.ts
+    project: api
+    covers:
+    - TC-F03-S02-001
+    - TC-F03-S02-002
+    - TC-F03-S02-022
   manual: []
   deferred: []
 evidence:

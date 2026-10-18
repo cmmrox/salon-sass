@@ -126,7 +126,16 @@ verification:
   - pnpm -r test
   - pnpm --filter @salon/web build
   - pnpm contracts:check
-  automation: []
+  automation:
+  - id: lifecycle
+    tool: playwright
+    file: qa/api/F03/S03-lifecycle.spec.ts
+    project: api
+    covers:
+    - TC-F03-S03-001
+    - TC-F03-S03-003
+    - TC-F03-S03-005
+    - TC-F03-S03-013
   manual: []
   deferred: []
 evidence:

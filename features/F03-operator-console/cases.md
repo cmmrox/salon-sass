@@ -44,8 +44,10 @@ the instant under test; clock-moving tests run serially and restore real time.
 Preparation notes for feature-verify:
 
 - F02's clock fixture guard (`qa/shared/identity-clock-cleanup.ts`) requires exactly the three fixed
-  salons, so F03 clock cases use their own clock helper; the lead decides how future scheduler
-  occurrences left by F03's month-scale clock moves are cleaned up before other features run.
+  salons, so F03 clock cases use their own clock helper, and every F03 test ends with the S03 local
+  reset hook: it removes salons created after the synthetic baseline, resets hook-created operators,
+  returns the clock to real time and reschedules job occurrences pushed ahead, so F01/F02 guards and
+  regression run unchanged afterwards.
 - Hook paths, signature header, BFF action names and test ids are taken from the stage handoffs;
   until then the shared helpers keep them in one map each, marked as awaiting the handoff.
 

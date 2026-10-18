@@ -72,14 +72,14 @@ Every case id here is declared under `cases:` in the yaml beside it, and the rev
 - **Type:** functional
 - **Priority:** high
 - **Covers:** AC-3
-- **Performed as:** Run-job and email-capture hooks; synthetic Admin
+- **Performed as:** Run-job, email-capture and salon background-state hooks; synthetic Admin
 - **Preconditions:** A suspended salon at an invoice issue instant; a pending customer message created before suspension
 - **Steps:**
   1. Run the billing job; record a transfer
-  2. Advance past the message's due time; read its attempts
-  3. Reactivate and observe the message and tenant jobs
-- **Expected:** The invoice is issued and the payment recorded while suspended; the message has no attempt and the tenant jobs did not run while suspended; after reactivation the message is attempted and jobs resume.
-- **Automation:** `qa/api/F03/S03-lifecycle.spec.ts` (planned; written at feature-verify once the S03 handoff says how a suspended salon's pending message and tenant jobs are observed)
+  2. Advance past the message's due time; read the salon background state
+  3. Reactivate, advance again and read the background state
+- **Expected:** The invoice is issued and the payment recorded while suspended; the background state shows the message waiting (not delivered) and the due tenant jobs skipped, none run; after reactivation the message is delivered and the jobs run.
+- **Automation:** `qa/api/F03/S03-lifecycle.spec.ts` (planned; written at feature-verify once the S03 handoff names the background-state hook)
 
 ### TC-F03-S03-005 Closure needs the exact slug and a reason and then removes the salon from its hostname
 
@@ -93,7 +93,7 @@ Every case id here is declared under `cases:` in the yaml beside it, and the rev
   2. Close with the exact slug and a reason; close again
   3. Call the salon's hostname with and without the Owner's credential; compare with an unknown slug's answer
   4. Advance past the next invoice instant and run the billing job; create a salon with the retired slug
-- **Expected:** Wrong slug and missing reason are refused with no change; closure answers 200 `status:closed` with `closedAt` and `deleteAt` = closedAt + 30 days; a second close is refused; the hostname answers exactly as an unknown salon (404 `not_found`); the session and pending message are cancelled; no new invoice; the slug is 409 `slug_taken`.
+- **Expected:** The wrong and upper-case slugs are 400 naming `confirmSlug`, the missing reason 400 naming `reason`, each with no change; closure answers 200 `status:closed` with `closedAt` and `deleteAt` = closedAt + 30 days; a second close is 409 `invalid_state`; the hostname answers exactly as an unknown salon (404 `not_found`); the session and pending message are cancelled; no new invoice; the slug is 409 `slug_taken`.
 - **Automation:** `qa/api/F03/S03-lifecycle.spec.ts` (drafted during preparation against the specified routes; hook paths confirmed against the S03 handoff at feature-verify)
 
 ### TC-F03-S03-006 The export contains every tenant table with exactly that salon's rows

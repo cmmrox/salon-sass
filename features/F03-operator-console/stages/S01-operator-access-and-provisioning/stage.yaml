@@ -268,7 +268,50 @@ verification:
   - pnpm -r test
   - pnpm --filter @salon/web build
   - pnpm contracts:check
-  automation: []
+  automation:
+  - id: operator-access
+    tool: playwright
+    file: qa/api/F03/S01-operator-access.spec.ts
+    project: api
+    covers:
+    - TC-F03-S01-001
+    - TC-F03-S01-002
+    - TC-F03-S01-003
+    - TC-F03-S01-004
+    - TC-F03-S01-005
+    - TC-F03-S01-006
+    - TC-F03-S01-007
+    - TC-F03-S01-008
+    - TC-F03-S01-009
+    - TC-F03-S01-011
+    - TC-F03-S01-012
+    - TC-F03-S01-013
+    - TC-F03-S01-015
+    - TC-F03-S01-016
+  - id: provisioning
+    tool: playwright
+    file: qa/api/F03/S01-provisioning.spec.ts
+    project: api
+    covers:
+    - TC-F03-S01-010
+    - TC-F03-S01-018
+    - TC-F03-S01-019
+    - TC-F03-S01-020
+    - TC-F03-S01-021
+    - TC-F03-S01-022
+    - TC-F03-S01-023
+    - TC-F03-S01-024
+    - TC-F03-S01-025
+    - TC-F03-S01-026
+  - id: operator-runtime
+    tool: playwright
+    file: qa/api/F03/S01-runtime.spec.ts
+    project: api
+    covers:
+    - TC-F03-S01-014
+    - TC-F03-S01-017
+    - TC-F03-S01-037
+    - TC-F03-S01-039
   manual: []
   deferred: []
 evidence:

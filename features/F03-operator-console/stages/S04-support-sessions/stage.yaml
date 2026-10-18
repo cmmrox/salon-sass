@@ -126,7 +126,18 @@ verification:
   - pnpm -r test
   - pnpm --filter @salon/web build
   - pnpm contracts:check
-  automation: []
+  automation:
+  - id: support-sessions
+    tool: playwright
+    file: qa/api/F03/S04-support-sessions.spec.ts
+    project: api
+    covers:
+    - TC-F03-S04-001
+    - TC-F03-S04-002
+    - TC-F03-S04-003
+    - TC-F03-S04-004
+    - TC-F03-S04-009
+    - TC-F03-S04-014
   manual: []
   deferred: []
 evidence:

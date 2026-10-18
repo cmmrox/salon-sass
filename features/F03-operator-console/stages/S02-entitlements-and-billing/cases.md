@@ -176,17 +176,17 @@ Every case id here is declared under `cases:` in the yaml beside it, and the rev
 - **Expected:** 201, the invoice `paid` with one transfer payment; the replay returns the original with no second payment or audit; the changed body is 409 `idempotency_conflict`.
 - **Automation:** `qa/api/F03/S02-billing-cycle.spec.ts` (drafted during preparation against the specified routes; hook paths confirmed against the S02 handoff at feature-verify)
 
-### TC-F03-S02-012 Partial, excess, future-dated, paid or foreign invoice transfers are refused without change
+### TC-F03-S02-012 Partial, excess, future-dated or paid-invoice transfers are refused without change
 
 - **Type:** payment-integrity
 - **Priority:** critical
 - **Covers:** AC-6
 - **Performed as:** Synthetic Admin
-- **Preconditions:** Two salons each with an open invoice; one paid invoice
+- **Preconditions:** A salon with an open invoice and a paid invoice; a second salon with an open invoice
 - **Steps:**
   1. Record transfers: amount - 1, amount + 1, received tomorrow, against the paid invoice, an unknown invoice id, missing reference, missing key
   2. Read both salons' invoices and payments
-- **Expected:** Each is refused and nothing changes on either salon: amount, date, reference and key rows are 400 `bad_request` naming the field (the key row names the header); the unknown id is 404 `not_found`; the paid-invoice and other-salon rows use the code the lead confirms (the spec names none, and the route carries no salon).
+- **Expected:** Amount, date, reference and key rows are 400 `bad_request` naming the field (the key row names the header); the paid invoice is 409 `invalid_state`; the unknown id is 404 `not_found`; nothing changes on either salon.
 - **Automation:** `qa/api/F03/S02-billing-cycle.spec.ts` (drafted during preparation against the specified routes; hook paths confirmed against the S02 handoff at feature-verify)
 
 ### TC-F03-S02-013 Due, reminder and read-only boundaries change state and send each notice exactly once
