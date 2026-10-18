@@ -34,9 +34,12 @@ class TenantRegistry implements TenantDirectory, ActiveTenants {
 
     static final String SUSPENDED = "suspended";
 
-    private static final String BY_SLUG = "SELECT id, status, time_zone FROM tenant_by_slug(?)";
+    /** The access state billing sets while an invoice is unpaid 14 days after its due instant (F03-S02). */
+    static final String READ_ONLY = "read_only";
 
-    private static final String BY_ID = "SELECT id, slug, status, time_zone FROM tenant_by_id(?)";
+    private static final String BY_SLUG = "SELECT id, status, time_zone, access_state FROM tenant_by_slug(?)";
+
+    private static final String BY_ID = "SELECT id, slug, status, time_zone, access_state FROM tenant_by_id(?)";
 
     private static final String ACTIVE_IDS = "SELECT id FROM active_tenant_ids()";
 
@@ -61,7 +64,8 @@ class TenantRegistry implements TenantDirectory, ActiveTenants {
                     }
                     UUID id = row.getObject("id", UUID.class);
                     ZoneId zone = timeZoneOf(row);
-                    return statusOf(row.getString("status")).map(status -> new RegisteredTenant(id, status, zone));
+                    boolean readOnly = READ_ONLY.equals(row.getString("access_state"));
+                    return statusOf(row.getString("status")).map(status -> new RegisteredTenant(id, status, zone, readOnly));
                 }
             }
         });
@@ -78,7 +82,7 @@ class TenantRegistry implements TenantDirectory, ActiveTenants {
                         return Optional.empty();
                     }
                     return Optional.of(new CurrentTenant(row.getObject("id", UUID.class), row.getString("slug"),
-                            timeZoneOf(row)));
+                            timeZoneOf(row), READ_ONLY.equals(row.getString("access_state"))));
                 }
             }
         });

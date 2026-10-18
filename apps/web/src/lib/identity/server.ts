@@ -70,7 +70,7 @@ export async function handleIdentity(request: NextRequest, kind: Kind, action: s
   try {
     const host = requestHost(request.headers.get('host'));
     if (!host) return problem('not_found', 404);
-    const reads = ['principal', 'sessions', 'staff', 'audit'];
+    const reads = ['principal', 'sessions', 'staff', 'audit', 'entitlements', 'invoices'];
     if (request.method === 'GET' && !reads.includes(action)) return problem('method_not_allowed', 405);
     if (request.method !== 'GET' && !csrf(request)) return problem('request_rejected', 403);
     const client = createServerApiClient({ hostname: host.hostname });
@@ -109,7 +109,7 @@ export async function handleIdentity(request: NextRequest, kind: Kind, action: s
         return problem('invalid_session', 401, { renewable });
       }
     }
-    const permission: Record<string, string> = { staff: 'staff.list', audit: 'audit.list', 'staff-create': 'staff.manage', 'staff-change': 'staff.manage', 'staff-remove': 'staff.manage', password: 'password.change', 'mfa-start': 'mfa.enroll' };
+    const permission: Record<string, string> = { entitlements: 'entitlement.read', invoices: 'invoice.read', staff: 'staff.list', audit: 'audit.list', 'staff-create': 'staff.manage', 'staff-change': 'staff.manage', 'staff-remove': 'staff.manage', password: 'password.change', 'mfa-start': 'mfa.enroll' };
     if (principal && permission[action] && !principal.permissions.includes(permission[action]!)) return problem('permission_denied', 403);
     if (action === 'principal') return output(principal);
     if (action === 'refresh') return output({ ok: true }); // A competing tab already renewed.
@@ -117,7 +117,9 @@ export async function handleIdentity(request: NextRequest, kind: Kind, action: s
     if (request.method === 'GET') {
       const result = action === 'sessions' ? await client.GET('/api/v1/identity/sessions', { ...options, params: { query } })
         : action === 'staff' ? await client.GET('/api/v1/identity/staff', { ...options, params: { query } })
-        : action === 'audit' ? await client.GET('/api/v1/identity/audit', { ...options, params: { query } }) : null;
+        : action === 'audit' ? await client.GET('/api/v1/identity/audit', { ...options, params: { query } })
+        : action === 'entitlements' ? await client.GET('/api/v1/salon/entitlements', options)
+        : action === 'invoices' ? await client.GET('/api/v1/salon/invoices', { ...options, params: { query: { page, size: 10 } } }) : null;
       if (!result) return problem('not_found', 404);
       return result.data ? output(result.data) : problem(result.error?.code ?? 'service_unavailable', result.response.status, { errors: result.error?.errors });
     }

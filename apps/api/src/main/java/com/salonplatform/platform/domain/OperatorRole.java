@@ -11,7 +11,8 @@ import java.util.Set;
 public enum OperatorRole {
 
     OPERATOR_ADMIN(Set.of(OperatorPermission.SESSION_MANAGE, OperatorPermission.SALON_READ,
-            OperatorPermission.SALON_CREATE, OperatorPermission.PLAN_READ, OperatorPermission.PLAN_CREATE)),
+            OperatorPermission.SALON_CREATE, OperatorPermission.PLAN_READ, OperatorPermission.PLAN_CREATE,
+            OperatorPermission.BILLING_READ, OperatorPermission.BILLING_MANAGE)),
 
     OPERATOR_SUPPORT(Set.of(OperatorPermission.SESSION_MANAGE));
 

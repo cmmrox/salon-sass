@@ -31,13 +31,16 @@ public class StaffAccess {
     private final IdentityCrypto crypto;
     private final Clock clock;
     private final AuditTrail audit;
+    private final com.salonplatform.shared.entitlements.SalonEntitlements entitlements;
 
     public StaffAccess(
             IdentityWork identityWork,
             SessionAccess sessionAccess,
             IdentityCrypto crypto,
             Clock clock,
-            AuditTrail audit) {
+            AuditTrail audit,
+            com.salonplatform.shared.entitlements.SalonEntitlements entitlements) {
+        this.entitlements = entitlements;
         this.identityWork = identityWork;
         this.sessionAccess = sessionAccess;
         this.crypto = crypto;
@@ -563,7 +566,36 @@ public class StaffAccess {
         return Map.of("role", a.role, "professionalGrant", a.professionalGrant, "active", a.active);
     }
 
+    /**
+     * Staff seats (PLT-04): active staff accounts may not exceed the plan's limit. Called inside the
+     * salon's identity transaction, which holds the salon's identity lock, so of two simultaneous
+     * creations for the last seat exactly one succeeds; a salon without a plan is not limited.
+     */
+    private void requireStaffSeat() {
+        entitlements
+                .forCurrentSalon()
+                .ifPresent(
+                        limits -> {
+                            long active =
+                                    em.createQuery(
+                                                    "select count(a) from StaffAccount a where"
+                                                            + " a.active=true",
+                                                    Long.class)
+                                            .getSingleResult();
+                            if (active >= limits.staffSeats())
+                                throw com.salonplatform.shared.entitlements.SalonEntitlements
+                                        .exceeded(
+                                                com.salonplatform.shared.entitlements
+                                                        .SalonEntitlements.STAFF_SEATS,
+                                                limits.staffSeats());
+                        });
+    }
+
     private StaffAccount createAccount(StaffInput input) {
+        return createAccount(input, false);
+    }
+
+    private StaffAccount createAccount(StaffInput input, boolean enforceSeats) {
         String email = email(input.email()), mobile = mobile(input.mobile());
         if (email == null && mobile == null) throw field("email", "email or mobile is required");
         StaffRole r = parseRole(input.role());
@@ -580,6 +612,7 @@ public class StaffAccess {
                         .setParameter("mobile", mobile)
                         .getSingleResult()
                 > 0) throw conflict();
+        if (enforceSeats) requireStaffSeat();
         StaffAccount a = new StaffAccount();
         stamp(a);
         a.email = email;
@@ -596,7 +629,7 @@ public class StaffAccess {
         return work(
                 () -> {
                     Auth current = permitted("staff.manage");
-                    StaffAccount a = createAccount(input);
+                    StaffAccount a = createAccount(input, true);
                     event(
                             new Actor(ActorKind.STAFF, current.account().id.toString()),
                             "staff_created",
@@ -835,6 +868,10 @@ public class StaffAccess {
                         UUID.fromString("b2b2b2b2-0000-4000-8000-000000000002"),
                         "gamma",
                         UUID.fromString("c3c3c3c3-0000-4000-8000-000000000003"));
-        if (!tenant.id().equals(ids.get(tenant.slug()))) throw new NotFoundException();
+        // Local fixtures work for every local salon (F03-S02: provisioned salons too, so read-only
+        // rights can be checked on a billed salon); a salon named like a fixed synthetic salon
+        // must still be that salon.
+        if (ids.containsKey(tenant.slug()) && !tenant.id().equals(ids.get(tenant.slug())))
+            throw new NotFoundException();
     }
 }

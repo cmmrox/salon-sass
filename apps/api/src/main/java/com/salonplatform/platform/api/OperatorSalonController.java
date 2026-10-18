@@ -45,15 +45,25 @@ class OperatorSalonController {
         }
     }
 
+    @Schema(additionalProperties = Schema.AdditionalPropertiesValue.FALSE, requiredProperties = {"monthlyAmount",
+        "paymentMethod"})
+    record SalonSubscriptionRequest(@Schema(minimum = "0", maximum = "100000000") Long monthlyAmount,
+            @Schema(allowableValues = {"card", "bank_transfer"}) String paymentMethod) {
+        @JsonAnySetter
+        void unknown(String field, Object ignored) {
+            throw OperatorRequests.unexpected("subscription." + field);
+        }
+    }
+
     @Schema(additionalProperties = Schema.AdditionalPropertiesValue.FALSE, requiredProperties = {"name", "slug",
-        "country", "currency", "timeZone", "defaultLanguage", "planId", "owner"})
+        "country", "currency", "timeZone", "defaultLanguage", "planId", "owner", "subscription"})
     record SalonRequest(@Schema(maxLength = 120) String name, @Schema(minLength = 3, maxLength = 30) String slug,
             @Schema(minLength = 2, maxLength = 2) String country, @Schema(minLength = 3, maxLength = 3) String currency,
             String timeZone, @Schema(allowableValues = {"en", "si", "ta"}) String defaultLanguage,
             @Schema(types = {"string", "null"}, maxLength = 254) String contactEmail,
             @Schema(types = {"string", "null"}, maxLength = 32) String contactPhone,
             @Schema(types = {"string", "null"}, maxLength = 500) String address, UUID planId,
-            SalonOwnerRequest owner) {
+            SalonOwnerRequest owner, SalonSubscriptionRequest subscription) {
         @JsonAnySetter
         void unknown(String field, Object ignored) {
             throw OperatorRequests.unexpected(field);
@@ -85,8 +95,11 @@ class OperatorSalonController {
         SalonRequest r = request;
         SalonProvisioning.OwnerInput owner = r.owner() == null ? null
                 : new SalonProvisioning.OwnerInput(r.owner().name(), r.owner().email(), r.owner().password());
+        SalonProvisioning.SubscriptionInput subscription = r.subscription() == null ? null
+                : new SalonProvisioning.SubscriptionInput(r.subscription().monthlyAmount(), r.subscription().paymentMethod());
         var created = salons.create(key, new SalonProvisioning.SalonInput(r.name(), r.slug(), r.country(), r.currency(),
-                r.timeZone(), r.defaultLanguage(), r.contactEmail(), r.contactPhone(), r.address(), r.planId(), owner));
+                r.timeZone(), r.defaultLanguage(), r.contactEmail(), r.contactPhone(), r.address(), r.planId(), owner,
+                subscription));
         return ResponseEntity.status(HttpStatus.CREATED).cacheControl(CacheControl.noStore()).body(created.salon());
     }
 }

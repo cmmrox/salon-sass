@@ -15,7 +15,7 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 
-export type NavigationItem = { href: string; label: string; testId: string; icon: 'home' | 'account' | 'staff' | 'audit' | 'salons' | 'plans'; current?: boolean; alias?: string };
+export type NavigationItem = { href: string; label: string; testId: string; icon: 'home' | 'account' | 'staff' | 'audit' | 'salons' | 'plans' | 'billing'; current?: boolean; alias?: string };
 
 /** The prototype's own navigation glyphs, drawn in the current text colour. */
 export function NavigationIcon({ icon }: { icon: NavigationItem['icon'] }) {
@@ -27,6 +27,8 @@ export function NavigationIcon({ icon }: { icon: NavigationItem['icon'] }) {
     // The prototype's own list and bars glyphs, for the operator console's salons and plans.
     salons: 'M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01',
     plans: 'M5 20V10M12 20V4M19 20v-7',
+    // The prototype's card glyph (its Payments item), for the workspace's Plan and billing.
+    billing: 'M6 6h12a3 3 0 0 1 3 3v7a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V9a3 3 0 0 1 3-3ZM3 11h18',
   };
   return <svg className="size-icon flex-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={paths[icon]} /></svg>;
 }

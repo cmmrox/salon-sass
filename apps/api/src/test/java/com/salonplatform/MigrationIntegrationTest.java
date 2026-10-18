@@ -38,7 +38,8 @@ class MigrationIntegrationTest {
                         tuple("9", "create customer identity"),
                         tuple("10", "add customer profile"),
                         tuple("11", "create platform operator console"), tuple("12", "create identity owner bootstrap"),
-                        tuple("13", "create branding bootstrap"));
+                        tuple("13", "create branding bootstrap"),
+                        tuple("14", "create subscription billing"));
         assertThat(afterFirstStart).allSatisfy(row -> assertThat(row).containsEntry("success", true));
 
         try (StartedApplication application = database.start()) {

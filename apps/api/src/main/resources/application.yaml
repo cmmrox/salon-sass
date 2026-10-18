@@ -217,3 +217,9 @@ salon.operator:
   encryption-key: ${SALON_OPERATOR_ENCRYPTION_KEY:}
   proxy-key: ${SALON_OPERATOR_PROXY_KEY:}
   fingerprint-key: ${SALON_OPERATOR_FINGERPRINT_KEY:}
+
+salon.billing:
+  # The billing provider's event-signing key; without it there is no provider (D-06 is open).
+  provider-key: ${SALON_BILLING_PROVIDER_KEY:}
+  # Where billing emails link to: the salon's hostname is put in place of %s.
+  link-origin: ${SALON_BILLING_LINK_ORIGIN:https://%s}

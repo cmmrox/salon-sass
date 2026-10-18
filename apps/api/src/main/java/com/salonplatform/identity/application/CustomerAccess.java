@@ -448,6 +448,10 @@ public class CustomerAccess {
                         UUID.fromString("b2b2b2b2-0000-4000-8000-000000000002"),
                         "gamma",
                         UUID.fromString("c3c3c3c3-0000-4000-8000-000000000003"));
-        if (!t.id().equals(ids.get(t.slug()))) throw new NotFoundException();
+        // Local fixtures work for every local salon (F03-S02: provisioned salons too, so read-only
+        // rights can be checked on a billed salon); a salon named like a fixed synthetic salon
+        // must still be that salon.
+        if (ids.containsKey(t.slug()) && !t.id().equals(ids.get(t.slug())))
+            throw new NotFoundException();
     }
 }

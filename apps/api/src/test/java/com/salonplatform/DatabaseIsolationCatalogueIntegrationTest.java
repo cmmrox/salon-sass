@@ -194,10 +194,13 @@ class DatabaseIsolationCatalogueIntegrationTest {
                  WHERE p.pronamespace = 'public'::regnamespace AND p.prosecdef
                 """, TestPostgres.APP_USER, TestPostgres.PLATFORM_USER);
 
+        // F03-S02 adds salon_entitlements(): the current transaction's salon's plan, for the tenant role.
         List<String> tenantPaths = List.of("tenant_by_slug", "tenant_by_id", "active_tenant_ids", "outbox_due",
-                "outbox_backlog", "job_claim", "job_finish");
-        // F03-S01: the module-owned bootstrap functions belong to the platform role alone.
-        List<String> bootstrap = List.of("identity_bootstrap_owner", "branding_bootstrap_brand");
+                "outbox_backlog", "job_claim", "job_finish", "salon_entitlements");
+        // F03-S01: the module-owned bootstrap functions belong to the platform role alone, as do F03-S02's
+        // staff-seat usage count and billing's outbox write.
+        List<String> bootstrap = List.of("identity_bootstrap_owner", "branding_bootstrap_brand",
+                "identity_active_staff_count", "outbox_enqueue_for_salon");
         assertThat(functions).extracting(function -> function.get("name"))
                 .containsExactlyInAnyOrderElementsOf(java.util.stream.Stream.concat(tenantPaths.stream(),
                         bootstrap.stream()).toList());
@@ -233,7 +236,20 @@ class DatabaseIsolationCatalogueIntegrationTest {
                         org.assertj.core.api.Assertions.tuple("operator_refresh_history", "INSERT,SELECT"),
                         org.assertj.core.api.Assertions.tuple("operator_mfa_challenge", "DELETE,INSERT,SELECT,UPDATE"),
                         org.assertj.core.api.Assertions.tuple("operator_mfa_step", "DELETE,INSERT,SELECT"),
-                        org.assertj.core.api.Assertions.tuple("operator_rate_bucket", "DELETE,INSERT,SELECT,UPDATE"));
+                        org.assertj.core.api.Assertions.tuple("operator_rate_bucket", "DELETE,INSERT,SELECT,UPDATE"),
+                        org.assertj.core.api.Assertions.tuple("subscription", "INSERT,SELECT,UPDATE"),
+                        org.assertj.core.api.Assertions.tuple("invoice_number", "SELECT,UPDATE"),
+                        org.assertj.core.api.Assertions.tuple("invoice", "INSERT,SELECT,UPDATE"),
+                        org.assertj.core.api.Assertions.tuple("charge_attempt", "INSERT,SELECT,UPDATE"),
+                        org.assertj.core.api.Assertions.tuple("invoice_payment", "INSERT,SELECT"),
+                        org.assertj.core.api.Assertions.tuple("provider_event", "INSERT,SELECT"),
+                        org.assertj.core.api.Assertions.tuple("billing_reminder", "INSERT,SELECT"));
+        // F03-S02: on the registry it may update only the plan, the access state, the version and the time.
+        List<String> tenantColumns = owner.queryForList("""
+                SELECT column_name FROM information_schema.role_column_grants
+                 WHERE grantee = ? AND table_name = 'tenant' AND privilege_type = 'UPDATE' ORDER BY column_name
+                """, String.class, TestPostgres.PLATFORM_USER);
+        assertThat(tenantColumns).containsExactly("access_state", "plan_id", "updated_at", "version");
     }
 
     /** The product's grants: what the application's role is refused, table by table. */

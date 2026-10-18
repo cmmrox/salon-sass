@@ -76,6 +76,9 @@ describe('the console screens render the shadcn/ui components of the component m
     expect(within(salonSheet).getByTestId('console-plan-id')).toHaveAttribute('data-slot', 'select-trigger');
     expect(within(salonSheet).getByTestId('console-default-language')).toHaveAttribute('data-slot', 'select-trigger');
     expect(within(salonSheet).getByTestId('console-address')).toHaveAttribute('data-slot', 'textarea');
-    expect(salonSheet.querySelectorAll('[data-slot="field-set"]')).toHaveLength(3);
+    // Profile, contact, subscription (F03-S02) and first Owner.
+    expect(salonSheet.querySelectorAll('[data-slot="field-set"]')).toHaveLength(4);
+    expect(within(salonSheet).getByTestId('console-payment-method')).toHaveAttribute('data-slot', 'select-trigger');
+    expect(within(salonSheet).getByTestId('console-monthly-amount')).toHaveAttribute('data-slot', 'input');
   });
 });

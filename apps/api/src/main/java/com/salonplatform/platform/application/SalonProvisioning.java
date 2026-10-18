@@ -59,9 +59,10 @@ public class SalonProvisioning {
     public record SalonPage(List<SalonSummary> items, int page, int size, long total) {
     }
 
-    @Schema(requiredProperties = {"id", "name", "slug", "hostname", "status", "country", "currency", "timeZone",
-        "defaultLanguage", "contactEmail", "contactPhone", "address", "plan", "ownerEmail", "createdAt", "updatedAt"})
-    public record SalonDetail(UUID id,
+    @Schema(requiredProperties = {"id", "version", "name", "slug", "hostname", "status", "country", "currency",
+        "timeZone", "defaultLanguage", "contactEmail", "contactPhone", "address", "plan", "ownerEmail", "createdAt",
+        "updatedAt"})
+    public record SalonDetail(UUID id, long version,
             @Schema(types = {"string", "null"}, requiredMode = Schema.RequiredMode.REQUIRED) String name,
             String slug, String hostname, String status,
             @Schema(types = {"string", "null"}, requiredMode = Schema.RequiredMode.REQUIRED) String country,
@@ -83,9 +84,13 @@ public class SalonProvisioning {
     public record OwnerInput(String name, String email, String password) {
     }
 
+    /** The subscription a new salon starts with (F03-S02): its monthly amount and payment method. */
+    public record SubscriptionInput(Long monthlyAmount, String paymentMethod) {
+    }
+
     public record SalonInput(String name, String slug, String country, String currency, String timeZone,
             String defaultLanguage, String contactEmail, String contactPhone, String address, UUID planId,
-            OwnerInput owner) {
+            OwnerInput owner, SubscriptionInput subscription) {
     }
 
     /** The result of a creation: whether it was a replay, and the nonsecret result. */
@@ -100,12 +105,13 @@ public class SalonProvisioning {
     private final IdentityProvisioning identity;
     private final BrandProvisioning branding;
     private final BootstrapFaults faults;
+    private final BillingLedger ledger;
     private final Clock clock;
     private final String platformDomain;
 
     public SalonProvisioning(PlatformDatabase database, OperatorWork work, OperatorAccess access,
             ProvisioningReceipts receipts, PlatformAudit audit, IdentityProvisioning identity,
-            BrandProvisioning branding, BootstrapFaults faults, Clock clock,
+            BrandProvisioning branding, BootstrapFaults faults, BillingLedger ledger, Clock clock,
             @Value("${salon.platform-domain}") String platformDomain) {
         this.database = database;
         this.work = work;
@@ -115,6 +121,7 @@ public class SalonProvisioning {
         this.identity = identity;
         this.branding = branding;
         this.faults = faults;
+        this.ledger = ledger;
         this.clock = clock;
         this.platformDomain = platformDomain.strip().toLowerCase(Locale.ROOT);
     }
@@ -124,7 +131,7 @@ public class SalonProvisioning {
     }
 
     private static final String SELECT = """
-            SELECT t.id, t.name, t.slug, t.status, t.country, t.currency, t.time_zone, t.default_language,
+            SELECT t.id, t.version, t.name, t.slug, t.status, t.country, t.currency, t.time_zone, t.default_language,
                    t.contact_email, t.contact_phone, t.address, t.owner_email, t.created_at, t.updated_at,
                    p.id AS plan_id, p.key AS plan_key, p.name AS plan_name
               FROM tenant t LEFT JOIN plan p ON p.id = t.plan_id
@@ -136,7 +143,8 @@ public class SalonProvisioning {
     }
 
     private SalonDetail detail(ResultSet row) throws SQLException {
-        return new SalonDetail(row.getObject("id", UUID.class), row.getString("name"), row.getString("slug"),
+        return new SalonDetail(row.getObject("id", UUID.class), row.getLong("version"), row.getString("name"),
+                row.getString("slug"),
                 hostname(row.getString("slug")), row.getString("status"), row.getString("country"),
                 row.getString("currency"), row.getString("time_zone"), row.getString("default_language"),
                 row.getString("contact_email"), row.getString("contact_phone"), row.getString("address"), plan(row),
@@ -204,6 +212,8 @@ public class SalonProvisioning {
         request.put("owner.name", prepared.name());
         request.put("owner.email", prepared.email());
         request.put("owner.password", owner.password());
+        request.put("subscription.monthlyAmount", input.subscription().monthlyAmount());
+        request.put("subscription.paymentMethod", input.subscription().paymentMethod());
         String fingerprint = receipts.fingerprint(ACTION, request);
         try {
             return work.run(() -> {
@@ -233,11 +243,14 @@ public class SalonProvisioning {
                 faults.reached(BootstrapFaults.Step.OWNER);
                 branding.bootstrapBrand(id, (String) profile.get("name"), now);
                 faults.reached(BootstrapFaults.Step.BRAND);
+                ledger.start(ledger.salon(id, false).orElseThrow(), input.subscription().monthlyAmount(),
+                        (String) profile.get("currency"), input.subscription().paymentMethod(), now,
+                        PlatformAudit.OPERATOR, operator.id().toString());
                 Map<String, Object> details = new LinkedHashMap<>();
                 details.put("slug", slug);
                 details.put("planId", planId.toString());
                 details.put("fields", List.of("name", "country", "currency", "timeZone", "defaultLanguage",
-                        "contactEmail", "contactPhone", "address", "owner"));
+                        "contactEmail", "contactPhone", "address", "owner", "subscription"));
                 audit.record(PlatformAudit.OPERATOR, operator.id().toString(), "salon.created", "salon", id.toString(),
                         details, now);
                 SalonCreated result = new SalonCreated(id, slug, hostname(slug), planId, now);
@@ -314,6 +327,13 @@ public class SalonProvisioning {
         }
         if (input.owner() == null) {
             errors.add(new FieldProblem("owner", "is required"));
+        }
+        if (input.subscription() == null) {
+            errors.add(new FieldProblem("subscription", "is required"));
+        }
+        else {
+            SubscriptionBilling.validateTerms("subscription.", input.subscription().monthlyAmount(),
+                    input.subscription().paymentMethod(), errors);
         }
         if (!errors.isEmpty()) {
             throw new ApplicationProblemException(400, ErrorCode.BAD_REQUEST, errors);

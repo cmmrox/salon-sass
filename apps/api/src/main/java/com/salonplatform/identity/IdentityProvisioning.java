@@ -127,4 +127,18 @@ public class IdentityProvisioning {
                 tenantId, id, owner.name, owner.email, owner.passwordHash, Timestamp.from(at));
         return id;
     }
+
+    /**
+     * The number of active staff accounts of a salon (its staff-seat usage), read through identity's
+     * {@code identity_active_staff_count} function in the current platform transaction: a count and
+     * nothing else of the salon's staff.
+     *
+     * @throws IllegalStateException outside a platform transaction
+     */
+    public long activeStaffCount(UUID tenantId) {
+        PlatformDatabase database = platform.getObject();
+        database.requireTransaction();
+        Long count = database.jdbc().queryForObject("SELECT identity_active_staff_count(?)", Long.class, tenantId);
+        return count == null ? 0 : count;
+    }
 }

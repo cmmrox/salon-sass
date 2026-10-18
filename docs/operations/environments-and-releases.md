@@ -125,6 +125,18 @@ provisioning failure: `POST /local/operator/seed`, `DELETE /local/operator/fixtu
 credentials in ignored files and never print them. The web build fails if an environment file, a
 key file or a known key value appears in its output (`apps/web/scripts/scan-artifacts.mjs`).
 
+F03 billing (F03-S02). `SALON_BILLING_PROVIDER_KEY` (64 hexadecimal characters) is optional:
+without it there is no billing provider and the provider-event intake answers 404, so outside
+`local` billing emails and charges wait in the outbox until a provider exists (D-06). Locally the
+key is retained in ignored `.local/billing-keys.properties` (mode `0600`, override
+`SALON_BILLING_LOCAL_KEY_FILE`); `SALON_BILLING_LINK_ORIGIN` sets the origin of email links
+(local `http://%s:3100`). The billing job runs every minute. Local hooks, loopback-only and outside
+OpenAPI: `PUT|GET /local/operator/billing/provider-outcomes/{salonId}`,
+`POST /local/operator/billing/provider-events/signature`, `GET|DELETE /local/operator/emails`
+(in memory until cleared or the API restarts), `POST /local/operator/billing/run`,
+`PUT|GET /local/operator/billing/interrupt`, `POST /local/operator/unbilled-salons` and
+`PUT /local/operator/operators/active`. F02's identity hooks work on every local salon.
+
 In the Codex execution environment, a detached child can be reaped after the launching command
 ends. Keep a foreground shell session alive while running the existing local startup scripts,
 and verify HTTP readiness from another call before relying on the process.
