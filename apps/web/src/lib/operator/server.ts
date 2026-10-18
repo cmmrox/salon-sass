@@ -5,6 +5,7 @@ import { createServerApiClient, requestSignal } from '@/lib/api/client';
 import { strictInstant } from '@/lib/identity/network';
 import { currentRequest } from '@/lib/observability/request-context';
 import { consoleRequestHost } from './host';
+import { readBoundedJson } from '@/lib/http/bounded-json';
 
 export type OperatorPrincipal = components['schemas']['OperatorPrincipal'];
 type Tokens = components['schemas']['OperatorTokens'];
@@ -122,13 +123,14 @@ export async function handleOperator(request: NextRequest, action: string): Prom
     if (request.method === 'GET' && !READS.has(action)) return problem('method_not_allowed', 405);
     if (request.method !== 'GET' && (request.method !== 'POST' || !MUTATIONS.has(action))) return problem('method_not_allowed', 405);
     if (request.method !== 'GET' && !operatorCsrf(request)) return problem('request_rejected', 403);
-    if (Number(request.headers.get('content-length') ?? 0) > 16384) return problem('bad_request', 400);
     const client = createServerApiClient({ hostname: host.hostname });
     if (!client) return problem('service_unavailable', 503);
     const credentials = credentialsOf(request);
     const headers: Record<string, string> = credentials.access ? { Authorization: `Bearer ${credentials.access}` } : {};
     const options = { headers, signal: requestSignal() };
-    const body: Record<string, unknown> = request.method === 'GET' ? {} : await request.json().catch(() => ({}));
+    const read = request.method === 'GET' ? { ok: true as const, value: {} } : await readBoundedJson(request, 16384);
+    if (!read.ok) return problem('bad_request', 400);
+    const body: Record<string, unknown> = read.value;
     const text = (name: string) => (typeof body[name] === 'string' ? (body[name] as string) : '');
     const query = request.nextUrl.searchParams;
 

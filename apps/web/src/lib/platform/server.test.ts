@@ -85,4 +85,14 @@ describe('the platform host BFF (F03-S03)', () => {
     expect((await run(request('salons'), 'salons')).status).toBe(404);
     expect(calls).toEqual([]);
   });
+
+  it('refuses a chunked body past its limit with no Content-Length before any upstream call', async () => {
+    const big = new TextEncoder().encode(JSON.stringify({ token: TOKEN, pad: 'x'.repeat(4096) }));
+    const body = new ReadableStream<Uint8Array>({ start(controller) { controller.enqueue(big.slice(0, 2000)); controller.enqueue(big.slice(2000)); controller.close(); } });
+    const req = new NextRequest('http://localhost:3100/platform-web/export-info', { method: 'POST', headers: { Host: 'localhost:3100', Origin: 'http://localhost:3100', 'Content-Type': 'application/json' }, body, duplex: 'half' } as ConstructorParameters<typeof NextRequest>[1]);
+    expect(req.headers.get('content-length')).toBeNull();
+    expect((await run(req, 'export-info')).status).toBe(400);
+    expect(calls).toEqual([]);
+  });
 });
+

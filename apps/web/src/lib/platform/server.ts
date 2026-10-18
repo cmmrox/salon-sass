@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerApiClient, requestSignal } from '@/lib/api/client';
+import { readBoundedJson } from '@/lib/http/bounded-json';
 import { archive } from '@/lib/operator/server';
 import { classifyHostname, platformDomainOf } from '@/lib/tenancy/hostname';
 
@@ -36,8 +37,9 @@ export async function handlePlatform(request: NextRequest, action: string): Prom
     if (request.method !== 'POST') return output({ code: 'method_not_allowed' }, 405);
     const site = request.headers.get('sec-fetch-site');
     if (request.headers.get('origin') !== host.origin || site === 'cross-site' || site === 'same-site') return output({ code: 'request_rejected' }, 403);
-    if (Number(request.headers.get('content-length') ?? 0) > 1024) return output({ code: 'bad_request' }, 400);
-    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
+    const read = await readBoundedJson(request, 1024);
+    if (!read.ok) return output({ code: 'bad_request' }, 400);
+    const body = read.value;
     const token = typeof body.token === 'string' ? body.token : '';
     // A malformed token is answered as an unknown one, without asking the API.
     if (!TOKEN.test(token)) return output({ code: 'not_found' }, 404);

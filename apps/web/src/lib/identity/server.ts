@@ -5,6 +5,7 @@ import { createServerApiClient, requestSignal } from '@/lib/api/client';
 import { currentRequest } from '@/lib/observability/request-context';
 import { hasSlugForm, platformDomainOf, slugOf } from '@/lib/tenancy/hostname';
 import { strictInstant } from './network';
+import { readBoundedJson } from '@/lib/http/bounded-json';
 
 export type Kind = 'staff';
 export type Principal = components['schemas']['Principal'];
@@ -79,8 +80,9 @@ export async function handleIdentity(request: NextRequest, kind: Kind, action: s
     const refresh = request.cookies.get(cookieName(kind, 'refresh'))?.value;
     const headers: Record<string, string> = access ? { Authorization: `Bearer ${access}` } : {};
     const signal = requestSignal();
-    if (Number(request.headers.get('content-length') ?? 0) > 16384) return problem('bad_request', 400);
-    const body: Record<string, unknown> = request.method === 'GET' ? {} : await request.json().catch(() => ({}));
+    const read = request.method === 'GET' ? { ok: true as const, value: {} } : await readBoundedJson(request, 16384);
+    if (!read.ok) return problem('bad_request', 400);
+    const body: Record<string, unknown> = read.value;
     // Input values are forwarded only through each generated contract's explicit fields.
     const text = (name: string) => typeof body[name] === 'string' ? body[name] as string : '';
     const page = Number(request.nextUrl.searchParams.get('page') ?? 0);
