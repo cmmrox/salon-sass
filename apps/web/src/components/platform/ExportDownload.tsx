@@ -54,14 +54,19 @@ export function ExportDownload() {
   }
 
   useEffect(() => {
-    const value = takeToken();
     let active = true;
-    Promise.resolve().then(() => {
-      if (!active) return;
-      setToken(value);
-      if (value) void load(value); else setState({ kind: 'no-link' });
-    });
-    return () => { active = false; };
+    // Read now, and again when another link is opened in the same tab (only the fragment changes).
+    const read = () => {
+      const value = takeToken();
+      Promise.resolve().then(() => {
+        if (!active) return;
+        setToken(value); setDownloaded(false); setFailed(null);
+        if (value) void load(value); else setState({ kind: 'no-link' });
+      });
+    };
+    read();
+    window.addEventListener('hashchange', read);
+    return () => { active = false; window.removeEventListener('hashchange', read); };
   }, []);
 
   async function download() {

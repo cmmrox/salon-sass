@@ -1,4 +1,4 @@
-import { fireEvent, screen } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderWithMessages } from '@/test/render';
 import { ExportDownload } from './ExportDownload';
@@ -48,4 +48,15 @@ describe('the Owner export download page (F03-S03)', () => {
     expect(await screen.findByTestId('exports-no-link')).toBeInTheDocument();
     expect(bodies).toEqual([]);
   });
+
+  it('reads a new link opened in the same tab, where only the fragment changes', async () => {
+    stub(() => Response.json({ code: 'not_found' }, { status: 404 }));
+    renderWithMessages(<ExportDownload />);
+    await screen.findByTestId('exports-unknown');
+    window.location.hash = `#${'B'.repeat(43)}`;
+    window.dispatchEvent(new HashChangeEvent('hashchange'));
+    await waitFor(() => expect(bodies).toEqual([{ token: TOKEN }, { token: 'B'.repeat(43) }]));
+    expect(window.location.hash).toBe('');
+  });
 });
+
