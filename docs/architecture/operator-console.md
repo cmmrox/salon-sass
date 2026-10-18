@@ -150,6 +150,21 @@ substring matching up to 120 characters. No dynamic SQL sorting. Salon detail re
 provisioning profile, status, nullable plan summary and initial-owner contact reference, never
 tenant business records or credentials.
 
+## Local test hooks (F03-S02 to S04)
+
+Added under `/local/operator` with the same loopback/`local`/OpenAPI exclusions, so feature QA can
+reach every boundary from outside without editing code. The developer names the exact paths and
+bodies in the stage handoff; the lead copies them into `docs/operations/environments-and-releases.md`.
+
+| Hook | Stage | Does |
+| --- | --- | --- |
+| Run job now | S02, S03 | Runs one pass of the billing, export or deletion job synchronously at the test clock's instant and returns what it did |
+| Interrupt job | S02, S03 | Arms a one-shot failure at a named point (after invoice issue before charge record; export after N tables; deletion after N batches), so the next run must resume |
+| Fake provider | S02 | Sets the next charge outcome (success/failure) per salon; signs an arbitrary event body with the local provider key, for replay and tamper tests. Events are JSON `{eventId,invoiceId,attemptKey,outcome,occurredAt}` with an HMAC-SHA256 signature header; the key is a local secret variable, never committed |
+| Email capture | S02 | Lists captured `email` deliveries by recipient (subject, kind, body links) and clears them |
+| Unbilled salon | S02 | Creates a synthetic legacy salon with no subscription and null new profile fields, so billing a legacy salon never consumes Alpha, Beta or Gamma |
+| Disable operator | S02 | Disables or re-enables a hook-created fixture operator (S01 AC-5 check) |
+
 ## Local operation and handoff
 
 Local hooks under `/local/operator` are loopback-only, `local`-profile-only and excluded from OpenAPI.

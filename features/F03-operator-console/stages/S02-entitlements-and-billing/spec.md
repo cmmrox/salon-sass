@@ -45,7 +45,9 @@ subscription state and the invoices in the workspace.
   `email` outbox channel with a local capturing fake.
 - Web: console subscription card on the salon detail, invoice list, record-transfer and plan-move
   sheets; workspace "Plan and billing" page for the Owner and a state banner for every staff member.
-- Local hooks: set the fake provider's next outcome, read captured emails, both loopback-only.
+- Local hooks (loopback-only, `local` profile, outside OpenAPI; see `operator-console.md`, "Local
+  test hooks"): fake provider outcome and signed events, email capture, running the billing job
+  now, an interrupted-job fault, an unbilled legacy salon fixture and disabling a fixture operator.
 
 ## Out of scope
 
@@ -128,13 +130,16 @@ Operator routes are under `/api/v1/operator` and console-host-only, as in S01.
 | Method/path | Request / result |
 | --- | --- |
 | `POST /salons` | Adds required `subscription:{monthlyAmount,paymentMethod}` |
-| `GET /salons/{id}/subscription` | `{state,plan,monthlyAmount,currency,paymentMethod,trialEndsAt,currentPeriod,nextInvoiceAt,readOnlyAt}` or 404 for unbilled |
+| `GET /salons/{id}/subscription` | `{version,state,plan,monthlyAmount,currency,paymentMethod,trialEndsAt,currentPeriod,nextInvoiceAt,readOnlyAt}` or 404 for unbilled |
 | `POST /salons/{id}/subscription` | Idempotency-Key; `{monthlyAmount,paymentMethod}` -> 201, unbilled salons only |
 | `PATCH /salons/{id}/subscription` | `{version,monthlyAmount?,paymentMethod?}` -> 200 |
 | `PUT /salons/{id}/plan` | `{version,planId}` -> 200 or 409 `entitlement_exceeded` |
 | `GET /salons/{id}/invoices`, `GET /invoices/{id}` | Paginated summaries / detail with payments |
 | `POST /invoices/{id}/payments` | Idempotency-Key; `{reference,amount,receivedOn}` -> 201 |
 | `POST /api/v1/billing/provider-events` | Signed fake-provider event; platform host only, no operator session |
+
+Salon detail gains `version` (optimistic concurrency for plan moves and S03 lifecycle actions);
+a stale version is 409 `conflict`.
 
 Salon routes, staff-authenticated on the salon's host: `GET /api/v1/salon/entitlements` ->
 `{plan:{key,name},limits,features,usage:{staffSeats},subscription:{state,trialEndsAt,readOnlyAt}}`;

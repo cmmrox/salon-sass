@@ -37,6 +37,9 @@ done in it in the audit log, and can end it.
   persistent support banner with End session, Support access page for the Owner; support entries
   in the existing audit list.
 
+S04 grants Support `operator.salon.read`; this supersedes S01 AC-3's denial of salon reads to
+Support, which holds only until S04 is built. Feature QA tests the final behaviour.
+
 ## Out of scope
 
 - Acting as the salon (any mutation) during support; seeing the customer app (F15).
@@ -46,8 +49,8 @@ done in it in the audit log, and can end it.
 
 - AC-1: A Support operator starts a session for an active, past-due or read-only salon with a reason
   of 10–500 characters and a duration of 5–120 minutes (default 30); out-of-range values are field
-  errors, a suspended or closed salon is refused, and a second active session for the same salon is
-  409 `support_session_active`. Admin cannot start one. (PLT-07)
+  errors, a suspended or closed salon is refused, and a second active session by the same operator
+  for the same salon is 409 `support_session_active`. Admin cannot start one. (PLT-07)
 - AC-2: The entry code opens the salon's workspace in the support view once, within 60 seconds; a
   reused, expired, altered or other-salon code, a missing or foreign Origin, or a code presented on
   another host issues nothing. The code never appears in server logs or a request URL. (PLT-07, NFR-20)

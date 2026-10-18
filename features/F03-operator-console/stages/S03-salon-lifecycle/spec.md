@@ -38,7 +38,8 @@ after closure while the platform keeps its billing and audit records.
   platform-host export download page and endpoint.
 - Web: console lifecycle actions on the salon detail with confirmation sheets, lifecycle history,
   export status and download; the platform-host download page.
-- Local hooks: read the captured export email, loopback-only.
+- Local hooks (`operator-console.md`, "Local test hooks"): running the export and deletion jobs now
+  and interrupting either part-way; the export email through S02's email capture.
 
 ## Out of scope
 
