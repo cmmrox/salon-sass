@@ -39,7 +39,8 @@ after closure while the platform keeps its billing and audit records.
 - Web: console lifecycle actions on the salon detail with confirmation sheets, lifecycle history,
   export status and download; the platform-host download page.
 - Local hooks (`operator-console.md`, "Local test hooks"): running the export and deletion jobs now
-  and interrupting either part-way; the export email through S02's email capture.
+  and interrupting either part-way; a salon's background state; a local reset to the synthetic
+  baseline; the export email through S02's email capture.
 
 ## Out of scope
 
@@ -56,9 +57,10 @@ after closure while the platform keeps its billing and audit records.
   `read_only` when an invoice is 14 or more days overdue; existing unexpired sessions work again.
   Suspending a suspended salon or reactivating a non-suspended one is 409 `invalid_state`. (PLT-06)
 - AC-3: While suspended, invoices are still issued and payments recorded; customer messages wait
-  unattempted and tenant jobs are skipped, then resume on reactivation. (PLT-06)
-- AC-4: Closing requires the exact slug typed as confirmation and a reason; a wrong slug or a
-  closed salon is refused without change. After closure the salon's hostname answers 404 as an
+  unattempted and tenant jobs are skipped, then resume on reactivation, as observed through the
+  salon background-state hook. (PLT-06)
+- AC-4: Closing requires the exact slug typed as confirmation and a reason; a wrong slug is a 400
+  field error on `confirmSlug` and closing a closed salon is 409 `invalid_state`, without change. After closure the salon's hostname answers 404 as an
   unknown salon, its sessions and pending messages are cancelled, its jobs stop, no further invoice
   is issued, and its slug cannot be used for a new salon. (PLT-06)
 - AC-5: Closure schedules one export; the job produces a ZIP whose manifest lists every tenant

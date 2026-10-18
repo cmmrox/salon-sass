@@ -164,6 +164,8 @@ bodies in the stage handoff; the lead copies them into `docs/operations/environm
 | Email capture | S02 | Lists captured `email` deliveries by recipient (subject, kind, body links) and clears them |
 | Unbilled salon | S02 | Creates a synthetic legacy salon with no subscription and null new profile fields, so billing a legacy salon never consumes Alpha, Beta or Gamma |
 | Disable operator | S02 | Disables or re-enables a hook-created fixture operator (S01 AC-5 check) |
+| Salon background state | S03 | For one salon, regardless of its state: counts of waiting, delivered and cancelled outbox messages and of its due, skipped and run jobs, with no message content |
+| Local reset | S03 | Removes every salon created after the synthetic baseline (tenant data through the erasers, then its platform rows, tombstone, invoices and audit), resets hook-created operators, returns the test clock to real time and reschedules job occurrences it pushed ahead. Alpha, Beta and Gamma and their data are untouched, so F01/F02 fixture guards and regression run unchanged afterwards |
 
 ## Local operation and handoff
 
