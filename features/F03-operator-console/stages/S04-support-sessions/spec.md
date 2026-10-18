@@ -117,6 +117,9 @@ End session Button; Alert Dialog to confirm revocation; Empty, Pagination, Spinn
 | Support banner | every workspace page in support view | "Support view, read only, ends at HH:MM"; End session |
 | Support access | `/workspace/support-access` | Owner: sessions and Revoke |
 
+Final console navigation (superseding S01's "only Salons, Plans and Sign out"): Admin sees Salons,
+Plans, Support sessions and Sign out; Support sees Salons, Support sessions and Sign out.
+
 In the support view, mutating actions are disabled with the reason. Messages through next-intl.
 
 ## Risks and test focus
