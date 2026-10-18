@@ -49,7 +49,7 @@ Support, which holds only until S04 is built. Feature QA tests the final behavio
 
 - AC-1: A Support operator starts a session for an active, past-due or read-only salon with a reason
   of 10–500 characters and a duration of 5–120 minutes (default 30); out-of-range values are field
-  errors, a suspended or closed salon is refused, and a second active session by the same operator
+  errors, a suspended or closed salon is 409 `invalid_state`, and a second active session by the same operator
   for the same salon is 409 `support_session_active`. Admin cannot start one. (PLT-07)
 - AC-2: The entry code opens the salon's workspace in the support view once, within 60 seconds; a
   reused, expired, altered or other-salon code, a missing or foreign Origin, or a code presented on
