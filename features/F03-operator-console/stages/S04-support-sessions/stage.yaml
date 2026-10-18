@@ -15,7 +15,109 @@ handoff:
   run: null
   data: null
   notes: null
-cases: []
+cases:
+- id: TC-F03-S04-001
+  title: A Support operator starts a bounded session for an accessible salon
+  type: api
+  priority: high
+  covers:
+  - AC-1
+- id: TC-F03-S04-002
+  title: Suspended or closed salons, a second own session and an Admin cannot start a session
+  type: permissions
+  priority: high
+  covers:
+  - AC-1
+- id: TC-F03-S04-003
+  title: An entry code works once, within 60 seconds, on its own salon's host only
+  type: security
+  priority: critical
+  covers:
+  - AC-2
+- id: TC-F03-S04-004
+  title: Simultaneous exchanges of one code issue exactly one support credential
+  type: concurrency
+  priority: critical
+  covers:
+  - AC-2
+- id: TC-F03-S04-005
+  title: The entry code never reaches a server log or a request URL
+  type: security
+  priority: critical
+  covers:
+  - AC-2
+- id: TC-F03-S04-006
+  title: The support view shows what the Owner can read under a persistent banner and no secrets
+  type: functional
+  priority: critical
+  covers:
+  - AC-3
+- id: TC-F03-S04-007
+  title: Every mutation in the support view answers support_read_only and changes nothing
+  type: security
+  priority: critical
+  covers:
+  - AC-3
+- id: TC-F03-S04-008
+  title: The support credential and operator or staff credentials stay inside their own boundaries
+  type: tenant-isolation
+  priority: critical
+  covers:
+  - AC-4
+- id: TC-F03-S04-009
+  title: Expiry, operator end, Admin revoke and Owner revoke each end support on the next request
+  type: security
+  priority: critical
+  covers:
+  - AC-5
+- id: TC-F03-S04-010
+  title: The workspace leaves the support view when the session ends
+  type: functional
+  priority: high
+  covers:
+  - AC-5
+- id: TC-F03-S04-011
+  title: The salon audit shows start, every request and end to Owner and Manager only
+  type: permissions
+  priority: critical
+  covers:
+  - AC-6
+- id: TC-F03-S04-012
+  title: The Owner lists and revokes the salon's support sessions and other roles cannot
+  type: permissions
+  priority: high
+  covers:
+  - AC-7
+- id: TC-F03-S04-013
+  title: Support finds salons; Admin sees and revokes every session; platform audit records each
+  type: permissions
+  priority: high
+  covers:
+  - AC-8
+- id: TC-F03-S04-014
+  title: Simultaneous sessions stay separate per operator and per salon
+  type: tenant-isolation
+  priority: critical
+  covers:
+  - AC-9
+- id: TC-F03-S04-015
+  title: Support screens show every state and the banner is announced and never hidden
+  type: functional
+  priority: high
+  covers:
+  - AC-10
+- id: TC-F03-S04-016
+  title: Support screens fit every width without clipping or horizontal scroll
+  type: responsive
+  priority: high
+  covers:
+  - AC-10
+- id: TC-F03-S04-017
+  title: Support screens pass the automated scan and keyboard-only use
+  type: accessibility
+  priority: high
+  covers:
+  - AC-10
 verification:
   commands:
   - cd apps/api && ./mvnw -q verify

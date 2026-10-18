@@ -20,7 +20,36 @@ requirements:
 - PLT-07
 nfr_focus:
 - NFR-20
-cases: []
+cases:
+- id: TC-F03-001
+  title: An operator takes one salon from creation through billing, suspension, support and closure in
+    the console
+  type: functional
+  priority: critical
+  covers:
+  - PLT-01
+  - PLT-04
+  - PLT-05
+  - PLT-06
+  - PLT-07
+- id: TC-F03-002
+  title: A second salon stays isolated and unaffected through every transition of the first
+  type: tenant-isolation
+  priority: critical
+  covers:
+  - PLT-01
+  - PLT-04
+  - PLT-05
+  - PLT-06
+  - PLT-07
+- id: TC-F03-003
+  title: Access states combine in the documented precedence across billing, lifecycle and support
+  type: data-integrity
+  priority: critical
+  covers:
+  - PLT-05
+  - PLT-06
+  - PLT-07
 verification:
   automation: []
   manual: []

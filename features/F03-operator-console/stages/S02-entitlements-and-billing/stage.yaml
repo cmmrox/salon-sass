@@ -15,7 +15,178 @@ handoff:
   run: null
   data: null
   notes: null
-cases: []
+cases:
+- id: TC-F03-S02-001
+  title: A salon created with a subscription is trialing until exactly 14 days after creation
+  type: api
+  priority: high
+  covers:
+  - AC-1
+- id: TC-F03-S02-002
+  title: A missing or invalid monthly amount or method creates no salon
+  type: api
+  priority: high
+  covers:
+  - AC-1
+- id: TC-F03-S02-003
+  title: An unbilled legacy salon works without a subscription until an Admin starts one, once
+  type: api
+  priority: high
+  covers:
+  - AC-2
+- id: TC-F03-S02-004
+  title: Crossing trial end issues exactly one correct first invoice
+  type: data-integrity
+  priority: critical
+  covers:
+  - AC-3
+- id: TC-F03-S02-005
+  title: Concurrent billing job runs issue no duplicate invoice
+  type: concurrency
+  priority: critical
+  covers:
+  - AC-3
+- id: TC-F03-S02-006
+  title: Monthly invoices follow the anchor day, including a 31st anchor in shorter months
+  type: data-integrity
+  priority: high
+  covers:
+  - AC-3
+- id: TC-F03-S02-007
+  title: A successful card charge pays the invoice and keeps the salon active
+  type: payment-integrity
+  priority: critical
+  covers:
+  - AC-4
+- id: TC-F03-S02-008
+  title: A failed card charge sends one notice and is retried on each reminder day
+  type: payment-integrity
+  priority: critical
+  covers:
+  - AC-4
+- id: TC-F03-S02-009
+  title: Repeated, late, unsigned or tampered provider events pay an invoice at most once
+  type: payment-integrity
+  priority: critical
+  covers:
+  - AC-5
+- id: TC-F03-S02-010
+  title: Simultaneous duplicate events and a racing transfer record one payment
+  type: concurrency
+  priority: critical
+  covers:
+  - AC-5
+  - AC-6
+- id: TC-F03-S02-011
+  title: A recorded bank transfer pays an open invoice once per key
+  type: payment-integrity
+  priority: critical
+  covers:
+  - AC-6
+- id: TC-F03-S02-012
+  title: Partial, excess, future-dated, paid or foreign invoice transfers are refused without change
+  type: payment-integrity
+  priority: critical
+  covers:
+  - AC-6
+- id: TC-F03-S02-013
+  title: Due, reminder and read-only boundaries change state and send each notice exactly once
+  type: data-integrity
+  priority: critical
+  covers:
+  - AC-7
+- id: TC-F03-S02-014
+  title: A read-only salon keeps reads and exempt identity actions and refuses every other mutation
+  type: permissions
+  priority: critical
+  covers:
+  - AC-8
+- id: TC-F03-S02-015
+  title: One salon's billing state, entitlements and invoices never reach another salon
+  type: tenant-isolation
+  priority: critical
+  covers:
+  - AC-8
+  - AC-12
+- id: TC-F03-S02-016
+  title: Paying every overdue invoice restores the salon; paying one of two does not
+  type: functional
+  priority: critical
+  covers:
+  - AC-9
+- id: TC-F03-S02-017
+  title: Staff creation beyond the seat limit is refused and a removal frees a seat
+  type: api
+  priority: high
+  covers:
+  - AC-10
+- id: TC-F03-S02-018
+  title: Two simultaneous creations for the last seat create exactly one staff member
+  type: concurrency
+  priority: critical
+  covers:
+  - AC-10
+- id: TC-F03-S02-019
+  title: A plan move is refused above the new limits and applies only to future invoices
+  type: data-integrity
+  priority: critical
+  covers:
+  - AC-11
+- id: TC-F03-S02-020
+  title: Every staff role reads its own entitlements and only the Owner reads invoices
+  type: permissions
+  priority: high
+  covers:
+  - AC-12
+- id: TC-F03-S02-021
+  title: Every staff member sees the state banner and the Owner sees Plan and billing
+  type: functional
+  priority: high
+  covers:
+  - AC-12
+- id: TC-F03-S02-022
+  title: Support, staff and customers are refused every operator billing action on any host
+  type: permissions
+  priority: critical
+  covers:
+  - AC-13
+- id: TC-F03-S02-023
+  title: Billing events are audited with actor or system and no secret reaches audit, logs, emails or
+    errors
+  type: security
+  priority: critical
+  covers:
+  - AC-14
+- id: TC-F03-S02-024
+  title: Console and workspace billing screens show every state with correct money formatting
+  type: functional
+  priority: high
+  covers:
+  - AC-15
+- id: TC-F03-S02-025
+  title: Billing screens fit every width without clipping or horizontal scroll
+  type: responsive
+  priority: high
+  covers:
+  - AC-15
+- id: TC-F03-S02-026
+  title: Billing screens pass the automated scan and keyboard-only use
+  type: accessibility
+  priority: high
+  covers:
+  - AC-15
+- id: TC-F03-S02-027
+  title: A stopped or silent database is reported on billing screens within five seconds and recovers
+  type: resilience
+  priority: high
+  covers:
+  - AC-16
+- id: TC-F03-S02-028
+  title: A billing job interrupted after invoice issue resumes without a partial invoice or payment
+  type: resilience
+  priority: critical
+  covers:
+  - AC-16
 verification:
   commands:
   - cd apps/api && ./mvnw -q verify

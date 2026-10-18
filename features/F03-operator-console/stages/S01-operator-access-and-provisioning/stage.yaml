@@ -19,7 +19,247 @@ handoff:
   run: null
   data: null
   notes: null
-cases: []
+cases:
+- id: TC-F03-S01-001
+  title: An enrolled operator obtains console access only after password and TOTP
+  type: security
+  priority: critical
+  covers:
+  - AC-1
+- id: TC-F03-S01-002
+  title: A first-time operator must enroll MFA before any session exists
+  type: security
+  priority: critical
+  covers:
+  - AC-1
+- id: TC-F03-S01-003
+  title: Wrong, expired, consumed, exhausted or replayed MFA challenges issue no session
+  type: security
+  priority: critical
+  covers:
+  - AC-1
+- id: TC-F03-S01-004
+  title: Simultaneous verification of one challenge creates exactly one operator session
+  type: concurrency
+  priority: critical
+  covers:
+  - AC-1
+- id: TC-F03-S01-005
+  title: Operator API and console routes on any other host answer 404 before side effects
+  type: security
+  priority: critical
+  covers:
+  - AC-2
+- id: TC-F03-S01-006
+  title: Admin and Support receive exactly their documented operator permissions
+  type: permissions
+  priority: critical
+  covers:
+  - AC-3
+- id: TC-F03-S01-007
+  title: Every salon staff role and the customer principal are refused every operator action
+  type: permissions
+  priority: critical
+  covers:
+  - AC-3
+- id: TC-F03-S01-008
+  title: An operator credential authenticates no tenant identity or workspace
+  type: security
+  priority: critical
+  covers:
+  - AC-4
+- id: TC-F03-S01-009
+  title: Matching operator and staff email and password grant no extra authority
+  type: security
+  priority: critical
+  covers:
+  - AC-4
+- id: TC-F03-S01-010
+  title: Two newly provisioned salons keep isolated staff and brand data
+  type: tenant-isolation
+  priority: critical
+  covers:
+  - AC-4
+- id: TC-F03-S01-011
+  title: Expired, signed-out, revoked and disabled operator sessions authorize nothing
+  type: security
+  priority: critical
+  covers:
+  - AC-5
+- id: TC-F03-S01-012
+  title: Refresh rotates once and reuse revokes the whole family
+  type: security
+  priority: critical
+  covers:
+  - AC-5
+- id: TC-F03-S01-013
+  title: Concurrent renewals never leave two usable refresh families
+  type: concurrency
+  priority: critical
+  covers:
+  - AC-5
+- id: TC-F03-S01-014
+  title: Email ceiling counts known and unknown operators and survives a restart
+  type: security
+  priority: critical
+  covers:
+  - AC-6
+- id: TC-F03-S01-015
+  title: Address ceiling holds across distinct emails and forged forwarding headers
+  type: security
+  priority: critical
+  covers:
+  - AC-6
+- id: TC-F03-S01-016
+  title: Concurrent failures cannot exceed the ceilings or reset MFA attempts
+  type: concurrency
+  priority: critical
+  covers:
+  - AC-6
+- id: TC-F03-S01-017
+  title: An Admin creates a plan whose exact values persist and can be assigned
+  type: api
+  priority: high
+  covers:
+  - AC-7
+- id: TC-F03-S01-018
+  title: Invalid plan definitions are refused with field errors and create nothing
+  type: api
+  priority: high
+  covers:
+  - AC-7
+- id: TC-F03-S01-019
+  title: An Admin provisions a salon whose profile, plan and hostname are correct
+  type: api
+  priority: critical
+  covers:
+  - AC-8
+- id: TC-F03-S01-020
+  title: The provisioned Owner signs in only at its salon and must enroll MFA
+  type: security
+  priority: critical
+  covers:
+  - AC-9
+- id: TC-F03-S01-021
+  title: Invalid salon input or a missing plan creates no tenant, Owner, brand or audit
+  type: api
+  priority: high
+  covers:
+  - AC-10
+- id: TC-F03-S01-022
+  title: Simultaneous creations for one slug create one salon and cannot replace a fixed salon
+  type: concurrency
+  priority: critical
+  covers:
+  - AC-11
+- id: TC-F03-S01-023
+  title: Simultaneous creations for one plan key create exactly one plan
+  type: concurrency
+  priority: critical
+  covers:
+  - AC-11
+- id: TC-F03-S01-024
+  title: Repeated creation with one key replays the original result and one audit
+  type: api
+  priority: critical
+  covers:
+  - AC-12
+- id: TC-F03-S01-025
+  title: A failed Owner or brand bootstrap leaves nothing and a retry with the original key succeeds
+  type: data-integrity
+  priority: critical
+  covers:
+  - AC-13
+- id: TC-F03-S01-026
+  title: Directories paginate, search literally and expose only allowlisted metadata
+  type: api
+  priority: high
+  covers:
+  - AC-14
+- id: TC-F03-S01-027
+  title: Tenant and platform database roles cannot cross the platform boundary
+  type: tenant-isolation
+  priority: critical
+  covers:
+  - AC-15
+- id: TC-F03-S01-028
+  title: The API refuses to start with an owning, RLS-bypassing or missing platform role
+  type: security
+  priority: critical
+  covers:
+  - AC-15
+- id: TC-F03-S01-029
+  title: Platform audit records operator and creation events immutably and without secrets
+  type: security
+  priority: critical
+  covers:
+  - AC-16
+- id: TC-F03-S01-030
+  title: Console mutations reject missing or foreign Origin and keep credentials in host-only cookies
+  type: security
+  priority: critical
+  covers:
+  - AC-17
+- id: TC-F03-S01-031
+  title: Concurrent console tabs and a browser without Web Locks stay safe
+  type: functional
+  priority: high
+  covers:
+  - AC-17
+- id: TC-F03-S01-032
+  title: A keyboard user signs in, defines a plan, creates a salon and inspects it
+  type: functional
+  priority: high
+  covers:
+  - AC-18
+- id: TC-F03-S01-033
+  title: Console screens fit every width in the matrix without clipping or horizontal scroll
+  type: responsive
+  priority: high
+  covers:
+  - AC-18
+- id: TC-F03-S01-034
+  title: Console screens pass the automated scan, keep focus contained and announce errors
+  type: accessibility
+  priority: high
+  covers:
+  - AC-18
+- id: TC-F03-S01-035
+  title: Support sees salon directory access only, and Admin sees only Salons, Plans and Sign out
+  type: permissions
+  priority: high
+  covers:
+  - AC-18
+- id: TC-F03-S01-036
+  title: Console screens follow the supplied Salon-mode reference components
+  type: functional
+  priority: medium
+  covers:
+  - AC-18
+- id: TC-F03-S01-037
+  title: A stopped or silent database is reported within five seconds and recovers without restart
+  type: resilience
+  priority: high
+  covers:
+  - AC-19
+- id: TC-F03-S01-038
+  title: A stopped or silent API is reported by the console within five seconds and recovers
+  type: resilience
+  priority: high
+  covers:
+  - AC-19
+- id: TC-F03-S01-039
+  title: Local operator hooks are loopback-only, absent from the contract and absent outside local
+  type: security
+  priority: critical
+  covers:
+  - AC-20
+- id: TC-F03-S01-040
+  title: Built web artifacts contain no environment files and no identity or operator key value
+  type: build
+  priority: critical
+  covers:
+  - AC-20
 verification:
   commands:
   - cd apps/api && ./mvnw -q verify

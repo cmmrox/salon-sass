@@ -15,7 +15,109 @@ handoff:
   run: null
   data: null
   notes: null
-cases: []
+cases:
+- id: TC-F03-S03-001
+  title: Suspension refuses every salon endpoint on the next request without revoking sessions
+  type: functional
+  priority: critical
+  covers:
+  - AC-1
+- id: TC-F03-S03-002
+  title: A suspended salon's workspace shows temporarily unavailable
+  type: functional
+  priority: high
+  covers:
+  - AC-1
+- id: TC-F03-S03-003
+  title: Reactivation restores the billing-implied state and the same sessions work again
+  type: api
+  priority: critical
+  covers:
+  - AC-2
+- id: TC-F03-S03-004
+  title: While suspended, billing continues and messages and tenant jobs wait until reactivation
+  type: functional
+  priority: high
+  covers:
+  - AC-3
+- id: TC-F03-S03-005
+  title: Closure needs the exact slug and a reason and then removes the salon from its hostname
+  type: api
+  priority: critical
+  covers:
+  - AC-4
+- id: TC-F03-S03-006
+  title: The export contains every tenant table with exactly that salon's rows
+  type: data-integrity
+  priority: critical
+  covers:
+  - AC-5
+- id: TC-F03-S03-007
+  title: The export excludes every secret and says so
+  type: security
+  priority: critical
+  covers:
+  - AC-5
+- id: TC-F03-S03-008
+  title: The Owner's email link downloads the archive until deletion and bad tokens reveal nothing
+  type: security
+  priority: critical
+  covers:
+  - AC-6
+- id: TC-F03-S03-009
+  title: Only an Admin on the console sees export status and downloads the archive
+  type: permissions
+  priority: critical
+  covers:
+  - AC-7
+- id: TC-F03-S03-010
+  title: Thirty days after closure the salon's tenant data is deleted and nothing else
+  type: data-integrity
+  priority: critical
+  covers:
+  - AC-8
+- id: TC-F03-S03-011
+  title: An interrupted export or deletion resumes to the same final result
+  type: resilience
+  priority: critical
+  covers:
+  - AC-9
+- id: TC-F03-S03-012
+  title: Running export or deletion twice or concurrently produces one archive and one deletion
+  type: concurrency
+  priority: critical
+  covers:
+  - AC-9
+- id: TC-F03-S03-013
+  title: Support, staff and customers are refused every lifecycle and export action on any host
+  type: permissions
+  priority: critical
+  covers:
+  - AC-10
+- id: TC-F03-S03-014
+  title: Lifecycle, export, email and deletion are audited without content, tokens or personal fields
+  type: security
+  priority: critical
+  covers:
+  - AC-11
+- id: TC-F03-S03-015
+  title: Console lifecycle actions and the download page show every state and make closure visibly irreversible
+  type: functional
+  priority: high
+  covers:
+  - AC-12
+- id: TC-F03-S03-016
+  title: Lifecycle screens and the download page fit every width
+  type: responsive
+  priority: high
+  covers:
+  - AC-12
+- id: TC-F03-S03-017
+  title: Lifecycle screens pass the automated scan and keyboard use with focus containment
+  type: accessibility
+  priority: high
+  covers:
+  - AC-12
 verification:
   commands:
   - cd apps/api && ./mvnw -q verify
