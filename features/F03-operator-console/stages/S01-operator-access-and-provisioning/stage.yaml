@@ -5,7 +5,7 @@ sequence: 1
 surfaces:
 - api
 - web
-status: planned
+status: complete
 qa_status: not-run
 blocked_reason: null
 released_in: null
@@ -16,9 +16,120 @@ requirements:
 - PLT-04
 nfr_focus: []
 handoff:
-  run: null
-  data: null
-  notes: null
+  run: |
+    infra/scripts/local-up.sh   (PostgreSQL 5440, API 8090, web 3100; provisions salon_app and salon_platform roles)
+    Console: http://console.localhost:3100/console  (root and /console redirect to /console/salons; sign-in at /console/sign-in)
+    Operator API: http://console.localhost:8090/api/v1/operator/{sign-in,mfa/challenges,mfa/verify,sessions/refresh,sessions/sign-out,me,plans,plans/{id},salons,salons/{id}}
+    BFF: /operator-web/{principal,plans,plan,salons,salon,sign-in,mfa-enroll,mfa-verify,refresh,sign-out,clear,plan-create,salon-create} (console host only)
+    Local hooks (loopback, local profile, not in OpenAPI): POST /local/operator/seed {accounts:[{email,displayName,role,password,totpSecret|null}]};
+      DELETE /local/operator/fixtures; PUT|GET /local/operator/bootstrap-failure {step: owner|brand|receipt|null}
+    Offline bootstrap (no default operator anywhere): infra/scripts/operator-bootstrap.sh <chmod-600 properties file: email, displayName, role, password>
+      (API jar with profile <env>,operator-bootstrap; SALON_OPERATOR_BOOTSTRAP_FILE). Stop/start: infra/scripts/local-service.sh <stop|start> <api|web|postgres>.
+    New settings: SALON_DB_PLATFORM_USER/PASSWORD (+ optional SALON_DB_PLATFORM_POOL_SIZE, default 4); SALON_OPERATOR_{SIGNING,CHALLENGE,ENCRYPTION,PROXY,FINGERPRINT}_KEY
+      (local: retained in .local/operator-keys.properties, mode 0600, SALON_OPERATOR_LOCAL_KEY_FILE); web needs SALON_OPERATOR_PROXY_KEY (local launcher reads the retained file).
+  data: |
+    Retained local database (salon-postgres volume): alpha/beta/gamma unchanged (legacy salons show null profile/plan/owner).
+    Synthetic operators seeded through the hook from ignored .local/f03-s01-dev-fixture.json (mode 0600, never printed):
+      f03-admin@example.test (OPERATOR_ADMIN, enrolled TOTP), f03-support@example.test (OPERATOR_SUPPORT, enrolled TOTP),
+      f03-enroll@example.test (OPERATOR_ADMIN, no MFA: first sign-in enrolls). Passwords and TOTP seeds are only in that file.
+    Walkthroughs created synthetic plans (keys f03-dev-*, f03pr-*, f03-ui-*) and salons (slugs f03-*, f03r-*, f03k-*, f03f?-*, f03res-*, f03ui-*),
+      their Owners owner-*/r*-*/k-*/f-*/ui-owner-*@example.test with random passwords not recorded. No real data, messages or payments.
+  notes: |
+    Developer gates (verification.commands), from the repository root, on a clean tree; complete logs in /Users/cmmrox/Personal/Projects/salon-sass/apps/api/target/f03-s01-evidence (ignored; the guard bars
+    the developer from .local, and /private/tmp was cleared by a machine restart that lost the first walkthrough evidence, so every
+    walkthrough below was rerun on the final build). Runner: /Users/cmmrox/Personal/Projects/salon-sass/apps/api/target/f03-s01-evidence/run-gates.sh, run-gates-2-6.sh.
+    | command | revision | result | log |
+    | cd apps/api && ./mvnw -q verify | 927726e | exit 0; 627 tests, 0 failures (surefire summaries in gates/surefire) | gates/1.log |
+    | pnpm -r lint | 973f131 | exit 0 | gates2/1.log |
+    | pnpm -r typecheck | 973f131 | exit 0 | gates2/2.log |
+    | pnpm -r test | 973f131 | exit 0; web 567 + contracts 19 | gates2/3.log |
+    | pnpm --filter @salon/web build | 973f131 | exit 0; post-build artifact scan clean (9 known key values) | gates2/4.log |
+    | pnpm contracts:check | 973f131 | exit 0; document and client current | gates2/5.log |
+    The first run of pnpm -r test on 927726e failed (gates/4.log): packages/api-contracts/test/contracts.test.ts listed the problem
+    codes and lacked the three this spec registers; fixed in 973f131 (test only). The API verify is reused for 973f131 because that
+    commit changes only that TypeScript test. Conditions: JDK 25 via the build's toolchain, Node 24.12 / pnpm 12.11.2, Docker
+    Testcontainers postgres:18.6; local runtime built from 973f131 (GET /api/v1/meta commit 973f1310...).
+
+    Acceptance criteria, checked on the running local product (results JSON/logs beside each script in /Users/cmmrox/Personal/Projects/salon-sass/apps/api/target/f03-s01-evidence):
+    AC-1 checked: enroll_mfa on first sign-in, setup only after the password, wrong/expired/consumed/replayed-step challenges 401, Admin
+      and Support complete password+MFA (api-walkthrough). Browser: password then authenticator; setup key shown only during enrollment.
+    AC-2 checked: operator API on localhost, 127.0.0.1, alpha, admin, consolex, a.console, console.localhost.evil.test = 404 not_found
+      even with a valid token and forged X-Forwarded-Host, no rate counter touched; /api/v1/meta and alpha /api/v1/salon still 200;
+      non-canonical spellings (;x, %6F, //, ..) 400/404; web /console, /operator-web on salon/bare/admin hosts and /workspace on the
+      console host 404; platform status and salon sign-in still 200.
+    AC-3 checked: Support 403 permission_denied on lists/detail/create with no change, own /me works; staff (all roles) and customer
+      tokens 401 (integration tests); browser: Support sees the denial and Sign out only, no management links.
+    AC-4 checked: operator token refused on salon and bare-API identity endpoints, staff token refused on /operator, matching
+      email/password staff gets no operator authority (integration test); new Owner cannot read alpha (404); alpha brand/staff unchanged.
+    AC-5 checked: rotate once, replay revokes the family, 5 concurrent renewals leave at most one usable family, sign-out ends access
+      and refresh, disabled account 401 at once, expired access 401 (integration); browser sign-out clears cookies and ends a second tab.
+    AC-6 checked: unknown and known email 11th attempt 429 rate_limited, positive Retry-After; one address 31st attempt 429; still 429
+      after an API restart (restart-check); 16 simultaneous attempts on one email give exactly 10x401 + 6x429 (integration);
+      invalid or staff assertion 400 before any counting; failed MFA attempts committed despite the 401 (integration).
+    AC-7 checked: plan with every feature/limit 201; missing/unknown/wrong-type/negative/above-bound 400 field errors and no plan;
+      exact values unchanged after restart and offered in the salon form; database trigger refuses UPDATE/DELETE of a plan.
+    AC-8 checked: complete salon 201 {id,slug,hostname,planId,createdAt}; detail and list show the nonsecret profile and plan;
+      new hostname resolves name and time zone (Europe/London).
+    AC-9 checked: Owner signs in only at its salon with the supplied password, must enroll MFA first, then has Owner permissions;
+      no password/token in the creation response; the operator token opens nothing at the salon.
+    AC-10 checked: reserved/short/31-char slug, XX, JPY, fr, Mars/Base, bad phone -> 400 naming the field; random planId -> 404;
+      unknown and owner.* fields named (integration); nothing created.
+    AC-11 checked: 5 distinct keys on one slug -> one 201 + four slug_taken, no orphan Owner; 5 on one plan key -> one 201 + four
+      plan_key_taken; alpha cannot be replaced (409).
+    AC-12 checked: same key+body replays the id with one audit; changed body 409 idempotency_conflict; unauthenticated 401;
+      4 concurrent submissions with one key -> one id, one salon.
+    AC-13 checked: controlled failure at owner, brand and receipt (local hook) -> 500, no tenant/Owner/brand/receipt/success audit,
+      hostname 404; retry with the same key 201. The forced-failure rollback test also runs on Testcontainers.
+    AC-14 checked: stable paging with totals, allowlisted list fields, invalid page/size/q field errors, unknown id 404, invalid id
+      400 naming id, literal search (% and _ match only themselves), legacy alpha shows nulls and no tenant data.
+    AC-15 checked: as salon_app, reading plan and running identity_bootstrap_owner -> permission denied; as salon_platform, reading
+      identity_staff and writing salon_brand -> denied; existing alpha staff rows survived V11-V13; RLS still forced. Startup refusal
+      for a missing/shared/table-owning/BYPASSRLS platform role and exact grants on both roles: PostgreSQL integration tests.
+    AC-16 checked: every event of the run (sign_in_failed, sign_in_limited, signed_in, signed_out, mfa_failed, mfa_enrolled,
+      refresh_replayed, session_renewed, plan.created, salon.created, mfa_challenge_issued) has actor, application time and a 32-hex
+      trace id; no password/email/phone/address/token/secret in audit details or receipts; refused creations have no success record;
+      the owning role cannot UPDATE an entry.
+    AC-17 checked: foreign, missing and cross-site Origin/Fetch Metadata mutations 403 with no change; operator cookies host-only
+      (console.localhost), HttpOnly, SameSite=Lax; no token in document.cookie, storage, HTML or URL; setup key only transient and not
+      in storage/URL; two tabs (sign-out in one ends the other); browser without Web Locks blocks sign-in with a translated message.
+    AC-18 checked: keyboard-only sign-in, plan definition and salon creation, detail inspection; sheets contain focus, Escape returns
+      it; loading, empty, validation, duplicate, not-found, unavailable (API/DB down) and success states; no horizontal scroll or
+      clipped control at 360/390/768/1024/1280/1440 on every screen (122/122, ui-walkthrough.json, screens/*.png).
+    AC-19 checked: stopped and paused PostgreSQL -> me/list/create 503 service_unavailable in about 2.0 s, BFF 503 in about 2.0 s,
+      pages render their recoverable state in about 3.0 s; recovery 4 ms after pg_isready; no partial salon; retry with the original
+      key 201 and exactly one salon. API stopped: BFF 503 at once, console pages 200 (recoverable state), back at once after restart.
+    AC-20 checked: hooks loopback/local only (404 outside local, integration test), absent from OpenAPI; no start creates an operator
+      (integration test); key files unchanged across an API restart and fixtures still sign in; web build artifact scan in the build
+      gate (finds .env*, *keys.properties and any known identity/operator key value; scanner unit-tested).
+
+    Visual handoff (docs/design/ui-ux-standards.md): no operator screen exists in the prototype. The console extends the final
+    Salon-mode components: sticky white header, 200/236px Sidebar rail with ink fill for the current item and its sheet below 900px,
+    canvas main area, white 24px cards, Item rows, pill actions, 20px fields, bottom sheet / 460px right drawer. Compared against
+    screens/reference-salon-mode-{390,1280}.png at the width matrix. Fixed during review: inherited link underline on rows,
+    semibold titles, the search action inside its Input Group, wrapping plan badges, the hostname block on phones, plain detail labels.
+
+    Differs from or adds to the documents (for the lead):
+    - Supported country/currency per your decision: ProvisioningRegions (JDK ISO 3166-1 alpha-2; active ISO 4217 with 2 minor digits);
+      form defaults LK, LKR, Asia/Colombo, English. Country and currency are text fields uppercased by the API (no Select of ~250 codes).
+    - identity_staff gains a nullable name column (V12, identity-owned) to keep the first Owner's name.
+    - Security fix (lead/review): shared RequestPaths refuses any non-canonical raw path (;, any %, backslash, empty or dot segment) with
+      400 before path decisions, also hardening F01/F02 paths (TenantFilter operator and /local decisions, staff assertion path).
+      LoopbackOnlyConfiguration has no path check (it binds addresses); /local controllers check the peer at dispatch. The web proxy
+      rewrites non-canonical paths to not found.
+    - ApiExceptionHandler now prefers a declared field error over the JSON path (nested unknown fields named owner.role, not owner).
+    - shared.jobs gains PlatformJob (claimed through job_claim) for the 15-minute operator-security-cleanup job.
+    - Five operator keys, including SALON_OPERATOR_FINGERPRINT_KEY for receipts; independence from identity keys is checked when
+      configured. The platform role also needs EXECUTE on is_iana_time_zone (tenant time-zone check).
+    - Salon creation answers 500 internal_error for the controlled local bootstrap failure; uncertain client failures retry the same key.
+    - Console forms use noValidate so the API's field errors are shown (web.md); BrandStyle gains `neutral` for the decision-047
+      accent; NEUTRAL_ACCENT/neutralRootRule in brand.ts; Navigation gains the prototype's list/bars glyphs.
+    - Web build script now runs scripts/scan-artifacts.mjs after next build.
+    - Stack: .env.stack.example, compose and provision-roles.sql need the platform role and five operator keys; the existing ignored
+      .env.stack of the running salon-stack lacks them, so its next stack-up refuses until they are added (stack not touched).
+    - Test ids: console-* (kebab), rows console-salon-row / console-plan-row with data-id.
+    Not done (out of scope or deferred): operator account administration/recovery screens; no platform audit browsing UI.
+    Elapsed: about 5 h wall clock from 03:30Z to 08:30Z on 2026-10-18 including two interruptions (usage limit, machine restart);
+      split unknown.
 cases:
 - id: TC-F03-S01-001
   title: An enrolled operator obtains console access only after password and TOTP

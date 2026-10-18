@@ -140,7 +140,7 @@ class CrossSalonFunctionsIntegrationTest {
                 assertThat(ids).containsExactlyInAnyOrder(fixture.alpha().id(), fixture.beta().id());
             }
             try (ResultSet rows = statement.executeQuery("SELECT * FROM tenant_by_id('" + fixture.closed().id() + "')")) {
-                assertThat(columns(rows)).containsExactly("id", "slug", "status", "time_zone");
+                assertThat(columns(rows)).containsExactly("id", "slug", "status", "time_zone", "access_state");
                 assertThat(rows.next()).isTrue();
                 assertThat(rows.getString("status")).isEqualTo("suspended");
             }

@@ -64,7 +64,8 @@ final class RequestLog {
         }
     }
 
-    static void write(String method, String path, int status, long durationNanos) {
+    static void write(String method, String rawPath, int status, long durationNanos) {
+        String path = com.salonplatform.shared.api.RequestPaths.loggable(rawPath);
         log.atInfo()
                 .addKeyValue("http.request.method", method)
                 .addKeyValue("url.path", path)

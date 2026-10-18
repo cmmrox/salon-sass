@@ -34,11 +34,19 @@ class TenantRegistry implements TenantDirectory, ActiveTenants {
 
     static final String SUSPENDED = "suspended";
 
-    private static final String BY_SLUG = "SELECT id, status, time_zone FROM tenant_by_slug(?)";
+    /** The access state billing sets while an invoice is unpaid 14 days after its due instant (F03-S02). */
+    static final String READ_ONLY = "read_only";
 
-    private static final String BY_ID = "SELECT id, slug, status, time_zone FROM tenant_by_id(?)";
+    private static final String BY_SLUG = "SELECT id, status, time_zone, access_state FROM tenant_by_slug(?)";
+
+    private static final String BY_ID = "SELECT id, slug, status, time_zone, access_state FROM tenant_by_id(?)";
 
     private static final String ACTIVE_IDS = "SELECT id FROM active_tenant_ids()";
+
+    private static final String SUSPENDED_IDS = "SELECT id FROM suspended_tenant_ids()";
+
+    /** A salon closed by an Admin (F03-S03): unknown to every request, served nothing. */
+    static final String CLOSED = "closed";
 
     private final JdbcTemplate jdbc;
 
@@ -61,7 +69,8 @@ class TenantRegistry implements TenantDirectory, ActiveTenants {
                     }
                     UUID id = row.getObject("id", UUID.class);
                     ZoneId zone = timeZoneOf(row);
-                    return statusOf(row.getString("status")).map(status -> new RegisteredTenant(id, status, zone));
+                    boolean readOnly = READ_ONLY.equals(row.getString("access_state"));
+                    return statusOf(row.getString("status")).map(status -> new RegisteredTenant(id, status, zone, readOnly));
                 }
             }
         });
@@ -78,17 +87,43 @@ class TenantRegistry implements TenantDirectory, ActiveTenants {
                         return Optional.empty();
                     }
                     return Optional.of(new CurrentTenant(row.getObject("id", UUID.class), row.getString("slug"),
-                            timeZoneOf(row)));
+                            timeZoneOf(row), READ_ONLY.equals(row.getString("access_state"))));
                 }
             }
         });
     }
 
     @Override
+    public Optional<CurrentTenant> findClosed(UUID id) {
+        return jdbc.execute((ConnectionCallback<Optional<CurrentTenant>>) connection -> {
+            limit.applyTo(connection);
+            try (PreparedStatement statement = connection.prepareStatement(BY_ID)) {
+                statement.setObject(1, id);
+                try (ResultSet row = statement.executeQuery()) {
+                    if (!row.next() || !CLOSED.equals(row.getString("status"))) {
+                        return Optional.empty();
+                    }
+                    return Optional.of(new CurrentTenant(row.getObject("id", UUID.class), row.getString("slug"),
+                            timeZoneOf(row), READ_ONLY.equals(row.getString("access_state"))));
+                }
+            }
+        });
+    }
+
+    @Override
+    public List<UUID> suspendedIds() {
+        return ids(SUSPENDED_IDS);
+    }
+
+    @Override
     public List<UUID> activeIds() {
+        return ids(ACTIVE_IDS);
+    }
+
+    private List<UUID> ids(String query) {
         return jdbc.execute((ConnectionCallback<List<UUID>>) connection -> {
             limit.applyTo(connection);
-            try (PreparedStatement statement = connection.prepareStatement(ACTIVE_IDS);
+            try (PreparedStatement statement = connection.prepareStatement(query);
                     ResultSet rows = statement.executeQuery()) {
                 List<UUID> ids = new java.util.ArrayList<>();
                 while (rows.next()) {
@@ -100,8 +135,9 @@ class TenantRegistry implements TenantDirectory, ActiveTenants {
     }
 
     /**
-     * The database allows these two and no other. A status this version does not know is treated
-     * as no salon at all, so that a salon is only ever served when the registry says it is active.
+     * A closed or deleted salon (F03-S03), like a status this version does not know, is no salon at
+     * all: its hostname answers exactly as one that never existed. A salon is only ever served when the
+     * registry says it is active.
      */
     private static Optional<TenantStatus> statusOf(String status) {
         if (ACTIVE.equals(status)) {

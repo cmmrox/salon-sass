@@ -29,6 +29,8 @@ public abstract class IntegrationTest {
         registry.add("spring.datasource.password", () -> TestPostgres.APP_PASSWORD);
         registry.add("spring.flyway.user", TestPostgres.shared()::getUsername);
         registry.add("spring.flyway.password", TestPostgres.shared()::getPassword);
+        registry.add("salon.platform.datasource.username", () -> TestPostgres.PLATFORM_USER);
+        registry.add("salon.platform.datasource.password", () -> TestPostgres.PLATFORM_PASSWORD);
     }
 
     protected Http http() {

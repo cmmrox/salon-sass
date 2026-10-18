@@ -47,6 +47,8 @@ spring:
     placeholders:
       # The role the migrations grant to: whichever role the application connects as.
       application_role: ${spring.datasource.username}
+      # The platform runtime role (F03-S01): the operator console's separately configured role.
+      platform_role: ${salon.platform.datasource.username}
   jpa:
     open-in-view: false
     hibernate:
@@ -126,6 +128,14 @@ logging:
       console: ecs
 
 salon:
+  # The platform runtime connection (docs/architecture/operator-console.md): its own role and a small
+  # pool, used only by operator/platform services and provisioning facades. Required: there is no
+  # fallback to the tenant role. The URL and every wait limit are the tenant pool's.
+  platform:
+    datasource:
+      username: ${SALON_DB_PLATFORM_USER}
+      password: ${SALON_DB_PLATFORM_PASSWORD}
+      maximum-pool-size: ${SALON_DB_PLATFORM_POOL_SIZE:4}
   # Salons are served at <slug>.<platform domain>. Required: an environment that does not say
   # which domain it serves must not guess.
   platform-domain: ${SALON_PLATFORM_DOMAIN}
@@ -198,3 +208,25 @@ salon.identity:
     device-limit: ${SALON_IDENTITY_CODE_DEVICE_LIMIT:10}
     address-limit: ${SALON_IDENTITY_CODE_ADDRESS_LIMIT:20}
     daily-limit: ${SALON_IDENTITY_CODE_DAILY_LIMIT:1000}
+
+# The operator console's five independent keys (F03-S01), each 64 hex characters and separate from
+# every identity key. No nonlocal fallback: an environment without them refuses to start.
+salon.operator:
+  signing-key: ${SALON_OPERATOR_SIGNING_KEY:}
+  challenge-key: ${SALON_OPERATOR_CHALLENGE_KEY:}
+  encryption-key: ${SALON_OPERATOR_ENCRYPTION_KEY:}
+  proxy-key: ${SALON_OPERATOR_PROXY_KEY:}
+  fingerprint-key: ${SALON_OPERATOR_FINGERPRINT_KEY:}
+
+salon.billing:
+  # The billing provider's event-signing key; without it there is no provider (D-06 is open).
+  provider-key: ${SALON_BILLING_PROVIDER_KEY:}
+  # Where billing emails link to: the salon's hostname is put in place of %s.
+  link-origin: ${SALON_BILLING_LINK_ORIGIN:https://%s}
+
+# The key that encrypts a closed salon's export at rest (F03-S03): 64 hex characters, independent of
+# every other key. No nonlocal fallback: an environment without it refuses to start.
+salon.export:
+  key: ${SALON_EXPORT_KEY:}
+  # Where the Owner's export-ready email links to: the platform domain is put in place of %s.
+  link-origin: ${SALON_EXPORT_LINK_ORIGIN:https://%s}

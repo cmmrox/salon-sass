@@ -104,6 +104,11 @@ public final class TestDatabase {
         return DriverManager.getConnection(url, TestPostgres.APP_USER, TestPostgres.APP_PASSWORD);
     }
 
+    /** A connection of the platform runtime role, for a test that controls its transactions itself. */
+    public Connection connectAsPlatform() throws SQLException {
+        return DriverManager.getConnection(url, TestPostgres.PLATFORM_USER, TestPostgres.PLATFORM_PASSWORD);
+    }
+
     public Connection connectAsOwner() throws SQLException {
         return DriverManager.getConnection(url, postgres.getUsername(), postgres.getPassword());
     }

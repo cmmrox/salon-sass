@@ -115,6 +115,11 @@ branding, without a second editable profile source or a reverse branding-to-plat
 Existing synthetic tenants remain unchanged; newly added profile/assignment
 columns are nullable for them and shown as unassigned until explicitly configured.
 
+Supported countries are the JDK's ISO 3166-1 alpha-2 codes and supported currencies the active
+ISO 4217 codes with exactly two minor digits, held in one platform constant (decision 050, NFR-13).
+The create form defaults to LK, LKR, `Asia/Colombo` and English. The first Owner's name is kept in
+identity's nullable `identity_staff.name`.
+
 Use the existing database slug grammar/reserved list, lowercase normalized before uniqueness.
 The first Owner needs a name, email and initial password conforming to the existing identity
 policy. Provision an active Owner without an enrolled secret or session; its first salon sign-in
@@ -137,7 +142,7 @@ and key. Store an HMAC request fingerprint (including credential-sensitive input
 result in the same transaction; never store plaintext request bodies or contact/Owner profile
 values. Salon creation returns only `{id,slug,hostname,planId,createdAt}`; its separate protected
 detail read supplies the profile. Use a secret independent
-from signing/encryption keys for fingerprints. Same key and normalized payload replay the original
+from signing/encryption keys for fingerprints (`SALON_OPERATOR_FINGERPRINT_KEY`). Same key and normalized payload replay the original
 201/id with no second audit or side effect; changed payload returns 409 `idempotency_conflict`.
 Keep successful receipts for the life of their subject in S01; failed transactions reserve no key.
 Parallel keys targeting the same slug/plan key yield one record and 409 `slug_taken`/`plan_key_taken`
@@ -160,7 +165,7 @@ bodies in the stage handoff; the lead copies them into `docs/operations/environm
 | --- | --- | --- |
 | Run job now | S02, S03 | Runs one pass of the billing, export or deletion job synchronously at the test clock's instant and returns what it did |
 | Interrupt job | S02, S03 | Arms a one-shot failure at a named point (after invoice issue before charge record; export after N tables; deletion after N batches), so the next run must resume |
-| Fake provider | S02 | Sets the next charge outcome (success/failure) per salon; signs an arbitrary event body with the local provider key, for replay and tamper tests. Events are JSON `{eventId,invoiceId,attemptKey,outcome,occurredAt}` with an HMAC-SHA256 signature header; the key is a local secret variable, never committed |
+| Fake provider | S02 | Sets the charge outcome (success/failure) per salon, applying to every later charge until changed; signs an arbitrary event body with the local provider key, for replay and tamper tests. Events are JSON `{eventId,invoiceId,attemptKey,outcome,occurredAt}` with an HMAC-SHA256 signature header; the key is a local secret variable, never committed |
 | Email capture | S02 | Lists captured `email` deliveries by recipient (subject, kind, body links) and clears them |
 | Unbilled salon | S02 | Creates a synthetic legacy salon with no subscription and null new profile fields, so billing a legacy salon never consumes Alpha, Beta or Gamma |
 | Disable operator | S02 | Disables or re-enables a hook-created fixture operator (S01 AC-5 check) |
@@ -243,6 +248,23 @@ salon to another plan; the move is refused with 409 `entitlement_exceeded` when 
 exceeds the new plan's limits. Staff of the salon read their entitlements and subscription state
 from the API; nothing in a client is the source of an entitlement.
 
+As built (F03-S02, decision 051): the registry keeps `access_state` (`full` or `read_only`,
+written only by billing) beside the lifecycle `status`, which takes precedence, and a `version`
+for operator changes. The read-only allowlist is staff sign-in, MFA, renewal, revoking one's own
+sessions, password change, customer sign-in and the customer's own profile and deletion; any other
+mutating `/api` request on a read-only salon, even one without a handler, answers 403
+`salon_read_only` before authentication. `/local` hooks and provider events are exempt. A salon
+without a currency is given one when its subscription starts (stored on the subscription only);
+a salon without an Owner contact has its reminders recorded with recipient `none`, no email, and a
+"No billing contact" warning in the console. Billing emails and charge requests are enqueued in
+the salon's outbox in the same transaction as the invoice, so while a salon is suspended they wait
+with its other messages; invoices are still issued and bank transfers still recorded. Boundaries
+are exact 24-hour-day offsets from the due instant; a late job pass issues every missed period
+and sends each passed reminder once. Staff seats count active staff including the Owner, and a
+plan move checks staff seats only, since no other usage exists yet. Provider events carry
+`X-Salon-Billing-Signature`, a lowercase hex HMAC-SHA256 of the body; a bad or missing signature is
+401 `invalid_credentials`, and a late success after a manual payment is recorded `already_paid`.
+
 | Permission | `OPERATOR_ADMIN` | `OPERATOR_SUPPORT` |
 | --- | --- | --- |
 | `operator.billing.read` (subscription, invoices) | yes | no |
@@ -283,6 +305,18 @@ Deletion that fails part-way resumes on the next run and never deletes another s
 | Permission | `OPERATOR_ADMIN` | `OPERATOR_SUPPORT` |
 | --- | --- | --- |
 | `operator.salon.suspend`, `operator.salon.close`, `operator.export.read` | yes | no |
+
+As built (F03-S03, decision 052): the exporter/eraser contract lives in `shared`, because platform
+already depends on identity and branding; each module registers both for its tenant tables, and a
+test fails when a table with `tenant_id` is unregistered. Module erasers are guarded database
+functions that refuse a salon not closed for 30 days. A trigger forbids reopening a closed salon,
+changing a retired slug or removing a `deleted` tombstone. Deletion waits while an export is being
+built. The export-ready email uses its own `platform-email` outbox channel, the only one still
+delivered for a closed salon, with its link encrypted in the outbox; the Owner's page at
+`/exports#<token>` on the platform host reads `GET /api/v1/exports/{token}/metadata` and the archive,
+and request logs and traces show the token as `{token}`. Closure instants keep millisecond
+precision. The local reset uses the owning role's connection in the `local` profile only; the
+runtime platform role has no delete rights on billing or audit.
 
 ## Support sessions (F03-S04)
 

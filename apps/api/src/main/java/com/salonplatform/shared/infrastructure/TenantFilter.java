@@ -1,7 +1,9 @@
 package com.salonplatform.shared.infrastructure;
 
 import com.salonplatform.shared.api.ApplicationProblemException;
+import com.salonplatform.shared.api.ErrorCode;
 import com.salonplatform.shared.api.NotFoundException;
+import com.salonplatform.shared.api.RequestPaths;
 import com.salonplatform.shared.tenancy.ActiveTenants;
 import com.salonplatform.shared.tenancy.CurrentTenant;
 import com.salonplatform.shared.tenancy.PlatformHostname;
@@ -72,12 +74,32 @@ class TenantFilter extends OncePerRequestFilter {
      * no {@code tenant.id}.
      */
     static boolean isPlatformEndpoint(HttpServletRequest request) {
-        String path = request.getRequestURI();
-        return path.equals("/api/v1/meta")
-                || path.equals("/actuator")
-                || path.startsWith("/actuator/")
-                || path.startsWith("/v3/api-docs")
-                || path.equals("/error");
+        String path = RequestPaths.path(request);
+        return path != null
+                && (path.equals("/api/v1/meta")
+                        || path.equals("/actuator")
+                        || path.startsWith("/actuator/")
+                        || path.startsWith("/v3/api-docs")
+                        || path.equals("/error"));
+    }
+
+    /**
+     * The operator console's API and its local hooks (docs/architecture/operator-console.md). They
+     * belong to no salon: the hostname is never resolved as one, and the bearer credential is never
+     * taken for a salon's. Platform authorizes them itself, on the exact console hostname only.
+     */
+    static boolean isOperatorEndpoint(HttpServletRequest request) {
+        return RequestPaths.under(request, "/api/v1/operator") || RequestPaths.under(request, "/local/operator");
+    }
+
+    /**
+     * A read-only salon (F03-S02) refuses every tenant mutation outside the allowlist before anything
+     * runs: 403 {@code salon_read_only}, nothing changed ({@link ReadOnlyRoutes}).
+     */
+    private static void refuseWhenReadOnly(HttpServletRequest request) {
+        if (ReadOnlyRoutes.refused(request)) {
+            throw new ApplicationProblemException(403, ErrorCode.SALON_READ_ONLY);
+        }
     }
 
     @Override
@@ -94,20 +116,37 @@ class TenantFilter extends OncePerRequestFilter {
                         ? authorization.substring(7)
                         : "";
         try {
+            // A path that is not already canonical could dispatch to a handler while every path
+            // check below reads it differently (;parameters, percent-escapes, dot or empty
+            // segments): it is refused before anything else (RequestPaths).
+            if (!RequestPaths.canonical(request)) {
+                throw new ApplicationProblemException(400, ErrorCode.BAD_REQUEST);
+            }
             // Only a raw API address may use token-only tenancy. Unknown/reserved salon hosts
             // remain closed.
             String name = host == null ? "" : host.toLowerCase(java.util.Locale.ROOT);
             boolean nativeAddress =
                     name.matches("^(localhost|[0-9]{1,3}(\\.[0-9]{1,3}){3})(:[0-9]+)?$")
                             || name.matches("^\\[[0-9a-f:]+\\](:[0-9]+)?$");
+            String path = RequestPaths.path(request);
             boolean publicPath =
-                    request.getRequestURI().contains("/sign-in")
-                            || request.getRequestURI()
-                                    .equals("/api/v1/identity/customers/challenges")
-                            || request.getRequestURI().contains("/mfa/")
-                            || request.getRequestURI().endsWith("/sessions/refresh")
-                            || request.getRequestURI().startsWith("/local/");
-            if (candidateSlug == null
+                    path.contains("/sign-in")
+                            || path.equals("/api/v1/identity/customers/challenges")
+                            || path.contains("/mfa/")
+                            || path.endsWith("/sessions/refresh")
+                            || RequestPaths.under(request, "/local");
+            if (isOperatorEndpoint(request)) {
+                TenantContext.callForRequest(
+                        null,
+                        directory,
+                        () ->
+                                RequestCredential.callWith(
+                                        credential,
+                                        () -> {
+                                            chain.doFilter(request, response);
+                                            return null;
+                                        }));
+            } else if (candidateSlug == null
                     && nativeAddress
                     && !credential.isBlank()
                     && !isPlatformEndpoint(request)
@@ -117,13 +156,15 @@ class TenantFilter extends OncePerRequestFilter {
                                 .orElseThrow(NotFoundException::new);
                 TenantContext.callAs(
                         tenant,
-                        () ->
-                                RequestCredential.callWith(
-                                        credential,
-                                        () -> {
-                                            chain.doFilter(request, response);
-                                            return null;
-                                        }));
+                        () -> {
+                            refuseWhenReadOnly(request);
+                            return RequestCredential.callWith(
+                                    credential,
+                                    () -> {
+                                        chain.doFilter(request, response);
+                                        return null;
+                                    });
+                        });
             } else {
                 TenantContext.callForRequest(
                         candidateSlug,
@@ -135,11 +176,12 @@ class TenantFilter extends OncePerRequestFilter {
                             // endpoint.
                             if (!credential.isBlank()
                                     && !isPlatformEndpoint(request)
-                                    && !request.getRequestURI().startsWith("/local/")) {
+                                    && !RequestPaths.under(request, "/local")) {
                                 if (!verifier.tenantOf(credential)
                                         .equals(TenantContext.require().id()))
                                     throw new NotFoundException();
                             }
+                            refuseWhenReadOnly(request);
                             RequestCredential.callWith(
                                     credential,
                                     () -> {

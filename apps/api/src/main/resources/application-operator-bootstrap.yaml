@@ -1,0 +1,15 @@
+# The offline operator bootstrap (F03-S01): creates one operator account from the protected file
+# named by SALON_OPERATOR_BOOTSTRAP_FILE and stops. No server, no delivery, no jobs. Credentials are
+# never accepted on the command line. Run with the environment's own profile beside it, for example
+# `--spring.profiles.active=local,operator-bootstrap` (infra/scripts/operator-bootstrap.sh).
+spring:
+  main:
+    web-application-type: none
+
+salon:
+  operator:
+    bootstrap-file: ${SALON_OPERATOR_BOOTSTRAP_FILE:}
+  outbox:
+    enabled: false
+  jobs:
+    enabled: false

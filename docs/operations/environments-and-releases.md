@@ -102,6 +102,50 @@ and 1000. Focused local tests may override them explicitly, then must restore th
 SMS/WhatsApp adapters capture encrypted outbox delivery only; a nonlocal deployment has no real
 sender configured and returns `provider_unavailable` rather than claiming that a code was sent.
 
+F03 operator console (F03-S01). The console is `http://console.localhost:3100/console` locally
+(the stack serves `console.stack.localhost`). The API connects for platform work as a separate
+non-owner role without `BYPASSRLS`: `SALON_DB_PLATFORM_USER` and `SALON_DB_PLATFORM_PASSWORD`,
+with `SALON_DB_PLATFORM_POOL_SIZE` defaulting to 4; startup refuses a missing, shared, table-owning
+or RLS-bypassing role. `infra/scripts/local-up.sh` and `infra/stack/provision-roles.sql` provision
+`salon_app` and `salon_platform` without resetting data. Operator authority uses five independent
+keys in the same format as the identity keys: `SALON_OPERATOR_SIGNING_KEY`,
+`SALON_OPERATOR_CHALLENGE_KEY`, `SALON_OPERATOR_ENCRYPTION_KEY`, `SALON_OPERATOR_PROXY_KEY` and
+`SALON_OPERATOR_FINGERPRINT_KEY` (idempotency receipts). Locally they are retained in ignored
+`.local/operator-keys.properties` (mode `0600`, override `SALON_OPERATOR_LOCAL_KEY_FILE`); the
+web app needs the proxy key, which the local launcher reads from that file. Outside `local` all
+five are required. An existing ignored `.env.stack` written before F03 lacks the platform role and
+operator keys, and the stack refuses to start until they are added from `.env.stack.example`.
+
+No start creates an operator. Outside `local`, create one with the offline command
+`infra/scripts/operator-bootstrap.sh <file>`, where the file (mode `0600`) holds email,
+displayName, role and password; it runs the API jar with the `operator-bootstrap` profile.
+Locally, loopback-only hooks outside OpenAPI seed and reset synthetic operators and arm a controlled
+provisioning failure: `POST /local/operator/seed`, `DELETE /local/operator/fixtures` and
+`PUT|GET /local/operator/bootstrap-failure` (`{step: owner|brand|receipt|null}`). Keep fixture
+credentials in ignored files and never print them. The web build fails if an environment file, a
+key file or a known key value appears in its output (`apps/web/scripts/scan-artifacts.mjs`).
+
+F03 billing (F03-S02). `SALON_BILLING_PROVIDER_KEY` (64 hexadecimal characters) is optional:
+without it there is no billing provider and the provider-event intake answers 404, so outside
+`local` billing emails and charges wait in the outbox until a provider exists (D-06). Locally the
+key is retained in ignored `.local/billing-keys.properties` (mode `0600`, override
+`SALON_BILLING_LOCAL_KEY_FILE`); `SALON_BILLING_LINK_ORIGIN` sets the origin of email links
+(local `http://%s:3100`). The billing job runs every minute. Local hooks, loopback-only and outside
+OpenAPI: `PUT|GET /local/operator/billing/provider-outcomes/{salonId}`,
+`POST /local/operator/billing/provider-events/signature`, `GET|DELETE /local/operator/emails`
+(in memory until cleared or the API restarts), `POST /local/operator/billing/run`,
+`PUT|GET /local/operator/billing/interrupt`, `POST /local/operator/unbilled-salons` and
+`PUT /local/operator/operators/active`. F02's identity hooks work on every local salon.
+
+F03 lifecycle (F03-S03). Export archives are encrypted with `SALON_EXPORT_KEY` (required outside
+`local`; locally retained in ignored `.local/export-keys.properties`), and `SALON_EXPORT_LINK_ORIGIN`
+sets the origin of the Owner's download link. The stack's compose file and `.env.stack.example`
+require the export key; an older `.env.stack` must have it added before the stack starts. The
+export and deletion jobs run every minute. Local hooks for running them now, interrupting them,
+reading a salon's background state and resetting to the Alpha/Beta/Gamma baseline are under
+`/local/operator` (paths in the F03-S03 handoff); the reset removes every post-baseline salon.
+All three web BFFs read request bodies through one byte-counting reader (`lib/http/bounded-json.ts`).
+
 In the Codex execution environment, a detached child can be reaped after the launching command
 ends. Keep a foreground shell session alive while running the existing local startup scripts,
 and verify HTTP readiness from another call before relying on the process.
