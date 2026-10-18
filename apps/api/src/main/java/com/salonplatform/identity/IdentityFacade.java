@@ -20,7 +20,8 @@ public class IdentityFacade {
                 "permissions",
                 "scope",
                 "staffId",
-                "mfaEnabled"
+                "mfaEnabled",
+                "expiresAt"
             })
     public record Principal(
             UUID id,
@@ -40,7 +41,28 @@ public class IdentityFacade {
                                     io.swagger.v3.oas.annotations.media.Schema.RequiredMode
                                             .REQUIRED)
                     UUID staffId,
-            boolean mfaEnabled) {}
+            boolean mfaEnabled,
+            @io.swagger.v3.oas.annotations.media.Schema(
+                            types = {"string", "null"},
+                            format = "date-time",
+                            description =
+                                    "When a support session (kind support) ends; null for every"
+                                            + " other kind",
+                            requiredMode =
+                                    io.swagger.v3.oas.annotations.media.Schema.RequiredMode
+                                            .REQUIRED)
+                    java.time.Instant expiresAt) {
+        public Principal(
+                UUID id,
+                String kind,
+                String role,
+                Set<String> permissions,
+                String scope,
+                UUID staffId,
+                boolean mfaEnabled) {
+            this(id, kind, role, permissions, scope, staffId, mfaEnabled, null);
+        }
+    }
 
     private final SessionAccess access;
 

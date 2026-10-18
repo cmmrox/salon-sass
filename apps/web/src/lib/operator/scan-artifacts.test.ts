@@ -18,7 +18,7 @@ describe('the built-artifact scan (F03-S01 AC-20)', () => {
   it('passes a clean build', () => {
     expect(scanArtifacts([build({ 'server.js': 'console.log(1)', 'chunks/a.js': 'x' })], [KEY])).toEqual([]);
   });
-  it.each(['.env', '.env.local', 'nested/.env.production', 'identity-keys.properties', 'deep/operator-keys.properties', 'billing-keys.properties', 'export-keys.properties'])('fails on a copied %s', (file) => {
+  it.each(['.env', '.env.local', 'nested/.env.production', 'identity-keys.properties', 'deep/operator-keys.properties', 'billing-keys.properties', 'export-keys.properties', 'support-keys.properties'])('fails on a copied %s', (file) => {
     const root = build({ 'server.js': 'ok', [file]: 'anything' });
     expect(scanArtifacts([root], [])).toEqual([join(root, file)]);
   });
@@ -38,5 +38,9 @@ describe('the built-artifact scan (F03-S01 AC-20)', () => {
   it('knows the export key, configured or retained (F03-S03)', () => {
     const root = build({ 'export-keys.properties': `export=${'56'.repeat(32)}\n` });
     expect(knownKeyValues({ SALON_EXPORT_KEY: '78'.repeat(32) }, [join(root, 'export-keys.properties')]).sort()).toEqual(['56'.repeat(32), '78'.repeat(32)]);
+  });
+  it('knows the support signing key, configured or retained (F03-S04)', () => {
+    const root = build({ 'support-keys.properties': `support=${'9a'.repeat(32)}\n` });
+    expect(knownKeyValues({ SALON_SUPPORT_SIGNING_KEY: 'bc'.repeat(32) }, [join(root, 'support-keys.properties')]).sort()).toEqual(['9a'.repeat(32), 'bc'.repeat(32)]);
   });
 });

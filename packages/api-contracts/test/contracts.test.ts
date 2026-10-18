@@ -121,6 +121,8 @@ describe('the committed contract', () => {
       'salon_read_only',
       'entitlement_exceeded',
       'invalid_state',
+      'support_read_only',
+      'support_session_active',
       'bad_request',
       'not_found',
       'method_not_allowed',

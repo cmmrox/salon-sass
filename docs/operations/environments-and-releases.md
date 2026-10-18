@@ -146,6 +146,12 @@ reading a salon's background state and resetting to the Alpha/Beta/Gamma baselin
 `/local/operator` (paths in the F03-S03 handoff); the reset removes every post-baseline salon.
 All three web BFFs read request bodies through one byte-counting reader (`lib/http/bounded-json.ts`).
 
+F03 support sessions (F03-S04). The support credential is signed with `SALON_SUPPORT_SIGNING_KEY`
+(required outside `local`, retained locally beside the other keys) and the console's entry link
+uses `SALON_SUPPORT_LINK_ORIGIN`; both are in `.env.example`, `.env.stack.example` and the stack
+compose file, so an older `.env.stack` needs them added. Expired sessions are ended by a job, with a
+loopback hook to run it now (path in the F03-S04 handoff).
+
 In the Codex execution environment, a detached child can be reaped after the launching command
 ends. Keep a foreground shell session alive while running the existing local startup scripts,
 and verify HTTP readiness from another call before relying on the process.

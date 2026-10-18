@@ -27,6 +27,9 @@ salon:
   export:
     local-key-file: ${SALON_EXPORT_LOCAL_KEY_FILE:../../.local/export-keys.properties}
     link-origin: ${SALON_EXPORT_LINK_ORIGIN:http://%s:3100}
+  support:
+    local-key-file: ${SALON_SUPPORT_LOCAL_KEY_FILE:../../.local/support-keys.properties}
+    link-origin: ${SALON_SUPPORT_LINK_ORIGIN:http://%s:3100}
   platform-domain: ${SALON_PLATFORM_DOMAIN:localhost}
   server:
     # This machine only (CR-002). SALON_LISTEN_ON_NETWORK=true opens the ports to the network, for

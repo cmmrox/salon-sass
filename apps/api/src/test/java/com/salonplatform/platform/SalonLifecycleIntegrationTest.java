@@ -567,8 +567,15 @@ class SalonLifecycleIntegrationTest extends IntegrationTest {
                 new Object[] {"GET", "/salons/" + id + "/lifecycle", null});
         for (Object[] call : calls) {
             Http.Exchange denied = billing.console.call((String) call[0], (String) call[1], call[2], support);
-            assertThat(denied.status()).as("support %s %s", call[0], call[1]).isEqualTo(403);
-            assertThat(denied.body()).contains("permission_denied");
+            // F03-S04: Support reads the lifecycle history (operator.salon.read); every action and the
+            // export stay the Admin's.
+            if (((String) call[1]).endsWith("/lifecycle")) {
+                assertThat(denied.status()).as("support %s %s", call[0], call[1]).isEqualTo(200);
+            }
+            else {
+                assertThat(denied.status()).as("support %s %s", call[0], call[1]).isEqualTo(403);
+                assertThat(denied.body()).contains("permission_denied");
+            }
             assertThat(billing.console.call((String) call[0], (String) call[1], call[2], staff).status())
                     .as("staff %s %s", call[0], call[1]).isEqualTo(401);
             for (String host : List.of(a.salon().host(port()), "localhost:" + port(), "admin.localhost:" + port(),

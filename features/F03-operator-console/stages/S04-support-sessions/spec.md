@@ -79,6 +79,12 @@ Support, which holds only until S04 is built. Feature QA tests the final behavio
   loading, validation, refused, expired, unavailable and success states at every documented width,
   keyboard-only use, accessible labels, and the support banner is announced and never hidden. (PLT-07)
 
+Refusals not named above: Support ending, or requesting a code for, another operator's session is
+403 `permission_denied`; a new entry code for an ended session is 409 `invalid_state`; any support
+credential on a salon that becomes suspended gets 403 `salon_suspended` like every salon request,
+and on a closed salon 404. The banner shows the end time in the salon's time zone, as `HH:MM`, like
+every workspace time. Audit action names are those recorded in the stage handoffs.
+
 ## Design notes
 
 Support grants and entry codes are platform records; the support credential is minted by platform

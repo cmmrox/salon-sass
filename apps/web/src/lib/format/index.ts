@@ -6,6 +6,10 @@ export function formatInstant(value: string, timeZone: string, locale = 'en-LK')
 export function formatDate(value: string, timeZone: string, locale = 'en-LK'): string {
   return new Intl.DateTimeFormat(locale, { timeZone, dateStyle: 'medium' }).format(new Date(value));
 }
+/** A time of day in the zone, on the 24-hour clock (`14:05`): a support session's end. */
+export function formatTime(value: string, timeZone: string, locale = 'en-LK'): string {
+  return new Intl.DateTimeFormat(locale, { timeZone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(value));
+}
 export function formatPhone(value: string): string {
   return value.replace(/^\+94(7\d)(\d{3})(\d{4})$/, '+94 $1 $2 $3');
 }

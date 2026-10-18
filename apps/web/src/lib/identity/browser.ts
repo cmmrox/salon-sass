@@ -46,3 +46,11 @@ export async function ensurePrincipal(kind: Kind): Promise<Principal> {
     return withIdentityLock(kind, () => principalInsideLock(kind));
   }
 }
+/**
+ * Leaves a session the API no longer accepts: staff go to sign-in; a support view (F03-S04) goes to
+ * its entry page, told it ended, with a full load so nothing of the support view stays on screen.
+ */
+export function leaveEndedSession(kind: Kind, router: { replace(href: string): void; refresh(): void }) {
+  if (kind === 'support') { window.location.replace('/workspace/support#ended'); return; }
+  router.replace('/workspace/sign-in'); router.refresh();
+}
