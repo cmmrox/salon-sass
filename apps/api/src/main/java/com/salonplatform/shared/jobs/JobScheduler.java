@@ -62,6 +62,8 @@ final class JobScheduler implements SmartLifecycle {
 
     private final MeterRegistry meters;
 
+    private final TenantJobActivity activity;
+
     private final String instance = "api-" + UUID.randomUUID();
 
     private volatile boolean running;
@@ -81,6 +83,14 @@ final class JobScheduler implements SmartLifecycle {
     JobScheduler(JobSettings settings, JobStore store, List<TenantJob> jobs, List<PlatformJob> platformJobs,
             ActiveTenants tenants, PlatformTransactionManager transactionManager, Clock clock, Traces traces,
             MeterRegistry meters) {
+        this(settings, store, jobs, platformJobs, tenants, transactionManager, clock, traces, meters,
+                new TenantJobActivity());
+    }
+
+    JobScheduler(JobSettings settings, JobStore store, List<TenantJob> jobs, List<PlatformJob> platformJobs,
+            ActiveTenants tenants, PlatformTransactionManager transactionManager, Clock clock, Traces traces,
+            MeterRegistry meters, TenantJobActivity activity) {
+        this.activity = activity;
         this.settings = settings;
         this.store = store;
         this.jobs = List.copyOf(jobs);
@@ -187,11 +197,24 @@ final class JobScheduler implements SmartLifecycle {
             if (salon.isEmpty()) {
                 continue;
             }
-            if (!runFor(job, salon.get(), now)) {
+            boolean succeeded = runFor(job, salon.get(), now);
+            activity.ran(id, succeeded, now);
+            if (!succeeded) {
                 failed++;
             }
         }
-        log.info("Job {} ran for {} salons, {} failed", job.name(), ids.size(), failed);
+        // A suspended salon's jobs are skipped until it is active again (decision 032); counted so the
+        // local background-state hook can show it.
+        List<java.util.UUID> skipped = List.of();
+        try {
+            skipped = tenants.suspendedIds();
+        }
+        catch (RuntimeException ex) {
+            log.debug("The suspended salons could not be read to count skipped runs", ex);
+        }
+        skipped.forEach(id -> activity.skipped(id, now));
+        log.info("Job {} ran for {} salons, {} failed, {} suspended salons skipped", job.name(), ids.size(), failed,
+                skipped.size());
     }
 
     /**

@@ -223,3 +223,10 @@ salon.billing:
   provider-key: ${SALON_BILLING_PROVIDER_KEY:}
   # Where billing emails link to: the salon's hostname is put in place of %s.
   link-origin: ${SALON_BILLING_LINK_ORIGIN:https://%s}
+
+# The key that encrypts a closed salon's export at rest (F03-S03): 64 hex characters, independent of
+# every other key. No nonlocal fallback: an environment without it refuses to start.
+salon.export:
+  key: ${SALON_EXPORT_KEY:}
+  # Where the Owner's export-ready email links to: the platform domain is put in place of %s.
+  link-origin: ${SALON_EXPORT_LINK_ORIGIN:https://%s}

@@ -24,6 +24,9 @@ salon:
   billing:
     local-key-file: ${SALON_BILLING_LOCAL_KEY_FILE:../../.local/billing-keys.properties}
     link-origin: ${SALON_BILLING_LINK_ORIGIN:http://%s:3100}
+  export:
+    local-key-file: ${SALON_EXPORT_LOCAL_KEY_FILE:../../.local/export-keys.properties}
+    link-origin: ${SALON_EXPORT_LINK_ORIGIN:http://%s:3100}
   platform-domain: ${SALON_PLATFORM_DOMAIN:localhost}
   server:
     # This machine only (CR-002). SALON_LISTEN_ON_NETWORK=true opens the ports to the network, for

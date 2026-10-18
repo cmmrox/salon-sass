@@ -39,3 +39,5 @@ salon.operator:
   fingerprint-key: ${random.value}${random.value}
 salon.billing:
   provider-key: ${random.value}${random.value}
+salon.export:
+  key: ${random.value}${random.value}

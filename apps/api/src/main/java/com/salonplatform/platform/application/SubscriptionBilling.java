@@ -160,6 +160,7 @@ public class SubscriptionBilling {
                 return new Started(true, json.convertValue(earlier.get().result(), SubscriptionView.class));
             }
             BillingLedger.Salon salon = ledger.salon(salonId, true).orElseThrow(NotFoundException::new);
+            stillBilled(salon);
             if (salon.currency() == null && currency == null) {
                 throw new ApplicationProblemException(400, ErrorCode.BAD_REQUEST,
                         List.of(new FieldProblem("currency", "is required for a salon without a currency")));
@@ -204,7 +205,7 @@ public class SubscriptionBilling {
             if (!errors.isEmpty()) {
                 throw new ApplicationProblemException(400, ErrorCode.BAD_REQUEST, errors);
             }
-            ledger.salon(salonId, false).orElseThrow(NotFoundException::new);
+            stillBilled(ledger.salon(salonId, true).orElseThrow(NotFoundException::new));
             BillingLedger.Subscription subscription = ledger.subscriptionOf(salonId, true)
                     .orElseThrow(NotFoundException::new);
             if (subscription.version() != input.version()) {
@@ -256,6 +257,7 @@ public class SubscriptionBilling {
                 throw new ApplicationProblemException(400, ErrorCode.BAD_REQUEST, errors);
             }
             BillingLedger.Salon salon = ledger.salon(salonId, true).orElseThrow(NotFoundException::new);
+            stillBilled(salon);
             List<Integer> seats = database.jdbc().queryForList("SELECT staff_seats FROM plan WHERE id = ?",
                     Integer.class, input.planId());
             if (seats.isEmpty()) {
@@ -283,5 +285,12 @@ public class SubscriptionBilling {
             return null;
         });
         return salons.get(salonId);
+    }
+
+    /** A closed or deleted salon's billing has stopped (F03-S03): no subscription change applies to it. */
+    private static void stillBilled(BillingLedger.Salon salon) {
+        if ("closed".equals(salon.status()) || "deleted".equals(salon.status())) {
+            throw new ApplicationProblemException(409, ErrorCode.INVALID_STATE);
+        }
     }
 }
