@@ -302,6 +302,8 @@ class SupportSessionIntegrationTest extends IntegrationTest {
         BillingTestSupport.status(enter(fixture.salon(), code(console.body(inTime))), 200);
         // Another operator cannot mint a code for this session.
         refused(console.call("POST", "/support-sessions/" + entry.get("id") + "/entry-codes", null, support().token()),
+                403, "permission_denied");
+        refused(console.call("POST", "/support-sessions/" + UUID.randomUUID() + "/entry-codes", null, support.token()),
                 404, "not_found");
     }
 
@@ -456,7 +458,9 @@ class SupportSessionIntegrationTest extends IntegrationTest {
         Map<String, Object> three = started(salon.id(), first.token());
         String third = credential(salon, code(three));
         // Another Support operator cannot end it.
-        refused(console.call("DELETE", "/support-sessions/" + three.get("id"), null, support().token()), 404, "not_found");
+        refused(console.call("DELETE", "/support-sessions/" + three.get("id"), null, support().token()), 403,
+                "permission_denied");
+        refused(console.call("DELETE", "/support-sessions/" + UUID.randomUUID(), null, billing.admin()), 404, "not_found");
         BillingTestSupport.status(console.call("DELETE", "/support-sessions/" + three.get("id"), null, billing.admin()), 204);
         refused(billing.identityCall(salon, "GET", "/me", null, third), 401, "invalid_session");
 

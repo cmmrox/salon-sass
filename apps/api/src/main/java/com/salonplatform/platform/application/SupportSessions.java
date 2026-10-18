@@ -221,8 +221,10 @@ public class SupportSessions implements SupportCredentials {
     public SupportEntry entryCode(UUID sessionId) {
         return work.run(() -> {
             var operator = access.require(OperatorPermission.SUPPORT_START);
-            Row row = find(sessionId).filter(each -> each.operatorId().equals(operator.id()))
-                    .orElseThrow(NotFoundException::new);
+            Row row = find(sessionId).orElseThrow(NotFoundException::new);
+            if (!row.operatorId().equals(operator.id())) {
+                throw new ApplicationProblemException(403, ErrorCode.PERMISSION_DENIED);
+            }
             Instant now = clock.instant();
             if (!row.open(now)) {
                 throw new ApplicationProblemException(409, ErrorCode.INVALID_STATE);
@@ -237,7 +239,8 @@ public class SupportSessions implements SupportCredentials {
 
     /**
      * Ends a session from the console: Support its own ({@code operator}), Admin any ({@code admin}).
-     * Another operator's session is not found for Support; an ended one is 409 {@code invalid_state}.
+     * Another operator's session is 403 {@code permission_denied} for Support; an ended one is 409
+     * {@code invalid_state}.
      */
     public void end(UUID sessionId) {
         work.run(() -> {
@@ -246,8 +249,10 @@ public class SupportSessions implements SupportCredentials {
             if (!admin && !operator.role().permissions().contains(OperatorPermission.SUPPORT_START)) {
                 throw new ApplicationProblemException(403, ErrorCode.PERMISSION_DENIED);
             }
-            Row row = lockRow(sessionId).filter(each -> admin || each.operatorId().equals(operator.id()))
-                    .orElseThrow(NotFoundException::new);
+            Row row = lockRow(sessionId).orElseThrow(NotFoundException::new);
+            if (!admin && !row.operatorId().equals(operator.id())) {
+                throw new ApplicationProblemException(403, ErrorCode.PERMISSION_DENIED);
+            }
             String by = admin ? "admin" : "operator";
             finish(row, by, operator.id().toString(), PlatformAudit.OPERATOR, operator.id().toString(),
                     admin ? "operator" : "support", admin ? operator.id().toString() : row.id().toString());
@@ -412,17 +417,18 @@ public class SupportSessions implements SupportCredentials {
         if (!crypto.current(verified)) {
             throw new ApplicationProblemException(401, ErrorCode.INVALID_SESSION);
         }
-        boolean live = Boolean.TRUE.equals(database.inTransaction(status -> {
+        // The stored session decides: its exact expiry, and whether it is still open and its operator active.
+        Row live = database.inTransaction(status -> {
             Instant now = clock.instant();
             return find(verified.sessionId())
                     .filter(row -> row.salonId().equals(salonId) && row.operatorId().equals(verified.operatorId())
-                            && row.open(now))
-                    .map(row -> operatorActive(row.operatorId())).orElse(false);
-        }));
-        if (!live) {
+                            && row.open(now) && operatorActive(row.operatorId()))
+                    .orElse(null);
+        });
+        if (live == null) {
             throw new ApplicationProblemException(401, ErrorCode.INVALID_SESSION);
         }
-        return Optional.of(new SupportGrant(verified.sessionId(), salonId, verified.operatorId(), verified.expiresAt()));
+        return Optional.of(new SupportGrant(verified.sessionId(), salonId, verified.operatorId(), live.expiresAt()));
     }
 
     // --- expiry -------------------------------------------------------------------------------------
