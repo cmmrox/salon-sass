@@ -170,13 +170,17 @@ describe('the salon directory', () => {
 
 describe('detail pages', () => {
   it('shows a legacy salon\'s unconfigured values as not configured and its hostname to copy', async () => {
-    stubApi(() => Response.json({ id: 's', name: null, slug: 'legacy', hostname: 'legacy.localhost', status: 'active', country: null, currency: null, timeZone: 'Asia/Colombo', defaultLanguage: null, contactEmail: null, contactPhone: null, address: null, plan: null, ownerEmail: null, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z' }));
+    stubApi((url) => url.startsWith('/operator-web/subscription') ? Response.json({ code: 'not_found' }, { status: 404 }) : Response.json({ id: 's', version: 0, name: null, slug: 'legacy', hostname: 'legacy.localhost', status: 'active', country: null, currency: null, timeZone: 'Asia/Colombo', defaultLanguage: null, contactEmail: null, contactPhone: null, address: null, plan: null, ownerEmail: null, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z' }));
     renderWithMessages(<SalonDetail id="s" />);
     expect(await screen.findByTestId('console-salon-name')).toHaveTextContent('Not configured');
     expect(screen.getByTestId('console-salon-country')).toHaveTextContent('Not configured');
     expect(screen.getByTestId('console-salon-plan')).toHaveTextContent('No plan assigned');
     fireEvent.click(screen.getByTestId('console-copy-hostname'));
     expect(await screen.findByTestId('console-hostname-copied')).toBeInTheDocument();
+    // F03-S02: an unbilled legacy salon has no subscription and no billing contact.
+    expect(await screen.findByTestId('console-subscription-none')).toHaveTextContent('No subscription');
+    expect(screen.getByTestId('console-no-billing-contact')).toBeInTheDocument();
+    expect(screen.getByTestId('console-start-subscription')).toBeInTheDocument();
   });
 
   it('shows a plan\'s exact limits and explicit features, and not found without a retry', async () => {

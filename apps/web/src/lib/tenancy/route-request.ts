@@ -33,7 +33,7 @@ const NOT_STORED = 'private, no-cache, no-store, max-age=0, must-revalidate';
 const SIGN_IN = '/workspace/sign-in';
 
 /** The protected workspace pages, whose entry is decided here before anything renders (CR-013). */
-const PROTECTED = new Set(['/workspace/account', '/workspace/staff', '/workspace/audit']);
+const PROTECTED = new Set(['/workspace/account', '/workspace/staff', '/workspace/audit', '/workspace/billing']);
 
 /** The console's sign-in, and where its root and bare `/console` lead (docs/architecture/operator-console.md). */
 const CONSOLE_SIGN_IN = '/console/sign-in';

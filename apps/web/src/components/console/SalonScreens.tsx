@@ -13,11 +13,12 @@ import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/u
 import { FieldGroup, FieldLegend, FieldSet } from '@/components/ui/field';
 import { Item, ItemContent, ItemDescription, ItemGroup, ItemTitle } from '@/components/ui/item';
 import { Spinner } from '@/components/ui/spinner';
-import { formatInstant, formatPhone, viewerTimeZone } from '@/lib/format';
+import { formatInstant, formatPhone, parseMinorUnits, viewerTimeZone } from '@/lib/format';
 import { operatorRead, operatorRequest, OperatorFailure, principalInsideLock, withOperatorLock } from '@/lib/operator/browser';
 import { ConsoleChoiceField, ConsoleFailure, ConsoleLoading, ConsolePasswordField, ConsoleTextArea, ConsoleTextField, uncertain } from './ConsoleControls';
 import { ConsoleSheet } from './ConsoleSheet';
 import { DirectoryPager, DirectorySearch } from './DirectoryControls';
+import { SubscriptionCard } from './BillingScreens';
 import type { Plan } from './PlanScreens';
 import { useIdempotencyKey } from './PlanScreens';
 import { PAGE_SIZE, useDirectory } from './useDirectory';
@@ -65,7 +66,7 @@ export function SalonDirectory({ platformDomain }: { platformDomain: string }) {
   );
 }
 
-const EMPTY = { name: '', slug: '', country: 'LK', currency: 'LKR', timeZone: 'Asia/Colombo', defaultLanguage: 'en', contactEmail: '', contactPhone: '', address: '', planId: '', ownerName: '', ownerEmail: '', ownerPassword: '' };
+const EMPTY = { name: '', slug: '', country: 'LK', currency: 'LKR', timeZone: 'Asia/Colombo', defaultLanguage: 'en', contactEmail: '', contactPhone: '', address: '', planId: '', ownerName: '', ownerEmail: '', ownerPassword: '', monthlyAmount: '', paymentMethod: 'bank_transfer' };
 type Values = typeof EMPTY;
 
 /**
@@ -102,6 +103,7 @@ function CreateSalon({ platformDomain, onCreated }: { platformDomain: string; on
       name: values.name, slug: values.slug, country: values.country, currency: values.currency, timeZone: values.timeZone,
       defaultLanguage: values.defaultLanguage, contactEmail: values.contactEmail, contactPhone: values.contactPhone, address: values.address,
       planId: values.planId, owner: { name: values.ownerName, email: values.ownerEmail, password: values.ownerPassword },
+      subscription: { monthlyAmount: parseMinorUnits(values.monthlyAmount), paymentMethod: values.paymentMethod },
     };
     const idempotencyKey = idempotency.keyFor(payload);
     try {
@@ -146,6 +148,14 @@ function CreateSalon({ platformDomain, onCreated }: { platformDomain: string; on
               <ConsoleTextField name="contactEmail" type="email" label={t('contactEmail')} maxLength={254} autoComplete="email" value={values.contactEmail} error={has('contactEmail')} onChange={set('contactEmail')} />
               <ConsoleTextField name="contactPhone" type="tel" label={t('contactPhone')} description={t('contactPhoneHelp')} maxLength={32} autoComplete="tel" value={values.contactPhone} error={has('contactPhone')} onChange={set('contactPhone')} />
               <ConsoleTextArea name="address" label={t('address')} maxLength={500} rows={3} autoComplete="street-address" value={values.address} error={has('address')} onChange={set('address')} />
+            </FieldGroup>
+          </FieldSet>
+          <FieldSet>
+            <FieldLegend>{t('subscription')}</FieldLegend>
+            <FieldGroup className="gap-4">
+              <ConsoleTextField name="monthlyAmount" label={t('monthlyAmount', { currency: values.currency.trim().toUpperCase() || 'LKR' })} description={t('monthlyAmountCreateHelp')} required inputMode="decimal" autoComplete="off" value={values.monthlyAmount} error={has('subscription.monthlyAmount', 'subscription')} onChange={set('monthlyAmount')} />
+              <ConsoleChoiceField name="paymentMethod" label={t('paymentMethod')} value={values.paymentMethod} error={has('subscription.paymentMethod')}
+                options={['card', 'bank_transfer'].map((method) => ({ value: method, label: t(`method_${method}` as 'method_card') }))} onChange={(paymentMethod) => setValues({ ...values, paymentMethod })} />
             </FieldGroup>
           </FieldSet>
           <FieldSet>
@@ -228,6 +238,7 @@ export function SalonDetail({ id }: { id: string }) {
           </section>
         </Card>
       )}
+      {salon && <SubscriptionCard salon={salon} onSalonChanged={() => void load()} />}
     </div>
   );
 }
