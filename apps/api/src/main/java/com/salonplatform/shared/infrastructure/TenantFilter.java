@@ -8,7 +8,11 @@ import com.salonplatform.shared.tenancy.ActiveTenants;
 import com.salonplatform.shared.tenancy.CurrentTenant;
 import com.salonplatform.shared.tenancy.PlatformHostname;
 import com.salonplatform.shared.tenancy.RequestCredential;
+import com.salonplatform.shared.audit.SupportRequestAudit;
+import com.salonplatform.shared.tenancy.RequestSupport;
 import com.salonplatform.shared.tenancy.SignedTenantVerifier;
+import com.salonplatform.shared.tenancy.SupportCredentials;
+import com.salonplatform.shared.tenancy.SupportGrant;
 import com.salonplatform.shared.tenancy.TenantContext;
 import com.salonplatform.shared.tenancy.TenantDirectory;
 
@@ -26,6 +30,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.Optional;
 
 /**
  * Binds the salon a request's hostname names for the extent of the request, before anything that
@@ -52,6 +57,13 @@ class TenantFilter extends OncePerRequestFilter {
 
     private final SignedTenantVerifier verifier;
     private final ActiveTenants tenants;
+    private final SupportCredentials support;
+    private final SupportRequestAudit supportAudit;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    @org.springframework.beans.factory.annotation.Qualifier("requestMappingHandlerMapping")
+    @org.springframework.context.annotation.Lazy
+    private org.springframework.web.servlet.HandlerMapping routes;
 
     @org.springframework.beans.factory.annotation.Autowired
     @org.springframework.beans.factory.annotation.Qualifier("handlerExceptionResolver")
@@ -61,7 +73,11 @@ class TenantFilter extends OncePerRequestFilter {
             PlatformHostname hostnames,
             TenantDirectory directory,
             SignedTenantVerifier verifier,
-            ActiveTenants tenants) {
+            ActiveTenants tenants,
+            SupportCredentials support,
+            SupportRequestAudit supportAudit) {
+        this.support = support;
+        this.supportAudit = supportAudit;
         this.verifier = verifier;
         this.tenants = tenants;
         this.hostnames = hostnames;
@@ -100,6 +116,60 @@ class TenantFilter extends OncePerRequestFilter {
         if (ReadOnlyRoutes.refused(request)) {
             throw new ApplicationProblemException(403, ErrorCode.SALON_READ_ONLY);
         }
+    }
+
+    /**
+     * The one mutation a support credential may make: ending its own session (F03-S04). Every other
+     * mutating request under a support credential is refused 403 {@code support_read_only} here, as a
+     * single rule on the principal's kind, before any handler runs.
+     */
+    static boolean supportMayChange(HttpServletRequest request) {
+        return "DELETE".equals(request.getMethod()) && "/api/v1/support/session".equals(RequestPaths.path(request));
+    }
+
+    /**
+     * Serves a request made under a live support session: refuses every mutation but ending it, then
+     * records the request (method, route template, outcome) in the salon's audit trail.
+     */
+    private void underSupport(SupportGrant grant, String credential, HttpServletRequest request,
+            HttpServletResponse response, FilterChain chain) throws Exception {
+        RequestSupport.callAs(grant, () -> {
+            try {
+                if (ReadOnlyRoutes.mutating(request.getMethod()) && !supportMayChange(request)) {
+                    throw new ApplicationProblemException(403, ErrorCode.SUPPORT_READ_ONLY);
+                }
+                refuseWhenReadOnly(request);
+                RequestCredential.callWith(credential, () -> {
+                    chain.doFilter(request, response);
+                    return null;
+                });
+            }
+            catch (ApplicationProblemException | NotFoundException ex) {
+                errors.resolveException(request, response, null, ex);
+            }
+            finally {
+                supportAudit.record(grant, request.getMethod(), routeOf(request), response.getStatus());
+            }
+            return null;
+        });
+    }
+
+    /** The route template the request matched (never its raw path, which carries ids). */
+    private String routeOf(HttpServletRequest request) {
+        Object pattern = request.getAttribute(org.springframework.web.servlet.HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE);
+        if (pattern == null) {
+            try {
+                // A request refused before dispatch: the route it would have reached.
+                if (routes.getHandler(request) != null) {
+                    pattern = request.getAttribute(
+                            org.springframework.web.servlet.HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE);
+                }
+            }
+            catch (Exception ex) {
+                pattern = null;
+            }
+        }
+        return pattern == null ? "unmatched" : pattern.toString();
     }
 
     @Override
@@ -177,6 +247,14 @@ class TenantFilter extends OncePerRequestFilter {
                             if (!credential.isBlank()
                                     && !isPlatformEndpoint(request)
                                     && !RequestPaths.under(request, "/local")) {
+                                // A support credential (F03-S04) is verified against its live
+                                // session and bound to this salon only; it never becomes a staff one.
+                                Optional<SupportGrant> grant =
+                                        support.verify(credential, () -> TenantContext.require().id());
+                                if (grant.isPresent()) {
+                                    underSupport(grant.get(), credential, request, response, chain);
+                                    return null;
+                                }
                                 if (!verifier.tenantOf(credential)
                                         .equals(TenantContext.require().id()))
                                     throw new NotFoundException();

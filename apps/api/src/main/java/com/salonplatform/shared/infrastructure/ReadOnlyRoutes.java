@@ -34,7 +34,11 @@ final class ReadOnlyRoutes {
             exempt("POST", "/api/v1/identity/customers/challenges"),
             exempt("POST", "/api/v1/identity/customers/sign-in"),
             exempt("PUT", "/api/v1/identity/customers/me"),
-            exempt("DELETE", "/api/v1/identity/customers/me"));
+            exempt("DELETE", "/api/v1/identity/customers/me"),
+            // Support sessions (F03-S04) are allowed for a read-only salon: entering one and ending
+            // it change nothing of the salon.
+            exempt("POST", "/api/v1/support/entry"),
+            exempt("DELETE", "/api/v1/support/session"));
 
     private ReadOnlyRoutes() {
     }

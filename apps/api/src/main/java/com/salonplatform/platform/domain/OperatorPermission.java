@@ -23,6 +23,13 @@ public final class OperatorPermission {
     /** A closed salon's export status and archive (F03-S03). */
     public static final String EXPORT_READ = "operator.export.read";
 
+    /** Start a support session for a salon, and end one's own (F03-S04). */
+    public static final String SUPPORT_START = "operator.support.start";
+    /** Every operator's support sessions (F03-S04). */
+    public static final String SUPPORT_READ = "operator.support.read";
+    /** Revoke any active support session (F03-S04). */
+    public static final String SUPPORT_REVOKE = "operator.support.revoke";
+
     private OperatorPermission() {
     }
 }

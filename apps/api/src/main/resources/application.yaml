@@ -230,3 +230,10 @@ salon.export:
   key: ${SALON_EXPORT_KEY:}
   # Where the Owner's export-ready email links to: the platform domain is put in place of %s.
   link-origin: ${SALON_EXPORT_LINK_ORIGIN:https://%s}
+
+# Support sessions (F03-S04): the support credential's signing key, 64 hex characters, independent of
+# every other key. No nonlocal fallback: an environment without it refuses to start.
+salon.support:
+  signing-key: ${SALON_SUPPORT_SIGNING_KEY:}
+  # Where the console's workspace entry link points: the salon's hostname is put in place of %s.
+  link-origin: ${SALON_SUPPORT_LINK_ORIGIN:https://%s}

@@ -11,7 +11,9 @@ public enum ActorKind {
     /** A platform operator, in a support session (PLT-07). */
     OPERATOR,
     /** The platform itself: a job, a delivery, a test hook. */
-    SYSTEM;
+    SYSTEM,
+    /** A platform operator working under an audited, read-only support session (F03-S04). */
+    SUPPORT;
 
     public String value() {
         return name().toLowerCase(Locale.ROOT);

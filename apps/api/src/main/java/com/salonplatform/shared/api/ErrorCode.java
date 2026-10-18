@@ -35,6 +35,10 @@ public enum ErrorCode {
     ENTITLEMENT_EXCEEDED("entitlement_exceeded", "The salon's plan does not allow this."),
     /** The record is not in a state that allows this action (F03-S02). */
     INVALID_STATE("invalid_state", "This action is not possible in the record's current state."),
+    /** A support session is read-only: every mutation under its credential is refused (F03-S04). */
+    SUPPORT_READ_ONLY("support_read_only", "A support session can read the workspace but cannot change anything."),
+    /** The operator already has an open support session for this salon (F03-S04). */
+    SUPPORT_SESSION_ACTIVE("support_session_active", "You already have an open support session for this salon."),
     BAD_REQUEST("bad_request", "The request could not be understood."),
     NOT_FOUND("not_found", "The requested resource was not found."),
     METHOD_NOT_ALLOWED("method_not_allowed", "The method is not allowed for this resource."),
