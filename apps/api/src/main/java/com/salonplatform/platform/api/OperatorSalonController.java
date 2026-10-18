@@ -61,7 +61,7 @@ class OperatorSalonController {
     }
 
     @GetMapping
-    ResponseEntity<SalonProvisioning.SalonPage> list(
+    ResponseEntity<SalonProvisioning.SalonPage> listSalons(
             @Parameter(schema = @Schema(type = "integer", minimum = "0", maximum = "100000", defaultValue = "0"))
             @RequestParam(required = false) String page,
             @Parameter(schema = @Schema(type = "integer", minimum = "1", maximum = "100", defaultValue = "20"))
@@ -71,13 +71,13 @@ class OperatorSalonController {
     }
 
     @GetMapping("/{id}")
-    ResponseEntity<SalonProvisioning.SalonDetail> get(@PathVariable String id) {
+    ResponseEntity<SalonProvisioning.SalonDetail> getSalon(@PathVariable String id) {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(salons.get(OperatorRequests.id(id)));
     }
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
-    ResponseEntity<SalonProvisioning.SalonCreated> create(
+    ResponseEntity<SalonProvisioning.SalonCreated> createSalon(
             @Parameter(name = ProvisioningReceipts.HEADER, in = ParameterIn.HEADER, required = true,
                     schema = @Schema(type = "string", format = "uuid"))
             @RequestHeader(name = ProvisioningReceipts.HEADER, required = false) String key,

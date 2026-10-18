@@ -84,36 +84,36 @@ class OperatorAccessController {
                     + "servlet peer, an invalid proof is refused before rate accounting.",
             schema = @Schema(type = "string", maxLength = 192))
     @PostMapping(path = "/sign-in", consumes = MediaType.APPLICATION_JSON_VALUE)
-    ResponseEntity<OperatorAccess.OperatorSignIn> signIn(@Valid @RequestBody OperatorSignInRequest request,
+    ResponseEntity<OperatorAccess.OperatorSignIn> operatorSignIn(@Valid @RequestBody OperatorSignInRequest request,
             HttpServletRequest http) {
         String address = assertions.rateAddress(http);
         return ok(access.signIn(request.email(), request.password(), request.deviceLabel(), address));
     }
 
     @PostMapping(path = "/mfa/challenges", consumes = MediaType.APPLICATION_JSON_VALUE)
-    ResponseEntity<OperatorAccess.OperatorEnrollment> enroll(@Valid @RequestBody OperatorChallengeRequest request) {
+    ResponseEntity<OperatorAccess.OperatorEnrollment> operatorEnroll(@Valid @RequestBody OperatorChallengeRequest request) {
         return ok(access.enroll(request.challengeId(), request.challengeToken()));
     }
 
     @PostMapping(path = "/mfa/verify", consumes = MediaType.APPLICATION_JSON_VALUE)
-    ResponseEntity<OperatorAccess.OperatorTokens> verify(@Valid @RequestBody OperatorVerifyRequest request) {
+    ResponseEntity<OperatorAccess.OperatorTokens> operatorVerify(@Valid @RequestBody OperatorVerifyRequest request) {
         return ok(access.verify(request.challengeId(), request.challengeToken(), request.code()));
     }
 
     @PostMapping(path = "/sessions/refresh", consumes = MediaType.APPLICATION_JSON_VALUE)
-    ResponseEntity<OperatorAccess.OperatorTokens> refresh(@Valid @RequestBody OperatorRefreshRequest request) {
+    ResponseEntity<OperatorAccess.OperatorTokens> operatorRefresh(@Valid @RequestBody OperatorRefreshRequest request) {
         return ok(access.refresh(request.refreshToken()));
     }
 
     @PostMapping("/sessions/sign-out")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    ResponseEntity<Void> signOut() {
+    ResponseEntity<Void> operatorSignOut() {
         access.signOut();
         return ResponseEntity.noContent().cacheControl(CacheControl.noStore()).build();
     }
 
     @GetMapping("/me")
-    ResponseEntity<OperatorAccess.OperatorPrincipal> me() {
+    ResponseEntity<OperatorAccess.OperatorPrincipal> operatorMe() {
         return ok(access.me());
     }
 }

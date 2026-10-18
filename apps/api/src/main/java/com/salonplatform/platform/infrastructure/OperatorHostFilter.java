@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.Locale;
 
 import com.salonplatform.shared.api.NotFoundException;
+import com.salonplatform.shared.api.RequestPaths;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -46,17 +47,20 @@ class OperatorHostFilter extends OncePerRequestFilter {
         this.errors = errors;
     }
 
+    /**
+     * Filters every operator path, and fails closed on a path that is not canonical (which the tenant
+     * filter has already refused): only a canonical path outside the console's API is let through.
+     */
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        String path = request.getRequestURI();
-        return !(path.equals(PREFIX) || path.startsWith(PREFIX + "/"));
+        return RequestPaths.canonical(request) && !RequestPaths.under(request, PREFIX);
     }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
         response.setHeader(HttpHeaders.CACHE_CONTROL, "no-store");
-        if (!isConsoleHost(request.getHeader(HttpHeaders.HOST), consoleHost)) {
+        if (!RequestPaths.canonical(request) || !isConsoleHost(request.getHeader(HttpHeaders.HOST), consoleHost)) {
             errors.resolveException(request, response, null, new NotFoundException());
             return;
         }

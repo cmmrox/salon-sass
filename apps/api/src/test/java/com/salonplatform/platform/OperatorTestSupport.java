@@ -55,7 +55,8 @@ public final class OperatorTestSupport {
         this.accounts = accounts;
         this.crypto = crypto;
         this.json = json;
-        this.proxyKey = HexFormat.of().parseHex(environment.getRequiredProperty("salon.operator.proxy-key"));
+        // From the bean: a random test key is drawn afresh on every Environment read.
+        this.proxyKey = com.salonplatform.platform.infrastructure.OperatorKeys.proxyKey(crypto);
         this.clock = clock;
     }
 

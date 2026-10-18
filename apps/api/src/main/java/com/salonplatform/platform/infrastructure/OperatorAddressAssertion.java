@@ -17,6 +17,7 @@ import javax.crypto.spec.SecretKeySpec;
 
 import com.salonplatform.shared.api.ApplicationProblemException;
 import com.salonplatform.shared.api.ErrorCode;
+import com.salonplatform.shared.api.RequestPaths;
 import jakarta.servlet.http.HttpServletRequest;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -56,11 +57,10 @@ public class OperatorAddressAssertion {
             return request.getRemoteAddr();
         }
         String proof = headers.nextElement();
-        if (headers.hasMoreElements() || !"POST".equals(request.getMethod())
-                || !SIGN_IN_PATH.equals(request.getRequestURI())) {
+        if (headers.hasMoreElements() || !"POST".equals(request.getMethod()) || !RequestPaths.is(request, SIGN_IN_PATH)) {
             throw invalid();
         }
-        return verify(proof, consoleHost, request.getMethod(), request.getRequestURI());
+        return verify(proof, consoleHost, request.getMethod(), SIGN_IN_PATH);
     }
 
     String verify(String proof, String host, String method, String path) {

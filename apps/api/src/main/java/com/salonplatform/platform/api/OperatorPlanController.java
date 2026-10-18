@@ -48,7 +48,7 @@ class OperatorPlanController {
     }
 
     @GetMapping
-    ResponseEntity<PlanCatalogue.PlanPage> list(
+    ResponseEntity<PlanCatalogue.PlanPage> listPlans(
             @Parameter(schema = @Schema(type = "integer", minimum = "0", maximum = "100000", defaultValue = "0"))
             @RequestParam(required = false) String page,
             @Parameter(schema = @Schema(type = "integer", minimum = "1", maximum = "100", defaultValue = "20"))
@@ -58,13 +58,13 @@ class OperatorPlanController {
     }
 
     @GetMapping("/{id}")
-    ResponseEntity<PlanCatalogue.PlanDefinition> get(@PathVariable String id) {
+    ResponseEntity<PlanCatalogue.PlanDefinition> getPlan(@PathVariable String id) {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(plans.get(OperatorRequests.id(id)));
     }
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
-    ResponseEntity<PlanCatalogue.PlanDefinition> create(
+    ResponseEntity<PlanCatalogue.PlanDefinition> createPlan(
             @Parameter(name = ProvisioningReceipts.HEADER, in = ParameterIn.HEADER, required = true,
                     schema = @Schema(type = "string", format = "uuid"))
             @RequestHeader(name = ProvisioningReceipts.HEADER, required = false) String key,

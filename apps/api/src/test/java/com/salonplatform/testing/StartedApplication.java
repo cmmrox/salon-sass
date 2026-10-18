@@ -65,6 +65,12 @@ public final class StartedApplication implements AutoCloseable {
                 "--spring.datasource.password=" + TestPostgres.APP_PASSWORD,
                 "--spring.flyway.user=" + migrationUser,
                 "--spring.flyway.password=" + migrationPassword));
+        // The platform runtime role of every test container, unless the test names its own (a
+        // repeated command-line setting would be joined, not replaced).
+        if (List.of(settings).stream().noneMatch(setting -> setting.startsWith("--salon.platform.datasource."))) {
+            arguments.add("--salon.platform.datasource.username=" + TestPostgres.PLATFORM_USER);
+            arguments.add("--salon.platform.datasource.password=" + TestPostgres.PLATFORM_PASSWORD);
+        }
         arguments.addAll(List.of(settings));
         SpringApplicationBuilder builder = new SpringApplicationBuilder(SalonApiApplication.class);
         if (testConfiguration != null) {
