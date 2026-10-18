@@ -3,7 +3,7 @@ feature: F03
 title: "Entitlements and subscription billing"
 sequence: 2
 surfaces: [api, web]
-status: in-progress
+status: built
 qa_status: not-run
 blocked_reason: null
 released_in: null
@@ -12,9 +12,146 @@ depends_on: [F03-S01]
 requirements: [PLT-04, PLT-05]
 nfr_focus: []
 handoff:
-  run: null
-  data: null
-  notes: null
+  run: |
+    infra/scripts/local-up.sh   (PostgreSQL 5440, API 8090, web 3100); after a rebuild: infra/scripts/local-service.sh stop|start api|web.
+    Console: http://console.localhost:3100/console/salons/{id} (subscription card) and /console/salons/{id}/invoices.
+    Workspace: http://<slug>.localhost:3100/workspace/billing (Owner) and the billing banner on every /workspace page.
+    Operator API (console host only): GET|POST|PATCH /api/v1/operator/salons/{id}/subscription (POST: Idempotency-Key, {monthlyAmount,paymentMethod,currency?});
+      PUT /salons/{id}/plan {version,planId}; GET /salons/{id}/invoices?page&size; GET /invoices/{id}; POST /invoices/{id}/payments (Idempotency-Key,
+      {reference,amount,receivedOn}); POST /salons now requires subscription:{monthlyAmount,paymentMethod}; salon detail gains version.
+    Salon API (staff on the salon host): GET /api/v1/salon/entitlements (entitlement.read: every staff role), GET /api/v1/salon/invoices[/{id}] (invoice.read: Owner).
+    Provider events: POST http://localhost:8090/api/v1/billing/provider-events (bare platform host only; 404 elsewhere), header X-Salon-Billing-Signature =
+      lowercase hex HMAC-SHA256 of the exact body with the provider key; body {eventId,invoiceId,attemptKey,outcome:success|failure,occurredAt};
+      200 {eventId,result: paid|failed|already_paid|unknown|duplicate}; unsigned or wrong signature 401 invalid_credentials; bad body 400 field errors.
+    Local hooks (loopback, local profile, absent from OpenAPI; any host):
+      PUT|GET /local/operator/billing/provider-outcomes/{salonId} {outcome: success|failure} -> {salonId,outcome}; sticky for every later charge of that salon, default success.
+      POST /local/operator/billing/provider-events/signature (any raw body) -> {header:"X-Salon-Billing-Signature",signature}.
+      GET /local/operator/emails?recipient=<email> -> {items:[{messageId,salonId,recipient,kind,subject,body,links,deliveredAt}]}; DELETE /local/operator/emails[?recipient=] -> 204.
+        Kinds billing.failed_charge|due|due_3|due_10|read_only; in memory until cleared or the API restarts.
+      POST /local/operator/billing/run -> {at,changed:[{salonId,issued,reminders,charges,states}],failed:[subscriptionId]} (one pass at the test clock's instant).
+      PUT|GET /local/operator/billing/interrupt {point:"after-invoice-issue"|null} -> {point}; one-shot.
+      POST /local/operator/unbilled-salons {slug?} -> 201 {id,slug,hostname}: active, no subscription, no plan, null profile fields, neutral brand; 409 slug_taken.
+      PUT /local/operator/operators/active {email,active} -> 204 for a hook-created fixture operator, 404 otherwise.
+      F02 hooks /local/identity/seed, DELETE /local/identity, /local/identity/captures|providers|customers now work on every local salon (alpha/beta/gamma still id-checked).
+      Test clock unchanged (GET|PUT|DELETE /local/clock); it drives the job, TOTP and token times.
+    Billing job: platform job subscription-billing every 1 minute through the shared scheduler (job_claim), one platform transaction per subscription.
+    BFF: /operator-web/{subscription?id, invoices?id&page&size, invoice?id} reads; mutations subscription-start {id,monthlyAmount,paymentMethod,currency?,idempotencyKey},
+      subscription-change {id,version,monthlyAmount?,paymentMethod?}, plan-move {id,version,planId}, payment-record {id,reference,amount,receivedOn,idempotencyKey};
+      salon-create gains subscription {monthlyAmount,paymentMethod}. /identity-web/staff/{entitlements, invoices?page} reads.
+    New settings: SALON_BILLING_PROVIDER_KEY (64 hex, optional; without it there is no provider and the intake is 404); local retained in .local/billing-keys.properties
+      (mode 0600, SALON_BILLING_LOCAL_KEY_FILE); SALON_BILLING_LINK_ORIGIN (default https://%s, local http://%s:3100) for email links.
+  data: |
+    Retained local database: V14 applied in place; alpha/beta/gamma and every S01 salon stay unbilled (no subscription, access_state full) and untouched.
+    Walkthrough fixtures (synthetic, random credentials per run, none recorded): operators f03s2-admin-*/f03s2-support-*/f03s2-ui-admin-*/f03s2-res-*@example.test
+      (hook-created fixtures); plans f03s2-*, f03s2ui-*, f03s2res-*; salons f03s2-{card,fail,bank,xfer,seats,move,intr}-<tag>, f03s2-legacy/legacy-*, f03s2ui-*,
+      f03s2res-*, with seeded staff seed-<role>-<slug>@example.test / ui-<role>-<slug>@example.test and their provisioned Owners owner-<slug>@example.test.
+      Their invoices are dated in the test clock's future (up to about 2026-12) and include read-only and paid states. The test clock is back on real time.
+    No real messages or charges: emails go to the local capture, charges to the local fake provider.
+  notes: |
+    Developer gates (verification.commands), run from the repository root by apps/api/target/f03-s02-evidence/run-gates.sh on a clean tree at
+    a6e6b8764f68665918c64f6d7a75385b2b53fbf2 (gates2/summary.txt records revision and dirty=0); complete logs in
+    /Users/cmmrox/Personal/Projects/salon-sass/apps/api/target/f03-s02-evidence/gates2/<n>.log (ignored path; never /tmp).
+    | command | revision | result | log |
+    | cd apps/api && ./mvnw -q verify | a6e6b87 | exit 0; 650 tests, 0 failures, 0 errors (surefire summaries in gates2/surefire) | gates2/1.log |
+    | pnpm -r lint | a6e6b87 | exit 0 | gates2/2.log |
+    | pnpm -r typecheck | a6e6b87 | exit 0 | gates2/3.log |
+    | pnpm -r test | a6e6b87 | exit 0; web 582 + contracts 19 | gates2/4.log |
+    | pnpm --filter @salon/web build | a6e6b87 | exit 0; artifact scan clean (10 known key values) | gates2/5.log |
+    | pnpm contracts:check | a6e6b87 | exit 0; document and client current | gates2/6.log |
+    The first full run (gates/, afa102c) failed the API verify on LocalHooksIntegrationTest: the new entitlements notice description contained the word
+    "clock", which the contract must not name; reworded in a6e6b87 (description only) and every gate rerun on a clean tree (gates2/, summary.txt).
+    Conditions: JDK 25 selected by the build's toolchain (machine default stays 21), Node 24.12 with Corepack pnpm, Docker Testcontainers postgres:18.6;
+    the local runtime was stopped during the gates and restarted afterwards from the same revision.
+
+    Acceptance criteria, checked on the running local product from outside (API 8090, web 3100, test clock, fake provider, email capture); scripts and
+    results in /Users/cmmrox/Personal/Projects/salon-sass/apps/api/target/f03-s02-evidence: api-walkthrough.{cjs,json,log} 78/78,
+    ui-walkthrough.{cjs,json,log} 55/55 with screens/*.png, resilience.{cjs,json,log} 24/24, all rerun after the gates on the runtime built from
+    a6e6b87 (GET /api/v1/meta commit a6e6b876...). The first browser walkthrough found the missing /workspace/billing route (fixed in b827779).
+    AC-1 checked: created salon trialing, trialEndsAt = createdAt + exactly 14 days; missing, -1, 1.5, 100000001, "5" amount -> 400 subscription.monthlyAmount,
+      unknown/missing method -> 400 subscription.paymentMethod, missing subscription -> 400 subscription; no salon in each case (also integration-tested).
+    AC-2 checked: unbilled-salon hook salon: subscription 404, console "No subscription" + Start subscription, workspace entitlements subscription null,
+      staff creation 201; start without currency 400 currency, with LKR 201 trialing 14 days; replay with the same key returns it; second start 409 invalid_state.
+    AC-3 checked: 5 s before trial end nothing; at trial end exactly one invoice per subscription with the next unique numbers, plan at issue, amount,
+      LKR, first period [trial end, +1 month), due exactly 7 days after issue, with 4 concurrent passes plus repeats; 31st anchor -> Feb 28 -> Mar 31
+      (integration test with a movable clock; also unit-tested incl. leap year and London clock changes).
+    AC-4 checked: fake success through the outbox and a signed event pays the invoice, salon active; with outcome failure the invoice stays open,
+      one billing.failed_charge email to the Owner contact per failed attempt, retried at due, due+3 and due+10 (attempts issue,due,due_3,due_10; 4 emails).
+    AC-5 checked: replayed event id -> duplicate; event for a paid invoice -> already_paid; unsigned and wrongly signed -> 401, no provider_event row;
+      late success after a manual transfer -> already_paid; exactly one payment each; intake 404 on salon and console hosts.
+    AC-6 checked: partial/excess -> 400 amount, future date -> 400 receivedOn, blank reference -> 400 reference, unknown id 404, paid 409 invalid_state, all
+      without change; exact transfer 201 paid; same key and input -> same payment, one payment and one payment.recorded audit; changed input -> 409 idempotency_conflict.
+    AC-7 checked (Europe/London salon): one second before each boundary nothing changed (run timestamp < boundary); at due past_due + billing.due email,
+      at +3 and +10 days one email each, at +14 days read_only + billing.read_only email, each once despite repeated passes; registry access_state read_only.
+    AC-8 checked: in the read-only salon sign-in, MFA, renewal, password change, sign-out (own session) and every staff read work; customer code sign-in,
+      profile read/update, export and deletion work; staff create/change/remove (signed in or not) -> 403 salon_read_only with no change; another salon
+      creates staff 201; alpha/beta/gamma unbilled and full. Browser: staff screen shows the reason and disables create/role/remove.
+    AC-9 checked: with two overdue invoices paying the newer leaves read_only; paying the older returns active/full on the next request and staff creation works.
+    AC-10 checked: beyond the seat limit 409 entitlement_exceeded with errors[0].field staffSeats, nothing created; removal frees a seat; 5 simultaneous
+      creations for the last seat -> exactly one 201 and four 409.
+    AC-11 checked: a move below usage 409 entitlement_exceeded naming staffSeats, no change; a fitting move 200 with version+1; stale version 409 conflict;
+      the next invoice carries the new plan; a changed amount applies from the next invoice while the issued one keeps its amount.
+    AC-12 checked: all five roles read plan, limits, usage and state of their own salon; only the Owner reads invoices (others 403 permission_denied);
+      another salon's invoice id 404; a token on another salon's host 404; customer 403 permission_denied on both. Browser: banner for trial ending
+      (within 3 days), past due (with due and read-only dates) and read-only (how to pay) on every page for Owner and Manager; Plan and billing for the
+      Owner only (Manager has no route and is denied).
+    AC-13 checked: on every operator billing route Support 403 permission_denied, staff and customer tokens 401, salon/bare/admin hosts 404; no change.
+    AC-14 checked: subscription.started, subscription.changed, salon.plan_changed, invoice.issued, charge.requested, charge.failed, provider_event.received,
+      payment.recorded, subscription.state_changed and billing.reminder_sent in the platform audit with actor kind operator or system and a 32-hex trace id
+      (job runs get their own trace); no email, password, secret, token or card text in audit details; emails carry only invoice number, amount, dates and
+      the workspace link.
+    AC-15 checked: console card (unbilled empty, trial, past due, read-only from), start/change/move/record sheets, invoice list (empty,
+      open, paid, pagination) and workspace Plan and billing page and banner at 360/390/768/1024/1280/1440 with no horizontal scroll or clipped control;
+      keyboard opens sheets with focus inside, Escape returns focus; every field labelled; status Badges carry words; validation (amount), conflict
+      (plan move), unavailable (API stopped) and success states; loading uses Skeleton/Spinner (rendered, not screenshotted); money as Rs. 2,500.50 / Rs. 1,500; no script error.
+    AC-16 checked: stopped and paused PostgreSQL -> operator subscription/invoices and salon entitlements 503 service_unavailable in about 2.0 s;
+      recovery 8 ms after pg_isready without restart; with the API stopped the console invoices page shows its recoverable error. Interrupt hook after
+      invoice issue -> the failed subscription has no invoice and no charge message; the next pass issues it with its attempt.
+
+    Visual handoff: no billing screen exists in the prototype; the screens extend the console's and workspace's Salon-mode grammar (white 24px Card,
+    Item rows, Badges, pill Buttons, Field/Select, bottom sheet / right drawer Sheet, Alert for the banner, Empty, Pagination, Skeleton, Spinner). The
+    workspace navigation adds Plan and billing with the prototype's own card glyph (its Payments icon). Compared in screens/*.png at the width matrix.
+
+    Differs from or adds to the documents (for the lead):
+    - Registry: tenant.access_state ('full'|'read_only', written only by billing) beside tenant.status (lifecycle, takes precedence), and tenant.version
+      for operator changes (plan moves now, S03 lifecycle). tenant_by_slug/tenant_by_id return access_state; RegisteredTenant/CurrentTenant carry readOnly.
+      The platform role gets column UPDATE on tenant (plan_id, access_state, version, updated_at) only.
+    - Read-only check in TenantFilter with an explicit allowlist: staff sign-in, MFA challenges/enroll/verify, session refresh, DELETE /identity/sessions and
+      /sessions/{id} (own sessions, accepted by the lead as sign-out), PUT /staff/password, customer challenges and sign-in, PUT and DELETE /customers/me.
+      Any other mutating /api request on a read-only salon (even one with no handler) is 403 salon_read_only before authentication; /local hooks and
+      /api/v1/billing are exempt.
+    - Lead decisions: a salon without a currency must be given one when its subscription starts (400 currency otherwise; refused for a salon with one),
+      stored on the subscription only; a salon without an Owner contact has reminders recorded with recipient "none" and no email, and the console shows
+      "No billing contact".
+    - Provider events: invalid or missing signature is 401 invalid_credentials (lead-accepted); header X-Salon-Billing-Signature; the fake's outcome is
+      sticky per salon (the document says "next charge outcome"). A late success after a manual payment is recorded already_paid: no second payment and
+      no refund (refunds are out of scope).
+    - Identity permission keys entitlement.read (every staff role) and invoice.read (Owner) are added to identity's matrix (identity-and-access.md).
+    - Staff seats count active staff including the Owner; the local identity seed hook does not enforce the limit (fixtures). A plan move checks staff
+      seats only (no other usage exists yet); moving to the current plan is a no-op 200. The seat race is serialized by identity's salon lock and the
+      registry row share lock taken by salon_entitlements() (a plan move updates that row).
+    - Times: issue/due/reminder/read-only boundaries are exact instant offsets (7, 3, 10, 14 days of 24 h); months are calendar months in the salon zone
+      anchored at trial end (anchor_local stored), clock-change rules as SalonTime. issued_at is the scheduled boundary, created_at when the pass ran;
+      a late pass issues every missed period (at most 36 per pass) and sends every reminder whose boundary has passed. Charge retries use the current
+      payment method.
+    - Invoice numbers come from a single-row counter advanced under its lock, so they have no gaps (INV-000001, six digits minimum). One payment per
+      invoice (unique) because payments are exact. An issued invoice is immutable by trigger except open -> paid; the platform role has no DELETE on
+      billing tables (S03's local reset will need the owning role or a function).
+    - Charge requests and emails use the existing tenant outbox through outbox_enqueue_for_salon (SECURITY DEFINER, platform role, channels email and
+      billing-charge only) so they commit with the invoice; a suspended salon's (S03) billing emails and charges therefore wait like its other messages.
+      Outside local no email or billing-charge provider exists, so those messages wait. Emails are English only and composed by billing.
+    - Entitlements response: plan/limits/features/subscription are nullable (legacy salon), and subscription adds pastDueSince and notice
+      (trial_ending|past_due|read_only|null, decided with the API clock, so the banner follows the test clock). SubscriptionView.readOnlyAt is the
+      future read-only instant while past due and the instant it became read-only once read-only.
+    - Console money input takes major units with up to two decimals and is converted to minor units by moving the decimal point in the text (no
+      floating point); anything else is sent as typed and the API names the field. Display follows the "Rs. 2,500" rule (lib/format formatMoney).
+    - Console invoices page requires operator.billing.read; console subscription card, sheets and invoice page test ids are console-* (kebab), invoice rows
+      console-invoice-row with data-id, record-transfer buttons with data-id; workspace billing-* and workspace-billing-banner (data-notice),
+      workspace-billing nav item, account-read-only.
+    - The built-artifact scan also refuses SALON_BILLING_PROVIDER_KEY and .local/billing-keys.properties. The stack files do not pass
+      SALON_BILLING_PROVIDER_KEY (optional: no provider in staging until D-06).
+    - F02 local identity hooks now accept every local salon (spec scope for AC-8); LocalIdentityIntegrationTest updated accordingly.
+    Not done: Sinhala and Tamil messages (the product has only messages/en.json; the spec mentions en, si, ta); a real billing provider (D-06).
+    Elapsed: 08:28Z to about 10:20Z on 2026-10-18 wall clock (about 1 h 50 min), including one usage-limit interruption of unknown length; split unknown.
 cases: []
 verification:
   commands:
