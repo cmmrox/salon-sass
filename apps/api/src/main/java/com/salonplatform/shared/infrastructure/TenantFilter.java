@@ -80,6 +80,17 @@ class TenantFilter extends OncePerRequestFilter {
                 || path.equals("/error");
     }
 
+    /**
+     * The operator console's API and its local hooks (docs/architecture/operator-console.md). They
+     * belong to no salon: the hostname is never resolved as one, and the bearer credential is never
+     * taken for a salon's. Platform authorizes them itself, on the exact console hostname only.
+     */
+    static boolean isOperatorEndpoint(HttpServletRequest request) {
+        String path = request.getRequestURI();
+        return path.equals("/api/v1/operator") || path.startsWith("/api/v1/operator/")
+                || path.equals("/local/operator") || path.startsWith("/local/operator/");
+    }
+
     @Override
     protected void doFilterInternal(
             HttpServletRequest request, HttpServletResponse response, FilterChain chain)
@@ -107,7 +118,18 @@ class TenantFilter extends OncePerRequestFilter {
                             || request.getRequestURI().contains("/mfa/")
                             || request.getRequestURI().endsWith("/sessions/refresh")
                             || request.getRequestURI().startsWith("/local/");
-            if (candidateSlug == null
+            if (isOperatorEndpoint(request)) {
+                TenantContext.callForRequest(
+                        null,
+                        directory,
+                        () ->
+                                RequestCredential.callWith(
+                                        credential,
+                                        () -> {
+                                            chain.doFilter(request, response);
+                                            return null;
+                                        }));
+            } else if (candidateSlug == null
                     && nativeAddress
                     && !credential.isBlank()
                     && !isPlatformEndpoint(request)

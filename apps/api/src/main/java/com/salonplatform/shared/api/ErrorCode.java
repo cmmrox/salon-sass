@@ -23,6 +23,12 @@ public enum ErrorCode {
     PERMISSION_DENIED("permission_denied", "Your account does not have permission for this action."),
     CONFLICT("conflict", "The record changed or this change conflicts with an existing record."),
     RATE_LIMITED("rate_limited", "Please wait before trying again."),
+    /** Another salon already has this slug (F03-S01). */
+    SLUG_TAKEN("slug_taken", "Another salon already uses this web address."),
+    /** Another plan already has this key (F03-S01). */
+    PLAN_KEY_TAKEN("plan_key_taken", "Another plan already uses this key."),
+    /** The idempotency key was already used with a different request (F03-S01). */
+    IDEMPOTENCY_CONFLICT("idempotency_conflict", "This request key was already used for a different request."),
     BAD_REQUEST("bad_request", "The request could not be understood."),
     NOT_FOUND("not_found", "The requested resource was not found."),
     METHOD_NOT_ALLOWED("method_not_allowed", "The method is not allowed for this resource."),

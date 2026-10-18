@@ -46,8 +46,13 @@ load_settings() {
   export SALON_DB_PASSWORD="${SALON_DB_PASSWORD:-salon-local-only}"
   export SALON_DB_APP_USER="${SALON_DB_APP_USER:-salon_app}"
   export SALON_DB_APP_PASSWORD="${SALON_DB_APP_PASSWORD:-salon-app-local-only}"
+  export SALON_DB_PLATFORM_USER="${SALON_DB_PLATFORM_USER:-salon_platform}"
+  export SALON_DB_PLATFORM_PASSWORD="${SALON_DB_PLATFORM_PASSWORD:-salon-platform-local-only}"
   if [ "$SALON_DB_APP_USER" = "$SALON_DB_USER" ]; then
     fail "SALON_DB_APP_USER and SALON_DB_USER are both '$SALON_DB_USER'. The API connects as a role of its own, which owns no table and cannot get round row-level security; the owning role runs the migrations. Give them different names (see .env.example)."
+  fi
+  if [ "$SALON_DB_PLATFORM_USER" = "$SALON_DB_USER" ] || [ "$SALON_DB_PLATFORM_USER" = "$SALON_DB_APP_USER" ]; then
+    fail "SALON_DB_PLATFORM_USER '$SALON_DB_PLATFORM_USER' must be a role of its own, neither the owning role nor the application's role (see .env.example)."
   fi
   export SALON_PLATFORM_DOMAIN="${SALON_PLATFORM_DOMAIN:-localhost}"
   case "${SALON_LISTEN_ON_NETWORK:-false}" in
@@ -59,6 +64,7 @@ load_settings() {
   export SALON_DB_URL="${SALON_DB_URL:-jdbc:postgresql://localhost:${SALON_POSTGRES_PORT}/${SALON_DB_NAME}}"
   export SALON_API_BASE_URL="${SALON_API_BASE_URL:-http://localhost:${SALON_API_PORT}}"
   export SALON_IDENTITY_LOCAL_KEY_FILE="${SALON_IDENTITY_LOCAL_KEY_FILE:-$ROOT/.local/identity-keys.properties}"
+  export SALON_OPERATOR_LOCAL_KEY_FILE="${SALON_OPERATOR_LOCAL_KEY_FILE:-$ROOT/.local/operator-keys.properties}"
   export SALON_WEB_LOCAL_HTTP="${SALON_WEB_LOCAL_HTTP:-true}"
   export SALON_WEB_TRUSTED_PROXIES="${SALON_WEB_TRUSTED_PROXIES:-}"
   export SALON_WEB_MODE="${SALON_WEB_MODE:-production}"
@@ -390,14 +396,15 @@ psql_as_owner() {
     psql --no-psqlrc --quiet --set ON_ERROR_STOP=1 --username "$SALON_DB_USER" --dbname "$SALON_DB_NAME" "$@"
 }
 
-# Creates the role the API connects as, or brings an existing one into line: it can log in, and it
-# is not a superuser, cannot bypass row-level security and owns nothing (infra/postgres/
-# application-role.sql). Done whenever PostgreSQL or the API is started, so it holds on a new
+# Creates the roles the API connects as (the tenant role and the platform runtime role), or brings
+# existing ones into line: each can log in, and is not a superuser, cannot bypass row-level security
+# and owns nothing (infra/postgres/application-role.sql). Done whenever PostgreSQL or the API is started, so it holds on a new
 # volume and on one made before the role existed. Its name and password are the local-only values
 # in .env.example.
 ensure_application_role() {
   psql_as_owner \
     --set app_user="$SALON_DB_APP_USER" --set app_password="$SALON_DB_APP_PASSWORD" --set db_name="$SALON_DB_NAME" \
+    --set platform_user="$SALON_DB_PLATFORM_USER" --set platform_password="$SALON_DB_PLATFORM_PASSWORD" \
     --file - <"$ROOT/infra/postgres/application-role.sql" >>"$LOG_DIR/postgres.log" 2>&1 \
     || { tail -n 30 "$LOG_DIR/postgres.log" >&2; fail "the application's database role '$SALON_DB_APP_USER' could not be created. See $LOG_DIR/postgres.log"; }
 }
@@ -511,9 +518,10 @@ stop_web() { stop_process web; }
 
 print_addresses() {
   say ""
-  say "PostgreSQL  localhost:${SALON_POSTGRES_PORT}  (database ${SALON_DB_NAME}; owner ${SALON_DB_USER}, application role ${SALON_DB_APP_USER})"
+  say "PostgreSQL  localhost:${SALON_POSTGRES_PORT}  (database ${SALON_DB_NAME}; owner ${SALON_DB_USER}, application role ${SALON_DB_APP_USER}, platform role ${SALON_DB_PLATFORM_USER})"
   say "API         http://localhost:${SALON_API_PORT}  (health: http://localhost:${SALON_API_PORT}/actuator/health)"
   say "Web         http://localhost:${SALON_WEB_PORT}"
+  say "Console     http://console.${SALON_PLATFORM_DOMAIN}:${SALON_WEB_PORT}/console  (operator API: http://console.${SALON_PLATFORM_DOMAIN}:${SALON_API_PORT}/api/v1/operator)"
   if [ "$SPRING_PROFILES_ACTIVE" = "local" ]; then
     say "Salons      alpha, beta, gamma: http://alpha.${SALON_PLATFORM_DOMAIN}:${SALON_WEB_PORT}  (API: http://alpha.${SALON_PLATFORM_DOMAIN}:${SALON_API_PORT}/api/v1/salon)"
   fi

@@ -26,7 +26,7 @@ asked for; the cases of a stage are written at its feature's pass.
 | F02-S02 | complete | - | IAM-01, IAM-03, IAM-09, IAM-10, IAM-11, NFR-08, NFR-10 | 8 | 18 | 18 | 0 | 0 |
 | F02-S03 | complete | - | IAM-03, IAM-04, IAM-05, IAM-11, NFR-08, NFR-10 | 6 | 14 | 14 | 0 | 0 |
 | F02-S04 | complete | - | IAM-01, IAM-03, IAM-04, IAM-05, IAM-06, IAM-07, IAM-08, IAM-09, IAM-10, IAM-11, NFR-08, NFR-10, NFR-21 | 14 | 31 | 28 | 3 | 0 |
-| F03-S01 | planned | - | PLT-01, PLT-04 | 20 | 0 | 0 | 0 | 0 |
+| F03-S01 | in-progress | - | PLT-01, PLT-04 | 20 | 0 | 0 | 0 | 0 |
 | F03-S02 | planned | - | PLT-04, PLT-05 | 16 | 0 | 0 | 0 | 0 |
 | F03-S03 | planned | - | PLT-06 | 12 | 0 | 0 | 0 | 0 |
 | F03-S04 | planned | - | PLT-07, NFR-20 | 10 | 0 | 0 | 0 | 0 |
@@ -43,10 +43,10 @@ Cases waiting for something else. `feature-verify` and `release-prepare` go thro
 
 | Requirement | Release | Priority | Feature | Stages |
 | --- | --- | --- | --- | --- |
-| PLT-01 | R1 | must | F03 | F03-S01 (planned) |
+| PLT-01 | R1 | must | F03 | F03-S01 (in-progress) |
 | PLT-02 | R1 | must | F14 | - |
 | PLT-03 | R1 | should | F14 | - |
-| PLT-04 | R1 | must | F03 | F03-S01 (planned), F03-S02 (planned) |
+| PLT-04 | R1 | must | F03 | F03-S01 (in-progress), F03-S02 (planned) |
 | PLT-05 | R1 | must | F03 | F03-S02 (planned) |
 | PLT-06 | R1 | must | F03 | F03-S03 (planned) |
 | PLT-07 | R1 | must | F03 | F03-S04 (planned) |

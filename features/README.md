@@ -31,7 +31,7 @@ requirement detail is in `qa/coverage.md`.
 
 | Stage | Title | Surfaces | Status | Stage QA | Blocking bugs | Next |
 | --- | --- | --- | --- | --- | --- | --- |
-| F03-S01 | Operator access, salon provisioning and plans | api, web | planned | - | 0 | **developer**: `stage-build F03-S01` |
+| F03-S01 | Operator access, salon provisioning and plans | api, web | in-progress | - | 0 | **developer**: `stage-build F03-S01` |
 | F03-S02 | Entitlements and subscription billing | api, web | planned | - | 0 | **developer**: `stage-build F03-S02` |
 | F03-S03 | Salon lifecycle, export and retention | api, web | planned | - | 0 | **developer**: `stage-build F03-S03` |
 | F03-S04 | Audited support sessions | api, web | planned | - | 0 | **developer**: `stage-build F03-S04` |

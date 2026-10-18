@@ -50,6 +50,8 @@ final class JobScheduler implements SmartLifecycle {
 
     private final List<TenantJob> jobs;
 
+    private final List<PlatformJob> platformJobs;
+
     private final ActiveTenants tenants;
 
     private final TransactionTemplate transactions;
@@ -73,9 +75,16 @@ final class JobScheduler implements SmartLifecycle {
 
     JobScheduler(JobSettings settings, JobStore store, List<TenantJob> jobs, ActiveTenants tenants,
             PlatformTransactionManager transactionManager, Clock clock, Traces traces, MeterRegistry meters) {
+        this(settings, store, jobs, List.of(), tenants, transactionManager, clock, traces, meters);
+    }
+
+    JobScheduler(JobSettings settings, JobStore store, List<TenantJob> jobs, List<PlatformJob> platformJobs,
+            ActiveTenants tenants, PlatformTransactionManager transactionManager, Clock clock, Traces traces,
+            MeterRegistry meters) {
         this.settings = settings;
         this.store = store;
         this.jobs = List.copyOf(jobs);
+        this.platformJobs = List.copyOf(platformJobs);
         this.tenants = tenants;
         this.transactions = new TransactionTemplate(transactionManager);
         this.clock = clock;
@@ -91,7 +100,8 @@ final class JobScheduler implements SmartLifecycle {
         running = true;
         stopping = new CountDownLatch(1);
         poller = Thread.ofVirtual().name("job-scheduler").start(this::pollUntilStopped);
-        log.info("The job scheduler started with the jobs {}", jobs.stream().map(TenantJob::name).toList());
+        log.info("The job scheduler started with the jobs {} and the platform jobs {}",
+                jobs.stream().map(TenantJob::name).toList(), platformJobs.stream().map(PlatformJob::name).toList());
     }
 
     @Override
@@ -135,6 +145,29 @@ final class JobScheduler implements SmartLifecycle {
                     .register(meters).record(Duration.between(occurrence.get(), now));
             try {
                 runForEverySalon(job, now);
+            }
+            finally {
+                store.finish(job.name(), instance, clock.instant());
+            }
+        }
+        for (PlatformJob job : platformJobs) {
+            if (!running) {
+                return;
+            }
+            Instant now = clock.instant();
+            Optional<Instant> occurrence = store.claim(job.name(), now, job.every(), instance,
+                    now.plus(settings.hold()));
+            if (occurrence.isEmpty()) {
+                continue;
+            }
+            Timer.builder(START_DELAY).description("How late a job's occurrence started").tag("job", job.name())
+                    .register(meters).record(Duration.between(occurrence.get(), now));
+            try {
+                job.run(now);
+                log.info("Platform job {} ran", job.name());
+            }
+            catch (RuntimeException ex) {
+                log.error("Platform job {} failed; its next occurrence tries again", job.name(), ex);
             }
             finally {
                 store.finish(job.name(), instance, clock.instant());
