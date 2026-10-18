@@ -11,7 +11,12 @@ public enum StaffRole {
 
     public Set<String> permissions(boolean grant) {
         java.util.HashSet<String> p =
-                new java.util.HashSet<>(Set.of("session.manage", "password.change", "mfa.enroll"));
+                new java.util.HashSet<>(
+                        Set.of(
+                                "session.manage",
+                                "password.change",
+                                "mfa.enroll",
+                                "entitlement.read"));
         if (this == OWNER || this == MANAGER)
             p.addAll(
                     Set.of(
@@ -21,7 +26,7 @@ public enum StaffRole {
                             "catalogue.price.change",
                             "policy.change",
                             "customer.export"));
-        if (this == OWNER) p.add("staff.manage");
+        if (this == OWNER) p.addAll(Set.of("staff.manage", "invoice.read"));
         if (this == OWNER || this == MANAGER || this == RECEPTIONIST || this == PROFESSIONAL)
             p.addAll(Set.of("calendar.read", "customer.read"));
         if (this == OWNER

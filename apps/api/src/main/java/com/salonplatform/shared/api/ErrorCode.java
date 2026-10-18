@@ -29,6 +29,12 @@ public enum ErrorCode {
     PLAN_KEY_TAKEN("plan_key_taken", "Another plan already uses this key."),
     /** The idempotency key was already used with a different request (F03-S01). */
     IDEMPOTENCY_CONFLICT("idempotency_conflict", "This request key was already used for a different request."),
+    /** The salon is read-only for an unpaid invoice: 403 on every tenant mutation but the exempt ones (F03-S02). */
+    SALON_READ_ONLY("salon_read_only", "This salon is read-only until its overdue invoices are paid."),
+    /** The salon's plan does not allow this; the problem names the limit in its errors (F03-S02). */
+    ENTITLEMENT_EXCEEDED("entitlement_exceeded", "The salon's plan does not allow this."),
+    /** The record is not in a state that allows this action (F03-S02). */
+    INVALID_STATE("invalid_state", "This action is not possible in the record's current state."),
     BAD_REQUEST("bad_request", "The request could not be understood."),
     NOT_FOUND("not_found", "The requested resource was not found."),
     METHOD_NOT_ALLOWED("method_not_allowed", "The method is not allowed for this resource."),

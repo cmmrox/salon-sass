@@ -115,7 +115,8 @@ final class RequestTenant {
 
     private Resolution resolutionOf(RegisteredTenant registered) {
         return switch (registered.status()) {
-            case ACTIVE -> Resolution.of(new CurrentTenant(registered.id(), candidateSlug, registered.timeZone()));
+            case ACTIVE -> Resolution.of(new CurrentTenant(registered.id(), candidateSlug, registered.timeZone(),
+                    registered.readOnly()));
             // Its id is dropped here: a suspended salon is never the salon of a request.
             case SUSPENDED -> Resolution.SUSPENDED;
         };

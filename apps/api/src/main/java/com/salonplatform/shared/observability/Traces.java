@@ -70,6 +70,24 @@ public class Traces {
         }
     }
 
+    /**
+     * Runs platform work that belongs to no salon (a platform job's run) in a new root span, so that
+     * its log lines and platform audit entries carry a trace id. A failure is recorded and thrown on.
+     */
+    public <R> R inPlatformSpan(String name, Callable<R> work) throws Exception {
+        Span span = start(name, null);
+        try (Tracer.SpanInScope scope = tracer.withSpan(span)) {
+            return work.call();
+        }
+        catch (Exception | Error ex) {
+            span.error(ex);
+            throw ex;
+        }
+        finally {
+            span.end();
+        }
+    }
+
     /** Records on the current span, when there is one, that its work failed for this reason. */
     public void failed(Throwable failure) {
         Span span = tracer.currentSpan();

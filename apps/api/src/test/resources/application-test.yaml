@@ -37,3 +37,5 @@ salon.operator:
   encryption-key: ${random.value}${random.value}
   proxy-key: ${random.value}${random.value}
   fingerprint-key: ${random.value}${random.value}
+salon.billing:
+  provider-key: ${random.value}${random.value}

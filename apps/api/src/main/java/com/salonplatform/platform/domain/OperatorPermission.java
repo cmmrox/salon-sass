@@ -12,6 +12,10 @@ public final class OperatorPermission {
     public static final String SALON_CREATE = "operator.salon.create";
     public static final String PLAN_READ = "operator.plan.read";
     public static final String PLAN_CREATE = "operator.plan.create";
+    /** Subscriptions and invoices (F03-S02). */
+    public static final String BILLING_READ = "operator.billing.read";
+    /** Start a subscription, change its amount or method, move a plan, record a transfer (F03-S02). */
+    public static final String BILLING_MANAGE = "operator.billing.manage";
 
     private OperatorPermission() {
     }

@@ -92,6 +92,16 @@ class TenantFilter extends OncePerRequestFilter {
         return RequestPaths.under(request, "/api/v1/operator") || RequestPaths.under(request, "/local/operator");
     }
 
+    /**
+     * A read-only salon (F03-S02) refuses every tenant mutation outside the allowlist before anything
+     * runs: 403 {@code salon_read_only}, nothing changed ({@link ReadOnlyRoutes}).
+     */
+    private static void refuseWhenReadOnly(HttpServletRequest request) {
+        if (ReadOnlyRoutes.refused(request)) {
+            throw new ApplicationProblemException(403, ErrorCode.SALON_READ_ONLY);
+        }
+    }
+
     @Override
     protected void doFilterInternal(
             HttpServletRequest request, HttpServletResponse response, FilterChain chain)
@@ -146,13 +156,15 @@ class TenantFilter extends OncePerRequestFilter {
                                 .orElseThrow(NotFoundException::new);
                 TenantContext.callAs(
                         tenant,
-                        () ->
-                                RequestCredential.callWith(
-                                        credential,
-                                        () -> {
-                                            chain.doFilter(request, response);
-                                            return null;
-                                        }));
+                        () -> {
+                            refuseWhenReadOnly(request);
+                            return RequestCredential.callWith(
+                                    credential,
+                                    () -> {
+                                        chain.doFilter(request, response);
+                                        return null;
+                                    });
+                        });
             } else {
                 TenantContext.callForRequest(
                         candidateSlug,
@@ -169,6 +181,7 @@ class TenantFilter extends OncePerRequestFilter {
                                         .equals(TenantContext.require().id()))
                                     throw new NotFoundException();
                             }
+                            refuseWhenReadOnly(request);
                             RequestCredential.callWith(
                                     credential,
                                     () -> {
