@@ -23,8 +23,8 @@ class JobsConfiguration {
     @ConditionalOnProperty(name = "salon.jobs.enabled", havingValue = "true", matchIfMissing = true)
     JobScheduler jobScheduler(JobSettings settings, JobStore store, List<TenantJob> jobs,
             ObjectProvider<PlatformJob> platformJobs, ActiveTenants tenants, PlatformTransactionManager transactions,
-            Clock clock, Traces traces, MeterRegistry meters) {
+            Clock clock, Traces traces, MeterRegistry meters, TenantJobActivity activity) {
         return new JobScheduler(settings, store, jobs, platformJobs.orderedStream().toList(), tenants, transactions,
-                clock, traces, meters);
+                clock, traces, meters, activity);
     }
 }

@@ -57,4 +57,16 @@ public final class RequestPaths {
     public static boolean is(HttpServletRequest request, String exact) {
         return exact.equals(path(request));
     }
+
+    /** The export download path carries a credential in its next segment (F03-S03). */
+    private static final java.util.regex.Pattern EXPORT_TOKEN =
+            java.util.regex.Pattern.compile("/api/v1/exports/[^/?#]+");
+
+    /**
+     * A path or URL as it may be logged or traced: an export download's token is replaced by
+     * {@code {token}}, so no download credential reaches a log line or a span.
+     */
+    public static String loggable(String path) {
+        return path == null ? null : EXPORT_TOKEN.matcher(path).replaceAll("/api/v1/exports/{token}");
+    }
 }

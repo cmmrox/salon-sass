@@ -31,6 +31,8 @@ x-api-environment: &api-environment
   SALON_OPERATOR_ENCRYPTION_KEY: ${SALON_OPERATOR_ENCRYPTION_KEY:?SALON_OPERATOR_ENCRYPTION_KEY is a required secret}
   SALON_OPERATOR_PROXY_KEY: ${SALON_OPERATOR_PROXY_KEY:?SALON_OPERATOR_PROXY_KEY is a required secret}
   SALON_OPERATOR_FINGERPRINT_KEY: ${SALON_OPERATOR_FINGERPRINT_KEY:?SALON_OPERATOR_FINGERPRINT_KEY is a required secret}
+  # A closed salon's export is encrypted at rest with its own key (F03-S03).
+  SALON_EXPORT_KEY: ${SALON_EXPORT_KEY:?SALON_EXPORT_KEY is a required secret}
 
 x-api: &api
   restart: unless-stopped

@@ -18,7 +18,7 @@ import org.springframework.stereotype.Component;
 
 /**
  * {@code local} only: the {@code email} channel's capturing fake, as for {@code sms} and
- * {@code whatsapp}. Nothing is sent; each delivered email is kept in memory (until cleared or the API
+ * {@code whatsapp} (and, through {@link LocalPlatformEmailCapture}, the {@code platform-email} channel). Nothing is sent; each delivered email is kept in memory (until cleared or the API
  * restarts) for the hook to list by recipient. A redelivery of the same message is captured once.
  */
 @Component
@@ -44,16 +44,26 @@ class LocalEmailCapture implements OutboxProvider {
     }
 
     @Override
-    public synchronized void deliver(OutboxDelivery delivery) {
-        if (captured.stream().anyMatch(each -> each.messageId().equals(delivery.messageId()))) {
-            return;
-        }
+    public void deliver(OutboxDelivery delivery) {
         JsonNode payload = json.readTree(delivery.payload());
         List<String> links = new ArrayList<>();
         payload.path("links").forEach(link -> links.add(link.asString()));
+        capture(delivery, payload, links);
+    }
+
+    /** Keeps one delivered email (once per message), whichever email channel delivered it. */
+    synchronized void capture(OutboxDelivery delivery, JsonNode payload, List<String> links) {
+        if (captured.stream().anyMatch(each -> each.messageId().equals(delivery.messageId()))) {
+            return;
+        }
         captured.add(new CapturedEmail(delivery.messageId(), delivery.tenantId(), payload.path("recipient").asString(),
                 payload.path("kind").asString(), payload.path("subject").asString(), payload.path("body").asString(),
                 List.copyOf(links), clock.instant()));
+    }
+
+    /** Forgets the emails of these salons (the local reset removes them). */
+    void clearSalons(java.util.Set<UUID> salons) {
+        captured.removeIf(each -> salons.contains(each.salonId()));
     }
 
     List<CapturedEmail> list(String recipient) {

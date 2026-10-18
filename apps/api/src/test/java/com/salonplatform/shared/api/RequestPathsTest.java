@@ -40,4 +40,17 @@ class RequestPathsTest {
         assertThat(RequestPaths.under(request(uri), "/api/v1/operator")).isFalse();
         assertThat(RequestPaths.under(request(uri), "/local")).isFalse();
     }
+
+    @org.junit.jupiter.api.Test
+    void anExportDownloadTokenNeverReachesALogLineOrASpan() {
+        String token = "AbCdEfGhIjKlMnOpQrStUvWxYz0123456789_-abcd";
+        org.assertj.core.api.Assertions.assertThat(RequestPaths.loggable("/api/v1/exports/" + token))
+                .isEqualTo("/api/v1/exports/{token}");
+        org.assertj.core.api.Assertions.assertThat(RequestPaths.loggable("/api/v1/exports/" + token + "/metadata"))
+                .isEqualTo("/api/v1/exports/{token}/metadata");
+        org.assertj.core.api.Assertions.assertThat(RequestPaths.loggable("http://localhost:8090/api/v1/exports/" + token))
+                .isEqualTo("http://localhost:8090/api/v1/exports/{token}");
+        org.assertj.core.api.Assertions.assertThat(RequestPaths.loggable("/api/v1/salon")).isEqualTo("/api/v1/salon");
+        org.assertj.core.api.Assertions.assertThat(RequestPaths.loggable(null)).isNull();
+    }
 }

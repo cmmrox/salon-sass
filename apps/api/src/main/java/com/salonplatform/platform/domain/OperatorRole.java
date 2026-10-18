@@ -12,7 +12,8 @@ public enum OperatorRole {
 
     OPERATOR_ADMIN(Set.of(OperatorPermission.SESSION_MANAGE, OperatorPermission.SALON_READ,
             OperatorPermission.SALON_CREATE, OperatorPermission.PLAN_READ, OperatorPermission.PLAN_CREATE,
-            OperatorPermission.BILLING_READ, OperatorPermission.BILLING_MANAGE)),
+            OperatorPermission.BILLING_READ, OperatorPermission.BILLING_MANAGE, OperatorPermission.SALON_SUSPEND,
+            OperatorPermission.SALON_CLOSE, OperatorPermission.EXPORT_READ)),
 
     OPERATOR_SUPPORT(Set.of(OperatorPermission.SESSION_MANAGE));
 

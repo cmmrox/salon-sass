@@ -62,10 +62,11 @@ public class BillingJob {
 
     private Pass pass(Instant now) {
         List<UUID> candidates = database.inTransaction(status -> database.jdbc().queryForList("""
-                SELECT s.id FROM subscription s
-                 WHERE s.next_invoice_at <= ?
+                SELECT s.id FROM subscription s JOIN tenant t ON t.id = s.salon_id
+                 WHERE t.status NOT IN ('closed', 'deleted')
+                   AND (s.next_invoice_at <= ?
                     OR EXISTS (SELECT 1 FROM invoice i WHERE i.subscription_id = s.id AND i.status = 'open')
-                    OR s.state <> 'active' AND s.state <> 'trialing'
+                    OR s.state <> 'active' AND s.state <> 'trialing')
                  ORDER BY s.id
                 """, UUID.class, Timestamp.from(now)));
         List<SubscriptionPass> changed = new ArrayList<>();
@@ -88,6 +89,14 @@ public class BillingJob {
     }
 
     private SubscriptionPass once(UUID id, Instant now) {
+        // The registry row is share-locked before the subscription row, the order a lifecycle action
+        // takes them in, so the two never wait on each other.
+        BillingLedger.Subscription unlocked = ledger.subscription(id, false).orElse(null);
+        if (unlocked == null || !ledger.billed(unlocked.salonId())) {
+            // A closed salon's billing has stopped (F03-S03): its open invoices stay as records, and no
+            // invoice, reminder or charge follows. A suspended salon is still billed.
+            return null;
+        }
         BillingLedger.Subscription subscription = ledger.subscription(id, true).orElse(null);
         if (subscription == null) {
             return null;

@@ -50,7 +50,8 @@ public class SalonProvisioning {
     @Schema(requiredProperties = {"id", "name", "slug", "hostname", "status", "plan", "createdAt"})
     public record SalonSummary(UUID id,
             @Schema(types = {"string", "null"}, requiredMode = Schema.RequiredMode.REQUIRED) String name,
-            String slug, String hostname, String status,
+            String slug, String hostname,
+            @Schema(allowableValues = {"active", "suspended", "closed", "deleted"}) String status,
             @Schema(types = {"object", "null"}, requiredMode = Schema.RequiredMode.REQUIRED) PlanSummary plan,
             Instant createdAt) {
     }
@@ -61,10 +62,11 @@ public class SalonProvisioning {
 
     @Schema(requiredProperties = {"id", "version", "name", "slug", "hostname", "status", "country", "currency",
         "timeZone", "defaultLanguage", "contactEmail", "contactPhone", "address", "plan", "ownerEmail", "createdAt",
-        "updatedAt"})
+        "updatedAt", "closedAt", "deleteAt", "deletedAt"})
     public record SalonDetail(UUID id, long version,
             @Schema(types = {"string", "null"}, requiredMode = Schema.RequiredMode.REQUIRED) String name,
-            String slug, String hostname, String status,
+            String slug, String hostname,
+            @Schema(allowableValues = {"active", "suspended", "closed", "deleted"}) String status,
             @Schema(types = {"string", "null"}, requiredMode = Schema.RequiredMode.REQUIRED) String country,
             @Schema(types = {"string", "null"}, requiredMode = Schema.RequiredMode.REQUIRED) String currency,
             String timeZone,
@@ -74,7 +76,13 @@ public class SalonProvisioning {
             @Schema(types = {"string", "null"}, requiredMode = Schema.RequiredMode.REQUIRED) String address,
             @Schema(types = {"object", "null"}, requiredMode = Schema.RequiredMode.REQUIRED) PlanSummary plan,
             @Schema(types = {"string", "null"}, requiredMode = Schema.RequiredMode.REQUIRED) String ownerEmail,
-            Instant createdAt, Instant updatedAt) {
+            Instant createdAt, Instant updatedAt,
+            @Schema(types = {"string", "null"}, format = "date-time", requiredMode = Schema.RequiredMode.REQUIRED,
+                    description = "When the salon was closed (F03-S03)") Instant closedAt,
+            @Schema(types = {"string", "null"}, format = "date-time", requiredMode = Schema.RequiredMode.REQUIRED,
+                    description = "When a closed salon's data is deleted: 30 days after closure") Instant deleteAt,
+            @Schema(types = {"string", "null"}, format = "date-time", requiredMode = Schema.RequiredMode.REQUIRED,
+                    description = "When a closed salon's data was deleted") Instant deletedAt) {
     }
 
     @Schema(requiredProperties = {"id", "slug", "hostname", "planId", "createdAt"})
@@ -133,6 +141,7 @@ public class SalonProvisioning {
     private static final String SELECT = """
             SELECT t.id, t.version, t.name, t.slug, t.status, t.country, t.currency, t.time_zone, t.default_language,
                    t.contact_email, t.contact_phone, t.address, t.owner_email, t.created_at, t.updated_at,
+                   t.closed_at, t.delete_at, t.deleted_at,
                    p.id AS plan_id, p.key AS plan_key, p.name AS plan_name
               FROM tenant t LEFT JOIN plan p ON p.id = t.plan_id
             """;
@@ -149,7 +158,13 @@ public class SalonProvisioning {
                 row.getString("currency"), row.getString("time_zone"), row.getString("default_language"),
                 row.getString("contact_email"), row.getString("contact_phone"), row.getString("address"), plan(row),
                 row.getString("owner_email"), row.getTimestamp("created_at").toInstant(),
-                row.getTimestamp("updated_at").toInstant());
+                row.getTimestamp("updated_at").toInstant(), instant(row, "closed_at"), instant(row, "delete_at"),
+                instant(row, "deleted_at"));
+    }
+
+    private static Instant instant(ResultSet row, String column) throws SQLException {
+        Timestamp value = row.getTimestamp(column);
+        return value == null ? null : value.toInstant();
     }
 
     public SalonPage list(Paging paging) {

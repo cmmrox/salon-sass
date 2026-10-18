@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // After `next build`: the built web artifacts (.next/standalone, which the image copies, and
 // .next/static) must contain no environment file, no retained key file and no identity or operator
-// key value (F03-S01 AC-20; F03-S02 adds the billing provider key). Every file is read, ignored paths included. Values are compared, never
+// key value (F03-S01 AC-20; F03-S02 adds the billing provider key, F03-S03 the export key). Every file is read, ignored paths included. Values are compared, never
 // printed. Exits non-zero naming only the offending file paths.
 //
 //   node scripts/scan-artifacts.mjs            scans apps/web/.next
@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 
 const KEY_VARIABLES = ['SALON_IDENTITY_SIGNING_KEY', 'SALON_IDENTITY_CHALLENGE_KEY', 'SALON_IDENTITY_ENCRYPTION_KEY', 'SALON_IDENTITY_PROXY_KEY',
   'SALON_OPERATOR_SIGNING_KEY', 'SALON_OPERATOR_CHALLENGE_KEY', 'SALON_OPERATOR_ENCRYPTION_KEY', 'SALON_OPERATOR_PROXY_KEY', 'SALON_OPERATOR_FINGERPRINT_KEY',
-  'SALON_BILLING_PROVIDER_KEY'];
+  'SALON_BILLING_PROVIDER_KEY', 'SALON_EXPORT_KEY'];
 
 /** Every 64-hex key value known to this machine: configured variables and the retained local key files. */
 export function knownKeyValues(environment, keyFiles) {
@@ -57,7 +57,8 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   const root = resolve(web, '..', '..');
   const keyFiles = [process.env.SALON_IDENTITY_LOCAL_KEY_FILE ?? join(root, '.local', 'identity-keys.properties'),
     process.env.SALON_OPERATOR_LOCAL_KEY_FILE ?? join(root, '.local', 'operator-keys.properties'),
-    process.env.SALON_BILLING_LOCAL_KEY_FILE ?? join(root, '.local', 'billing-keys.properties')];
+    process.env.SALON_BILLING_LOCAL_KEY_FILE ?? join(root, '.local', 'billing-keys.properties'),
+    process.env.SALON_EXPORT_LOCAL_KEY_FILE ?? join(root, '.local', 'export-keys.properties')];
   const roots = [join(web, '.next', 'standalone'), join(web, '.next', 'static')];
   if (!existsSync(roots[0])) {
     console.error('scan-artifacts: no .next/standalone output to scan; run next build first');

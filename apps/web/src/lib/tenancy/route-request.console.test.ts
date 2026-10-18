@@ -85,3 +85,16 @@ describe('the console hostname in the proxy', () => {
     }
   });
 });
+
+describe('the Owner export page and its BFF (F03-S03)', () => {
+  it.each(['/exports', '/platform-web/export-info'])('%s is the bare platform host\'s alone, never stored', async (path) => {
+    const platform = await routeRequest(request('localhost:3100', path), vi.fn(async () => ({ kind: 'platform' as const })), staff, deciding({ kind: 'pending' }));
+    expect(isRewrite(platform)).toBe(false);
+    expect(platform.headers.get('cache-control')).toContain('no-store');
+    const salon = await routeRequest(request('alpha.localhost:3100', path), resolving(), staff, deciding({ kind: 'pending' }));
+    expect(isRewrite(salon)).toBe(true);
+    expect(new URL(getRewrittenUrl(salon)!).pathname).toBe('/salon-site/nowhere');
+    const console = await routeRequest(request('console.localhost:3100', path), resolving(), staff, deciding({ kind: 'pending' }));
+    expect(isRewrite(console)).toBe(true);
+  });
+});

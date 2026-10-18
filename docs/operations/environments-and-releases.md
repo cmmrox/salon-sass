@@ -137,6 +137,15 @@ OpenAPI: `PUT|GET /local/operator/billing/provider-outcomes/{salonId}`,
 `PUT|GET /local/operator/billing/interrupt`, `POST /local/operator/unbilled-salons` and
 `PUT /local/operator/operators/active`. F02's identity hooks work on every local salon.
 
+F03 lifecycle (F03-S03). Export archives are encrypted with `SALON_EXPORT_KEY` (required outside
+`local`; locally retained in ignored `.local/export-keys.properties`), and `SALON_EXPORT_LINK_ORIGIN`
+sets the origin of the Owner's download link. The stack's compose file and `.env.stack.example`
+require the export key; an older `.env.stack` must have it added before the stack starts. The
+export and deletion jobs run every minute. Local hooks for running them now, interrupting them,
+reading a salon's background state and resetting to the Alpha/Beta/Gamma baseline are under
+`/local/operator` (paths in the F03-S03 handoff); the reset removes every post-baseline salon.
+All three web BFFs read request bodies through one byte-counting reader (`lib/http/bounded-json.ts`).
+
 In the Codex execution environment, a detached child can be reaped after the launching command
 ends. Keep a foreground shell session alive while running the existing local startup scripts,
 and verify HTTP readiness from another call before relying on the process.

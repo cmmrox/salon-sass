@@ -20,6 +20,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/exports/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["download"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/exports/{token}/metadata": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["metadata"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/identity/audit": {
         parameters: {
             query?: never;
@@ -75,7 +107,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["export"];
+        get: operations["export_1"];
         put?: never;
         post?: never;
         delete?: never;
@@ -437,6 +469,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/operator/salons/{id}/closure": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["close"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/operator/salons/{id}/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["export"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/operator/salons/{id}/export/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["archive"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/operator/salons/{id}/invoices": {
         parameters: {
             query?: never;
@@ -445,6 +525,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["listInvoices"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/operator/salons/{id}/lifecycle": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["history"];
         put?: never;
         post?: never;
         delete?: never;
@@ -483,6 +579,22 @@ export interface paths {
         options?: never;
         head?: never;
         patch: operations["changeSubscription"];
+        trace?: never;
+    };
+    "/api/v1/operator/salons/{id}/suspension": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["suspend"];
+        delete: operations["reactivate"];
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/operator/sessions/refresh": {
@@ -652,6 +764,13 @@ export interface components {
             /** Format: int64 */
             version: number;
         };
+        ClosureRequest: {
+            /** @description The salon's slug, typed exactly, to confirm an irreversible closure */
+            confirmSlug: string;
+            reason: string;
+            /** Format: int64 */
+            version: number;
+        };
         CodeRequest: {
             channel: string;
             deviceLabel: string;
@@ -696,11 +815,30 @@ export interface components {
             subscription: components["schemas"]["SubscriptionState"];
             usage: components["schemas"]["Usage"];
         };
+        EventActor: {
+            displayName: string | null;
+            id: string;
+            /** @enum {string} */
+            kind: "operator" | "system";
+        };
         Export: {
             devices: components["schemas"]["SessionView"][];
             /** Format: date-time */
             generatedAt: string;
             profile: components["schemas"]["Profile"];
+        };
+        ExportView: {
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            deleteAt: string;
+            /** Format: date-time */
+            readyAt: string | null;
+            sha256: string | null;
+            /** Format: int64 */
+            sizeBytes: number | null;
+            /** @enum {string} */
+            status: "pending" | "ready" | "deleted";
         };
         Features: {
             customDomain: boolean;
@@ -760,6 +898,30 @@ export interface components {
             /** @enum {string} */
             status: "open" | "paid";
         };
+        LifecycleEvent: {
+            actor: components["schemas"]["EventActor"];
+            /** Format: date-time */
+            at: string;
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            kind: "suspended" | "reactivated" | "closed" | "deleted";
+            reason: string | null;
+        };
+        LifecyclePage: {
+            items: components["schemas"]["LifecycleEvent"][];
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            size: number;
+            /** Format: int64 */
+            total: number;
+        };
+        LifecycleRequest: {
+            reason: string;
+            /** Format: int64 */
+            version: number;
+        };
         Limits: {
             /** Format: int32 */
             branches: number;
@@ -767,6 +929,15 @@ export interface components {
             messageAllowance: number;
             /** Format: int32 */
             staffSeats: number;
+        };
+        LinkView: {
+            /** Format: date-time */
+            deleteAt: string;
+            /** Format: date-time */
+            readyAt: string;
+            sha256: string;
+            /** Format: int64 */
+            sizeBytes: number;
         };
         /** @description What the running service says about itself. */
         Meta: {
@@ -1066,6 +1237,11 @@ export interface components {
         };
         SalonDetail: {
             address: string | null;
+            /**
+             * Format: date-time
+             * @description When the salon was closed (F03-S03)
+             */
+            closedAt: string | null;
             contactEmail: string | null;
             contactPhone: string | null;
             country: string | null;
@@ -1073,6 +1249,16 @@ export interface components {
             createdAt: string;
             currency: string | null;
             defaultLanguage: string | null;
+            /**
+             * Format: date-time
+             * @description When a closed salon's data is deleted: 30 days after closure
+             */
+            deleteAt: string | null;
+            /**
+             * Format: date-time
+             * @description When a closed salon's data was deleted
+             */
+            deletedAt: string | null;
             hostname: string;
             /** Format: uuid */
             id: string;
@@ -1080,7 +1266,8 @@ export interface components {
             ownerEmail: string | null;
             plan: components["schemas"]["PlanSummary"];
             slug: string;
-            status: string;
+            /** @enum {string} */
+            status: "active" | "suspended" | "closed" | "deleted";
             timeZone: string;
             /** Format: date-time */
             updatedAt: string;
@@ -1134,7 +1321,8 @@ export interface components {
             name: string | null;
             plan: components["schemas"]["PlanSummary"];
             slug: string;
-            status: string;
+            /** @enum {string} */
+            status: "active" | "suspended" | "closed" | "deleted";
         };
         SessionView: {
             /** Format: date-time */
@@ -1266,6 +1454,68 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Acknowledged"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    download: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The export archive */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/zip": string;
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    metadata: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LinkView"];
                 };
             };
             /** @description Any error: problem details with a stable `code`. */
@@ -1452,7 +1702,7 @@ export interface operations {
             };
         };
     };
-    export: {
+    export_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -2347,6 +2597,103 @@ export interface operations {
             };
         };
     };
+    close: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClosureRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalonDetail"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    export: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExportView"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    archive: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The export archive */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/zip": string;
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     listInvoices: {
         parameters: {
             query?: {
@@ -2368,6 +2715,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["InvoicePage"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    history: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LifecyclePage"];
                 };
             };
             /** @description Any error: problem details with a stable `code`. */
@@ -2506,6 +2887,76 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SubscriptionView"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    suspend: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LifecycleRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalonDetail"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    reactivate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LifecycleRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalonDetail"];
                 };
             };
             /** @description Any error: problem details with a stable `code`. */

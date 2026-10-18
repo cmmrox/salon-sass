@@ -29,7 +29,7 @@ export function DirectorySearch({ area, help, busy, onSearch }: { area: 'salons'
 }
 
 /** Previous and next pages, in place, with the position and total. */
-export function DirectoryPager({ area, page, size, total, busy, onPage }: { area: 'salons' | 'plans' | 'invoices'; page: number; size: number; total: number; busy: boolean; onPage: (page: number) => void }) {
+export function DirectoryPager({ area, page, size, total, busy, onPage }: { area: 'salons' | 'plans' | 'invoices' | 'lifecycle'; page: number; size: number; total: number; busy: boolean; onPage: (page: number) => void }) {
   const t = useTranslations('console');
   const pages = Math.max(1, Math.ceil(total / size));
   return (

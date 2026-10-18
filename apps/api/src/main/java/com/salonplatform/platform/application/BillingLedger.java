@@ -153,6 +153,17 @@ public class BillingLedger {
                 """ + (lock ? " FOR UPDATE OF t" : ""), (row, n) -> salon(row), id).stream().findFirst();
     }
 
+    /**
+     * Whether a salon is still billed: active or suspended. A closed or deleted salon's billing stopped at
+     * its closure (F03-S03). Read with a share lock on its registry row, so a closure waits for a billing
+     * pass in progress and a pass that starts after it sees it.
+     */
+    public boolean billed(UUID salonId) {
+        database.requireTransaction();
+        return database.jdbc().queryForList("SELECT status FROM tenant WHERE id = ? FOR SHARE", String.class, salonId)
+                .stream().findFirst().map(status -> !"closed".equals(status) && !"deleted".equals(status)).orElse(false);
+    }
+
     public Optional<Subscription> subscriptionOf(UUID salonId, boolean lock) {
         database.requireTransaction();
         return database.jdbc().query("SELECT * FROM subscription WHERE salon_id = ?" + (lock ? " FOR UPDATE" : ""),

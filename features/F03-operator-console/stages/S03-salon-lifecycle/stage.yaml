@@ -3,7 +3,7 @@ feature: F03
 title: "Salon lifecycle, export and retention"
 sequence: 3
 surfaces: [api, web]
-status: planned
+status: complete
 qa_status: not-run
 blocked_reason: null
 released_in: null
@@ -12,9 +12,141 @@ depends_on: [F03-S02]
 requirements: [PLT-06]
 nfr_focus: []
 handoff:
-  run: null
-  data: null
-  notes: null
+  run: |
+    infra/scripts/local-up.sh   (PostgreSQL 5440, API 8090, web 3100); after a rebuild: infra/scripts/local-service.sh stop|start api|web. V15 migrates on start.
+    Console: http://console.localhost:3100/console/salons/{id} (Lifecycle card: Suspend / Reactivate / Close sheets and history; Data export card once closed).
+    Owner download page: http://localhost:3100/exports#<token> (bare platform host only; the link arrives in the export-ready email).
+    Operator API (console host only, Admin): POST /api/v1/operator/salons/{id}/suspension {version,reason}; DELETE /salons/{id}/suspension {version,reason};
+      POST /salons/{id}/closure {version,confirmSlug,reason} -> 200 salon detail (now with closedAt, deleteAt, deletedAt; status active|suspended|closed|deleted);
+      GET /salons/{id}/lifecycle?page&size -> {items:[{id,kind,reason,actor:{kind,id,displayName},at}],page,size,total};
+      GET /salons/{id}/export -> {status: pending|ready|deleted,createdAt,readyAt,deleteAt,sizeBytes,sha256}; GET /salons/{id}/export/archive -> application/zip attachment, no-store, X-Content-SHA256 (409 invalid_state while pending, 404 none/deleted).
+    Platform host (http://localhost:8090, bare host only, no session): GET /api/v1/exports/{token} -> the ZIP or 404; GET /api/v1/exports/{token}/metadata -> {readyAt,deleteAt,sizeBytes,sha256} or 404.
+    Local hooks (loopback, local profile, absent from OpenAPI; any host):
+      POST /local/operator/exports/run -> {at,exports:[{salonId,exportId,tablesStored,ready}],failed:[salonId]} (one export pass at the test clock's instant)
+      POST /local/operator/deletions/run -> {at,salons:[{salonId,batches,rows,deleted}],waiting:[salonId],failed:[salonId]} (one deletion pass; a salon whose export is still pending waits)
+      PUT|GET /local/operator/exports/interrupt {afterTables: 1..1000|null} -> {afterTables}; one-shot: the next export run fails after storing that many tables
+      PUT|GET /local/operator/deletions/interrupt {afterBatches: 1..100000|null} -> {afterBatches}; one-shot: the next deletion run fails after that many committed batches
+      GET /local/operator/salons/{salonId}/background -> {salonId,status,accessState,outbox:{waiting,delivered,cancelled,dead},jobs:{due,run,skipped,failed,lastRunAt,lastSkippedAt}}
+          (any lifecycle state; counts only; job counts are this API process's since start, in memory)
+      POST /local/operator/reset -> {removedSalons,salonIds,jobsRescheduled,clock:"real"}: removes every salon but alpha/beta/gamma (tenant data through the
+          erasers, then billing, export, lifecycle, receipts, platform audit and the registry row as the owning role), resets hook-created operators,
+          returns the test clock to real time and brings scheduled_job occurrences in the future back to now.
+      The export-ready email is captured by the S02 email capture: GET /local/operator/emails?recipient=<owner email> (kind export.ready, links [http://localhost:3100/exports#<token>]).
+    Jobs: platform jobs salon-export and salon-deletion every minute through the shared scheduler (also run by the hooks above).
+    BFF: /operator-web/{lifecycle?id&page&size, export?id, export-archive?id (binary attachment)} reads; mutations salon-suspend {id,version,reason},
+      salon-reactivate {id,version,reason}, salon-close {id,version,confirmSlug,reason}. Platform host BFF: POST /platform-web/export-info {token},
+      POST /platform-web/export-download {token} (bare platform host only, exact Origin, body <= 1024 bytes).
+    New settings: SALON_EXPORT_KEY (64 hex, required outside local; local retains a generated one in .local/export-keys.properties, mode 0600,
+      SALON_EXPORT_LOCAL_KEY_FILE); SALON_EXPORT_LINK_ORIGIN (default https://%s with the platform domain; local http://%s:3100); salon.retention.batch-size (default 500).
+  data: |
+    Retained local database: V15 applied in place. The API walkthrough ends with POST /local/operator/reset, so every S01/S02/S03 walkthrough salon was
+      removed; alpha/beta/gamma unchanged (status, access state, version and every tenant table row count compared before and after).
+    After that, the browser walkthrough created (synthetic, random credentials not recorded): operator f03s3-ui-admin-<tag>@example.test (hook-created
+      fixture), plan f03s3ui-<tag>, salons f03s3ui-long-<tag> (active, suspended and reactivated, two history rows), f03s3ui-conflict-<tag> (suspended)
+      and f03s3ui-close-<tag> (closed, export ready, deletion due 30 days after closure). Their Owners owner-<slug>@example.test. POST /local/operator/reset removes them.
+    The test clock is on real time. No real messages or charges: emails go to the local capture, charges to the local fake provider.
+  notes: |
+    Developer gates (verification.commands), run from the repository root by apps/api/target/f03-s03-evidence/run-gates.sh on a clean tree at
+    808c4e593be373d34771a2b6757ba94e132b4564 (gates/summary.txt records revision and dirty=0); complete logs in
+    /Users/cmmrox/Personal/Projects/salon-sass/apps/api/target/f03-s03-evidence/gates/<n>.log (ignored path; never /tmp).
+    | command | revision | result | log |
+    | cd apps/api && ./mvnw -q verify | 808c4e5 | exit 0; 669 tests, 0 failures, 0 errors (surefire summaries in gates/surefire) | gates/1.log |
+    | pnpm -r lint | 808c4e5 | exit 0 | gates/2.log |
+    | pnpm -r typecheck | 808c4e5 | exit 0 | gates/3.log |
+    | pnpm -r test | 808c4e5 | exit 0; web 620 + contracts 19 | gates/4.log |
+    | pnpm --filter @salon/web build | 808c4e5 | exit 0; artifact scan clean (11 known key values, export key included) | gates/5.log |
+    | pnpm contracts:check | 808c4e5 | exit 0; document and client current | gates/6.log |
+    Conditions: JDK 25 selected by the build's toolchain (machine default stays 21), Node 24.12 with Corepack pnpm, Docker Testcontainers postgres:18.6;
+    the local API and web were stopped during the gates and restarted afterwards from the same revision (GET /api/v1/meta commit 808c4e59...). An earlier
+    full verify (first-verify.log, before the catalogue tests followed V15) failed only on the expected catalogue/migration/contract tests, which were updated.
+
+    Acceptance criteria, checked on the running local product from outside (API 8090, web 3100, test clock, hooks, email capture), after the gates on the
+    runtime built from 808c4e5: apps/api/target/f03-s03-evidence/api-walkthrough.{cjs,json,log} 69/69 and ui-walkthrough.{cjs,json,log} 44/44 with
+    screens/*.png (60 screenshots). Integration tests: SalonLifecycleIntegrationTest (9), catalogue/grant tests, unit tests (LifecycleTermsTest, ExportKeyTest, RequestPathsTest).
+    AC-1 checked: an Admin suspends active (full), trialing, past-due and read-only salons with a reason (a 9-character reason 400 naming reason); next request
+      staff /identity/me, /api/v1/salon and staff sign-in 403 salon_suspended; workspace 503 "temporarily unavailable"; identity_session not revoked; another salon 200.
+    AC-2 checked: suspending a suspended salon and reactivating an active one 409 invalid_state, stale version 409 conflict, nothing changed; reactivation
+      restores full access and the same unexpired access token works again; a salon whose invoice became 14 days overdue while suspended comes back read_only.
+    AC-3 checked (suspended salon): the invoice is issued at trial end and a bank transfer recorded and paid; billing emails wait unattempted (background hook
+      waiting>0, delivered 0, nothing captured); a due tenant job (hourly outbox cleanup, reached by moving the test clock) is skipped for it and run for an
+      active salon; after reactivation the waiting messages are delivered (captured) and the next occurrence runs for it.
+    AC-4 checked: wrong-case slug 400 confirmSlug, blank reason 400 reason, nothing changed; closure 200 with deleteAt = closedAt + exactly 30 days; the
+      hostname answers 404 not_found identical (apart from trace/instance) to an unknown salon, web "salon not found" 404; every session revoked (DB) and the
+      access and refresh tokens refused; pending/in-flight messages cancelled (background hook); closing again 409 invalid_state; a salon closed before its
+      trial end is issued no invoice when the trial end passes and its jobs neither run nor are skipped; reusing the slug 409 slug_taken.
+    AC-5 checked: one export scheduled at closure (pending; archive 409 meanwhile); the job produces a ZIP whose manifest lists all 12 tenant tables with
+      row counts equal to the database, the salon profile and exportedAt; every row carries only that salon's tenant_id; no other salon's id or emails;
+      password_hash, mfa_secret, refresh/credential/code/number/device/key hashes, pending_secret, encrypted_recipient, outbox payload and lease_token are
+      absent and listed under "excluded" with reasons, plus a note.
+    AC-6 checked: the Owner contact received exactly one export.ready email whose link is http://localhost:3100/exports#<43-char token>; the token is not in
+      the outbox payload (links sealed with the export key) and only its SHA-256 is stored; the API platform-host route and the web BFF return the same bytes
+      (checksum matches); altered, malformed and random tokens and the token on a salon host or the console host are 404 naming nothing; /exports on a salon
+      host 404; each download audited (export.downloaded via link/console); after deletion the link is 404. Browser: the page removes the fragment at once.
+    AC-7 checked: Admin export status and console download (attachment, no-store, same checksum, size equals bytes); Support 403 permission_denied; staff and
+      customer tokens 401; salon, bare and admin hosts 404 (AC-10 row).
+    AC-8 checked: test clock at deleteAt - 1 s: nothing deleted (all 12 table counts unchanged, status closed); at deleteAt: every tenant row of the salon
+      removed (identity incl. sessions/rate buckets/guard, brand, outbox, audit), the archive and token hash removed, tombstone status deleted with the slug,
+      invoices and platform audit kept, other salon and alpha/beta/gamma row counts unchanged; exactly one salon.deleted.
+    AC-9 checked: export interrupted after 3 tables (hook) keeps 3 parts and stays pending; three concurrent runs then a fourth give one archive, one
+      export.ready, one email, no parts left; deletion interrupted after 2 batches leaves rows and status closed; three concurrent runs then one more finish
+      with every row gone, one salon.deleted and one deleted lifecycle event (also integration-tested with a MovableClock and armed faults).
+    AC-10 checked: on suspend, reactivate, close, export, archive and lifecycle routes: Support 403 permission_denied, staff and customer tokens 401, salon,
+      bare and admin hosts 404 (and console.localhost.evil.test in the integration test); version and history unchanged.
+    AC-11 checked: platform audit has salon.suspended, salon.reactivated, salon.closed (reason, from/to, deleteAt, sessionsRevoked, messagesCancelled),
+      export.created, export.ready, export.email_sent (recipient owner|none), export.downloaded (via) and salon.deleted, actor operator or system, 32-hex trace
+      id; no token, token hash, Owner or staff email in audit details; the API log has no token or staff email and logs /api/v1/exports/{token}; spans redact it too.
+    AC-12 checked (browser, console and Owner page): lifecycle card active/suspended/closed, Suspend validation (short reason field error), conflict (salon
+      changed in another tab), Close sheet with the irreversible consequences, hostname, 30-day deletion date and retired slug, destructive action, wrong slug
+      field error, success notices and history rows, export pending/ready/unavailable (API stopped) and download, Owner page ready/unknown/no-link and download:
+      no horizontal scroll or clipped control at 360/390/768/1024/1280/1440, every field labelled, keyboard opens each sheet, Tab stays inside, Escape returns
+      focus to its button, download reachable by keyboard, no script error. Loading uses Skeleton/Spinner (component-tested, not screenshotted).
+    Hooks checked: reset removes post-baseline salons with no orphan billing/export/lifecycle rows, returns the clock to real time and reschedules pushed
+      jobs; interrupt hooks one-shot and validated; background state works for a deleted salon; hooks absent from OpenAPI.
+
+    Visual handoff: no lifecycle or download screen exists in the prototype. They extend the console's Salon-mode grammar (white 24px Card, Badge words,
+    Item rows, pill Buttons incl. destructive, Field + Textarea/Input, bottom sheet / 460px right drawer Sheet, Alert, Empty, Skeleton, Spinner,
+    Pagination) and the platform AppShell with the neutral accent; compared in screens/*.png at the width matrix.
+
+    Done criteria: every table with a tenant_id column (12) has a registered exporter and eraser, proved by
+    SalonLifecycleIntegrationTest.everyTableWithATenantIdHasARegisteredExporterAndEraser (fails for an unregistered table).
+
+    Differs from or adds to the documents (for the lead):
+    - Export key variable: SALON_EXPORT_KEY (AES-256-GCM at rest for parts, archive and the email's sealed link); local file .local/export-keys.properties;
+      SALON_EXPORT_LINK_ORIGIN for the email link. Compose and .env.stack.example require SALON_EXPORT_KEY; the running salon-stack's ignored .env.stack lacks
+      it, so its next stack-up refuses until it is added (stack not touched). The web artifact scan also refuses it and the retained file.
+    - Exporter/eraser SPI lives in shared (shared.lifecycle.TenantDataModule), not a platform facade: platform already depends on identity and branding,
+      so modules cannot depend on platform (cycle). Modules (identity, branding, audit, outbox) register beans; platform collects them.
+    - Erasers are module-owned SECURITY DEFINER functions (identity_/branding_/audit_/outbox_erase_salon_rows) granted to the platform role only and refusing
+      any salon that is not closed with delete_at <= the given instant; closure uses identity_revoke_closed_salon_sessions and outbox_cancel_closed_salon
+      (closed salons only). Exporters read in a read-only tenant transaction (app role, salon set). The platform role gains UPDATE on tenant(status,
+      closed_at, delete_at, deleted_at) and the new tables only; no DELETE on billing or audit.
+    - Registry guard: trigger tenant_lifecycle refuses slug changes, leaving closed (except to deleted), changing a deleted salon or the closure instants,
+      and deleting a closed/deleted row; the retired slug is kept by the tombstone's unique slug (new salon 409 slug_taken).
+    - Local reset uses the owning role's connection (local profile only, the migration credentials) and lifts the platform-audit and registry triggers
+      inside its own transaction; an open salon is first closed as the owner so the same erasers remove its data.
+    - Export-ready email: a new outbox channel platform-email, the only channel delivered for a closed salon (outbox_due and the dispatcher), payload with
+      the links sealed by the export key; locally captured by the S02 capture, elsewhere it waits (no email provider). English only (decision 051).
+    - Platform host adds GET /api/v1/exports/{token}/metadata for the download page (the spec lists only the archive route); the download page uses the
+      viewer's time zone (no salon zone is revealed).
+    - Deletion waits for a pending export (deletion run lists it under waiting), so the archive is made before its data is removed.
+    - Closure instant is truncated to milliseconds so deleteAt can be reached exactly by a millisecond clock; boundaries are exact 30x24h.
+    - Billing: a closed or deleted salon is skipped by the billing job (no invoice, reminder or charge); subscription start/change and plan move 409
+      invalid_state; recording a bank transfer on its open invoice is still allowed. Reactivation re-applies the billing state at that instant.
+    - Background-state job counts are per API process in memory (TenantJobActivity); "due" = occurrences that came due for the salon (run + skipped + failed).
+    - Lifecycle history and export read permissions: history needs operator.salon.read; export status/archive operator.export.read (Admin only).
+    - Request log and spans replace the export token with {token} (RequestPaths.loggable).
+    - Security hardening (lead request): one bounded JSON body reader (apps/web/src/lib/http/bounded-json.ts) for the identity (16384), console (16384) and
+      platform (1024) BFFs: declared Content-Length over the limit refused before reading, streamed body counted and aborted past the limit, 400 bad_request.
+      This hardens the F02 and F03-S01/S02 BFFs too.
+    - Test ids: console-lifecycle-{card,status,notice,suspended,closed,deleted,history,empty,list,row(data-id,data-kind),kind,reason,at},
+      console-{suspend,reactivate}{,-sheet,-reason,-submit,-cancel}, console-close{,-sheet,-consequences,-deletion-date,-reason,-submit,-cancel},
+      console-confirm-slug, console-export-{card,status(data-status),loading,pending,deleted,created,ready,size,delete-at,sha256,download,downloaded,refresh},
+      console-lifecycle-{total,pagination,previous,page,next}; Owner page exports-{card,heading,loading,no-link,unknown,unavailable,retry,delete-notice,
+      ready-at,delete-at,size,sha256,download,downloaded}. console-salon-status now carries data-status.
+    - Messages: English only (decision 051); spec's en/si/ta not done.
+    Not done: Sinhala and Tamil messages; a real email provider (none exists); database-down resilience of the new routes was not separately measured
+      (they use the existing platform connection limits).
+    Elapsed: about 10:17Z to 13:50Z on 2026-10-18 wall clock (about 3 h 30 min), including one usage-limit interruption of unknown length; split unknown.
 cases: []
 verification:
   commands:
