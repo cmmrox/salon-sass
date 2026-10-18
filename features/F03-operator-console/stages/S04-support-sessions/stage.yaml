@@ -143,6 +143,20 @@ verification:
     - TC-F03-S04-012
     - TC-F03-S04-013
     - TC-F03-S04-014
+  - id: support-screens
+    tool: playwright
+    file: qa/web/F03/S04-support-screens.spec.ts
+    project: web
+    covers:
+    - TC-F03-S04-003
+    - TC-F03-S04-005
+    - TC-F03-S04-006
+    - TC-F03-S04-007
+    - TC-F03-S04-010
+    - TC-F03-S04-012
+    - TC-F03-S04-015
+    - TC-F03-S04-016
+    - TC-F03-S04-017
   manual: []
   deferred: []
 evidence:

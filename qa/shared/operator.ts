@@ -119,8 +119,25 @@ export const PENDING_S04 = {
   listStateParam: null as string | null,
   /** The salon-host BFF action that exchanges an entry code. */
   entryBffAction: null as string | null,
+  /**
+   * Browser test ids of the S04 screens (spec "UI and UX" names the screens; the handoff names the
+   * ids). Keys are QA's names for the controls; values are filled from the handoff.
+   */
+  testIds: {
+    startOpen: null, startSheet: null, startReason: null, startDuration: null, startSubmit: null, startResult: null, openWorkspace: null,
+    sessionList: null, sessionRow: null, sessionEnd: null,
+    entryPage: null, entryRefused: null, entryExpired: null, entryUnavailable: null,
+    banner: null, bannerEnd: null,
+    accessPage: null, accessRow: null, accessRevoke: null, accessConfirm: null,
+  } as Record<string, string | null>,
 };
-export function pendingS04<K extends Exclude<keyof typeof PENDING_S04, 'schemas'>>(key: K): string {
+/** An S04 test id from the handoff, or an `ENVIRONMENT:` stop until it is named. */
+export function supportTestId(name: string): string {
+  const value = PENDING_S04.testIds[name];
+  if (!value) throw new Error(`ENVIRONMENT: the F03-S04 handoff has not yet named the test id for ${name} (qa/shared/operator.ts PENDING_S04.testIds)`);
+  return value;
+}
+export function pendingS04<K extends Exclude<keyof typeof PENDING_S04, 'schemas' | 'testIds'>>(key: K): string {
   const value = PENDING_S04[key];
   if (value === null) throw new Error(`ENVIRONMENT: the F03-S04 handoff has not yet named ${key} (qa/shared/operator.ts PENDING_S04)`);
   return value;

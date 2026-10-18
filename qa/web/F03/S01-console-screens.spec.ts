@@ -166,7 +166,7 @@ test(`${id(34)} Console screens pass the automated scan, keep focus contained an
   await context.close();
 });
 
-test(`${id(35)} Support sees salon directory access only, and Admin sees only Salons, Plans and Sign out`, async ({ browser, operator }) => {
+test(`${id(35)} Each operator role sees exactly its console navigation and Support no management actions`, async ({ browser, operator }) => {
   const admin = await seeded(operator);
   const support = await seeded(operator, 'OPERATOR_SUPPORT');
   const navigation = (page: Page) => page.getByRole('navigation').first().getByRole('link');
@@ -175,9 +175,8 @@ test(`${id(35)} Support sees salon directory access only, and Admin sees only Sa
   await adminPage.goto(consoleUrl('/console/salons'));
   await expect(adminPage.getByTestId('console-salons')).toBeVisible();
   const adminLinks = (await navigation(adminPage).evaluateAll(links => links.map(l => new URL((l as HTMLAnchorElement).href).pathname))).sort();
-  // S01 AC-18 names Salons and Plans; S04 adds the Support sessions screen for Admin (its spec, "UI and UX").
-  expect(adminLinks, 'Admin navigation').toEqual(expect.arrayContaining(['/console/plans', '/console/salons']));
-  expect(adminLinks.filter(l => !['/console/plans', '/console/salons', '/console/support'].includes(l)), 'no other management link').toEqual([]);
+  // Final navigation (lead, cf2ba18; supersedes S01 AC-18): Salons, Plans, Support sessions, Sign out.
+  expect(adminLinks, 'Admin navigation').toEqual(['/console/plans', '/console/salons', '/console/support']);
   await expect(adminPage.getByTestId('console-sign-out')).toBeVisible();
   await adminContext.close();
   // From S04 Support reads the directory (operator-console.md); it has no plan or billing management.
@@ -189,8 +188,8 @@ test(`${id(35)} Support sees salon directory access only, and Admin sees only Sa
   await supportPage.goto(consoleUrl('/console/plans'));
   await expect(supportPage.getByTestId('console-denied'), 'plans are refused clearly').toBeVisible();
   await expect(supportPage.getByTestId('console-create-plan')).toHaveCount(0);
-  const supportLinks = await navigation(supportPage).evaluateAll(links => links.map(l => new URL((l as HTMLAnchorElement).href).pathname));
-  expect(supportLinks, 'no plan link for Support').not.toContain('/console/plans');
+  const supportLinks = (await navigation(supportPage).evaluateAll(links => links.map(l => new URL((l as HTMLAnchorElement).href).pathname))).sort();
+  expect(supportLinks, 'Support navigation: Salons, Support sessions').toEqual(['/console/salons', '/console/support']);
   await expect(supportPage.getByTestId('console-sign-out')).toBeVisible();
   await supportContext.close();
 });
