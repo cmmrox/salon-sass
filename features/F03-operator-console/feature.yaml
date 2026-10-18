@@ -51,7 +51,25 @@ cases:
   - PLT-06
   - PLT-07
 verification:
-  automation: []
+  automation:
+  - id: journey-operator-lifecycle
+    tool: playwright
+    file: qa/web/F03/journey-operator-lifecycle.spec.ts
+    project: web
+    covers:
+    - TC-F03-001
+  - id: journey-second-salon-isolation
+    tool: playwright
+    file: qa/api/F03/journey-second-salon-isolation.spec.ts
+    project: api
+    covers:
+    - TC-F03-002
+  - id: journey-access-state-precedence
+    tool: playwright
+    file: qa/api/F03/journey-access-state-precedence.spec.ts
+    project: api
+    covers:
+    - TC-F03-003
   manual: []
   deferred: []
 evidence:

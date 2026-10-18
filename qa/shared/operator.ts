@@ -273,6 +273,20 @@ export async function ownerSession(identity: Identity, salon: Salon, input: Salo
 }
 
 /**
+ * A staff member's current credentials as the test clock moves: the last tokens while their access
+ * has more than 30 seconds left on the application clock, otherwise a new sign-in (after a clock
+ * move, so a new TOTP step and no replay of an earlier code).
+ */
+export function staffTokens(identity: Identity, salon: Salon, account: SeedAccount, tokens: Tokens) {
+  let current = tokens;
+  return async (): Promise<Tokens> => {
+    if (Date.parse(await identity.now()) < Date.parse(current.accessExpiresAt) - 30_000) return current;
+    current = (await identity.login(salon, account)).tokens;
+    return current;
+  };
+}
+
+/**
  * Read-only observations as the owning database role (the same observer F02 uses). Each value is
  * passed through a literal, never interpolated raw.
  */
