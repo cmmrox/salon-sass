@@ -74,7 +74,7 @@ evidence:
   scoped_assessment: features/F02-sign-in-accounts-and-roles/cr017/scoped-qa.json
 integration:
   branch: charithm/feature/F02-tailwind-shadcn
-  pull_request: null
+  pull_request: https://github.com/cmmrox/salon-sass/pull/12
   qa_revision: e73d99b0bbb38ec4db6b9cc837ea635286a1fed0
   merged_commit: null
   merged_at: null
