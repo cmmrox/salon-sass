@@ -71,10 +71,10 @@ verification:
 evidence:
   last_run: qa/reports/20261015-000506-F02-3e38935bf776
   last_result: pass
-  scoped_assessment: features/F02-sign-in-accounts-and-roles/cr013/scoped-qa.json
+  scoped_assessment: features/F02-sign-in-accounts-and-roles/cr017/scoped-qa.json
 integration:
-  branch: charithm/feature/F02-unified-theme
-  pull_request: https://github.com/cmmrox/salon-sass/pull/11
+  branch: charithm/feature/F02-tailwind-shadcn
+  pull_request: https://github.com/cmmrox/salon-sass/pull/12
   qa_revision: e73d99b0bbb38ec4db6b9cc837ea635286a1fed0
   merged_commit: null
   merged_at: null
@@ -84,8 +84,13 @@ previous_integration:
   qa_revision: 4f9a2a9c68e1ac218b436b486321f6bc6844a311
   merged_commit: b94abb01ea7b16576c9450b911b5c4664e860b32
   merged_at: '2026-10-14T07:11:47Z'
-reopened_by: CR-013
+reopened_by: CR-017
 integration_history:
+- branch: charithm/feature/F02-unified-theme
+  pull_request: https://github.com/cmmrox/salon-sass/pull/11
+  qa_revision: e73d99b0bbb38ec4db6b9cc837ea635286a1fed0
+  merged_commit: c4028379f500ca11c4b2cd8be107e887edf34abb
+  merged_at: '2026-10-17T11:21:41Z'
 - branch: charithm/feature/F02-salon-login-design
   pull_request: https://github.com/cmmrox/salon-sass/pull/10
   qa_revision: e73d99b0bbb38ec4db6b9cc837ea635286a1fed0

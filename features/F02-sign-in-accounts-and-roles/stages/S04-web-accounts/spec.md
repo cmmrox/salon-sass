@@ -20,6 +20,8 @@ M1-web feature is released. Existing S02/S03 Java APIs remain backend foundation
 - `docs/design/ui-ux-standards.md`
 - `docs/changes/CR-012-salon-login-design.md`
 - `docs/changes/CR-013-one-salon-theme-and-direct-entry.md`
+- `docs/changes/CR-016-tailwind-and-shadcn-ui.md`: Tailwind CSS and shadcn/ui for every web screen
+- `docs/changes/CR-017-shadcn-ui-components-everywhere.md`: a shadcn/ui component for every control, menu and list
 
 ## Requirements covered
 
@@ -88,6 +90,31 @@ implementation, future business dashboards, operator console (F03), real messagi
   your account…" card or skeleton is painted on the way. A signed-in member's first painted frame is
   their workspace with the salon's resolved name. A loading state remains only where data is truly
   pending after the page is shown, and it carries the salon's identity and theme. (NFR-21, IAM-09)
+- AC-12: (CR-016) Staff sign-in, MFA enrolment and challenge, account, devices, staff and audit
+  screens and the confirmation overlay are built from shadcn/ui components (for example Button,
+  Input, Label, Card, Alert, Table, Badge, Skeleton, Avatar, Sheet or Dialog; CR-017 widens this to the full component map) and Tailwind
+  utilities, with no CSS Module and no hand-built look-alike of a shadcn/ui component. The
+  confirmation overlay keeps its phone bottom sheet and desktop right drawer, initial focus on
+  Cancel, focus containment, Escape and backdrop dismissal and focus return. (NFR-21, IAM-06)
+- AC-13: (CR-016) Every earlier criterion of this stage still holds after the rebuild: the CR-012
+  sign-in composition, the CR-013 brand accent (now through `--primary` and `--accent`) with a dark,
+  a light and the default salon colour, direct entry with no intermediate frame, the same test ids,
+  translations, states, password visibility toggle, 44-point targets and the width matrix with no
+  horizontal overflow. (NFR-21, IAM-09)
+- AC-14: (CR-017) The sign-in and account screens use the shadcn/ui component for every job in the
+  component map of `docs/engineering/web.md`, "Styling": every staff role choice is a Select (no
+  native `<select>`; `ui/native-select.tsx` is deleted); every labelled input with its help and
+  refused-input message is a Field; the password fields with the visibility toggle are an Input
+  Group; the authenticator code at sign-in and at account enrolment is an Input OTP of six slots;
+  the Professional grant is a horizontal Field with a Checkbox; device, staff and audit rows are
+  Items in an Item Group; status, current device and role labels are Badges; empty lists are
+  Empty; the pager is Pagination; the denied page and the retry wait are Alerts; a busy sign-in
+  shows a Spinner; a Separator divides the staff list from the create form. Each keeps its test id
+  (or the developer names its replacement in the handoff), its translation, its keyboard and screen
+  reader behaviour (the Select opens with the keyboard, moves by arrow keys, chooses with Enter and
+  returns focus to its trigger), 44-point targets and the width matrix with no horizontal overflow,
+  with a dark, a light and the default salon colour. AC-1 to AC-13 still hold. (NFR-21, IAM-06,
+  IAM-09)
 
 ## Design notes
 

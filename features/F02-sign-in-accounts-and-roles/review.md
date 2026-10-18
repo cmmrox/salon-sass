@@ -1,5 +1,164 @@
 # F02 Sign-in, accounts and roles: product review
 
+## Closure receipts after BUG-F01-006 (2026-10-18)
+
+After 2fc8425 only F01's API image Dockerfile, documents and metadata changed; no F02 behaviour is affected. The F02 web entries were re-executed at 18bb512 so that the closure receipts match the reviewed tree. Sealed delta `qa/reports/20261018-022929-F02-delta-4999a18c34fe`: 7 of 8 entries pass. TC-F02-S04-029 failed once (backdrop at 1280). Repeats showed why: the case clicked the drawer's backdrop within tens of milliseconds of it opening, before Radix listens for a click outside the sheet (3 of 8 repeats missed). Clicks from 50 ms onward close it every time (24 of 24 at 390 and 1280), so no person can hit this; it is a test defect, not a product one. The case now waits two frames and a task before that click, and its expectations are unchanged. It passed 8 of 8 repeats, then sealed in `qa/reports/20261018-025615-F02-delta-33a3f679c901` at `c522818`. QA status remains pass.
+
+
+## Current CR-017 independent review of the staff screens (2026-10-18)
+
+Reviewed as: a receptionist on a 768px tablet and a 390px phone, a salon owner at a 1280-1440px desk and a professional on a 360px phone; signed out (sign-in, recovery, refused sign-in, MFA challenge, Owner enrolment) and signed in (account and devices, staff with Owner controls and a Professional, the role Select open, audit, confirmation, a Receptionist's denied page), for alpha, beta and gamma.
+Compared with: the accepted CR-016 build (`79ec9d2`, side by side), the owner's CR-012 sign-in reference and the prototype's tokens. Competitor findings below are not refreshed.
+
+### Verdict
+
+The account screens now use the shadcn/ui component for every job. They feel more like a finished product: roles and states read at a glance as Badges, rows are clearly bounded Items, the pager shows where you are, and the authenticator code is six slots that refuse letters. Sign-in keeps the CR-012 composition; the only change there is the eye toggle sitting inside the 54px field. The role Select works fully from the keyboard and announces itself correctly: a combobox named "Role", Enter opens it, the arrows move, Enter chooses, Escape cancels, and focus returns each time. No product defect was found in F02. QA status: pass, on base-plus-delta evidence for the lead's closure.
+
+### Verification in this pass
+
+- Tested revision `2fc8425` (product identical to `29fb3d1`). Developer gates: `qa/reports/20261018-014949-F01-commands-fcd90bc3cfa8`, 10/10, a superset of F02's six gates.
+- Sealed F02 delta `qa/reports/20261018-020402-F02-delta-ed7240fe5e86`, 8/8 entries pass: web-functional 7, browser-security 8, web-presentation 6, web-resilience-address 2, web-theme-entry 5, shadcn-composition 1, component-map 1 (new, TC-F02-S04-031) and account-journeys 1. These rerun groups also cover what the developer did not re-exercise: rate-limit lockout, cross-tab renewal and replay revocation, the frozen-API budget, and no upstream call for removed customer actions.
+- Retained under CR-009, not rerun: the S01-S03 Java API suites, the nonlocal checks and the read baseline.
+- Manual, performed 2026-10-18: TC-F02-S04-030 (comparison with the CR-016 build), TC-F02-S04-032 (the owner's component-map review) and TC-F02-S04-018 (keyboard: 150 stops, all with the 3px `#1D5FD0` outline, no trap).
+- Expectations CR-017 made wrong were corrected without changing their meaning:
+  - Roles are now chosen through the Select's trigger and option rather than `selectOption`.
+  - The password field's radius and focus accent are read on its Input Group.
+  - Radix's aria-hidden form select is not treated as a control, and the checkbox's target is its own label.
+  - The header is exactly 60px from 900px.
+  - A field is focused only after the closing sheet has handed focus back.
+- Two timing effects needed the tests to wait; neither is a product defect:
+  - Select options measure 42px only while the opening zoom runs; settled, they are 44px.
+  - A backdrop click in the same instant the sheet opens is ignored (Radix); a click a moment later closes it.
+
+### Component-map review (owner's request)
+
+Every state was inventoried by `data-slot`; no raw or native control appears in any state, and there is no Native Select. Jobs map as follows:
+
+| Job | Component in the product |
+| --- | --- |
+| Labelled input | Field, FieldLabel, FieldDescription and FieldError |
+| Password with visibility | Input Group with InputGroupButton |
+| Authenticator code | Input OTP, 6 slots |
+| Role choice | Select |
+| Professional grant | horizontal Field with Checkbox |
+| Device, staff and audit rows | ItemGroup and Item |
+| Role, state and current device | Badge |
+| Pager | Pagination |
+| Refusal, enrolment notice, MFA enabled and denied | Alert |
+| Busy sign-in | Spinner |
+| Divider | Separator |
+| Initial | Avatar |
+| Containers | Card |
+| Confirmation | Sheet |
+
+Allowed plain HTML: headings, the permissions list, the audit JSON, and the setup key and URI as labelled outputs (the map's own row). Two states cannot be reached with real data: Empty, because every list holds at least the viewer, and the retry-wait Alert, which needs a rate-limit lockout of a shared salon. The developer's composition tests cover both.
+
+### How the new controls feel
+
+- **Sign-in and MFA:** the eye inside the field and the six code slots are familiar from banking and authenticator apps. The active slot shows the brand ring plus the blue keyboard outline, which reads well even on gamma's pale yellow.
+- **Staff and devices:** Badges and Item rows make each member's role and state much easier to scan. However, when a row's actions sit beside the text, a long email or a device's "Created" date is squeezed into a narrow column and breaks across 4-6 lines. This happens on the staff list at 1280 (the card is only about 450px wide on a 1280px screen, as it was before CR-017) and on devices at 390. See SUG-F02-11.
+- **Role Select:** the white list with a check mark is clearer than the native picker on desktop. On a phone it can open upward over the form, which is acceptable.
+
+### Suggestions
+
+Ranked, most valuable first. Earlier suggestions stand.
+
+| Id | Class | Suggestion | Disposition |
+| --- | --- | --- | --- |
+| SUG-F02-11 | should | Stop Item rows squeezing long text into a narrow column beside their actions | CR-018 |
+
+#### SUG-F02-11 Stop Item rows squeezing long text beside their actions
+
+- **Observed:** on Staff access at 1280, the second member's email breaks across six lines in a column about 80px wide next to the Role select and Remove button, while the first member's row stacks its controls below. On Account at 390 the device's "Created" date takes four lines beside "Sign out this device". Captures: `side/beta-staff-1280.png`, `side/beta-account-390.png`, `unmasked/select-gamma-1280.png`.
+- **Why it matters:** an owner checking who has access reads email addresses; broken mid-word they are slow to read and easy to misread. Real emails are shorter than the synthetic ones, but many are not short.
+- **Instead:** let `ItemActions` wrap below `ItemContent` when the row is narrower than a set width (or always on the staff list). Also give the staff card the workspace's content width on a desk (it is about 450px inside a 1280px page).
+- **Evidence:** the captures above, in `qa/reports/20261018-CR017-manual/`.
+
+### Notes for the lead (documents)
+
+- The F02-S04 handoff says "options and pager controls 44px+"; this is true once the Select's opening animation settles.
+- Commit the draft `qa/reports/cr017-assessment-draft/scoped-qa.json` (F02 can use it as is; F01 needs its stack re-verification first) and point the features' `evidence.scoped_assessment` at it.
+
+### Bugs filed from this pass
+
+- None in F02.
+
+
+## Current CR-016 independent review of the staff screens (2026-10-17)
+
+Reviewed as: a receptionist on a 768px tablet and a 390px phone, a salon owner at a 1280-1440px desk and a professional on a 360px phone; signed out (sign-in, recovery guidance, refused sign-in, MFA challenge and Owner enrolment) and signed in (account and devices, staff with Owner controls and a Professional, audit, the sign-out confirmation), for alpha (default), beta (dark, long name) and gamma (light). Synthetic accounts seeded through the local hook; credentials kept in memory.
+Compared with: the accepted pre-CR-016 build (`fefc4fd`, the QA-passed CR-013 product), rendered side by side. The dated Fresha/Booksy/Vagaro findings below are not refreshed: CR-016 changes construction, not the flows those products are compared on.
+
+### Verdict
+
+The staff screens are now shadcn/ui components on the prototype's theme and nobody using them would notice: 155 of 162 screen/state pairs across F01 and F02 are pixel-identical to the accepted build, and the rest differ only where CR-016 requires it (the Professional-grant checkbox) or by data (an MFA expiry minute). The confirmation keeps its phone bottom sheet and 460px desktop drawer, starts on Cancel, keeps focus inside, closes by Escape, backdrop and Cancel, and gives focus back to the opener. Every behaviour the developer did not re-exercise (rate-limit lockout, cross-tab renewal and replay revocation, the frozen-API three-second budget, no upstream call for the removed customer actions) passed in the rerun groups. No product defect was found. QA status: pass, on base-plus-delta evidence for the lead's closure.
+
+### Verification in this pass
+
+- Tested revision `79ec9d21516bbfb7871a52733e73335a647a11b6` (product identical to `858cac3`). Developer gates: `qa/reports/20261017-225523-F01-commands-0c672da5c8e5`, 10/10, a superset of F02's six gates.
+- Sealed F02 delta `qa/reports/20261017-232017-F02-delta-2725f22af1b3` at `1530cea`: web-functional 7, browser-security 8, web-resilience-address 2, web-theme-entry 5, shadcn-composition 1 (TC-F02-S04-029, new), account-journeys 1, all pass; web-presentation 5/6, see triage. Sealed F02 delta `qa/reports/20261017-232348-F02-delta-ea3f7a82e3a0` at `79ec9d2`: web-presentation 6/6.
+- Triage: TC-F02-S04-023 waited for the page's `main` landmark before its confirmation screenshot. CR-016's Sheet hides the page behind the modal from assistive technology (`aria-hidden`), which is correct for a modal, so the landmark is rightly absent while it is open; a test defect, repaired in `79ec9d2` by waiting for the dialog. Its layout and focus assertions are unchanged and passed.
+- TC-F02-S04-029 was seen failing on the pre-CR-016 build for the intended reason (no shadcn/ui components on sign-in): `qa/reports/20261017-CR016-manual/failure-proof-TC029.log`.
+- Retained under CR-009, not rerun: S01-S03 Java API suites, nonlocal checks and the identity read baseline (Java, schema, contracts and their QA definitions unchanged since their passing CR-013 run at `8fd1939`).
+- Manual, performed 2026-10-17: TC-F02-S04-030 (pixel comparison) and TC-F02-S04-018 (keyboard journeys, re-performed: 147 stops on sign-in at 360/768/1536 and the account at 390/1280 for three brands, every stop a solid 3px `#1D5FD0` outline in view, no trap). Evidence `qa/reports/20261017-CR016-manual/`.
+
+### What the side-by-side comparison found
+
+| Screen and state | Pairs | Result | Classification |
+| --- | --- | --- | --- |
+| Sign-in, recovery guidance, refused sign-in, Owner enrolment (key masked) | 48 | Identical | - |
+| MFA challenge | 6 | 5 identical; beta 1280 differs in 80 pixels | Data: the code's expiry minute ticked between captures |
+| Account with devices, audit, confirmation sheet/drawer | 54 | Identical | - |
+| Staff list | 18 | Alpha differs at all six widths, in the Professional-grant control only | Required by AC-12: the shadcn/ui Checkbox (24px, 4px radius, 1px `#6B7280` line) replaces the native box. It sits 4px further left and its label text 7px further left because the native box carried 3-4px user-agent margins; the 44px label target is unchanged. The developer's handoff says "same place"; it is close, not exact |
+
+These are F02's 126 pairs; F01's 36 (status, not-found and plain pages) are in F01's review and all identical. Test-id sets are identical in all 162 states and visible text is identical apart from the portalled overlay's position in the reading order; no horizontal overflow in 324 captures.
+
+### What works well
+
+- Continuity: CR-012's sign-in composition and CR-013's brand accent survived the rebuild exactly, on a dark, a light and the default brand.
+- The confirmation is now a real modal: the page behind it is hidden from assistive technology while it is open, and focus cannot leave it.
+- Every control is a shadcn/ui component with a stable test id, so later screens inherit focus handling and states from one place.
+
+### Developer observations, judged
+
+- **Focus briefly on the body after the confirmation closes.** Measured on Escape, backdrop and Cancel at 390 and 1280: focus reaches the opener 3-17 ms after the sheet leaves the document (`CR016-focus-return.json`), one or two frames on `<body>`. AC-12 asks for focus return and it returns; not a defect. SUG-F02-09 below.
+- **Alpha's staff cookies presented on beta's host.** In a browser carrying them by hand, beta's first document is its own named, empty workspace frame (200); the BFF answers 401 `invalid_session` with `renewable: false`, the cookies are cleared, and the page reaches beta's sign-in within four seconds. No alpha name, account or data appears on beta, and alpha's session stays valid. A real browser never sends them (host-only cookies). This is the known limit recorded in `docs/engineering/web.md` (decision 045) applied to a credential from another salon; it meets `docs/architecture/multi-tenancy.md` (beta never sees alpha's data). Not a defect. SUG-F02-10 below.
+- **The checkbox.** The only rendered difference CR-016 introduces, classified above.
+
+### Suggestions
+
+Ranked, most valuable first. Earlier SUG-F02-02..08 stand.
+
+| Id | Class | Suggestion | Disposition |
+| --- | --- | --- | --- |
+| SUG-F02-09 | idea | Return focus to the opener in the same frame the confirmation closes | backlog |
+| SUG-F02-10 | idea | Send a credential the API calls non-renewable straight to sign-in on the server | backlog |
+
+#### SUG-F02-09 Return focus in the same frame the confirmation closes
+
+- **Observed:** after Escape, backdrop or Cancel, focus sits on `<body>` for 3-17 ms before Radix returns it to the opener; the pre-CR-016 native dialog returned it at once.
+- **Why it matters:** a screen-reader user may hear the document announced before the button; minor, and only for keyboard and assistive-technology users.
+- **Instead:** let the Sheet return focus on close (`onCloseAutoFocus` focusing the stored opener) rather than after unmount.
+- **Evidence:** `qa/reports/20261017-232017-F02-delta-2725f22af1b3/CR016-focus-return.json`.
+
+#### SUG-F02-10 Send a non-renewable credential straight to sign-in
+
+- **Observed:** with another salon's cookies (or a refresh credential already revoked), the proxy renders the salon's empty workspace frame and the browser then sends the visitor to sign-in.
+- **Why it matters:** a brief workspace frame before sign-in; nobody reaches it with a normal browser, so it is polish, not protection.
+- **Instead:** when `/identity/me` answers 401 with `renewable: false`, clear the cookies and answer a 307 to sign-in in the proxy.
+- **Evidence:** probe above; `renewable:false` in the BFF's principal answer.
+
+### Notes for the lead (documents)
+
+- `docs/engineering/web.md` could say that a modal Sheet hides the page from assistive technology while open, so tests and tools must not expect the `main` landmark then.
+- Correct the F02-S04 handoff's "same place" for the checkbox to the measured 4px/7px shift (or accept it as written).
+- Commit the draft `qa/reports/cr016-assessment-draft/scoped-qa.json` and point both features' `evidence.scoped_assessment` at it.
+
+### Bugs filed from this pass
+
+- None.
+
+
 ## Current CR-013 independent review of the salon web screens (2026-10-17)
 
 Reviewed as: a receptionist on a 768px tablet and a 390px phone, a salon owner at a 1280–1440px desk, and a professional on a 360px phone; signed out and signed in; dark brand (beta `#1F2937`, long name) and light brand (gamma `#FDE68A`), alpha's default `#D6086A` in automation. Screens: F01 bare-domain status, unknown-host "Salon not found", suspended-salon "Temporarily unavailable"; F02 staff sign-in (with recovery guidance and authenticator step), workspace account, staff access and activity log, and the sign-out confirmation drawer/sheet. Every screen at 360/390/768/1024/1280/1440: 66 captures in `qa/reports/20261017-F01-F02-review/` (`review-notes.json`), plus 120 keyboard captures for TC-F02-S04-018 in `qa/reports/20261017-F02-TC018-manual/`. Owners were synthetic, enrolled with a seeded authenticator secret; credentials in an ignored 0600 file only.

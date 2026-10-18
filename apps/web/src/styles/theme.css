@@ -1,0 +1,166 @@
+/*
+ * The theme: every colour, radius, size and font the web app may use, as CSS variables
+ * (docs/engineering/web.md, "Styling"; docs/design/ui-ux-standards.md). Plain CSS with no Tailwind
+ * directive, so the proxy's plain pages can inline it from this one source (lib/plain-page).
+ * app/globals.css maps these to Tailwind's names in `@theme inline`; components use those names
+ * (`bg-primary`, `rounded-card`) and never a raw value.
+ *
+ * The values are the prototype's final tokens under shadcn/ui's variable names. A salon's brand
+ * arrives from the API at run time and is put on the root by BrandStyle (styles/brand.ts):
+ * `--color-brand`, `--color-on-brand`, `--color-brand-soft` and `--color-brand-text`. `--primary`
+ * and `--accent` read them, so every salon screen takes its accent from the salon (CR-013). No
+ * value here is a brand colour; the plain pages and the operator console stay neutral.
+ */
+
+@font-face { font-family: 'Poppins'; font-style: normal; font-weight: 400; font-display: swap; src: url('/fonts/poppins/Poppins-Regular.ttf') format('truetype'); }
+@font-face { font-family: 'Poppins'; font-style: normal; font-weight: 500; font-display: swap; src: url('/fonts/poppins/Poppins-Medium.ttf') format('truetype'); }
+@font-face { font-family: 'Poppins'; font-style: normal; font-weight: 600; font-display: swap; src: url('/fonts/poppins/Poppins-SemiBold.ttf') format('truetype'); }
+
+/* shadcn/ui's theme variables, with the prototype's values. */
+:root {
+  --background: #F3F0EB;
+  --foreground: #111827;
+  --card: #ffffff;
+  --card-foreground: #111827;
+  --popover: #ffffff;
+  --popover-foreground: #111827;
+  --primary: var(--color-brand);
+  --primary-foreground: var(--color-on-brand);
+  --secondary: #EAE5DC;
+  --secondary-foreground: #111827;
+  --muted: #EAE5DC;
+  /* Muted text only on white: 4.83:1 there, 4.25:1 on the canvas (ui-ux-standards.md). */
+  --muted-foreground: #6B7280;
+  --accent: var(--color-brand-soft);
+  /* The soft tint is the brand at 22 alpha over a light surface; ink reads on it. */
+  --accent-foreground: #111827;
+  --destructive: #B3261E;
+  --border: #DDD6CA;
+  --input: #DDD6CA;
+  /* The keyboard focus outline, never the brand. */
+  --ring: #1D5FD0;
+  /* The workspace navigation (ui/sidebar.tsx, CR-017): the prototype's white rail with muted
+     items, the current item filled with the salon's brand, hover on the canvas. */
+  --sidebar: var(--card);
+  --sidebar-foreground: var(--muted-foreground);
+  --sidebar-primary: var(--color-brand);
+  --sidebar-primary-foreground: var(--color-on-brand);
+  --sidebar-accent: var(--background);
+  --sidebar-accent-foreground: var(--foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
+  /* Fields; cards are --radius-medium, actions --radius-pill. */
+  --radius: 1.25rem;
+}
+
+/* The prototype's own named tokens, which shadcn/ui has no name for. */
+:root {
+  /* Status colours. Positive text is not AA on its surface: normal-size success text uses ink. */
+  --positive: #0F7B55;
+  --positive-surface: #DDF1E6;
+  --caution: #8F5A00;
+  --caution-surface: #FFF4DC;
+  --negative-surface: #FDE9E7;
+  --backdrop: rgb(20 20 19 / 28%);
+  --opacity-disabled: 0.55;
+  /* Text drawn in the salon's colour (links, the recovery control): the brand when it reaches
+     4.5:1 on white, otherwise ink (styles/brand.ts). */
+  --link: var(--color-brand-text);
+
+  /* Type */
+  --font-family: 'Poppins', system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', 'Noto Sans Sinhala', 'Noto Sans Tamil',
+    sans-serif;
+  --font-size-small: 0.875rem;
+  --font-size-body: 0.9375rem;
+  --font-size-large: 1rem;
+  --font-size-title: 1.375rem;
+  --font-size-workspace-title: 1.625rem;
+  --font-size-label: 0.8125rem;
+  --font-size-input: 1rem;
+  --font-size-rail: 0.90625rem;
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-strong: 600;
+  --line-height-body: 1.5;
+  --line-height-heading: 1.25;
+  --letter-spacing-heading: -0.02em;
+  --font-family-mono: monospace;
+
+  /* Radius */
+  --radius-small: 1.25rem;
+  --radius-medium: 1.5rem;
+  --radius-pill: 999px;
+  --radius-rail: 0.875rem;
+  --radius-sheet: 2rem 2rem 0 0;
+  /* shadcn/ui's checkbox corner; the prototype has no checkbox. */
+  --checkbox-radius: 0.25rem;
+
+  /* Size */
+  --size-content: 47.5rem;
+  --size-workspace: 80rem;
+  --size-sidebar: 14.75rem;
+  --size-sidebar-compact: 12.5rem;
+  /* The Sidebar's phone sheet (below 900px): shadcn/ui's own width; the prototype has none. */
+  --size-sidebar-sheet: 18rem;
+  --size-header: 3.75rem;
+  --size-rail-row: 2.875rem;
+  --size-icon: 1.375rem;
+  --size-touch-target: 2.75rem;
+  --size-field: 3rem;
+  --size-action: 3.125rem;
+  --size-skeleton-line: 1.25rem;
+  --size-focus-ring: 0.1875rem;
+  --size-focus-offset: 0.125rem;
+  --size-border: 0.0625rem;
+  --size-field-inset: 0.09375rem;
+  --size-customer: 26.875rem;
+  --size-form: 35rem;
+  --size-drawer: 28.75rem;
+  --size-sheet-handle: 2.5rem;
+  /* The phone confirmation sheet's tallest extent. */
+  --size-sheet-max-height: 90vh;
+
+  /* Shadow. Fields draw their outline as an inset ring: the line colour, the brand when focused
+     (the keyboard outline stays --ring), the negative colour when refused. */
+  --shadow-surface: none;
+  /* A list that opens over the page (the Select's options). */
+  --shadow-menu: 0 12px 32px rgb(20 20 19 / 12%);
+  --field-ring: inset 0 0 0 var(--size-field-inset) var(--border);
+  --field-ring-focus: inset 0 0 0 var(--size-focus-offset) var(--color-brand);
+  --field-ring-invalid: inset 0 0 0 var(--size-field-inset) var(--destructive);
+}
+
+/* CR-012 staff sign-in composition. Its colours are the shared ones above with the salon's brand
+   accent (CR-013); only its translucent card over the interior photograph is its own. */
+:root {
+  --surface-translucent: rgb(255 255 255 / 88%);
+  --size-login-card: 32.75rem;
+  --size-login-initial: 3.875rem;
+  --size-login-field: 3.375rem;
+  --size-login-toggle: 3.375rem;
+  --space-login-top: 5.625rem;
+  --space-login-card-block: 2.875rem;
+  --space-login-card-inline: 2.625rem;
+  --space-login-brand-gap: 2.25rem;
+  --space-login-heading-gap: 0.375rem;
+  --space-login-form-top: 1.875rem;
+  --space-login-recovery-pull: -1.25rem;
+  --space-login-toggle-top: 1.875rem;
+  --font-size-login-title: 2.5rem;
+  --font-size-login-welcome: 1.75rem;
+  --font-size-login-name: 2rem;
+  --font-size-login-initial: 2.5rem;
+  --font-size-login-help: 1.125rem;
+  --font-size-login-label: 1.0625rem;
+  --font-size-login-action: 1.3125rem;
+  --letter-spacing-login-name: 0.12em;
+  --radius-login-card: 1.375rem;
+  --radius-login-field: 0.625rem;
+  --shadow-login-card: 0 12px 44px rgb(77 57 37 / 5%);
+  /* The shared decorative interior behind every salon's sign-in, and the feather glyphs drawn as
+     masks in the current text colour. */
+  --sign-in-interior: url('/images/staff-sign-in-interior.webp');
+  --icon-eye: url('/icons/feather/eye.svg');
+  --icon-eye-off: url('/icons/feather/eye-off.svg');
+  --icon-lock: url('/icons/feather/lock.svg');
+}

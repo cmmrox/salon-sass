@@ -1,12 +1,12 @@
 import { cookies, headers } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
-import { getTranslations } from 'next-intl/server';
 import { createServerApiClient } from '@/lib/api/client';
 import { decodeSalon, SALON_HEADER } from '@/lib/tenancy/salon-header';
 import { workspaceEntry } from '@/lib/identity/entry';
 import { cookieName, requestHost, type Kind } from '@/lib/identity/server';
 import { AccountFrame } from './AccountFrame';
 import { AccountScreen } from './AccountScreen';
+import { Denied } from './Controls';
 import { SignIn } from './SignIn';
 
 type PageProps = { kind: Kind; view?: 'account' | 'staff' | 'audit'; signIn?: boolean };
@@ -24,7 +24,7 @@ export async function AccountPage({ kind, view, signIn }: PageProps) {
   if (entry.kind === 'signed-out') redirect('/workspace/sign-in');
   const principal = entry.kind === 'signed-in' ? entry.principal : null;
   if (principal && ((view === 'staff' && !principal.permissions.includes('staff.list')) || (view === 'audit' && !principal.permissions.includes('audit.list')))) {
-    const t = await getTranslations('account'); return <AccountFrame salon={salon} permissions={principal.permissions} view={view}><p role="alert" data-testid="account-denied">{t('denied')}</p></AccountFrame>;
+    return <AccountFrame salon={salon} permissions={principal.permissions} view={view}><Denied /></AccountFrame>;
   }
   return <AccountFrame salon={salon} permissions={principal?.permissions} view={view}><AccountScreen kind={kind} initialPrincipal={principal} timeZone={salon.timeZone} view={view} /></AccountFrame>;
 }

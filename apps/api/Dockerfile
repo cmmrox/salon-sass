@@ -29,6 +29,11 @@ LABEL org.opencontainers.image.title="salon-api" \
       org.opencontainers.image.description="The platform's API" \
       org.opencontainers.image.version="${VERSION}" \
       org.opencontainers.image.revision="${COMMIT}"
+# BUG-F01-006: the pinned JRE image (newest Temurin 25 tag, 2026-09-25) carries libexpat 2.8.5-r0,
+# which has the HIGH CVE-2026-77214, fixed in Alpine 3.24's 2.9.0-r0. Until Temurin publishes a
+# rebuilt tag, take the fixed package from Alpine; the build fails if it is not there. Remove this
+# when the base tag is moved to one that already contains libexpat 2.9.0-r0 or later.
+RUN apk add --no-cache --upgrade 'libexpat>=2.9.0-r0'
 RUN addgroup -S -g 10001 salon && adduser -S -D -H -u 10001 -G salon -h /app salon
 WORKDIR /app
 # Least-changing layer first. The files belong to root and cannot be changed by the user that runs them.

@@ -41,7 +41,7 @@ screens continue to follow the HTML prototype below.
 | Typography | Poppins 400/500/600; 15px body; 22px customer title; 26px desktop workspace title |
 | Cards / fields / primary actions | 24px cards, 20px fields, pill actions; fields at least 48px and primary actions 50px |
 | Customer (later React Native only) | Centred 430px canvas, compact sticky header and anchored icon navigation |
-| Salon | Full width; below 900px main area up to 760px and bottom navigation; desktop sticky white header, sidebar and main area up to 1280px |
+| Salon | Full width; below 900px main area up to 760px and the navigation in the shadcn/ui Sidebar's sheet, opened from a menu button in the sticky header (CR-017, replacing the prototype's bottom navigation; the sheet is 18rem wide and the phone main area keeps 48px of bottom padding, product choices the prototype does not define); desktop sticky white header, sidebar and main area up to 1280px |
 | Sidebar | 200px at 900–1199px; 236px at 1200px and above |
 | Accent and branding (CR-013) | Wherever the prototype uses `--ac`/`--acs`/`--onac` (primary actions, selected navigation, chips and slots, focus, progress, identity accents), sign-in and workspace use the salon's brand colour, its soft tint and its computed readable foreground. Default `#D6086A` when a salon has none. Only the operator console stays neutral |
 
@@ -72,23 +72,30 @@ product evidence; never claim a side-by-side preview occurred.
 ## Build order for a screen
 
 1. Find the prototype screen and list its states: loading, empty, filled, error, disabled.
-2. Search the codebase for components that already do part of it.
-3. Build from tokens and existing components. Add a new component only when nothing fits, and add
-   it to the shared set, not to the screen.
+2. Search the codebase for components that already do part of it. On the web, check the shadcn/ui
+   components first (`apps/web/src/components/ui/`, then the shadcn/ui catalogue) and add the one
+   that fits with its CLI (`docs/engineering/web.md`, "Styling"). The prototype decides how it
+   looks; shadcn/ui decides how it is built.
+3. Build from theme tokens and existing components. Add a new component only when nothing fits, and
+   add it to the shared set, not to the screen.
 4. Check it at every width in the matrix and in every state before handing over.
 
 ## Tokens and branding
 
 - Colours, spacing, radii, type sizes and shadows are tokens. No raw hex value and no magic number
-  in a component.
+  in a component. On the web the tokens are the theme's CSS variables, used through Tailwind
+  utilities (CR-016); where they live and how they map to shadcn/ui's names is in
+  `docs/engineering/web.md`, "Styling".
 - Two kinds of colour: the platform's palette (the prototype's final tokens), and the salon's brand
   colour, which arrives at run time and is the accent of every salon screen, sign-in included.
   Anything drawn on the brand colour uses the computed contrast colour.
 - Brand tokens: `--color-brand` (fills, the sign-in initial ring, the field focus ring),
-  `--color-on-brand` (anything on a brand fill), `--color-brand-soft` (selected tints, the phone's
-  selected tab) and `--color-brand-text` (links and other text in the brand colour, ink when the
+  `--color-on-brand` (anything on a brand fill), `--color-brand-soft` (selected tints; the selected
+  Sidebar item uses the full brand fill on every width, CR-017) and `--color-brand-text` (links and other text in the brand colour, ink when the
   brand is under 4.5:1 on white). The keyboard focus outline stays the prototype's `#1D5FD0`.
   The sign-in card uses `--color-surface-translucent`.
+- CR-017 adds `--shadow-menu` for the Select's option list and retires the bottom tab bar's tokens
+  (`--size-nav`, `--size-tab`, `--font-size-nav`, `--shadow-navigation`, `--radius-nav`).
 - Test every salon screen with at least two salons' brands: a dark brand colour and a light one.
   A screen that only works on the default pink is broken.
 - Images uploaded by a salon are resized and cropped by the system. A layout must survive a very
@@ -163,7 +170,10 @@ Use the prototype's wording where it exists. One name for one thing everywhere: 
 
 ## Red flags
 
-- A new component that looks like an existing one.
+- A new component that looks like an existing one, or a hand-built control where a shadcn/ui
+  component exists (CR-016).
+- A CSS Module, a new style sheet or a `style` prop for a visual value in the web app (CR-016).
+- shadcn/ui's default grey palette or radius showing through instead of the prototype's tokens.
 - A colour, size or string typed straight into a screen.
 - A screen checked only at desktop width, only with the default brand, or only with data in it.
 - A generic placeholder frame ("Salon", an account skeleton) painted before the screen the visitor

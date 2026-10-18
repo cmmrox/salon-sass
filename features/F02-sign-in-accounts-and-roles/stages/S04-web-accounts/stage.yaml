@@ -10,7 +10,7 @@ status: complete
 qa_status: not-run
 blocked_reason: null
 released_in: null
-reopened_by: CR-013
+reopened_by: CR-017
 depends_on:
 - F02-S01
 - F02-S02
@@ -31,304 +31,79 @@ nfr_focus:
 - NFR-10
 - NFR-21
 handoff:
-  run: 'CR-013 current runtime 2026-10-17 (checkout /Users/cmmrox/Personal/Projects/salon-sass, source 756fdef): infra/scripts/local-service.sh start api|web (stop the same before rebuilding). API PID54422 java -jar target/salon-api.jar (JDK25 selected by the build), health UP; production web PID52092 node scripts/serve.mjs --port 3100 from the final build. Open http://alpha.localhost:3100/ (beta, gamma likewise): signed out it is 307 / -> /workspace -> /workspace/sign-in; signed in /workspace/account. Colour hook: infra/scripts/local-salon.sh colour <slug> <#RRGGBB> (local only, owner role, refuses a non-salon or non-#RRGGBB, changes only salon_brand.brand_colour and updated_at, stores upper case); local-reset.sh restores seeded alpha #D6086A, beta #1F2937, gamma #FDE68A. Earlier runtime records below are historical. CR-012 current runtime 2026-10-15: API session81238/PID2865 from apps/api, SPRING_PROFILES_ACTIVE=local
-    SALON_PLATFORM_DOMAIN=localhost SALON_IDENTITY_LOCAL_KEY_FILE=<checkout>/.local/identity-keys.properties
-    JDK25 java -jar target/salon-api.jar; production web session66419/PID2880 from apps/web, SALON_PLATFORM_DOMAIN=localhost
-    SALON_API_BASE_URL=http://localhost:8090 SALON_WEB_LOCAL_HTTP=true SALON_IDENTITY_LOCAL_KEY_FILE=<checkout>/.local/identity-keys.properties
-    node scripts/serve.mjs --port 3100. Scripts PID records refreshed to these exact processes. Health
-    UP; API meta commit11e9955d331548495fd78f5967e4555d97ac2172. Open http://alpha.localhost:3100/; browser
-    reaches /workspace/sign-in. Logs .local/logs/cr012-api-runtime.log and cr012-web-runtime.log. Stop
-    exact processes before rebuilding artifacts. Historical startup below: Installed Node24/Corepack pnpm
-    and JDK25 remain in use. PostgreSQL salon-local is running. Current API foreground session99029/PID21141
-    uses retained .local/identity-keys.properties and SPRING_PROFILES_ACTIVE=local SALON_PLATFORM_DOMAIN=localhost
-    /Users/cmmrox/.sdkman/candidates/java/25.0.1.0+8-amzn/bin/java -jar target/salon-api.jar from apps/api.
-    Current web foreground session42871/PID88485 runs from apps/web: SALON_PLATFORM_DOMAIN=localhost SALON_API_BASE_URL=http://localhost:8090
-    SALON_WEB_LOCAL_HTTP=true SALON_IDENTITY_LOCAL_KEY_FILE=/Users/cmmrox/Personal/Projects/salon-sass/.local/identity-keys.properties
-    node scripts/serve.mjs --port3100 (use --port 3100). Browser http://alpha.localhost:3100/ and /sign-in,/account,/workspace/sign-in,/workspace/account,/workspace/staff,/workspace/audit;
-    beta/gamma same host pattern. Keep sessions alive; stop these exact application processes before Maven/web
-    rebuild, then restart. Logs .local/logs/cr007-api-runtime.log and cr007-web-runtime.log. CR-010 current
-    web: persistent exec43141, http://alpha.localhost:3100/ -> staff workspace; log .local/logs/cr010-web-runtime.log.
-    Old customer entry URLs now staff aliases.'
-  data: 'CR-013: no reset. Added one synthetic MANAGER per salon (alpha, beta, gamma) through POST /local/identity/seed; random credentials only in ignored .local/cr013-dev-fixture.json mode0600, never printed. Their browser sessions were signed out or left to expire; no other account changed. beta colour temporarily set to #0F766E with the new hook for the AC-10 change check and restored to #1F2937 (API confirmed); alpha/gamma untouched. Earlier fixture records below are historical. CR-012 retained alpha/beta/gamma and existing local identity keys, no reset. Added one synthetic
-    Alpha Owner for developer password/MFA walkthrough; private random fixture .local/cr012-developer-fixture.json
-    mode0600, authenticator enrolled and browser session signed out/revoked. No real sending/payment or
-    provider overrides. Historical fixtures below: Only synthetic alpha/beta/gamma; all three active after
-    the gamma suspend/reactivate check. Retained identity keys and existing fixtures were preserved. Old
-    ignored .local/f02-staff-fixtures.json Owner password is stale; do not reuse it as current credentials.
-    Direct local seed implementation inspected: existing accounts are returned without credential replacement;
-    no reset was used. Three dedicated random alpha Owners were added for screenshots; ALL THREE exact
-    created accounts had access removed through authorized staff-remove BFF and current sessions revoked
-    afterwards. Their private fixtures remain ignored mode0600 at .local/cr007-staff-fixture.json and
-    .local/cr007-dialog-owner.json and .local/cr007-final-size-owner.json, never printed/committed. Synthetic
-    customers0740990701/0702/0703 registered through captured local codes and saved name Design check;0740990714
-    exercised wrong-code feedback. Those customer fixtures remain local for QA''s normal synthetic reset.
-    No Clock/provider/limit overrides or real messages were used.'
-  notes: "bug-fix F02 2026-10-17 BUG-F02-013, fix c618f87 on charithm/bugfix/F02-brand-foreground-contrast, checkout /Users/cmmrox/Personal/Projects/salon-sass. contrastColour(): white or ink #111827 as before when the better one reaches 4.5:1, otherwise #000000 (ON_BRAND_COLOURS.black); brandTextColour already falls back to ink on white (17.7:1), so no gap there. Red first: brand.test.ts sweep of the RGB cube at step 5 (140,608 colours) plus #808080 and #C34BB4 failed (9,364 colours below 4.5:1; .local/logs/bug-f02-013-before.log), now passing; a further case proves every colour where white or ink reached 4.5:1 keeps the previous choice. Running product: alpha set with local-salon.sh colour to #808080 then #C34BB4: sign-in action, workspace primary button and selected navigation black text at 5.32:1 and 4.99:1 (were ink 4.49 and white 4.21); alpha restored to #D6086A, white 5.12:1 (.local/logs/bug-f02-013-after-runtime.log). Gates on c618f87, logs .local/logs/bug013-*.log: pnpm -r lint EXIT0; pnpm -r typecheck EXIT0; pnpm -r test EXIT0 (19 contracts, 391 web); pnpm --filter @salon/web build EXIT0; pnpm contracts:check EXIT0; cd apps/api && ./mvnw -q verify first run EXIT1 on a timing assertion only: SalonEndpointDatabaseSilentIntegrationTest had two requests at 5.077 s and 5.075 s against a 5 s limit while the database was frozen (Java unchanged; this suite passed three times earlier today; .local/logs/bug013-maven-run1-flaky.log); rerun EXIT0, 518 tests, 0 failures (bug013-maven.log). The lead may want that margin examined separately. API and web restarted from this build. Fixture MANAGERs re-seeded idempotently.\n\nbug-fix F02 2026-10-17 BUG-F02-012, fix 881ca87 on charithm/bugfix/F02-sign-in-frozen-api-deadline, checkout /Users/cmmrox/Personal/Projects/salon-sass. Root cause: requestSignal() deadlines reached the outgoing socket only through openapi-fetch, withTraceparent and transport copies of the Request; undici copies follow their parent signal through a weakly held controller, so a GC while the API was silent dropped the abort and the call waited for the API to resume (intermittent, predates CR-013). Fix: withTraceparent enforces the shared request budget with a strong timer (remainingBudget) and passes its signal explicitly; fetchForHostname uses init.signal as given; the caller's original signal is forwarded. Red first: lib/api/deadline.test.ts (stand-in API silent, headers-only, unread; hostname transport, platform fetch, handleIdentity sign-in; caller abort) 11/11 failing with forced GC, all passing without GC (.local/logs/bug-f02-012-before.log), now 11/11 passing. Running product: API frozen with SIGSTOP plus static-file load on the web: pre-fix web gave no answer in 30 s 3/3 (.local/logs/bug-f02-012-repro-prefix.log); fixed web 503 in about 3.0 s 7/7 (bug-f02-012-after-runtime.log, bug-f02-012-final-runtime.log); API always resumed; normal sign-in, renewal and logout re-checked. Gates on 881ca87, logs .local/logs/bug012-*.log: mvnw -q verify EXIT0 (518 tests; API stopped then restarted); pnpm -r lint EXIT0; pnpm -r typecheck EXIT0; pnpm -r test EXIT0 (19 contracts, 386 web); pnpm --filter @salon/web build EXIT0 (web stopped then restarted); pnpm contracts:check EXIT0. Fixture: synthetic MANAGERs re-seeded idempotently after QA's identity reset (private .local/cr013-dev-fixture.json).\n\nbug-fix F02 2026-10-17 (BUG-F02-010, BUG-F02-011), fix 3b8df96 on charithm/bugfix/F02-cr013-entry-cookies-default-brand, checkout /Users/cmmrox/Personal/Projects/salon-sass. Red first: 7 failing unit cases (.local/logs/bug-f02-010-011-before.log), now passing. Running product: BUG-011 reproduced on the pre-fix 756fdef web, then fixed on the rebuilt 3b8df96 web (307 to sign-in with six host-only clearing Set-Cookie headers; no staff cookies left; renewal and logout entry unchanged); BUG-010 through a stand-in API :8091 and a second web :3101 (invalid, injection and missing colour render sign-in 200 in #D6086A; stand-ins stopped). Gates on 3b8df96, logs .local/logs/bugfix-f02-*.log: mvnw -q verify EXIT0 (518 tests, API stopped then restarted); pnpm -r lint EXIT0; pnpm -r typecheck EXIT0; pnpm -r test EXIT0 (19 contracts, 375 web); pnpm --filter @salon/web build EXIT0 (web stopped then restarted); pnpm contracts:check EXIT0. Fixture: the three synthetic MANAGERs were re-seeded idempotently after QA's identity reset (same private .local/cr013-dev-fixture.json). Earlier CR-013 handoff follows.\n\nCR-013 developer handoff 2026-10-17, tested source 756fdef9a5b29d23cd74daf4000f56db07311d4c (tree clean; this handoff commit changes only stage metadata).\n\nAC-10 checked on the running product (Playwright from outside, .local/output/playwright/cr013/observations-theme.json, screenshots *-sign-in-1440/390.png and *-account-1440/390.png). One shared theme, with prototype tokens canvas F3F0EB, secondary EAE5DC, lines DDD6CA, white cards, ink 111827 and muted 6B7280. Every salon screen gets its brand from a style rule built from the API colour (BrandStyle via salonBrandRule): --color-brand, --color-on-brand, --color-brand-soft and --color-brand-text. alpha D6086A (default), beta 1F2937 (dark) and gamma FDE68A (light) were each measured on sign-in and workspace. The sign-in action fill and its border, the initial ring, the field inset focus, the workspace primary button, the selected desktop rail item and the field inset focus all equal the brand. Text on brand fills is white for alpha and beta and ink for gamma. The recovery link is the brand colour for alpha and beta, and ink with a brand underline for gamma, because gamma is under 4.5:1 on white. The phone selected tab is the brand soft tint behind the icon, with ink text. The global :focus-visible outline stays the prototype blue 1D5FD0, as the lead agreed. Sign-in card text is ink, help text is muted on a measured card pixel of rgb 252,251,250 (about 4.65:1), and card and field lines are DDD6CA. Changing the colour without a rebuild: local-salon.sh colour beta 0F766E changed both beta screens on the next request, and was then restored. A salon without a valid colour gets D6086A: the DB CHECK and strict web resolution keep an invalid colour from reaching a screen, so this is covered by the salonBrandRule and AccountFrame unit tests. Retired tokens: --color-login-ink, -muted, -accent, -action, -field, -border and -input-border, and --color-primary. --color-login-card is renamed --color-surface-translucent, and the size, space and type login tokens are kept. theme.test.ts asserts the token values, that no raw colour appears in a component module, and the accent mapping. The width matrix (360, 390, 768, 1024, 1280 and 1440) on beta and gamma covered sign-in and the account, staff and audit pages: 48 checks with no horizontal overflow.\n\nAC-11 checked on the running product (.local/output/playwright/cr013/observations-entry.json, screencast frames frames-*/ and sheet-entry.png). Signed out, on alpha, beta and gamma, every one of /, /workspace, /workspace/account, /workspace/staff and /workspace/audit is answered by server 307s straight to /workspace/sign-in, and the first painted frame is the sign-in screen. Revoked or stale cookies reach sign-in the same way: the proxy checks the session with the API before rendering. Signed in, the documents for /, /workspace, account, staff and audit render the workspace shell with the salon name in server HTML. They contain no app-name, no account-loading card and no unsupported-browser warning, and the first screencast frame is that workspace. The only pending state is the in-section list skeleton, account-list-loading (\"Loading...\"), inside the branded workspace. An expired access cookie with a live refresh family renders the salon workspace and renews under the browser lock: verified, the family rotated and the device list loaded. After logout, revisiting reaches sign-in by 307.\n\nDesign: a page redirect() under cacheComponents streams as a client meta redirect after the shell, so entry is decided in proxy.ts (routeRequest) with real 307s. /workspace is decided on cookie presence alone, with no API call. Protected pages call the API with workspaceEntry: /identity/me, plus /meta only when renewal is possible, inside the same request's three-second deadline. The page re-checks with the same function, so a signed-in protected page load now makes one extra /identity/me call within that budget. Renewal is never performed on the server, so Web Locks coordination and replay revocation are unchanged. The shared renewal() helper replaces the identical inline check in handleIdentity. (workspace)/layout.tsx sets instant=false and AccountPage has no Suspense fallbacks, so no generic AppShell frame exists.\n\nKnown limit: when the access cookie has expired but a revoked refresh family remains, the server cannot tell whether that family is spent without spending it. That visitor sees their salon's workspace frame for a moment before the browser renewal sends them to sign-in. The frame is branded and named, not the generic one.\n\nOther changes: the unsupported-browser warning no longer flashes on first render (support is unknown until inspected; controls stay disabled until then). New test id account-list-loading and message account.listLoading. local-salon.sh colour action added at the lead's request.\n\nDocs for the lead: the README, test-plan and environments docs should name the colour hook. docs/engineering/web.md Branding could record that entry is decided in proxy.ts, with the re-check and the extra /identity/me call. ui-ux-standards could mention --color-brand-text and --color-surface-translucent.\n\nDeveloper gates (checkout above, Node 24.12.0, Corepack pnpm 12.11.2, JDK25 from the build; logs in .local/logs):\n- cd apps/api && ./mvnw -q verify: EXIT 0, 518 surefire tests and 0 failures, cr013-maven.log, run fresh with the API stopped.\n- pnpm -r lint: EXIT 0, cr013-lint.log.\n- pnpm -r typecheck: EXIT 0, cr013-typecheck.log.\n- pnpm -r test: EXIT 0, 19 contracts and 367 web tests, cr013-tests.log.\n- pnpm --filter @salon/web build: EXIT 0 with the web stopped, workspace routes dynamic, cr013-web-build.log.\n- pnpm contracts:check: EXIT 0, current, cr013-contracts.log.\nNew tests: lib/identity/entry.test.ts (mutation-checked: making every 401 pending fails 3 cases), lib/tenancy/route-request.test.ts entry cases, styles/theme.test.ts, the brand.test.ts brandTextColour and salonBrandRule cases, AccountFrame brand cases, AccountEntry.test.tsx, and the SignIn no-flash case. Walkthrough scripts are in .local/output/playwright/cr013/scripts.\n\nTimings: implementation about 20 minutes, walkthrough and rework about 15 minutes, gates about 5 minutes. Exact timings are unknown.\n\nCR-012 developer handoff 2026-10-15. Built against approved mockup and HTML protected-workspace\
-    \ grammar. Tested source11e9955d331548495fd78f5967e4555d97ac2172 includes app5962920/70912e1/11e9955\
-    \ and QA preparationfcbb15a/fe6686c. Checkout /Users/cmmrox/Personal/Projects/salon-sass; tree clean\
-    \ during final sealed commands.\n\nAC-1: Live in-app browser checked invalid password recovery/credential\
-    \ clearing; additive Owner password -> required MFA enrollment -> valid TOTP -> protected account,\
-    \ then enrolled MFA sign-in -> valid TOTP -> account. Found cached enroll_mfa state after logout,\
-    \ added failing-before outcome test, reset step on successful MFA and live confirmed logout returns\
-    \ initial identifier/password screen. Existing rate/expiry/role variants retain original evidence;\
-    \ no new complete security walkthrough claimed.\nAC-2: Live Alpha root and Beta root reach fixed same-host\
-    \ staff sign-in with corresponding salon name. Root/legacy redirect implementation unchanged; unit\
-    \ route coverage passes. No customer mode introduced.\nAC-3/AC-6: Live Owner protected account restored\
-    \ existing workspace header/navigation after sign-in; permission/staff/audit implementation unchanged.\
-    \ Original negative/role/audit evidence retained; current API integration and web component gates\
-    \ pass. No new full permission walkthrough.\nAC-4: Live logout returns standalone initial login with\
-    \ no retained MFA screen; other session/password/device logic unchanged and original evidence retained.\
-    \ Current developer session tests pass.\nAC-5/AC-7: API/BFF/cookies/CSRF/customer rejection/hostname\
-    \ authority unchanged; original browser evidence retained and current518 API tests plus web boundary\
-    \ tests pass. No new claim of all browser negative variants.\nAC-8: Live six-width360/390/768/1024/1280/1440\
-    \ checks show zero horizontal overflow, loaded local Poppins and54px inputs/action. Label/native ids/testids\
-    \ preserved. Show/hide works, failed sign-in re-hides/clears password, guidance expands as accessible\
-    \ status without network side effect. Beta long full name wraps at360. MFA enrollment and code screen\
-    \ had no overflow at desktop. Browser support/rate/error variants covered by component gates; full\
-    \ independent accessibility check remains QA.\nAC-9: Rendered reference comparison completed against\
-    \ supplied screenshot and protected HTML source. At1536x1024 final production cardx506/y230/w524/h634.5\
-    \ vs referencex506/y231/w524/h636; initial62px/y90; form438px, action54px. API-resolved Alpha Studio/A\
-    \ and Beta full name/B replace mockup placeholder. Final settled production screenshot .local/output/cr012/alpha-production-1536.jpg\
-    \ and production-observation.json; no dev badge. Six-width dev captures alpha-{width}.jpg and widths.json;\
-    \ beta-360.jpg. Reference preview is supplied screenshot plus source-defined HTML mapping, not a live\
-    \ HTML side-by-side. Protected workspace frame retains original grammar. Taupe#8A705E gives white\
-    \ contrast4.605:1, minimally darker for AA.\n\nDeveloper gates: sealed qa/scripts/sdlc verify-commands\
-    \ --feature F02 --context .local/cr012-final-context.json PASS6/6 at11e9955, report qa/reports/20261015-134702-F02-commands-fd058793a3dd\
-    \ (all complete raw logs and integrity receipt retained);248.9s. Command1 cd apps/api && ./mvnw -q\
-    \ verify EXIT0(518 tests,0failures/errors); command2 pnpm contracts:check EXIT0; command3 pnpm -r\
-    \ lint EXIT0; command4 pnpm -r typecheck EXIT0; command5 pnpm -r test EXIT0(19 contract+320 web tests);\
-    \ command6 pnpm --filter @salon/web build EXIT0. Runtime-only SALON_* variables were UNSET for commands,\
-    \ JAVA25_HOME=/Users/cmmrox/.sdkman/candidates/java/25.0.1.0+8-amzn; closure must compare same command\
-    \ environment. Runtime configured separately as run field. Context config fingerprints retained identity\
-    \ key file. Driver log .local/logs/cr012-final-commands-env-fixed.log.\n\nFailure record: first new\
-    \ tests failed correctly before implementation (.local/logs/cr012-before-tests.log); that broad run\
-    \ also had transient existing staff-remove focus assertion, unchanged focused and final full tests\
-    \ pass. MFA return assertion failed before fix (.local/logs/cr012-mfa-return-before.log), focused\
-    \ final11/11 passed (.local/logs/cr012-focused-final.log). First sealed run qa/reports/20261015-130759-F02-commands-5c4755e2cb3f\
-    \ retained4passes then unit failure: site.test undefined-domain expected unavailable, received salon\
-    \ because developer globally exported SALON_PLATFORM_DOMAIN=localhost. Corrected verification environment\
-    \ only; no weakening or app/test workaround. Complete rerun passed. Initial screenshot captured streamed\
-    \ loading; replaced with settled captures and final production proof above.\n\nAssets: shared decorative\
-    \ generated interior supplied by lead under CR-012, optimized via installed cwebp-q88 to79534-byte\
-    \ WebP; no published salon cover/logo capability implied. Official Feather eye/eye-off/lock downloaded\
-    \ from github.com/feathericons/feather main/icons and LICENSE, local MIT assets rendered as CSS masks.\
-    \ No package/system dependency added. Forgot password opens approved administrator-contact guidance,\
-    \ no reset API/provider invented. Existing account-* ids remain; new staff-sign-in-* and account-password-toggle/account-forgot-password/account-password-help\
-    \ added.\n\nNo known unfinished application correction. No QA automation executed by developer. Lead\
-    \ closes on evidence, independent QA checks affected F02 scope next. No push, deployment, tag, real\
-    \ payment or real message. Observed final command run248.9s; implementation/manual-debug elapsed unavailable\
-    \ across interruption and not estimated.\n\nHISTORICAL HANDOFF BELOW (retained proof, not rerun claims):\n\
-    \nCR-007 repair acceptance checked 2026-10-14 on application source 6bb5fd2 (3096a83, e6faafa, f19d2b2,\
-    \ 2afbd77 and 4d01605 included), before independent feature QA. Design mapping: Customer header/tabs/canvas\
-    \ and cards/fields/actions; Salon responsive rail/header/mobile tabs, .setf form measure and .tbl/.row\
-    \ list grammar; Customer .sheet bottom sheets and Salon desktop right drawer. Foundation/unknown/suspended\
-    \ pages extend the same neutral grammar. Prototype final CSS/render source was inspected; a permitted\
-    \ live prototype preview was unavailable after the browser safety rejection recorded by the lead.\
-    \ This is source-defined comparison with actual rendered application evidence, not a claimed side-by-side\
-    \ preview.\n\nCurrent design walkthrough: .local/output/playwright/cr007/observations.json contains\
-    \ 253 observations across all six widths (360,390,768,1024,1280,1440), public/customer/workspace sign-in,\
-    \ platform status, unknown-host page, customer profiles/devices/privacy and Owner account/staff/audit.\
-    \ Every measured layout has zero horizontal overflow and loaded Poppins400/500/600. Customer dark\
-    \ Beta/light Gamma were checked in public/sign-in/protected account; workspace stays neutral. Font/body15,\
-    \ input16/label13, field radius20/min48, cards24/no routine shadow, primary pills50, customer32px\
-    \ initials/50px header, 430px canvas, workspace60px header/200-or236px rail and responsive bottom\
-    \ tabs follow the source contract. Full names remain in accessible DOM/title with only approved compact-header\
-    \ ellipsis. Customer profile saves for all three synthetic salons succeeded; code error, loading skeleton,\
-    \ safe feedback and controlled empty-device presentation were observed. Controlled empty response\
-    \ is developer presentation evidence, not an assertion that the real database was empty.\n\nConfirmation\
-    \ checks: Cancel receives initial focus; Tab/Shift+Tab wrapping, Escape/cancel/backdrop dismissal\
-    \ and focus return checked in the real browser; desktop workspace460px drawer and customer430px bottom\
-    \ sheet at every width. Busy dismissal/focus fallback checked in developer component tests. Screenshots\
-    \ now use viewport capture for native dialog states because fullPage stitching misrepresents fixed\
-    \ overlays. Exact viewport evidence: workspace-confirm-360.png/workspace-confirm-1440.png and alpha-privacy-confirm-360.png/alpha-privacy-confirm-1440.png.\
-    \ Additional customer viewport evidence .local/output/playwright/cr007/customer-viewport-observations.json:13\
-    \ checks/zero overflow. Empty settled workspace sign-in screenshot workspace-empty-sign-in-final-1440.png\
-    \ shows actual unmasked EMPTY fields; no private values are exposed. Screenshot review caught and\
-    \ resolved overly wide auth forms, active rail icon specificity and native Tab escaping; no known\
-    \ correction remains unfinished.\n\nDeveloper gates: pnpm install --frozen-lockfile EXIT0; cd apps/api\
-    \ && JAVA25_HOME=/Users/cmmrox/.sdkman/candidates/java/25.0.1.0+8-amzn ./mvnw -q verify EXIT0 (504\
-    \ tests); pnpm -r lint EXIT0; pnpm -r typecheck EXIT0; pnpm -r test EXIT0 (19 contract and298 web\
-    \ tests); pnpm --filter @salon/web build EXIT0; pnpm contracts:check EXIT0; qa/scripts/sdlc selftest\
-    \ EXIT0. Logs .local/logs/cr007-{install,maven-final,lint,typecheck,tests,build,contracts,selftest}.log.\
-    \ Final API artifact identifies a6db99b: later commits are web/documentation/QA only and do not rewrite\
-    \ an already-built jar. Stop API before the lead repeats Maven packaging, and restart from the completed\
-    \ artifact. No QA automation was run by this developer.\n\nAdditional delivery check: Docker build\
-    \ of apps/web/Dockerfile passed; isolated non-root10001:10001 runtime served all3 real Poppins TTF\
-    \ assets plus OFL license with bytes identical to committed files (.local/cr007-image-assets.json).\
-    \ Asset container salon-cr007-assets-check was stopped and removed; local test image salon-web-cr007-assets\
-    \ remains. The original standalone packaging omitted public assets and is corrected. Poppins files\
-    \ were downloaded from Google Fonts official ofl/poppins source and licensed locally; no package or\
-    \ system software was added.\n\nResolved gate failures: first web test failed because the old contrast\
-    \ helper dark output did not match prototype ink; lead authorized exact fixture migration preserving\
-    \ all>=4.5 assertions. First Maven504 run had one BuildSourceMetadataTest failure because HEAD changed\
-    \ from781fd55 to a6db99b during execution; rerun under stable HEAD passed504. New dialog tests initially\
-    \ needed native-method jsdom stubs/ordered cleanup and explicit this types; initial busy test exposed\
-    \ effect ordering and was corrected. Actual browser Tab escape was fixed with explicit wrapping and\
-    \ rerun successfully. Initial screenshot harness sampled streamed hidden DOM; settled visibility/font\
-    \ waits corrected the measurement. Historical ignored Owner fixture password returned invalid_credentials;\
-    \ existing accounts were left intact and additive isolated synthetic Owners were used instead.\n\n\
-    Historical original handoff below is retained as prior evidence; it is not a claim that every earlier\
-    \ business/security variation was rerun during this visual repair. Current APIs/BFF/cookies/tenant\
-    \ resolution, password/MFA/code authority, privacy contracts and permissions remain unchanged and\
-    \ current full developer unit/integration gates pass. Independent QA will rerun complete F01/F02 journeys.\
-    \ CR-006 role preview/authenticator-copy suggestions remain unimplemented; no next feature, deployment,\
-    \ tag, real message/payment or push occurred.\n\nCurrent F02 criterion scope: AC-1 live dedicated\
-    \ Owner password+valid authenticator sign-in checked; enrollment/negative/rate variants retain original\
-    \ evidence below because authentication logic unchanged. AC-2 live customer SMS code requests/capture/verification\
-    \ for three salons plus wrong-code recovery checked; WhatsApp/resend/expiry/provider variants retain\
-    \ original evidence. AC-3 actual Owner staff/audit/account routes/nav verified; old every-role/wrong-kind/foreign-salon\
-    \ denial evidence retained and current integration/component permission tests pass. AC-4 current-device\
-    \ markers and sign-out confirmation cancellation checked; created Owner staff removal revoked only\
-    \ those accounts; password/renewal/device mutation variants retain original evidence. AC-5 three live\
-    \ profiles loaded and name changes saved independently with success; every other field/concurrency\
-    \ variation retains original evidence. AC-6 deletion confirmation cancellation checked at all widths,\
-    \ with no deletion side effect; affirmative deletion/export variants retain original evidence and\
-    \ current API tests. AC-7 existing BFF/cookies/CSRF/authority/isolation contracts untouched; original\
-    \ browser negative evidence retained, current server/client security gates pass. AC-8 six-width/brands/current\
-    \ forms/cards/lists/feedback/loading/empty controls checked, screenshots reviewed, modal focus/return\
-    \ corrected and live checked; no current full automated axe pass is claimed by developer. AC-9 exact\
-    \ source-defined reference mapping and running rendered comparison described above completed, including\
-    \ loaded local font assets in production image and responsive confirmation sheet/drawer. All remaining\
-    \ business/security variations named as historical are explicitly not new repair walkthrough executions,\
-    \ and full independent feature QA is next.\n\nHISTORICAL ORIGINAL HANDOFF (prior build evidence only):\n\
-    Developer acceptance walkthrough completed 2026-10-14, independently of later feature QA. Latest application\
-    \ source is 8eeca6f; final API artifact and running /api/v1/meta reported full 8eeca6f16049d3aac8cb37e710e35a2d155d96df\
-    \ after rebuilding. API/helper commits cccbeae and metadata fix e5c9026 are included. Sanitized evidence:\
-    \ .local/s04-developer-checks.json and .local/s04-final-gates.json; screenshots/CLI observations in\
-    \ ignored .local/playwright-s04 and .local/s04-*.png. Runtime stopped after final checks.\n\nAC-1:\
-    \ Checked staff password sign-in and authenticator verification in the running browser, required enrollment\
-    \ for a newly provisioned Owner, and voluntary enrollment for a non-Owner. Incomplete enrollment returned\
-    \ no protected principal (401); wrong authenticator/customer codes displayed recovery, and setup authority\
-    \ never appeared in client responses. Existing synthetic staff/MFA fixtures stayed intact. APIs' email/mobile\
-    \ normalization and limits passed their developer integration gates; the shared browser identifier\
-    \ field accepts either. API failures retain nonsensitive fields and clear submitted credentials.\n\
-    \nAC-2: Checked SMS and WhatsApp request/capture, verification, incorrect code, resend with a changed\
-    \ challenge, invalidated old code and injected-clock expiry through running screens. Number choice\
-    \ remained available after expiry. Public browsing stayed accessible without sign-in. Accepted responses\
-    \ contained expiry only; challenge id/token authority stayed in HttpOnly cookies. Local captures were\
-    \ read through developer hooks, never real providers.\n\nAC-3: Checked Owner provision/grant/role/removal\
-    \ screens and Manager read-only staff/audit screens, Professional direct protected-URL denial, and\
-    \ 15 live BFF reads for every staff role (principal/staff/audit). Owner/Manager returned allowed lists;\
-    \ Receptionist/Professional/Accountant received 403 on staff/audit. Wrong principal-kind and foreign-salon\
-    \ credentials were denied through direct BFF calls without data. Permission checks use the live server\
-    \ principal and API use cases. Changing a granted Professional to Receptionist initially sent an invalid\
-    \ retained grant; fixed to clear the specific grant and reran controlled-component regression plus\
-    \ the real role/removal flow.\n\nAC-4: Checked current-device markers, audit/list pagination, sign-out,\
-    \ correct/incorrect old-password change, credential rotation, current-device revocation and revoke-all.\
-    \ Created two synthetic Manager devices; revoked the other through its browser row, verified its old\
-    \ access returned 401 while current access still returned 200, then revoked fixture sessions and restored\
-    \ the Clock. Staff/customer cookies coexisted; customer deletion did not disturb staff. Two tabs after\
-    \ an injected six-minute advance made exactly one renewal and both recovered. Replaying the old refresh\
-    \ returned 401, cleared staff cookies and required fresh sign-in. Renewal eligibility used issued\
-    \ expiry metadata and API meta.time; metadata never authorized access. Unsupported Web Locks disabled\
-    \ credential-changing controls with translated explanation.\n\nAC-5: Checked fresh profile defaults,\
-    \ read-only verified mobile, name/email/birthday/language/all preferences/explicit consent saving.\
-    \ A second tab's stale update produced conflict, retained the draft and loaded the saved version only\
-    \ on explicit reload; refresh did not silently overwrite it. Negative field/ownership/concurrency\
-    \ API tests passed. Profile updates forward the allowlisted mutable representation/version only.\n\
-    \nAC-6: Checked JSON download and exact top-level allowlist (devices/generatedAt/profile), no credential\
-    \ material, no-store headers, cancel deletion, confirmed deletion and return to sign-in. Staff stayed\
-    \ authenticated after customer deletion; other salons' independently authenticated profiles remained\
-    \ available. The first real deletion exposed Node transport dropping a DELETE JSON body; added explicit\
-    \ body length, a real HTTP regression, rebuilt and reran successful deletion. Owner/Manager audit\
-    \ entries and pagination were visible without authentication secrets; code-volume audit/threshold\
-    \ behavior is covered by closed API stages and their integration gates.\n\nAC-7: Checked missing/wrong\
-    \ Origin and cross-site Fetch Metadata rejecting login before API side effects; forged forwarded host/protocol/assertion\
-    \ did not alter authority. Host-only distinct HttpOnly SameSite=Lax staff/customer cookies had no\
-    \ Domain attribute. Tokens were absent from rendered HTML, document.cookie and local/session storage.\
-    \ BFF operations are fixed under /identity-web/<staff|customer>/<operation>, outside the edge's /api\
-    \ routing. Local HTTP alone omits Secure; nonlocal configuration requires Secure and exact https Origin.\
-    \ Enrollment only transiently displays setup instructions; no browser navigation link/storage. Native\
-    \ wrong-kind/foreign-host probes returned safe denial. Actual IPv4 sign-in address ceiling and separately\
-    \ arriving IPv6 loopback address proved request diagnostics preserve the connection address; spoofed\
-    \ XFF/assertion could not reset the ceiling.\n\nAC-8: Checked 72 settled layout combinations: 36 staff/customer\
-    \ sign-in views, 18 protected workspace account/staff/audit views, and 18 customer account views over\
-    \ alpha/beta/gamma and all six widths (360/390/768/1024/1280/1440). No horizontal overflow; minimum\
-    \ action targets 44px. Checked keyboard tab order, visible focus, semantic labels, stable test ids,\
-    \ long Beta name and Gamma light-brand/dark contrast, neutral workspace. Loading skeletons, sign-in\
-    \ errors, permission denial, stale-profile conflict, retry/expiry instructions, confirmations and\
-    \ success were observed. Authenticated identity lists inherently contain at least the current session/Owner/sign-in\
-    \ audit; empty presentation remains available for an empty API page rather than fabricating business\
-    \ records. During actually silent PostgreSQL the browser displayed safe unavailable recovery in 2314ms\
-    \ and retained the entered mobile; resumed PostgreSQL recovered to UP. This duration is the observed\
-    \ browser action, separate from pause/resume control overhead. English translation files centralize\
-    \ new UI wording; en/si/ta profile preference persists without a new global locale selector.\n\nFinal\
-    \ verification.commands on source 8eeca6f: cd apps/api && ./mvnw -q verify EXIT 0 (500 tests, zero\
-    \ failures/errors/skips); pnpm -r lint EXIT 0; pnpm -r typecheck EXIT 0; pnpm -r test EXIT 0 (19 contract\
-    \ tests and 271 web tests); pnpm --filter @salon/web build EXIT 0; pnpm contracts:check EXIT 0, committed\
-    \ contracts current. Logs .local/logs/s04-final-{maven,lint,typecheck,tests,build,contracts}.log.\
-    \ Developer guard, lifecycle validation and diff checks passed before source commits; no QA automation\
-    \ was run by this developer.\n\nResolved verification findings: intentional public Salon.timeZone\
-    \ propagation made older developer fixtures stale; lead approved exact fixture/expectation updates\
-    \ preserving assertions and adding timezone formatting. The F01-only hardcoded Problem enum fixture\
-    \ lacked F02 codes; lead approved the exact ordered 19-code expectation and explicit uniqueness assertion.\
-    \ IPv6 zone input initially reached URL parsing; fixed strict rejection and reran. Linked-worktree\
-    \ Git plugin metadata initially named the primary checkout; metadata regression/config correction\
-    \ verified normal checkout, archive fallback and exact worktree source. Initial bundled filesystem\
-    \ key read caused the retained file to enter standalone instrumentation traces even after route exclusions;\
-    \ moved file loading into the nonbundled local launcher, made bundled BFF env-only, removed generated\
-    \ output and rebuilt. Final actual-byte scan traversed 1417 standalone files, checked all four retained\
-    \ secret values and key/.env/.local filenames: zero private artifacts. Strict local-loader tests cover\
-    \ missing/invalid/duplicate keys and no nonlocal file fallback. The observed errors above were fixed;\
-    \ no accepted criterion remains unfinished.\n\nRuntime contract: x-salon-client-assertion v1 canonical\
-    \ hostname/method/path/IP/issued instant HMAC is bounded and verified by API before counters or side\
-    \ effects. SALON_IDENTITY_PROXY_KEY is the fourth independent 32-byte/64-hex key; existing local file\
-    \ appends proxy without replacing signing/challenge/encryption. SALON_WEB_LOCAL_HTTP selects only\
-    \ explicit local HTTP; SALON_WEB_TRUSTED_PROXIES is empty locally, explicit edge CIDRs in stack. Nonlocal\
-    \ API/BFF require configured proxy key; real staging rejects local-HTTP configuration. Cookie suffixes\
-    \ access/refresh/expires/session/challenge/challenge_id are separately prefixed salon_staff_ and salon_customer_;\
-    \ salon_device is retained only as the server-issued rate-tracking device. BFF cookie Max-Age derives\
-    \ API-issued durations, never subtracts the web machine clock. No dependency was added.\n\nFinal source-settled\
-    \ proofs: .local/cr007-final-tints.json records18 checks of alpha/beta/gamma across all six widths:\
-    \ derived brandhex+22 selected customer tab background,32px initial/50px header, zerooverflow. .local/cr007-final-primitives.json\
-    \ records6 live workspace checks: header8/28, main28/36/56 at>=1200, compact24/24/48, rail46/text14.5/padding0/14,\
-    \ mobiletabs8/6/items56/gap2, fields10/14/inset1.5/min48. Workspace drawer title26 at1440 and sheet22\
-    \ at360 were rendered and captured after4d01605; only primitive spacing changed subsequently. Latest\
-    \ lint/typecheck/tests298/build all EXIT0 on6bb5fd2; independent QA still pending. No later UI scope\
-    \ remains open.\n\n\nCR-010 developer handoff 2026-10-15. Application source changes are apps/web\
-    \ only; Java API, contracts, infrastructure and lockfile remain unchanged. Root / redirects307 to\
-    \ same-host /workspace; legacy /sign-in and /account redirect307 to /workspace/sign-in, discarding\
-    \ query input. /salon-site remains external404. Removed customer shell/OTP/profile/privacy UI, customer\
-    \ navigation and customer BFF handlers; staff-only Kind and no-store customer404 boundary. Running\
-    \ production web is foreground exec session43141, port3100, log .local/logs/cr010-web-runtime.log;\
-    \ API PID89825 preserved. Existing key file and data preserved. Browser entry http://alpha.localhost:3100/\
-    \ or /workspace/sign-in. No new dependency, system install, deployment, real messages or QA automation\
-    \ run. F02 AC1 checked live password/MFA and retained expiry/error/rate evidence; AC2 checked root/aliases\
-    \ and absence of customer routes/nav; AC3 checked Owner protected views plus retained independent\
-    \ role/isolation/security evidence and current313 web tests; AC4 live password rotation/logout/device\
-    \ view plus retained cross-tab/replay tests; AC5 verified20 live rejected GET/POST calls and zero-upstream\
-    \ component boundary, Java APIs untouched; AC6 live audit plus passing refused-mutation and permission-refresh\
-    \ component cases; AC7 existing staff CSRF/private-cookie boundaries retained and current tests passing;\
-    \ AC8/9 six-width workspace entry/account screenshots, fonts, accessible labels, neutral responsive\
-    \ rails/tabs, no overflow. Fresh gates: pnpm -r lint EXIT0; pnpm -r typecheck EXIT0; pnpm -r test\
-    \ EXIT0 (19 contracts,313 web); pnpm --filter @salon/web build EXIT0, followed by local-service production\
-    \ rebuild/start EXIT0. Logs .local/logs/cr010-{lint,typecheck,tests,web-build,web-start}.log. Retain\
-    \ intact prior Maven504 tests and contracts-check proof recorded above because their code/tests/contracts/runtime\
-    \ conditions are unchanged; lead final manifest is pending. Resolved failures: customer BFF red test\
-    \ before implementation failed10 actions as expected (.local/logs/cr010-boundary-before.log); initial\
-    \ lint had one now-unused hook dependency; initial typecheck saw stale ignored .next/dev/types from\
-    \ renamed route group, regenerated after confirming no dev writer. local-service detached child did\
-    \ not persist after exec exit; restarted foreground session43141 and verified browser/HTTP. HTTP developer\
-    \ checks .local/output/playwright/cr010/http-boundaries.json:32 observations (three salons root/legacy/internal\
-    \ routes plus20 customer BFF GET/POST404/no cookies). Component boundary proves rejected customer\
-    \ calls never invoke identity/API handler. Browser observations .local/output/playwright/cr010/browser-observations.json:22\
-    \ observations including18 entry comparisons across alpha/beta/gamma and360/390/768/1024/1280/1440,\
-    \ both aliases, unknown tenant and platform status. Every entry full-width neutral workspace; no customer\
-    \ controls; Poppins400/500/600 loaded; warm#F3F0EB, fields20px/cards24px; mobile tabs and200/236px\
-    \ desktop rails; zero horizontal overflow. Representative alpha desktop/beta phone screenshots visually\
-    \ inspected. Screenshots *-staff-entry-*.png and staff-account-*.png, staff-staff-1440.png, staff-audit-1440.png\
-    \ under same directory. Prototype Salon source grammar compared with rendered product; no new side-by-side\
-    \ prototype claim. Running staff acceptance: dedicated synthetic Owner signed in by password and valid\
-    \ MFA; no workspace before MFA. Account/device view at all six widths, Owner staff list and audit,\
-    \ password rotation and logout revocation401 observed. Second immediate login correctly refused already-used\
-    \ same30s TOTP; harness waited for navigation and timed out (.local/logs/cr010-staff-acceptance.log).\
-    \ Fresh-step MFA succeeded. Attempted self-removal returned409 last-Owner protection; retain only\
-    \ that synthetic alpha Owner private fixture .local/cr010-dev-owner.json mode0600; session revocation\
-    \ cleanup recorded .local/logs/cr010-staff-cleanup-final.log. No unrelated account was modified. Current\
-    \ staff error/permission/renewal component tests pass; unchanged running/API permission/isolation/session/CSRF\
-    \ acceptance evidence above is retained under CR-009. \nLead closure: inspected 6/6 sealed passing\
-    \ command summary and developer running-product criterion account; source unchanged since11e9955 except\
-    \ handoff metadata. Accepted retained unaffected proof under CR009. Independent scoped QA follows."
+  run: 'Checkout /Users/cmmrox/Personal/Projects/salon-sass, branch charithm/feature/F02-S04-cr-017-shadcn-everywhere
+    at 0b84f53. Postgres salon-local on 5440. Both apps were started by infra/scripts/local-service.sh with the
+    repository''s local settings (SALON_PLATFORM_DOMAIN=localhost, SALON_API_BASE_URL=http://localhost:8090, SALON_WEB_LOCAL_HTTP=true,
+    retained .local/identity-keys.properties): API PID 96927 (java -jar target/salon-api.jar built from 0b84f53,
+    port 8090), web PID 97082 (node scripts/serve.mjs --port 3100, production build of 0b84f53). Restart either
+    with infra/scripts/local-service.sh stop|start api|web (start rebuilds). Open http://alpha.localhost:3100/ (beta,
+    gamma likewise): signed out 307 / -> /workspace -> /workspace/sign-in; signed in /workspace/account, /workspace/staff,
+    /workspace/audit. Colour hook unchanged: infra/scripts/local-salon.sh colour <slug> <#RRGGBB>.'
+  data: 'No reset; the three synthetic salons, colours unchanged (alpha #D6086A, beta #1F2937, gamma #FDE68A). Used
+    the alpha MANAGER and RECEPTIONIST of the ignored .local/owner-test-login.json. Added through POST /local/identity/seed,
+    per salon and per walk run (two runs): a fresh OWNER (enrolled MFA at sign-in; TOTP seed kept) and a RECEPTIONIST
+    (its role was changed to Professional, granted, and changed back to Receptionist on screen), named cr017-owner-<stamp>@<slug>.test
+    and cr017-staff-<stamp>@<slug>.test; credentials and TOTP seeds only in the ignored .local/f02s04-cr017-dev-fixture.json
+    (mode 0600, last run''s accounts), never printed or committed. The alpha MANAGER signed out once (logout check).
+    Screenshots under .local/output/playwright/f02s04-cr017/ show synthetic setup keys of these local accounts.
+    No clock, provider or limit override, no real message or payment.'
+  notes: |-
+    CR-017 developer handoff, 2026-10-18, F02-S04 stage-build. Checkout /Users/cmmrox/Personal/Projects/salon-sass, branch charithm/feature/F02-S04-cr-017-shadcn-everywhere from a58fe9c. Tested revision 0b84f53 (full SHA in .local/logs/f02s04-cr017-gates-revision.txt), clean tree; the hand-over commit changes only this stage.yaml and generated documents. Earlier handoffs (CR-016, CR-013, CR-012, bug fixes): git show a58fe9c:features/F02-sign-in-accounts-and-roles/stages/S04-web-accounts/stage.yaml.
+
+    Developer gates (each run on 0b84f53 from the repository root; logs relative to the checkout):
+    | Command | Log | Result |
+    | cd apps/api && ./mvnw -q verify (JAVA25_HOME=~/.sdkman/candidates/java/25.0.1.0+8-amzn; API stopped first, restarted after) | .local/logs/f02s04-cr017-maven-verify.log | EXIT 0, 518 tests, 0 failures/errors/skipped |
+    | pnpm -r lint | .local/logs/f02s04-cr017-lint.log | EXIT 0 |
+    | pnpm -r typecheck | .local/logs/f02s04-cr017-typecheck.log | EXIT 0 |
+    | pnpm -r test | .local/logs/f02s04-cr017-tests.log | EXIT 0, 19 contract + 453 web tests (43 files) |
+    | pnpm --filter @salon/web build | .local/logs/f02s04-cr017-build.log | EXIT 0, no warnings |
+    | pnpm contracts:check | .local/logs/f02s04-cr017-contracts.log | EXIT 0 |
+    Conditions: local profile, the three synthetic salons, retained .local/identity-keys.properties, no clock/provider/limit override. No QA automation was run by this developer.
+
+    Built (apps/web only; no API, contract, schema, BFF or identity-library change):
+    - Components added with pnpm dlx shadcn@4.22.0 add select field input-group input-otp item badge empty pagination spinner (the CLI also wrote ui/textarea.tsx for Input Group and asked to overwrite button, input, label and separator, refused). After-add steps per web.md: cn from @/lib/utils and the cn npm package removed again; dark: classes, CLI focus rings and outline-none removed; sizes, radii and colours mapped to the theme (Select trigger and Input Group as the 48px white field with the line ring and the brand ring when focused/open; Input OTP slots as separate fields, 54px on sign-in; options and pager controls 44px+; Item rows the 24px outlined row; Badge pills with default/secondary/positive/destructive/outline; Empty a dashed 20px panel). New theme shadow --shadow-menu (Tailwind shadow-popover) for the Select list.
+    - Behaviour edits in ui/ (web.md rule 3): pagination.tsx: page controls are Buttons (the lists page in place, so a link with no href would not be focusable), words come from the caller, a PaginationCurrent text marker with aria-current; spinner.tsx: decorative (aria-hidden) unless given a translated label (the CLI's role=status aria-label "Loading" literal fails the translation lint); input-otp.tsx: noScriptCSSFallback={null} so no <style> element is rendered by us (rule 4); the library itself still inserts one runtime <style id=input-otp-style> for its own input (selection/autofill rules); InputGroup takes size="login"; Input Group addon drops its padding around a button so the sign-in field stays 54px; Field's invalid state no longer recolours the label; FieldError is used with role removed in Controls (the page Alert announces the refusal; the field message is read with the field through aria-describedby).
+    - Product: components/account/Controls.tsx now provides TextField (Field, FieldLabel, Input, FieldDescription, FieldError), PasswordField (Input Group with the visibility toggle; sign-in and both password-change fields), CodeField (Input OTP, six slots, digits only), ChoiceField (Select), Check (horizontal Field with Checkbox; the label is the 44px target), Denied (Alert). SignIn: FieldGroup form, Input Group password, Input OTP code with expiry and help as FieldDescription, setup key/URI as labelled outputs in Fields, setup notice and "copied" as Alerts, retry wait as an Alert, Spinner in the busy action (with its translated text, aria-busy). AccountScreen: role Badge; password change Input Groups; MFA enabled and setup notice Alerts; Input OTP at enrolment; devices, staff and audit as Items in ItemGroups with Badges (current device in the brand, role, Active/Removed); Empty for empty lists; Pagination; Select for each member's role and the create form's role; horizontal Field for the Professional grant; Separator before the create form; denied (server AccountPage and client) as Alert; the invalid-session sign-in link as Button asChild variant link. ui/native-select.tsx deleted.
+    - Retired with no remaining user: --size-nav, --font-size-nav (text-nav), --shadow-navigation (shadow-tabs), --radius-nav and also --size-tab (spacing-tab, the bottom tab item height), with their tailwind-merge names.
+    - Reviewed and kept, as no shadcn/ui component covers the job (please confirm or name one): the setup key and URI are plain-text <output> values (QA reads them with textContent; an Input Group with a read-only input would change that), the permissions list is a plain-text list, page and section headings, the audit entry's JSON in a <pre>, the confirmation stays the Sheet, the sign-in initial stays the Avatar.
+    - Tests: account/composition.test.tsx asserts the component map on every screen (Field, Input Group, Input OTP, Select, Item/ItemGroup, Badge, Empty, Pagination, Spinner, Separator, Alert for denied, retry wait, notices); components/composition.test.tsx has no exception left (the F02-S04 allowance is removed) and fails if ui/native-select.tsx returns; Controls.test.tsx covers Field labelling/refusal/description, the password toggle, Input OTP digits-only and six slots, the Select's label, keyboard choice and focus return, option ids; StaffRole and AccountRecovery tests drive the Select with the keyboard (src/test/select.ts). src/test/setup.ts adds jsdom stand-ins for scrollIntoView, pointer capture and elementFromPoint. Negative proofs (.local/logs/f02s04-cr017-negative.log): native-select.tsx restored; Native Select imported; four OTP slots with a second alert; the denied page as a paragraph: each fails, the restored tree passes.
+
+    New dependency: input-otp 1.5.0 (apps/web dependencies; required by shadcn/ui Input OTP, as CR-017 states). The cn package the CLI added was removed.
+
+    Test ids (QA updates its cases at the feature pass):
+    - account-staff-role and account-staff-new-role are now the Select triggers (role=combobox, labelled "Role"); open with click or Enter/Space/ArrowDown, then choose the option by role and name or by its id account-role-option-<owner|manager|receptionist|professional|accountant> (lowercase value); selectOption no longer applies. The value is the trigger's text (a translated role name). Radix renders a hidden aria-hidden native select inside the create form for form semantics; it is not the control.
+    - account-code is the single real input of the Input OTP (fill() and type() work; six data-slot=input-otp-slot elements draw it); digits only, maxlength 6.
+    - New: account-old-password-toggle, account-new-password-toggle (password change visibility), account-staff-role-label (role Badge on each staff row), account-staff-state (Active/Removed Badge), account-staff-list, account-devices, account-audit-list (ItemGroups), account-pagination (Pagination nav, labelled "Pages"), account-staff-separator, account-mfa-notice, account-copied (sign-in "copied" Alert).
+    - Kept, different element: account-device/-staff-row/-audit-row (Item, role=listitem), account-device-current and account-role (Badge), account-devices-empty/-staff-empty/-audit-empty (Empty, text unchanged), account-page (pagination current marker, text "Page N"), account-page-previous/-next (Pagination buttons, text plus chevron), account-denied (Alert, role=alert, server and client), account-retry-wait (Alert, role=status), account-mfa-enabled (Alert), account-professional-grant (Checkbox in a horizontal Field; checkbox ids are now unique per row), account-*-error (FieldError, no role). Kept unchanged: every other id, including account-identifier, account-password, account-password-toggle, account-setup-key, account-setup-uri, account-sign-in-submit, account-confirmation and its actions.
+    - New strings: account.pages "Pages".
+
+    Acceptance criteria, checked on the running product (web production build of 0b84f53, PID 97082; API jar of 0b84f53, PID 96927) with scratch Playwright 1.64 scripts that load the qa package's Playwright and @axe-core/playwright read-only (nothing written under qa/). Evidence .local/output/playwright/f02s04-cr017/ (walk.json 800/800, walk-roles.json 12/12, screenshots per salon, screen and width):
+    - AC-1: on alpha, beta and gamma a fresh OWNER (seeded without TOTP) signed in, was sent to enrolment, read the setup key, typed the code into the Input OTP (letters refused) and reached /workspace/account; a wrong password shows the page Alert, keeps the identifier and clears the password. Rate limits were not triggered (they would lock the shared salons); the retry-wait Alert is covered by the composition test.
+    - AC-2: / 307 /workspace, /workspace and /workspace/account signed out 307 /workspace/sign-in, legacy /sign-in and /account 307 /workspace/sign-in.
+    - AC-3 / AC-6: the Owner changed a seeded Receptionist to Professional with the Select (grant appears as a horizontal Field, success Alert), checked the grant by its label (brand fill), and changed back (grant gone, Badge "Receptionist"). MANAGER reads staff (Badges, no Select, no create form) and audit; RECEPTIONIST on /workspace/staff gets the denied Alert (role=alert) and no rows.
+    - AC-4: devices with the current-device Badge in the brand, Pagination, revoke and revoke-all controls; logout then the principal BFF read answers 401. Password rotation, cross-tab renewal and replay revocation are unchanged code (no file in lib/identity changed) and were not re-exercised.
+    - AC-5: customer BFF GET and POST on sign-in, principal and otp-request: 404 no-store, no Set-Cookie.
+    - AC-7: staff cookies HttpOnly, SameSite, host-only, not Secure under explicit local HTTP; no token in the HTML.
+    - AC-8 / AC-13 / AC-14 at 360, 390, 768, 1024, 1280, 1440 for alpha (#D6086A), beta (#1F2937, long name) and gamma (#FDE68A): sign-in, account, staff, confirmation at all six; MFA enrolment at 360/390/768/1280; audit at 360/1280: zero horizontal overflow; the Poppins weights each page uses loaded; 44px+ for every action, the password toggle, the pager, the Select options and the grant label; keyboard order identifier, password, toggle (Enter shows/hides, aria-pressed), #1D5FD0 3px outline on the toggle, the Select trigger and the active OTP slot; the Select opens with Enter, ArrowDown moves, Enter chooses, focus returns to the trigger, list inside the viewport; confirmation Sheet: focus on Cancel, bottom sheet below 900px, 460px right drawer from 900px, Escape closes and returns focus to the opener. axe (wcag2a/aa, 2.1, 2.2 aa, best-practice) on beta sign-in 360/1280, MFA enrolment 360, account, staff and audit at 360 and 1280: no violation of any impact.
+    - AC-9 / AC-10: sign-in keeps the CR-012 composition (compared with docs/design/references/staff-sign-in.png: interior, initial ring, name, translucent card, headings, labelled fields, the eye toggle inside the 54px password field, recovery link, action, secure-team footer); brand fill and readable foreground on the sign-in action for the three colours; the brand ring on the focused field; no workspace frame on sign-in.
+    - AC-11: signed-in documents carry the workspace shell with no account-loading card; signed-out entry is a server 307 (above).
+    - AC-12: rendered data-slots checked by the walk and the composition tests; the confirmation keeps its Sheet behaviour (above).
+    - Prototype: docs/design/prototype/index.html Salon mode captured at the six widths (prototype-salon-*.png); the account, staff and audit screens keep its card, field, pill and row grammar.
+
+    Visible changes accepted by CR-017 (not regressions): password-change fields gain the visibility toggle; role and status show as Badges; rows are outlined Items; the pager has chevrons and a current-page marker; empty lists are a dashed Empty panel; MFA enabled, the setup notice and "copied" are Alerts; the busy sign-in shows a spinner; a Separator line before "Add staff account"; the role choice opens a white list (it may open upward near the bottom of the viewport).
+
+    Left out, or for the lead:
+    - No screen pixel comparison with the CR-016 build this time: CR-017 changes the look by design; the comparison is with the prototype and the CR-012 reference.
+    - The walk created synthetic accounts (see handoff.data).
+
+    Different from a document (the lead corrects the documents):
+    - web.md component map: name what shows a one-time secret (here a labelled <output>), and that a Select test chooses by role/name or the option ids above.
+    - web.md rule 3 list of ui behaviour edits: add Pagination (Button controls, caller words, PaginationCurrent), Spinner (decorative unless labelled), Input OTP (no noscript style; the library's own runtime style element), Input Group size/addon padding, FieldError role removed by the caller.
+    - web.md rule 4 (no <style> element): input-otp inserts one runtime <style> for its input; it is the library's, not ours.
+    - tech-stack.md: input-otp 1.5.0.
+    - ui-ux-standards.md: the theme gains --shadow-menu; the tab-bar tokens and --size-tab are retired.
+
+    Timing (observed from the reflog and log times, local 2026-10-18): branch 00:43; reading and component adaptation 00:43-00:50; product rebuild and unit tests 00:50-00:56 (negative checks 00:56); walkthrough, diagnosis of the 56px field and the measurement timing, and the server denied-page fix 00:57-01:03; commit 01:03; gates 01:03-01:07; final walks on the committed build 01:07-01:09; no delivery wait.
 cases:
 - id: TC-F02-S04-001
   title: staff password and authenticator flows reach account only after complete verification
@@ -494,6 +269,31 @@ cases:
   covers:
   - AC-8
   - AC-10
+- id: TC-F02-S04-029
+  title: staff screens and the confirmation overlay are shadcn/ui components with the overlay's dismissal and focus behaviour
+  type: functional
+  priority: high
+  covers:
+  - AC-12
+- id: TC-F02-S04-030
+  title: every staff screen and state renders as the accepted CR-016 build did, apart from the changes CR-017 lists
+  type: responsive
+  priority: high
+  covers:
+  - AC-13
+  - AC-14
+- id: TC-F02-S04-031
+  title: sign-in and account screens use the shadcn/ui component for every job, operable by keyboard and screen reader
+  type: functional
+  priority: high
+  covers:
+  - AC-14
+- id: TC-F02-S04-032
+  title: every sign-in and account screen and state uses the shadcn/ui component the web.md map names for each job
+  type: functional
+  priority: high
+  covers:
+  - AC-14
 verification:
   commands:
   - cd apps/api && ./mvnw -q verify
@@ -564,21 +364,62 @@ verification:
     - TC-F02-S04-028
     suites:
     - regression
+  - id: shadcn-composition
+    tool: playwright
+    file: qa/web/F02/S04-shadcn-composition.spec.ts
+    project: web
+    covers:
+    - TC-F02-S04-029
+    suites:
+    - regression
+  - id: component-map
+    tool: playwright
+    file: qa/web/F02/S04-component-map.spec.ts
+    project: web
+    covers:
+    - TC-F02-S04-031
+    suites:
+    - regression
   manual:
   - case: TC-F02-S04-018
-    reason: 'CR-013 manual judgment performed 2026-10-17 on the running local build (API/web from be188ca, application
-      source identical to developer-gated 756fdef). Synthetic MANAGER per salon seeded through the local hook; random
-      credentials only in ignored 0600 .local/cr013-qa-tc018-fixture.json. Keyboard-only traversal of staff sign-in at
-      360/768/1536 and the workspace account at 390/1280 for alpha (#D6086A), beta (dark #1F2937) and gamma (light #FDE68A):
-      ordered focus identifier, password, visibility toggle, recovery, sign-in, then wraps; no trap; every stop
-      :focus-visible with a 3px #1D5FD0 outline in view; fields add the 2px brand inset ring. Action contrast 5.12/14.68/14.24
-      (gamma ink text); recovery text brand for alpha/beta (5.12/14.68 on white) and ink with brand underline for gamma;
-      desktop selected rail item brand fill with readable text, phone tab soft tint with ink; wrong-password error announced
-      (role alert) with focus kept on the password. 120 focus screenshots and observations
-      qa/reports/20261017-F02-TC018-manual/TC018-observations.json sha256 0eac0e5577b20a833bfc11293c9580b52df36024c546a3cc02c939d99b623155, visually inspected. Machine-captured
-      keyboard sequences through repository Playwright, not a native assistive-technology session. Earlier CR-012 and 2026-10-14
-      protected-account evidence is historical.'
-    performed_on: 2026-10-17
+    reason: 'Re-performed after CR-017 on 2026-10-18 by independent QA on the product built from 0b84f53 (identical to
+      29fb3d1). Synthetic MANAGER per salon seeded through the local hook, credentials in memory only. Keyboard-only
+      traversal of staff sign-in at 360/768/1536 and the workspace account at 390/1280 for alpha (#D6086A), beta (dark
+      #1F2937) and gamma (light #FDE68A): sign-in order identifier, password, visibility toggle, recovery, sign-in, then
+      out and back (no trap); account order on a phone menu button, salon name, sign out, current password and its
+      toggle, new password and its toggle, change password, authenticator, device and sign-out-all actions; from 1280 the
+      salon name, the three rail routes, then the same. All 150 stops :focus-visible with a solid 3px #1D5FD0 outline in
+      view; the status retry the same. Select, Input OTP and Sidebar sheet keyboard and screen-reader behaviour is
+      automated in TC-F02-S04-031 and TC-F01-S03-017. Observations qa/reports/20261018-CR017-manual/keyboard/keyboard-observations.json sha256 948fd9bfdc9f4cc28a6f6cdeff6059e224299c9d595c71688d9cff6d9ae83ded,
+      a sample of captures inspected by eye. Machine-captured sequences through repository Playwright, not a native
+      assistive-technology session. The CR-016 judgment is historical.'
+    performed_on: 2026-10-18
+  - case: TC-F02-S04-030
+    reason: 'Re-performed for CR-017 on 2026-10-18 by independent QA: the accepted CR-016 product (79ec9d2) on :3101 and the
+      CR-017 product on :3100, same API, sessions and data, captured back to back. Every F02 state differs, and each
+      difference inspected is one CR-017 lists: the password field''s toggle inside an Input Group (sign-in otherwise
+      unchanged: the CR-012 composition, card, headings, initial, recovery and footer, in the 54px field box), the code
+      as six Input OTP slots with the expiry and help as Field descriptions, the enrolment notice as an Alert, role and
+      status Badges, outlined Item rows, Pagination with chevrons, the MFA-enabled and denied Alerts, the Select trigger
+      with its chevron and a white option list, the Professional grant as a horizontal Field, the Separator, and the
+      phone header menu button instead of bottom tabs. The confirmation sheet and drawer themselves are unchanged. Prototype
+      tokens, Poppins and radii hold (automated). Overlays re-captured unmasked with empty fields (unmasked/). Test-id
+      sets change only by ids the handoffs list; no horizontal overflow. Evidence qa/reports/20261018-CR017-manual/ (pixel-comparison.json sha256 1b7a05a64bc66e54e8afde1f940083aeb352deb613b94db1bd194b48f11c88a7,
+      pairs/facts.json with secrets redacted sha256 f22dc47ed0e8dafa394a76a297da4ba0874015a6c1b98a7ba5d6cbd723b5a157, side/, unmasked/).'
+    performed_on: 2026-10-18
+  - case: TC-F02-S04-032
+    reason: 'Owner-requested component-map review, performed 2026-10-18 by independent QA on the CR-017 product: every
+      rendered sign-in and account state (sign-in, recovery guidance, refused sign-in, MFA challenge and Owner enrolment,
+      account with devices, staff with Owner controls and a Professional, the open role Select, audit, the confirmation,
+      the Receptionist denied page; six widths, three brands) inventoried by data-slot against docs/engineering/web.md
+      "Styling" rule 1: Field/FieldLabel/FieldDescription, Input Group with InputGroupButton toggles, Input OTP (six slots),
+      Select (trigger, content, items), horizontal Field with Checkbox, ItemGroup/Item, Badge, Pagination, Alert (refusal,
+      enrolment notice, MFA enabled, denied), Spinner while busy (TC-F02-S04-031), Separator, Avatar, Card, Sheet; no raw
+      control outside a shadcn/ui component and no Native Select in any state. Allowed plain HTML: headings, the
+      permissions list, the audit JSON pre, the setup key and URI as labelled outputs (the map''s own row). Not reachable
+      with real data, covered by the developer''s composition tests: Empty (every list holds at least its viewer) and the
+      retry-wait Alert (needs a rate-limit lockout of the shared salon). Evidence qa/reports/20261018-CR017-manual/pairs/facts.json sha256 f22dc47ed0e8dafa394a76a297da4ba0874015a6c1b98a7ba5d6cbd723b5a157.'
+    performed_on: 2026-10-18
   deferred: []
 evidence:
   last_run: null

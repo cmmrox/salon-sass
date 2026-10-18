@@ -27,16 +27,24 @@ async function loginPresentation(page:Page,width:number){
  await expect(handle(page,'title')).toHaveText('Staff workspace');await expect(card.getByRole('heading',{name:'Welcome back',exact:true})).toBeVisible();
  await expect(card.getByText('Sign in to your salon workspace.',{exact:true})).toBeVisible();await expect(page.getByTestId('staff-sign-in-secure')).toContainText('Secure access for your salon team');
  const title=await appearance(handle(page,'title'));if(width<=600)expect(title.fontSize).toBe('28px');else{expect(parseFloat(title.fontSize)).toBeGreaterThanOrEqual(40);expect(parseFloat(title.fontSize)).toBeLessThanOrEqual(42);}
- for(const field of [handle(page,'identifier'),handle(page,'password')]){const s=await appearance(field);expect(s.height).toBeGreaterThanOrEqual(52);expect(s.radius).toBe('10px');}
+ // CR-017: the password field's surface is its Input Group, the visibility toggle inside it.
+ for(const field of [handle(page,'identifier'),page.locator('[data-slot="input-group"]').filter({has:handle(page,'password')})]){const s=await appearance(field);expect(s.height).toBeGreaterThanOrEqual(52);expect(s.radius).toBe('10px');}
  const submit=await appearance(handle(page,'sign-in-submit'));expect(submit.height).toBeGreaterThanOrEqual(52);expect(submit.radius).toBe('10px');
  await expect(handle(page,'password-toggle')).toBeVisible();await expect(handle(page,'forgot-password')).toBeVisible();
+}
+
+/** The open confirmation: a modal overlay hides the page behind it from assistive technology (CR-016's
+ * Sheet does so through aria-hidden), so the capture waits for the dialog, not for the page's main landmark. */
+async function dialogScreenshot(page:Page,name:string){
+ await expect(page.getByRole('dialog')).toBeVisible();const folder=path.join(reportDir,'design');fs.mkdirSync(folder,{recursive:true});
+ await page.screenshot({path:path.join(folder,name+'.png'),fullPage:false,mask:[page.locator('input')]});
 }
 
 test(`${c(16)} responsive layouts keep every control reachable across six widths`,async({identity,accounts})=>{
  test.setTimeout(180000);const staff=await identity.staff(beta,'OWNER'),context=await accounts.context(beta,[staff]);
  for(const route of screenMap){const page=await accounts.open(context,route);if(!route.endsWith('sign-in'))await accounts.ready(page);else await expect(handle(page,'sign-in-submit')).toBeVisible();
   for(const viewport of WIDTHS){await page.setViewportSize(viewport);const inspected=await referenceFit(page,beta.name);expect(inspected.counted).toBeGreaterThan(0);expect(inspected.pageScrolls).toBe(false);expect(inspected.outside).toEqual([]);expect(inspected.clipped).toEqual([]);
-   const targets=await page.locator('button:visible,input:visible,select:visible,a:visible').evaluateAll(elements=>elements.map(element=>{const target=(element as HTMLInputElement).type==='checkbox'?element.closest('label')!:element;const r=target.getBoundingClientRect();return {height:r.height,width:r.width,id:element.getAttribute('data-testid')};}));expect(targets.length).toBeGreaterThan(0);for(const target of targets){expect(target.height,`${target.id} target height`).toBeGreaterThanOrEqual(44);expect(target.width,`${target.id} target width`).toBeGreaterThanOrEqual(44);}
+   const targets=await page.locator('button:visible,input:visible,select:visible,a:visible').evaluateAll(elements=>elements.filter(element=>!element.closest('[aria-hidden="true"]')).map(element=>{/* A check box's target is its label (CR-017: a horizontal Field, the label beside it). Radix's aria-hidden form select is not a control (web.md rule 11). */const label=element.getAttribute('role')==='checkbox'&&element.id?document.querySelector(`label[for="${element.id}"]`):null;const target=label??element;const r=target.getBoundingClientRect();return {height:r.height,width:r.width,id:element.getAttribute('data-testid')};}));expect(targets.length).toBeGreaterThan(0);for(const target of targets){expect(target.height,`${target.id} target height`).toBeGreaterThanOrEqual(44);expect(target.width,`${target.id} target width`).toBeGreaterThanOrEqual(44);}
   }await page.close();
  }
  const account=syntheticAccount('OWNER',false);await identity.seed(alpha,[account]);const enrollment=await accounts.context(alpha),page=await accounts.open(enrollment,routes.staffSignIn);await handle(page,'identifier').fill(account.email);await handle(page,'password').fill(account.password);await handle(page,'sign-in-submit').click();await expect(handle(page,'setup-key')).toHaveText(/^[A-Z2-7]{32}$/);for(const viewport of WIDTHS){await page.setViewportSize(viewport);const inspected=await fit(page);expect(inspected.pageScrolls).toBe(false);expect(inspected.outside).toEqual([]);expect(inspected.clipped).toEqual([]);await designScreenshot(page,`CR012-enrollment-${viewport.width}`);}
@@ -50,14 +58,14 @@ test(`${c(23)} staff identity screens follow the supplied salon layout with acce
    if(route===routes.staffSignIn)await loginPresentation(page,viewport.width);else await referenceAccountControls(page);
    const workspace=route.startsWith('/workspace');
    if(workspace&&route!==routes.staffSignIn){const shell=await appearance(page.getByTestId('workspace-shell'));expect(shell.width).toBe(viewport.width);expect(shell.background).toBe('rgb(243, 240, 235)');
-    const header=await appearance(page.getByTestId('workspace-header'));expect(header.position).toBe('sticky');if(viewport.width>=900){expect(header.background).toBe('rgb(255, 255, 255)');expect(header.padding).toBe('8px 28px');expect(header.minHeight).toBe('60px');}
+    const header=await appearance(page.getByTestId('workspace-header'));expect(header.position).toBe('sticky');if(viewport.width>=900){expect(header.background).toBe('rgb(255, 255, 255)');/* CR-017: the fixed Sidebar rail starts at 60px, so the header is exactly 60px with its content centred (no vertical padding); the prototype's horizontal 28px stays. */expect(header.height).toBe(60);expect(header.padding.split(' ')[1]).toBe('28px');}
     await referenceNavigation(page,'workspace-navigation',viewport.width);await expect(handle(page,'title')).toHaveCSS('font-size',viewport.width>=900?'26px':'22px');
     if(viewport.width>=900){const main=await appearance(page.getByTestId('workspace-main'));expect(main.left).toBe(viewport.width<1200?200:236);expect(main.padding).toBe(viewport.width<1200?'24px 24px 48px':'28px 36px 56px');}
    }
    const result=await referenceFit(page,beta.name);expect(result.counted).toBeGreaterThan(0);expect(result.pageScrolls).toBe(false);expect(result.outside).toEqual([]);expect(result.clipped).toEqual([]);
    await designScreenshot(page,`F02-${route.replaceAll('/','-')}-${viewport.width}`);
    if(route===routes.staff){const trigger=handle(page,'revoke-all');await trigger.click();await referenceDialog(page,workspace,viewport.width);
-    await designScreenshot(page,`F02-confirmation-${workspace?'staff':'customer'}-${viewport.width}`);await page.keyboard.press('Escape');await expect(page.getByRole('dialog')).toHaveCount(0);await expect(trigger).toBeFocused();
+    await dialogScreenshot(page,`F02-confirmation-${workspace?'staff':'customer'}-${viewport.width}`);await page.keyboard.press('Escape');await expect(page.getByRole('dialog')).toHaveCount(0);await expect(trigger).toBeFocused();
     await trigger.click();await handle(page,'cancel-action').click();await expect(page.getByRole('dialog')).toHaveCount(0);await expect(trigger).toBeFocused();
    }
   }await page.close();
@@ -105,7 +113,7 @@ test(`${c(21)} translation and test-id inventories cover every new screen state`
  let jsx=0;for(const [index,text]of texts.entries()){const parsed=ts.createSourceFile(files[index],text,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);const visit=(node:ts.Node)=>{if(ts.isJsxElement(node)||ts.isJsxSelfClosingElement(node))jsx++;if(ts.isJsxText(node))expect(/[\p{L}\p{N}]/u.test(node.text),`${files[index]} has no unlocalized JSX text`).toBe(false);ts.forEachChild(node,visit);};visit(parsed);}expect(jsx).toBeGreaterThan(20);
  const owner=await identity.staff(alpha,'OWNER'),context=await accounts.context(alpha,[owner]);
  for(const route of screenMap){const page=await accounts.open(context,route);if(!route.endsWith('sign-in'))await accounts.ready(page);else await expect(handle(page,'sign-in-submit')).toBeVisible();await expect(page.locator('html')).toHaveAttribute('lang','en');const ids=await testIds(page);expect(ids.length).toBeGreaterThan(3);for(const id of ids)expect(id).toMatch(TEST_ID_NAME);
-  const missing=await page.locator('button,input,select').evaluateAll(elements=>elements.filter(el=>!el.getAttribute('data-testid')).length);expect(missing,'every new form control has a stable handle').toBe(0);expect((await page.locator('body').innerText()).includes('account.')).toBe(false);await page.close();
+  const missing=await page.locator('button,input,select').evaluateAll(elements=>elements.filter(el=>!el.closest('[aria-hidden="true"]')&&!el.getAttribute('data-testid')).length);expect(missing,'every new form control has a stable handle').toBe(0);expect((await page.locator('body').innerText()).includes('account.')).toBe(false);await page.close();
  }
 });
 

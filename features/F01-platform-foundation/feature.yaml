@@ -61,21 +61,26 @@ verification:
 evidence:
   last_run: qa/reports/20261014-232942-F01-2f5e0e96dfa2
   last_result: pass
-  scoped_assessment: features/F02-sign-in-accounts-and-roles/scoped-qa.json
+  scoped_assessment: features/F02-sign-in-accounts-and-roles/cr017/scoped-qa.json
 integration:
-  branch: charithm/feature/F02-staff-web-only
-  pull_request: https://github.com/cmmrox/salon-sass/pull/7
+  branch: charithm/feature/F02-tailwind-shadcn
+  pull_request: https://github.com/cmmrox/salon-sass/pull/12
   qa_revision: e4e254f4463a274fdfd055df67b3056e83a249f0
-  merged_commit: 654bfcc6c7f85718255fea0ab15bd6099c2f80cf
-  merged_at: '2026-10-15T05:03:35Z'
+  merged_commit: null
+  merged_at: null
 previous_integration:
   branch: charithm/feature/F01-platform-foundation
   pull_request: https://github.com/cmmrox/salon-sass/pull/3
   qa_revision: 771c56b89f192deec47ab3d4f68f04a7dbcbf6ce
   merged_commit: 396ce0054fc662cddbf58a6c584fcb7789040edf
   merged_at: '2026-10-13T11:35:17Z'
-reopened_by: CR-010
+reopened_by: CR-017
 integration_history:
+- branch: charithm/feature/F02-staff-web-only
+  pull_request: https://github.com/cmmrox/salon-sass/pull/7
+  qa_revision: e4e254f4463a274fdfd055df67b3056e83a249f0
+  merged_commit: 654bfcc6c7f85718255fea0ab15bd6099c2f80cf
+  merged_at: '2026-10-15T05:03:35Z'
 - branch: charithm/feature/F02-prototype-design-fidelity
   pull_request: https://github.com/cmmrox/salon-sass/pull/5
   qa_revision: e4e254f4463a274fdfd055df67b3056e83a249f0

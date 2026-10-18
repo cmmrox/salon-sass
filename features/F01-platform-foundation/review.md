@@ -1,5 +1,118 @@
 # F01 Platform foundation and tenant isolation: product review
 
+## BUG-F01-006 re-verification (2026-10-18)
+
+BUG-F01-006 is verified at 18bb512. The API production image now carries `libexpat-2.9.0-r0`, and `images-scan.sh` passes both images. The S05 production-like stack (12/12 cases) and deployment checks pass with images N and N+1 built at that tree. Sealed F01 delta `qa/reports/20261018-022325-F01-delta-9149b677b3ef`: 13/13 entries pass. Developer gates `qa/reports/20261018-021645-F01-commands-7797ee59cdeb`: 10/10. The web entries were re-executed at the same tree only so that the closure receipts match the reviewed tree; CR-017's results are otherwise unchanged. QA status: pass.
+
+Reviewed revision `c522818`. The F02 re-run at 18bb512 found a timing defect in TC-F02-S04-029, repaired in `c522818` (see F02's review). The grouped assessment draft is `qa/reports/cr017-assessment-draft/scoped-qa.json`.
+
+
+## Current CR-017 independent review (2026-10-18)
+
+Reviewed as: a professional on a 360/390px phone, a receptionist on a 768px tablet and a salon owner at a 1280-1440px desk, signed in to alpha (`#D6086A`), beta (`#1F2937`, long name) and gamma (`#FDE68A`); a caller on the platform domain, an unknown host and a suspended salon.
+Compared with: the accepted CR-016 build (`79ec9d2`, rendered side by side on a second port) and the prototype's Salon mode tokens. Competitor findings below are not refreshed.
+
+### Verdict
+
+The shadcn/ui Sidebar works well on every width. From 900px nothing changes for a desk user: the same 200/236px white rail, brand-filled current item and 60px header. On a phone the bottom tab bar is replaced by a menu button in the header that opens the Sidebar as a sheet. It is keyboard- and screen-reader-correct: a named "Menu" button that reports open or closed, a "Staff workspace" dialog that focuses the current route, focus kept inside, and Escape, the backdrop or choosing a route closing it with focus back on the button. Only permitted routes appear. Every shell and foundation state uses the component the web.md map names, and nothing native or hand-built remains. One product defect blocks the pass, and it is not CR-017's doing: the unchanged API production image now carries a newly published, fixable HIGH vulnerability (BUG-F01-006, major). QA status: failing until it is fixed.
+
+### Verification in this pass
+
+- Tested revision `2fc8425e6048d6fa133c6169b7d63265adc68563` on `charithm/test/CR-017-feature-qa`; product source identical to `29fb3d1` (F01-S03 at `94296b8`, F02-S04 at `0b84f53`). API and web rebuilt from this tree; stack images N and N+1 built at it.
+- Developer gates `qa/reports/20261018-014949-F01-commands-fcd90bc3cfa8`: 10/10 (Maven, install, lint, typecheck, unit tests, web build, contracts, selftest, image build, workflow lint).
+- Sealed F01 delta `qa/reports/20261018-015641-F01-delta-db23e058e597`: 12 of 13 entries pass. Results: web-status-page 8, web-status-page-api-down 11, strings-and-test-ids, browser-hostnames 1, branded-shell 12, web-rush 603/603 checks, styling-setup, shadcn-shell 1, sidebar-navigation 2 (new, TC-F01-S03-017), component-rules (new, TC-F01-S03-018), deployment-traffic 2 cases and the journey. production-like-stack had 11 of 12 cases pass; TC-F01-S05-002 failed on BUG-F01-006.
+- Retained under CR-009, not rerun: the S01/S02 API, database, migration, contract, load, seed and listening checks and S04, because only `apps/web` and the lockfile changed. The impact is in the draft `qa/reports/cr017-assessment-draft/scoped-qa.json`.
+- Manual, performed 2026-10-18: TC-F01-S03-016 (comparison with the CR-016 build), TC-F01-S03-019 (the owner's component-map review) and TC-F01-S01-040 (status page states). Evidence is in `qa/reports/20261018-CR017-manual/`.
+- Expectations CR-017 made wrong were corrected without changing their meaning. The navigation helper now checks the Sidebar, and waits for its width transition after a resize. The styling check expects the generated plain-page CSS. The source scan lets composed ui primitives forward test ids. A design capture now waits for an open modal instead of the main landmark it hides. The new cases were seen failing on the CR-016 build for the intended reasons (`failure-proof.log`).
+
+### Component-map review (owner's request)
+
+Every state was inventoried by `data-slot`: the shell on account, staff and audit at six widths and three brands, the phone sheet, status loaded, loading and unavailable, application not-found, and the three plain pages.
+- **Navigation:** Sidebar (`sidebar`, `sidebar-menu-button` with `isActive`, `sidebar-trigger`, `sidebar-inset`), rendered as its sheet below 900px.
+- **Containers:** Card.
+- **Status:** the reachable summary and the unavailable state are Alerts (positive and caution). The retry is a Button with `asChild`; loading is Skeleton.
+- **Plain pages:** they carry the Card, Alert and Button slots and classes, with Tailwind-generated CSS and no script.
+- **No raw controls:** no raw `button`, `input`, `select`, `textarea`, `table` or `dialog` appears outside a shadcn/ui component in any state.
+- **Plain HTML is used only where the map allows it:** headings, paragraphs, the prototype glyphs, and the not-found page's home link (a navigation link, not an action).
+
+### What the comparison with the CR-016 build found
+
+- **Identical** at all six widths (30 pairs): application not-found, the three plain pages, and the status page with the API down.
+- **Changed, as CR-017 lists:**
+  - The status summary is a taller positive Alert.
+  - Below 900px the header gains the menu button and the tab bar is gone.
+- **Unchanged from 900px:** the rail looks as it did. The selected Sidebar item uses the brand fill on the rail and in the phone sheet (gamma: ink on yellow), as AC-15 asks.
+
+### How the new navigation feels
+
+- **Desk:** unchanged. Tab reaches the salon name, then the three routes in order, and Ctrl/Cmd+B cannot collapse the rail.
+- **Phone:** moving between screens now takes two taps instead of one, and the current page is no longer visible at the bottom of the screen. In return there is more room for content (48px bottom padding instead of the tab bar), and the sheet is clear and roomy (288px, 46px rows, the brand-filled current page). Back-office web apps commonly use a menu drawer, and a professional checking one screen loses little. A receptionist switching often between screens loses a tap each time. This is noted only; the owner chose it (decision 048).
+- **Sheet focus:** it opens on the current route, so the next Tab or Enter moves on from where the person already is. It has no visible close control: a touch user closes it by tapping the darkened page or choosing a route (SUG-F01-03).
+
+### Suggestions
+
+| Id | Class | Suggestion | Disposition |
+| --- | --- | --- | --- |
+| SUG-F01-03 | idea | Give the phone navigation sheet a visible close button | backlog |
+
+#### SUG-F01-03 A visible close button on the phone navigation sheet
+
+- **Observed:** the Sidebar's phone sheet closes on Escape, on its backdrop or on choosing a route. There is no close button (`sheet-*.png` in `unmasked/`).
+- **Why it matters:** a first-time phone user looking for an X may not try tapping the darkened page; it is a small hesitation.
+- **Instead:** a `SheetClose` icon button in the sheet header, labelled from the translation file.
+- **Evidence:** `qa/reports/20261018-CR017-manual/unmasked/sheet-*-360.png`.
+
+### Notes for the lead (documents)
+
+- `docs/design/ui-ux-standards.md` says `--color-brand-soft` is used for "the selected Sidebar item on a phone". The product (and F01-S03 AC-15, "the brand fill of the selected item") fills it with the brand. The document line is out of date.
+- Commit the draft assessment when F01 is re-verified. F01 needs a further production-like-stack receipt after BUG-F01-006 is fixed.
+
+### Bugs filed from this pass
+
+- BUG-F01-006 (major, open): the API production image ships libexpat 2.8.5 with the fixable HIGH CVE-2026-77214, so `images-scan.sh` refuses it (F01-S05 AC-2, NFR-07). It reproduces 3 of 3 times, including on yesterday's CR-013 image: the advisory is new and the Dockerfile is unchanged. The web image is clean.
+- BUG-F01-005 (minor) stays open; its symptom did not occur this time.
+
+
+## Current CR-016 independent review (2026-10-17)
+
+Reviewed as: a salon owner at a 1280-1440px desk, a receptionist on a 768px tablet and a professional on a 360/390px phone, signed in to alpha (`#D6086A`, default), beta (`#1F2937`, dark, long name) and gamma (`#FDE68A`, light); and a caller on the bare platform domain, an unknown host and a suspended salon.
+Compared with: the accepted pre-CR-016 build of this product (`fefc4fd`, rendered side by side). The competitor findings below are not refreshed: CR-016 changes how the screens are built, not what is compared with Fresha or Booksy.
+
+### Verdict
+
+The Tailwind CSS 4 and shadcn/ui rebuild is invisible to the people who use it, which is what CR-016 promised. Every F01 screen and state (status loaded and unavailable, application not-found and the three plain pages, 36 pairs) is pixel-identical to the accepted build at all six widths, and so is the signed-in workspace shell (header, rail or phone tabs) on account, staff and audit for all three salons, with the same test ids and wording. The one difference on those signed-in pages is inside alpha's staff list, F02-S04's Professional-grant checkbox (TC-F02-S04-030); TC-F01-S03-016's manual record, which lists the shell among its rows, means the shell itself. The setup is the documented one and is guarded: the styling-rules test fails, naming the file, for each of the four violations AC-13 lists. No product defect was found. QA status: pass, on base-plus-delta evidence for the lead's closure.
+
+### Verification in this pass
+
+- Tested revision `79ec9d21516bbfb7871a52733e73335a647a11b6` on branch `charithm/test/CR-016-feature-qa` (product source identical to the developer-gated `858cac3`; the QA commits change only QA files). Running product: local API (meta `033cc61`, Java unchanged) and production web rebuilt from this tree; production-like stack images N and N+1 built at `1530cea`.
+- Developer gates: `qa/reports/20261017-225523-F01-commands-0c672da5c8e5`, 10/10 at `033cc61` (Maven 518 tests, lint, typecheck, unit tests, web build, contracts, selftest, image build, workflow lint).
+- Sealed F01 delta `qa/reports/20261017-231346-F01-delta-9faa7cb28a8b` at `1530cea`, 11/11 entries pass: web-status-page 8, web-status-page-api-down 11, strings-and-test-ids (TC-F01-S01-055), browser-hostnames 1, branded-shell 12, web-rush (300 iterations from 60 virtual users, 603/603 checks, no cross-salon page), styling-setup (TC-F01-S03-014, new), shadcn-shell (TC-F01-S03-015, new), production-like-stack (10 cases), deployment-traffic (TC-F01-S05-008/009) and the salon-isolation journey.
+- Retained under CR-009, not rerun: S01 API, database, migration, profile, CI, contract and local-script checks; S02 API, database, load, seed, listening and contract checks; S04 platform services and nonlocal hooks. A CSS rebuild cannot reach their source, contracts or scripts; the impact assessment is in the lead's draft `qa/reports/cr016-assessment-draft/scoped-qa.json`.
+- Manual: TC-F01-S03-016 (pixel comparison, below) and TC-F01-S01-040 (status page states) performed 2026-10-17. Evidence `qa/reports/20261017-CR016-manual/`.
+- Triage before the passing run (`qa/reports/20261017-230554-F01-delta-e9d15d94b63c`, 8/11, preserved, not counted): strings-and-test-ids was a QA scanner defect (it flagged the shadcn/ui primitives, which forward the caller's `data-testid`, and missed shadcn/ui controls at their use sites; repaired in `1530cea` with two new failure alterations); the two S05 checks were an environment fault (the stack still ran images from `c78b909` and `QA_STACK_NEXT` was unset; repaired by building N and N+1 at the tested tree and restarting the stack with its data kept). Two shared helpers read the theme tokens under their pre-CR-016 names; they now read the shadcn/ui names AC-13 introduced, with the same expected values.
+
+### What works well
+
+- Pixel-for-pixel continuity: the rail, phone tabs, sticky header, cards, status panel and plain pages render exactly as before, for a dark, a light and the default brand.
+- The plain proxy pages still answer 404/503 with no script, inline the theme and show no salon.
+- One keyboard outline everywhere (solid 3px `#1D5FD0`, offset 2px), including the status page's retry action.
+- The styling rules are enforced by a test that really fails, and the source scan now holds every shadcn/ui control to a test id where it is used.
+
+### Suggestions
+
+No new suggestion. SUG-F01-01 (CR-004) and SUG-F01-02 (backlog) below stand.
+
+### Notes for the lead (documents)
+
+- `docs/qa/automation.md` could record the method used here for a change meant to be invisible: build the last accepted revision in a scratch worktree, serve it on a second port against the same API and sessions, and compare screenshot pairs and test-id/text inventories.
+- Shared QA helpers now read theme tokens by their shadcn/ui names (`--background`, `--foreground`, `--ring`, `--destructive`, ...); the source scan treats `src/components/ui/` primitives that spread `props` as forwarding the caller's `data-testid`.
+- The draft assessment must be committed by the lead (QA may not write `features/*/scoped-qa.json`) and both features' `evidence.scoped_assessment` pointed at it.
+
+### Bugs filed from this review
+
+- None. BUG-F01-005 (minor, pre-existing scanner message) stays open; the image scan completed normally in this pass.
+
+
 ## Current CR-010 independent scoped review (2026-10-15)
 
 The web application now serves salon administrators and relevant staff only. Tenant root and legacy account links reach staff access; customer OTP/profile/privacy screens are absent. Every former customer BFF GET/POST returns no-store404 with zero upstream API calls and unchanged cookies, including when the API is unavailable. The Customer HTML preview is explicitly a later React Native design; Salon web is the default. Mobile implementation waits until M1-web is released.

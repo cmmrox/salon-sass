@@ -31,6 +31,14 @@ const SPOKEN = new Set(['aria-label', 'aria-description', 'aria-placeholder', 'a
 // Elements a person presses or types into, and the components that render one.
 const PRESSABLE_TAGS = new Set(['a', 'button', 'input', 'select', 'textarea', 'summary', 'Link']);
 const PRESSABLE_ROLES = new Set(['button', 'link', 'checkbox', 'radio', 'switch', 'tab', 'menuitem', 'option', 'textbox', 'combobox', 'slider']);
+// shadcn/ui components (CR-016) that render something a person presses or types into. Their own
+// source in src/components/ui/ forwards the caller's props, data-testid included, so the test id is
+// required where they are used, not in the primitive.
+const PRESSABLE_UI = new Set(['Button', 'Input', 'NativeSelect', 'Checkbox', 'Textarea', 'Switch', 'RadioGroupItem', 'SelectTrigger',
+  'SheetTrigger', 'SheetClose', 'DialogTrigger', 'DialogClose', 'TabsTrigger', 'DropdownMenuTrigger', 'DropdownMenuItem', 'Toggle',
+  // CR-017
+  'InputGroupInput', 'InputGroupButton', 'InputGroupTextarea', 'InputOTP', 'PaginationLink', 'PaginationPrevious', 'PaginationNext',
+  'SidebarTrigger', 'SidebarMenuButton', 'SidebarInput', 'SelectItem']);
 // Keys of the page metadata a browser shows.
 const METADATA_KEYS = new Set(['title', 'description']);
 
@@ -60,6 +68,11 @@ function scan(file) {
     ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node) ? node.text : ts.isTemplateExpression(node) ? node.head.text + node.templateSpans.map((span) => span.literal.text).join('') : null;
   const controls=path.join(root,'src/components/account/Controls.tsx');
   const buttonContract=fs.existsSync(controls)&&/data-testid=\{testId\}/.test(fs.readFileSync(controls,'utf8'));
+  const inUiPrimitives = /^src[\\/]components[\\/]ui[\\/]/.test(shown);
+  // Local names of pressable shadcn/ui components imported into this file (`Button as UiButton` too).
+  const pressableUi = new Set(source.statements.flatMap(statement=>ts.isImportDeclaration(statement)&&ts.isStringLiteral(statement.moduleSpecifier)&&
+    /^@\/components\/ui\//.test(statement.moduleSpecifier.text)&&statement.importClause?.namedBindings&&ts.isNamedImports(statement.importClause.namedBindings)?
+    statement.importClause.namedBindings.elements.filter(element=>PRESSABLE_UI.has(element.propertyName?.text??element.name.text)).map(element=>element.name.text):[]));
   const importsButton=source.statements.some(statement=>ts.isImportDeclaration(statement)&&ts.isStringLiteral(statement.moduleSpecifier)&&
     /(?:^@\/components\/account\/Controls$|^\.\/Controls$)/.test(statement.moduleSpecifier.text)&&statement.importClause?.namedBindings&&ts.isNamedImports(statement.importClause.namedBindings)&&
     statement.importClause.namedBindings.elements.some(element=>element.name.text==='Button'&&(element.propertyName?.text??element.name.text)==='Button'));
@@ -94,8 +107,13 @@ function scan(file) {
     const role = attributes.get('role')?.initializer;
     const roleName = role && ts.isStringLiteral(role) ? role.text : null;
     const wrappedButton=tag==='Button'&&importsButton;
-    const pressable = wrappedButton || PRESSABLE_TAGS.has(tag) || (roleName && PRESSABLE_ROLES.has(roleName)) || attributes.has('onClick') || attributes.has('href');
-    if (pressable) {
+    // With asChild the component renders its child instead, which is checked as an element of its own.
+    const uiComponent=pressableUi.has(tag)&&!attributes.has('asChild');
+    const pressable = wrappedButton || uiComponent || PRESSABLE_TAGS.has(tag) || (roleName && PRESSABLE_ROLES.has(roleName)) || attributes.has('onClick') || attributes.has('href');
+    // A shadcn/ui primitive's own element that spreads the caller's props forwards their data-testid.
+    // (CR-017: also when the primitive's element is itself a shadcn/ui component, as InputGroupButton is a Button.)
+    const forwards = inUiPrimitives && opening.attributes.properties.some(attribute=>ts.isJsxSpreadAttribute(attribute)&&attribute.expression.getText(source)==='props');
+    if (pressable && !forwards) {
       counts.pressable += 1;
       const testId = attributes.get('data-testid')??(wrappedButton&&buttonContract?attributes.get('testId'):undefined);
       const value = testId?.initializer;

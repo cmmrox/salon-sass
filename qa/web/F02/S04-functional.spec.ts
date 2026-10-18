@@ -100,7 +100,7 @@ test(`${c(4)} live self-demotion removes inaccessible workspace navigation witho
  const context=await accounts.context(alpha,[owner]),page=await accounts.open(context,routes.staffList);await accounts.ready(page);
  await expect(page.getByTestId('workspace-staff')).toBeVisible();await expect(page.getByTestId('workspace-audit')).toBeVisible();
  const ownRow=page.locator(`[data-testid="account-staff-row"][data-id="${owner.principal.id}"]`);await expect(ownRow).toBeVisible();
- await ownRow.getByTestId('account-staff-role').selectOption('RECEPTIONIST');await expect(handle(page,'denied')).toBeVisible();
+ await accounts.chooseRole(page,ownRow.getByTestId('account-staff-role'),'RECEPTIONIST');await expect(handle(page,'denied')).toBeVisible();
  const principal=await accounts.principal(context,alpha,'staff');expect(principal.role).toBe('RECEPTIONIST');expect(principal.permissions).not.toContain('staff.list');expect(principal.permissions).not.toContain('audit.list');
  expect((await accounts.action(context,alpha,'staff','staff')).status()).toBe(403);expect((await accounts.action(context,alpha,'staff','audit')).status()).toBe(403);
  await testInfo.attach('live-navigation',{body:JSON.stringify({role:principal.role,contentDenied:await handle(page,'denied').isVisible(),staffLinks:await page.getByTestId('workspace-staff').count(),auditLinks:await page.getByTestId('workspace-audit').count()}),contentType:'application/json'});

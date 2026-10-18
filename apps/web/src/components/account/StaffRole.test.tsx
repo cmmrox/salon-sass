@@ -1,6 +1,7 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
-import { renderWithMessages } from '@/test/render';
+import { messages, renderWithMessages } from '@/test/render';
+import { chooseOption } from '@/test/select';
 import { AccountScreen } from './AccountScreen';
 vi.mock('next/navigation', () => ({ useRouter: () => ({ replace: vi.fn(), refresh: vi.fn() }) }));
 afterEach(() => vi.unstubAllGlobals());
@@ -18,8 +19,8 @@ it('clears the Professional-only grant when the Owner selects another role', asy
   renderWithMessages(<AccountScreen kind="staff" initialPrincipal={principal} timeZone="Asia/Colombo" view="staff" />);
   await screen.findByTestId('account-staff-role');
   expect(screen.getByTestId('account-professional-grant')).toBeChecked();
-  fireEvent.change(screen.getByTestId('account-staff-role'), { target: { value: 'RECEPTIONIST' } });
+  await chooseOption(screen.getByTestId('account-staff-role'), messages.account.RECEPTIONIST);
   await waitFor(() => expect(changes).toEqual([{ id: 'professional', version: 0, role: 'RECEPTIONIST', professionalGrant: false }]));
   await waitFor(() => expect(screen.queryByTestId('account-professional-grant')).not.toBeInTheDocument());
-  expect(screen.getByTestId('account-staff-role')).toHaveValue('RECEPTIONIST');
+  expect(screen.getByTestId('account-staff-role')).toHaveTextContent(messages.account.RECEPTIONIST);
 });
