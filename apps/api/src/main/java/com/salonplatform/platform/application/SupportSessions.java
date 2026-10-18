@@ -289,7 +289,7 @@ public class SupportSessions implements SupportCredentials {
                     + " AND (?::text IS NULL OR (?::text = 'active') = (s.ended_at IS NULL AND s.expires_at > ?))";
             UUID only = all ? null : operator.id();
             Object[] args = {only, only, salonId, salonId, stateFilter, stateFilter, at};
-            List<Object> page = new ArrayList<>(List.of(args));
+            List<Object> page = new ArrayList<>(java.util.Arrays.asList(args));
             page.add(paging.size());
             page.add(paging.offset());
             List<SessionView> items = database.jdbc().query(SELECT + where
