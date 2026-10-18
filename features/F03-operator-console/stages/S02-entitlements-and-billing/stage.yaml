@@ -370,6 +370,12 @@ verification:
     - TC-F03-S02-017
     - TC-F03-S02-018
     - TC-F03-S02-020
+  - id: billing-records
+    tool: playwright
+    file: qa/api/F03/S02-billing-records.spec.ts
+    project: api
+    covers:
+    - TC-F03-S02-023
   manual: []
   deferred: []
 evidence:

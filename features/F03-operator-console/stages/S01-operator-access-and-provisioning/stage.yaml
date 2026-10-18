@@ -423,6 +423,25 @@ verification:
     - TC-F03-S01-017
     - TC-F03-S01-037
     - TC-F03-S01-039
+  - id: platform-audit
+    tool: playwright
+    file: qa/api/F03/S01-audit.spec.ts
+    project: api
+    covers:
+    - TC-F03-S01-029
+  - id: database-boundary
+    tool: script
+    file: qa/checks/F03/S01-database-boundary.sh
+    covers:
+    - TC-F03-S01-027
+    - TC-F03-S01-028
+    - TC-F03-S01-029
+    - TC-F03-S01-039
+  - id: build-artifacts
+    tool: script
+    file: qa/checks/F03/S01-build-artifacts.sh
+    covers:
+    - TC-F03-S01-040
   manual: []
   deferred: []
 evidence:
