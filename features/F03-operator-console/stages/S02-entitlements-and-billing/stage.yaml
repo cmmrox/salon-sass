@@ -3,7 +3,7 @@ feature: F03
 title: "Entitlements and subscription billing"
 sequence: 2
 surfaces: [api, web]
-status: built
+status: complete
 qa_status: not-run
 blocked_reason: null
 released_in: null
