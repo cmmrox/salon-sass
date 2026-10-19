@@ -263,6 +263,14 @@ test(`${id(17)} Support screens pass the automated scan and keyboard-only use`, 
   await expectAccessible(page, 'session list');
   await page.getByTestId(tid('sessionEnd')).first().focus();
   await page.keyboard.press('Enter');
+  // End asks for confirmation in an Alert Dialog (S04 handoff); confirm it by keyboard too.
+  await page.getByTestId('console-support-confirm-end').focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByTestId('console-support-confirm-end')).toHaveCount(0);
+  // Read through the API with the still-valid access token: renewing would rotate the refresh token
+  // the browser holds. The end request is asynchronous, so wait for it.
+  await expect.poll(async () => (await supportJson<{ total: number }>(await operator.supportList(support, { salonId: target.created.id, state: 'active' }), 'supportSessionPage')).total,
+    { message: 'the session ended by keyboard', timeout: 10_000 }).toBe(0);
   await consoleSide.close();
   const session = await start(operator, await operator.actor('OPERATOR_SUPPORT'), target.created.id);
   const viewContext = await browser.newContext();
