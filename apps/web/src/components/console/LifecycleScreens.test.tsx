@@ -1,6 +1,7 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { components } from '@salon/api-contracts';
+import { expectListOfItems } from '@/test/list';
 import { renderWithMessages } from '@/test/render';
 import { ExportCard, LifecycleCard } from './LifecycleScreens';
 
@@ -43,6 +44,7 @@ describe('the lifecycle card', () => {
     expect(row).toHaveTextContent('Suspended');
     expect(row).toHaveTextContent('Synthetic Admin');
     expect(within(row).getByTestId('console-lifecycle-reason')).toHaveTextContent('Repeated chargeback disputes');
+    expectListOfItems(screen.getByTestId('console-lifecycle-list'), screen.getAllByTestId('console-lifecycle-row').length);
   });
 
   it('suspends with a reason and the version, and names a refused reason', async () => {

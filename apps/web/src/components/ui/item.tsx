@@ -54,23 +54,34 @@ const itemVariants = cva(
   }
 )
 
+// An Item is a row of an ItemGroup, whose role is list, so it is announced as a list item
+// (BUG-F03-003). A row rendered as a link (`asChild`) keeps its link role and sits inside a
+// list item instead, because one element cannot be both.
 function Item({
   className,
   variant = "default",
   size = "default",
   asChild = false,
+  role,
   ...props
 }: React.ComponentProps<"div"> &
   VariantProps<typeof itemVariants> & { asChild?: boolean }) {
   const Comp = asChild ? Slot.Root : "div"
-  return (
+  const item = (
     <Comp
       data-slot="item"
       data-variant={variant}
       data-size={size}
+      role={asChild ? role : (role ?? "listitem")}
       className={cn(itemVariants({ variant, size, className }))}
       {...props}
     />
+  )
+  if (!asChild) return item
+  return (
+    <div role="listitem" data-slot="item-listitem" className="flex min-w-0 flex-col">
+      {item}
+    </div>
   )
 }
 

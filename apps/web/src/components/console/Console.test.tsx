@@ -2,6 +2,7 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import type { AnchorHTMLAttributes } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderWithMessages } from '@/test/render';
+import { expectListOfItems } from '@/test/list';
 import { chooseOption } from '@/test/select';
 import { ConsoleShell } from './ConsoleShell';
 import { ConsoleSignIn } from './ConsoleSignIn';
@@ -108,6 +109,8 @@ describe('the salon directory', () => {
     expect(rows[0]).toHaveTextContent('No plan assigned');
     expect(rows[1]).toHaveTextContent('Suspended');
     expect(rows[1]).toHaveAttribute('href', '/console/salons/s2');
+    expectListOfItems(screen.getByTestId('console-salons-list'), 2);
+    expect(within(screen.getAllByRole('listitem')[1]!).getByRole('link')).toBe(rows[1]);
     fireEvent.change(screen.getByTestId('console-salons-search'), { target: { value: ' 100%_ ' } });
     fireEvent.submit(screen.getByTestId('console-salons-search-submit').closest('form')!);
     await waitFor(() => expect(calls.at(-1)!.url).toBe('/operator-web/salons?page=0&size=20&q=100%25_'));
@@ -207,5 +210,7 @@ describe('detail pages', () => {
     renderWithMessages(<PlanDirectory />);
     expect(await screen.findByTestId('console-plan-row')).toHaveTextContent('fixture-basic');
     expect(screen.getByTestId('console-create-plan')).toBeInTheDocument();
+    expectListOfItems(screen.getByTestId('console-plans-list'), 1);
+    expect(screen.getByRole('link', { name: /fixture-basic/ })).toBe(screen.getByTestId('console-plan-row'));
   });
 });
