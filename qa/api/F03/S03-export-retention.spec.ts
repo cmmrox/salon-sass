@@ -199,7 +199,15 @@ test(`${id(10)} Thirty days after closure the salon's tenant data is deleted and
   const { admin, target, other, closed } = await arrange(operator, identity, clock, '2026-12-14T07:00:00Z', true);
   await ready(operator, admin, target.created.id);
   const counts = tenantRowCounts(target.created.id);
-  const others = { other: tenantRowCounts(other.created.id), alpha: tenantRowCounts(alpha.id), beta: tenantRowCounts(beta.id), gamma: tenantRowCounts(gamma.id) };
+  // Moving the clock 30 days also runs the scheduled jobs: outbox retention removes old finished
+  // messages and billing enqueues reminders, for every salon. So the other salons' outbox is compared
+  // by its unfinished messages (which no job may remove), and every other tenant table exactly.
+  const othersNow = () => Object.fromEntries(Object.entries({ other: other.created.id, alpha: alpha.id, beta: beta.id, gamma: gamma.id })
+    .map(([name, salonId]) => { const { outbox_message: _outbox, ...rest } = tenantRowCounts(salonId); return [name, rest]; }));
+  const unfinished = () => identitySql(`SELECT coalesce(string_agg(id::text, ',' ORDER BY id), '') FROM outbox_message WHERE tenant_id IN (${
+    [other.created.id, alpha.id, beta.id, gamma.id].map(sqlLiteral).join(', ')}) AND lower(status::text) IN ('pending', 'sending')`).split(',').filter(Boolean);
+  const others = othersNow();
+  const pendingBefore = unfinished();
   const invoicesBefore = countRows('invoice', `salon_id = ${sqlLiteral(target.created.id)}`);
   const paymentsBefore = countRows('invoice_payment', `invoice_id IN (SELECT id FROM invoice WHERE salon_id = ${sqlLiteral(target.created.id)})`);
   const auditBefore = platformAudit(target.created.id).length;
@@ -226,8 +234,10 @@ test(`${id(10)} Thirty days after closure the salon's tenant data is deleted and
   expect(countRows('invoice_payment', `invoice_id IN (SELECT id FROM invoice WHERE salon_id = ${sqlLiteral(target.created.id)})`), 'payments kept').toBe(paymentsBefore);
   expect(platformAudit(target.created.id).length, 'platform audit kept').toBeGreaterThanOrEqual(auditBefore);
   expect(platformAudit(target.created.id).filter(e => e.action === 'salon.deleted').length, 'exactly one salon.deleted').toBe(1);
-  expect({ other: tenantRowCounts(other.created.id), alpha: tenantRowCounts(alpha.id), beta: tenantRowCounts(beta.id), gamma: tenantRowCounts(gamma.id) },
-    'nothing of any other salon').toEqual(others);
+  expect(othersNow(), 'nothing of any other salon').toEqual(others);
+  const pendingAfter = new Set(identitySql(`SELECT coalesce(string_agg(id::text, ','), '') FROM outbox_message WHERE id::text IN (${
+    pendingBefore.length ? pendingBefore.map(sqlLiteral).join(', ') : "''"})`).split(',').filter(Boolean));
+  expect(pendingBefore.filter(id => !pendingAfter.has(id)), 'no unfinished message of another salon was removed').toEqual([]);
 });
 
 test(`${id(11)} An interrupted export or deletion resumes to the same final result`, async ({ operator, identity, clock }) => {
