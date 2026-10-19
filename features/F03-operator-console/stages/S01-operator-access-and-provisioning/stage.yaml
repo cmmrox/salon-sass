@@ -475,7 +475,10 @@ verification:
     - TC-F03-S01-031
     - TC-F03-S01-038
     suites: [regression]
-  manual: []
+  manual:
+  - case: TC-F03-S01-036
+    reason: Conformance to the Salon-mode reference grammar has no exact operator reference screen to diff against, so it needs a person's judgement; screenshot pairs of docs/design/prototype/index.html (Salon web, Staff and Today) and the console salons, salon detail, plans, plan detail and create-salon sheet at 360 and 1280 were compared, kept in qa/reports/f03-manual (not committed), with differences classified in review.md
+    performed_on: 2026-10-19
   deferred: []
 evidence:
   last_run: null

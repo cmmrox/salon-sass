@@ -2,9 +2,10 @@
 
 Prepared during the F03 build (lifecycle "QA preparation during a build") from the feature README,
 the four approved stage specs, `docs/architecture/operator-console.md` (including "Local test
-hooks"), decisions 042 and 049, PLT-01 and PLT-04 to PLT-07, NFR-20 and `docs/qa/`. Expected
-results come from those documents only. Nothing has been run and no case is performed; F03 QA
-runs once, through `qa/scripts/sdlc run --feature F03`, after all four stages close.
+hooks"), decisions 042 and 049, PLT-01 and PLT-04 to PLT-07, NFR-20 and `docs/qa/`, and reconciled
+at feature-verify with the final specs, decisions 049-053 and the four stage handoffs. Expected
+results come from those documents only. F03 QA runs once, through `qa/scripts/sdlc run --feature
+F03`, after all four stages close.
 
 ## Test approach
 
@@ -31,7 +32,7 @@ local QA and are not certified (README).
 
 Limits kept (`references/test-design.md`): every acceptance criterion has a case and a negative
 case where it can be violated; input variants are table rows; a rule proved through the API is not
-proved again in the browser; beyond the criteria only critical cases are added. Totals: S01 40,
+proved again in the browser; beyond the criteria only critical cases are added. Totals: S01 41,
 S02 28, S03 17, S04 17, journeys 3.
 
 Environment: local only, synthetic data. alpha, beta and gamma are never provisioned over, billed,
@@ -41,16 +42,31 @@ Operator accounts come from the `/local/operator` fixture hooks with credentials
 memory. Time moves only through the test clock, and scheduled work runs through the run-job hook at
 the instant under test; clock-moving tests run serially and restore real time.
 
-Preparation notes for feature-verify:
+Automation notes (feature-verify, 2026-10-19):
 
 - F02's clock fixture guard (`qa/shared/identity-clock-cleanup.ts`) requires exactly the three fixed
   salons, so F03 clock cases use their own clock helper, and every F03 test ends with the S03 local
   reset hook: it removes salons created after the synthetic baseline, resets hook-created operators,
-  returns the clock to real time and reschedules job occurrences pushed ahead, so F01/F02 guards and
-  regression run unchanged afterwards.
-- Hook paths, signature header, BFF action names and test ids are taken from the stage handoffs:
-  S01-S03 are confirmed in `qa/shared/operator.ts` `CONTRACT`; what the S04 handoff must still
-  name is in `PENDING_S04`, and a test reaching one of those values stops with `ENVIRONMENT:`.
+  returns the clock to real time and reschedules job occurrences pushed ahead.
+- Hook paths, signature header, BFF actions, schema names and test ids come from the stage
+  handoffs: `qa/shared/operator.ts` `CONTRACT`, `SUPPORT` and `PENDING_S04` (filled from the S04
+  handoff).
+- The generated contract writes nullable objects and enums so that null fails validation
+  (BUG-F03-001). F03 checks read them as nullable through `contractValidator`, so they still fail
+  on a missing, extra or wrongly typed field; TC-F03-S01-041 asserts the defect on the raw document.
+- The API answers instants with microseconds; computed instants are compared through `exact` and
+  `plusExact`, never through JavaScript Date.
+- Moving the clock runs scheduled jobs for every salon (outbox retention, billing reminders, the
+  identity cleanup of expired challenges, steps, rate buckets and refresh history). "Nothing of
+  another salon changed" across a clock jump compares the durable tenant tables
+  (`TIME_CLEANED_TABLES` excluded); the closed salon itself is compared on every table.
+- Failure proof (automation-principles): TC-F03-S01-041 failed on the committed contract for the
+  reason it guards. `contractValidator` was run on controlled bodies: it accepts a null legacy
+  `plan` and a known or null `notice`, and rejects a string `plan`, a `plan` missing `key`, a
+  missing `slug`, a string `version` and an unknown `notice`. `exact` keeps microseconds
+  (`.254315Z` differs from `.254Z`). The durable comparison keeps 6 of the 12 tenant tables.
+  The accessibility, outage-deadline and contract checks failed on the product defects filed in
+  `bugs/` before any fix, which is their own failure proof.
 
 ## Cases
 
