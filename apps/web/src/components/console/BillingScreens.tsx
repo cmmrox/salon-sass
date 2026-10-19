@@ -18,8 +18,8 @@ import { operatorRead, operatorRequest, OperatorFailure, principalInsideLock, wi
 import { ConsoleChoiceField, ConsoleFailure, ConsoleLoading, ConsoleTextField, uncertain, useFailureMessage } from './ConsoleControls';
 import { ConsoleSheet } from './ConsoleSheet';
 import { DirectoryPager } from './DirectoryControls';
-import type { Plan } from './PlanScreens';
 import { useIdempotencyKey } from './PlanScreens';
+import { PlanPicker } from './PlanPicker';
 import { PAGE_SIZE, type DirectoryPage } from './useDirectory';
 
 type Detail = components['schemas']['SalonDetail'];
@@ -217,17 +217,10 @@ export function MovePlan({ salon, onMoved }: { salon: Detail; onMoved: () => voi
   const t = useTranslations('console');
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [plans, setPlans] = useState<Plan[] | null>(null);
   const [planId, setPlanId] = useState('');
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<OperatorFailure | null>(null);
-  useEffect(() => {
-    if (!open || plans) return;
-    let active = true;
-    operatorRead<{ items: Plan[] }>('plans?page=0&size=100').then((page) => { if (active) setPlans(page.items); }).catch((error) => { if (active) setFailure(asFailure(error)); });
-    return () => { active = false; };
-  }, [open, plans]);
-  function change(next: boolean) { setOpen(next); setFailure(null); if (next) { setPlans(null); setPlanId(''); } }
+  function change(next: boolean) { setOpen(next); setFailure(null); if (next) setPlanId(''); }
   async function submit() {
     setBusy(true); setFailure(null);
     try {
@@ -239,17 +232,15 @@ export function MovePlan({ salon, onMoved }: { salon: Detail; onMoved: () => voi
       setFailure(f);
     } finally { setBusy(false); }
   }
-  const choices = (plans ?? []).filter((plan) => plan.id !== salon.plan?.id);
   return (
     <ConsoleSheet title={t('movePlan')} description={t('movePlanHelp', { plan: salon.plan ? salon.plan.name : t('noPlan') })} open={open} onOpenChange={change} busy={busy} testId="console-move-plan-sheet"
       trigger={<Button variant="outline" data-testid="console-move-plan">{t('movePlan')}</Button>}>
       {failure && <ConsoleFailure failure={failure} />}
       {failure?.code === 'entitlement_exceeded' && <Alert variant="notice" role="status" data-testid="console-move-plan-exceeded">{t('movePlanExceeded')}</Alert>}
-      {!plans && !failure && <ConsoleLoading rows={1} />}
       <form className="flex min-w-0 flex-col gap-6" noValidate onSubmit={(event) => { event.preventDefault(); void submit(); }}>
-        <ConsoleChoiceField name="movePlanId" label={t('newPlan')} placeholder={t('choosePlan')} value={planId} error={Boolean(failure?.fields.includes('planId'))} disabled={!plans || choices.length === 0}
-          description={plans && choices.length === 0 ? t('noOtherPlans') : undefined}
-          options={choices.map((plan) => ({ value: plan.id, label: t('planSeats', { name: plan.name, key: plan.key, seats: plan.staffSeats }) }))} onChange={setPlanId} />
+        <PlanPicker name="movePlanId" label={t('newPlan')} placeholder={t('choosePlan')} emptyText={t('noOtherPlans')} value={planId} error={Boolean(failure?.fields.includes('planId'))}
+          exclude={salon.plan?.id} onFailure={setFailure}
+          optionLabel={(plan) => t('planSeats', { name: plan.name, key: plan.key, seats: plan.staffSeats })} onChange={(plan) => setPlanId(plan.id)} />
         <div className="flex flex-wrap gap-2">
           <Button type="submit" data-testid="console-move-plan-submit" disabled={busy || !planId} aria-busy={busy || undefined}>{busy ? <><Spinner />{t('saving')}</> : t('movePlan')}</Button>
           <Button type="button" variant="outline" data-testid="console-move-plan-cancel" disabled={busy} onClick={() => change(false)}>{t('cancel')}</Button>

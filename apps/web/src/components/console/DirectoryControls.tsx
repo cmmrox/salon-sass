@@ -29,7 +29,7 @@ export function DirectorySearch({ area, help, busy, onSearch }: { area: 'salons'
 }
 
 /** Previous and next pages, in place, with the position and total. */
-export function DirectoryPager({ area, page, size, total, busy, onPage }: { area: 'salons' | 'plans' | 'invoices' | 'lifecycle' | 'support'; page: number; size: number; total: number; busy: boolean; onPage: (page: number) => void }) {
+export function DirectoryPager({ area, page, size, total, busy, onPage }: { area: 'salons' | 'plans' | 'invoices' | 'lifecycle' | 'support' | 'plan-id' | 'move-plan-id'; page: number; size: number; total: number; busy: boolean; onPage: (page: number) => void }) {
   const t = useTranslations('console');
   const pages = Math.max(1, Math.ceil(total / size));
   return (
@@ -37,9 +37,9 @@ export function DirectoryPager({ area, page, size, total, busy, onPage }: { area
       <p className="m-0 text-small" data-testid={`console-${area}-total`}>{t('total', { total })}</p>
       <Pagination aria-label={t('pages')} data-testid={`console-${area}-pagination`}>
         <PaginationContent>
-          <PaginationItem><PaginationPrevious data-testid={`console-${area}-previous`} disabled={busy || page === 0} onClick={() => onPage(page - 1)}>{t('previous')}</PaginationPrevious></PaginationItem>
+          <PaginationItem><PaginationPrevious type="button" data-testid={`console-${area}-previous`} disabled={busy || page === 0} onClick={() => onPage(page - 1)}>{t('previous')}</PaginationPrevious></PaginationItem>
           <PaginationItem><PaginationCurrent data-testid={`console-${area}-page`}>{t('page', { page: page + 1, pages })}</PaginationCurrent></PaginationItem>
-          <PaginationItem><PaginationNext data-testid={`console-${area}-next`} disabled={busy || (page + 1) * size >= total} onClick={() => onPage(page + 1)}>{t('next')}</PaginationNext></PaginationItem>
+          <PaginationItem><PaginationNext type="button" data-testid={`console-${area}-next`} disabled={busy || (page + 1) * size >= total} onClick={() => onPage(page + 1)}>{t('next')}</PaginationNext></PaginationItem>
         </PaginationContent>
       </Pagination>
     </div>

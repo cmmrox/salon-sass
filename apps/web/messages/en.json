@@ -198,6 +198,8 @@
     "search": "Search",
     "searchSalonsHelp": "Search by salon name or web address.",
     "searchPlansHelp": "Search by plan name or key.",
+    "planSearch": "Find a plan",
+    "planSearchHelp": "Newest plans are listed first. Search by plan name or key to find any other.",
     "searchAction": "Search",
     "previous": "Previous",
     "next": "Next",

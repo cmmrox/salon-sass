@@ -23,6 +23,7 @@ import { ExportCard, LifecycleCard, SalonStatusBadge } from './LifecycleScreens'
 import { SupportCard } from './SupportScreens';
 import type { Plan } from './PlanScreens';
 import { useIdempotencyKey } from './PlanScreens';
+import { PlanPicker } from './PlanPicker';
 import { PAGE_SIZE, useDirectory } from './useDirectory';
 
 type Summary = components['schemas']['SalonSummary'];
@@ -82,21 +83,16 @@ function CreateSalon({ platformDomain, onCreated }: { platformDomain: string; on
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [values, setValues] = useState<Values>(EMPTY);
-  const [plans, setPlans] = useState<Plan[] | null>(null);
+  const [plan, setPlan] = useState<Plan | null>(null);
+  const [plansAvailable, setPlansAvailable] = useState(false);
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<OperatorFailure | null>(null);
   const [created, setCreated] = useState<{ result: Created; plan: string } | null>(null);
   const idempotency = useIdempotencyKey();
-  useEffect(() => {
-    if (!open || plans) return;
-    let active = true;
-    operatorRead<{ items: Plan[] }>('plans?page=0&size=100').then((page) => { if (active) setPlans(page.items); }).catch((error) => { if (active) setFailure(error instanceof OperatorFailure ? error : new OperatorFailure('service_unavailable')); });
-    return () => { active = false; };
-  }, [open, plans]);
   function change(next: boolean) {
     setOpen(next);
     if (!next) { setValues((v) => ({ ...v, ownerPassword: '' })); setFailure(null); idempotency.reset(); }
-    else { setCreated(null); setPlans(null); }
+    else { setCreated(null); setPlan(null); setPlansAvailable(false); }
   }
   const set = (name: keyof Values) => (event: { target: { value: string } }) => setValues({ ...values, [name]: event.target.value });
   async function submit() {
@@ -111,7 +107,7 @@ function CreateSalon({ platformDomain, onCreated }: { platformDomain: string; on
     try {
       const result = await withOperatorLock(async () => { await principalInsideLock(); return operatorRequest<Created>('salon-create', { ...payload, idempotencyKey }); });
       idempotency.reset();
-      setCreated({ result, plan: plans?.find((plan) => plan.id === result.planId)?.name ?? '' });
+      setCreated({ result, plan: plan?.id === result.planId ? plan.name : '' });
       setValues(EMPTY); setOpen(false); onCreated();
     } catch (error) {
       const f = error instanceof OperatorFailure ? error : new OperatorFailure('service_unavailable');
@@ -135,8 +131,8 @@ function CreateSalon({ platformDomain, onCreated }: { platformDomain: string; on
             <FieldGroup className="gap-4">
               <ConsoleTextField name="salonName" label={t('salonName')} required maxLength={120} autoComplete="organization" value={values.name} error={has('name')} onChange={set('name')} />
               <ConsoleTextField name="slug" label={t('slug')} description={t('slugHelp', { example: `${values.slug.trim().toLowerCase() || 'example'}.${platformDomain}` })} required minLength={3} maxLength={30} autoComplete="off" value={values.slug} error={has('slug')} onChange={set('slug')} />
-              <ConsoleChoiceField name="planId" label={t('plan')} placeholder={t('choosePlan')} description={plans && plans.length === 0 ? t('noPlansToChoose') : undefined} value={values.planId} error={has('planId')} disabled={!plans || plans.length === 0}
-                options={(plans ?? []).map((plan) => ({ value: plan.id, label: t('planLabel', { name: plan.name, key: plan.key }) }))} onChange={(planId) => setValues({ ...values, planId })} />
+              <PlanPicker name="planId" label={t('plan')} placeholder={t('choosePlan')} emptyText={t('noPlansToChoose')} value={values.planId} error={has('planId')} onFailure={setFailure} onAvailable={setPlansAvailable}
+                optionLabel={(choice) => t('planLabel', { name: choice.name, key: choice.key })} onChange={(choice) => { setPlan(choice); setValues((v) => ({ ...v, planId: choice.id })); }} />
               <ConsoleTextField name="country" label={t('country')} description={t('countryHelp')} required minLength={2} maxLength={2} autoComplete="country" value={values.country} error={has('country')} onChange={set('country')} />
               <ConsoleTextField name="currency" label={t('currency')} description={t('currencyHelp')} required minLength={3} maxLength={3} autoComplete="off" value={values.currency} error={has('currency')} onChange={set('currency')} />
               <ConsoleTextField name="timeZone" label={t('timeZone')} description={t('timeZoneHelp')} required maxLength={64} autoComplete="off" value={values.timeZone} error={has('timeZone')} onChange={set('timeZone')} />
@@ -169,7 +165,7 @@ function CreateSalon({ platformDomain, onCreated }: { platformDomain: string; on
             </FieldGroup>
           </FieldSet>
           <div className="flex flex-wrap gap-2">
-            <Button type="submit" data-testid="console-create-salon-submit" disabled={busy || !plans || plans.length === 0} aria-busy={busy || undefined}>{busy ? <><Spinner />{t('creating')}</> : t('create')}</Button>
+            <Button type="submit" data-testid="console-create-salon-submit" disabled={busy || !plansAvailable} aria-busy={busy || undefined}>{busy ? <><Spinner />{t('creating')}</> : t('create')}</Button>
             <Button type="button" variant="outline" data-testid="console-create-salon-cancel" disabled={busy} onClick={() => change(false)}>{t('cancel')}</Button>
           </div>
         </form>

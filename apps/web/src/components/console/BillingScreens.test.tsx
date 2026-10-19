@@ -86,6 +86,33 @@ describe('the subscription card', () => {
   });
 });
 
+describe('the plan picker in Move plan (BUG-F03-006)', () => {
+  it('finds a plan older than the newest 100 by search and moves to it', async () => {
+    const plans = Array.from({ length: 150 }, (_, n) => ({ id: `p-${n}`, key: `plan-${n}`, name: `Plan ${n}`, staffSeats: 5, branches: 1, messageAllowance: 0, customDomain: false, dedicatedApp: false, createdAt: '', updatedAt: '' }));
+    stubApi((url) => {
+      if (url.startsWith('/operator-web/subscription?')) return Response.json(SUBSCRIPTION);
+      if (url.startsWith('/operator-web/plans')) {
+        const params = new URL(url, 'http://console.localhost').searchParams;
+        const q = params.get('q');
+        const matching = q ? plans.filter((plan) => plan.key.includes(q)) : plans;
+        return Response.json({ items: matching.slice(0, 100), page: 0, size: 100, total: matching.length });
+      }
+      if (url === '/operator-web/plan-move') return new Response(null, { status: 204 });
+      return Response.json({ id: 'o', kind: 'operator', role: 'OPERATOR_ADMIN', permissions: [], mfaEnabled: true });
+    });
+    renderWithMessages(<SubscriptionCard salon={SALON} onSalonChanged={() => undefined} />);
+    fireEvent.click(await screen.findByTestId('console-move-plan'));
+    const sheet = await screen.findByTestId('console-move-plan-sheet');
+    await waitFor(() => expect(within(sheet).getByTestId('console-move-plan-id')).toBeEnabled());
+    fireEvent.change(within(sheet).getByTestId('console-move-plan-id-search'), { target: { value: 'plan-142' } });
+    fireEvent.click(within(sheet).getByTestId('console-move-plan-id-search-submit'));
+    await waitFor(() => expect(calls.at(-1)!.url).toBe('/operator-web/plans?page=0&size=100&q=plan-142'));
+    await chooseOption(within(sheet).getByTestId('console-move-plan-id'), 'Plan 142 (plan-142), 5 staff seats');
+    fireEvent.submit(within(sheet).getByTestId('console-move-plan-submit').closest('form')!);
+    await waitFor(() => expect(calls.find((call) => call.url === '/operator-web/plan-move')?.body).toMatchObject({ id: SALON.id, version: 3, planId: 'p-142' }));
+  });
+});
+
 describe('the invoice list', () => {
   it('lists invoices with status words and records an exact transfer in minor units', async () => {
     let paid = false;
