@@ -1,6 +1,6 @@
 /**
  * F03-S01 runtime: ceilings and plans across an API restart, database outages, and the exposure of
- * the local operator hooks. Cases TC-F03-S01-014, -017, -037, -039 (cases.md).
+ * the local operator hooks, and the generated contract. Cases TC-F03-S01-014, -017, -037, -039, -041 (cases.md).
  *
  * These tests stop and start local services through infra/scripts/local-service.sh and always
  * restore them. Prepared during the F03 build; never run outside the recorded F03 feature pass.
@@ -126,4 +126,31 @@ test(`${id(39)} Local operator hooks are loopback-only, absent from the contract
   expect(await Promise.all([alpha, beta, gamma].map(async s => (await operator.identity.api.salon(s)).json()))).toEqual(fixed);
   // The non-local start (hooks 404, no default operator created) is the second half of this case,
   // in qa/checks/F03/S01-database-boundary.sh, which starts a separate API process.
+});
+
+test(`${id(41)} The generated contract states the nullability and success statuses the API returns`, () => {
+  const document = committedContract();
+  const schemas = Object.entries(document.components.schemas);
+  expect(schemas.length, 'the contract has schemas').toBeGreaterThan(0);
+  // Under OpenAPI 3.1 a sibling `type` beside `$ref` applies together with it, so a "nullable"
+  // reference written that way still forbids null (S01 spec: the generated contract and client
+  // include nullability; S01 legacy `plan`, `credentials` before MFA, S02 legacy entitlements).
+  const forbidsNull = schemas.flatMap(([name, schema]) => Object.entries(schema.properties ?? {})
+    .filter(([, p]) => { const q = p as { $ref?: string; type?: unknown }; return typeof q.$ref === 'string' && Array.isArray(q.type) && q.type.includes('null'); })
+    .map(([property]) => `${name}.${property}`));
+  expect(forbidsNull, 'nullable object properties are expressed so that null validates').toEqual([]);
+  // Success statuses from the S04 spec's API table and handoff.
+  const expected: [string, string, string][] = [
+    ['post', '/api/v1/operator/salons/{id}/support-sessions', '201'],
+    ['post', '/api/v1/operator/support-sessions/{id}/entry-codes', '201'],
+    ['delete', '/api/v1/operator/support-sessions/{id}', '204'],
+    ['delete', '/api/v1/salon/support-sessions/{id}', '204'],
+    ['delete', '/api/v1/support/session', '204'],
+  ];
+  const documented = expected.map(([method, route]) => {
+    const responses = (document.paths[route]?.[method] as { responses?: Record<string, unknown> } | undefined)?.responses;
+    expect(responses, `${method.toUpperCase()} ${route} is in the contract`).toBeTruthy();
+    return `${method.toUpperCase()} ${route} ${Object.keys(responses!).filter(k => k !== 'default').join(',')}`;
+  });
+  expect(documented).toEqual(expected.map(([method, route, status]) => `${method.toUpperCase()} ${route} ${status}`));
 });

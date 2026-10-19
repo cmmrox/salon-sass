@@ -19,7 +19,10 @@ import { answerOf, expectProblem } from './answers';
 import { reportDir } from './env';
 import { test as identityTest, expect, json, totp, syntheticAccount, type Identity, type SeedAccount, type Tokens } from './identity';
 import { identitySql } from './identity-storage';
-import { committedContract, schemaValidator } from './openapi';
+import Ajv2020, { type ValidateFunction } from 'ajv/dist/2020';
+import addFormats from 'ajv-formats';
+
+import { committedContract } from './openapi';
 import { PLATFORM_DOMAIN, alpha, beta, gamma, type Salon } from './tenants';
 import type { components } from '@contracts/schema';
 
@@ -149,7 +152,7 @@ export async function supportJson<T>(response: APIResponse, schema: keyof typeof
   const answer = await answerOf(response);
   expect(answer.status, `${schema}: HTTP status (body ${answer.status >= 400 ? answer.body.slice(0, 200) : 'withheld'})`).toBe(status);
   const body = JSON.parse(answer.body);
-  expect(Boolean(schemaValidator(name)(body)), `${schema}: generated contract shape`).toBe(true);
+  expect(Boolean(contractValidator(name)(body)), `${schema}: generated contract shape`).toBe(true);
   return body as T;
 }
 
@@ -322,12 +325,50 @@ export function platformAuditWhere(where: string): PlatformAuditRow[] {
 }
 export const platformAudit = (subjectId: string) => platformAuditWhere(`subject_id = ${sqlLiteral(subjectId)}`);
 
+/**
+ * A validator for a schema of the committed contract, reading a property written as
+ * `{"$ref": X, "type": [..., "null"]}` as "X or null". Under OpenAPI 3.1 (JSON Schema 2020-12) the
+ * two keywords both apply, so the document as generated forbids the null the specs require
+ * (S01: legacy `plan`, `credentials` before MFA; S02: legacy entitlements). That contract defect is
+ * BUG-F03-001 and is asserted on its own by TC-F03-S01-041 against the raw document; every other
+ * F03 check reads the nullability the specs state, so it still fails on a missing, extra-typed or
+ * wrongly typed field. Fails loudly when the schema does not exist.
+ */
+export function contractValidator(name: string): ValidateFunction {
+  const document = committedContract();
+  const schemas = JSON.parse(JSON.stringify(document.components?.schemas ?? {})) as Record<string, { properties?: Record<string, Record<string, unknown>> }>;
+  if (!schemas[name]) throw new Error(`docs/api/openapi.json defines no schema named ${name}`);
+  for (const schema of Object.values(schemas)) {
+    for (const [key, property] of Object.entries(schema.properties ?? {})) {
+      const types = property.type;
+      if (typeof property.$ref === 'string' && Array.isArray(types) && types.includes('null')) {
+        const { $ref, type: _type, ...rest } = property;
+        schema.properties![key] = { ...rest, anyOf: [{ $ref }, { type: 'null' }] };
+      }
+    }
+  }
+  const ajv = new Ajv2020({ allErrors: true, strict: true });
+  addFormats(ajv);
+  ajv.addVocabulary(['example', 'xml', 'externalDocs', 'discriminator', 'components']);
+  return ajv.compile({ $id: 'https://contract.test/openapi.json', $ref: `#/components/schemas/${name}`, components: { schemas } });
+}
+
+/** The identity helper's `json`, with the F03 reading of nullable references (contractValidator). */
+export async function contractJson<T>(response: APIResponse, schema: string, status = 200): Promise<T> {
+  const answer = await answerOf(response);
+  expect(answer.status, `${schema}: HTTP status (body ${answer.status >= 400 ? answer.body.slice(0, 200) : 'withheld'})`).toBe(status);
+  expect(answer.contentType, `${schema}: content type`).toBe('application/json');
+  const body = JSON.parse(answer.body);
+  expect(Boolean(contractValidator(schema)(body)), `${schema}: generated contract shape`).toBe(true);
+  return body as T;
+}
+
 export async function operatorJson<T>(response: APIResponse, schema: keyof typeof CONTRACT.schemas, status = 200): Promise<T> {
   const answer = await answerOf(response);
   expect(answer.status, `${schema}: HTTP status (body ${answer.status >= 400 ? answer.body.slice(0, 200) : 'withheld'})`).toBe(status);
   expect(answer.contentType, `${schema}: content type`).toBe('application/json');
   const body = JSON.parse(answer.body);
-  const validate = schemaValidator(CONTRACT.schemas[schema]);
+  const validate = contractValidator(CONTRACT.schemas[schema]);
   // A credential-bearing body is never printed; only whether it matched.
   expect(Boolean(validate(body)), `${schema}: generated contract shape`).toBe(true);
   return body as T;

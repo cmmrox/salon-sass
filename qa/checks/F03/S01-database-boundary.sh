@@ -39,15 +39,24 @@ denied() { # denied <label> <output>
 }
 random_key() { node -e 'process.stdout.write(require("crypto").randomBytes(32).toString("hex"))'; }
 free_port() { node -e 'const n=require("net");const s=n.createServer();s.listen(0,"127.0.0.1",()=>{console.log(s.address().port);s.close()});'; }
-PLATFORM_TABLES="operator_user operator_session operator_refresh_history operator_mfa_challenge operator_mfa_step operator_rate_bucket plan provisioning_receipt platform_audit_entry subscription invoice_number invoice charge_attempt invoice_payment provider_event billing_reminder salon_lifecycle_event salon_export salon_export_part"
+PLATFORM_TABLES="operator_user operator_session operator_refresh_history operator_mfa_challenge operator_mfa_step operator_rate_bucket plan provisioning_receipt platform_audit_entry subscription invoice_number invoice charge_attempt invoice_payment provider_event billing_reminder salon_lifecycle_event salon_export salon_export_part support_session support_entry_code"
 PLATFORM_FUNCTIONS="$(printf "SELECT p.oid::regprocedure FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE n.nspname = 'public' AND has_function_privilege('%s', p.oid, 'EXECUTE') AND p.proname IN ('identity_bootstrap_owner','branding_bootstrap_brand','identity_active_staff_count','outbox_enqueue_for_salon','identity_revoke_closed_salon_sessions','outbox_cancel_closed_salon','identity_erase_salon_rows','branding_erase_salon_rows','audit_erase_salon_rows','outbox_erase_salon_rows');\n" "$PLATFORM_USER" | owner_psql)"
 
 begin_case TC-F03-S01-027 "Tenant and platform database roles cannot cross the platform boundary"
 load_salons
 ALPHA="$(salon_value alpha ID)"
 FIXED_BEFORE="$(printf "SELECT string_agg(id::text||':'||slug||':'||status, ',' ORDER BY slug) FROM tenant WHERE slug IN ('alpha','beta','gamma');\n" | owner_psql)"
+# The shared Playwright identity fixture resets the fixed salons' staff around every test, so this
+# check arranges its own: one synthetic Manager on alpha through the F02 seed hook (additive,
+# random credentials kept in this shell only; the next identity fixture reset removes it).
+if [ "$(printf "SELECT count(*) FROM identity_staff WHERE tenant_id = '%s';\n" "$ALPHA" | owner_psql)" = 0 ]; then
+  SEED="$(node -e 'const c=require("crypto");process.stdout.write(JSON.stringify({accounts:[{email:`qa-f03-boundary-${c.randomUUID()}@example.invalid`,mobile:`077${c.randomInt(1000000,10000000)}`,password:`QA ${c.randomBytes(20).toString("hex")}`,role:"MANAGER"}]}))')"
+  SEEDED="$(curl -s --max-time 10 -X POST -H "Host: $(salon_value alpha HOST)" -H 'Content-Type: application/json' --data "$SEED" "$API_URL/local/identity/seed")"
+  unset SEED
+  [ "$SEEDED" = '{"accounts":1}' ] || environment_fault "the F02 identity seed hook did not add a staff member to alpha: $SEEDED"
+fi
 STAFF_BEFORE="$(printf "SELECT count(*) FROM identity_staff WHERE tenant_id = '%s';\n" "$ALPHA" | owner_psql)"
-[ "${STAFF_BEFORE:-0}" -gt 0 ] || environment_fault "alpha has no staff rows to protect; seed the F02 fixtures first"
+[ "${STAFF_BEFORE:-0}" -gt 0 ] || environment_fault "alpha has no staff rows to protect after seeding"
 for table in $PLATFORM_TABLES; do
   denied "tenant role reads $table" "$(as_salon "$ALPHA" "select count(*) from $table")"
   denied "tenant role deletes from $table" "$(as_salon "$ALPHA" "delete from $table")"
@@ -111,7 +120,8 @@ while IFS='=' read -r key value; do
 done <"$IDENTITY_KEY_FILE"
 [ "${#IDENTITY_KEYS[@]}" = 4 ] || environment_fault "all four retained identity keys are required"
 KEYS=("${IDENTITY_KEYS[@]}" SALON_OPERATOR_SIGNING_KEY="$(random_key)" SALON_OPERATOR_CHALLENGE_KEY="$(random_key)" SALON_OPERATOR_ENCRYPTION_KEY="$(random_key)"
-  SALON_OPERATOR_PROXY_KEY="$(random_key)" SALON_OPERATOR_FINGERPRINT_KEY="$(random_key)" SALON_EXPORT_KEY="$(random_key)")
+  SALON_OPERATOR_PROXY_KEY="$(random_key)" SALON_OPERATOR_FINGERPRINT_KEY="$(random_key)" SALON_EXPORT_KEY="$(random_key)"
+  SALON_SUPPORT_SIGNING_KEY="$(random_key)")
 
 begin_case TC-F03-S01-028 "The API refuses to start with an owning, RLS-bypassing or missing platform role"
 printf "CREATE ROLE %s LOGIN PASSWORD 'qa-bypass-local-only' BYPASSRLS;\n" "$BYPASS_ROLE" | owner_psql >/dev/null

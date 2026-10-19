@@ -36,7 +36,8 @@ test('TC-F03-S01-029 Platform audit records operator and creation events immutab
   const audit = platformAuditWhere(`created_at >= ${sqlLiteral(fixed)} AND (actor_id = ${sqlLiteral(admin.principal.id)} OR subject_id IN (${
     [admin.principal.id, plan.id, made.created.id].map(sqlLiteral).join(', ')}))`);
   const actions = audit.map(e => e.action);
-  for (const action of ['sign_in_failed', 'signed_in', 'signed_out', 'plan.created', 'salon.created']) {
+  // Action names as recorded (the spec does not name them; the S01 handoff abbreviates the operator. prefix).
+  for (const action of ['operator.sign_in_failed', 'operator.signed_in', 'operator.signed_out', 'plan.created', 'salon.created']) {
     expect(actions.filter(a => a === action).length, `${action} recorded once`).toBe(1);
   }
   expect(audit.find(e => e.action === 'plan.created')!.subjectId).toBe(plan.id);

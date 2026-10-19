@@ -84,7 +84,9 @@ test(`${id(18)} Invalid plan definitions are refused with field errors and creat
     await test.step(label, async () => {
       const problem = await operatorProblem(await operator.createPlanRaw(admin, body), 400, 'bad_request');
       expect(fieldsOf(problem), `${label} names ${field}`).toContain(field);
-      if (typeof body.key === 'string') expect((await operator.planPage(admin, `?q=${encodeURIComponent(body.key)}`)).total).toBe(0);
+      // Search is a literal substring, so a short key also matches longer ones: count exact keys.
+      if (typeof body.key === 'string') expect((await operator.planPage(admin, `?q=${encodeURIComponent(body.key)}&size=100`)).items
+        .filter(p => p.key === body.key), `${label}: no plan with that key`).toEqual([]);
     });
   }
   await operatorProblem(await operator.createPlanRaw(admin, planInput({ key: taken.key })), 409, 'plan_key_taken');

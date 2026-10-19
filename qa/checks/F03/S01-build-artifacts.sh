@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # TC-F03-S01-040: built web artifacts contain no environment file and no identity, operator,
-# billing or export key value. Reads the existing build output; never builds, never edits the
+# billing, export or support key value. Reads the existing build output; never builds, never edits the
 # repository. Key values are read from the retained local key files and never printed.
 set -u
 . "$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)/shared/checks.sh"
@@ -13,7 +13,7 @@ trap 'rm -rf "$WORK"' EXIT
 # One fixed-string pattern per retained key value, in a file only this check reads.
 PATTERNS="$WORK/patterns"
 : >"$PATTERNS"; chmod 600 "$PATTERNS"
-for file in identity-keys operator-keys billing-keys export-keys; do
+for file in identity-keys operator-keys billing-keys export-keys support-keys; do
   path="$PRODUCT_ROOT/.local/$file.properties"
   [ -f "$path" ] || { [ "$file" = billing-keys ] && continue; environment_fault "retained key file .local/$file.properties is absent"; }
   sed -n 's/^[^=#]*=[[:space:]]*\([0-9a-fA-F]\{32,\}\)[[:space:]]*$/\1/p' "$path" >>"$PATTERNS"

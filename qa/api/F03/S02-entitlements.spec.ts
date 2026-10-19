@@ -15,7 +15,7 @@ import { Customers } from '../../shared/customer-identity';
 import { Profiles } from '../../shared/customer-profile';
 import { ROLES, json, syntheticAccount, type Identity, type Role, type Tokens } from '../../shared/identity';
 import {
-  test, expect, alpha, SECOND, fieldsOf, onSalonHost, operatorProblem, ownerSession, plusMs, tenantMutationRoutes,
+  test, expect, alpha, SECOND, contractJson, fieldsOf, onSalonHost, operatorProblem, ownerSession, plusMs, tenantMutationRoutes,
   type Entitlements, type Operator, type TestClock,
 } from '../../shared/operator';
 import type { Salon } from '../../shared/tenants';
@@ -40,7 +40,7 @@ async function provisioned(operator: Operator, clock: TestClock, createdAt: stri
 }
 
 async function usage(identity: Identity, salon: Salon, tokens: Tokens) {
-  return (await json<Entitlements>(await onSalonHost(identity, salon, 'GET', ENTITLEMENTS, tokens), 'Entitlements')).usage.staffSeats;
+  return (await contractJson<Entitlements>(await onSalonHost(identity, salon, 'GET', ENTITLEMENTS, tokens), 'Entitlements')).usage.staffSeats;
 }
 
 test(`${id(14)} A read-only salon keeps reads and exempt identity actions and refuses every other mutation`, async ({ operator, identity, clock }) => {
@@ -130,8 +130,8 @@ test(`${id(15)} One salon's billing state, entitlements and invoices never reach
   await operatorProblem(await onSalonHost(identity, b.salon, 'GET', `${INVOICES}/${invoiceA.id}`, tokensB), 404, 'not_found');
   await operatorProblem(await onSalonHost(identity, a.salon, 'GET', `${INVOICES}/${invoiceA.id}`, tokensB), 404, 'not_found');
   await operatorProblem(await onSalonHost(identity, alpha, 'GET', `${INVOICES}/${invoiceB.id}`, alphaOwner.tokens), 404, 'not_found');
-  const entA = await json<Entitlements>(await onSalonHost(identity, a.salon, 'GET', ENTITLEMENTS, tokensA), 'Entitlements');
-  const entB = await json<Entitlements>(await onSalonHost(identity, b.salon, 'GET', ENTITLEMENTS, tokensB), 'Entitlements');
+  const entA = await contractJson<Entitlements>(await onSalonHost(identity, a.salon, 'GET', ENTITLEMENTS, tokensA), 'Entitlements');
+  const entB = await contractJson<Entitlements>(await onSalonHost(identity, b.salon, 'GET', ENTITLEMENTS, tokensB), 'Entitlements');
   expect(entA.subscription!.state).toBe('read_only');
   expect(entB.subscription!.state).toBe('active');
   await operatorProblem(await onSalonHost(identity, a.salon, 'GET', ENTITLEMENTS, tokensB), 404, 'not_found');
@@ -177,7 +177,7 @@ test(`${id(20)} Every staff role reads its own entitlements and only the Owner r
   expect(actors.length, 'five staff roles').toBe(5);
   for (const actor of actors) {
     await test.step(actor.role, async () => {
-      const ent = await json<Entitlements>(await onSalonHost(identity, salon, 'GET', ENTITLEMENTS, actor.tokens), 'Entitlements');
+      const ent = await contractJson<Entitlements>(await onSalonHost(identity, salon, 'GET', ENTITLEMENTS, actor.tokens), 'Entitlements');
       expect(ent.plan).toEqual({ key: plan.key, name: plan.name });
       expect(ent.limits).toEqual({ staffSeats: plan.staffSeats, branches: plan.branches, messageAllowance: plan.messageAllowance });
       expect(ent.features).toEqual({ customDomain: plan.customDomain, dedicatedApp: plan.dedicatedApp });
