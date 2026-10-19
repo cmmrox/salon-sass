@@ -135,8 +135,13 @@ test(`${id(41)} The generated contract states the nullability and success status
   // Under OpenAPI 3.1 a sibling `type` beside `$ref` applies together with it, so a "nullable"
   // reference written that way still forbids null (S01 spec: the generated contract and client
   // include nullability; S01 legacy `plan`, `credentials` before MFA, S02 legacy entitlements).
+  // The same holds for an `enum` beside a nullable `type` that does not list null.
   const forbidsNull = schemas.flatMap(([name, schema]) => Object.entries(schema.properties ?? {})
-    .filter(([, p]) => { const q = p as { $ref?: string; type?: unknown }; return typeof q.$ref === 'string' && Array.isArray(q.type) && q.type.includes('null'); })
+    .filter(([, p]) => {
+      const q = p as { $ref?: string; type?: unknown; enum?: unknown[] };
+      if (!Array.isArray(q.type) || !q.type.includes('null')) return false;
+      return typeof q.$ref === 'string' || (Array.isArray(q.enum) && !q.enum.includes(null));
+    })
     .map(([property]) => `${name}.${property}`));
   expect(forbidsNull, 'nullable object properties are expressed so that null validates').toEqual([]);
   // Success statuses from the S04 spec's API table and handoff.

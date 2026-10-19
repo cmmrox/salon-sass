@@ -160,7 +160,7 @@ export type OperatorRole = 'OPERATOR_ADMIN' | 'OPERATOR_SUPPORT';
 export type OperatorAccount = { email: string; password: string; role: OperatorRole; displayName: string; totpSecret?: string };
 export type OperatorSignIn = components['schemas']['OperatorSignIn'];
 export type OperatorPrincipal = { id: string; kind: string; role: OperatorRole; permissions: string[]; mfaEnabled: boolean };
-export type OperatorActor = { account: OperatorAccount; tokens: Tokens; principal: OperatorPrincipal };
+export type OperatorActor = { account: OperatorAccount; tokens: Tokens; principal: OperatorPrincipal; signedInAt?: string };
 export type Plan = components['schemas']['PlanDefinition'];
 export type PlanInput = Omit<Plan, 'id' | 'createdAt' | 'updatedAt'>;
 export type Page<T> = { items: T[]; page: number; size: number; total: number };
@@ -223,6 +223,27 @@ export const strongPassword = () => `QA ${hex(20)}`;
 export const DAY = 86_400_000;
 export const SECOND = 1_000;
 export const plusMs = (instant: string, ms: number) => new Date(Date.parse(instant) + ms).toISOString();
+/**
+ * Exact instants. The API answers with microseconds (`...30.254315Z`) and JavaScript's Date keeps
+ * milliseconds, so an instant the product computed (trial end, a period, the read-only instant) is
+ * compared in microseconds, never through Date.
+ */
+export function instantMicros(iso: string): bigint {
+  const m = /^(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d)(?:\.(\d{1,9}))?(Z|[+-]\d\d:\d\d)$/.exec(iso);
+  if (!m) throw new Error(`not an ISO instant: ${iso}`);
+  return BigInt(Date.parse(`${m[1]}${m[3]}`)) * 1000n + BigInt((m[2] ?? '').padEnd(6, '0').slice(0, 6));
+}
+/** The canonical UTC form of an instant, with six fractional digits. */
+export function exact(iso: string): string {
+  return isoOf(instantMicros(iso));
+}
+/** An instant plus a whole number of milliseconds, keeping its microseconds. */
+export function plusExact(iso: string, ms: number): string {
+  return isoOf(instantMicros(iso) + BigInt(ms) * 1000n);
+}
+function isoOf(us: bigint): string {
+  return `${new Date(Number(us / 1000n)).toISOString().slice(0, 19)}.${String(us % 1_000_000n).padStart(6, '0')}Z`;
+}
 
 export function base32Secret(): string {
   return syntheticAccount('OWNER', true).totpSecret!;
@@ -327,8 +348,9 @@ export const platformAudit = (subjectId: string) => platformAuditWhere(`subject_
 
 /**
  * A validator for a schema of the committed contract, reading a property written as
- * `{"$ref": X, "type": [..., "null"]}` as "X or null". Under OpenAPI 3.1 (JSON Schema 2020-12) the
- * two keywords both apply, so the document as generated forbids the null the specs require
+ * `{"$ref": X, "type": [..., "null"]}` as "X or null", and a nullable `enum` that omits null as
+ * also allowing null. Under OpenAPI 3.1 (JSON Schema 2020-12) these keywords all apply together, so
+ * the document as generated forbids the null the specs require
  * (S01: legacy `plan`, `credentials` before MFA; S02: legacy entitlements). That contract defect is
  * BUG-F03-001 and is asserted on its own by TC-F03-S01-041 against the raw document; every other
  * F03 check reads the nullability the specs state, so it still fails on a missing, extra-typed or
@@ -341,9 +363,12 @@ export function contractValidator(name: string): ValidateFunction {
   for (const schema of Object.values(schemas)) {
     for (const [key, property] of Object.entries(schema.properties ?? {})) {
       const types = property.type;
-      if (typeof property.$ref === 'string' && Array.isArray(types) && types.includes('null')) {
+      if (!Array.isArray(types) || !types.includes('null')) continue;
+      if (typeof property.$ref === 'string') {
         const { $ref, type: _type, ...rest } = property;
         schema.properties![key] = { ...rest, anyOf: [{ $ref }, { type: 'null' }] };
+      } else if (Array.isArray(property.enum) && !property.enum.includes(null)) {
+        schema.properties![key] = { ...property, enum: [...property.enum, null] };
       }
     }
   }
@@ -515,7 +540,7 @@ export class Operator {
       expect(challenge.state).toBe('verify_mfa');
     }
     const tokens = await this.tokens(await this.verifyRaw(challenge, await this.code(account.totpSecret)));
-    return { account, tokens, principal: await this.me(tokens) };
+    return { account, tokens, principal: await this.me(tokens), signedInAt: await this.now() };
   }
 
   async me(tokens: Tokens): Promise<OperatorPrincipal> { return operatorJson(await this.call('GET', '/me', { tokens }), 'principal'); }
@@ -528,13 +553,20 @@ export class Operator {
 
   /**
    * Fresh credentials for an actor after the test clock moved: access lasts five minutes and a
-   * session seven days. Renewal first; a full sign-in (a new TOTP step) when the session ended.
+   * session seven days. Renewal first; a full sign-in (a new TOTP step) when the session ended or
+   * ends within ten minutes (billing's due instant is exactly seven days after issue, so a renewal
+   * there could land milliseconds before the session's absolute end).
    */
   async renew(actor: OperatorActor): Promise<OperatorActor> {
-    const r = await this.refreshRaw(actor.tokens.refreshToken);
-    if (r.status() === 200) { actor.tokens = await this.tokens(r); return actor; }
+    const now = Date.parse(await this.now());
+    const nearEnd = !actor.signedInAt || now - Date.parse(actor.signedInAt) >= 7 * DAY - 10 * 60_000;
+    if (!nearEnd) {
+      const r = await this.refreshRaw(actor.tokens.refreshToken);
+      if (r.status() === 200) { actor.tokens = await this.tokens(r); return actor; }
+    }
     const fresh = await this.login(actor.account);
     actor.tokens = fresh.tokens;
+    actor.signedInAt = fresh.signedInAt;
     return actor;
   }
 

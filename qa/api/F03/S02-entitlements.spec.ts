@@ -30,6 +30,8 @@ const EXEMPT = new Set([
   'POST /api/v1/identity/staff/mfa/verify', 'POST /api/v1/identity/sessions/refresh', 'DELETE /api/v1/identity/sessions',
   'DELETE /api/v1/identity/sessions/{id}', 'PUT /api/v1/identity/staff/password', 'POST /api/v1/identity/customers/challenges',
   'POST /api/v1/identity/customers/sign-in', 'PUT /api/v1/identity/customers/me', 'DELETE /api/v1/identity/customers/me',
+  // Decision 053 (F03-S04): an Owner may revoke support access even while the salon is read-only.
+  'DELETE /api/v1/salon/support-sessions/{id}',
 ]);
 
 async function provisioned(operator: Operator, clock: TestClock, createdAt: string, staffSeats = 5) {

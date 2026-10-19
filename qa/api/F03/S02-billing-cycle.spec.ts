@@ -16,7 +16,7 @@ import {
 } from '../../shared/billing';
 import { syntheticAccount } from '../../shared/identity';
 import {
-  test, expect, alpha, DAY, SECOND, fieldsOf, operatorJson, operatorProblem, ownerSession, plusMs, CONSOLE_HOST,
+  test, expect, alpha, DAY, SECOND, exact, fieldsOf, operatorJson, plusExact, operatorProblem, ownerSession, plusMs, CONSOLE_HOST,
   type Operator, type Payment, type SalonInput, type TestClock,
 } from '../../shared/operator';
 
@@ -55,9 +55,9 @@ test(`${id(4)} Crossing trial end issues exactly one correct first invoice`, asy
     status: 'open', paidAt: null, payments: [],
   });
   // Asia/Colombo has no clock change, so one calendar month is the same wall time a month later.
-  expect(invoice.periodStart).toBe(new Date(trialEnd).toISOString());
-  expect(invoice.periodEnd).toBe(new Date(Date.parse(trialEnd) + 30 * DAY).toISOString());
-  expect(invoice.issuedAt, 'issued at the boundary').toBe(new Date(trialEnd).toISOString());
+  expect(exact(invoice.periodStart)).toBe(exact(trialEnd));
+  expect(exact(invoice.periodEnd)).toBe(plusExact(trialEnd, 30 * DAY));
+  expect(exact(invoice.issuedAt), 'issued at the boundary').toBe(exact(trialEnd));
   expect(Date.parse(invoice.dueAt) - Date.parse(invoice.issuedAt), 'due seven days after issue').toBe(7 * DAY);
   expect(numbersAfter(before), 'no gap and no repeat').toEqual([before + 1]);
 });
@@ -87,7 +87,7 @@ test(`${id(6)} Monthly invoices follow the anchor day, including a 31st anchor i
     await test.step(row.label, async () => {
       const { admin, created, subscription } = await billed(operator, clock, row.createdAt, { timeZone: row.timeZone });
       const trialEnd = subscription.trialEndsAt;
-      const issues = [trialEnd, ...row.offsets.map(o => plusMs(trialEnd, o))];
+      const issues = [trialEnd, ...row.offsets.map(o => plusExact(trialEnd, o))];
       for (const [n, instant] of issues.entries()) {
         await billAt(operator, clock, plusMs(instant, -SECOND));
         await operator.renew(admin);
@@ -98,7 +98,7 @@ test(`${id(6)} Monthly invoices follow the anchor day, including a 31st anchor i
         const page = await operator.invoices(admin, created.id);
         expect(page.total, `${row.label}: one invoice for period ${n + 1}`).toBe(n + 1);
         const latest = page.items.reduce((a, b) => (Date.parse(a.issuedAt) > Date.parse(b.issuedAt) ? a : b));
-        expect(latest.issuedAt, `${row.label}: issue ${n + 1} at the local anchor`).toBe(new Date(instant).toISOString());
+        expect(exact(latest.issuedAt), `${row.label}: issue ${n + 1} at the local anchor`).toBe(exact(instant));
         expect(latest.periodStart).toBe(latest.issuedAt);
         await operator.pay(admin, latest);
       }
@@ -290,7 +290,7 @@ test(`${id(13)} Due, reminder and read-only boundaries change state and send eac
     });
   }
   const final = await operator.subscription(admin, created.id);
-  expect(final.readOnlyAt, 'read-only from 14 days after the due instant').toBe(plusMs(invoice.dueAt, BOUNDARY.read_only));
+  expect(exact(final.readOnlyAt!), 'read-only from 14 days after the due instant').toBe(plusExact(invoice.dueAt, BOUNDARY.read_only));
   expect(await kinds(), 'each notice exactly once').toEqual(['billing.due', 'billing.due_10', 'billing.due_3', 'billing.read_only']);
 });
 
