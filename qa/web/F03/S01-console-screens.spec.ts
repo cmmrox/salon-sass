@@ -1,6 +1,7 @@
 /**
  * F03-S01 console screens: the keyboard journey, the width matrix, accessibility, and what each
- * operator role is shown. Cases TC-F03-S01-032 to -035 (cases.md); -036 is manual.
+ * operator role is shown, and the plan pickers reaching every plan. Cases TC-F03-S01-032 to -035
+ * and -042 (cases.md); -036 is manual.
  *
  * Arrangement is through the API with real operator credentials bridged into the console's
  * cookies; the journey itself (-032) signs in through the screens by keyboard. Test ids are the
@@ -11,7 +12,8 @@ import type { Locator, Page } from '@playwright/test';
 import {
   test, expect, WIDTHS, consoleContext, consoleUrl, expectAccessible, expectFits, expectSheetFocus, signInByKeyboard,
 } from '../../shared/console-browser';
-import { afterNewestPlan, operatorAccount, uniqueSlug, strongPassword, type Operator } from '../../shared/operator';
+import { identitySql } from '../../shared/identity-storage';
+import { afterNewestPlan, operatorAccount, sqlLiteral, uniqueSlug, strongPassword, type Operator } from '../../shared/operator';
 
 const id = (n: number) => `TC-F03-S01-${String(n).padStart(3, '0')}`;
 
@@ -196,4 +198,45 @@ test(`${id(35)} Each operator role sees exactly its console navigation and Suppo
   expect(supportLinks, 'Support navigation: Salons, Support sessions').toEqual(['/console/salons', '/console/support']);
   await expect(supportPage.getByTestId('console-sign-out')).toBeVisible();
   await supportContext.close();
+});
+
+test(`${id(42)} Every plan can be chosen in the console's plan pickers`, async ({ browser, operator, clock }) => {
+  test.setTimeout(240_000);
+  const admin = await operator.actor();
+  // An older plan, behind at least one full picker page (100) of newer plans.
+  const older = await operator.plan(admin, { name: `QA older plan ${uniqueSlug('o')}` });
+  const newer = () => Number(identitySql(`SELECT count(*) FROM plan WHERE created_at > (SELECT created_at FROM plan WHERE id = ${sqlLiteral(older.id)})`));
+  if (newer() < 100) {
+    await clock.set(afterNewestPlan());
+    await operator.renew(admin);
+    for (let n = newer(); n < 100; n++) await operator.plan(admin);
+  }
+  expect(newer(), 'a full picker page of newer plans exists').toBeGreaterThanOrEqual(100);
+  const current = await operator.plan(await operator.renew(admin));
+  const made = await operator.salon(admin, current.id);
+  const context = await consoleContext(browser, await operator.renew(admin));
+  const page = await context.newPage();
+  // Create salon: more plans than one page, so the picker pages; a literal search finds the older one.
+  await page.goto(consoleUrl('/console/salons'));
+  await page.getByTestId('console-create-salon').click();
+  await expect(page.getByTestId('console-create-salon-sheet')).toBeVisible();
+  await expect(page.getByTestId('console-plan-id-pagination'), 'the picker pages beyond 100 plans').toBeVisible();
+  await page.getByTestId('console-plan-id-search').fill(older.key);
+  await page.getByTestId('console-plan-id-search-submit').click();
+  await page.getByTestId('console-plan-id').click();
+  await page.getByTestId(`console-plan-id-option-${older.id}`).click();
+  await expect(page.getByTestId('console-plan-id'), 'the older plan is chosen').toContainText(older.name);
+  await page.keyboard.press('Escape');
+  // Move plan: the same plan is found and the salon is moved to it.
+  await page.goto(consoleUrl(`/console/salons/${made.created.id}`));
+  await page.getByTestId('console-move-plan').click();
+  await expect(page.getByTestId('console-move-plan-sheet')).toBeVisible();
+  await page.getByTestId('console-move-plan-id-search').fill(older.key);
+  await page.getByTestId('console-move-plan-id-search-submit').click();
+  await page.getByTestId('console-move-plan-id').click();
+  await page.getByTestId(`console-move-plan-id-option-${older.id}`).click();
+  await page.getByTestId('console-move-plan-submit').click();
+  await expect(page.getByTestId('console-move-plan-sheet')).toBeHidden();
+  expect((await operator.salonDetail(await operator.renew(admin), made.created.id)).plan?.id, 'moved to the older plan (API)').toBe(older.id);
+  await context.close();
 });

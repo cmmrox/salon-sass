@@ -26,7 +26,7 @@ asked for; the cases of a stage are written at its feature's pass.
 | F02-S02 | complete | - | IAM-01, IAM-03, IAM-09, IAM-10, IAM-11, NFR-08, NFR-10 | 8 | 18 | 18 | 0 | 0 |
 | F02-S03 | complete | - | IAM-03, IAM-04, IAM-05, IAM-11, NFR-08, NFR-10 | 6 | 14 | 14 | 0 | 0 |
 | F02-S04 | complete | - | IAM-01, IAM-03, IAM-04, IAM-05, IAM-06, IAM-07, IAM-08, IAM-09, IAM-10, IAM-11, NFR-08, NFR-10, NFR-21 | 14 | 31 | 28 | 3 | 0 |
-| F03-S01 | complete | - | PLT-01, PLT-04 | 20 | 42 | 40 | 1 | 1 |
+| F03-S01 | complete | - | PLT-01, PLT-04 | 20 | 42 | 41 | 1 | 0 |
 | F03-S02 | complete | - | PLT-04, PLT-05 | 16 | 28 | 28 | 0 | 0 |
 | F03-S03 | complete | - | PLT-06 | 12 | 17 | 17 | 0 | 0 |
 | F03-S04 | complete | - | PLT-07, NFR-20 | 10 | 17 | 17 | 0 | 0 |
@@ -38,7 +38,6 @@ Cases waiting for something else. `feature-verify` and `release-prepare` go thro
 | Scope | Case | Reason | Unblocked by |
 | --- | --- | --- | --- |
 | F01 | TC-F01-002 | First real-host deployment is outside local F01 proof, explicitly deferred by decision 018 and CR-005; public certificate, remote delivery and provider-dependent monitoring are not certified. | Owner decides D-08 hosting and D-02 platform domain, configures the DNS challenge module and credentials, provides host access, and explicitly requests staging deployment. |
-| F03-S01 | TC-F03-S01-042 | Found with BUG-F03-006 (the pickers list only the 100 newest plans); there is no way to choose an older plan to automate until the fix exists | BUG-F03-006 |
 
 ## Requirements
 

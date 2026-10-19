@@ -10,7 +10,7 @@ import { randomUUID } from 'node:crypto';
 import { Customers } from '../../shared/customer-identity';
 import { ROLES, json, syntheticAccount, type Tokens } from '../../shared/identity';
 import {
-  test, expect, alpha, DAY, WRONG_HOSTS, contractJson, fieldsOf, operatorJson, operatorProblem, salonInput,
+  test, expect, alpha, DAY, WRONG_HOSTS, fieldsOf, operatorJson, operatorProblem, salonInput,
   type Entitlements, type OperatorActor, type Operator, type Subscription,
 } from '../../shared/operator';
 
@@ -118,7 +118,7 @@ test(`${id(3)} An unbilled legacy salon works without a subscription until an Ad
   const detail = await operator.salonDetail(admin, legacy.id);
   expect({ plan: detail.plan, currency: detail.currency, status: detail.status }, 'a legacy salon: no plan, no currency').toEqual({ plan: null, currency: null, status: 'active' });
   const owner = await identity.staff(legacy, 'OWNER');
-  const entitlements = await contractJson<Entitlements>(await identity.api.send('GET', ENTITLEMENTS, { headers: { Host: legacy.hostname, Authorization: `Bearer ${owner.tokens.accessToken}` } }), 'Entitlements');
+  const entitlements = await json<Entitlements>(await identity.api.send('GET', ENTITLEMENTS, { headers: { Host: legacy.hostname, Authorization: `Bearer ${owner.tokens.accessToken}` } }), 'Entitlements');
   expect(entitlements.subscription, 'no subscription').toBeNull();
   expect((await identity.call(legacy, 'POST', '/staff', syntheticAccount('MANAGER'), owner.tokens)).status(), 'the salon works normally').toBe(201);
   // A salon without a currency must be given one when billing starts (decision 051).
