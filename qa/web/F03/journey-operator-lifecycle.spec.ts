@@ -4,7 +4,7 @@
  * Stage rules are not repeated: each step's outcome is checked once more through the API.
  *
  * The support step uses the S04 test ids, credential shape and schemas the S04 handoff names
- * (qa/shared/operator.ts PENDING_S04); until then the journey stops there with `ENVIRONMENT:`.
+ * (qa/shared/operator.ts PENDING_S04).
  */
 import { firstInvoice } from '../../shared/billing';
 import {

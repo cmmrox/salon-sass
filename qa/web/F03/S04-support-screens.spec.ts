@@ -112,7 +112,9 @@ test(`${id(7)} Every mutating control in the support view is disabled with the r
   await page.goto(`${salonUrl(target.salon, webUrl)}/workspace/staff`);
   await expect(page.getByTestId('workspace-main')).toBeVisible();
   const ids = await page.locator('button[data-testid]').evaluateAll(buttons => buttons.map(b => b.getAttribute('data-testid') ?? '')
-    .filter(id => /create|remove|change|revoke|save|submit|logout-all|role/.test(id)));
+    // Actions only: the add-staff form's own fields (account-staff-new-*, including its Role picker)
+    // are inputs, not mutations; its submit (account-staff-create) is an action and is listed.
+    .filter(id => /create|remove|change|revoke|save|submit|logout-all|role/.test(id) && !/-new-/.test(id)));
   expect(ids.length, 'mutating controls are present to inspect').toBeGreaterThan(0);
   for (const testId of ids) await expect(page.getByTestId(testId).first(), `${testId} disabled in the support view`).toBeDisabled();
   await context.close();
@@ -198,7 +200,10 @@ test(`${id(15)} Support screens show every state and the banner is announced and
 
 test(`${id(16)} Support screens fit every width without clipping or horizontal scroll`, async ({ browser, operator, identity, accounts }) => {
   test.setTimeout(240_000);
-  const { support, target } = await arrange(operator);
+  const { admin, support, target } = await arrange(operator);
+  // Support lists only its own sessions: it gets one, on a second salon so this salon's Start stays offered.
+  const second = await operator.salon(admin, (await operator.plan(admin)).id);
+  await start(operator, support, second.created.id);
   for (let n = 0; n < 6; n++) {
     const extra = await operator.actor('OPERATOR_SUPPORT');
     const s = await start(operator, extra, target.created.id);
@@ -217,6 +222,14 @@ test(`${id(16)} Support screens fit every width without clipping or horizontal s
     await expect(page.getByTestId(tid('sessionList'))).toBeVisible();
     await expectFits(page, `session list at ${viewport.width}`);
     await consoleSide.close();
+    // The Admin's list holds every session, a longer list.
+    const adminSide = await consoleContext(browser, await operator.renew(admin), { width: viewport.width });
+    const adminPage = await adminSide.newPage();
+    await adminPage.goto(consoleUrl('/console/support'));
+    await expect(adminPage.getByTestId(tid('sessionRow')).first()).toBeVisible();
+    expect(await adminPage.getByTestId(tid('sessionRow')).count(), 'several sessions listed for the Admin').toBeGreaterThan(1);
+    await expectFits(adminPage, `Admin session list at ${viewport.width}`);
+    await adminSide.close();
     const session = await start(operator, await operator.actor('OPERATOR_SUPPORT'), target.created.id);
     const viewContext = await browser.newContext({ viewport: { width: viewport.width, height: 900 } });
     const view = await enterView(viewContext, target.salon, session.entryCode);

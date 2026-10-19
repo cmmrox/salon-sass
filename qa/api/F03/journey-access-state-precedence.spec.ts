@@ -2,8 +2,8 @@
  * F03 journey TC-F03-003: access states combine in the documented precedence across billing (S02),
  * lifecycle (S03) and support (S04): `closed` over `suspended` over `read_only` over billing states.
  *
- * The support steps use the S04 spec's routes and codes; the credential shape waits for the S04
- * handoff (qa/shared/operator.ts PENDING_S04), so this journey stops with `ENVIRONMENT:` until then.
+ * The support steps use the S04 spec's routes and codes and the handoff's credential shape
+ * (qa/shared/operator.ts PENDING_S04).
  */
 import { syntheticAccount } from '../../shared/identity';
 import { readOnlySalon } from '../../shared/billing';

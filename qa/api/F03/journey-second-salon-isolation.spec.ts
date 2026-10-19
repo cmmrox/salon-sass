@@ -4,8 +4,7 @@
  * export and deletion. Stage rules are not repeated; after each transition B's and alpha's Owners
  * read and mutate once, and their tenant-table counts are compared.
  *
- * The support step needs the S04 handoff's credential shape (PENDING_S04) and stops with
- * `ENVIRONMENT:` until it is named.
+ * The support step uses the S04 handoff's credential shape (qa/shared/operator.ts PENDING_S04).
  */
 import { crossBoundary, firstInvoice } from '../../shared/billing';
 import { syntheticAccount, type Identity, type Tokens } from '../../shared/identity';
