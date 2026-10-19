@@ -532,6 +532,10 @@ class SalonLifecycleIntegrationTest extends IntegrationTest {
         // Other tests' salons due earlier are deleted first, so the armed interruption meets this salon's.
         CLOCK.set(deleteAt.minusSeconds(1));
         deletion.run(CLOCK.instant());
+        // A salon another test closed in the same second is due at the same instant and, ordered by
+        // id, may be deleted first and take the armed interruption: move it a day later.
+        owner.update("UPDATE tenant SET delete_at = delete_at + interval '1 day' WHERE status = 'closed' AND delete_at = ? AND id <> ?",
+                java.sql.Timestamp.from(deleteAt), a.salon().id());
         CLOCK.set(deleteAt);
         DELETION_AFTER.set(1);
         SalonDeletion.Pass stopped = deletion.run(CLOCK.instant());
