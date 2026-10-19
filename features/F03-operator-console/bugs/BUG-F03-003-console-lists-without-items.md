@@ -2,12 +2,12 @@
 id: BUG-F03-003
 title: Console item lists expose a list role with no list items, so screen readers cannot navigate them
 severity: major
-status: open
+status: fixed
 found_by: TC-F03-S01-034
 breaks: AC-18
 found_on: 2026-10-19
-fixed_in: null
-fix_note: null
+fixed_in: f9d31c4
+fix_note: 'Item defaults to role listitem and a link row (asChild) sits inside a listitem wrapper, so every ItemGroup announces its items; Console/LifecycleScreens tests red then green; axe on 9 console views 0 serious/critical (apps/api/target/f03-bugfix-evidence/a11y-before.json, a11y-after.json); gates (apps/api/target/f03-bugfix-evidence/gates/summary.txt): API verify exit 0 at 4a60e33 (688 tests), lint/typecheck/test/web build/contracts:check exit 0 at f122ad4'
 developer_note: null
 verified_on: null
 approved_by: null

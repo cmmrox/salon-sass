@@ -158,6 +158,19 @@ describe('the committed contract', () => {
     expect(schema).toContain('"salon_suspended"');
     expect(schema).toMatch(/getSalon: \{[\s\S]*?403: \{/);
   });
+
+  it('lets the generated client receive the nulls the API answers (BUG-F03-001)', () => {
+    const schema = readFileSync(join(generatedDirectory, SCHEMA_FILE), 'utf8');
+    const { schemas } = committed.components;
+
+    expect(schemas.SalonDetail.properties.plan).toEqual({
+      oneOf: [{ $ref: '#/components/schemas/PlanSummary' }, { type: 'null' }],
+    });
+    expect(schemas.SubscriptionState.properties.notice.enum).toContain(null);
+    expect(schema).toContain('credentials: components["schemas"]["OperatorTokens"] | null;');
+    expect(schema).toContain('plan: components["schemas"]["PlanSummary"] | null;');
+    expect(schema).toContain('subscription: components["schemas"]["SubscriptionState"] | null;');
+  });
 });
 
 describe('the committed client', () => {

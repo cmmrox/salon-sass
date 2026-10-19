@@ -66,6 +66,25 @@ export function clearCookies(response: NextResponse, kind: Kind) {
   const names = kind === 'support' ? SUPPORT_COOKIES : ['access', 'refresh', 'expires', 'session', 'challenge', 'challenge_id'];
   for (const name of names) setCookie(response, kind, name, '', 0);
 }
+/**
+ * Left on the salon's host when a support view ends (BUG-F03-005): the support cookies may be
+ * cleared by any refused request (a prefetch, a read) before the browser's next page, and that page
+ * must still land on the "session ended" notice rather than the staff sign-in. It carries no
+ * credential and authorizes nothing; it only chooses the notice, and the entry page forgets it.
+ */
+export const SUPPORT_ENDED_COOKIE = 'salon_session_ended';
+const SUPPORT_ENDED_SECONDS = 600;
+export function supportEnded(request: { cookies: { get(name: string): { value: string } | undefined } }): boolean {
+  return request.cookies.get(SUPPORT_ENDED_COOKIE)?.value === 'support';
+}
+/** A support session that ended: its cookies cleared host-only, the ended marker left behind. */
+export function endSupportView(response: NextResponse) {
+  clearCookies(response, 'support');
+  response.cookies.set(SUPPORT_ENDED_COOKIE, 'support', { httpOnly: true, secure: !localHttp(), sameSite: 'lax', path: '/', maxAge: SUPPORT_ENDED_SECONDS });
+}
+function forgetSupportEnded(response: NextResponse) {
+  response.cookies.set(SUPPORT_ENDED_COOKIE, '', { httpOnly: true, secure: !localHttp(), sameSite: 'lax', path: '/', maxAge: 0 });
+}
 function issueSupport(response: NextResponse, credential: SupportCredential) {
   if (!strictInstant(credential.issuedAt) || !strictInstant(credential.expiresAt)) throw new Error('Invalid credential expiry');
   // Both instants are the API's; the support credential lives until its session's expiry, with no refresh.
@@ -89,7 +108,7 @@ async function handleSupport(request: NextRequest, action: string, host: { hostn
   if (!client) return problem('service_unavailable', 503);
   const access = request.cookies.get(cookieName('support', 'access'))?.value;
   const options = { headers: access ? { Authorization: `Bearer ${access}` } : {}, signal: requestSignal() };
-  if (action === 'clear') { const response = output({ ok: true }); clearCookies(response, 'support'); return response; }
+  if (action === 'clear') { const response = output({ ok: true }); clearCookies(response, 'support'); forgetSupportEnded(response); return response; }
   if (action === 'entry') {
     const read = await readBoundedJson(request, 1024);
     if (!read.ok) return problem('bad_request', 400);
@@ -98,13 +117,14 @@ async function handleSupport(request: NextRequest, action: string, host: { hostn
     if (!r.data) return failure(r);
     const response = output({ ok: true, expiresAt: r.data.expiresAt });
     issueSupport(response, r.data);
+    forgetSupportEnded(response);
     return response;
   }
   if (action === 'end') {
     const r = await client.DELETE('/api/v1/support/session', options);
     // Ended now, or already ended: either way the browser leaves the support view.
     const response = r.response.ok || r.response.status === 401 ? output({ ok: true }) : failure(r);
-    if (r.response.ok || r.response.status === 401) clearCookies(response, 'support');
+    if (r.response.ok || r.response.status === 401) endSupportView(response);
     return response;
   }
   const answer = await client.GET('/api/v1/identity/me', options);
@@ -112,7 +132,7 @@ async function handleSupport(request: NextRequest, action: string, host: { hostn
     if (answer.response.status === 503 || (answer.response.status !== 401 && answer.response.status !== 403 && !answer.data)) return problem('service_unavailable', 503);
     // The session ended (expiry, End session, Admin or Owner revocation): the browser leaves the support view.
     const response = problem('invalid_session', 401, { renewable: false });
-    clearCookies(response, 'support');
+    endSupportView(response);
     return response;
   }
   const principal = answer.data;
@@ -125,7 +145,7 @@ async function handleSupport(request: NextRequest, action: string, host: { hostn
     : action === 'audit' ? await client.GET('/api/v1/identity/audit', { ...options, params: { query } })
     : action === 'entitlements' ? await client.GET('/api/v1/salon/entitlements', options)
     : await client.GET('/api/v1/salon/invoices', { ...options, params: { query } });
-  if (result.response.status === 401) { const response = problem('invalid_session', 401, { renewable: false }); clearCookies(response, 'support'); return response; }
+  if (result.response.status === 401) { const response = problem('invalid_session', 401, { renewable: false }); endSupportView(response); return response; }
   return result.data ? output(result.data) : problem(result.error?.code ?? 'service_unavailable', result.response.status, { errors: result.error?.errors });
 }
 function issue(response: NextResponse, kind: Kind, tokens: Tokens) {

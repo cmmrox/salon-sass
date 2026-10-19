@@ -2,12 +2,12 @@
 id: BUG-F03-005
 title: When support access ends, the next page sometimes shows the staff sign-in instead of the "session ended" notice
 severity: minor
-status: open
+status: fixed
 found_by: TC-F03-S04-010
 breaks: AC-10
 found_on: 2026-10-19
-fixed_in: null
-fix_note: null
+fixed_in: f122ad4
+fix_note: 'Ending a support view now also leaves a 10-minute HttpOnly marker (salon_session_ended=support) so a session-less protected page goes to /workspace/support#ended even when a refused prefetch or read cleared the support cookies first; route-request/support tests red then green; on the product 3/3 forced-race attempts landed on sign-in before and 6/6 on the ended notice after (apps/api/target/f03-bugfix-evidence/support-ended-before.json, support-ended-after.json); gates (apps/api/target/f03-bugfix-evidence/gates/summary.txt): API verify exit 0 at 4a60e33 (688 tests), lint/typecheck/test/web build/contracts:check exit 0 at f122ad4'
 developer_note: null
 verified_on: null
 approved_by: null

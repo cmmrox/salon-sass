@@ -105,6 +105,13 @@ describe('the support view', () => {
     expect(response.status).toBe(401);
     expect(await response.json()).toMatchObject({ code: 'invalid_session', renewable: false });
     expect(response.headers.getSetCookie().filter((cookie) => /^salon_support_(access|session)=;/.test(cookie) && /Max-Age=0/i.test(cookie))).toHaveLength(2);
+    expect(response.headers.getSetCookie().filter((cookie) => /^salon_session_ended=support;/.test(cookie) && /HttpOnly/i.test(cookie))).toHaveLength(1);
+  });
+
+  it('forgets the ended marker when the entry page has shown it (clear)', async () => {
+    const response = await run(request('POST', 'clear', { cookies: 'salon_session_ended=support', body: {} }), 'clear');
+    expect(response.status).toBe(200);
+    expect(response.headers.getSetCookie().filter((cookie) => /^salon_session_ended=;/.test(cookie) && /Max-Age=0/i.test(cookie))).toHaveLength(1);
   });
 
   it('ends the session and clears its cookies, also when it had already ended', async () => {

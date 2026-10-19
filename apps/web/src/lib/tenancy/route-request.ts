@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 import { createServerApiClient } from '@/lib/api/client';
 import { hasCredentials, workspaceEntry, type Entry } from '@/lib/identity/entry';
-import { clearCookies, cookieName, requestHost, type Credentials, type Kind } from '@/lib/identity/server';
+import { clearCookies, cookieName, endSupportView, requestHost, supportEnded, type Credentials, type Kind } from '@/lib/identity/server';
 import { plainPageHtml, plainPageStatus, type PlainPage } from '@/lib/plain-page/plain-page';
 import { hasOperatorCredentials, operatorEntry, type OperatorEntry } from '@/lib/operator/entry';
 import { consoleHostname, isCanonicalPath, isConsoleHost, isConsolePath, isUnder } from '@/lib/operator/host';
@@ -153,20 +153,24 @@ export async function routeRequest(
         return redirect(request, path === '/' ? '/workspace' : SIGN_IN);
       }
       const support = supportCredentialsOf(request);
+      // A support view that ended moments ago (BUG-F03-005): its cookies may already be gone, cleared
+      // by a refused prefetch or read, but a page without any session still belongs on the notice.
+      const ended = supportEnded(request);
       if (path === '/workspace') {
-        return redirect(request, hasCredentials(support) || hasCredentials(credentialsOf(request)) ? '/workspace/account' : SIGN_IN);
+        if (hasCredentials(support) || hasCredentials(credentialsOf(request))) return redirect(request, '/workspace/account');
+        return ended ? redirect(request, SUPPORT_ENTRY, 'ended') : redirect(request, SIGN_IN);
       }
       if (PROTECTED.has(path) && hasCredentials(support)) {
         // The support view (F03-S04): an ended, expired or revoked session leaves it for the entry
         // page, its cookies cleared host-only; a staff session in the same browser is left alone.
         if ((await decide(request, support, 'support')).kind === 'signed-out') {
           const response = redirect(request, SUPPORT_ENTRY, 'ended');
-          clearCookies(response, 'support');
+          endSupportView(response);
           return response;
         }
       } else if (PROTECTED.has(path)) {
         const credentials = credentialsOf(request);
-        if (!hasCredentials(credentials)) return redirect(request, SIGN_IN);
+        if (!hasCredentials(credentials)) return ended ? redirect(request, SUPPORT_ENTRY, 'ended') : redirect(request, SIGN_IN);
         if ((await decide(request, credentials)).kind === 'signed-out') {
           // The same clearing the BFF does for a session that cannot renew (BUG-F02-011): the
           // revoked family's credentials leave the browser with the redirect, host-only.

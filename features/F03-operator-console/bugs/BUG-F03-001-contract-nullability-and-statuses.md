@@ -2,12 +2,12 @@
 id: BUG-F03-001
 title: The generated contract forbids the nulls the operator, billing and entitlement APIs return and documents 200 for the support routes' 201 and 204
 severity: major
-status: open
+status: fixed
 found_by: TC-F03-S01-041
 breaks: AC-14
 found_on: 2026-10-19
-fixed_in: null
-fix_note: null
+fixed_in: 28b6de2
+fix_note: 'A springdoc customizer rewrites every nullable $ref as oneOf [$ref, {type: null}] and adds null to nullable enums (the ten fields plus both endedBy), and the five support routes declare 201/204; document and client regenerated; red/green OpenApiShapeTest and contracts.test.ts (apps/api/target/f03-bugfix-evidence/bug001-*.log); live sign-in body invalid under the old document, valid under the new (apps/api/target/f03-bugfix-evidence/contract-signin-before.json, contract-signin-after.json); gates (apps/api/target/f03-bugfix-evidence/gates/summary.txt): API verify exit 0 at 4a60e33 (688 tests), lint/typecheck/test/web build/contracts:check exit 0 at f122ad4'
 developer_note: null
 verified_on: null
 approved_by: null

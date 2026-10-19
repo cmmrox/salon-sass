@@ -54,7 +54,7 @@ export function PlanDirectory() {
       {failure && <ConsoleFailure failure={failure} busy={loading} onRetry={() => void load(page, query)} />}
       {loading && !data && <ConsoleLoading />}
       {data && data.items.length === 0 && (
-        <Empty className="bg-card" data-testid="console-plans-empty"><EmptyHeader><EmptyTitle>{query ? t('plansNoMatch') : t('plansEmpty')}</EmptyTitle>{!query && <EmptyDescription>{t('plansEmptyHelp')}</EmptyDescription>}</EmptyHeader></Empty>
+        <Empty surface="card" data-testid="console-plans-empty"><EmptyHeader><EmptyTitle>{query ? t('plansNoMatch') : t('plansEmpty')}</EmptyTitle>{!query && <EmptyDescription>{t('plansEmptyHelp')}</EmptyDescription>}</EmptyHeader></Empty>
       )}
       {data && data.items.length > 0 && (
         <ItemGroup className="gap-2" data-testid="console-plans-list" aria-busy={loading || undefined}>

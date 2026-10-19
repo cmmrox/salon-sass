@@ -175,7 +175,7 @@ export function SupportSessionList({ admin }: { admin: boolean }) {
       {failure && <ConsoleFailure failure={failure} busy={loading} onRetry={() => void load(page, state)} />}
       {loading && !data && <ConsoleLoading rows={4} />}
       {data && items.length === 0 && (
-        <Empty data-testid="console-support-empty">
+        <Empty surface="canvas" data-testid="console-support-empty">
           <EmptyHeader><EmptyTitle>{t('supportEmpty')}</EmptyTitle><EmptyDescription>{admin ? t('supportEmptyAdmin') : t('supportEmptyOwn')}</EmptyDescription></EmptyHeader>
         </Empty>
       )}

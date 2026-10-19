@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { ensurePrincipal, OperatorFailure } from '@/lib/operator/browser';
 import { ConsoleFailure, ConsoleLoading } from './ConsoleControls';
@@ -25,4 +25,15 @@ export function ConsolePending() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { let active = true; Promise.resolve().then(() => { if (active) void attempt(); }); return () => { active = false; }; }, []);
   return failure ? <ConsoleFailure failure={failure} busy={busy} onRetry={() => void attempt()} /> : <ConsoleLoading />;
+}
+
+/**
+ * The server could not reach the API within the request's budget (BUG-F03-002): the unavailable
+ * state is rendered with the page, within the five-second outage deadline, and its retry renders the
+ * page again on the server.
+ */
+export function ConsoleUnavailable() {
+  const router = useRouter();
+  const [retrying, startRetry] = useTransition();
+  return <ConsoleFailure failure={new OperatorFailure('service_unavailable')} busy={retrying} onRetry={() => startRetry(() => router.refresh())} />;
 }

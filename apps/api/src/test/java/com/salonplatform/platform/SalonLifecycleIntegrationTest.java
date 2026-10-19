@@ -505,6 +505,10 @@ class SalonLifecycleIntegrationTest extends IntegrationTest {
         // Other tests' pending exports are finished first, so the armed interruption meets this salon's.
         exports.run(CLOCK.instant());
         Fixture a = fixture();
+        // Closed at an instant no other test closes at: a salon another test closed in the same second
+        // would be due at the same delete_at and, ordered by id, could take the armed deletion
+        // interruption below (closure instants are immutable, so it cannot be moved afterwards).
+        CLOCK.advance(Duration.ofHours(25));
         closed(a.salon());
         EXPORT_AFTER.set(2);
         SalonExports.Pass interrupted = exports.run(CLOCK.instant());

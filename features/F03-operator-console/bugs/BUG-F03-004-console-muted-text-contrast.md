@@ -2,12 +2,12 @@
 id: BUG-F03-004
 title: Console help and empty-state text has 4.25:1 contrast on the canvas, below WCAG AA
 severity: major
-status: open
+status: fixed
 found_by: TC-F03-S01-034
 breaks: AC-18
 found_on: 2026-10-19
-fixed_in: null
-fix_note: null
+fixed_in: 40abb62
+fix_note: 'Canvas surfaces (every Sheet, Empty surface=canvas, the console search) carry data-surface=canvas and Field/Sheet/Item/Empty descriptions draw ink there, staying muted on white; muted-contrast.test.tsx red (4.25:1) then green; axe 0 color-contrast on the console views (apps/api/target/f03-bugfix-evidence/a11y-after.json); gates (apps/api/target/f03-bugfix-evidence/gates/summary.txt): API verify exit 0 at 4a60e33 (688 tests), lint/typecheck/test/web build/contracts:check exit 0 at f122ad4'
 developer_note: null
 verified_on: null
 approved_by: null

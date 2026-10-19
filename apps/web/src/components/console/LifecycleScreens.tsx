@@ -208,7 +208,7 @@ function LifecycleHistory({ salon, refresh }: { salon: Detail; refresh: number }
       {failure && <ConsoleFailure failure={failure} busy={loading} onRetry={() => void load(page)} />}
       {loading && !data && !failure && <div className="flex flex-col gap-2" role="status"><span className="sr-only">{t('loading')}</span>{[0, 1].map((row) => <Skeleton key={row} className="h-field" aria-hidden="true" />)}</div>}
       {data && data.items.length === 0 && (
-        <Empty className="bg-background" data-testid="console-lifecycle-empty"><EmptyHeader><EmptyTitle>{t('historyEmpty')}</EmptyTitle><EmptyDescription>{t('historyEmptyHelp')}</EmptyDescription></EmptyHeader></Empty>
+        <Empty surface="canvas" data-testid="console-lifecycle-empty"><EmptyHeader><EmptyTitle>{t('historyEmpty')}</EmptyTitle><EmptyDescription>{t('historyEmptyHelp')}</EmptyDescription></EmptyHeader></Empty>
       )}
       {data && data.items.length > 0 && (
         <ItemGroup className="gap-2" data-testid="console-lifecycle-list">

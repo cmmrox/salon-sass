@@ -2,12 +2,12 @@
 id: BUG-F03-002
 title: Console pages take 5.4 to 6.4 seconds to report unavailable when the database or API is down or silent, beyond the five-second deadline
 severity: major
-status: open
+status: fixed
 found_by: TC-F03-S02-027
 breaks: AC-16
 found_on: 2026-10-19
-fixed_in: null
-fix_note: null
+fixed_in: 7b44b83
+fix_note: 'Operator entry now returns unavailable (5xx, unanswered meta, or no answer within the shared 3 s budget) and the console page renders console-error with the response instead of a second browser wait; entry.test.ts/ConsolePending.test.tsx red then green; on the product 5.33/5.34/6.37 s became 3.02-3.05 s for database stopped/paused and API frozen (apps/api/target/f03-bugfix-evidence/outage-before.json, outage-after.json); gates (apps/api/target/f03-bugfix-evidence/gates/summary.txt): API verify exit 0 at 4a60e33 (688 tests), lint/typecheck/test/web build/contracts:check exit 0 at f122ad4'
 developer_note: null
 verified_on: null
 approved_by: null

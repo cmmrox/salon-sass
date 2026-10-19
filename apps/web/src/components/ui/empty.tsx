@@ -1,16 +1,35 @@
 import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
-// Nothing to show: a quiet dashed panel with the line colour, its words in muted text.
+// Nothing to show: a quiet dashed panel with the line colour, its words in muted text. Muted text
+// reads only on white, so a panel on the warm canvas (`surface="canvas"`) marks itself and its
+// description turns ink (ui-ux-standards.md, BUG-F03-004). `surface="card"` is a white panel.
+const emptyVariants = cva(
+  "flex min-w-0 flex-1 flex-col items-center justify-center gap-6 rounded-field border border-dashed border-border p-6 text-center text-balance",
+  {
+    variants: {
+      surface: {
+        inherit: "",
+        card: "bg-card",
+        canvas: "bg-background",
+      },
+    },
+    defaultVariants: {
+      surface: "inherit",
+    },
+  }
+)
 
-function Empty({ className, ...props }: React.ComponentProps<"div">) {
+function Empty({
+  className,
+  surface = "inherit",
+  ...props
+}: React.ComponentProps<"div"> & VariantProps<typeof emptyVariants>) {
   return (
     <div
       data-slot="empty"
-      className={cn(
-        "flex min-w-0 flex-1 flex-col items-center justify-center gap-6 rounded-field border border-dashed border-border p-6 text-center text-balance",
-        className
-      )}
+      data-surface={surface === "canvas" ? "canvas" : undefined}
+      className={cn(emptyVariants({ surface, className }))}
       {...props}
     />
   )
@@ -74,7 +93,7 @@ function EmptyDescription({ className, ...props }: React.ComponentProps<"p">) {
     <div
       data-slot="empty-description"
       className={cn(
-        "text-body leading-body text-muted-foreground [&>a]:underline [&>a]:underline-offset-4",
+        "text-body leading-body text-muted-foreground in-data-[surface=canvas]:text-foreground [&>a]:underline [&>a]:underline-offset-4",
         className
       )}
       {...props}

@@ -937,10 +937,10 @@ export interface components {
             secret?: string;
         };
         Entitlements: {
-            features: components["schemas"]["Features"];
-            limits: components["schemas"]["Limits"];
-            plan: components["schemas"]["PlanRef"];
-            subscription: components["schemas"]["SubscriptionState"];
+            features: components["schemas"]["Features"] | null;
+            limits: components["schemas"]["Limits"] | null;
+            plan: components["schemas"]["PlanRef"] | null;
+            subscription: components["schemas"]["SubscriptionState"] | null;
             usage: components["schemas"]["Usage"];
         };
         EntryRequest: {
@@ -1133,7 +1133,7 @@ export interface components {
             /** Format: uuid */
             challengeId: string;
             challengeToken: string;
-            credentials: components["schemas"]["OperatorTokens"];
+            credentials: components["schemas"]["OperatorTokens"] | null;
             /** Format: date-time */
             expiresAt: string;
             state: string;
@@ -1400,7 +1400,7 @@ export interface components {
             id: string;
             name: string | null;
             ownerEmail: string | null;
-            plan: components["schemas"]["PlanSummary"];
+            plan: components["schemas"]["PlanSummary"] | null;
             slug: string;
             /** @enum {string} */
             status: "active" | "suspended" | "closed" | "deleted";
@@ -1455,7 +1455,7 @@ export interface components {
             /** Format: uuid */
             id: string;
             name: string | null;
-            plan: components["schemas"]["PlanSummary"];
+            plan: components["schemas"]["PlanSummary"] | null;
             slug: string;
             /** @enum {string} */
             status: "active" | "suspended" | "closed" | "deleted";
@@ -1554,14 +1554,14 @@ export interface components {
         };
         SubscriptionView: {
             currency: string;
-            currentPeriod: components["schemas"]["Period"];
+            currentPeriod: components["schemas"]["Period"] | null;
             /** Format: int64 */
             monthlyAmount: number;
             /** Format: date-time */
             nextInvoiceAt: string;
             /** @enum {string} */
             paymentMethod: "card" | "bank_transfer";
-            plan: components["schemas"]["PlanSummary"];
+            plan: components["schemas"]["PlanSummary"] | null;
             /** Format: date-time */
             readOnlyAt: string | null;
             /** @enum {string} */
@@ -3143,8 +3143,8 @@ export interface operations {
             };
         };
         responses: {
-            /** @description OK */
-            200: {
+            /** @description Created */
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3374,8 +3374,8 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
-            200: {
+            /** @description No Content */
+            204: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3403,8 +3403,8 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
-            200: {
+            /** @description Created */
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3614,8 +3614,8 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
-            200: {
+            /** @description No Content */
+            204: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3674,8 +3674,8 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
-            200: {
+            /** @description No Content */
+            204: {
                 headers: {
                     [name: string]: unknown;
                 };
