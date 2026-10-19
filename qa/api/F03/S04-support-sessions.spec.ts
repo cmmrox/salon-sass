@@ -3,10 +3,9 @@
  * boundaries, ending, the salon audit, the Owner's and Admin's session lists, and separation.
  * Cases TC-F03-S04-001 to -004, -007 to -009, -011 to -014 (cases.md).
  *
- * PREPARED, NOT YET RUNNABLE: F03-S04 is being built. Routes and codes come from the S04 spec's
- * API table and acceptance criteria (qa/shared/operator.ts SUPPORT); the generated schema names,
- * the shape of the exchanged credential and the list filter names come from the S04 handoff
- * (PENDING_S04). Until those are filled in, these tests stop with an `ENVIRONMENT:` message.
+ * Routes and codes come from the S04 spec's API table and acceptance criteria (qa/shared/operator.ts
+ * SUPPORT); the generated schema names, the exchanged credential's shape and the list filter names
+ * come from the S04 handoff (PENDING_S04).
  * Entry codes are exchanged directly with the API here; the BFF Origin rows are browser cases.
  */
 import { randomUUID } from 'node:crypto';

@@ -5,9 +5,8 @@
  *
  * Routes, bodies and codes come from the stage specs and docs/architecture/operator-console.md.
  * What those documents left to the stage handoffs is in CONTRACT below, confirmed against the
- * F03-S01, S02 and S03 handoffs (stage.yaml `handoff.run`) and the generated contract. What the
- * S04 handoff has not named yet is in PENDING_S04; a test that needs one of those values stops with
- * an `ENVIRONMENT:` message until it is filled in.
+ * F03-S01 to S04 handoffs (stage.yaml `handoff.run`) and the generated contract; S04's values are in
+ * SUPPORT and PENDING_S04 (the name is kept so the prepared tests read unchanged).
  *
  * Credentials and TOTP seeds are generated in memory and never logged or written to evidence.
  */
@@ -91,10 +90,10 @@ export const CONTRACT = {
 } as const;
 
 /**
- * F03-S04 is being built. Its spec's API table names the routes (SUPPORT below); the handoff names
- * what the spec leaves open: generated schema names, the shape of the support credential the entry
- * exchange returns, the list filter parameter names and the BFF action. Fill PENDING_S04 from the
- * S04 handoff at feature-verify; until then a test that needs a value stops with `ENVIRONMENT:`.
+ * F03-S04's routes (spec API table) and what its handoff named that the spec left open: generated
+ * schema names (docs/api/openapi.json), the entry exchange's credential field, the operator list's
+ * filter names, the salon-host BFF entry action and the screens' test ids (S04 stage.yaml
+ * `handoff.run` and `handoff.notes`, "Test ids"). Filled at feature-verify from the closed handoff.
  */
 export const SUPPORT = {
   start: (salonId: string) => `/salons/${salonId}/support-sessions`,
@@ -102,33 +101,34 @@ export const SUPPORT = {
   end: (sessionId: string) => `/support-sessions/${sessionId}`,
   list: '/support-sessions',
   entry: '/api/v1/support/entry',
+  /** The support credential ends its own session (S04 handoff; added beside the spec table). */
+  ownEnd: '/api/v1/support/session',
   salonSessions: '/api/v1/salon/support-sessions',
   cookies: ['salon_support_access', 'salon_support_session'],
 } as const;
 export const PENDING_S04 = {
   schemas: {
-    supportStart: null as string | null,       // 201 {id,expiresAt,entryCode,entryUrl}
-    entryCode: null as string | null,          // 201 a fresh code
-    supportSessionPage: null as string | null, // GET /operator/support-sessions
-    salonSupportSessionPage: null as string | null, // GET /salon/support-sessions
+    supportStart: 'SupportEntry' as string | null,       // 201 {id,expiresAt,entryCode,entryUrl,codeExpiresAt}
+    entryCode: 'SupportEntry' as string | null,          // 201 a fresh code, same shape
+    supportSessionPage: 'SupportSessionPage' as string | null, // GET /operator/support-sessions
+    salonSupportSessionPage: 'SalonSupportSessionPage' as string | null, // GET /salon/support-sessions
   },
-  /** Where the entry exchange's answer holds the support access token, e.g. 'accessToken'. */
-  credentialField: null as string | null,
+  /** Where the entry exchange's answer holds the support access token. */
+  credentialField: 'accessToken' as string | null,
   /** Query parameter names of the operator list's salon and state filters. */
-  listSalonParam: null as string | null,
-  listStateParam: null as string | null,
-  /** The salon-host BFF action that exchanges an entry code. */
-  entryBffAction: null as string | null,
-  /**
-   * Browser test ids of the S04 screens (spec "UI and UX" names the screens; the handoff names the
-   * ids). Keys are QA's names for the controls; values are filled from the handoff.
-   */
+  listSalonParam: 'salonId' as string | null,
+  listStateParam: 'state' as string | null,
+  /** The salon-host BFF action that exchanges an entry code (/identity-web/support/entry). */
+  entryBffAction: 'support/entry' as string | null,
+  /** Browser test ids of the S04 screens. Keys are QA's names for the controls; values are the handoff's. */
   testIds: {
-    startOpen: null, startSheet: null, startReason: null, startDuration: null, startSubmit: null, startResult: null, openWorkspace: null,
-    sessionList: null, sessionRow: null, sessionEnd: null,
-    entryPage: null, entryRefused: null, entryExpired: null, entryUnavailable: null,
-    banner: null, bannerEnd: null,
-    accessPage: null, accessRow: null, accessRevoke: null, accessConfirm: null,
+    startOpen: 'console-support-start', startSheet: 'console-support-sheet', startReason: 'console-support-reason',
+    startDuration: 'console-support-duration', startSubmit: 'console-support-submit', startResult: 'console-support-started',
+    openWorkspace: 'console-support-started-open',
+    sessionList: 'console-support-list', sessionRow: 'console-support-row', sessionEnd: 'console-support-end',
+    entryPage: 'support-entry', entryRefused: 'support-entry-refused', entryExpired: 'support-entry-ended', entryUnavailable: 'support-entry-unavailable',
+    banner: 'support-banner', bannerEnd: 'support-banner-end',
+    accessPage: 'support-access', accessRow: 'support-access-row', accessRevoke: 'support-access-revoke', accessConfirm: 'support-access-confirm-revoke',
   } as Record<string, string | null>,
 };
 /** An S04 test id from the handoff, or an `ENVIRONMENT:` stop until it is named. */
@@ -626,7 +626,7 @@ export class Operator {
   async armDeletionInterrupt(afterBatches: number | null) { expect(await this.hookOk('deletionInterrupt', 200, { afterBatches })).toEqual({ afterBatches }); }
   async background(salonId: string): Promise<Background> { return this.hookOk('background', 200, undefined, { salonId }); }
 
-  // ---- F03-S04 support sessions (S04 API table; handoff details in PENDING_S04) ----
+  // ---- F03-S04 support sessions (S04 API table and handoff) ----
   startSupport(actor: OperatorActor | null, salonId: string, data: Record<string, unknown> = { reason: 'QA support reason text' }, extra: { host?: string } = {}) {
     return this.call('POST', SUPPORT.start(salonId), { tokens: actor?.tokens, data, ...extra });
   }

@@ -4,9 +4,8 @@
  * Owner's Support access page, and the screens' states, widths and accessibility.
  * Cases TC-F03-S04-003 (BFF rows), -005, -006, -007 (controls), -010, -012 (page), -015 to -017.
  *
- * PREPARED, NOT YET RUNNABLE: F03-S04 is being built. Routes, cookie names and codes are the S04
- * spec's; test ids, the entry BFF action and the credential shape come from its handoff
- * (qa/shared/operator.ts PENDING_S04), and until then each test stops with `ENVIRONMENT:`.
+ * Routes, cookie names and codes are the S04 spec's; test ids, the entry BFF action and the
+ * credential shape come from its handoff (qa/shared/operator.ts PENDING_S04).
  */
 import type { BrowserContext, Page } from '@playwright/test';
 
