@@ -4,8 +4,8 @@ summary: The operator creates a salon, puts it on a plan, bills it, suspends or 
   its workspace only through a recorded support session.
 release: R1
 milestone: M1-web
-status: in-progress
-qa_status: not-run
+status: in-qa
+qa_status: failing
 released_in: null
 depends_on:
 - F02
@@ -20,17 +20,67 @@ requirements:
 - PLT-07
 nfr_focus:
 - NFR-20
-cases: []
+cases:
+- id: TC-F03-001
+  title: An operator takes one salon from creation through billing, suspension, support and closure in
+    the console
+  type: functional
+  priority: critical
+  covers:
+  - PLT-01
+  - PLT-04
+  - PLT-05
+  - PLT-06
+  - PLT-07
+- id: TC-F03-002
+  title: A second salon stays isolated and unaffected through every transition of the first
+  type: tenant-isolation
+  priority: critical
+  covers:
+  - PLT-01
+  - PLT-04
+  - PLT-05
+  - PLT-06
+  - PLT-07
+- id: TC-F03-003
+  title: Access states combine in the documented precedence across billing, lifecycle and support
+  type: data-integrity
+  priority: critical
+  covers:
+  - PLT-05
+  - PLT-06
+  - PLT-07
 verification:
-  automation: []
+  automation:
+  - id: journey-operator-lifecycle
+    tool: playwright
+    file: qa/web/F03/journey-operator-lifecycle.spec.ts
+    project: web
+    covers:
+    - TC-F03-001
+    suites: [regression, smoke]
+  - id: journey-second-salon-isolation
+    tool: playwright
+    file: qa/api/F03/journey-second-salon-isolation.spec.ts
+    project: api
+    covers:
+    - TC-F03-002
+    suites: [regression]
+  - id: journey-access-state-precedence
+    tool: playwright
+    file: qa/api/F03/journey-access-state-precedence.spec.ts
+    project: api
+    covers:
+    - TC-F03-003
+    suites: [regression]
   manual: []
   deferred: []
 evidence:
-  last_run: null
-  last_result: null
+  last_run: qa/reports/20261019-093648-F03-09df7b0ccb75
+  last_result: fail
 integration:
   branch: charithm/feature/F03-operator-console
   pull_request: null
-  qa_revision: null
+  qa_revision: c1d6e73b5035f7584af1775dd6f40ade13009b82
   merged_commit: null
   merged_at: null
