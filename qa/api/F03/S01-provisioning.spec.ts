@@ -304,7 +304,11 @@ test(`${id(26)} Directories paginate, search literally and expose only allowlist
   expect(all.length, 'no duplicates').toBe(5);
   for (let n = 1; n < all.length; n++) expect(Date.parse(all[n - 1].createdAt), 'creation time descending').toBeGreaterThanOrEqual(Date.parse(all[n].createdAt));
   for (const item of all) expect(Object.keys(item).sort()).toEqual(PLAN_KEYS);
-  expect((await operator.planPage(admin, `?q=${encodeURIComponent('100%_off')}`)).total, 'literal % and _').toBe(1);
+  // Literal % and _: a token of this run, and a decoy that only wildcard matching would find.
+  const token = `Lq${randomUUID().slice(0, 6)}`;
+  await operator.plan(admin, { name: `${token}100%_off` });
+  await operator.plan(admin, { name: `${token}100xyoff` });
+  expect((await operator.planPage(admin, `?q=${encodeURIComponent(`${token}100%_off`)}`)).total, 'literal % and _').toBe(1);
   expect((await operator.planPage(admin, `?q=${encodeURIComponent('%')}&size=100`)).items.every(p => p.name.includes('%'))).toBe(true);
   const salons = await operator.salonPage(admin, `?q=${fragment.toUpperCase()}`);
   expect(salons.total).toBe(3);

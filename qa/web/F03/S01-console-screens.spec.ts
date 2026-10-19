@@ -93,7 +93,8 @@ test(`${id(32)} A keyboard user signs in, defines a plan, creates a salon and in
   await page.keyboard.press('Enter');
   await expect(page.getByTestId('console-salon-detail')).toBeVisible();
   await expect(page.getByTestId('console-salon-hostname')).toHaveText(`${slug}.localhost`);
-  await expect(page.getByTestId('console-salon-plan')).toContainText(plan.name);
+  // Client-side navigation keeps the salons list in the DOM, hidden: read the badge on the detail.
+  await expect(page.getByTestId('console-salon-detail').getByTestId('console-salon-plan')).toContainText(plan.name);
   const salon = (await operator.salonPage(admin, `?q=${slug}`)).items[0];
   const detail = await operator.salonDetail(admin, salon.id);
   expect(detail).toMatchObject({ slug, ownerEmail, plan: { id: created.id } });
