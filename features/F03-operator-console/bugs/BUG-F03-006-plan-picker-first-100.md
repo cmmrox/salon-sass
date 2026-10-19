@@ -2,12 +2,12 @@
 id: BUG-F03-006
 title: The console's plan pickers offer only the 100 newest plans, so older plans cannot be assigned or moved to
 severity: minor
-status: open
+status: fixed
 found_by: TC-F03-S01-042
 breaks: AC-7
 found_on: 2026-10-19
-fixed_in: null
-fix_note: null
+fixed_in: aaa059a
+fix_note: 'A shared PlanPicker keeps the newest 100 and adds a literal name/key search and previous/next pages, keeping the chosen plan; Console/BillingScreens tests red then green; on the product the oldest of 576 plans was found, a salon created on it and moved to another old plan, then reset (apps/api/target/f03-bugfix-evidence/plan-picker-after.json, plan-assign-after.json); gates (apps/api/target/f03-bugfix-evidence/gates/summary.txt): API verify exit 0 at 4a60e33 (688 tests), lint/typecheck/test/web build/contracts:check exit 0 at f122ad4'
 developer_note: null
 verified_on: null
 approved_by: null
