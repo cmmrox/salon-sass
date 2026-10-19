@@ -726,7 +726,7 @@ export class Operator {
   }
 }
 
-export type SupportStart = { id: string; expiresAt: string; entryCode: string; entryUrl: string };
+export type SupportStart = { id: string; expiresAt: string; entryCode: string; entryUrl: string; codeExpiresAt: string };
 export type SupportSession = { id: string; salonId?: string; reason: string; state: string; expiresAt: string };
 
 /**

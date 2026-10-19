@@ -16,7 +16,8 @@ import {
   supportJson, tenantMutationRoutes,
   type Operator, type OperatorActor, type SupportSession, type SupportStart,
 } from '../../shared/operator';
-import type { Salon } from '../../shared/tenants';
+import { webUrl } from '../../shared/env';
+import { salonUrl, type Salon } from '../../shared/tenants';
 
 const id = (n: number) => `TC-F03-S04-${String(n).padStart(3, '0')}`;
 const REASON = 'QA support reason text';
@@ -56,11 +57,15 @@ test(`${id(1)} A Support operator starts a bounded session for an accessible sal
   for (const [data, minutes] of [[{ reason: 'r'.repeat(10) }, 30], [{ reason: 'r'.repeat(500), durationMinutes: 120 }, 120], [{ reason: REASON, durationMinutes: 5 }, 5]] as const) {
     const before = Date.parse(await operator.now());
     const session = await start(operator, support, target.created.id, data);
-    expect(Object.keys(session).sort()).toEqual(['entryCode', 'entryUrl', 'expiresAt', 'id']);
+    // The spec's four fields and the code's own expiry, which the S04 handoff adds.
+    expect(Object.keys(session).sort()).toEqual(['codeExpiresAt', 'entryCode', 'entryUrl', 'expiresAt', 'id']);
+    const codeLasts = Date.parse(session.codeExpiresAt) - before;
+    expect(codeLasts > 0 && codeLasts <= 61_000, 'the entry code lasts 60 seconds').toBe(true);
     const lasts = Date.parse(session.expiresAt) - before;
     expect(lasts, `${minutes} minutes`).toBeGreaterThanOrEqual(minutes * 60_000 - 1_000);
     expect(lasts).toBeLessThanOrEqual(minutes * 60_000 + 2_000);
-    expect(session.entryUrl).toBe(`https://${target.created.hostname}/workspace/support#${session.entryCode}`);
+    // SALON_SUPPORT_LINK_ORIGIN: https://<host> outside local, http://<host>:3100 locally (S04 handoff).
+    expect(session.entryUrl).toBe(`${salonUrl(target.salon, webUrl)}/workspace/support#${session.entryCode}`);
     expect((await operator.endSupport(support, session.id)).status()).toBe(204);
   }
   for (const [data, field] of [[{ reason: 'r'.repeat(9) }, 'reason'], [{ reason: 'r'.repeat(501) }, 'reason'], [{ reason: REASON, durationMinutes: 4 }, 'durationMinutes'],
@@ -138,7 +143,8 @@ test(`${id(8)} The support credential and operator or staff credentials stay ins
   expect((await reads(identity, a.salon, tokens)).status(), 'the credential works on its salon').toBe(200);
   await operatorProblem(await operator.call('GET', '/me', { tokens }), 401, 'invalid_session');
   await operatorProblem(await operator.call('GET', '/salons', { tokens }), 401, 'invalid_session');
-  await operatorProblem(await onSalonHost(identity, a.salon, 'GET', '/api/v1/identity/customers/me', tokens), 401, 'invalid_session');
+  // Customer endpoints refuse a staff-kind principal with 403 (S04 handoff, AC-4 checked).
+  await operatorProblem(await onSalonHost(identity, a.salon, 'GET', '/api/v1/identity/customers/me', tokens), 403, 'permission_denied');
   await operatorProblem(await reads(identity, b.salon, tokens), 404, 'not_found');
   await operatorProblem(await operator.call('GET', '/api/v1/identity/me', { tokens }), 404, 'not_found');
   const owner = await ownerSession(identity, a.salon, a.input);
@@ -155,8 +161,8 @@ test(`${id(9)} Expiry, operator end, Admin revoke and Owner revoke each end supp
     ['operator end', async (s, support) => { expect((await operator.endSupport(support, s.id)).status()).toBe(204); }],
     ['admin revoke', async s => { expect((await operator.endSupport(await operator.renew(admin), s.id)).status()).toBe(204); }],
     ['owner revoke', async s => {
-      const ownerNow = await identity.login(target.salon, owner.account);
-      expect((await onSalonHost(identity, target.salon, 'DELETE', `${SUPPORT.salonSessions}/${s.id}`, ownerNow.tokens)).status(), 'Owner revoke').toBe(204);
+      // The Owner's first session is still valid (a second sign-in in the same TOTP step is a refused replay).
+      expect((await onSalonHost(identity, target.salon, 'DELETE', `${SUPPORT.salonSessions}/${s.id}`, owner.tokens)).status(), 'Owner revoke').toBe(204);
     }],
     ['expiry', async () => { await clock.advance(5 * 60_000 + 1_000); }],
   ];
