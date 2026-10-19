@@ -17,7 +17,7 @@ import {
 } from '../../shared/console-browser';
 import type { SignedStaff } from '../../shared/identity';
 import { localService } from '../../shared/identity-runtime';
-import { DAY, SECOND, ownerSession, plusMs, type Operator, type TestClock } from '../../shared/operator';
+import { DAY, SECOND, afterNewestPlan, ownerSession, plusMs, type Operator, type TestClock } from '../../shared/operator';
 import type { Identity } from '../../shared/identity';
 import type { AccountBrowser } from '../../shared/identity-browser';
 
@@ -93,7 +93,7 @@ test(`${id(21)} Every staff member sees the state banner and the Owner sees Plan
 
 test(`${id(24)} Console and workspace billing screens show every state with correct money formatting`, async ({ browser, operator, identity, clock, accounts }) => {
   test.setTimeout(240_000);
-  const { admin, created, input, salon } = await billedSalon(operator, clock, '2027-01-05T07:00:00Z');
+  const { admin, created, input, salon } = await billedSalon(operator, clock, afterNewestPlan());
   const exceeded = await operator.plan(admin, { staffSeats: 1 });
   await identity.seed(salon, [{ email: `seat-${Date.now()}@example.invalid`, mobile: '', password: 'QA seat password long', role: 'MANAGER' }]);
   const legacy = await operator.unbilledSalon();
@@ -198,7 +198,7 @@ test(`${id(25)} Billing screens fit every width without clipping or horizontal s
 
 test(`${id(26)} Billing screens pass the automated scan and keyboard-only use`, async ({ browser, operator, identity, clock, accounts }) => {
   test.setTimeout(180_000);
-  const { admin, created, input, salon } = await billedSalon(operator, clock, '2027-01-07T07:00:00Z');
+  const { admin, created, input, salon } = await billedSalon(operator, clock, afterNewestPlan());
   const larger = await operator.plan(admin, { staffSeats: 12 });
   const invoice = await firstInvoice(operator, clock, admin, created.id);
   const context = await consoleContext(browser, admin);

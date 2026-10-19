@@ -13,7 +13,7 @@ import {
 import { syntheticAccount } from '../../shared/identity';
 import { unzip } from '../../shared/zip';
 import {
-  ownerSession, operatorProblem, staffTokens, supportJson, supportTestId as tid, uniqueSlug, strongPassword,
+  afterNewestPlan, ownerSession, operatorProblem, staffTokens, supportJson, supportTestId as tid, uniqueSlug, strongPassword,
   type SupportStart,
 } from '../../shared/operator';
 import { webUrl } from '../../shared/env';
@@ -21,7 +21,7 @@ import { salonUrl } from '../../shared/tenants';
 
 test('TC-F03-001 An operator takes one salon from creation through billing, suspension, support and closure in the console', async ({ browser, operator, identity, clock, accounts }) => {
   test.setTimeout(420_000);
-  await clock.set('2027-03-01T05:00:00Z');
+  await clock.set(afterNewestPlan()); // its plan must be among the picker's newest (BUG-F03-006)
   const admin = await operator.actor();
   const consoleSide = await consoleContext(browser, admin);
   const page = await consoleSide.newPage();

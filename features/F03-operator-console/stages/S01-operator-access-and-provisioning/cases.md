@@ -604,3 +604,16 @@ Every case id here is declared under `cases:` in the yaml beside it, and the rev
   2. Read the documented success status of the S04 support routes that answer 201 or 204
 - **Expected:** No property forbids the null the specs require (legacy `plan`, `credentials` before MFA, legacy entitlements, `notice`); the S04 start and entry-code routes document 201 and the three ending routes 204.
 - **Automation:** `qa/api/F03/S01-runtime.spec.ts`
+
+### TC-F03-S01-042 Every plan can be chosen in the console's plan pickers
+
+- **Type:** functional
+- **Priority:** medium
+- **Covers:** AC-7
+- **Performed as:** Synthetic Admin in the console
+- **Preconditions:** More than 100 plans exist; one plan older than the 100 newest. Added at feature-verify with BUG-F03-006.
+- **Steps:**
+  1. Open Create salon and look for the older plan in the Plan picker (search or page as the picker offers)
+  2. Do the same in a salon's Move plan sheet
+- **Expected:** The older plan can be found and chosen in both pickers, and the salon is created on it or moved to it (checked through the API).
+- **Automation:** deferred until BUG-F03-006 is fixed; automated at its re-verification

@@ -11,7 +11,7 @@ import type { Locator, Page } from '@playwright/test';
 import {
   test, expect, WIDTHS, consoleContext, consoleUrl, expectAccessible, expectFits, expectSheetFocus, signInByKeyboard,
 } from '../../shared/console-browser';
-import { operatorAccount, uniqueSlug, strongPassword, type Operator } from '../../shared/operator';
+import { afterNewestPlan, operatorAccount, uniqueSlug, strongPassword, type Operator } from '../../shared/operator';
 
 const id = (n: number) => `TC-F03-S01-${String(n).padStart(3, '0')}`;
 
@@ -35,8 +35,9 @@ async function seeded(operator: Operator, role: 'OPERATOR_ADMIN' | 'OPERATOR_SUP
   return operator.actor(role);
 }
 
-test(`${id(32)} A keyboard user signs in, defines a plan, creates a salon and inspects it`, async ({ browser, operator }) => {
+test(`${id(32)} A keyboard user signs in, defines a plan, creates a salon and inspects it`, async ({ browser, operator, clock }) => {
   test.setTimeout(120_000);
+  await clock.set(afterNewestPlan());
   const account = operatorAccount('OPERATOR_ADMIN', false);
   await operator.seed(account);
   const context = await consoleContext(browser);

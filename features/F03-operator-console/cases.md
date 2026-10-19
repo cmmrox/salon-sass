@@ -32,7 +32,7 @@ local QA and are not certified (README).
 
 Limits kept (`references/test-design.md`): every acceptance criterion has a case and a negative
 case where it can be violated; input variants are table rows; a rule proved through the API is not
-proved again in the browser; beyond the criteria only critical cases are added. Totals: S01 41,
+proved again in the browser; beyond the criteria only critical cases are added. Totals: S01 42,
 S02 28, S03 17, S04 17, journeys 3.
 
 Environment: local only, synthetic data. alpha, beta and gamma are never provisioned over, billed,
@@ -60,6 +60,11 @@ Automation notes (feature-verify, 2026-10-19):
   identity cleanup of expired challenges, steps, rate buckets and refresh history). "Nothing of
   another salon changed" across a clock jump compares the durable tenant tables
   (`TIME_CLEANED_TABLES` excluded); the closed salon itself is compared on every table.
+- Plans are immutable and never removed, so they accumulate across runs (some dated in the future
+  by the test clock), and the console's plan pickers list only the 100 newest (BUG-F03-006). The
+  browser cases that pick their own plan start the clock after the newest plan (`afterNewestPlan`).
+  The console keeps a client-navigated page in the DOM hidden after navigating, so browser checks
+  read the visible shell or scope to the page they navigated to.
 - Failure proof (automation-principles): TC-F03-S01-041 failed on the committed contract for the
   reason it guards. `contractValidator` was run on controlled bodies: it accepts a null legacy
   `plan` and a known or null `notice`, and rejects a string `plan`, a `plan` missing `key`, a

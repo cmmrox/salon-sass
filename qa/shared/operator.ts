@@ -320,6 +320,17 @@ export function countRows(table: string, where: string): number {
   if (!/^[a-z_]+$/.test(table)) throw new Error(`not a table name: ${table}`);
   return Number(identitySql(`SELECT count(*) FROM ${table} WHERE ${where}`));
 }
+/**
+ * An instant (07:00Z) at least a day after every existing plan's creation. Plans are immutable and
+ * never removed (the local reset keeps them), clock-moving tests date some in the future, and the
+ * console's plan pickers list only the 100 newest (BUG-F03-006). A test that picks its own plan in
+ * the browser starts its clock here so that plan is among them, independent of earlier runs.
+ */
+export function afterNewestPlan(): string {
+  const newest = identitySql(`SELECT to_char(greatest(coalesce(max(created_at), now()), now()) AT TIME ZONE 'UTC', 'YYYY-MM-DD') FROM plan`);
+  expect(newest, 'the newest plan date').toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  return new Date(Date.parse(`${newest}T07:00:00Z`) + DAY).toISOString();
+}
 /** Rows a salon owns in the S01 bootstrap tables: the registry, its Owner and its brand. */
 export function bootstrapRows(slug: string) {
   const tenant = countRows('tenant', `slug = ${sqlLiteral(slug)}`);
