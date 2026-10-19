@@ -84,7 +84,9 @@ test(`${id(32)} A keyboard user signs in, defines a plan, creates a salon and in
   await page.getByTestId('console-create-salon-submit').focus();
   await page.keyboard.press('Enter');
   await expect(page.getByTestId('console-salon-created')).toBeVisible();
-  await expect(page.getByTestId('console-salon-created-hostname')).toHaveText(`${slug}.localhost`);
+  // The success line is a sentence naming the submitted hostname and the assigned plan (S01 UI and UX).
+  await expect(page.getByTestId('console-salon-created-hostname')).toContainText(`${slug}.localhost`);
+  await expect(page.getByTestId('console-salon-created-hostname')).toContainText(plan.name);
   await expect(page.getByTestId('console-salon-created-next'), 'the Owner sign-in next step').toBeVisible();
   await expect(page.getByTestId('console-owner-password'), 'the password is cleared on success').toHaveCount(0);
   await page.getByTestId('console-salon-created-view').focus();

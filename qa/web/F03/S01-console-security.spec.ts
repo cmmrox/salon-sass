@@ -23,7 +23,8 @@ const LIMIT_MS = 5_000;
 test(`${id(5)} Console and operator BFF routes on any other host answer 404 (web rows)`, async ({ request }) => {
   for (const host of [alpha.hostname, 'localhost', 'admin.localhost', 'console.localhost.example.com', 'a.console.localhost']) {
     for (const route of ['/console', '/console/salons', '/console/sign-in', '/operator-web/principal']) {
-      const r = await request.get(`${onHostname(webUrl, host)}${route}`, { maxRedirects: 0, failOnStatusCode: false });
+      // Sent to the local web server with the host in the Host header: a lookalike name has no DNS entry.
+      const r = await request.get(`${webUrl}${route}`, { headers: { Host: `${host}:${new URL(webUrl).port}` }, maxRedirects: 0, failOnStatusCode: false });
       expect(r.status(), `${route} on ${host}`).toBe(404);
     }
   }

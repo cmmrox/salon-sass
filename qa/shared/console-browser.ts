@@ -49,7 +49,8 @@ export async function signInByKeyboard(page: Page, operator: Operator, account: 
   await page.keyboard.type(await operator.code(account.totpSecret));
   await page.keyboard.press('Enter');
   await page.waitForURL('**/console/salons');
-  await expect(page.getByTestId('console-shell')).toBeVisible();
+  // The router keeps the sign-in page's shell in the DOM, hidden (display: none), after navigating.
+  await expect(page.getByTestId('console-shell').filter({ visible: true })).toHaveCount(1);
 }
 
 /** No sideways scroll, nothing outside the viewport or clipped, having first found elements to measure. */
