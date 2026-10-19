@@ -37,6 +37,25 @@ describe('the support view in the proxy (F03-S04)', () => {
     const cleared = response.headers.getSetCookie();
     expect(cleared.filter((cookie) => /^salon_support_(access|session)=;/.test(cookie) && /Max-Age=0/i.test(cookie) && /HttpOnly/i.test(cookie))).toHaveLength(2);
     expect(cleared.some((cookie) => cookie.startsWith('salon_staff_'))).toBe(false);
+    expect(cleared.filter((cookie) => /^salon_session_ended=support;/.test(cookie) && /HttpOnly/i.test(cookie) && /Max-Age=600/i.test(cookie))).toHaveLength(1);
+  });
+
+  // BUG-F03-005: the support cookies may already be gone (cleared by a refused prefetch or BFF read)
+  // when the next page is requested; the ended marker still sends it to the "session ended" notice.
+  it('sends the next page after a support view ended to the ended notice, not to staff sign-in', async () => {
+    const decide = vi.fn();
+    for (const path of ['/workspace/staff', '/workspace/account', '/workspace']) {
+      const response = await routeRequest(request(path, 'salon_session_ended=support'), salonSite(), decide);
+      expect(response.status, path).toBe(307);
+      expect(response.headers.get('location'), path).toBe('http://alpha.localhost:3100/workspace/support#ended');
+    }
+    expect(decide).not.toHaveBeenCalled();
+    const staff = vi.fn(async () => ({ kind: 'signed-in' as const, principal: { kind: 'staff' } as never }));
+    const signedIn = await routeRequest(request('/workspace/staff', 'salon_session_ended=support; salon_staff_access=t'), salonSite(), staff);
+    expect(signedIn.status).toBe(200);
+    expect(staff).toHaveBeenCalledExactlyOnceWith(expect.anything(), { access: 't', refresh: undefined, expiry: undefined });
+    expect((await routeRequest(request('/workspace/staff', 'salon_session_ended=other'), salonSite(), vi.fn())).headers.get('location'))
+      .toBe('http://alpha.localhost:3100/workspace/sign-in');
   });
 
   it('protects the Owner\'s Support access page like every workspace page', async () => {
