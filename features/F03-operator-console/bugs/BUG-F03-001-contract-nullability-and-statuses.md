@@ -63,8 +63,8 @@ with the document.
   `["/credentials","type","must be object"]` (`qa/reports/f03-dev/s01-access.log`, 13 of 14 S01
   access tests failing on `signIn: generated contract shape` before QA isolated the defect).
 - `SubscriptionState.notice`: `{"enum":["trial_ending","past_due","read_only"],"type":["string","null"]}`.
-- TC-F03-S01-041 in the recorded run (see the run folder in `feature.yaml` `evidence.last_run`,
-  entry `F03-S01 operator-runtime`) lists the ten properties and the five statuses.
+- TC-F03-S01-041 in the recorded run `qa/reports/20261019-093648-F03-09df7b0ccb75` (revision
+  c1d6e73), entry `F03-S01 operator-runtime`, lists the ten properties and the five statuses.
 
 QA note: so that one contract defect does not hide every other result, F03's own response
 checks read these ten properties as nullable (`contractValidator` in `qa/shared/operator.ts`);

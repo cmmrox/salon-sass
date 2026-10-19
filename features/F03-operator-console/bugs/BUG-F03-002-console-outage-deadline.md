@@ -58,8 +58,8 @@ is reported at once; the silent cases and the database outage on the console exc
   stopped and paused) and `qa/reports/f03-dev/api-frozen-marks.json` (API frozen, two rounds; the
   BFF's principal and salons reads each answer 503 after about 3,010 ms).
 - Recorded run: entries `F03-S01 console-security` (TC-F03-S01-038, step "silent") and
-  `F03-S02 billing-screens` (TC-F03-S02-027, step "down"), run folder in `feature.yaml`
-  `evidence.last_run`.
+  `F03-S02 billing-screens` (TC-F03-S02-027, step "down"), run
+  `qa/reports/20261019-093648-F03-09df7b0ccb75` (revision c1d6e73).
 
 ## Re-verification
 

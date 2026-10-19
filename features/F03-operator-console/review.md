@@ -15,8 +15,9 @@ Competitor operator consoles are not public, and no competitor pages were resear
 The operator can provision, bill, suspend, close and support a salon end to end, and the hard
 parts are right: tenant isolation held through every transition, money is exact and paid at most
 once, closure is unmistakably irreversible, and support access is short, owner-visible and truly
-read-only. It is not ready to pass yet: four defects are filed (the contract's nullability, the
-console's outage deadline and two console accessibility faults). The one change that would most
+read-only. It is not ready to pass yet: six defects are filed, four of them major (the
+contract's nullability, the console's outage deadline and two console accessibility faults) and
+two minor (an intermittent missing "session ended" notice, and plan pickers capped at 100). The one change that would most
 improve it for the operator is showing each legacy salon's real name in the directory instead of
 three identical "Not configured" rows.
 
@@ -46,6 +47,8 @@ Ranked, most valuable first. Findings that break a requirement are filed as bugs
 | SUG-F03-03 | should | Let operators pick time zone (and country/currency) from a searchable list rather than typing IANA names | |
 | SUG-F03-04 | idea | Let an Admin archive plans so the plan directory and the plan picker list only plans still offered | |
 | SUG-F03-05 | idea | Cap a renewed operator token's `accessExpiresAt` at the session's absolute end | |
+| SUG-F03-06 | idea | Compact the stacked support and billing banners on phones | |
+| SUG-F03-07 | idea | Show the close sheet's deletion date from the server, not the browser's clock | |
 
 ### SUG-F03-01 Show a legacy salon's published name instead of "Not configured"
 
@@ -102,6 +105,40 @@ Ranked, most valuable first. Findings that break a requirement are filed as bugs
 - **Instead:** return `min(now + 5 min, session end)`.
 - **Evidence:** QA diagnostic of operator renewal across the absolute end (S01 AC-5 still holds).
 
+### SUG-F03-06 Compact the stacked support and billing banners on phones
+
+- **Observed:** at 390px a support view of a read-only salon opens with the support banner and the
+  read-only notice stacked, about 430px of an 844px screen, before any page content.
+- **Why it matters:** the support operator reproducing a problem on a phone, and a receptionist on
+  a read-only salon, scroll past the same notices on every page.
+- **Instead:** on narrow screens keep one line per banner with a "details" disclosure, or merge the
+  two into one Alert when both apply.
+- **Evidence:** `qa/reports/f03-explore/support-view-390.png`, `support-billing-390.png`.
+
+### SUG-F03-07 Server-provided deletion date on the close sheet
+
+- **Observed:** with the application clock at July 2027 the close sheet said the data would be
+  deleted "on Nov 18, 2026", 30 days from the browser's date; the closure itself used the
+  application clock correctly.
+- **Why it matters:** the date is the operator's last check before an irreversible action; a
+  device whose clock is wrong shows the wrong date.
+- **Instead:** compute the preview from the API's current time (or return it with the salon detail).
+- **Evidence:** `qa/reports/f03-explore/console-close-sheet-390.png`.
+
+## Verification in this pass
+
+- Tested revision `c1d6e73` (product source identical to the closed stages' `8ef1649`); final
+  recorded run `qa/reports/20261019-093648-F03-09df7b0ccb75`: 21 automation entries, 15 pass and
+  6 fail; 111 tests, 104 pass and 7 fail, none skipped. Every failure is one of the bugs below.
+- Earlier recorded runs at `1af62a2` and `0ce4ca1` (14 and 15 of 21 entries) each exposed test
+  defects, repaired and committed before the final run; their reports are kept.
+- Manual: TC-F03-S01-036, the reference comparison, performed on 2026-10-19. Deferred:
+  TC-F03-S01-042, until BUG-F03-006 is fixed.
+- Passing throughout: operator sign-in, MFA, sessions and ceilings; host binding; provisioning
+  atomicity and idempotency; the database boundary; the build artifact scan; billing cycle,
+  events, transfers, read-only and seats; suspension, closure, export and deletion; support
+  sessions; and all three journeys, including the second-salon isolation journey.
+
 ## Compared with other products
 
 Not compared in this pass. The operator console is internal and the comparison products publish
@@ -127,4 +164,12 @@ export link valid for the 30 days before deletion.
 
 ## Bugs filed from this review
 
-- None beyond those found by the cases: BUG-F03-001 to BUG-F03-004.
+- BUG-F03-001 (major) The generated contract forbids the nulls the API returns and documents 200
+  for the support routes' 201 and 204.
+- BUG-F03-002 (major) Console pages report unavailable after 5.4 to 6.4 s, beyond the 5 s deadline.
+- BUG-F03-003 (major) Console item lists have a list role without list items.
+- BUG-F03-004 (major) Console help and empty-state text has 4.25:1 contrast.
+- BUG-F03-005 (minor) The next page after support access ends sometimes shows the staff sign-in
+  instead of the "session ended" notice.
+- BUG-F03-006 (minor) The plan pickers offer only the 100 newest plans.
+All six were found by cases or while exercising them; none came from the review alone.

@@ -5,7 +5,7 @@ summary: The operator creates a salon, puts it on a plan, bills it, suspends or 
 release: R1
 milestone: M1-web
 status: in-qa
-qa_status: not-run
+qa_status: failing
 released_in: null
 depends_on:
 - F02
@@ -76,11 +76,11 @@ verification:
   manual: []
   deferred: []
 evidence:
-  last_run: null
-  last_result: null
+  last_run: qa/reports/20261019-093648-F03-09df7b0ccb75
+  last_result: fail
 integration:
   branch: charithm/feature/F03-operator-console
   pull_request: null
-  qa_revision: null
+  qa_revision: c1d6e73b5035f7584af1775dd6f40ade13009b82
   merged_commit: null
   merged_at: null

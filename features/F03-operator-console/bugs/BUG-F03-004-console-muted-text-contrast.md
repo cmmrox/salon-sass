@@ -48,8 +48,8 @@ pages scanned clean).
   background color: #f3f0eb, font size: 10.5pt (14px), font weight: normal). Expected contrast
   ratio of 4.5:1".
 - Recorded run: entries `F03-S01 console-screens` (TC-F03-S01-034), `F03-S02 billing-screens`
-  (TC-F03-S02-026) and `F03-S04 support-screens` (TC-F03-S04-017); run folder in `feature.yaml`
-  `evidence.last_run`.
+  (TC-F03-S02-026) and `F03-S04 support-screens` (TC-F03-S04-017); run
+  `qa/reports/20261019-093648-F03-09df7b0ccb75` (revision c1d6e73).
 
 ## Re-verification
 

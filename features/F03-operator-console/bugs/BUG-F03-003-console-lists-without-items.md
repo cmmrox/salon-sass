@@ -46,7 +46,7 @@ announces an empty or malformed list. The workspace screens scanned clean.
   "html":"<div role=\"list\" data-slot=\"item-group\" ... data-testid=\"console-salons-list\">"}`,
   the same for `/console/plans` and `/console/salons/{id}`.
 - Recorded run: entries `F03-S01 console-screens` (TC-F03-S01-034) and `F03-S03 lifecycle-screens`
-  (TC-F03-S03-017), run folder in `feature.yaml` `evidence.last_run`.
+  (TC-F03-S03-017), run `qa/reports/20261019-093648-F03-09df7b0ccb75` (revision c1d6e73).
 
 ## Re-verification
 
