@@ -371,6 +371,12 @@ cases:
   priority: critical
   covers:
   - AC-20
+- id: TC-F03-S01-041
+  title: The generated contract states the nullability and success statuses the API returns
+  type: api
+  priority: medium
+  covers:
+  - AC-14
 verification:
   commands:
   - cd apps/api && ./mvnw -q verify
@@ -399,6 +405,7 @@ verification:
     - TC-F03-S01-013
     - TC-F03-S01-015
     - TC-F03-S01-016
+    suites: [regression]
   - id: provisioning
     tool: playwright
     file: qa/api/F03/S01-provisioning.spec.ts
@@ -414,6 +421,7 @@ verification:
     - TC-F03-S01-024
     - TC-F03-S01-025
     - TC-F03-S01-026
+    suites: [regression]
   - id: operator-runtime
     tool: playwright
     file: qa/api/F03/S01-runtime.spec.ts
@@ -423,12 +431,15 @@ verification:
     - TC-F03-S01-017
     - TC-F03-S01-037
     - TC-F03-S01-039
+    - TC-F03-S01-041
+    suites: [regression]
   - id: platform-audit
     tool: playwright
     file: qa/api/F03/S01-audit.spec.ts
     project: api
     covers:
     - TC-F03-S01-029
+    suites: [regression]
   - id: database-boundary
     tool: script
     file: qa/checks/F03/S01-database-boundary.sh
@@ -437,11 +448,13 @@ verification:
     - TC-F03-S01-028
     - TC-F03-S01-029
     - TC-F03-S01-039
+    suites: [regression]
   - id: build-artifacts
     tool: script
     file: qa/checks/F03/S01-build-artifacts.sh
     covers:
     - TC-F03-S01-040
+    suites: [regression]
   - id: console-screens
     tool: playwright
     file: qa/web/F03/S01-console-screens.spec.ts
@@ -451,6 +464,7 @@ verification:
     - TC-F03-S01-033
     - TC-F03-S01-034
     - TC-F03-S01-035
+    suites: [regression]
   - id: console-security
     tool: playwright
     file: qa/web/F03/S01-console-security.spec.ts
@@ -460,6 +474,7 @@ verification:
     - TC-F03-S01-030
     - TC-F03-S01-031
     - TC-F03-S01-038
+    suites: [regression]
   manual: []
   deferred: []
 evidence:

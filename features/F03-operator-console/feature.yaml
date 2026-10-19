@@ -58,18 +58,21 @@ verification:
     project: web
     covers:
     - TC-F03-001
+    suites: [regression, smoke]
   - id: journey-second-salon-isolation
     tool: playwright
     file: qa/api/F03/journey-second-salon-isolation.spec.ts
     project: api
     covers:
     - TC-F03-002
+    suites: [regression]
   - id: journey-access-state-precedence
     tool: playwright
     file: qa/api/F03/journey-access-state-precedence.spec.ts
     project: api
     covers:
     - TC-F03-003
+    suites: [regression]
   manual: []
   deferred: []
 evidence:

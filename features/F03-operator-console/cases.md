@@ -70,7 +70,7 @@ Every case id here is declared under `cases:` in the yaml beside it, and the rev
   4. Admin suspends and reactivates the salon; Support starts a session, enters through the code, sees the Owner's pages under the banner and ends it; the Owner sees the session in the audit list
   5. Admin closes the salon; the Owner's email link downloads the export; at deletion the hostname stays unknown and the console shows the tombstone
 - **Expected:** Values pass between stages unchanged: the plan defined in S01 is the one billed and enforced in S02, the invoice and state read in S03's lifecycle card match S02, the support view in S04 shows S01's profile and S02's billing page, and the export holds the staff and audit created along the way. Each step's outcome is checked once more through the API; the journey does not repeat stage rules.
-- **Automation:** `qa/web/F03/journey-operator-lifecycle.spec.ts` (written against the final S01-S03 contract; its support step waits for the S04 handoff, qa/shared/operator.ts PENDING_S04; not yet run)
+- **Automation:** `qa/web/F03/journey-operator-lifecycle.spec.ts`
 
 ### TC-F03-002 A second salon stays isolated and unaffected through every transition of the first
 
@@ -84,7 +84,7 @@ Every case id here is declared under `cases:` in the yaml beside it, and the rev
   2. After each transition, B's and alpha's Owners read staff, audit, entitlements, invoices and perform one mutation; compare database counts per tenant
   3. Check A's export and the support credential for any B or alpha record
 - **Expected:** B and alpha behave and read exactly as before at every step (their counts show records existed first); no export file, audit list, entitlement or support response contains a B or alpha record; A's deletion removes no B or alpha row.
-- **Automation:** `qa/api/F03/journey-second-salon-isolation.spec.ts` (written against the final S01-S03 contract; its support step waits for the S04 handoff, qa/shared/operator.ts PENDING_S04; not yet run)
+- **Automation:** `qa/api/F03/journey-second-salon-isolation.spec.ts`
 
 ### TC-F03-003 Access states combine in the documented precedence across billing, lifecycle and support
 
@@ -98,4 +98,4 @@ Every case id here is declared under `cases:` in the yaml beside it, and the rev
   2. Admin reactivates: the salon returns to `read_only`; the Owner pays every overdue invoice and the salon is `active`
   3. Support starts a new session; Admin closes the salon; the support credential and the Owner's session are used again
 - **Expected:** Read-only allows the support session and its reads; suspension refuses the support credential with 403 `salon_suspended` and refuses new sessions; reactivation restores `read_only`, payment restores `active`; after closure every credential gets the unknown-salon 404 and no session can be started. `closed` over `suspended` over `read_only` over billing states holds at each step.
-- **Automation:** `qa/api/F03/journey-access-state-precedence.spec.ts` (written against the final S01-S03 contract; its support step waits for the S04 handoff, qa/shared/operator.ts PENDING_S04; not yet run)
+- **Automation:** `qa/api/F03/journey-access-state-precedence.spec.ts`

@@ -269,6 +269,7 @@ verification:
     - TC-F03-S04-012
     - TC-F03-S04-013
     - TC-F03-S04-014
+    suites: [regression]
   - id: support-screens
     tool: playwright
     file: qa/web/F03/S04-support-screens.spec.ts
@@ -283,6 +284,7 @@ verification:
     - TC-F03-S04-015
     - TC-F03-S04-016
     - TC-F03-S04-017
+    suites: [regression]
   manual: []
   deferred: []
 evidence:

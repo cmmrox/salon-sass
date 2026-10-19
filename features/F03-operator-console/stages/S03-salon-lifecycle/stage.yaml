@@ -269,6 +269,7 @@ verification:
     - TC-F03-S03-004
     - TC-F03-S03-005
     - TC-F03-S03-013
+    suites: [regression]
   - id: export-retention
     tool: playwright
     file: qa/api/F03/S03-export-retention.spec.ts
@@ -282,6 +283,7 @@ verification:
     - TC-F03-S03-011
     - TC-F03-S03-012
     - TC-F03-S03-014
+    suites: [regression]
   - id: lifecycle-screens
     tool: playwright
     file: qa/web/F03/S03-lifecycle-screens.spec.ts
@@ -291,6 +293,7 @@ verification:
     - TC-F03-S03-015
     - TC-F03-S03-016
     - TC-F03-S03-017
+    suites: [regression]
   manual: []
   deferred: []
 evidence:

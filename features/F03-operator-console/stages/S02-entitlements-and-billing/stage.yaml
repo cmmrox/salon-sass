@@ -342,6 +342,7 @@ verification:
     - TC-F03-S02-002
     - TC-F03-S02-003
     - TC-F03-S02-022
+    suites: [regression]
   - id: billing-cycle
     tool: playwright
     file: qa/api/F03/S02-billing-cycle.spec.ts
@@ -360,6 +361,7 @@ verification:
     - TC-F03-S02-016
     - TC-F03-S02-019
     - TC-F03-S02-028
+    suites: [regression]
   - id: entitlements
     tool: playwright
     file: qa/api/F03/S02-entitlements.spec.ts
@@ -370,12 +372,14 @@ verification:
     - TC-F03-S02-017
     - TC-F03-S02-018
     - TC-F03-S02-020
+    suites: [regression]
   - id: billing-records
     tool: playwright
     file: qa/api/F03/S02-billing-records.spec.ts
     project: api
     covers:
     - TC-F03-S02-023
+    suites: [regression]
   - id: billing-screens
     tool: playwright
     file: qa/web/F03/S02-billing-screens.spec.ts
@@ -386,6 +390,7 @@ verification:
     - TC-F03-S02-025
     - TC-F03-S02-026
     - TC-F03-S02-027
+    suites: [regression]
   manual: []
   deferred: []
 evidence:
