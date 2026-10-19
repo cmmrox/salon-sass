@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import org.springframework.http.CacheControl;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -42,18 +44,21 @@ class OperatorSupportController {
     }
 
     @PostMapping(path = "/salons/{id}/support-sessions", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseStatus(HttpStatus.CREATED)
     ResponseEntity<SupportSessions.SupportEntry> startSupportSession(@PathVariable String id, @RequestBody StartRequest request) {
         return ResponseEntity.status(201).cacheControl(CacheControl.noStore()).body(sessions.start(
                 OperatorRequests.id(id), new SupportSessions.StartInput(request.reason(), request.durationMinutes())));
     }
 
     @PostMapping("/support-sessions/{id}/entry-codes")
+    @ResponseStatus(HttpStatus.CREATED)
     ResponseEntity<SupportSessions.SupportEntry> issueSupportEntryCode(@PathVariable String id) {
         return ResponseEntity.status(201).cacheControl(CacheControl.noStore())
                 .body(sessions.entryCode(OperatorRequests.id(id)));
     }
 
     @DeleteMapping("/support-sessions/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     ResponseEntity<Void> endSupportSession(@PathVariable String id) {
         sessions.end(OperatorRequests.id(id));
         return ResponseEntity.noContent().build();

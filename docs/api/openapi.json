@@ -329,31 +329,43 @@
       "Entitlements": {
         "properties": {
           "features": {
-            "$ref": "#/components/schemas/Features",
-            "type": [
-              "object",
-              "null"
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Features"
+              },
+              {
+                "type": "null"
+              }
             ]
           },
           "limits": {
-            "$ref": "#/components/schemas/Limits",
-            "type": [
-              "object",
-              "null"
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Limits"
+              },
+              {
+                "type": "null"
+              }
             ]
           },
           "plan": {
-            "$ref": "#/components/schemas/PlanRef",
-            "type": [
-              "object",
-              "null"
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PlanRef"
+              },
+              {
+                "type": "null"
+              }
             ]
           },
           "subscription": {
-            "$ref": "#/components/schemas/SubscriptionState",
-            "type": [
-              "object",
-              "null"
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/SubscriptionState"
+              },
+              {
+                "type": "null"
+              }
             ]
           },
           "usage": {
@@ -980,10 +992,13 @@
             "type": "string"
           },
           "credentials": {
-            "$ref": "#/components/schemas/OperatorTokens",
-            "type": [
-              "object",
-              "null"
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/OperatorTokens"
+              },
+              {
+                "type": "null"
+              }
             ]
           },
           "expiresAt": {
@@ -1817,10 +1832,13 @@
             ]
           },
           "plan": {
-            "$ref": "#/components/schemas/PlanSummary",
-            "type": [
-              "object",
-              "null"
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PlanSummary"
+              },
+              {
+                "type": "null"
+              }
             ]
           },
           "slug": {
@@ -2047,10 +2065,13 @@
             ]
           },
           "plan": {
-            "$ref": "#/components/schemas/PlanSummary",
-            "type": [
-              "object",
-              "null"
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PlanSummary"
+              },
+              {
+                "type": "null"
+              }
             ]
           },
           "slug": {
@@ -2091,7 +2112,8 @@
               "operator",
               "admin",
               "owner",
-              "expiry"
+              "expiry",
+              null
             ],
             "type": [
               "string",
@@ -2336,7 +2358,8 @@
             "enum": [
               "trial_ending",
               "past_due",
-              "read_only"
+              "read_only",
+              null
             ],
             "type": [
               "string",
@@ -2386,10 +2409,13 @@
             "type": "string"
           },
           "currentPeriod": {
-            "$ref": "#/components/schemas/Period",
-            "type": [
-              "object",
-              "null"
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Period"
+              },
+              {
+                "type": "null"
+              }
             ]
           },
           "monthlyAmount": {
@@ -2408,10 +2434,13 @@
             "type": "string"
           },
           "plan": {
-            "$ref": "#/components/schemas/PlanSummary",
-            "type": [
-              "object",
-              "null"
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PlanSummary"
+              },
+              {
+                "type": "null"
+              }
             ]
           },
           "readOnlyAt": {
@@ -2597,7 +2626,8 @@
               "operator",
               "admin",
               "owner",
-              "expiry"
+              "expiry",
+              null
             ],
             "type": [
               "string",
@@ -4744,7 +4774,7 @@
           "required": true
         },
         "responses": {
-          "200": {
+          "201": {
             "content": {
               "application/json": {
                 "schema": {
@@ -4752,7 +4782,7 @@
                 }
               }
             },
-            "description": "OK"
+            "description": "Created"
           },
           "default": {
             "content": {
@@ -5071,8 +5101,8 @@
           }
         ],
         "responses": {
-          "200": {
-            "description": "OK"
+          "204": {
+            "description": "No Content"
           },
           "default": {
             "content": {
@@ -5104,7 +5134,7 @@
           }
         ],
         "responses": {
-          "200": {
+          "201": {
             "content": {
               "application/json": {
                 "schema": {
@@ -5112,7 +5142,7 @@
                 }
               }
             },
-            "description": "OK"
+            "description": "Created"
           },
           "default": {
             "content": {
@@ -5383,8 +5413,8 @@
           }
         ],
         "responses": {
-          "200": {
-            "description": "OK"
+          "204": {
+            "description": "No Content"
           },
           "default": {
             "content": {
@@ -5446,8 +5476,8 @@
       "delete": {
         "operationId": "endCurrentSupportSession",
         "responses": {
-          "200": {
-            "description": "OK"
+          "204": {
+            "description": "No Content"
           },
           "default": {
             "content": {

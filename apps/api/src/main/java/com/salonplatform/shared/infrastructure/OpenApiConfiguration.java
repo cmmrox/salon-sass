@@ -1,11 +1,17 @@
 package com.salonplatform.shared.infrastructure;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.IdentityHashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import com.salonplatform.shared.api.ErrorCode;
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.SpecVersion;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.media.ArraySchema;
 import io.swagger.v3.oas.models.media.Content;
@@ -62,6 +68,70 @@ class OpenApiConfiguration {
                 }
             }));
         };
+    }
+
+    /**
+     * OpenAPI 3.1 is JSON Schema 2020-12, where every keyword applies. The generator writes a
+     * nullable reference as {@code $ref} beside {@code type: [object, null]}, so null still fails the
+     * referenced schema, and a nullable enum without null in its values, so null fails the enum
+     * (BUG-F03-001, the class of BUG-F02-001). Rewrite both so that a client generated from the
+     * document accepts the nulls the API answers: {@code oneOf: [{$ref}, {type: null}]} and
+     * {@code null} among the enum values.
+     */
+    @Bean
+    OpenApiCustomizer nullableSchemas() {
+        return openApi -> {
+            if (openApi.getComponents() == null || openApi.getComponents().getSchemas() == null) {
+                return;
+            }
+            Map<Schema<?>, Boolean> seen = new IdentityHashMap<>();
+            openApi.getComponents().getSchemas().values().forEach(schema -> nullable(schema, seen));
+        };
+    }
+
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    private static void nullable(Schema<?> schema, Map<Schema<?>, Boolean> seen) {
+        if (schema == null || seen.put(schema, Boolean.TRUE) != null) {
+            return;
+        }
+        if (schema.getProperties() != null) {
+            Map<String, Schema> rewritten = new LinkedHashMap<>();
+            schema.getProperties().forEach((name, property) -> rewritten.put(name, nullableReference(property)));
+            schema.setProperties(rewritten);
+            rewritten.values().forEach(property -> nullable(property, seen));
+        }
+        if (schema.getItems() != null) {
+            schema.setItems(nullableReference(schema.getItems()));
+            nullable(schema.getItems(), seen);
+        }
+        if (schema.getAdditionalProperties() instanceof Schema<?> additional) {
+            schema.setAdditionalProperties(nullableReference(additional));
+            nullable(additional, seen);
+        }
+        for (List<Schema> members : Arrays.asList(schema.getAllOf(), schema.getOneOf(), schema.getAnyOf())) {
+            if (members != null) {
+                members.forEach(member -> nullable(member, seen));
+            }
+        }
+        Set<String> types = schema.getTypes();
+        List<?> values = schema.getEnum();
+        if (types != null && types.contains("null") && values != null && !values.contains(null)) {
+            List<Object> withNull = new ArrayList<>(values);
+            withNull.add(null);
+            ((Schema<Object>) schema).setEnum(withNull);
+        }
+    }
+
+    private static Schema<?> nullableReference(Schema<?> property) {
+        Set<String> types = property.getTypes();
+        if (property.get$ref() == null || types == null || !types.contains("null")) {
+            return property;
+        }
+        Schema<?> reference = new Schema<>().specVersion(SpecVersion.V31).$ref(property.get$ref());
+        Schema<?> nothing = new Schema<>().specVersion(SpecVersion.V31).types(Set.of("null"));
+        return new Schema<>().specVersion(SpecVersion.V31)
+                .description(property.getDescription())
+                .oneOf(List.of(reference, nothing));
     }
 
     private static Schema<?> problemSchema() {
