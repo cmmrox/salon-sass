@@ -92,7 +92,7 @@ export function SubscriptionCard({ salon, onSalonChanged }: { salon: Detail; onS
           <div className="flex flex-col gap-3" role="status" data-testid="console-subscription-loading"><span className="sr-only">{t('loading')}</span>{[0, 1, 2].map((row) => <Skeleton key={row} className="h-field" aria-hidden="true" />)}</div>
         )}
         {unbilled && (
-          <Empty className="bg-background" data-testid="console-subscription-none">
+          <Empty surface="canvas" data-testid="console-subscription-none">
             <EmptyHeader><EmptyTitle>{t('noSubscription')}</EmptyTitle><EmptyDescription>{t('noSubscriptionHelp')}</EmptyDescription></EmptyHeader>
             <StartSubscription salon={salon} onStarted={() => changed(t('subscriptionStarted'))} />
           </Empty>
@@ -298,7 +298,7 @@ export function InvoiceList({ id }: { id: string }) {
       {failure && <ConsoleFailure failure={failure} busy={loading} onRetry={failure.code === 'not_found' || failure.code === 'bad_request' ? undefined : () => void load(page)} />}
       {loading && !data && <ConsoleLoading />}
       {data && data.items.length === 0 && (
-        <Empty className="bg-card" data-testid="console-invoices-empty"><EmptyHeader><EmptyTitle>{t('invoicesEmpty')}</EmptyTitle><EmptyDescription>{t('invoicesEmptyHelp')}</EmptyDescription></EmptyHeader></Empty>
+        <Empty surface="card" data-testid="console-invoices-empty"><EmptyHeader><EmptyTitle>{t('invoicesEmpty')}</EmptyTitle><EmptyDescription>{t('invoicesEmptyHelp')}</EmptyDescription></EmptyHeader></Empty>
       )}
       {data && data.items.length > 0 && (
         <ItemGroup className="gap-2" data-testid="console-invoices-list" aria-busy={loading || undefined}>

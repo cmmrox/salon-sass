@@ -12,7 +12,7 @@ export function DirectorySearch({ area, help, busy, onSearch }: { area: 'salons'
   const [value, setValue] = useState('');
   const id = `console-${area}-search`;
   return (
-    <form role="search" className="min-w-0" onSubmit={(event) => { event.preventDefault(); onSearch(value); }}>
+    <form role="search" className="min-w-0" data-surface="canvas" onSubmit={(event) => { event.preventDefault(); onSearch(value); }}>
       <Field className="min-w-0">
         <FieldLabel htmlFor={id}>{t('search')}</FieldLabel>
         <InputGroup>

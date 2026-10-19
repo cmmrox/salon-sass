@@ -43,7 +43,7 @@ export function SalonDirectory({ platformDomain, permissions = ['operator.salon.
       {failure && <ConsoleFailure failure={failure} busy={loading} onRetry={() => void load(page, query)} />}
       {loading && !data && <ConsoleLoading />}
       {data && data.items.length === 0 && (
-        <Empty className="bg-card" data-testid="console-salons-empty"><EmptyHeader><EmptyTitle>{query ? t('salonsNoMatch') : t('salonsEmpty')}</EmptyTitle>{!query && <EmptyDescription>{t('salonsEmptyHelp')}</EmptyDescription>}</EmptyHeader></Empty>
+        <Empty surface="card" data-testid="console-salons-empty"><EmptyHeader><EmptyTitle>{query ? t('salonsNoMatch') : t('salonsEmpty')}</EmptyTitle>{!query && <EmptyDescription>{t('salonsEmptyHelp')}</EmptyDescription>}</EmptyHeader></Empty>
       )}
       {data && data.items.length > 0 && (
         <ItemGroup className="gap-2" data-testid="console-salons-list" aria-busy={loading || undefined}>
