@@ -41,7 +41,7 @@ export async function billAt(operator: Operator, clock: TestClock, instant: stri
 
 /** Crosses the trial end of a salon's subscription and returns its first invoice. */
 export async function firstInvoice(operator: Operator, clock: TestClock, admin: OperatorActor, salonId: string): Promise<InvoiceSummary> {
-  const subscription = await operator.subscription(admin, salonId);
+  const subscription = await operator.subscription(await operator.renew(admin), salonId);
   await billAt(operator, clock, subscription.trialEndsAt);
   await operator.renew(admin);
   const page = await operator.invoices(admin, salonId);

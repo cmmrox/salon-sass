@@ -281,8 +281,9 @@ export function provisionedSalon(created: { id: string; slug: string; hostname: 
 }
 
 /**
- * The provisioned Owner's first sign-in at its own salon: enrollment, then a session. The account
- * keeps its TOTP seed so the Owner can sign in again after the test clock moves.
+ * The provisioned Owner's first sign-in at its own salon: enrollment, then a session, returned as a
+ * signed-in staff member. The account keeps its TOTP seed so the Owner can sign in again after the
+ * test clock moves; a second sign-in in the same TOTP step would be a refused replay.
  */
 export async function ownerSession(identity: Identity, salon: Salon, input: SalonInput) {
   const account = ownerOf(input);
@@ -293,7 +294,7 @@ export async function ownerSession(identity: Identity, salon: Salon, input: Salo
     { challengeId: challenge.challengeId, challengeToken: challenge.challengeToken }), 'Enrollment');
   account.totpSecret = enrollment.secret!;
   const tokens = await identity.verify(salon, challenge, account.totpSecret);
-  return { salon, account, tokens };
+  return { salon, account, tokens, principal: await identity.principal(salon, tokens) };
 }
 
 /**

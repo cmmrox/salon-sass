@@ -142,7 +142,7 @@ test(`${id(12)} The Owner's Support access page lists sessions and offers Revoke
   const ended = await start(operator, support, target.created.id);
   expect((await operator.endSupport(support, ended.id)).status()).toBe(204);
   const active = await start(operator, support, target.created.id);
-  const owner = await identity.login(target.salon, (await ownerSession(identity, target.salon, target.input)).account);
+  const owner = await ownerSession(identity, target.salon, target.input);
   const context = await accounts.context(target.salon, [owner]);
   const page = await context.newPage();
   await page.goto('/workspace/support-access');
@@ -204,7 +204,7 @@ test(`${id(16)} Support screens fit every width without clipping or horizontal s
     const s = await start(operator, extra, target.created.id);
     if (n % 2) expect((await operator.endSupport(extra, s.id)).status()).toBe(204);
   }
-  const owner = await identity.login(target.salon, (await ownerSession(identity, target.salon, target.input)).account);
+  const owner = await ownerSession(identity, target.salon, target.input);
   for (const viewport of WIDTHS) {
     const consoleSide = await consoleContext(browser, await operator.renew(support), { width: viewport.width });
     const page = await consoleSide.newPage();
@@ -259,7 +259,7 @@ test(`${id(17)} Support screens pass the automated scan and keyboard-only use`, 
   await view.keyboard.press('Enter');
   await expect(view.getByTestId(tid('banner'))).toHaveCount(0);
   await viewContext.close();
-  const owner = await identity.login(target.salon, (await ownerSession(identity, target.salon, target.input)).account);
+  const owner = await ownerSession(identity, target.salon, target.input);
   await start(operator, await operator.actor('OPERATOR_SUPPORT'), target.created.id);
   const ownerContext = await accounts.context(target.salon, [owner]);
   const access = await ownerContext.newPage();

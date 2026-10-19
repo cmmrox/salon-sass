@@ -97,8 +97,8 @@ test(`${id(24)} Console and workspace billing screens show every state with corr
   const exceeded = await operator.plan(admin, { staffSeats: 1 });
   await identity.seed(salon, [{ email: `seat-${Date.now()}@example.invalid`, mobile: '', password: 'QA seat password long', role: 'MANAGER' }]);
   const legacy = await operator.unbilledSalon();
-  const context = await consoleContext(browser, admin);
-  const page = await context.newPage();
+  let context = await consoleContext(browser, admin);
+  let page = await context.newPage();
   // Unbilled: no subscription, Start subscription offered.
   await page.goto(consoleUrl(`/console/salons/${legacy.id}`));
   await expect(page.getByTestId('console-subscription-none')).toBeVisible();
@@ -129,6 +129,10 @@ test(`${id(24)} Console and workspace billing screens show every state with corr
   await page.keyboard.press('Escape');
   // Invoice issued: an open invoice, a refused and then an accepted transfer.
   const invoice = await firstInvoice(operator, clock, admin, created.id);
+  // Fourteen days later the browser's console session has passed its absolute end: bridge fresh authority.
+  await context.close();
+  context = await consoleContext(browser, admin);
+  page = await context.newPage();
   await page.goto(consoleUrl(`/console/salons/${created.id}/invoices`));
   const row = page.locator(`[data-testid="console-invoice-row"][data-id="${invoice.id}"]`);
   await expect(row.getByTestId('console-invoice-status')).toHaveAttribute('data-status', 'open');
@@ -145,7 +149,7 @@ test(`${id(24)} Console and workspace billing screens show every state with corr
   expect((await operator.invoice(await operator.renew(admin), invoice.id)).status, 'the transfer is visible through the API').toBe('paid');
   await context.close();
   // Workspace Plan and billing (English only: decision 051).
-  const owner = await identity.login(salon, (await ownerSession(identity, salon, input)).account);
+  const owner = await ownerSession(identity, salon, input);
   const { context: ws, page: billing } = await workspacePage(accounts, owner, '/workspace/billing');
   await expect(billing.getByTestId('billing-invoice-row')).toHaveCount(1);
   await expect(billing.getByTestId('billing-invoice-status')).toContainText(/paid/i);
@@ -160,7 +164,7 @@ test(`${id(25)} Billing screens fit every width without clipping or horizontal s
   for (let n = 0; n < 5; n++) await billAt(operator, clock, (await operator.subscription(await operator.renew(admin), created.id)).nextInvoiceAt);
   await operator.renew(admin);
   const legacy = await operator.unbilledSalon();
-  const owner = await identity.login(salon, (await ownerSession(identity, salon, input)).account);
+  const owner = await ownerSession(identity, salon, input);
   for (const viewport of WIDTHS) {
     const context = await consoleContext(browser, await operator.actor(), { width: viewport.width });
     const page = await context.newPage();
@@ -230,7 +234,7 @@ test(`${id(26)} Billing screens pass the automated scan and keyboard-only use`, 
   await page.keyboard.press('Enter');
   await expect(page.getByTestId('console-transfer-recorded')).toBeVisible();
   await context.close();
-  const owner = await identity.login(salon, (await ownerSession(identity, salon, input)).account);
+  const owner = await ownerSession(identity, salon, input);
   const { context: ws, page: billing } = await workspacePage(accounts, owner, '/workspace/billing');
   await expect(billing.getByTestId('billing-page')).toBeVisible();
   await expectAccessible(billing, 'Plan and billing');
@@ -240,7 +244,7 @@ test(`${id(26)} Billing screens pass the automated scan and keyboard-only use`, 
 test(`${id(27)} A stopped or silent database is reported on billing screens within five seconds and recovers`, async ({ browser, operator, identity, clock, accounts }) => {
   test.setTimeout(300_000);
   const { admin, created, input, salon } = await billedSalon(operator, clock, '2027-01-08T07:00:00Z');
-  const owner = await identity.login(salon, (await ownerSession(identity, salon, input)).account);
+  const owner = await ownerSession(identity, salon, input);
   const consoleSide = await consoleContext(browser, admin);
   const card = await consoleSide.newPage();
   const { context: ws, page: billing } = await workspacePage(accounts, owner, '/workspace/billing');
@@ -255,18 +259,27 @@ test(`${id(27)} A stopped or silent database is reported on billing screens with
         for (const [page, route, error] of [[card, consoleUrl(`/console/salons/${created.id}`), 'console-error'], [billing, '/workspace/billing', 'billing-error']] as const) {
           const started = Date.now();
           await page.goto(route, { timeout: 30_000 });
-          await expect(page.getByTestId(error), `${mode}: ${route} reports unavailable`).toBeVisible({ timeout: LIMIT_MS });
-          expect(Date.now() - started, `${mode}: within five seconds`).toBeLessThanOrEqual(LIMIT_MS);
+          // The workspace may be refused before the page renders: with no database the salon itself
+          // cannot be resolved and the platform's unavailable page answers instead of the billing card.
+          await expect(page.getByTestId(error).or(page.getByTestId('status-unavailable')), `${mode}: ${route} reports unavailable`).toBeVisible({ timeout: LIMIT_MS });
+          expect(Date.now() - started, `${mode}: ${route} within five seconds`).toBeLessThanOrEqual(LIMIT_MS);
         }
       } finally {
         localService(mode === 'down' ? 'start' : 'resume', 'postgres');
       }
       await expect.poll(accepting, { timeout: 60_000, intervals: [100] }).toBe(true);
       const back = Date.now();
-      await expect.poll(async () => { await card.goto(consoleUrl(`/console/salons/${created.id}`)); return card.getByTestId('console-subscription-card').isVisible(); },
-        { timeout: LIMIT_MS, intervals: [250] }).toBe(true);
-      await expect.poll(async () => { await billing.goto('/workspace/billing'); return billing.getByTestId('billing-page').isVisible(); },
-        { timeout: LIMIT_MS, intervals: [250] }).toBe(true);
+      // Each attempt waits for the page to settle (its content or its error) before reading it.
+      const settledOn = async (page: Page, route: string, ready: string, errors: string[]) => {
+        await page.goto(route);
+        await errors.reduce((l, e) => l.or(page.getByTestId(e)), page.getByTestId(ready)).first().waitFor({ timeout: LIMIT_MS }).catch(() => undefined);
+        return page.getByTestId(ready).isVisible();
+      };
+      // The card holds its own error, so recovery is read from its state badge, shown only on success.
+      await expect.poll(() => settledOn(card, consoleUrl(`/console/salons/${created.id}`), 'console-subscription-state', ['console-error']),
+        { timeout: 2 * LIMIT_MS, intervals: [250] }).toBe(true);
+      await expect.poll(() => settledOn(billing, '/workspace/billing', 'billing-page', ['billing-error', 'status-unavailable']),
+        { timeout: 2 * LIMIT_MS, intervals: [250] }).toBe(true);
       expect(Date.now() - back, `${mode}: recovered within five seconds of the database`).toBeLessThanOrEqual(2 * LIMIT_MS);
     });
   }

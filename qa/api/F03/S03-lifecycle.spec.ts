@@ -58,7 +58,7 @@ test(`${id(1)} Suspension refuses every salon endpoint on the next request witho
       const { admin, created, input, salon } = await provisioned(operator, clock, row.createdAt);
       await row.drive(operator, clock, admin, created.id);
       if (row.state !== 'active') expect((await operator.subscription(admin, created.id)).state).toBe(row.state);
-      const owner = await identity.login(salon, (await ownerSession(identity, salon, input)).account);
+      const owner = await ownerSession(identity, salon, input);
       const customer = await customers.login(salon);
       expect((await identity.call(salon, 'GET', '/me', undefined, owner.tokens)).status()).toBe(200);
       const sessions = liveSessions(created.id);

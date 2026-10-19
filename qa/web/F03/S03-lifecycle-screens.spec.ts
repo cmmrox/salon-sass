@@ -43,7 +43,7 @@ async function detail(page: Page, salonId: string) {
 test(`${id(2)} A suspended salon's workspace shows temporarily unavailable`, async ({ operator, identity, accounts }) => {
   const admin = await operator.actor();
   const { created, input, salon } = await salonWithHistory(operator, admin);
-  const owner = await identity.login(salon, (await ownerSession(identity, salon, input)).account);
+  const owner = await ownerSession(identity, salon, input);
   await operatorJson(await operator.suspend(admin, created.id, await operator.version(admin, created.id)), 'salon');
   const context = await accounts.context(salon, [owner]);
   for (const route of ['/workspace/sign-in', '/workspace/account']) {

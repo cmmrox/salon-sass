@@ -124,7 +124,10 @@ test(`${id(38)} A stopped or silent API is reported by the console within five s
       const back = Date.now();
       await expect.poll(async () => {
         await page.goto(consoleUrl('/console/salons'));
-        return page.getByTestId('console-salons').isVisible();
+        // Wait for the page to settle (its list or its error) before reading it. The page container
+        // also holds the error, so recovery is read from the list itself (alpha, beta, gamma exist).
+        await page.getByTestId('console-salons-list').or(page.getByTestId('console-error')).first().waitFor({ timeout: LIMIT_MS }).catch(() => undefined);
+        return page.getByTestId('console-salons-list').isVisible();
       }, { timeout: LIMIT_MS, intervals: [250] }).toBe(true);
       expect(Date.now() - back, `${mode}: recovered within five seconds of the API`).toBeLessThanOrEqual(LIMIT_MS);
     });
