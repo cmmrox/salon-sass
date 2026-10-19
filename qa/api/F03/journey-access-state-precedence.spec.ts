@@ -45,6 +45,11 @@ test('TC-F03-003 Access states combine in the documented precedence across billi
   expect((await operator.subscription(admin, created.id)).state).toBe('active');
   expect((await identity.call(salon, 'POST', '/staff', syntheticAccount('MANAGER'), await ownerTokens())).status(), 'active again').toBe(201);
 
+  // The first session was never ended (suspension refuses credentials but leaves sessions open,
+  // decision 053): it reads again once the salon is active; the operator ends it before a new one.
+  expect((await onSalonHost(identity, salon, 'GET', STAFF, credential)).status(), 'the open session reads again after reactivation').toBe(200);
+  expect((await operator.endSupport(await operator.renew(support), first.id)).status()).toBe(204);
+
   // closed over everything: every credential gets the unknown-salon answer and no session starts.
   const second = await begin();
   const late = await operator.supportCredential(await operator.exchange(second.entryCode, salon.hostname));

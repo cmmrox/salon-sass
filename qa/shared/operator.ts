@@ -337,6 +337,17 @@ export function tenantTables(): string[] {
 export function tenantRowCounts(salonId: string): Record<string, number> {
   return Object.fromEntries(tenantTables().map(t => [t, countRows(t, `tenant_id = ${sqlLiteral(salonId)}`)]));
 }
+/**
+ * Tenant tables whose rows scheduled jobs remove or add as the test clock moves, for every salon:
+ * outbox retention and billing reminders (outbox_message) and the identity security cleanup of
+ * expired challenges, steps, rate buckets and refresh history. A comparison across a clock jump
+ * of "nothing of another salon changed" uses the durable tables only.
+ */
+export const TIME_CLEANED_TABLES = ['outbox_message', 'identity_mfa_challenge', 'identity_mfa_step', 'identity_rate_bucket',
+  'identity_customer_challenge', 'identity_refresh_history'];
+export function durableRowCounts(salonId: string): Record<string, number> {
+  return Object.fromEntries(Object.entries(tenantRowCounts(salonId)).filter(([table]) => !TIME_CLEANED_TABLES.includes(table)));
+}
 /** Platform audit entries for a subject, as `action` strings in order (S01 AC-16, S02 AC-14, S03 AC-11). */
 export type PlatformAuditRow = { action: string; actorKind: string; actorId: string; subjectKind: string; subjectId: string; traceId: string | null; details: string; at: string };
 export function platformAuditWhere(where: string): PlatformAuditRow[] {

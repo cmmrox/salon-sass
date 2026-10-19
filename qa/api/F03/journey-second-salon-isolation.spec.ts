@@ -6,28 +6,28 @@
  *
  * The support step uses the S04 handoff's credential shape (qa/shared/operator.ts PENDING_S04).
  */
-import { crossBoundary, firstInvoice } from '../../shared/billing';
+import { billAt, crossBoundary, firstInvoice } from '../../shared/billing';
 import { syntheticAccount, type Identity, type Tokens } from '../../shared/identity';
 import { rowsOf, unzip } from '../../shared/zip';
 import {
-  test, expect, alpha, onSalonHost, operatorJson, operatorProblem, ownerSession, staffTokens, supportJson, tenantRowCounts,
+  test, expect, alpha, onSalonHost, operatorJson, operatorProblem, ownerSession, staffTokens, supportJson, tenantRowCounts, durableRowCounts,
   type SalonDetail, type SupportStart,
 } from '../../shared/operator';
 import type { Salon } from '../../shared/tenants';
 
 type Witness = { salon: Salon; owner: () => Promise<Tokens>; label: string };
 
-/** One read and one mutation each, and unchanged counts apart from the mutation's own rows. */
+/** One read and one mutation each, and durable tables never shrink (time-cleaned tables are left out: TIME_CLEANED_TABLES). */
 async function unaffected(identity: Identity, witnesses: Witness[], step: string) {
   for (const w of witnesses) {
     const tokens = await w.owner();
-    const before = tenantRowCounts(w.salon.id);
+    const before = durableRowCounts(w.salon.id);
     expect(Object.values(before).some(n => n > 0), `${step}: ${w.label} has records to protect`).toBe(true);
     for (const route of ['/api/v1/identity/staff?size=100', '/api/v1/identity/audit?size=100']) {
       expect((await onSalonHost(identity, w.salon, 'GET', route, tokens)).status(), `${step}: ${w.label} reads ${route}`).toBe(200);
     }
     expect((await identity.call(w.salon, 'POST', '/staff', syntheticAccount('PROFESSIONAL'), tokens)).status(), `${step}: ${w.label} mutates`).toBe(201);
-    const after = tenantRowCounts(w.salon.id);
+    const after = durableRowCounts(w.salon.id);
     for (const table of Object.keys(before)) expect(after[table], `${step}: ${w.label} ${table} never shrinks`).toBeGreaterThanOrEqual(before[table]);
   }
 }
@@ -54,7 +54,9 @@ test('TC-F03-002 A second salon stays isolated and unaffected through every tran
   await unaffected(identity, witnesses, 'seat exhaustion');
   // Read-only A (B paid).
   const invoiceA = await firstInvoice(operator, clock, admin, a.created.id);
-  const invoiceB = (await operator.invoices(admin, b.created.id)).items[0];
+  // B was provisioned just after A, so its trial ends a moment later.
+  await billAt(operator, clock, (await operator.subscription(await operator.renew(admin), b.created.id)).trialEndsAt);
+  const invoiceB = (await operator.invoices(await operator.renew(admin), b.created.id)).items[0];
   expect(invoiceB, 'B was invoiced too').toBeTruthy();
   await operator.pay(admin, invoiceB);
   await crossBoundary(operator, clock, admin, invoiceA, 'read_only');
@@ -80,9 +82,18 @@ test('TC-F03-002 A second salon stays isolated and unaffected through every tran
   const text = [...files.entries()].filter(([name]) => name.startsWith('tables/')).map(([, file]) => JSON.stringify(rowsOf(file))).join('\n');
   for (const foreign of [b.created.id, alpha.id, b.input.owner.email, b.input.name]) expect(text, 'A\'s export holds nothing of B or alpha').not.toContain(foreign);
   await unaffected(identity, witnesses, 'closure and export');
-  const beforeDeletion = { b: tenantRowCounts(b.created.id), alpha: tenantRowCounts(alpha.id) };
+  // Scheduled jobs that run as the clock moves 30 days change time-cleaned tables for every salon,
+  // so the comparison is of the durable tables (TIME_CLEANED_TABLES).
+  const counts = durableRowCounts;
+  const beforeDeletion = { b: counts(b.created.id), alpha: counts(alpha.id) };
   await clock.set(closed.deleteAt!);
   await operator.runDeletions();
-  expect({ b: tenantRowCounts(b.created.id), alpha: tenantRowCounts(alpha.id) }, 'A\'s deletion removes no B or alpha row').toEqual(beforeDeletion);
+  expect({ b: counts(b.created.id), alpha: counts(alpha.id) }, 'A\'s deletion removes no B or alpha row').toEqual(beforeDeletion);
+  // B's own billing went on for those 30 days and left it read-only for its own unpaid invoice;
+  // B pays, so the last check is of A's deletion and not of B's billing state.
+  await operator.runBilling();
+  const renewed = await operator.renew(admin);
+  const openB = (await operator.invoices(renewed, b.created.id)).items.filter(i => i.status === 'open');
+  for (const inv of openB) await operator.pay(renewed, inv);
   await unaffected(identity, witnesses, 'deletion');
 });

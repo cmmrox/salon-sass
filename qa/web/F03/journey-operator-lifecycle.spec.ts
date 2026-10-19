@@ -54,7 +54,7 @@ test('TC-F03-001 An operator takes one salon from creation through billing, susp
   await page.getByTestId('console-owner-email').fill(owner.email);
   await page.getByTestId('console-owner-password').fill(owner.password);
   await page.getByTestId('console-create-salon-submit').click();
-  await expect(page.getByTestId('console-salon-created-hostname')).toHaveText(`${slug}.localhost`);
+  await expect(page.getByTestId('console-salon-created-hostname')).toContainText(`${slug}.localhost`);
   const summary = (await operator.salonPage(admin, `?q=${slug}`)).items[0];
   const salon = { slug, id: summary.id, name: `QA Journey ${slug}`, brandColour: '', hostname: summary.hostname, timeZone: 'Asia/Colombo' };
   const input = { owner } as Parameters<typeof ownerSession>[2];

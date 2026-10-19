@@ -18,7 +18,7 @@ import { identitySql } from '../../shared/identity-storage';
 import { logOffsets, logsSince } from '../../shared/product-logs';
 import {
   test, expect, alpha, beta, gamma, CONSOLE_HOST, SECOND, WRONG_HOSTS, comparable, countRows, operatorJson, operatorProblem,
-  ownerSession, platformAudit, plusMs, sqlLiteral, tenantRowCounts, tenantTables,
+  durableRowCounts, ownerSession, platformAudit, plusMs, sqlLiteral, tenantRowCounts, tenantTables,
   type ExportView, type Operator, type OperatorActor, type SalonDetail, type TestClock,
 } from '../../shared/operator';
 import { rowsOf, unzip } from '../../shared/zip';
@@ -199,11 +199,11 @@ test(`${id(10)} Thirty days after closure the salon's tenant data is deleted and
   const { admin, target, other, closed } = await arrange(operator, identity, clock, '2026-12-14T07:00:00Z', true);
   await ready(operator, admin, target.created.id);
   const counts = tenantRowCounts(target.created.id);
-  // Moving the clock 30 days also runs the scheduled jobs: outbox retention removes old finished
-  // messages and billing enqueues reminders, for every salon. So the other salons' outbox is compared
-  // by its unfinished messages (which no job may remove), and every other tenant table exactly.
+  // Moving the clock 30 days also runs the scheduled jobs (outbox retention, billing reminders, the
+  // identity cleanup of expired rows) for every salon. So the other salons' durable tables are
+  // compared exactly, and their unfinished outbox messages (which no job may remove) must survive.
   const othersNow = () => Object.fromEntries(Object.entries({ other: other.created.id, alpha: alpha.id, beta: beta.id, gamma: gamma.id })
-    .map(([name, salonId]) => { const { outbox_message: _outbox, ...rest } = tenantRowCounts(salonId); return [name, rest]; }));
+    .map(([name, salonId]) => [name, durableRowCounts(salonId)]));
   const unfinished = () => identitySql(`SELECT coalesce(string_agg(id::text, ',' ORDER BY id), '') FROM outbox_message WHERE tenant_id IN (${
     [other.created.id, alpha.id, beta.id, gamma.id].map(sqlLiteral).join(', ')}) AND lower(status::text) IN ('pending', 'sending')`).split(',').filter(Boolean);
   const others = othersNow();
