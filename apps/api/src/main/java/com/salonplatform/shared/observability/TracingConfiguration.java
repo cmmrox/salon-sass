@@ -17,6 +17,24 @@ class TracingConfiguration {
 
     static final String SPAN_ID = "span.id";
 
+    /**
+     * A request's URL as a span records it, with an export download's token replaced (F03-S03), so no
+     * download credential leaves the process in a trace.
+     */
+    @Bean
+    io.micrometer.observation.ObservationFilter exportTokenRedaction() {
+        return context -> {
+            for (String name : new String[] {"http.url", "url.path", "uri"}) {
+                io.micrometer.common.KeyValue value = context.getHighCardinalityKeyValue(name);
+                if (value != null && value.getValue() != null && value.getValue().contains("/api/v1/exports/")) {
+                    context.addHighCardinalityKeyValue(io.micrometer.common.KeyValue.of(name,
+                            com.salonplatform.shared.api.RequestPaths.loggable(value.getValue())));
+                }
+            }
+            return context;
+        };
+    }
+
     @Bean
     Slf4JEventListener otelSlf4JEventListener() {
         return new Slf4JEventListener(TRACE_ID, SPAN_ID);

@@ -67,3 +67,21 @@ no remote database or application hook is involved.
 ## F02 bounded local read baseline
 
 `TC-F02-004` is registered once as `qa/checks/F02/F02-read-baseline.sh`. The wrapper uses Corepack Playwright for typed real API fixture preparation and runs the actual k6 thresholds in `qa/load/F02/identity-reads.js`. The lead approved an address ceiling of 200 only while creating the synthetic data. It restores the documented 3/10/20/1000 limits, proves the API restarted with those values and retained keys, and then measures ten concurrent users for twenty seconds. There are exactly five staff roles and fifty customers in each fixed salon. Existing immutable audit remains; each salon has at least one hundred entries, with actual totals recorded. Credential files have mode 0600 under ignored `qa/.auth/` and are removed in finally. The ordinary fixture cleanup removes mutable identities. Preparation, authentication, hashing, delivery and mutation time are excluded from the measured per-read p95 below 300 ms. k6 also observes the connection pool. This is a local baseline, with machine and data volume recorded, and does not certify a production target. Draft automation has not been executed.
+
+## F03 preparation (during the build)
+
+F03 automation was prepared during the build and has not been executed. `qa/shared/operator.ts`
+holds the operator fixtures; `CONTRACT` holds what the S01-S03 handoffs named (local
+`/local/operator` hooks and bodies, generated schema names, the provider signature header), and
+`PENDING_S04` what the S04 handoff still has to name (schema names, credential shape, list filter
+names, the entry BFF action, test ids). A missing hook or an unnamed S04 value stops a test with an
+`ENVIRONMENT:` message rather than a product failure. `qa/shared/billing.ts` drives billing through
+the test clock and the run-job hook, `qa/shared/console-browser.ts` bridges real operator
+credentials into the console, `qa/shared/zip.ts` reads export archives and
+`qa/shared/product-logs.ts` searches the local API and web logs from an offset. Every F03 test
+ends by disarming the one-shot job faults and calling the S03 local reset
+(`POST /local/operator/reset`), which removes salons created after the synthetic baseline, resets
+hook-created operators, returns the test clock to real time and reschedules pushed-ahead jobs, so
+F01/F02 fixture guards and regression run unchanged afterwards. The shell checks in
+`qa/checks/F03/` start separate API processes from the built jar on a free port with jobs and
+outbox delivery off, so they never act on the running product's data.

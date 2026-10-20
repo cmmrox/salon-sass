@@ -60,6 +60,7 @@ certify a live payment provider, real message delivery or public TLS.
 - BRD decision D-06 (commercial pricing and packaging) remains open. Published tiers or prices
   must not be inferred from the BRD's commercial hypothesis. Stage planning must distinguish
   configurable plan definitions and synthetic billing fixtures from approved commercial terms.
-- Trial length, billing cadence, grace period, agreed retention and support session duration
-  need explicit policies in the stage specifications before the corresponding implementation.
-  No commercial or deletion defaults are approved by this outline.
+- On 2026-10-18 the owner set the operating terms (decision 049): 14-day trial, monthly invoices
+  due 7 days after issue, reminders on the due date and 3 and 10 days after, read-only 14 days
+  after the due date, deletion 30 days after closure, support sessions of 5–120 minutes (default
+  30). The S02–S04 policies are in `docs/architecture/operator-console.md`; D-06 stays open.

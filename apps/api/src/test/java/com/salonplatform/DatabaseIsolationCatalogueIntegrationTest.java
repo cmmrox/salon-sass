@@ -188,19 +188,90 @@ class DatabaseIsolationCatalogueIntegrationTest {
                 SELECT p.proname AS name,
                        coalesce(array_to_string(p.proconfig, ';'), '') AS settings,
                        has_function_privilege('public', p.oid, 'EXECUTE') AS public_may_run,
-                       has_function_privilege(?, p.oid, 'EXECUTE') AS application_may_run
+                       has_function_privilege(?, p.oid, 'EXECUTE') AS application_may_run,
+                       has_function_privilege(?, p.oid, 'EXECUTE') AS platform_may_run
                   FROM pg_proc p
                  WHERE p.pronamespace = 'public'::regnamespace AND p.prosecdef
-                """, TestPostgres.APP_USER);
+                """, TestPostgres.APP_USER, TestPostgres.PLATFORM_USER);
 
-        assertThat(functions).extracting(function -> function.get("name")).containsExactlyInAnyOrder("tenant_by_slug",
-                "tenant_by_id", "active_tenant_ids", "outbox_due", "outbox_backlog", "job_claim", "job_finish");
+        // F03-S02 adds salon_entitlements(): the current transaction's salon's plan, for the tenant role.
+        List<String> tenantPaths = List.of("tenant_by_slug", "tenant_by_id", "active_tenant_ids", "outbox_due",
+                "outbox_backlog", "job_claim", "job_finish", "salon_entitlements", "suspended_tenant_ids");
+        // F03-S01: the module-owned bootstrap functions belong to the platform role alone, as do F03-S02's
+        // staff-seat usage count and billing's outbox write.
+        // F03-S03: closure's session revocation and message cancellation, and each module's guarded eraser,
+        // belong to the platform role alone too.
+        List<String> bootstrap = List.of("identity_bootstrap_owner", "branding_bootstrap_brand",
+                "identity_active_staff_count", "outbox_enqueue_for_salon", "identity_revoke_closed_salon_sessions",
+                "outbox_cancel_closed_salon", "identity_erase_salon_rows", "branding_erase_salon_rows",
+                "audit_erase_salon_rows", "outbox_erase_salon_rows",
+                // F03-S04: a support session's entries in the salon's audit trail, from the platform connection.
+                "audit_record_support");
+        assertThat(functions).extracting(function -> function.get("name"))
+                .containsExactlyInAnyOrderElementsOf(java.util.stream.Stream.concat(tenantPaths.stream(),
+                        bootstrap.stream()).toList());
         assertThat(functions).allSatisfy(function -> {
             assertThat((String) function.get("settings")).as("%s", function.get("name"))
                     .isEqualTo("search_path=pg_catalog, pg_temp");
-            assertThat(function).as("%s", function.get("name")).containsEntry("public_may_run", false)
-                    .containsEntry("application_may_run", true);
+            assertThat(function).as("%s", function.get("name")).containsEntry("public_may_run", false);
+            boolean bootstraps = bootstrap.contains((String) function.get("name"));
+            assertThat(function).as("%s", function.get("name"))
+                    .containsEntry("application_may_run", !bootstraps)
+                    .containsEntry("platform_may_run", bootstraps);
         });
+    }
+
+    /** F03-S01: the platform runtime role holds exactly its platform-table operations, no tenant table. */
+    @Test
+    void thePlatformRoleHoldsExactlyThePlatformTablePrivilegesItNeeds() {
+        List<Map<String, Object>> grants = owner.queryForList("""
+                SELECT table_name AS name, string_agg(privilege_type, ',' ORDER BY privilege_type) AS privileges
+                  FROM information_schema.role_table_grants
+                 WHERE grantee = ? AND table_schema = 'public'
+                 GROUP BY table_name
+                """, TestPostgres.PLATFORM_USER);
+
+        assertThat(grants).extracting(grant -> grant.get("name"), grant -> grant.get("privileges"))
+                .containsExactlyInAnyOrder(
+                        org.assertj.core.api.Assertions.tuple("tenant", "INSERT,SELECT"),
+                        org.assertj.core.api.Assertions.tuple("plan", "INSERT,SELECT"),
+                        org.assertj.core.api.Assertions.tuple("provisioning_receipt", "INSERT,SELECT"),
+                        org.assertj.core.api.Assertions.tuple("platform_audit_entry", "INSERT,SELECT"),
+                        org.assertj.core.api.Assertions.tuple("operator_user", "INSERT,SELECT,UPDATE"),
+                        org.assertj.core.api.Assertions.tuple("operator_session", "INSERT,SELECT,UPDATE"),
+                        org.assertj.core.api.Assertions.tuple("operator_refresh_history", "INSERT,SELECT"),
+                        org.assertj.core.api.Assertions.tuple("operator_mfa_challenge", "DELETE,INSERT,SELECT,UPDATE"),
+                        org.assertj.core.api.Assertions.tuple("operator_mfa_step", "DELETE,INSERT,SELECT"),
+                        org.assertj.core.api.Assertions.tuple("operator_rate_bucket", "DELETE,INSERT,SELECT,UPDATE"),
+                        org.assertj.core.api.Assertions.tuple("subscription", "INSERT,SELECT,UPDATE"),
+                        org.assertj.core.api.Assertions.tuple("invoice_number", "SELECT,UPDATE"),
+                        org.assertj.core.api.Assertions.tuple("invoice", "INSERT,SELECT,UPDATE"),
+                        org.assertj.core.api.Assertions.tuple("charge_attempt", "INSERT,SELECT,UPDATE"),
+                        org.assertj.core.api.Assertions.tuple("invoice_payment", "INSERT,SELECT"),
+                        org.assertj.core.api.Assertions.tuple("provider_event", "INSERT,SELECT"),
+                        org.assertj.core.api.Assertions.tuple("billing_reminder", "INSERT,SELECT"),
+                        org.assertj.core.api.Assertions.tuple("salon_lifecycle_event", "INSERT,SELECT"),
+                        org.assertj.core.api.Assertions.tuple("salon_export", "INSERT,SELECT,UPDATE"),
+                        org.assertj.core.api.Assertions.tuple("salon_export_part", "DELETE,INSERT,SELECT"),
+                        // F03-S04: support sessions and entry codes; only their end and consumption are updated.
+                        org.assertj.core.api.Assertions.tuple("support_session", "INSERT,SELECT"),
+                        org.assertj.core.api.Assertions.tuple("support_entry_code", "INSERT,SELECT"));
+        // F03-S02: on the registry it may update only the plan, the access state, the version and the time;
+        // F03-S03 adds the lifecycle status and the closure and deletion instants.
+        List<String> tenantColumns = owner.queryForList("""
+                SELECT column_name FROM information_schema.role_column_grants
+                 WHERE grantee = ? AND table_name = 'tenant' AND privilege_type = 'UPDATE' ORDER BY column_name
+                """, String.class, TestPostgres.PLATFORM_USER);
+        assertThat(tenantColumns).containsExactly("access_state", "closed_at", "delete_at", "deleted_at", "plan_id", "status",
+                "updated_at", "version");
+        List<String> supportColumns = owner.queryForList("""
+                SELECT table_name || '.' || column_name FROM information_schema.role_column_grants
+                 WHERE grantee = ? AND table_name IN ('support_session', 'support_entry_code') AND privilege_type = 'UPDATE'
+                 ORDER BY 1
+                """, String.class, TestPostgres.PLATFORM_USER);
+        assertThat(supportColumns).containsExactly("support_entry_code.consumed_at", "support_entry_code.updated_at",
+                "support_session.ended_at", "support_session.ended_by", "support_session.ended_by_id",
+                "support_session.updated_at");
     }
 
     /** The product's grants: what the application's role is refused, table by table. */
@@ -225,6 +296,15 @@ class DatabaseIsolationCatalogueIntegrationTest {
         "DELETE FROM scheduled_job",
         "ALTER TABLE outbox_message DISABLE ROW LEVEL SECURITY",
         "DROP FUNCTION outbox_due(timestamptz, text[], integer, integer)",
+        "SELECT * FROM operator_user",
+        "SELECT * FROM operator_session",
+        "SELECT * FROM plan",
+        "INSERT INTO plan (id, key, name, staff_seats, branches, message_allowance, custom_domain, dedicated_app, created_at, updated_at) VALUES (gen_random_uuid(), 'sneaky', 'x', 1, 1, 0, false, false, now(), now())",
+        "SELECT * FROM provisioning_receipt",
+        "SELECT * FROM platform_audit_entry",
+        "SELECT * FROM tenant",
+        "SELECT identity_bootstrap_owner(gen_random_uuid(), gen_random_uuid(), 'x', 'x@example.com', 'x', now())",
+        "SELECT branding_bootstrap_brand(gen_random_uuid(), 'x', '#111827', now())",
     })
     void theApplicationRoleIsRefusedEverythingItDoesNotNeed(String sql) throws SQLException {
         try (Connection connection = database.connectAsApplication(); Statement statement = connection.createStatement()) {

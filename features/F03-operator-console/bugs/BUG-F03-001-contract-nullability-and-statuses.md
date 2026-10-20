@@ -1,0 +1,76 @@
+---
+id: BUG-F03-001
+title: The generated contract forbids the nulls the operator, billing and entitlement APIs return and documents 200 for the support routes' 201 and 204
+severity: major
+status: verified
+found_by: TC-F03-S01-041
+breaks: AC-14
+found_on: 2026-10-19
+fixed_in: 28b6de2
+fix_note: 'A springdoc customizer rewrites every nullable $ref as oneOf [$ref, {type: null}] and adds null to nullable enums (the ten fields plus both endedBy), and the five support routes declare 201/204; document and client regenerated; red/green OpenApiShapeTest and contracts.test.ts (apps/api/target/f03-bugfix-evidence/bug001-*.log); live sign-in body invalid under the old document, valid under the new (apps/api/target/f03-bugfix-evidence/contract-signin-before.json, contract-signin-after.json); gates (apps/api/target/f03-bugfix-evidence/gates/summary.txt): API verify exit 0 at 4a60e33 (688 tests), lint/typecheck/test/web build/contracts:check exit 0 at f122ad4'
+developer_note: null
+verified_on: 2026-10-20
+approved_by: null
+found_in_release: null
+---
+
+# BUG-F03-001 The generated contract forbids the nulls the operator, billing and entitlement APIs return and documents 200 for the support routes' 201 and 204
+
+## Steps
+
+Account: a synthetic `OPERATOR_ADMIN` from `POST /local/operator/seed` (random credentials, not
+recorded). Data: none beyond the committed `docs/api/openapi.json` and the running API (build
+1af62a2, product source identical to 8ef1649).
+
+1. `POST /api/v1/operator/sign-in` on `console.localhost` with a correct password: the 200 body has
+   `"credentials": null` (no session before MFA, S01 AC-1).
+2. Validate that body against `#/components/schemas/OperatorSignIn` with a JSON Schema 2020-12
+   validator (OpenAPI 3.1 is JSON Schema 2020-12), without changing the document.
+3. Read the documented success statuses of the S04 routes in the same document.
+
+## Expected
+
+F03-S01 spec, "API and data changes": "Generate OpenAPI/client including nullability, 201/204
+statuses and errors"; legacy salons show `plan: null` ("plan is `{id,key,name}` or null for a
+legacy unassigned salon"), and sign-in returns no credentials before MFA. F03-S02 makes the
+legacy entitlements and the banner `notice` nullable. The S04 API table names 201 for starting a
+session and for a fresh entry code and 204 for every ending. A client generated from the contract
+must accept what the API returns.
+
+## Actual
+
+Every time. Nullable objects are written as `{"$ref": X, "type": ["object","null"]}`; under
+OpenAPI 3.1 both keywords apply, so `null` fails `X`. Nullable enums omit `null` from `enum`.
+Affected properties: `OperatorSignIn.credentials`, `SalonDetail.plan`, `SalonSummary.plan`,
+`SubscriptionView.plan`, `SubscriptionView.currentPeriod`, `Entitlements.plan`,
+`Entitlements.limits`, `Entitlements.features`, `Entitlements.subscription`,
+`SubscriptionState.notice`. The generated TypeScript client follows the `$ref` and types them
+non-null (for example `credentials: components["schemas"]["OperatorTokens"]` in
+`packages/api-contracts/src/generated/schema.ts`), so a web or mobile client is told a legacy
+salon always has a plan.
+The support routes document `200` where the API answers `201`
+(`POST /api/v1/operator/salons/{id}/support-sessions`, `POST /api/v1/operator/support-sessions/{id}/entry-codes`)
+and `204` (`DELETE /api/v1/operator/support-sessions/{id}`, `DELETE /api/v1/salon/support-sessions/{id}`,
+`DELETE /api/v1/support/session`).
+
+The same class of defect was BUG-F02-001 (audit `before`/`after`); the S01 and S02 contract
+tests did not catch it because they compare the document with the generator, not the responses
+with the document.
+
+## Evidence
+
+- Validation of a live sign-in body (credentials not printed): the only error is
+  `["/credentials","type","must be object"]` (`qa/reports/f03-dev/s01-access.log`, 13 of 14 S01
+  access tests failing on `signIn: generated contract shape` before QA isolated the defect).
+- `SubscriptionState.notice`: `{"enum":["trial_ending","past_due","read_only"],"type":["string","null"]}`.
+- TC-F03-S01-041 in the recorded run `qa/reports/20261019-093648-F03-09df7b0ccb75` (revision
+  c1d6e73), entry `F03-S01 operator-runtime`, lists the ten properties and the five statuses.
+
+QA note: so that one contract defect does not hide every other result, F03's own response
+checks read these ten properties as nullable (`contractValidator` in `qa/shared/operator.ts`);
+they still fail on a missing, extra or wrongly typed field (failure proof in the feature
+`cases.md`). TC-F03-S01-041 keeps this defect visible on the raw document.
+
+## Re-verification
+
+Verified on 2026-10-20. The contract now writes the ten nullable properties as `oneOf [$ref, null]`, adds `null` to the nullable enums, and documents 201/204 for the five support routes; the generated client types `credentials` as `OperatorTokens | null`. By the lead's ruling the F03 response checks were returned to strict validation of the committed contract (the temporary nullable reading was removed), so every live null (sign-in before MFA, a legacy salon's `plan`, legacy entitlements, the banner `notice`) is now validated by the unmodified schema. TC-F03-S01-041 passes on the raw document. Run `qa/reports/20261020-055248-F03-e3ca1b96e90f` (full F03 run at 7808703, product identical to 002b661; 21/21 entries, 112/112 tests).

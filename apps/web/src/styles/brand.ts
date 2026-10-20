@@ -101,3 +101,15 @@ export function brandRootRule(brandColour: string): string {
 export function salonBrandRule(brandColour: unknown): string {
   return brandRootRule(isHexColour(brandColour) ? brandColour : DEFAULT_BRAND_COLOUR);
 }
+
+/**
+ * The platform's neutral accent (decision 047), for a page that belongs to no salon and so has no
+ * brand: the operator console. Ink as the accent with white on it, the canvas's secondary tone as the
+ * soft tint, and ink as accent-coloured text. The console never takes a salon's brand.
+ */
+export const NEUTRAL_ACCENT = { brand: '#111827', onBrand: '#ffffff', soft: '#EAE5DC', text: '#111827' } as const;
+
+/** The neutral accent's root rule: the same four properties a salon's brand sets. */
+export function neutralRootRule(): string {
+  return `:root{--color-brand:${NEUTRAL_ACCENT.brand};--color-on-brand:${NEUTRAL_ACCENT.onBrand};--color-brand-soft:${NEUTRAL_ACCENT.soft};--color-brand-text:${NEUTRAL_ACCENT.text}}`;
+}

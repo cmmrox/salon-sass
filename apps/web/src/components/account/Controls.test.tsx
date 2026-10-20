@@ -59,7 +59,7 @@ describe('declared account control handles', () => {
 });
 
 it('uses kebab-case handles in the real password form while sending camelCase API fields', async () => {
-  const principal: Principal = { id: 'manager', staffId: 'manager', kind: 'staff', role: 'MANAGER', permissions: ['session.manage', 'password.change'], scope: 'salon', mfaEnabled: true };
+  const principal: Principal = { id: 'manager', staffId: 'manager', kind: 'staff', role: 'MANAGER', permissions: ['session.manage', 'password.change'], scope: 'salon', mfaEnabled: true, expiresAt: null };
   const bodies: unknown[] = [];
   vi.stubGlobal('navigator', { locks: { request: (_name: string, work: () => Promise<unknown>) => work() } });
   vi.stubGlobal('BroadcastChannel', undefined);
@@ -80,7 +80,7 @@ it('uses kebab-case handles in the real password form while sending camelCase AP
 });
 
 it('preserves staff creation handles on the actual Owner form', async () => {
-  const principal: Principal = { id: 'owner', staffId: 'owner', kind: 'staff', role: 'OWNER', permissions: ['staff.list', 'staff.manage'], scope: 'salon', mfaEnabled: true };
+  const principal: Principal = { id: 'owner', staffId: 'owner', kind: 'staff', role: 'OWNER', permissions: ['staff.list', 'staff.manage'], scope: 'salon', mfaEnabled: true, expiresAt: null };
   vi.stubGlobal('navigator', { locks: { request: (_name: string, work: () => Promise<unknown>) => work() } });
   vi.stubGlobal('BroadcastChannel', undefined);
   vi.stubGlobal('fetch', async (url: string) => Response.json(url.endsWith('/principal') ? principal : { items: [], total: 0 }));
@@ -93,7 +93,7 @@ it('preserves staff creation handles on the actual Owner form', async () => {
 });
 
 it('preserves the verification code handle and submitted field on the real MFA form', async () => {
-  const principal: Principal = { id: 'staff', staffId: 'staff', kind: 'staff', role: 'RECEPTIONIST', permissions: ['session.manage', 'mfa.enroll'], scope: 'salon', mfaEnabled: false };
+  const principal: Principal = { id: 'staff', staffId: 'staff', kind: 'staff', role: 'RECEPTIONIST', permissions: ['session.manage', 'mfa.enroll'], scope: 'salon', mfaEnabled: false, expiresAt: null };
   const verified: unknown[] = [];
   vi.stubGlobal('navigator', { locks: { request: (_name: string, work: () => Promise<unknown>) => work() } });
   vi.stubGlobal('BroadcastChannel', undefined);

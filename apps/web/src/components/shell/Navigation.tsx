@@ -15,7 +15,7 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 
-export type NavigationItem = { href: string; label: string; testId: string; icon: 'home' | 'account' | 'staff' | 'audit'; current?: boolean; alias?: string };
+export type NavigationItem = { href: string; label: string; testId: string; icon: 'home' | 'account' | 'staff' | 'audit' | 'salons' | 'plans' | 'billing' | 'support'; current?: boolean; alias?: string };
 
 /** The prototype's own navigation glyphs, drawn in the current text colour. */
 export function NavigationIcon({ icon }: { icon: NavigationItem['icon'] }) {
@@ -24,6 +24,13 @@ export function NavigationIcon({ icon }: { icon: NavigationItem['icon'] }) {
     account: 'M20 21v-2a7 7 0 0 0-14 0v2M17 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z',
     staff: 'M16 21v-2a6 6 0 0 0-12 0v2M14 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0ZM20 21v-2a6 6 0 0 0-3-5.2M17 3.2a4 4 0 0 1 0 7.6',
     audit: 'M8 3h8v4H8ZM8 5H5v16h14V5h-3M8 12h8M8 16h6',
+    // The prototype's own list and bars glyphs, for the operator console's salons and plans.
+    salons: 'M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01',
+    plans: 'M5 20V10M12 20V4M19 20v-7',
+    // The prototype's card glyph (its Payments item), for the workspace's Plan and billing.
+    billing: 'M6 6h12a3 3 0 0 1 3 3v7a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V9a3 3 0 0 1 3-3ZM3 11h18',
+    // The prototype's clock glyph, for time-limited support sessions (F03-S04).
+    support: 'M3 12a9 9 0 1 0 18 0a9 9 0 1 0-18 0ZM12 7v5l3 2',
   };
   return <svg className="size-icon flex-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={paths[icon]} /></svg>;
 }

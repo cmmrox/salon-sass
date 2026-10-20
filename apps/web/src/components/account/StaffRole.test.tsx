@@ -6,7 +6,7 @@ import { AccountScreen } from './AccountScreen';
 vi.mock('next/navigation', () => ({ useRouter: () => ({ replace: vi.fn(), refresh: vi.fn() }) }));
 afterEach(() => vi.unstubAllGlobals());
 it('clears the Professional-only grant when the Owner selects another role', async () => {
-  const principal = { id: 'owner', kind: 'staff', role: 'OWNER', permissions: ['staff.list', 'staff.manage', 'session.manage'], scope: 'salon', staffId: 'owner', mfaEnabled: true };
+  const principal = { id: 'owner', kind: 'staff', role: 'OWNER', permissions: ['staff.list', 'staff.manage', 'session.manage'], scope: 'salon', staffId: 'owner', mfaEnabled: true, expiresAt: null };
   let person = { id: 'professional', email: 'synthetic@alpha.test', role: 'PROFESSIONAL', professionalGrant: true, version: 0, active: true };
   const changes: Record<string, unknown>[] = [];
   vi.stubGlobal('navigator', { locks: { request: (_name: string, work: () => Promise<unknown>) => work() } });

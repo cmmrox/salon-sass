@@ -18,7 +18,7 @@ import org.springframework.stereotype.Component;
 @Component
 @Primary
 @Profile("local")
-public class TestClock extends Clock {
+public class TestClock extends Clock implements com.salonplatform.shared.time.ResettableClock {
 
     private final Clock real = Clock.systemUTC();
 
@@ -47,6 +47,7 @@ public class TestClock extends Clock {
     }
 
     /** Back to real time. */
+    @Override
     public void reset() {
         offset = null;
     }

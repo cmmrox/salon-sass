@@ -11,6 +11,8 @@ trap restore EXIT
 # SCRIPTS is resolved by shared/checks.sh: QA_PRODUCT_ROOT from the shell or qa/.env.local, else this checkout.
 . "$SCRIPTS/lib/common.sh"
 load_settings
+# Settings later features require outside local (F03), so only this check's own settings are missing.
+later_feature_nonlocal_settings
 resolve_java_home || environment_fault "installed JDK25 required"
 [ -f "$ROOT/apps/api/target/salon-api.jar" ] || environment_fault "lead must prepare final built jar"
 PORT="$(node -e 'const n=require("net"),s=n.createServer();s.listen(0,"127.0.0.1",()=>{console.log(s.address().port);s.close()});')"

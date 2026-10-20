@@ -195,15 +195,16 @@ final class OutboxDispatcher implements SmartLifecycle {
         }
         List<OutboxStore.Due> due =
                 store.due(now, providers.keySet(), settings.perSalon(), settings.batchSize());
-        Map<UUID, Optional<CurrentTenant>> salons = new HashMap<>();
+        Map<UUID, Optional<Deliverable>> salons = new HashMap<>();
         int started = 0;
         for (OutboxStore.Due message : due) {
             if (!running || inFlight.contains(message.messageId())) {
                 continue;
             }
-            Optional<CurrentTenant> salon =
-                    salons.computeIfAbsent(message.tenantId(), tenants::findActive);
-            if (salon.isPresent() && take(salon.get(), message.messageId(), now)) {
+            Optional<Deliverable> salon =
+                    salons.computeIfAbsent(message.tenantId(), this::deliverable);
+            if (salon.isPresent()
+                    && take(salon.get().salon(), salon.get().closed(), message.messageId(), now)) {
                 started++;
             }
         }
@@ -235,8 +236,22 @@ final class OutboxDispatcher implements SmartLifecycle {
         }
     }
 
+    /**
+     * A salon whose messages may be delivered: an active one (every channel), or a closed one, for
+     * which only {@link OutboxLifecycle#PLATFORM_EMAIL} is delivered (F03-S03).
+     */
+    private record Deliverable(CurrentTenant salon, boolean closed) {}
+
+    private Optional<Deliverable> deliverable(UUID id) {
+        Optional<CurrentTenant> active = tenants.findActive(id);
+        if (active.isPresent()) {
+            return Optional.of(new Deliverable(active.get(), false));
+        }
+        return tenants.findClosed(id).map(salon -> new Deliverable(salon, true));
+    }
+
     /** Claims one message and starts its delivery; false when it was not taken. */
-    private boolean take(CurrentTenant salon, UUID messageId, Instant now) {
+    private boolean take(CurrentTenant salon, boolean closed, UUID messageId, Instant now) {
         List<ChannelGuard.Permit> reserved = new ArrayList<>(1);
         OutboxStore.Taken taken;
         try {
@@ -252,7 +267,13 @@ final class OutboxDispatcher implements SmartLifecycle {
                                                             now,
                                                             settings.lease(),
                                                             settings.maxAttempts(),
-                                                            this::permitFor,
+                                                            channel ->
+                                                                    closed
+                                                                                    && !OutboxLifecycle
+                                                                                            .PLATFORM_EMAIL
+                                                                                            .equals(channel)
+                                                                            ? Optional.empty()
+                                                                            : permitFor(channel),
                                                             reserved)));
         } catch (Exception ex) {
             reserved.forEach(ChannelGuard.Permit::abandoned);

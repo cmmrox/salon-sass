@@ -64,6 +64,7 @@ function SheetContent({
       <SheetOverlay />
       <SheetPrimitive.Content
         data-slot="sheet-content"
+        data-surface="canvas"
         className={cn(
           "fixed z-50 flex flex-col gap-4 bg-background text-foreground",
           side === "right" && "inset-y-0 right-0 h-full",
@@ -126,7 +127,7 @@ function SheetDescription({
   return (
     <SheetPrimitive.Description
       data-slot="sheet-description"
-      className={cn("text-muted-foreground", className)}
+      className={cn("text-muted-foreground in-data-[surface=canvas]:text-foreground", className)}
       {...props}
     />
   )

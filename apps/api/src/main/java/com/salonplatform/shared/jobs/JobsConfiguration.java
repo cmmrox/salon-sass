@@ -7,6 +7,7 @@ import com.salonplatform.shared.observability.Traces;
 import com.salonplatform.shared.tenancy.ActiveTenants;
 import io.micrometer.core.instrument.MeterRegistry;
 
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -20,8 +21,10 @@ class JobsConfiguration {
 
     @Bean
     @ConditionalOnProperty(name = "salon.jobs.enabled", havingValue = "true", matchIfMissing = true)
-    JobScheduler jobScheduler(JobSettings settings, JobStore store, List<TenantJob> jobs, ActiveTenants tenants,
-            PlatformTransactionManager transactions, Clock clock, Traces traces, MeterRegistry meters) {
-        return new JobScheduler(settings, store, jobs, tenants, transactions, clock, traces, meters);
+    JobScheduler jobScheduler(JobSettings settings, JobStore store, List<TenantJob> jobs,
+            ObjectProvider<PlatformJob> platformJobs, ActiveTenants tenants, PlatformTransactionManager transactions,
+            Clock clock, Traces traces, MeterRegistry meters, TenantJobActivity activity) {
+        return new JobScheduler(settings, store, jobs, platformJobs.orderedStream().toList(), tenants, transactions,
+                clock, traces, meters, activity);
     }
 }

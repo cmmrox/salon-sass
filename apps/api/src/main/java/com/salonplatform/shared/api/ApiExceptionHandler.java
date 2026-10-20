@@ -94,22 +94,21 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
             HttpStatusCode status,
             WebRequest request) {
         List<FieldProblem> errors = new ArrayList<>();
-        if (ex.getCause() instanceof JacksonException json) {
+        // A strict request's any-setter reports its unknown field before construction. Jackson
+        // wraps that declared edge validation, at most with the path of the enclosing object; the
+        // declared field is the more precise one (F03-S01: `owner.role`, not `owner`).
+        for (Throwable cause = ex.getCause(); cause != null; cause = cause.getCause()) {
+            if (cause instanceof ApplicationProblemException declared
+                    && declared.status() == 400
+                    && declared.code() == ErrorCode.BAD_REQUEST) {
+                errors.addAll(declared.errors());
+                break;
+            }
+        }
+        if (errors.isEmpty() && ex.getCause() instanceof JacksonException json) {
             String field = fieldOf(json);
             if (field != null) {
                 errors.add(new FieldProblem(field, describe(json)));
-            }
-        }
-        // A strict request's any-setter reports its unknown field before construction. Jackson
-        // wraps that declared edge validation without a property path; preserve the safe fields.
-        if (errors.isEmpty()) {
-            for (Throwable cause = ex.getCause(); cause != null; cause = cause.getCause()) {
-                if (cause instanceof ApplicationProblemException declared
-                        && declared.status() == 400
-                        && declared.code() == ErrorCode.BAD_REQUEST) {
-                    errors.addAll(declared.errors());
-                    break;
-                }
             }
         }
         return handleExceptionInternal(

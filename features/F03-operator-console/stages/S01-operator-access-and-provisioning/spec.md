@@ -187,6 +187,11 @@ customer navigation or links to undelivered billing/support actions.
 | Plan directory/detail | `/console/plans`, `/console/plans/{id}` | Same neutral list/card structure; explicit feature labels and numerical limits, no prices |
 | Create salon / plan | Drawer or sheet from its directory | Desktop right drawer, phone bottom sheet, labels, contained focus, Escape/cancel and focus return |
 
+Build every control with Tailwind CSS and shadcn/ui following the component map in
+`docs/engineering/web.md`, "Styling" (CR-016, CR-017): Sidebar for the console navigation, Sheet for
+create forms, Field/Input/Input Group/Select in forms, Input OTP for MFA, Item rows, Badge, Empty,
+Pagination, Card, Alert, Skeleton and Spinner. The console sets the neutral accent (decision 047).
+
 Only Salons, Plans and Sign out appear for Admin; Support sees a clear access-denied state and
 Sign out, not nonfunctional management links. Clear passwords on success/cancel/error requiring
 re-entry; retain other safe fields. Keep one idempotency key for an unchanged pending submission;

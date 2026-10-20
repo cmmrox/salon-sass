@@ -13,8 +13,23 @@ spring:
     locations: classpath:db/migration,classpath:db/local
 
 salon:
+  platform:
+    datasource:
+      username: ${SALON_DB_PLATFORM_USER:salon_platform}
+      password: ${SALON_DB_PLATFORM_PASSWORD:salon-platform-local-only}
   identity:
     local-key-file: ${SALON_IDENTITY_LOCAL_KEY_FILE:../../.local/identity-keys.properties}
+  operator:
+    local-key-file: ${SALON_OPERATOR_LOCAL_KEY_FILE:../../.local/operator-keys.properties}
+  billing:
+    local-key-file: ${SALON_BILLING_LOCAL_KEY_FILE:../../.local/billing-keys.properties}
+    link-origin: ${SALON_BILLING_LINK_ORIGIN:http://%s:3100}
+  export:
+    local-key-file: ${SALON_EXPORT_LOCAL_KEY_FILE:../../.local/export-keys.properties}
+    link-origin: ${SALON_EXPORT_LINK_ORIGIN:http://%s:3100}
+  support:
+    local-key-file: ${SALON_SUPPORT_LOCAL_KEY_FILE:../../.local/support-keys.properties}
+    link-origin: ${SALON_SUPPORT_LINK_ORIGIN:http://%s:3100}
   platform-domain: ${SALON_PLATFORM_DOMAIN:localhost}
   server:
     # This machine only (CR-002). SALON_LISTEN_ON_NETWORK=true opens the ports to the network, for

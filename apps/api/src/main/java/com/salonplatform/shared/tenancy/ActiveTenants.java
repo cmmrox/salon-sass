@@ -25,4 +25,23 @@ public interface ActiveTenants {
      * @throws org.springframework.dao.DataAccessException when the registry cannot be read
      */
     List<UUID> activeIds();
+
+    /**
+     * The salon with this id, when it exists and is closed (F03-S03): for the delivery of the
+     * platform's own email to its Owner contact, the one kind of work a closed salon still has.
+     *
+     * @throws org.springframework.dao.DataAccessException when the registry cannot be read
+     */
+    default Optional<CurrentTenant> findClosed(UUID id) {
+        return Optional.empty();
+    }
+
+    /**
+     * The ids of every suspended salon, whose job runs are skipped (and counted as skipped).
+     *
+     * @throws org.springframework.dao.DataAccessException when the registry cannot be read
+     */
+    default List<UUID> suspendedIds() {
+        return List.of();
+    }
 }

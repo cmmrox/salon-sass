@@ -85,7 +85,7 @@ it('opens the confirmation as a Sheet', () => {
 });
 
 it('builds the account from Card, Badge, Input Group, Input OTP, Item, Pagination and Skeleton', async () => {
-  const principal: Principal = { id: 'r', staffId: 'r', kind: 'staff', role: 'RECEPTIONIST', permissions: ['session.manage', 'mfa.enroll'], scope: 'salon', mfaEnabled: false };
+  const principal: Principal = { id: 'r', staffId: 'r', kind: 'staff', role: 'RECEPTIONIST', permissions: ['session.manage', 'mfa.enroll'], scope: 'salon', mfaEnabled: false, expiresAt: null };
   locks(); vi.stubGlobal('BroadcastChannel', undefined);
   let release: () => void = () => {};
   const pending = new Promise<void>((resolve) => { release = resolve; });
@@ -129,7 +129,7 @@ it('draws the server\'s denied page as an Alert too', () => {
 });
 
 it('shows an empty list as Empty, and the denied page as an Alert', async () => {
-  const principal: Principal = { id: 'm', staffId: 'm', kind: 'staff', role: 'MANAGER', permissions: ['session.manage', 'audit.list'], scope: 'salon', mfaEnabled: true };
+  const principal: Principal = { id: 'm', staffId: 'm', kind: 'staff', role: 'MANAGER', permissions: ['session.manage', 'audit.list'], scope: 'salon', mfaEnabled: true, expiresAt: null };
   locks(); vi.stubGlobal('BroadcastChannel', undefined);
   vi.stubGlobal('fetch', async (url: string) => Response.json(url.endsWith('/principal') ? principal : { items: [], total: 0 }));
   const { unmount } = renderWithMessages(<AccountScreen kind="staff" initialPrincipal={principal} timeZone="Asia/Colombo" view="audit" />);
@@ -142,7 +142,7 @@ it('shows an empty list as Empty, and the denied page as an Alert', async () => 
 });
 
 it('builds the staff list from Item, Badge, Select, a horizontal Field with Checkbox, Separator and Button', async () => {
-  const principal: Principal = { id: 'o', staffId: 'o', kind: 'staff', role: 'OWNER', permissions: ['staff.list', 'staff.manage'], scope: 'salon', mfaEnabled: true };
+  const principal: Principal = { id: 'o', staffId: 'o', kind: 'staff', role: 'OWNER', permissions: ['staff.list', 'staff.manage'], scope: 'salon', mfaEnabled: true, expiresAt: null };
   locks(); vi.stubGlobal('BroadcastChannel', undefined);
   vi.stubGlobal('fetch', async (url: string) => Response.json(url.endsWith('/principal') ? principal : { items: [{ id: 's1', email: 'pro@alpha.test', role: 'PROFESSIONAL', active: true, version: 1, professionalGrant: false }], total: 1 }));
   renderWithMessages(<AccountScreen kind="staff" initialPrincipal={principal} timeZone="Asia/Colombo" view="staff" />);

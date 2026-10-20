@@ -23,6 +23,22 @@ public enum ErrorCode {
     PERMISSION_DENIED("permission_denied", "Your account does not have permission for this action."),
     CONFLICT("conflict", "The record changed or this change conflicts with an existing record."),
     RATE_LIMITED("rate_limited", "Please wait before trying again."),
+    /** Another salon already has this slug (F03-S01). */
+    SLUG_TAKEN("slug_taken", "Another salon already uses this web address."),
+    /** Another plan already has this key (F03-S01). */
+    PLAN_KEY_TAKEN("plan_key_taken", "Another plan already uses this key."),
+    /** The idempotency key was already used with a different request (F03-S01). */
+    IDEMPOTENCY_CONFLICT("idempotency_conflict", "This request key was already used for a different request."),
+    /** The salon is read-only for an unpaid invoice: 403 on every tenant mutation but the exempt ones (F03-S02). */
+    SALON_READ_ONLY("salon_read_only", "This salon is read-only until its overdue invoices are paid."),
+    /** The salon's plan does not allow this; the problem names the limit in its errors (F03-S02). */
+    ENTITLEMENT_EXCEEDED("entitlement_exceeded", "The salon's plan does not allow this."),
+    /** The record is not in a state that allows this action (F03-S02). */
+    INVALID_STATE("invalid_state", "This action is not possible in the record's current state."),
+    /** A support session is read-only: every mutation under its credential is refused (F03-S04). */
+    SUPPORT_READ_ONLY("support_read_only", "A support session can read the workspace but cannot change anything."),
+    /** The operator already has an open support session for this salon (F03-S04). */
+    SUPPORT_SESSION_ACTIVE("support_session_active", "You already have an open support session for this salon."),
     BAD_REQUEST("bad_request", "The request could not be understood."),
     NOT_FOUND("not_found", "The requested resource was not found."),
     METHOD_NOT_ALLOWED("method_not_allowed", "The method is not allowed for this resource."),

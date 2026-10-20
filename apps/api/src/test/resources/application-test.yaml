@@ -6,6 +6,11 @@ spring:
 
 salon:
   platform-domain: localhost
+  # The platform runtime role of every test container (db/test-application-role.sql).
+  platform:
+    datasource:
+      username: salon_platform
+      password: salon-platform-test
   # The tests start and stop the application many times; the one that tests the drain sets its own.
   server:
     drain-delay: 0s
@@ -26,3 +31,15 @@ salon.identity:
   challenge-key: ${random.value}${random.value}
   encryption-key: ${random.value}${random.value}
   proxy-key: ${random.value}${random.value}
+salon.operator:
+  signing-key: ${random.value}${random.value}
+  challenge-key: ${random.value}${random.value}
+  encryption-key: ${random.value}${random.value}
+  proxy-key: ${random.value}${random.value}
+  fingerprint-key: ${random.value}${random.value}
+salon.billing:
+  provider-key: ${random.value}${random.value}
+salon.export:
+  key: ${random.value}${random.value}
+salon.support:
+  signing-key: ${random.value}${random.value}

@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "kind": "independent-scoped-qa",
+  "reviewed_revision": "787657c65fbf2e152b5220af245dce7f0927cd71",
+  "qa_identity": {
+    "agent": "/root/f03_evidence_review",
+    "role": "independent salon_qa",
+    "recorded_at_utc": "2026-10-20T02:52:53.254214+00:00"
+  },
+  "owner_instruction": "Resume F03 final testing and closure after the previous session hit its rate limit. The lead delegated independent inspection of retained QA and gate evidence and a document-only impact assessment under CR-009; no unchanged product QA rerun.",
+  "features": {
+    "F03": {
+      "base_report": "qa/reports/20261020-062553-F03-9838421329cf",
+      "base_revision": "f7ebbf8fef0a3c1ca5aae3068a7f45864a4731fd",
+      "base_summary_sha256": "85d9a0baf0bc54b190ae0a748202247d2c74decc45c58c24d32d64e1bc8de5f3",
+      "changed_paths": [
+        "docs/architecture/identity-and-access.md",
+        "docs/architecture/operator-console.md",
+        "docs/changes/CR-019-operator-console-usability-follow-ups.md",
+        "docs/qa/test-plan.md",
+        "features/BACKLOG.md",
+        "features/F03-operator-console/feature.yaml",
+        "features/F03-operator-console/review.md",
+        "features/README.md",
+        "qa/coverage.md"
+      ],
+      "impact": "No application, infrastructure, contract, QA automation, case, requirement, acceptance criterion or command definition changed after the complete full F03 pass. Changes are QA report metadata/review dispositions, proposed CR-019 and backlog entries, generated portfolio/coverage, and three factual Read first corrections restored exactly from the gate-tested f124837 revision. The corrections describe existing Owner-only support.manage, already verified BUG-F03-005 ended-session marker, already asserted codeExpiresAt/link origins/operator audit names, and existing fixture reset/scheduler snapshot handling. Independently checked against approved S04 oversight/cases, verified bug evidence, retained raw logs and unchanged source facts. All original product proof is retained; document fingerprint expansion does not identify a new product behavior needing execution."
+    }
+  },
+  "commands": {
+    "report": "qa/reports/20261020-064037-F03-commands-d943671a96fe",
+    "revision": "f124837a1acaa343a66d0ad73a01f0185b83d722",
+    "summary_sha256": "b90e69ce53923173d247b5ba56c57ba56641f9cda1a2746f11f470b240753d06",
+    "reused_qa_paths": [],
+    "reuse_reason": "All six declared commands and their executed product/test inputs remain unchanged. The three corrected Read first docs are exact gate-tested bytes; later changes are review/process metadata only."
+  },
+  "targeted": {
+    "log": "qa/reports/f03-doc-impact-20261020/review.log",
+    "sha256": "4adb5bcd8f31086f8d722377488c8e8fbf0fff0cb79191d14b7a38fd0c44dd97",
+    "passed": 9,
+    "failed": 0,
+    "coverage": [
+      "Nine independent document-impact/evidence-integrity review checks only; these are not nine product tests or a fresh feature QA run.",
+      "Original full F03 receipt, exact 21-entry selection and raw logs; original complete six-command receipt/logs and no command delta.",
+      "Exact base-to-reviewed changed-path inventory; semantic feature definitions, all stage closure states and all six verified bugs; exact restored documentation identity.",
+      "Current declared context aggregate equals both original contexts without reading private values into logs.",
+      "Owner support oversight; verified ended notice and marker lifetime; response fields, configured link origin and audit names; fixed-salon reset, own shell seed and scheduler/snapshot handling."
+    ],
+    "review_script": "qa/reports/f03-doc-impact-20261020/review.py",
+    "review_script_sha256": "40fed0b780928fd97141236b9230a19d8e7cac51f076b846e3c76e65fe06a034"
+  },
+  "limits": [
+    "Original full QA at f7ebbf8 is retained as 21/21 automation groups,112/112 Playwright tests plus shell assertions; original developer gates at f124837 are retained as 6/6 commands. This document review is not a new full-feature or scoped product automation pass.",
+    "No product behavior, certified case meaning or execution input changed, so no feature/stage/regression/smoke/load/mobile/provider/staging/TLS/deployment run was started. No new product case or automation definition was needed. Existing manual and deferred inventories remain unchanged.",
+    "No report, certification receipt, source SHA, context or raw product log was rewritten. The interrupted earlier 063542 command report is explicitly excluded; only authentic complete 064037 gate evidence counts.",
+    "Current declared context matches original aggregate; this does not reconstruct historical database contents or certify a new runtime. Lead independently confirmed local API health and console reachability before closure. Synthetic local-only evidence does not certify real messages/payments/public TLS.",
+    "Review script initially used an incorrect contiguous shell-command substring and stopped after eight checks. Preserved first-incomplete.log; corrected parsing to assert the actual separate -X POST option and exact seed endpoint, then all nine review checks passed. Product expectations were unchanged.",
+    "The existing QA guard excludes feature-local scoped-qa.json despite this evidence protocol. QA must hand this independent assessment and evidence pointer to the lead uncommitted if the guard refuses; no guard change or bypass is authorized."
+  ],
+  "process_documents": {}
+}
