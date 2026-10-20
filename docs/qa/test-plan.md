@@ -103,11 +103,6 @@ shared helper, never by typing a password into a test.
   the salon's zone, and its audit entries. To interrupt a delivery with a graceful stop of the API,
   use a `delayMs` between the shutdown grace (5 s) and the time limit (10 s); a shorter call simply
   finishes. Waits (backoff, breaker, lease, retention) are crossed by moving the test clock.
-  Moving the clock also makes the scheduler's own platform job passes (billing, export,
-  deletion) due alongside any run-now hook, so a test settles those passes before reading and
-  checks interrupted states as single-snapshot invariants (F03).
-  The shared identity fixture resets the fixed salons' staff around every Playwright test, so a
-  shell check that needs staff seeds its own.
 - **Meters**, local profile only: `GET /actuator/metrics/salon.outbox.dead` and the others listed in
   `docs/engineering/backend.md`.
 - **Time:** bookings depend on the clock. Use the test clock hook to fix "now"; never write a test

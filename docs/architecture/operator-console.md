@@ -360,15 +360,6 @@ Support access page is denied to the support view, and the Owner gains `support.
 revocation is on the read-only allowlist. In one browser a support cookie takes precedence over a
 staff session on that salon. Suspending or closing a salon leaves open support sessions to expire,
 but their credentials are refused at once (403 `salon_suspended` or 404). Operator session lists
-filter by `salonId` and `state` (`active`, `ended`). When a support view ends, the salon host
-sets a 10-minute HttpOnly marker cookie `salon_session_ended=support` (no credential, no access);
-a protected page requested without a session but with the marker shows the "session ended"
-notice at `/workspace/support#ended` instead of staff sign-in, and the notice clears it
-(BUG-F03-005).
-The start response also carries `codeExpiresAt`. The console's entry link uses
-`SALON_SUPPORT_LINK_ORIGIN` (default `https://%s`, locally `http://<slug>.localhost:3100`). Platform
-audit actions for operator security are prefixed `operator.` (`operator.signed_in`,
-`operator.sign_in_failed`, `operator.signed_out`, `operator.mfa_*`, `operator.session_renewed`,
-`operator.refresh_replayed`).
+filter by `salonId` and `state` (`active`, `ended`).
 
 Reproducing what a customer sees in the customer app (NFR-20's customer half) waits for F15.
