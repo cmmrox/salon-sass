@@ -68,6 +68,11 @@ Automation notes (feature-verify, 2026-10-19):
   (`afterNewestPlan`).
   The console keeps a client-navigated page in the DOM hidden after navigating, so browser checks
   read the visible shell or scope to the page they navigated to.
+- Moving the clock makes the scheduler's own billing, export and deletion passes due at once, beside
+  the run-job hooks. Reads after a hook pass wait for the scheduler to settle (`schedulerSettled`);
+  the interrupted-job cases read the interrupted state as an atomic invariant (no invoice without
+  its charge attempt; never `deleted` while rows remain; no archive offered while pending), since
+  the scheduler may legitimately resume the work at once.
 - Failure proof (automation-principles): TC-F03-S01-041 failed on the committed contract for the
   reason it guards, and passes on the fixed contract. `exact` keeps microseconds
   (`.254315Z` differs from `.254Z`). The durable comparison keeps 6 of the 12 tenant tables.

@@ -128,7 +128,9 @@ test(`${id(10)} The workspace leaves the support view when the session ends`, as
   const page = await enterView(context, target.salon, first.entryCode);
   const revoked = await identity.api.send('DELETE', `${SUPPORT.salonSessions}/${first.id}`, { headers: { Host: target.salon.hostname, Authorization: `Bearer ${owner.tokens.accessToken}` } });
   expect(revoked.status(), 'the Owner revokes').toBe(204);
-  await page.goto(`${salonUrl(target.salon, webUrl)}/workspace/staff`);
+  // The open page may notice the end itself and redirect to the ended notice at the same instant,
+  // which aborts this navigation; either way the next page must be the ended notice.
+  await page.goto(`${salonUrl(target.salon, webUrl)}/workspace/staff`).catch((error: Error) => { if (!/ERR_ABORTED/.test(error.message)) throw error; });
   await expect(page.getByTestId(tid('entryExpired')), 'the next navigation leaves the support view').toBeVisible();
   await expect(page.getByTestId(tid('banner'))).toHaveCount(0);
   const second = await start(operator, await operator.renew(support), target.created.id);

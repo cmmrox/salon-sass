@@ -25,6 +25,8 @@ async function type(page: Page, field: Locator, text: string) {
 
 /** A shadcn/ui Select by keyboard: open the trigger with Enter, move to the option, choose it with Enter. */
 async function choose(page: Page, trigger: Locator, option: Locator) {
+  // The plan picker's Select is disabled until its first page of plans has loaded.
+  await expect(trigger).toBeEnabled();
   await trigger.focus();
   await page.keyboard.press('Enter');
   await expect(option).toBeVisible();

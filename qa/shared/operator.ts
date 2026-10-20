@@ -328,6 +328,20 @@ export function afterNewestPlan(): string {
   expect(newest, 'the newest plan date').toMatch(/^\d{4}-\d{2}-\d{2}$/);
   return new Date(Date.parse(`${newest}T07:00:00Z`) + DAY).toISOString();
 }
+/**
+ * Waits until the application's scheduler has run every platform job occurrence the clock made due
+ * and none is still running. Moving the test clock makes the scheduled billing, export and deletion
+ * jobs due at once, so they run beside the run-job hooks; a read after a hook pass waits here so it
+ * sees the committed result of every pass, not a moment in the middle of a concurrent one.
+ */
+export async function schedulerSettled(operator: Operator, jobs = ['subscription-billing', 'salon-export', 'salon-deletion']) {
+  const now = await operator.now();
+  const busy = () => identitySql(`SELECT count(*) FROM scheduled_job WHERE name IN (${jobs.map(sqlLiteral).join(', ')}) AND (
+    next_run_at <= ${sqlLiteral(now)}::timestamptz OR locked_by IS NOT NULL
+    OR (last_started_at IS NOT NULL AND (last_finished_at IS NULL OR last_finished_at < last_started_at)))`);
+  expect(identitySql(`SELECT count(*) FROM scheduled_job WHERE name IN (${jobs.map(sqlLiteral).join(', ')})`), 'the platform jobs are scheduled').toBe(String(jobs.length));
+  await expect.poll(busy, { message: 'the scheduler has run the job occurrences the clock made due', timeout: 20_000, intervals: [100, 250, 500] }).toBe('0');
+}
 /** Rows a salon owns in the S01 bootstrap tables: the registry, its Owner and its brand. */
 export function bootstrapRows(slug: string) {
   const tenant = countRows('tenant', `slug = ${sqlLiteral(slug)}`);

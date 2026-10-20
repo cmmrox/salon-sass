@@ -18,7 +18,7 @@ import { identitySql } from '../../shared/identity-storage';
 import { logOffsets, logsSince } from '../../shared/product-logs';
 import {
   test, expect, alpha, beta, gamma, CONSOLE_HOST, SECOND, WRONG_HOSTS, comparable, countRows, operatorJson, operatorProblem,
-  durableRowCounts, ownerSession, platformAudit, plusMs, sqlLiteral, tenantRowCounts, tenantTables,
+  durableRowCounts, ownerSession, platformAudit, plusMs, schedulerSettled, sqlLiteral, tenantRowCounts, tenantTables,
   type ExportView, type Operator, type OperatorActor, type SalonDetail, type TestClock,
 } from '../../shared/operator';
 import { rowsOf, unzip } from '../../shared/zip';
@@ -247,8 +247,11 @@ test(`${id(11)} An interrupted export or deletion resumes to the same final resu
   await operator.armExportInterrupt(3);
   const interrupted = await operator.runExports();
   expect(interrupted.failed, 'the armed export failed').toContain(target.created.id);
-  expect((await operator.exportStatus(admin, target.created.id)).status, 'not presented as ready').toBe('pending');
-  await operatorProblem(await operator.archiveRaw(admin, target.created.id), 409, 'invalid_state');
+  // The scheduler's export pass may resume at once; an export still pending offers no archive, and a
+  // ready one must be complete (the manifest check below).
+  const after = (await operator.exportStatus(admin, target.created.id)).status;
+  expect(['pending', 'ready'], 'pending, or already resumed by the scheduler').toContain(after);
+  if (after === 'pending') await operatorProblem(await operator.archiveRaw(admin, target.created.id), 409, 'invalid_state');
   const view = await ready(operator, admin, target.created.id);
   const manifest = JSON.parse(unzip((await download(operator, admin, target.created.id)).bytes).get('manifest.json')!.toString('utf8')) as Manifest;
   expect(Object.fromEntries(manifest.tables.map(t => [t.name, t.rows])), 'the resumed archive is complete').toEqual(counts);
@@ -257,10 +260,18 @@ test(`${id(11)} An interrupted export or deletion resumes to the same final resu
   await operator.armDeletionInterrupt(1);
   const stopped = await operator.runDeletions();
   expect(stopped.failed, 'the armed deletion failed').toContain(target.created.id);
-  await operator.renew(admin);
-  expect((await operator.salonDetail(admin, target.created.id)).status, 'not presented as deleted').toBe('closed');
-  expect(Object.values(tenantRowCounts(target.created.id)).some(n => n > 0), 'rows remain after the interruption').toBe(true);
+  // The scheduler's own deletion pass is due at the same instant and may resume the deletion at
+  // once, so the interrupted state is read as an invariant in one snapshot: the salon is never
+  // presented as deleted while any of its tenant rows remains.
+  const tables = tenantTables();
+  const snapshot = identitySql(`SELECT (SELECT status FROM tenant WHERE id = ${sqlLiteral(target.created.id)}) || ':' || (${
+    tables.map(t => `(SELECT count(*) FROM ${t} WHERE tenant_id = ${sqlLiteral(target.created.id)})`).join(' + ')})`);
+  const [status, remaining] = snapshot.split(':');
+  expect(['closed', 'deleted'], 'closed or deleted after the interrupted pass').toContain(status);
+  if (status === 'deleted') expect(Number(remaining), 'not presented as deleted while rows remain').toBe(0);
   await operator.runDeletions();
+  await schedulerSettled(operator);
+  await operator.renew(admin);
   expect(Object.values(tenantRowCounts(target.created.id)).every(n => n === 0), 'the resumed deletion removes every row').toBe(true);
   expect((await operator.salonDetail(admin, target.created.id)).status).toBe('deleted');
   expect(platformAudit(target.created.id).filter(e => e.action === 'salon.deleted').length).toBe(1);
