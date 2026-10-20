@@ -78,6 +78,7 @@ verification:
 evidence:
   last_run: qa/reports/20261020-062553-F03-9838421329cf
   last_result: pass
+  scoped_assessment: features/F03-operator-console/scoped-qa.json
 integration:
   branch: charithm/feature/F03-operator-console
   pull_request: null
