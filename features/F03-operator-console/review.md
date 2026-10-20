@@ -15,11 +15,11 @@ Competitor operator consoles are not public, and no competitor pages were resear
 The operator can provision, bill, suspend, close and support a salon end to end, and the hard
 parts are right: tenant isolation held through every transition, money is exact and paid at most
 once, closure is unmistakably irreversible, and support access is short, owner-visible and truly
-read-only. It is not ready to pass yet: six defects are filed, four of them major (the
-contract's nullability, the console's outage deadline and two console accessibility faults) and
-two minor (an intermittent missing "session ended" notice, and plan pickers capped at 100). The one change that would most
-improve it for the operator is showing each legacy salon's real name in the directory instead of
-three identical "Not configured" rows.
+read-only. The six defects the first pass found (the contract's nullability, the console's outage
+deadline, two console accessibility faults, an intermittent missing "session ended" notice and
+plan pickers capped at 100) are fixed and verified, and the feature passes. The one change that
+would most improve it for the operator is showing each legacy salon's real name in the directory
+instead of three identical "Not configured" rows.
 
 ## What works well
 
@@ -94,7 +94,11 @@ Ranked, most valuable first. Findings that break a requirement are filed as bugs
 - **Why it matters:** as plans are revised the operator picks from an ever-longer list and can
   assign a superseded plan.
 - **Instead:** an "archived" flag that hides a plan from new assignments while keeping existing ones.
-- **Evidence:** `qa/reports/f03-manual/console-plans-1280.png`.
+  Since BUG-F03-006's fix the pickers search and page, so every plan is reachable, but at 360px
+  the Create salon sheet now carries a result count ("946 results") and a pager whose Next button
+  wraps onto its own line above the remaining fields; archiving would keep that list short.
+- **Evidence:** `qa/reports/f03-manual/console-plans-1280.png`,
+  `qa/reports/f03-manual-reverify/console-create-salon-sheet-360.png`.
 
 ### SUG-F03-05 Cap a renewed token at the session's end
 
@@ -126,6 +130,27 @@ Ranked, most valuable first. Findings that break a requirement are filed as bugs
 - **Evidence:** `qa/reports/f03-explore/console-close-sheet-390.png`.
 
 ## Verification in this pass
+
+Re-verification of the six fixes (2026-10-20):
+
+- The fixes changed shared UI primitives (Item, Empty, Field, Sheet), workspace routing, the
+  console screens and the generated contract, and the lead's ruling returned the F03 response
+  checks to strict contract validation, which every F03 API entry uses, so the whole feature was
+  run again rather than a delta. Final full run: `qa/reports/20261020-062553-F03-9838421329cf` at
+  `f7ebbf8` (product identical to `002b661`): 21 of 21 entries, 112 of 112 tests, none skipped. The earlier re-verification runs
+  `qa/reports/20261019-163455-F03-c795c0a974a8` (18 of 21) and
+  `qa/reports/20261019-165049-F03-61951eb24a36` (16 of 21) failed only on test defects, all
+  repaired: tests that now ran past the old accessibility faults (picker focus and loading, the
+  export link read before an API restart, an unconfirmed End session, a prefilled amount), and
+  races with the scheduler's own job passes that every clock move makes due (now settled before
+  reads; interrupted states read as atomic invariants). `qa/reports/20261020-055248-F03-e3ca1b96e90f`
+  at 7808703 passed 21 of 21; the final run repeats it at the last automation revision.
+- By hand: console unavailable states 3.02-3.04 s with the database stopped or paused or the API
+  frozen (were 5.35-6.37 s), recovery 55-135 ms; 32 of 32 support-view endings land on the "session
+  ended" notice; after the notice has shown, no marker remains and staff routes go to sign-in.
+- Manual TC-F03-S01-036 performed again on 2026-10-20; TC-F03-S01-042 automated (no deferred cases).
+
+First pass (2026-10-19):
 
 - Tested revision `c1d6e73` (product source identical to the closed stages' `8ef1649`); final
   recorded run `qa/reports/20261019-093648-F03-09df7b0ccb75`: 21 automation entries, 15 pass and
@@ -161,8 +186,14 @@ export link valid for the 30 days before deletion.
   product adds `codeExpiresAt` (named in the handoff, not in the spec).
 - `docs/qa/test-plan.md` could record that the shared identity fixture resets the fixed salons'
   staff around every Playwright test, so a shell check needing staff must seed its own.
+- `docs/architecture/identity-and-access.md`'s permission matrix lists `entitlement.read` and
+  `invoice.read` (F03-S02) but not the Owner's `support.manage` (F03-S04 handoff, decision 053).
+- `docs/qa/test-plan.md` "Time, messages and payments" could say that moving the test clock makes
+  the scheduler's own platform job passes due at once, beside the run-job hooks.
 
 ## Bugs filed from this review
+
+All six were verified on 2026-10-20.
 
 - BUG-F03-001 (major) The generated contract forbids the nulls the API returns and documents 200
   for the support routes' 201 and 204.

@@ -10,7 +10,7 @@ requirement detail is in `qa/coverage.md`.
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | F01 | [Platform foundation and tenant isolation](F01-platform-foundation/) | M1-web | complete | merged | 5/5 | 2 | - |
 | F02 | [Sign-in, accounts and roles](F02-sign-in-accounts-and-roles/) | M1-web | complete | merged | 4/4 | 10 | - |
-| F03 | [Operator console: salons, plans and billing](F03-operator-console/) | M1-web | in-qa | - | 4/4 | 5 | **qa**: `feature-verify F03` |
+| F03 | [Operator console: salons, plans and billing](F03-operator-console/) | M1-web | in-qa | - | 4/4 | 5 | **lead**: `feature-close F03` |
 | F04 | [Salon setup: profile, branding, hours and policies](F04-salon-setup/) | M1-web | backlog | - | - | 6 | after GitHub merge of F03 |
 | F05 | [Service catalogue](F05-service-catalogue/) | M1-web | backlog | - | - | 6 | after F04 |
 | F06 | [Staff, schedules and leave](F06-staff-schedules-and-leave/) | M1-web | backlog | - | - | 4 | after F04, F05 |
