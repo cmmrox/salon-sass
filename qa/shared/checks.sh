@@ -305,3 +305,18 @@ committed_copy() {
   git -C "$REPO_ROOT" archive HEAD "$@" | tar -x -C "$target" \
     || environment_fault "could not copy the committed tree to $target"
 }
+
+# later_feature_nonlocal_settings: throwaway values (never printed) for the settings later features
+# made required outside `local` (F03: the platform database role, the five operator keys, the export
+# key and the support signing key), so a check that starts a separate nonlocal API to observe one
+# feature's settings is refused only for the settings it leaves out on purpose. Existing values win.
+later_feature_nonlocal_settings() {
+  local key
+  _throwaway() { node -e 'process.stdout.write(require("crypto").randomBytes(32).toString("hex"))'; }
+  export SALON_DB_PLATFORM_USER="${SALON_DB_PLATFORM_USER:-salon_platform}"
+  export SALON_DB_PLATFORM_PASSWORD="${SALON_DB_PLATFORM_PASSWORD:-salon-platform-local-only}"
+  for key in SALON_OPERATOR_SIGNING_KEY SALON_OPERATOR_CHALLENGE_KEY SALON_OPERATOR_ENCRYPTION_KEY SALON_OPERATOR_PROXY_KEY \
+      SALON_OPERATOR_FINGERPRINT_KEY SALON_EXPORT_KEY SALON_SUPPORT_SIGNING_KEY; do
+    [ -n "${!key:-}" ] || export "$key=$(_throwaway)"
+  done
+}

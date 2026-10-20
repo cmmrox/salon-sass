@@ -17,6 +17,8 @@ trap restore EXIT
 # SCRIPTS is resolved by shared/checks.sh: QA_PRODUCT_ROOT from the shell or qa/.env.local, else this checkout.
 . "$SCRIPTS/lib/common.sh"
 load_settings
+# Settings later features require outside local (F03), so only this check's own settings are missing.
+later_feature_nonlocal_settings
 resolve_java_home || environment_fault "JDK25 required for separate nonlocal-profile observation"
 JAR="$ROOT/apps/api/target/salon-api.jar"
 [ -f "$JAR" ] || environment_fault "built API jar unavailable; lead must prepare final runtime artifact"

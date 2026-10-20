@@ -2,14 +2,14 @@
 id: BUG-F03-005
 title: When support access ends, the next page sometimes shows the staff sign-in instead of the "session ended" notice
 severity: minor
-status: fixed
+status: verified
 found_by: TC-F03-S04-010
 breaks: AC-10
 found_on: 2026-10-19
 fixed_in: f122ad4
 fix_note: 'Ending a support view now also leaves a 10-minute HttpOnly marker (salon_session_ended=support) so a session-less protected page goes to /workspace/support#ended even when a refused prefetch or read cleared the support cookies first; route-request/support tests red then green; on the product 3/3 forced-race attempts landed on sign-in before and 6/6 on the ended notice after (apps/api/target/f03-bugfix-evidence/support-ended-before.json, support-ended-after.json); gates (apps/api/target/f03-bugfix-evidence/gates/summary.txt): API verify exit 0 at 4a60e33 (688 tests), lint/typecheck/test/web build/contracts:check exit 0 at f122ad4'
 developer_note: null
-verified_on: null
+verified_on: 2026-10-20
 approved_by: null
 found_in_release: null
 ---
@@ -51,3 +51,4 @@ their session was ended. No access is gained: the credential is refused (AC-5 ho
 
 ## Re-verification
 
+Verified on 2026-10-20. By hand, 12 attempts (`qa/reports/f03-reverify-dev/bug005-by-hand.txt`) including immediate navigation while the loaded page's prefetches are in flight (the timing that failed 1 in 6 before), and 20 further attempts (`qa/reports/f03-reverify-dev/ended-20.txt`): every one lands on the "session ended" notice with no support banner. TC-F03-S04-010 passes in run `qa/reports/20261020-055248-F03-e3ca1b96e90f` (full F03 run at 7808703, product identical to 002b661; 21/21 entries, 112/112 tests). Not shown: whether the 10-minute `salon_session_ended` marker changes what a staff member meets in the same browser; see the review.

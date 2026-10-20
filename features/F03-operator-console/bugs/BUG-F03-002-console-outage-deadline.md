@@ -2,14 +2,14 @@
 id: BUG-F03-002
 title: Console pages take 5.4 to 6.4 seconds to report unavailable when the database or API is down or silent, beyond the five-second deadline
 severity: major
-status: fixed
+status: verified
 found_by: TC-F03-S02-027
 breaks: AC-16
 found_on: 2026-10-19
 fixed_in: 7b44b83
 fix_note: 'Operator entry now returns unavailable (5xx, unanswered meta, or no answer within the shared 3 s budget) and the console page renders console-error with the response instead of a second browser wait; entry.test.ts/ConsolePending.test.tsx red then green; on the product 5.33/5.34/6.37 s became 3.02-3.05 s for database stopped/paused and API frozen (apps/api/target/f03-bugfix-evidence/outage-before.json, outage-after.json); gates (apps/api/target/f03-bugfix-evidence/gates/summary.txt): API verify exit 0 at 4a60e33 (688 tests), lint/typecheck/test/web build/contracts:check exit 0 at f122ad4'
 developer_note: null
-verified_on: null
+verified_on: 2026-10-20
 approved_by: null
 found_in_release: null
 ---
@@ -63,3 +63,4 @@ is reported at once; the silent cases and the database outage on the console exc
 
 ## Re-verification
 
+Verified on 2026-10-20. By hand with timing marks (`qa/reports/f03-reverify-dev/bug002-marks.json`): with PostgreSQL stopped or paused, or the API frozen, the console salon detail and salons pages show the unavailable state 3,021-3,041 ms after navigation (before: 5,352-6,367 ms), and recover 55-135 ms after the dependency is back without a restart. TC-F03-S01-038 and TC-F03-S02-027 pass in run `qa/reports/20261020-055248-F03-e3ca1b96e90f` (full F03 run at 7808703, product identical to 002b661; 21/21 entries, 112/112 tests).

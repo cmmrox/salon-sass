@@ -52,8 +52,11 @@ export async function referenceFit(page: Page, fullName?: string) {
   }
   return { ...result, clipped: result.clipped.filter(value => !ids.some(id => value.startsWith(`${id} (`))) };
 }
-/** The workspace navigation's routes: only these, each once (CR-010). */
-const NAVIGATION_ROUTES = ['/workspace/account', '/workspace/staff', '/workspace/audit'];
+/**
+ * The workspace navigation's routes: only these, each once (CR-010), plus the Owner's Plan and
+ * billing (F03-S02) and Support access (F03-S04) pages, which F03 added to the staff workspace.
+ */
+const NAVIGATION_ROUTES = ['/workspace/account', '/workspace/staff', '/workspace/audit', '/workspace/billing', '/workspace/support-access'];
 async function navigationLinks(nav: Locator) {
   const links = nav.getByRole('link');
   const hrefs = await links.evaluateAll(elements => elements.map(el => el.getAttribute('href')));

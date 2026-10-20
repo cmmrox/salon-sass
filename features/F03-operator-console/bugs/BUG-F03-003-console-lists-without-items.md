@@ -2,14 +2,14 @@
 id: BUG-F03-003
 title: Console item lists expose a list role with no list items, so screen readers cannot navigate them
 severity: major
-status: fixed
+status: verified
 found_by: TC-F03-S01-034
 breaks: AC-18
 found_on: 2026-10-19
 fixed_in: f9d31c4
 fix_note: 'Item defaults to role listitem and a link row (asChild) sits inside a listitem wrapper, so every ItemGroup announces its items; Console/LifecycleScreens tests red then green; axe on 9 console views 0 serious/critical (apps/api/target/f03-bugfix-evidence/a11y-before.json, a11y-after.json); gates (apps/api/target/f03-bugfix-evidence/gates/summary.txt): API verify exit 0 at 4a60e33 (688 tests), lint/typecheck/test/web build/contracts:check exit 0 at f122ad4'
 developer_note: null
-verified_on: null
+verified_on: 2026-10-20
 approved_by: null
 found_in_release: null
 ---
@@ -50,3 +50,4 @@ announces an empty or malformed list. The workspace screens scanned clean.
 
 ## Re-verification
 
+Verified on 2026-10-20. Console rows are now list items (a link row sits inside a `role=listitem` wrapper). The automated scans of the salons, plans, salon detail with lifecycle history, invoices, support sessions and every console sheet report no serious or critical violation: TC-F03-S01-034, TC-F03-S02-026, TC-F03-S03-017 and TC-F03-S04-017 pass in run `qa/reports/20261020-055248-F03-e3ca1b96e90f` (full F03 run at 7808703, product identical to 002b661; 21/21 entries, 112/112 tests).
