@@ -81,7 +81,7 @@ evidence:
   scoped_assessment: features/F03-operator-console/scoped-qa.json
 integration:
   branch: charithm/feature/F03-operator-console
-  pull_request: null
+  pull_request: https://github.com/cmmrox/salon-sass/pull/13
   qa_revision: f7ebbf8fef0a3c1ca5aae3068a7f45864a4731fd
   merged_commit: null
   merged_at: null
