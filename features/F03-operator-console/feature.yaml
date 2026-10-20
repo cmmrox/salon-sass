@@ -4,7 +4,7 @@ summary: The operator creates a salon, puts it on a plan, bills it, suspends or 
   its workspace only through a recorded support session.
 release: R1
 milestone: M1-web
-status: in-qa
+status: complete
 qa_status: pass
 released_in: null
 depends_on:
