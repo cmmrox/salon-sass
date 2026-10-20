@@ -42,13 +42,13 @@ Ranked, most valuable first. Findings that break a requirement are filed as bugs
 
 | Id | Class | Suggestion | Disposition |
 | --- | --- | --- | --- |
-| SUG-F03-01 | should | Show a legacy salon's published name instead of "Not configured" in the salon directory and detail | |
-| SUG-F03-02 | should | Disable or hide the whole add-staff form in the support view and in a read-only salon, not only its submit button | |
-| SUG-F03-03 | should | Let operators pick time zone (and country/currency) from a searchable list rather than typing IANA names | |
-| SUG-F03-04 | idea | Let an Admin archive plans so the plan directory and the plan picker list only plans still offered | |
-| SUG-F03-05 | idea | Cap a renewed operator token's `accessExpiresAt` at the session's absolute end | |
-| SUG-F03-06 | idea | Compact the stacked support and billing banners on phones | |
-| SUG-F03-07 | idea | Show the close sheet's deletion date from the server, not the browser's clock | |
+| SUG-F03-01 | should | Show a legacy salon's published name instead of "Not configured" in the salon directory and detail | CR-019 |
+| SUG-F03-02 | should | Disable or hide the whole add-staff form in the support view and in a read-only salon, not only its submit button | CR-019 |
+| SUG-F03-03 | should | Let operators pick time zone (and country/currency) from a searchable list rather than typing IANA names | CR-019 |
+| SUG-F03-04 | idea | Let an Admin archive plans so the plan directory and the plan picker list only plans still offered | backlog |
+| SUG-F03-05 | idea | Cap a renewed operator token's `accessExpiresAt` at the session's absolute end | backlog |
+| SUG-F03-06 | idea | Compact the stacked support and billing banners on phones | backlog |
+| SUG-F03-07 | idea | Show the close sheet's deletion date from the server, not the browser's clock | backlog |
 
 ### SUG-F03-01 Show a legacy salon's published name instead of "Not configured"
 

@@ -55,3 +55,7 @@ Added by the lead at `stage-close` and `feature-close`, from suggestions classed
 | Send a credential the API calls non-renewable straight to sign-in on the server | SUG-F02-10 | Avoids briefly painting an empty workspace frame |
 | Make the API integration tests bind and connect on the same loopback address | Developer, CR-017 F01-S03 gates | A random test port collided with an IDE language server on 127.0.0.1 and failed one test once |
 | Give the phone navigation sheet a visible close button | SUG-F01-03 | A `SheetClose` icon button labelled from the translations; today it closes on Escape, backdrop or a route |
+| Let an Admin archive plans so pickers and the plan directory list only plans still offered | SUG-F03-04 | Keeps existing assignments; also shortens the Create salon picker that wraps its pager at 360px |
+| Cap a renewed operator token's `accessExpiresAt` at the session's absolute end | SUG-F03-05 | Return `min(now + 5 min, session end)`; the token is already refused at the end |
+| Compact the stacked support and billing banners on phones | SUG-F03-06 | About 430px of an 844px screen before content when both apply |
+| Take the close sheet's deletion date from the API's clock, not the browser's | SUG-F03-07 | The closure itself already uses the application clock |
