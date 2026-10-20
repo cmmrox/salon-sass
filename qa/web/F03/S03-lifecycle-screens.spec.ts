@@ -107,6 +107,8 @@ test(`${id(15)} Console lifecycle actions and the download page show every state
   const download = page.waitForEvent('download');
   await page.getByTestId('console-export-download').click();
   expect((await download).suggestedFilename()).toMatch(/\.zip$/);
+  // The export email is captured in the API's memory, which a restart clears: read its link first.
+  const [email] = await operator.emailsOfKind(input.owner.email, 'export.ready', 1);
   // Unavailable: the API stopped while the export card loads.
   try {
     localService('stop', 'api');
@@ -117,7 +119,6 @@ test(`${id(15)} Console lifecycle actions and the download page show every state
   }
   await context.close();
   // The Owner's page on the platform host: ready, then an unknown link.
-  const [email] = await operator.emailsOfKind(input.owner.email, 'export.ready', 1);
   const token = email.links[0].split('#')[1];
   const owner = await browser.newContext({ viewport: { width: 390, height: 900 } });
   const ownerPage = await owner.newPage();

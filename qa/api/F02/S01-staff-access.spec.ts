@@ -119,9 +119,11 @@ test(`${id(16)} single and all-device revocation is immediate and owner-scoped`,
 test(`${id(17)} each role receives exactly its permitted identity actions`,async({identity})=>{
  for(const role of ROLES){
   const actor=await identity.staff(alpha,role);
-  const common=['session.manage','password.change','mfa.enroll'];
+  // F03 added entitlement.read for every staff role and invoice.read and support.manage for the Owner
+  // (F03-S02 decision 051, identity-and-access.md; F03-S04 handoff, decision 053).
+  const common=['session.manage','password.change','mfa.enroll','entitlement.read'];
   const admin=['staff.list','audit.list','payment.refund','catalogue.price.change','policy.change','customer.export','calendar.read','customer.read','financial.read'];
-  const expected=role==='OWNER'?[...common,...admin,'staff.manage']:role==='MANAGER'?[...common,...admin]:role==='RECEPTIONIST'||role==='PROFESSIONAL'?[...common,'calendar.read','customer.read']:[...common,'financial.read'];
+  const expected=role==='OWNER'?[...common,...admin,'staff.manage','invoice.read','support.manage']:role==='MANAGER'?[...common,...admin]:role==='RECEPTIONIST'||role==='PROFESSIONAL'?[...common,'calendar.read','customer.read']:[...common,'financial.read'];
   expect([...actor.principal.permissions].sort()).toEqual(expected.sort());
   const victim=await identity.staff(alpha,'PROFESSIONAL');const target=await identity.staff(alpha);const payload=syntheticAccount();
   for(const path of ['/me','/sessions'])expect((await identity.call(alpha,'GET',path,undefined,actor.tokens)).status()).toBe(200);

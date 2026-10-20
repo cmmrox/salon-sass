@@ -15,8 +15,9 @@ import {
   paymentRows, providerEventRows, settled,
 } from '../../shared/billing';
 import { syntheticAccount } from '../../shared/identity';
+import { identitySql } from '../../shared/identity-storage';
 import {
-  test, expect, alpha, DAY, SECOND, exact, fieldsOf, operatorJson, plusExact, operatorProblem, ownerSession, plusMs, CONSOLE_HOST,
+  test, expect, alpha, DAY, SECOND, exact, fieldsOf, operatorJson, plusExact, schedulerSettled, sqlLiteral, operatorProblem, ownerSession, plusMs, CONSOLE_HOST,
   type Operator, type Payment, type SalonInput, type TestClock,
 } from '../../shared/operator';
 
@@ -349,11 +350,16 @@ test(`${id(28)} A billing job interrupted after invoice issue resumes without a 
   await operator.armBillingInterrupt('after-invoice-issue');
   const failed = await operator.runBilling();
   expect(failed.failed.length, 'the armed pass failed for a subscription').toBeGreaterThanOrEqual(1);
-  await operator.renew(admin);
-  expect((await operator.invoices(admin, created.id)).total, 'no partial invoice').toBe(0);
-  expect(chargeAttemptsOfSalon(created.id), 'no charge attempt').toBe(0);
-  expect(await operator.emails(owner), 'no message').toEqual([]);
+  // The scheduler's own billing pass is due at the same instant and may issue the invoice beside
+  // the interrupted one, so the interrupted state is read as an invariant in one snapshot: no
+  // invoice without its issue charge attempt and no attempt without its invoice (no partial issue).
+  const snapshot = identitySql(`SELECT (SELECT count(*) FROM invoice WHERE salon_id = ${sqlLiteral(created.id)}) || ':' ||
+    (SELECT count(*) FROM charge_attempt a JOIN invoice i ON i.id = a.invoice_id WHERE i.salon_id = ${sqlLiteral(created.id)} AND a.occasion = 'issue')`);
+  const [issued, attempted] = snapshot.split(':').map(Number);
+  expect(issued, 'at most one invoice').toBeLessThanOrEqual(1);
+  expect(attempted, 'no partial invoice: each issued invoice has its charge attempt').toBe(issued);
   await operator.runBilling();
+  await schedulerSettled(operator);
   await operator.renew(admin);
   const page = await operator.invoices(admin, created.id);
   expect(page.total, 'the next pass issues it once').toBe(1);

@@ -51,9 +51,10 @@ Automation notes (feature-verify, 2026-10-19):
 - Hook paths, signature header, BFF actions, schema names and test ids come from the stage
   handoffs: `qa/shared/operator.ts` `CONTRACT`, `SUPPORT` and `PENDING_S04` (filled from the S04
   handoff).
-- The generated contract writes nullable objects and enums so that null fails validation
-  (BUG-F03-001). F03 checks read them as nullable through `contractValidator`, so they still fail
-  on a missing, extra or wrongly typed field; TC-F03-S01-041 asserts the defect on the raw document.
+- Response checks validate strictly against the committed contract. During the first pass the
+  contract forbade the nulls the API returns (BUG-F03-001) and the checks read those properties as
+  nullable for a time; after the fix (verified 2026-10-19) that allowance was removed by the lead's
+  ruling, and TC-F03-S01-041 keeps the nullability and success statuses asserted on the raw document.
 - The API answers instants with microseconds; computed instants are compared through `exact` and
   `plusExact`, never through JavaScript Date.
 - Moving the clock runs scheduled jobs for every salon (outbox retention, billing reminders, the
@@ -61,14 +62,19 @@ Automation notes (feature-verify, 2026-10-19):
   another salon changed" across a clock jump compares the durable tenant tables
   (`TIME_CLEANED_TABLES` excluded); the closed salon itself is compared on every table.
 - Plans are immutable and never removed, so they accumulate across runs (some dated in the future
-  by the test clock), and the console's plan pickers list only the 100 newest (BUG-F03-006). The
-  browser cases that pick their own plan start the clock after the newest plan (`afterNewestPlan`).
+  by the test clock). The console's plan pickers show 100 plans per page, newest first, with search
+  and paging (BUG-F03-006, fixed); TC-F03-S01-042 proves an older plan is reachable. The other
+  browser cases that pick their own plan from the first page start the clock after the newest plan
+  (`afterNewestPlan`).
   The console keeps a client-navigated page in the DOM hidden after navigating, so browser checks
   read the visible shell or scope to the page they navigated to.
+- Moving the clock makes the scheduler's own billing, export and deletion passes due at once, beside
+  the run-job hooks. Reads after a hook pass wait for the scheduler to settle (`schedulerSettled`);
+  the interrupted-job cases read the interrupted state as an atomic invariant (no invoice without
+  its charge attempt; never `deleted` while rows remain; no archive offered while pending), since
+  the scheduler may legitimately resume the work at once.
 - Failure proof (automation-principles): TC-F03-S01-041 failed on the committed contract for the
-  reason it guards. `contractValidator` was run on controlled bodies: it accepts a null legacy
-  `plan` and a known or null `notice`, and rejects a string `plan`, a `plan` missing `key`, a
-  missing `slug`, a string `version` and an unknown `notice`. `exact` keeps microseconds
+  reason it guards, and passes on the fixed contract. `exact` keeps microseconds
   (`.254315Z` differs from `.254Z`). The durable comparison keeps 6 of the 12 tenant tables.
   The accessibility, outage-deadline and contract checks failed on the product defects filed in
   `bugs/` before any fix, which is their own failure proof.

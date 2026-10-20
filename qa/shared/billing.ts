@@ -6,7 +6,7 @@
  */
 import { identitySql } from './identity-storage';
 import {
-  expect, DAY, plusMs, sqlLiteral, platformAuditWhere,
+  expect, DAY, plusMs, schedulerSettled, sqlLiteral, platformAuditWhere,
   type Operator, type OperatorActor, type InvoiceSummary, type TestClock,
 } from './operator';
 
@@ -36,7 +36,10 @@ export const auditsNaming = (action: string, subjectId: string) => platformAudit
 /** Sets the clock and runs one billing pass at that instant. */
 export async function billAt(operator: Operator, clock: TestClock, instant: string) {
   await clock.set(instant);
-  return operator.runBilling();
+  const pass = await operator.runBilling();
+  // The scheduler's own pass of the same job is due too; let it finish before anything is read.
+  await schedulerSettled(operator);
+  return pass;
 }
 
 /** Crosses the trial end of a salon's subscription and returns its first invoice. */

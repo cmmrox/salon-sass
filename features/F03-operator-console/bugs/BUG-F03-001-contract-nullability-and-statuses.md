@@ -2,14 +2,14 @@
 id: BUG-F03-001
 title: The generated contract forbids the nulls the operator, billing and entitlement APIs return and documents 200 for the support routes' 201 and 204
 severity: major
-status: fixed
+status: verified
 found_by: TC-F03-S01-041
 breaks: AC-14
 found_on: 2026-10-19
 fixed_in: 28b6de2
 fix_note: 'A springdoc customizer rewrites every nullable $ref as oneOf [$ref, {type: null}] and adds null to nullable enums (the ten fields plus both endedBy), and the five support routes declare 201/204; document and client regenerated; red/green OpenApiShapeTest and contracts.test.ts (apps/api/target/f03-bugfix-evidence/bug001-*.log); live sign-in body invalid under the old document, valid under the new (apps/api/target/f03-bugfix-evidence/contract-signin-before.json, contract-signin-after.json); gates (apps/api/target/f03-bugfix-evidence/gates/summary.txt): API verify exit 0 at 4a60e33 (688 tests), lint/typecheck/test/web build/contracts:check exit 0 at f122ad4'
 developer_note: null
-verified_on: null
+verified_on: 2026-10-20
 approved_by: null
 found_in_release: null
 ---
@@ -73,3 +73,4 @@ they still fail on a missing, extra or wrongly typed field (failure proof in the
 
 ## Re-verification
 
+Verified on 2026-10-20. The contract now writes the ten nullable properties as `oneOf [$ref, null]`, adds `null` to the nullable enums, and documents 201/204 for the five support routes; the generated client types `credentials` as `OperatorTokens | null`. By the lead's ruling the F03 response checks were returned to strict validation of the committed contract (the temporary nullable reading was removed), so every live null (sign-in before MFA, a legacy salon's `plan`, legacy entitlements, the banner `notice`) is now validated by the unmodified schema. TC-F03-S01-041 passes on the raw document. Run `qa/reports/20261020-055248-F03-e3ca1b96e90f` (full F03 run at 7808703, product identical to 002b661; 21/21 entries, 112/112 tests).

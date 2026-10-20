@@ -128,7 +128,9 @@ test(`${id(10)} The workspace leaves the support view when the session ends`, as
   const page = await enterView(context, target.salon, first.entryCode);
   const revoked = await identity.api.send('DELETE', `${SUPPORT.salonSessions}/${first.id}`, { headers: { Host: target.salon.hostname, Authorization: `Bearer ${owner.tokens.accessToken}` } });
   expect(revoked.status(), 'the Owner revokes').toBe(204);
-  await page.goto(`${salonUrl(target.salon, webUrl)}/workspace/staff`);
+  // The open page may notice the end itself and redirect to the ended notice at the same instant,
+  // which aborts this navigation; either way the next page must be the ended notice.
+  await page.goto(`${salonUrl(target.salon, webUrl)}/workspace/staff`).catch((error: Error) => { if (!/ERR_ABORTED/.test(error.message)) throw error; });
   await expect(page.getByTestId(tid('entryExpired')), 'the next navigation leaves the support view').toBeVisible();
   await expect(page.getByTestId(tid('banner'))).toHaveCount(0);
   const second = await start(operator, await operator.renew(support), target.created.id);
@@ -263,6 +265,14 @@ test(`${id(17)} Support screens pass the automated scan and keyboard-only use`, 
   await expectAccessible(page, 'session list');
   await page.getByTestId(tid('sessionEnd')).first().focus();
   await page.keyboard.press('Enter');
+  // End asks for confirmation in an Alert Dialog (S04 handoff); confirm it by keyboard too.
+  await page.getByTestId('console-support-confirm-end').focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByTestId('console-support-confirm-end')).toHaveCount(0);
+  // Read through the API with the still-valid access token: renewing would rotate the refresh token
+  // the browser holds. The end request is asynchronous, so wait for it.
+  await expect.poll(async () => (await supportJson<{ total: number }>(await operator.supportList(support, { salonId: target.created.id, state: 'active' }), 'supportSessionPage')).total,
+    { message: 'the session ended by keyboard', timeout: 10_000 }).toBe(0);
   await consoleSide.close();
   const session = await start(operator, await operator.actor('OPERATOR_SUPPORT'), target.created.id);
   const viewContext = await browser.newContext();

@@ -212,6 +212,9 @@ test(`${id(26)} Billing screens pass the automated scan and keyboard-only use`, 
   // A plan move by keyboard.
   await page.getByTestId('console-move-plan').focus();
   await page.keyboard.press('Enter');
+  // The sheet first places focus on its plan search (BUG-F03-006's picker); let it settle before moving on.
+  await expect(page.getByTestId('console-move-plan-id-search')).toBeFocused();
+  await expect(page.getByTestId('console-move-plan-id'), 'the picker has loaded its plans').toBeEnabled();
   await page.getByTestId('console-move-plan-id').focus();
   await page.keyboard.press('Enter');
   await page.getByTestId(`console-move-plan-id-option-${larger.id}`).focus();
@@ -226,9 +229,12 @@ test(`${id(26)} Billing screens pass the automated scan and keyboard-only use`, 
   await page.locator(`[data-testid="console-record-transfer"][data-id="${invoice.id}"]`).focus();
   await page.keyboard.press('Enter');
   await expectAccessible(page, 'record transfer sheet');
+  // Fields may be prefilled (the amount is the invoice's): select their contents before typing.
   await page.getByTestId('console-transfer-reference').focus();
+  await page.keyboard.press('ControlOrMeta+A');
   await page.keyboard.type('QA-KEYBOARD');
   await page.getByTestId('console-transfer-amount').focus();
+  await page.keyboard.press('ControlOrMeta+A');
   await page.keyboard.type('2500.50');
   await page.getByTestId('console-record-transfer-submit').focus();
   await page.keyboard.press('Enter');

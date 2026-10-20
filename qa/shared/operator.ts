@@ -19,10 +19,7 @@ import { answerOf, expectProblem } from './answers';
 import { reportDir } from './env';
 import { test as identityTest, expect, json, totp, syntheticAccount, type Identity, type SeedAccount, type Tokens } from './identity';
 import { identitySql } from './identity-storage';
-import Ajv2020, { type ValidateFunction } from 'ajv/dist/2020';
-import addFormats from 'ajv-formats';
-
-import { committedContract } from './openapi';
+import { committedContract, schemaValidator } from './openapi';
 import { PLATFORM_DOMAIN, alpha, beta, gamma, type Salon } from './tenants';
 import type { components } from '@contracts/schema';
 
@@ -152,7 +149,7 @@ export async function supportJson<T>(response: APIResponse, schema: keyof typeof
   const answer = await answerOf(response);
   expect(answer.status, `${schema}: HTTP status (body ${answer.status >= 400 ? answer.body.slice(0, 200) : 'withheld'})`).toBe(status);
   const body = JSON.parse(answer.body);
-  expect(Boolean(contractValidator(name)(body)), `${schema}: generated contract shape`).toBe(true);
+  expect(Boolean(schemaValidator(name)(body)), `${schema}: generated contract shape`).toBe(true);
   return body as T;
 }
 
@@ -323,13 +320,27 @@ export function countRows(table: string, where: string): number {
 /**
  * An instant (07:00Z) at least a day after every existing plan's creation. Plans are immutable and
  * never removed (the local reset keeps them), clock-moving tests date some in the future, and the
- * console's plan pickers list only the 100 newest (BUG-F03-006). A test that picks its own plan in
- * the browser starts its clock here so that plan is among them, independent of earlier runs.
+ * console's plan pickers show the 100 newest on their first page. A test that picks its own plan
+ * from that page starts its clock here so the plan is on it, independent of earlier runs.
  */
 export function afterNewestPlan(): string {
   const newest = identitySql(`SELECT to_char(greatest(coalesce(max(created_at), now()), now()) AT TIME ZONE 'UTC', 'YYYY-MM-DD') FROM plan`);
   expect(newest, 'the newest plan date').toMatch(/^\d{4}-\d{2}-\d{2}$/);
   return new Date(Date.parse(`${newest}T07:00:00Z`) + DAY).toISOString();
+}
+/**
+ * Waits until the application's scheduler has run every platform job occurrence the clock made due
+ * and none is still running. Moving the test clock makes the scheduled billing, export and deletion
+ * jobs due at once, so they run beside the run-job hooks; a read after a hook pass waits here so it
+ * sees the committed result of every pass, not a moment in the middle of a concurrent one.
+ */
+export async function schedulerSettled(operator: Operator, jobs = ['subscription-billing', 'salon-export', 'salon-deletion']) {
+  const now = await operator.now();
+  const busy = () => identitySql(`SELECT count(*) FROM scheduled_job WHERE name IN (${jobs.map(sqlLiteral).join(', ')}) AND (
+    next_run_at <= ${sqlLiteral(now)}::timestamptz OR locked_by IS NOT NULL
+    OR (last_started_at IS NOT NULL AND (last_finished_at IS NULL OR last_finished_at < last_started_at)))`);
+  expect(identitySql(`SELECT count(*) FROM scheduled_job WHERE name IN (${jobs.map(sqlLiteral).join(', ')})`), 'the platform jobs are scheduled').toBe(String(jobs.length));
+  await expect.poll(busy, { message: 'the scheduler has run the job occurrences the clock made due', timeout: 20_000, intervals: [100, 250, 500] }).toBe('0');
 }
 /** Rows a salon owns in the S01 bootstrap tables: the registry, its Owner and its brand. */
 export function bootstrapRows(slug: string) {
@@ -369,54 +380,12 @@ export function platformAuditWhere(where: string): PlatformAuditRow[] {
 }
 export const platformAudit = (subjectId: string) => platformAuditWhere(`subject_id = ${sqlLiteral(subjectId)}`);
 
-/**
- * A validator for a schema of the committed contract, reading a property written as
- * `{"$ref": X, "type": [..., "null"]}` as "X or null", and a nullable `enum` that omits null as
- * also allowing null. Under OpenAPI 3.1 (JSON Schema 2020-12) these keywords all apply together, so
- * the document as generated forbids the null the specs require
- * (S01: legacy `plan`, `credentials` before MFA; S02: legacy entitlements). That contract defect is
- * BUG-F03-001 and is asserted on its own by TC-F03-S01-041 against the raw document; every other
- * F03 check reads the nullability the specs state, so it still fails on a missing, extra-typed or
- * wrongly typed field. Fails loudly when the schema does not exist.
- */
-export function contractValidator(name: string): ValidateFunction {
-  const document = committedContract();
-  const schemas = JSON.parse(JSON.stringify(document.components?.schemas ?? {})) as Record<string, { properties?: Record<string, Record<string, unknown>> }>;
-  if (!schemas[name]) throw new Error(`docs/api/openapi.json defines no schema named ${name}`);
-  for (const schema of Object.values(schemas)) {
-    for (const [key, property] of Object.entries(schema.properties ?? {})) {
-      const types = property.type;
-      if (!Array.isArray(types) || !types.includes('null')) continue;
-      if (typeof property.$ref === 'string') {
-        const { $ref, type: _type, ...rest } = property;
-        schema.properties![key] = { ...rest, anyOf: [{ $ref }, { type: 'null' }] };
-      } else if (Array.isArray(property.enum) && !property.enum.includes(null)) {
-        schema.properties![key] = { ...property, enum: [...property.enum, null] };
-      }
-    }
-  }
-  const ajv = new Ajv2020({ allErrors: true, strict: true });
-  addFormats(ajv);
-  ajv.addVocabulary(['example', 'xml', 'externalDocs', 'discriminator', 'components']);
-  return ajv.compile({ $id: 'https://contract.test/openapi.json', $ref: `#/components/schemas/${name}`, components: { schemas } });
-}
-
-/** The identity helper's `json`, with the F03 reading of nullable references (contractValidator). */
-export async function contractJson<T>(response: APIResponse, schema: string, status = 200): Promise<T> {
-  const answer = await answerOf(response);
-  expect(answer.status, `${schema}: HTTP status (body ${answer.status >= 400 ? answer.body.slice(0, 200) : 'withheld'})`).toBe(status);
-  expect(answer.contentType, `${schema}: content type`).toBe('application/json');
-  const body = JSON.parse(answer.body);
-  expect(Boolean(contractValidator(schema)(body)), `${schema}: generated contract shape`).toBe(true);
-  return body as T;
-}
-
 export async function operatorJson<T>(response: APIResponse, schema: keyof typeof CONTRACT.schemas, status = 200): Promise<T> {
   const answer = await answerOf(response);
   expect(answer.status, `${schema}: HTTP status (body ${answer.status >= 400 ? answer.body.slice(0, 200) : 'withheld'})`).toBe(status);
   expect(answer.contentType, `${schema}: content type`).toBe('application/json');
   const body = JSON.parse(answer.body);
-  const validate = contractValidator(CONTRACT.schemas[schema]);
+  const validate = schemaValidator(CONTRACT.schemas[schema]);
   // A credential-bearing body is never printed; only whether it matched.
   expect(Boolean(validate(body)), `${schema}: generated contract shape`).toBe(true);
   return body as T;
