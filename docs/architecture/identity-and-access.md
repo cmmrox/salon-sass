@@ -106,6 +106,7 @@ salon-wide calendar/customer/figures access (IAM-08), not arbitrary role customi
 | Salon financial reports | yes | yes | no | only if granted | yes |
 | Plan, limits and subscription state (`entitlement.read`, F03-S02) | yes | yes | yes | yes | yes |
 | Salon subscription invoices (`invoice.read`, F03-S02) | yes | no | no | no | no |
+| List and revoke the salon's support sessions (`support.manage`, F03-S04) | yes | no | no | no | no |
 
 The API permission keys for these rows are `session.manage`, `password.change`, `mfa.enroll`,
 `staff.list`, `staff.manage`, `audit.list`, `payment.refund`, `catalogue.price.change`,
