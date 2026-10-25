@@ -1,0 +1,26 @@
+id: F19-S01
+feature: F19
+title: Enquiries, consultations and packages
+sequence: 1
+surfaces: [api, web]
+status: outlined
+qa_status: not-run
+blocked_reason: null
+released_in: null
+reopened_by: null
+depends_on: []
+requirements: [OCC-01, OCC-02, OCC-03, OCC-04, OCC-17]
+nfr_focus: [NFR-01, NFR-09, NFR-10, NFR-12]
+handoff:
+  run: null
+  data: null
+  notes: null
+cases: []
+verification:
+  commands: []
+  automation: []
+  manual: []
+  deferred: []
+evidence:
+  last_run: null
+  last_result: null

@@ -19,6 +19,8 @@ modules:
   REP: "Reports"
   BRD: "Branding, web addresses and white-label apps"
   INV: "Retail and inventory"
+  OCC: "Bridal and occasion services"
+  AST: "AI-assisted booking and front desk"
   NFR: "Non-functional requirements"
 
 requirements:
@@ -106,6 +108,20 @@ requirements:
     prototype: none
     status: active
     text: "In-product announcements and a help centre."
+  - id: PLT-13
+    module: PLT
+    priority: should
+    release: R2
+    prototype: partial
+    status: active
+    text: "Configurable service lines and business-type presets seed, but do not restrict, catalogue and module defaults."
+  - id: PLT-14
+    module: PLT
+    priority: must
+    release: R2
+    prototype: partial
+    status: active
+    text: "Removing a module stops new sales and configuration while preserving confirmed work, historical records, exports, financial obligations and the access needed to honour them."
   - id: IAM-01
     module: IAM
     priority: must
@@ -279,11 +295,26 @@ requirements:
     text: "Service flags: patch test required, consultation required, custom deposit, minimum notice, staff-only (not bookable online)."
   - id: CAT-12
     module: CAT
-    priority: could
-    release: R3
-    prototype: none
+    priority: should
+    release: R2
+    prototype: partial
+    status: changed
+    changed_by: CR-020
+    text: "Processing time inside a service releases the professional for another customer while resource and event occupancy remain explicit in availability and conflict checks."
+  - id: CAT-13
+    module: CAT
+    priority: should
+    release: R2
+    prototype: partial
     status: active
-    text: "Processing time inside a service (for example colour developing) during which the professional can serve another customer."
+    text: "Conditional single-select and multi-select option groups and add-ons have validated price, duration and buffer effects."
+  - id: CAT-14
+    module: CAT
+    priority: should
+    release: R2
+    prototype: partial
+    status: active
+    text: "Services support fixed, “from” and consultation-required pricing, with the final price and customer confirmation recorded."
   - id: STF-01
     module: STF
     priority: must
@@ -497,18 +528,20 @@ requirements:
     text: "Recurring appointments (for example every four weeks)."
   - id: BKG-22
     module: BKG
-    priority: could
-    release: R3
-    prototype: none
-    status: active
-    text: "Group bookings (for example a bridal party) across several professionals."
+    priority: must
+    release: R2
+    prototype: partial
+    status: changed
+    changed_by: CR-020
+    text: "Group bookings coordinate multiple professionals, party tasks and resources against ready-by times, with atomic database-backed conflict prevention."
   - id: BKG-23
     module: BKG
-    priority: could
-    release: R3
-    prototype: none
-    status: active
-    text: "Services at the customer’s location with travel time and an address."
+    priority: should
+    release: R2
+    prototype: partial
+    status: changed
+    changed_by: CR-020
+    text: "Services at the customer’s location capture the service address and include staff travel assignments and buffers in availability and conflict checks."
   - id: APP-01
     module: APP
     priority: must
@@ -652,11 +685,12 @@ requirements:
     text: "Branch selection where the salon has more than one."
   - id: APP-21
     module: APP
-    priority: could
-    release: R3
-    prototype: none
-    status: active
-    text: "Purchase of packages and gift cards; balances visible in the app."
+    priority: should
+    release: R2
+    prototype: partial
+    status: changed
+    changed_by: CR-020
+    text: "Customers can purchase packages and gift cards in the app, configure recipient delivery, view balances and redeem an available gift-card balance at checkout."
   - id: APP-22
     module: APP
     priority: could
@@ -762,6 +796,13 @@ requirements:
     prototype: none
     status: active
     text: "Additional gateways and wallets."
+  - id: PAY-15
+    module: PAY
+    priority: should
+    release: R2
+    prototype: partial
+    status: active
+    text: "Refundable security deposits are held as a liability separate from service revenue, with a traceable receipt, deduction and refund audit."
   - id: NOT-01
     module: NOT
     priority: must
@@ -954,11 +995,26 @@ requirements:
     text: "Memberships and prepaid credit."
   - id: MKT-09
     module: MKT
-    priority: could
-    release: R3
-    prototype: none
+    priority: should
+    release: R2
+    prototype: partial
+    status: changed
+    changed_by: CR-020
+    text: "Gift cards are sold online and in the salon, with recipient and scheduled delivery, and activate only after verified payment or authorised desk tender."
+  - id: MKT-10
+    module: MKT
+    priority: should
+    release: R2
+    prototype: partial
     status: active
-    text: "Gift cards sold online and in the salon."
+    text: "Gift cards support masked rate-limited balance lookup, partial redemption, atomic balance reservations, idempotent redemption and restoration, disclosed expiry, extension, void and outstanding-liability reporting."
+  - id: MKT-11
+    module: MKT
+    priority: should
+    release: R2
+    prototype: partial
+    status: active
+    text: "Checkout applies offer, loyalty-point and gift-card eligibility, scope, date, use limits and stacking deterministically, and reverses or restores benefits correctly on refund and cancellation."
   - id: REP-01
     module: REP
     priority: must
@@ -1137,6 +1193,174 @@ requirements:
     prototype: none
     status: active
     text: "Recording of products used in services."
+  - id: OCC-01
+    module: OCC
+    priority: must
+    release: R2
+    prototype: partial
+    status: active
+    text: "An occasion enquiry captures services, event dates and venues, party size, contact preference and consent, and acknowledges receipt to the customer."
+  - id: OCC-02
+    module: OCC
+    priority: must
+    release: R2
+    prototype: partial
+    status: active
+    text: "Staff triage, assign and track occasion enquiries with notes, ownership, status history and a next action."
+  - id: OCC-03
+    module: OCC
+    priority: must
+    release: R2
+    prototype: partial
+    status: active
+    text: "Staff schedule consultations and trials and record authorised outcomes, preferences and intake against the occasion."
+  - id: OCC-04
+    module: OCC
+    priority: should
+    release: R2
+    prototype: partial
+    status: active
+    text: "Staff manage versioned occasion packages and a consent-controlled gallery; customers see only published package versions and media."
+  - id: OCC-05
+    module: OCC
+    priority: must
+    release: R2
+    prototype: partial
+    status: active
+    text: "Staff build quotes from package or custom lines, options, party services, travel, discounts, inclusions, exclusions, taxes and a payment schedule."
+  - id: OCC-06
+    module: OCC
+    priority: must
+    release: R2
+    prototype: partial
+    status: active
+    text: "Quotes can be versioned, sent, expired, approved and rejected; an accepted version is an immutable snapshot with evidence of the terms accepted."
+  - id: OCC-07
+    module: OCC
+    priority: must
+    release: R2
+    prototype: partial
+    status: active
+    text: "An accepted quote converts exactly once, with expiring provisional holds and verified-advance confirmation that cannot create duplicate bookings or payments on retry."
+  - id: OCC-08
+    module: OCC
+    priority: must
+    release: R2
+    prototype: partial
+    status: active
+    text: "An occasion schedules multiple events, party members and professional tasks with ready-by times and shared staff and resource conflict prevention."
+  - id: OCC-09
+    module: OCC
+    priority: must
+    release: R2
+    prototype: partial
+    status: active
+    text: "The occasion shows its payment schedule, verified transactions, security-deposit state and outstanding balance in one traceable ledger."
+  - id: OCC-10
+    module: OCC
+    priority: should
+    release: R2
+    prototype: partial
+    status: active
+    text: "On-location events include the address, staff travel assignments and buffers, and travel charges in quote and conflict rules."
+  - id: OCC-11
+    module: OCC
+    priority: must
+    release: R2
+    prototype: partial
+    status: active
+    text: "Staff have occasion pipeline, detail, task and filtered calendar views with operational notes and entitlement and read-only enforcement."
+  - id: OCC-12
+    module: OCC
+    priority: must
+    release: R2
+    prototype: partial
+    status: active
+    text: "Occasion cancellation calculates and records the charge, refund and amount still owed from the accepted terms before confirmation."
+  - id: OCC-13
+    module: OCC
+    priority: must
+    release: R2
+    prototype: partial
+    status: active
+    text: "Postponement requotes where needed and atomically revalidates every event, task and resource, preserving old dates and any accepted fee without silently moving staff."
+  - id: OCC-14
+    module: OCC
+    priority: should
+    release: R2
+    prototype: partial
+    status: active
+    text: "Occasion reports cover enquiry conversion, quote ageing, upcoming workload, balances, refunds and revenue, filtered by permitted branch and service line."
+  - id: OCC-15
+    module: OCC
+    priority: must
+    release: R2
+    prototype: partial
+    status: active
+    text: "Mobile customers discover published occasion packages and galleries, submit enquiries and manage their authenticated enquiries; no customer website is added."
+  - id: OCC-16
+    module: OCC
+    priority: must
+    release: R2
+    prototype: partial
+    status: active
+    text: "Mobile customers review and accept quote versions, pay through verified checkout, track events, tasks and balances, and request changes."
+  - id: OCC-17
+    module: OCC
+    priority: must
+    release: R2
+    prototype: partial
+    status: active
+    text: "Occasion media and intake record purpose and consent, public gallery use has separate explicit consent, and role visibility, access, export and retention or deletion policy are enforced."
+  - id: OCC-18
+    module: OCC
+    priority: should
+    release: R2
+    prototype: partial
+    status: active
+    text: "Customer and staff notifications cover enquiry, quote, payment, upcoming event, task and change events using notification preferences and retry rules."
+  - id: AST-01
+    module: AST
+    priority: could
+    release: R3
+    prototype: partial
+    status: active
+    text: "A customer assistant gives authoritative service, price and availability guidance and a confirmed path into ordinary booking or an occasion enquiry."
+  - id: AST-02
+    module: AST
+    priority: could
+    release: R3
+    prototype: partial
+    status: active
+    text: "An authorised staff assistant previews scheduling and front-desk actions and requires explicit confirmation before invoking the same business APIs to mutate data."
+  - id: AST-03
+    module: AST
+    priority: could
+    release: R3
+    prototype: partial
+    status: active
+    text: "Assistants disclose automation and limitations and transfer to a human with an authorised conversation summary."
+  - id: AST-04
+    module: AST
+    priority: could
+    release: R3
+    prototype: partial
+    status: active
+    text: "Every assistant retrieval and action enforces tenant, role, read-only, module and object-level access, and assistants never take payment in chat."
+  - id: AST-05
+    module: AST
+    priority: could
+    release: R3
+    prototype: partial
+    status: active
+    text: "Assistant prompts and conversations have defined retention and sensitive-data handling, with provider-failure and timeout behaviour and a deterministic non-AI fallback."
+  - id: AST-06
+    module: AST
+    priority: could
+    release: R3
+    prototype: partial
+    status: active
+    text: "Assistant subscription, trial, status and limits include usage and cost reporting, graceful exhaustion and no loss of core booking access."
   - id: NFR-01
     module: NFR
     priority: must

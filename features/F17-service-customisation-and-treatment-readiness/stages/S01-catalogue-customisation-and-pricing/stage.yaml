@@ -1,0 +1,26 @@
+id: F17-S01
+feature: F17
+title: Catalogue customisation and pricing
+sequence: 1
+surfaces: [api, web]
+status: outlined
+qa_status: not-run
+blocked_reason: null
+released_in: null
+reopened_by: null
+depends_on: []
+requirements: [CAT-07, CAT-08, CAT-10, CAT-13, CAT-14]
+nfr_focus: [NFR-01, NFR-03, NFR-12, NFR-18]
+handoff:
+  run: null
+  data: null
+  notes: null
+cases: []
+verification:
+  commands: []
+  automation: []
+  manual: []
+  deferred: []
+evidence:
+  last_run: null
+  last_result: null

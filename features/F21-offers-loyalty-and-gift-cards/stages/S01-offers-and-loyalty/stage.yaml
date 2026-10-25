@@ -1,0 +1,26 @@
+id: F21-S01
+feature: F21
+title: Offers and loyalty
+sequence: 1
+surfaces: [api, web, mobile]
+status: outlined
+qa_status: not-run
+blocked_reason: null
+released_in: null
+reopened_by: null
+depends_on: []
+requirements: [MKT-05, MKT-06, APP-15, APP-16]
+nfr_focus: [NFR-01, NFR-09, NFR-10, NFR-12]
+handoff:
+  run: null
+  data: null
+  notes: null
+cases: []
+verification:
+  commands: []
+  automation: []
+  manual: []
+  deferred: []
+evidence:
+  last_run: null
+  last_result: null

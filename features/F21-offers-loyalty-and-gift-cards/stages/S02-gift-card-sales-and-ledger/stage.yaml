@@ -1,0 +1,26 @@
+id: F21-S02
+feature: F21
+title: Gift-card sales and ledger
+sequence: 2
+surfaces: [api, web, mobile]
+status: outlined
+qa_status: not-run
+blocked_reason: null
+released_in: null
+reopened_by: null
+depends_on: [F21-S01]
+requirements: [MKT-09, MKT-10, APP-21]
+nfr_focus: [NFR-01, NFR-05, NFR-09, NFR-10, NFR-11, NFR-12]
+handoff:
+  run: null
+  data: null
+  notes: null
+cases: []
+verification:
+  commands: []
+  automation: []
+  manual: []
+  deferred: []
+evidence:
+  last_run: null
+  last_result: null

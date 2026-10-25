@@ -1,0 +1,20 @@
+id: F18
+title: Multi-branch salons and module administration
+summary: Salons can operate service lines and branches with scoped catalogue, staff, calendars and reports, while operators can change modules without losing obligations or history.
+release: R2
+milestone: M3-growth
+status: backlog
+qa_status: not-run
+released_in: null
+depends_on: [F03, F04, F05, F10, F13, F17]
+surfaces: [api, web, mobile]
+requirements: [PLT-11, PLT-13, PLT-14, APP-20, REP-07]
+nfr_focus: [NFR-01, NFR-07, NFR-10, NFR-18, NFR-19]
+cases: []
+verification:
+  automation: []
+  manual: []
+  deferred: []
+evidence:
+  last_run: null
+  last_result: null

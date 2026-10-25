@@ -1,0 +1,26 @@
+id: F22-S02
+feature: F22
+title: Guided customer and staff assistants
+sequence: 2
+surfaces: [api, web, mobile]
+status: outlined
+qa_status: not-run
+blocked_reason: null
+released_in: null
+reopened_by: null
+depends_on: [F22-S01]
+requirements: [AST-01, AST-02, AST-04, AST-05]
+nfr_focus: [NFR-01, NFR-07, NFR-09, NFR-10, NFR-15, NFR-16, NFR-17, NFR-18]
+handoff:
+  run: null
+  data: null
+  notes: null
+cases: []
+verification:
+  commands: []
+  automation: []
+  manual: []
+  deferred: []
+evidence:
+  last_run: null
+  last_result: null

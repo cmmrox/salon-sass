@@ -1,0 +1,26 @@
+id: F21-S03
+feature: F21
+title: Shared checkout and reversal
+sequence: 3
+surfaces: [api, web, mobile]
+status: outlined
+qa_status: not-run
+blocked_reason: null
+released_in: null
+reopened_by: null
+depends_on: [F21-S02]
+requirements: [MKT-11]
+nfr_focus: [NFR-01, NFR-05, NFR-10, NFR-11, NFR-18]
+handoff:
+  run: null
+  data: null
+  notes: null
+cases: []
+verification:
+  commands: []
+  automation: []
+  manual: []
+  deferred: []
+evidence:
+  last_run: null
+  last_result: null

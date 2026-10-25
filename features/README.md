@@ -10,8 +10,8 @@ requirement detail is in `qa/coverage.md`.
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | F01 | [Platform foundation and tenant isolation](F01-platform-foundation/) | M1-web | complete | merged | 5/5 | 2 | - |
 | F02 | [Sign-in, accounts and roles](F02-sign-in-accounts-and-roles/) | M1-web | complete | merged | 4/4 | 10 | - |
-| F03 | [Operator console: salons, plans and billing](F03-operator-console/) | M1-web | complete | awaiting owner | 4/4 | 5 | **lead**: `merge-sync F03 (after owner merges the PR)` |
-| F04 | [Salon setup: profile, branding, hours and policies](F04-salon-setup/) | M1-web | backlog | - | - | 6 | after GitHub merge of F03 |
+| F03 | [Operator console: salons, plans and billing](F03-operator-console/) | M1-web | complete | merged | 4/4 | 5 | - |
+| F04 | [Salon setup: profile, branding, hours and policies](F04-salon-setup/) | M1-web | backlog | - | - | 6 | **lead**: `feature-new F04` |
 | F05 | [Service catalogue](F05-service-catalogue/) | M1-web | backlog | - | - | 6 | after F04 |
 | F06 | [Staff, schedules and leave](F06-staff-schedules-and-leave/) | M1-web | backlog | - | - | 4 | after F04, F05 |
 | F07 | [Booking engine and staff booking foundations](F07-online-booking/) | M1-web | backlog | - | - | 7 | after F05, F06 |
@@ -21,9 +21,15 @@ requirement detail is in `qa/coverage.md`.
 | F11 | [Notifications and reminders](F11-notifications-and-reminders/) | M1-web | backlog | - | - | 10 | after F09 |
 | F12 | [Customer records](F12-customer-records/) | M1-web | backlog | - | - | 5 | after F07 |
 | F13 | [Reports](F13-reports/) | M1-web | backlog | - | - | 3 | after F10 |
-| F14 | [Guided onboarding and data import](F14-guided-onboarding-and-import/) | M1-web | backlog | - | - | 3 | after F03, F06, F08 |
+| F14 | [Guided onboarding and data import](F14-guided-onboarding-and-import/) | M1-web | backlog | - | - | 3 | after F06, F08 |
 | F15 | [Customer mobile app](F15-customer-mobile-app/) | M2-mobile | backlog | - | - | 12 | after F09, F11 |
 | F16 | [Dedicated salon apps and store pipeline](F16-dedicated-salon-apps/) | M2-mobile | backlog | - | - | 4 | after F15 |
+| F17 | [Service customisation and treatment readiness](F17-service-customisation-and-treatment-readiness/) | M3-growth | backlog | - | 0/3 | 10 | after F05, F06, F07, F08, F12 |
+| F18 | [Multi-branch salons and module administration](F18-multi-branch-salons/) | M3-growth | backlog | - | 0/3 | 5 | after F04, F05, F10, F13, F17 |
+| F19 | [Bridal and occasion operations](F19-bridal-and-occasion-operations/) | M3-growth | backlog | - | 0/4 | 19 | after F09, F11, F17, F18 |
+| F20 | [Bridal customer mobile experience](F20-bridal-customer-mobile-experience/) | M3-growth | backlog | - | 0/3 | 2 | after F15, F19 |
+| F21 | [Offers, loyalty and gift cards](F21-offers-loyalty-and-gift-cards/) | M3-growth | backlog | - | 0/3 | 8 | after F08, F09, F12, F14, F15, F18 |
+| F22 | [AI-assisted booking and front desk](F22-ai-assisted-booking-and-front-desk/) | M4-assistance | backlog | - | 0/3 | 8 | after F15, F19, F20, F21 |
 
 ## In flight
 

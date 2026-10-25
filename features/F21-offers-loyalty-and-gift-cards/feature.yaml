@@ -1,0 +1,20 @@
+id: F21
+title: Offers, loyalty and gift cards
+summary: Salons can sell and manage offers, loyalty rewards and gift cards with deterministic checkout, traceable balances and safe refund or cancellation reversal.
+release: R2
+milestone: M3-growth
+status: backlog
+qa_status: not-run
+released_in: null
+depends_on: [F08, F09, F12, F14, F15, F18]
+surfaces: [api, web, mobile]
+requirements: [MKT-05, MKT-06, MKT-09, MKT-10, MKT-11, APP-15, APP-16, APP-21]
+nfr_focus: [NFR-01, NFR-05, NFR-09, NFR-10, NFR-11, NFR-12, NFR-18]
+cases: []
+verification:
+  automation: []
+  manual: []
+  deferred: []
+evidence:
+  last_run: null
+  last_result: null
