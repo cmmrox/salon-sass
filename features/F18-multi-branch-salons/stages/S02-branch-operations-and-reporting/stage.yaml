@@ -1,0 +1,26 @@
+id: F18-S02
+feature: F18
+title: Branch operations and reporting
+sequence: 2
+surfaces: [api, web]
+status: outlined
+qa_status: not-run
+blocked_reason: null
+released_in: null
+reopened_by: null
+depends_on: [F18-S01]
+requirements: [PLT-11, REP-07]
+nfr_focus: [NFR-01, NFR-10, NFR-19]
+handoff:
+  run: null
+  data: null
+  notes: null
+cases: []
+verification:
+  commands: []
+  automation: []
+  manual: []
+  deferred: []
+evidence:
+  last_run: null
+  last_result: null

@@ -12,6 +12,8 @@ order and is edited by the lead when the owner changes it.
 | --- | --- | --- | --- |
 | `M1-web` | The operator console and each salon's owner/admin/staff workspace; no customer web surface | F01 to F14 | Now |
 | `M2-mobile` | The customer mobile app, and a dedicated store app per salon | F15, F16 | Every `M1-web` feature is released |
+| `M3-growth` | Service customisation, multi-branch operations, Bridal/occasion workflows and expanded commerce | F17 to F21 | Every R1 feature is released |
+| `M4-assistance` | Guided customer and staff AI assistants with human handoff | F22 | Every `M3-growth` feature is released |
 
 A milestone may ship as more than one version. `M2-mobile` waits for the last `M1-web` feature to
 be released, not merely complete; `features/README.md` shows "after M1-web is released" until then,
@@ -64,6 +66,23 @@ A completed backend requirement is not evidence of a delivered customer interfac
 
 Open decision D-01 (the mobile distribution model) must be settled before F15 is planned.
 
-## After Release 1
+## M3-growth: R2 service, branch, occasion and commerce expansion
 
-Candidates for Releases 2 and 3 are in `features/BACKLOG.md`. They are not scheduled.
+Approved under CR-020. These features remain backlog until their dependencies have passed QA, merged
+and the milestone gate opens. Their stage outlines do not authorise early implementation.
+
+| Feature | Delivers |
+| --- | --- |
+| F17 Service customisation and treatment readiness | Conditional options and add-ons, pricing types, packages, resources, processing time, consultations and customer intake |
+| F18 Multi-branch salons and module administration | Service lines, branch-scoped operations and reports, mobile branch selection and safe module offboarding |
+| F19 Bridal and occasion operations | Staff enquiry, package and quote workflows, party/event scheduling, travel, ledgers, changes and reports |
+| F20 Bridal customer mobile experience | Mobile discovery, enquiry, quote acceptance, verified payment, tracking and change requests |
+| F21 Offers, loyalty and gift cards | Offers and rewards, gift-card sales and ledgers, deterministic checkout and safe reversal |
+
+## M4-assistance: R3 guided AI
+
+F22 AI-assisted booking and front desk follows the authoritative R2 workflows. It includes customer
+and staff assistants, WhatsApp/shared-inbox integration, explicit action confirmation, human handoff,
+privacy and provider-failure controls, and subscription/usage administration.
+
+Other unscheduled Release 2 and 3 candidates remain in `features/BACKLOG.md`; they are not committed scope.

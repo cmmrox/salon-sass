@@ -1,0 +1,20 @@
+id: F17
+title: Service customisation and treatment readiness
+summary: Salons can offer configurable services, consultations and treatment-ready appointments with reliable price, duration, resource and intake rules across staff web and customer mobile.
+release: R2
+milestone: M3-growth
+status: backlog
+qa_status: not-run
+released_in: null
+depends_on: [F05, F06, F07, F08, F12]
+surfaces: [api, web, mobile]
+requirements: [CAT-07, CAT-08, CAT-09, CAT-10, CAT-11, CAT-12, CAT-13, CAT-14, CRM-06, APP-18]
+nfr_focus: [NFR-01, NFR-03, NFR-05, NFR-09, NFR-12, NFR-18]
+cases: []
+verification:
+  automation: []
+  manual: []
+  deferred: []
+evidence:
+  last_run: null
+  last_result: null

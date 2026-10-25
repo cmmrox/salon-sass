@@ -1,0 +1,26 @@
+id: F20-S02
+feature: F20
+title: Mobile quotes and checkout
+sequence: 2
+surfaces: [api, mobile]
+status: outlined
+qa_status: not-run
+blocked_reason: null
+released_in: null
+reopened_by: null
+depends_on: [F20-S01]
+requirements: [OCC-16]
+nfr_focus: [NFR-01, NFR-03, NFR-09, NFR-11, NFR-12, NFR-18]
+handoff:
+  run: null
+  data: null
+  notes: null
+cases: []
+verification:
+  commands: []
+  automation: []
+  manual: []
+  deferred: []
+evidence:
+  last_run: null
+  last_result: null

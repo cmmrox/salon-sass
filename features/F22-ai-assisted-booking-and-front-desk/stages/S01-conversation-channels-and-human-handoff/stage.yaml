@@ -1,0 +1,26 @@
+id: F22-S01
+feature: F22
+title: Conversation channels and human handoff
+sequence: 1
+surfaces: [api, web]
+status: outlined
+qa_status: not-run
+blocked_reason: null
+released_in: null
+reopened_by: null
+depends_on: []
+requirements: [NOT-10, NOT-11, AST-03, AST-04]
+nfr_focus: [NFR-01, NFR-07, NFR-09, NFR-10, NFR-15]
+handoff:
+  run: null
+  data: null
+  notes: null
+cases: []
+verification:
+  commands: []
+  automation: []
+  manual: []
+  deferred: []
+evidence:
+  last_run: null
+  last_result: null

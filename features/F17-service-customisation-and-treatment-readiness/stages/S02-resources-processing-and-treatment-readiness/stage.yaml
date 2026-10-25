@@ -1,0 +1,26 @@
+id: F17-S02
+feature: F17
+title: Resources, processing and treatment readiness
+sequence: 2
+surfaces: [api, web]
+status: outlined
+qa_status: not-run
+blocked_reason: null
+released_in: null
+reopened_by: null
+depends_on: [F17-S01]
+requirements: [CAT-09, CAT-11, CAT-12, CRM-06]
+nfr_focus: [NFR-01, NFR-05, NFR-09, NFR-12]
+handoff:
+  run: null
+  data: null
+  notes: null
+cases: []
+verification:
+  commands: []
+  automation: []
+  manual: []
+  deferred: []
+evidence:
+  last_run: null
+  last_result: null

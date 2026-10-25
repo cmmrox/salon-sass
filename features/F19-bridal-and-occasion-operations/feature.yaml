@@ -1,0 +1,20 @@
+id: F19
+title: Bridal and occasion operations
+summary: Salon staff can manage Bridal and occasion work from enquiry and versioned quote through party scheduling, verified payments, changes and completion.
+release: R2
+milestone: M3-growth
+status: backlog
+qa_status: not-run
+released_in: null
+depends_on: [F09, F11, F17, F18]
+surfaces: [api, web]
+requirements: [BKG-22, BKG-23, PAY-15, OCC-01, OCC-02, OCC-03, OCC-04, OCC-05, OCC-06, OCC-07, OCC-08, OCC-09, OCC-10, OCC-11, OCC-12, OCC-13, OCC-14, OCC-17, OCC-18]
+nfr_focus: [NFR-01, NFR-05, NFR-09, NFR-10, NFR-11, NFR-12, NFR-18]
+cases: []
+verification:
+  automation: []
+  manual: []
+  deferred: []
+evidence:
+  last_run: null
+  last_result: null

@@ -1,0 +1,26 @@
+id: F19-S02
+feature: F19
+title: Quotes and confirmed conversion
+sequence: 2
+surfaces: [api, web]
+status: outlined
+qa_status: not-run
+blocked_reason: null
+released_in: null
+reopened_by: null
+depends_on: [F19-S01]
+requirements: [OCC-05, OCC-06, OCC-07]
+nfr_focus: [NFR-01, NFR-05, NFR-10, NFR-11, NFR-18]
+handoff:
+  run: null
+  data: null
+  notes: null
+cases: []
+verification:
+  commands: []
+  automation: []
+  manual: []
+  deferred: []
+evidence:
+  last_run: null
+  last_result: null

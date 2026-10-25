@@ -1,0 +1,21 @@
+id: F20
+title: Bridal customer mobile experience
+summary: Customers can discover occasion packages, enquire, accept quotes, pay, track events and request changes in the salon's React Native app.
+release: R2
+milestone: M3-growth
+status: backlog
+qa_status: not-run
+released_in: null
+depends_on: [F15, F19]
+surfaces: [api, mobile]
+requirements: [OCC-15, OCC-16]
+extends: [OCC-17, OCC-18]
+nfr_focus: [NFR-01, NFR-03, NFR-09, NFR-11, NFR-12, NFR-14, NFR-18]
+cases: []
+verification:
+  automation: []
+  manual: []
+  deferred: []
+evidence:
+  last_run: null
+  last_result: null

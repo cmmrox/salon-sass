@@ -1,7 +1,7 @@
 id: F03
 title: 'Operator console: salons, plans and billing'
-summary: The operator creates a salon, puts it on a plan, bills it, suspends or closes it, and can enter
-  its workspace only through a recorded support session.
+summary: The operator creates a salon, puts it on a plan, bills it, suspends or closes
+  it, and can enter its workspace only through a recorded support session.
 release: R1
 milestone: M1-web
 status: complete
@@ -22,8 +22,8 @@ nfr_focus:
 - NFR-20
 cases:
 - id: TC-F03-001
-  title: An operator takes one salon from creation through billing, suspension, support and closure in
-    the console
+  title: An operator takes one salon from creation through billing, suspension, support
+    and closure in the console
   type: functional
   priority: critical
   covers:
@@ -33,7 +33,8 @@ cases:
   - PLT-06
   - PLT-07
 - id: TC-F03-002
-  title: A second salon stays isolated and unaffected through every transition of the first
+  title: A second salon stays isolated and unaffected through every transition of
+    the first
   type: tenant-isolation
   priority: critical
   covers:
@@ -43,7 +44,8 @@ cases:
   - PLT-06
   - PLT-07
 - id: TC-F03-003
-  title: Access states combine in the documented precedence across billing, lifecycle and support
+  title: Access states combine in the documented precedence across billing, lifecycle
+    and support
   type: data-integrity
   priority: critical
   covers:
@@ -58,21 +60,25 @@ verification:
     project: web
     covers:
     - TC-F03-001
-    suites: [regression, smoke]
+    suites:
+    - regression
+    - smoke
   - id: journey-second-salon-isolation
     tool: playwright
     file: qa/api/F03/journey-second-salon-isolation.spec.ts
     project: api
     covers:
     - TC-F03-002
-    suites: [regression]
+    suites:
+    - regression
   - id: journey-access-state-precedence
     tool: playwright
     file: qa/api/F03/journey-access-state-precedence.spec.ts
     project: api
     covers:
     - TC-F03-003
-    suites: [regression]
+    suites:
+    - regression
   manual: []
   deferred: []
 evidence:
@@ -83,5 +89,5 @@ integration:
   branch: charithm/feature/F03-operator-console
   pull_request: https://github.com/cmmrox/salon-sass/pull/13
   qa_revision: f7ebbf8fef0a3c1ca5aae3068a7f45864a4731fd
-  merged_commit: null
-  merged_at: null
+  merged_commit: fc47342b9a2e46808d61962267c94b550e5cc9d5
+  merged_at: '2026-10-20T03:08:22Z'

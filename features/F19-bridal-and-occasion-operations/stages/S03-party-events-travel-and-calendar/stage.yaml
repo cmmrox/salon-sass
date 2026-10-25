@@ -1,0 +1,26 @@
+id: F19-S03
+feature: F19
+title: Party events, travel and calendar
+sequence: 3
+surfaces: [api, web]
+status: outlined
+qa_status: not-run
+blocked_reason: null
+released_in: null
+reopened_by: null
+depends_on: [F19-S02]
+requirements: [BKG-22, BKG-23, OCC-08, OCC-10, OCC-11]
+nfr_focus: [NFR-01, NFR-05, NFR-10, NFR-12, NFR-18]
+handoff:
+  run: null
+  data: null
+  notes: null
+cases: []
+verification:
+  commands: []
+  automation: []
+  manual: []
+  deferred: []
+evidence:
+  last_run: null
+  last_result: null

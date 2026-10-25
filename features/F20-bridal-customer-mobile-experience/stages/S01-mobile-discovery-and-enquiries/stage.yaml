@@ -1,0 +1,26 @@
+id: F20-S01
+feature: F20
+title: Mobile discovery and enquiries
+sequence: 1
+surfaces: [api, mobile]
+status: outlined
+qa_status: not-run
+blocked_reason: null
+released_in: null
+reopened_by: null
+depends_on: []
+requirements: [OCC-15, OCC-17]
+nfr_focus: [NFR-01, NFR-03, NFR-09, NFR-12, NFR-14]
+handoff:
+  run: null
+  data: null
+  notes: null
+cases: []
+verification:
+  commands: []
+  automation: []
+  manual: []
+  deferred: []
+evidence:
+  last_run: null
+  last_result: null

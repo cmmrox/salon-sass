@@ -7,8 +7,8 @@
 | Release | Requirements | Owned by a feature | Assigned to a stage | Passed QA |
 | --- | --- | --- | --- | --- |
 | R1 | 96 | 96 | 17 | 17 |
-| R2 | 40 | 0 | 0 | 0 |
-| R3 | 22 | 0 | 0 | 0 |
+| R2 | 70 | 44 | 44 | 0 |
+| R3 | 23 | 8 | 8 | 0 |
 
 ## Stages
 
@@ -53,8 +53,10 @@ Cases waiting for something else. `feature-verify` and `release-prepare` go thro
 | PLT-08 | R1 | should | F14 | - |
 | PLT-09 | R2 | should | unowned | - |
 | PLT-10 | R2 | should | unowned | - |
-| PLT-11 | R2 | should | unowned | - |
+| PLT-11 | R2 | should | F18 | F18-S01 (outlined), F18-S02 (outlined) |
 | PLT-12 | R3 | could | unowned | - |
+| PLT-13 | R2 | should | F18 | F18-S01 (outlined) |
+| PLT-14 | R2 | must | F18 | F18-S03 (outlined) |
 | IAM-01 | R1 | must | F02 | F02-S02 (complete), F02-S04 (complete) |
 | IAM-02 | R1 | must | F15 | - |
 | IAM-03 | R1 | must | F02 | F02-S02 (complete), F02-S03 (complete), F02-S04 (complete) |
@@ -74,12 +76,14 @@ Cases waiting for something else. `feature-verify` and `release-prepare` go thro
 | CAT-04 | R1 | must | F05 | - |
 | CAT-05 | R1 | must | F05 | - |
 | CAT-06 | R1 | should | F05 | - |
-| CAT-07 | R2 | should | unowned | - |
-| CAT-08 | R2 | should | unowned | - |
-| CAT-09 | R2 | should | unowned | - |
-| CAT-10 | R2 | should | unowned | - |
-| CAT-11 | R2 | should | unowned | - |
-| CAT-12 | R3 | could | unowned | - |
+| CAT-07 | R2 | should | F17 | F17-S01 (outlined), F17-S03 (outlined) |
+| CAT-08 | R2 | should | F17 | F17-S01 (outlined) |
+| CAT-09 | R2 | should | F17 | F17-S02 (outlined) |
+| CAT-10 | R2 | should | F17 | F17-S01 (outlined) |
+| CAT-11 | R2 | should | F17 | F17-S02 (outlined) |
+| CAT-12 | R2 | should | F17 | F17-S02 (outlined) |
+| CAT-13 | R2 | should | F17 | F17-S01 (outlined), F17-S03 (outlined) |
+| CAT-14 | R2 | should | F17 | F17-S01 (outlined), F17-S03 (outlined) |
 | STF-01 | R1 | must | F06 | - |
 | STF-02 | R1 | must | F06 | - |
 | STF-03 | R1 | must | F06 | - |
@@ -110,8 +114,8 @@ Cases waiting for something else. `feature-verify` and `release-prepare` go thro
 | BKG-19 | R2 | should | unowned | - |
 | BKG-20 | R2 | should | unowned | - |
 | BKG-21 | R3 | could | unowned | - |
-| BKG-22 | R3 | could | unowned | - |
-| BKG-23 | R3 | could | unowned | - |
+| BKG-22 | R2 | must | F19 | F19-S03 (outlined) |
+| BKG-23 | R2 | should | F19 | F19-S03 (outlined) |
 | APP-01 | R1 | must | F15 | - |
 | APP-02 | R1 | must | F15 | - |
 | APP-03 | R1 | must | F09 | - |
@@ -126,13 +130,13 @@ Cases waiting for something else. `feature-verify` and `release-prepare` go thro
 | APP-12 | R2 | should | unowned | - |
 | APP-13 | R2 | should | unowned | - |
 | APP-14 | R2 | should | unowned | - |
-| APP-15 | R2 | should | unowned | - |
-| APP-16 | R2 | should | unowned | - |
+| APP-15 | R2 | should | F21 | F21-S01 (outlined) |
+| APP-16 | R2 | should | F21 | F21-S01 (outlined) |
 | APP-17 | R2 | should | unowned | - |
-| APP-18 | R2 | should | unowned | - |
+| APP-18 | R2 | should | F17 | F17-S03 (outlined) |
 | APP-19 | R2 | should | unowned | - |
-| APP-20 | R2 | should | unowned | - |
-| APP-21 | R3 | could | unowned | - |
+| APP-20 | R2 | should | F18 | F18-S03 (outlined) |
+| APP-21 | R2 | should | F21 | F21-S02 (outlined) |
 | APP-22 | R3 | could | unowned | - |
 | PAY-01 | R1 | must | F08 | - |
 | PAY-02 | R1 | must | F08 | - |
@@ -148,6 +152,7 @@ Cases waiting for something else. `feature-verify` and `release-prepare` go thro
 | PAY-12 | R2 | should | unowned | - |
 | PAY-13 | R3 | could | unowned | - |
 | PAY-14 | R3 | could | unowned | - |
+| PAY-15 | R2 | should | F19 | F19-S04 (outlined) |
 | NOT-01 | R1 | must | F11 | - |
 | NOT-02 | R1 | must | F11 | - |
 | NOT-03 | R1 | must | F11 | - |
@@ -157,32 +162,34 @@ Cases waiting for something else. `feature-verify` and `release-prepare` go thro
 | NOT-07 | R1 | should | F11 | - |
 | NOT-08 | R1 | should | F11 | - |
 | NOT-09 | R2 | should | unowned | - |
-| NOT-10 | R3 | could | unowned | - |
-| NOT-11 | R3 | could | unowned | - |
+| NOT-10 | R3 | could | F22 | F22-S01 (outlined) |
+| NOT-11 | R3 | could | F22 | F22-S01 (outlined) |
 | CRM-01 | R1 | must | F12 | - |
 | CRM-02 | R1 | must | F12 | - |
 | CRM-03 | R1 | must | F12 | - |
 | CRM-04 | R1 | must | F12 | - |
 | CRM-05 | R1 | must | F12 | - |
-| CRM-06 | R2 | should | unowned | - |
+| CRM-06 | R2 | should | F17 | F17-S02 (outlined) |
 | CRM-07 | R2 | should | unowned | - |
 | CRM-08 | R2 | should | unowned | - |
 | MKT-01 | R1 | must | F15 | - |
 | MKT-02 | R1 | should | F11 | - |
 | MKT-03 | R2 | should | unowned | - |
 | MKT-04 | R2 | should | unowned | - |
-| MKT-05 | R2 | should | unowned | - |
-| MKT-06 | R2 | should | unowned | - |
+| MKT-05 | R2 | should | F21 | F21-S01 (outlined) |
+| MKT-06 | R2 | should | F21 | F21-S01 (outlined) |
 | MKT-07 | R3 | could | unowned | - |
 | MKT-08 | R3 | could | unowned | - |
-| MKT-09 | R3 | could | unowned | - |
+| MKT-09 | R2 | should | F21 | F21-S02 (outlined) |
+| MKT-10 | R2 | should | F21 | F21-S02 (outlined) |
+| MKT-11 | R2 | should | F21 | F21-S03 (outlined) |
 | REP-01 | R1 | must | F10 | - |
 | REP-02 | R1 | must | F13 | - |
 | REP-03 | R1 | must | F13 | - |
 | REP-04 | R1 | must | F13 | - |
 | REP-05 | R2 | should | unowned | - |
 | REP-06 | R2 | should | unowned | - |
-| REP-07 | R2 | should | unowned | - |
+| REP-07 | R2 | should | F18 | F18-S02 (outlined) |
 | REP-08 | R3 | should | unowned | - |
 | REP-09 | R3 | could | unowned | - |
 | BRD-01 | R1 | must | F04 | - |
@@ -201,3 +208,27 @@ Cases waiting for something else. `feature-verify` and `release-prepare` go thro
 | INV-01 | R3 | could | unowned | - |
 | INV-02 | R3 | could | unowned | - |
 | INV-03 | R3 | could | unowned | - |
+| OCC-01 | R2 | must | F19 | F19-S01 (outlined) |
+| OCC-02 | R2 | must | F19 | F19-S01 (outlined) |
+| OCC-03 | R2 | must | F19 | F19-S01 (outlined) |
+| OCC-04 | R2 | should | F19 | F19-S01 (outlined) |
+| OCC-05 | R2 | must | F19 | F19-S02 (outlined) |
+| OCC-06 | R2 | must | F19 | F19-S02 (outlined) |
+| OCC-07 | R2 | must | F19 | F19-S02 (outlined) |
+| OCC-08 | R2 | must | F19 | F19-S03 (outlined) |
+| OCC-09 | R2 | must | F19 | F19-S04 (outlined) |
+| OCC-10 | R2 | should | F19 | F19-S03 (outlined) |
+| OCC-11 | R2 | must | F19 | F19-S03 (outlined) |
+| OCC-12 | R2 | must | F19 | F19-S04 (outlined) |
+| OCC-13 | R2 | must | F19 | F19-S04 (outlined) |
+| OCC-14 | R2 | should | F19 | F19-S04 (outlined) |
+| OCC-15 | R2 | must | F20 | F20-S01 (outlined) |
+| OCC-16 | R2 | must | F20 | F20-S02 (outlined), F20-S03 (outlined) |
+| OCC-17 | R2 | must | F19 | F19-S01 (outlined), F20-S01 (outlined) |
+| OCC-18 | R2 | should | F19 | F19-S04 (outlined), F20-S03 (outlined) |
+| AST-01 | R3 | could | F22 | F22-S02 (outlined) |
+| AST-02 | R3 | could | F22 | F22-S02 (outlined) |
+| AST-03 | R3 | could | F22 | F22-S01 (outlined) |
+| AST-04 | R3 | could | F22 | F22-S01 (outlined), F22-S02 (outlined) |
+| AST-05 | R3 | could | F22 | F22-S02 (outlined), F22-S03 (outlined) |
+| AST-06 | R3 | could | F22 | F22-S03 (outlined) |
