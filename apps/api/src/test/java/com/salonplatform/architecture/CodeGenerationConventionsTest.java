@@ -2,20 +2,12 @@ package com.salonplatform.architecture;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.salonplatform.architecture.FixtureCompiler.Compilation;
 import com.salonplatform.shared.mapping.ResponseMapperConfig;
 import java.io.File;
-import java.io.IOException;
-import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.Locale;
 import java.util.stream.Stream;
-import javax.tools.Diagnostic;
-import javax.tools.DiagnosticCollector;
-import javax.tools.JavaCompiler;
-import javax.tools.JavaFileObject;
-import javax.tools.StandardJavaFileManager;
-import javax.tools.ToolProvider;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -29,9 +21,6 @@ import org.junit.jupiter.params.provider.ValueSource;
  * build's order and the build's warning flags, and never by the build itself.
  */
 class CodeGenerationConventionsTest {
-
-    /** Relative to the module, where Maven runs the tests, so that Lombok finds {@code lombok.config}. */
-    private static final Path FIXTURES = Path.of("src", "test", "compile-fixtures", "fixture");
 
     /** The jars of Lombok, the binding and MapStruct: the order of {@code annotationProcessorPaths}. */
     private static final List<String> PROCESSOR_PATH =
@@ -117,67 +106,27 @@ class CodeGenerationConventionsTest {
     }
 
     private Compilation compile(String... fixtures) {
-        JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
-        DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<>();
         List<String> options = List.of(
                 "-Xlint:all,-processing",
                 "-Werror",
                 "-processorpath",
-                pathOf(PROCESSOR_PATH),
+                FixtureCompiler.pathOf(PROCESSOR_PATH),
                 "-processor",
                 PROCESSORS,
                 "-classpath",
-                pathOf(CLASS_PATH),
+                FixtureCompiler.pathOf(CLASS_PATH),
                 "-d",
                 directory("classes"),
                 "-s",
                 directory("generated"));
-        try (StandardJavaFileManager files = compiler.getStandardFileManager(diagnostics, Locale.ROOT, null)) {
-            Iterable<? extends JavaFileObject> sources = files.getJavaFileObjectsFromPaths(
-                    Stream.of(fixtures).map(FIXTURES::resolve).toList());
-            boolean succeeded = compiler.getTask(null, files, diagnostics, options, null, sources)
-                    .call();
-            return new Compilation(succeeded, diagnostics.getDiagnostics());
-        } catch (IOException exception) {
-            throw new IllegalStateException("The compiler's file manager could not be closed", exception);
-        }
+        return FixtureCompiler.compile(
+                options,
+                Stream.of(fixtures).map(FixtureCompiler.FIXTURES::resolve).toList());
     }
 
     private String directory(String name) {
         File directory = output.resolve(name).toFile();
         assertThat(directory.mkdirs()).as("created %s", directory).isTrue();
         return directory.getPath();
-    }
-
-    /** The class path entries (jars, or {@code target/classes}) the named classes are loaded from. */
-    private static String pathOf(List<String> classNames) {
-        return classNames.stream()
-                .map(CodeGenerationConventionsTest::locationOf)
-                .distinct()
-                .reduce((first, second) -> first + File.pathSeparator + second)
-                .orElseThrow();
-    }
-
-    private static String locationOf(String className) {
-        try {
-            Class<?> type = Class.forName(className, false, CodeGenerationConventionsTest.class.getClassLoader());
-            return Path.of(type.getProtectionDomain()
-                            .getCodeSource()
-                            .getLocation()
-                            .toURI())
-                    .toString();
-        } catch (ClassNotFoundException | URISyntaxException exception) {
-            throw new IllegalStateException("Not on the test class path: " + className, exception);
-        }
-    }
-
-    private record Compilation(boolean succeeded, List<Diagnostic<? extends JavaFileObject>> diagnostics) {
-
-        List<String> errors() {
-            return diagnostics.stream()
-                    .filter(diagnostic -> diagnostic.getKind() == Diagnostic.Kind.ERROR)
-                    .map(diagnostic -> diagnostic.getMessage(Locale.ROOT))
-                    .toList();
-        }
     }
 }
