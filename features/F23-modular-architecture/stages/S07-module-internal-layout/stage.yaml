@@ -3,7 +3,7 @@ feature: F23
 title: Module internal layout with conventional Spring folders
 sequence: 5
 surfaces: [api]
-status: in-progress
+status: built
 qa_status: not-run
 blocked_reason: null
 released_in: null
@@ -12,9 +12,110 @@ depends_on: [F23-S04]
 requirements: []
 nfr_focus: [NFR-23, NFR-22]
 handoff:
-  run: null
-  data: null
-  notes: null
+  run: |
+    Build and checks: cd apps/api && ./mvnw verify   (Spotless, -Werror, unit, integration and architecture tests).
+      Layout and boundary rules only: ./mvnw test -Dtest='ModuleBoundariesTest,PersistenceConventionsTest,CodeOwnershipTest'.
+      Contract: pnpm contracts:check (corepack pnpm).
+    Running product: infra/scripts/local-service.sh start api (local profile, API 8090) and start web (3100); the operator
+      console at console.localhost:3100, a salon workspace at alpha.localhost:3100/workspace/sign-in.
+  data: |
+    No migration, seed or fixture data change. The walk-through ran against a fresh database salon_f23_s07 in this project's own
+      container (created empty, migrated with the local seed by the API: 16 migrations, salons alpha/beta/gamma; dropped
+      afterwards), because the retained database carries a stray V17 salon_setup that breaks POST /local/operator/reset. Synthetic
+      admin.walk@operator.test (OPERATOR_ADMIN) and owner.walk@alpha.test (OWNER) were seeded through the local hooks with a
+      random password and TOTP secret, not recorded; they went with that database. The retained database is untouched.
+      The local API found running from 2b39d2d on the retained database was stopped before the gate rebuilt its jar and is left
+      stopped; the web app is stopped, as found.
+  notes: |
+    Developer gates (verification.commands), run from the repository root on the clean tree at 332001a; logs in
+    /Users/cmmrox/Personal/Projects/salon-sass/.local/verification/F23-S07/ (ignored path; keep until closure), surefire copies in surefire/.
+    | command | revision | result | log |
+    | cd apps/api && ./mvnw -q verify | 332001a | exit 0; 125 report classes, 898 tests, 0 failures, 0 errors, 0 skipped (03:38-03:43) | 1-api-verify.log |
+    | pnpm contracts:check | 332001a | exit 0; "docs/api/openapi.json and packages/api-contracts/src/generated are current" | 2-contracts-check.log |
+    Conditions: Maven on JDK 21.0.9 with the toolchain's JDK 25.0.1, pnpm through Corepack, Testcontainers PostgreSQL (max_connections
+    200), test server on 127.0.0.1. The local API was stopped while the jar was rebuilt.
+
+    Acceptance criteria:
+    AC-1 checked: no web, application or infrastructure package remains in identity, branding or platform (main and test), and none
+      named application or infrastructure in shared; the business modules' sub-packages are now identity {adapter config controller
+      domain dto entity inprocess job local mapper repository service}, platform {adapter config controller domain job local repository
+      service}, branding {controller dto entity inprocess repository service}. New rule businessModulesUseOnlyTheLayoutFolders passes
+      for the application and fails on fixture unknownfolder (booking/application/BookBooking).
+    AC-2 checked: each rule passes for the application and fails on its fixture, naming the class: database access (EntityManager,
+      JdbcClient: entitymanager, jdbcclient -> service.BookBooking; Spring Data repository declared in service -> service.BookingRepository,
+      "repository"); domain uses no Spring (springindomain) and now no JPA (new fixture jpaindomain, PricedSlot with @Column); behaviour
+      in a root package (rootclass); mapper outside mapper (new misplacedmapper); controller outside controller or local (new
+      controlleroutside). Also new, from the spec's scope: top-level records with an OpenAPI annotation only in dto (responseoutsidedto),
+      and no Impl names (implname). ModuleBoundariesTest's rule cases went from 10 to 16; PersistenceConventionsTest's 6 hold.
+    AC-3 checked: ApplicationModules.verify() passes (theApplicationKeepsEveryRuleBetweenModules). allowedDependencies unchanged in
+      meaning: the named interface shared :: infrastructure no longer exists; its only uses outside shared were PlatformDatabase and
+      RequestDatabaseLimit, now in shared.persistence, so branding and platform declare shared :: persistence in its place and identity
+      (which already had it) drops it. Every other named interface and dependency is as before; only platform may use inprocess.
+    AC-4 checked: noClassIsNamedImpl passes for the application (the only source Impl is NewEntitiesImpl; MapStruct's generated
+      PrincipalResponseMapperImpl is exempt as a mapper implementation) and fails on fixture implname (BookingServiceImpl).
+    AC-5 checked: pnpm contracts:check regenerated the document from the controllers and found it current; git diff 63df3bd..332001a --
+      docs/api packages/api-contracts is empty, so the OpenAPI document and the generated client are byte-identical to the feature
+      branch before this stage.
+    AC-6 checked: 105 test classes and 464 @Test/@ParameterizedTest methods before and after (same class names); 898 tests pass. The
+      only edited assertion lines are class-name strings that follow the moves (ModuleBoundariesTest ".shared.web.MetaService",
+      PersistenceConventionsTest and CodeOwnershipTest ".identity.entity.StaffAccount", ".identity.repository.StaffAccountRepository",
+      ".platform.repository.SalonStore", and the fixture class names in the architecture tests). A script compared every moved file
+      with its original ignoring package and import lines: identical, except SalonResponse.from made public (below). Running product
+      (fresh database, 332001a, web on 3100): operator signed in with password and TOTP at console.localhost:3100, salon list (3
+      synthetic salons), Alpha's detail (lifecycle, history, subscription), plans ("No plans yet"); Alpha's owner signed in with TOTP at
+      alpha.localhost:3100: Account and security (permissions, signed-in devices), Staff access, Activity log, Plan and billing. API
+      request log (walk-requests.txt): every call 200 except 401 on /me and /sessions/refresh while signed out before each sign-in and
+      the designed 404 for Alpha's missing subscription. Negative: wrong password -> 401 invalid_credentials; Alpha's owner on beta's
+      host -> 401 invalid_credentials; /api/v1/operator/salons on alpha's host -> 404 not_found. The two-guard isolation suites passed
+      unchanged in the gate.
+
+    Class placements that needed judgement (the layout did not decide them obviously):
+    - shared: database plumbing -> shared.persistence (PlatformDatabase, RequestDatabaseLimit, ApplicationRoleCheck,
+      DatabaseHealthIndicator, DatabaseReconnectConfiguration, SteadyReconnectDataSource, MigrationDataSourceConfiguration,
+      TenantIdentifierResolver, TenantJpaDialect, TenantTransactionConfiguration); request pipeline and meta -> shared.web (TenantFilter,
+      RequestLog, RequestLogFilter, ReadOnlyRoutes, ProblemErrorReportValve, ServerErrorConfiguration, StrictJsonConfiguration,
+      MetaService, ServiceMeta); TenancyConfiguration -> shared.tenancy; TimeConfiguration and UtcTimeZone -> shared.time (UtcTimeZone is
+      used by SalonApiApplication in the base package, which Modulith allows only through a named interface); a new shared.config, not
+      a named interface, for LoopbackOnlyConfiguration, ReadinessDrain, RuntimeInfoContributor, OpenApiConfiguration and ModuleOwnership.
+      Tests followed (ForwardedHeaders, HealthGroups, LoopbackOnly, ReadinessDrain -> config; MigrationOnlyStartup -> persistence).
+    - identity: SignIn and Tokens (top-level @Schema records returned by services) -> dto; CustomerDevice (signed device cookie) and
+      ClientAddressAssertion -> adapter; CustomerCodeSettings and CustomerCodeConfiguration -> config; pure Identifiers, MfaPurpose,
+      PasswordPolicy, SessionKind, StaffRole stay in domain; the nine @Entity classes -> entity; Page and SessionView stay in service.
+    - platform: every store and class that runs SQL on either pool -> repository, including PlatformAudit, PlatformOutbox, PlatformTimes,
+      TenantRegistry, SalonEntitlementsStore and the local-profile LocalResetStore (SQL is allowed only in repository); BillingChargeChannel
+      (outbox channel calling the billing provider) -> adapter with the key holders and crypto; OperatorBootstrapCommand and
+      OperatorHostFilter -> config; the four schedules and OperatorSecurityCleanupJob -> job; OperatorRequests (controllers' shared edge
+      rules) -> controller; the BillingProvider/BillingFaults/BootstrapFaults/LifecycleFaults seams and their No* defaults stay in service
+      beside the use cases that call them; platform has no entity folder (it uses the platform pool, named exception 1).
+    - branding: no pure rules, so no domain folder.
+
+    Visibility: SalonResponse.from became public (its controller is now in another folder). BillingChanges, BillingNotices,
+    InvoiceIssuing, OperatorAccess, OperatorWork and SubscriptionStates became package-private (nothing outside service uses them).
+    Left public although only tests in another package use them: IdentitySecrets (six tests in four packages), IdentityGuardRepository
+    and IdentityWork (one identity integration test each), OperatorSecrets (IndependentKeysTest in shared.secrets); moving those
+    integration tests into the folders would split suites that test a module as a whole.
+
+    Differences from the documents and the spec (the lead corrects them; nothing under docs/ edited):
+    1. Request records stay nested in their controllers (about 30, e.g. StaffAccessController.SignInRequest) and many response shapes
+       stay nested in the services that return them (about 90, e.g. SalonDirectory.SalonDetail, CustomerAccess.Challenge). Moving them
+       to dto is a restructuring beyond package moves (services would return dto types; nested records become top-level files), so the
+       dto rule as built covers top-level records with OpenAPI annotations only. backend.md "dto/ this module's request and response
+       records" therefore holds for top-level types only; a decision is needed on whether a later stage extracts them.
+    2. backend.md "Modules"/named interfaces: shared's named interface infrastructure is gone; shared.persistence now also exposes the
+       platform pool and request limit, and shared.config is a new internal (non-named) capability package. The spec's list of shared
+       capability packages gains config.
+    3. backend.md "Clean code"/AC-4: MapStruct's generated implementations end in Impl (PrincipalResponseMapperImpl); the rule exempts
+       classes implementing a @Mapper type.
+    4. Logger names of moved classes changed with their packages (the ECS log.logger field, e.g. ...shared.web.TenantFilter); the request
+       line logger com.salonplatform.request is unchanged. Nothing under qa/ or docs/ names a Java package.
+    5. The controlleroutside fixture is a @RestController with no mappings on the test class path, so it is a bean in integration
+       test contexts like the existing SpringInDomain/AlwaysThere fixtures; it adds no endpoint (the contract is byte-identical).
+    6. Observed: the web build stops once on Next.js's known security advisory (web-build.attempt1.log) and succeeds on retry; the
+       upgrade belongs to F23-S06 per CR-022. The retained local database still has the stray V17 salon_setup.
+
+    Time (observed): reading and planning about 60 min (02:30 onwards, including an interruption for a usage limit); moves, rules and
+    focused tests about 40 min (commits 03:31-03:38); gates about 10 min (03:38-03:46); walk-through about 10 min; diagnosis/rework:
+    UtcTimeZone's placement (Modulith refused shared.config from the base package) and one visibility fix, a few minutes each.
 cases: []
 verification:
   commands:
