@@ -40,8 +40,12 @@ API only (`apps/api`, main and test sources), in `identity`, `platform`, `brandi
   change.
 - **Services return dto records** where they returned their own nested response records; a
   service never returns an entity to a controller.
-- **Records used only inside one class** (a repository's row, a crypto holder's value, a test
-  hook's private shape) stay nested and become non-public where they are public today.
+- **Records that are not API shapes stay nested** in the class that defines them (clarified by the
+  lead on 2026-10-30, decision 062): one used only inside its class becomes `private`; one shared
+  with other classes of the same module (a store's row read by services, a service's input built by
+  its controller, a crypto holder's claims, an entity's embedded value, a `shared` capability's
+  types) keeps the visibility it needs and is never used outside its module except through a named
+  interface. They are listed in `handoff.notes`.
 - **The module API's records** (root package) are not moved: they are not response shapes
   (`backend.md`, "Provided interfaces").
 - **Architecture rule**, with fixtures: a record used as a controller's request body or reachable
@@ -68,8 +72,9 @@ Each criterion is one observable outcome that a test can pass or fail.
   nested response record, and pass for the application. (NFR-23)
 - AC-2: The committed OpenAPI document and the generated client are byte-identical to the feature
   branch before this stage, including every schema name; `pnpm contracts:check` passes. (NFR-23)
-- AC-3: Records that stay nested are used only inside their enclosing class and are not public.
-  (NFR-23)
+- AC-3: A nested record that stays nested is not an API shape; one used only inside its enclosing
+  class is `private`; one used by other classes is used only within its own module or through a
+  declared named interface (Spring Modulith verification proves the latter). (NFR-23)
 - AC-4: Behaviour is unchanged: every test before this stage still exists and passes with unchanged
   assertions (type references may follow the moves); the application starts in the local profile
   and the operator console and a salon workspace sign-in work as before. (NFR-23)
