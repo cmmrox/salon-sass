@@ -115,8 +115,10 @@ anything but the root package or a declared named interface. Controllers are thi
 one service, map the result. Business rules live in `entity`, `domain` and `service`, never in a
 controller, a repository or a mapper. Classes in the root are interfaces, records, enums and
 exceptions only; a class elsewhere is package-private when nothing outside its folder needs it.
-Request and response records are top-level types in `dto/`, not nested in a controller or service
-(decision 061). An architecture test refuses any other sub-folder name in a business module, a
+The records a controller reads as a request body or returns as a response, at any depth of the
+response, are top-level types in `dto/`, not nested in a controller or service (decision 061). A
+record used only inside one class (a repository's row, a crypto holder's value) may stay nested and
+non-public there. An architecture test refuses any other sub-folder name in a business module, a
 mapper outside `mapper/`, a controller outside `controller/` or `local/`, and a class named `*Impl`
 other than the Spring Data fragment `NewEntitiesImpl` and MapStruct's generated mappers. Moving a
 class changes its logger name, which is its package.

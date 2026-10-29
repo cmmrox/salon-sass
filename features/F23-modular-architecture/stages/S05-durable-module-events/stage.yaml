@@ -1,14 +1,14 @@
 id: F23-S05
 feature: F23
 title: Durable events between modules
-sequence: 6
+sequence: 7
 surfaces: [api]
 status: outlined
 qa_status: not-run
 blocked_reason: null
 released_in: null
 reopened_by: null
-depends_on: [F23-S07]
+depends_on: [F23-S08]
 requirements: []
 nfr_focus: [NFR-22, NFR-01, NFR-04]
 handoff:

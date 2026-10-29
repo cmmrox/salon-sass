@@ -7,7 +7,7 @@ requested_on: 2026-10-30
 decided_on: 2026-10-30
 requirements: [NFR-23]
 features: [F23]
-stages: [F23-S07, F23-S06]
+stages: [F23-S07, F23-S08, F23-S06]
 ---
 
 # CR-022 Module internal layout with conventional Spring folders
