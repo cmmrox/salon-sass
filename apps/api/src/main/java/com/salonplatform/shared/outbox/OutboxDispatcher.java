@@ -10,6 +10,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -30,14 +31,15 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * Delivers the outbox (NFR-15). On each poll it asks what is due across salons (ids only), then for
- * each message, with that message's salon set (T-7):
+ * Delivers the outbox (NFR-15): provider messages, and events between modules (NFR-22). On each poll it
+ * asks what is due across salons (ids only), then for each message, with that message's salon set (T-7):
  *
  * <ol>
  *   <li>claims it in a short transaction with a lease, once its channel has a free call and its
- *       breaker lets the call through, and commits;
+ *       breaker, if it has one, lets the call through, and commits;
  *   <li>calls the channel's provider with no transaction open and no lock held, with the message id
- *       as the idempotency key, within the provider's time limit;
+ *       as the idempotency key, within the provider's time limit; for an event, delivers it to the
+ *       subscribers of its type instead, each in a transaction of its own ({@link EventSubscribers});
  *   <li>records the outcome in a new transaction: {@code sent}, or a wait by the backoff before the
  *       next attempt, or {@code dead} once the attempts are used up.
  * </ol>
@@ -64,6 +66,11 @@ final class OutboxDispatcher implements SmartLifecycle {
     private final OutboxStore store;
 
     private final Map<String, OutboxProvider> providers;
+
+    private final EventSubscribers events;
+
+    /** The channels this dispatcher delivers: its providers', and the events' channel. */
+    private final Set<String> channels;
 
     private final Map<String, ChannelGuard> guards;
 
@@ -102,6 +109,7 @@ final class OutboxDispatcher implements SmartLifecycle {
             OutboxSettings settings,
             OutboxStore store,
             List<OutboxProvider> providers,
+            EventSubscribers events,
             Map<String, ChannelGuard> guards,
             ActiveTenants tenants,
             PlatformTransactionManager transactionManager,
@@ -112,12 +120,20 @@ final class OutboxDispatcher implements SmartLifecycle {
         this.store = store;
         Map<String, OutboxProvider> byChannel = new HashMap<>();
         for (OutboxProvider provider : providers) {
+            if (EventTypes.CHANNEL.equals(provider.channel())) {
+                throw new IllegalStateException("The channel '" + EventTypes.CHANNEL
+                        + "' carries events between modules; no provider delivers it");
+            }
             if (byChannel.put(provider.channel(), provider) != null) {
                 throw new IllegalStateException(
                         "Two outbox providers deliver the channel '" + provider.channel() + "'");
             }
         }
         this.providers = Map.copyOf(byChannel);
+        this.events = events;
+        Set<String> delivered = new HashSet<>(byChannel.keySet());
+        delivered.add(EventTypes.CHANNEL);
+        this.channels = Set.copyOf(delivered);
         this.guards = guards;
         this.tenants = tenants;
         this.transactions = new TransactionTemplate(transactionManager);
@@ -140,7 +156,7 @@ final class OutboxDispatcher implements SmartLifecycle {
         calls = Executors.newThreadPerTaskExecutor(
                 Thread.ofVirtual().name("outbox-call-", 0).factory());
         poller = Thread.ofVirtual().name("outbox-dispatcher").start(this::pollUntilStopped);
-        log.info("The outbox dispatcher started for the channels {}", providers.keySet());
+        log.info("The outbox dispatcher started for the channels {}", channels);
     }
 
     @Override
@@ -184,11 +200,7 @@ final class OutboxDispatcher implements SmartLifecycle {
         } catch (RuntimeException ex) {
             log.debug("The outbox backlog could not be read", ex);
         }
-        if (providers.isEmpty()) {
-            // No channel has a provider in this environment yet: nothing can be delivered.
-            return 0;
-        }
-        List<OutboxStore.Due> due = store.due(now, providers.keySet(), settings.perSalon(), settings.batchSize());
+        List<OutboxStore.Due> due = store.due(now, channels, settings.perSalon(), settings.batchSize());
         Map<UUID, Optional<Deliverable>> salons = new HashMap<>();
         int started = 0;
         for (OutboxStore.Due message : due) {
@@ -327,17 +339,15 @@ final class OutboxDispatcher implements SmartLifecycle {
     private record Outcome(boolean delivered, String outcome, String error) {}
 
     /**
-     * Calls the provider within its time limit; null when the call was abandoned because of a stop.
+     * Makes the attempt within the provider's time limit; null when the call was abandoned because of a
+     * stop.
      */
     private Outcome call(CurrentTenant salon, OutboxStore.Claim claim, ChannelGuard.Permit permit) {
-        OutboxProvider provider = providers.get(claim.channel());
-        OutboxDelivery delivery = new OutboxDelivery(
-                claim.messageId(), claim.tenantId(), claim.channel(), claim.payload(), claim.attempt());
         Duration limit = settings.provider().timeLimit();
         Future<?> call;
         try {
             call = calls.submit(traces.inCurrentSpan(() -> TenantContext.callAs(salon, () -> {
-                provider.deliver(delivery);
+                attempt(claim);
                 return null;
             })));
         } catch (RuntimeException ex) {
@@ -375,12 +385,24 @@ final class OutboxDispatcher implements SmartLifecycle {
         }
     }
 
+    /** One attempt: the event's subscribers for an event, the channel's provider for a message. */
+    private void attempt(OutboxStore.Claim claim) throws Exception {
+        if (claim.isEvent()) {
+            events.deliver(claim.messageId(), claim.eventType(), claim.payload());
+            return;
+        }
+        providers
+                .get(claim.channel())
+                .deliver(new OutboxDelivery(
+                        claim.messageId(), claim.tenantId(), claim.channel(), claim.payload(), claim.attempt()));
+    }
+
     private void record(OutboxStore.Claim claim, Outcome outcome) {
         if (abandoning) {
             return;
         }
         Instant now = clock.instant();
-        metrics.delivery(claim.channel(), outcome.outcome());
+        metrics.delivery(claim, outcome.outcome());
         if ("cancelled".equals(outcome.outcome())) {
             transactions.execute(status -> store.cancelled(claim, now));
             return;
@@ -390,7 +412,7 @@ final class OutboxDispatcher implements SmartLifecycle {
                 log.info(
                         "Delivered outbox message {} on '{}' (attempt {})",
                         claim.messageId(),
-                        claim.channel(),
+                        destination(claim),
                         claim.attempt());
             }
             return;
@@ -401,7 +423,7 @@ final class OutboxDispatcher implements SmartLifecycle {
                 log.error(
                         "Outbox message {} on '{}' is dead after {} attempts: {}",
                         claim.messageId(),
-                        claim.channel(),
+                        destination(claim),
                         claim.attempt(),
                         outcome.error());
             }
@@ -412,12 +434,17 @@ final class OutboxDispatcher implements SmartLifecycle {
             log.warn(
                     "Delivering outbox message {} on '{}' failed (attempt {} of {}): {}; next" + " attempt at {}",
                     claim.messageId(),
-                    claim.channel(),
+                    destination(claim),
                     claim.attempt(),
                     settings.maxAttempts(),
                     outcome.error(),
                     next);
         }
+    }
+
+    /** Where a message goes, for the logs: its event type, or its provider's channel. */
+    private static String destination(OutboxStore.Claim claim) {
+        return claim.isEvent() ? claim.eventType() : claim.channel();
     }
 
     private static void runAs(CurrentTenant salon, Runnable work) {

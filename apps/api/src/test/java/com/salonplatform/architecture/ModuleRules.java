@@ -91,7 +91,8 @@ final class ModuleRules {
                 requestAndResponseRecordsLiveInDto(),
                 controllerRecordsAreTopLevelInDto(),
                 nestedRecordsUsedOnlyByTheirClassArePrivate(),
-                noClassIsNamedImpl());
+                noClassIsNamedImpl(),
+                eventRecordsLiveInTheirModulesRootPackage());
     }
 
     /** A package beside the modules would escape every other rule here. */
@@ -193,6 +194,20 @@ final class ModuleRules {
                 .resideInAnyPackage(rootPackages())
                 .should(beAContract())
                 .as("a module's root package holds only interfaces, records, enums and exceptions")
+                .allowEmptyShould(true);
+    }
+
+    /**
+     * An event published through the outbox ({@code @EventType}) is part of its module's API: a record in
+     * the module's root package, whose type name begins with that module's name (docs/engineering/backend.md,
+     * "Events between modules").
+     */
+    ArchRule eventRecordsLiveInTheirModulesRootPackage() {
+        return classes()
+                .that()
+                .areAnnotatedWith(EVENT_TYPE)
+                .should(beARecordInItsModulesRootPackage())
+                .as("an event published through the outbox is a record in its module's root package")
                 .allowEmptyShould(true);
     }
 
@@ -334,6 +349,8 @@ final class ModuleRules {
                 .allowEmptyShould(true);
     }
 
+    private static final String EVENT_TYPE = "com.salonplatform.shared.outbox.EventType";
+
     private static final String SPRING_COMPONENT = "org.springframework.stereotype.Component";
 
     private static final String SPRING_CONTROLLER = "org.springframework.stereotype.Controller";
@@ -387,6 +404,28 @@ final class ModuleRules {
                             javaClass.getName()
                                     + " is in a module's root package but is not an interface, a record, an enum"
                                     + " or an exception, or is a Spring bean"));
+                }
+            }
+        };
+    }
+
+    private ArchCondition<JavaClass> beARecordInItsModulesRootPackage() {
+        return new ArchCondition<>("be a record in its module's root package, named for that module") {
+            @Override
+            public void check(JavaClass javaClass, ConditionEvents events) {
+                String module = moduleOf(javaClass);
+                boolean inRoot = javaClass.getPackageName().equals(base + "." + module);
+                boolean named = javaClass
+                        .getAnnotationOfType(EVENT_TYPE)
+                        .get("value")
+                        .filter(type -> type instanceof String name && name.startsWith(module + "."))
+                        .isPresent();
+                if (!javaClass.isRecord() || !inRoot || !named) {
+                    events.add(SimpleConditionEvent.violated(
+                            javaClass,
+                            javaClass.getName() + " is an event published through the outbox but is not a record in"
+                                    + " the root package of its module " + module + ", with a type name that begins"
+                                    + " with " + module + "."));
                 }
             }
         };

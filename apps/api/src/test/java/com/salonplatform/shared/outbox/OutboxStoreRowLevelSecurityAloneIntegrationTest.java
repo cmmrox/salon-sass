@@ -114,7 +114,7 @@ class OutboxStoreRowLevelSecurityAloneIntegrationTest {
         List<Map<String, Object>> before = betasMessages();
         Instant now = Instant.now();
         OutboxStore.Claim forged =
-                new OutboxStore.Claim(betasMessage, beta.id(), "probe", "{}", 1, UUID.randomUUID(), null);
+                new OutboxStore.Claim(betasMessage, beta.id(), "probe", null, "{}", 1, UUID.randomUUID(), null);
 
         OutboxStore.Taken taken = inAlphasTransaction(() -> store.claim(
                 beta.id(), betasMessage, now, LEASE, 10, channel -> Optional.of(channel), new ArrayList<>()));

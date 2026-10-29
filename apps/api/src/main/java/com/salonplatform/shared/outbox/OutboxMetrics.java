@@ -15,10 +15,12 @@ import org.springframework.stereotype.Component;
  * <li>{@value #OLDEST_DUE_AGE}: how long ago, in seconds, the oldest message that is due became due
  * (0 when none is);</li>
  * <li>{@value #DEAD}: messages that went {@code dead};</li>
- * <li>{@value #DELIVERIES}: delivery attempts, by {@code channel} and {@code outcome}
- * ({@code sent}, {@code failed}, {@code timed_out}).</li>
+ * <li>{@value #DELIVERIES}: delivery attempts, by {@code kind} ({@code delivery} to a provider, or
+ * {@code event} to the subscribers of an event between modules), {@code channel} and {@code outcome}
+ * ({@code sent}, {@code failed}, {@code timed_out}, {@code cancelled}).</li>
  * </ul>
- * The first two are refreshed by the dispatcher on each poll.
+ * The first two are refreshed by the dispatcher on each poll. The first three count events and provider
+ * messages together.
  */
 @Component
 class OutboxMetrics {
@@ -64,10 +66,11 @@ class OutboxMetrics {
                                 0, Duration.between(backlog.oldestDueAt(), now).toSeconds()));
     }
 
-    void delivery(String channel, String outcome) {
+    void delivery(OutboxStore.Claim claim, String outcome) {
         Counter.builder(DELIVERIES)
-                .description("Delivery attempts by channel and outcome")
-                .tag("channel", channel)
+                .description("Delivery attempts by kind, channel and outcome")
+                .tag("kind", claim.isEvent() ? "event" : "delivery")
+                .tag("channel", claim.channel())
                 .tag("outcome", outcome)
                 .register(registry)
                 .increment();

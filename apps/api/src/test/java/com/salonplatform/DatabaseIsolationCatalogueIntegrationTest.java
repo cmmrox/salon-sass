@@ -64,7 +64,9 @@ class DatabaseIsolationCatalogueIntegrationTest {
                         "identity_rate_bucket",
                         "identity_guard",
                         "identity_customer",
-                        "identity_customer_challenge");
+                        "identity_customer_challenge",
+                        // F23-S05: which subscriber processed which event.
+                        "shared_processed_event");
         assertThat(tables)
                 .allSatisfy(table -> assertThat(table)
                         .as("%s", table.get("name"))
@@ -210,7 +212,9 @@ class DatabaseIsolationCatalogueIntegrationTest {
                         org.assertj.core.api.Assertions.tuple("identity_guard", "INSERT,SELECT,UPDATE"),
                         org.assertj.core.api.Assertions.tuple("identity_customer", "DELETE,INSERT,SELECT,UPDATE"),
                         org.assertj.core.api.Assertions.tuple(
-                                "identity_customer_challenge", "DELETE,INSERT,SELECT,UPDATE"));
+                                "identity_customer_challenge", "DELETE,INSERT,SELECT,UPDATE"),
+                        // F23-S05: a processed record is written and read, never changed.
+                        org.assertj.core.api.Assertions.tuple("shared_processed_event", "INSERT,SELECT"));
     }
 
     /**

@@ -31,7 +31,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -50,7 +49,6 @@ public class CustomerProfile {
     private final Clock clock;
     private final AuditTrail audit;
     private final Outbox outbox;
-    private final ApplicationEventPublisher events;
 
     public record Change(
             long version,
@@ -185,7 +183,7 @@ public class CustomerProfile {
                     null));
             customers.delete(account);
             customers.flush();
-            events.publishEvent(new CustomerDataErased(TenantContext.require().id(), erased));
+            outbox.publish(new CustomerDataErased(erased));
             return null;
         });
     }

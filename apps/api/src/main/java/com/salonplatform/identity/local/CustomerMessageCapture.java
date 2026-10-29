@@ -1,24 +1,31 @@
 package com.salonplatform.identity.local;
 
+import com.salonplatform.identity.CustomerDataErased;
 import com.salonplatform.identity.dto.CapturedMessage;
 import com.salonplatform.identity.service.CustomerAccess;
-import com.salonplatform.shared.outbox.*;
+import com.salonplatform.shared.outbox.EventSubscriber;
+import com.salonplatform.shared.outbox.OutboxCancelled;
+import com.salonplatform.shared.outbox.OutboxDelivery;
 import com.salonplatform.shared.tenancy.TenantContext;
-import com.salonplatform.shared.web.*;
+import com.salonplatform.shared.web.NotFoundException;
 import java.time.Clock;
-import java.util.*;
-import java.util.concurrent.*;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * A local synthetic provider capture, never a real sender. Delay/failure are outside database
- * locks.
+ * locks. It subscribes to {@link CustomerDataErased} so that an erased customer's captured codes go
+ * once the erasure has committed.
  */
 @Service
 @Profile("local")
-class CustomerMessageCapture {
+class CustomerMessageCapture implements EventSubscriber<CustomerDataErased> {
     private record Key(UUID tenant, String channel) {}
 
     private record ChallengeKey(UUID tenant, UUID challenge) {}
@@ -51,9 +58,8 @@ class CustomerMessageCapture {
         if (control.delayMs > 0) Thread.sleep(control.delayMs);
         if (control.failures.getAndUpdate(n -> Math.max(0, n - 1)) > 0)
             throw new IllegalStateException("The local message provider refused this attempt");
-        CustomerAccess.Envelope envelope = tools.jackson.databind.json.JsonMapper.builder()
-                .build()
-                .readValue(message.payload(), CustomerAccess.Envelope.class);
+        CustomerAccess.Envelope envelope =
+                JsonMapper.builder().build().readValue(message.payload(), CustomerAccess.Envelope.class);
         boolean captured = customers.captureIfLive(
                 message,
                 clear -> captures.putIfAbsent(
@@ -80,11 +86,21 @@ class CustomerMessageCapture {
         return capture;
     }
 
-    @org.springframework.transaction.event.TransactionalEventListener
-    void erased(com.salonplatform.identity.CustomerDataErased event) {
+    @Override
+    public String name() {
+        return "identity.local-message-capture";
+    }
+
+    @Override
+    public Class<CustomerDataErased> event() {
+        return CustomerDataErased.class;
+    }
+
+    @Override
+    public void handle(CustomerDataErased event) {
+        UUID tenant = TenantContext.require().id();
         captures.keySet()
-                .removeIf(k -> k.tenant().equals(event.tenantId())
-                        && event.challengeIds().contains(k.challenge()));
+                .removeIf(k -> k.tenant().equals(tenant) && event.challengeIds().contains(k.challenge()));
     }
 
     void clear() {
