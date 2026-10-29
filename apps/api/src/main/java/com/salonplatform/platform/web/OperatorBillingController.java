@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.salonplatform.platform.application.InvoiceBilling;
 import com.salonplatform.platform.application.Paging;
 import com.salonplatform.platform.application.ProvisioningReceipts;
-import com.salonplatform.platform.application.SalonProvisioning;
+import com.salonplatform.platform.application.SalonDirectory;
 import com.salonplatform.platform.application.SubscriptionBilling;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
@@ -141,8 +141,7 @@ class OperatorBillingController {
     }
 
     @PutMapping(path = "/salons/{id}/plan", consumes = MediaType.APPLICATION_JSON_VALUE)
-    ResponseEntity<SalonProvisioning.SalonDetail> movePlan(
-            @PathVariable String id, @RequestBody MovePlanRequest request) {
+    ResponseEntity<SalonDirectory.SalonDetail> movePlan(@PathVariable String id, @RequestBody MovePlanRequest request) {
         return ResponseEntity.ok()
                 .cacheControl(CacheControl.noStore())
                 .body(subscriptions.movePlan(

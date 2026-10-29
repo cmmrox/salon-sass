@@ -60,7 +60,7 @@ public class SubscriptionBilling {
             @Schema(
                     types = {"object", "null"},
                     requiredMode = Schema.RequiredMode.REQUIRED)
-            SalonProvisioning.PlanSummary plan,
+            SalonDirectory.PlanSummary plan,
 
             long monthlyAmount,
             String currency,
@@ -98,7 +98,7 @@ public class SubscriptionBilling {
     private final ProvisioningReceipts receipts;
     private final BillingLedger ledger;
     private final SubscriptionStates states;
-    private final SalonProvisioning salons;
+    private final SalonDirectory salons;
     private final IdentityProvisioning identity;
     private final PlatformAudit audit;
     private final JsonMapper json;
@@ -111,7 +111,7 @@ public class SubscriptionBilling {
             ProvisioningReceipts receipts,
             BillingLedger ledger,
             SubscriptionStates states,
-            SalonProvisioning salons,
+            SalonDirectory salons,
             IdentityProvisioning identity,
             PlatformAudit audit,
             JsonMapper json,
@@ -132,9 +132,9 @@ public class SubscriptionBilling {
     /** The view of a salon's subscription, inside a platform transaction. */
     SubscriptionView view(BillingLedger.Subscription subscription, Instant now) {
         BillingLedger.Salon salon = ledger.salon(subscription.salonId(), false).orElseThrow();
-        SalonProvisioning.PlanSummary plan = salon.planId() == null
+        SalonDirectory.PlanSummary plan = salon.planId() == null
                 ? null
-                : new SalonProvisioning.PlanSummary(salon.planId(), salon.planKey(), salon.planName());
+                : new SalonDirectory.PlanSummary(salon.planId(), salon.planKey(), salon.planName());
         Period period = ledger.latestInvoice(subscription.id())
                 .map(invoice -> new Period(invoice.periodStart(), invoice.periodEnd()))
                 .orElse(null);
@@ -305,7 +305,7 @@ public class SubscriptionBilling {
      * progress (which share-locks it) finishes first and is counted. The next invoice carries the new
      * plan; issued invoices keep theirs.
      */
-    public SalonProvisioning.SalonDetail movePlan(UUID salonId, PlanMoveInput input) {
+    public SalonDirectory.SalonDetail movePlan(UUID salonId, PlanMoveInput input) {
         List<FieldProblem> errors = new ArrayList<>();
         if (input.version() == null || input.version() < 0) {
             errors.add(new FieldProblem("version", "must be the salon's current version"));

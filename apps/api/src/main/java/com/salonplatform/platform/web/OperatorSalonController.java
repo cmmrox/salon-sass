@@ -3,6 +3,7 @@ package com.salonplatform.platform.web;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.salonplatform.platform.application.Paging;
 import com.salonplatform.platform.application.ProvisioningReceipts;
+import com.salonplatform.platform.application.SalonDirectory;
 import com.salonplatform.platform.application.SalonProvisioning;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
@@ -27,10 +28,12 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping(path = "/api/v1/operator/salons", produces = MediaType.APPLICATION_JSON_VALUE)
 class OperatorSalonController {
 
-    private final SalonProvisioning salons;
+    private final SalonDirectory salons;
+    private final SalonProvisioning provisioning;
 
-    OperatorSalonController(SalonProvisioning salons) {
+    OperatorSalonController(SalonDirectory salons, SalonProvisioning provisioning) {
         this.salons = salons;
+        this.provisioning = provisioning;
     }
 
     @Schema(
@@ -108,7 +111,7 @@ class OperatorSalonController {
     }
 
     @GetMapping
-    ResponseEntity<SalonProvisioning.SalonPage> listSalons(
+    ResponseEntity<SalonDirectory.SalonPage> listSalons(
             @Parameter(schema = @Schema(type = "integer", minimum = "0", maximum = "100000", defaultValue = "0"))
                     @RequestParam(required = false)
                     String page,
@@ -120,7 +123,7 @@ class OperatorSalonController {
     }
 
     @GetMapping("/{id}")
-    ResponseEntity<SalonProvisioning.SalonDetail> getSalon(@PathVariable String id) {
+    ResponseEntity<SalonDirectory.SalonDetail> getSalon(@PathVariable String id) {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(salons.get(OperatorRequests.id(id)));
     }
 
@@ -144,7 +147,7 @@ class OperatorSalonController {
                 ? null
                 : new SalonProvisioning.SubscriptionInput(
                         r.subscription().monthlyAmount(), r.subscription().paymentMethod());
-        var created = salons.create(
+        var created = provisioning.create(
                 key,
                 new SalonProvisioning.SalonInput(
                         r.name(),

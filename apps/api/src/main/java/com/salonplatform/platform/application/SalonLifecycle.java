@@ -78,7 +78,7 @@ public class SalonLifecycle {
     private final OperatorWork work;
     private final OperatorAccess access;
     private final PlatformAudit audit;
-    private final SalonProvisioning salons;
+    private final SalonDirectory salons;
     private final BillingLedger ledger;
     private final SubscriptionStates states;
     private final IdentityLifecycle identity;
@@ -90,7 +90,7 @@ public class SalonLifecycle {
             OperatorWork work,
             OperatorAccess access,
             PlatformAudit audit,
-            SalonProvisioning salons,
+            SalonDirectory salons,
             BillingLedger ledger,
             SubscriptionStates states,
             IdentityLifecycle identity,
@@ -109,7 +109,7 @@ public class SalonLifecycle {
     }
 
     /** Suspends an active salon (whatever its billing state). */
-    public SalonProvisioning.SalonDetail suspend(UUID salonId, ChangeInput input) {
+    public SalonDirectory.SalonDetail suspend(UUID salonId, ChangeInput input) {
         List<FieldProblem> errors = new ArrayList<>();
         long version = version(input.version(), errors);
         String reason = reason(input.reason(), errors);
@@ -153,7 +153,7 @@ public class SalonLifecycle {
      * Reactivates a suspended salon: it is active again, with the access state its unpaid invoices imply
      * now ({@code read_only} when one is 14 or more days overdue), so its unexpired sessions work again.
      */
-    public SalonProvisioning.SalonDetail reactivate(UUID salonId, ChangeInput input) {
+    public SalonDirectory.SalonDetail reactivate(UUID salonId, ChangeInput input) {
         List<FieldProblem> errors = new ArrayList<>();
         long version = version(input.version(), errors);
         String reason = reason(input.reason(), errors);
@@ -205,7 +205,7 @@ public class SalonLifecycle {
      * Closes an active or suspended salon for good, once the exact slug is typed to confirm. In the same
      * transaction: its sessions are revoked, its undelivered messages cancelled and its export scheduled.
      */
-    public SalonProvisioning.SalonDetail close(UUID salonId, ClosureInput input) {
+    public SalonDirectory.SalonDetail close(UUID salonId, ClosureInput input) {
         List<FieldProblem> errors = new ArrayList<>();
         long version = version(input.version(), errors);
         String reason = reason(input.reason(), errors);

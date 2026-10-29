@@ -3,8 +3,8 @@ package com.salonplatform.platform.web;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.salonplatform.platform.application.ExportDownloads;
 import com.salonplatform.platform.application.Paging;
+import com.salonplatform.platform.application.SalonDirectory;
 import com.salonplatform.platform.application.SalonLifecycle;
-import com.salonplatform.platform.application.SalonProvisioning;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -68,8 +68,7 @@ class OperatorLifecycleController {
     }
 
     @PostMapping(path = "/suspension", consumes = MediaType.APPLICATION_JSON_VALUE)
-    ResponseEntity<SalonProvisioning.SalonDetail> suspend(
-            @PathVariable String id, @RequestBody LifecycleRequest request) {
+    ResponseEntity<SalonDirectory.SalonDetail> suspend(@PathVariable String id, @RequestBody LifecycleRequest request) {
         return ResponseEntity.ok()
                 .cacheControl(CacheControl.noStore())
                 .body(lifecycle.suspend(
@@ -77,7 +76,7 @@ class OperatorLifecycleController {
     }
 
     @DeleteMapping(path = "/suspension", consumes = MediaType.APPLICATION_JSON_VALUE)
-    ResponseEntity<SalonProvisioning.SalonDetail> reactivate(
+    ResponseEntity<SalonDirectory.SalonDetail> reactivate(
             @PathVariable String id, @RequestBody LifecycleRequest request) {
         return ResponseEntity.ok()
                 .cacheControl(CacheControl.noStore())
@@ -86,7 +85,7 @@ class OperatorLifecycleController {
     }
 
     @PostMapping(path = "/closure", consumes = MediaType.APPLICATION_JSON_VALUE)
-    ResponseEntity<SalonProvisioning.SalonDetail> close(@PathVariable String id, @RequestBody ClosureRequest request) {
+    ResponseEntity<SalonDirectory.SalonDetail> close(@PathVariable String id, @RequestBody ClosureRequest request) {
         return ResponseEntity.ok()
                 .cacheControl(CacheControl.noStore())
                 .body(lifecycle.close(
