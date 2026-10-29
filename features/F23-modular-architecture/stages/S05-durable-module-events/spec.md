@@ -52,8 +52,12 @@ API only (`apps/api`):
   attempts, without blocking other events or repeating subscribers that succeeded. A suspended
   salon's events wait, as its messages do.
 - **Versioning.** An event record lives in the publishing module's root package; its type name
-  includes a version; the payload is read back into the record the subscriber names. An event type
-  with no subscriber is delivered at once (nothing to do) and removed by the outbox's retention.
+  includes a version; the payload is read back into the record the subscriber names. An instance
+  claims only events whose type it knows (declared by an event record in this build); an event of a
+  known type with no subscriber is delivered at once and removed by the outbox's retention, and an
+  event of an unknown type is left unclaimed for an instance that knows it, so a rolling deployment
+  never marks a newer event delivered with nothing done (corrected by the lead at stage-close,
+  decision 064).
 - **`CustomerDataErased`** is published through the outbox instead of Spring's in-memory publisher,
   and its existing local-profile consumer becomes a subscriber. Its payload holds only ids, never
   personal data.
