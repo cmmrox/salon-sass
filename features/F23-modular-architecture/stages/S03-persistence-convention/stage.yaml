@@ -3,7 +3,7 @@ feature: F23
 title: Persistence convention for tenant aggregates
 sequence: 3
 surfaces: [api]
-status: in-progress
+status: built
 qa_status: not-run
 blocked_reason: null
 released_in: null
@@ -12,9 +12,117 @@ depends_on: [F23-S02]
 requirements: []
 nfr_focus: [NFR-23, NFR-01]
 handoff:
-  run: null
-  data: null
-  notes: null
+  run: |
+    Build and checks: cd apps/api && ./mvnw verify   (Spotless, -Werror, unit, integration and architecture tests).
+      Persistence rules only: ./mvnw test -Dtest='PersistenceConventionsTest,ModuleBoundariesTest'.
+      Two-guard tests: ./mvnw test -Dtest='*HibernateFilterAlone*,*RowLevelSecurityAlone*'.
+    Running product: infra/scripts/local-service.sh start api (local profile, PostgreSQL 5440, API 8090; log .local/logs/api.log).
+      Walkthrough: python3 -I /Users/cmmrox/Personal/Projects/salon-sass/apps/api/target/f23-s03-evidence/walkthrough.py (65 checks over HTTP; log walkthrough.log beside it).
+  data: |
+    No migration, seed or fixture change. Retained local database used as it was. The walkthrough created synthetic data through the
+      local hooks and the API: operators f23s3-admin-821242/f23s3-support-821242@example.test (random credentials, not recorded), plan
+      f23s3-821242 (2 staff seats), salon f23s3-821242 (closed, export ready) with owner-821242@ and reception-821242@example.test and one
+      ended support session. POST /local/operator/reset removes them. Test clock on real time. The local API is left running from a408386.
+  notes: |
+    Developer gates (verification.commands), run from the repository root by /Users/cmmrox/Personal/Projects/salon-sass/apps/api/target/f23-s03-evidence/run-gates.sh on a clean tree (dirty=0 before and after);
+    logs, summary.txt and surefire/ in /Users/cmmrox/Personal/Projects/salon-sass/apps/api/target/f23-s03-evidence/gates1/ (ignored path; keep until closure).
+    | command | revision | result | log |
+    | cd apps/api && ./mvnw -q verify | a408386 | exit 0, 361 s; 788 tests, 0 failures, 0 errors, 0 skipped (gates1/surefire) | gates1/1.log |
+    | pnpm contracts:check | a408386 | exit 0, 18 s; "docs/api/openapi.json and packages/api-contracts/src/generated are current" | gates1/2.log |
+    Conditions: Maven on JDK 21 with the toolchain's JDK 25.0.1, Node 24.12.0, pnpm 12.11.2 (Corepack), Docker 29.8.2, Testcontainers
+    postgres (max_connections 200). The local API was stopped during the gates and started afterwards from a408386.
+
+    Acceptance criteria (evidence paths relative to f23-s03-evidence/):
+    AC-1 checked: PersistenceRules.entitiesKeepTheirFieldsToThemselves names domain.Booking "public field status" (fixture publicfield) and
+      entitiesHaveNoKeySetter names "method setTenantId" (fixture keysetter); both pass the application and the clean fixture (gate). All 12
+      entities (identity's 9, SalonBrand, OutboxMessage, AuditEntry) have private fields, @Getter, @NoArgsConstructor(PROTECTED), a factory
+      or constructor and named changes; no setter; @Version stays on StaffAccount and CustomerAccount only, now a wrapper Long.
+    AC-2 checked: persistenceIsReachedOnlyFromInfrastructureOrShared names application.BookBooking with jakarta.persistence.EntityManager
+      (fixture entitymanager) and with JdbcClient (fixture jdbcclient); nothingUsesJdbcTemplate names infrastructure.BookingRows even in
+      infrastructure (fixture jdbctemplate); repositoriesAreDeclaredOnlyInInfrastructureOrShared names application.BookingRepository. All
+      pass the application. The rule reported SalonEntitlementsService (EntityManager) and the JdbcTemplate users before they moved.
+    AC-3 checked: IdentityRepositoriesHibernateFilterAloneIntegrationTest (12 tests; RLS disabled on every identity table, all DML granted):
+      for each of the 9 identity repositories, beta's row is not found by findById/existsById/findAllById, not listed (findAll, count,
+      pages), not found by any declared query, and survives deleteById, deleteAllById, deleteAllByIdInBatch, deleteAllInBatch, deleteAll and
+      a save of one of alpha's entities under beta's id (owner snapshot of beta's rows identical); a new row is stamped alpha and cannot
+      point at beta's staff or session; with no salon every repository finds nothing. IdentityTablesRowLevelSecurityAloneIntegrationTest
+      (36 = 9 tables x 4): plain SQL as the application role, no salon sees nothing, alpha sees only its rows even by beta's id, updates and
+      deletes aimed at beta reach 0 rows, inserting for beta or moving a row to beta is 42501. SalonBrand (existing pair, 5+6),
+      OutboxMessage and AuditEntry (existing TenantTablesHibernateFilterAlone/TenantTablesIsolation pair) keep their tests.
+      Mutations (mutations/): @TenantId removed from StaffAccount fails 3 filter-alone tests ("beta's row, by its id" found:
+      1-no-tenantid-on-staff.log); the policy disabled on identity_staff fails all 4 RLS-alone cases of that table (2-no-policy-...log).
+      Written before the use cases moved; first run after they compiled, passing on both guards; Hibernate 7's find() applies the filter.
+    AC-4 checked: every direct-SQL statement on a tenant table names tenant_id or calls a function scoped by app.tenant_id (Javadoc beside
+      it). Row-level-security-alone tests run each in alpha's transaction while naming beta (the request rebound to beta, or beta passed as
+      the salon), so only the policy can stop it: IdentityDirectSqlRowLevelSecurityAloneIntegrationTest (8: lock row insert refused 42501;
+      expiry cleanup, customer erasure and fixture reset change none of beta's rows, and do their work on alpha's own),
+      OutboxStoreRowLevelSecurityAloneIntegrationTest (4: cancel, remove, claim, sent/retry/dead/cancelled, removeSentBefore),
+      TenantTableRowsRowLevelSecurityAloneIntegrationTest (2: export), platform's PlatformTenantSqlRowLevelSecurityAloneIntegrationTest (4:
+      salon_entitlements(), local message counts, outbox_enqueue_for_salon, audit_record_support).
+    AC-5 checked: StaffAccess (754) became StaffSignIn 136, StaffMfa 191, StaffAccounts 272, StaffAudit 108 lines (plus the shared
+      StaffAuthority, StaffValidation, IdentityProblems, SyntheticSalons and top-level response records). StaffAccessIntegrationTest 18/18,
+      CustomerAccess 14, CustomerProfile 16, CustomerLimits 4 and the isolation tests pass with unchanged assertions; on the running product
+      (walkthrough.log): Owner sign-in with enroll_mfa, then verify_mfa with a wrong (401) and right code; receptionist created within the
+      2 seats, third 409 entitlement_exceeded; staff session list, refresh rotation, spent refresh 401 and family revoked, password change
+      (wrong old 401), sign-out of all sessions then 401; staff list and audit list (no secrets).
+    AC-6 checked: contracts:check passes (gate 2); git diff origin/main (2301191) -- docs/api packages/api-contracts/src/generated is empty.
+    AC-7 checked: test-inventory.txt compares gates1/surefire with S02's final gate run (714 tests): all 714 present and passing, 74 new,
+      none moved. Edits to existing tests are arrangements only (entities built through factories, .id -> getId(), imports of the moved
+      records); no expected value changed. Running product, walkthrough.log 65/65 PASS at a408386: console sign-in with MFA (wrong
+      password/code 401, console host only), plan and salon creation with Owner, brand and trialing subscription, replay 201, slug_taken,
+      field errors; Owner sign-in with MFA; staff at the seat limit; support session (single-use entry, Owner revokes, next request 401);
+      operator refresh/sign-out/replay; closure ends the Owner's session; export built and downloaded. walkthrough-api.log: 0 ERROR,
+      0 WARN, no password hash, MFA secret or token.
+    AC-8 checked: grep finds no JdbcTemplate in src/main, no TODO/FIXME, no commented-out code (// lines ending ; { } are prose); a scan
+      of every changed main class for members nothing references finds only framework-invoked controller handlers and entity columns
+      read through Lombok getters. PlatformDatabase.jdbcTemplate() (transitional) removed.
+    Test stability: the test profile sets salon.server.listen-on-network: false, the product's own setting, which binds a random-port
+      server to 127.0.0.1 alone; LoopbackOnlyIntegrationTest sets its own values and passes unchanged.
+
+    Commits: 8b7d448 PlatformDatabase JdbcClient (+ status in-progress); f18b744 test server on 127.0.0.1; 2465d11..93046c3 platform SQL into
+    stores (7 commits, merged by fa020a4); 2b9a287 shared and branding; 84ccf3c identity and the StaffAccess split; 9748bd1 JdbcTemplate
+    removed; 08cf8aa architecture rules; a408386 BillingLedger split (431 -> 292, invoices into InvoiceStore 358).
+
+    For the reviewer (isolation and security):
+    1. Every repository read uses Hibernate's filter; findById relies on Hibernate 7 applying @TenantId to find() (proved by AC-3).
+    2. Statements that were JPQL bulk deletes or EntityManager native queries are now JdbcClient: they no longer trigger Hibernate's
+       auto-flush before running. Each runs inside the salon's identity transaction under its lock; tests show identical outcomes.
+    3. TenantRegistry applies the request wait limit through a TransactionAwareDataSourceProxy instead of a ConnectionCallback (same
+       connection inside a transaction; DatabaseFrozen/DatabaseTimeouts/Health tests pass).
+    4. Spring 7's JdbcClient single() throws on a NULL value where queryForObject returned null; every converted statement that could
+       return NULL uses optional() or list().
+    5. No entity, log line or toString prints a password hash, MFA secret or token (no generated toString; Lombok denies it).
+
+    Choices to write down (common practice, not in the docs):
+    1. shared.persistence.NewEntities<T> (named interface shared :: persistence) is a repository fragment whose persist() calls
+       EntityManager.persist. Spring Data's save() merges an entity with an assigned UUID and no @Version (an extra select and a different
+       instance, which would lose later changes such as attempts++), and Persistable cannot be used because domain/ may not use Spring.
+       Its implementation must be named NewEntitiesImpl: Spring Data finds fragment implementations by that suffix.
+    2. Direct-SQL classes live per module in infrastructure: identity's IdentityLock, ExpiredSecurityState, CustomerDataErasure,
+       SyntheticIdentityReset, IdentityPlatformFunctions; branding's BrandPlatformFunctions; platform's *Store classes (one per table group).
+    3. Persistence fixtures are sources under src/test/compile-fixtures/fixture/persistence, compiled by the test (FixtureCompiler, shared
+       with CodeGenerationConventionsTest): an @Entity or JpaRepository on the test class path would be scanned by every integration test.
+    4. Kind and purpose constants left the entities (SessionKind, MfaPurpose), so that "an @Entity has no public field" holds literally.
+    5. StaffRole is mapped with @Enumerated(STRING) on identity_staff.role (same values); response records keep their simple names.
+
+    Different from the docs or the spec (for the lead):
+    1. Spec scope names only OperatorAccess, OperatorSessions and OperatorSignIns in platform/application; 22 more platform/application
+       classes and three platform/local hooks ran SQL through PlatformDatabase. AC-2 and the objective need them all in infrastructure, so
+       all moved (platform stores above).
+    2. The identity lock-row insert (INSERT ... ON CONFLICT DO NOTHING on identity_guard) fits none of backend.md's five named exceptions;
+       a repository cannot express it without changing the concurrency outcome (two first uses must both wait, not fail). Kept as direct SQL
+       in IdentityLock with its RLS-alone test; backend.md may want it listed (with exception 3, conditional writes for locking).
+    3. backend.md "Code generation" and "Persistence" do not mention the NewEntities fragment or that a fixture whose classes Spring would
+       scan belongs under compile-fixtures, not src/test/java/<base>/architecture/fixture (backend.md "Tests").
+    4. Response mapping: no controller handles an entity; use cases return records built by hand (StaffView, Profile, ...), shorter than a
+       mapper and the spec's "by hand where that is shorter". No new MapStruct mapper.
+    5. operator-console.md and identity-and-access.md describe the security rules unchanged; no wording change needed from this stage.
+    Nothing left unfinished. No new dependency, no migration.
+
+    Timings (observed): implementation about 45 min for the identity, shared and branding half (00:45-01:30 local), with the platform half
+    built in parallel by a second developer agent in its own worktree (00:56-01:25) and reviewed and merged here; gates 6.5 min; walkthrough
+    and evidence about 5 min. Diagnosis: two fixes found by the focused runs (identity's missing shared :: persistence declaration; public
+    constants on entities), one test assertion of my own corrected to the exception's root cause.
 cases: []
 verification:
   commands:
