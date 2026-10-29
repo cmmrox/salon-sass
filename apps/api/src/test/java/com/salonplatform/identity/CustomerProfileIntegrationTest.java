@@ -473,6 +473,8 @@ class CustomerProfileIntegrationTest extends CustomerHttpFixture {
                         Long.class,
                         tenant("alpha").id()))
                 .isEqualTo(1);
+        long removedBy = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+        while (((Map<?, ?>) field.get(capture)).size() != 1 && System.nanoTime() < removedBy) Thread.sleep(20);
         assertThat((Map<?, ?>) field.get(capture)).hasSize(1);
         assertThat(owner.queryForObject(
                         "SELECT count(*) FROM identity_customer WHERE tenant_id=?",
