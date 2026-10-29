@@ -3,7 +3,7 @@ feature: F23
 title: Durable events between modules
 sequence: 7
 surfaces: [api]
-status: built
+status: complete
 qa_status: not-run
 blocked_reason: null
 released_in: null
