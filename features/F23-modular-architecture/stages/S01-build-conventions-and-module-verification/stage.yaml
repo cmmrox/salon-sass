@@ -3,7 +3,7 @@ feature: F23
 title: Build conventions and module verification
 sequence: 1
 surfaces: [api]
-status: built
+status: complete
 qa_status: not-run
 blocked_reason: null
 released_in: null
