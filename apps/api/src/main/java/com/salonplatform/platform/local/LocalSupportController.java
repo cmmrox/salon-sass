@@ -1,5 +1,6 @@
 package com.salonplatform.platform.local;
 
+import com.salonplatform.platform.dto.SupportExpiryPass;
 import com.salonplatform.platform.service.SupportSessions;
 import com.salonplatform.shared.web.NotFoundException;
 import io.swagger.v3.oas.annotations.Hidden;
@@ -26,8 +27,6 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/local/operator")
 class LocalSupportController {
 
-    record Pass(Instant at, int ended) {}
-
     private final SupportSessions sessions;
     private final Clock clock;
 
@@ -37,7 +36,7 @@ class LocalSupportController {
     }
 
     @PostMapping("/support-sessions/expire")
-    ResponseEntity<Pass> expire(HttpServletRequest http) {
+    ResponseEntity<SupportExpiryPass> expire(HttpServletRequest http) {
         try {
             if (!InetAddress.getByName(http.getRemoteAddr()).isLoopbackAddress()) {
                 throw new NotFoundException();
@@ -46,6 +45,8 @@ class LocalSupportController {
             throw new NotFoundException();
         }
         Instant now = clock.instant();
-        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(new Pass(now, sessions.expire(now)));
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.noStore())
+                .body(new SupportExpiryPass(now, sessions.expire(now)));
     }
 }

@@ -11,12 +11,6 @@ final class OperatorRequests {
 
     private OperatorRequests() {}
 
-    /** An unknown request field: 400 naming it. */
-    static ApplicationProblemException unexpected(String field) {
-        return new ApplicationProblemException(
-                400, ErrorCode.BAD_REQUEST, List.of(new FieldProblem(field, "is not allowed")));
-    }
-
     /** A path id: a UUID, or 400 naming {@code id}. */
     static UUID id(String value) {
         try {

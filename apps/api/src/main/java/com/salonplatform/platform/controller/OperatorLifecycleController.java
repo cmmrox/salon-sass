@@ -1,9 +1,12 @@
 package com.salonplatform.platform.controller;
 
-import com.fasterxml.jackson.annotation.JsonAnySetter;
+import com.salonplatform.platform.dto.ClosureRequest;
+import com.salonplatform.platform.dto.ExportView;
+import com.salonplatform.platform.dto.LifecyclePage;
+import com.salonplatform.platform.dto.LifecycleRequest;
+import com.salonplatform.platform.dto.SalonDetail;
 import com.salonplatform.platform.service.ExportDownloads;
 import com.salonplatform.platform.service.Paging;
-import com.salonplatform.platform.service.SalonDirectory;
 import com.salonplatform.platform.service.SalonLifecycle;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -41,36 +44,8 @@ class OperatorLifecycleController {
         this.exports = exports;
     }
 
-    @Schema(
-            additionalProperties = Schema.AdditionalPropertiesValue.FALSE,
-            requiredProperties = {"version", "reason"})
-    record LifecycleRequest(
-            @Schema(minimum = "0") Long version,
-            @Schema(minLength = 10, maxLength = 500) String reason) {
-        @JsonAnySetter
-        void unknown(String field, Object ignored) {
-            throw OperatorRequests.unexpected(field);
-        }
-    }
-
-    @Schema(
-            additionalProperties = Schema.AdditionalPropertiesValue.FALSE,
-            requiredProperties = {"version", "confirmSlug", "reason"})
-    record ClosureRequest(
-            @Schema(minimum = "0") Long version,
-
-            @Schema(description = "The salon's slug, typed exactly, to confirm an irreversible closure")
-            String confirmSlug,
-
-            @Schema(minLength = 10, maxLength = 500) String reason) {
-        @JsonAnySetter
-        void unknown(String field, Object ignored) {
-            throw OperatorRequests.unexpected(field);
-        }
-    }
-
     @PostMapping(path = "/suspension", consumes = MediaType.APPLICATION_JSON_VALUE)
-    ResponseEntity<SalonDirectory.SalonDetail> suspend(@PathVariable String id, @RequestBody LifecycleRequest request) {
+    ResponseEntity<SalonDetail> suspend(@PathVariable String id, @RequestBody LifecycleRequest request) {
         return ResponseEntity.ok()
                 .cacheControl(CacheControl.noStore())
                 .body(lifecycle.suspend(
@@ -78,8 +53,7 @@ class OperatorLifecycleController {
     }
 
     @DeleteMapping(path = "/suspension", consumes = MediaType.APPLICATION_JSON_VALUE)
-    ResponseEntity<SalonDirectory.SalonDetail> reactivate(
-            @PathVariable String id, @RequestBody LifecycleRequest request) {
+    ResponseEntity<SalonDetail> reactivate(@PathVariable String id, @RequestBody LifecycleRequest request) {
         return ResponseEntity.ok()
                 .cacheControl(CacheControl.noStore())
                 .body(lifecycle.reactivate(
@@ -87,7 +61,7 @@ class OperatorLifecycleController {
     }
 
     @PostMapping(path = "/closure", consumes = MediaType.APPLICATION_JSON_VALUE)
-    ResponseEntity<SalonDirectory.SalonDetail> close(@PathVariable String id, @RequestBody ClosureRequest request) {
+    ResponseEntity<SalonDetail> close(@PathVariable String id, @RequestBody ClosureRequest request) {
         return ResponseEntity.ok()
                 .cacheControl(CacheControl.noStore())
                 .body(lifecycle.close(
@@ -96,7 +70,7 @@ class OperatorLifecycleController {
     }
 
     @GetMapping("/lifecycle")
-    ResponseEntity<SalonLifecycle.LifecyclePage> history(
+    ResponseEntity<LifecyclePage> history(
             @PathVariable String id,
             @Parameter(schema = @Schema(type = "integer", minimum = "0", maximum = "100000", defaultValue = "0"))
                     @RequestParam(required = false)
@@ -110,7 +84,7 @@ class OperatorLifecycleController {
     }
 
     @GetMapping("/export")
-    ResponseEntity<ExportDownloads.ExportView> export(@PathVariable String id) {
+    ResponseEntity<ExportView> export(@PathVariable String id) {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(exports.status(OperatorRequests.id(id)));
     }
 

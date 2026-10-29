@@ -1,12 +1,12 @@
 package com.salonplatform.platform.service;
 
+import com.salonplatform.platform.dto.SupportOperatorRef;
+import com.salonplatform.platform.dto.SupportSalonRef;
+import com.salonplatform.platform.dto.SupportSessionView;
 import com.salonplatform.platform.repository.PlatformAudit;
 import com.salonplatform.platform.repository.SupportSessionStore;
 import com.salonplatform.platform.repository.SupportSessionStore.SalonAuditEntry;
 import com.salonplatform.platform.repository.SupportSessionStore.Session;
-import com.salonplatform.platform.service.SupportSessions.SupportOperatorRef;
-import com.salonplatform.platform.service.SupportSessions.SupportSalonRef;
-import com.salonplatform.platform.service.SupportSessions.SupportSessionView;
 import com.salonplatform.shared.observability.Traces;
 import com.salonplatform.shared.web.ApplicationProblemException;
 import com.salonplatform.shared.web.ErrorCode;

@@ -1,10 +1,11 @@
 package com.salonplatform.platform.service;
 
+import com.salonplatform.platform.dto.BillingJobPass;
+import com.salonplatform.platform.dto.SubscriptionPass;
 import com.salonplatform.platform.repository.BillingLedger;
 import com.salonplatform.platform.repository.PlatformAudit;
 import com.salonplatform.shared.observability.Traces;
 import com.salonplatform.shared.persistence.PlatformDatabase;
-import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -27,13 +28,6 @@ public class BillingJob {
 
     private static final Logger log = LoggerFactory.getLogger(BillingJob.class);
 
-    /** What one pass did: per subscription that changed, and the subscriptions that failed. */
-    @Schema(hidden = true)
-    public record Pass(Instant at, List<SubscriptionPass> changed, List<UUID> failed) {}
-
-    public record SubscriptionPass(
-            UUID salonId, List<String> issued, List<String> reminders, List<String> charges, List<String> states) {}
-
     private final PlatformDatabase database;
     private final BillingLedger ledger;
     private final InvoiceIssuing issuing;
@@ -53,7 +47,7 @@ public class BillingJob {
         this.traces = traces;
     }
 
-    public Pass run(Instant now) {
+    public BillingJobPass run(Instant now) {
         try {
             return traces.inPlatformSpan("job.billing", () -> pass(now));
         } catch (RuntimeException ex) {
@@ -63,7 +57,7 @@ public class BillingJob {
         }
     }
 
-    private Pass pass(Instant now) {
+    private BillingJobPass pass(Instant now) {
         List<UUID> candidates = database.inTransaction(status -> ledger.subscriptionsToBill(now));
         List<SubscriptionPass> changed = new ArrayList<>();
         List<UUID> failed = new ArrayList<>();
@@ -83,7 +77,7 @@ public class BillingJob {
                 candidates.size(),
                 changed.size(),
                 failed.size());
-        return new Pass(now, changed, failed);
+        return new BillingJobPass(now, changed, failed);
     }
 
     private SubscriptionPass once(UUID id, Instant now) {

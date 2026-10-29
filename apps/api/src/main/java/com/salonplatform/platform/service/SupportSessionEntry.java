@@ -1,6 +1,7 @@
 package com.salonplatform.platform.service;
 
 import com.salonplatform.platform.adapter.SupportCrypto;
+import com.salonplatform.platform.dto.SupportCredential;
 import com.salonplatform.platform.repository.PlatformAudit;
 import com.salonplatform.platform.repository.SupportSessionStore;
 import com.salonplatform.platform.repository.SupportSessionStore.Entered;
@@ -13,7 +14,6 @@ import com.salonplatform.shared.tenancy.TenantContext;
 import com.salonplatform.shared.web.ApplicationProblemException;
 import com.salonplatform.shared.web.ErrorCode;
 import com.salonplatform.shared.web.NotFoundException;
-import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.LinkedHashMap;
@@ -31,9 +31,6 @@ import org.springframework.stereotype.Service;
  */
 @Service
 public class SupportSessionEntry implements SupportCredentials {
-
-    @Schema(requiredProperties = {"accessToken", "sessionId", "issuedAt", "expiresAt"})
-    public record SupportCredential(String accessToken, UUID sessionId, Instant issuedAt, Instant expiresAt) {}
 
     private final PlatformDatabase database;
     private final SupportSessionStore store;

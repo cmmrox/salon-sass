@@ -3,6 +3,16 @@ package com.salonplatform.platform.local;
 import com.salonplatform.branding.inprocess.BrandProvisioning;
 import com.salonplatform.platform.adapter.BillingProviderKey;
 import com.salonplatform.platform.domain.Slugs;
+import com.salonplatform.platform.dto.BillingInterruptRequest;
+import com.salonplatform.platform.dto.BillingInterruptState;
+import com.salonplatform.platform.dto.BillingJobPass;
+import com.salonplatform.platform.dto.CapturedEmails;
+import com.salonplatform.platform.dto.OperatorActiveRequest;
+import com.salonplatform.platform.dto.ProviderEventSignature;
+import com.salonplatform.platform.dto.ProviderOutcomeRequest;
+import com.salonplatform.platform.dto.ProviderOutcomeState;
+import com.salonplatform.platform.dto.UnbilledRequest;
+import com.salonplatform.platform.dto.UnbilledSalon;
 import com.salonplatform.platform.repository.OperatorUserStore;
 import com.salonplatform.platform.repository.SalonStore;
 import com.salonplatform.platform.service.BillingFaults;
@@ -88,60 +98,42 @@ class LocalBillingController {
         this.platformDomain = platformDomain.strip().toLowerCase(Locale.ROOT);
     }
 
-    record OutcomeRequest(String outcome) {}
-
-    record OutcomeState(UUID salonId, String outcome) {}
-
-    record Signature(String header, String signature) {}
-
-    record Emails(List<LocalEmailCapture.CapturedEmail> items) {}
-
-    record InterruptRequest(String point) {}
-
-    record InterruptState(String point) {}
-
-    record UnbilledRequest(String slug) {}
-
-    record UnbilledSalon(UUID id, String slug, String hostname) {}
-
-    record OperatorActiveRequest(String email, Boolean active) {}
-
     private static <T> ResponseEntity<T> ok(T body) {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(body);
     }
 
     /** The fake provider's outcome for every later charge of this salon: success (default) or failure. */
     @PutMapping("/billing/provider-outcomes/{salonId}")
-    ResponseEntity<OutcomeState> setOutcome(
-            @PathVariable UUID salonId, @RequestBody OutcomeRequest request, HttpServletRequest http) {
+    ResponseEntity<ProviderOutcomeState> setOutcome(
+            @PathVariable UUID salonId, @RequestBody ProviderOutcomeRequest request, HttpServletRequest http) {
         loopback(http);
         if (request == null || !List.of("success", "failure").contains(request.outcome())) {
             throw new ApplicationProblemException(
                     400, ErrorCode.BAD_REQUEST, List.of(new FieldProblem("outcome", "must be success or failure")));
         }
         provider.outcome(salonId, request.outcome());
-        return ok(new OutcomeState(salonId, request.outcome()));
+        return ok(new ProviderOutcomeState(salonId, request.outcome()));
     }
 
     @GetMapping("/billing/provider-outcomes/{salonId}")
-    ResponseEntity<OutcomeState> outcome(@PathVariable UUID salonId, HttpServletRequest http) {
+    ResponseEntity<ProviderOutcomeState> outcome(@PathVariable UUID salonId, HttpServletRequest http) {
         loopback(http);
-        return ok(new OutcomeState(salonId, provider.outcome(salonId)));
+        return ok(new ProviderOutcomeState(salonId, provider.outcome(salonId)));
     }
 
     /** Signs the exact request body, whatever it is, with the local provider key. */
     @PostMapping("/billing/provider-events/signature")
-    ResponseEntity<Signature> sign(@RequestBody(required = false) byte[] body, HttpServletRequest http) {
+    ResponseEntity<ProviderEventSignature> sign(@RequestBody(required = false) byte[] body, HttpServletRequest http) {
         loopback(http);
-        return ok(new Signature(
+        return ok(new ProviderEventSignature(
                 BillingProviderKey.HEADER,
                 key.sign(body == null ? new byte[0] : body).orElseThrow()));
     }
 
     @GetMapping("/emails")
-    ResponseEntity<Emails> emails(@RequestParam(required = false) String recipient, HttpServletRequest http) {
+    ResponseEntity<CapturedEmails> emails(@RequestParam(required = false) String recipient, HttpServletRequest http) {
         loopback(http);
-        return ok(new Emails(emails.list(recipient)));
+        return ok(new CapturedEmails(emails.list(recipient)));
     }
 
     @DeleteMapping("/emails")
@@ -153,13 +145,14 @@ class LocalBillingController {
 
     /** One billing pass, now, at the application clock's instant (the test clock when it is set). */
     @PostMapping("/billing/run")
-    ResponseEntity<BillingJob.Pass> run(HttpServletRequest http) {
+    ResponseEntity<BillingJobPass> run(HttpServletRequest http) {
         loopback(http);
         return ok(job.run(clock.instant()));
     }
 
     @PutMapping("/billing/interrupt")
-    ResponseEntity<InterruptState> interrupt(@RequestBody InterruptRequest request, HttpServletRequest http) {
+    ResponseEntity<BillingInterruptState> interrupt(
+            @RequestBody BillingInterruptRequest request, HttpServletRequest http) {
         loopback(http);
         BillingFaults.Point point = null;
         if (request != null && request.point() != null && !request.point().isBlank()) {
@@ -176,13 +169,13 @@ class LocalBillingController {
     }
 
     @GetMapping("/billing/interrupt")
-    ResponseEntity<InterruptState> interruptState(HttpServletRequest http) {
+    ResponseEntity<BillingInterruptState> interruptState(HttpServletRequest http) {
         loopback(http);
         return interruptState();
     }
 
-    private ResponseEntity<InterruptState> interruptState() {
-        return ok(new InterruptState(faults.current() == null ? null : "after-invoice-issue"));
+    private ResponseEntity<BillingInterruptState> interruptState() {
+        return ok(new BillingInterruptState(faults.current() == null ? null : "after-invoice-issue"));
     }
 
     /**

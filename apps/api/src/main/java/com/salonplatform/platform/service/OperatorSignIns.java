@@ -5,6 +5,9 @@ import static com.salonplatform.platform.service.OperatorAccess.invalidCredentia
 import com.salonplatform.platform.adapter.OperatorCrypto;
 import com.salonplatform.platform.domain.OperatorRole;
 import com.salonplatform.platform.domain.PlainText;
+import com.salonplatform.platform.dto.OperatorEnrollment;
+import com.salonplatform.platform.dto.OperatorSignIn;
+import com.salonplatform.platform.dto.OperatorTokens;
 import com.salonplatform.platform.repository.OperatorSecurityStore;
 import com.salonplatform.platform.repository.OperatorSecurityStore.Challenge;
 import com.salonplatform.platform.repository.OperatorSecurityStore.NewChallenge;
@@ -12,11 +15,9 @@ import com.salonplatform.platform.repository.OperatorSecurityStore.RateCount;
 import com.salonplatform.platform.repository.OperatorUserStore;
 import com.salonplatform.platform.repository.OperatorUserStore.Account;
 import com.salonplatform.platform.repository.PlatformAudit;
-import com.salonplatform.platform.service.OperatorSessions.OperatorTokens;
 import com.salonplatform.shared.web.ApplicationProblemException;
 import com.salonplatform.shared.web.ErrorCode;
 import com.salonplatform.shared.web.FieldProblem;
-import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -41,21 +42,6 @@ public class OperatorSignIns {
     static final Duration RATE_WINDOW = Duration.ofMinutes(15);
     static final Duration CHALLENGE_LIFETIME = Duration.ofMinutes(5);
     static final int CHALLENGE_ATTEMPTS = 5;
-
-    @Schema(requiredProperties = {"state", "challengeId", "challengeToken", "expiresAt", "credentials"})
-    public record OperatorSignIn(
-            String state,
-            @Schema(format = "uuid") UUID challengeId,
-            String challengeToken,
-            Instant expiresAt,
-
-            @Schema(
-                    types = {"object", "null"},
-                    requiredMode = Schema.RequiredMode.REQUIRED)
-            OperatorTokens credentials) {}
-
-    @Schema(requiredProperties = {"challengeId", "secret", "otpauthUri", "expiresAt"})
-    public record OperatorEnrollment(UUID challengeId, String secret, String otpauthUri, Instant expiresAt) {}
 
     private final OperatorWork work;
     private final OperatorSessions sessions;

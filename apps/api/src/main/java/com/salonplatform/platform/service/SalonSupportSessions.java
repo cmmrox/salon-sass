@@ -2,13 +2,14 @@ package com.salonplatform.platform.service;
 
 import com.salonplatform.identity.Principal;
 import com.salonplatform.identity.Principals;
+import com.salonplatform.platform.dto.SalonSupportSession;
+import com.salonplatform.platform.dto.SalonSupportSessionPage;
+import com.salonplatform.platform.dto.SupportSessionView;
 import com.salonplatform.platform.repository.SupportSessionStore;
 import com.salonplatform.platform.repository.SupportSessionStore.Session;
-import com.salonplatform.platform.service.SupportSessions.SupportSessionView;
 import com.salonplatform.shared.persistence.PlatformDatabase;
 import com.salonplatform.shared.tenancy.TenantContext;
 import com.salonplatform.shared.web.NotFoundException;
-import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
@@ -21,41 +22,6 @@ import org.springframework.stereotype.Service;
  */
 @Service
 public class SalonSupportSessions {
-
-    @Schema(
-            requiredProperties = {
-                "id",
-                "operatorName",
-                "reason",
-                "startedAt",
-                "expiresAt",
-                "endedAt",
-                "endedBy",
-                "state"
-            })
-    public record SalonSupportSession(
-            UUID id,
-            String operatorName,
-            String reason,
-            Instant startedAt,
-            Instant expiresAt,
-
-            @Schema(
-                    types = {"string", "null"},
-                    format = "date-time",
-                    requiredMode = Schema.RequiredMode.REQUIRED)
-            Instant endedAt,
-
-            @Schema(
-                    types = {"string", "null"},
-                    allowableValues = {"operator", "admin", "owner", "expiry"},
-                    requiredMode = Schema.RequiredMode.REQUIRED)
-            String endedBy,
-
-            @Schema(allowableValues = {"active", "ended"}) String state) {}
-
-    @Schema(requiredProperties = {"items", "page", "size", "total"})
-    public record SalonSupportSessionPage(List<SalonSupportSession> items, int page, int size, long total) {}
 
     private final PlatformDatabase database;
     private final SupportSessionStore store;

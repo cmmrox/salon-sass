@@ -7,6 +7,8 @@ import com.salonplatform.identity.domain.StaffRole;
 import com.salonplatform.identity.entity.StaffAccount;
 import com.salonplatform.platform.adapter.ExportKey;
 import com.salonplatform.platform.adapter.OperatorCrypto;
+import com.salonplatform.platform.dto.DeletionJobPass;
+import com.salonplatform.platform.dto.ExportJobPass;
 import com.salonplatform.platform.service.BillingJob;
 import com.salonplatform.platform.service.LifecycleFaults;
 import com.salonplatform.platform.service.OperatorAccounts;
@@ -415,7 +417,7 @@ class SalonLifecycleIntegrationTest extends IntegrationTest {
                 billing.console.call("GET", "/salons/" + a.salon().id() + "/export/archive", null, billing.admin()),
                 409);
 
-        SalonExports.Pass pass = exports.run(CLOCK.instant());
+        ExportJobPass pass = exports.run(CLOCK.instant());
         assertThat(pass.exports()).anySatisfy(each -> {
             assertThat(each.salonId()).isEqualTo(a.salon().id());
             assertThat(each.ready()).isTrue();
@@ -570,7 +572,7 @@ class SalonLifecycleIntegrationTest extends IntegrationTest {
         assertThat(before.get("salon_brand")).isEqualTo(1);
 
         CLOCK.set(deleteAt.minusSeconds(1));
-        SalonDeletion.Pass early = deletion.run(CLOCK.instant());
+        DeletionJobPass early = deletion.run(CLOCK.instant());
         assertThat(early.salons()).noneMatch(each -> each.salonId().equals(id));
         assertThat(tenantRows(id)).isEqualTo(before);
 
@@ -614,7 +616,7 @@ class SalonLifecycleIntegrationTest extends IntegrationTest {
         CLOCK.advance(Duration.ofHours(25));
         closed(a.salon());
         EXPORT_AFTER.set(2);
-        SalonExports.Pass interrupted = exports.run(CLOCK.instant());
+        ExportJobPass interrupted = exports.run(CLOCK.instant());
         assertThat(interrupted.failed()).contains(a.salon().id());
         assertThat(count("""
                 SELECT count(*) FROM salon_export_part p JOIN salon_export e ON e.id = p.export_id WHERE e.salon_id = ?
@@ -651,7 +653,7 @@ class SalonLifecycleIntegrationTest extends IntegrationTest {
         deletion.run(CLOCK.instant());
         CLOCK.set(deleteAt);
         DELETION_AFTER.set(1);
-        SalonDeletion.Pass stopped = deletion.run(CLOCK.instant());
+        DeletionJobPass stopped = deletion.run(CLOCK.instant());
         assertThat(stopped.failed()).contains(a.salon().id());
         assertThat(owner.queryForObject(
                         "SELECT status FROM tenant WHERE id = ?",

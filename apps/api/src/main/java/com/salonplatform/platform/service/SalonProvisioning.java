@@ -7,6 +7,7 @@ import com.salonplatform.platform.domain.OperatorPermission;
 import com.salonplatform.platform.domain.PlainText;
 import com.salonplatform.platform.domain.ProvisioningRegions;
 import com.salonplatform.platform.domain.Slugs;
+import com.salonplatform.platform.dto.SalonCreated;
 import com.salonplatform.platform.repository.BillingLedger;
 import com.salonplatform.platform.repository.PlanStore;
 import com.salonplatform.platform.repository.PlatformAudit;
@@ -16,7 +17,6 @@ import com.salonplatform.shared.web.ApplicationProblemException;
 import com.salonplatform.shared.web.ErrorCode;
 import com.salonplatform.shared.web.FieldProblem;
 import com.salonplatform.shared.web.NotFoundException;
-import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -42,9 +42,6 @@ import org.springframework.stereotype.Service;
 public class SalonProvisioning {
 
     static final String ACTION = "salon.create";
-
-    @Schema(requiredProperties = {"id", "slug", "hostname", "planId", "createdAt"})
-    public record SalonCreated(UUID id, String slug, String hostname, UUID planId, Instant createdAt) {}
 
     public record OwnerInput(String name, String email, String password) {}
 

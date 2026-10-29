@@ -1,12 +1,13 @@
 package com.salonplatform.platform.service;
 
+import com.salonplatform.platform.dto.DeletionJobPass;
+import com.salonplatform.platform.dto.SalonPass;
 import com.salonplatform.platform.repository.PlatformAudit;
 import com.salonplatform.platform.repository.SalonExportStore;
 import com.salonplatform.platform.repository.SalonLifecycleStore;
 import com.salonplatform.shared.lifecycle.TenantDataModule;
 import com.salonplatform.shared.observability.Traces;
 import com.salonplatform.shared.persistence.PlatformDatabase;
-import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -37,11 +38,6 @@ import org.springframework.stereotype.Service;
 public class SalonDeletion {
 
     private static final Logger log = LoggerFactory.getLogger(SalonDeletion.class);
-
-    @Schema(hidden = true)
-    public record Pass(Instant at, List<SalonPass> salons, List<UUID> waiting, List<UUID> failed) {}
-
-    public record SalonPass(UUID salonId, int batches, long rows, boolean deleted) {}
 
     private final PlatformDatabase database;
     private final PlatformAudit audit;
@@ -78,7 +74,7 @@ public class SalonDeletion {
     }
 
     /** One pass at {@code now}: every closed salon whose deletion instant is at or before it. */
-    public Pass run(Instant now) {
+    public DeletionJobPass run(Instant now) {
         try {
             return traces.inPlatformSpan("job.salon-deletion", () -> pass(now));
         } catch (RuntimeException ex) {
@@ -88,7 +84,7 @@ public class SalonDeletion {
         }
     }
 
-    private Pass pass(Instant now) {
+    private DeletionJobPass pass(Instant now) {
         List<UUID> due = database.inTransaction(status -> lifecycles.dueForDeletion(now));
         List<SalonPass> salons = new ArrayList<>();
         List<UUID> waiting = new ArrayList<>();
@@ -130,7 +126,7 @@ public class SalonDeletion {
             }
         }
         log.info("Deletion pass: {} due, {} waiting, {} failed", due.size(), waiting.size(), failed.size());
-        return new Pass(now, salons, waiting, failed);
+        return new DeletionJobPass(now, salons, waiting, failed);
     }
 
     /** Makes the salon a tombstone, once; false when another run already did. */

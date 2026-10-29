@@ -1,8 +1,8 @@
 package com.salonplatform.platform.controller;
 
-import com.fasterxml.jackson.annotation.JsonAnySetter;
+import com.salonplatform.platform.dto.EntryRequest;
+import com.salonplatform.platform.dto.SupportCredential;
 import com.salonplatform.platform.service.SupportSessionEntry;
-import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
@@ -31,19 +31,8 @@ class SupportEntryController {
         this.sessions = sessions;
     }
 
-    @Schema(
-            additionalProperties = Schema.AdditionalPropertiesValue.FALSE,
-            requiredProperties = {"code"})
-    record EntryRequest(
-            @Schema(minLength = 43, maxLength = 43) String code) {
-        @JsonAnySetter
-        void unknown(String field, Object ignored) {
-            throw OperatorRequests.unexpected(field);
-        }
-    }
-
     @PostMapping(path = "/entry", consumes = MediaType.APPLICATION_JSON_VALUE)
-    ResponseEntity<SupportSessionEntry.SupportCredential> enterSupportSession(@RequestBody EntryRequest request) {
+    ResponseEntity<SupportCredential> enterSupportSession(@RequestBody EntryRequest request) {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(sessions.enter(request.code()));
     }
 

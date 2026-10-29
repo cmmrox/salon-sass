@@ -1,6 +1,8 @@
 package com.salonplatform.platform.service;
 
 import com.salonplatform.platform.adapter.ExportKey;
+import com.salonplatform.platform.dto.ExportJobPass;
+import com.salonplatform.platform.dto.ExportPass;
 import com.salonplatform.platform.repository.PlatformAudit;
 import com.salonplatform.platform.repository.PlatformOutbox;
 import com.salonplatform.platform.repository.SalonExportStore;
@@ -14,7 +16,6 @@ import com.salonplatform.shared.outbox.OutboxLifecycle;
 import com.salonplatform.shared.persistence.PlatformDatabase;
 import com.salonplatform.shared.tenancy.CurrentTenant;
 import com.salonplatform.shared.tenancy.TenantContext;
-import io.swagger.v3.oas.annotations.media.Schema;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Instant;
@@ -55,11 +56,6 @@ public class SalonExports {
     private static final Logger log = LoggerFactory.getLogger(SalonExports.class);
 
     static final String EMAIL_KIND = "export.ready";
-    /** What one pass of the export job did. */
-    @Schema(hidden = true)
-    public record Pass(Instant at, List<ExportPass> exports, List<UUID> failed) {}
-
-    public record ExportPass(UUID salonId, UUID exportId, int tablesStored, boolean ready) {}
 
     private final PlatformDatabase database;
     private final SalonExportStore store;
@@ -124,7 +120,7 @@ public class SalonExports {
     // --- the job -------------------------------------------------------------------------------
 
     /** One pass of the export job at {@code now}: every pending export of a closed salon. */
-    public Pass run(Instant now) {
+    public ExportJobPass run(Instant now) {
         try {
             return traces.inPlatformSpan("job.salon-export", () -> pass(now));
         } catch (RuntimeException ex) {
@@ -134,7 +130,7 @@ public class SalonExports {
         }
     }
 
-    private Pass pass(Instant now) {
+    private ExportJobPass pass(Instant now) {
         List<Pending> pending = database.inTransaction(status -> store.pending());
         List<ExportPass> exports = new ArrayList<>();
         List<UUID> failed = new ArrayList<>();
@@ -151,7 +147,7 @@ public class SalonExports {
             }
         }
         log.info("Export pass: {} pending, {} failed", pending.size(), failed.size());
-        return new Pass(now, exports, failed);
+        return new ExportJobPass(now, exports, failed);
     }
 
     /** Stores the part of every table not stored yet; returns the run's running count of stored tables. */

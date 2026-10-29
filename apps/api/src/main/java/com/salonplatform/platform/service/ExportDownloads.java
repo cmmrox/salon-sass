@@ -2,6 +2,8 @@ package com.salonplatform.platform.service;
 
 import com.salonplatform.platform.adapter.ExportKey;
 import com.salonplatform.platform.domain.OperatorPermission;
+import com.salonplatform.platform.dto.ExportView;
+import com.salonplatform.platform.dto.LinkView;
 import com.salonplatform.platform.repository.PlatformAudit;
 import com.salonplatform.platform.repository.SalonExportStore;
 import com.salonplatform.platform.repository.SalonExportStore.Stored;
@@ -9,8 +11,6 @@ import com.salonplatform.shared.persistence.PlatformDatabase;
 import com.salonplatform.shared.web.ApplicationProblemException;
 import com.salonplatform.shared.web.ErrorCode;
 import com.salonplatform.shared.web.NotFoundException;
-import io.swagger.v3.oas.annotations.media.Schema;
-import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -23,36 +23,6 @@ import org.springframework.stereotype.Service;
  */
 @Service
 public class ExportDownloads {
-
-    @Schema(requiredProperties = {"status", "createdAt", "readyAt", "deleteAt", "sizeBytes", "sha256"})
-    public record ExportView(
-            @Schema(allowableValues = {"pending", "ready", "deleted"})
-            String status,
-
-            Instant createdAt,
-
-            @Schema(
-                    types = {"string", "null"},
-                    format = "date-time",
-                    requiredMode = Schema.RequiredMode.REQUIRED)
-            Instant readyAt,
-
-            Instant deleteAt,
-
-            @Schema(
-                    types = {"integer", "null"},
-                    format = "int64",
-                    requiredMode = Schema.RequiredMode.REQUIRED)
-            Long sizeBytes,
-
-            @Schema(
-                    types = {"string", "null"},
-                    pattern = "^[0-9a-f]{64}$",
-                    requiredMode = Schema.RequiredMode.REQUIRED)
-            String sha256) {}
-
-    @Schema(requiredProperties = {"readyAt", "deleteAt", "sizeBytes", "sha256"})
-    public record LinkView(Instant readyAt, Instant deleteAt, long sizeBytes, String sha256) {}
 
     /** A downloadable archive: its bytes, the file name to save it as and its checksum. */
     public record Archive(byte[] bytes, String fileName, String sha256) {}

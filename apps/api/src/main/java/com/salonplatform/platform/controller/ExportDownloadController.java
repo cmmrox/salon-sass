@@ -1,5 +1,6 @@
 package com.salonplatform.platform.controller;
 
+import com.salonplatform.platform.dto.LinkView;
 import com.salonplatform.platform.service.ExportDownloads;
 import com.salonplatform.shared.web.NotFoundException;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -51,7 +52,7 @@ class ExportDownloadController {
 
     /** What the download page explains: when the archive was made and is deleted, its size and checksum. */
     @GetMapping("/{token}/metadata")
-    ResponseEntity<ExportDownloads.LinkView> metadata(@PathVariable String token, HttpServletRequest request) {
+    ResponseEntity<LinkView> metadata(@PathVariable String token, HttpServletRequest request) {
         platformHost(request);
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(exports.linkView(token));
     }

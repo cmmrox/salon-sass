@@ -1,10 +1,17 @@
 package com.salonplatform.platform.controller;
 
-import com.fasterxml.jackson.annotation.JsonAnySetter;
+import com.salonplatform.platform.dto.ChangeSubscriptionRequest;
+import com.salonplatform.platform.dto.InvoiceDetail;
+import com.salonplatform.platform.dto.InvoicePage;
+import com.salonplatform.platform.dto.MovePlanRequest;
+import com.salonplatform.platform.dto.PaymentView;
+import com.salonplatform.platform.dto.RecordTransferRequest;
+import com.salonplatform.platform.dto.SalonDetail;
+import com.salonplatform.platform.dto.StartSubscriptionRequest;
+import com.salonplatform.platform.dto.SubscriptionView;
 import com.salonplatform.platform.service.InvoiceBilling;
 import com.salonplatform.platform.service.Paging;
 import com.salonplatform.platform.service.ProvisioningReceipts;
-import com.salonplatform.platform.service.SalonDirectory;
 import com.salonplatform.platform.service.SubscriptionBilling;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
@@ -44,66 +51,8 @@ class OperatorBillingController {
         this.invoices = invoices;
     }
 
-    @Schema(
-            additionalProperties = Schema.AdditionalPropertiesValue.FALSE,
-            requiredProperties = {"monthlyAmount", "paymentMethod"})
-    record StartSubscriptionRequest(
-            @Schema(minimum = "0", maximum = "100000000") Long monthlyAmount,
-
-            @Schema(allowableValues = {"card", "bank_transfer"})
-            String paymentMethod,
-
-            @Schema(
-                    description = "Required, and only allowed, when the salon has no currency of its own",
-                    minLength = 3,
-                    maxLength = 3)
-            String currency) {
-        @JsonAnySetter
-        void unknown(String field, Object ignored) {
-            throw OperatorRequests.unexpected(field);
-        }
-    }
-
-    @Schema(
-            additionalProperties = Schema.AdditionalPropertiesValue.FALSE,
-            requiredProperties = {"version"})
-    record ChangeSubscriptionRequest(
-            @Schema(minimum = "0") Long version,
-            @Schema(minimum = "0", maximum = "100000000") Long monthlyAmount,
-
-            @Schema(allowableValues = {"card", "bank_transfer"})
-            String paymentMethod) {
-        @JsonAnySetter
-        void unknown(String field, Object ignored) {
-            throw OperatorRequests.unexpected(field);
-        }
-    }
-
-    @Schema(
-            additionalProperties = Schema.AdditionalPropertiesValue.FALSE,
-            requiredProperties = {"version", "planId"})
-    record MovePlanRequest(@Schema(minimum = "0") Long version, java.util.UUID planId) {
-        @JsonAnySetter
-        void unknown(String field, Object ignored) {
-            throw OperatorRequests.unexpected(field);
-        }
-    }
-
-    @Schema(
-            additionalProperties = Schema.AdditionalPropertiesValue.FALSE,
-            requiredProperties = {"reference", "amount", "receivedOn"})
-    record RecordTransferRequest(
-            @Schema(maxLength = 120) String reference,
-            @Schema(minimum = "0", maximum = "100000000") Long amount,
-            @Schema(format = "date") String receivedOn) {
-        @JsonAnySetter
-        void unknown(String field, Object ignored) {
-            throw OperatorRequests.unexpected(field);
-        }
-    }
-
     @GetMapping("/salons/{id}/subscription")
-    ResponseEntity<SubscriptionBilling.SubscriptionView> getSubscription(@PathVariable String id) {
+    ResponseEntity<SubscriptionView> getSubscription(@PathVariable String id) {
         return ResponseEntity.ok()
                 .cacheControl(CacheControl.noStore())
                 .body(subscriptions.get(OperatorRequests.id(id)));
@@ -111,7 +60,7 @@ class OperatorBillingController {
 
     @PostMapping(path = "/salons/{id}/subscription", consumes = MediaType.APPLICATION_JSON_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
-    ResponseEntity<SubscriptionBilling.SubscriptionView> startSubscription(
+    ResponseEntity<SubscriptionView> startSubscription(
             @PathVariable String id,
             @Parameter(
                             name = ProvisioningReceipts.HEADER,
@@ -132,7 +81,7 @@ class OperatorBillingController {
     }
 
     @PatchMapping(path = "/salons/{id}/subscription", consumes = MediaType.APPLICATION_JSON_VALUE)
-    ResponseEntity<SubscriptionBilling.SubscriptionView> changeSubscription(
+    ResponseEntity<SubscriptionView> changeSubscription(
             @PathVariable String id, @RequestBody ChangeSubscriptionRequest request) {
         return ResponseEntity.ok()
                 .cacheControl(CacheControl.noStore())
@@ -143,7 +92,7 @@ class OperatorBillingController {
     }
 
     @PutMapping(path = "/salons/{id}/plan", consumes = MediaType.APPLICATION_JSON_VALUE)
-    ResponseEntity<SalonDirectory.SalonDetail> movePlan(@PathVariable String id, @RequestBody MovePlanRequest request) {
+    ResponseEntity<SalonDetail> movePlan(@PathVariable String id, @RequestBody MovePlanRequest request) {
         return ResponseEntity.ok()
                 .cacheControl(CacheControl.noStore())
                 .body(subscriptions.movePlan(
@@ -152,7 +101,7 @@ class OperatorBillingController {
     }
 
     @GetMapping("/salons/{id}/invoices")
-    ResponseEntity<InvoiceBilling.InvoicePage> listInvoices(
+    ResponseEntity<InvoicePage> listInvoices(
             @PathVariable String id,
             @Parameter(schema = @Schema(type = "integer", minimum = "0", maximum = "100000", defaultValue = "0"))
                     @RequestParam(required = false)
@@ -166,13 +115,13 @@ class OperatorBillingController {
     }
 
     @GetMapping("/invoices/{id}")
-    ResponseEntity<InvoiceBilling.InvoiceDetail> getInvoice(@PathVariable String id) {
+    ResponseEntity<InvoiceDetail> getInvoice(@PathVariable String id) {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(invoices.get(OperatorRequests.id(id)));
     }
 
     @PostMapping(path = "/invoices/{id}/payments", consumes = MediaType.APPLICATION_JSON_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
-    ResponseEntity<InvoiceBilling.PaymentView> recordTransfer(
+    ResponseEntity<PaymentView> recordTransfer(
             @PathVariable String id,
             @Parameter(
                             name = ProvisioningReceipts.HEADER,

@@ -1,6 +1,7 @@
 package com.salonplatform.platform.controller;
 
 import com.salonplatform.platform.adapter.BillingProviderKey;
+import com.salonplatform.platform.dto.Acknowledged;
 import com.salonplatform.platform.service.ProviderEvents;
 import com.salonplatform.shared.web.NotFoundException;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -39,7 +40,7 @@ class BillingProviderController {
     }
 
     @PostMapping(path = "/provider-events", consumes = MediaType.APPLICATION_JSON_VALUE)
-    ResponseEntity<ProviderEvents.Acknowledged> receive(
+    ResponseEntity<Acknowledged> receive(
             @Parameter(
                             name = BillingProviderKey.HEADER,
                             in = ParameterIn.HEADER,

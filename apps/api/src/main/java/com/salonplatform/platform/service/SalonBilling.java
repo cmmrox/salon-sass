@@ -2,12 +2,19 @@ package com.salonplatform.platform.service;
 
 import com.salonplatform.identity.Principals;
 import com.salonplatform.identity.inprocess.IdentityProvisioning;
+import com.salonplatform.platform.dto.Entitlements;
+import com.salonplatform.platform.dto.Features;
+import com.salonplatform.platform.dto.InvoiceDetail;
+import com.salonplatform.platform.dto.InvoicePage;
+import com.salonplatform.platform.dto.Limits;
+import com.salonplatform.platform.dto.PlanRef;
+import com.salonplatform.platform.dto.SubscriptionState;
+import com.salonplatform.platform.dto.Usage;
 import com.salonplatform.platform.repository.BillingLedger;
 import com.salonplatform.platform.repository.InvoiceStore;
 import com.salonplatform.shared.persistence.PlatformDatabase;
 import com.salonplatform.shared.tenancy.TenantContext;
 import com.salonplatform.shared.web.NotFoundException;
-import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.UUID;
@@ -23,44 +30,6 @@ import org.springframework.stereotype.Service;
 @Service
 public class SalonBilling {
 
-    @Schema(requiredProperties = {"key", "name"})
-    public record PlanRef(String key, String name) {}
-
-    @Schema(requiredProperties = {"staffSeats", "branches", "messageAllowance"})
-    public record Limits(int staffSeats, int branches, int messageAllowance) {}
-
-    @Schema(requiredProperties = {"customDomain", "dedicatedApp"})
-    public record Features(boolean customDomain, boolean dedicatedApp) {}
-
-    @Schema(requiredProperties = {"staffSeats"})
-    public record Usage(long staffSeats) {}
-
-    @Schema(requiredProperties = {"state", "trialEndsAt", "readOnlyAt", "pastDueSince", "notice"})
-    public record SubscriptionState(
-            @Schema(allowableValues = {"trialing", "active", "past_due", "read_only"})
-            String state,
-
-            Instant trialEndsAt,
-
-            @Schema(
-                    types = {"string", "null"},
-                    format = "date-time",
-                    requiredMode = Schema.RequiredMode.REQUIRED)
-            Instant readOnlyAt,
-
-            @Schema(
-                    types = {"string", "null"},
-                    format = "date-time",
-                    requiredMode = Schema.RequiredMode.REQUIRED)
-            Instant pastDueSince,
-
-            @Schema(
-                    types = {"string", "null"},
-                    allowableValues = {"trial_ending", "past_due", "read_only"},
-                    requiredMode = Schema.RequiredMode.REQUIRED,
-                    description = "The workspace banner to show, decided by the API at the time of the request")
-            String notice) {}
-
     /** The trial-ending banner shows from three days before trial end. */
     static final java.time.Duration TRIAL_NOTICE = java.time.Duration.ofDays(3);
 
@@ -72,30 +41,6 @@ public class SalonBilling {
             default -> null;
         };
     }
-
-    @Schema(requiredProperties = {"plan", "limits", "features", "usage", "subscription"})
-    public record Entitlements(
-            @Schema(
-                    types = {"object", "null"},
-                    requiredMode = Schema.RequiredMode.REQUIRED)
-            PlanRef plan,
-
-            @Schema(
-                    types = {"object", "null"},
-                    requiredMode = Schema.RequiredMode.REQUIRED)
-            Limits limits,
-
-            @Schema(
-                    types = {"object", "null"},
-                    requiredMode = Schema.RequiredMode.REQUIRED)
-            Features features,
-
-            Usage usage,
-
-            @Schema(
-                    types = {"object", "null"},
-                    requiredMode = Schema.RequiredMode.REQUIRED)
-            SubscriptionState subscription) {}
 
     private final PlatformDatabase database;
     private final BillingLedger ledger;
@@ -155,13 +100,13 @@ public class SalonBilling {
         });
     }
 
-    public InvoiceBilling.InvoicePage invoices(Paging paging) {
+    public InvoicePage invoices(Paging paging) {
         UUID salonId = TenantContext.require().id();
         principals.require("invoice.read");
         return database.inTransaction(status -> invoices.page(salonId, paging));
     }
 
-    public InvoiceBilling.InvoiceDetail invoice(UUID id) {
+    public InvoiceDetail invoice(UUID id) {
         UUID salonId = TenantContext.require().id();
         principals.require("invoice.read");
         return database.inTransaction(status -> invoiceStore
