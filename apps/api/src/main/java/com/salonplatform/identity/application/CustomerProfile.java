@@ -2,53 +2,52 @@ package com.salonplatform.identity.application;
 
 import com.salonplatform.identity.CustomerDataErased;
 import com.salonplatform.identity.domain.CustomerAccount;
+import com.salonplatform.identity.domain.CustomerChallenge;
 import com.salonplatform.identity.domain.Identifiers;
+import com.salonplatform.identity.infrastructure.CustomerAccountRepository;
+import com.salonplatform.identity.infrastructure.CustomerChallengeRepository;
+import com.salonplatform.identity.infrastructure.CustomerDataErasure;
 import com.salonplatform.identity.infrastructure.IdentityCrypto;
-import com.salonplatform.shared.audit.*;
+import com.salonplatform.shared.audit.AuditAction;
+import com.salonplatform.shared.audit.AuditTrail;
 import com.salonplatform.shared.outbox.Outbox;
 import com.salonplatform.shared.tenancy.TenantContext;
 import com.salonplatform.shared.time.SalonTime;
-import com.salonplatform.shared.web.*;
-import jakarta.persistence.*;
-import java.time.*;
-import java.util.*;
+import com.salonplatform.shared.web.ApplicationProblemException;
+import com.salonplatform.shared.web.ErrorCode;
+import com.salonplatform.shared.web.FieldProblem;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.json.JsonMapper;
 
 /** Own profile and data rights; all privacy effects share the identity security transaction. */
 @Service
+@RequiredArgsConstructor
 public class CustomerProfile {
-    @PersistenceContext
-    private EntityManager em;
 
     private final IdentityWork work;
     private final SessionAccess sessions;
+    private final CustomerAccountRepository customers;
+    private final CustomerChallengeRepository challenges;
+    private final CustomerDataErasure erasure;
     private final IdentityCrypto crypto;
     private final JsonMapper json;
     private final Clock clock;
     private final AuditTrail audit;
     private final Outbox outbox;
     private final ApplicationEventPublisher events;
-
-    public CustomerProfile(
-            IdentityWork work,
-            SessionAccess sessions,
-            IdentityCrypto crypto,
-            JsonMapper json,
-            Clock clock,
-            AuditTrail audit,
-            Outbox outbox,
-            ApplicationEventPublisher events) {
-        this.work = work;
-        this.sessions = sessions;
-        this.crypto = crypto;
-        this.json = json;
-        this.clock = clock;
-        this.audit = audit;
-        this.outbox = outbox;
-        this.events = events;
-    }
 
     @io.swagger.v3.oas.annotations.media.Schema(requiredProperties = {"sms", "whatsapp", "email"})
     public record Preferences(boolean sms, boolean whatsapp, boolean email) {}
@@ -84,7 +83,7 @@ public class CustomerProfile {
             boolean marketingConsent) {}
 
     @io.swagger.v3.oas.annotations.media.Schema(requiredProperties = {"generatedAt", "profile", "devices"})
-    public record Export(Instant generatedAt, Profile profile, List<StaffAccess.SessionView> devices) {}
+    public record Export(Instant generatedAt, Profile profile, List<SessionView> devices) {}
 
     public record Change(
             long version,
@@ -102,60 +101,79 @@ public class CustomerProfile {
     public Profile update(Change change) {
         return work.run(() -> {
             SessionAccess.Auth auth = sessions.customerAuth();
-            CustomerAccount a = auth.customer();
+            CustomerAccount account = auth.customer();
             String name = change.name() == null ? null : change.name().trim();
-            if (name == null || name.isBlank() || name.codePointCount(0, name.length()) > 120)
-                throw field("name", "must contain 1 to 120 characters");
+            if (name == null || name.isBlank() || name.codePointCount(0, name.length()) > 120) {
+                throw IdentityProblems.invalidField("name", "must contain 1 to 120 characters");
+            }
             String email;
             try {
                 email = Identifiers.email(change.email());
             } catch (IllegalArgumentException ex) {
-                throw field("email", "must be a valid email address");
+                throw IdentityProblems.invalidField("email", "must be a valid email address");
             }
             if (change.birthday() != null
                     && change.birthday()
                             .isAfter(SalonTime.toLocal(
                                             clock.instant(),
                                             TenantContext.require().timeZone())
-                                    .toLocalDate())) throw field("birthday", "must not be in the future");
-            if (!Set.of("en", "si", "ta").contains(change.preferredLanguage()))
-                throw field("preferredLanguage", "must be en, si or ta");
-            if (a.version != change.version()) throw new ApplicationProblemException(409, ErrorCode.CONFLICT);
+                                    .toLocalDate())) {
+                throw IdentityProblems.invalidField("birthday", "must not be in the future");
+            }
+            if (!Set.of("en", "si", "ta").contains(change.preferredLanguage())) {
+                throw IdentityProblems.invalidField("preferredLanguage", "must be en, si or ta");
+            }
+            if (account.getVersion() != change.version()) {
+                throw IdentityProblems.conflict();
+            }
             List<String> changed = new ArrayList<>();
-            if (!Objects.equals(a.name, name)) changed.add("name");
-            if (!Objects.equals(a.email, email)) changed.add("email");
-            if (!Objects.equals(a.birthday, change.birthday())) changed.add("birthday");
-            if (!a.preferredLanguage.equals(change.preferredLanguage())) changed.add("preferredLanguage");
-            Preferences before = preferences(a);
-            if (!before.equals(change.preferences())) changed.add("notificationPreferences");
-            if (a.marketingConsent != change.marketingConsent()) changed.add("marketingConsent");
-            long previous = a.version;
-            a.name = name;
-            a.email = email;
-            a.birthday = change.birthday();
-            a.preferredLanguage = change.preferredLanguage();
-            a.notifySms = change.preferences().sms();
-            a.notifyWhatsApp = change.preferences().whatsapp();
-            a.notifyEmail = change.preferences().email();
-            a.marketingConsent = change.marketingConsent();
-            a.updatedAt = clock.instant();
-            em.flush();
+            if (!Objects.equals(account.getName(), name)) {
+                changed.add("name");
+            }
+            if (!Objects.equals(account.getEmail(), email)) {
+                changed.add("email");
+            }
+            if (!Objects.equals(account.getBirthday(), change.birthday())) {
+                changed.add("birthday");
+            }
+            if (!account.getPreferredLanguage().equals(change.preferredLanguage())) {
+                changed.add("preferredLanguage");
+            }
+            if (!preferences(account).equals(change.preferences())) {
+                changed.add("notificationPreferences");
+            }
+            if (account.isMarketingConsent() != change.marketingConsent()) {
+                changed.add("marketingConsent");
+            }
+            long previous = account.getVersion();
+            account.updateProfile(
+                    new CustomerAccount.Profile(
+                            name,
+                            email,
+                            change.birthday(),
+                            change.preferredLanguage(),
+                            change.preferences().sms(),
+                            change.preferences().whatsapp(),
+                            change.preferences().email(),
+                            change.marketingConsent()),
+                    clock.instant());
+            customers.flush();
             audit.record(new AuditAction(
                     auth.actor(),
                     "identity.profile_updated",
                     "customer",
-                    a.id.toString(),
+                    account.getId().toString(),
                     null,
                     Map.of("version", previous),
-                    Map.of("version", a.version, "changedFields", changed)));
-            return view(a);
+                    Map.of("version", account.getVersion(), "changedFields", changed)));
+            return view(account);
         });
     }
 
     public Export export() {
         return work.run(() -> {
             SessionAccess.Auth auth = sessions.customerAuth();
-            List<StaffAccess.SessionView> devices = new ArrayList<>();
+            List<SessionView> devices = new ArrayList<>();
             int page = 0;
             while (true) {
                 var part = sessions.sessions(page++, 100);
@@ -177,32 +195,29 @@ public class CustomerProfile {
     public void delete(boolean confirm) {
         work.run(() -> {
             SessionAccess.Auth auth = sessions.customerAuth();
-            if (!confirm)
+            if (!confirm) {
                 throw new ApplicationProblemException(
                         400, ErrorCode.CONFIRMATION_REQUIRED, List.of(new FieldProblem("confirm", "must be true")));
-            CustomerAccount a = auth.customer();
-            String numberHash = crypto.hash("customer-number", a.mobile);
+            }
+            CustomerAccount account = auth.customer();
+            String numberHash = crypto.hash("customer-number", account.getMobile());
             Set<UUID> erased = new HashSet<>(outbox.eraseMatching(
                     Set.of("sms", "whatsapp"), payload -> matches(payload, numberHash), clock.instant()));
-            erased.addAll(
-                    em.createQuery("select c.id from CustomerChallenge c where" + " c.numberHash=:number", UUID.class)
-                            .setParameter("number", numberHash)
-                            .getResultList());
-            em.createQuery("delete from CustomerChallenge c where c.numberHash=:number")
-                    .setParameter("number", numberHash)
-                    .executeUpdate();
-            em.createQuery("delete from RefreshHistory h where h.sessionId in (select s.id"
-                            + " from AccessSession s where s.customerAccountId=:owner"
-                            + " and s.kind='customer')")
-                    .setParameter("owner", a.id)
-                    .executeUpdate();
-            em.createQuery("delete from AccessSession s where s.customerAccountId=:owner" + " and s.kind='customer'")
-                    .setParameter("owner", a.id)
-                    .executeUpdate();
+            challenges.findByNumberHash(numberHash).stream()
+                    .map(CustomerChallenge::getId)
+                    .forEach(erased::add);
+            erasure.eraseChallengesOfNumber(numberHash);
+            erasure.eraseSessionsOf(account.getId());
             audit.record(new AuditAction(
-                    auth.actor(), "identity.account_deleted", "customer", a.id.toString(), null, null, null));
-            em.remove(a);
-            em.flush();
+                    auth.actor(),
+                    "identity.account_deleted",
+                    "customer",
+                    account.getId().toString(),
+                    null,
+                    null,
+                    null));
+            customers.delete(account);
+            customers.flush();
             events.publishEvent(new CustomerDataErased(TenantContext.require().id(), erased));
             return null;
         });
@@ -228,24 +243,20 @@ public class CustomerProfile {
         }
     }
 
-    private static ApplicationProblemException field(String field, String detail) {
-        return new ApplicationProblemException(400, ErrorCode.BAD_REQUEST, List.of(new FieldProblem(field, detail)));
+    private static Preferences preferences(CustomerAccount account) {
+        return new Preferences(account.isNotifySms(), account.isNotifyWhatsApp(), account.isNotifyEmail());
     }
 
-    private static Preferences preferences(CustomerAccount a) {
-        return new Preferences(a.notifySms, a.notifyWhatsApp, a.notifyEmail);
-    }
-
-    private static Profile view(CustomerAccount a) {
+    private static Profile view(CustomerAccount account) {
         return new Profile(
-                a.id,
-                a.version,
-                a.name,
-                a.mobile,
-                a.email,
-                a.birthday,
-                a.preferredLanguage,
-                preferences(a),
-                a.marketingConsent);
+                account.getId(),
+                account.getVersion(),
+                account.getName(),
+                account.getMobile(),
+                account.getEmail(),
+                account.getBirthday(),
+                account.getPreferredLanguage(),
+                preferences(account),
+                account.isMarketingConsent());
     }
 }

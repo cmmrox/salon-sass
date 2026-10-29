@@ -74,19 +74,17 @@ class StaffAccessIntegrationTest extends IntegrationTest {
         return TenantContext.callAs(
                 salons.asCurrent(salon),
                 () -> new TransactionTemplate(manager).execute(status -> {
-                    StaffAccount a = new StaffAccount();
-                    a.id = UUID.randomUUID();
-                    a.email = role.name().toLowerCase(Locale.ROOT) + "@example.test";
-                    a.mobile = "+9477" + String.format("%07d", role.ordinal() + 1);
-                    a.role = role.name();
-                    a.active = true;
-                    a.createdAt = clock.instant();
-                    a.updatedAt = a.createdAt;
-                    a.passwordHash = crypto.encodePassword(password);
+                    StaffAccount a = StaffAccount.create(
+                            role.name().toLowerCase(Locale.ROOT) + "@example.test",
+                            "+9477" + String.format("%07d", role.ordinal() + 1),
+                            crypto.encodePassword(password),
+                            role,
+                            false,
+                            clock.instant());
                     if (mfa) {
                         String secret = crypto.newTotpSecret();
-                        totpSecrets.put(a.id, secret);
-                        a.mfaSecret = crypto.encrypt("totp:" + salon.id() + ":" + a.id, secret);
+                        totpSecrets.put(a.getId(), secret);
+                        a.enrollMfa(crypto.encrypt("totp:" + salon.id() + ":" + a.getId(), secret), a.getCreatedAt());
                     }
                     em.persist(a);
                     return a;
@@ -134,7 +132,7 @@ class StaffAccessIntegrationTest extends IntegrationTest {
         Map<String, Object> result = body(sign);
         if (result.get("credentials") != null) return (Map<String, Object>) result.get("credentials");
         String code = crypto.totpCode(
-                totpSecrets.get(accounts.get(role).id), clock.instant().getEpochSecond() / 30);
+                totpSecrets.get(accounts.get(role).getId()), clock.instant().getEpochSecond() / 30);
         Http.Exchange verify = call(
                 alpha,
                 "POST",
@@ -196,7 +194,9 @@ class StaffAccessIntegrationTest extends IntegrationTest {
                                     "phone"),
                             null),
                     401);
-        owner.update("UPDATE identity_staff SET active=false WHERE id=?", accounts.get(StaffRole.MANAGER).id);
+        owner.update(
+                "UPDATE identity_staff SET active=false WHERE id=?",
+                accounts.get(StaffRole.MANAGER).getId());
         status(signIn(alpha, StaffRole.MANAGER), 401);
         assertThat(owner.queryForObject(
                         "SELECT count(*) FROM identity_rate_bucket WHERE tenant_id=?", Long.class, alpha.id()))
@@ -240,7 +240,9 @@ class StaffAccessIntegrationTest extends IntegrationTest {
 
     @Test
     void ownerEnrollmentIsLimitedAndNeverGrantsAProtectedSessionBeforeTotp() {
-        owner.update("UPDATE identity_staff SET mfa_secret=null WHERE id=?", accounts.get(StaffRole.OWNER).id);
+        owner.update(
+                "UPDATE identity_staff SET mfa_secret=null WHERE id=?",
+                accounts.get(StaffRole.OWNER).getId());
         Map<String, Object> c = body(signIn(alpha, StaffRole.OWNER));
         assertThat(c.get("state")).isEqualTo("enroll_mfa");
         assertThat(c.get("credentials")).isNull();
@@ -259,14 +261,16 @@ class StaffAccessIntegrationTest extends IntegrationTest {
         status(call(alpha, "POST", "/staff/mfa/verify", verify, null), 401);
         status(call(alpha, "GET", "/me", null, (String) body(success).get("accessToken")), 200);
         String stored = owner.queryForObject(
-                "SELECT mfa_secret FROM identity_staff WHERE id=?", String.class, accounts.get(StaffRole.OWNER).id);
+                "SELECT mfa_secret FROM identity_staff WHERE id=?",
+                String.class,
+                accounts.get(StaffRole.OWNER).getId());
         assertThat(stored).doesNotContain(secret);
     }
 
     @Test
     void nonOwnerCanEnrollVoluntarilyAndOldSessionStopsWorking() {
         StaffAccount a = accounts.get(StaffRole.RECEPTIONIST);
-        owner.update("UPDATE identity_staff SET mfa_secret=null WHERE id=?", a.id);
+        owner.update("UPDATE identity_staff SET mfa_secret=null WHERE id=?", a.getId());
         Map<String, Object> original = tokens(StaffRole.RECEPTIONIST);
         String bearer = (String) original.get("accessToken");
         Map<String, Object> challenge = body(call(alpha, "POST", "/staff/mfa/challenges", null, bearer));
@@ -304,7 +308,7 @@ class StaffAccessIntegrationTest extends IntegrationTest {
         Map<String, Object> session = tokens(StaffRole.RECEPTIONIST);
         String customer = crypto.access(
                 alpha.id(),
-                accounts.get(StaffRole.RECEPTIONIST).id,
+                accounts.get(StaffRole.RECEPTIONIST).getId(),
                 UUID.fromString((String) session.get("sessionId")),
                 "customer",
                 1);
@@ -331,7 +335,7 @@ class StaffAccessIntegrationTest extends IntegrationTest {
                             null),
                     401);
         String code = crypto.totpCode(
-                totpSecrets.get(accounts.get(StaffRole.OWNER).id),
+                totpSecrets.get(accounts.get(StaffRole.OWNER).getId()),
                 clock.instant().getEpochSecond() / 30);
         status(
                 call(
@@ -358,7 +362,7 @@ class StaffAccessIntegrationTest extends IntegrationTest {
     void simultaneousTotpUseProducesOneSession() throws Exception {
         Map<String, Object> c = body(signIn(alpha, StaffRole.OWNER));
         String code = crypto.totpCode(
-                totpSecrets.get(accounts.get(StaffRole.OWNER).id),
+                totpSecrets.get(accounts.get(StaffRole.OWNER).getId()),
                 clock.instant().getEpochSecond() / 30);
         Object request =
                 Map.of("challengeId", c.get("challengeId"), "challengeToken", c.get("challengeToken"), "code", code);
@@ -412,7 +416,7 @@ class StaffAccessIntegrationTest extends IntegrationTest {
             JwtClaimsSet c = JwtClaimsSet.builder()
                     .issuer(mutation.equals("issuer") ? "wrong" : "salon-platform")
                     .audience(List.of(mutation.equals("audience") ? "wrong" : "salon-api"))
-                    .subject(accounts.get(StaffRole.MANAGER).id.toString())
+                    .subject(accounts.get(StaffRole.MANAGER).getId().toString())
                     .issuedAt(clock.instant().plusSeconds(mutation.equals("future") ? 60 : -600))
                     .expiresAt(clock.instant().plusSeconds(mutation.equals("expiry") ? -1 : 300))
                     .claim("tenant", alpha.id().toString())
@@ -510,18 +514,28 @@ class StaffAccessIntegrationTest extends IntegrationTest {
                 manager = token(StaffRole.MANAGER);
         StaffAccount pro = accounts.get(StaffRole.PROFESSIONAL);
         status(
-                call(alpha, "PATCH", "/staff/" + pro.id, Map.of("version", 0, "professionalGrant", true), ownerToken),
+                call(
+                        alpha,
+                        "PATCH",
+                        "/staff/" + pro.getId(),
+                        Map.of("version", 0, "professionalGrant", true),
+                        ownerToken),
                 200);
         assertThat(body(call(alpha, "GET", "/me", null, professional)).get("scope"))
                 .isEqualTo("salon");
         status(
-                call(alpha, "PATCH", "/staff/" + pro.id, Map.of("version", 0, "professionalGrant", false), ownerToken),
+                call(
+                        alpha,
+                        "PATCH",
+                        "/staff/" + pro.getId(),
+                        Map.of("version", 0, "professionalGrant", false),
+                        ownerToken),
                 409);
         status(
                 call(
                         alpha,
                         "PATCH",
-                        "/staff/" + accounts.get(StaffRole.MANAGER).id,
+                        "/staff/" + accounts.get(StaffRole.MANAGER).getId(),
                         Map.of("version", 0, "role", "RECEPTIONIST"),
                         ownerToken),
                 200);
@@ -542,7 +556,7 @@ class StaffAccessIntegrationTest extends IntegrationTest {
                         Map.of("email", "bad-email", "password", password, "role", "ACCOUNTANT"),
                         ownerToken),
                 400);
-        status(call(alpha, "DELETE", "/staff/" + pro.id, null, ownerToken), 204);
+        status(call(alpha, "DELETE", "/staff/" + pro.getId(), null, ownerToken), 204);
         status(call(alpha, "GET", "/me", null, professional), 401);
         UUID foreign = owner.queryForObject(
                 "SELECT id FROM identity_staff WHERE tenant_id=? AND role='OWNER'", UUID.class, beta.id());
@@ -625,16 +639,16 @@ class StaffAccessIntegrationTest extends IntegrationTest {
         String o = token(StaffRole.OWNER);
         Map<String, Object> manager = tokens(StaffRole.MANAGER);
         StaffAccount m = accounts.get(StaffRole.MANAGER);
-        status(call(alpha, "DELETE", "/staff/" + accounts.get(StaffRole.OWNER).id, null, o), 409);
+        status(call(alpha, "DELETE", "/staff/" + accounts.get(StaffRole.OWNER).getId(), null, o), 409);
         status(
                 call(
                         alpha,
                         "PATCH",
-                        "/staff/" + accounts.get(StaffRole.OWNER).id,
+                        "/staff/" + accounts.get(StaffRole.OWNER).getId(),
                         Map.of("version", 0, "role", "MANAGER"),
                         o),
                 409);
-        status(call(alpha, "PATCH", "/staff/" + m.id, Map.of("version", 0, "role", "OWNER"), o), 200);
+        status(call(alpha, "PATCH", "/staff/" + m.getId(), Map.of("version", 0, "role", "OWNER"), o), 200);
         status(call(alpha, "GET", "/me", null, (String) manager.get("accessToken")), 401);
         assertThat(body(signIn(alpha, StaffRole.MANAGER)).get("state")).isEqualTo("enroll_mfa");
     }
@@ -644,22 +658,23 @@ class StaffAccessIntegrationTest extends IntegrationTest {
         StaffAccount second = accounts.get(StaffRole.MANAGER);
         owner.update(
                 "UPDATE identity_staff SET role='OWNER',mfa_secret=? WHERE id=?",
-                crypto.encrypt("totp:" + alpha.id() + ":" + second.id, crypto.newTotpSecret()),
-                second.id);
+                crypto.encrypt("totp:" + alpha.id() + ":" + second.getId(), crypto.newTotpSecret()),
+                second.getId());
         String o = token(StaffRole.OWNER);
         ExecutorService pool = Executors.newVirtualThreadPerTaskExecutor();
         CountDownLatch start = new CountDownLatch(1);
         try {
             Future<Integer> a = pool.submit(() -> {
                 start.await();
-                return call(alpha, "DELETE", "/staff/" + second.id, null, o).status();
+                return call(alpha, "DELETE", "/staff/" + second.getId(), null, o)
+                        .status();
             });
             Future<Integer> b = pool.submit(() -> {
                 start.await();
                 return call(
                                 alpha,
                                 "PATCH",
-                                "/staff/" + accounts.get(StaffRole.OWNER).id,
+                                "/staff/" + accounts.get(StaffRole.OWNER).getId(),
                                 Map.of("version", 0, "role", "MANAGER"),
                                 o)
                         .status();
@@ -711,12 +726,12 @@ class StaffAccessIntegrationTest extends IntegrationTest {
     void auditsAreImmutablePaginatedIsolatedAndContainNonsecretAccessChanges() {
         String o = token(StaffRole.OWNER);
         StaffAccount pro = accounts.get(StaffRole.PROFESSIONAL);
-        status(call(alpha, "PATCH", "/staff/" + pro.id, Map.of("version", 0, "professionalGrant", true), o), 200);
-        Http.Exchange audits = call(alpha, "GET", "/audit?subjectId=" + pro.id, null, o);
+        status(call(alpha, "PATCH", "/staff/" + pro.getId(), Map.of("version", 0, "professionalGrant", true), o), 200);
+        Http.Exchange audits = call(alpha, "GET", "/audit?subjectId=" + pro.getId(), null, o);
         status(audits, 200);
         assertThat(audits.body())
                 .contains("professionalGrant", "false", "true")
-                .doesNotContain(password, pro.mobile, pro.email, "passwordHash", "mfaSecret");
+                .doesNotContain(password, pro.getMobile(), pro.getEmail(), "passwordHash", "mfaSecret");
         assertThat(((List<?>) body(call(alpha, "GET", "/audit?subjectId=" + UUID.randomUUID(), null, o))
                         .get("items")))
                 .isEmpty();

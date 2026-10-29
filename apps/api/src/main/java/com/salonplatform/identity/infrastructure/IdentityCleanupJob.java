@@ -1,26 +1,30 @@
 package com.salonplatform.identity.infrastructure;
 
+import com.salonplatform.identity.application.CustomerAccess;
 import com.salonplatform.shared.jobs.TenantJob;
 import com.salonplatform.shared.tenancy.CurrentTenant;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
 import java.time.Duration;
 import java.time.Instant;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 /**
- * Removes expired short-term security state, through the scheduler's isolated tenant transaction.
+ * Removes expired short-term security state every fifteen minutes, through the scheduler's isolated tenant
+ * transaction (docs/architecture/identity-and-access.md): expired customer codes and code rate buckets, expired
+ * second-step challenges, authenticator steps outside the accepted tolerance and staff rate buckets.
  */
 @Component
+@RequiredArgsConstructor
 class IdentityCleanupJob implements TenantJob {
-    @PersistenceContext
-    private EntityManager em;
 
-    private final com.salonplatform.identity.application.CustomerAccess customers;
+    /** A used step stays while a code of it, or of the step before, could still be accepted. */
+    private static final long TOTP_STEP_SECONDS = 30;
 
-    IdentityCleanupJob(com.salonplatform.identity.application.CustomerAccess customers) {
-        this.customers = customers;
-    }
+    private static final Duration STAFF_RATE_WINDOW = Duration.ofMinutes(15);
+
+    private final CustomerAccess customers;
+
+    private final ExpiredSecurityState expired;
 
     @Override
     public String name() {
@@ -35,14 +39,8 @@ class IdentityCleanupJob implements TenantJob {
     @Override
     public void runFor(CurrentTenant salon, Instant now) {
         customers.cleanup(now);
-        em.createQuery("delete from MfaChallenge c where c.expiresAt<=:now")
-                .setParameter("now", now)
-                .executeUpdate();
-        em.createQuery("delete from MfaStep s where s.step<:step")
-                .setParameter("step", now.getEpochSecond() / 30 - 1)
-                .executeUpdate();
-        em.createQuery("delete from RateBucket b where b.windowStart<=:before and b.dimension like" + " 'staff-%'")
-                .setParameter("before", now.minusSeconds(900))
-                .executeUpdate();
+        expired.removeMfaChallengesExpiredBy(now);
+        expired.removeMfaStepsBefore(now.getEpochSecond() / TOTP_STEP_SECONDS - 1);
+        expired.removeStaffRateBucketsStartedBy(now.minus(STAFF_RATE_WINDOW));
     }
 }

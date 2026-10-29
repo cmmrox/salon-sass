@@ -154,18 +154,12 @@ final class BillingTestSupport {
         return TenantContext.callAs(
                 salons.asCurrent(salon),
                 () -> new TransactionTemplate(manager).execute(status -> {
-                    StaffAccount a = new StaffAccount();
-                    a.id = UUID.randomUUID();
-                    a.email = email;
-                    a.role = role.name();
-                    a.active = true;
-                    a.createdAt = clock.instant();
-                    a.updatedAt = a.createdAt;
-                    a.passwordHash = identity.encodePassword(password);
+                    StaffAccount a = StaffAccount.create(
+                            email, null, identity.encodePassword(password), role, false, clock.instant());
                     if (role == StaffRole.OWNER) {
                         String secret = identity.newTotpSecret();
-                        totp.put(a.id, secret);
-                        a.mfaSecret = identity.encrypt("totp:" + salon.id() + ":" + a.id, secret);
+                        totp.put(a.getId(), secret);
+                        a.enrollMfa(identity.encrypt("totp:" + salon.id() + ":" + a.getId(), secret), a.getCreatedAt());
                     }
                     em.persist(a);
                     return a;
@@ -196,7 +190,7 @@ final class BillingTestSupport {
                 salon,
                 "POST",
                 "/staff/sign-in",
-                Map.of("identifier", account.email, "password", password, "deviceLabel", "JUnit billing"),
+                Map.of("identifier", account.getEmail(), "password", password, "deviceLabel", "JUnit billing"),
                 null);
         status(sign, 200);
         Map<String, Object> result = body(sign);
@@ -204,7 +198,7 @@ final class BillingTestSupport {
             return (Map<String, Object>) result.get("credentials");
         }
         long current = clock.instant().getEpochSecond() / 30;
-        java.util.Set<Long> steps = used.computeIfAbsent(account.id, id -> new java.util.HashSet<>());
+        java.util.Set<Long> steps = used.computeIfAbsent(account.getId(), id -> new java.util.HashSet<>());
         long step = java.util.stream.LongStream.of(current, current - 1, current + 1)
                 .filter(steps::add)
                 .findFirst()
@@ -219,7 +213,7 @@ final class BillingTestSupport {
                         "challengeToken",
                         result.get("challengeToken"),
                         "code",
-                        identity.totpCode(totp.get(account.id), step)),
+                        identity.totpCode(totp.get(account.getId()), step)),
                 null);
         status(verify, 200);
         return body(verify);

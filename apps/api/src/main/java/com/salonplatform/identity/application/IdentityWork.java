@@ -1,31 +1,31 @@
 package com.salonplatform.identity.application;
 
-import com.salonplatform.identity.domain.IdentityGuard;
+import com.salonplatform.identity.infrastructure.IdentityLock;
 import com.salonplatform.shared.tenancy.TenantContext;
 import com.salonplatform.shared.web.ApplicationProblemException;
-import jakarta.persistence.*;
 import java.time.Clock;
-import java.time.Instant;
-import java.util.UUID;
 import java.util.function.Supplier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * Shared transaction and cross-instance security lock. Failed auth state commits before the HTTP
- * error.
+ * One tenant transaction per identity use case, holding the salon's identity lock. A refused sign-in, code or
+ * rate limit (401 or 429) commits its counters, consumption and audit before the error is answered, so that a
+ * failed HTTP outcome can never undo those controls; every other failure rolls the whole transaction back.
  */
 @Service
 public class IdentityWork {
-    @PersistenceContext
-    private EntityManager em;
 
     private final TransactionTemplate transactions;
+
+    private final IdentityLock lock;
+
     private final Clock clock;
 
-    public IdentityWork(PlatformTransactionManager manager, Clock clock) {
+    public IdentityWork(PlatformTransactionManager manager, IdentityLock lock, Clock clock) {
         this.transactions = new TransactionTemplate(manager);
+        this.lock = lock;
         this.clock = clock;
     }
 
@@ -34,29 +34,19 @@ public class IdentityWork {
     public <T> T run(Supplier<T> useCase) {
         TenantContext.require();
         Outcome<T> result = transactions.execute(status -> {
-            lockSalon();
+            lock.lockCurrentSalon(clock.instant());
             try {
                 return new Outcome<>(useCase.get(), null);
             } catch (ApplicationProblemException ex) {
-                if (ex.status() != 401 && ex.status() != 429) throw ex;
+                if (ex.status() != 401 && ex.status() != 429) {
+                    throw ex;
+                }
                 return new Outcome<>(null, ex);
             }
         });
-        if (result.failure() != null) throw result.failure();
+        if (result.failure() != null) {
+            throw result.failure();
+        }
         return result.value();
-    }
-
-    private void lockSalon() {
-        UUID tenant = TenantContext.require().id();
-        Instant at = clock.instant();
-        em.createNativeQuery("INSERT INTO identity_guard(id,tenant_id,created_at,updated_at)"
-                        + " VALUES(:id,:tenant,:at,:at) ON CONFLICT(tenant_id) DO NOTHING")
-                .setParameter("id", tenant)
-                .setParameter("tenant", tenant)
-                .setParameter("at", at)
-                .executeUpdate();
-        em.createQuery("select g from IdentityGuard g", IdentityGuard.class)
-                .setLockMode(LockModeType.PESSIMISTIC_WRITE)
-                .getSingleResult();
     }
 }
