@@ -216,9 +216,12 @@ guard. No `JdbcTemplate`, no jOOQ, no Spring Data JDBC, and no second entity man
 
 ## Code generation
 
-Lombok and MapStruct remove repetitive code; they never hide a rule (CR-021).
+Lombok and MapStruct remove repetitive code; they never hide a rule (CR-021). Both run as
+annotation processors listed in `annotationProcessorPaths` (Lombok, then `lombok-mapstruct-binding`,
+then MapStruct), and Lombok is not packaged in the jar.
 
-**Lombok** is allowed only as follows, and `apps/api/lombok.config` refuses the rest at compile time:
+**Lombok** is allowed only as follows, and `apps/api/lombok.config` refuses every other Lombok
+feature at compile time (including `@AllArgsConstructor` everywhere):
 
 | Allowed | Where |
 | --- | --- |
@@ -241,9 +244,13 @@ nothing to them.
 **MapStruct** mappers live in `web/` and map one way: from an entity or a provided record to a
 response record. No mapper writes to an entity (no request-to-entity mapping, no `@MappingTarget`
 entity), no mapping expression holds a business rule, and no mapper maps another module's types
-other than its provided records. Unmapped target properties and lossy conversions fail the build
-(the shared `@MapperConfig` in `shared`, plus compiler arguments). A mapping that is shorter by hand
-than as a mapper stays by hand.
+other than its provided records. Every mapper names the shared configuration,
+`@Mapper(config = ResponseMapperConfig.class)` (`shared.mapping`), which makes unmapped target
+properties and lossy conversions errors and the mapper a Spring bean with constructor injection;
+an architecture test refuses a mapper that does not. The policies are not set as compiler
+arguments: on JDK 25 javac warns about processor options that no processor consumed, which
+`-Werror` turns into a failure in every compilation without a mapper (decision 056). A mapping that
+is shorter by hand than as a mapper stays by hand.
 
 ## Clean code
 
@@ -441,11 +448,13 @@ test uses them is in `docs/qa/test-plan.md`.
 | Unit | Domain rules: availability, deposit and refund calculation, policy windows, state changes | Plain JUnit, no Spring. Use a fixed clock |
 | Integration | Use cases and endpoints against real PostgreSQL in a container | Includes the two-tenant isolation cases and the wrong-role cases |
 | Concurrency | Anything that must happen once: holds, bookings, payment notifications | Fire simultaneous requests and assert exactly one succeeds |
-| Architecture | Module boundaries (Spring Modulith `verify()`), provided-interface rules, table and path ownership, no entity setter for id, tenant or version | Fails the build. Each rule has a fixture proving it fails on a violation |
+| Architecture | Module boundaries (Spring Modulith `verify()`), provided-interface rules, table and path ownership, no entity setter for id, tenant or version, mappers on the shared configuration | Fails the build. Each rule has a fixture proving it fails on a violation: package fixtures under `src/test/java/<base>/architecture/fixture/`, and sources that must fail to compile (denied Lombok, unmapped MapStruct targets) under `src/test/compile-fixtures/`, compiled by a test through `javax.tools` |
+| Conventions | Formatting and warnings | `./mvnw verify` runs `spotless:check` and compiles with `-Xlint:all,-processing -Werror` |
 | Contract | The OpenAPI document and generated client are current | Fails the build. `pnpm contracts:check` regenerates the document from the controllers, so it needs the JDK and Docker |
 
 Integration tests are named `*IntegrationTest` and run in the same Maven phase as unit tests. One
-PostgreSQL container serves the whole run.
+PostgreSQL container serves the whole run, with `max_connections` raised to 200 because every cached
+test context holds its own pools.
 
 A test asserts an outcome the spec promises. A test that passes when the feature is removed is not
 a test: when you write one for a bug, watch it fail first.
