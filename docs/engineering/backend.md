@@ -142,10 +142,16 @@ signature:
   names, because a rename breaks the rule that a migration works while the previous version runs.
 - No foreign key crosses modules, except `tenant_id` to the platform's tenant. Another module's row
   is held as its id.
-- Every top-level path segment under `/api/v1` belongs to exactly one module, and every operation is
-  tagged with its module's name in the OpenAPI document. This is what lets the edge send one module's
-  paths to a separate service without a client noticing.
-- A module's settings are under `salon.<module>.*`, and no module reads another module's settings.
+- Every path under `/api/v1` belongs to exactly one module: each module declares its path prefixes
+  in `apps/api/src/main/resources/module-ownership.yaml`, beside its tables, and a path belongs to
+  the module with the longest matching prefix (`/api/v1/salon` is `branding`'s,
+  `/api/v1/salon/invoices` is `platform`'s; decision 058). A new module prefers a top-level segment
+  of its own. Every operation is tagged with its module's name in the OpenAPI document, and the
+  generated client is exported per module (`@salon/api-contracts/<module>`). This is what lets the
+  edge send one module's paths to a separate service without a client noticing.
+- A business module's settings are under `salon.<module>.*`, and no module reads another module's
+  settings. `shared`'s settings keep their names: `salon.platform-domain`, `salon.database`,
+  `salon.outbox`, `salon.jobs`.
 
 ## API conventions
 
