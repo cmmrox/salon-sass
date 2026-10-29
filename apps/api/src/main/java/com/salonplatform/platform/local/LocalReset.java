@@ -1,6 +1,7 @@
 package com.salonplatform.platform.local;
 
 import com.salonplatform.platform.domain.LifecycleTerms;
+import com.salonplatform.platform.dto.LocalResetResult;
 import com.salonplatform.platform.repository.LocalResetStore;
 import com.salonplatform.platform.service.OperatorAccounts;
 import com.salonplatform.platform.service.SalonExports;
@@ -48,8 +49,6 @@ class LocalReset {
             UUID.fromString("b2b2b2b2-0000-4000-8000-000000000002"),
             UUID.fromString("c3c3c3c3-0000-4000-8000-000000000003"));
 
-    record Result(int removedSalons, List<UUID> salonIds, int jobsRescheduled, String clock) {}
-
     private final PlatformDatabase platform;
     private final SalonExports exports;
     private final OperatorAccounts accounts;
@@ -78,7 +77,7 @@ class LocalReset {
         this.jobs = jobs;
     }
 
-    synchronized Result reset() {
+    synchronized LocalResetResult reset() {
         clock.ifAvailable(ResettableClock::reset);
         Instant now = Instant.now();
         List<UUID> removed = new ArrayList<>();
@@ -95,7 +94,7 @@ class LocalReset {
         emails.clearSalons(new HashSet<>(removed));
         activity.clear();
         log.info("Local reset: {} salons removed, {} job occurrences brought back to now", removed.size(), rescheduled);
-        return new Result(removed.size(), removed, rescheduled, "real");
+        return new LocalResetResult(removed.size(), removed, rescheduled, "real");
     }
 
     /**

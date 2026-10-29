@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.salonplatform.identity.adapter.IdentityCrypto;
 import com.salonplatform.platform.adapter.BillingProviderKey;
 import com.salonplatform.platform.adapter.OperatorCrypto;
+import com.salonplatform.platform.dto.BillingJobPass;
 import com.salonplatform.platform.service.BillingFaults;
 import com.salonplatform.platform.service.BillingJob;
 import com.salonplatform.platform.service.OperatorAccounts;
@@ -310,7 +311,7 @@ class SubscriptionBillingIntegrationTest extends IntegrationTest {
 
         long before = lastNumber();
         CLOCK.set(trialEnd);
-        List<Callable<BillingJob.Pass>> runs = new ArrayList<>();
+        List<Callable<BillingJobPass>> runs = new ArrayList<>();
         CountDownLatch start = new CountDownLatch(1);
         for (int i = 0; i < 4; i++) {
             runs.add(() -> {
@@ -319,12 +320,12 @@ class SubscriptionBillingIntegrationTest extends IntegrationTest {
             });
         }
         ExecutorService pool = Executors.newFixedThreadPool(4);
-        List<Future<BillingJob.Pass>> results = new ArrayList<>();
-        for (Callable<BillingJob.Pass> run : runs) {
+        List<Future<BillingJobPass>> results = new ArrayList<>();
+        for (Callable<BillingJobPass> run : runs) {
             results.add(pool.submit(run));
         }
         start.countDown();
-        for (Future<BillingJob.Pass> result : results) {
+        for (Future<BillingJobPass> result : results) {
             result.get();
         }
         pool.shutdown();
@@ -931,7 +932,7 @@ class SubscriptionBillingIntegrationTest extends IntegrationTest {
         CLOCK.advance(Duration.ofDays(14));
         long before = lastNumber();
         ARMED.set(BillingFaults.Point.AFTER_INVOICE_ISSUE);
-        BillingJob.Pass interrupted = job.run(CLOCK.instant());
+        BillingJobPass interrupted = job.run(CLOCK.instant());
         assertThat(interrupted.failed()).isNotEmpty();
         assertThat(invoices(id)).isEmpty();
         assertThat(owner.queryForObject(

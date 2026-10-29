@@ -3,6 +3,9 @@ package com.salonplatform.identity.service;
 import com.salonplatform.identity.adapter.IdentityCrypto;
 import com.salonplatform.identity.domain.SessionKind;
 import com.salonplatform.identity.domain.StaffRole;
+import com.salonplatform.identity.dto.Page;
+import com.salonplatform.identity.dto.SeedAccount;
+import com.salonplatform.identity.dto.StaffView;
 import com.salonplatform.identity.entity.StaffAccount;
 import com.salonplatform.identity.repository.StaffAccountRepository;
 import com.salonplatform.identity.repository.SyntheticIdentityReset;
@@ -44,31 +47,9 @@ public class StaffAccounts {
     private final Clock clock;
     private final AuditTrail audit;
 
-    public record StaffView(
-            UUID id,
-
-            @io.swagger.v3.oas.annotations.media.Schema(
-                    types = {"string", "null"},
-                    requiredMode = io.swagger.v3.oas.annotations.media.Schema.RequiredMode.REQUIRED)
-            String email,
-
-            @io.swagger.v3.oas.annotations.media.Schema(
-                    types = {"string", "null"},
-                    requiredMode = io.swagger.v3.oas.annotations.media.Schema.RequiredMode.REQUIRED)
-            String mobile,
-
-            String role,
-            boolean active,
-            boolean professionalGrant,
-            boolean mfaEnabled,
-            long version) {}
-
     public record StaffInput(String email, String mobile, String password, String role, Boolean professionalGrant) {}
 
     public record StaffChange(long version, String role, Boolean professionalGrant) {}
-
-    public record SeedAccount(
-            String email, String mobile, String password, String role, String totpSecret, Boolean professionalGrant) {}
 
     public StaffView create(StaffInput input) {
         return work.run(() -> {
@@ -81,7 +62,7 @@ public class StaffAccounts {
     }
 
     public Page<StaffView> list(int page, int size) {
-        Page.requireValid(page, size);
+        Pagination.requireValid(page, size);
         return work.run(() -> {
             authority.requireReadable("staff.list");
             org.springframework.data.domain.Page<StaffAccount> rows =

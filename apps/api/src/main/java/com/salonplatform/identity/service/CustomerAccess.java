@@ -3,6 +3,7 @@ package com.salonplatform.identity.service;
 import com.salonplatform.identity.adapter.IdentityCrypto;
 import com.salonplatform.identity.config.CustomerCodeSettings;
 import com.salonplatform.identity.domain.Identifiers;
+import com.salonplatform.identity.dto.Challenge;
 import com.salonplatform.identity.dto.Tokens;
 import com.salonplatform.identity.entity.CustomerAccount;
 import com.salonplatform.identity.entity.CustomerChallenge;
@@ -64,9 +65,6 @@ public class CustomerAccess {
     private final Environment environment;
     private final JsonMapper json;
     private final SecureRandom random = new SecureRandom();
-
-    @io.swagger.v3.oas.annotations.media.Schema(requiredProperties = {"challengeId", "expiresAt"})
-    public record Challenge(UUID challengeId, Instant expiresAt) {}
 
     public record Envelope(UUID challengeId, String encrypted) {}
 

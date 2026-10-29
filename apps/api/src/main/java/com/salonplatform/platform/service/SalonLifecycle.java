@@ -3,6 +3,10 @@ package com.salonplatform.platform.service;
 import com.salonplatform.identity.inprocess.IdentityLifecycle;
 import com.salonplatform.platform.domain.LifecycleTerms;
 import com.salonplatform.platform.domain.OperatorPermission;
+import com.salonplatform.platform.dto.EventActor;
+import com.salonplatform.platform.dto.LifecycleEvent;
+import com.salonplatform.platform.dto.LifecyclePage;
+import com.salonplatform.platform.dto.SalonDetail;
 import com.salonplatform.platform.repository.BillingLedger;
 import com.salonplatform.platform.repository.PlatformAudit;
 import com.salonplatform.platform.repository.SalonExportStore;
@@ -13,7 +17,6 @@ import com.salonplatform.shared.web.ApplicationProblemException;
 import com.salonplatform.shared.web.ErrorCode;
 import com.salonplatform.shared.web.FieldProblem;
 import com.salonplatform.shared.web.NotFoundException;
-import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -43,36 +46,6 @@ public class SalonLifecycle {
     public record ChangeInput(Long version, String reason) {}
 
     public record ClosureInput(Long version, String confirmSlug, String reason) {}
-
-    @Schema(requiredProperties = {"kind", "id", "displayName"})
-    public record EventActor(
-            @Schema(allowableValues = {"operator", "system"})
-            String kind,
-
-            String id,
-
-            @Schema(
-                    types = {"string", "null"},
-                    requiredMode = Schema.RequiredMode.REQUIRED)
-            String displayName) {}
-
-    @Schema(requiredProperties = {"id", "kind", "reason", "actor", "at"})
-    public record LifecycleEvent(
-            UUID id,
-
-            @Schema(allowableValues = {"suspended", "reactivated", "closed", "deleted"})
-            String kind,
-
-            @Schema(
-                    types = {"string", "null"},
-                    requiredMode = Schema.RequiredMode.REQUIRED)
-            String reason,
-
-            EventActor actor,
-            Instant at) {}
-
-    @Schema(requiredProperties = {"items", "page", "size", "total"})
-    public record LifecyclePage(List<LifecycleEvent> items, int page, int size, long total) {}
 
     private final SalonLifecycleStore store;
     private final SalonExportStore exports;
@@ -112,7 +85,7 @@ public class SalonLifecycle {
     }
 
     /** Suspends an active salon (whatever its billing state). */
-    public SalonDirectory.SalonDetail suspend(UUID salonId, ChangeInput input) {
+    public SalonDetail suspend(UUID salonId, ChangeInput input) {
         List<FieldProblem> errors = new ArrayList<>();
         long version = version(input.version(), errors);
         String reason = reason(input.reason(), errors);
@@ -154,7 +127,7 @@ public class SalonLifecycle {
      * Reactivates a suspended salon: it is active again, with the access state its unpaid invoices imply
      * now ({@code read_only} when one is 14 or more days overdue), so its unexpired sessions work again.
      */
-    public SalonDirectory.SalonDetail reactivate(UUID salonId, ChangeInput input) {
+    public SalonDetail reactivate(UUID salonId, ChangeInput input) {
         List<FieldProblem> errors = new ArrayList<>();
         long version = version(input.version(), errors);
         String reason = reason(input.reason(), errors);
@@ -203,7 +176,7 @@ public class SalonLifecycle {
      * Closes an active or suspended salon for good, once the exact slug is typed to confirm. In the same
      * transaction: its sessions are revoked, its undelivered messages cancelled and its export scheduled.
      */
-    public SalonDirectory.SalonDetail close(UUID salonId, ClosureInput input) {
+    public SalonDetail close(UUID salonId, ClosureInput input) {
         List<FieldProblem> errors = new ArrayList<>();
         long version = version(input.version(), errors);
         String reason = reason(input.reason(), errors);

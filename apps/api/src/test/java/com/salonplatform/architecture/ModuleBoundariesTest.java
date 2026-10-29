@@ -161,6 +161,10 @@ class ModuleBoundariesTest {
                         rule(ModuleRules::controllersLiveInControllerOrLocal),
                         "BookingController"),
                 arguments("responseoutsidedto", rule(ModuleRules::requestAndResponseRecordsLiveInDto), "SlotResponse"),
+                arguments(
+                        "nestedrecordvisible",
+                        rule(ModuleRules::nestedRecordsUsedOnlyByTheirClassArePrivate),
+                        "BookBooking$Window"),
                 arguments("implname", rule(ModuleRules::noClassIsNamedImpl), "BookingServiceImpl"));
     }
 

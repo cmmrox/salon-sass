@@ -1,9 +1,9 @@
 package com.salonplatform.platform.local;
 
+import com.salonplatform.platform.dto.CapturedEmail;
 import com.salonplatform.shared.outbox.OutboxDelivery;
 import com.salonplatform.shared.outbox.OutboxProvider;
 import java.time.Clock;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -22,16 +22,6 @@ import tools.jackson.databind.json.JsonMapper;
 @Component
 @Profile("local")
 class LocalEmailCapture implements OutboxProvider {
-
-    record CapturedEmail(
-            UUID messageId,
-            UUID salonId,
-            String recipient,
-            String kind,
-            String subject,
-            String body,
-            List<String> links,
-            Instant deliveredAt) {}
 
     private final List<CapturedEmail> captured = new CopyOnWriteArrayList<>();
     private final JsonMapper json;

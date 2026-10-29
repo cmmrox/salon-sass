@@ -1,5 +1,6 @@
 package com.salonplatform.platform.controller;
 
+import com.salonplatform.platform.dto.SalonSupportSessionPage;
 import com.salonplatform.platform.service.Paging;
 import com.salonplatform.platform.service.SalonSupportSessions;
 import com.salonplatform.shared.web.ApiPaths;
@@ -36,7 +37,7 @@ class SalonSupportController {
     }
 
     @GetMapping
-    ResponseEntity<SalonSupportSessions.SalonSupportSessionPage> listSalonSupportSessions(
+    ResponseEntity<SalonSupportSessionPage> listSalonSupportSessions(
             @Parameter(schema = @Schema(type = "integer", minimum = "0", maximum = "100000", defaultValue = "0"))
                     @RequestParam(required = false)
                     String page,

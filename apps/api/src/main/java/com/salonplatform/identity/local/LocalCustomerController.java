@@ -1,12 +1,13 @@
 package com.salonplatform.identity.local;
 
+import com.salonplatform.identity.dto.CapturedMessage;
+import com.salonplatform.identity.dto.DeliveryView;
+import com.salonplatform.identity.dto.ProviderControl;
 import com.salonplatform.identity.service.CustomerAccess;
-import com.salonplatform.shared.outbox.OutboxMessageView;
 import com.salonplatform.shared.web.NotFoundException;
 import io.swagger.v3.oas.annotations.Hidden;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.*;
 import java.net.InetAddress;
 import java.util.UUID;
 import org.springframework.context.annotation.Profile;
@@ -26,25 +27,21 @@ class LocalCustomerController {
         this.capture = capture;
     }
 
-    record Control(
-            @Min(0) @Max(50) int failures,
-            @Min(0) @Max(60000) long delayMs) {}
-
     @GetMapping("/captures/{id}")
-    ResponseEntity<CustomerMessageCapture.Captured> capture(@PathVariable UUID id, HttpServletRequest request) {
+    ResponseEntity<CapturedMessage> capture(@PathVariable UUID id, HttpServletRequest request) {
         loopback(request);
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(capture.capture(id));
     }
 
     @GetMapping("/deliveries/{id}")
-    ResponseEntity<OutboxMessageView> delivery(@PathVariable UUID id, HttpServletRequest request) {
+    ResponseEntity<DeliveryView> delivery(@PathVariable UUID id, HttpServletRequest request) {
         loopback(request);
-        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(customers.delivery(id));
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(DeliveryView.from(customers.delivery(id)));
     }
 
     @PutMapping("/providers/{channel}")
     ResponseEntity<Void> control(
-            @PathVariable String channel, @Valid @RequestBody Control control, HttpServletRequest request) {
+            @PathVariable String channel, @Valid @RequestBody ProviderControl control, HttpServletRequest request) {
         loopback(request);
         capture.control(channel, control.failures(), control.delayMs());
         return ResponseEntity.noContent().build();

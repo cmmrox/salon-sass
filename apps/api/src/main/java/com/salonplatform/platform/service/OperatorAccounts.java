@@ -4,6 +4,7 @@ import com.salonplatform.identity.inprocess.IdentityProvisioning;
 import com.salonplatform.platform.adapter.OperatorCrypto;
 import com.salonplatform.platform.domain.OperatorRole;
 import com.salonplatform.platform.domain.PlainText;
+import com.salonplatform.platform.dto.AccountInput;
 import com.salonplatform.platform.repository.OperatorSecurityStore;
 import com.salonplatform.platform.repository.OperatorSessionStore;
 import com.salonplatform.platform.repository.OperatorUserStore;
@@ -30,9 +31,6 @@ import org.springframework.stereotype.Service;
  */
 @Service
 public class OperatorAccounts {
-
-    /** An account to create. The password is validated with identity's policy and hashed here. */
-    public record AccountInput(String email, String displayName, String role, String password, String totpSecret) {}
 
     private final PlatformDatabase database;
     private final OperatorUserStore users;

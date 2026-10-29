@@ -1,13 +1,23 @@
 package com.salonplatform.identity.controller;
 
 import com.salonplatform.identity.adapter.ClientAddressAssertion;
+import com.salonplatform.identity.dto.AuditView;
+import com.salonplatform.identity.dto.ChallengeRequest;
+import com.salonplatform.identity.dto.ChangeStaffRequest;
+import com.salonplatform.identity.dto.CreateStaffRequest;
+import com.salonplatform.identity.dto.Enrollment;
+import com.salonplatform.identity.dto.Page;
+import com.salonplatform.identity.dto.PasswordRequest;
 import com.salonplatform.identity.dto.PrincipalResponse;
+import com.salonplatform.identity.dto.RefreshRequest;
+import com.salonplatform.identity.dto.SessionView;
 import com.salonplatform.identity.dto.SignIn;
+import com.salonplatform.identity.dto.SignInRequest;
+import com.salonplatform.identity.dto.StaffView;
 import com.salonplatform.identity.dto.Tokens;
+import com.salonplatform.identity.dto.VerifyRequest;
 import com.salonplatform.identity.mapper.PrincipalResponseMapper;
-import com.salonplatform.identity.service.Page;
 import com.salonplatform.identity.service.SessionAccess;
-import com.salonplatform.identity.service.SessionView;
 import com.salonplatform.identity.service.StaffAccounts;
 import com.salonplatform.identity.service.StaffAudit;
 import com.salonplatform.identity.service.StaffMfa;
@@ -16,9 +26,6 @@ import com.salonplatform.shared.web.NotFoundException;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -39,35 +46,6 @@ class StaffAccessController {
     private final SessionAccess sessions;
     private final ClientAddressAssertion assertions;
     private final PrincipalResponseMapper principals;
-
-    record SignInRequest(
-            @NotBlank @Size(max = 254) String identifier,
-            @NotBlank @Size(max = 512) String password,
-            @NotBlank @Size(max = 160) String deviceLabel) {}
-
-    record ChallengeRequest(
-            @NotNull UUID challengeId,
-            @NotBlank @Size(max = 256) String challengeToken) {}
-
-    record VerifyRequest(
-            @NotNull UUID challengeId,
-            @NotBlank @Size(max = 256) String challengeToken,
-            @NotBlank @Size(max = 32) String code) {}
-
-    record RefreshRequest(@NotBlank @Size(max = 256) String refreshToken) {}
-
-    record PasswordRequest(
-            @NotBlank @Size(max = 512) String oldPassword,
-            @NotBlank @Size(max = 512) String newPassword) {}
-
-    record CreateStaffRequest(
-            @Size(max = 254) String email,
-            @Size(max = 32) String mobile,
-            @NotBlank @Size(max = 512) String password,
-            @NotBlank String role,
-            Boolean professionalGrant) {}
-
-    record ChangeStaffRequest(@NotNull @Min(0) Long version, String role, Boolean professionalGrant) {}
 
     private <T> ResponseEntity<T> ok(T body) {
         return ResponseEntity.ok()
@@ -94,7 +72,7 @@ class StaffAccessController {
     }
 
     @PostMapping(path = "/staff/mfa/enroll", consumes = MediaType.APPLICATION_JSON_VALUE)
-    ResponseEntity<StaffMfa.Enrollment> enroll(@Valid @RequestBody ChallengeRequest request) {
+    ResponseEntity<Enrollment> enroll(@Valid @RequestBody ChallengeRequest request) {
         return ok(mfa.enroll(request.challengeId(), request.challengeToken()));
     }
 
@@ -139,14 +117,14 @@ class StaffAccessController {
     }
 
     @GetMapping("/staff")
-    ResponseEntity<Page<StaffAccounts.StaffView>> staff(
+    ResponseEntity<Page<StaffView>> staff(
             @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
         return ok(accounts.list(page, size));
     }
 
     @PostMapping(path = "/staff", consumes = MediaType.APPLICATION_JSON_VALUE)
     @ResponseStatus(org.springframework.http.HttpStatus.CREATED)
-    ResponseEntity<StaffAccounts.StaffView> create(@Valid @RequestBody CreateStaffRequest request) {
+    ResponseEntity<StaffView> create(@Valid @RequestBody CreateStaffRequest request) {
         return ResponseEntity.status(201)
                 .cacheControl(org.springframework.http.CacheControl.noStore())
                 .body(accounts.create(new StaffAccounts.StaffInput(
@@ -158,8 +136,7 @@ class StaffAccessController {
     }
 
     @PatchMapping(path = "/staff/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
-    ResponseEntity<StaffAccounts.StaffView> change(
-            @PathVariable String id, @Valid @RequestBody ChangeStaffRequest request) {
+    ResponseEntity<StaffView> change(@PathVariable String id, @Valid @RequestBody ChangeStaffRequest request) {
         return ok(accounts.change(
                 id(id), new StaffAccounts.StaffChange(request.version(), request.role(), request.professionalGrant())));
     }
@@ -172,7 +149,7 @@ class StaffAccessController {
     }
 
     @GetMapping("/audit")
-    ResponseEntity<Page<StaffAudit.AuditView>> audit(
+    ResponseEntity<Page<AuditView>> audit(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false) @Size(max = 128) String subjectId) {

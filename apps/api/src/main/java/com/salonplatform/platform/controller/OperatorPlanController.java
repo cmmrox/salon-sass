@@ -1,6 +1,8 @@
 package com.salonplatform.platform.controller;
 
-import com.fasterxml.jackson.annotation.JsonAnySetter;
+import com.salonplatform.platform.dto.PlanDefinition;
+import com.salonplatform.platform.dto.PlanPage;
+import com.salonplatform.platform.dto.PlanRequest;
 import com.salonplatform.platform.service.Paging;
 import com.salonplatform.platform.service.PlanCatalogue;
 import com.salonplatform.platform.service.ProvisioningReceipts;
@@ -34,33 +36,8 @@ class OperatorPlanController {
         this.plans = plans;
     }
 
-    @Schema(
-            additionalProperties = Schema.AdditionalPropertiesValue.FALSE,
-            requiredProperties = {
-                "key",
-                "name",
-                "staffSeats",
-                "branches",
-                "messageAllowance",
-                "customDomain",
-                "dedicatedApp"
-            })
-    record PlanRequest(
-            @Schema(minLength = 3, maxLength = 30) String key,
-            @Schema(maxLength = 120) String name,
-            @Schema(minimum = "1", maximum = "1000000") Integer staffSeats,
-            @Schema(minimum = "1", maximum = "1000000") Integer branches,
-            @Schema(minimum = "0", maximum = "1000000") Integer messageAllowance,
-            Boolean customDomain,
-            Boolean dedicatedApp) {
-        @JsonAnySetter
-        void unknown(String field, Object ignored) {
-            throw OperatorRequests.unexpected(field);
-        }
-    }
-
     @GetMapping
-    ResponseEntity<PlanCatalogue.PlanPage> listPlans(
+    ResponseEntity<PlanPage> listPlans(
             @Parameter(schema = @Schema(type = "integer", minimum = "0", maximum = "100000", defaultValue = "0"))
                     @RequestParam(required = false)
                     String page,
@@ -72,13 +49,13 @@ class OperatorPlanController {
     }
 
     @GetMapping("/{id}")
-    ResponseEntity<PlanCatalogue.PlanDefinition> getPlan(@PathVariable String id) {
+    ResponseEntity<PlanDefinition> getPlan(@PathVariable String id) {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(plans.get(OperatorRequests.id(id)));
     }
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
-    ResponseEntity<PlanCatalogue.PlanDefinition> createPlan(
+    ResponseEntity<PlanDefinition> createPlan(
             @Parameter(
                             name = ProvisioningReceipts.HEADER,
                             in = ParameterIn.HEADER,

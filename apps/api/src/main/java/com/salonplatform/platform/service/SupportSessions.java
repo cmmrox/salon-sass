@@ -6,6 +6,9 @@ import static com.salonplatform.platform.service.SupportSessionRecords.ENDED;
 import com.salonplatform.platform.adapter.SupportCrypto;
 import com.salonplatform.platform.domain.LifecycleTerms;
 import com.salonplatform.platform.domain.OperatorPermission;
+import com.salonplatform.platform.dto.SupportEntry;
+import com.salonplatform.platform.dto.SupportSessionPage;
+import com.salonplatform.platform.dto.SupportSessionView;
 import com.salonplatform.platform.repository.PlatformAudit;
 import com.salonplatform.platform.repository.SupportSessionStore;
 import com.salonplatform.platform.repository.SupportSessionStore.NewSession;
@@ -16,7 +19,6 @@ import com.salonplatform.shared.web.ApplicationProblemException;
 import com.salonplatform.shared.web.ErrorCode;
 import com.salonplatform.shared.web.FieldProblem;
 import com.salonplatform.shared.web.NotFoundException;
-import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -52,71 +54,6 @@ public class SupportSessions {
     public static final int MAX_MINUTES = 120;
 
     public record StartInput(String reason, Integer durationMinutes) {}
-
-    @Schema(requiredProperties = {"id", "expiresAt", "entryCode", "entryUrl", "codeExpiresAt"})
-    public record SupportEntry(
-            UUID id,
-            Instant expiresAt,
-
-            @Schema(description = "Single-use; exchanged once on the salon's host within 60 seconds")
-            String entryCode,
-
-            @Schema(description = "The salon's workspace support entry page with the code in its fragment")
-            String entryUrl,
-
-            Instant codeExpiresAt) {}
-
-    @Schema(requiredProperties = {"id", "slug", "name", "hostname"})
-    public record SupportSalonRef(
-            UUID id,
-            String slug,
-
-            @Schema(
-                    types = {"string", "null"},
-                    requiredMode = Schema.RequiredMode.REQUIRED)
-            String name,
-
-            String hostname) {}
-
-    @Schema(requiredProperties = {"id", "displayName"})
-    public record SupportOperatorRef(UUID id, String displayName) {}
-
-    @Schema(
-            requiredProperties = {
-                "id",
-                "salon",
-                "operator",
-                "reason",
-                "startedAt",
-                "expiresAt",
-                "endedAt",
-                "endedBy",
-                "state"
-            })
-    public record SupportSessionView(
-            UUID id,
-            SupportSalonRef salon,
-            SupportOperatorRef operator,
-            String reason,
-            Instant startedAt,
-            Instant expiresAt,
-
-            @Schema(
-                    types = {"string", "null"},
-                    format = "date-time",
-                    requiredMode = Schema.RequiredMode.REQUIRED)
-            Instant endedAt,
-
-            @Schema(
-                    types = {"string", "null"},
-                    allowableValues = {"operator", "admin", "owner", "expiry"},
-                    requiredMode = Schema.RequiredMode.REQUIRED)
-            String endedBy,
-
-            @Schema(allowableValues = {"active", "ended"}) String state) {}
-
-    @Schema(requiredProperties = {"items", "page", "size", "total"})
-    public record SupportSessionPage(List<SupportSessionView> items, int page, int size, long total) {}
 
     private final PlatformDatabase database;
     private final SupportSessionStore store;

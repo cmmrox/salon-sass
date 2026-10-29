@@ -1,5 +1,9 @@
 package com.salonplatform.platform.local;
 
+import com.salonplatform.platform.dto.BootstrapFaultRequest;
+import com.salonplatform.platform.dto.BootstrapFaultState;
+import com.salonplatform.platform.dto.OperatorSeedRequest;
+import com.salonplatform.platform.dto.OperatorSeedResult;
 import com.salonplatform.platform.service.BootstrapFaults;
 import com.salonplatform.platform.service.OperatorAccounts;
 import com.salonplatform.shared.web.ApplicationProblemException;
@@ -9,8 +13,6 @@ import com.salonplatform.shared.web.NotFoundException;
 import io.swagger.v3.oas.annotations.Hidden;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotEmpty;
-import jakarta.validation.constraints.Size;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.List;
@@ -46,20 +48,12 @@ class LocalOperatorController {
         this.faults = faults;
     }
 
-    record SeedRequest(@NotEmpty @Size(max = 20) List<OperatorAccounts.AccountInput> accounts) {}
-
-    record SeedResult(int accounts) {}
-
-    record FaultRequest(String step) {}
-
-    record FaultState(String step) {}
-
     @PostMapping("/seed")
-    ResponseEntity<SeedResult> seed(@Valid @RequestBody SeedRequest request, HttpServletRequest http) {
+    ResponseEntity<OperatorSeedResult> seed(@Valid @RequestBody OperatorSeedRequest request, HttpServletRequest http) {
         loopback(http);
         return ResponseEntity.ok()
                 .cacheControl(CacheControl.noStore())
-                .body(new SeedResult(accounts.seed(request.accounts())));
+                .body(new OperatorSeedResult(accounts.seed(request.accounts())));
     }
 
     @DeleteMapping("/fixtures")
@@ -71,7 +65,7 @@ class LocalOperatorController {
     }
 
     @PutMapping("/bootstrap-failure")
-    ResponseEntity<FaultState> fail(@RequestBody FaultRequest request, HttpServletRequest http) {
+    ResponseEntity<BootstrapFaultState> fail(@RequestBody BootstrapFaultRequest request, HttpServletRequest http) {
         loopback(http);
         BootstrapFaults.Step step = null;
         if (request.step() != null && !request.step().isBlank()) {
@@ -89,16 +83,16 @@ class LocalOperatorController {
     }
 
     @GetMapping("/bootstrap-failure")
-    ResponseEntity<FaultState> current(HttpServletRequest http) {
+    ResponseEntity<BootstrapFaultState> current(HttpServletRequest http) {
         loopback(http);
         return state();
     }
 
-    private ResponseEntity<FaultState> state() {
+    private ResponseEntity<BootstrapFaultState> state() {
         BootstrapFaults.Step step = faults.current();
         return ResponseEntity.ok()
                 .cacheControl(CacheControl.noStore())
-                .body(new FaultState(step == null ? null : step.name().toLowerCase(Locale.ROOT)));
+                .body(new BootstrapFaultState(step == null ? null : step.name().toLowerCase(Locale.ROOT)));
     }
 
     private static void loopback(HttpServletRequest request) {

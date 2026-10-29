@@ -3,6 +3,7 @@ package com.salonplatform.platform;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.salonplatform.platform.adapter.OperatorCrypto;
+import com.salonplatform.platform.dto.AccountInput;
 import com.salonplatform.platform.service.OperatorAccounts;
 import com.salonplatform.testing.Http;
 import java.nio.charset.StandardCharsets;
@@ -74,7 +75,7 @@ public final class OperatorTestSupport {
         String email = "op-" + UUID.randomUUID() + "@example.test";
         String password = "synthetic " + UUID.randomUUID();
         String secret = enrolled ? crypto.newTotpSecret() : null;
-        accounts.seed(List.of(new OperatorAccounts.AccountInput(email, "Synthetic " + role, role, password, secret)));
+        accounts.seed(List.of(new AccountInput(email, "Synthetic " + role, role, password, secret)));
         return new Operator(email, password, secret, role);
     }
 

@@ -1,4 +1,4 @@
-package com.salonplatform.identity.service;
+package com.salonplatform.identity.dto;
 
 import java.time.Instant;
 import java.util.UUID;

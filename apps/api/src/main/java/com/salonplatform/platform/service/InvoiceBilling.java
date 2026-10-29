@@ -3,6 +3,10 @@ package com.salonplatform.platform.service;
 import com.salonplatform.platform.domain.BillingTerms;
 import com.salonplatform.platform.domain.OperatorPermission;
 import com.salonplatform.platform.domain.PlainText;
+import com.salonplatform.platform.dto.InvoiceDetail;
+import com.salonplatform.platform.dto.InvoicePage;
+import com.salonplatform.platform.dto.InvoiceSummary;
+import com.salonplatform.platform.dto.PaymentView;
 import com.salonplatform.platform.repository.BillingLedger;
 import com.salonplatform.platform.repository.InvoiceStore;
 import com.salonplatform.platform.repository.PlatformAudit;
@@ -10,7 +14,6 @@ import com.salonplatform.shared.web.ApplicationProblemException;
 import com.salonplatform.shared.web.ErrorCode;
 import com.salonplatform.shared.web.FieldProblem;
 import com.salonplatform.shared.web.NotFoundException;
-import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -34,114 +37,6 @@ import tools.jackson.databind.json.JsonMapper;
 public class InvoiceBilling {
 
     static final String RECORD = "payment.record";
-
-    @Schema(
-            requiredProperties = {
-                "id",
-                "number",
-                "periodStart",
-                "periodEnd",
-                "amount",
-                "currency",
-                "status",
-                "issuedAt",
-                "dueAt",
-                "paidAt"
-            })
-    public record InvoiceSummary(
-            UUID id,
-            String number,
-            Instant periodStart,
-            Instant periodEnd,
-            long amount,
-            String currency,
-            @Schema(allowableValues = {"open", "paid"}) String status,
-            Instant issuedAt,
-            Instant dueAt,
-
-            @Schema(
-                    types = {"string", "null"},
-                    format = "date-time",
-                    requiredMode = Schema.RequiredMode.REQUIRED)
-            Instant paidAt) {}
-
-    @Schema(requiredProperties = {"items", "page", "size", "total"})
-    public record InvoicePage(List<InvoiceSummary> items, int page, int size, long total) {}
-
-    @Schema(requiredProperties = {"id", "method", "reference", "providerEventId", "amount", "receivedOn", "paidAt"})
-    public record PaymentView(
-            UUID id,
-
-            @Schema(allowableValues = {"card", "bank_transfer"})
-            String method,
-
-            @Schema(
-                    types = {"string", "null"},
-                    requiredMode = Schema.RequiredMode.REQUIRED)
-            String reference,
-
-            @Schema(
-                    types = {"string", "null"},
-                    requiredMode = Schema.RequiredMode.REQUIRED)
-            String providerEventId,
-
-            long amount,
-
-            @Schema(
-                    types = {"string", "null"},
-                    format = "date",
-                    requiredMode = Schema.RequiredMode.REQUIRED)
-            LocalDate receivedOn,
-
-            Instant paidAt) {}
-
-    @Schema(
-            requiredProperties = {
-                "id",
-                "number",
-                "salonId",
-                "planKey",
-                "planName",
-                "periodStart",
-                "periodEnd",
-                "amount",
-                "currency",
-                "status",
-                "issuedAt",
-                "dueAt",
-                "paidAt",
-                "payments"
-            })
-    public record InvoiceDetail(
-            UUID id,
-            String number,
-            UUID salonId,
-
-            @Schema(
-                    types = {"string", "null"},
-                    requiredMode = Schema.RequiredMode.REQUIRED)
-            String planKey,
-
-            @Schema(
-                    types = {"string", "null"},
-                    requiredMode = Schema.RequiredMode.REQUIRED)
-            String planName,
-
-            Instant periodStart,
-            Instant periodEnd,
-            long amount,
-            String currency,
-            @Schema(allowableValues = {"open", "paid"}) String status,
-            Instant issuedAt,
-            Instant dueAt,
-
-            @Schema(
-                    types = {"string", "null"},
-                    format = "date-time",
-                    requiredMode = Schema.RequiredMode.REQUIRED)
-            Instant paidAt,
-
-            List<PaymentView> payments) {}
 
     /** A transfer as received. */
     public record TransferInput(String reference, Long amount, String receivedOn) {}

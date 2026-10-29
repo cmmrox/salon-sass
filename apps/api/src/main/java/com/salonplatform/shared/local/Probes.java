@@ -3,6 +3,8 @@ package com.salonplatform.shared.local;
 import com.salonplatform.shared.audit.Actor;
 import com.salonplatform.shared.audit.AuditAction;
 import com.salonplatform.shared.audit.AuditTrail;
+import com.salonplatform.shared.local.dto.AuditView;
+import com.salonplatform.shared.local.dto.ProbeView;
 import com.salonplatform.shared.outbox.Outbox;
 import com.salonplatform.shared.outbox.OutboxMessageView;
 import com.salonplatform.shared.tenancy.CurrentTenant;
@@ -63,22 +65,6 @@ class Probes {
 
     /** What a probe asks of its provider. */
     record Request(int failures, long delayMs, boolean abort) {}
-
-    /** One audit entry of a probe. */
-    record AuditView(String action, Instant occurredAt, String actorKind, Map<String, Object> after, String traceId) {}
-
-    /** A probe: its message's state, the calls its provider received, and its audit entries. */
-    record ProbeView(
-            UUID id,
-            String status,
-            int attempts,
-            int providerCalls,
-            Instant nextAttemptAt,
-            String lastError,
-            Instant createdAt,
-            String createdAtLocal,
-            Instant sentAt,
-            List<AuditView> audit) {}
 
     /** Thrown inside the transaction when the probe asked for it, after both rows were written. */
     static final class ProbeAborted extends RuntimeException {

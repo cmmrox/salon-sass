@@ -3,6 +3,8 @@ package com.salonplatform.platform.service;
 import com.salonplatform.platform.domain.OperatorPermission;
 import com.salonplatform.platform.domain.PlainText;
 import com.salonplatform.platform.domain.Slugs;
+import com.salonplatform.platform.dto.PlanDefinition;
+import com.salonplatform.platform.dto.PlanPage;
 import com.salonplatform.platform.repository.PlanStore;
 import com.salonplatform.platform.repository.PlanStore.NewPlan;
 import com.salonplatform.platform.repository.PlanStore.Plan;
@@ -11,7 +13,6 @@ import com.salonplatform.shared.web.ApplicationProblemException;
 import com.salonplatform.shared.web.ErrorCode;
 import com.salonplatform.shared.web.FieldProblem;
 import com.salonplatform.shared.web.NotFoundException;
-import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -33,34 +34,6 @@ public class PlanCatalogue {
 
     static final String ACTION = "plan.create";
     static final int LIMIT_MAX = 1_000_000;
-
-    @Schema(
-            requiredProperties = {
-                "id",
-                "key",
-                "name",
-                "staffSeats",
-                "branches",
-                "messageAllowance",
-                "customDomain",
-                "dedicatedApp",
-                "createdAt",
-                "updatedAt"
-            })
-    public record PlanDefinition(
-            UUID id,
-            String key,
-            String name,
-            int staffSeats,
-            int branches,
-            int messageAllowance,
-            boolean customDomain,
-            boolean dedicatedApp,
-            Instant createdAt,
-            Instant updatedAt) {}
-
-    @Schema(requiredProperties = {"items", "page", "size", "total"})
-    public record PlanPage(List<PlanDefinition> items, int page, int size, long total) {}
 
     /** A plan request as received; validated here, after authorization. */
     public record PlanInput(

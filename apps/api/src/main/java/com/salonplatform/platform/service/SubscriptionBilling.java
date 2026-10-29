@@ -4,6 +4,10 @@ import com.salonplatform.identity.inprocess.IdentityProvisioning;
 import com.salonplatform.platform.domain.BillingTerms;
 import com.salonplatform.platform.domain.OperatorPermission;
 import com.salonplatform.platform.domain.ProvisioningRegions;
+import com.salonplatform.platform.dto.Period;
+import com.salonplatform.platform.dto.PlanSummary;
+import com.salonplatform.platform.dto.SalonDetail;
+import com.salonplatform.platform.dto.SubscriptionView;
 import com.salonplatform.platform.repository.BillingLedger;
 import com.salonplatform.platform.repository.InvoiceStore;
 import com.salonplatform.platform.repository.PlanStore;
@@ -13,7 +17,6 @@ import com.salonplatform.shared.web.ApplicationProblemException;
 import com.salonplatform.shared.web.ErrorCode;
 import com.salonplatform.shared.web.FieldProblem;
 import com.salonplatform.shared.web.NotFoundException;
-import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -36,54 +39,6 @@ import tools.jackson.databind.json.JsonMapper;
 public class SubscriptionBilling {
 
     static final String START = "subscription.start";
-
-    @Schema(requiredProperties = {"start", "end"})
-    public record Period(Instant start, Instant end) {}
-
-    @Schema(
-            requiredProperties = {
-                "version",
-                "state",
-                "plan",
-                "monthlyAmount",
-                "currency",
-                "paymentMethod",
-                "trialEndsAt",
-                "currentPeriod",
-                "nextInvoiceAt",
-                "readOnlyAt"
-            })
-    public record SubscriptionView(
-            long version,
-
-            @Schema(allowableValues = {"trialing", "active", "past_due", "read_only"})
-            String state,
-
-            @Schema(
-                    types = {"object", "null"},
-                    requiredMode = Schema.RequiredMode.REQUIRED)
-            SalonDirectory.PlanSummary plan,
-
-            long monthlyAmount,
-            String currency,
-
-            @Schema(allowableValues = {"card", "bank_transfer"})
-            String paymentMethod,
-
-            Instant trialEndsAt,
-
-            @Schema(
-                    types = {"object", "null"},
-                    requiredMode = Schema.RequiredMode.REQUIRED)
-            Period currentPeriod,
-
-            Instant nextInvoiceAt,
-
-            @Schema(
-                    types = {"string", "null"},
-                    format = "date-time",
-                    requiredMode = Schema.RequiredMode.REQUIRED)
-            Instant readOnlyAt) {}
 
     /** A start request as received. */
     public record StartInput(Long monthlyAmount, String paymentMethod, String currency) {}
@@ -137,9 +92,8 @@ public class SubscriptionBilling {
     /** The view of a salon's subscription, inside a platform transaction. */
     SubscriptionView view(BillingLedger.Subscription subscription, Instant now) {
         BillingLedger.Salon salon = ledger.salon(subscription.salonId(), false).orElseThrow();
-        SalonDirectory.PlanSummary plan = salon.planId() == null
-                ? null
-                : new SalonDirectory.PlanSummary(salon.planId(), salon.planKey(), salon.planName());
+        PlanSummary plan =
+                salon.planId() == null ? null : new PlanSummary(salon.planId(), salon.planKey(), salon.planName());
         Period period = invoices.latestInvoice(subscription.id())
                 .map(invoice -> new Period(invoice.periodStart(), invoice.periodEnd()))
                 .orElse(null);
@@ -307,7 +261,7 @@ public class SubscriptionBilling {
      * progress (which share-locks it) finishes first and is counted. The next invoice carries the new
      * plan; issued invoices keep theirs.
      */
-    public SalonDirectory.SalonDetail movePlan(UUID salonId, PlanMoveInput input) {
+    public SalonDetail movePlan(UUID salonId, PlanMoveInput input) {
         List<FieldProblem> errors = new ArrayList<>();
         if (input.version() == null || input.version() < 0) {
             errors.add(new FieldProblem("version", "must be the salon's current version"));

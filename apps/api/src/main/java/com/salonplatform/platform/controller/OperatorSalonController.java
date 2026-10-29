@@ -1,6 +1,9 @@
 package com.salonplatform.platform.controller;
 
-import com.fasterxml.jackson.annotation.JsonAnySetter;
+import com.salonplatform.platform.dto.SalonCreated;
+import com.salonplatform.platform.dto.SalonDetail;
+import com.salonplatform.platform.dto.SalonPage;
+import com.salonplatform.platform.dto.SalonRequest;
 import com.salonplatform.platform.service.Paging;
 import com.salonplatform.platform.service.ProvisioningReceipts;
 import com.salonplatform.platform.service.SalonDirectory;
@@ -9,7 +12,6 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import java.util.UUID;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -38,82 +40,8 @@ class OperatorSalonController {
         this.provisioning = provisioning;
     }
 
-    @Schema(
-            additionalProperties = Schema.AdditionalPropertiesValue.FALSE,
-            requiredProperties = {"name", "email", "password"})
-    record SalonOwnerRequest(
-            @Schema(maxLength = 120) String name,
-            @Schema(maxLength = 254, format = "email") String email,
-
-            @Schema(minLength = 15, maxLength = 128, format = "password")
-            String password) {
-        @JsonAnySetter
-        void unknown(String field, Object ignored) {
-            throw OperatorRequests.unexpected("owner." + field);
-        }
-    }
-
-    @Schema(
-            additionalProperties = Schema.AdditionalPropertiesValue.FALSE,
-            requiredProperties = {"monthlyAmount", "paymentMethod"})
-    record SalonSubscriptionRequest(
-            @Schema(minimum = "0", maximum = "100000000") Long monthlyAmount,
-
-            @Schema(allowableValues = {"card", "bank_transfer"})
-            String paymentMethod) {
-        @JsonAnySetter
-        void unknown(String field, Object ignored) {
-            throw OperatorRequests.unexpected("subscription." + field);
-        }
-    }
-
-    @Schema(
-            additionalProperties = Schema.AdditionalPropertiesValue.FALSE,
-            requiredProperties = {
-                "name",
-                "slug",
-                "country",
-                "currency",
-                "timeZone",
-                "defaultLanguage",
-                "planId",
-                "owner",
-                "subscription"
-            })
-    record SalonRequest(
-            @Schema(maxLength = 120) String name,
-            @Schema(minLength = 3, maxLength = 30) String slug,
-            @Schema(minLength = 2, maxLength = 2) String country,
-            @Schema(minLength = 3, maxLength = 3) String currency,
-            String timeZone,
-            @Schema(allowableValues = {"en", "si", "ta"}) String defaultLanguage,
-
-            @Schema(
-                    types = {"string", "null"},
-                    maxLength = 254)
-            String contactEmail,
-
-            @Schema(
-                    types = {"string", "null"},
-                    maxLength = 32)
-            String contactPhone,
-
-            @Schema(
-                    types = {"string", "null"},
-                    maxLength = 500)
-            String address,
-
-            UUID planId,
-            SalonOwnerRequest owner,
-            SalonSubscriptionRequest subscription) {
-        @JsonAnySetter
-        void unknown(String field, Object ignored) {
-            throw OperatorRequests.unexpected(field);
-        }
-    }
-
     @GetMapping
-    ResponseEntity<SalonDirectory.SalonPage> listSalons(
+    ResponseEntity<SalonPage> listSalons(
             @Parameter(schema = @Schema(type = "integer", minimum = "0", maximum = "100000", defaultValue = "0"))
                     @RequestParam(required = false)
                     String page,
@@ -125,13 +53,13 @@ class OperatorSalonController {
     }
 
     @GetMapping("/{id}")
-    ResponseEntity<SalonDirectory.SalonDetail> getSalon(@PathVariable String id) {
+    ResponseEntity<SalonDetail> getSalon(@PathVariable String id) {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(salons.get(OperatorRequests.id(id)));
     }
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
-    ResponseEntity<SalonProvisioning.SalonCreated> createSalon(
+    ResponseEntity<SalonCreated> createSalon(
             @Parameter(
                             name = ProvisioningReceipts.HEADER,
                             in = ParameterIn.HEADER,

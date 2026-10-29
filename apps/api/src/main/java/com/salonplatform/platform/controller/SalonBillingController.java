@@ -1,6 +1,8 @@
 package com.salonplatform.platform.controller;
 
-import com.salonplatform.platform.service.InvoiceBilling;
+import com.salonplatform.platform.dto.Entitlements;
+import com.salonplatform.platform.dto.InvoiceDetail;
+import com.salonplatform.platform.dto.InvoicePage;
 import com.salonplatform.platform.service.Paging;
 import com.salonplatform.platform.service.SalonBilling;
 import com.salonplatform.shared.web.ApiPaths;
@@ -34,12 +36,12 @@ class SalonBillingController {
     }
 
     @GetMapping("/entitlements")
-    ResponseEntity<SalonBilling.Entitlements> entitlements() {
+    ResponseEntity<Entitlements> entitlements() {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(billing.entitlements());
     }
 
     @GetMapping("/invoices")
-    ResponseEntity<InvoiceBilling.InvoicePage> invoices(
+    ResponseEntity<InvoicePage> invoices(
             @Parameter(schema = @Schema(type = "integer", minimum = "0", maximum = "100000", defaultValue = "0"))
                     @RequestParam(required = false)
                     String page,
@@ -52,7 +54,7 @@ class SalonBillingController {
     }
 
     @GetMapping("/invoices/{id}")
-    ResponseEntity<InvoiceBilling.InvoiceDetail> invoice(@PathVariable String id) {
+    ResponseEntity<InvoiceDetail> invoice(@PathVariable String id) {
         UUID invoice;
         try {
             invoice = UUID.fromString(id);

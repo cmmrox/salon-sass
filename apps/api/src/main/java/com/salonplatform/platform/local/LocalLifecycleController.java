@@ -1,5 +1,14 @@
 package com.salonplatform.platform.local;
 
+import com.salonplatform.platform.dto.DeletionInterrupt;
+import com.salonplatform.platform.dto.DeletionJobPass;
+import com.salonplatform.platform.dto.ExportInterrupt;
+import com.salonplatform.platform.dto.ExportJobPass;
+import com.salonplatform.platform.dto.JobCounts;
+import com.salonplatform.platform.dto.LifecycleInterruptRequest;
+import com.salonplatform.platform.dto.LocalResetResult;
+import com.salonplatform.platform.dto.OutboxCounts;
+import com.salonplatform.platform.dto.SalonBackground;
 import com.salonplatform.platform.repository.SalonLifecycleStore;
 import com.salonplatform.platform.service.SalonDeletion;
 import com.salonplatform.platform.service.SalonExports;
@@ -82,45 +91,27 @@ class LocalLifecycleController {
         this.clock = clock;
     }
 
-    record InterruptRequest(Integer afterTables, Integer afterBatches) {}
-
-    record ExportInterrupt(Integer afterTables) {}
-
-    record DeletionInterrupt(Integer afterBatches) {}
-
-    record Outbox(long waiting, long delivered, long cancelled, long dead) {}
-
-    record Jobs(
-            long due,
-            long run,
-            long skipped,
-            long failed,
-            java.time.Instant lastRunAt,
-            java.time.Instant lastSkippedAt) {}
-
-    record Background(UUID salonId, String status, String accessState, Outbox outbox, Jobs jobs) {}
-
     private static <T> ResponseEntity<T> ok(T body) {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(body);
     }
 
     /** One export pass, now, at the application clock's instant (the test clock when it is set). */
     @PostMapping("/exports/run")
-    ResponseEntity<SalonExports.Pass> runExport(HttpServletRequest http) {
+    ResponseEntity<ExportJobPass> runExport(HttpServletRequest http) {
         loopback(http);
         return ok(exports.run(clock.instant()));
     }
 
     /** One deletion pass, now, at the application clock's instant. */
     @PostMapping("/deletions/run")
-    ResponseEntity<SalonDeletion.Pass> runDeletion(HttpServletRequest http) {
+    ResponseEntity<DeletionJobPass> runDeletion(HttpServletRequest http) {
         loopback(http);
         return ok(deletion.run(clock.instant()));
     }
 
     @PutMapping("/exports/interrupt")
     ResponseEntity<ExportInterrupt> interruptExport(
-            @RequestBody(required = false) InterruptRequest request, HttpServletRequest http) {
+            @RequestBody(required = false) LifecycleInterruptRequest request, HttpServletRequest http) {
         loopback(http);
         Integer after = request == null ? null : request.afterTables();
         if (after != null && (after < 1 || after > 1000)) {
@@ -141,7 +132,7 @@ class LocalLifecycleController {
 
     @PutMapping("/deletions/interrupt")
     ResponseEntity<DeletionInterrupt> interruptDeletion(
-            @RequestBody(required = false) InterruptRequest request, HttpServletRequest http) {
+            @RequestBody(required = false) LifecycleInterruptRequest request, HttpServletRequest http) {
         loopback(http);
         Integer after = request == null ? null : request.afterBatches();
         if (after != null && (after < 1 || after > 100000)) {
@@ -166,7 +157,7 @@ class LocalLifecycleController {
      * skipped (while suspended) and failed since the API started. Counts only.
      */
     @GetMapping("/salons/{salonId}/background")
-    ResponseEntity<Background> background(@PathVariable UUID salonId, HttpServletRequest http) throws Exception {
+    ResponseEntity<SalonBackground> background(@PathVariable UUID salonId, HttpServletRequest http) throws Exception {
         loopback(http);
         SalonLifecycleStore.State salon =
                 database.inTransaction(status -> lifecycles.state(salonId).orElseThrow(NotFoundException::new));
@@ -174,16 +165,16 @@ class LocalLifecycleController {
         Map<String, Long> counts =
                 TenantContext.callAs(tenant, () -> tenantReads.execute(status -> messages.byStatus(salonId)));
         TenantJobActivity.Counts jobs = activity.of(salonId);
-        return ok(new Background(
+        return ok(new SalonBackground(
                 salonId,
                 salon.status(),
                 salon.accessState(),
-                new Outbox(
+                new OutboxCounts(
                         counts.getOrDefault("pending", 0L) + counts.getOrDefault("sending", 0L),
                         counts.getOrDefault("sent", 0L),
                         counts.getOrDefault("cancelled", 0L),
                         counts.getOrDefault("dead", 0L)),
-                new Jobs(
+                new JobCounts(
                         jobs.due(),
                         jobs.run(),
                         jobs.skipped(),
@@ -194,7 +185,7 @@ class LocalLifecycleController {
 
     /** Back to the synthetic baseline (see {@link LocalReset}). */
     @PostMapping("/reset")
-    ResponseEntity<LocalReset.Result> reset(HttpServletRequest http) {
+    ResponseEntity<LocalResetResult> reset(HttpServletRequest http) {
         loopback(http);
         return ok(reset.reset());
     }

@@ -1,11 +1,13 @@
 package com.salonplatform.platform.service;
 
 import com.salonplatform.platform.domain.OperatorPermission;
+import com.salonplatform.platform.dto.PlanSummary;
+import com.salonplatform.platform.dto.SalonDetail;
+import com.salonplatform.platform.dto.SalonPage;
+import com.salonplatform.platform.dto.SalonSummary;
 import com.salonplatform.platform.repository.SalonStore;
 import com.salonplatform.platform.repository.SalonStore.Salon;
 import com.salonplatform.shared.web.NotFoundException;
-import io.swagger.v3.oas.annotations.media.Schema;
-import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
@@ -18,138 +20,6 @@ import org.springframework.stereotype.Service;
  */
 @Service
 public class SalonDirectory {
-
-    @Schema(requiredProperties = {"id", "key", "name"})
-    public record PlanSummary(UUID id, String key, String name) {}
-
-    @Schema(requiredProperties = {"id", "name", "slug", "hostname", "status", "plan", "createdAt"})
-    public record SalonSummary(
-            UUID id,
-
-            @Schema(
-                    types = {"string", "null"},
-                    requiredMode = Schema.RequiredMode.REQUIRED)
-            String name,
-
-            String slug,
-            String hostname,
-
-            @Schema(allowableValues = {"active", "suspended", "closed", "deleted"})
-            String status,
-
-            @Schema(
-                    types = {"object", "null"},
-                    requiredMode = Schema.RequiredMode.REQUIRED)
-            PlanSummary plan,
-
-            Instant createdAt) {}
-
-    @Schema(requiredProperties = {"items", "page", "size", "total"})
-    public record SalonPage(List<SalonSummary> items, int page, int size, long total) {}
-
-    @Schema(
-            requiredProperties = {
-                "id",
-                "version",
-                "name",
-                "slug",
-                "hostname",
-                "status",
-                "country",
-                "currency",
-                "timeZone",
-                "defaultLanguage",
-                "contactEmail",
-                "contactPhone",
-                "address",
-                "plan",
-                "ownerEmail",
-                "createdAt",
-                "updatedAt",
-                "closedAt",
-                "deleteAt",
-                "deletedAt"
-            })
-    public record SalonDetail(
-            UUID id,
-            long version,
-
-            @Schema(
-                    types = {"string", "null"},
-                    requiredMode = Schema.RequiredMode.REQUIRED)
-            String name,
-
-            String slug,
-            String hostname,
-
-            @Schema(allowableValues = {"active", "suspended", "closed", "deleted"})
-            String status,
-
-            @Schema(
-                    types = {"string", "null"},
-                    requiredMode = Schema.RequiredMode.REQUIRED)
-            String country,
-
-            @Schema(
-                    types = {"string", "null"},
-                    requiredMode = Schema.RequiredMode.REQUIRED)
-            String currency,
-
-            String timeZone,
-
-            @Schema(
-                    types = {"string", "null"},
-                    requiredMode = Schema.RequiredMode.REQUIRED)
-            String defaultLanguage,
-
-            @Schema(
-                    types = {"string", "null"},
-                    requiredMode = Schema.RequiredMode.REQUIRED)
-            String contactEmail,
-
-            @Schema(
-                    types = {"string", "null"},
-                    requiredMode = Schema.RequiredMode.REQUIRED)
-            String contactPhone,
-
-            @Schema(
-                    types = {"string", "null"},
-                    requiredMode = Schema.RequiredMode.REQUIRED)
-            String address,
-
-            @Schema(
-                    types = {"object", "null"},
-                    requiredMode = Schema.RequiredMode.REQUIRED)
-            PlanSummary plan,
-
-            @Schema(
-                    types = {"string", "null"},
-                    requiredMode = Schema.RequiredMode.REQUIRED)
-            String ownerEmail,
-
-            Instant createdAt,
-            Instant updatedAt,
-
-            @Schema(
-                    types = {"string", "null"},
-                    format = "date-time",
-                    requiredMode = Schema.RequiredMode.REQUIRED,
-                    description = "When the salon was closed (F03-S03)")
-            Instant closedAt,
-
-            @Schema(
-                    types = {"string", "null"},
-                    format = "date-time",
-                    requiredMode = Schema.RequiredMode.REQUIRED,
-                    description = "When a closed salon's data is deleted: 30 days after closure")
-            Instant deleteAt,
-
-            @Schema(
-                    types = {"string", "null"},
-                    format = "date-time",
-                    requiredMode = Schema.RequiredMode.REQUIRED,
-                    description = "When a closed salon's data was deleted")
-            Instant deletedAt) {}
 
     private final SalonStore salons;
     private final OperatorWork work;

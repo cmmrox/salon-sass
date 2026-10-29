@@ -1,5 +1,6 @@
 package com.salonplatform.platform.config;
 
+import com.salonplatform.platform.dto.AccountInput;
 import com.salonplatform.platform.service.OperatorAccounts;
 import java.io.IOException;
 import java.io.Reader;
@@ -58,7 +59,7 @@ class OperatorBootstrapCommand implements ApplicationRunner {
         try (Reader reader = Files.newBufferedReader(path, StandardCharsets.UTF_8)) {
             values.load(reader);
         }
-        boolean created = accounts.bootstrap(new OperatorAccounts.AccountInput(
+        boolean created = accounts.bootstrap(new AccountInput(
                 values.getProperty("email"),
                 values.getProperty("displayName"),
                 values.getProperty("role"),

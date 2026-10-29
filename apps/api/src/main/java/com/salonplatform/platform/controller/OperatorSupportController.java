@@ -1,6 +1,8 @@
 package com.salonplatform.platform.controller;
 
-import com.fasterxml.jackson.annotation.JsonAnySetter;
+import com.salonplatform.platform.dto.StartRequest;
+import com.salonplatform.platform.dto.SupportEntry;
+import com.salonplatform.platform.dto.SupportSessionPage;
 import com.salonplatform.platform.service.Paging;
 import com.salonplatform.platform.service.SupportSessions;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -35,24 +37,9 @@ class OperatorSupportController {
         this.sessions = sessions;
     }
 
-    @Schema(
-            additionalProperties = Schema.AdditionalPropertiesValue.FALSE,
-            requiredProperties = {"reason"})
-    record StartRequest(
-            @Schema(minLength = 10, maxLength = 500) String reason,
-
-            @Schema(minimum = "5", maximum = "120", defaultValue = "30")
-            Integer durationMinutes) {
-        @JsonAnySetter
-        void unknown(String field, Object ignored) {
-            throw OperatorRequests.unexpected(field);
-        }
-    }
-
     @PostMapping(path = "/salons/{id}/support-sessions", consumes = MediaType.APPLICATION_JSON_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
-    ResponseEntity<SupportSessions.SupportEntry> startSupportSession(
-            @PathVariable String id, @RequestBody StartRequest request) {
+    ResponseEntity<SupportEntry> startSupportSession(@PathVariable String id, @RequestBody StartRequest request) {
         return ResponseEntity.status(201)
                 .cacheControl(CacheControl.noStore())
                 .body(sessions.start(
@@ -62,7 +49,7 @@ class OperatorSupportController {
 
     @PostMapping("/support-sessions/{id}/entry-codes")
     @ResponseStatus(HttpStatus.CREATED)
-    ResponseEntity<SupportSessions.SupportEntry> issueSupportEntryCode(@PathVariable String id) {
+    ResponseEntity<SupportEntry> issueSupportEntryCode(@PathVariable String id) {
         return ResponseEntity.status(201)
                 .cacheControl(CacheControl.noStore())
                 .body(sessions.entryCode(OperatorRequests.id(id)));
@@ -76,7 +63,7 @@ class OperatorSupportController {
     }
 
     @GetMapping("/support-sessions")
-    ResponseEntity<SupportSessions.SupportSessionPage> listSupportSessions(
+    ResponseEntity<SupportSessionPage> listSupportSessions(
             @Parameter(schema = @Schema(type = "integer", minimum = "0", maximum = "100000", defaultValue = "0"))
                     @RequestParam(required = false)
                     String page,

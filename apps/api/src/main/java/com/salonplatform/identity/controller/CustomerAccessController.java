@@ -1,14 +1,15 @@
 package com.salonplatform.identity.controller;
 
 import com.salonplatform.identity.adapter.CustomerDevice;
+import com.salonplatform.identity.dto.Challenge;
+import com.salonplatform.identity.dto.CodeRequest;
+import com.salonplatform.identity.dto.CustomerCodeVerificationRequest;
 import com.salonplatform.identity.dto.Tokens;
 import com.salonplatform.identity.service.CustomerAccess;
 import com.salonplatform.shared.tenancy.TenantContext;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.*;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.*;
-import java.util.UUID;
 import org.springframework.core.env.Environment;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
@@ -42,15 +43,6 @@ class CustomerAccessController {
         this.environment = environment;
     }
 
-    record CodeRequest(
-            @NotBlank @Size(max = 32) String mobile,
-            @NotBlank @Size(max = 16) String channel,
-            @NotBlank @Size(max = 160) String deviceLabel) {}
-
-    record CustomerCodeVerificationRequest(
-            @NotNull UUID challengeId,
-            @NotBlank @Size(max = 32) String code) {}
-
     @io.swagger.v3.oas.annotations.Parameter(
             name = "x-salon-client-assertion",
             in = io.swagger.v3.oas.annotations.enums.ParameterIn.HEADER,
@@ -67,8 +59,7 @@ class CustomerAccessController {
                         @io.swagger.v3.oas.annotations.media.Content(
                                 mediaType = "application/json",
                                 schema =
-                                        @io.swagger.v3.oas.annotations.media.Schema(
-                                                implementation = CustomerAccess.Challenge.class))),
+                                        @io.swagger.v3.oas.annotations.media.Schema(implementation = Challenge.class))),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(
                 responseCode = "429",
                 description = "An accepted-send ceiling is reached",
@@ -84,7 +75,7 @@ class CustomerAccessController {
                                         @io.swagger.v3.oas.annotations.media.Schema(
                                                 ref = "#/components/schemas/Problem")))
     })
-    ResponseEntity<CustomerAccess.Challenge> request(@Valid @RequestBody CodeRequest request, HttpServletRequest http) {
+    ResponseEntity<Challenge> request(@Valid @RequestBody CodeRequest request, HttpServletRequest http) {
         TenantContext.require();
         String rateAddress = assertions.rateAddress(http);
         String cookie = cookie(http);
@@ -94,7 +85,7 @@ class CustomerAccessController {
             cookie = devices.issue();
             id = devices.verifiedId(cookie);
         }
-        CustomerAccess.Challenge challenge =
+        Challenge challenge =
                 access.request(request.mobile(), request.channel(), request.deviceLabel(), id, rateAddress);
         ResponseEntity.BodyBuilder response = ResponseEntity.ok().cacheControl(CacheControl.noStore());
         if (issued)

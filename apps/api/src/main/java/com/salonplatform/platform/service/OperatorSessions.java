@@ -3,16 +3,16 @@ package com.salonplatform.platform.service;
 import static com.salonplatform.platform.service.OperatorAccess.invalidSession;
 
 import com.salonplatform.platform.adapter.OperatorCrypto;
+import com.salonplatform.platform.dto.OperatorPrincipal;
+import com.salonplatform.platform.dto.OperatorTokens;
 import com.salonplatform.platform.repository.OperatorSessionStore;
 import com.salonplatform.platform.repository.OperatorSessionStore.Session;
 import com.salonplatform.platform.repository.OperatorUserStore;
 import com.salonplatform.platform.repository.PlatformAudit;
 import com.salonplatform.platform.service.OperatorAccess.Operator;
-import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -26,26 +26,6 @@ import org.springframework.stereotype.Service;
 public class OperatorSessions {
 
     static final Duration SESSION_LIFETIME = Duration.ofDays(7);
-
-    @Schema(
-            requiredProperties = {
-                "state",
-                "sessionId",
-                "accessToken",
-                "refreshToken",
-                "accessExpiresAt",
-                "refreshExpiresAt"
-            })
-    public record OperatorTokens(
-            String state,
-            UUID sessionId,
-            String accessToken,
-            String refreshToken,
-            Instant accessExpiresAt,
-            Instant refreshExpiresAt) {}
-
-    @Schema(requiredProperties = {"id", "kind", "role", "permissions", "mfaEnabled"})
-    public record OperatorPrincipal(UUID id, String kind, String role, List<String> permissions, boolean mfaEnabled) {}
 
     private final OperatorWork work;
     private final OperatorAccess access;

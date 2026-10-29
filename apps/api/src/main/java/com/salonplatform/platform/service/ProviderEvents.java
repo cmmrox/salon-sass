@@ -1,6 +1,7 @@
 package com.salonplatform.platform.service;
 
 import com.salonplatform.platform.adapter.BillingProviderKey;
+import com.salonplatform.platform.dto.Acknowledged;
 import com.salonplatform.platform.repository.BillingLedger;
 import com.salonplatform.platform.repository.InvoiceStore;
 import com.salonplatform.platform.repository.InvoiceStore.ChargeAttempt;
@@ -11,7 +12,6 @@ import com.salonplatform.shared.web.ApplicationProblemException;
 import com.salonplatform.shared.web.ErrorCode;
 import com.salonplatform.shared.web.FieldProblem;
 import com.salonplatform.shared.web.NotFoundException;
-import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
@@ -36,13 +36,6 @@ import tools.jackson.databind.json.JsonMapper;
  */
 @Service
 public class ProviderEvents {
-
-    @Schema(requiredProperties = {"eventId", "result"})
-    public record Acknowledged(
-            String eventId,
-
-            @Schema(allowableValues = {"paid", "failed", "already_paid", "unknown", "duplicate"})
-            String result) {}
 
     private record Event(String eventId, UUID invoiceId, UUID attemptKey, String outcome, Instant occurredAt) {}
 
