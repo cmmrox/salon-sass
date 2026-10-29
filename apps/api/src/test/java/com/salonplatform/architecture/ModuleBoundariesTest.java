@@ -165,7 +165,11 @@ class ModuleBoundariesTest {
                         "nestedrecordvisible",
                         rule(ModuleRules::nestedRecordsUsedOnlyByTheirClassArePrivate),
                         "BookBooking$Window"),
-                arguments("implname", rule(ModuleRules::noClassIsNamedImpl), "BookingServiceImpl"));
+                arguments("implname", rule(ModuleRules::noClassIsNamedImpl), "BookingServiceImpl"),
+                arguments(
+                        "misplacedevent",
+                        rule(ModuleRules::eventRecordsLiveInTheirModulesRootPackage),
+                        "event.BookingConfirmed"));
     }
 
     /**

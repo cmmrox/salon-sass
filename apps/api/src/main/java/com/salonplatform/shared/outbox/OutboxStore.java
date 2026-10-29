@@ -14,7 +14,8 @@ import org.springframework.jdbc.support.SqlArrayValue;
 import org.springframework.stereotype.Component;
 
 /**
- * The outbox's direct SQL: the dispatcher's leasing and conditional status updates, and the cancellation and
+ * The outbox's direct SQL: the dispatcher's leasing and conditional status updates of messages and events,
+ * and the cancellation and
  * erasure of one message (named direct-SQL exceptions, {@code docs/engineering/backend.md}). What is due across
  * salons is asked of {@code outbox_due()}, which returns ids and nothing else; everything else is done for one
  * salon, inside a transaction that the caller opened with that salon set, so that row-level security holds, and
@@ -25,10 +26,12 @@ class OutboxStore {
 
     private static final String DUE = "SELECT message_id, tenant_id FROM outbox_due(?, ?, ?, ?)";
 
+    private static final String DUE_EVENTS = "SELECT message_id, tenant_id FROM outbox_due_events(?, ?, ?, ?)";
+
     private static final String BACKLOG = "SELECT waiting, oldest_due_at FROM outbox_backlog(?)";
 
     private static final String LOCK_DUE = """
-            SELECT channel, payload::text AS payload, attempts, trace_parent FROM outbox_message
+            SELECT channel, event_type, payload::text AS payload, attempts, trace_parent FROM outbox_message
              WHERE tenant_id = ? AND id = ?
                AND ((status = 'pending' AND next_attempt_at <= ?) OR (status = 'sending' AND lease_until <= ?))
                FOR UPDATE SKIP LOCKED
@@ -96,15 +99,25 @@ class OutboxStore {
     /** Waiting messages across every salon, and when the oldest due one became due. */
     record Backlog(long waiting, Instant oldestDueAt) {}
 
-    /** A message this dispatcher now holds. */
+    /**
+     * A message this dispatcher now holds.
+     *
+     * @param eventType for an event, its type name; null for a provider's delivery
+     */
     record Claim(
             UUID messageId,
             UUID tenantId,
             String channel,
+            String eventType,
             String payload,
             int attempt,
             UUID leaseToken,
-            String traceParent) {}
+            String traceParent) {
+
+        boolean isEvent() {
+            return eventType != null;
+        }
+    }
 
     /** What happened when a due message was looked at. */
     sealed interface Taken permits Claimed, OutOfAttempts, NotTaken {}
@@ -118,11 +131,20 @@ class OutboxStore {
     record NotTaken() implements Taken {}
 
     /** A due message, locked for this dispatcher's transaction. */
-    private record Locked(String channel, String payload, int attempts, String traceParent) {}
+    private record Locked(String channel, String eventType, String payload, int attempts, String traceParent) {}
 
     List<Due> due(Instant now, Collection<String> channels, int perSalon, int max) {
         return jdbc.sql(DUE)
                 .params(utc(now), new SqlArrayValue("text", channels.toArray()), perSalon, max)
+                .query((row, number) ->
+                        new Due(row.getObject("message_id", UUID.class), row.getObject("tenant_id", UUID.class)))
+                .list();
+    }
+
+    /** Due events of these types across salons, as {@link #due} for provider messages; another type's wait. */
+    List<Due> dueEvents(Instant now, Collection<String> eventTypes, int perSalon, int max) {
+        return jdbc.sql(DUE_EVENTS)
+                .params(utc(now), new SqlArrayValue("text", eventTypes.toArray()), perSalon, max)
                 .query((row, number) ->
                         new Due(row.getObject("message_id", UUID.class), row.getObject("tenant_id", UUID.class)))
                 .list();
@@ -157,6 +179,7 @@ class OutboxStore {
                 .params(tenantId, messageId, utc(now), utc(now))
                 .query((row, number) -> new Locked(
                         row.getString("channel"),
+                        row.getString("event_type"),
                         row.getString("payload"),
                         row.getInt("attempts"),
                         row.getString("trace_parent")))
@@ -182,6 +205,7 @@ class OutboxStore {
                 messageId,
                 tenantId,
                 message.channel(),
+                message.eventType(),
                 message.payload(),
                 message.attempts() + 1,
                 token,

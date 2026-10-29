@@ -12,9 +12,10 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
 
 /**
- * The salon's outgoing messages in a closed salon's export, and their removal after the retention
- * (PLT-06). Only the delivery record is exported: the payload (which may hold an encrypted recipient
- * envelope or a link credential) and the delivery lease are left out.
+ * The salon's outgoing messages and events, and which subscriber processed which event, in a closed salon's
+ * export, and their removal after the retention (PLT-06). Only a message's delivery record is exported: the
+ * payload (which may hold an encrypted recipient envelope or a link credential) and the delivery lease are
+ * left out. The processed records are erased first, because they refer to their events.
  */
 @Component
 class OutboxTenantData implements TenantDataModule {
@@ -25,6 +26,11 @@ class OutboxTenantData implements TenantDataModule {
             Map.of(
                     "payload", "an encrypted or credential-bearing delivery payload, never exported",
                     "lease_token", "a dispatcher's internal claim token, never exported"));
+
+    private static final Table PROCESSED_EVENTS = new Table("shared_processed_event", "created_at", Map.of());
+
+    /** In the order they are erased. */
+    private static final List<Table> TABLES = List.of(PROCESSED_EVENTS, OUTBOX);
 
     private final JdbcClient jdbc;
     private final ObjectProvider<PlatformDatabase> platform;
@@ -41,7 +47,7 @@ class OutboxTenantData implements TenantDataModule {
 
     @Override
     public List<Table> tables() {
-        return List.of(OUTBOX);
+        return TABLES;
     }
 
     @Override
@@ -56,9 +62,9 @@ class OutboxTenantData implements TenantDataModule {
     }
 
     private static Table checked(String table) {
-        if (!OUTBOX.name().equals(table)) {
-            throw new IllegalArgumentException("not an outbox table: " + table);
-        }
-        return OUTBOX;
+        return TABLES.stream()
+                .filter(owned -> owned.name().equals(table))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("not an outbox table: " + table));
     }
 }

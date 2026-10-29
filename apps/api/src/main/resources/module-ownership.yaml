@@ -80,6 +80,7 @@ modules:
       - audit_entry
       - outbox_message
       - scheduled_job
+      - shared_processed_event
     paths:
       - /api/v1/meta
     settings:

@@ -16,9 +16,10 @@ import tools.jackson.databind.json.JsonMapper;
 
 /**
  * The way anything leaves the system (docs/engineering/backend.md, "Transactions, outbox and
- * external calls"). A message is written in the caller's transaction, so it exists exactly when the
+ * external calls"), and the way a module tells other modules that something happened ("Events between
+ * modules"). A message or an event is written in the caller's transaction, so it exists exactly when the
  * change that caused it was committed; it is delivered afterwards by the dispatcher, with retry,
- * time limits and a circuit breaker. Called outside a writable transaction, it refuses.
+ * time limits and, for a provider, a circuit breaker. Called outside a writable transaction, it refuses.
  */
 @Service
 public class Outbox {
@@ -57,6 +58,45 @@ public class Outbox {
      * As {@link #enqueue(String, Object)}, at a time the caller already took for the same change.
      */
     public UUID enqueue(String channel, Object payload, Instant at) {
+        requireWritableSalonTransaction();
+        if (channel == null || channel.isBlank()) {
+            throw new IllegalArgumentException("a message has a channel");
+        }
+        if (EventTypes.CHANNEL.equals(channel)) {
+            throw new IllegalArgumentException("the channel '" + channel + "' carries events: publish them");
+        }
+        UUID id = UUID.randomUUID();
+        messages.persist(OutboxMessage.delivery(
+                id,
+                channel,
+                json.writeValueAsString(payload),
+                traces.currentTraceParent().orElse(null),
+                at));
+        return id;
+    }
+
+    /**
+     * Publishes an event between modules for the current salon, in the caller's transaction: it exists
+     * exactly when the change that caused it was committed, and is then delivered to every subscriber of its
+     * type (docs/engineering/backend.md, "Events between modules"). Its delivery belongs to the current trace.
+     *
+     * @param event a record annotated with {@link EventType}, holding ids and values only
+     * @return the event's id
+     */
+    public UUID publish(Record event) {
+        requireWritableSalonTransaction();
+        String type = EventTypes.nameOf(event.getClass());
+        UUID id = UUID.randomUUID();
+        messages.persist(OutboxMessage.event(
+                id,
+                type,
+                json.writeValueAsString(event),
+                traces.currentTraceParent().orElse(null),
+                time.now()));
+        return id;
+    }
+
+    private static void requireWritableSalonTransaction() {
         if (!TransactionSynchronizationManager.isActualTransactionActive()
                 || TransactionSynchronizationManager.isCurrentTransactionReadOnly()) {
             throw new IllegalStateException(
@@ -65,18 +105,7 @@ public class Outbox {
         }
         TenantContext.resolved()
                 .orElseThrow(() -> new IllegalStateException(
-                        "An outbox message belongs to a salon: write it inside work" + " for one (TenantContext)"));
-        if (channel == null || channel.isBlank()) {
-            throw new IllegalArgumentException("a message has a channel");
-        }
-        UUID id = UUID.randomUUID();
-        messages.persist(new OutboxMessage(
-                id,
-                channel,
-                json.writeValueAsString(payload),
-                traces.currentTraceParent().orElse(null),
-                at));
-        return id;
+                        "An outbox message belongs to a salon: write it inside work for one (TenantContext)"));
     }
 
     /**

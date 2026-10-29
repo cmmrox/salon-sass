@@ -64,7 +64,9 @@ class DatabaseIsolationCatalogueIntegrationTest {
                         "identity_rate_bucket",
                         "identity_guard",
                         "identity_customer",
-                        "identity_customer_challenge");
+                        "identity_customer_challenge",
+                        // F23-S05: which subscriber processed which event.
+                        "shared_processed_event");
         assertThat(tables)
                 .allSatisfy(table -> assertThat(table)
                         .as("%s", table.get("name"))
@@ -210,7 +212,9 @@ class DatabaseIsolationCatalogueIntegrationTest {
                         org.assertj.core.api.Assertions.tuple("identity_guard", "INSERT,SELECT,UPDATE"),
                         org.assertj.core.api.Assertions.tuple("identity_customer", "DELETE,INSERT,SELECT,UPDATE"),
                         org.assertj.core.api.Assertions.tuple(
-                                "identity_customer_challenge", "DELETE,INSERT,SELECT,UPDATE"));
+                                "identity_customer_challenge", "DELETE,INSERT,SELECT,UPDATE"),
+                        // F23-S05: a processed record is written and read, never changed.
+                        org.assertj.core.api.Assertions.tuple("shared_processed_event", "INSERT,SELECT"));
     }
 
     /**
@@ -241,7 +245,9 @@ class DatabaseIsolationCatalogueIntegrationTest {
                 "job_claim",
                 "job_finish",
                 "salon_entitlements",
-                "suspended_tenant_ids");
+                "suspended_tenant_ids",
+                // F23-S05: the due events of the types the asking instance knows.
+                "outbox_due_events");
         // F03-S01: the module-owned bootstrap functions belong to the platform role alone, as do F03-S02's
         // staff-seat usage count and billing's outbox write.
         // F03-S03: closure's session revocation and message cancellation, and each module's guarded eraser,

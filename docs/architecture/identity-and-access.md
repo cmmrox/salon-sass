@@ -360,7 +360,8 @@ writable tenant transaction. It scans bounded keyset pages and erases matching i
 in every delivery state, including messages whose expired challenge rows were already cleaned up.
 Identity recognizes its own encrypted payload shape; an unreadable recognized envelope rolls back
 deletion with a safe internal-error response. Conditional dispatcher finalization cannot recreate
-erased rows. An opaque `CustomerDataErased(tenantId,challengeIds)` event clears local captures after
-commit; core identity code never imports local hooks. Other numbers/salons and ordinary hashed
+erased rows. An opaque `identity.CustomerDataErased.v1` event (challenge ids only) is published through the
+outbox in the erasing transaction and clears local captures when its subscriber runs, shortly after
+commit (F23-S05, decision 063); core identity code never imports local hooks. Other numbers/salons and ordinary hashed
 anti-abuse counters remain. V10 adds profile defaults to the existing customer table; it introduces
 no new tenant table or cross-module table access.

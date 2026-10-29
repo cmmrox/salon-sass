@@ -136,12 +136,12 @@ Three consequences of how the framework works, which every later stage follows:
 - **The application reads the registry only through `SECURITY DEFINER` functions.** It has no grant
   on `tenant` or on any other platform table. `tenant_by_slug(text)` returns a slug's id, status and
   time zone; `tenant_by_id` the same for an id; `active_tenant_ids` the ids of active salons, for
-  jobs. The outbox reaches across salons only through `outbox_due` and `outbox_backlog`, which
+  jobs. The outbox reaches across salons only through `outbox_due`, `outbox_due_events` and `outbox_backlog`, which
   return ids and counts and nothing of a message, and the scheduler only through `job_claim` and
   `job_finish`.
 - **Row-level security is forced, so it holds for the owning role too**, which is not a superuser
   outside a developer's machine. A `SECURITY DEFINER` function that must see several salons' rows
-  (`outbox_due`, `outbox_backlog`) sets each active salon in turn inside the function, and puts the
+  (`outbox_due`, `outbox_due_events`, `outbox_backlog`) sets each active salon in turn inside the function, and puts the
   caller's `app.tenant_id` back before it returns. A `SET` clause on the function cannot be used:
   only a superuser may attach one for a custom setting. `TenantContext`
   tells "no such salon" (404 `not_found`) from "suspended" (403 `salon_suspended`).

@@ -14,7 +14,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 
 /**
  * The outbox's dispatcher, with a guard (a limit on calls at once and a circuit breaker) for each
- * channel that has a provider. {@code salon.outbox.enabled=false} leaves the dispatcher out; messages
+ * channel that has a provider, and a limit on event deliveries at once. {@code salon.outbox.enabled=false} leaves the dispatcher out; messages
  * are still written, and another instance delivers them.
  */
 @Configuration(proxyBeanMethods = false)
@@ -27,6 +27,8 @@ class OutboxConfiguration {
             OutboxSettings settings,
             OutboxStore store,
             List<OutboxProvider> providers,
+            EventSubscribers events,
+            DeclaredEventTypes eventTypes,
             ActiveTenants tenants,
             PlatformTransactionManager transactions,
             Clock clock,
@@ -42,7 +44,20 @@ class OutboxConfiguration {
                             settings.breaker().waitDuration(),
                             clock));
         }
+        guards.put(
+                EventTypes.CHANNEL,
+                ChannelGuard.withoutBreaker(settings.provider().concurrency()));
+        DeliveryAttempts attempts =
+                new DeliveryAttempts(settings, store, providers, events, transactions, clock, traces, metrics);
         return new OutboxDispatcher(
-                settings, store, providers, Map.copyOf(guards), tenants, transactions, clock, traces, metrics);
+                settings,
+                store,
+                attempts,
+                eventTypes.names(),
+                Map.copyOf(guards),
+                tenants,
+                transactions,
+                clock,
+                metrics);
     }
 }
