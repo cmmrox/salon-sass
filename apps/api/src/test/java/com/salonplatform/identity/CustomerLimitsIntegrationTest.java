@@ -13,6 +13,9 @@ import tools.jackson.databind.json.JsonMapper;
 /**
  * Low explicit test ceilings make salon alerts and midnight transitions observable without load.
  */
+// JSON bodies are read as untyped maps (Map.class); each cast states the shape the assertion
+// beside it then checks, so a wrong shape fails that assertion with a ClassCastException.
+@SuppressWarnings("unchecked")
 class CustomerLimitsIntegrationTest {
     private static TestDatabase database;
     private static StartedApplication app;

@@ -4,6 +4,7 @@ import com.salonplatform.shared.tenancy.CurrentTenant;
 import com.salonplatform.shared.tenancy.TenantContext;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceException;
+import java.io.Serial;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import org.hibernate.Session;
@@ -24,9 +25,12 @@ import org.springframework.transaction.TransactionException;
  */
 class TenantJpaDialect extends HibernateJpaDialect {
 
+    @Serial
+    private static final long serialVersionUID = 1L;
+
     private static final String SET_TENANT = "SELECT set_config('app.tenant_id', ?, true)";
 
-    private final RequestDatabaseLimit limit;
+    private final transient RequestDatabaseLimit limit;
 
     TenantJpaDialect(RequestDatabaseLimit limit) {
         this.limit = limit;

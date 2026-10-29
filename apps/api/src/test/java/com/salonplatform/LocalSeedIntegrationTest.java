@@ -62,7 +62,7 @@ class LocalSeedIntegrationTest {
     @Test
     void startingAgainNeitherDuplicatesNorChangesASalonNorOverwritesOneThatWasEdited() {
         TestDatabase database = TestDatabase.createEmpty(TestPostgres.shared());
-        try (StartedApplication first = database.start(LOCAL)) {
+        try (StartedApplication _ = database.start(LOCAL)) {
             // Seeded.
         }
         database.asOwner()
@@ -70,10 +70,10 @@ class LocalSeedIntegrationTest {
                         + "'c3c3c3c3-0000-4000-8000-000000000003'");
         List<Map<String, Object>> before = database.asOwner().queryForList(SALONS);
 
-        try (StartedApplication second = database.start(LOCAL)) {
+        try (StartedApplication _ = database.start(LOCAL)) {
             // Seeded again.
         }
-        try (StartedApplication third = database.start(LOCAL)) {
+        try (StartedApplication _ = database.start(LOCAL)) {
             assertThat(database.asOwner().queryForList(SALONS))
                     .isEqualTo(before)
                     .hasSize(3);
@@ -102,7 +102,7 @@ class LocalSeedIntegrationTest {
     @Test
     void aSeededDatabaseStartsUnderAnotherProfileToo() {
         TestDatabase database = TestDatabase.createEmpty(TestPostgres.shared());
-        try (StartedApplication local = database.start(LOCAL)) {
+        try (StartedApplication _ = database.start(LOCAL)) {
             // Seeded.
         }
 

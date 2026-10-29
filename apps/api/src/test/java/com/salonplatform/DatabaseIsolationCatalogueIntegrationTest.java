@@ -32,7 +32,7 @@ class DatabaseIsolationCatalogueIntegrationTest {
     @BeforeAll
     static void migrated() {
         database = TestDatabase.createEmpty(TestPostgres.shared());
-        try (StartedApplication migrated = database.start()) {
+        try (StartedApplication _ = database.start()) {
             // Started once to apply the migrations.
         }
         owner = database.asOwner();

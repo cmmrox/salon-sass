@@ -20,7 +20,7 @@ class MigrationIntegrationTest {
         TestDatabase database = TestDatabase.createEmpty(TestPostgres.shared());
 
         List<Map<String, Object>> afterFirstStart;
-        try (StartedApplication application = database.start()) {
+        try (StartedApplication _ = database.start()) {
             afterFirstStart = database.asOwner().queryForList(HISTORY);
         }
 

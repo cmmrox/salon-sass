@@ -83,6 +83,8 @@ class LoopbackOnlyConfiguration {
         }
 
         @Override
+        // LambdaSafe calls a customizer only when its generic type accepts this handler, which is the
+        // check the raw call to customize(T) would otherwise skip.
         @SuppressWarnings("unchecked")
         public void customize(Connector main) {
             if (added) {

@@ -67,7 +67,7 @@ class CrossSalonFunctionsIntegrationTest {
             TestDatabase database = kind == Owner.SUPERUSER
                     ? TestDatabase.createEmpty(TestPostgres.shared())
                     : TestDatabase.createEmptyOwnedByAnOrdinaryRole(TestPostgres.shared());
-            try (StartedApplication migrated = database.start()) {
+            try (StartedApplication _ = database.start()) {
                 // Started once to apply the migrations as the owning role.
             }
             JdbcTemplate superuser = database.asOwner();

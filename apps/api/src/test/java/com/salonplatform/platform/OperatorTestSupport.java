@@ -91,6 +91,7 @@ public final class OperatorTestSupport {
     }
 
     public Map<String, Object> body(Http.Exchange response) {
+        // JSON is read as an untyped map (Map.class); the cast states the shape the assertions then check.
         @SuppressWarnings("unchecked")
         Map<String, Object> map = json.readValue(response.body(), Map.class);
         return map;

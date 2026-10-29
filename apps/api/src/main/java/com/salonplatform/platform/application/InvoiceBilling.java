@@ -324,6 +324,7 @@ public class InvoiceBilling {
                     PlatformAudit.OPERATOR,
                     operator.id().toString());
             PaymentView view = payment(payment);
+            // Jackson converts to a raw Map; a view is a JSON object, so every key is a string.
             @SuppressWarnings("unchecked")
             Map<String, Object> stored = json.convertValue(view, Map.class);
             receipts.store(operator.id(), RECORD, key, fingerprint, payment.id(), stored, now);

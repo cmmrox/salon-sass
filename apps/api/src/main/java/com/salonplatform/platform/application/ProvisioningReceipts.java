@@ -79,6 +79,7 @@ public class ProvisioningReceipts {
                             if (!crypto.equalHash(row.getString("fingerprint"), fingerprint)) {
                                 throw new ApplicationProblemException(409, ErrorCode.IDEMPOTENCY_CONFLICT);
                             }
+                            // Jackson reads a raw Map; a stored result is a JSON object, so every key is a string.
                             @SuppressWarnings("unchecked")
                             Map<String, Object> result = json.readValue(row.getString("result"), Map.class);
                             return new Receipt(row.getObject("subject_id", UUID.class), result);

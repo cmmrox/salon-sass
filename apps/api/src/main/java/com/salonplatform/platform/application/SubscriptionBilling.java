@@ -229,6 +229,7 @@ public class SubscriptionBilling {
                     PlatformAudit.OPERATOR,
                     operator.id().toString());
             SubscriptionView view = view(subscription, now);
+            // Jackson converts to a raw Map; a view is a JSON object, so every key is a string.
             @SuppressWarnings("unchecked")
             Map<String, Object> stored = json.convertValue(view, Map.class);
             receipts.store(operator.id(), START, key, fingerprint, subscription.id(), stored, now);

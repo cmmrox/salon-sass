@@ -8,6 +8,7 @@ import com.salonplatform.shared.outbox.OutboxMessageView;
 import com.salonplatform.shared.tenancy.CurrentTenant;
 import com.salonplatform.shared.tenancy.TenantContext;
 import com.salonplatform.shared.time.SalonTime;
+import java.io.Serial;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.LinkedHashMap;
@@ -81,6 +82,9 @@ class Probes {
 
     /** Thrown inside the transaction when the probe asked for it, after both rows were written. */
     static final class ProbeAborted extends RuntimeException {
+
+        @Serial
+        private static final long serialVersionUID = 1L;
 
         ProbeAborted() {
             super("The probe asked for its transaction to be aborted after writing", null, false, false);

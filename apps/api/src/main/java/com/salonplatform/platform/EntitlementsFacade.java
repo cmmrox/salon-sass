@@ -29,6 +29,7 @@ public class EntitlementsFacade implements SalonEntitlements {
             throw new IllegalStateException("Entitlements are read inside the writable transaction that enforces them");
         }
         TenantContext.resolved().orElseThrow(() -> new IllegalStateException("Entitlements belong to a salon"));
+        // A native query's result list is untyped; each row of this one is an Object[] of its six columns.
         @SuppressWarnings("unchecked")
         List<Object[]> rows = entityManager.createNativeQuery("""
                 SELECT plan_id, staff_seats, branches, message_allowance, custom_domain, dedicated_app

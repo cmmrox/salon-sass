@@ -64,10 +64,10 @@ public class OperatorCrypto {
     public OperatorCrypto(OperatorSecrets secrets, Clock clock) {
         this.secrets = secrets;
         this.clock = clock;
-        Pbkdf2PasswordEncoder pbkdf2 = new Pbkdf2PasswordEncoder("", 16, 600000, 256);
-        pbkdf2.setAlgorithm(Pbkdf2PasswordEncoder.SecretKeyFactoryAlgorithm.PBKDF2WithHmacSHA256);
+        Pbkdf2PasswordEncoder pbkdf2 = new Pbkdf2PasswordEncoder(
+                "", 16, 600000, Pbkdf2PasswordEncoder.SecretKeyFactoryAlgorithm.PBKDF2WithHmacSHA256);
         passwords = new DelegatingPasswordEncoder("pbkdf2-sha256-600k", Map.of("pbkdf2-sha256-600k", pbkdf2));
-        dummyHash = passwords.encode(randomToken());
+        dummyHash = passwords.encode(newRandomToken());
         encoder = new NimbusJwtEncoder(new ImmutableSecret<>(secrets.signing()));
         NimbusJwtDecoder jwtDecoder = NimbusJwtDecoder.withSecretKey(new SecretKeySpec(secrets.signing(), "HmacSHA256"))
                 .macAlgorithm(MacAlgorithm.HS256)
@@ -88,6 +88,11 @@ public class OperatorCrypto {
 
     /** 256 random bits, URL-safe. */
     public String randomToken() {
+        return newRandomToken();
+    }
+
+    /** Private, so that the constructor calls nothing a subclass could override. */
+    private String newRandomToken() {
         byte[] bytes = new byte[32];
         random.nextBytes(bytes);
         return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);

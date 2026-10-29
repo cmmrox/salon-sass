@@ -8,6 +8,9 @@ import java.util.*;
 import java.util.concurrent.*;
 import org.junit.jupiter.api.Test;
 
+// JSON bodies are read as untyped maps (Map.class); each cast states the shape the assertion
+// beside it then checks, so a wrong shape fails that assertion with a ClassCastException.
+@SuppressWarnings("unchecked")
 class CustomerAccessIntegrationTest extends CustomerHttpFixture {
     @Test
     void bothChannelsCaptureEncryptedMessagesAndOnlyPublishChallengeMetadata() throws Exception {

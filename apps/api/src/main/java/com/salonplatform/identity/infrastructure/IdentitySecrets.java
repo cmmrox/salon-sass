@@ -49,7 +49,7 @@ public class IdentitySecrets {
             try (var channel = java.nio.channels.FileChannel.open(
                     lockPath, java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.WRITE)) {
                 Files.setPosixFilePermissions(lockPath, mode);
-                try (var lock = channel.lock()) {
+                try (var _ = channel.lock()) {
                     if (Files.exists(path)) {
                         Files.setPosixFilePermissions(path, mode);
                         try (InputStream in = Files.newInputStream(path)) {

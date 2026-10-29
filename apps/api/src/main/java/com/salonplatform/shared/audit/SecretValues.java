@@ -93,7 +93,6 @@ public final class SecretValues {
                 || SECRET_COMPOUNDS.stream().anyMatch(compound -> joined.endsWith(compound) && compound.length() > 3);
     }
 
-    @SuppressWarnings("unchecked")
     private static Object redactValue(Object value) {
         if (value instanceof Map<?, ?> map) {
             Map<String, Object> nested = new LinkedHashMap<>();

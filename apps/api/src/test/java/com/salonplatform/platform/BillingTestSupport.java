@@ -189,6 +189,7 @@ final class BillingTestSupport {
     private final Map<UUID, java.util.Set<Long>> used = new HashMap<>();
 
     /** The staff member's access token through the real sign-in (with MFA for an Owner). */
+    // JSON is read as an untyped map (Map.class); the cast states the shape the assertions then check.
     @SuppressWarnings("unchecked")
     Map<String, Object> tokens(TestSalon salon, StaffAccount account) {
         Http.Exchange sign = identityCall(

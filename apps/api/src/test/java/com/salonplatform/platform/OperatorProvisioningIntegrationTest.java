@@ -117,6 +117,7 @@ class OperatorProvisioningIntegrationTest extends IntegrationTest {
     }
 
     private List<String> fields(Http.Exchange response) {
+        // JSON is read as an untyped map (Map.class); the cast states the shape the assertions then check.
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> errors =
                 (List<Map<String, Object>>) console.body(response).get("errors");
@@ -296,6 +297,7 @@ class OperatorProvisioningIntegrationTest extends IntegrationTest {
                 .containsEntry("contactPhone", "+94771234567")
                 .containsEntry("address", "1 Synthetic Road\nColombo 07")
                 .containsEntry("ownerEmail", ownerEmail);
+        // JSON is read as an untyped map (Map.class); the cast states the shape the assertions then check.
         @SuppressWarnings("unchecked")
         Map<String, Object> planSummary = (Map<String, Object>) detail.get("plan");
         assertThat(planSummary).containsEntry("id", plan).containsKeys("key", "name");
@@ -343,6 +345,7 @@ class OperatorProvisioningIntegrationTest extends IntegrationTest {
                                         "deviceLabel",
                                         "x"))),
                 401);
+        // JSON is read as an untyped map (Map.class); the cast states the shape the assertions then check.
         @SuppressWarnings("unchecked")
         Map<String, Object> challenge = console.body(signIn);
         Http.Exchange setup = http().sendOnHost(
@@ -378,6 +381,7 @@ class OperatorProvisioningIntegrationTest extends IntegrationTest {
                                 "Bearer " + console.body(verified).get("accessToken")));
         status(principal, 200);
         assertThat(console.body(principal)).containsEntry("role", "OWNER");
+        // JSON is read as an untyped map (Map.class); the cast states the shape the assertions then check.
         @SuppressWarnings("unchecked")
         List<String> permissions = (List<String>) console.body(principal).get("permissions");
         assertThat(permissions).contains("staff.manage", "audit.list", "staff.list");
@@ -447,6 +451,7 @@ class OperatorProvisioningIntegrationTest extends IntegrationTest {
                 .contains("tenantId");
         Map<String, Object> ownerUnknown =
                 OperatorTestSupport.salon(slug, plan, "o@example.test", "owner synthetic v2");
+        // JSON is read as an untyped map (Map.class); the cast states the shape the assertions then check.
         @SuppressWarnings("unchecked")
         Map<String, Object> ownerPart = (Map<String, Object>) ownerUnknown.get("owner");
         ownerPart.put("role", "OPERATOR_ADMIN");
@@ -673,6 +678,7 @@ class OperatorProvisioningIntegrationTest extends IntegrationTest {
         status(page0, 200);
         Map<String, Object> first = console.body(page0);
         assertThat(first).containsEntry("total", 3).containsEntry("page", 0).containsEntry("size", 2);
+        // JSON is read as an untyped map (Map.class); the cast states the shape the assertions then check.
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> items = (List<Map<String, Object>>) first.get("items");
         assertThat(items).extracting(i -> i.get("id")).containsExactly(created.get(2), created.get(1));
@@ -681,6 +687,7 @@ class OperatorProvisioningIntegrationTest extends IntegrationTest {
         assertThat(page0.body()).doesNotContain("password", "ownerEmail", "contactPhone", "@example.test");
         Map<String, Object> second =
                 console.body(console.call("GET", "/salons?q=" + marker + "&page=1&size=2", null, admin));
+        // JSON is read as an untyped map (Map.class); the cast states the shape the assertions then check.
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> rest = (List<Map<String, Object>>) second.get("items");
         assertThat(rest).extracting(i -> i.get("id")).containsExactly(created.get(0));

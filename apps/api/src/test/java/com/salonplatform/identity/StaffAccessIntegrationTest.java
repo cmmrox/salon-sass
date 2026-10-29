@@ -28,6 +28,9 @@ import tools.jackson.databind.json.JsonMapper;
  * Staff APIs on real HTTP/PostgreSQL: security, isolation, live permissions and simultaneous
  * one-use controls.
  */
+// JSON bodies are read as untyped maps (Map.class); each cast states the shape the assertion
+// beside it then checks, so a wrong shape fails that assertion with a ClassCastException.
+@SuppressWarnings("unchecked")
 class StaffAccessIntegrationTest extends IntegrationTest {
     @Autowired
     IdentityCrypto crypto;

@@ -37,7 +37,7 @@ class TenantTablesIsolationIntegrationTest {
     @BeforeAll
     static void twoSalonsWithARowEachInEachTable() {
         database = TestDatabase.createEmpty(TestPostgres.shared());
-        try (var migrated = database.start()) {
+        try (var _ = database.start()) {
             // Migrated.
         }
         JdbcTemplate owner = database.asOwner();

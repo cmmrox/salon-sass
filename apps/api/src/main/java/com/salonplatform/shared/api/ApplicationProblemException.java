@@ -1,12 +1,16 @@
 package com.salonplatform.shared.api;
 
+import java.io.Serial;
 import java.util.List;
 
 /** A safe declared application outcome. Messages never include submitted values. */
 public final class ApplicationProblemException extends RuntimeException {
+    @Serial
+    private static final long serialVersionUID = 1L;
+
     private final int status;
     private final ErrorCode code;
-    private final List<FieldProblem> errors;
+    private final transient List<FieldProblem> errors;
     private Long retryAfterSeconds;
 
     public ApplicationProblemException(int status, ErrorCode code) {

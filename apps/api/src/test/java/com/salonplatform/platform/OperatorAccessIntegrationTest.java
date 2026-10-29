@@ -591,6 +591,7 @@ class OperatorAccessIntegrationTest extends IntegrationTest {
                         json.writeValueAsString(
                                 Map.of("identifier", admin.email(), "password", admin.password(), "deviceLabel", "x")));
         status(staffSignIn, 200);
+        // JSON is read as an untyped map (Map.class); the cast states the shape the assertions then check.
         @SuppressWarnings("unchecked")
         Map<String, Object> staffTokens =
                 (Map<String, Object>) console.body(staffSignIn).get("credentials");

@@ -26,7 +26,7 @@ import tools.jackson.databind.json.JsonMapper;
  * <p>Tomcat creates it by name, so it has a public constructor and uses nothing from Spring's
  * context.
  */
-public class ProblemErrorReportValve extends ErrorReportValve {
+public final class ProblemErrorReportValve extends ErrorReportValve {
 
     private static final JsonMapper JSON = JsonMapper.builder().build();
 

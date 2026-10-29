@@ -430,6 +430,7 @@ class SupportSessionIntegrationTest extends IntegrationTest {
         assertThat(principal.get("expiresAt")).isEqualTo(entry.get("expiresAt"));
         assertThat(principal.get("role")).isNull();
         assertThat(principal.get("staffId")).isNull();
+        // JSON is read as an untyped map (Map.class); the cast states the shape the assertions then check.
         @SuppressWarnings("unchecked")
         List<String> permissions = (List<String>) principal.get("permissions");
         assertThat(permissions).containsExactlyInAnyOrderElementsOf(StaffRole.SUPPORT_READS);
@@ -645,6 +646,7 @@ class SupportSessionIntegrationTest extends IntegrationTest {
     // --- AC-6 and AC-7 ----------------------------------------------------------------------------------
 
     @Test
+    // JSON is read as an untyped map (Map.class); the cast states the shape the assertions then check.
     @SuppressWarnings("unchecked")
     void theSalonsAuditShowsStartRequestsAndEndToOwnerAndManagerOnly() throws Exception {
         Fixture fixture = fixture();
@@ -724,6 +726,7 @@ class SupportSessionIntegrationTest extends IntegrationTest {
     }
 
     @Test
+    // JSON is read as an untyped map (Map.class); the cast states the shape the assertions then check.
     @SuppressWarnings("unchecked")
     void theOwnerListsAndRevokesTheSalonsSessionsAndNoOtherRoleOrSalonCan() throws Exception {
         Fixture fixture = fixture();
@@ -789,6 +792,7 @@ class SupportSessionIntegrationTest extends IntegrationTest {
     // --- AC-8 -----------------------------------------------------------------------------------------
 
     @Test
+    // JSON is read as an untyped map (Map.class); the cast states the shape the assertions then check.
     @SuppressWarnings("unchecked")
     void supportFindsSalonsAndAdminOverseesEverySessionWithPlatformAudit() throws Exception {
         Fixture fixture = fixture();

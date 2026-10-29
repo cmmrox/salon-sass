@@ -436,14 +436,17 @@ class SalonLifecycleIntegrationTest extends IntegrationTest {
         assertThat(((Number) status.get("sizeBytes")).longValue()).isEqualTo(console.body().length);
 
         Map<String, byte[]> files = unzip(console.body());
+        // JSON is read as an untyped map (Map.class); the cast states the shape the assertions then check.
         @SuppressWarnings("unchecked")
         Map<String, Object> manifest = json.readValue(files.get("manifest.json"), Map.class);
+        // JSON is read as an untyped map (Map.class); the cast states the shape the assertions then check.
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> tables = (List<Map<String, Object>>) manifest.get("tables");
         Set<String> registered = new HashSet<>();
         exports.tables().forEach(entry -> registered.add(entry.getValue().name()));
         assertThat(tables).extracting(table -> table.get("name")).containsExactlyInAnyOrderElementsOf(registered);
         assertThat(manifest.get("exportedAt")).isNotNull();
+        // JSON is read as an untyped map (Map.class); the cast states the shape the assertions then check.
         @SuppressWarnings("unchecked")
         Map<String, Object> profile = (Map<String, Object>) manifest.get("salon");
         assertThat(profile.get("id")).isEqualTo(a.salon().id().toString());
@@ -458,6 +461,7 @@ class SalonLifecycleIntegrationTest extends IntegrationTest {
         for (Map<String, Object> table : tables) {
             String name = (String) table.get("name");
             String content = new String(files.get("tables/" + name + ".json"), StandardCharsets.UTF_8);
+            // JSON is read as an untyped map (Map.class); the cast states the shape the assertions then check.
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> rows = json.readValue(content, List.class);
             assertThat(rows).hasSize(((Number) table.get("rows")).intValue());
@@ -474,6 +478,7 @@ class SalonLifecycleIntegrationTest extends IntegrationTest {
             assertThat(content)
                     .doesNotContain(
                             b.salon().id().toString(), b.ownerEmail(), b.managerEmail(), "never-exported", "pbkdf2");
+            // JSON is read as an untyped map (Map.class); the cast states the shape the assertions then check.
             @SuppressWarnings("unchecked")
             List<String> excluded = (List<String>) table.get("excludedColumns");
             if (!excluded.isEmpty()) {
@@ -488,6 +493,7 @@ class SalonLifecycleIntegrationTest extends IntegrationTest {
         Map<String, Object> message = owner.queryForMap("""
                 SELECT payload::text AS payload FROM outbox_message WHERE tenant_id = ? AND channel = 'platform-email'
                 """, a.salon().id());
+        // JSON is read as an untyped map (Map.class); the cast states the shape the assertions then check.
         @SuppressWarnings("unchecked")
         Map<String, Object> payload = json.readValue((String) message.get("payload"), Map.class);
         assertThat(payload.get("recipient")).isEqualTo(a.ownerEmail());
@@ -735,9 +741,11 @@ class SalonLifecycleIntegrationTest extends IntegrationTest {
         BillingTestSupport.status(history, 200);
         Map<String, Object> page = billing.body(history);
         assertThat(page.get("total")).isEqualTo(2);
+        // JSON is read as an untyped map (Map.class); the cast states the shape the assertions then check.
         @SuppressWarnings("unchecked")
         Map<String, Object> first = ((List<Map<String, Object>>) page.get("items")).get(0);
         assertThat(first).containsEntry("kind", "reactivated").containsEntry("reason", "First reactivation reason");
+        // JSON is read as an untyped map (Map.class); the cast states the shape the assertions then check.
         @SuppressWarnings("unchecked")
         Map<String, Object> actor = (Map<String, Object>) first.get("actor");
         assertThat(actor.get("kind")).isEqualTo("operator");

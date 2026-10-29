@@ -15,6 +15,7 @@ import io.swagger.v3.oas.models.media.ObjectSchema;
 import io.swagger.v3.oas.models.media.Schema;
 import io.swagger.v3.oas.models.media.StringSchema;
 import io.swagger.v3.oas.models.responses.ApiResponse;
+import io.swagger.v3.oas.models.responses.ApiResponses;
 import io.swagger.v3.oas.models.servers.Server;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -63,18 +64,20 @@ class OpenApiConfiguration {
             openApi.getPaths()
                     .values()
                     .forEach(path -> path.readOperations().forEach(operation -> {
-                        if (operation.getResponses().getDefault() == null) {
+                        if (operation.getResponses().get(ApiResponses.DEFAULT) == null) {
                             operation
                                     .getResponses()
-                                    .setDefault(new ApiResponse()
-                                            .description("Any error: problem details with a stable `code`.")
-                                            .content(new Content()
-                                                    .addMediaType(
-                                                            APPLICATION_PROBLEM_JSON_VALUE,
-                                                            new MediaType()
-                                                                    .schema(new Schema<>()
-                                                                            .$ref("#/components/schemas/"
-                                                                                    + PROBLEM_SCHEMA)))));
+                                    .addApiResponse(
+                                            ApiResponses.DEFAULT,
+                                            new ApiResponse()
+                                                    .description("Any error: problem details with a stable `code`.")
+                                                    .content(new Content()
+                                                            .addMediaType(
+                                                                    APPLICATION_PROBLEM_JSON_VALUE,
+                                                                    new MediaType()
+                                                                            .schema(new Schema<>()
+                                                                                    .$ref("#/components/schemas/"
+                                                                                            + PROBLEM_SCHEMA)))));
                         }
                     }));
         };
@@ -99,6 +102,8 @@ class OpenApiConfiguration {
         };
     }
 
+    // swagger-models types properties and allOf/oneOf/anyOf with the raw Schema, and a Schema<?>'s
+    // enum can be replaced only through an unchecked cast.
     @SuppressWarnings({"rawtypes", "unchecked"})
     private static void nullable(Schema<?> schema, Map<Schema<?>, Boolean> seen) {
         if (schema == null || seen.put(schema, Boolean.TRUE) != null) {
@@ -137,29 +142,44 @@ class OpenApiConfiguration {
         if (property.get$ref() == null || types == null || !types.contains("null")) {
             return property;
         }
-        Schema<?> reference = new Schema<>().specVersion(SpecVersion.V31).$ref(property.get$ref());
-        Schema<?> nothing = new Schema<>().specVersion(SpecVersion.V31).types(Set.of("null"));
-        return new Schema<>()
-                .specVersion(SpecVersion.V31)
-                .description(property.getDescription())
-                .oneOf(List.of(reference, nothing));
+        Schema<Object> reference = new Schema<>();
+        reference.specVersion(SpecVersion.V31);
+        reference.$ref(property.get$ref());
+        Schema<Object> nothing = new Schema<>();
+        nothing.specVersion(SpecVersion.V31);
+        nothing.types(Set.of("null"));
+        Schema<Object> referenceOrNothing = new Schema<>();
+        referenceOrNothing.specVersion(SpecVersion.V31);
+        referenceOrNothing.description(property.getDescription());
+        referenceOrNothing.oneOf(List.of(reference, nothing));
+        return referenceOrNothing;
     }
 
     private static Schema<?> problemSchema() {
-        return new ObjectSchema()
-                .description("An error, as problem details (RFC 9457) with a stable machine-readable `code`.")
+        StringSchema code = new StringSchema();
+        code.description("The stable reason. Branch on this.");
+        code._enum(Arrays.stream(ErrorCode.values()).map(ErrorCode::code).toList());
+
+        ObjectSchema fieldProblem = new ObjectSchema();
+        fieldProblem.addProperty(
+                "field",
+                new StringSchema().description("The field, as the request names it; a dotted path when nested."));
+        fieldProblem.addProperty("detail", new StringSchema().description("What is wrong with it, for a person."));
+        fieldProblem.required(List.of("field", "detail"));
+
+        ArraySchema fieldProblems = new ArraySchema();
+        fieldProblems.description("For a request body that failed validation (`bad_request`): each field that "
+                + "failed, when the failure has a field. Never the value that was refused.");
+        fieldProblems.items(fieldProblem);
+
+        ObjectSchema problem = new ObjectSchema();
+        problem.description("An error, as problem details (RFC 9457) with a stable machine-readable `code`.")
                 .addProperty("type", new StringSchema().description("A URI identifying the kind of problem."))
                 .addProperty("title", new StringSchema().description("A short summary of the status."))
                 .addProperty("status", new IntegerSchema().description("The HTTP status."))
                 .addProperty("detail", new StringSchema().description("A sentence for a person. Do not branch on it."))
                 .addProperty("instance", new StringSchema().description("The path that was requested."))
-                .addProperty(
-                        "code",
-                        new StringSchema()
-                                .description("The stable reason. Branch on this.")
-                                ._enum(Arrays.stream(ErrorCode.values())
-                                        .map(ErrorCode::code)
-                                        .toList()))
+                .addProperty("code", code)
                 .addProperty(
                         "traceId",
                         new StringSchema()
@@ -167,22 +187,8 @@ class OpenApiConfiguration {
                                         "The request's trace id: the `trace.id` of its log lines and of its trace.")
                                 .pattern("^[0-9a-f]{32}$")
                                 .example("4bf92f3577b34da6a3ce929d0e0e4736"))
-                .addProperty(
-                        "errors",
-                        new ArraySchema()
-                                .description(
-                                        "For a request body that failed validation (`bad_request`): each field that "
-                                                + "failed, when the failure has a field. Never the value that was refused.")
-                                .items(new ObjectSchema()
-                                        .addProperty(
-                                                "field",
-                                                new StringSchema()
-                                                        .description(
-                                                                "The field, as the request names it; a dotted path when nested."))
-                                        .addProperty(
-                                                "detail",
-                                                new StringSchema().description("What is wrong with it, for a person."))
-                                        .required(List.of("field", "detail"))))
-                .required(List.of("title", "status", "code", "traceId"));
+                .addProperty("errors", fieldProblems);
+        problem.required(List.of("title", "status", "code", "traceId"));
+        return problem;
     }
 }

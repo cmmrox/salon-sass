@@ -184,6 +184,7 @@ class OpenApiShapeTest extends IntegrationTest {
                 && (!(property.get("enum") instanceof List<?> values) || values.contains(null));
     }
 
+    // The OpenAPI document is read as untyped maps; walk visits its JSON objects only.
     @SuppressWarnings("unchecked")
     private static void walk(
             Object node, String path, java.util.function.BiConsumer<String, Map<String, Object>> visit) {

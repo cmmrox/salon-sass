@@ -52,6 +52,9 @@ import tools.jackson.databind.json.JsonMapper;
  * unaffected; staff seats are enforced with one winner for the last seat; staff read their own salon's
  * entitlements, only the Owner its invoices, and the customer principal neither (AC-8 to AC-10, AC-12).
  */
+// JSON bodies are read as untyped maps (Map.class); each cast states the shape the assertion
+// beside it then checks, so a wrong shape fails that assertion with a ClassCastException.
+@SuppressWarnings("unchecked")
 class SalonBillingIntegrationTest extends IntegrationTest {
 
     static final MovableClock CLOCK = new MovableClock(Instant.now().truncatedTo(ChronoUnit.SECONDS));

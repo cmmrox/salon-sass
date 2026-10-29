@@ -14,6 +14,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import tools.jackson.databind.json.JsonMapper;
 
 /** Public statuses and nullable/omitted response fields match the generated contract. */
+// JSON bodies are read as untyped maps (Map.class); each cast states the shape the assertion
+// beside it then checks, so a wrong shape fails that assertion with a ClassCastException.
+@SuppressWarnings("unchecked")
 class IdentityContractIntegrationTest extends IntegrationTest {
     @Autowired
     JsonMapper json;

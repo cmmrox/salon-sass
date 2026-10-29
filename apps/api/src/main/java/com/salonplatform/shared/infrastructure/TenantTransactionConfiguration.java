@@ -1,6 +1,7 @@
 package com.salonplatform.shared.infrastructure;
 
 import jakarta.persistence.EntityManagerFactory;
+import java.io.Serial;
 import java.sql.Connection;
 import org.hibernate.Session;
 import org.springframework.beans.factory.ObjectProvider;
@@ -30,6 +31,9 @@ class TenantTransactionConfiguration {
     }
 
     static final class TenantTransactionManager extends JpaTransactionManager {
+
+        @Serial
+        private static final long serialVersionUID = 1L;
 
         private final TenantJpaDialect dialect;
 

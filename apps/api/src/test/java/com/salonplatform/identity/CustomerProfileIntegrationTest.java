@@ -17,6 +17,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 /** Personal-data boundaries and privacy effects exercised over real HTTP and PostgreSQL. */
+// JSON bodies are read as untyped maps (Map.class); each cast states the shape the assertion
+// beside it then checks, so a wrong shape fails that assertion with a ClassCastException.
+@SuppressWarnings("unchecked")
 class CustomerProfileIntegrationTest extends CustomerHttpFixture {
     @BeforeEach
     void isolateProfileFixtures() {

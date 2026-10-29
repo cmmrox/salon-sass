@@ -141,4 +141,19 @@ class IdentityCryptoTest {
         assertThat(crypto.matchingStep(publicVector, crypto.totpCode(publicVector, 3)))
                 .isNull();
     }
+
+    /**
+     * A hash written by the encoder as configured before F23-S01 (PBKDF2 with HMAC-SHA256, 16-byte salt,
+     * 600000 iterations, 256-bit hash) for a synthetic password. Every stored staff password depends on it
+     * still verifying.
+     */
+    @Test
+    void aPasswordHashStoredEarlierStillVerifies() {
+        IdentityCrypto crypto = new IdentityCrypto(new IdentitySecrets(configured()), Clock.systemUTC());
+        String stored = "{pbkdf2-sha256-600k}49aedb7ab90d4121766bb213f8e06b4c4d7434bea8b04319e3e623c0febf25b2"
+                + "4abed20b5cadaf46122f5c3c007d73f7";
+
+        assertThat(crypto.matchesPassword("a stored password of 2026", stored)).isTrue();
+        assertThat(crypto.matchesPassword("another password of 2026", stored)).isFalse();
+    }
 }

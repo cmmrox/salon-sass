@@ -60,7 +60,7 @@ public class Traces {
     public <R> R inSpan(String name, CurrentTenant salon, String parentTraceParent, Callable<R> work) throws Exception {
         Span span = start(name, parentTraceParent)
                 .tag(TenantContext.LOG_FIELD, salon.id().toString());
-        try (Tracer.SpanInScope scope = tracer.withSpan(span)) {
+        try (Tracer.SpanInScope _ = tracer.withSpan(span)) {
             return work.call();
         } catch (Exception | Error ex) {
             span.error(ex);
@@ -76,7 +76,7 @@ public class Traces {
      */
     public <R> R inPlatformSpan(String name, Callable<R> work) throws Exception {
         Span span = start(name, null);
-        try (Tracer.SpanInScope scope = tracer.withSpan(span)) {
+        try (Tracer.SpanInScope _ = tracer.withSpan(span)) {
             return work.call();
         } catch (Exception | Error ex) {
             span.error(ex);
@@ -104,7 +104,7 @@ public class Traces {
             return work;
         }
         return () -> {
-            try (Tracer.SpanInScope scope = tracer.withSpan(span)) {
+            try (Tracer.SpanInScope _ = tracer.withSpan(span)) {
                 return work.call();
             }
         };
@@ -119,7 +119,7 @@ public class Traces {
                     .start();
         }
         // A new trace: nothing of whatever happens to be current on this thread is its parent.
-        try (Tracer.SpanInScope none = tracer.withSpan(null)) {
+        try (Tracer.SpanInScope _ = tracer.withSpan(null)) {
             return tracer.nextSpan().name(name).start();
         }
     }

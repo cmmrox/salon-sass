@@ -60,8 +60,7 @@ class LoopbackOnlyIntegrationTest {
         InetAddress network = reachableNetworkAddress();
         int port = freePort();
         TestDatabase database = TestDatabase.createEmpty(TestPostgres.shared());
-        try (StartedApplication application =
-                database.start("--server.port=" + port, "--salon.server.listen-on-network=false")) {
+        try (StartedApplication _ = database.start("--server.port=" + port, "--salon.server.listen-on-network=false")) {
             assertThatExceptionOfType(ConnectException.class)
                     .as("a connection to %s:%d", network.getHostAddress(), port)
                     .isThrownBy(() -> connect(network, port));
@@ -74,8 +73,7 @@ class LoopbackOnlyIntegrationTest {
         assumeTrue(hasIPv6Loopback(), "this machine has no IPv6 loopback");
         int port = freePort();
         TestDatabase database = TestDatabase.createEmpty(TestPostgres.shared());
-        try (StartedApplication application =
-                database.start("--server.port=" + port, "--spring.profiles.active=local")) {
+        try (StartedApplication _ = database.start("--server.port=" + port, "--spring.profiles.active=local")) {
             String info = "GET /actuator/info HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n";
             for (String address : new String[] {"127.0.0.1", "::1"}) {
                 Exchange response = Exchange.parse(new Http(port).raw(address, info));
@@ -107,8 +105,7 @@ class LoopbackOnlyIntegrationTest {
         InetAddress network = reachableNetworkAddress();
         int port = freePort();
         TestDatabase database = TestDatabase.createEmpty(TestPostgres.shared());
-        try (StartedApplication application =
-                database.start("--server.port=" + port, "--salon.server.listen-on-network=true")) {
+        try (StartedApplication _ = database.start("--server.port=" + port, "--salon.server.listen-on-network=true")) {
             assertThat(new Http(port).raw(network.getHostAddress(), META))
                     .as("on %s", network.getHostAddress())
                     .startsWith("HTTP/1.1 200");

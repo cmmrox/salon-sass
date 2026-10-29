@@ -11,6 +11,9 @@ import org.junit.jupiter.api.*;
 import tools.jackson.databind.json.JsonMapper;
 
 /** Real local-profile HTTP fixture. Every case begins with isolated synthetic identity state. */
+// JSON bodies are read as untyped maps (Map.class); each cast states the shape the assertion
+// beside it then checks, so a wrong shape fails that assertion with a ClassCastException.
+@SuppressWarnings("unchecked")
 abstract class CustomerHttpFixture {
     protected static StartedApplication app;
     protected static TestDatabase database;

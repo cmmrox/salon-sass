@@ -111,7 +111,7 @@ public class BillingProviderKey {
             try (FileChannel channel =
                     FileChannel.open(lockPath, StandardOpenOption.CREATE, StandardOpenOption.WRITE)) {
                 Files.setPosixFilePermissions(lockPath, mode);
-                try (var lock = channel.lock()) {
+                try (var _ = channel.lock()) {
                     if (Files.exists(path)) {
                         Files.setPosixFilePermissions(path, mode);
                         try (InputStream in = Files.newInputStream(path)) {

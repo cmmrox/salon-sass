@@ -40,7 +40,7 @@ class SalonBrandRowLevelSecurityAloneIntegrationTest {
     @BeforeAll
     static void migratedDatabaseWithTwoSalonsAndEveryWriteGranted() {
         database = TestDatabase.createEmpty(TestPostgres.shared());
-        try (StartedApplication migrated = database.start()) {
+        try (StartedApplication _ = database.start()) {
             // Started once to apply the migrations as the product applies them.
         }
         JdbcTemplate owner = database.asOwner();
