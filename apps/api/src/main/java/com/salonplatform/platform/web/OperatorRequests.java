@@ -3,7 +3,6 @@ package com.salonplatform.platform.web;
 import com.salonplatform.shared.web.ApplicationProblemException;
 import com.salonplatform.shared.web.ErrorCode;
 import com.salonplatform.shared.web.FieldProblem;
-import com.salonplatform.shared.web.NotFoundException;
 import java.util.List;
 import java.util.UUID;
 
@@ -29,9 +28,5 @@ final class OperatorRequests {
         }
         throw new ApplicationProblemException(
                 400, ErrorCode.BAD_REQUEST, List.of(new FieldProblem("id", "must be a UUID")));
-    }
-
-    static NotFoundException notFound() {
-        return new NotFoundException();
     }
 }

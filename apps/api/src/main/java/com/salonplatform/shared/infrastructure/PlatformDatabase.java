@@ -22,8 +22,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 /**
  * The platform runtime connection (docs/architecture/operator-console.md, "Platform database
  * boundary and atomic bootstrap"): a separately configured role and a small pool of its own, used
- * explicitly by operator and platform services, and by the identity and branding provisioning
- * facades inside a platform transaction. The default tenant datasource, its JPA transaction manager
+ * explicitly by operator and platform services, and by the identity and branding in-process-only
+ * contracts inside a platform transaction. The default tenant datasource, its JPA transaction manager
  * and the tenant role are untouched: this pool is deliberately not a {@code DataSource} bean, and its
  * transaction manager is not a {@code PlatformTransactionManager} bean, so nothing reaches it by
  * accident.
@@ -127,8 +127,8 @@ public class PlatformDatabase implements SmartInitializingSingleton, DisposableB
     }
 
     /**
-     * Refuses to run outside a platform transaction: a provisioning facade must take part in the
-     * transaction that creates the salon, never commit separately.
+     * Refuses to run outside a platform transaction: an in-process-only contract must take part in the
+     * transaction that creates or closes the salon, never commit separately.
      */
     public void requireTransaction() {
         if (TransactionSynchronizationManager.getResource(pool) == null

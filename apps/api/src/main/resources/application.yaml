@@ -129,7 +129,7 @@ logging:
 
 salon:
   # The platform runtime connection (docs/architecture/operator-console.md): its own role and a small
-  # pool, used only by operator/platform services and provisioning facades. Required: there is no
+  # pool, used only by operator/platform services and in-process-only contracts. Required: there is no
   # fallback to the tenant role. The URL and every wait limit are the tenant pool's.
   platform:
     datasource:

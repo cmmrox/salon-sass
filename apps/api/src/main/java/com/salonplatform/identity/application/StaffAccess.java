@@ -162,10 +162,6 @@ public class StaffAccess {
         return new ApplicationProblemException(401, ErrorCode.INVALID_CREDENTIALS);
     }
 
-    private ApplicationProblemException sessionError() {
-        return new ApplicationProblemException(401, ErrorCode.INVALID_SESSION);
-    }
-
     private ApplicationProblemException conflict() {
         return new ApplicationProblemException(409, ErrorCode.CONFLICT);
     }
