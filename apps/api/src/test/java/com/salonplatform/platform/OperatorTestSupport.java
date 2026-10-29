@@ -2,8 +2,8 @@ package com.salonplatform.platform;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.salonplatform.platform.application.OperatorAccounts;
-import com.salonplatform.platform.infrastructure.OperatorCrypto;
+import com.salonplatform.platform.adapter.OperatorCrypto;
+import com.salonplatform.platform.service.OperatorAccounts;
 import com.salonplatform.testing.Http;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
@@ -57,7 +57,7 @@ public final class OperatorTestSupport {
         this.crypto = crypto;
         this.json = json;
         // From the bean: a random test key is drawn afresh on every Environment read.
-        this.proxyKey = com.salonplatform.platform.infrastructure.OperatorKeys.proxyKey(crypto);
+        this.proxyKey = com.salonplatform.platform.adapter.OperatorKeys.proxyKey(crypto);
         this.clock = clock;
     }
 

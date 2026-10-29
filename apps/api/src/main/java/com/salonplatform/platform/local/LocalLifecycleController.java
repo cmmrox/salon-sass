@@ -1,8 +1,8 @@
 package com.salonplatform.platform.local;
 
-import com.salonplatform.platform.application.SalonDeletion;
-import com.salonplatform.platform.application.SalonExports;
-import com.salonplatform.platform.infrastructure.SalonLifecycleStore;
+import com.salonplatform.platform.repository.SalonLifecycleStore;
+import com.salonplatform.platform.service.SalonDeletion;
+import com.salonplatform.platform.service.SalonExports;
 import com.salonplatform.shared.jobs.TenantJobActivity;
 import com.salonplatform.shared.outbox.SalonMessageCounts;
 import com.salonplatform.shared.persistence.PlatformDatabase;

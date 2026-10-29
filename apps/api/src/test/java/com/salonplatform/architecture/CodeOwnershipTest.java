@@ -51,8 +51,7 @@ class CodeOwnershipTest {
                 .contains(
                         new TableReference(
                                 BASE + ".identity.entity.StaffAccount", "identity", "identity_staff", "identity"),
-                        new TableReference(
-                                BASE + ".platform.infrastructure.SalonStore", "platform", "tenant", "platform"),
+                        new TableReference(BASE + ".platform.repository.SalonStore", "platform", "tenant", "platform"),
                         new TableReference(
                                 BASE + ".identity.repository.StaffAccountRepository",
                                 "identity",

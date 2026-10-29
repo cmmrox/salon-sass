@@ -1,6 +1,6 @@
 package com.salonplatform.platform.local;
 
-import com.salonplatform.platform.application.BootstrapFaults;
+import com.salonplatform.platform.service.BootstrapFaults;
 import java.util.concurrent.atomic.AtomicReference;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;

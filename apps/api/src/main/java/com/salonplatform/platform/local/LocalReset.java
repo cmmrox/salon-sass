@@ -1,9 +1,9 @@
 package com.salonplatform.platform.local;
 
-import com.salonplatform.platform.application.OperatorAccounts;
-import com.salonplatform.platform.application.SalonExports;
 import com.salonplatform.platform.domain.LifecycleTerms;
-import com.salonplatform.platform.infrastructure.LocalResetStore;
+import com.salonplatform.platform.repository.LocalResetStore;
+import com.salonplatform.platform.service.OperatorAccounts;
+import com.salonplatform.platform.service.SalonExports;
 import com.salonplatform.shared.jobs.LocalJobRewind;
 import com.salonplatform.shared.jobs.TenantJobActivity;
 import com.salonplatform.shared.lifecycle.TenantDataModule;

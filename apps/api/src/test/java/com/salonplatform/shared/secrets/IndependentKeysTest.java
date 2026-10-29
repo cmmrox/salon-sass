@@ -4,10 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
 import com.salonplatform.identity.adapter.IdentitySecrets;
-import com.salonplatform.platform.infrastructure.BillingProviderKey;
-import com.salonplatform.platform.infrastructure.ExportKey;
-import com.salonplatform.platform.infrastructure.OperatorSecrets;
-import com.salonplatform.platform.infrastructure.SupportCrypto;
+import com.salonplatform.platform.adapter.BillingProviderKey;
+import com.salonplatform.platform.adapter.ExportKey;
+import com.salonplatform.platform.adapter.OperatorSecrets;
+import com.salonplatform.platform.adapter.SupportCrypto;
 import java.security.SecureRandom;
 import java.time.Clock;
 import java.util.ArrayList;

@@ -1,9 +1,9 @@
 package com.salonplatform.platform.local;
 
-import com.salonplatform.platform.application.BillingProvider;
-import com.salonplatform.platform.application.ProviderEvents;
-import com.salonplatform.platform.infrastructure.BillingChargeChannel;
-import com.salonplatform.platform.infrastructure.BillingProviderKey;
+import com.salonplatform.platform.adapter.BillingChargeChannel;
+import com.salonplatform.platform.adapter.BillingProviderKey;
+import com.salonplatform.platform.service.BillingProvider;
+import com.salonplatform.platform.service.ProviderEvents;
 import com.salonplatform.shared.outbox.OutboxProvider;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
