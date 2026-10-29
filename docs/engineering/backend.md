@@ -381,7 +381,7 @@ change, and a stage leaves the code it touches meeting them.
   a writable tenant transaction and clears its lease; conditional result writes cannot turn it
   back into sending/sent. A provider `OutboxCancelled` outcome does not count as a provider failure.
   Ordinary delivery failures retain the existing retry/breaker behavior. Cancellation does not
-  erase payloads by itself; a privacy-erasure operation must use a shared outbox facade to remove
+  erase payloads by itself; a privacy-erasure operation must use a shared outbox operation to remove
   identifying payloads as well.
 - **Every provider call** has a time limit (10 s), a limit on calls at once per channel (4), and a
   circuit breaker per channel that opens after 5 consecutive failures and waits 60 s. While it is
