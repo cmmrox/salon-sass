@@ -1,4 +1,4 @@
-package com.salonplatform.branding.domain;
+package com.salonplatform.branding.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

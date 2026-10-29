@@ -1,4 +1,4 @@
-package com.salonplatform.branding.infrastructure;
+package com.salonplatform.branding.repository;
 
 import com.salonplatform.shared.persistence.PlatformDatabase;
 import java.sql.Timestamp;

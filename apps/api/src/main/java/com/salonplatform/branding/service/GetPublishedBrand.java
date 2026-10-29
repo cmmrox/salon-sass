@@ -1,6 +1,6 @@
-package com.salonplatform.branding.application;
+package com.salonplatform.branding.service;
 
-import com.salonplatform.branding.infrastructure.SalonBrandRepository;
+import com.salonplatform.branding.repository.SalonBrandRepository;
 import com.salonplatform.shared.tenancy.CurrentTenant;
 import com.salonplatform.shared.tenancy.TenantContext;
 import com.salonplatform.shared.tenancy.TenantNotFoundException;

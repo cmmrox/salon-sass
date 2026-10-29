@@ -1,6 +1,6 @@
-package com.salonplatform.branding.web;
+package com.salonplatform.branding.dto;
 
-import com.salonplatform.branding.application.PublishedBrand;
+import com.salonplatform.branding.service.PublishedBrand;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.media.Schema.RequiredMode;
 
@@ -32,7 +32,7 @@ public record SalonResponse(
                 requiredMode = RequiredMode.REQUIRED)
         String timeZone) {
 
-    static SalonResponse from(PublishedBrand brand) {
+    public static SalonResponse from(PublishedBrand brand) {
         return new SalonResponse(brand.slug(), brand.name(), brand.brandColour(), brand.timeZone());
     }
 }

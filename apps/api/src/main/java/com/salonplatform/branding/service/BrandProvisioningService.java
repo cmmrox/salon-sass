@@ -1,7 +1,7 @@
-package com.salonplatform.branding.application;
+package com.salonplatform.branding.service;
 
-import com.salonplatform.branding.infrastructure.BrandPlatformFunctions;
 import com.salonplatform.branding.inprocess.BrandProvisioning;
+import com.salonplatform.branding.repository.BrandPlatformFunctions;
 import com.salonplatform.shared.persistence.PlatformDatabase;
 import java.time.Instant;
 import java.util.UUID;

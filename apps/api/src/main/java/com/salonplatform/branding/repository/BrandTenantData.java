@@ -1,4 +1,4 @@
-package com.salonplatform.branding.infrastructure;
+package com.salonplatform.branding.repository;
 
 import com.salonplatform.shared.lifecycle.TenantDataModule;
 import com.salonplatform.shared.lifecycle.TenantTableRows;

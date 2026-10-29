@@ -1,6 +1,7 @@
-package com.salonplatform.branding.web;
+package com.salonplatform.branding.controller;
 
-import com.salonplatform.branding.application.GetPublishedBrand;
+import com.salonplatform.branding.dto.SalonResponse;
+import com.salonplatform.branding.service.GetPublishedBrand;
 import com.salonplatform.shared.web.ApiPaths;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;

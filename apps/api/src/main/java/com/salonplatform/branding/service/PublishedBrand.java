@@ -1,4 +1,4 @@
-package com.salonplatform.branding.application;
+package com.salonplatform.branding.service;
 
 /**
  * What customers see of a salon's brand.

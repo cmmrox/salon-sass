@@ -1,6 +1,6 @@
-package com.salonplatform.branding.infrastructure;
+package com.salonplatform.branding.repository;
 
-import com.salonplatform.branding.domain.SalonBrand;
+import com.salonplatform.branding.entity.SalonBrand;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
