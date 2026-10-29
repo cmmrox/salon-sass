@@ -1,7 +1,8 @@
 package com.salonplatform.platform.web;
 
 import com.fasterxml.jackson.annotation.JsonAnySetter;
-import com.salonplatform.platform.application.OperatorAccess;
+import com.salonplatform.platform.application.OperatorSessions;
+import com.salonplatform.platform.application.OperatorSignIns;
 import com.salonplatform.platform.infrastructure.OperatorAddressAssertion;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
@@ -31,11 +32,13 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping(path = "/api/v1/operator", produces = MediaType.APPLICATION_JSON_VALUE)
 class OperatorAccessController {
 
-    private final OperatorAccess access;
+    private final OperatorSignIns signIns;
+    private final OperatorSessions sessions;
     private final OperatorAddressAssertion assertions;
 
-    OperatorAccessController(OperatorAccess access, OperatorAddressAssertion assertions) {
-        this.access = access;
+    OperatorAccessController(OperatorSignIns signIns, OperatorSessions sessions, OperatorAddressAssertion assertions) {
+        this.signIns = signIns;
+        this.sessions = sessions;
         this.assertions = assertions;
     }
 
@@ -91,37 +94,38 @@ class OperatorAccessController {
                     + "servlet peer, an invalid proof is refused before rate accounting.",
             schema = @Schema(type = "string", maxLength = 192))
     @PostMapping(path = "/sign-in", consumes = MediaType.APPLICATION_JSON_VALUE)
-    ResponseEntity<OperatorAccess.OperatorSignIn> operatorSignIn(
+    ResponseEntity<OperatorSignIns.OperatorSignIn> operatorSignIn(
             @Valid @RequestBody OperatorSignInRequest request, HttpServletRequest http) {
         String address = assertions.rateAddress(http);
-        return ok(access.signIn(request.email(), request.password(), request.deviceLabel(), address));
+        return ok(signIns.signIn(request.email(), request.password(), request.deviceLabel(), address));
     }
 
     @PostMapping(path = "/mfa/challenges", consumes = MediaType.APPLICATION_JSON_VALUE)
-    ResponseEntity<OperatorAccess.OperatorEnrollment> operatorEnroll(
+    ResponseEntity<OperatorSignIns.OperatorEnrollment> operatorEnroll(
             @Valid @RequestBody OperatorChallengeRequest request) {
-        return ok(access.enroll(request.challengeId(), request.challengeToken()));
+        return ok(signIns.enroll(request.challengeId(), request.challengeToken()));
     }
 
     @PostMapping(path = "/mfa/verify", consumes = MediaType.APPLICATION_JSON_VALUE)
-    ResponseEntity<OperatorAccess.OperatorTokens> operatorVerify(@Valid @RequestBody OperatorVerifyRequest request) {
-        return ok(access.verify(request.challengeId(), request.challengeToken(), request.code()));
+    ResponseEntity<OperatorSessions.OperatorTokens> operatorVerify(@Valid @RequestBody OperatorVerifyRequest request) {
+        return ok(signIns.verify(request.challengeId(), request.challengeToken(), request.code()));
     }
 
     @PostMapping(path = "/sessions/refresh", consumes = MediaType.APPLICATION_JSON_VALUE)
-    ResponseEntity<OperatorAccess.OperatorTokens> operatorRefresh(@Valid @RequestBody OperatorRefreshRequest request) {
-        return ok(access.refresh(request.refreshToken()));
+    ResponseEntity<OperatorSessions.OperatorTokens> operatorRefresh(
+            @Valid @RequestBody OperatorRefreshRequest request) {
+        return ok(sessions.refresh(request.refreshToken()));
     }
 
     @PostMapping("/sessions/sign-out")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     ResponseEntity<Void> operatorSignOut() {
-        access.signOut();
+        sessions.signOut();
         return ResponseEntity.noContent().cacheControl(CacheControl.noStore()).build();
     }
 
     @GetMapping("/me")
-    ResponseEntity<OperatorAccess.OperatorPrincipal> operatorMe() {
-        return ok(access.me());
+    ResponseEntity<OperatorSessions.OperatorPrincipal> operatorMe() {
+        return ok(sessions.me());
     }
 }
