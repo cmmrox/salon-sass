@@ -1,8 +1,8 @@
 package com.salonplatform.platform.web;
 
 import com.fasterxml.jackson.annotation.JsonAnySetter;
+import com.salonplatform.platform.application.ExportDownloads;
 import com.salonplatform.platform.application.Paging;
-import com.salonplatform.platform.application.SalonExports;
 import com.salonplatform.platform.application.SalonLifecycle;
 import com.salonplatform.platform.application.SalonProvisioning;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -32,9 +32,9 @@ import org.springframework.web.bind.annotation.RestController;
 class OperatorLifecycleController {
 
     private final SalonLifecycle lifecycle;
-    private final SalonExports exports;
+    private final ExportDownloads exports;
 
-    OperatorLifecycleController(SalonLifecycle lifecycle, SalonExports exports) {
+    OperatorLifecycleController(SalonLifecycle lifecycle, ExportDownloads exports) {
         this.lifecycle = lifecycle;
         this.exports = exports;
     }
@@ -109,7 +109,7 @@ class OperatorLifecycleController {
     }
 
     @GetMapping("/export")
-    ResponseEntity<SalonExports.ExportView> export(@PathVariable String id) {
+    ResponseEntity<ExportDownloads.ExportView> export(@PathVariable String id) {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(exports.status(OperatorRequests.id(id)));
     }
 
@@ -124,7 +124,7 @@ class OperatorLifecycleController {
         return attachment(exports.archiveForOperator(OperatorRequests.id(id)));
     }
 
-    static ResponseEntity<byte[]> attachment(SalonExports.Archive archive) {
+    static ResponseEntity<byte[]> attachment(ExportDownloads.Archive archive) {
         return ResponseEntity.ok()
                 .cacheControl(CacheControl.noStore())
                 .header(

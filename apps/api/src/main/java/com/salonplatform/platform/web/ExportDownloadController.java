@@ -1,6 +1,6 @@
 package com.salonplatform.platform.web;
 
-import com.salonplatform.platform.application.SalonExports;
+import com.salonplatform.platform.application.ExportDownloads;
 import com.salonplatform.shared.web.NotFoundException;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -27,10 +27,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping(path = "/api/v1/exports", produces = MediaType.APPLICATION_JSON_VALUE)
 class ExportDownloadController {
 
-    private final SalonExports exports;
+    private final ExportDownloads exports;
     private final String platformDomain;
 
-    ExportDownloadController(SalonExports exports, @Value("${salon.platform-domain}") String platformDomain) {
+    ExportDownloadController(ExportDownloads exports, @Value("${salon.platform-domain}") String platformDomain) {
         this.exports = exports;
         this.platformDomain = platformDomain.strip().toLowerCase(Locale.ROOT);
     }
@@ -49,7 +49,7 @@ class ExportDownloadController {
 
     /** What the download page explains: when the archive was made and is deleted, its size and checksum. */
     @GetMapping("/{token}/metadata")
-    ResponseEntity<SalonExports.LinkView> metadata(@PathVariable String token, HttpServletRequest request) {
+    ResponseEntity<ExportDownloads.LinkView> metadata(@PathVariable String token, HttpServletRequest request) {
         platformHost(request);
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(exports.linkView(token));
     }
