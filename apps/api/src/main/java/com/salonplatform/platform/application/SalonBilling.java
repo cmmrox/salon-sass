@@ -98,6 +98,7 @@ public class SalonBilling {
 
     private final PlatformDatabase database;
     private final BillingLedger ledger;
+    private final SubscriptionStates states;
     private final InvoiceBilling invoices;
     private final Principals principals;
     private final IdentityProvisioning provisioning;
@@ -106,12 +107,14 @@ public class SalonBilling {
     public SalonBilling(
             PlatformDatabase database,
             BillingLedger ledger,
+            SubscriptionStates states,
             InvoiceBilling invoices,
             Principals principals,
             IdentityProvisioning provisioning,
             Clock clock) {
         this.database = database;
         this.ledger = ledger;
+        this.states = states;
         this.invoices = invoices;
         this.principals = principals;
         this.provisioning = provisioning;
@@ -123,32 +126,20 @@ public class SalonBilling {
         principals.require("entitlement.read");
         return database.inTransaction(status -> {
             Instant now = clock.instant();
-            var limits = database
-                    .jdbcTemplate()
-                    .query(
-                            """
-                    SELECT p.key, p.name, p.staff_seats, p.branches, p.message_allowance, p.custom_domain, p.dedicated_app
-                      FROM tenant t JOIN plan p ON p.id = t.plan_id WHERE t.id = ?
-                    """,
-                            (row, n) -> new Entitlements(
-                                    new PlanRef(row.getString("key"), row.getString("name")),
-                                    new Limits(
-                                            row.getInt("staff_seats"),
-                                            row.getInt("branches"),
-                                            row.getInt("message_allowance")),
-                                    new Features(row.getBoolean("custom_domain"), row.getBoolean("dedicated_app")),
-                                    null,
-                                    null),
-                            salonId)
-                    .stream()
-                    .findFirst()
+            var limits = ledger.planOf(salonId)
+                    .map(plan -> new Entitlements(
+                            new PlanRef(plan.key(), plan.name()),
+                            new Limits(plan.staffSeats(), plan.branches(), plan.messageAllowance()),
+                            new Features(plan.customDomain(), plan.dedicatedApp()),
+                            null,
+                            null))
                     .orElse(new Entitlements(null, null, null, null, null));
             SubscriptionState state = ledger.subscriptionOf(salonId, false)
                     .map(subscription -> new SubscriptionState(
                             subscription.state().value(),
                             subscription.trialEndsAt(),
-                            ledger.readOnlyAt(subscription, now),
-                            ledger.pastDueSince(subscription, now),
+                            states.readOnlyAt(subscription, now),
+                            states.pastDueSince(subscription, now),
                             notice(subscription.state().value(), subscription.trialEndsAt(), now)))
                     .orElse(null);
             return new Entitlements(

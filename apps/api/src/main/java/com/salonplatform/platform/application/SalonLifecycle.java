@@ -174,7 +174,7 @@ public class SalonLifecycle {
             // instant, even if the billing job has not run since a boundary passed.
             ledger.subscriptionOf(salonId, true)
                     .ifPresent(subscription -> states.applyState(
-                            subscription, now, PlatformAudit.SYSTEM, "billing", BillingLedger.Changes.none()));
+                            subscription, now, PlatformAudit.SYSTEM, "billing", BillingChanges.none()));
             String access = database.jdbcTemplate()
                     .queryForObject("SELECT access_state FROM tenant WHERE id = ?", String.class, salonId);
             event(

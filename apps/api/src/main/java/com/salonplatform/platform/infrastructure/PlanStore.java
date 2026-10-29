@@ -92,6 +92,18 @@ public class PlanStore {
                 > 0;
     }
 
+    /** The plan's staff seat limit, when the plan exists. */
+    public Optional<Integer> staffSeatsOf(UUID id) {
+        return database
+                .jdbc()
+                .sql("SELECT staff_seats FROM plan WHERE id = ?")
+                .param(id)
+                .query(Integer.class)
+                .list()
+                .stream()
+                .findFirst();
+    }
+
     /**
      * Adds a plan.
      *

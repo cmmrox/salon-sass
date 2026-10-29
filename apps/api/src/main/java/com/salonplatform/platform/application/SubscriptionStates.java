@@ -4,14 +4,15 @@ import com.salonplatform.platform.domain.BillingCalendar;
 import com.salonplatform.platform.domain.BillingCalendar.State;
 import com.salonplatform.platform.domain.BillingTerms;
 import com.salonplatform.platform.infrastructure.BillingLedger;
-import com.salonplatform.platform.infrastructure.BillingLedger.Changes;
 import com.salonplatform.platform.infrastructure.BillingLedger.Invoice;
+import com.salonplatform.platform.infrastructure.BillingLedger.NewSubscription;
 import com.salonplatform.platform.infrastructure.BillingLedger.Payment;
 import com.salonplatform.platform.infrastructure.BillingLedger.Salon;
 import com.salonplatform.platform.infrastructure.BillingLedger.Subscription;
+import com.salonplatform.platform.infrastructure.InvoiceStore;
+import com.salonplatform.platform.infrastructure.InvoiceStore.NewPayment;
 import com.salonplatform.platform.infrastructure.PlatformAudit;
 import com.salonplatform.shared.infrastructure.PlatformDatabase;
-import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -33,14 +34,38 @@ public class SubscriptionStates {
     private final PlatformDatabase database;
     private final PlatformAudit audit;
     private final BillingLedger ledger;
+    private final InvoiceStore invoices;
     private final BillingNotices notices;
 
     public SubscriptionStates(
-            PlatformDatabase database, PlatformAudit audit, BillingLedger ledger, BillingNotices notices) {
+            PlatformDatabase database,
+            PlatformAudit audit,
+            BillingLedger ledger,
+            InvoiceStore invoices,
+            BillingNotices notices) {
         this.database = database;
         this.audit = audit;
         this.ledger = ledger;
+        this.invoices = invoices;
         this.notices = notices;
+    }
+
+    /**
+     * When a past-due subscription becomes, or a read-only one became, read-only: 14 days after the
+     * due instant of its oldest unpaid invoice past due. Null when nothing is past due.
+     */
+    public Instant readOnlyAt(Subscription subscription, Instant now) {
+        Instant pastDueSince = pastDueSince(subscription, now);
+        return pastDueSince == null ? null : BillingCalendar.readOnlyAt(pastDueSince);
+    }
+
+    /** The due instant of the oldest unpaid invoice past due, or null. */
+    public Instant pastDueSince(Subscription subscription, Instant now) {
+        return ledger.openInvoices(subscription.id()).stream()
+                .map(Invoice::dueAt)
+                .filter(due -> !now.isBefore(due))
+                .min(Instant::compareTo)
+                .orElse(null);
     }
 
     /** Starts a trialing subscription for a salon that has none (the caller checked). */
@@ -50,25 +75,8 @@ public class SubscriptionStates {
         UUID id = UUID.randomUUID();
         Instant trialEnd = BillingCalendar.trialEnd(start);
         LocalDateTime anchor = BillingCalendar.anchor(trialEnd, salon.zone());
-        Timestamp at = Timestamp.from(start);
-        database.jdbcTemplate()
-                .update(
-                        """
-                INSERT INTO subscription (id, salon_id, state, monthly_amount, currency, payment_method, started_at,
-                    trial_ends_at, anchor_local, invoices_issued, next_invoice_at, version, created_at, updated_at)
-                VALUES (?, ?, 'trialing', ?, ?, ?, ?, ?, ?, 0, ?, 0, ?, ?)
-                """,
-                        id,
-                        salon.id(),
-                        amount,
-                        currency,
-                        method,
-                        at,
-                        Timestamp.from(trialEnd),
-                        Timestamp.valueOf(anchor),
-                        Timestamp.from(trialEnd),
-                        at,
-                        at);
+        ledger.startSubscription(
+                id, new NewSubscription(salon.id(), amount, currency, method, start, trialEnd, anchor), start);
         Map<String, Object> details = new LinkedHashMap<>();
         details.put("subscriptionId", id.toString());
         details.put("monthlyAmount", amount);
@@ -86,7 +94,7 @@ public class SubscriptionStates {
      * lower the state; the job raises it.
      */
     public Subscription applyState(
-            Subscription subscription, Instant now, String actorKind, String actorId, Changes changes) {
+            Subscription subscription, Instant now, String actorKind, String actorId, BillingChanges changes) {
         List<Invoice> open = ledger.openInvoices(subscription.id());
         State next = BillingCalendar.stateAt(
                 now,
@@ -95,21 +103,8 @@ public class SubscriptionStates {
         if (next == subscription.state()) {
             return subscription;
         }
-        Timestamp at = Timestamp.from(now);
-        database.jdbcTemplate()
-                .update(
-                        "UPDATE subscription SET state = ?, updated_at = ? WHERE id = ?",
-                        next.value(),
-                        at,
-                        subscription.id());
-        String access = next == State.READ_ONLY ? "read_only" : "full";
-        database.jdbcTemplate()
-                .update(
-                        "UPDATE tenant SET access_state = ?, updated_at = ? WHERE id = ? AND access_state <> ?",
-                        access,
-                        at,
-                        subscription.salonId(),
-                        access);
+        ledger.changeState(subscription.id(), next, now);
+        ledger.setAccessState(subscription.salonId(), next == State.READ_ONLY ? "read_only" : "full", now);
         audit.record(
                 actorKind,
                 actorId,
@@ -149,31 +144,7 @@ public class SubscriptionStates {
             String actorKind,
             String actorId) {
         UUID id = UUID.randomUUID();
-        Timestamp at = Timestamp.from(now);
-        database.jdbcTemplate()
-                .update(
-                        """
-                INSERT INTO invoice_payment (id, invoice_id, method, reference, provider_event_id, amount, received_on,
-                    paid_at, recorded_by, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                        id,
-                        invoice.id(),
-                        method,
-                        reference,
-                        providerEventId,
-                        invoice.amount(),
-                        receivedOn == null ? null : java.sql.Date.valueOf(receivedOn),
-                        at,
-                        recordedBy,
-                        at,
-                        at);
-        database.jdbcTemplate()
-                .update(
-                        "UPDATE invoice SET status = 'paid', paid_at = ?, updated_at = ? WHERE id = ?",
-                        at,
-                        at,
-                        invoice.id());
+        invoices.pay(id, invoice, new NewPayment(method, reference, providerEventId, receivedOn, recordedBy), now);
         Map<String, Object> details = new LinkedHashMap<>();
         details.put("paymentId", id.toString());
         details.put("number", BillingTerms.invoiceNumber(invoice.number()));
@@ -183,7 +154,11 @@ public class SubscriptionStates {
         audit.record(
                 actorKind, actorId, "payment.recorded", "invoice", invoice.id().toString(), details, now);
         applyState(
-                ledger.subscription(subscription.id(), false).orElseThrow(), now, actorKind, actorId, Changes.none());
+                ledger.subscription(subscription.id(), false).orElseThrow(),
+                now,
+                actorKind,
+                actorId,
+                BillingChanges.none());
         return ledger.payments(invoice.id()).stream()
                 .filter(p -> p.id().equals(id))
                 .findFirst()

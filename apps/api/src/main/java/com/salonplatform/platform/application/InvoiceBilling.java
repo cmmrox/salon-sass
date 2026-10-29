@@ -5,7 +5,6 @@ import com.salonplatform.platform.domain.OperatorPermission;
 import com.salonplatform.platform.domain.PlainText;
 import com.salonplatform.platform.infrastructure.BillingLedger;
 import com.salonplatform.platform.infrastructure.PlatformAudit;
-import com.salonplatform.shared.infrastructure.PlatformDatabase;
 import com.salonplatform.shared.web.ApplicationProblemException;
 import com.salonplatform.shared.web.ErrorCode;
 import com.salonplatform.shared.web.FieldProblem;
@@ -149,7 +148,6 @@ public class InvoiceBilling {
     /** The result of recording: whether it replayed an earlier one, and the payment. */
     public record Recorded(boolean replayed, PaymentView payment) {}
 
-    private final PlatformDatabase database;
     private final OperatorWork work;
     private final OperatorAccess access;
     private final ProvisioningReceipts receipts;
@@ -159,7 +157,6 @@ public class InvoiceBilling {
     private final Clock clock;
 
     public InvoiceBilling(
-            PlatformDatabase database,
             OperatorWork work,
             OperatorAccess access,
             ProvisioningReceipts receipts,
@@ -167,7 +164,6 @@ public class InvoiceBilling {
             SubscriptionStates states,
             JsonMapper json,
             Clock clock) {
-        this.database = database;
         this.work = work;
         this.access = access;
         this.receipts = receipts;
@@ -224,17 +220,11 @@ public class InvoiceBilling {
 
     /** A salon's invoices, newest first, inside a platform transaction. */
     InvoicePage page(UUID salonId, Paging paging) {
-        List<InvoiceSummary> items = database.jdbcTemplate()
-                .query(
-                        "SELECT " + BillingLedger.INVOICE_COLUMNS
-                                + " FROM invoice WHERE salon_id = ? ORDER BY issued_at DESC, number DESC LIMIT ? OFFSET ?",
-                        (row, n) -> summary(BillingLedger.invoice(row)),
-                        salonId,
-                        paging.size(),
-                        paging.offset());
-        Long total = database.jdbcTemplate()
-                .queryForObject("SELECT count(*) FROM invoice WHERE salon_id = ?", Long.class, salonId);
-        return new InvoicePage(items, paging.page(), paging.size(), total == null ? 0 : total);
+        List<InvoiceSummary> items = ledger.invoicesOf(salonId, paging.size(), paging.offset()).stream()
+                .map(InvoiceBilling::summary)
+                .toList();
+        long total = ledger.countInvoicesOf(salonId);
+        return new InvoicePage(items, paging.page(), paging.size(), total);
     }
 
     public InvoicePage list(UUID salonId, Paging paging) {
