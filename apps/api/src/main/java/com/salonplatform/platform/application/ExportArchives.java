@@ -1,12 +1,12 @@
 package com.salonplatform.platform.application;
 
-import com.salonplatform.platform.application.SalonExports.Part;
-import com.salonplatform.platform.application.SalonExports.Pending;
 import com.salonplatform.platform.infrastructure.ExportKey;
+import com.salonplatform.platform.infrastructure.SalonExportStore.ClosedSalon;
+import com.salonplatform.platform.infrastructure.SalonExportStore.Part;
+import com.salonplatform.platform.infrastructure.SalonExportStore.Pending;
 import com.salonplatform.shared.lifecycle.TenantDataModule;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -36,28 +36,27 @@ class ExportArchives {
             Pending export,
             List<Map.Entry<TenantDataModule, TenantDataModule.Table>> tables,
             Map<String, Part> parts,
-            Map<String, Object> salon,
+            ClosedSalon salon,
             Instant now) {
         Map<String, Object> manifest = new LinkedHashMap<>();
         manifest.put("format", "salon-export/1");
         manifest.put("exportId", export.exportId().toString());
         manifest.put("exportedAt", now.toString());
         Map<String, Object> profile = new LinkedHashMap<>();
-        profile.put("id", salon.get("id").toString());
-        profile.put("slug", salon.get("slug"));
-        profile.put("name", salon.get("name"));
-        profile.put("country", salon.get("country"));
-        profile.put("currency", salon.get("currency"));
-        profile.put("timeZone", salon.get("time_zone"));
-        profile.put("defaultLanguage", salon.get("default_language"));
-        profile.put("contactEmail", salon.get("contact_email"));
-        profile.put("contactPhone", salon.get("contact_phone"));
-        profile.put("address", salon.get("address"));
-        profile.put("ownerEmail", salon.get("owner_email"));
-        profile.put(
-                "createdAt", ((Timestamp) salon.get("created_at")).toInstant().toString());
-        profile.put("closedAt", ((Timestamp) salon.get("closed_at")).toInstant().toString());
-        profile.put("deleteAt", ((Timestamp) salon.get("delete_at")).toInstant().toString());
+        profile.put("id", salon.id().toString());
+        profile.put("slug", salon.slug());
+        profile.put("name", salon.name());
+        profile.put("country", salon.country());
+        profile.put("currency", salon.currency());
+        profile.put("timeZone", salon.timeZone());
+        profile.put("defaultLanguage", salon.defaultLanguage());
+        profile.put("contactEmail", salon.contactEmail());
+        profile.put("contactPhone", salon.contactPhone());
+        profile.put("address", salon.address());
+        profile.put("ownerEmail", salon.ownerEmail());
+        profile.put("createdAt", salon.createdAt().toString());
+        profile.put("closedAt", salon.closedAt().toString());
+        profile.put("deleteAt", salon.deleteAt().toString());
         manifest.put("salon", profile);
         List<Map<String, Object>> listed = new ArrayList<>();
         List<Map<String, Object>> excluded = new ArrayList<>();
@@ -67,7 +66,7 @@ class ExportArchives {
             item.put("name", table.name());
             item.put("module", entry.getKey().module());
             item.put("file", "tables/" + table.name() + ".json");
-            item.put("rows", parts.get(table.name()).rows());
+            item.put("rows", parts.get(table.name()).rowCount());
             item.put(
                     "excludedColumns",
                     table.excluded().keySet().stream().sorted().toList());

@@ -4,9 +4,10 @@ import com.salonplatform.identity.inprocess.IdentityProvisioning;
 import com.salonplatform.platform.domain.BillingTerms;
 import com.salonplatform.platform.domain.OperatorPermission;
 import com.salonplatform.platform.domain.ProvisioningRegions;
+import com.salonplatform.platform.infrastructure.BillingLedger;
+import com.salonplatform.platform.infrastructure.PlanStore;
 import com.salonplatform.platform.infrastructure.PlatformAudit;
 import com.salonplatform.shared.entitlements.SalonEntitlements;
-import com.salonplatform.shared.infrastructure.PlatformDatabase;
 import com.salonplatform.shared.web.ApplicationProblemException;
 import com.salonplatform.shared.web.ErrorCode;
 import com.salonplatform.shared.web.FieldProblem;
@@ -92,7 +93,7 @@ public class SubscriptionBilling {
     /** A plan move as received. */
     public record PlanMoveInput(Long version, UUID planId) {}
 
-    private final PlatformDatabase database;
+    private final PlanStore plans;
     private final OperatorWork work;
     private final OperatorAccess access;
     private final ProvisioningReceipts receipts;
@@ -105,7 +106,7 @@ public class SubscriptionBilling {
     private final Clock clock;
 
     public SubscriptionBilling(
-            PlatformDatabase database,
+            PlanStore plans,
             OperatorWork work,
             OperatorAccess access,
             ProvisioningReceipts receipts,
@@ -116,7 +117,7 @@ public class SubscriptionBilling {
             PlatformAudit audit,
             JsonMapper json,
             Clock clock) {
-        this.database = database;
+        this.plans = plans;
         this.work = work;
         this.access = access;
         this.receipts = receipts;
@@ -148,7 +149,7 @@ public class SubscriptionBilling {
                 subscription.trialEndsAt(),
                 period,
                 subscription.nextInvoiceAt(),
-                ledger.readOnlyAt(subscription, now));
+                states.readOnlyAt(subscription, now));
     }
 
     public SubscriptionView get(UUID salonId) {
@@ -284,10 +285,7 @@ public class SubscriptionBilling {
                 return view(subscription, now);
             }
             details.put("fields", fields);
-            database.jdbcTemplate().update("""
-                    UPDATE subscription SET monthly_amount = ?, payment_method = ?, version = version + 1, updated_at = ?
-                     WHERE id = ?
-                    """, amount, method, java.sql.Timestamp.from(now), subscription.id());
+            ledger.changeTerms(subscription.id(), amount, method, now);
             audit.record(
                     PlatformAudit.OPERATOR,
                     operator.id().toString(),
@@ -320,11 +318,7 @@ public class SubscriptionBilling {
             }
             BillingLedger.Salon salon = ledger.salon(salonId, true).orElseThrow(NotFoundException::new);
             stillBilled(salon);
-            List<Integer> seats = database.jdbcTemplate()
-                    .queryForList("SELECT staff_seats FROM plan WHERE id = ?", Integer.class, input.planId());
-            if (seats.isEmpty()) {
-                throw new NotFoundException();
-            }
+            int seats = plans.staffSeatsOf(input.planId()).orElseThrow(NotFoundException::new);
             if (salon.version() != input.version()) {
                 throw new ApplicationProblemException(409, ErrorCode.CONFLICT);
             }
@@ -332,13 +326,11 @@ public class SubscriptionBilling {
                 return null;
             }
             long used = identity.activeStaffCount(salonId);
-            if (used > seats.get(0)) {
-                throw SalonEntitlements.exceeded(SalonEntitlements.STAFF_SEATS, seats.get(0));
+            if (used > seats) {
+                throw SalonEntitlements.exceeded(SalonEntitlements.STAFF_SEATS, seats);
             }
             Instant now = clock.instant();
-            database.jdbcTemplate().update("""
-                    UPDATE tenant SET plan_id = ?, version = version + 1, updated_at = ? WHERE id = ?
-                    """, input.planId(), java.sql.Timestamp.from(now), salonId);
+            ledger.movePlan(salonId, input.planId(), now);
             Map<String, Object> details = new LinkedHashMap<>();
             details.put(
                     "fromPlanId", salon.planId() == null ? null : salon.planId().toString());

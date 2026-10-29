@@ -1,11 +1,12 @@
 package com.salonplatform.platform.application;
 
 import com.salonplatform.platform.infrastructure.PlatformAudit;
+import com.salonplatform.platform.infrastructure.SalonExportStore;
+import com.salonplatform.platform.infrastructure.SalonLifecycleStore;
 import com.salonplatform.shared.infrastructure.PlatformDatabase;
 import com.salonplatform.shared.lifecycle.TenantDataModule;
 import com.salonplatform.shared.observability.Traces;
 import io.swagger.v3.oas.annotations.media.Schema;
-import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -46,6 +47,8 @@ public class SalonDeletion {
     private final PlatformAudit audit;
     private final SalonLifecycle lifecycle;
     private final SalonExports exports;
+    private final SalonLifecycleStore lifecycles;
+    private final SalonExportStore exportStore;
     private final LifecycleFaults faults;
     private final Traces traces;
     private final int batchSize;
@@ -55,6 +58,8 @@ public class SalonDeletion {
             PlatformAudit audit,
             SalonLifecycle lifecycle,
             SalonExports exports,
+            SalonLifecycleStore lifecycles,
+            SalonExportStore exportStore,
             LifecycleFaults faults,
             Traces traces,
             @Value("${salon.retention.batch-size:500}") int batchSize) {
@@ -62,6 +67,8 @@ public class SalonDeletion {
         this.audit = audit;
         this.lifecycle = lifecycle;
         this.exports = exports;
+        this.lifecycles = lifecycles;
+        this.exportStore = exportStore;
         this.faults = faults;
         this.traces = traces;
         if (batchSize < 1 || batchSize > 10_000) {
@@ -82,17 +89,14 @@ public class SalonDeletion {
     }
 
     private Pass pass(Instant now) {
-        List<UUID> due = database.inTransaction(
-                status -> database.jdbcTemplate().queryForList("""
-                SELECT id FROM tenant WHERE status = 'closed' AND delete_at <= ? ORDER BY delete_at, id
-                """, UUID.class, Timestamp.from(now)));
+        List<UUID> due = database.inTransaction(status -> lifecycles.dueForDeletion(now));
         List<SalonPass> salons = new ArrayList<>();
         List<UUID> waiting = new ArrayList<>();
         List<UUID> failed = new ArrayList<>();
         int batches = 0;
         for (UUID salon : due) {
-            String export =
-                    database.inTransaction(status -> exports.exportStatus(salon).orElse(null));
+            String export = database.inTransaction(
+                    status -> exportStore.statusOfSalon(salon).orElse(null));
             if ("pending".equals(export)) {
                 waiting.add(salon);
                 log.warn("A closed salon's deletion waits for its export to be ready");
@@ -131,23 +135,12 @@ public class SalonDeletion {
 
     /** Makes the salon a tombstone, once; false when another run already did. */
     private boolean finish(UUID salon, Instant now, long rows) {
-        String state = database
-                .jdbcTemplate()
-                .queryForList("SELECT status FROM tenant WHERE id = ? FOR UPDATE", String.class, salon)
-                .stream()
-                .findFirst()
-                .orElse(null);
+        String state = lifecycles.lockStatus(salon).orElse(null);
         if (!"closed".equals(state)) {
             return false;
         }
-        Timestamp at = Timestamp.from(now);
-        database.jdbcTemplate().update("""
-                UPDATE salon_export SET status = 'deleted', archive = NULL, token_hash = NULL, deleted_at = ?, updated_at = ?
-                 WHERE salon_id = ? AND status <> 'deleted'
-                """, at, at, salon);
-        database.jdbcTemplate().update("""
-                UPDATE tenant SET status = 'deleted', deleted_at = ?, version = version + 1, updated_at = ? WHERE id = ?
-                """, at, at, salon);
+        exportStore.markDeleted(salon, now);
+        lifecycles.markDeleted(salon, now);
         lifecycle.event(salon, "deleted", null, PlatformAudit.SYSTEM, "retention", now);
         Map<String, Object> details = new LinkedHashMap<>();
         details.put("from", "closed");

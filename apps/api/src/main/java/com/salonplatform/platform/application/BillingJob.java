@@ -1,10 +1,10 @@
 package com.salonplatform.platform.application;
 
+import com.salonplatform.platform.infrastructure.BillingLedger;
 import com.salonplatform.platform.infrastructure.PlatformAudit;
 import com.salonplatform.shared.infrastructure.PlatformDatabase;
 import com.salonplatform.shared.observability.Traces;
 import io.swagger.v3.oas.annotations.media.Schema;
-import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -64,15 +64,7 @@ public class BillingJob {
     }
 
     private Pass pass(Instant now) {
-        List<UUID> candidates = database.inTransaction(
-                status -> database.jdbcTemplate().queryForList("""
-                SELECT s.id FROM subscription s JOIN tenant t ON t.id = s.salon_id
-                 WHERE t.status NOT IN ('closed', 'deleted')
-                   AND (s.next_invoice_at <= ?
-                    OR EXISTS (SELECT 1 FROM invoice i WHERE i.subscription_id = s.id AND i.status = 'open')
-                    OR s.state <> 'active' AND s.state <> 'trialing')
-                 ORDER BY s.id
-                """, UUID.class, Timestamp.from(now)));
+        List<UUID> candidates = database.inTransaction(status -> ledger.subscriptionsToBill(now));
         List<SubscriptionPass> changed = new ArrayList<>();
         List<UUID> failed = new ArrayList<>();
         for (UUID id : candidates) {
@@ -107,7 +99,7 @@ public class BillingJob {
         if (subscription == null) {
             return null;
         }
-        BillingLedger.Changes changes = BillingLedger.Changes.none();
+        BillingChanges changes = BillingChanges.none();
         subscription = issuing.issueDue(subscription, now, changes);
         issuing.remind(subscription, now, changes);
         states.applyState(subscription, now, PlatformAudit.SYSTEM, "billing", changes);

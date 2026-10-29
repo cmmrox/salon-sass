@@ -4,13 +4,12 @@ import com.salonplatform.platform.application.SupportSessions.SupportOperatorRef
 import com.salonplatform.platform.application.SupportSessions.SupportSalonRef;
 import com.salonplatform.platform.application.SupportSessions.SupportSessionView;
 import com.salonplatform.platform.infrastructure.PlatformAudit;
-import com.salonplatform.shared.infrastructure.PlatformDatabase;
+import com.salonplatform.platform.infrastructure.SupportSessionStore;
+import com.salonplatform.platform.infrastructure.SupportSessionStore.SalonAuditEntry;
+import com.salonplatform.platform.infrastructure.SupportSessionStore.Session;
 import com.salonplatform.shared.observability.Traces;
 import com.salonplatform.shared.web.ApplicationProblemException;
 import com.salonplatform.shared.web.ErrorCode;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Timestamp;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.LinkedHashMap;
@@ -32,32 +31,7 @@ class SupportSessionRecords {
     static final String ACTIVE = "active";
     static final String ENDED = "ended";
 
-    static final String SELECT = """
-            SELECT s.id, s.salon_id, t.slug, t.name AS salon_name, s.operator_id, o.display_name, s.reason,
-                   s.started_at, s.expires_at, s.ended_at, s.ended_by
-              FROM support_session s JOIN tenant t ON t.id = s.salon_id JOIN operator_user o ON o.id = s.operator_id
-            """;
-
-    /** One stored session row. */
-    record Row(
-            UUID id,
-            UUID salonId,
-            String slug,
-            String salonName,
-            UUID operatorId,
-            String operatorName,
-            String reason,
-            Instant startedAt,
-            Instant expiresAt,
-            Instant endedAt,
-            String endedBy) {
-
-        boolean open(Instant now) {
-            return endedAt == null && now.isBefore(expiresAt);
-        }
-    }
-
-    private final PlatformDatabase database;
+    private final SupportSessionStore store;
     private final PlatformAudit audit;
     private final Traces traces;
     private final JsonMapper json;
@@ -65,13 +39,13 @@ class SupportSessionRecords {
     private final String platformDomain;
 
     SupportSessionRecords(
-            PlatformDatabase database,
+            SupportSessionStore store,
             PlatformAudit audit,
             Traces traces,
             JsonMapper json,
             Clock clock,
             @Value("${salon.platform-domain}") String platformDomain) {
-        this.database = database;
+        this.store = store;
         this.audit = audit;
         this.traces = traces;
         this.json = json;
@@ -79,23 +53,7 @@ class SupportSessionRecords {
         this.platformDomain = platformDomain;
     }
 
-    static Row row(ResultSet row) throws SQLException {
-        Timestamp ended = row.getTimestamp("ended_at");
-        return new Row(
-                row.getObject("id", UUID.class),
-                row.getObject("salon_id", UUID.class),
-                row.getString("slug"),
-                row.getString("salon_name"),
-                row.getObject("operator_id", UUID.class),
-                row.getString("display_name"),
-                row.getString("reason"),
-                row.getTimestamp("started_at").toInstant(),
-                row.getTimestamp("expires_at").toInstant(),
-                ended == null ? null : ended.toInstant(),
-                row.getString("ended_by"));
-    }
-
-    SupportSessionView view(Row row, Instant now) {
+    SupportSessionView view(Session row, Instant now) {
         boolean open = row.open(now);
         Instant endedAt = row.endedAt() != null ? row.endedAt() : open ? null : row.expiresAt();
         String endedBy = row.endedBy() != null ? row.endedBy() : open ? null : "expiry";
@@ -111,17 +69,12 @@ class SupportSessionRecords {
                 open ? ACTIVE : ENDED);
     }
 
-    Optional<Row> find(UUID id) {
-        return database.jdbcTemplate().query(SELECT + " WHERE s.id = ?", (row, n) -> row(row), id).stream()
-                .findFirst();
+    Optional<Session> find(UUID id) {
+        return store.find(id);
     }
 
-    Optional<Row> lockRow(UUID id) {
-        return database
-                .jdbcTemplate()
-                .query(SELECT + " WHERE s.id = ? FOR UPDATE OF s", (row, n) -> row(row), id)
-                .stream()
-                .findFirst();
+    Optional<Session> lockRow(UUID id) {
+        return store.lock(id);
     }
 
     /**
@@ -129,7 +82,7 @@ class SupportSessionRecords {
      * the salon's audit entry. An ended session is 409 {@code invalid_state}: it is never reopened.
      */
     void finish(
-            Row row,
+            Session row,
             String by,
             String byId,
             String platformActorKind,
@@ -142,9 +95,7 @@ class SupportSessionRecords {
             throw new ApplicationProblemException(409, ErrorCode.INVALID_STATE);
         }
         Instant at = expiry ? row.expiresAt() : now;
-        database.jdbcTemplate().update("""
-                UPDATE support_session SET ended_at = ?, ended_by = ?, ended_by_id = ?, updated_at = ? WHERE id = ?
-                """, Timestamp.from(at), by, byId, Timestamp.from(now), row.id());
+        store.end(row.id(), at, by, byId, now);
         Map<String, Object> details = new LinkedHashMap<>();
         details.put("salonId", row.salonId().toString());
         details.put("endedBy", by);
@@ -175,34 +126,24 @@ class SupportSessionRecords {
             String reason,
             Map<String, Object> after,
             Instant at) {
-        database.jdbcTemplate()
-                .queryForObject(
-                        "SELECT audit_record_support(?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?, ?)",
-                        Boolean.class,
-                        salonId,
-                        UUID.randomUUID(),
-                        actorKind,
-                        actorId,
-                        action,
-                        sessionId.toString(),
-                        reason,
-                        json.writeValueAsString(after),
-                        traces.currentTraceId().orElse(null),
-                        Timestamp.from(at));
+        store.recordInSalonAudit(new SalonAuditEntry(
+                salonId,
+                actorKind,
+                actorId,
+                action,
+                sessionId,
+                reason,
+                json.writeValueAsString(after),
+                traces.currentTraceId().orElse(null),
+                at));
     }
 
     String operatorName(UUID operatorId) {
-        return database.jdbcTemplate()
-                .queryForObject("SELECT display_name FROM operator_user WHERE id = ?", String.class, operatorId);
+        return store.operatorName(operatorId);
     }
 
     boolean operatorActive(UUID operatorId) {
-        return Boolean.TRUE.equals(database
-                .jdbcTemplate()
-                .query("SELECT active FROM operator_user WHERE id = ?", (row, n) -> row.getBoolean(1), operatorId)
-                .stream()
-                .findFirst()
-                .orElse(false));
+        return store.operatorActive(operatorId);
     }
 
     String hostname(String slug) {

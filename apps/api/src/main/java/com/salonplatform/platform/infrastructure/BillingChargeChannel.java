@@ -1,6 +1,5 @@
 package com.salonplatform.platform.infrastructure;
 
-import com.salonplatform.platform.application.BillingLedger;
 import com.salonplatform.platform.application.BillingProvider;
 import com.salonplatform.shared.outbox.OutboxDelivery;
 import com.salonplatform.shared.outbox.OutboxProvider;

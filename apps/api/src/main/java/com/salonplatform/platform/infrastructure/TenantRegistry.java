@@ -6,24 +6,25 @@ import com.salonplatform.shared.tenancy.CurrentTenant;
 import com.salonplatform.shared.tenancy.RegisteredTenant;
 import com.salonplatform.shared.tenancy.TenantDirectory;
 import com.salonplatform.shared.tenancy.TenantStatus;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
+import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.DateTimeException;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import org.springframework.jdbc.core.ConnectionCallback;
-import org.springframework.jdbc.core.JdbcTemplate;
+import javax.sql.DataSource;
+import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.jdbc.datasource.TransactionAwareDataSourceProxy;
 import org.springframework.stereotype.Component;
 
 /**
  * The tenant registry, as the application reads it: through {@code tenant_by_slug()},
  * {@code tenant_by_id()} and {@code active_tenant_ids()}, the narrow paths its database role has to
- * the {@code tenant} table, which it cannot read directly. One short statement on a pooled
- * connection, under the request's limit on database waits. Nothing is cached: a salon's status is
- * read where it is decided.
+ * the {@code tenant} table, which it cannot read directly: named direct-SQL exception 2 of
+ * docs/engineering/backend.md. One short statement on a pooled connection (the transaction's own, inside
+ * one), under the request's limit on database waits. Nothing is cached: a salon's status is read where it
+ * is decided.
  */
 @Component
 class TenantRegistry implements TenantDirectory, ActiveTenants {
@@ -46,73 +47,62 @@ class TenantRegistry implements TenantDirectory, ActiveTenants {
     /** A salon closed by an Admin (F03-S03): unknown to every request, served nothing. */
     static final String CLOSED = "closed";
 
-    private final JdbcTemplate jdbc;
+    private final JdbcClient jdbc;
 
-    private final RequestDatabaseLimit limit;
-
-    TenantRegistry(JdbcTemplate jdbc, RequestDatabaseLimit limit) {
-        this.jdbc = jdbc;
-        this.limit = limit;
+    TenantRegistry(DataSource tenantDataSource, RequestDatabaseLimit limit) {
+        this.jdbc = JdbcClient.create(new LimitedConnections(tenantDataSource, limit));
     }
 
     @Override
     public Optional<RegisteredTenant> find(String slug) {
-        return jdbc.execute((ConnectionCallback<Optional<RegisteredTenant>>) connection -> {
-            limit.applyTo(connection);
-            try (PreparedStatement statement = connection.prepareStatement(BY_SLUG)) {
-                statement.setString(1, slug);
-                try (ResultSet row = statement.executeQuery()) {
-                    if (!row.next()) {
-                        return Optional.empty();
-                    }
+        return jdbc
+                .sql(BY_SLUG)
+                .param(slug)
+                .query((row, n) -> {
                     UUID id = row.getObject("id", UUID.class);
-                    ZoneId zone = timeZoneOf(row);
+                    ZoneId zone = timeZoneOf(row.getString("time_zone"));
                     boolean readOnly = READ_ONLY.equals(row.getString("access_state"));
                     return statusOf(row.getString("status"))
                             .map(status -> new RegisteredTenant(id, status, zone, readOnly));
-                }
-            }
-        });
+                })
+                .list()
+                .stream()
+                .findFirst()
+                .flatMap(found -> found);
     }
 
     @Override
     public Optional<CurrentTenant> findActive(UUID id) {
-        return jdbc.execute((ConnectionCallback<Optional<CurrentTenant>>) connection -> {
-            limit.applyTo(connection);
-            try (PreparedStatement statement = connection.prepareStatement(BY_ID)) {
-                statement.setObject(1, id);
-                try (ResultSet row = statement.executeQuery()) {
-                    if (!row.next() || statusOf(row.getString("status")).orElse(null) != TenantStatus.ACTIVE) {
-                        return Optional.empty();
-                    }
-                    return Optional.of(new CurrentTenant(
-                            row.getObject("id", UUID.class),
-                            row.getString("slug"),
-                            timeZoneOf(row),
-                            READ_ONLY.equals(row.getString("access_state"))));
-                }
-            }
-        });
+        return byId(id).filter(row -> statusOf(row.status()).orElse(null) == TenantStatus.ACTIVE)
+                .map(ById::tenant);
     }
 
     @Override
     public Optional<CurrentTenant> findClosed(UUID id) {
-        return jdbc.execute((ConnectionCallback<Optional<CurrentTenant>>) connection -> {
-            limit.applyTo(connection);
-            try (PreparedStatement statement = connection.prepareStatement(BY_ID)) {
-                statement.setObject(1, id);
-                try (ResultSet row = statement.executeQuery()) {
-                    if (!row.next() || !CLOSED.equals(row.getString("status"))) {
-                        return Optional.empty();
-                    }
-                    return Optional.of(new CurrentTenant(
-                            row.getObject("id", UUID.class),
-                            row.getString("slug"),
-                            timeZoneOf(row),
-                            READ_ONLY.equals(row.getString("access_state"))));
-                }
-            }
-        });
+        return byId(id).filter(row -> CLOSED.equals(row.status())).map(ById::tenant);
+    }
+
+    /** A registry row by id, its time zone checked only once the status says the salon is wanted. */
+    private record ById(UUID id, String slug, String status, String timeZone, String accessState) {
+
+        CurrentTenant tenant() {
+            return new CurrentTenant(id, slug, timeZoneOf(timeZone), READ_ONLY.equals(accessState));
+        }
+    }
+
+    private Optional<ById> byId(UUID id) {
+        return jdbc
+                .sql(BY_ID)
+                .param(id)
+                .query((row, n) -> new ById(
+                        row.getObject("id", UUID.class),
+                        row.getString("slug"),
+                        row.getString("status"),
+                        row.getString("time_zone"),
+                        row.getString("access_state")))
+                .list()
+                .stream()
+                .findFirst();
     }
 
     @Override
@@ -126,17 +116,9 @@ class TenantRegistry implements TenantDirectory, ActiveTenants {
     }
 
     private List<UUID> ids(String query) {
-        return jdbc.execute((ConnectionCallback<List<UUID>>) connection -> {
-            limit.applyTo(connection);
-            try (PreparedStatement statement = connection.prepareStatement(query);
-                    ResultSet rows = statement.executeQuery()) {
-                List<UUID> ids = new java.util.ArrayList<>();
-                while (rows.next()) {
-                    ids.add(rows.getObject("id", UUID.class));
-                }
-                return List.copyOf(ids);
-            }
-        });
+        return List.copyOf(jdbc.sql(query)
+                .query((row, n) -> row.getObject("id", UUID.class))
+                .list());
     }
 
     /**
@@ -155,13 +137,34 @@ class TenantRegistry implements TenantDirectory, ActiveTenants {
     }
 
     /** The database accepts only names it knows as IANA time zones; one Java does not know is a fault. */
-    private static ZoneId timeZoneOf(ResultSet row) throws SQLException {
-        String name = row.getString("time_zone");
+    private static ZoneId timeZoneOf(String name) {
         try {
             return ZoneId.of(name);
         } catch (DateTimeException ex) {
             throw new IllegalStateException(
                     "The registry holds a time zone this application does not know: " + name, ex);
+        }
+    }
+
+    /**
+     * The tenant pool's connections, each with the request's limit on database waits put on it before a
+     * statement runs. Inside a transaction it is the transaction's own connection, released as the
+     * transaction decides.
+     */
+    private static final class LimitedConnections extends TransactionAwareDataSourceProxy {
+
+        private final RequestDatabaseLimit limit;
+
+        LimitedConnections(DataSource tenantDataSource, RequestDatabaseLimit limit) {
+            super(tenantDataSource);
+            this.limit = limit;
+        }
+
+        @Override
+        public Connection getConnection() throws SQLException {
+            Connection connection = super.getConnection();
+            limit.applyTo(connection);
+            return connection;
         }
     }
 }

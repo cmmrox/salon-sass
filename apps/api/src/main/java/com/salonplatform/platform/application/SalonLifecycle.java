@@ -3,15 +3,17 @@ package com.salonplatform.platform.application;
 import com.salonplatform.identity.inprocess.IdentityLifecycle;
 import com.salonplatform.platform.domain.LifecycleTerms;
 import com.salonplatform.platform.domain.OperatorPermission;
+import com.salonplatform.platform.infrastructure.BillingLedger;
 import com.salonplatform.platform.infrastructure.PlatformAudit;
-import com.salonplatform.shared.infrastructure.PlatformDatabase;
+import com.salonplatform.platform.infrastructure.SalonExportStore;
+import com.salonplatform.platform.infrastructure.SalonLifecycleStore;
+import com.salonplatform.platform.infrastructure.SalonLifecycleStore.Locked;
 import com.salonplatform.shared.outbox.OutboxLifecycle;
 import com.salonplatform.shared.web.ApplicationProblemException;
 import com.salonplatform.shared.web.ErrorCode;
 import com.salonplatform.shared.web.FieldProblem;
 import com.salonplatform.shared.web.NotFoundException;
 import io.swagger.v3.oas.annotations.media.Schema;
-import java.sql.Timestamp;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -72,9 +74,8 @@ public class SalonLifecycle {
     @Schema(requiredProperties = {"items", "page", "size", "total"})
     public record LifecyclePage(List<LifecycleEvent> items, int page, int size, long total) {}
 
-    private record Locked(UUID id, String slug, String status, long version, String ownerEmail) {}
-
-    private final PlatformDatabase database;
+    private final SalonLifecycleStore store;
+    private final SalonExportStore exports;
     private final OperatorWork work;
     private final OperatorAccess access;
     private final PlatformAudit audit;
@@ -86,7 +87,8 @@ public class SalonLifecycle {
     private final Clock clock;
 
     public SalonLifecycle(
-            PlatformDatabase database,
+            SalonLifecycleStore store,
+            SalonExportStore exports,
             OperatorWork work,
             OperatorAccess access,
             PlatformAudit audit,
@@ -96,7 +98,8 @@ public class SalonLifecycle {
             IdentityLifecycle identity,
             OutboxLifecycle outbox,
             Clock clock) {
-        this.database = database;
+        this.store = store;
+        this.exports = exports;
         this.work = work;
         this.access = access;
         this.audit = audit;
@@ -122,9 +125,7 @@ public class SalonLifecycle {
             }
             current(salon, version);
             Instant now = clock.instant();
-            database.jdbcTemplate().update("""
-                    UPDATE tenant SET status = 'suspended', version = version + 1, updated_at = ? WHERE id = ?
-                    """, Timestamp.from(now), salonId);
+            store.suspend(salonId, now);
             event(
                     salonId,
                     SUSPENDED,
@@ -166,16 +167,13 @@ public class SalonLifecycle {
             }
             current(salon, version);
             Instant now = clock.instant();
-            database.jdbcTemplate().update("""
-                    UPDATE tenant SET status = 'active', version = version + 1, updated_at = ? WHERE id = ?
-                    """, Timestamp.from(now), salonId);
+            store.reactivate(salonId, now);
             // Billing went on while suspended; this brings the access state to what it implies at this
             // instant, even if the billing job has not run since a boundary passed.
             ledger.subscriptionOf(salonId, true)
                     .ifPresent(subscription -> states.applyState(
-                            subscription, now, PlatformAudit.SYSTEM, "billing", BillingLedger.Changes.none()));
-            String access = database.jdbcTemplate()
-                    .queryForObject("SELECT access_state FROM tenant WHERE id = ?", String.class, salonId);
+                            subscription, now, PlatformAudit.SYSTEM, "billing", BillingChanges.none()));
+            String access = store.accessState(salonId);
             event(
                     salonId,
                     "reactivated",
@@ -231,20 +229,11 @@ public class SalonLifecycle {
             // with a clock or a test that counts in milliseconds.
             Instant now = clock.instant().truncatedTo(java.time.temporal.ChronoUnit.MILLIS);
             Instant deleteAt = LifecycleTerms.deleteAt(now);
-            database.jdbcTemplate()
-                    .update("""
-                    UPDATE tenant SET status = 'closed', closed_at = ?, delete_at = ?, version = version + 1,
-                        updated_at = ?
-                     WHERE id = ?
-                    """, Timestamp.from(now), Timestamp.from(deleteAt), Timestamp.from(now), salonId);
+            store.close(salonId, now, deleteAt);
             int sessions = identity.revokeClosedSalonSessions(salonId, now);
             int messages = outbox.cancelClosedSalon(salonId, now);
             UUID exportId = UUID.randomUUID();
-            database.jdbcTemplate()
-                    .update("""
-                    INSERT INTO salon_export (id, salon_id, status, delete_at, created_at, updated_at)
-                    VALUES (?, ?, 'pending', ?, ?, ?)
-                    """, exportId, salonId, Timestamp.from(deleteAt), Timestamp.from(now), Timestamp.from(now));
+            exports.schedule(exportId, salonId, deleteAt, now);
             event(salonId, CLOSED, reason, PlatformAudit.OPERATOR, operator.id().toString(), now);
             Map<String, Object> details = new LinkedHashMap<>();
             details.put("reason", reason);
@@ -278,75 +267,29 @@ public class SalonLifecycle {
     public LifecyclePage history(UUID salonId, Paging paging) {
         return work.run(() -> {
             access.require(OperatorPermission.SALON_READ);
-            Integer exists = database.jdbcTemplate()
-                    .queryForObject("SELECT count(*) FROM tenant WHERE id = ?", Integer.class, salonId);
-            if (exists == null || exists == 0) {
+            if (!store.exists(salonId)) {
                 throw new NotFoundException();
             }
-            List<LifecycleEvent> items = database.jdbcTemplate()
-                    .query(
-                            """
-                    SELECT e.id, e.kind, e.reason, e.actor_kind, e.actor_id, e.created_at, u.display_name
-                      FROM salon_lifecycle_event e
-                      LEFT JOIN operator_user u ON e.actor_kind = 'operator' AND u.id::text = e.actor_id
-                     WHERE e.salon_id = ?
-                     ORDER BY e.created_at DESC, e.id
-                     LIMIT ? OFFSET ?
-                    """,
-                            (row, n) -> new LifecycleEvent(
-                                    row.getObject("id", UUID.class),
-                                    row.getString("kind"),
-                                    row.getString("reason"),
-                                    new EventActor(
-                                            row.getString("actor_kind"),
-                                            row.getString("actor_id"),
-                                            row.getString("display_name")),
-                                    row.getTimestamp("created_at").toInstant()),
-                            salonId,
-                            paging.size(),
-                            paging.offset());
-            Long total = database.jdbcTemplate()
-                    .queryForObject(
-                            "SELECT count(*) FROM salon_lifecycle_event WHERE salon_id = ?", Long.class, salonId);
-            return new LifecyclePage(items, paging.page(), paging.size(), total == null ? 0 : total);
+            List<LifecycleEvent> items = store.history(salonId, paging.size(), paging.offset()).stream()
+                    .map(event -> new LifecycleEvent(
+                            event.id(),
+                            event.kind(),
+                            event.reason(),
+                            new EventActor(event.actorKind(), event.actorId(), event.operatorName()),
+                            event.createdAt()))
+                    .toList();
+            long total = store.countHistory(salonId);
+            return new LifecyclePage(items, paging.page(), paging.size(), total);
         });
     }
 
     /** Records a lifecycle event in the caller's platform transaction. */
     void event(UUID salonId, String kind, String reason, String actorKind, String actorId, Instant at) {
-        database.jdbcTemplate()
-                .update(
-                        """
-                INSERT INTO salon_lifecycle_event (id, salon_id, kind, reason, actor_kind, actor_id, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                        UUID.randomUUID(),
-                        salonId,
-                        kind,
-                        reason,
-                        actorKind,
-                        actorId,
-                        Timestamp.from(at),
-                        Timestamp.from(at));
+        store.recordEvent(salonId, kind, reason, actorKind, actorId, at);
     }
 
     private Locked lock(UUID salonId) {
-        return database
-                .jdbcTemplate()
-                .query(
-                        """
-                SELECT id, slug, status, version, owner_email FROM tenant WHERE id = ? FOR UPDATE
-                """,
-                        (row, n) -> new Locked(
-                                row.getObject("id", UUID.class),
-                                row.getString("slug"),
-                                row.getString("status"),
-                                row.getLong("version"),
-                                row.getString("owner_email")),
-                        salonId)
-                .stream()
-                .findFirst()
-                .orElseThrow(NotFoundException::new);
+        return store.lock(salonId).orElseThrow(NotFoundException::new);
     }
 
     private static void current(Locked salon, long version) {

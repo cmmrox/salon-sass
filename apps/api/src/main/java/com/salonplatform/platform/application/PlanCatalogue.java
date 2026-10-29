@@ -3,16 +3,15 @@ package com.salonplatform.platform.application;
 import com.salonplatform.platform.domain.OperatorPermission;
 import com.salonplatform.platform.domain.PlainText;
 import com.salonplatform.platform.domain.Slugs;
+import com.salonplatform.platform.infrastructure.PlanStore;
+import com.salonplatform.platform.infrastructure.PlanStore.NewPlan;
+import com.salonplatform.platform.infrastructure.PlanStore.Plan;
 import com.salonplatform.platform.infrastructure.PlatformAudit;
-import com.salonplatform.shared.infrastructure.PlatformDatabase;
 import com.salonplatform.shared.web.ApplicationProblemException;
 import com.salonplatform.shared.web.ErrorCode;
 import com.salonplatform.shared.web.FieldProblem;
 import com.salonplatform.shared.web.NotFoundException;
 import io.swagger.v3.oas.annotations.media.Schema;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Timestamp;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -73,7 +72,7 @@ public class PlanCatalogue {
             Boolean customDomain,
             Boolean dedicatedApp) {}
 
-    private final PlatformDatabase database;
+    private final PlanStore plans;
     private final OperatorWork work;
     private final OperatorAccess access;
     private final ProvisioningReceipts receipts;
@@ -81,13 +80,13 @@ public class PlanCatalogue {
     private final Clock clock;
 
     public PlanCatalogue(
-            PlatformDatabase database,
+            PlanStore plans,
             OperatorWork work,
             OperatorAccess access,
             ProvisioningReceipts receipts,
             PlatformAudit audit,
             Clock clock) {
-        this.database = database;
+        this.plans = plans;
         this.work = work;
         this.access = access;
         this.receipts = receipts;
@@ -95,42 +94,28 @@ public class PlanCatalogue {
         this.clock = clock;
     }
 
-    private static final String COLUMNS = "id, key, name, staff_seats, branches, message_allowance, custom_domain, "
-            + "dedicated_app, created_at, updated_at";
-
-    static PlanDefinition definition(ResultSet row) throws SQLException {
+    private static PlanDefinition definition(Plan plan) {
         return new PlanDefinition(
-                row.getObject("id", UUID.class),
-                row.getString("key"),
-                row.getString("name"),
-                row.getInt("staff_seats"),
-                row.getInt("branches"),
-                row.getInt("message_allowance"),
-                row.getBoolean("custom_domain"),
-                row.getBoolean("dedicated_app"),
-                row.getTimestamp("created_at").toInstant(),
-                row.getTimestamp("updated_at").toInstant());
+                plan.id(),
+                plan.key(),
+                plan.name(),
+                plan.staffSeats(),
+                plan.branches(),
+                plan.messageAllowance(),
+                plan.customDomain(),
+                plan.dedicatedApp(),
+                plan.createdAt(),
+                plan.updatedAt());
     }
 
     public PlanPage list(Paging paging) {
         return work.run(() -> {
             access.require(OperatorPermission.PLAN_READ);
-            String filter = " WHERE (?::text IS NULL OR strpos(lower(name), lower(?::text)) > 0"
-                    + " OR strpos(key, lower(?::text)) > 0)";
-            List<PlanDefinition> items = database.jdbcTemplate()
-                    .query(
-                            "SELECT " + COLUMNS + " FROM plan" + filter
-                                    + " ORDER BY created_at DESC, id LIMIT ? OFFSET ?",
-                            (row, n) -> definition(row),
-                            paging.q(),
-                            paging.q(),
-                            paging.q(),
-                            paging.size(),
-                            paging.offset());
-            Long total = database.jdbcTemplate()
-                    .queryForObject(
-                            "SELECT count(*) FROM plan" + filter, Long.class, paging.q(), paging.q(), paging.q());
-            return new PlanPage(items, paging.page(), paging.size(), total == null ? 0 : total);
+            List<PlanDefinition> items = plans.page(paging.q(), paging.size(), paging.offset()).stream()
+                    .map(PlanCatalogue::definition)
+                    .toList();
+            long total = plans.count(paging.q());
+            return new PlanPage(items, paging.page(), paging.size(), total);
         });
     }
 
@@ -142,12 +127,7 @@ public class PlanCatalogue {
     }
 
     private PlanDefinition find(UUID id) {
-        return database
-                .jdbcTemplate()
-                .query("SELECT " + COLUMNS + " FROM plan WHERE id = ?", (row, n) -> definition(row), id)
-                .stream()
-                .findFirst()
-                .orElseThrow(NotFoundException::new);
+        return plans.findById(id).map(PlanCatalogue::definition).orElseThrow(NotFoundException::new);
     }
 
     /** The result of a creation: whether it was a replay, and the definition. */
@@ -166,23 +146,17 @@ public class PlanCatalogue {
             Instant now = clock.instant();
             UUID id = UUID.randomUUID();
             try {
-                database.jdbcTemplate()
-                        .update(
-                                """
-                        INSERT INTO plan (id, key, name, staff_seats, branches, message_allowance, custom_domain,
-                            dedicated_app, created_at, updated_at)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                        """,
-                                id,
-                                plan.get("key"),
-                                plan.get("name"),
-                                plan.get("staffSeats"),
-                                plan.get("branches"),
-                                plan.get("messageAllowance"),
-                                plan.get("customDomain"),
-                                plan.get("dedicatedApp"),
-                                Timestamp.from(now),
-                                Timestamp.from(now));
+                plans.add(
+                        id,
+                        new NewPlan(
+                                (String) plan.get("key"),
+                                (String) plan.get("name"),
+                                (Integer) plan.get("staffSeats"),
+                                (Integer) plan.get("branches"),
+                                (Integer) plan.get("messageAllowance"),
+                                (Boolean) plan.get("customDomain"),
+                                (Boolean) plan.get("dedicatedApp")),
+                        now);
             } catch (DuplicateKeyException ex) {
                 throw new ApplicationProblemException(409, ErrorCode.PLAN_KEY_TAKEN);
             }

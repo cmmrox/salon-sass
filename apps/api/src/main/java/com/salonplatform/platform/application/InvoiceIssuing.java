@@ -1,15 +1,15 @@
 package com.salonplatform.platform.application;
 
-import com.salonplatform.platform.application.BillingLedger.Changes;
-import com.salonplatform.platform.application.BillingLedger.Invoice;
-import com.salonplatform.platform.application.BillingLedger.Salon;
-import com.salonplatform.platform.application.BillingLedger.Subscription;
 import com.salonplatform.platform.domain.BillingCalendar;
 import com.salonplatform.platform.domain.BillingCalendar.Reminder;
 import com.salonplatform.platform.domain.BillingTerms;
+import com.salonplatform.platform.infrastructure.BillingLedger;
+import com.salonplatform.platform.infrastructure.BillingLedger.Invoice;
+import com.salonplatform.platform.infrastructure.BillingLedger.Salon;
+import com.salonplatform.platform.infrastructure.BillingLedger.Subscription;
+import com.salonplatform.platform.infrastructure.InvoiceStore;
 import com.salonplatform.platform.infrastructure.PlatformAudit;
-import com.salonplatform.shared.infrastructure.PlatformDatabase;
-import java.sql.Timestamp;
+import com.salonplatform.platform.infrastructure.PlatformOutbox;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -26,22 +26,25 @@ import org.springframework.stereotype.Service;
 @Service
 public class InvoiceIssuing {
 
-    private final PlatformDatabase database;
+    private final InvoiceStore invoices;
     private final PlatformAudit audit;
     private final BillingFaults faults;
     private final BillingLedger ledger;
+    private final PlatformOutbox outbox;
     private final BillingNotices notices;
 
     public InvoiceIssuing(
-            PlatformDatabase database,
+            InvoiceStore invoices,
             PlatformAudit audit,
             BillingFaults faults,
             BillingLedger ledger,
+            PlatformOutbox outbox,
             BillingNotices notices) {
-        this.database = database;
+        this.invoices = invoices;
         this.audit = audit;
         this.faults = faults;
         this.ledger = ledger;
+        this.outbox = outbox;
         this.notices = notices;
     }
 
@@ -50,7 +53,7 @@ public class InvoiceIssuing {
      * attempt (card) in the same transaction. The amount is the subscription's at issue and the plan
      * the salon's at issue; an issued invoice never changes.
      */
-    public Subscription issueDue(Subscription locked, Instant now, Changes changes) {
+    public Subscription issueDue(Subscription locked, Instant now, BillingChanges changes) {
         Subscription current = locked;
         int guard = 0;
         while (!current.nextInvoiceAt().isAfter(now) && guard++ < 36) {
@@ -59,44 +62,16 @@ public class InvoiceIssuing {
         return current;
     }
 
-    private Subscription issue(Subscription subscription, Instant now, Changes changes) {
+    private Subscription issue(Subscription subscription, Instant now, BillingChanges changes) {
         Salon salon = ledger.salon(subscription.salonId(), false).orElseThrow();
         int index = subscription.invoicesIssued();
         Instant periodStart = subscription.nextInvoiceAt();
         Instant periodEnd = BillingCalendar.periodStart(subscription.anchor(), salon.zone(), index + 1);
         Instant due = BillingCalendar.due(periodStart);
-        Long number = database.jdbcTemplate()
-                .queryForObject(
-                        "UPDATE invoice_number SET last_number = last_number + 1 WHERE id RETURNING last_number",
-                        Long.class);
+        long number = invoices.nextInvoiceNumber();
         UUID id = UUID.randomUUID();
-        Timestamp at = Timestamp.from(now);
-        database.jdbcTemplate()
-                .update(
-                        """
-                INSERT INTO invoice (id, number, salon_id, subscription_id, plan_id, plan_key, plan_name, period_index,
-                    period_start, period_end, amount, currency, issued_at, due_at, status, paid_at, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'open', NULL, ?, ?)
-                """,
-                        id,
-                        number,
-                        salon.id(),
-                        subscription.id(),
-                        salon.planId(),
-                        salon.planKey(),
-                        salon.planName(),
-                        index,
-                        Timestamp.from(periodStart),
-                        Timestamp.from(periodEnd),
-                        subscription.monthlyAmount(),
-                        subscription.currency(),
-                        Timestamp.from(periodStart),
-                        Timestamp.from(due),
-                        at,
-                        at);
-        database.jdbcTemplate().update("""
-                UPDATE subscription SET invoices_issued = ?, next_invoice_at = ?, updated_at = ? WHERE id = ?
-                """, index + 1, Timestamp.from(periodEnd), at, subscription.id());
+        invoices.issue(id, number, salon, subscription, index, periodStart, periodEnd, due, now);
+        ledger.recordIssued(subscription.id(), index + 1, periodEnd, now);
         Map<String, Object> details = new LinkedHashMap<>();
         details.put("salonId", salon.id().toString());
         details.put("number", BillingTerms.invoiceNumber(number));
@@ -120,17 +95,11 @@ public class InvoiceIssuing {
      * Records a charge attempt for an invoice and occasion, once, with the outbox message that makes
      * the provider call afterwards. Nothing when that occasion already has an attempt.
      */
-    public boolean requestCharge(Salon salon, Invoice invoice, String occasion, Instant now, Changes changes) {
+    public boolean requestCharge(Salon salon, Invoice invoice, String occasion, Instant now, BillingChanges changes) {
         UUID id = UUID.randomUUID();
         UUID key = UUID.randomUUID();
-        Timestamp at = Timestamp.from(now);
-        int inserted = database.jdbcTemplate().update("""
-                INSERT INTO charge_attempt (id, invoice_id, occasion, attempt_key, status, requested_at, settled_at,
-                    created_at, updated_at)
-                VALUES (?, ?, ?, ?, 'requested', ?, NULL, ?, ?)
-                ON CONFLICT (invoice_id, occasion) DO NOTHING
-                """, id, invoice.id(), occasion, key, at, at, at);
-        if (inserted == 0) {
+        boolean requested = invoices.requestCharge(id, invoice.id(), occasion, key, now);
+        if (!requested) {
             return false;
         }
         Map<String, Object> payload = new LinkedHashMap<>();
@@ -138,7 +107,7 @@ public class InvoiceIssuing {
         payload.put("invoiceId", invoice.id().toString());
         payload.put("amount", invoice.amount());
         payload.put("currency", invoice.currency());
-        ledger.enqueue(salon.id(), BillingLedger.CHARGE, payload, now);
+        outbox.enqueue(salon.id(), BillingLedger.CHARGE, payload, now);
         audit.record(
                 PlatformAudit.SYSTEM,
                 "billing",
@@ -155,7 +124,7 @@ public class InvoiceIssuing {
      * Sends the reminders whose boundary has come for every unpaid invoice (once per invoice and
      * kind), with a retry of the charge on each reminder day for a card subscription.
      */
-    public void remind(Subscription subscription, Instant now, Changes changes) {
+    public void remind(Subscription subscription, Instant now, BillingChanges changes) {
         Salon salon = ledger.salon(subscription.salonId(), false).orElseThrow();
         for (Invoice invoice : ledger.openInvoices(subscription.id())) {
             for (Reminder reminder : BillingCalendar.remindersDue(now, invoice.dueAt())) {

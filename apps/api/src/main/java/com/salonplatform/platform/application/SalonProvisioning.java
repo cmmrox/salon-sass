@@ -7,14 +7,16 @@ import com.salonplatform.platform.domain.OperatorPermission;
 import com.salonplatform.platform.domain.PlainText;
 import com.salonplatform.platform.domain.ProvisioningRegions;
 import com.salonplatform.platform.domain.Slugs;
+import com.salonplatform.platform.infrastructure.BillingLedger;
+import com.salonplatform.platform.infrastructure.PlanStore;
 import com.salonplatform.platform.infrastructure.PlatformAudit;
-import com.salonplatform.shared.infrastructure.PlatformDatabase;
+import com.salonplatform.platform.infrastructure.SalonStore;
+import com.salonplatform.platform.infrastructure.SalonStore.NewSalon;
 import com.salonplatform.shared.web.ApplicationProblemException;
 import com.salonplatform.shared.web.ErrorCode;
 import com.salonplatform.shared.web.FieldProblem;
 import com.salonplatform.shared.web.NotFoundException;
 import io.swagger.v3.oas.annotations.media.Schema;
-import java.sql.Timestamp;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -66,7 +68,8 @@ public class SalonProvisioning {
     /** The result of a creation: whether it was a replay, and the nonsecret result. */
     public record Created(boolean replayed, SalonCreated salon) {}
 
-    private final PlatformDatabase database;
+    private final SalonStore salons;
+    private final PlanStore plans;
     private final OperatorWork work;
     private final OperatorAccess access;
     private final ProvisioningReceipts receipts;
@@ -80,7 +83,8 @@ public class SalonProvisioning {
     private final String platformDomain;
 
     public SalonProvisioning(
-            PlatformDatabase database,
+            SalonStore salons,
+            PlanStore plans,
             OperatorWork work,
             OperatorAccess access,
             ProvisioningReceipts receipts,
@@ -92,7 +96,8 @@ public class SalonProvisioning {
             SubscriptionStates states,
             Clock clock,
             @Value("${salon.platform-domain}") String platformDomain) {
-        this.database = database;
+        this.salons = salons;
+        this.plans = plans;
         this.work = work;
         this.access = access;
         this.receipts = receipts;
@@ -153,35 +158,27 @@ public class SalonProvisioning {
                     return new Created(true, created(earlier.get().result()));
                 }
                 UUID planId = (UUID) profile.get("planId");
-                Integer plans = database.jdbcTemplate()
-                        .queryForObject("SELECT count(*) FROM plan WHERE id = ?", Integer.class, planId);
-                if (plans == null || plans == 0) {
+                if (!plans.exists(planId)) {
                     throw new NotFoundException();
                 }
                 Instant now = clock.instant();
                 UUID id = UUID.randomUUID();
                 String slug = (String) profile.get("slug");
-                database.jdbcTemplate()
-                        .update(
-                                """
-                        INSERT INTO tenant (id, slug, status, time_zone, name, country, currency, default_language,
-                            contact_email, contact_phone, address, owner_email, plan_id, created_at, updated_at)
-                        VALUES (?, ?, 'active', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                        """,
-                                id,
+                salons.create(
+                        id,
+                        new NewSalon(
                                 slug,
-                                profile.get("timeZone"),
-                                profile.get("name"),
-                                profile.get("country"),
-                                profile.get("currency"),
-                                profile.get("defaultLanguage"),
-                                profile.get("contactEmail"),
-                                profile.get("contactPhone"),
-                                profile.get("address"),
+                                (String) profile.get("timeZone"),
+                                (String) profile.get("name"),
+                                (String) profile.get("country"),
+                                (String) profile.get("currency"),
+                                (String) profile.get("defaultLanguage"),
+                                (String) profile.get("contactEmail"),
+                                (String) profile.get("contactPhone"),
+                                (String) profile.get("address"),
                                 prepared.email(),
-                                planId,
-                                Timestamp.from(now),
-                                Timestamp.from(now));
+                                planId),
+                        now);
                 identity.bootstrapOwner(id, prepared, now);
                 faults.reached(BootstrapFaults.Step.OWNER);
                 branding.bootstrapBrand(id, (String) profile.get("name"), now);

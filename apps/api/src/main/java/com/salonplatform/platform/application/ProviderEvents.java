@@ -1,6 +1,10 @@
 package com.salonplatform.platform.application;
 
+import com.salonplatform.platform.infrastructure.BillingLedger;
 import com.salonplatform.platform.infrastructure.BillingProviderKey;
+import com.salonplatform.platform.infrastructure.InvoiceStore;
+import com.salonplatform.platform.infrastructure.InvoiceStore.ChargeAttempt;
+import com.salonplatform.platform.infrastructure.InvoiceStore.ProviderEvent;
 import com.salonplatform.platform.infrastructure.PlatformAudit;
 import com.salonplatform.shared.infrastructure.PlatformDatabase;
 import com.salonplatform.shared.web.ApplicationProblemException;
@@ -8,7 +12,6 @@ import com.salonplatform.shared.web.ErrorCode;
 import com.salonplatform.shared.web.FieldProblem;
 import com.salonplatform.shared.web.NotFoundException;
 import io.swagger.v3.oas.annotations.media.Schema;
-import java.sql.Timestamp;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
@@ -47,6 +50,7 @@ public class ProviderEvents {
 
     private final PlatformDatabase database;
     private final BillingLedger ledger;
+    private final InvoiceStore invoices;
     private final BillingNotices notices;
     private final SubscriptionStates states;
     private final BillingProviderKey key;
@@ -57,6 +61,7 @@ public class ProviderEvents {
     public ProviderEvents(
             PlatformDatabase database,
             BillingLedger ledger,
+            InvoiceStore invoices,
             BillingNotices notices,
             SubscriptionStates states,
             BillingProviderKey key,
@@ -66,6 +71,7 @@ public class ProviderEvents {
         this.audit = audit;
         this.database = database;
         this.ledger = ledger;
+        this.invoices = invoices;
         this.notices = notices;
         this.states = states;
         this.key = key;
@@ -143,35 +149,21 @@ public class ProviderEvents {
     }
 
     private Acknowledged apply(Event event) {
-        database.jdbcTemplate()
-                .queryForObject(
-                        "SELECT pg_advisory_xact_lock(hashtextextended(?, 1))::text",
-                        String.class,
-                        "provider-event|" + event.eventId());
-        Integer seen = database.jdbcTemplate()
-                .queryForObject(
-                        "SELECT count(*) FROM provider_event WHERE event_id = ?", Integer.class, event.eventId());
-        if (seen != null && seen > 0) {
+        invoices.lockProviderEvent(event.eventId());
+        if (invoices.providerEventSeen(event.eventId())) {
             return new Acknowledged(event.eventId(), "duplicate");
         }
         Instant now = clock.instant();
         String result = outcome(event, now);
-        Timestamp at = Timestamp.from(now);
-        database.jdbcTemplate()
-                .update(
-                        """
-                INSERT INTO provider_event (event_id, invoice_id, attempt_key, outcome, occurred_at, result, created_at,
-                    updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                """,
+        invoices.recordProviderEvent(
+                new ProviderEvent(
                         event.eventId(),
                         event.invoiceId(),
                         event.attemptKey(),
                         event.outcome(),
-                        Timestamp.from(event.occurredAt()),
-                        result,
-                        at,
-                        at);
+                        event.occurredAt(),
+                        result),
+                now);
         Map<String, Object> details = new LinkedHashMap<>();
         details.put("eventId", event.eventId());
         details.put("outcome", event.outcome());
@@ -188,20 +180,8 @@ public class ProviderEvents {
     }
 
     private String outcome(Event event, Instant now) {
-        var attempt = database
-                .jdbcTemplate()
-                .query(
-                        "SELECT id, invoice_id, status FROM charge_attempt WHERE attempt_key = ?",
-                        (row, n) -> new Object[] {
-                            row.getObject("id", UUID.class),
-                            row.getObject("invoice_id", UUID.class),
-                            row.getString("status")
-                        },
-                        event.attemptKey())
-                .stream()
-                .findFirst()
-                .orElse(null);
-        if (attempt == null || !event.invoiceId().equals(attempt[1])) {
+        ChargeAttempt attempt = invoices.chargeAttempt(event.attemptKey()).orElse(null);
+        if (attempt == null || !event.invoiceId().equals(attempt.invoiceId())) {
             return "unknown";
         }
         BillingLedger.Invoice found =
@@ -212,8 +192,8 @@ public class ProviderEvents {
         BillingLedger.Subscription subscription =
                 ledger.subscription(found.subscriptionId(), true).orElseThrow();
         BillingLedger.Invoice invoice = ledger.invoiceById(found.id(), true).orElseThrow();
-        UUID attemptId = (UUID) attempt[0];
-        boolean pending = "requested".equals(attempt[2]);
+        UUID attemptId = attempt.id();
+        boolean pending = "requested".equals(attempt.status());
         if (!invoice.open()) {
             if (pending) {
                 settle(attemptId, "success".equals(event.outcome()) ? "succeeded" : "failed", now);
@@ -252,9 +232,6 @@ public class ProviderEvents {
     }
 
     private void settle(UUID attemptId, String status, Instant now) {
-        Timestamp at = Timestamp.from(now);
-        database.jdbcTemplate().update("""
-                UPDATE charge_attempt SET status = ?, settled_at = ?, updated_at = ? WHERE id = ? AND status = 'requested'
-                """, status, at, at, attemptId);
+        invoices.settleCharge(attemptId, status, now);
     }
 }
