@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.channels.FileChannel;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -97,8 +98,8 @@ public class BillingProviderKey implements SecretKeys {
             return false;
         }
         return MessageDigest.isEqual(
-                sign(body).orElseThrow().getBytes(java.nio.charset.StandardCharsets.US_ASCII),
-                signature.getBytes(java.nio.charset.StandardCharsets.US_ASCII));
+                sign(body).orElseThrow().getBytes(StandardCharsets.US_ASCII),
+                signature.getBytes(StandardCharsets.US_ASCII));
     }
 
     private static synchronized String retained(Environment environment) {
