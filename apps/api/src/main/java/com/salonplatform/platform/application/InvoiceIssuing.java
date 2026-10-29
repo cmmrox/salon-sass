@@ -9,6 +9,7 @@ import com.salonplatform.platform.infrastructure.BillingLedger.Salon;
 import com.salonplatform.platform.infrastructure.BillingLedger.Subscription;
 import com.salonplatform.platform.infrastructure.InvoiceStore;
 import com.salonplatform.platform.infrastructure.PlatformAudit;
+import com.salonplatform.platform.infrastructure.PlatformOutbox;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -29,6 +30,7 @@ public class InvoiceIssuing {
     private final PlatformAudit audit;
     private final BillingFaults faults;
     private final BillingLedger ledger;
+    private final PlatformOutbox outbox;
     private final BillingNotices notices;
 
     public InvoiceIssuing(
@@ -36,11 +38,13 @@ public class InvoiceIssuing {
             PlatformAudit audit,
             BillingFaults faults,
             BillingLedger ledger,
+            PlatformOutbox outbox,
             BillingNotices notices) {
         this.invoices = invoices;
         this.audit = audit;
         this.faults = faults;
         this.ledger = ledger;
+        this.outbox = outbox;
         this.notices = notices;
     }
 
@@ -103,7 +107,7 @@ public class InvoiceIssuing {
         payload.put("invoiceId", invoice.id().toString());
         payload.put("amount", invoice.amount());
         payload.put("currency", invoice.currency());
-        ledger.enqueue(salon.id(), BillingLedger.CHARGE, payload, now);
+        outbox.enqueue(salon.id(), BillingLedger.CHARGE, payload, now);
         audit.record(
                 PlatformAudit.SYSTEM,
                 "billing",

@@ -4,7 +4,6 @@ import static com.salonplatform.platform.infrastructure.PlatformTimes.time;
 
 import com.salonplatform.platform.domain.BillingCalendar.State;
 import com.salonplatform.shared.infrastructure.PlatformDatabase;
-import com.salonplatform.shared.observability.Traces;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -13,21 +12,17 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.stereotype.Component;
-import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Subscription billing's records on the platform connection (docs/architecture/operator-console.md,
  * "Subscriptions, invoices and entitlements"): salons, subscriptions, invoices and payments as billing
- * reads them, the subscription and registry changes billing makes, and the outbox messages it writes.
- * Named direct-SQL exception 1 of docs/engineering/backend.md (platform tables with no
- * {@code tenant_id}); the outbox messages are written through {@code outbox_enqueue_for_salon}, a
- * {@code SECURITY DEFINER} function that writes the named salon's row (exception 2). Every method runs
- * inside the caller's platform transaction, and a subscription is changed only while its row is locked.
- * The invoice-side writes are {@link InvoiceStore}.
+ * reads them, and the subscription and registry changes billing makes. Named direct-SQL exception 1 of
+ * docs/engineering/backend.md: platform tables with no {@code tenant_id}. Every method runs inside the
+ * caller's platform transaction, and a subscription is changed only while its row is locked. The
+ * invoice-side writes are {@link InvoiceStore}, the outbox messages billing writes {@link PlatformOutbox}.
  */
 @Component
 public class BillingLedger {
@@ -128,13 +123,9 @@ public class BillingLedger {
             """;
 
     private final PlatformDatabase database;
-    private final Traces traces;
-    private final JsonMapper json;
 
-    BillingLedger(PlatformDatabase database, Traces traces, JsonMapper json) {
+    BillingLedger(PlatformDatabase database) {
         this.database = database;
-        this.traces = traces;
-        this.json = json;
     }
 
     // --- salons ----------------------------------------------------------------------------------
@@ -361,27 +352,6 @@ public class BillingLedger {
                 .sql("SELECT * FROM invoice_payment WHERE invoice_id = ? ORDER BY paid_at, id")
                 .param(invoiceId)
                 .query((row, n) -> payment(row))
-                .list();
-    }
-
-    // --- outbox ---------------------------------------------------------------------------------
-
-    public void enqueue(UUID salon, String channel, Map<String, Object> payload, Instant now) {
-        enqueueWithId(salon, UUID.randomUUID(), channel, payload, now);
-    }
-
-    /** Writes a message to the named salon's outbox through {@code outbox_enqueue_for_salon}. */
-    public void enqueueWithId(UUID salon, UUID id, String channel, Map<String, Object> payload, Instant now) {
-        database.jdbc()
-                .sql("SELECT outbox_enqueue_for_salon(?, ?, ?, ?::jsonb, ?, ?)::text")
-                .params(
-                        salon,
-                        id,
-                        channel,
-                        json.writeValueAsString(payload),
-                        traces.currentTraceParent().orElse(null),
-                        time(now))
-                .query(String.class)
                 .list();
     }
 

@@ -6,6 +6,7 @@ import com.salonplatform.platform.infrastructure.BillingLedger.Invoice;
 import com.salonplatform.platform.infrastructure.BillingLedger.Salon;
 import com.salonplatform.platform.infrastructure.InvoiceStore;
 import com.salonplatform.platform.infrastructure.PlatformAudit;
+import com.salonplatform.platform.infrastructure.PlatformOutbox;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Locale;
@@ -24,19 +25,19 @@ public class BillingNotices {
 
     private final InvoiceStore invoices;
     private final PlatformAudit audit;
-    private final BillingLedger ledger;
+    private final PlatformOutbox outbox;
     private final String platformDomain;
     private final String linkOrigin;
 
     public BillingNotices(
             InvoiceStore invoices,
             PlatformAudit audit,
-            BillingLedger ledger,
+            PlatformOutbox outbox,
             @Value("${salon.platform-domain}") String platformDomain,
             @Value("${salon.billing.link-origin:https://%s}") String linkOrigin) {
         this.invoices = invoices;
         this.audit = audit;
-        this.ledger = ledger;
+        this.outbox = outbox;
         this.platformDomain = platformDomain.strip().toLowerCase(Locale.ROOT);
         this.linkOrigin = linkOrigin;
     }
@@ -56,7 +57,7 @@ public class BillingNotices {
             return false;
         }
         if (message != null) {
-            ledger.enqueueWithId(
+            outbox.enqueueWithId(
                     salon.id(),
                     message,
                     BillingLedger.EMAIL,
