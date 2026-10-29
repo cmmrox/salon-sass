@@ -72,7 +72,10 @@ a separate service without its callers or the web and mobile clients changing:
   not weaken them to get a change in; move the code.
 - `shared` holds technical capabilities only (tenant context, errors, time, money, audit, outbox,
   jobs). A business contract never moves into `shared` to avoid a dependency cycle; invert the
-  dependency with an event instead.
+  dependency with an event instead. The one exception is `shared.entitlements.SalonEntitlements`,
+  the plan limits every module enforces inside its own transaction under the registry's share lock:
+  `platform` implements it, and neither an event (it must answer and lock now) nor a move into
+  `platform` (a cycle with `identity`) can replace it (decision 057).
 
 ## Inside a module
 
