@@ -2,7 +2,6 @@ package com.salonplatform.platform.infrastructure;
 
 import com.salonplatform.shared.infrastructure.PlatformDatabase;
 import com.salonplatform.shared.jobs.PlatformJob;
-import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
 import org.springframework.stereotype.Component;
@@ -18,9 +17,11 @@ class OperatorSecurityCleanupJob implements PlatformJob {
     static final int BATCH = 1000;
 
     private final PlatformDatabase database;
+    private final OperatorSecurityStore security;
 
-    OperatorSecurityCleanupJob(PlatformDatabase database) {
+    OperatorSecurityCleanupJob(PlatformDatabase database, OperatorSecurityStore security) {
         this.database = database;
+        this.security = security;
     }
 
     @Override
@@ -36,18 +37,8 @@ class OperatorSecurityCleanupJob implements PlatformJob {
     @Override
     public void run(Instant now) {
         database.inTransaction(status -> {
-            database.jdbcTemplate().update("""
-                    DELETE FROM operator_rate_bucket WHERE id IN (SELECT id FROM operator_rate_bucket
-                     WHERE window_start + interval '15 minutes' <= ? LIMIT ?)
-                    """, Timestamp.from(now), BATCH);
-            database.jdbcTemplate().update("""
-                    DELETE FROM operator_mfa_challenge WHERE id IN (SELECT id FROM operator_mfa_challenge
-                     WHERE expires_at <= ? LIMIT ?)
-                    """, Timestamp.from(now), BATCH);
             // A step stays refused while it can still match (one adjacent step either side).
-            database.jdbcTemplate().update("""
-                    DELETE FROM operator_mfa_step WHERE id IN (SELECT id FROM operator_mfa_step WHERE step < ? LIMIT ?)
-                    """, now.getEpochSecond() / 30 - 2, BATCH);
+            security.removeExpired(now, now.getEpochSecond() / 30 - 2, BATCH);
             return null;
         });
     }
