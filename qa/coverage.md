@@ -34,6 +34,7 @@ asked for; the cases of a stage are written at its feature's pass.
 | F23-S02 | complete | - | NFR-22, NFR-01, NFR-04 | 9 | 0 | 0 | 0 | 0 |
 | F23-S03 | complete | - | NFR-23, NFR-01 | 8 | 0 | 0 | 0 | 0 |
 | F23-S04 | complete | - | NFR-22, NFR-18 | 8 | 0 | 0 | 0 | 0 |
+| F23-S05 | planned | - | NFR-22, NFR-01, NFR-04 | 8 | 0 | 0 | 0 | 0 |
 | F23-S07 | complete | - | NFR-23, NFR-22 | 6 | 0 | 0 | 0 | 0 |
 | F23-S08 | complete | - | NFR-23, NFR-22 | 4 | 0 | 0 | 0 | 0 |
 
