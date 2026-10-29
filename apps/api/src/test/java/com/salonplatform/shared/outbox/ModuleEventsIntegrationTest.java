@@ -139,12 +139,33 @@ class ModuleEventsIntegrationTest {
     }
 
     @Test
-    void anEventTypeWithNoSubscriberIsDeliveredAtOnce() throws Exception {
+    void anEventOfADeclaredTypeWithNoSubscriberIsDeliveredAtOnce() throws Exception {
         UUID event = publish(alpha, new Unheard(UUID.randomUUID()));
 
         awaitStatus(event, "sent");
         assertThat(owner.queryForObject("SELECT attempts FROM outbox_message WHERE id = ?", Integer.class, event))
                 .isEqualTo(1);
+    }
+
+    @Test
+    void anEventOfATypeThisBuildDoesNotDeclareStaysPendingAndUnclaimedWhileKnownEventsFlow() throws Exception {
+        assertThat(application.bean(DeclaredEventTypes.class).names())
+                .contains("identity.CustomerDataErased.v1", "probe.Noted.v1", "probe.Unheard.v1")
+                .doesNotContain("probe.FromANewerVersion.v1");
+        UUID unknown = insertDueEvent(alpha, "probe.FromANewerVersion.v1", "{}");
+
+        UUID mark = UUID.randomUUID();
+        awaitStatus(publish(alpha, new Noted(mark)), "sent");
+        Thread.sleep(300);
+
+        assertThat(owner.queryForMap("SELECT status, attempts, lease_until FROM outbox_message WHERE id = ?", unknown))
+                .containsEntry("status", "pending")
+                .containsEntry("attempts", 0)
+                .containsEntry("lease_until", null);
+        assertThat(EventProbes.handled(FIRST, mark)).containsExactly(alpha.id());
+        assertThat(owner.queryForObject(
+                        "SELECT count(*) FROM shared_processed_event WHERE event_id = ?", Integer.class, unknown))
+                .isZero();
     }
 
     @Test

@@ -28,6 +28,7 @@ class OutboxConfiguration {
             OutboxStore store,
             List<OutboxProvider> providers,
             EventSubscribers events,
+            DeclaredEventTypes eventTypes,
             ActiveTenants tenants,
             PlatformTransactionManager transactions,
             Clock clock,
@@ -49,6 +50,14 @@ class OutboxConfiguration {
         DeliveryAttempts attempts =
                 new DeliveryAttempts(settings, store, providers, events, transactions, clock, traces, metrics);
         return new OutboxDispatcher(
-                settings, store, attempts, Map.copyOf(guards), tenants, transactions, clock, metrics);
+                settings,
+                store,
+                attempts,
+                eventTypes.names(),
+                Map.copyOf(guards),
+                tenants,
+                transactions,
+                clock,
+                metrics);
     }
 }

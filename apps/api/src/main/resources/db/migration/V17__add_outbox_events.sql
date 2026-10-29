@@ -5,7 +5,8 @@
 -- Additive, so that the previous version keeps running against it: the new columns have a default or
 -- are nullable, and a provider message written without them is a 'delivery' as before. An event's
 -- channel is 'event', which no provider delivers, so a previous version's dispatcher, which asks
--- outbox_due() for its providers' channels only, never claims one.
+-- outbox_due() for its providers' channels only, never claims one; this version asks outbox_due() the same
+-- way and outbox_due_events() for the event types it knows.
 
 ALTER TABLE outbox_message ADD COLUMN kind text NOT NULL DEFAULT 'delivery';
 -- The event's type name with its version ('identity.CustomerDataErased.v1'); null for a delivery.
@@ -14,6 +15,49 @@ ALTER TABLE outbox_message ADD COLUMN event_type text;
 ALTER TABLE outbox_message ADD CONSTRAINT outbox_message_kind_known CHECK (kind IN ('delivery', 'event'));
 ALTER TABLE outbox_message ADD CONSTRAINT outbox_message_event_has_type CHECK ((kind = 'event') = (event_type IS NOT NULL));
 ALTER TABLE outbox_message ADD CONSTRAINT outbox_message_event_channel CHECK ((kind = 'event') = (channel = 'event'));
+
+-- What events are due across salons, for the dispatcher: the ids of due events of the types the asking
+-- instance knows, and of their salons, nothing else, as outbox_due() does for provider messages. An event of a
+-- type the instance's build does not declare is never returned, so it stays pending, unclaimed and with no
+-- attempt counted, for an instance that knows it: during a rolling deployment an older instance never marks a
+-- newer event delivered with nothing done (decision 064). Only an active salon's events are due; a suspended
+-- salon's wait, and a closed salon's are never delivered. It sets each salon in turn and puts its caller's back.
+CREATE FUNCTION outbox_due_events(at_time timestamptz, event_types text[], per_salon integer, max_count integer)
+    RETURNS TABLE (message_id uuid, tenant_id uuid)
+    LANGUAGE plpgsql
+    SECURITY DEFINER
+    SET search_path = pg_catalog, pg_temp
+AS $$
+DECLARE
+    callers_salon text := coalesce(current_setting('app.tenant_id', true), '');
+    salon         uuid;
+    remaining     integer := max_count;
+    found         integer;
+BEGIN
+    FOR salon IN SELECT t.id FROM public.tenant t WHERE t.status = 'active' ORDER BY random() LOOP
+        EXIT WHEN remaining <= 0;
+        PERFORM set_config('app.tenant_id', salon::text, true);
+        RETURN QUERY
+            SELECT due.id, due.tenant_id FROM (
+                SELECT m.id, m.tenant_id, m.next_attempt_at AS due_at FROM public.outbox_message m
+                 WHERE m.tenant_id = salon AND m.status = 'pending' AND m.next_attempt_at <= at_time
+                   AND m.kind = 'event' AND m.event_type = ANY (event_types)
+                UNION ALL
+                SELECT m.id, m.tenant_id, m.lease_until FROM public.outbox_message m
+                 WHERE m.tenant_id = salon AND m.status = 'sending' AND m.lease_until <= at_time
+                   AND m.kind = 'event' AND m.event_type = ANY (event_types)
+            ) due
+            ORDER BY due.due_at, due.id
+            LIMIT least(per_salon, remaining);
+        GET DIAGNOSTICS found = ROW_COUNT;
+        remaining := remaining - found;
+    END LOOP;
+    PERFORM set_config('app.tenant_id', callers_salon, true);
+END
+$$;
+
+REVOKE ALL ON FUNCTION outbox_due_events(timestamptz, text[], integer, integer) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION outbox_due_events(timestamptz, text[], integer, integer) TO "${application_role}";
 
 -- Which subscriber has processed which event, per salon. A subscriber's change and this record commit in
 -- one transaction, so a repeated delivery (a lease that ran out before the outcome was recorded, or a

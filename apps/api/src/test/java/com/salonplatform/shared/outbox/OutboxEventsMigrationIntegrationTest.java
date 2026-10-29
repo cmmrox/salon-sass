@@ -111,6 +111,35 @@ class OutboxEventsMigrationIntegrationTest {
     }
 
     @Test
+    void thisVersionAsksForDueEventsOfTheTypesItKnowsOnly() throws SQLException {
+        UUID known = UUID.randomUUID();
+        UUID unknown = UUID.randomUUID();
+        for (Object[] event : new Object[][] {{known, "probe.Known.v1"}, {unknown, "probe.FromANewerVersion.v1"}}) {
+            owner.update(
+                    "INSERT INTO outbox_message (tenant_id, id, kind, channel, event_type, payload, status, attempts,"
+                            + " next_attempt_at, created_at, updated_at)"
+                            + " VALUES (?, ?, 'event', 'event', ?, '{}', 'pending', 0, now(), now(), now())",
+                    salon,
+                    event[0],
+                    event[1]);
+        }
+
+        List<UUID> due = new ArrayList<>();
+        try (Connection application = database.connectAsApplication();
+                PreparedStatement asked = application.prepareStatement(
+                        "SELECT message_id FROM outbox_due_events(?, ARRAY['probe.Known.v1'], 100, 100)")) {
+            asked.setTimestamp(1, Timestamp.from(Instant.now().plusSeconds(1)));
+            try (ResultSet rows = asked.executeQuery()) {
+                while (rows.next()) {
+                    due.add(rows.getObject(1, UUID.class));
+                }
+            }
+        }
+
+        assertThat(due).contains(known).doesNotContain(unknown, writtenBefore);
+    }
+
+    @Test
     void aDeliveryCannotTakeTheEventsChannelAndAnEventCannotTakeAProvidersChannel() {
         assertThatExceptionOfType(DataIntegrityViolationException.class)
                 .isThrownBy(() -> owner.update(

@@ -9,7 +9,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -28,7 +27,9 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * Delivers the outbox (NFR-15): provider messages, and events between modules (NFR-22). On each poll it
- * asks what is due across salons (ids only), then for each message, with that message's salon set (T-7):
+ * asks what is due across salons (ids only): messages of its providers' channels, and events of the types its
+ * build declares, so that an event of a type it does not know waits for an instance that does (decision 064).
+ * Then for each message, with that message's salon set (T-7):
  *
  * <ol>
  *   <li>claims it in a short transaction with a lease, once its channel has a free call and its
@@ -63,8 +64,11 @@ final class OutboxDispatcher implements SmartLifecycle {
 
     private final DeliveryAttempts attempts;
 
-    /** The channels this dispatcher delivers: its providers', and the events' channel. */
+    /** The channels this dispatcher delivers to a provider. */
     private final Set<String> channels;
+
+    /** The event types this build declares: the only events it claims. */
+    private final Set<String> eventTypes;
 
     private final Map<String, ChannelGuard> guards;
 
@@ -95,6 +99,7 @@ final class OutboxDispatcher implements SmartLifecycle {
             OutboxSettings settings,
             OutboxStore store,
             DeliveryAttempts attempts,
+            Set<String> eventTypes,
             Map<String, ChannelGuard> guards,
             ActiveTenants tenants,
             PlatformTransactionManager transactionManager,
@@ -103,9 +108,8 @@ final class OutboxDispatcher implements SmartLifecycle {
         this.settings = settings;
         this.store = store;
         this.attempts = attempts;
-        Set<String> delivered = new HashSet<>(attempts.providerChannels());
-        delivered.add(EventTypes.CHANNEL);
-        this.channels = Set.copyOf(delivered);
+        this.channels = Set.copyOf(attempts.providerChannels());
+        this.eventTypes = Set.copyOf(eventTypes);
         this.guards = guards;
         this.tenants = tenants;
         this.transactions = new TransactionTemplate(transactionManager);
@@ -124,7 +128,7 @@ final class OutboxDispatcher implements SmartLifecycle {
                 Thread.ofVirtual().name("outbox-delivery-", 0).factory());
         attempts.open();
         poller = Thread.ofVirtual().name("outbox-dispatcher").start(this::pollUntilStopped);
-        log.info("The outbox dispatcher started for the channels {}", channels);
+        log.info("The outbox dispatcher started for the channels {} and the event types {}", channels, eventTypes);
     }
 
     @Override
@@ -167,7 +171,9 @@ final class OutboxDispatcher implements SmartLifecycle {
         } catch (RuntimeException ex) {
             log.debug("The outbox backlog could not be read", ex);
         }
-        List<OutboxStore.Due> due = store.due(now, channels, settings.perSalon(), settings.batchSize());
+        List<OutboxStore.Due> due =
+                new ArrayList<>(store.due(now, channels, settings.perSalon(), settings.batchSize()));
+        due.addAll(store.dueEvents(now, eventTypes, settings.perSalon(), settings.batchSize()));
         Map<UUID, Optional<Deliverable>> salons = new HashMap<>();
         int started = 0;
         for (OutboxStore.Due message : due) {

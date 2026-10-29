@@ -26,6 +26,8 @@ class OutboxStore {
 
     private static final String DUE = "SELECT message_id, tenant_id FROM outbox_due(?, ?, ?, ?)";
 
+    private static final String DUE_EVENTS = "SELECT message_id, tenant_id FROM outbox_due_events(?, ?, ?, ?)";
+
     private static final String BACKLOG = "SELECT waiting, oldest_due_at FROM outbox_backlog(?)";
 
     private static final String LOCK_DUE = """
@@ -134,6 +136,15 @@ class OutboxStore {
     List<Due> due(Instant now, Collection<String> channels, int perSalon, int max) {
         return jdbc.sql(DUE)
                 .params(utc(now), new SqlArrayValue("text", channels.toArray()), perSalon, max)
+                .query((row, number) ->
+                        new Due(row.getObject("message_id", UUID.class), row.getObject("tenant_id", UUID.class)))
+                .list();
+    }
+
+    /** Due events of these types across salons, as {@link #due} for provider messages; another type's wait. */
+    List<Due> dueEvents(Instant now, Collection<String> eventTypes, int perSalon, int max) {
+        return jdbc.sql(DUE_EVENTS)
+                .params(utc(now), new SqlArrayValue("text", eventTypes.toArray()), perSalon, max)
                 .query((row, number) ->
                         new Due(row.getObject("message_id", UUID.class), row.getObject("tenant_id", UUID.class)))
                 .list();
