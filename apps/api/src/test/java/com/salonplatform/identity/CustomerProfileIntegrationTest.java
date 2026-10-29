@@ -28,7 +28,7 @@ class CustomerProfileIntegrationTest extends CustomerHttpFixture {
         // the product's reset intentionally retains delivered history and audit.
         for (String salon : List.of("alpha", "beta", "gamma"))
             status(call(salon, "DELETE", "/local/identity", null, null, null), 204);
-        database.asOwner().update("DELETE FROM outbox_message WHERE channel IN ('sms','whatsapp')");
+        database.asOwner().update("DELETE FROM outbox_message WHERE channel IN ('sms','whatsapp') OR kind = 'event'");
     }
 
     private static final String ME = "/api/v1/identity/customers/me";
