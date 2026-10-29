@@ -29,7 +29,7 @@ message or customer-cookie work. Existing direct customer Java APIs remain mobil
 - The API is reached at its one configured address, `SALON_API_BASE_URL`, never at an address taken
   from the request. The salon is named to it by the `Host` header of that request,
   `<slug>.<platform domain>`, sent through a fetch built on `node:http`
-  (`src/lib/api/forward-hostname.ts`), because Node's `fetch` drops a `Host` header.
+  (`src/lib/api-core/forward-hostname.ts`; `src/lib/api/` until F23-S06 moves it), because Node's `fetch` drops a `Host` header.
 - **Status codes (decision 028).** The proxy answers "salon not found" (404), "temporarily
   unavailable" (503, a suspended salon, on every path of its hostname) and "service unavailable"
   (503, the API cannot be reached within three seconds, or `SALON_PLATFORM_DOMAIN` is unset) itself,
@@ -44,15 +44,57 @@ message or customer-cookie work. Existing direct customer Java APIs remain mobil
 
 ## Structure
 
-- Route groups per surface: `(workspace)`, `(console)`; legacy route aliases contain no customer UI. A component used by more than
-  one surface lives in a shared folder; a surface never imports from another surface.
+The web app is organised by the same business modules as the API (CR-021, delivered by F23-S06):
+
+```
+apps/web/src/
+  app/                    routing only: route groups (workspace), (console), (platform); pages,
+                          layouts and thin route handlers (the BFF) that delegate to a feature
+  surfaces/<surface>/     workspace, console, platform: shells, navigation and screens that compose features
+  features/<module>/      one folder per API module that the web uses (identity, platform, branding,
+                          catalogue, staff, booking, payment, notification, customer, reporting)
+    server/               'server-only' calls to that module's API through the generated client; returns what the UI needs
+    components/           that module's product components, built from components/ui and Tailwind
+    hooks/  schemas/      client hooks; zod schemas for convenience validation
+  components/ui/          shadcn/ui (unchanged)
+  components/shared/      product components used by several features (notices, status)
+  lib/                    cross-cutting only, no business module: tenancy, http, observability,
+                          plain-page, api-core, utils
+  hooks/  i18n/  styles/
+```
+
+- Imports point one way: `app` -> `surfaces` -> `features` -> `components`, `lib`. A feature never
+  imports another feature; the surface composes them. A surface never imports another surface.
+  `eslint-plugin-boundaries` enforces both, and lint fails on a violation.
+- Each feature exposes a client-safe `index.ts` and a server entry `server.ts`; code under
+  `features/*/server/` starts with `import 'server-only'`. No deep import into another folder's
+  internals.
+- Route groups per surface: `(workspace)`, `(console)`; legacy route aliases contain no customer UI.
 - Pages and layouts compose; they do not hold business rules. Data access goes through the
-  generated client in `packages/api-contracts`, wrapped in one small module per API area.
+  generated client in `packages/api-contracts`, imported per module (`@salon/api-contracts/<module>`),
+  inside that module's `features/<module>/server/`.
+- Mutations go through the BFF route handlers, which re-check the session; there are no Server
+  Actions alongside them.
 - Server components fetch for first render in the staff workspace.
   Client components are for interaction only.
 - No money arithmetic, availability logic or policy logic in the browser. Show what the API returns.
 - Forms validate for the user's convenience and the API validates for real. Show the API's field
   errors next to the fields.
+
+## Clean code
+
+The same standard as the API (`docs/engineering/backend.md`, "Clean code"), with the web's tools:
+
+- Names in the business's words; a component is named for what it shows, a hook for what it gives.
+- Small units: a component that grows past about 200 lines, or mixes data access with layout, is
+  split; logic that is not rendering moves to a hook or to `features/<module>/server/`.
+- Nothing dead: no commented-out code, unused component, export, file, dependency or message key.
+  `knip` fails the build on an unused file, export or dependency. A `TODO` names its stage, change
+  request or bug.
+- One format: Prettier, with the Tailwind class-sorting plugin, formats every file; `prettier
+  --check` and `eslint --max-warnings 0` are part of the gates. TypeScript is `strict`; no `any`,
+  no non-null assertion without a comment saying why it holds.
+- Comments say why, not what.
 
 ## Where things live
 
@@ -63,11 +105,12 @@ message or customer-cookie work. Existing direct customer Java APIs remain mobil
 | Theme (every colour, radius, size and font, as CSS variables) | `apps/web/src/styles/theme.css`, plain CSS with no Tailwind directive, so the plain pages can inline it. See "Styling" |
 | The application's one style sheet | `apps/web/src/app/globals.css`: Tailwind, the theme, `@theme inline` and the base layer |
 | shadcn/ui components | `apps/web/src/components/ui/`, added by the shadcn CLI and committed; configured by `apps/web/components.json` |
-| Product components | `apps/web/src/components/<area>/`, built from `ui/` components and Tailwind utilities |
+| Product components | `apps/web/src/features/<module>/components/`, or `components/shared/` when several features use one; built from `ui/` components and Tailwind utilities |
+| Screens and shells of a surface | `apps/web/src/surfaces/<surface>/` |
 | Class name helper | `cn()` in `apps/web/src/lib/utils.ts` (`clsx` with `tailwind-merge`) |
 | The proxy's plain HTML pages | `apps/web/src/lib/plain-page/`. Their markup uses Tailwind utility classes, and their CSS is generated by Tailwind from the theme and those classes and committed (CR-017); a test fails when it is stale. See "Styling", rule 9 |
-| Formatting of money, dates and phone numbers | `apps/web/src/lib/format/` |
-| Calls to the API | `apps/web/src/lib/api/`, wrapping the generated client |
+| Formatting of money, dates and phone numbers | `packages/format` (`@salon/format`), shared with the customer app |
+| Calls to the API | `apps/web/src/features/<module>/server/`, through the per-module generated client; the shared request plumbing (base URL, hostname forwarding, timeouts) in `apps/web/src/lib/api-core/` |
 
 - A string literal in JSX fails lint. Add the string to the messages file.
 - The application's own not-found page exists so that even a 404 is translated. Add an error
@@ -169,7 +212,7 @@ because the owner set one standard for all Next.js work in this product.
    | Sections switched in place | Tabs |
 
    A job the table and the catalogue do not cover is raised with the lead before it is built.
-2. Product components in `src/components/<area>/` compose `ui/` components with Tailwind utilities.
+2. Product components in `src/features/<module>/components/` (or `src/components/shared/`) compose `ui/` components with Tailwind utilities.
    Variants that recur go into the `ui/` component with `cva`, not into each screen.
 3. A `ui/` component may be edited after the CLI writes it, to carry the prototype's look (classes
    and variants). Keep its accessibility behaviour: roles, focus management, keyboard handling,

@@ -12,10 +12,12 @@ it is about this product it is in this folder, and nowhere else.
 | Start in this repository for the first time | `ROADMAP.md`, `architecture/ARCHITECTURE.md`, `architecture/repository-structure.md`, `architecture/glossary.md` |
 | Plan a feature or a stage | `ROADMAP.md`, `brd/requirements.yaml`, `architecture/ARCHITECTURE.md`, `design/prototype/index.html` |
 | Review the approved expanded salon and Bridal scope | `changes/CR-020-expanded-salon-and-bridal-capabilities.md` |
+| `changes/CR-021-modular-extractable-architecture.md` | Owner-approved: extractable modules (provided interfaces, outbox events, table and path ownership), JPA by default, Lombok and MapStruct conventions, web organised by module, Caddy edge with hostname-resolved tenants and the design for salon-owned domains |
 | Store, read, cache, log or schedule any salon's data | `architecture/multi-tenancy.md` |
 | Build sign-in, sessions or permissions | `architecture/identity-and-access.md`, `architecture/multi-tenancy.md` |
 | Build operator access, salon provisioning or plan definitions | `architecture/operator-console.md`, `architecture/multi-tenancy.md` |
-| Change the API (`apps/api`) | `engineering/backend.md`, `architecture/multi-tenancy.md` |
+| Change the API (`apps/api`) | `engineering/backend.md` (modules, provided interfaces, events, ownership, persistence, code generation), `architecture/multi-tenancy.md` |
+| Understand why the code is organised by module, or plan a module's extraction | `changes/CR-021-modular-extractable-architecture.md`, `architecture/ARCHITECTURE.md` |
 | Change the web app (`apps/web`) | `engineering/web.md`, `design/ui-ux-standards.md` |
 | Change the customer app (`apps/mobile`) | `engineering/mobile.md`, `design/ui-ux-standards.md` |
 | Build or change any screen | `design/ui-ux-standards.md`, `design/prototype/index.html`, and on the web `engineering/web.md` "Styling" (Tailwind CSS and shadcn/ui only) |

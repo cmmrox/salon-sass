@@ -7,6 +7,7 @@ defect the business cannot survive, so isolation is enforced twice and tested on
 
 - The ten rules
 - Salons and their hostnames
+- Domains a salon owns (designed, not yet built)
 - How the tenant reaches the database
 - Adding a table
 - Adding an endpoint
@@ -56,6 +57,44 @@ the salon's subdomain on the platform domain.
   for such a request. A status change is seen on the next request; nothing caches it.
 - A domain the salon owns (a later release) maps to the same tenant through the edge; it is another
   way in to the same resolution, not a second mechanism.
+
+## Domains a salon owns (designed, not yet built)
+
+Approved as a design in CR-021 and built only when the owner asks; until then, every salon is
+reached on its platform subdomain. The tenant is still resolved by the API from the hostname. The
+edge never decides or sends a tenant id: a tenant header set by a proxy is a client-supplied tenant
+id on any hop that fails to strip it (T-5), and a per-domain proxy map needs a reload for every
+salon and can disagree with the database.
+
+- **Edge.** Caddy stays the edge and passes `Host` unchanged, stripping `X-Forwarded-Host` and any
+  `X-Tenant*` header. Platform subdomains keep one wildcard certificate (DNS challenge). Salon-owned
+  hostnames are served by a catch-all site with on-demand TLS, gated by an `ask` endpoint on the
+  API's private network that answers 200 only for a verified hostname of an active salon and 404
+  for everything else. Caddy's certificate storage is a persistent, backed-up volume.
+- **Data.** A platform table `tenant_domain`: `hostname` (lowercase, punycode, no port, unique
+  across all salons), `tenant_id`, `kind` (`primary` or `alias`, at most one primary per salon),
+  `verification_token`, `verified_at`, `last_checked_at`, `tls_status` (`pending`, `active`,
+  `failed`), `created_at`. Hostnames under the platform domain and reserved names are refused. An
+  unverified claim expires after seven days so a domain cannot be squatted. The salon's
+  `<slug>.<platform domain>` stays implicit and cannot be removed.
+- **Resolution.** A hostname exactly one label in front of the platform domain resolves by slug, as
+  today. Any other hostname is looked up exactly through a new `SECURITY DEFINER` function
+  `tenant_by_hostname(text)`. A signed token and the hostname must still agree. An unknown hostname
+  gets the same 404 `not_found` as an unknown slug.
+- **Onboarding.** The owner enters a hostname (a subdomain such as `book.example.com` is
+  recommended; an apex domain needs an address record tied to the server). They add a CNAME to the
+  platform's domain target and a TXT record holding the verification token. A job confirms both,
+  sets `verified_at`, requests the hostname once so the certificate is issued, records `tls_status`,
+  and re-checks daily; a hostname whose DNS moved away is detached and the `ask` endpoint stops
+  approving it.
+- **Web.** The request proxy keeps reading `Host` only; an alias redirects (308) to the primary.
+  Session cookies stay host-only, so a sign-in on one hostname is not a sign-in on another.
+- **Mobile.** Unaffected: the app reaches one API host and names its salon by the signed tenant
+  token. A dedicated salon app may list its salon's own domain for universal links at build time.
+- **Limits.** Let's Encrypt allows 300 new orders per account per three hours and five failed
+  validations per hostname per hour; certificate lifetimes shorten to 45 days by 2028, so renewal
+  is automatic and never manual. A provider in front (such as a custom-hostname service) can be
+  added later without changing tenant resolution.
 
 ## How the tenant reaches the database
 
@@ -109,12 +148,15 @@ Three consequences of how the framework works, which every later stage follows:
 
 ## Adding a table
 
+- [ ] The table is named with its owning module's prefix and added to that module's entry in the
+      ownership map (`docs/engineering/backend.md`, "Ownership of tables and paths").
 - [ ] `tenant_id uuid NOT NULL`, with a foreign key to the tenant.
 - [ ] `ENABLE` and `FORCE ROW LEVEL SECURITY`, and the `tenant_isolation` policy, in the same
       migration that creates the table.
 - [ ] The entity carries `@TenantId`.
 - [ ] Every unique constraint and every index starts with `tenant_id`.
-- [ ] Every foreign key to another tenant table is composite: `(tenant_id, other_id)`.
+- [ ] Every foreign key to another tenant table is composite: `(tenant_id, other_id)`, and points
+      only at a table of the same module. Another module's row is held as its id.
 - [ ] The application role is granted only the operations it needs, in the migration, to the Flyway
       placeholder for the application role (never to a role name written into the migration, and
       no migration creates a role).
@@ -126,6 +168,8 @@ Three consequences of how the framework works, which every later stage follows:
 - [ ] An id that belongs to another salon returns "not found", exactly as an id that does not exist.
       Never "forbidden": that confirms the record exists.
 - [ ] Native queries, reports and exports go through the same transaction and so the same policy.
+      They are one of the named direct-SQL exceptions in `docs/engineering/backend.md` and state
+      `tenant_id = ?` explicitly, because Hibernate's filter does not apply to them.
 - [ ] The role check is in the service, not only in the controller.
 
 ## Background jobs
@@ -137,6 +181,10 @@ touches platform tables only, and is reviewed as such.
 The scheduler and the outbox dispatcher in `shared` already do this (`docs/engineering/backend.md`).
 A new job declares itself to the scheduler and receives one salon at a time; it never queries
 across salons. A suspended salon's jobs are skipped and its messages wait.
+
+An event between modules is an outbox message and follows the same rules: it carries the salon it
+was written for, and its consumer runs in a transaction with that salon set, records the message as
+processed for that salon, and can read nothing of another salon.
 
 ## Caches, files, search and logs
 

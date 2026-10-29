@@ -7,8 +7,13 @@ The isolation rules every table, endpoint and job must follow are in
 
 - Modules
 - Inside a module
+- Provided interfaces
+- Events between modules
+- Ownership of tables and paths
 - API conventions
 - Persistence and migrations
+- Code generation
+- Clean code
 - Booking integrity
 - Health and service metadata
 - Time
@@ -43,34 +48,101 @@ The base Java package is the placeholder in `docs/architecture/tech-stack.md`.
 Layout of the project:
 
 - One Maven module. Modules are packages, not Maven modules: `apps/api/src/main/java/<base package>/<module>/`.
+  Spring Modulith (`docs/architecture/tech-stack.md`) reads each direct sub-package of the base
+  package as a module.
 - Tests mirror the source tree under `apps/api/src/test/java/`.
 - Migrations: `apps/api/src/main/resources/db/migration/V<number>__<description>.sql`, numbered in
   sequence (`V1__baseline.sql`, `V2__create_tenant.sql`).
 - An endpoint that belongs to no business module (such as the service's own metadata) lives in `shared`.
 
-- A module exposes a small public interface (a facade) and its events. Another module calls the
-  facade; it never imports the other module's entities, repositories or internal services.
-- Concretely: another module may use only the types in a module's root package, and any module
-  may use anything in `shared`. The architecture tests enforce exactly this.
+The rules between modules (CR-021). They exist so that any module except `shared` could later run as
+a separate service without its callers or the web and mobile clients changing:
+
+- A module's root package is its public surface and holds only **provided interfaces**, the
+  **records** they take and return, and its **event records**. No class with behaviour, no entity,
+  no Spring annotation other than `package-info.java`'s module declaration.
+- Another module uses only that root package, and any sub-package the owning module declares as a
+  named interface (`@NamedInterface`). Every sub-package of `shared` that other modules use is a
+  named interface. Each module declares the modules it may use (`allowedDependencies` on
+  `@ApplicationModule`).
 - No module reads another module's tables. A report that needs both asks both, or reads a read
-  model that the owning modules feed.
+  model that the owning modules feed through events.
 - Dependencies point one way. `shared` depends on nothing; nothing depends on `reporting`.
-- An architecture test fails the build on a boundary violation. Do not weaken it to get a change in;
-  move the code.
+- Spring Modulith's `verify()` and the remaining ArchUnit rules fail the build on a violation. Do
+  not weaken them to get a change in; move the code.
+- `shared` holds technical capabilities only (tenant context, errors, time, money, audit, outbox,
+  jobs). A business contract never moves into `shared` to avoid a dependency cycle; invert the
+  dependency with an event instead.
 
 ## Inside a module
 
 ```
 <module>/
-  api/             controllers, request and response records, mapping
-  application/     use cases: one public method per thing a user can do; transactions start here
-  domain/          entities, value objects, business rules; no Spring, no HTTP
-  infrastructure/  repositories, adapters to external services
-  <Module>Facade   the only type other modules may use
+  package-info.java  @ApplicationModule(allowedDependencies = {...}) and the module's description
+  <Name>.java        provided interfaces, their records, and event records (<Thing><PastTense>, versioned)
+  web/               controllers, request and response records, MapStruct response mappers
+  application/       use cases: one public method per thing a user can do; transactions start here;
+                     the implementations of the provided interfaces
+  domain/            entities, value objects, business rules; no Spring, no HTTP
+  infrastructure/    Spring Data repositories, the named direct-SQL exceptions, adapters to external services
+  local/             test hooks served only in the local profile (see "Local test hooks")
 ```
 
 Controllers are thin: validate, call one use case, map the result. Business rules live in `domain`
 and `application`, never in a controller, a repository or a mapper.
+
+## Provided interfaces
+
+When another module needs something from this one, this module offers it as a Java interface in its
+root package. The rules make the interface replaceable later by an HTTP client with the same
+signature:
+
+- Parameters and results are records of values and ids. Never an entity, a repository type, a
+  `Pageable` of entities or a lazily loaded object. Another module's object is referred to by its id.
+- The records are not REST response shapes: no OpenAPI annotation in the root package. A controller
+  that returns the same data has its own response record in `web/`.
+- The tenant is never a parameter. The implementation reads it from `TenantContext`, as an
+  extracted service will read it from the signed token.
+- An implementation opens its own transaction and does not join the caller's. A contract that
+  genuinely must join the caller's transaction (it writes in the same unit of work, or holds a lock
+  until the caller commits) is declared **in-process only**: it sits in a named interface called
+  `inprocess`, its Javadoc says why, and it is never exposed remotely. If its module is ever
+  extracted, the contract becomes an event with a compensating action, not a remote call.
+- A state change that another module reacts to is an event (next section), not a call into that
+  module.
+- No `@HttpExchange` or other HTTP annotation on a provided interface. On extraction, the calling
+  side gets an adapter implementing the same interface over a declarative HTTP client, and the
+  adapter is where timeouts, 404 and remote failure are translated.
+
+## Events between modules
+
+- An event is an immutable record in the publishing module's root package, named for what happened
+  (`BookingConfirmed`), carrying ids and the values a consumer needs, never an entity. Its type name
+  carries a version (`booking.BookingConfirmed.v1`); a published version is never changed, only
+  superseded.
+- Events are written to the outbox in the publisher's transaction (kind `event`), so an event exists
+  exactly when the change that caused it was committed. Spring Modulith's event publication registry
+  is not used: it has no tenant column and no row-level security.
+- Each consuming module registers a subscriber for the event types it handles. Delivery is at least
+  once, for one salon at a time with that salon's context set, with the outbox's retry and dead-letter
+  rules. A consumer records each message it has processed and ignores a repeat, in the same
+  transaction as its own change.
+- Use an event when another module reacts to a change (booking confirmed: send confirmations, update
+  reports). Use a provided interface when the caller needs an answer now (availability needs staff
+  hours and service durations).
+
+## Ownership of tables and paths
+
+- Every table belongs to exactly one module, declared in the ownership map that the architecture
+  tests read, and only that module's code and migrations touch it. A table created from CR-021 on is
+  named with its module's prefix (`catalogue_service`, `booking_hold`); existing tables keep their
+  names, because a rename breaks the rule that a migration works while the previous version runs.
+- No foreign key crosses modules, except `tenant_id` to the platform's tenant. Another module's row
+  is held as its id.
+- Every top-level path segment under `/api/v1` belongs to exactly one module, and every operation is
+  tagged with its module's name in the OpenAPI document. This is what lets the edge send one module's
+  paths to a separate service without a client noticing.
+- A module's settings are under `salon.<module>.*`, and no module reads another module's settings.
 
 ## API conventions
 
@@ -121,6 +193,85 @@ and `application`, never in a controller, a repository or a mapper.
   later release.
 - Every tenant table follows the checklist in `docs/architecture/multi-tenancy.md`, in the migration that creates it.
 
+**Spring Data JPA is the default (CR-021).** Every tenant aggregate is an entity with a Spring Data
+JPA repository: one repository per aggregate root, behaviour on the entity (`reprice()`, not
+`setPrice()`), `@Version` on the root as a wrapper `Long` (null means new, so saving a new entity
+issues no extra select). Lists read through JPQL or record projections, paginated.
+
+Direct SQL through `JdbcClient` is allowed only for these named exceptions, each in
+`infrastructure/` (or in `shared` for the shared capabilities):
+
+1. The platform database pool (`PlatformDatabase`), which is deliberately not a `DataSource` bean
+   or a transaction manager, so that `@Transactional` can never pick the platform role by accident.
+2. Calls to the `SECURITY DEFINER` functions (`tenant_by_*`, `active_tenant_ids`, `outbox_due`,
+   `job_claim`, `job_finish` and the per-module erasers).
+3. Outbox and job leasing (`FOR UPDATE SKIP LOCKED`, conditional status updates).
+4. Set-based bulk work: erasure, cleanup, lifecycle row deletion.
+5. Reporting read models and exports.
+
+Hibernate's tenant filter does not apply to direct SQL, so row-level security is its only guard.
+Every exception therefore runs inside a tenant transaction, states `tenant_id = ?` explicitly in its
+SQL where it reads or writes a tenant table, and has a test with row-level security as the only
+guard. No `JdbcTemplate`, no jOOQ, no Spring Data JDBC, and no second entity manager factory.
+
+## Code generation
+
+Lombok and MapStruct remove repetitive code; they never hide a rule (CR-021).
+
+**Lombok** is allowed only as follows, and `apps/api/lombok.config` refuses the rest at compile time:
+
+| Allowed | Where |
+| --- | --- |
+| `@Getter` | Entities and value objects |
+| `@NoArgsConstructor(access = AccessLevel.PROTECTED)` | Entities (JPA needs it; nobody else may use it) |
+| `@RequiredArgsConstructor` | Spring beans with constructor injection |
+| `@Slf4j` | Any class that logs |
+| `@Setter` on a single field | A plain attribute with no rule attached |
+
+Denied: `@Data`, `@Value`, `@EqualsAndHashCode`, `@ToString` (a generated `toString` would log
+password hashes, secrets and personal data), `@Builder` and `@AllArgsConstructor` on entities,
+class-level `@Setter`, `@SneakyThrows`, `@With`, and any Lombok annotation on a record. No entity
+has a setter for its id, tenant id, version or creation time; an architecture test checks the
+compiled classes. An entity is created by a static factory or constructor that establishes its
+rules, and changed through methods named for what they do.
+
+**Records** are the form of every request, response, provided-interface type and event. Lombok adds
+nothing to them.
+
+**MapStruct** mappers live in `web/` and map one way: from an entity or a provided record to a
+response record. No mapper writes to an entity (no request-to-entity mapping, no `@MappingTarget`
+entity), no mapping expression holds a business rule, and no mapper maps another module's types
+other than its provided records. Unmapped target properties and lossy conversions fail the build
+(the shared `@MapperConfig` in `shared`, plus compiler arguments). A mapping that is shorter by hand
+than as a mapper stays by hand.
+
+## Clean code
+
+The owner's standard (CR-021): code a person can read without its author. These hold for every
+change, and a stage leaves the code it touches meeting them.
+
+- **Names** use the business's words from `docs/architecture/glossary.md` and say what a thing is
+  or does. No abbreviations, no `Manager`, `Helper`, `Util` or `Impl`-only names; an implementation
+  of a provided interface is named for what it is (`BookingQueriesService`).
+- **Small units.** A use-case class serves one capability; a class that grows past about 400 lines,
+  or a method past about 40, is split along the business's seams unless the reason it is not is
+  written beside it. A long parameter list becomes a record.
+- **Nothing dead.** No commented-out code, no unused class, method, field, parameter, import,
+  dependency, setting or file, and no code kept "in case". Version control keeps history. A `TODO`
+  names the stage, change request or bug that will resolve it, or it is not written.
+- **Comments say why**, not what: a business rule's source, a framework constraint, a decision's
+  number. Javadoc on every provided interface, event and public record of a module's root package.
+- **Errors** are explicit: a business outcome is an `ApplicationProblemException` with its
+  `ErrorCode`, never a swallowed exception, a `null` meaning failure, or a generic `RuntimeException`.
+  Return `Optional` for "may be absent", never `null`.
+- **Immutability by default:** records, `final` fields, unmodifiable collections; an entity changes
+  only through its methods.
+- **One format.** Spotless with `palantir-java-format` formats every Java file and removes unused
+  imports; `./mvnw spotless:check` is part of the build. Compiler warnings are errors
+  (`-Xlint:all -Werror`, with each suppression justified where it is written).
+- **Tests read as specifications:** one behaviour per test, named for the outcome
+  (`refusesAHoldThatOverlapsAnother`), arrange-act-assert, test data built by named fixtures.
+
 ## Booking integrity
 
 - A hold and a booking are one table with a state. An exclusion constraint forbids two active rows
@@ -128,7 +279,10 @@ and `application`, never in a controller, a repository or a mapper.
 - The loser of a race gets the constraint violation, which the use case turns into `slot_taken`.
   Do not "check availability then insert" as the protection; the check is only for a good message.
 - A hold has an expiry. Availability ignores an expired hold immediately; a job removes it later.
-- Confirming a payment, converting the hold and scheduling notifications happen in one transaction.
+- Confirming a payment and converting the hold happen in one transaction, deliberately across
+  `payment` and `booking` through an in-process-only contract. That transaction writes a
+  `BookingConfirmed` event to the outbox; `notification` schedules the messages when it consumes
+  the event, not inside the confirming transaction (CR-021).
 - Every state change records who, when and why.
 
 ## Health and service metadata
@@ -287,7 +441,7 @@ test uses them is in `docs/qa/test-plan.md`.
 | Unit | Domain rules: availability, deposit and refund calculation, policy windows, state changes | Plain JUnit, no Spring. Use a fixed clock |
 | Integration | Use cases and endpoints against real PostgreSQL in a container | Includes the two-tenant isolation cases and the wrong-role cases |
 | Concurrency | Anything that must happen once: holds, bookings, payment notifications | Fire simultaneous requests and assert exactly one succeeds |
-| Architecture | Module boundaries | Fails the build |
+| Architecture | Module boundaries (Spring Modulith `verify()`), provided-interface rules, table and path ownership, no entity setter for id, tenant or version | Fails the build. Each rule has a fixture proving it fails on a violation |
 | Contract | The OpenAPI document and generated client are current | Fails the build. `pnpm contracts:check` regenerates the document from the controllers, so it needs the JDK and Docker |
 
 Integration tests are named `*IntegrationTest` and run in the same Maven phase as unit tests. One
