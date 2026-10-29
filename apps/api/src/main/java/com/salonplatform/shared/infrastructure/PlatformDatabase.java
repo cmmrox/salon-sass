@@ -11,7 +11,6 @@ import javax.sql.DataSource;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.SmartInitializingSingleton;
 import org.springframework.core.env.Environment;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.stereotype.Component;
@@ -50,8 +49,6 @@ public class PlatformDatabase implements SmartInitializingSingleton, DisposableB
             """;
 
     private final HikariDataSource pool;
-
-    private final JdbcTemplate jdbcTemplate;
 
     private final JdbcClient jdbc;
 
@@ -96,8 +93,7 @@ public class PlatformDatabase implements SmartInitializingSingleton, DisposableB
                         password),
                 environment.getRequiredProperty(DatabaseReconnectConfiguration.INTERVAL, Duration.class),
                 pool::isClosed));
-        jdbcTemplate = new JdbcTemplate(pool);
-        jdbc = JdbcClient.create(jdbcTemplate);
+        jdbc = JdbcClient.create(pool);
         DataSourceTransactionManager manager = new DataSourceTransactionManager(pool) {
             @Override
             protected void prepareTransactionalConnection(Connection connection, TransactionDefinition definition)
@@ -128,11 +124,6 @@ public class PlatformDatabase implements SmartInitializingSingleton, DisposableB
     /** Statements on the platform connection; inside {@link #inTransaction} they join its transaction. */
     public JdbcClient jdbc() {
         return jdbc;
-    }
-
-    /** As {@link #jdbc()}, for the statements not yet moved to {@link JdbcClient}. */
-    public JdbcTemplate jdbcTemplate() {
-        return jdbcTemplate;
     }
 
     /**

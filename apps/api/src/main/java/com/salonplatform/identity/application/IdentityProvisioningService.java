@@ -86,10 +86,7 @@ class IdentityProvisioningService implements IdentityProvisioning {
 
     @Override
     public long activeStaffCount(UUID tenantId) {
-        PlatformDatabase database = platform.getObject();
-        database.requireTransaction();
-        Long count =
-                database.jdbcTemplate().queryForObject("SELECT identity_active_staff_count(?)", Long.class, tenantId);
-        return count == null ? 0 : count;
+        platform.getObject().requireTransaction();
+        return functions.activeStaffCount(tenantId);
     }
 }
