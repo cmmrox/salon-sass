@@ -8,7 +8,9 @@ public interface BootstrapFaults {
 
     /** The provisioning steps a failure can be set at. */
     enum Step {
-        OWNER, BRAND, RECEIPT
+        OWNER,
+        BRAND,
+        RECEIPT
     }
 
     /** Fails the provisioning at this step when a controlled failure is set for it. */

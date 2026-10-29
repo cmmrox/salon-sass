@@ -1,17 +1,16 @@
 package com.salonplatform.identity.domain;
 
 import jakarta.persistence.*;
-
-import org.hibernate.annotations.TenantId;
-
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
+import org.hibernate.annotations.TenantId;
 
 @Entity
 @Table(name = "identity_customer")
 public class CustomerAccount {
-    @Id public UUID id;
+    @Id
+    public UUID id;
 
     @TenantId
     @Column(name = "tenant_id", nullable = false, updatable = false)
@@ -50,7 +49,8 @@ public class CustomerAccount {
     @Column(name = "updated_at", nullable = false)
     public Instant updatedAt;
 
-    @Version public long version;
+    @Version
+    public long version;
 
     public CustomerAccount() {}
 }

@@ -1,12 +1,11 @@
 package com.salonplatform.shared.outbox;
 
-import java.time.Instant;
-import java.util.UUID;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.time.Instant;
+import java.util.UUID;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.TenantId;
 import org.hibernate.type.SqlTypes;
@@ -66,8 +65,7 @@ class OutboxMessage {
     @Column(name = "sent_at")
     private Instant sentAt;
 
-    protected OutboxMessage() {
-    }
+    protected OutboxMessage() {}
 
     /** A new message, due at once. */
     OutboxMessage(UUID id, String channel, String payload, String traceParent, Instant at) {
@@ -83,7 +81,16 @@ class OutboxMessage {
     }
 
     OutboxMessageView view() {
-        return new OutboxMessageView(id, tenantId, channel, OutboxStatus.of(status), attempts, nextAttemptAt, leaseUntil,
-                lastError, createdAt, sentAt);
+        return new OutboxMessageView(
+                id,
+                tenantId,
+                channel,
+                OutboxStatus.of(status),
+                attempts,
+                nextAttemptAt,
+                leaseUntil,
+                lastError,
+                createdAt,
+                sentAt);
     }
 }

@@ -1,16 +1,5 @@
 package com.salonplatform.platform.application;
 
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Timestamp;
-import java.time.Clock;
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-
 import com.salonplatform.platform.domain.OperatorPermission;
 import com.salonplatform.platform.domain.PlainText;
 import com.salonplatform.platform.domain.Slugs;
@@ -21,7 +10,16 @@ import com.salonplatform.shared.api.FieldProblem;
 import com.salonplatform.shared.api.NotFoundException;
 import com.salonplatform.shared.infrastructure.PlatformDatabase;
 import io.swagger.v3.oas.annotations.media.Schema;
-
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.time.Clock;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 
@@ -37,20 +35,43 @@ public class PlanCatalogue {
     static final String ACTION = "plan.create";
     static final int LIMIT_MAX = 1_000_000;
 
-    @Schema(requiredProperties = {"id", "key", "name", "staffSeats", "branches", "messageAllowance", "customDomain",
-        "dedicatedApp", "createdAt", "updatedAt"})
-    public record PlanDefinition(UUID id, String key, String name, int staffSeats, int branches,
-            int messageAllowance, boolean customDomain, boolean dedicatedApp, Instant createdAt, Instant updatedAt) {
-    }
+    @Schema(
+            requiredProperties = {
+                "id",
+                "key",
+                "name",
+                "staffSeats",
+                "branches",
+                "messageAllowance",
+                "customDomain",
+                "dedicatedApp",
+                "createdAt",
+                "updatedAt"
+            })
+    public record PlanDefinition(
+            UUID id,
+            String key,
+            String name,
+            int staffSeats,
+            int branches,
+            int messageAllowance,
+            boolean customDomain,
+            boolean dedicatedApp,
+            Instant createdAt,
+            Instant updatedAt) {}
 
     @Schema(requiredProperties = {"items", "page", "size", "total"})
-    public record PlanPage(List<PlanDefinition> items, int page, int size, long total) {
-    }
+    public record PlanPage(List<PlanDefinition> items, int page, int size, long total) {}
 
     /** A plan request as received; validated here, after authorization. */
-    public record PlanInput(String key, String name, Integer staffSeats, Integer branches, Integer messageAllowance,
-            Boolean customDomain, Boolean dedicatedApp) {
-    }
+    public record PlanInput(
+            String key,
+            String name,
+            Integer staffSeats,
+            Integer branches,
+            Integer messageAllowance,
+            Boolean customDomain,
+            Boolean dedicatedApp) {}
 
     private final PlatformDatabase database;
     private final OperatorWork work;
@@ -59,8 +80,13 @@ public class PlanCatalogue {
     private final PlatformAudit audit;
     private final Clock clock;
 
-    public PlanCatalogue(PlatformDatabase database, OperatorWork work, OperatorAccess access,
-            ProvisioningReceipts receipts, PlatformAudit audit, Clock clock) {
+    public PlanCatalogue(
+            PlatformDatabase database,
+            OperatorWork work,
+            OperatorAccess access,
+            ProvisioningReceipts receipts,
+            PlatformAudit audit,
+            Clock clock) {
         this.database = database;
         this.work = work;
         this.access = access;
@@ -73,10 +99,17 @@ public class PlanCatalogue {
             + "dedicated_app, created_at, updated_at";
 
     static PlanDefinition definition(ResultSet row) throws SQLException {
-        return new PlanDefinition(row.getObject("id", UUID.class), row.getString("key"), row.getString("name"),
-                row.getInt("staff_seats"), row.getInt("branches"), row.getInt("message_allowance"),
-                row.getBoolean("custom_domain"), row.getBoolean("dedicated_app"),
-                row.getTimestamp("created_at").toInstant(), row.getTimestamp("updated_at").toInstant());
+        return new PlanDefinition(
+                row.getObject("id", UUID.class),
+                row.getString("key"),
+                row.getString("name"),
+                row.getInt("staff_seats"),
+                row.getInt("branches"),
+                row.getInt("message_allowance"),
+                row.getBoolean("custom_domain"),
+                row.getBoolean("dedicated_app"),
+                row.getTimestamp("created_at").toInstant(),
+                row.getTimestamp("updated_at").toInstant());
     }
 
     public PlanPage list(Paging paging) {
@@ -84,11 +117,19 @@ public class PlanCatalogue {
             access.require(OperatorPermission.PLAN_READ);
             String filter = " WHERE (?::text IS NULL OR strpos(lower(name), lower(?::text)) > 0"
                     + " OR strpos(key, lower(?::text)) > 0)";
-            List<PlanDefinition> items = database.jdbc().query("SELECT " + COLUMNS + " FROM plan" + filter
-                    + " ORDER BY created_at DESC, id LIMIT ? OFFSET ?", (row, n) -> definition(row),
-                    paging.q(), paging.q(), paging.q(), paging.size(), paging.offset());
-            Long total = database.jdbc().queryForObject("SELECT count(*) FROM plan" + filter, Long.class,
-                    paging.q(), paging.q(), paging.q());
+            List<PlanDefinition> items = database.jdbc()
+                    .query(
+                            "SELECT " + COLUMNS + " FROM plan" + filter
+                                    + " ORDER BY created_at DESC, id LIMIT ? OFFSET ?",
+                            (row, n) -> definition(row),
+                            paging.q(),
+                            paging.q(),
+                            paging.q(),
+                            paging.size(),
+                            paging.offset());
+            Long total = database.jdbc()
+                    .queryForObject(
+                            "SELECT count(*) FROM plan" + filter, Long.class, paging.q(), paging.q(), paging.q());
             return new PlanPage(items, paging.page(), paging.size(), total == null ? 0 : total);
         });
     }
@@ -101,13 +142,16 @@ public class PlanCatalogue {
     }
 
     private PlanDefinition find(UUID id) {
-        return database.jdbc().query("SELECT " + COLUMNS + " FROM plan WHERE id = ?", (row, n) -> definition(row), id)
-                .stream().findFirst().orElseThrow(NotFoundException::new);
+        return database
+                .jdbc()
+                .query("SELECT " + COLUMNS + " FROM plan WHERE id = ?", (row, n) -> definition(row), id)
+                .stream()
+                .findFirst()
+                .orElseThrow(NotFoundException::new);
     }
 
     /** The result of a creation: whether it was a replay, and the definition. */
-    public record Created(boolean replayed, PlanDefinition plan) {
-    }
+    public record Created(boolean replayed, PlanDefinition plan) {}
 
     public Created create(String idempotencyKey, PlanInput input) {
         return work.run(() -> {
@@ -122,19 +166,28 @@ public class PlanCatalogue {
             Instant now = clock.instant();
             UUID id = UUID.randomUUID();
             try {
-                database.jdbc().update("""
+                database.jdbc()
+                        .update(
+                                """
                         INSERT INTO plan (id, key, name, staff_seats, branches, message_allowance, custom_domain,
                             dedicated_app, created_at, updated_at)
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                        """, id, plan.get("key"), plan.get("name"), plan.get("staffSeats"), plan.get("branches"),
-                        plan.get("messageAllowance"), plan.get("customDomain"), plan.get("dedicatedApp"),
-                        Timestamp.from(now), Timestamp.from(now));
-            }
-            catch (DuplicateKeyException ex) {
+                        """,
+                                id,
+                                plan.get("key"),
+                                plan.get("name"),
+                                plan.get("staffSeats"),
+                                plan.get("branches"),
+                                plan.get("messageAllowance"),
+                                plan.get("customDomain"),
+                                plan.get("dedicatedApp"),
+                                Timestamp.from(now),
+                                Timestamp.from(now));
+            } catch (DuplicateKeyException ex) {
                 throw new ApplicationProblemException(409, ErrorCode.PLAN_KEY_TAKEN);
             }
-            audit.record(PlatformAudit.OPERATOR, operator.id().toString(), "plan.created", "plan", id.toString(), plan,
-                    now);
+            audit.record(
+                    PlatformAudit.OPERATOR, operator.id().toString(), "plan.created", "plan", id.toString(), plan, now);
             receipts.store(operator.id(), ACTION, key, fingerprint, id, Map.of("id", id.toString()), now);
             return new Created(false, find(id));
         });
@@ -145,8 +198,10 @@ public class PlanCatalogue {
         List<FieldProblem> errors = new ArrayList<>();
         String key = Slugs.normalize(input.key());
         if (!Slugs.wellFormed(key)) {
-            errors.add(new FieldProblem("key", "must be 3 to 30 lowercase letters, digits and hyphens, starting and "
-                    + "ending with a letter or digit"));
+            errors.add(new FieldProblem(
+                    "key",
+                    "must be 3 to 30 lowercase letters, digits and hyphens, starting and "
+                            + "ending with a letter or digit"));
         }
         String name = PlainText.line(input.name(), 120);
         if (name == null) {

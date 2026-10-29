@@ -1,12 +1,10 @@
 package com.salonplatform.platform.infrastructure;
 
-import java.time.Duration;
-import java.time.Instant;
-
 import com.salonplatform.platform.application.SalonDeletion;
 import com.salonplatform.platform.application.SalonExports;
 import com.salonplatform.shared.jobs.PlatformJob;
-
+import java.time.Duration;
+import java.time.Instant;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 

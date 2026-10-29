@@ -1,12 +1,11 @@
 package com.salonplatform.shared.api;
 
+import jakarta.servlet.http.HttpServletRequest;
 import java.security.SecureRandom;
 import java.util.HexFormat;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import jakarta.servlet.http.HttpServletRequest;
 
 /**
  * A request's trace id: 32 lowercase hexadecimal characters, the same in every problem body and on
@@ -31,8 +30,7 @@ public final class RequestTrace {
 
     private static final SecureRandom RANDOM = new SecureRandom();
 
-    private RequestTrace() {
-    }
+    private RequestTrace() {}
 
     /** The request's trace id: the one recorded for it, or else one that can stand for it. */
     public static String of(HttpServletRequest request) {
@@ -63,8 +61,7 @@ public final class RequestTrace {
         do {
             RANDOM.nextBytes(bytes);
             id = HexFormat.of().formatHex(bytes);
-        }
-        while (!isTraceId(id));
+        } while (!isTraceId(id));
         return id;
     }
 }

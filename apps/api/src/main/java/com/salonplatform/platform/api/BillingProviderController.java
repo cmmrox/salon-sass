@@ -1,7 +1,5 @@
 package com.salonplatform.platform.api;
 
-import java.util.Locale;
-
 import com.salonplatform.platform.application.ProviderEvents;
 import com.salonplatform.platform.infrastructure.BillingProviderKey;
 import com.salonplatform.shared.api.NotFoundException;
@@ -9,7 +7,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.servlet.http.HttpServletRequest;
-
+import java.util.Locale;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpHeaders;
@@ -40,18 +38,36 @@ class BillingProviderController {
 
     @PostMapping(path = "/provider-events", consumes = MediaType.APPLICATION_JSON_VALUE)
     ResponseEntity<ProviderEvents.Acknowledged> receive(
-            @Parameter(name = BillingProviderKey.HEADER, in = ParameterIn.HEADER, required = true,
-                    schema = @Schema(type = "string", pattern = "^[0-9a-f]{64}$"))
-            @RequestHeader(name = BillingProviderKey.HEADER, required = false) String signature,
-            @io.swagger.v3.oas.annotations.parameters.RequestBody(required = true, content = @io.swagger.v3.oas.annotations.media.Content(
-                    mediaType = MediaType.APPLICATION_JSON_VALUE,
-                    schema = @Schema(type = "object", requiredProperties = {"eventId", "invoiceId", "attemptKey",
-                        "outcome", "occurredAt"})))
-            @RequestBody(required = false) byte[] body, HttpServletRequest request) {
+            @Parameter(
+                            name = BillingProviderKey.HEADER,
+                            in = ParameterIn.HEADER,
+                            required = true,
+                            schema = @Schema(type = "string", pattern = "^[0-9a-f]{64}$"))
+                    @RequestHeader(name = BillingProviderKey.HEADER, required = false)
+                    String signature,
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                            required = true,
+                            content =
+                                    @io.swagger.v3.oas.annotations.media.Content(
+                                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                            schema =
+                                                    @Schema(
+                                                            type = "object",
+                                                            requiredProperties = {
+                                                                "eventId",
+                                                                "invoiceId",
+                                                                "attemptKey",
+                                                                "outcome",
+                                                                "occurredAt"
+                                                            })))
+                    @RequestBody(required = false)
+                    byte[] body,
+            HttpServletRequest request) {
         if (!platformHost(request.getHeader(HttpHeaders.HOST))) {
             throw new NotFoundException();
         }
-        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.noStore())
                 .body(events.receive(body == null ? new byte[0] : body, signature));
     }
 

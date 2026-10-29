@@ -8,10 +8,12 @@ import com.salonplatform.identity.infrastructure.*;
 import com.salonplatform.shared.tenancy.*;
 import com.salonplatform.testing.*;
 import com.salonplatform.testing.TestSalons.TestSalon;
-
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
-
+import java.time.Clock;
+import java.time.Instant;
+import java.util.*;
+import java.util.concurrent.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,25 +22,34 @@ import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.*;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
-
 import tools.jackson.databind.json.JsonMapper;
-
-import java.time.Clock;
-import java.time.Instant;
-import java.util.*;
-import java.util.concurrent.*;
 
 /**
  * Staff APIs on real HTTP/PostgreSQL: security, isolation, live permissions and simultaneous
  * one-use controls.
  */
+// JSON bodies are read as untyped maps (Map.class); each cast states the shape the assertion
+// beside it then checks, so a wrong shape fails that assertion with a ClassCastException.
+@SuppressWarnings("unchecked")
 class StaffAccessIntegrationTest extends IntegrationTest {
-    @Autowired IdentityCrypto crypto;
-    @Autowired IdentitySecrets secrets;
-    @Autowired Clock clock;
-    @Autowired JsonMapper json;
-    @Autowired PlatformTransactionManager manager;
-    @PersistenceContext EntityManager em;
+    @Autowired
+    IdentityCrypto crypto;
+
+    @Autowired
+    IdentitySecrets secrets;
+
+    @Autowired
+    Clock clock;
+
+    @Autowired
+    JsonMapper json;
+
+    @Autowired
+    PlatformTransactionManager manager;
+
+    @PersistenceContext
+    EntityManager em;
+
     private final JdbcTemplate owner = TestDatabase.of(TestPostgres.shared()).asOwner();
     private TestSalons salons;
     private TestSalon alpha, beta;
@@ -54,8 +65,7 @@ class StaffAccessIntegrationTest extends IntegrationTest {
         password = UUID.randomUUID() + " synthetic";
         accounts = new EnumMap<>(StaffRole.class);
         totpSecrets = new HashMap<>();
-        for (StaffRole role : StaffRole.values())
-            accounts.put(role, add(alpha, role, role == StaffRole.OWNER));
+        for (StaffRole role : StaffRole.values()) accounts.put(role, add(alpha, role, role == StaffRole.OWNER));
         add(beta, StaffRole.OWNER, true);
         add(beta, StaffRole.MANAGER, false);
     }
@@ -63,48 +73,35 @@ class StaffAccessIntegrationTest extends IntegrationTest {
     private StaffAccount add(TestSalon salon, StaffRole role, boolean mfa) throws Exception {
         return TenantContext.callAs(
                 salons.asCurrent(salon),
-                () ->
-                        new TransactionTemplate(manager)
-                                .execute(
-                                        status -> {
-                                            StaffAccount a = new StaffAccount();
-                                            a.id = UUID.randomUUID();
-                                            a.email =
-                                                    role.name().toLowerCase(Locale.ROOT)
-                                                            + "@example.test";
-                                            a.mobile =
-                                                    "+9477"
-                                                            + String.format(
-                                                                    "%07d", role.ordinal() + 1);
-                                            a.role = role.name();
-                                            a.active = true;
-                                            a.createdAt = clock.instant();
-                                            a.updatedAt = a.createdAt;
-                                            a.passwordHash = crypto.encodePassword(password);
-                                            if (mfa) {
-                                                String secret = crypto.newTotpSecret();
-                                                totpSecrets.put(a.id, secret);
-                                                a.mfaSecret =
-                                                        crypto.encrypt(
-                                                                "totp:" + salon.id() + ":" + a.id,
-                                                                secret);
-                                            }
-                                            em.persist(a);
-                                            return a;
-                                        }));
+                () -> new TransactionTemplate(manager).execute(status -> {
+                    StaffAccount a = new StaffAccount();
+                    a.id = UUID.randomUUID();
+                    a.email = role.name().toLowerCase(Locale.ROOT) + "@example.test";
+                    a.mobile = "+9477" + String.format("%07d", role.ordinal() + 1);
+                    a.role = role.name();
+                    a.active = true;
+                    a.createdAt = clock.instant();
+                    a.updatedAt = a.createdAt;
+                    a.passwordHash = crypto.encodePassword(password);
+                    if (mfa) {
+                        String secret = crypto.newTotpSecret();
+                        totpSecrets.put(a.id, secret);
+                        a.mfaSecret = crypto.encrypt("totp:" + salon.id() + ":" + a.id, secret);
+                    }
+                    em.persist(a);
+                    return a;
+                }));
     }
 
     private Map<String, Object> body(Http.Exchange response) {
         return json.readValue(response.body(), Map.class);
     }
 
-    private Http.Exchange call(
-            TestSalon salon, String method, String path, Object request, String token) {
+    private Http.Exchange call(TestSalon salon, String method, String path, Object request, String token) {
         return callHost(salon.host(port()), method, path, request, token);
     }
 
-    private Http.Exchange callHost(
-            String host, String method, String path, Object request, String token) {
+    private Http.Exchange callHost(String host, String method, String path, Object request, String token) {
         Map<String, String> headers = new HashMap<>();
         headers.put("Content-Type", "application/json");
         if (token != null) headers.put("Authorization", "Bearer " + token);
@@ -135,25 +132,21 @@ class StaffAccessIntegrationTest extends IntegrationTest {
         Http.Exchange sign = signIn(alpha, role);
         assertThat(sign.status()).isEqualTo(200);
         Map<String, Object> result = body(sign);
-        if (result.get("credentials") != null)
-            return (Map<String, Object>) result.get("credentials");
-        String code =
-                crypto.totpCode(
-                        totpSecrets.get(accounts.get(role).id),
-                        clock.instant().getEpochSecond() / 30);
-        Http.Exchange verify =
-                call(
-                        alpha,
-                        "POST",
-                        "/staff/mfa/verify",
-                        Map.of(
-                                "challengeId",
-                                result.get("challengeId"),
-                                "challengeToken",
-                                result.get("challengeToken"),
-                                "code",
-                                code),
-                        null);
+        if (result.get("credentials") != null) return (Map<String, Object>) result.get("credentials");
+        String code = crypto.totpCode(
+                totpSecrets.get(accounts.get(role).id), clock.instant().getEpochSecond() / 30);
+        Http.Exchange verify = call(
+                alpha,
+                "POST",
+                "/staff/mfa/verify",
+                Map.of(
+                        "challengeId",
+                        result.get("challengeId"),
+                        "challengeToken",
+                        result.get("challengeToken"),
+                        "code",
+                        code),
+                null);
         assertThat(verify.status()).isEqualTo(200);
         return body(verify);
     }
@@ -168,19 +161,12 @@ class StaffAccessIntegrationTest extends IntegrationTest {
 
     @Test
     void emailMobileAndUnknownDisabledCredentialsHaveCorrectOutcomes() {
-        Http.Exchange valid =
-                call(
-                        alpha,
-                        "POST",
-                        "/staff/sign-in",
-                        Map.of(
-                                "identifier",
-                                " RECEPTIONIST@EXAMPLE.TEST ",
-                                "password",
-                                password,
-                                "deviceLabel",
-                                "phone"),
-                        null);
+        Http.Exchange valid = call(
+                alpha,
+                "POST",
+                "/staff/sign-in",
+                Map.of("identifier", " RECEPTIONIST@EXAMPLE.TEST ", "password", password, "deviceLabel", "phone"),
+                null);
         status(valid, 200);
         Map<String, Object> t = (Map<String, Object>) body(valid).get("credentials");
         assertThat(Instant.parse((String) t.get("accessExpiresAt")))
@@ -192,13 +178,7 @@ class StaffAccessIntegrationTest extends IntegrationTest {
                         alpha,
                         "POST",
                         "/staff/sign-in",
-                        Map.of(
-                                "identifier",
-                                "0770000003",
-                                "password",
-                                password,
-                                "deviceLabel",
-                                "phone"),
+                        Map.of("identifier", "0770000003", "password", password, "deviceLabel", "phone"),
                         null),
                 200);
         for (String identifier : List.of("unknown@example.test", "manager@example.test"))
@@ -216,15 +196,10 @@ class StaffAccessIntegrationTest extends IntegrationTest {
                                     "phone"),
                             null),
                     401);
-        owner.update(
-                "UPDATE identity_staff SET active=false WHERE id=?",
-                accounts.get(StaffRole.MANAGER).id);
+        owner.update("UPDATE identity_staff SET active=false WHERE id=?", accounts.get(StaffRole.MANAGER).id);
         status(signIn(alpha, StaffRole.MANAGER), 401);
-        assertThat(
-                        owner.queryForObject(
-                                "SELECT count(*) FROM identity_rate_bucket WHERE tenant_id=?",
-                                Long.class,
-                                alpha.id()))
+        assertThat(owner.queryForObject(
+                        "SELECT count(*) FROM identity_rate_bucket WHERE tenant_id=?", Long.class, alpha.id()))
                 .isPositive();
     }
 
@@ -236,13 +211,7 @@ class StaffAccessIntegrationTest extends IntegrationTest {
                             alpha,
                             "POST",
                             "/staff/sign-in",
-                            Map.of(
-                                    "identifier",
-                                    "missing@example.test",
-                                    "password",
-                                    password,
-                                    "deviceLabel",
-                                    "phone"),
+                            Map.of("identifier", "missing@example.test", "password", password, "deviceLabel", "phone"),
                             null),
                     401);
         status(
@@ -261,30 +230,23 @@ class StaffAccessIntegrationTest extends IntegrationTest {
                                 "1.2.3.4"),
                         null),
                 429);
-        assertThat(
-                        owner.queryForObject(
-                                "SELECT max(attempts) FROM identity_rate_bucket WHERE tenant_id=?"
-                                        + " AND dimension='staff-identifier'",
-                                Integer.class,
-                                alpha.id()))
+        assertThat(owner.queryForObject(
+                        "SELECT max(attempts) FROM identity_rate_bucket WHERE tenant_id=?"
+                                + " AND dimension='staff-identifier'",
+                        Integer.class,
+                        alpha.id()))
                 .isEqualTo(11);
     }
 
     @Test
     void ownerEnrollmentIsLimitedAndNeverGrantsAProtectedSessionBeforeTotp() {
-        owner.update(
-                "UPDATE identity_staff SET mfa_secret=null WHERE id=?",
-                accounts.get(StaffRole.OWNER).id);
+        owner.update("UPDATE identity_staff SET mfa_secret=null WHERE id=?", accounts.get(StaffRole.OWNER).id);
         Map<String, Object> c = body(signIn(alpha, StaffRole.OWNER));
         assertThat(c.get("state")).isEqualTo("enroll_mfa");
         assertThat(c.get("credentials")).isNull();
         status(call(alpha, "GET", "/me", null, (String) c.get("challengeToken")), 401);
         Map<String, Object> input =
-                Map.of(
-                        "challengeId",
-                        c.get("challengeId"),
-                        "challengeToken",
-                        c.get("challengeToken"));
+                Map.of("challengeId", c.get("challengeId"), "challengeToken", c.get("challengeToken"));
         Http.Exchange first = call(alpha, "POST", "/staff/mfa/enroll", input, null);
         status(first, 200);
         String secret = (String) body(first).get("secret");
@@ -296,11 +258,8 @@ class StaffAccessIntegrationTest extends IntegrationTest {
         status(success, 200);
         status(call(alpha, "POST", "/staff/mfa/verify", verify, null), 401);
         status(call(alpha, "GET", "/me", null, (String) body(success).get("accessToken")), 200);
-        String stored =
-                owner.queryForObject(
-                        "SELECT mfa_secret FROM identity_staff WHERE id=?",
-                        String.class,
-                        accounts.get(StaffRole.OWNER).id);
+        String stored = owner.queryForObject(
+                "SELECT mfa_secret FROM identity_staff WHERE id=?", String.class, accounts.get(StaffRole.OWNER).id);
         assertThat(stored).doesNotContain(secret);
     }
 
@@ -310,14 +269,9 @@ class StaffAccessIntegrationTest extends IntegrationTest {
         owner.update("UPDATE identity_staff SET mfa_secret=null WHERE id=?", a.id);
         Map<String, Object> original = tokens(StaffRole.RECEPTIONIST);
         String bearer = (String) original.get("accessToken");
-        Map<String, Object> challenge =
-                body(call(alpha, "POST", "/staff/mfa/challenges", null, bearer));
+        Map<String, Object> challenge = body(call(alpha, "POST", "/staff/mfa/challenges", null, bearer));
         Map<String, Object> request =
-                Map.of(
-                        "challengeId",
-                        challenge.get("challengeId"),
-                        "challengeToken",
-                        challenge.get("challengeToken"));
+                Map.of("challengeId", challenge.get("challengeId"), "challengeToken", challenge.get("challengeToken"));
         Http.Exchange enrollment = call(alpha, "POST", "/staff/mfa/enroll", request, null);
         status(enrollment, 200);
         String secret = (String) body(enrollment).get("secret");
@@ -341,21 +295,19 @@ class StaffAccessIntegrationTest extends IntegrationTest {
             List<Future<Integer>> results = new ArrayList<>();
             for (int n = 0; n < 20; n++) {
                 boolean foreign = n % 2 == 0;
-                results.add(
-                        pool.submit(
-                                () -> call(beta, "GET", "/me", null, foreign ? a : b).status()));
+                results.add(pool.submit(
+                        () -> call(beta, "GET", "/me", null, foreign ? a : b).status()));
             }
             for (int n = 0; n < results.size(); n++)
                 assertThat(results.get(n).get()).isEqualTo(n % 2 == 0 ? 404 : 200);
         }
         Map<String, Object> session = tokens(StaffRole.RECEPTIONIST);
-        String customer =
-                crypto.access(
-                        alpha.id(),
-                        accounts.get(StaffRole.RECEPTIONIST).id,
-                        UUID.fromString((String) session.get("sessionId")),
-                        "customer",
-                        1);
+        String customer = crypto.access(
+                alpha.id(),
+                accounts.get(StaffRole.RECEPTIONIST).id,
+                UUID.fromString((String) session.get("sessionId")),
+                "customer",
+                1);
         status(call(alpha, "GET", "/me", null, customer), 401);
         status(call(alpha, "GET", "/staff", null, customer), 401);
     }
@@ -378,10 +330,9 @@ class StaffAccessIntegrationTest extends IntegrationTest {
                                     "wrong"),
                             null),
                     401);
-        String code =
-                crypto.totpCode(
-                        totpSecrets.get(accounts.get(StaffRole.OWNER).id),
-                        clock.instant().getEpochSecond() / 30);
+        String code = crypto.totpCode(
+                totpSecrets.get(accounts.get(StaffRole.OWNER).id),
+                clock.instant().getEpochSecond() / 30);
         status(
                 call(
                         alpha,
@@ -396,31 +347,23 @@ class StaffAccessIntegrationTest extends IntegrationTest {
                                 code),
                         null),
                 401);
-        assertThat(
-                        owner.queryForObject(
-                                "SELECT attempts FROM identity_mfa_challenge WHERE id=?",
-                                Integer.class,
-                                UUID.fromString((String) c.get("challengeId"))))
+        assertThat(owner.queryForObject(
+                        "SELECT attempts FROM identity_mfa_challenge WHERE id=?",
+                        Integer.class,
+                        UUID.fromString((String) c.get("challengeId"))))
                 .isEqualTo(5);
     }
 
     @Test
     void simultaneousTotpUseProducesOneSession() throws Exception {
         Map<String, Object> c = body(signIn(alpha, StaffRole.OWNER));
-        String code =
-                crypto.totpCode(
-                        totpSecrets.get(accounts.get(StaffRole.OWNER).id),
-                        clock.instant().getEpochSecond() / 30);
+        String code = crypto.totpCode(
+                totpSecrets.get(accounts.get(StaffRole.OWNER).id),
+                clock.instant().getEpochSecond() / 30);
         Object request =
-                Map.of(
-                        "challengeId",
-                        c.get("challengeId"),
-                        "challengeToken",
-                        c.get("challengeToken"),
-                        "code",
-                        code);
-        List<Integer> statuses =
-                race(() -> call(alpha, "POST", "/staff/mfa/verify", request, null).status());
+                Map.of("challengeId", c.get("challengeId"), "challengeToken", c.get("challengeToken"), "code", code);
+        List<Integer> statuses = race(
+                () -> call(alpha, "POST", "/staff/mfa/verify", request, null).status());
         assertThat(statuses).containsExactlyInAnyOrder(200, 401);
     }
 
@@ -433,13 +376,7 @@ class StaffAccessIntegrationTest extends IntegrationTest {
                         beta,
                         "POST",
                         "/staff/sign-in",
-                        Map.of(
-                                "identifier",
-                                "manager@example.test",
-                                "password",
-                                password,
-                                "deviceLabel",
-                                "phone"),
+                        Map.of("identifier", "manager@example.test", "password", password, "deviceLabel", "phone"),
                         access),
                 404);
         status(
@@ -454,10 +391,8 @@ class StaffAccessIntegrationTest extends IntegrationTest {
         status(callHost("console.localhost:" + port(), "GET", "/me", null, access), 404);
         status(callHost("unknown.localhost:" + port(), "GET", "/me", null, access), 404);
         for (String hostile :
-                List.of(
-                        access.substring(0, access.length() - 6) + "xxxxxx",
-                        "eyJhbGciOiJub25lIn0.e30.",
-                        "broken")) status(call(alpha, "GET", "/me", null, hostile), 401);
+                List.of(access.substring(0, access.length() - 6) + "xxxxxx", "eyJhbGciOiJub25lIn0.e30.", "broken"))
+            status(call(alpha, "GET", "/me", null, hostile), 401);
         Map<String, Object> t = tokens(StaffRole.RECEPTIONIST);
         status(
                 callHost(
@@ -473,49 +408,38 @@ class StaffAccessIntegrationTest extends IntegrationTest {
     void issuerAudienceKindExpiryAndAlgorithmAreValidated() {
         Map<String, Object> t = tokens(StaffRole.MANAGER);
         UUID sid = UUID.fromString((String) t.get("sessionId"));
-        for (String mutation :
-                List.of("issuer", "audience", "expiry", "future", "kind", "algorithm")) {
-            JwtClaimsSet c =
-                    JwtClaimsSet.builder()
-                            .issuer(mutation.equals("issuer") ? "wrong" : "salon-platform")
-                            .audience(List.of(mutation.equals("audience") ? "wrong" : "salon-api"))
-                            .subject(accounts.get(StaffRole.MANAGER).id.toString())
-                            .issuedAt(
-                                    clock.instant()
-                                            .plusSeconds(mutation.equals("future") ? 60 : -600))
-                            .expiresAt(
-                                    clock.instant()
-                                            .plusSeconds(mutation.equals("expiry") ? -1 : 300))
-                            .claim("tenant", alpha.id().toString())
-                            .claim("session", sid.toString())
-                            .claim("kind", mutation.equals("kind") ? "operator" : "staff")
-                            .claim("generation", 1)
-                            .build();
+        for (String mutation : List.of("issuer", "audience", "expiry", "future", "kind", "algorithm")) {
+            JwtClaimsSet c = JwtClaimsSet.builder()
+                    .issuer(mutation.equals("issuer") ? "wrong" : "salon-platform")
+                    .audience(List.of(mutation.equals("audience") ? "wrong" : "salon-api"))
+                    .subject(accounts.get(StaffRole.MANAGER).id.toString())
+                    .issuedAt(clock.instant().plusSeconds(mutation.equals("future") ? 60 : -600))
+                    .expiresAt(clock.instant().plusSeconds(mutation.equals("expiry") ? -1 : 300))
+                    .claim("tenant", alpha.id().toString())
+                    .claim("session", sid.toString())
+                    .claim("kind", mutation.equals("kind") ? "operator" : "staff")
+                    .claim("generation", 1)
+                    .build();
             JwtEncoder encoder = new NimbusJwtEncoder(new ImmutableSecret<>(secrets.signing()));
             String bad;
             if (mutation.equals("algorithm")) {
                 byte[] key = new byte[64];
                 new java.security.SecureRandom().nextBytes(key);
                 encoder = new NimbusJwtEncoder(new ImmutableSecret<>(key));
-                bad =
-                        encoder.encode(
-                                        JwtEncoderParameters.from(
-                                                JwsHeader.with(MacAlgorithm.HS512).build(), c))
-                                .getTokenValue();
+                bad = encoder.encode(JwtEncoderParameters.from(
+                                JwsHeader.with(MacAlgorithm.HS512).build(), c))
+                        .getTokenValue();
             } else
-                bad =
-                        encoder.encode(
-                                        JwtEncoderParameters.from(
-                                                JwsHeader.with(MacAlgorithm.HS256).build(), c))
-                                .getTokenValue();
+                bad = encoder.encode(JwtEncoderParameters.from(
+                                JwsHeader.with(MacAlgorithm.HS256).build(), c))
+                        .getTokenValue();
             status(call(alpha, "GET", "/me", null, bad), 401);
         }
     }
 
     @Test
     void sessionsAreOwnPaginatedAndRevocationIsImmediate() {
-        Map<String, Object> manager = tokens(StaffRole.MANAGER),
-                reception = tokens(StaffRole.RECEPTIONIST);
+        Map<String, Object> manager = tokens(StaffRole.MANAGER), reception = tokens(StaffRole.RECEPTIONIST);
         String m = (String) manager.get("accessToken"), r = (String) reception.get("accessToken");
         Http.Exchange list = call(alpha, "GET", "/sessions?page=0&size=1", null, m);
         status(list, 200);
@@ -535,18 +459,14 @@ class StaffAccessIntegrationTest extends IntegrationTest {
         Map<String, Object> t = tokens(StaffRole.MANAGER);
         String refresh = (String) t.get("refreshToken");
         Object request = Map.of("refreshToken", refresh);
-        List<Http.Exchange> results =
-                raceResults(() -> call(alpha, "POST", "/sessions/refresh", request, null));
-        assertThat(results.stream().map(Http.Exchange::status).toList())
-                .containsExactlyInAnyOrder(200, 401);
+        List<Http.Exchange> results = raceResults(() -> call(alpha, "POST", "/sessions/refresh", request, null));
+        assertThat(results.stream().map(Http.Exchange::status).toList()).containsExactlyInAnyOrder(200, 401);
         Http.Exchange win =
                 results.stream().filter(r -> r.status() == 200).findFirst().orElseThrow();
         status(call(alpha, "GET", "/me", null, (String) body(win).get("accessToken")), 401);
-        assertThat(
-                        owner.queryForObject(
-                                "SELECT refresh_hash FROM identity_session WHERE id=?",
-                                String.class,
-                                UUID.fromString((String) t.get("sessionId"))))
+        assertThat(owner.queryForObject(
+                        "SELECT refresh_hash FROM identity_session WHERE id=?", String.class, UUID.fromString((String)
+                                t.get("sessionId"))))
                 .doesNotContain(refresh);
     }
 
@@ -557,8 +477,7 @@ class StaffAccessIntegrationTest extends IntegrationTest {
             Http.Exchange me = call(alpha, "GET", "/me", null, token);
             status(me, 200);
             Map<String, Object> p = body(me);
-            assertThat(new HashSet<>((List<String>) p.get("permissions")))
-                    .isEqualTo(role.permissions(false));
+            assertThat(new HashSet<>((List<String>) p.get("permissions"))).isEqualTo(role.permissions(false));
             assertThat(p.get("scope")).isEqualTo(role.scope(false));
             status(
                     call(alpha, "GET", "/staff", null, token),
@@ -591,22 +510,12 @@ class StaffAccessIntegrationTest extends IntegrationTest {
                 manager = token(StaffRole.MANAGER);
         StaffAccount pro = accounts.get(StaffRole.PROFESSIONAL);
         status(
-                call(
-                        alpha,
-                        "PATCH",
-                        "/staff/" + pro.id,
-                        Map.of("version", 0, "professionalGrant", true),
-                        ownerToken),
+                call(alpha, "PATCH", "/staff/" + pro.id, Map.of("version", 0, "professionalGrant", true), ownerToken),
                 200);
         assertThat(body(call(alpha, "GET", "/me", null, professional)).get("scope"))
                 .isEqualTo("salon");
         status(
-                call(
-                        alpha,
-                        "PATCH",
-                        "/staff/" + pro.id,
-                        Map.of("version", 0, "professionalGrant", false),
-                        ownerToken),
+                call(alpha, "PATCH", "/staff/" + pro.id, Map.of("version", 0, "professionalGrant", false), ownerToken),
                 409);
         status(
                 call(
@@ -622,13 +531,7 @@ class StaffAccessIntegrationTest extends IntegrationTest {
                         alpha,
                         "POST",
                         "/staff",
-                        Map.of(
-                                "email",
-                                "manager@example.test",
-                                "password",
-                                password,
-                                "role",
-                                "ACCOUNTANT"),
+                        Map.of("email", "manager@example.test", "password", password, "role", "ACCOUNTANT"),
                         ownerToken),
                 409);
         status(
@@ -641,11 +544,8 @@ class StaffAccessIntegrationTest extends IntegrationTest {
                 400);
         status(call(alpha, "DELETE", "/staff/" + pro.id, null, ownerToken), 204);
         status(call(alpha, "GET", "/me", null, professional), 401);
-        UUID foreign =
-                owner.queryForObject(
-                        "SELECT id FROM identity_staff WHERE tenant_id=? AND role='OWNER'",
-                        UUID.class,
-                        beta.id());
+        UUID foreign = owner.queryForObject(
+                "SELECT id FROM identity_staff WHERE tenant_id=? AND role='OWNER'", UUID.class, beta.id());
         status(call(alpha, "DELETE", "/staff/" + foreign, null, ownerToken), 404);
     }
 
@@ -655,10 +555,8 @@ class StaffAccessIntegrationTest extends IntegrationTest {
         String email = UUID.randomUUID() + "@synthetic.example";
         String mobile = "+94771234567";
         List<Map<String, Object>> created = new ArrayList<>();
-        for (var identifiers :
-                List.of(
-                        Map.of("email", "  " + email.toUpperCase(Locale.ROOT) + "  "),
-                        Map.of("mobile", "0771234567"))) {
+        for (var identifiers : List.of(
+                Map.of("email", "  " + email.toUpperCase(Locale.ROOT) + "  "), Map.of("mobile", "0771234567"))) {
             Map<String, Object> request = new HashMap<>(identifiers);
             request.put("password", password);
             request.put("role", "PROFESSIONAL");
@@ -669,19 +567,18 @@ class StaffAccessIntegrationTest extends IntegrationTest {
                     .containsEntry("email", identifiers.containsKey("email") ? email : null)
                     .containsEntry("mobile", identifiers.containsKey("mobile") ? mobile : null);
             created.add(account);
-            var signIn =
-                    call(
-                            alpha,
-                            "POST",
-                            "/staff/sign-in",
-                            Map.of(
-                                    "identifier",
-                                    identifiers.containsKey("email") ? email : mobile,
-                                    "password",
-                                    password,
-                                    "deviceLabel",
-                                    "Synthetic identifier check"),
-                            null);
+            var signIn = call(
+                    alpha,
+                    "POST",
+                    "/staff/sign-in",
+                    Map.of(
+                            "identifier",
+                            identifiers.containsKey("email") ? email : mobile,
+                            "password",
+                            password,
+                            "deviceLabel",
+                            "Synthetic identifier check"),
+                    null);
             status(signIn, 200);
             var credentials = (Map<String, Object>) body(signIn).get("credentials");
             status(call(alpha, "GET", "/me", null, (String) credentials.get("accessToken")), 200);
@@ -692,14 +589,7 @@ class StaffAccessIntegrationTest extends IntegrationTest {
         status(page, 200);
         var items = (List<Map<String, Object>>) body(page).get("items");
         for (var account : created) assertThat(items).contains(account);
-        status(
-                call(
-                        alpha,
-                        "POST",
-                        "/staff",
-                        Map.of("password", password, "role", "PROFESSIONAL"),
-                        ownerToken),
-                400);
+        status(call(alpha, "POST", "/staff", Map.of("password", password, "role", "PROFESSIONAL"), ownerToken), 400);
         status(
                 call(
                         alpha,
@@ -715,24 +605,19 @@ class StaffAccessIntegrationTest extends IntegrationTest {
                         token(StaffRole.MANAGER)),
                 403);
         Map<String, Object> document = json.readValue(http().get("/v3/api-docs").body(), Map.class);
-        var schemas =
-                (Map<String, Object>)
-                        ((Map<String, Object>) document.get("components")).get("schemas");
+        var schemas = (Map<String, Object>) ((Map<String, Object>) document.get("components")).get("schemas");
         var staff = (Map<String, Object>) schemas.get("StaffView");
         var properties = (Map<String, Object>) staff.get("properties");
         for (String field : List.of("email", "mobile")) {
             Object types = ((Map<String, Object>) properties.get(field)).get("type");
-            assertThat(types)
-                    .as("Staff %s permits string and null", field)
-                    .isInstanceOf(List.class);
+            assertThat(types).as("Staff %s permits string and null", field).isInstanceOf(List.class);
             assertThat((List<String>) types).containsExactlyInAnyOrder("string", "null");
             assertThat((List<String>) staff.get("required")).contains(field);
         }
         var pageSchema = (Map<String, Object>) schemas.get("PageStaffView");
         var pageProperties = (Map<String, Object>) pageSchema.get("properties");
         var array = (Map<String, Object>) pageProperties.get("items");
-        assertThat((Map<String, Object>) array.get("items"))
-                .containsEntry("$ref", "#/components/schemas/StaffView");
+        assertThat((Map<String, Object>) array.get("items")).containsEntry("$ref", "#/components/schemas/StaffView");
     }
 
     @Test
@@ -749,9 +634,7 @@ class StaffAccessIntegrationTest extends IntegrationTest {
                         Map.of("version", 0, "role", "MANAGER"),
                         o),
                 409);
-        status(
-                call(alpha, "PATCH", "/staff/" + m.id, Map.of("version", 0, "role", "OWNER"), o),
-                200);
+        status(call(alpha, "PATCH", "/staff/" + m.id, Map.of("version", 0, "role", "OWNER"), o), 200);
         status(call(alpha, "GET", "/me", null, (String) manager.get("accessToken")), 401);
         assertThat(body(signIn(alpha, StaffRole.MANAGER)).get("state")).isEqualTo("enroll_mfa");
     }
@@ -767,43 +650,34 @@ class StaffAccessIntegrationTest extends IntegrationTest {
         ExecutorService pool = Executors.newVirtualThreadPerTaskExecutor();
         CountDownLatch start = new CountDownLatch(1);
         try {
-            Future<Integer> a =
-                    pool.submit(
-                            () -> {
-                                start.await();
-                                return call(alpha, "DELETE", "/staff/" + second.id, null, o)
-                                        .status();
-                            });
-            Future<Integer> b =
-                    pool.submit(
-                            () -> {
-                                start.await();
-                                return call(
-                                                alpha,
-                                                "PATCH",
-                                                "/staff/" + accounts.get(StaffRole.OWNER).id,
-                                                Map.of("version", 0, "role", "MANAGER"),
-                                                o)
-                                        .status();
-                            });
+            Future<Integer> a = pool.submit(() -> {
+                start.await();
+                return call(alpha, "DELETE", "/staff/" + second.id, null, o).status();
+            });
+            Future<Integer> b = pool.submit(() -> {
+                start.await();
+                return call(
+                                alpha,
+                                "PATCH",
+                                "/staff/" + accounts.get(StaffRole.OWNER).id,
+                                Map.of("version", 0, "role", "MANAGER"),
+                                o)
+                        .status();
+            });
             start.countDown();
             List<Integer> outcomes = List.of(a.get(), b.get());
-            assertThat(outcomes.stream().filter(v -> v == 200 || v == 204).count()).isEqualTo(1);
+            assertThat(outcomes.stream().filter(v -> v == 200 || v == 204).count())
+                    .isEqualTo(1);
             assertThat(outcomes)
-                    .allMatch(
-                            v ->
-                                    v == 200 || v == 204 || v == 403
-                                            || v == 409); // whichever succeeds first leaves one
+                    .allMatch(v -> v == 200 || v == 204 || v == 403 || v == 409); // whichever succeeds first leaves one
             // Owner
         } finally {
             pool.close();
         }
-        assertThat(
-                        owner.queryForObject(
-                                "SELECT count(*) FROM identity_staff WHERE tenant_id=? AND"
-                                        + " active=true AND role='OWNER'",
-                                Long.class,
-                                alpha.id()))
+        assertThat(owner.queryForObject(
+                        "SELECT count(*) FROM identity_staff WHERE tenant_id=? AND" + " active=true AND role='OWNER'",
+                        Long.class,
+                        alpha.id()))
                 .isEqualTo(1);
     }
 
@@ -820,20 +694,12 @@ class StaffAccessIntegrationTest extends IntegrationTest {
                         (String) first.get("accessToken")),
                 401);
         status(
-                call(
-                        alpha,
-                        "PUT",
-                        "/staff/password",
-                        Map.of("oldPassword", password, "newPassword", "short"),
-                        (String) first.get("accessToken")),
+                call(alpha, "PUT", "/staff/password", Map.of("oldPassword", password, "newPassword", "short"), (String)
+                        first.get("accessToken")),
                 400);
         Http.Exchange changed =
-                call(
-                        alpha,
-                        "PUT",
-                        "/staff/password",
-                        Map.of("oldPassword", password, "newPassword", next),
-                        (String) first.get("accessToken"));
+                call(alpha, "PUT", "/staff/password", Map.of("oldPassword", password, "newPassword", next), (String)
+                        first.get("accessToken"));
         status(changed, 200);
         status(call(alpha, "GET", "/me", null, (String) first.get("accessToken")), 401);
         status(call(alpha, "GET", "/me", null, (String) second.get("accessToken")), 401);
@@ -845,52 +711,30 @@ class StaffAccessIntegrationTest extends IntegrationTest {
     void auditsAreImmutablePaginatedIsolatedAndContainNonsecretAccessChanges() {
         String o = token(StaffRole.OWNER);
         StaffAccount pro = accounts.get(StaffRole.PROFESSIONAL);
-        status(
-                call(
-                        alpha,
-                        "PATCH",
-                        "/staff/" + pro.id,
-                        Map.of("version", 0, "professionalGrant", true),
-                        o),
-                200);
+        status(call(alpha, "PATCH", "/staff/" + pro.id, Map.of("version", 0, "professionalGrant", true), o), 200);
         Http.Exchange audits = call(alpha, "GET", "/audit?subjectId=" + pro.id, null, o);
         status(audits, 200);
         assertThat(audits.body())
                 .contains("professionalGrant", "false", "true")
                 .doesNotContain(password, pro.mobile, pro.email, "passwordHash", "mfaSecret");
-        assertThat(
-                        ((List<?>)
-                                body(call(
-                                                alpha,
-                                                "GET",
-                                                "/audit?subjectId=" + UUID.randomUUID(),
-                                                null,
-                                                o))
-                                        .get("items")))
+        assertThat(((List<?>) body(call(alpha, "GET", "/audit?subjectId=" + UUID.randomUUID(), null, o))
+                        .get("items")))
                 .isEmpty();
-        assertThatThrownBy(
-                        () ->
-                                owner.update(
-                                        "UPDATE audit_entry SET action='changed' WHERE tenant_id=?",
-                                        alpha.id()))
+        assertThatThrownBy(() -> owner.update("UPDATE audit_entry SET action='changed' WHERE tenant_id=?", alpha.id()))
                 .hasStackTraceContaining("an audit entry is never changed");
     }
 
     private List<Integer> race(Callable<Integer> operation) throws Exception {
         try (ExecutorService pool = Executors.newVirtualThreadPerTaskExecutor()) {
             CountDownLatch latch = new CountDownLatch(1);
-            Future<Integer> a =
-                    pool.submit(
-                            () -> {
-                                latch.await();
-                                return operation.call();
-                            });
-            Future<Integer> b =
-                    pool.submit(
-                            () -> {
-                                latch.await();
-                                return operation.call();
-                            });
+            Future<Integer> a = pool.submit(() -> {
+                latch.await();
+                return operation.call();
+            });
+            Future<Integer> b = pool.submit(() -> {
+                latch.await();
+                return operation.call();
+            });
             latch.countDown();
             return List.of(a.get(), b.get());
         }
@@ -899,18 +743,14 @@ class StaffAccessIntegrationTest extends IntegrationTest {
     private List<Http.Exchange> raceResults(Callable<Http.Exchange> operation) throws Exception {
         try (ExecutorService pool = Executors.newVirtualThreadPerTaskExecutor()) {
             CountDownLatch latch = new CountDownLatch(1);
-            Future<Http.Exchange> a =
-                    pool.submit(
-                            () -> {
-                                latch.await();
-                                return operation.call();
-                            });
-            Future<Http.Exchange> b =
-                    pool.submit(
-                            () -> {
-                                latch.await();
-                                return operation.call();
-                            });
+            Future<Http.Exchange> a = pool.submit(() -> {
+                latch.await();
+                return operation.call();
+            });
+            Future<Http.Exchange> b = pool.submit(() -> {
+                latch.await();
+                return operation.call();
+            });
             latch.countDown();
             return List.of(a.get(), b.get());
         }

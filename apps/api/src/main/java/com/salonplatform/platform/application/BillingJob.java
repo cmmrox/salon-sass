@@ -1,18 +1,16 @@
 package com.salonplatform.platform.application;
 
+import com.salonplatform.platform.infrastructure.PlatformAudit;
+import com.salonplatform.shared.infrastructure.PlatformDatabase;
+import com.salonplatform.shared.observability.Traces;
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-
-import com.salonplatform.platform.infrastructure.PlatformAudit;
-import com.salonplatform.shared.infrastructure.PlatformDatabase;
-import com.salonplatform.shared.observability.Traces;
-import io.swagger.v3.oas.annotations.media.Schema;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.springframework.stereotype.Service;
 
 /**
@@ -31,12 +29,10 @@ public class BillingJob {
 
     /** What one pass did: per subscription that changed, and the subscriptions that failed. */
     @Schema(hidden = true)
-    public record Pass(Instant at, List<SubscriptionPass> changed, List<UUID> failed) {
-    }
+    public record Pass(Instant at, List<SubscriptionPass> changed, List<UUID> failed) {}
 
-    public record SubscriptionPass(UUID salonId, List<String> issued, List<String> reminders, List<String> charges,
-            List<String> states) {
-    }
+    public record SubscriptionPass(
+            UUID salonId, List<String> issued, List<String> reminders, List<String> charges, List<String> states) {}
 
     private final PlatformDatabase database;
     private final BillingLedger ledger;
@@ -51,17 +47,16 @@ public class BillingJob {
     public Pass run(Instant now) {
         try {
             return traces.inPlatformSpan("job.billing", () -> pass(now));
-        }
-        catch (RuntimeException ex) {
+        } catch (RuntimeException ex) {
             throw ex;
-        }
-        catch (Exception ex) {
+        } catch (Exception ex) {
             throw new IllegalStateException(ex);
         }
     }
 
     private Pass pass(Instant now) {
-        List<UUID> candidates = database.inTransaction(status -> database.jdbc().queryForList("""
+        List<UUID> candidates =
+                database.inTransaction(status -> database.jdbc().queryForList("""
                 SELECT s.id FROM subscription s JOIN tenant t ON t.id = s.salon_id
                  WHERE t.status NOT IN ('closed', 'deleted')
                    AND (s.next_invoice_at <= ?
@@ -77,13 +72,15 @@ public class BillingJob {
                 if (result != null) {
                     changed.add(result);
                 }
-            }
-            catch (RuntimeException ex) {
+            } catch (RuntimeException ex) {
                 failed.add(id);
                 log.error("The billing job failed for one subscription; the next pass resumes it", ex);
             }
         }
-        log.info("Billing pass: {} subscriptions considered, {} changed, {} failed", candidates.size(), changed.size(),
+        log.info(
+                "Billing pass: {} subscriptions considered, {} changed, {} failed",
+                candidates.size(),
+                changed.size(),
                 failed.size());
         return new Pass(now, changed, failed);
     }
@@ -105,7 +102,13 @@ public class BillingJob {
         subscription = ledger.issueDue(subscription, now, changes);
         ledger.remind(subscription, now, changes);
         ledger.applyState(subscription, now, PlatformAudit.SYSTEM, "billing", changes);
-        return changes.any() ? new SubscriptionPass(subscription.salonId(), changes.issued(), changes.reminders(),
-                changes.charges(), changes.states()) : null;
+        return changes.any()
+                ? new SubscriptionPass(
+                        subscription.salonId(),
+                        changes.issued(),
+                        changes.reminders(),
+                        changes.charges(),
+                        changes.states())
+                : null;
     }
 }

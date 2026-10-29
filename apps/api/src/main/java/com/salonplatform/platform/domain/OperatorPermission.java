@@ -30,6 +30,5 @@ public final class OperatorPermission {
     /** Revoke any active support session (F03-S04). */
     public static final String SUPPORT_REVOKE = "operator.support.revoke";
 
-    private OperatorPermission() {
-    }
+    private OperatorPermission() {}
 }

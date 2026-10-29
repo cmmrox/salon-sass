@@ -6,8 +6,7 @@ import com.jayway.jsonpath.JsonPath;
 /** Helpers for comparing problem details bodies. */
 public final class ProblemBodies {
 
-    private ProblemBodies() {
-    }
+    private ProblemBodies() {}
 
     /**
      * The body without its {@code traceId}, which is every request's own: what two answers must

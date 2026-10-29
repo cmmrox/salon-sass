@@ -1,7 +1,6 @@
 package com.salonplatform.identity.local;
 
 import com.salonplatform.shared.outbox.*;
-
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 

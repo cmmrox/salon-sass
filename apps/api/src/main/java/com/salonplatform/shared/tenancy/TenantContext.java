@@ -3,7 +3,6 @@ package com.salonplatform.shared.tenancy;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.Callable;
-
 import org.slf4j.MDC;
 
 /**
@@ -41,8 +40,7 @@ public final class TenantContext {
 
     private static final ScopedValue<RequestTenant> REQUEST = ScopedValue.newInstance();
 
-    private TenantContext() {
-    }
+    private TenantContext() {}
 
     /**
      * The salon of the current request, resolving it on first use.
@@ -91,7 +89,8 @@ public final class TenantContext {
      */
     public static <R> R callForRequest(String candidateSlug, TenantDirectory directory, Callable<R> work)
             throws Exception {
-        return ScopedValue.where(REQUEST, RequestTenant.forHostname(candidateSlug, directory)).call(work::call);
+        return ScopedValue.where(REQUEST, RequestTenant.forHostname(candidateSlug, directory))
+                .call(work::call);
     }
 
     /**
@@ -107,12 +106,10 @@ public final class TenantContext {
         MDC.put(LOG_FIELD, tenant.id().toString());
         try {
             return ScopedValue.where(REQUEST, RequestTenant.known(tenant)).call(work::call);
-        }
-        finally {
+        } finally {
             if (outer == null) {
                 MDC.remove(LOG_FIELD);
-            }
-            else {
+            } else {
                 MDC.put(LOG_FIELD, outer);
             }
         }

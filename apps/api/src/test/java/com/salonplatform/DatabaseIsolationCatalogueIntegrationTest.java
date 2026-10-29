@@ -1,23 +1,21 @@
 package com.salonplatform;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+
+import com.salonplatform.testing.StartedApplication;
+import com.salonplatform.testing.TestDatabase;
+import com.salonplatform.testing.TestPostgres;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.List;
 import java.util.Map;
-
-import com.salonplatform.testing.StartedApplication;
-import com.salonplatform.testing.TestDatabase;
-import com.salonplatform.testing.TestPostgres;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-
 import org.springframework.jdbc.core.JdbcTemplate;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 /**
  * What the database itself promises, read from its catalogue after every migration: every tenant
@@ -34,7 +32,7 @@ class DatabaseIsolationCatalogueIntegrationTest {
     @BeforeAll
     static void migrated() {
         database = TestDatabase.createEmpty(TestPostgres.shared());
-        try (StartedApplication migrated = database.start()) {
+        try (StartedApplication _ = database.start()) {
             // Started once to apply the migrations.
         }
         owner = database.asOwner();
@@ -51,14 +49,28 @@ class DatabaseIsolationCatalogueIntegrationTest {
                  WHERE c.relnamespace = 'public'::regnamespace AND c.relkind IN ('r', 'p')
                 """);
 
-        assertThat(tables).extracting(table -> table.get("name")).as("tenant tables")
-                .containsExactlyInAnyOrder("salon_brand", "audit_entry", "outbox_message",
-                        "identity_staff", "identity_session", "identity_refresh_history", "identity_mfa_challenge",
-                        "identity_mfa_step", "identity_rate_bucket", "identity_guard",
-                        "identity_customer", "identity_customer_challenge");
-        assertThat(tables).allSatisfy(table -> assertThat(table)
-                .as("%s", table.get("name"))
-                .containsEntry("enabled", true).containsEntry("forced", true).containsEntry("policy", true));
+        assertThat(tables)
+                .extracting(table -> table.get("name"))
+                .as("tenant tables")
+                .containsExactlyInAnyOrder(
+                        "salon_brand",
+                        "audit_entry",
+                        "outbox_message",
+                        "identity_staff",
+                        "identity_session",
+                        "identity_refresh_history",
+                        "identity_mfa_challenge",
+                        "identity_mfa_step",
+                        "identity_rate_bucket",
+                        "identity_guard",
+                        "identity_customer",
+                        "identity_customer_challenge");
+        assertThat(tables)
+                .allSatisfy(table -> assertThat(table)
+                        .as("%s", table.get("name"))
+                        .containsEntry("enabled", true)
+                        .containsEntry("forced", true)
+                        .containsEntry("policy", true));
     }
 
     @Test
@@ -74,8 +86,12 @@ class DatabaseIsolationCatalogueIntegrationTest {
                  WHERE c.relnamespace = 'public'::regnamespace AND c.relkind IN ('r', 'p')
                 """);
 
-        assertThat(columns).isNotEmpty().allSatisfy(column -> assertThat(column).as("%s", column.get("name"))
-                .containsEntry("required", true).containsEntry("refers_to_tenant", true));
+        assertThat(columns)
+                .isNotEmpty()
+                .allSatisfy(column -> assertThat(column)
+                        .as("%s", column.get("name"))
+                        .containsEntry("required", true)
+                        .containsEntry("refers_to_tenant", true));
     }
 
     @Test
@@ -91,8 +107,11 @@ class DatabaseIsolationCatalogueIntegrationTest {
                    AND EXISTS (SELECT 1 FROM pg_attribute a WHERE a.attrelid = c.oid AND a.attname = 'tenant_id')
                 """);
 
-        assertThat(uniques).isNotEmpty().allSatisfy(unique -> assertThat(unique)
-                .as("%s on %s", unique.get("index"), unique.get("name")).containsEntry("includes_tenant", true));
+        assertThat(uniques)
+                .isNotEmpty()
+                .allSatisfy(unique -> assertThat(unique)
+                        .as("%s on %s", unique.get("index"), unique.get("name"))
+                        .containsEntry("includes_tenant", true));
     }
 
     @Test
@@ -104,15 +123,22 @@ class DatabaseIsolationCatalogueIntegrationTest {
                   FROM pg_roles r WHERE r.rolname = ?
                 """, TestPostgres.APP_USER);
 
-        assertThat(role).containsEntry("superuser", false).containsEntry("bypass", false)
-                .containsEntry("createrole", false).containsEntry("createdb", false).containsEntry("owned", 0L);
+        assertThat(role)
+                .containsEntry("superuser", false)
+                .containsEntry("bypass", false)
+                .containsEntry("createrole", false)
+                .containsEntry("createdb", false)
+                .containsEntry("owned", 0L);
     }
 
     @Test
     void theApplicationRoleCannotReadTheRegistryButCanAskItAboutOneSlug() throws SQLException {
-        owner.update("INSERT INTO tenant (id, slug) VALUES ('d4d4d4d4-0000-4000-8000-000000000004', 'catalogue-check')");
-        try (Connection connection = database.connectAsApplication(); Statement statement = connection.createStatement()) {
-            assertThatExceptionOfType(SQLException.class).isThrownBy(() -> statement.executeQuery("SELECT * FROM tenant"))
+        owner.update(
+                "INSERT INTO tenant (id, slug) VALUES ('d4d4d4d4-0000-4000-8000-000000000004', 'catalogue-check')");
+        try (Connection connection = database.connectAsApplication();
+                Statement statement = connection.createStatement()) {
+            assertThatExceptionOfType(SQLException.class)
+                    .isThrownBy(() -> statement.executeQuery("SELECT * FROM tenant"))
                     .satisfies(refused -> assertThat(refused.getSQLState()).isEqualTo("42501"));
             try (var row = statement.executeQuery("SELECT id, status FROM tenant_by_slug('catalogue-check')")) {
                 assertThat(row.next()).isTrue();
@@ -142,10 +168,18 @@ class DatabaseIsolationCatalogueIntegrationTest {
                    AND EXISTS (SELECT 1 FROM pg_attribute a WHERE a.attrelid = c.oid AND a.attname = 'tenant_id')
                 """);
 
-        assertThat(indexes).extracting(index -> index.get("index")).contains("audit_entry_pkey", "audit_entry_subject_idx",
-                "outbox_message_pkey", "outbox_message_due_idx", "outbox_message_lease_idx");
-        assertThat(indexes).allSatisfy(index -> assertThat(index)
-                .as("%s on %s", index.get("index"), index.get("name")).containsEntry("starts_with_tenant", true));
+        assertThat(indexes)
+                .extracting(index -> index.get("index"))
+                .contains(
+                        "audit_entry_pkey",
+                        "audit_entry_subject_idx",
+                        "outbox_message_pkey",
+                        "outbox_message_due_idx",
+                        "outbox_message_lease_idx");
+        assertThat(indexes)
+                .allSatisfy(index -> assertThat(index)
+                        .as("%s on %s", index.get("index"), index.get("name"))
+                        .containsEntry("starts_with_tenant", true));
     }
 
     /**
@@ -161,7 +195,8 @@ class DatabaseIsolationCatalogueIntegrationTest {
                  GROUP BY table_name
                 """, TestPostgres.APP_USER);
 
-        assertThat(grants).extracting(grant -> grant.get("name"), grant -> grant.get("privileges"))
+        assertThat(grants)
+                .extracting(grant -> grant.get("name"), grant -> grant.get("privileges"))
                 .containsExactlyInAnyOrder(
                         org.assertj.core.api.Assertions.tuple("salon_brand", "SELECT"),
                         org.assertj.core.api.Assertions.tuple("audit_entry", "INSERT,SELECT"),
@@ -174,7 +209,8 @@ class DatabaseIsolationCatalogueIntegrationTest {
                         org.assertj.core.api.Assertions.tuple("identity_rate_bucket", "DELETE,INSERT,SELECT,UPDATE"),
                         org.assertj.core.api.Assertions.tuple("identity_guard", "INSERT,SELECT,UPDATE"),
                         org.assertj.core.api.Assertions.tuple("identity_customer", "DELETE,INSERT,SELECT,UPDATE"),
-                        org.assertj.core.api.Assertions.tuple("identity_customer_challenge", "DELETE,INSERT,SELECT,UPDATE"));
+                        org.assertj.core.api.Assertions.tuple(
+                                "identity_customer_challenge", "DELETE,INSERT,SELECT,UPDATE"));
     }
 
     /**
@@ -184,7 +220,8 @@ class DatabaseIsolationCatalogueIntegrationTest {
      */
     @Test
     void everyFunctionThatRunsWithItsOwnersRightsIsKnownPinsItsSearchPathAndIsNotPublic() {
-        List<Map<String, Object>> functions = owner.queryForList("""
+        List<Map<String, Object>> functions =
+                owner.queryForList("""
                 SELECT p.proname AS name,
                        coalesce(array_to_string(p.proconfig, ';'), '') AS settings,
                        has_function_privilege('public', p.oid, 'EXECUTE') AS public_may_run,
@@ -195,27 +232,46 @@ class DatabaseIsolationCatalogueIntegrationTest {
                 """, TestPostgres.APP_USER, TestPostgres.PLATFORM_USER);
 
         // F03-S02 adds salon_entitlements(): the current transaction's salon's plan, for the tenant role.
-        List<String> tenantPaths = List.of("tenant_by_slug", "tenant_by_id", "active_tenant_ids", "outbox_due",
-                "outbox_backlog", "job_claim", "job_finish", "salon_entitlements", "suspended_tenant_ids");
+        List<String> tenantPaths = List.of(
+                "tenant_by_slug",
+                "tenant_by_id",
+                "active_tenant_ids",
+                "outbox_due",
+                "outbox_backlog",
+                "job_claim",
+                "job_finish",
+                "salon_entitlements",
+                "suspended_tenant_ids");
         // F03-S01: the module-owned bootstrap functions belong to the platform role alone, as do F03-S02's
         // staff-seat usage count and billing's outbox write.
         // F03-S03: closure's session revocation and message cancellation, and each module's guarded eraser,
         // belong to the platform role alone too.
-        List<String> bootstrap = List.of("identity_bootstrap_owner", "branding_bootstrap_brand",
-                "identity_active_staff_count", "outbox_enqueue_for_salon", "identity_revoke_closed_salon_sessions",
-                "outbox_cancel_closed_salon", "identity_erase_salon_rows", "branding_erase_salon_rows",
-                "audit_erase_salon_rows", "outbox_erase_salon_rows",
+        List<String> bootstrap = List.of(
+                "identity_bootstrap_owner",
+                "branding_bootstrap_brand",
+                "identity_active_staff_count",
+                "outbox_enqueue_for_salon",
+                "identity_revoke_closed_salon_sessions",
+                "outbox_cancel_closed_salon",
+                "identity_erase_salon_rows",
+                "branding_erase_salon_rows",
+                "audit_erase_salon_rows",
+                "outbox_erase_salon_rows",
                 // F03-S04: a support session's entries in the salon's audit trail, from the platform connection.
                 "audit_record_support");
-        assertThat(functions).extracting(function -> function.get("name"))
-                .containsExactlyInAnyOrderElementsOf(java.util.stream.Stream.concat(tenantPaths.stream(),
-                        bootstrap.stream()).toList());
+        assertThat(functions)
+                .extracting(function -> function.get("name"))
+                .containsExactlyInAnyOrderElementsOf(
+                        java.util.stream.Stream.concat(tenantPaths.stream(), bootstrap.stream())
+                                .toList());
         assertThat(functions).allSatisfy(function -> {
-            assertThat((String) function.get("settings")).as("%s", function.get("name"))
+            assertThat((String) function.get("settings"))
+                    .as("%s", function.get("name"))
                     .isEqualTo("search_path=pg_catalog, pg_temp");
             assertThat(function).as("%s", function.get("name")).containsEntry("public_may_run", false);
             boolean bootstraps = bootstrap.contains((String) function.get("name"));
-            assertThat(function).as("%s", function.get("name"))
+            assertThat(function)
+                    .as("%s", function.get("name"))
                     .containsEntry("application_may_run", !bootstraps)
                     .containsEntry("platform_may_run", bootstraps);
         });
@@ -231,7 +287,8 @@ class DatabaseIsolationCatalogueIntegrationTest {
                  GROUP BY table_name
                 """, TestPostgres.PLATFORM_USER);
 
-        assertThat(grants).extracting(grant -> grant.get("name"), grant -> grant.get("privileges"))
+        assertThat(grants)
+                .extracting(grant -> grant.get("name"), grant -> grant.get("privileges"))
                 .containsExactlyInAnyOrder(
                         org.assertj.core.api.Assertions.tuple("tenant", "INSERT,SELECT"),
                         org.assertj.core.api.Assertions.tuple("plan", "INSERT,SELECT"),
@@ -262,53 +319,69 @@ class DatabaseIsolationCatalogueIntegrationTest {
                 SELECT column_name FROM information_schema.role_column_grants
                  WHERE grantee = ? AND table_name = 'tenant' AND privilege_type = 'UPDATE' ORDER BY column_name
                 """, String.class, TestPostgres.PLATFORM_USER);
-        assertThat(tenantColumns).containsExactly("access_state", "closed_at", "delete_at", "deleted_at", "plan_id", "status",
-                "updated_at", "version");
+        assertThat(tenantColumns)
+                .containsExactly(
+                        "access_state",
+                        "closed_at",
+                        "delete_at",
+                        "deleted_at",
+                        "plan_id",
+                        "status",
+                        "updated_at",
+                        "version");
         List<String> supportColumns = owner.queryForList("""
                 SELECT table_name || '.' || column_name FROM information_schema.role_column_grants
                  WHERE grantee = ? AND table_name IN ('support_session', 'support_entry_code') AND privilege_type = 'UPDATE'
                  ORDER BY 1
                 """, String.class, TestPostgres.PLATFORM_USER);
-        assertThat(supportColumns).containsExactly("support_entry_code.consumed_at", "support_entry_code.updated_at",
-                "support_session.ended_at", "support_session.ended_by", "support_session.ended_by_id",
-                "support_session.updated_at");
+        assertThat(supportColumns)
+                .containsExactly(
+                        "support_entry_code.consumed_at",
+                        "support_entry_code.updated_at",
+                        "support_session.ended_at",
+                        "support_session.ended_by",
+                        "support_session.ended_by_id",
+                        "support_session.updated_at");
     }
 
     /** The product's grants: what the application's role is refused, table by table. */
     @ParameterizedTest
-    @ValueSource(strings = {
-        "INSERT INTO salon_brand (tenant_id, display_name, brand_colour) VALUES (gen_random_uuid(), 'x', '#000000')",
-        "UPDATE salon_brand SET display_name = 'x'",
-        "DELETE FROM salon_brand",
-        "INSERT INTO tenant (id, slug) VALUES (gen_random_uuid(), 'sneaky')",
-        "UPDATE tenant SET status = 'suspended'",
-        "CREATE TABLE intruder (id int)",
-        "UPDATE audit_entry SET reason = 'changed'",
-        "DELETE FROM audit_entry",
-        "TRUNCATE audit_entry",
-        "TRUNCATE outbox_message",
-        "UPDATE identity_mfa_step SET step=0",
-        "UPDATE identity_refresh_history SET credential_hash='x'",
-        "DELETE FROM identity_guard",
-        "SELECT * FROM scheduled_job",
-        "INSERT INTO scheduled_job (name, next_run_at, created_at, updated_at) VALUES ('sneaky', now(), now(), now())",
-        "UPDATE scheduled_job SET locked_by = NULL, locked_until = NULL",
-        "DELETE FROM scheduled_job",
-        "ALTER TABLE outbox_message DISABLE ROW LEVEL SECURITY",
-        "DROP FUNCTION outbox_due(timestamptz, text[], integer, integer)",
-        "SELECT * FROM operator_user",
-        "SELECT * FROM operator_session",
-        "SELECT * FROM plan",
-        "INSERT INTO plan (id, key, name, staff_seats, branches, message_allowance, custom_domain, dedicated_app, created_at, updated_at) VALUES (gen_random_uuid(), 'sneaky', 'x', 1, 1, 0, false, false, now(), now())",
-        "SELECT * FROM provisioning_receipt",
-        "SELECT * FROM platform_audit_entry",
-        "SELECT * FROM tenant",
-        "SELECT identity_bootstrap_owner(gen_random_uuid(), gen_random_uuid(), 'x', 'x@example.com', 'x', now())",
-        "SELECT branding_bootstrap_brand(gen_random_uuid(), 'x', '#111827', now())",
-    })
+    @ValueSource(
+            strings = {
+                "INSERT INTO salon_brand (tenant_id, display_name, brand_colour) VALUES (gen_random_uuid(), 'x', '#000000')",
+                "UPDATE salon_brand SET display_name = 'x'",
+                "DELETE FROM salon_brand",
+                "INSERT INTO tenant (id, slug) VALUES (gen_random_uuid(), 'sneaky')",
+                "UPDATE tenant SET status = 'suspended'",
+                "CREATE TABLE intruder (id int)",
+                "UPDATE audit_entry SET reason = 'changed'",
+                "DELETE FROM audit_entry",
+                "TRUNCATE audit_entry",
+                "TRUNCATE outbox_message",
+                "UPDATE identity_mfa_step SET step=0",
+                "UPDATE identity_refresh_history SET credential_hash='x'",
+                "DELETE FROM identity_guard",
+                "SELECT * FROM scheduled_job",
+                "INSERT INTO scheduled_job (name, next_run_at, created_at, updated_at) VALUES ('sneaky', now(), now(), now())",
+                "UPDATE scheduled_job SET locked_by = NULL, locked_until = NULL",
+                "DELETE FROM scheduled_job",
+                "ALTER TABLE outbox_message DISABLE ROW LEVEL SECURITY",
+                "DROP FUNCTION outbox_due(timestamptz, text[], integer, integer)",
+                "SELECT * FROM operator_user",
+                "SELECT * FROM operator_session",
+                "SELECT * FROM plan",
+                "INSERT INTO plan (id, key, name, staff_seats, branches, message_allowance, custom_domain, dedicated_app, created_at, updated_at) VALUES (gen_random_uuid(), 'sneaky', 'x', 1, 1, 0, false, false, now(), now())",
+                "SELECT * FROM provisioning_receipt",
+                "SELECT * FROM platform_audit_entry",
+                "SELECT * FROM tenant",
+                "SELECT identity_bootstrap_owner(gen_random_uuid(), gen_random_uuid(), 'x', 'x@example.com', 'x', now())",
+                "SELECT branding_bootstrap_brand(gen_random_uuid(), 'x', '#111827', now())",
+            })
     void theApplicationRoleIsRefusedEverythingItDoesNotNeed(String sql) throws SQLException {
-        try (Connection connection = database.connectAsApplication(); Statement statement = connection.createStatement()) {
-            assertThatExceptionOfType(SQLException.class).isThrownBy(() -> statement.execute(sql))
+        try (Connection connection = database.connectAsApplication();
+                Statement statement = connection.createStatement()) {
+            assertThatExceptionOfType(SQLException.class)
+                    .isThrownBy(() -> statement.execute(sql))
                     .satisfies(refused -> assertThat(refused.getSQLState()).isEqualTo("42501"));
         }
     }

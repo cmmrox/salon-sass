@@ -1,7 +1,6 @@
 package com.salonplatform.identity.infrastructure;
 
 import com.salonplatform.shared.tenancy.TenantContext;
-
 import org.springframework.stereotype.Component;
 
 /**
@@ -24,7 +23,8 @@ public class CustomerDevice {
         if (cookie == null || cookie.length() > 128) return null;
         String[] p = cookie.split("\\.");
         if (p.length != 2 || !p[0].matches("[A-Za-z0-9_-]{43}")) return null;
-        return crypto.equalHash(p[1], crypto.hash("device:" + TenantContext.require().id(), p[0]))
+        return crypto.equalHash(
+                        p[1], crypto.hash("device:" + TenantContext.require().id(), p[0]))
                 ? p[0]
                 : null;
     }

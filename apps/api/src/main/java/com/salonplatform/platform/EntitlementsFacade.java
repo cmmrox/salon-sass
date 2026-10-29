@@ -1,14 +1,11 @@
 package com.salonplatform.platform;
 
-import java.util.List;
-import java.util.Optional;
-
 import com.salonplatform.shared.entitlements.SalonEntitlements;
 import com.salonplatform.shared.tenancy.TenantContext;
-
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
-
+import java.util.List;
+import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
@@ -32,6 +29,7 @@ public class EntitlementsFacade implements SalonEntitlements {
             throw new IllegalStateException("Entitlements are read inside the writable transaction that enforces them");
         }
         TenantContext.resolved().orElseThrow(() -> new IllegalStateException("Entitlements belong to a salon"));
+        // A native query's result list is untyped; each row of this one is an Object[] of its six columns.
         @SuppressWarnings("unchecked")
         List<Object[]> rows = entityManager.createNativeQuery("""
                 SELECT plan_id, staff_seats, branches, message_allowance, custom_domain, dedicated_app
@@ -41,7 +39,11 @@ public class EntitlementsFacade implements SalonEntitlements {
             return Optional.empty();
         }
         Object[] row = rows.get(0);
-        return Optional.of(new Limits(((Number) row[1]).intValue(), ((Number) row[2]).intValue(),
-                ((Number) row[3]).intValue(), (Boolean) row[4], (Boolean) row[5]));
+        return Optional.of(new Limits(
+                ((Number) row[1]).intValue(),
+                ((Number) row[2]).intValue(),
+                ((Number) row[3]).intValue(),
+                (Boolean) row[4],
+                (Boolean) row[5]));
     }
 }

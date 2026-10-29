@@ -10,5 +10,4 @@ import java.time.Instant;
  * @param commit the commit the build was made from
  * @param time the server's time, a UTC instant
  */
-public record ServiceMeta(String service, String version, String commit, Instant time) {
-}
+public record ServiceMeta(String service, String version, String commit, Instant time) {}

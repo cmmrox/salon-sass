@@ -1,12 +1,9 @@
 package com.salonplatform.shared.infrastructure;
 
-import java.time.Duration;
-
-import javax.sql.DataSource;
-
 import com.zaxxer.hikari.HikariDataSource;
 import com.zaxxer.hikari.util.DriverDataSource;
-
+import java.time.Duration;
+import javax.sql.DataSource;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -33,11 +30,17 @@ class DatabaseReconnectConfiguration {
 
             @Override
             public Object postProcessAfterInitialization(Object bean, String beanName) {
-                if (bean instanceof HikariDataSource pool && pool.getDataSource() == null && pool.getJdbcUrl() != null) {
-                    DataSource driver = new DriverDataSource(pool.getJdbcUrl(), pool.getDriverClassName(),
-                            pool.getDataSourceProperties(), pool.getUsername(), pool.getPassword());
-                    pool.setDataSource(new SteadyReconnectDataSource(driver,
-                            environment.getRequiredProperty(INTERVAL, Duration.class), pool::isClosed));
+                if (bean instanceof HikariDataSource pool
+                        && pool.getDataSource() == null
+                        && pool.getJdbcUrl() != null) {
+                    DataSource driver = new DriverDataSource(
+                            pool.getJdbcUrl(),
+                            pool.getDriverClassName(),
+                            pool.getDataSourceProperties(),
+                            pool.getUsername(),
+                            pool.getPassword());
+                    pool.setDataSource(new SteadyReconnectDataSource(
+                            driver, environment.getRequiredProperty(INTERVAL, Duration.class), pool::isClosed));
                 }
                 return bean;
             }

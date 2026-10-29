@@ -1,15 +1,14 @@
 package com.salonplatform;
 
-import java.util.List;
-import java.util.Map;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 
 import com.salonplatform.testing.StartedApplication;
 import com.salonplatform.testing.TestDatabase;
 import com.salonplatform.testing.TestPostgres;
+import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.tuple;
 
 class MigrationIntegrationTest {
 
@@ -21,11 +20,12 @@ class MigrationIntegrationTest {
         TestDatabase database = TestDatabase.createEmpty(TestPostgres.shared());
 
         List<Map<String, Object>> afterFirstStart;
-        try (StartedApplication application = database.start()) {
+        try (StartedApplication _ = database.start()) {
             afterFirstStart = database.asOwner().queryForList(HISTORY);
         }
 
-        assertThat(afterFirstStart).extracting(row -> row.get("version"), row -> row.get("description"))
+        assertThat(afterFirstStart)
+                .extracting(row -> row.get("version"), row -> row.get("description"))
                 .containsExactly(
                         tuple("1", "baseline"),
                         tuple("2", "create tenant"),
@@ -37,7 +37,8 @@ class MigrationIntegrationTest {
                         tuple("8", "create staff identity"),
                         tuple("9", "create customer identity"),
                         tuple("10", "add customer profile"),
-                        tuple("11", "create platform operator console"), tuple("12", "create identity owner bootstrap"),
+                        tuple("11", "create platform operator console"),
+                        tuple("12", "create identity owner bootstrap"),
                         tuple("13", "create branding bootstrap"),
                         tuple("14", "create subscription billing"),
                         tuple("15", "create salon lifecycle"),

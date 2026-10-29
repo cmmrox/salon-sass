@@ -4,41 +4,40 @@ import static org.assertj.core.api.Assertions.*;
 
 import com.salonplatform.identity.application.StaffAccess;
 import com.salonplatform.testing.IntegrationTest;
-
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-
-import tools.jackson.databind.json.JsonMapper;
-
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import tools.jackson.databind.json.JsonMapper;
 
 /** Public statuses and nullable/omitted response fields match the generated contract. */
+// JSON bodies are read as untyped maps (Map.class); each cast states the shape the assertion
+// beside it then checks, so a wrong shape fails that assertion with a ClassCastException.
+@SuppressWarnings("unchecked")
 class IdentityContractIntegrationTest extends IntegrationTest {
-    @Autowired JsonMapper json;
+    @Autowired
+    JsonMapper json;
 
     @Test
     void auditBeforeAndAfterExplicitlyAllowNullAsSerialized() {
         Map<String, Object> document = json.readValue(http().get("/v3/api-docs").body(), Map.class);
         Map<String, Object> schemas =
-                (Map<String, Object>)
-                        ((Map<String, Object>) document.get("components")).get("schemas");
+                (Map<String, Object>) ((Map<String, Object>) document.get("components")).get("schemas");
         Map<String, Object> audit = (Map<String, Object>) schemas.get("AuditView");
         Map<String, Object> properties = (Map<String, Object>) audit.get("properties");
-        var entry =
-                new StaffAccess.AuditView(
-                        UUID.randomUUID(),
-                        Instant.now(),
-                        "staff",
-                        UUID.randomUUID().toString(),
-                        "identity.sign_in",
-                        "staff",
-                        UUID.randomUUID().toString(),
-                        null,
-                        null);
+        var entry = new StaffAccess.AuditView(
+                UUID.randomUUID(),
+                Instant.now(),
+                "staff",
+                UUID.randomUUID().toString(),
+                "identity.sign_in",
+                "staff",
+                UUID.randomUUID().toString(),
+                null,
+                null);
         Map<String, Object> wire = json.readValue(json.writeValueAsString(entry), Map.class);
         for (String field : List.of("before", "after")) {
             assertThat(wire).containsEntry(field, null);
@@ -56,25 +55,19 @@ class IdentityContractIntegrationTest extends IntegrationTest {
         Map<String, Object> document = json.readValue(http().get("/v3/api-docs").body(), Map.class);
         Map<String, Object> paths = (Map<String, Object>) document.get("paths");
         for (String path :
-                List.of(
-                        "/api/v1/identity/staff/{id}",
-                        "/api/v1/identity/sessions",
-                        "/api/v1/identity/sessions/{id}")) {
-            Map<String, Object> operation =
-                    (Map<String, Object>) ((Map<String, Object>) paths.get(path)).get("delete");
+                List.of("/api/v1/identity/staff/{id}", "/api/v1/identity/sessions", "/api/v1/identity/sessions/{id}")) {
+            Map<String, Object> operation = (Map<String, Object>) ((Map<String, Object>) paths.get(path)).get("delete");
             assertThat(((Map<String, Object>) operation.get("responses")).keySet())
                     .contains("204")
                     .doesNotContain("200");
         }
         Map<String, Object> create =
-                (Map<String, Object>)
-                        ((Map<String, Object>) paths.get("/api/v1/identity/staff")).get("post");
+                (Map<String, Object>) ((Map<String, Object>) paths.get("/api/v1/identity/staff")).get("post");
         assertThat(((Map<String, Object>) create.get("responses")).keySet())
                 .contains("201")
                 .doesNotContain("200");
         Map<String, Object> schemas =
-                (Map<String, Object>)
-                        ((Map<String, Object>) document.get("components")).get("schemas");
+                (Map<String, Object>) ((Map<String, Object>) document.get("components")).get("schemas");
         Map<String, Object> principal = (Map<String, Object>) schemas.get("Principal");
         Map<String, Object> properties = (Map<String, Object>) principal.get("properties");
         for (String field : List.of("role", "staffId"))
@@ -89,31 +82,21 @@ class IdentityContractIntegrationTest extends IntegrationTest {
         Map<String, Object> document = json.readValue(http().get("/v3/api-docs").body(), Map.class);
         Map<String, Object> paths = (Map<String, Object>) document.get("paths");
         Map<String, Object> schemas =
-                (Map<String, Object>)
-                        ((Map<String, Object>) document.get("components")).get("schemas");
-        for (String path :
-                List.of(
-                        "/api/v1/identity/customers/sign-in",
-                        "/api/v1/identity/staff/mfa/verify")) {
-            Map<String, Object> operation =
-                    (Map<String, Object>) ((Map<String, Object>) paths.get(path)).get("post");
+                (Map<String, Object>) ((Map<String, Object>) document.get("components")).get("schemas");
+        for (String path : List.of("/api/v1/identity/customers/sign-in", "/api/v1/identity/staff/mfa/verify")) {
+            Map<String, Object> operation = (Map<String, Object>) ((Map<String, Object>) paths.get(path)).get("post");
             Map<String, Object> content =
-                    (Map<String, Object>)
-                            ((Map<String, Object>) operation.get("requestBody")).get("content");
+                    (Map<String, Object>) ((Map<String, Object>) operation.get("requestBody")).get("content");
             Map<String, Object> schema =
-                    (Map<String, Object>)
-                            ((Map<String, Object>) content.get("application/json")).get("schema");
+                    (Map<String, Object>) ((Map<String, Object>) content.get("application/json")).get("schema");
             String ref = (String) schema.get("$ref");
-            Map<String, Object> request =
-                    (Map<String, Object>) schemas.get(ref.substring(ref.lastIndexOf('/') + 1));
-            List<String> expected =
-                    path.contains("customers")
-                            ? List.of("challengeId", "code")
-                            : List.of("challengeId", "challengeToken", "code");
+            Map<String, Object> request = (Map<String, Object>) schemas.get(ref.substring(ref.lastIndexOf('/') + 1));
+            List<String> expected = path.contains("customers")
+                    ? List.of("challengeId", "code")
+                    : List.of("challengeId", "challengeToken", "code");
             assertThat(((Map<String, Object>) request.get("properties")).keySet())
                     .containsExactlyInAnyOrderElementsOf(expected);
-            assertThat((List<String>) request.get("required"))
-                    .containsExactlyInAnyOrderElementsOf(expected);
+            assertThat((List<String>) request.get("required")).containsExactlyInAnyOrderElementsOf(expected);
         }
     }
 
@@ -121,8 +104,7 @@ class IdentityContractIntegrationTest extends IntegrationTest {
     void profileContractRejectsSelectorsAndDeclaresNullableOptionalDataAndDeletionStatus() {
         Map<String, Object> document = json.readValue(http().get("/v3/api-docs").body(), Map.class);
         Map<String, Object> schemas =
-                (Map<String, Object>)
-                        ((Map<String, Object>) document.get("components")).get("schemas");
+                (Map<String, Object>) ((Map<String, Object>) document.get("components")).get("schemas");
         Map<String, Object> profile = (Map<String, Object>) schemas.get("Profile");
         Map<String, Object> properties = (Map<String, Object>) profile.get("properties");
         assertThat(properties.keySet())
@@ -139,8 +121,7 @@ class IdentityContractIntegrationTest extends IntegrationTest {
         for (String field : List.of("email", "birthday"))
             assertThat((List<String>) ((Map<String, Object>) properties.get(field)).get("type"))
                     .containsExactlyInAnyOrder("string", "null");
-        Map<String, Object> update =
-                (Map<String, Object>) schemas.get("CustomerProfileUpdateRequest");
+        Map<String, Object> update = (Map<String, Object>) schemas.get("CustomerProfileUpdateRequest");
         assertThat((Map<String, Object>) update.get("properties"))
                 .containsOnlyKeys(
                         "version",
@@ -157,16 +138,10 @@ class IdentityContractIntegrationTest extends IntegrationTest {
         assertThat(update.get("additionalProperties")).isEqualTo(false);
         assertThat((List<String>) update.get("required"))
                 .containsExactlyInAnyOrder(
-                        "version",
-                        "name",
-                        "preferredLanguage",
-                        "notificationPreferences",
-                        "marketingConsent");
+                        "version", "name", "preferredLanguage", "notificationPreferences", "marketingConsent");
         Map<String, Object> paths = (Map<String, Object>) document.get("paths");
         var delete =
-                (Map<String, Object>)
-                        ((Map<String, Object>) paths.get("/api/v1/identity/customers/me"))
-                                .get("delete");
+                (Map<String, Object>) ((Map<String, Object>) paths.get("/api/v1/identity/customers/me")).get("delete");
         assertThat(((Map<String, Object>) delete.get("responses")).keySet())
                 .contains("204")
                 .doesNotContain("200");
@@ -176,54 +151,32 @@ class IdentityContractIntegrationTest extends IntegrationTest {
     void privateClientAssertionIsOptionalAndDeclaredOnlyForTheTwoRateMutations() {
         Map<String, Object> document = json.readValue(http().get("/v3/api-docs").body(), Map.class);
         Map<String, Object> paths = (Map<String, Object>) document.get("paths");
-        for (String path :
-                List.of(
-                        "/api/v1/identity/staff/sign-in",
-                        "/api/v1/identity/customers/challenges")) {
-            var operation =
-                    (Map<String, Object>) ((Map<String, Object>) paths.get(path)).get("post");
+        for (String path : List.of("/api/v1/identity/staff/sign-in", "/api/v1/identity/customers/challenges")) {
+            var operation = (Map<String, Object>) ((Map<String, Object>) paths.get(path)).get("post");
             var parameters = (List<Map<String, Object>>) operation.get("parameters");
-            assertThat(parameters)
-                    .anySatisfy(
-                            p -> {
-                                assertThat(p)
-                                        .containsEntry("name", "x-salon-client-assertion")
-                                        .containsEntry("in", "header");
-                                // OpenAPI defaults non-path parameters to optional when omitted.
-                                assertThat(p.getOrDefault("required", false)).isEqualTo(false);
-                                assertThat((Map<String, Object>) p.get("schema"))
-                                        .containsEntry("type", "string")
-                                        .containsEntry("maxLength", 192);
-                            });
+            assertThat(parameters).anySatisfy(p -> {
+                assertThat(p).containsEntry("name", "x-salon-client-assertion").containsEntry("in", "header");
+                // OpenAPI defaults non-path parameters to optional when omitted.
+                assertThat(p.getOrDefault("required", false)).isEqualTo(false);
+                assertThat((Map<String, Object>) p.get("schema"))
+                        .containsEntry("type", "string")
+                        .containsEntry("maxLength", 192);
+            });
         }
         var protectedOperation =
-                (Map<String, Object>)
-                        ((Map<String, Object>) paths.get("/api/v1/identity/me")).get("get");
+                (Map<String, Object>) ((Map<String, Object>) paths.get("/api/v1/identity/me")).get("get");
         assertThat(protectedOperation.get("parameters")).isNull();
     }
 
     @Test
     void optionalSignInFieldsAreOmittedAndCustomerPrincipalFieldsAreNullable() {
-        StaffAccess.SignIn challenge =
-                new StaffAccess.SignIn(
-                        "enroll_mfa",
-                        UUID.randomUUID(),
-                        UUID.randomUUID().toString(),
-                        Instant.now(),
-                        null);
+        StaffAccess.SignIn challenge = new StaffAccess.SignIn(
+                "enroll_mfa", UUID.randomUUID(), UUID.randomUUID().toString(), Instant.now(), null);
         Map<String, Object> wire = json.readValue(json.writeValueAsString(challenge), Map.class);
         assertThat(wire.containsKey("credentials")).isFalse();
-        var customer =
-                new IdentityFacade.Principal(
-                        UUID.randomUUID(),
-                        "customer",
-                        null,
-                        Set.of("session.manage"),
-                        "own",
-                        null,
-                        false);
-        Map<String, Object> principal =
-                json.readValue(json.writeValueAsString(customer), Map.class);
+        var customer = new IdentityFacade.Principal(
+                UUID.randomUUID(), "customer", null, Set.of("session.manage"), "own", null, false);
+        Map<String, Object> principal = json.readValue(json.writeValueAsString(customer), Map.class);
         assertThat(principal.containsKey("role")).isTrue();
         assertThat(principal.get("role")).isNull();
         assertThat(principal.containsKey("staffId")).isTrue();

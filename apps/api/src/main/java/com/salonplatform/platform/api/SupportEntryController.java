@@ -3,7 +3,6 @@ package com.salonplatform.platform.api;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.salonplatform.platform.application.SupportSessions;
 import io.swagger.v3.oas.annotations.media.Schema;
-
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -30,8 +29,11 @@ class SupportEntryController {
         this.sessions = sessions;
     }
 
-    @Schema(additionalProperties = Schema.AdditionalPropertiesValue.FALSE, requiredProperties = {"code"})
-    record EntryRequest(@Schema(minLength = 43, maxLength = 43) String code) {
+    @Schema(
+            additionalProperties = Schema.AdditionalPropertiesValue.FALSE,
+            requiredProperties = {"code"})
+    record EntryRequest(
+            @Schema(minLength = 43, maxLength = 43) String code) {
         @JsonAnySetter
         void unknown(String field, Object ignored) {
             throw OperatorRequests.unexpected(field);

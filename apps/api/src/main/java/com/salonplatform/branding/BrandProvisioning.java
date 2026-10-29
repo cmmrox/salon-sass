@@ -1,13 +1,11 @@
 package com.salonplatform.branding;
 
 import com.salonplatform.shared.infrastructure.PlatformDatabase;
-
-import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.stereotype.Service;
-
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.UUID;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.stereotype.Service;
 
 /**
  * Branding's narrow public provisioning facade (docs/architecture/operator-console.md): the minimal
@@ -36,7 +34,13 @@ public class BrandProvisioning {
     public void bootstrapBrand(UUID tenantId, String displayName, Instant at) {
         PlatformDatabase database = platform.getObject();
         database.requireTransaction();
-        database.jdbc().queryForObject("SELECT branding_bootstrap_brand(?, ?, ?, ?)::text", String.class, tenantId,
-                displayName, NEUTRAL_COLOUR, Timestamp.from(at));
+        database.jdbc()
+                .queryForObject(
+                        "SELECT branding_bootstrap_brand(?, ?, ?, ?)::text",
+                        String.class,
+                        tenantId,
+                        displayName,
+                        NEUTRAL_COLOUR,
+                        Timestamp.from(at));
     }
 }

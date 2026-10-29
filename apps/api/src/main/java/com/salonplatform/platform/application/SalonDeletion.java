@@ -1,5 +1,10 @@
 package com.salonplatform.platform.application;
 
+import com.salonplatform.platform.infrastructure.PlatformAudit;
+import com.salonplatform.shared.infrastructure.PlatformDatabase;
+import com.salonplatform.shared.lifecycle.TenantDataModule;
+import com.salonplatform.shared.observability.Traces;
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -7,15 +12,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-
-import com.salonplatform.platform.infrastructure.PlatformAudit;
-import com.salonplatform.shared.infrastructure.PlatformDatabase;
-import com.salonplatform.shared.lifecycle.TenantDataModule;
-import com.salonplatform.shared.observability.Traces;
-import io.swagger.v3.oas.annotations.media.Schema;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -40,11 +38,9 @@ public class SalonDeletion {
     private static final Logger log = LoggerFactory.getLogger(SalonDeletion.class);
 
     @Schema(hidden = true)
-    public record Pass(Instant at, List<SalonPass> salons, List<UUID> waiting, List<UUID> failed) {
-    }
+    public record Pass(Instant at, List<SalonPass> salons, List<UUID> waiting, List<UUID> failed) {}
 
-    public record SalonPass(UUID salonId, int batches, long rows, boolean deleted) {
-    }
+    public record SalonPass(UUID salonId, int batches, long rows, boolean deleted) {}
 
     private final PlatformDatabase database;
     private final PlatformAudit audit;
@@ -54,8 +50,13 @@ public class SalonDeletion {
     private final Traces traces;
     private final int batchSize;
 
-    public SalonDeletion(PlatformDatabase database, PlatformAudit audit, SalonLifecycle lifecycle,
-            SalonExports exports, LifecycleFaults faults, Traces traces,
+    public SalonDeletion(
+            PlatformDatabase database,
+            PlatformAudit audit,
+            SalonLifecycle lifecycle,
+            SalonExports exports,
+            LifecycleFaults faults,
+            Traces traces,
             @Value("${salon.retention.batch-size:500}") int batchSize) {
         this.database = database;
         this.audit = audit;
@@ -73,17 +74,16 @@ public class SalonDeletion {
     public Pass run(Instant now) {
         try {
             return traces.inPlatformSpan("job.salon-deletion", () -> pass(now));
-        }
-        catch (RuntimeException ex) {
+        } catch (RuntimeException ex) {
             throw ex;
-        }
-        catch (Exception ex) {
+        } catch (Exception ex) {
             throw new IllegalStateException(ex);
         }
     }
 
     private Pass pass(Instant now) {
-        List<UUID> due = database.inTransaction(status -> database.jdbc().queryForList("""
+        List<UUID> due =
+                database.inTransaction(status -> database.jdbc().queryForList("""
                 SELECT id FROM tenant WHERE status = 'closed' AND delete_at <= ? ORDER BY delete_at, id
                 """, UUID.class, Timestamp.from(now)));
         List<SalonPass> salons = new ArrayList<>();
@@ -91,7 +91,8 @@ public class SalonDeletion {
         List<UUID> failed = new ArrayList<>();
         int batches = 0;
         for (UUID salon : due) {
-            String export = database.inTransaction(status -> exports.exportStatus(salon).orElse(null));
+            String export =
+                    database.inTransaction(status -> exports.exportStatus(salon).orElse(null));
             if ("pending".equals(export)) {
                 waiting.add(salon);
                 log.warn("A closed salon's deletion waits for its export to be ready");
@@ -119,8 +120,7 @@ public class SalonDeletion {
                 long erasedRows = rows;
                 boolean deleted = database.inTransaction(status -> finish(salon, now, erasedRows));
                 salons.add(new SalonPass(salon, batches - before, rows, deleted));
-            }
-            catch (RuntimeException ex) {
+            } catch (RuntimeException ex) {
                 failed.add(salon);
                 log.error("The deletion job failed for one salon; the next run resumes it", ex);
             }
@@ -131,8 +131,13 @@ public class SalonDeletion {
 
     /** Makes the salon a tombstone, once; false when another run already did. */
     private boolean finish(UUID salon, Instant now, long rows) {
-        String state = database.jdbc().queryForList("SELECT status FROM tenant WHERE id = ? FOR UPDATE", String.class,
-                salon).stream().findFirst().orElse(null);
+        String state =
+                database
+                        .jdbc()
+                        .queryForList("SELECT status FROM tenant WHERE id = ? FOR UPDATE", String.class, salon)
+                        .stream()
+                        .findFirst()
+                        .orElse(null);
         if (!"closed".equals(state)) {
             return false;
         }

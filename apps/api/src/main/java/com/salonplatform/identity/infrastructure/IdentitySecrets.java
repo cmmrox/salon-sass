@@ -1,8 +1,5 @@
 package com.salonplatform.identity.infrastructure;
 
-import org.springframework.core.env.Environment;
-import org.springframework.stereotype.Component;
-
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
@@ -11,6 +8,8 @@ import java.nio.file.attribute.PosixFilePermissions;
 import java.security.SecureRandom;
 import java.util.HexFormat;
 import java.util.Properties;
+import org.springframework.core.env.Environment;
+import org.springframework.stereotype.Component;
 
 /** Independent externally configured 256-bit keys; only local generates a retained ignored file. */
 @Component
@@ -36,13 +35,10 @@ public class IdentitySecrets {
     }
 
     private static synchronized Properties retained(Environment environment) {
-        Path path =
-                Path.of(
-                                environment.getProperty(
-                                        "salon.identity.local-key-file",
-                                        "../../.local/identity-keys.properties"))
-                        .toAbsolutePath()
-                        .normalize();
+        Path path = Path.of(environment.getProperty(
+                        "salon.identity.local-key-file", "../../.local/identity-keys.properties"))
+                .toAbsolutePath()
+                .normalize();
         Properties saved = new Properties();
         Path temporary = null;
         var mode = PosixFilePermissions.fromString("rw-------");
@@ -50,13 +46,10 @@ public class IdentitySecrets {
             Files.createDirectories(path.getParent());
             Path lockPath = path.resolveSibling(path.getFileName() + ".lock");
             // A separate lock remains stable while an atomic replacement preserves complete reads.
-            try (var channel =
-                    java.nio.channels.FileChannel.open(
-                            lockPath,
-                            java.nio.file.StandardOpenOption.CREATE,
-                            java.nio.file.StandardOpenOption.WRITE)) {
+            try (var channel = java.nio.channels.FileChannel.open(
+                    lockPath, java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.WRITE)) {
                 Files.setPosixFilePermissions(lockPath, mode);
-                try (var lock = channel.lock()) {
+                try (var _ = channel.lock()) {
                     if (Files.exists(path)) {
                         Files.setPosixFilePermissions(path, mode);
                         try (InputStream in = Files.newInputStream(path)) {
@@ -64,8 +57,7 @@ public class IdentitySecrets {
                         }
                     }
                     boolean changed = false;
-                    for (String name :
-                            new String[] {"signing", "challenge", "encryption", "proxy"}) {
+                    for (String name : new String[] {"signing", "challenge", "encryption", "proxy"}) {
                         if (!saved.containsKey(name)) {
                             byte[] key = new byte[32];
                             new SecureRandom().nextBytes(key);
@@ -74,12 +66,11 @@ public class IdentitySecrets {
                         }
                     }
                     if (changed) {
-                        temporary =
-                                Files.createTempFile(
-                                        path.getParent(),
-                                        ".identity-keys-",
-                                        ".tmp",
-                                        PosixFilePermissions.asFileAttribute(mode));
+                        temporary = Files.createTempFile(
+                                path.getParent(),
+                                ".identity-keys-",
+                                ".tmp",
+                                PosixFilePermissions.asFileAttribute(mode));
                         try (OutputStream out = Files.newOutputStream(temporary)) {
                             saved.store(out, "Local-only identity keys. Never commit or print.");
                         }
@@ -108,10 +99,9 @@ public class IdentitySecrets {
         String value = env.getProperty("salon.identity." + name + "-key", saved.getProperty(name));
         if (value == null || value.isBlank()) value = saved.getProperty(name);
         if (value == null || !value.matches("[0-9a-fA-F]{64}"))
-            throw new IllegalStateException(
-                    "Configure SALON_IDENTITY_"
-                            + name.toUpperCase(java.util.Locale.ROOT)
-                            + "_KEY with an independent 64-hex-character secret");
+            throw new IllegalStateException("Configure SALON_IDENTITY_"
+                    + name.toUpperCase(java.util.Locale.ROOT)
+                    + "_KEY with an independent 64-hex-character secret");
         return HexFormat.of().parseHex(value);
     }
 

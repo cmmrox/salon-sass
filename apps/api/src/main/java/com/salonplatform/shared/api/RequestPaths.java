@@ -17,8 +17,7 @@ import jakarta.servlet.http.HttpServletRequest;
  */
 public final class RequestPaths {
 
-    private RequestPaths() {
-    }
+    private RequestPaths() {}
 
     /**
      * Whether the raw path is canonical: it starts with {@code /}, has no path parameter
@@ -27,7 +26,11 @@ public final class RequestPaths {
      */
     public static boolean canonical(HttpServletRequest request) {
         String raw = request.getRequestURI();
-        if (raw == null || raw.isEmpty() || raw.charAt(0) != '/' || raw.indexOf(';') >= 0 || raw.indexOf('%') >= 0
+        if (raw == null
+                || raw.isEmpty()
+                || raw.charAt(0) != '/'
+                || raw.indexOf(';') >= 0
+                || raw.indexOf('%') >= 0
                 || raw.indexOf('\\') >= 0) {
             return false;
         }
@@ -35,7 +38,9 @@ public final class RequestPaths {
         for (int i = 0; i < segments.length; i++) {
             String segment = segments[i];
             boolean trailing = i == segments.length - 1;
-            if ((segment.isEmpty() && !trailing && segments.length > 1) || segment.equals(".") || segment.equals("..")) {
+            if ((segment.isEmpty() && !trailing && segments.length > 1)
+                    || segment.equals(".")
+                    || segment.equals("..")) {
                 return false;
             }
         }

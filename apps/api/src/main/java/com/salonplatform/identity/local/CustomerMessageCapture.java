@@ -4,15 +4,13 @@ import com.salonplatform.identity.application.CustomerAccess;
 import com.salonplatform.shared.api.*;
 import com.salonplatform.shared.outbox.*;
 import com.salonplatform.shared.tenancy.TenantContext;
-
-import org.springframework.context.annotation.Profile;
-import org.springframework.stereotype.Service;
-
 import java.time.Clock;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.springframework.context.annotation.Profile;
+import org.springframework.stereotype.Service;
 
 /**
  * A local synthetic provider capture, never a real sender. Delay/failure are outside database
@@ -35,8 +33,7 @@ class CustomerMessageCapture {
         }
     }
 
-    record Captured(
-            UUID challengeId, String channel, String code, int attempt, Instant deliveredAt) {}
+    record Captured(UUID challengeId, String channel, String code, int attempt, Instant deliveredAt) {}
 
     private final ConcurrentMap<Key, Control> controls = new ConcurrentHashMap<>();
     private final ConcurrentMap<ChallengeKey, Captured> captures = new ConcurrentHashMap<>();
@@ -50,40 +47,31 @@ class CustomerMessageCapture {
 
     void deliver(OutboxDelivery message) throws Exception {
         captures.entrySet()
-                .removeIf(
-                        e ->
-                                !clock.instant()
-                                        .isBefore(e.getValue().deliveredAt().plusSeconds(300)));
-        Control control =
-                controls.getOrDefault(
-                        new Key(message.tenantId(), message.channel()), new Control(0, 0));
+                .removeIf(e ->
+                        !clock.instant().isBefore(e.getValue().deliveredAt().plusSeconds(300)));
+        Control control = controls.getOrDefault(new Key(message.tenantId(), message.channel()), new Control(0, 0));
         if (control.delayMs > 0) Thread.sleep(control.delayMs);
         if (control.failures.getAndUpdate(n -> Math.max(0, n - 1)) > 0)
             throw new IllegalStateException("The local message provider refused this attempt");
-        CustomerAccess.Envelope envelope =
-                tools.jackson.databind.json.JsonMapper.builder()
-                        .build()
-                        .readValue(message.payload(), CustomerAccess.Envelope.class);
-        boolean captured =
-                customers.captureIfLive(
-                        message,
-                        clear ->
-                                captures.putIfAbsent(
-                                        new ChallengeKey(
-                                                message.tenantId(), envelope.challengeId()),
-                                        new Captured(
-                                                envelope.challengeId(),
-                                                message.channel(),
-                                                clear.code(),
-                                                message.attempt(),
-                                                clock.instant())));
+        CustomerAccess.Envelope envelope = tools.jackson.databind.json.JsonMapper.builder()
+                .build()
+                .readValue(message.payload(), CustomerAccess.Envelope.class);
+        boolean captured = customers.captureIfLive(
+                message,
+                clear -> captures.putIfAbsent(
+                        new ChallengeKey(message.tenantId(), envelope.challengeId()),
+                        new Captured(
+                                envelope.challengeId(),
+                                message.channel(),
+                                clear.code(),
+                                message.attempt(),
+                                clock.instant())));
         if (!captured) throw new OutboxCancelled();
     }
 
     void control(String channel, int failures, long delayMs) {
         if (!Set.of("sms", "whatsapp").contains(channel)) throw new NotFoundException();
-        controls.put(
-                new Key(TenantContext.require().id(), channel), new Control(failures, delayMs));
+        controls.put(new Key(TenantContext.require().id(), channel), new Control(failures, delayMs));
     }
 
     Captured capture(UUID id) {
@@ -96,10 +84,8 @@ class CustomerMessageCapture {
     @org.springframework.transaction.event.TransactionalEventListener
     void erased(com.salonplatform.identity.CustomerDataErased event) {
         captures.keySet()
-                .removeIf(
-                        k ->
-                                k.tenant().equals(event.tenantId())
-                                        && event.challengeIds().contains(k.challenge()));
+                .removeIf(k -> k.tenant().equals(event.tenantId())
+                        && event.challengeIds().contains(k.challenge()));
     }
 
     void clear() {

@@ -1,9 +1,6 @@
 package com.salonplatform.shared.infrastructure;
 
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.Callable;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import com.salonplatform.shared.tenancy.CurrentTenant;
 import com.salonplatform.shared.tenancy.TenantContext;
@@ -12,15 +9,16 @@ import com.salonplatform.testing.TestDatabase;
 import com.salonplatform.testing.TestPostgres;
 import com.salonplatform.testing.TestSalons;
 import com.salonplatform.testing.TestSalons.TestSalon;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.Callable;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * How the salon reaches the database through the application's own transactions: set at the start
@@ -63,7 +61,9 @@ class TenantTransactionIntegrationTest {
 
         assertThat(inAlpha.get("tenant")).isEqualTo(alpha.id().toString());
         assertThat(afterwards.get("pid")).as("the same connection").isEqualTo(inAlpha.get("pid"));
-        assertThat((String) afterwards.get("tenant")).as("no salon in the next transaction").isNullOrEmpty();
+        assertThat((String) afterwards.get("tenant"))
+                .as("no salon in the next transaction")
+                .isNullOrEmpty();
     }
 
     @Test
@@ -93,7 +93,9 @@ class TenantTransactionIntegrationTest {
         List<UUID> seenWithASalonButNoTransaction = as(alpha, TenantTransactionIntegrationTest::visibleTenants);
 
         assertThat(seenWithNoSalon).isEmpty();
-        assertThat(seenWithASalonButNoTransaction).as("a salon in the context is set by a transaction only").isEmpty();
+        assertThat(seenWithASalonButNoTransaction)
+                .as("a salon in the context is set by a transaction only")
+                .isEmpty();
     }
 
     private static Map<String, Object> state() {

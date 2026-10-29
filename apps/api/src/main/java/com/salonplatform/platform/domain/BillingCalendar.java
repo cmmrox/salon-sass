@@ -27,7 +27,10 @@ public final class BillingCalendar {
 
     /** A subscription's state (no unpaid invoice past due is {@code active}). */
     public enum State {
-        TRIALING("trialing"), ACTIVE("active"), PAST_DUE("past_due"), READ_ONLY("read_only");
+        TRIALING("trialing"),
+        ACTIVE("active"),
+        PAST_DUE("past_due"),
+        READ_ONLY("read_only");
 
         private final String value;
 
@@ -51,7 +54,9 @@ public final class BillingCalendar {
 
     /** A reminder or notice to the Owner contact, by the boundary that triggers it. */
     public enum Reminder {
-        DUE("due", Duration.ZERO), DUE_3("due_3", SECOND_REMINDER), DUE_10("due_10", THIRD_REMINDER);
+        DUE("due", Duration.ZERO),
+        DUE_3("due_3", SECOND_REMINDER),
+        DUE_10("due_10", THIRD_REMINDER);
 
         private final String kind;
         private final Duration afterDue;
@@ -71,8 +76,7 @@ public final class BillingCalendar {
         }
     }
 
-    private BillingCalendar() {
-    }
+    private BillingCalendar() {}
 
     public static Instant trialEnd(Instant start) {
         return start.plus(TRIAL);
@@ -124,6 +128,8 @@ public final class BillingCalendar {
 
     /** The reminders due for an unpaid invoice at {@code now}, in order. */
     public static List<Reminder> remindersDue(Instant now, Instant due) {
-        return java.util.Arrays.stream(Reminder.values()).filter(reminder -> !now.isBefore(reminder.at(due))).toList();
+        return java.util.Arrays.stream(Reminder.values())
+                .filter(reminder -> !now.isBefore(reminder.at(due)))
+                .toList();
     }
 }

@@ -1,17 +1,15 @@
 package com.salonplatform.shared.local;
 
+import com.salonplatform.shared.outbox.OutboxDelivery;
+import com.salonplatform.shared.outbox.OutboxProvider;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import com.salonplatform.shared.outbox.OutboxDelivery;
-import com.salonplatform.shared.outbox.OutboxProvider;
-import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.json.JsonMapper;
-
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * The fake provider of the channel {@value #CHANNEL}: does what its probe asked. It fails the first
@@ -48,8 +46,8 @@ class ProbeProvider implements OutboxProvider {
             Thread.sleep(delayMs);
         }
         if (call <= failures) {
-            throw new IllegalStateException("The probe's provider failed call " + call + " of the " + failures
-                    + " it was told to fail");
+            throw new IllegalStateException(
+                    "The probe's provider failed call " + call + " of the " + failures + " it was told to fail");
         }
     }
 

@@ -1,16 +1,5 @@
 package com.salonplatform.platform.application;
 
-import java.sql.Timestamp;
-import java.time.Clock;
-import java.time.Duration;
-import java.time.Instant;
-import java.time.OffsetDateTime;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
-
 import com.salonplatform.platform.domain.OperatorRole;
 import com.salonplatform.platform.domain.PlainText;
 import com.salonplatform.platform.infrastructure.OperatorCrypto;
@@ -21,7 +10,16 @@ import com.salonplatform.shared.api.FieldProblem;
 import com.salonplatform.shared.infrastructure.PlatformDatabase;
 import com.salonplatform.shared.tenancy.RequestCredential;
 import io.swagger.v3.oas.annotations.media.Schema;
-
+import java.sql.Timestamp;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
@@ -44,39 +42,58 @@ public class OperatorAccess {
     static final int CHALLENGE_ATTEMPTS = 5;
 
     @Schema(requiredProperties = {"state", "challengeId", "challengeToken", "expiresAt", "credentials"})
-    public record OperatorSignIn(String state, @Schema(format = "uuid") UUID challengeId, String challengeToken,
+    public record OperatorSignIn(
+            String state,
+            @Schema(format = "uuid") UUID challengeId,
+            String challengeToken,
             Instant expiresAt,
-            @Schema(types = {"object", "null"}, requiredMode = Schema.RequiredMode.REQUIRED) OperatorTokens credentials) {
-    }
+
+            @Schema(
+                    types = {"object", "null"},
+                    requiredMode = Schema.RequiredMode.REQUIRED)
+            OperatorTokens credentials) {}
 
     @Schema(requiredProperties = {"challengeId", "secret", "otpauthUri", "expiresAt"})
-    public record OperatorEnrollment(UUID challengeId, String secret, String otpauthUri, Instant expiresAt) {
-    }
+    public record OperatorEnrollment(UUID challengeId, String secret, String otpauthUri, Instant expiresAt) {}
 
-    @Schema(requiredProperties = {"state", "sessionId", "accessToken", "refreshToken", "accessExpiresAt",
-        "refreshExpiresAt"})
-    public record OperatorTokens(String state, UUID sessionId, String accessToken, String refreshToken,
-            Instant accessExpiresAt, Instant refreshExpiresAt) {
-    }
+    @Schema(
+            requiredProperties = {
+                "state",
+                "sessionId",
+                "accessToken",
+                "refreshToken",
+                "accessExpiresAt",
+                "refreshExpiresAt"
+            })
+    public record OperatorTokens(
+            String state,
+            UUID sessionId,
+            String accessToken,
+            String refreshToken,
+            Instant accessExpiresAt,
+            Instant refreshExpiresAt) {}
 
     @Schema(requiredProperties = {"id", "kind", "role", "permissions", "mfaEnabled"})
-    public record OperatorPrincipal(UUID id, String kind, String role, List<String> permissions, boolean mfaEnabled) {
-    }
+    public record OperatorPrincipal(UUID id, String kind, String role, List<String> permissions, boolean mfaEnabled) {}
 
     /** The authenticated operator of the current request, inside its transaction. */
-    public record Operator(UUID id, OperatorRole role, UUID sessionId) {
-    }
+    public record Operator(UUID id, OperatorRole role, UUID sessionId) {}
 
-    private record Account(UUID id, String email, String passwordHash, String role, boolean active, String mfaSecret) {
-    }
+    private record Account(UUID id, String email, String passwordHash, String role, boolean active, String mfaSecret) {}
 
-    private record Challenge(UUID id, UUID userId, String purpose, String credentialHash, String pendingSecret,
-            String deviceLabel, Instant expiresAt, int attempts, Instant consumedAt) {
-    }
+    private record Challenge(
+            UUID id,
+            UUID userId,
+            String purpose,
+            String credentialHash,
+            String pendingSecret,
+            String deviceLabel,
+            Instant expiresAt,
+            int attempts,
+            Instant consumedAt) {}
 
-    private record Session(UUID id, UUID userId, boolean mfaVerified, long generation, Instant expiresAt,
-            Instant revokedAt) {
-    }
+    private record Session(
+            UUID id, UUID userId, boolean mfaVerified, long generation, Instant expiresAt, Instant revokedAt) {}
 
     private final PlatformDatabase database;
     private final OperatorWork work;
@@ -84,8 +101,8 @@ public class OperatorAccess {
     private final PlatformAudit audit;
     private final Clock clock;
 
-    public OperatorAccess(PlatformDatabase database, OperatorWork work, OperatorCrypto crypto, PlatformAudit audit,
-            Clock clock) {
+    public OperatorAccess(
+            PlatformDatabase database, OperatorWork work, OperatorCrypto crypto, PlatformAudit audit, Clock clock) {
         this.database = database;
         this.work = work;
         this.crypto = crypto;
@@ -126,7 +143,9 @@ public class OperatorAccess {
     static String deviceLabel(String label) {
         String value = PlainText.line(label, 80);
         if (value == null) {
-            throw new ApplicationProblemException(400, ErrorCode.BAD_REQUEST,
+            throw new ApplicationProblemException(
+                    400,
+                    ErrorCode.BAD_REQUEST,
                     List.of(new FieldProblem("deviceLabel", "must be plain text between 1 and 80 characters")));
         }
         return value;
@@ -146,18 +165,33 @@ public class OperatorAccess {
             Attempt byEmail = attempt("operator-email", key, EMAIL_CEILING, now);
             Attempt byAddress = attempt("operator-address", address == null ? "" : address, ADDRESS_CEILING, now);
             if (!byEmail.allowed() || !byAddress.allowed()) {
-                audit.record(PlatformAudit.SYSTEM, "sign-in", "operator.sign_in_limited", "operator-email",
-                        crypto.hash("audit", key), null, now);
-                long retry = Math.max(byEmail.allowed() ? 0 : byEmail.retryAfter(),
-                        byAddress.allowed() ? 0 : byAddress.retryAfter());
+                audit.record(
+                        PlatformAudit.SYSTEM,
+                        "sign-in",
+                        "operator.sign_in_limited",
+                        "operator-email",
+                        crypto.hash("audit", key),
+                        null,
+                        now);
+                long retry = Math.max(
+                        byEmail.allowed() ? 0 : byEmail.retryAfter(), byAddress.allowed() ? 0 : byAddress.retryAfter());
                 throw new ApplicationProblemException(429, ErrorCode.RATE_LIMITED).retryAfter(Math.max(1, retry));
             }
             Optional<Account> found = account("email", key);
-            boolean correct = crypto.matchesPassword(password, found.map(Account::passwordHash).orElse(null));
-            if (found.isEmpty() || !found.get().active() || !correct
+            boolean correct = crypto.matchesPassword(
+                    password, found.map(Account::passwordHash).orElse(null));
+            if (found.isEmpty()
+                    || !found.get().active()
+                    || !correct
                     || OperatorRole.of(found.get().role()).isEmpty()) {
-                audit.record(PlatformAudit.SYSTEM, "sign-in", "operator.sign_in_failed", "operator",
-                        found.map(a -> a.id().toString()).orElseGet(() -> crypto.hash("audit", key)), null, now);
+                audit.record(
+                        PlatformAudit.SYSTEM,
+                        "sign-in",
+                        "operator.sign_in_failed",
+                        "operator",
+                        found.map(a -> a.id().toString()).orElseGet(() -> crypto.hash("audit", key)),
+                        null,
+                        now);
                 throw invalidCredentials();
             }
             Account account = found.get();
@@ -165,24 +199,38 @@ public class OperatorAccess {
             String token = crypto.randomToken();
             UUID challenge = UUID.randomUUID();
             Instant expires = now.plus(CHALLENGE_LIFETIME);
-            jdbc().update("""
+            jdbc().update(
+                            """
                     INSERT INTO operator_mfa_challenge (id, user_id, purpose, credential_hash, device_label, expires_at,
                         attempts, created_at, updated_at)
                     VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?)
-                    """, challenge, account.id(), purpose, crypto.hash("challenge", token), device, time(expires),
-                    time(now), time(now));
-            audit.record(PlatformAudit.OPERATOR, account.id().toString(), "operator.mfa_challenge_issued",
-                    "operator", account.id().toString(), Map.of("purpose", purpose), now);
+                    """,
+                            challenge,
+                            account.id(),
+                            purpose,
+                            crypto.hash("challenge", token),
+                            device,
+                            time(expires),
+                            time(now),
+                            time(now));
+            audit.record(
+                    PlatformAudit.OPERATOR,
+                    account.id().toString(),
+                    "operator.mfa_challenge_issued",
+                    "operator",
+                    account.id().toString(),
+                    Map.of("purpose", purpose),
+                    now);
             return new OperatorSignIn(purpose, challenge, token, expires, null);
         });
     }
 
-    private record Attempt(boolean allowed, long retryAfter) {
-    }
+    private record Attempt(boolean allowed, long retryAfter) {}
 
     /** One atomic count in a fifteen-minute window that starts on its first attempt. */
     private Attempt attempt(String dimension, String key, int ceiling, Instant now) {
-        Map<String, Object> row = jdbc().queryForMap("""
+        Map<String, Object> row = jdbc().queryForMap(
+                        """
                 INSERT INTO operator_rate_bucket AS b (id, dimension, key_hash, window_start, attempts, created_at,
                     updated_at)
                 VALUES (?, ?, ?, ?, 1, ?, ?)
@@ -193,8 +241,13 @@ public class OperatorAccess {
                         THEN 1 ELSE b.attempts + 1 END,
                     updated_at = EXCLUDED.updated_at
                 RETURNING attempts, window_start
-                """, UUID.randomUUID(), dimension, crypto.hash("rate-" + dimension, key), time(now), time(now),
-                time(now));
+                """,
+                        UUID.randomUUID(),
+                        dimension,
+                        crypto.hash("rate-" + dimension, key),
+                        time(now),
+                        time(now),
+                        time(now));
         int attempts = ((Number) row.get("attempts")).intValue();
         Instant windowEnd = instant(row.get("window_start")).plus(RATE_WINDOW);
         long remaining = (long) Math.ceil(Duration.between(now, windowEnd).toMillis() / 1000.0);
@@ -202,27 +255,49 @@ public class OperatorAccess {
     }
 
     private Optional<Account> account(String column, Object value) {
-        return jdbc().query("SELECT id, email, password_hash, role, active, mfa_secret FROM operator_user WHERE "
-                        + ("email".equals(column) ? "email" : "id") + " = ?",
-                (row, n) -> new Account(row.getObject("id", UUID.class), row.getString("email"),
-                        row.getString("password_hash"), row.getString("role"), row.getBoolean("active"),
-                        row.getString("mfa_secret")),
-                value).stream().findFirst();
+        return jdbc()
+                .query(
+                        "SELECT id, email, password_hash, role, active, mfa_secret FROM operator_user WHERE "
+                                + ("email".equals(column) ? "email" : "id") + " = ?",
+                        (row, n) -> new Account(
+                                row.getObject("id", UUID.class),
+                                row.getString("email"),
+                                row.getString("password_hash"),
+                                row.getString("role"),
+                                row.getBoolean("active"),
+                                row.getString("mfa_secret")),
+                        value)
+                .stream()
+                .findFirst();
     }
 
     // --- MFA -------------------------------------------------------------------------------------
 
     private Challenge lockedChallenge(UUID id, String token) {
-        Challenge challenge = jdbc().query("""
+        Challenge challenge = jdbc()
+                .query(
+                        """
                 SELECT id, user_id, purpose, credential_hash, pending_secret, device_label, expires_at, attempts,
                        consumed_at
                   FROM operator_mfa_challenge WHERE id = ? FOR UPDATE
-                """, (row, n) -> new Challenge(row.getObject("id", UUID.class), row.getObject("user_id", UUID.class),
-                row.getString("purpose"), row.getString("credential_hash"), row.getString("pending_secret"),
-                row.getString("device_label"), instant(row.getObject("expires_at")), row.getInt("attempts"),
-                instant(row.getObject("consumed_at"))), id).stream().findFirst().orElseThrow(OperatorAccess::invalidCredentials);
+                """,
+                        (row, n) -> new Challenge(
+                                row.getObject("id", UUID.class),
+                                row.getObject("user_id", UUID.class),
+                                row.getString("purpose"),
+                                row.getString("credential_hash"),
+                                row.getString("pending_secret"),
+                                row.getString("device_label"),
+                                instant(row.getObject("expires_at")),
+                                row.getInt("attempts"),
+                                instant(row.getObject("consumed_at"))),
+                        id)
+                .stream()
+                .findFirst()
+                .orElseThrow(OperatorAccess::invalidCredentials);
         if (!crypto.equalHash(challenge.credentialHash(), crypto.hash("challenge", token == null ? "" : token))
-                || challenge.consumedAt() != null || !clock.instant().isBefore(challenge.expiresAt())
+                || challenge.consumedAt() != null
+                || !clock.instant().isBefore(challenge.expiresAt())
                 || challenge.attempts() >= CHALLENGE_ATTEMPTS) {
             throw invalidCredentials();
         }
@@ -240,7 +315,8 @@ public class OperatorAccess {
     public OperatorEnrollment enroll(UUID challengeId, String token) {
         return work.run(() -> {
             Challenge challenge = lockedChallenge(challengeId, token);
-            Account account = account("id", challenge.userId()).filter(Account::active)
+            Account account = account("id", challenge.userId())
+                    .filter(Account::active)
                     .orElseThrow(OperatorAccess::invalidCredentials);
             if (!"enroll_mfa".equals(challenge.purpose()) || account.mfaSecret() != null) {
                 throw invalidCredentials();
@@ -248,8 +324,11 @@ public class OperatorAccess {
             String pending = challenge.pendingSecret();
             if (pending == null) {
                 pending = crypto.encrypt(totpPurpose(account.id()), crypto.newTotpSecret());
-                jdbc().update("UPDATE operator_mfa_challenge SET pending_secret = ?, updated_at = ? WHERE id = ?",
-                        pending, time(clock.instant()), challenge.id());
+                jdbc().update(
+                                "UPDATE operator_mfa_challenge SET pending_secret = ?, updated_at = ? WHERE id = ?",
+                                pending,
+                                time(clock.instant()),
+                                challenge.id());
             }
             String secret = crypto.decrypt(totpPurpose(account.id()), pending);
             String uri = "otpauth://totp/Salon%20Console:" + account.id() + "?secret=" + secret
@@ -267,44 +346,70 @@ public class OperatorAccess {
         return work.run(() -> {
             Instant now = clock.instant();
             Challenge challenge = lockedChallenge(challengeId, token);
-            jdbc().update("UPDATE operator_mfa_challenge SET attempts = attempts + 1, updated_at = ? WHERE id = ?",
-                    time(now), challenge.id());
-            Account account = account("id", challenge.userId()).filter(Account::active)
-                    .filter(a -> OperatorRole.of(a.role()).isPresent()).orElseThrow(OperatorAccess::invalidCredentials);
+            jdbc().update(
+                            "UPDATE operator_mfa_challenge SET attempts = attempts + 1, updated_at = ? WHERE id = ?",
+                            time(now),
+                            challenge.id());
+            Account account = account("id", challenge.userId())
+                    .filter(Account::active)
+                    .filter(a -> OperatorRole.of(a.role()).isPresent())
+                    .orElseThrow(OperatorAccess::invalidCredentials);
             boolean enrolling = "enroll_mfa".equals(challenge.purpose());
             String encrypted = enrolling ? challenge.pendingSecret() : account.mfaSecret();
             if ((enrolling && account.mfaSecret() != null) || encrypted == null) {
                 mfaFailed(account, challenge, now);
             }
             Long step = crypto.matchingStep(crypto.decrypt(totpPurpose(account.id()), encrypted), code);
-            int consumed = step == null ? 0 : jdbc().update("""
+            int consumed =
+                    step == null ? 0 : jdbc().update("""
                     INSERT INTO operator_mfa_step (id, user_id, step, created_at, updated_at) VALUES (?, ?, ?, ?, ?)
                     ON CONFLICT (user_id, step) DO NOTHING
                     """, UUID.randomUUID(), account.id(), step, time(now), time(now));
             if (consumed == 0) {
                 mfaFailed(account, challenge, now);
             }
-            jdbc().update("UPDATE operator_mfa_challenge SET consumed_at = ?, updated_at = ? WHERE id = ?", time(now),
-                    time(now), challenge.id());
+            jdbc().update(
+                            "UPDATE operator_mfa_challenge SET consumed_at = ?, updated_at = ? WHERE id = ?",
+                            time(now),
+                            time(now),
+                            challenge.id());
             if (enrolling) {
                 jdbc().update("""
                         UPDATE operator_user SET mfa_secret = ?, version = version + 1, updated_at = ?
                          WHERE id = ? AND mfa_secret IS NULL
                         """, encrypted, time(now), account.id());
                 revokeAll(account.id(), now);
-                audit.record(PlatformAudit.OPERATOR, account.id().toString(), "operator.mfa_enrolled", "operator",
-                        account.id().toString(), null, now);
+                audit.record(
+                        PlatformAudit.OPERATOR,
+                        account.id().toString(),
+                        "operator.mfa_enrolled",
+                        "operator",
+                        account.id().toString(),
+                        null,
+                        now);
             }
             OperatorTokens tokens = newSession(account.id(), challenge.deviceLabel(), now);
-            audit.record(PlatformAudit.OPERATOR, account.id().toString(), "operator.signed_in", "operator_session",
-                    tokens.sessionId().toString(), null, now);
+            audit.record(
+                    PlatformAudit.OPERATOR,
+                    account.id().toString(),
+                    "operator.signed_in",
+                    "operator_session",
+                    tokens.sessionId().toString(),
+                    null,
+                    now);
             return tokens;
         });
     }
 
     private void mfaFailed(Account account, Challenge challenge, Instant now) {
-        audit.record(PlatformAudit.OPERATOR, account.id().toString(), "operator.mfa_failed", "operator_challenge",
-                challenge.id().toString(), null, now);
+        audit.record(
+                PlatformAudit.OPERATOR,
+                account.id().toString(),
+                "operator.mfa_failed",
+                "operator_challenge",
+                challenge.id().toString(),
+                null,
+                now);
         throw invalidCredentials();
     }
 
@@ -324,24 +429,40 @@ public class OperatorAccess {
 
     private OperatorTokens tokens(UUID operator, UUID session, long generation, String refresh, Instant expires) {
         Instant issued = crypto.issuedNow();
-        return new OperatorTokens("authenticated", session, crypto.access(operator, session, generation, issued),
-                refresh, issued.plusSeconds(300), expires);
+        return new OperatorTokens(
+                "authenticated",
+                session,
+                crypto.access(operator, session, generation, issued),
+                refresh,
+                issued.plusSeconds(300),
+                expires);
     }
 
     private void revokeAll(UUID operator, Instant now) {
-        jdbc().update("UPDATE operator_session SET revoked_at = ?, updated_at = ? WHERE user_id = ? AND revoked_at IS NULL",
-                time(now), time(now), operator);
+        jdbc().update(
+                        "UPDATE operator_session SET revoked_at = ?, updated_at = ? WHERE user_id = ? AND revoked_at IS NULL",
+                        time(now),
+                        time(now),
+                        operator);
     }
 
     private static Session session(java.sql.ResultSet row) throws java.sql.SQLException {
-        return new Session(row.getObject("id", UUID.class), row.getObject("user_id", UUID.class),
-                row.getBoolean("mfa_verified"), row.getLong("generation"), instant(row.getObject("expires_at")),
+        return new Session(
+                row.getObject("id", UUID.class),
+                row.getObject("user_id", UUID.class),
+                row.getBoolean("mfa_verified"),
+                row.getLong("generation"),
+                instant(row.getObject("expires_at")),
                 instant(row.getObject("revoked_at")));
     }
 
     private boolean live(Session session, Optional<Account> account, Instant now) {
-        return session.revokedAt() == null && now.isBefore(session.expiresAt()) && session.mfaVerified()
-                && account.isPresent() && account.get().active() && account.get().mfaSecret() != null
+        return session.revokedAt() == null
+                && now.isBefore(session.expiresAt())
+                && session.mfaVerified()
+                && account.isPresent()
+                && account.get().active()
+                && account.get().mfaSecret() != null
                 && OperatorRole.of(account.get().role()).isPresent();
     }
 
@@ -353,20 +474,29 @@ public class OperatorAccess {
         return work.run(() -> {
             Instant now = clock.instant();
             String hash = crypto.hash("refresh", refreshToken == null ? "" : refreshToken);
-            Optional<Session> current = jdbc().query("""
+            Optional<Session> current =
+                    jdbc().query("""
                     SELECT id, user_id, mfa_verified, generation, expires_at, revoked_at
                       FROM operator_session WHERE refresh_hash = ? FOR UPDATE
                     """, (row, n) -> session(row), hash).stream().findFirst();
             if (current.isEmpty()) {
                 List<UUID> family = jdbc().queryForList(
-                        "SELECT session_id FROM operator_refresh_history WHERE credential_hash = ?", UUID.class, hash);
+                                "SELECT session_id FROM operator_refresh_history WHERE credential_hash = ?",
+                                UUID.class,
+                                hash);
                 for (UUID id : family) {
                     int revoked = jdbc().update("""
                             UPDATE operator_session SET revoked_at = ?, updated_at = ? WHERE id = ? AND revoked_at IS NULL
                             """, time(now), time(now), id);
                     if (revoked > 0) {
-                        audit.record(PlatformAudit.SYSTEM, "refresh", "operator.refresh_replayed", "operator_session",
-                                id.toString(), null, now);
+                        audit.record(
+                                PlatformAudit.SYSTEM,
+                                "refresh",
+                                "operator.refresh_replayed",
+                                "operator_session",
+                                id.toString(),
+                                null,
+                                now);
                     }
                 }
                 throw invalidSession();
@@ -383,8 +513,14 @@ public class OperatorAccess {
             jdbc().update("""
                     UPDATE operator_session SET refresh_hash = ?, generation = generation + 1, updated_at = ? WHERE id = ?
                     """, crypto.hash("refresh", next), time(now), session.id());
-            audit.record(PlatformAudit.OPERATOR, session.userId().toString(), "operator.session_renewed",
-                    "operator_session", session.id().toString(), null, now);
+            audit.record(
+                    PlatformAudit.OPERATOR,
+                    session.userId().toString(),
+                    "operator.session_renewed",
+                    "operator_session",
+                    session.id().toString(),
+                    null,
+                    now);
             return tokens(session.userId(), session.id(), session.generation() + 1, next, session.expiresAt());
         });
     }
@@ -394,10 +530,19 @@ public class OperatorAccess {
         work.run(() -> {
             Operator operator = authenticated();
             Instant now = clock.instant();
-            jdbc().update("UPDATE operator_session SET revoked_at = ?, updated_at = ? WHERE id = ? AND revoked_at IS NULL",
-                    time(now), time(now), operator.sessionId());
-            audit.record(PlatformAudit.OPERATOR, operator.id().toString(), "operator.signed_out", "operator_session",
-                    operator.sessionId().toString(), null, now);
+            jdbc().update(
+                            "UPDATE operator_session SET revoked_at = ?, updated_at = ? WHERE id = ? AND revoked_at IS NULL",
+                            time(now),
+                            time(now),
+                            operator.sessionId());
+            audit.record(
+                    PlatformAudit.OPERATOR,
+                    operator.id().toString(),
+                    "operator.signed_out",
+                    "operator_session",
+                    operator.sessionId().toString(),
+                    null,
+                    now);
             return null;
         });
     }
@@ -406,8 +551,12 @@ public class OperatorAccess {
     public OperatorPrincipal me() {
         return work.run(() -> {
             Operator operator = require(com.salonplatform.platform.domain.OperatorPermission.SESSION_MANAGE);
-            return new OperatorPrincipal(operator.id(), OperatorCrypto.KIND, operator.role().name(),
-                    operator.role().permissions().stream().sorted().toList(), true);
+            return new OperatorPrincipal(
+                    operator.id(),
+                    OperatorCrypto.KIND,
+                    operator.role().name(),
+                    operator.role().permissions().stream().sorted().toList(),
+                    true);
         });
     }
 
@@ -425,14 +574,17 @@ public class OperatorAccess {
         OperatorCrypto.Claims claims = crypto.verify(RequestCredential.require());
         Session session = jdbc().query("""
                 SELECT id, user_id, mfa_verified, generation, expires_at, revoked_at FROM operator_session WHERE id = ?
-                """, (row, n) -> session(row), claims.sessionId()).stream().findFirst()
+                """, (row, n) -> session(row), claims.sessionId()).stream()
+                .findFirst()
                 .orElseThrow(OperatorAccess::invalidSession);
         Optional<Account> account = account("id", session.userId());
-        if (!session.userId().equals(claims.operatorId()) || session.generation() != claims.generation()
+        if (!session.userId().equals(claims.operatorId())
+                || session.generation() != claims.generation()
                 || !live(session, account, clock.instant())) {
             throw invalidSession();
         }
-        return new Operator(account.get().id(), OperatorRole.of(account.get().role()).orElseThrow(), session.id());
+        return new Operator(
+                account.get().id(), OperatorRole.of(account.get().role()).orElseThrow(), session.id());
     }
 
     /**

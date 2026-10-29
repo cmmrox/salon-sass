@@ -1,12 +1,10 @@
 package com.salonplatform.shared.infrastructure;
 
-import java.util.List;
-import java.util.regex.Pattern;
-
 import com.salonplatform.shared.api.RequestPaths;
 import com.salonplatform.shared.tenancy.TenantContext;
-
 import jakarta.servlet.http.HttpServletRequest;
+import java.util.List;
+import java.util.regex.Pattern;
 
 /**
  * Which requests a read-only salon refuses (docs/architecture/operator-console.md, "Read-only"): every
@@ -17,8 +15,7 @@ import jakarta.servlet.http.HttpServletRequest;
  */
 final class ReadOnlyRoutes {
 
-    private record Exempt(String method, Pattern path) {
-    }
+    private record Exempt(String method, Pattern path) {}
 
     private static final String UUID = "[0-9a-fA-F-]{1,64}";
 
@@ -42,8 +39,7 @@ final class ReadOnlyRoutes {
             // The Owner can always take support access away, as staff can always end their own sessions.
             exempt("DELETE", "/api/v1/salon/support-sessions/" + UUID));
 
-    private ReadOnlyRoutes() {
-    }
+    private ReadOnlyRoutes() {}
 
     private static Exempt exempt(String method, String path) {
         return new Exempt(method, Pattern.compile(path));
@@ -65,7 +61,9 @@ final class ReadOnlyRoutes {
             return true;
         }
         String path = RequestPaths.path(request);
-        return EXEMPT.stream().anyMatch(each -> each.method().equals(method) && each.path().matcher(path).matches());
+        return EXEMPT.stream()
+                .anyMatch(each -> each.method().equals(method)
+                        && each.path().matcher(path).matches());
     }
 
     /**
@@ -74,6 +72,8 @@ final class ReadOnlyRoutes {
      * whatever requires it.
      */
     static boolean refused(HttpServletRequest request) {
-        return TenantContext.resolved().map(salon -> salon.readOnly() && !allowed(request)).orElse(false);
+        return TenantContext.resolved()
+                .map(salon -> salon.readOnly() && !allowed(request))
+                .orElse(false);
     }
 }

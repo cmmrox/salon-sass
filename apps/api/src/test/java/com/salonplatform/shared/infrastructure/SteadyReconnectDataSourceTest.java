@@ -1,5 +1,8 @@
 package com.salonplatform.shared.infrastructure;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
 import java.lang.reflect.Proxy;
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -9,13 +12,8 @@ import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.junit.jupiter.api.Test;
-
 import org.springframework.jdbc.datasource.AbstractDataSource;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * The pool's source of connections asks a database that has stopped answering again and again, at an
@@ -64,8 +62,11 @@ class SteadyReconnectDataSourceTest {
         }
         assertThat(waits).hasSize(12).allSatisfy(wait -> assertThat(wait).isGreaterThanOrEqualTo(INTERVAL));
         // Left to the pool, the last of these waits alone would be five seconds.
-        assertThat(waits.get(waits.size() - 1)).as("the wait before the last attempt").isLessThan(Duration.ofSeconds(1));
-        assertThat(Duration.ofNanos(attempts.get(attempts.size() - 1) - attempts.get(0))).as("all twelve waits together")
+        assertThat(waits.get(waits.size() - 1))
+                .as("the wait before the last attempt")
+                .isLessThan(Duration.ofSeconds(1));
+        assertThat(Duration.ofNanos(attempts.get(attempts.size() - 1) - attempts.get(0)))
+                .as("all twelve waits together")
                 .isLessThan(Duration.ofSeconds(3));
     }
 
@@ -89,7 +90,9 @@ class SteadyReconnectDataSourceTest {
         driver.answers();
 
         assertThatThrownBy(source::getConnection).isSameAs(down);
-        assertThat(driver.attempts()).as("an application started without its database fails to start").hasSize(1);
+        assertThat(driver.attempts())
+                .as("an application started without its database fails to start")
+                .hasSize(1);
     }
 
     @Test
@@ -128,10 +131,11 @@ class SteadyReconnectDataSourceTest {
 
         try {
             assertThatThrownBy(source::getConnection).isSameAs(down);
-            assertThat(Thread.currentThread().isInterrupted()).as("the interruption is left for the caller to see").isTrue();
+            assertThat(Thread.currentThread().isInterrupted())
+                    .as("the interruption is left for the caller to see")
+                    .isTrue();
             assertThat(driver.attempts()).hasSize(2);
-        }
-        finally {
+        } finally {
             Thread.interrupted();
         }
     }
@@ -163,19 +167,21 @@ class SteadyReconnectDataSourceTest {
         private final List<String> roles = new ArrayList<>();
 
         Connection answers() {
-            Connection connection = (Connection) Proxy.newProxyInstance(Connection.class.getClassLoader(),
-                    new Class<?>[] { Connection.class }, (proxy, method, arguments) -> switch (method.getName()) {
+            Connection connection = (Connection) Proxy.newProxyInstance(
+                    Connection.class.getClassLoader(),
+                    new Class<?>[] {Connection.class},
+                    (proxy, method, arguments) -> switch (method.getName()) {
                         case "equals" -> proxy == arguments[0];
                         case "hashCode" -> System.identityHashCode(proxy);
                         case "toString" -> "a connection";
                         default -> throw new UnsupportedOperationException(method.getName());
                     });
-            outcomes.add(new Outcome(connection, null, () -> { }));
+            outcomes.add(new Outcome(connection, null, () -> {}));
             return connection;
         }
 
         void fails(SQLException failure) {
-            fails(failure, () -> { });
+            fails(failure, () -> {});
         }
 
         void fails(SQLException failure, Runnable meanwhile) {
@@ -207,7 +213,6 @@ class SteadyReconnectDataSourceTest {
             return getConnection();
         }
 
-        private record Outcome(Connection connection, SQLException failure, Runnable meanwhile) {
-        }
+        private record Outcome(Connection connection, SQLException failure, Runnable meanwhile) {}
     }
 }

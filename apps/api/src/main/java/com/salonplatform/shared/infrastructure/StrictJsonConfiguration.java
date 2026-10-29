@@ -3,7 +3,6 @@ package com.salonplatform.shared.infrastructure;
 import org.springframework.boot.jackson.autoconfigure.JsonMapperBuilderCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
 import tools.jackson.databind.cfg.CoercionAction;
 import tools.jackson.databind.cfg.CoercionInputShape;
 import tools.jackson.databind.type.LogicalType;
@@ -16,16 +15,10 @@ import tools.jackson.databind.type.LogicalType;
 class StrictJsonConfiguration {
     @Bean
     JsonMapperBuilderCustomizer strictTextFields() {
-        return builder ->
-                builder.withCoercionConfig(
-                        LogicalType.Textual,
-                        config -> {
-                            for (CoercionInputShape shape :
-                                    new CoercionInputShape[] {
-                                        CoercionInputShape.Integer,
-                                        CoercionInputShape.Float,
-                                        CoercionInputShape.Boolean
-                                    }) config.setCoercion(shape, CoercionAction.Fail);
-                        });
+        return builder -> builder.withCoercionConfig(LogicalType.Textual, config -> {
+            for (CoercionInputShape shape : new CoercionInputShape[] {
+                CoercionInputShape.Integer, CoercionInputShape.Float, CoercionInputShape.Boolean
+            }) config.setCoercion(shape, CoercionAction.Fail);
+        });
     }
 }

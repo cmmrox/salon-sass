@@ -1,11 +1,10 @@
 package com.salonplatform.platform.application;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import com.salonplatform.shared.api.ApplicationProblemException;
 import com.salonplatform.shared.api.ErrorCode;
 import com.salonplatform.shared.api.FieldProblem;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * A list request: page 0 to 100,000, size 1 to 100 (default 20), and an optional literal search of up
@@ -18,8 +17,9 @@ public record Paging(int page, int size, String q) {
         int p = number(page, 0, 0, 100000, "page", errors);
         int s = number(size, 20, 1, 100, "size", errors);
         String search = q == null ? null : q.strip();
-        if (search != null && (search.codePointCount(0, search.length()) > 120
-                || search.codePoints().anyMatch(Character::isISOControl))) {
+        if (search != null
+                && (search.codePointCount(0, search.length()) > 120
+                        || search.codePoints().anyMatch(Character::isISOControl))) {
             errors.add(new FieldProblem("q", "must be plain text of at most 120 characters"));
         }
         if (!errors.isEmpty()) {

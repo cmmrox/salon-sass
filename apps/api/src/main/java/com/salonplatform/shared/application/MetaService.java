@@ -2,7 +2,6 @@ package com.salonplatform.shared.application;
 
 import java.time.Clock;
 import java.time.temporal.ChronoUnit;
-
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.info.BuildProperties;
@@ -25,7 +24,8 @@ public class MetaService {
     private final String commit;
     private final Clock clock;
 
-    public MetaService(@Value("${spring.application.name}") String service,
+    public MetaService(
+            @Value("${spring.application.name}") String service,
             ObjectProvider<BuildProperties> buildProperties,
             ObjectProvider<GitProperties> gitProperties,
             Clock clock) {

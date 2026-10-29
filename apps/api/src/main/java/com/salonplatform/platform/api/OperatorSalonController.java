@@ -1,7 +1,5 @@
 package com.salonplatform.platform.api;
 
-import java.util.UUID;
-
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.salonplatform.platform.application.Paging;
 import com.salonplatform.platform.application.ProvisioningReceipts;
@@ -9,7 +7,7 @@ import com.salonplatform.platform.application.SalonProvisioning;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.media.Schema;
-
+import java.util.UUID;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -35,35 +33,74 @@ class OperatorSalonController {
         this.salons = salons;
     }
 
-    @Schema(additionalProperties = Schema.AdditionalPropertiesValue.FALSE, requiredProperties = {"name", "email",
-        "password"})
-    record SalonOwnerRequest(@Schema(maxLength = 120) String name, @Schema(maxLength = 254, format = "email") String email,
-            @Schema(minLength = 15, maxLength = 128, format = "password") String password) {
+    @Schema(
+            additionalProperties = Schema.AdditionalPropertiesValue.FALSE,
+            requiredProperties = {"name", "email", "password"})
+    record SalonOwnerRequest(
+            @Schema(maxLength = 120) String name,
+            @Schema(maxLength = 254, format = "email") String email,
+
+            @Schema(minLength = 15, maxLength = 128, format = "password")
+            String password) {
         @JsonAnySetter
         void unknown(String field, Object ignored) {
             throw OperatorRequests.unexpected("owner." + field);
         }
     }
 
-    @Schema(additionalProperties = Schema.AdditionalPropertiesValue.FALSE, requiredProperties = {"monthlyAmount",
-        "paymentMethod"})
-    record SalonSubscriptionRequest(@Schema(minimum = "0", maximum = "100000000") Long monthlyAmount,
-            @Schema(allowableValues = {"card", "bank_transfer"}) String paymentMethod) {
+    @Schema(
+            additionalProperties = Schema.AdditionalPropertiesValue.FALSE,
+            requiredProperties = {"monthlyAmount", "paymentMethod"})
+    record SalonSubscriptionRequest(
+            @Schema(minimum = "0", maximum = "100000000") Long monthlyAmount,
+
+            @Schema(allowableValues = {"card", "bank_transfer"})
+            String paymentMethod) {
         @JsonAnySetter
         void unknown(String field, Object ignored) {
             throw OperatorRequests.unexpected("subscription." + field);
         }
     }
 
-    @Schema(additionalProperties = Schema.AdditionalPropertiesValue.FALSE, requiredProperties = {"name", "slug",
-        "country", "currency", "timeZone", "defaultLanguage", "planId", "owner", "subscription"})
-    record SalonRequest(@Schema(maxLength = 120) String name, @Schema(minLength = 3, maxLength = 30) String slug,
-            @Schema(minLength = 2, maxLength = 2) String country, @Schema(minLength = 3, maxLength = 3) String currency,
-            String timeZone, @Schema(allowableValues = {"en", "si", "ta"}) String defaultLanguage,
-            @Schema(types = {"string", "null"}, maxLength = 254) String contactEmail,
-            @Schema(types = {"string", "null"}, maxLength = 32) String contactPhone,
-            @Schema(types = {"string", "null"}, maxLength = 500) String address, UUID planId,
-            SalonOwnerRequest owner, SalonSubscriptionRequest subscription) {
+    @Schema(
+            additionalProperties = Schema.AdditionalPropertiesValue.FALSE,
+            requiredProperties = {
+                "name",
+                "slug",
+                "country",
+                "currency",
+                "timeZone",
+                "defaultLanguage",
+                "planId",
+                "owner",
+                "subscription"
+            })
+    record SalonRequest(
+            @Schema(maxLength = 120) String name,
+            @Schema(minLength = 3, maxLength = 30) String slug,
+            @Schema(minLength = 2, maxLength = 2) String country,
+            @Schema(minLength = 3, maxLength = 3) String currency,
+            String timeZone,
+            @Schema(allowableValues = {"en", "si", "ta"}) String defaultLanguage,
+
+            @Schema(
+                    types = {"string", "null"},
+                    maxLength = 254)
+            String contactEmail,
+
+            @Schema(
+                    types = {"string", "null"},
+                    maxLength = 32)
+            String contactPhone,
+
+            @Schema(
+                    types = {"string", "null"},
+                    maxLength = 500)
+            String address,
+
+            UUID planId,
+            SalonOwnerRequest owner,
+            SalonSubscriptionRequest subscription) {
         @JsonAnySetter
         void unknown(String field, Object ignored) {
             throw OperatorRequests.unexpected(field);
@@ -73,9 +110,11 @@ class OperatorSalonController {
     @GetMapping
     ResponseEntity<SalonProvisioning.SalonPage> listSalons(
             @Parameter(schema = @Schema(type = "integer", minimum = "0", maximum = "100000", defaultValue = "0"))
-            @RequestParam(required = false) String page,
+                    @RequestParam(required = false)
+                    String page,
             @Parameter(schema = @Schema(type = "integer", minimum = "1", maximum = "100", defaultValue = "20"))
-            @RequestParam(required = false) String size,
+                    @RequestParam(required = false)
+                    String size,
             @Parameter(schema = @Schema(type = "string", maxLength = 120)) @RequestParam(required = false) String q) {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(salons.list(Paging.of(page, size, q)));
     }
@@ -88,18 +127,40 @@ class OperatorSalonController {
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
     ResponseEntity<SalonProvisioning.SalonCreated> createSalon(
-            @Parameter(name = ProvisioningReceipts.HEADER, in = ParameterIn.HEADER, required = true,
-                    schema = @Schema(type = "string", format = "uuid"))
-            @RequestHeader(name = ProvisioningReceipts.HEADER, required = false) String key,
+            @Parameter(
+                            name = ProvisioningReceipts.HEADER,
+                            in = ParameterIn.HEADER,
+                            required = true,
+                            schema = @Schema(type = "string", format = "uuid"))
+                    @RequestHeader(name = ProvisioningReceipts.HEADER, required = false)
+                    String key,
             @RequestBody SalonRequest request) {
         SalonRequest r = request;
-        SalonProvisioning.OwnerInput owner = r.owner() == null ? null
-                : new SalonProvisioning.OwnerInput(r.owner().name(), r.owner().email(), r.owner().password());
-        SalonProvisioning.SubscriptionInput subscription = r.subscription() == null ? null
-                : new SalonProvisioning.SubscriptionInput(r.subscription().monthlyAmount(), r.subscription().paymentMethod());
-        var created = salons.create(key, new SalonProvisioning.SalonInput(r.name(), r.slug(), r.country(), r.currency(),
-                r.timeZone(), r.defaultLanguage(), r.contactEmail(), r.contactPhone(), r.address(), r.planId(), owner,
-                subscription));
-        return ResponseEntity.status(HttpStatus.CREATED).cacheControl(CacheControl.noStore()).body(created.salon());
+        SalonProvisioning.OwnerInput owner = r.owner() == null
+                ? null
+                : new SalonProvisioning.OwnerInput(
+                        r.owner().name(), r.owner().email(), r.owner().password());
+        SalonProvisioning.SubscriptionInput subscription = r.subscription() == null
+                ? null
+                : new SalonProvisioning.SubscriptionInput(
+                        r.subscription().monthlyAmount(), r.subscription().paymentMethod());
+        var created = salons.create(
+                key,
+                new SalonProvisioning.SalonInput(
+                        r.name(),
+                        r.slug(),
+                        r.country(),
+                        r.currency(),
+                        r.timeZone(),
+                        r.defaultLanguage(),
+                        r.contactEmail(),
+                        r.contactPhone(),
+                        r.address(),
+                        r.planId(),
+                        owner,
+                        subscription));
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .cacheControl(CacheControl.noStore())
+                .body(created.salon());
     }
 }

@@ -1,23 +1,21 @@
 package com.salonplatform.shared.infrastructure;
 
+import com.salonplatform.shared.api.ErrorCode;
+import com.salonplatform.shared.api.RequestTrace;
 import java.io.IOException;
 import java.io.Writer;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import com.salonplatform.shared.api.ErrorCode;
-import com.salonplatform.shared.api.RequestTrace;
 import org.apache.catalina.connector.Request;
 import org.apache.catalina.connector.Response;
 import org.apache.catalina.valves.ErrorReportValve;
 import org.apache.coyote.ActionCode;
 import org.slf4j.MDC;
-import tools.jackson.databind.json.JsonMapper;
-
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * The server rejects some requests itself, before the application sees them: a path that is not
@@ -28,7 +26,7 @@ import org.springframework.http.MediaType;
  * <p>Tomcat creates it by name, so it has a public constructor and uses nothing from Spring's
  * context.
  */
-public class ProblemErrorReportValve extends ErrorReportValve {
+public final class ProblemErrorReportValve extends ErrorReportValve {
 
     private static final JsonMapper JSON = JsonMapper.builder().build();
 
@@ -62,8 +60,7 @@ public class ProblemErrorReportValve extends ErrorReportValve {
                 writer.write(JSON.writeValueAsString(body(HttpStatusCode.valueOf(status), traceId)));
                 response.finishResponse();
             }
-        }
-        catch (IOException | IllegalStateException ex) {
+        } catch (IOException | IllegalStateException ex) {
             // The client has gone, or the response can no longer be written. There is nobody to tell.
         }
     }
@@ -74,10 +71,12 @@ public class ProblemErrorReportValve extends ErrorReportValve {
         String path = request.getRequestURI();
         MDC.put(RequestLog.TRACE_ID, traceId);
         try {
-            RequestLog.write(request.getMethod() == null ? "-" : request.getMethod(), path == null ? "-" : path, status,
+            RequestLog.write(
+                    request.getMethod() == null ? "-" : request.getMethod(),
+                    path == null ? "-" : path,
+                    status,
                     duration);
-        }
-        finally {
+        } finally {
             MDC.remove(RequestLog.TRACE_ID);
         }
     }

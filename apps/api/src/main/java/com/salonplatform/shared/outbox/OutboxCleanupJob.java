@@ -1,14 +1,12 @@
 package com.salonplatform.shared.outbox;
 
-import java.time.Duration;
-import java.time.Instant;
-
 import com.salonplatform.shared.jobs.JobSettings;
 import com.salonplatform.shared.jobs.TenantJob;
 import com.salonplatform.shared.tenancy.CurrentTenant;
+import java.time.Duration;
+import java.time.Instant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.springframework.stereotype.Component;
 
 /**

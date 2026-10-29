@@ -1,5 +1,13 @@
 package com.salonplatform.platform.application;
 
+import com.salonplatform.platform.infrastructure.BillingProviderKey;
+import com.salonplatform.platform.infrastructure.PlatformAudit;
+import com.salonplatform.shared.api.ApplicationProblemException;
+import com.salonplatform.shared.api.ErrorCode;
+import com.salonplatform.shared.api.FieldProblem;
+import com.salonplatform.shared.api.NotFoundException;
+import com.salonplatform.shared.infrastructure.PlatformDatabase;
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.sql.Timestamp;
 import java.time.Clock;
 import java.time.Instant;
@@ -10,19 +18,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-
-import com.salonplatform.platform.infrastructure.BillingProviderKey;
-import com.salonplatform.platform.infrastructure.PlatformAudit;
-import com.salonplatform.shared.api.ApplicationProblemException;
-import com.salonplatform.shared.api.ErrorCode;
-import com.salonplatform.shared.api.FieldProblem;
-import com.salonplatform.shared.api.NotFoundException;
-import com.salonplatform.shared.infrastructure.PlatformDatabase;
-import io.swagger.v3.oas.annotations.media.Schema;
+import org.springframework.stereotype.Service;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
-
-import org.springframework.stereotype.Service;
 
 /**
  * The billing provider's signed events (docs/architecture/operator-console.md, "Payment"): JSON
@@ -37,12 +35,13 @@ import org.springframework.stereotype.Service;
 public class ProviderEvents {
 
     @Schema(requiredProperties = {"eventId", "result"})
-    public record Acknowledged(String eventId,
-            @Schema(allowableValues = {"paid", "failed", "already_paid", "unknown", "duplicate"}) String result) {
-    }
+    public record Acknowledged(
+            String eventId,
 
-    private record Event(String eventId, UUID invoiceId, UUID attemptKey, String outcome, Instant occurredAt) {
-    }
+            @Schema(allowableValues = {"paid", "failed", "already_paid", "unknown", "duplicate"})
+            String result) {}
+
+    private record Event(String eventId, UUID invoiceId, UUID attemptKey, String outcome, Instant occurredAt) {}
 
     private static final Set<String> FIELDS = Set.of("eventId", "invoiceId", "attemptKey", "outcome", "occurredAt");
 
@@ -53,8 +52,13 @@ public class ProviderEvents {
     private final JsonMapper json;
     private final Clock clock;
 
-    public ProviderEvents(PlatformDatabase database, BillingLedger ledger, BillingProviderKey key, PlatformAudit audit,
-            JsonMapper json, Clock clock) {
+    public ProviderEvents(
+            PlatformDatabase database,
+            BillingLedger ledger,
+            BillingProviderKey key,
+            PlatformAudit audit,
+            JsonMapper json,
+            Clock clock) {
         this.audit = audit;
         this.database = database;
         this.ledger = ledger;
@@ -78,8 +82,7 @@ public class ProviderEvents {
         JsonNode node;
         try {
             node = json.readTree(body);
-        }
-        catch (RuntimeException ex) {
+        } catch (RuntimeException ex) {
             throw new ApplicationProblemException(400, ErrorCode.BAD_REQUEST);
         }
         if (node == null || !node.isObject()) {
@@ -105,8 +108,7 @@ public class ProviderEvents {
         try {
             String value = text(node, "occurredAt");
             occurredAt = value == null ? null : Instant.parse(value);
-        }
-        catch (DateTimeParseException ex) {
+        } catch (DateTimeParseException ex) {
             occurredAt = null;
         }
         if (occurredAt == null) {
@@ -126,7 +128,8 @@ public class ProviderEvents {
 
     private static UUID uuid(JsonNode node, String name, List<FieldProblem> errors) {
         String value = text(node, name);
-        if (value != null && value.matches("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")) {
+        if (value != null
+                && value.matches("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")) {
             return UUID.fromString(value);
         }
         errors.add(new FieldProblem(name, "must be a UUID"));
@@ -134,44 +137,74 @@ public class ProviderEvents {
     }
 
     private Acknowledged apply(Event event) {
-        database.jdbc().queryForObject("SELECT pg_advisory_xact_lock(hashtextextended(?, 1))::text", String.class,
-                "provider-event|" + event.eventId());
-        Integer seen = database.jdbc().queryForObject("SELECT count(*) FROM provider_event WHERE event_id = ?",
-                Integer.class, event.eventId());
+        database.jdbc()
+                .queryForObject(
+                        "SELECT pg_advisory_xact_lock(hashtextextended(?, 1))::text",
+                        String.class,
+                        "provider-event|" + event.eventId());
+        Integer seen = database.jdbc()
+                .queryForObject(
+                        "SELECT count(*) FROM provider_event WHERE event_id = ?", Integer.class, event.eventId());
         if (seen != null && seen > 0) {
             return new Acknowledged(event.eventId(), "duplicate");
         }
         Instant now = clock.instant();
         String result = outcome(event, now);
         Timestamp at = Timestamp.from(now);
-        database.jdbc().update("""
+        database.jdbc()
+                .update(
+                        """
                 INSERT INTO provider_event (event_id, invoice_id, attempt_key, outcome, occurred_at, result, created_at,
                     updated_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                """, event.eventId(), event.invoiceId(), event.attemptKey(), event.outcome(),
-                Timestamp.from(event.occurredAt()), result, at, at);
+                """,
+                        event.eventId(),
+                        event.invoiceId(),
+                        event.attemptKey(),
+                        event.outcome(),
+                        Timestamp.from(event.occurredAt()),
+                        result,
+                        at,
+                        at);
         Map<String, Object> details = new LinkedHashMap<>();
         details.put("eventId", event.eventId());
         details.put("outcome", event.outcome());
         details.put("result", result);
-        audit.record(PlatformAudit.SYSTEM, "billing-provider", "provider_event.received", "invoice",
-                event.invoiceId().toString(), details, now);
+        audit.record(
+                PlatformAudit.SYSTEM,
+                "billing-provider",
+                "provider_event.received",
+                "invoice",
+                event.invoiceId().toString(),
+                details,
+                now);
         return new Acknowledged(event.eventId(), result);
     }
 
     private String outcome(Event event, Instant now) {
-        var attempt = database.jdbc().query(
-                "SELECT id, invoice_id, status FROM charge_attempt WHERE attempt_key = ?",
-                (row, n) -> new Object[] {row.getObject("id", UUID.class), row.getObject("invoice_id", UUID.class),
-                    row.getString("status")}, event.attemptKey()).stream().findFirst().orElse(null);
+        var attempt = database
+                .jdbc()
+                .query(
+                        "SELECT id, invoice_id, status FROM charge_attempt WHERE attempt_key = ?",
+                        (row, n) -> new Object[] {
+                            row.getObject("id", UUID.class),
+                            row.getObject("invoice_id", UUID.class),
+                            row.getString("status")
+                        },
+                        event.attemptKey())
+                .stream()
+                .findFirst()
+                .orElse(null);
         if (attempt == null || !event.invoiceId().equals(attempt[1])) {
             return "unknown";
         }
-        BillingLedger.Invoice found = ledger.invoiceById(event.invoiceId(), false).orElse(null);
+        BillingLedger.Invoice found =
+                ledger.invoiceById(event.invoiceId(), false).orElse(null);
         if (found == null) {
             return "unknown";
         }
-        BillingLedger.Subscription subscription = ledger.subscription(found.subscriptionId(), true).orElseThrow();
+        BillingLedger.Subscription subscription =
+                ledger.subscription(found.subscriptionId(), true).orElseThrow();
         BillingLedger.Invoice invoice = ledger.invoiceById(found.id(), true).orElseThrow();
         UUID attemptId = (UUID) attempt[0];
         boolean pending = "requested".equals(attempt[2]);
@@ -183,14 +216,29 @@ public class ProviderEvents {
         }
         if ("success".equals(event.outcome())) {
             settle(attemptId, "succeeded", now);
-            ledger.pay(subscription, invoice, "card", null, event.eventId(), null, null, now, PlatformAudit.SYSTEM,
+            ledger.pay(
+                    subscription,
+                    invoice,
+                    "card",
+                    null,
+                    event.eventId(),
+                    null,
+                    null,
+                    now,
+                    PlatformAudit.SYSTEM,
                     "billing-provider");
             return "paid";
         }
         if (pending) {
             settle(attemptId, "failed", now);
-            audit.record(PlatformAudit.SYSTEM, "billing-provider", "charge.failed", "invoice", invoice.id().toString(),
-                    Map.of("attemptId", attemptId.toString()), now);
+            audit.record(
+                    PlatformAudit.SYSTEM,
+                    "billing-provider",
+                    "charge.failed",
+                    "invoice",
+                    invoice.id().toString(),
+                    Map.of("attemptId", attemptId.toString()),
+                    now);
         }
         BillingLedger.Salon salon = ledger.salon(invoice.salonId(), false).orElseThrow();
         ledger.notice(salon, invoice, "failed_charge", attemptId, now);

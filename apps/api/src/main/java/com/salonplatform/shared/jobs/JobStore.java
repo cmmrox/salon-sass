@@ -5,7 +5,6 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Optional;
-
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
@@ -27,7 +26,11 @@ class JobStore {
         OffsetDateTime occurrence = jdbc.queryForObject(
                 "SELECT job_claim(?, ?, make_interval(secs => ?), ?, ?)",
                 (row, n) -> row.getObject(1, OffsetDateTime.class),
-                job, utc(now), every.toMillis() / 1000.0, holder, utc(holdUntil));
+                job,
+                utc(now),
+                every.toMillis() / 1000.0,
+                holder,
+                utc(holdUntil));
         return Optional.ofNullable(occurrence).map(OffsetDateTime::toInstant);
     }
 

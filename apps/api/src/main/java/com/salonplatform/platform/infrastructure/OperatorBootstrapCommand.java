@@ -1,5 +1,6 @@
 package com.salonplatform.platform.infrastructure;
 
+import com.salonplatform.platform.application.OperatorAccounts;
 import java.io.IOException;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;
@@ -8,11 +9,8 @@ import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermission;
 import java.util.Properties;
 import java.util.Set;
-
-import com.salonplatform.platform.application.OperatorAccounts;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
@@ -46,19 +44,29 @@ class OperatorBootstrapCommand implements ApplicationRunner {
         }
         Path path = Path.of(file).toAbsolutePath().normalize();
         Set<PosixFilePermission> permissions = Files.getPosixFilePermissions(path);
-        for (PosixFilePermission open : Set.of(PosixFilePermission.GROUP_READ, PosixFilePermission.GROUP_WRITE,
-                PosixFilePermission.OTHERS_READ, PosixFilePermission.OTHERS_WRITE)) {
+        for (PosixFilePermission open : Set.of(
+                PosixFilePermission.GROUP_READ,
+                PosixFilePermission.GROUP_WRITE,
+                PosixFilePermission.OTHERS_READ,
+                PosixFilePermission.OTHERS_WRITE)) {
             if (permissions.contains(open)) {
-                throw new IllegalStateException("The operator bootstrap file must be readable by its owner only (chmod 600)");
+                throw new IllegalStateException(
+                        "The operator bootstrap file must be readable by its owner only (chmod 600)");
             }
         }
         Properties values = new Properties();
         try (Reader reader = Files.newBufferedReader(path, StandardCharsets.UTF_8)) {
             values.load(reader);
         }
-        boolean created = accounts.bootstrap(new OperatorAccounts.AccountInput(values.getProperty("email"),
-                values.getProperty("displayName"), values.getProperty("role"), values.getProperty("password"), null));
-        log.info(created ? "Operator bootstrap: the account was created; it enrolls MFA at its first sign-in"
-                : "Operator bootstrap: an account with that email already exists and was left unchanged");
+        boolean created = accounts.bootstrap(new OperatorAccounts.AccountInput(
+                values.getProperty("email"),
+                values.getProperty("displayName"),
+                values.getProperty("role"),
+                values.getProperty("password"),
+                null));
+        log.info(
+                created
+                        ? "Operator bootstrap: the account was created; it enrolls MFA at its first sign-in"
+                        : "Operator bootstrap: an account with that email already exists and was left unchanged");
     }
 }

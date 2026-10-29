@@ -1,16 +1,15 @@
 package com.salonplatform.shared.local;
 
-import java.time.Duration;
-import java.time.Instant;
-import java.util.Map;
-import java.util.function.Predicate;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
 import com.salonplatform.testing.Http.Exchange;
 import com.salonplatform.testing.StartedApplication;
-
-import static org.assertj.core.api.Assertions.assertThat;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Map;
+import java.util.function.Predicate;
 
 /** Drives the local hooks of a started application, as QA does from outside. */
 final class ProbeClient {
@@ -33,8 +32,12 @@ final class ProbeClient {
      */
     static String[] localWithDispatcher(String... more) {
         java.util.Map<String, String> settings = new java.util.LinkedHashMap<>();
-        for (String setting : new String[] { "--spring.profiles.active=local", "--salon.outbox.enabled=true",
-            "--salon.jobs.enabled=false", "--salon.outbox.poll-interval=100ms" }) {
+        for (String setting : new String[] {
+            "--spring.profiles.active=local",
+            "--salon.outbox.enabled=true",
+            "--salon.jobs.enabled=false",
+            "--salon.outbox.poll-interval=100ms"
+        }) {
             settings.put(setting.substring(0, setting.indexOf('=')), setting);
         }
         for (String setting : more) {
@@ -75,14 +78,23 @@ final class ProbeClient {
     }
 
     void setClock(Instant instant) {
-        Exchange response = application.http().sendOnHost("PUT", "localhost:" + application.port(), "/local/clock",
-                Map.of("Content-Type", "application/json"), "{\"instant\":\"" + instant + "\"}");
+        Exchange response = application
+                .http()
+                .sendOnHost(
+                        "PUT",
+                        "localhost:" + application.port(),
+                        "/local/clock",
+                        Map.of("Content-Type", "application/json"),
+                        "{\"instant\":\"" + instant + "\"}");
         assertThat(response.status()).isEqualTo(200);
     }
 
     Instant clock() {
-        return Instant.parse(JsonPath.parse(application.http().sendOnHost("GET", "localhost:" + application.port(),
-                "/local/clock", Map.of(), null).body()).read("$.now"));
+        return Instant.parse(JsonPath.parse(application
+                        .http()
+                        .sendOnHost("GET", "localhost:" + application.port(), "/local/clock", Map.of(), null)
+                        .body())
+                .read("$.now"));
     }
 
     static Predicate<DocumentContext> status(String status) {
@@ -97,8 +109,7 @@ final class ProbeClient {
     static void sleep(long millis) {
         try {
             Thread.sleep(millis);
-        }
-        catch (InterruptedException ex) {
+        } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
             throw new IllegalStateException(ex);
         }

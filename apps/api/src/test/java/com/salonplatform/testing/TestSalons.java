@@ -2,7 +2,6 @@ package com.salonplatform.testing;
 
 import java.time.ZoneId;
 import java.util.UUID;
-
 import org.springframework.jdbc.core.JdbcTemplate;
 
 /**
@@ -23,8 +22,11 @@ public final class TestSalons {
     /** An active salon with a published brand. */
     public TestSalon create(String name, String brandColour) {
         TestSalon salon = createWithoutBrand("active");
-        owner.update("INSERT INTO salon_brand (tenant_id, display_name, brand_colour) VALUES (?, ?, ?)",
-                salon.id(), name, brandColour);
+        owner.update(
+                "INSERT INTO salon_brand (tenant_id, display_name, brand_colour) VALUES (?, ?, ?)",
+                salon.id(),
+                name,
+                brandColour);
         return new TestSalon(salon.id(), salon.slug(), name, brandColour);
     }
 

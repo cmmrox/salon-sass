@@ -10,16 +10,23 @@ import java.util.Set;
  * session's single-use entry code.
  */
 public enum OperatorRole {
-
-    OPERATOR_ADMIN(Set.of(OperatorPermission.SESSION_MANAGE, OperatorPermission.SALON_READ,
-            OperatorPermission.SALON_CREATE, OperatorPermission.PLAN_READ, OperatorPermission.PLAN_CREATE,
-            OperatorPermission.BILLING_READ, OperatorPermission.BILLING_MANAGE, OperatorPermission.SALON_SUSPEND,
-            OperatorPermission.SALON_CLOSE, OperatorPermission.EXPORT_READ, OperatorPermission.SUPPORT_READ,
+    OPERATOR_ADMIN(Set.of(
+            OperatorPermission.SESSION_MANAGE,
+            OperatorPermission.SALON_READ,
+            OperatorPermission.SALON_CREATE,
+            OperatorPermission.PLAN_READ,
+            OperatorPermission.PLAN_CREATE,
+            OperatorPermission.BILLING_READ,
+            OperatorPermission.BILLING_MANAGE,
+            OperatorPermission.SALON_SUSPEND,
+            OperatorPermission.SALON_CLOSE,
+            OperatorPermission.EXPORT_READ,
+            OperatorPermission.SUPPORT_READ,
             OperatorPermission.SUPPORT_REVOKE)),
 
     /** From F03-S04 Support finds salons and starts its own audited, expiring support sessions. */
-    OPERATOR_SUPPORT(Set.of(OperatorPermission.SESSION_MANAGE, OperatorPermission.SALON_READ,
-            OperatorPermission.SUPPORT_START));
+    OPERATOR_SUPPORT(
+            Set.of(OperatorPermission.SESSION_MANAGE, OperatorPermission.SALON_READ, OperatorPermission.SUPPORT_START));
 
     private final Set<String> permissions;
 

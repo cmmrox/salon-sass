@@ -1,7 +1,6 @@
 package com.salonplatform.shared.infrastructure;
 
 import com.salonplatform.shared.tenancy.PlatformHostname;
-
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

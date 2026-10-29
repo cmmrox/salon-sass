@@ -1,16 +1,15 @@
 package com.salonplatform.identity.domain;
 
 import jakarta.persistence.*;
-
-import org.hibernate.annotations.TenantId;
-
 import java.time.Instant;
 import java.util.UUID;
+import org.hibernate.annotations.TenantId;
 
 @Entity
 @Table(name = "identity_customer_challenge")
 public class CustomerChallenge {
-    @Id public UUID id;
+    @Id
+    public UUID id;
 
     @TenantId
     @Column(name = "tenant_id", nullable = false, updatable = false)

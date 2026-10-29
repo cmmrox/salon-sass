@@ -1,5 +1,6 @@
 package com.salonplatform.platform.infrastructure;
 
+import com.nimbusds.jose.jwk.source.ImmutableSecret;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -21,11 +22,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.UUID;
-
 import javax.crypto.spec.SecretKeySpec;
-
-import com.nimbusds.jose.jwk.source.ImmutableSecret;
-
 import org.springframework.core.env.Environment;
 import org.springframework.security.oauth2.core.OAuth2TokenValidatorResult;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
@@ -57,8 +54,7 @@ public class SupportCrypto {
     public static final String KIND = "support";
 
     /** The claims of a verified support credential. */
-    public record Claims(UUID salonId, UUID sessionId, UUID operatorId, Instant issuedAt, Instant expiresAt) {
-    }
+    public record Claims(UUID salonId, UUID sessionId, UUID operatorId, Instant issuedAt, Instant expiresAt) {}
 
     private final Clock clock;
     private final JwtEncoder encoder;
@@ -76,19 +72,30 @@ public class SupportCrypto {
                     "Configure SALON_SUPPORT_SIGNING_KEY with an independent 64-hex-character secret");
         }
         byte[] key = HexFormat.of().parseHex(value);
-        for (String name : new String[] {"salon.operator.signing-key", "salon.operator.challenge-key",
-            "salon.operator.encryption-key", "salon.operator.proxy-key", "salon.operator.fingerprint-key",
-            "salon.identity.signing-key", "salon.identity.challenge-key", "salon.identity.encryption-key",
-            "salon.identity.proxy-key", "salon.billing.provider-key", "salon.export.key"}) {
+        for (String name : new String[] {
+            "salon.operator.signing-key",
+            "salon.operator.challenge-key",
+            "salon.operator.encryption-key",
+            "salon.operator.proxy-key",
+            "salon.operator.fingerprint-key",
+            "salon.identity.signing-key",
+            "salon.identity.challenge-key",
+            "salon.identity.encryption-key",
+            "salon.identity.proxy-key",
+            "salon.billing.provider-key",
+            "salon.export.key"
+        }) {
             String other = environment.getProperty(name);
-            if (other != null && other.matches("[0-9a-fA-F]{64}")
+            if (other != null
+                    && other.matches("[0-9a-fA-F]{64}")
                     && MessageDigest.isEqual(key, HexFormat.of().parseHex(other))) {
                 throw new IllegalStateException("The support signing key must be independent of every other key");
             }
         }
         encoder = new NimbusJwtEncoder(new ImmutableSecret<>(key));
         NimbusJwtDecoder jwtDecoder = NimbusJwtDecoder.withSecretKey(new SecretKeySpec(key, "HmacSHA256"))
-                .macAlgorithm(MacAlgorithm.HS256).build();
+                .macAlgorithm(MacAlgorithm.HS256)
+                .build();
         // Issuer, audience, kind and time are checked below against the application's clock.
         jwtDecoder.setJwtValidator(jwt -> OAuth2TokenValidatorResult.success());
         decoder = jwtDecoder;
@@ -106,7 +113,8 @@ public class SupportCrypto {
                 .claim("tenant", salonId.toString())
                 .claim("session", sessionId.toString())
                 .build();
-        return encoder.encode(JwtEncoderParameters.from(JwsHeader.with(MacAlgorithm.HS256).build(), claims))
+        return encoder.encode(JwtEncoderParameters.from(
+                        JwsHeader.with(MacAlgorithm.HS256).build(), claims))
                 .getTokenValue();
     }
 
@@ -124,14 +132,17 @@ public class SupportCrypto {
                     || !ISSUER.equals(jwt.getClaimAsString("iss"))
                     || !List.of(AUDIENCE).equals(jwt.getAudience())
                     || !KIND.equals(jwt.getClaimAsString("kind"))
-                    || jwt.getExpiresAt() == null || jwt.getIssuedAt() == null) {
+                    || jwt.getExpiresAt() == null
+                    || jwt.getIssuedAt() == null) {
                 return Optional.empty();
             }
-            return Optional.of(new Claims(UUID.fromString(jwt.getClaimAsString("tenant")),
-                    UUID.fromString(jwt.getClaimAsString("session")), UUID.fromString(jwt.getSubject()),
-                    jwt.getIssuedAt(), jwt.getExpiresAt()));
-        }
-        catch (RuntimeException ex) {
+            return Optional.of(new Claims(
+                    UUID.fromString(jwt.getClaimAsString("tenant")),
+                    UUID.fromString(jwt.getClaimAsString("session")),
+                    UUID.fromString(jwt.getSubject()),
+                    jwt.getIssuedAt(),
+                    jwt.getExpiresAt()));
+        } catch (RuntimeException ex) {
             return Optional.empty();
         }
     }
@@ -157,25 +168,27 @@ public class SupportCrypto {
     /** The stored form of an entry code: its SHA-256, lowercase hex. */
     public static String codeHash(String code) {
         try {
-            return HexFormat.of().formatHex(
-                    MessageDigest.getInstance("SHA-256").digest(code.getBytes(StandardCharsets.US_ASCII)));
-        }
-        catch (NoSuchAlgorithmException ex) {
+            return HexFormat.of()
+                    .formatHex(MessageDigest.getInstance("SHA-256").digest(code.getBytes(StandardCharsets.US_ASCII)));
+        } catch (NoSuchAlgorithmException ex) {
             throw new IllegalStateException("SHA-256 is unavailable", ex);
         }
     }
 
     private static synchronized String retained(Environment environment) {
-        Path path = Path.of(environment.getProperty("salon.support.local-key-file",
-                "../../.local/support-keys.properties")).toAbsolutePath().normalize();
+        Path path = Path.of(
+                        environment.getProperty("salon.support.local-key-file", "../../.local/support-keys.properties"))
+                .toAbsolutePath()
+                .normalize();
         var mode = PosixFilePermissions.fromString("rw-------");
         Properties saved = new Properties();
         try {
             Files.createDirectories(path.getParent());
             Path lockPath = path.resolveSibling(path.getFileName() + ".lock");
-            try (FileChannel channel = FileChannel.open(lockPath, StandardOpenOption.CREATE, StandardOpenOption.WRITE)) {
+            try (FileChannel channel =
+                    FileChannel.open(lockPath, StandardOpenOption.CREATE, StandardOpenOption.WRITE)) {
                 Files.setPosixFilePermissions(lockPath, mode);
-                try (var lock = channel.lock()) {
+                try (var _ = channel.lock()) {
                     if (Files.exists(path)) {
                         Files.setPosixFilePermissions(path, mode);
                         try (InputStream in = Files.newInputStream(path)) {
@@ -186,24 +199,25 @@ public class SupportCrypto {
                         byte[] fresh = new byte[32];
                         new SecureRandom().nextBytes(fresh);
                         saved.setProperty("support", HexFormat.of().formatHex(fresh));
-                        Path temporary = Files.createTempFile(path.getParent(), ".support-keys-", ".tmp",
-                                PosixFilePermissions.asFileAttribute(mode));
+                        Path temporary = Files.createTempFile(
+                                path.getParent(), ".support-keys-", ".tmp", PosixFilePermissions.asFileAttribute(mode));
                         try {
                             try (OutputStream out = Files.newOutputStream(temporary)) {
                                 saved.store(out, "Local-only support credential signing key. Never commit or print.");
                             }
-                            Files.move(temporary, path, StandardCopyOption.ATOMIC_MOVE,
+                            Files.move(
+                                    temporary,
+                                    path,
+                                    StandardCopyOption.ATOMIC_MOVE,
                                     StandardCopyOption.REPLACE_EXISTING);
-                        }
-                        finally {
+                        } finally {
                             Files.deleteIfExists(temporary);
                         }
                     }
                 }
             }
             return saved.getProperty("support");
-        }
-        catch (IOException ex) {
+        } catch (IOException ex) {
             throw new IllegalStateException("Cannot read the retained local support key", ex);
         }
     }

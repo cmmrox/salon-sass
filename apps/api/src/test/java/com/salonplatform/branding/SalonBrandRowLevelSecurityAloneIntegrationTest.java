@@ -1,5 +1,13 @@
 package com.salonplatform.branding;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+
+import com.salonplatform.testing.StartedApplication;
+import com.salonplatform.testing.TestDatabase;
+import com.salonplatform.testing.TestPostgres;
+import com.salonplatform.testing.TestSalons;
+import com.salonplatform.testing.TestSalons.TestSalon;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -9,19 +17,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-
-import com.salonplatform.testing.StartedApplication;
-import com.salonplatform.testing.TestDatabase;
-import com.salonplatform.testing.TestPostgres;
-import com.salonplatform.testing.TestSalons;
-import com.salonplatform.testing.TestSalons.TestSalon;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-
 import org.springframework.jdbc.core.JdbcTemplate;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 /**
  * The second layer on its own: row-level security, with Hibernate nowhere in the path. Plain SQL as
@@ -42,7 +40,7 @@ class SalonBrandRowLevelSecurityAloneIntegrationTest {
     @BeforeAll
     static void migratedDatabaseWithTwoSalonsAndEveryWriteGranted() {
         database = TestDatabase.createEmpty(TestPostgres.shared());
-        try (StartedApplication migrated = database.start()) {
+        try (StartedApplication _ = database.start()) {
             // Started once to apply the migrations as the product applies them.
         }
         JdbcTemplate owner = database.asOwner();
@@ -51,14 +49,16 @@ class SalonBrandRowLevelSecurityAloneIntegrationTest {
         alpha = salons.create("Alpha Studio", "#D6086A");
         beta = salons.create("Beta Lounge", "#1F2937");
         assertThat(owner.queryForObject("SELECT count(*) FROM salon_brand", Integer.class))
-                .as("both salons have a brand row to find").isEqualTo(2);
+                .as("both salons have a brand row to find")
+                .isEqualTo(2);
     }
 
     @Test
     void aQueryWithNoSalonSetSeesNoRow() throws SQLException {
         try (Connection connection = database.connectAsApplication()) {
             connection.setAutoCommit(false);
-            assertThat(tenantsVisible(connection, "SELECT tenant_id FROM salon_brand")).isEmpty();
+            assertThat(tenantsVisible(connection, "SELECT tenant_id FROM salon_brand"))
+                    .isEmpty();
             connection.rollback();
         }
     }
@@ -69,8 +69,10 @@ class SalonBrandRowLevelSecurityAloneIntegrationTest {
             connection.setAutoCommit(false);
             setTenant(connection, alpha);
 
-            assertThat(tenantsVisible(connection, "SELECT tenant_id FROM salon_brand")).containsExactly(alpha.id());
-            assertThat(tenantsVisible(connection, "SELECT tenant_id FROM salon_brand WHERE tenant_id = '" + beta.id() + "'"))
+            assertThat(tenantsVisible(connection, "SELECT tenant_id FROM salon_brand"))
+                    .containsExactly(alpha.id());
+            assertThat(tenantsVisible(
+                            connection, "SELECT tenant_id FROM salon_brand WHERE tenant_id = '" + beta.id() + "'"))
                     .isEmpty();
             connection.rollback();
         }
@@ -83,17 +85,22 @@ class SalonBrandRowLevelSecurityAloneIntegrationTest {
             connection.setAutoCommit(false);
             setTenant(connection, alpha);
 
-            assertThat(update(connection, "UPDATE salon_brand SET display_name = 'Taken' WHERE tenant_id = '" + beta.id() + "'"))
-                    .as("rows updated").isZero();
+            assertThat(update(
+                            connection,
+                            "UPDATE salon_brand SET display_name = 'Taken' WHERE tenant_id = '" + beta.id() + "'"))
+                    .as("rows updated")
+                    .isZero();
             assertThat(update(connection, "DELETE FROM salon_brand WHERE tenant_id = '" + beta.id() + "'"))
-                    .as("rows deleted").isZero();
+                    .as("rows deleted")
+                    .isZero();
             assertThat(update(connection, "UPDATE salon_brand SET brand_colour = '#000000'"))
-                    .as("an update of every row reaches alpha's only").isEqualTo(1);
+                    .as("an update of every row reaches alpha's only")
+                    .isEqualTo(1);
             connection.commit();
         }
         assertThat(brandOf(beta)).isEqualTo(betaBefore);
-        database.asOwner().update("UPDATE salon_brand SET brand_colour = ? WHERE tenant_id = ?", alpha.brandColour(),
-                alpha.id());
+        database.asOwner()
+                .update("UPDATE salon_brand SET brand_colour = ? WHERE tenant_id = ?", alpha.brandColour(), alpha.id());
     }
 
     @Test
@@ -104,8 +111,10 @@ class SalonBrandRowLevelSecurityAloneIntegrationTest {
             setTenant(connection, alpha);
 
             assertThatExceptionOfType(SQLException.class)
-                    .isThrownBy(() -> update(connection, "INSERT INTO salon_brand (tenant_id, display_name, brand_colour) "
-                            + "VALUES ('" + delta.id() + "', 'Not mine', '#123456')"))
+                    .isThrownBy(() -> update(
+                            connection,
+                            "INSERT INTO salon_brand (tenant_id, display_name, brand_colour) " + "VALUES ('"
+                                    + delta.id() + "', 'Not mine', '#123456')"))
                     .satisfies(refused -> assertThat(refused.getSQLState()).isEqualTo("42501"));
             connection.rollback();
 
@@ -115,8 +124,10 @@ class SalonBrandRowLevelSecurityAloneIntegrationTest {
                     .satisfies(refused -> assertThat(refused.getSQLState()).isEqualTo("42501"));
             connection.rollback();
         }
-        assertThat(database.asOwner().queryForObject("SELECT count(*) FROM salon_brand WHERE tenant_id = ?",
-                Integer.class, delta.id())).isZero();
+        assertThat(database.asOwner()
+                        .queryForObject(
+                                "SELECT count(*) FROM salon_brand WHERE tenant_id = ?", Integer.class, delta.id()))
+                .isZero();
     }
 
     @Test
@@ -124,11 +135,14 @@ class SalonBrandRowLevelSecurityAloneIntegrationTest {
         TestSalon delta = new TestSalons(database.asOwner()).createWithoutBrand("active");
         try (Connection connection = database.connectAsApplication()) {
             connection.setAutoCommit(false);
-            assertThat(update(connection, "UPDATE salon_brand SET display_name = 'Taken'")).isZero();
+            assertThat(update(connection, "UPDATE salon_brand SET display_name = 'Taken'"))
+                    .isZero();
             assertThat(update(connection, "DELETE FROM salon_brand")).isZero();
             assertThatExceptionOfType(SQLException.class)
-                    .isThrownBy(() -> update(connection, "INSERT INTO salon_brand (tenant_id, display_name, brand_colour) "
-                            + "VALUES ('" + delta.id() + "', 'Nobody', '#123456')"))
+                    .isThrownBy(() -> update(
+                            connection,
+                            "INSERT INTO salon_brand (tenant_id, display_name, brand_colour) " + "VALUES ('"
+                                    + delta.id() + "', 'Nobody', '#123456')"))
                     .satisfies(refused -> assertThat(refused.getSQLState()).isEqualTo("42501"));
             connection.rollback();
         }
@@ -144,19 +158,24 @@ class SalonBrandRowLevelSecurityAloneIntegrationTest {
             connection.setAutoCommit(false);
 
             setTenant(connection, alpha);
-            assertThat(tenantsVisible(connection, "SELECT tenant_id FROM salon_brand")).containsExactly(alpha.id());
+            assertThat(tenantsVisible(connection, "SELECT tenant_id FROM salon_brand"))
+                    .containsExactly(alpha.id());
             connection.commit();
-            assertThat(tenantsVisible(connection, "SELECT tenant_id FROM salon_brand")).isEmpty();
+            assertThat(tenantsVisible(connection, "SELECT tenant_id FROM salon_brand"))
+                    .isEmpty();
             connection.commit();
 
             setTenant(connection, beta);
-            assertThat(tenantsVisible(connection, "SELECT tenant_id FROM salon_brand")).containsExactly(beta.id());
+            assertThat(tenantsVisible(connection, "SELECT tenant_id FROM salon_brand"))
+                    .containsExactly(beta.id());
             connection.rollback();
-            assertThat(tenantsVisible(connection, "SELECT tenant_id FROM salon_brand")).isEmpty();
+            assertThat(tenantsVisible(connection, "SELECT tenant_id FROM salon_brand"))
+                    .isEmpty();
             connection.commit();
 
             connection.setAutoCommit(true);
-            assertThat(tenantsVisible(connection, "SELECT tenant_id FROM salon_brand")).isEmpty();
+            assertThat(tenantsVisible(connection, "SELECT tenant_id FROM salon_brand"))
+                    .isEmpty();
         }
     }
 
@@ -169,7 +188,8 @@ class SalonBrandRowLevelSecurityAloneIntegrationTest {
 
     private static List<UUID> tenantsVisible(Connection connection, String query) throws SQLException {
         List<UUID> tenants = new ArrayList<>();
-        try (Statement statement = connection.createStatement(); ResultSet rows = statement.executeQuery(query)) {
+        try (Statement statement = connection.createStatement();
+                ResultSet rows = statement.executeQuery(query)) {
             while (rows.next()) {
                 tenants.add(rows.getObject(1, UUID.class));
             }

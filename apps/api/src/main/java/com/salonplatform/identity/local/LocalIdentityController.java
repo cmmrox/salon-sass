@@ -2,20 +2,16 @@ package com.salonplatform.identity.local;
 
 import com.salonplatform.identity.application.StaffAccess;
 import com.salonplatform.shared.api.NotFoundException;
-
 import io.swagger.v3.oas.annotations.Hidden;
-
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Size;
-
+import java.net.InetAddress;
+import java.util.List;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.net.InetAddress;
-import java.util.List;
 
 /** Loopback synthetic-only fixtures. Submitted credentials are never returned. */
 @RestController
@@ -41,8 +37,7 @@ class LocalIdentityController {
     record SeedResult(int accounts) {}
 
     @PostMapping("/seed")
-    ResponseEntity<SeedResult> seed(
-            @Valid @RequestBody SeedRequest request, HttpServletRequest http) {
+    ResponseEntity<SeedResult> seed(@Valid @RequestBody SeedRequest request, HttpServletRequest http) {
         loopback(http);
         return ResponseEntity.ok()
                 .cacheControl(org.springframework.http.CacheControl.noStore())
@@ -60,8 +55,7 @@ class LocalIdentityController {
 
     private static void loopback(HttpServletRequest request) {
         try {
-            if (!InetAddress.getByName(request.getRemoteAddr()).isLoopbackAddress())
-                throw new NotFoundException();
+            if (!InetAddress.getByName(request.getRemoteAddr()).isLoopbackAddress()) throw new NotFoundException();
         } catch (java.net.UnknownHostException ex) {
             throw new NotFoundException();
         }

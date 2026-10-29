@@ -1,11 +1,9 @@
 package com.salonplatform.shared.outbox;
 
+import com.salonplatform.shared.infrastructure.PlatformDatabase;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.UUID;
-
-import com.salonplatform.shared.infrastructure.PlatformDatabase;
-
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 
@@ -31,8 +29,8 @@ public class OutboxLifecycle {
     public int cancelClosedSalon(UUID salonId, Instant at) {
         PlatformDatabase platform = database.getObject();
         platform.requireTransaction();
-        Integer cancelled = platform.jdbc().queryForObject("SELECT outbox_cancel_closed_salon(?, ?)", Integer.class,
-                salonId, Timestamp.from(at));
+        Integer cancelled = platform.jdbc()
+                .queryForObject("SELECT outbox_cancel_closed_salon(?, ?)", Integer.class, salonId, Timestamp.from(at));
         return cancelled == null ? 0 : cancelled;
     }
 }

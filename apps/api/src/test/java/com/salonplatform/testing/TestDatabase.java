@@ -5,11 +5,9 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.UUID;
-
-import org.testcontainers.postgresql.PostgreSQLContainer;
-
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 
 /**
  * One database in a test container, reached directly as either role: as the owner, the way
@@ -50,11 +48,11 @@ public final class TestDatabase {
     /** A new, empty database in the container, for a test that must start from nothing. */
     public static TestDatabase createEmpty(PostgreSQLContainer postgres) {
         String name = "test_" + UUID.randomUUID().toString().replace("-", "");
-        try (Connection connection = DriverManager.getConnection(postgres.getJdbcUrl(), postgres.getUsername(),
-                postgres.getPassword()); Statement statement = connection.createStatement()) {
+        try (Connection connection = DriverManager.getConnection(
+                        postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword());
+                Statement statement = connection.createStatement()) {
             statement.execute("CREATE DATABASE " + name);
-        }
-        catch (SQLException ex) {
+        } catch (SQLException ex) {
             throw new IllegalStateException("could not create database " + name, ex);
         }
         return new TestDatabase(postgres, postgres.getJdbcUrl().replace("/" + postgres.getDatabaseName(), "/" + name));
@@ -69,8 +67,9 @@ public final class TestDatabase {
      */
     public static TestDatabase createEmptyOwnedByAnOrdinaryRole(PostgreSQLContainer postgres) {
         String name = "test_" + UUID.randomUUID().toString().replace("-", "");
-        try (Connection connection = DriverManager.getConnection(postgres.getJdbcUrl(), postgres.getUsername(),
-                postgres.getPassword()); Statement statement = connection.createStatement()) {
+        try (Connection connection = DriverManager.getConnection(
+                        postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword());
+                Statement statement = connection.createStatement()) {
             // Two tests may arrive here at once in one container; the lock makes "create if absent" safe.
             statement.execute("SELECT pg_advisory_lock(7401)");
             statement.execute("DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '" + ORDINARY_OWNER
@@ -78,12 +77,14 @@ public final class TestDatabase {
                     + "' NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS; END IF; END $$");
             statement.execute("SELECT pg_advisory_unlock(7401)");
             statement.execute("CREATE DATABASE " + name + " OWNER " + ORDINARY_OWNER);
-        }
-        catch (SQLException ex) {
+        } catch (SQLException ex) {
             throw new IllegalStateException("could not create database " + name, ex);
         }
-        return new TestDatabase(postgres, postgres.getJdbcUrl().replace("/" + postgres.getDatabaseName(), "/" + name),
-                ORDINARY_OWNER, ORDINARY_OWNER_PASSWORD);
+        return new TestDatabase(
+                postgres,
+                postgres.getJdbcUrl().replace("/" + postgres.getDatabaseName(), "/" + name),
+                ORDINARY_OWNER,
+                ORDINARY_OWNER_PASSWORD);
     }
 
     public String url() {

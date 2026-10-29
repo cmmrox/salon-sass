@@ -16,7 +16,6 @@ import java.util.HexFormat;
 import java.util.List;
 import java.util.Locale;
 import java.util.Properties;
-
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
@@ -57,7 +56,8 @@ public class OperatorSecrets {
         for (int a = 0; a < keys.size(); a++) {
             for (int b = a + 1; b < keys.size(); b++) {
                 if (MessageDigest.isEqual(keys.get(a), keys.get(b))) {
-                    throw new IllegalStateException("Operator keys must be independent of each other and of identity keys");
+                    throw new IllegalStateException(
+                            "Operator keys must be independent of each other and of identity keys");
                 }
             }
         }
@@ -76,17 +76,20 @@ public class OperatorSecrets {
     }
 
     private static synchronized Properties retained(Environment environment) {
-        Path path = Path.of(environment.getProperty("salon.operator.local-key-file",
-                "../../.local/operator-keys.properties")).toAbsolutePath().normalize();
+        Path path = Path.of(environment.getProperty(
+                        "salon.operator.local-key-file", "../../.local/operator-keys.properties"))
+                .toAbsolutePath()
+                .normalize();
         Properties saved = new Properties();
         var mode = PosixFilePermissions.fromString("rw-------");
         Path temporary = null;
         try {
             Files.createDirectories(path.getParent());
             Path lockPath = path.resolveSibling(path.getFileName() + ".lock");
-            try (FileChannel channel = FileChannel.open(lockPath, StandardOpenOption.CREATE, StandardOpenOption.WRITE)) {
+            try (FileChannel channel =
+                    FileChannel.open(lockPath, StandardOpenOption.CREATE, StandardOpenOption.WRITE)) {
                 Files.setPosixFilePermissions(lockPath, mode);
-                try (var lock = channel.lock()) {
+                try (var _ = channel.lock()) {
                     if (Files.exists(path)) {
                         Files.setPosixFilePermissions(path, mode);
                         try (InputStream in = Files.newInputStream(path)) {
@@ -103,27 +106,28 @@ public class OperatorSecrets {
                         }
                     }
                     if (changed) {
-                        temporary = Files.createTempFile(path.getParent(), ".operator-keys-", ".tmp",
+                        temporary = Files.createTempFile(
+                                path.getParent(),
+                                ".operator-keys-",
+                                ".tmp",
                                 PosixFilePermissions.asFileAttribute(mode));
                         try (OutputStream out = Files.newOutputStream(temporary)) {
                             saved.store(out, "Local-only operator console keys. Never commit or print.");
                         }
-                        Files.move(temporary, path, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+                        Files.move(
+                                temporary, path, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
                         temporary = null;
                     }
                 }
             }
             return saved;
-        }
-        catch (IOException ex) {
+        } catch (IOException ex) {
             throw new IllegalStateException("Cannot read retained local operator keys", ex);
-        }
-        finally {
+        } finally {
             if (temporary != null) {
                 try {
                     Files.deleteIfExists(temporary);
-                }
-                catch (IOException ignored) {
+                } catch (IOException ignored) {
                     // Nothing more can be done; the file holds no key until it is moved into place.
                 }
             }

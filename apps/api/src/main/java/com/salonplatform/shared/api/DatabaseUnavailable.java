@@ -4,7 +4,6 @@ import java.sql.SQLException;
 import java.sql.SQLNonTransientConnectionException;
 import java.sql.SQLTimeoutException;
 import java.sql.SQLTransientConnectionException;
-
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.dao.QueryTimeoutException;
 import org.springframework.dao.TransientDataAccessResourceException;
@@ -19,16 +18,17 @@ import org.springframework.dao.TransientDataAccessResourceException;
 public final class DatabaseUnavailable {
 
     /** SQL states of the connection-failure class, and of the server shutting down. */
-    private static final String[] UNAVAILABLE_STATES = { "08", "57P01", "57P02", "57P03" };
+    private static final String[] UNAVAILABLE_STATES = {"08", "57P01", "57P02", "57P03"};
 
-    private DatabaseUnavailable() {
-    }
+    private DatabaseUnavailable() {}
 
     public static boolean isCauseOf(Throwable failure) {
         for (Throwable cause = failure; cause != null; cause = cause.getCause()) {
             if (cause instanceof DataAccessResourceFailureException
-                    || cause instanceof TransientDataAccessResourceException || cause instanceof QueryTimeoutException
-                    || cause instanceof SQLTransientConnectionException || cause instanceof SQLTimeoutException
+                    || cause instanceof TransientDataAccessResourceException
+                    || cause instanceof QueryTimeoutException
+                    || cause instanceof SQLTransientConnectionException
+                    || cause instanceof SQLTimeoutException
                     || cause instanceof SQLNonTransientConnectionException) {
                 return true;
             }

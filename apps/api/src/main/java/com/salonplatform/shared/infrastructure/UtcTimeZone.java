@@ -1,7 +1,6 @@
 package com.salonplatform.shared.infrastructure;
 
 import java.util.TimeZone;
-
 import org.springframework.boot.context.event.ApplicationStartingEvent;
 import org.springframework.context.ApplicationListener;
 

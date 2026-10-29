@@ -1,15 +1,13 @@
 package com.salonplatform.platform.infrastructure;
 
-import java.io.IOException;
-import java.util.Locale;
-
 import com.salonplatform.shared.api.NotFoundException;
 import com.salonplatform.shared.api.RequestPaths;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-
+import java.io.IOException;
+import java.util.Locale;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
@@ -41,7 +39,8 @@ class OperatorHostFilter extends OncePerRequestFilter {
     private final String consoleHost;
     private final HandlerExceptionResolver errors;
 
-    OperatorHostFilter(@Value("${salon.platform-domain}") String platformDomain,
+    OperatorHostFilter(
+            @Value("${salon.platform-domain}") String platformDomain,
             @Qualifier("handlerExceptionResolver") HandlerExceptionResolver errors) {
         this.consoleHost = "console." + platformDomain.strip().toLowerCase(Locale.ROOT);
         this.errors = errors;

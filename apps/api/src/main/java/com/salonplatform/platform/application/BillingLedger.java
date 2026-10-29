@@ -1,5 +1,12 @@
 package com.salonplatform.platform.application;
 
+import com.salonplatform.platform.domain.BillingCalendar;
+import com.salonplatform.platform.domain.BillingCalendar.Reminder;
+import com.salonplatform.platform.domain.BillingCalendar.State;
+import com.salonplatform.platform.domain.BillingTerms;
+import com.salonplatform.platform.infrastructure.PlatformAudit;
+import com.salonplatform.shared.infrastructure.PlatformDatabase;
+import com.salonplatform.shared.observability.Traces;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -14,18 +21,9 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-
-import com.salonplatform.platform.domain.BillingCalendar;
-import com.salonplatform.platform.domain.BillingCalendar.Reminder;
-import com.salonplatform.platform.domain.BillingCalendar.State;
-import com.salonplatform.platform.domain.BillingTerms;
-import com.salonplatform.platform.infrastructure.PlatformAudit;
-import com.salonplatform.shared.infrastructure.PlatformDatabase;
-import com.salonplatform.shared.observability.Traces;
-import tools.jackson.databind.json.JsonMapper;
-
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Subscription billing's records on the platform connection (docs/architecture/operator-console.md,
@@ -43,20 +41,55 @@ public class BillingLedger {
     public static final String CHARGE = "billing-charge";
 
     /** A salon as billing needs it. */
-    public record Salon(UUID id, String slug, String name, ZoneId zone, String currency, String ownerEmail,
-            UUID planId, String planKey, String planName, String status, String accessState, long version) {
-    }
+    public record Salon(
+            UUID id,
+            String slug,
+            String name,
+            ZoneId zone,
+            String currency,
+            String ownerEmail,
+            UUID planId,
+            String planKey,
+            String planName,
+            String status,
+            String accessState,
+            long version) {}
 
     /** A subscription row. */
-    public record Subscription(UUID id, UUID salonId, State state, long monthlyAmount, String currency,
-            String paymentMethod, Instant startedAt, Instant trialEndsAt, LocalDateTime anchor, int invoicesIssued,
-            Instant nextInvoiceAt, long version, Instant createdAt, Instant updatedAt) {
-    }
+    public record Subscription(
+            UUID id,
+            UUID salonId,
+            State state,
+            long monthlyAmount,
+            String currency,
+            String paymentMethod,
+            Instant startedAt,
+            Instant trialEndsAt,
+            LocalDateTime anchor,
+            int invoicesIssued,
+            Instant nextInvoiceAt,
+            long version,
+            Instant createdAt,
+            Instant updatedAt) {}
 
     /** An invoice row. */
-    public record Invoice(UUID id, long number, UUID salonId, UUID subscriptionId, UUID planId, String planKey,
-            String planName, int periodIndex, Instant periodStart, Instant periodEnd, long amount, String currency,
-            Instant issuedAt, Instant dueAt, String status, Instant paidAt) {
+    public record Invoice(
+            UUID id,
+            long number,
+            UUID salonId,
+            UUID subscriptionId,
+            UUID planId,
+            String planKey,
+            String planName,
+            int periodIndex,
+            Instant periodStart,
+            Instant periodEnd,
+            long amount,
+            String currency,
+            Instant issuedAt,
+            Instant dueAt,
+            String status,
+            Instant paidAt) {
 
         public boolean open() {
             return "open".equals(status);
@@ -64,9 +97,15 @@ public class BillingLedger {
     }
 
     /** A payment row. */
-    public record Payment(UUID id, UUID invoiceId, String method, String reference, String providerEventId,
-            long amount, LocalDate receivedOn, Instant paidAt) {
-    }
+    public record Payment(
+            UUID id,
+            UUID invoiceId,
+            String method,
+            String reference,
+            String providerEventId,
+            long amount,
+            LocalDate receivedOn,
+            Instant paidAt) {}
 
     /** What one pass did to one subscription, for the run-now hook's answer and the log. */
     public record Changes(List<String> issued, List<String> reminders, List<String> charges, List<String> states) {
@@ -88,8 +127,13 @@ public class BillingLedger {
     private final String platformDomain;
     private final String linkOrigin;
 
-    public BillingLedger(PlatformDatabase database, PlatformAudit audit, Traces traces, JsonMapper json,
-            BillingFaults faults, @Value("${salon.platform-domain}") String platformDomain,
+    public BillingLedger(
+            PlatformDatabase database,
+            PlatformAudit audit,
+            Traces traces,
+            JsonMapper json,
+            BillingFaults faults,
+            @Value("${salon.platform-domain}") String platformDomain,
             @Value("${salon.billing.link-origin:https://%s}") String linkOrigin) {
         this.database = database;
         this.audit = audit;
@@ -108,34 +152,70 @@ public class BillingLedger {
     }
 
     private static Salon salon(ResultSet row) throws SQLException {
-        return new Salon(row.getObject("id", UUID.class), row.getString("slug"), row.getString("name"),
-                ZoneId.of(row.getString("time_zone")), row.getString("currency"), row.getString("owner_email"),
-                row.getObject("plan_id", UUID.class), row.getString("plan_key"), row.getString("plan_name"),
-                row.getString("status"), row.getString("access_state"), row.getLong("version"));
+        return new Salon(
+                row.getObject("id", UUID.class),
+                row.getString("slug"),
+                row.getString("name"),
+                ZoneId.of(row.getString("time_zone")),
+                row.getString("currency"),
+                row.getString("owner_email"),
+                row.getObject("plan_id", UUID.class),
+                row.getString("plan_key"),
+                row.getString("plan_name"),
+                row.getString("status"),
+                row.getString("access_state"),
+                row.getLong("version"));
     }
 
     private static Subscription subscription(ResultSet row) throws SQLException {
-        return new Subscription(row.getObject("id", UUID.class), row.getObject("salon_id", UUID.class),
-                State.of(row.getString("state")), row.getLong("monthly_amount"), row.getString("currency"),
-                row.getString("payment_method"), instant(row, "started_at"), instant(row, "trial_ends_at"),
-                row.getTimestamp("anchor_local").toLocalDateTime(), row.getInt("invoices_issued"),
-                instant(row, "next_invoice_at"), row.getLong("version"), instant(row, "created_at"),
+        return new Subscription(
+                row.getObject("id", UUID.class),
+                row.getObject("salon_id", UUID.class),
+                State.of(row.getString("state")),
+                row.getLong("monthly_amount"),
+                row.getString("currency"),
+                row.getString("payment_method"),
+                instant(row, "started_at"),
+                instant(row, "trial_ends_at"),
+                row.getTimestamp("anchor_local").toLocalDateTime(),
+                row.getInt("invoices_issued"),
+                instant(row, "next_invoice_at"),
+                row.getLong("version"),
+                instant(row, "created_at"),
                 instant(row, "updated_at"));
     }
 
     static Invoice invoice(ResultSet row) throws SQLException {
-        return new Invoice(row.getObject("id", UUID.class), row.getLong("number"), row.getObject("salon_id", UUID.class),
-                row.getObject("subscription_id", UUID.class), row.getObject("plan_id", UUID.class),
-                row.getString("plan_key"), row.getString("plan_name"), row.getInt("period_index"),
-                instant(row, "period_start"), instant(row, "period_end"), row.getLong("amount"), row.getString("currency"),
-                instant(row, "issued_at"), instant(row, "due_at"), row.getString("status"), instant(row, "paid_at"));
+        return new Invoice(
+                row.getObject("id", UUID.class),
+                row.getLong("number"),
+                row.getObject("salon_id", UUID.class),
+                row.getObject("subscription_id", UUID.class),
+                row.getObject("plan_id", UUID.class),
+                row.getString("plan_key"),
+                row.getString("plan_name"),
+                row.getInt("period_index"),
+                instant(row, "period_start"),
+                instant(row, "period_end"),
+                row.getLong("amount"),
+                row.getString("currency"),
+                instant(row, "issued_at"),
+                instant(row, "due_at"),
+                row.getString("status"),
+                instant(row, "paid_at"));
     }
 
     static Payment payment(ResultSet row) throws SQLException {
         java.sql.Date received = row.getDate("received_on");
-        return new Payment(row.getObject("id", UUID.class), row.getObject("invoice_id", UUID.class),
-                row.getString("method"), row.getString("reference"), row.getString("provider_event_id"),
-                row.getLong("amount"), received == null ? null : received.toLocalDate(), instant(row, "paid_at"));
+        return new Payment(
+                row.getObject("id", UUID.class),
+                row.getObject("invoice_id", UUID.class),
+                row.getString("method"),
+                row.getString("reference"),
+                row.getString("provider_event_id"),
+                row.getLong("amount"),
+                received == null ? null : received.toLocalDate(),
+                instant(row, "paid_at"));
     }
 
     static final String INVOICE_COLUMNS = """
@@ -150,7 +230,8 @@ public class BillingLedger {
                 SELECT t.id, t.slug, t.name, t.time_zone, t.currency, t.owner_email, t.plan_id, t.status,
                        t.access_state, t.version, p.key AS plan_key, p.name AS plan_name
                   FROM tenant t LEFT JOIN plan p ON p.id = t.plan_id WHERE t.id = ?
-                """ + (lock ? " FOR UPDATE OF t" : ""), (row, n) -> salon(row), id).stream().findFirst();
+                """ + (lock ? " FOR UPDATE OF t" : ""), (row, n) -> salon(row), id).stream()
+                .findFirst();
     }
 
     /**
@@ -160,46 +241,81 @@ public class BillingLedger {
      */
     public boolean billed(UUID salonId) {
         database.requireTransaction();
-        return database.jdbc().queryForList("SELECT status FROM tenant WHERE id = ? FOR SHARE", String.class, salonId)
-                .stream().findFirst().map(status -> !"closed".equals(status) && !"deleted".equals(status)).orElse(false);
+        return database
+                .jdbc()
+                .queryForList("SELECT status FROM tenant WHERE id = ? FOR SHARE", String.class, salonId)
+                .stream()
+                .findFirst()
+                .map(status -> !"closed".equals(status) && !"deleted".equals(status))
+                .orElse(false);
     }
 
     public Optional<Subscription> subscriptionOf(UUID salonId, boolean lock) {
         database.requireTransaction();
-        return database.jdbc().query("SELECT * FROM subscription WHERE salon_id = ?" + (lock ? " FOR UPDATE" : ""),
-                (row, n) -> subscription(row), salonId).stream().findFirst();
+        return database
+                .jdbc()
+                .query(
+                        "SELECT * FROM subscription WHERE salon_id = ?" + (lock ? " FOR UPDATE" : ""),
+                        (row, n) -> subscription(row),
+                        salonId)
+                .stream()
+                .findFirst();
     }
 
     public Optional<Subscription> subscription(UUID id, boolean lock) {
         database.requireTransaction();
-        return database.jdbc().query("SELECT * FROM subscription WHERE id = ?" + (lock ? " FOR UPDATE" : ""),
-                (row, n) -> subscription(row), id).stream().findFirst();
+        return database
+                .jdbc()
+                .query(
+                        "SELECT * FROM subscription WHERE id = ?" + (lock ? " FOR UPDATE" : ""),
+                        (row, n) -> subscription(row),
+                        id)
+                .stream()
+                .findFirst();
     }
 
     public Optional<Invoice> invoiceById(UUID id, boolean lock) {
         database.requireTransaction();
-        return database.jdbc().query("SELECT " + INVOICE_COLUMNS + " FROM invoice WHERE id = ?" + (lock ? " FOR UPDATE" : ""),
-                (row, n) -> invoice(row), id).stream().findFirst();
+        return database
+                .jdbc()
+                .query(
+                        "SELECT " + INVOICE_COLUMNS + " FROM invoice WHERE id = ?" + (lock ? " FOR UPDATE" : ""),
+                        (row, n) -> invoice(row),
+                        id)
+                .stream()
+                .findFirst();
     }
 
     public List<Invoice> openInvoices(UUID subscriptionId) {
         database.requireTransaction();
-        return database.jdbc().query("SELECT " + INVOICE_COLUMNS
-                + " FROM invoice WHERE subscription_id = ? AND status = 'open' ORDER BY due_at, number",
-                (row, n) -> invoice(row), subscriptionId);
+        return database.jdbc()
+                .query(
+                        "SELECT " + INVOICE_COLUMNS
+                                + " FROM invoice WHERE subscription_id = ? AND status = 'open' ORDER BY due_at, number",
+                        (row, n) -> invoice(row),
+                        subscriptionId);
     }
 
     public Optional<Invoice> latestInvoice(UUID subscriptionId) {
         database.requireTransaction();
-        return database.jdbc().query("SELECT " + INVOICE_COLUMNS
-                + " FROM invoice WHERE subscription_id = ? ORDER BY period_index DESC LIMIT 1",
-                (row, n) -> invoice(row), subscriptionId).stream().findFirst();
+        return database
+                .jdbc()
+                .query(
+                        "SELECT " + INVOICE_COLUMNS
+                                + " FROM invoice WHERE subscription_id = ? ORDER BY period_index DESC LIMIT 1",
+                        (row, n) -> invoice(row),
+                        subscriptionId)
+                .stream()
+                .findFirst();
     }
 
     public List<Payment> payments(UUID invoiceId) {
         database.requireTransaction();
-        return database.jdbc().query("SELECT * FROM invoice_payment WHERE invoice_id = ? ORDER BY paid_at, id",
-                (row, n) -> payment(row), invoiceId);
+        return database.jdbc()
+                .query(
+                        "SELECT * FROM invoice_payment WHERE invoice_id = ? ORDER BY paid_at, id",
+                        (row, n) -> payment(row),
+                        invoiceId);
     }
 
     /**
@@ -207,39 +323,59 @@ public class BillingLedger {
      * due instant of its oldest unpaid invoice past due. Null when nothing is past due.
      */
     public Instant readOnlyAt(Subscription subscription, Instant now) {
-        return openInvoices(subscription.id()).stream().map(Invoice::dueAt).filter(due -> !now.isBefore(due))
-                .min(Instant::compareTo).map(BillingCalendar::readOnlyAt).orElse(null);
+        return openInvoices(subscription.id()).stream()
+                .map(Invoice::dueAt)
+                .filter(due -> !now.isBefore(due))
+                .min(Instant::compareTo)
+                .map(BillingCalendar::readOnlyAt)
+                .orElse(null);
     }
 
     /** The due instant of the oldest unpaid invoice past due, or null. */
     public Instant pastDueSince(Subscription subscription, Instant now) {
-        return openInvoices(subscription.id()).stream().map(Invoice::dueAt).filter(due -> !now.isBefore(due))
-                .min(Instant::compareTo).orElse(null);
+        return openInvoices(subscription.id()).stream()
+                .map(Invoice::dueAt)
+                .filter(due -> !now.isBefore(due))
+                .min(Instant::compareTo)
+                .orElse(null);
     }
 
     // --- writes ---------------------------------------------------------------------------------
 
     /** Starts a trialing subscription for a salon that has none (the caller checked). */
-    public Subscription start(Salon salon, long amount, String currency, String method, Instant start,
-            String actorKind, String actorId) {
+    public Subscription start(
+            Salon salon, long amount, String currency, String method, Instant start, String actorKind, String actorId) {
         database.requireTransaction();
         UUID id = UUID.randomUUID();
         Instant trialEnd = BillingCalendar.trialEnd(start);
         LocalDateTime anchor = BillingCalendar.anchor(trialEnd, salon.zone());
         Timestamp at = Timestamp.from(start);
-        database.jdbc().update("""
+        database.jdbc()
+                .update(
+                        """
                 INSERT INTO subscription (id, salon_id, state, monthly_amount, currency, payment_method, started_at,
                     trial_ends_at, anchor_local, invoices_issued, next_invoice_at, version, created_at, updated_at)
                 VALUES (?, ?, 'trialing', ?, ?, ?, ?, ?, ?, 0, ?, 0, ?, ?)
-                """, id, salon.id(), amount, currency, method, at, Timestamp.from(trialEnd),
-                Timestamp.valueOf(anchor), Timestamp.from(trialEnd), at, at);
+                """,
+                        id,
+                        salon.id(),
+                        amount,
+                        currency,
+                        method,
+                        at,
+                        Timestamp.from(trialEnd),
+                        Timestamp.valueOf(anchor),
+                        Timestamp.from(trialEnd),
+                        at,
+                        at);
         Map<String, Object> details = new LinkedHashMap<>();
         details.put("subscriptionId", id.toString());
         details.put("monthlyAmount", amount);
         details.put("currency", currency);
         details.put("paymentMethod", method);
         details.put("trialEndsAt", trialEnd.toString());
-        audit.record(actorKind, actorId, "subscription.started", "salon", salon.id().toString(), details, start);
+        audit.record(
+                actorKind, actorId, "subscription.started", "salon", salon.id().toString(), details, start);
         return subscription(id, false).orElseThrow();
     }
 
@@ -263,17 +399,35 @@ public class BillingLedger {
         Instant periodStart = subscription.nextInvoiceAt();
         Instant periodEnd = BillingCalendar.periodStart(subscription.anchor(), salon.zone(), index + 1);
         Instant due = BillingCalendar.due(periodStart);
-        Long number = database.jdbc().queryForObject(
-                "UPDATE invoice_number SET last_number = last_number + 1 WHERE id RETURNING last_number", Long.class);
+        Long number = database.jdbc()
+                .queryForObject(
+                        "UPDATE invoice_number SET last_number = last_number + 1 WHERE id RETURNING last_number",
+                        Long.class);
         UUID id = UUID.randomUUID();
         Timestamp at = Timestamp.from(now);
-        database.jdbc().update("""
+        database.jdbc()
+                .update(
+                        """
                 INSERT INTO invoice (id, number, salon_id, subscription_id, plan_id, plan_key, plan_name, period_index,
                     period_start, period_end, amount, currency, issued_at, due_at, status, paid_at, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'open', NULL, ?, ?)
-                """, id, number, salon.id(), subscription.id(), salon.planId(), salon.planKey(), salon.planName(), index,
-                Timestamp.from(periodStart), Timestamp.from(periodEnd), subscription.monthlyAmount(),
-                subscription.currency(), Timestamp.from(periodStart), Timestamp.from(due), at, at);
+                """,
+                        id,
+                        number,
+                        salon.id(),
+                        subscription.id(),
+                        salon.planId(),
+                        salon.planKey(),
+                        salon.planName(),
+                        index,
+                        Timestamp.from(periodStart),
+                        Timestamp.from(periodEnd),
+                        subscription.monthlyAmount(),
+                        subscription.currency(),
+                        Timestamp.from(periodStart),
+                        Timestamp.from(due),
+                        at,
+                        at);
         database.jdbc().update("""
                 UPDATE subscription SET invoices_issued = ?, next_invoice_at = ?, updated_at = ? WHERE id = ?
                 """, index + 1, Timestamp.from(periodEnd), at, subscription.id());
@@ -319,8 +473,14 @@ public class BillingLedger {
         payload.put("amount", invoice.amount());
         payload.put("currency", invoice.currency());
         enqueue(salon.id(), CHARGE, payload, now);
-        audit.record(PlatformAudit.SYSTEM, "billing", "charge.requested", "invoice", invoice.id().toString(),
-                Map.of("attemptId", id.toString(), "occasion", occasion), now);
+        audit.record(
+                PlatformAudit.SYSTEM,
+                "billing",
+                "charge.requested",
+                "invoice",
+                invoice.id().toString(),
+                Map.of("attemptId", id.toString(), "occasion", occasion),
+                now);
         changes.charges().add(BillingTerms.invoiceNumber(invoice.number()) + ":" + occasion);
         return true;
     }
@@ -354,9 +514,11 @@ public class BillingLedger {
         UUID id = UUID.randomUUID();
         UUID message = salon.ownerEmail() == null ? null : UUID.randomUUID();
         Timestamp at = Timestamp.from(now);
-        String conflict = attemptId == null ? "(invoice_id, kind) WHERE kind <> 'failed_charge'"
+        String conflict = attemptId == null
+                ? "(invoice_id, kind) WHERE kind <> 'failed_charge'"
                 : "(charge_attempt_id) WHERE kind = 'failed_charge'";
-        int inserted = database.jdbc().update("""
+        int inserted =
+                database.jdbc().update("""
                 INSERT INTO billing_reminder (id, invoice_id, kind, charge_attempt_id, message_id, sent_at, created_at,
                     updated_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -366,15 +528,25 @@ public class BillingLedger {
             return false;
         }
         if (message != null) {
-            enqueueWithId(salon.id(), message, EMAIL, BillingEmails.compose(kind, salon.ownerEmail(), invoice,
-                    salon.zone(), link(salon)), now);
+            enqueueWithId(
+                    salon.id(),
+                    message,
+                    EMAIL,
+                    BillingEmails.compose(kind, salon.ownerEmail(), invoice, salon.zone(), link(salon)),
+                    now);
         }
         Map<String, Object> details = new LinkedHashMap<>();
         details.put("kind", kind);
         details.put("number", BillingTerms.invoiceNumber(invoice.number()));
         details.put("recipient", message == null ? "none" : "owner");
-        audit.record(PlatformAudit.SYSTEM, "billing", "billing.reminder_sent", "invoice", invoice.id().toString(),
-                details, now);
+        audit.record(
+                PlatformAudit.SYSTEM,
+                "billing",
+                "billing.reminder_sent",
+                "invoice",
+                invoice.id().toString(),
+                details,
+                now);
         return true;
     }
 
@@ -387,25 +559,44 @@ public class BillingLedger {
      * imply at {@code now}. On becoming read-only the read-only notice is sent once. A payment can only
      * lower the state; the job raises it.
      */
-    public Subscription applyState(Subscription subscription, Instant now, String actorKind, String actorId,
-            Changes changes) {
+    public Subscription applyState(
+            Subscription subscription, Instant now, String actorKind, String actorId, Changes changes) {
         List<Invoice> open = openInvoices(subscription.id());
-        State next = BillingCalendar.stateAt(now, subscription.invoicesIssued(), open.stream().map(Invoice::dueAt).toList());
+        State next = BillingCalendar.stateAt(
+                now,
+                subscription.invoicesIssued(),
+                open.stream().map(Invoice::dueAt).toList());
         if (next == subscription.state()) {
             return subscription;
         }
         Timestamp at = Timestamp.from(now);
-        database.jdbc().update("UPDATE subscription SET state = ?, updated_at = ? WHERE id = ?", next.value(), at,
-                subscription.id());
+        database.jdbc()
+                .update(
+                        "UPDATE subscription SET state = ?, updated_at = ? WHERE id = ?",
+                        next.value(),
+                        at,
+                        subscription.id());
         String access = next == State.READ_ONLY ? "read_only" : "full";
-        database.jdbc().update("UPDATE tenant SET access_state = ?, updated_at = ? WHERE id = ? AND access_state <> ?",
-                access, at, subscription.salonId(), access);
-        audit.record(actorKind, actorId, "subscription.state_changed", "salon", subscription.salonId().toString(),
-                Map.of("from", subscription.state().value(), "to", next.value()), now);
+        database.jdbc()
+                .update(
+                        "UPDATE tenant SET access_state = ?, updated_at = ? WHERE id = ? AND access_state <> ?",
+                        access,
+                        at,
+                        subscription.salonId(),
+                        access);
+        audit.record(
+                actorKind,
+                actorId,
+                "subscription.state_changed",
+                "salon",
+                subscription.salonId().toString(),
+                Map.of("from", subscription.state().value(), "to", next.value()),
+                now);
         changes.states().add(subscription.state().value() + "->" + next.value());
         if (next == State.READ_ONLY) {
             Salon salon = salon(subscription.salonId(), false).orElseThrow();
-            open.stream().filter(invoice -> !now.isBefore(BillingCalendar.readOnlyAt(invoice.dueAt())))
+            open.stream()
+                    .filter(invoice -> !now.isBefore(BillingCalendar.readOnlyAt(invoice.dueAt())))
                     .min(java.util.Comparator.comparing(Invoice::dueAt))
                     .ifPresent(invoice -> {
                         if (notice(salon, invoice, "read_only", null, now)) {
@@ -420,28 +611,56 @@ public class BillingLedger {
      * Pays an open invoice with its one payment (the caller holds the subscription and invoice
      * locks and checked the invoice is open), then lowers the state at once.
      */
-    public Payment pay(Subscription subscription, Invoice invoice, String method, String reference,
-            String providerEventId, LocalDate receivedOn, UUID recordedBy, Instant now, String actorKind,
+    public Payment pay(
+            Subscription subscription,
+            Invoice invoice,
+            String method,
+            String reference,
+            String providerEventId,
+            LocalDate receivedOn,
+            UUID recordedBy,
+            Instant now,
+            String actorKind,
             String actorId) {
         UUID id = UUID.randomUUID();
         Timestamp at = Timestamp.from(now);
-        database.jdbc().update("""
+        database.jdbc()
+                .update(
+                        """
                 INSERT INTO invoice_payment (id, invoice_id, method, reference, provider_event_id, amount, received_on,
                     paid_at, recorded_by, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """, id, invoice.id(), method, reference, providerEventId, invoice.amount(),
-                receivedOn == null ? null : java.sql.Date.valueOf(receivedOn), at, recordedBy, at, at);
-        database.jdbc().update("UPDATE invoice SET status = 'paid', paid_at = ?, updated_at = ? WHERE id = ?", at, at,
-                invoice.id());
+                """,
+                        id,
+                        invoice.id(),
+                        method,
+                        reference,
+                        providerEventId,
+                        invoice.amount(),
+                        receivedOn == null ? null : java.sql.Date.valueOf(receivedOn),
+                        at,
+                        recordedBy,
+                        at,
+                        at);
+        database.jdbc()
+                .update(
+                        "UPDATE invoice SET status = 'paid', paid_at = ?, updated_at = ? WHERE id = ?",
+                        at,
+                        at,
+                        invoice.id());
         Map<String, Object> details = new LinkedHashMap<>();
         details.put("paymentId", id.toString());
         details.put("number", BillingTerms.invoiceNumber(invoice.number()));
         details.put("method", method);
         details.put("amount", invoice.amount());
         details.put("currency", invoice.currency());
-        audit.record(actorKind, actorId, "payment.recorded", "invoice", invoice.id().toString(), details, now);
+        audit.record(
+                actorKind, actorId, "payment.recorded", "invoice", invoice.id().toString(), details, now);
         applyState(subscription(subscription.id(), false).orElseThrow(), now, actorKind, actorId, Changes.none());
-        return payments(invoice.id()).stream().filter(p -> p.id().equals(id)).findFirst().orElseThrow();
+        return payments(invoice.id()).stream()
+                .filter(p -> p.id().equals(id))
+                .findFirst()
+                .orElseThrow();
     }
 
     private void enqueue(UUID salon, String channel, Map<String, Object> payload, Instant now) {
@@ -449,8 +668,15 @@ public class BillingLedger {
     }
 
     private void enqueueWithId(UUID salon, UUID id, String channel, Map<String, Object> payload, Instant now) {
-        database.jdbc().queryForObject("SELECT outbox_enqueue_for_salon(?, ?, ?, ?::jsonb, ?, ?)::text", String.class,
-                salon, id, channel, json.writeValueAsString(payload), traces.currentTraceParent().orElse(null),
-                Timestamp.from(now));
+        database.jdbc()
+                .queryForObject(
+                        "SELECT outbox_enqueue_for_salon(?, ?, ?, ?::jsonb, ?, ?)::text",
+                        String.class,
+                        salon,
+                        id,
+                        channel,
+                        json.writeValueAsString(payload),
+                        traces.currentTraceParent().orElse(null),
+                        Timestamp.from(now));
     }
 }

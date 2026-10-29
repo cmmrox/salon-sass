@@ -3,19 +3,16 @@ package com.salonplatform.identity.api;
 import com.salonplatform.identity.IdentityFacade.Principal;
 import com.salonplatform.identity.application.StaffAccess;
 import com.salonplatform.shared.api.NotFoundException;
-
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-
+import java.util.UUID;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.UUID;
 
 /** Validates requests and delegates one use case. Auth responses are never cached. */
 @RestController
@@ -40,7 +37,8 @@ class StaffAccessController {
             @NotBlank @Size(max = 160) String deviceLabel) {}
 
     record ChallengeRequest(
-            @NotNull UUID challengeId, @NotBlank @Size(max = 256) String challengeToken) {}
+            @NotNull UUID challengeId,
+            @NotBlank @Size(max = 256) String challengeToken) {}
 
     record VerifyRequest(
             @NotNull UUID challengeId,
@@ -60,8 +58,7 @@ class StaffAccessController {
             @NotBlank String role,
             Boolean professionalGrant) {}
 
-    record ChangeStaffRequest(
-            @NotNull @Min(0) Long version, String role, Boolean professionalGrant) {}
+    record ChangeStaffRequest(@NotNull @Min(0) Long version, String role, Boolean professionalGrant) {}
 
     private <T> ResponseEntity<T> ok(T body) {
         return ResponseEntity.ok()
@@ -73,19 +70,13 @@ class StaffAccessController {
             name = "x-salon-client-assertion",
             in = io.swagger.v3.oas.annotations.enums.ParameterIn.HEADER,
             required = false,
-            description =
-                    "Private server-authenticated rate-address assertion; absent uses servlet peer,"
-                        + " invalid proof is rejected before accounting.",
+            description = "Private server-authenticated rate-address assertion; absent uses servlet peer,"
+                    + " invalid proof is rejected before accounting.",
             schema = @io.swagger.v3.oas.annotations.media.Schema(type = "string", maxLength = 192))
     @PostMapping(path = "/staff/sign-in", consumes = MediaType.APPLICATION_JSON_VALUE)
-    ResponseEntity<StaffAccess.SignIn> signIn(
-            @Valid @RequestBody SignInRequest request, HttpServletRequest http) {
-        return ok(
-                access.signIn(
-                        request.identifier(),
-                        request.password(),
-                        request.deviceLabel(),
-                        assertions.rateAddress(http)));
+    ResponseEntity<StaffAccess.SignIn> signIn(@Valid @RequestBody SignInRequest request, HttpServletRequest http) {
+        return ok(access.signIn(
+                request.identifier(), request.password(), request.deviceLabel(), assertions.rateAddress(http)));
     }
 
     @PostMapping("/staff/mfa/challenges")
@@ -100,8 +91,7 @@ class StaffAccessController {
 
     @PostMapping(path = "/staff/mfa/verify", consumes = MediaType.APPLICATION_JSON_VALUE)
     ResponseEntity<StaffAccess.Tokens> verify(@Valid @RequestBody VerifyRequest request) {
-        return ok(
-                access.verifyMfa(request.challengeId(), request.challengeToken(), request.code()));
+        return ok(access.verifyMfa(request.challengeId(), request.challengeToken(), request.code()));
     }
 
     @GetMapping("/me")
@@ -111,8 +101,7 @@ class StaffAccessController {
 
     @GetMapping("/sessions")
     ResponseEntity<StaffAccess.Page<StaffAccess.SessionView>> sessions(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
         return ok(sessions.sessions(page, size));
     }
 
@@ -142,8 +131,7 @@ class StaffAccessController {
 
     @GetMapping("/staff")
     ResponseEntity<StaffAccess.Page<StaffAccess.StaffView>> staff(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
         return ok(access.staff(page, size));
     }
 
@@ -152,24 +140,19 @@ class StaffAccessController {
     ResponseEntity<StaffAccess.StaffView> create(@Valid @RequestBody CreateStaffRequest request) {
         return ResponseEntity.status(201)
                 .cacheControl(org.springframework.http.CacheControl.noStore())
-                .body(
-                        access.create(
-                                new StaffAccess.StaffInput(
-                                        request.email(),
-                                        request.mobile(),
-                                        request.password(),
-                                        request.role(),
-                                        request.professionalGrant())));
+                .body(access.create(new StaffAccess.StaffInput(
+                        request.email(),
+                        request.mobile(),
+                        request.password(),
+                        request.role(),
+                        request.professionalGrant())));
     }
 
     @PatchMapping(path = "/staff/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
     ResponseEntity<StaffAccess.StaffView> change(
             @PathVariable String id, @Valid @RequestBody ChangeStaffRequest request) {
-        return ok(
-                access.change(
-                        id(id),
-                        new StaffAccess.StaffChange(
-                                request.version(), request.role(), request.professionalGrant())));
+        return ok(access.change(
+                id(id), new StaffAccess.StaffChange(request.version(), request.role(), request.professionalGrant())));
     }
 
     @DeleteMapping("/staff/{id}")

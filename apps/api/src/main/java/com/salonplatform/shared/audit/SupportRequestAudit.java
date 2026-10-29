@@ -1,10 +1,8 @@
 package com.salonplatform.shared.audit;
 
+import com.salonplatform.shared.tenancy.SupportGrant;
 import java.util.LinkedHashMap;
 import java.util.Map;
-
-import com.salonplatform.shared.tenancy.SupportGrant;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -53,11 +51,17 @@ public class SupportRequestAudit {
             after.put("route", route);
             after.put("status", status);
             transactions.executeWithoutResult(tx -> audit.record(new AuditAction(
-                    new Actor(ActorKind.SUPPORT, grant.sessionId().toString()), ACTION, "support_session",
-                    grant.sessionId().toString(), null, null, after)));
-        }
-        catch (RuntimeException ex) {
-            log.warn("A support request's audit entry could not be written: {}", ex.getClass().getSimpleName());
+                    new Actor(ActorKind.SUPPORT, grant.sessionId().toString()),
+                    ACTION,
+                    "support_session",
+                    grant.sessionId().toString(),
+                    null,
+                    null,
+                    after)));
+        } catch (RuntimeException ex) {
+            log.warn(
+                    "A support request's audit entry could not be written: {}",
+                    ex.getClass().getSimpleName());
         }
     }
 }

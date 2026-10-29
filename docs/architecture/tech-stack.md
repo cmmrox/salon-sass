@@ -10,15 +10,15 @@ this table in step when a major version changes.
 | Language and runtime | Java 25 (LTS) |
 | Backend framework | Spring Boot 4.1.x, virtual threads on (`spring.threads.virtual.enabled=true`) |
 | Persistence | Spring Data JPA repositories by default, `JdbcClient` only for the named exceptions in `docs/engineering/backend.md`; Hibernate 7 with `@TenantId`; Flyway migrations |
-| Module boundaries | Spring Modulith 2.1 (`spring-modulith-starter-core`, `spring-modulith-starter-test`) for module verification and module tests only; its event publication registry is not used (CR-021). ArchUnit for the rules Modulith does not cover |
-| Code generation (API) | Lombok, in the version Spring Boot manages, within the allow-list in `apps/api/lombok.config`; MapStruct 1.6.3 with `lombok-mapstruct-binding` 0.2.0. Both are listed in `annotationProcessorPaths` (JDK 23 and later do not discover processors on the class path) (CR-021) |
+| Module boundaries | Spring Modulith 2.1.2 (`spring-modulith-starter-core`, `spring-modulith-starter-test`, through its BOM) for module verification and module tests only; its documentation annotation processor is excluded and its event publication registry is not used (CR-021). ArchUnit, test scope only, for the rules Modulith does not cover |
+| Code generation (API) | Lombok, in the version Spring Boot manages (1.18.46 with Boot 4.1.1), within the allow-list in `apps/api/lombok.config` (copied into the image build); MapStruct 1.6.3 with `lombok-mapstruct-binding` 0.2.0. Both are listed in `annotationProcessorPaths` (JDK 23 and later do not discover processors on the class path); MapStruct's policies are in the shared `ResponseMapperConfig`, not compiler arguments (decision 056) (CR-021) |
 | Database | PostgreSQL 18 or later: row-level security, exclusion constraints |
 | Build | Maven wrapper for the API; one pnpm workspace for the web app, the customer app and packages. `qa/` is a separate package with its own lock file, so QA can add test dependencies without touching the product's |
 | Web | Next.js 16 (App Router), TypeScript, Tailwind CSS 4 and shadcn/ui (CR-016). The request proxy file is `proxy.ts` (formerly `middleware.ts`) |
 | Customer app | Expo SDK 57, React Native 0.86, Expo Router; EAS Build, Submit and Update. Not built until milestone `M2-mobile` |
 | API contract | An OpenAPI document generated from the API's controllers and committed, with every operation tagged by its module; a TypeScript client generated from it (`openapi-typescript` with `openapi-fetch`), exported per module |
 | Web import boundaries | `eslint-plugin-boundaries` (CR-021) |
-| Formatting and dead-code checks | API: Spotless Maven plugin with `palantir-java-format`, and `-Xlint:all -Werror`. Web: Prettier with `prettier-plugin-tailwindcss`, and `knip` for unused files, exports and dependencies (CR-021). Versions are pinned when the stage that adds them verifies them on JDK 25 and the current Node |
+| Formatting and dead-code checks | API: Spotless Maven plugin 3.10.4 with `palantir-java-format` 2.102.0 (its default; identical output under JDK 21 and 25), and `-Xlint:all,-processing -Werror`. Web: Prettier with `prettier-plugin-tailwindcss`, and `knip` for unused files, exports and dependencies (CR-021). Versions are pinned when the stage that adds them verifies them on JDK 25 and the current Node |
 | Background work | Database-backed job scheduler and transactional outbox, which also carries versioned events between modules. No message broker |
 | Files | S3-compatible object storage, one prefix per tenant |
 | Developer tests | JUnit and Testcontainers, in the versions Spring Boot manages (API); Vitest with Testing Library (web); Jest (customer app) |

@@ -1,13 +1,11 @@
 package com.salonplatform.shared.infrastructure;
 
-import java.util.Map;
-import java.util.UUID;
-
 import com.salonplatform.shared.tenancy.CurrentTenant;
 import com.salonplatform.shared.tenancy.TenantContext;
+import java.util.Map;
+import java.util.UUID;
 import org.hibernate.cfg.MultiTenancySettings;
 import org.hibernate.context.spi.CurrentTenantIdentifierResolver;
-
 import org.springframework.boot.hibernate.autoconfigure.HibernatePropertiesCustomizer;
 import org.springframework.stereotype.Component;
 

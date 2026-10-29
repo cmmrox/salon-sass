@@ -3,7 +3,7 @@ feature: F23
 title: Build conventions and module verification
 sequence: 1
 surfaces: [api]
-status: outlined
+status: complete
 qa_status: not-run
 blocked_reason: null
 released_in: null
@@ -12,12 +12,112 @@ depends_on: []
 requirements: []
 nfr_focus: [NFR-22, NFR-23, NFR-04]
 handoff:
-  run: null
-  data: null
-  notes: null
+  run: |
+    Build and checks: cd apps/api && ./mvnw verify   (Spotless check, javac -Xlint:all,-processing -Werror, unit/integration/architecture tests).
+      Format: ./mvnw spotless:apply. Architecture: ./mvnw test -Dtest='ModuleBoundariesTest,CodeGenerationConventionsTest'.
+    Running product: infra/scripts/local-service.sh start api (local profile, PostgreSQL 5440, API 8090; rebuilds target/salon-api.jar).
+      GET http://localhost:8090/api/v1/meta, /actuator/health/readiness, /actuator/health/liveness, /actuator/health.
+    Packaged jar: unzip -l apps/api/target/salon-api.jar | grep -i lombok   (no entries).
+  data: |
+    No seed data, migration or fixture data changed. The retained local database was used as it was; the API walkthrough only read
+      meta and health. The local API is left running from 7f6f2d5 (commit in GET /api/v1/meta).
+  notes: |
+    Developer gates (verification.commands), run from the repository root by
+    /Users/cmmrox/Personal/Projects/salon-sass/apps/api/target/f23-s01-evidence/run-gates.sh on a clean tree (dirty=0 before and after);
+    logs and summary.txt in /Users/cmmrox/Personal/Projects/salon-sass/apps/api/target/f23-s01-evidence/gates2/ (ignored path; keep until closure).
+    | command | revision | result | log |
+    | cd apps/api && ./mvnw -q verify | 7f6f2d5 | exit 0, 250 s; 705 tests in 91 classes, 0 failures, 0 errors, 0 skipped (gates2/surefire) | gates2/1.log |
+    | pnpm contracts:check | 7f6f2d5 | exit 0, 14 s; "docs/api/openapi.json and packages/api-contracts/src/generated are current" | gates2/2.log |
+    Conditions: Maven on JDK 21 (machine default) with the toolchain's JDK 25.0.1 for compile/test/run, Node 24.12.0, pnpm 12.11.2 (Corepack),
+    Docker 29.8.2 Testcontainers postgres:18.6. The local API was stopped during the gates and started afterwards from the same revision.
+    First run (gates1-failed-connections/, c47d367): verify failed in TwoDispatchersIntegrationTest, "remaining connection slots are reserved"
+    (contracts:check passed). The same failure happens on origin/main: a baseline verify of 2301191 in a separate worktree ran 685 tests with
+    1 error, ForwardedHeadersIntegrationTest, same cause (baseline-origin-main-verify.log); F03-S04's first gate run hit it too. Cause: the shared
+    test PostgreSQL kept the default max_connections=100 while each cached test context holds 14 pooled connections and some tests start
+    applications of their own; a sampler on the rerun saw a peak of 99 client connections (gates2-connections.txt). Fixed in 7f6f2d5
+    (TestPostgres keeps Testcontainers' command and allows 200 connections); every gate then rerun on a clean tree (gates2/).
+
+    Acceptance criteria, checked on the built and running product from 7f6f2d5 (evidence paths relative to f23-s01-evidence/):
+    AC-1 checked: the verify gate passes (above). `./mvnw verify -DskipTests` lists compiler:compile/testCompile, surefire:test, jar,
+      repackage and spotless:check (ac1/verify-goals.log); the compiler arguments are -Xlint:all,-processing -Werror (pom.xml). An extra
+      space in ApiPaths.java fails verify at spotless:check naming the file (ac1/unformatted.log); a raw List in MetaService fails it with
+      "warnings found and -Werror specified" (ac1/warning.log); both reverted. The gate's reports include ModuleBoundariesTest (15 tests,
+      Modulith verify() plus the ArchUnit rules) and CodeGenerationConventionsTest (12), all passing.
+    AC-2 checked: ModuleBoundariesTest. Modulith detectViolations() names PaymentFacade (cycle), PaymentUsesBookingEntity (another module's
+      internal package) and BookingUsesSharedInternals (new: a shared sub-package that is not a named interface); the ArchUnit rules name
+      SharedUsesBooking, BookingUsesReporting, SpringInDomain, Points (unlisted module), BookingUsesTestClock, AlwaysThere and AlsoElsewhere;
+      the clean fixture (now with a named-interface shared.time used by booking) passes both. Mutation run (mutation-run.log): removing
+      @NamedInterface from shared.tenancy makes the application's verify() fail ("Module 'branding' depends on non-exposed type
+      com.salonplatform.shared.tenancy.CurrentTenant within module 'shared'!"), and from the fixture's shared.time fails the clean fixture.
+      moduleVerificationSeesEveryListedModule: Modulith finds exactly the 11 modules of backend.md.
+    AC-3 checked: CodeGenerationConventionsTest compiles src/test/compile-fixtures with javax.tools, the build's processor order
+      (Lombok, binding, MapStruct) and flags: @Data, @Value, @EqualsAndHashCode, @ToString, @Builder, @SneakyThrows, @AllArgsConstructor and
+      @With each fail with "Use of @X is flagged according to lombok configuration"; @Getter, @NoArgsConstructor(PROTECTED), field @Setter,
+      @RequiredArgsConstructor and @Slf4j compile with no diagnostic. Mutation: removing lombok.data.flagUsage makes the @Data case fail.
+    AC-4 checked: a mapper (config = ResponseMapperConfig) whose response has an unmapped "nickname" fails with 'Unmapped target property:
+      "nickname"'; the same mapper with @Mapping(target = "nickname", source = "name") compiles with no diagnostic to a @Component bean;
+      a long-to-int mapping fails as a possibly lossy conversion. Mutation: unmapped/type-conversion policies set to IGNORE make both fail.
+    AC-5 checked: target/salon-api.jar has no Lombok entry (ac5/jar-contents.txt); new runtime jars are mapstruct, spring-modulith-api/core/
+      moments and jmolecules-events, and no ArchUnit. The API started in the local profile (infra/scripts/local-service.sh start api) in 3.6 s;
+      GET /api/v1/meta 200 {service, version, commit 7f6f2d5..., time}, readiness and liveness 200 {"status":"UP"}, health 200 UP with db.
+      The origin/main jar (2301191) started beside it on 8091 answers all four identically apart from commit and time
+      (ac5/compare-with-origin-main.txt); both start-up logs have the same single Flyway schema WARN and nothing else above INFO.
+    AC-6 checked: contracts:check passes; `git diff origin/main -- docs/api packages/api-contracts/src/generated` is empty (tree and HEAD).
+    AC-7 checked: test names in gates2/surefire against the baseline run of origin/main (baseline-tests.txt): every one of its 685 results
+      is present and passing, except aForbiddenDependencyIsCaught [8] and [9] (the cycle and internal-package cases), which moved with
+      their rules to aForbiddenDependencyIsCaughtByModuleVerification [1] and [2] with the same fixtures and offenders, and
+      ForwardedHeadersIntegrationTest, whose 4 methods errored at start-up in the baseline and pass here. All 90 test files of origin/main
+      exist with the same or more test methods (ModuleBoundariesTest 4 to 7, IdentityCryptoTest 6 to 7). No assertion changed: test edits are
+      the formatter, `_` for unread try-with-resources variables, why-comments beside @SuppressWarnings, the two moved rules, and new tests.
+    AC-8 checked: no TODO or FIXME in apps/api; no commented-out code (scan of // lines with code shapes: prose only); all 36
+      @SuppressWarnings have a comment beside them saying why; one in SecretValues suppressed nothing and was removed.
+
+    Commits: ad9a1b0 start; 1c9a16a formatting only (298 files: whitespace, import order, 3 unused imports removed; checked by
+    comparing every file with whitespace removed); b924389 warning fixes; c47d367 build conventions and Modulith; 7f6f2d5 test database.
+
+    Warning fixes worth a careful look (behaviour unchanged): IdentityCrypto and OperatorCrypto use the non-deprecated
+    Pbkdf2PasswordEncoder(secret, 16, 600000, PBKDF2WithHmacSHA256); bytecode of Spring Security 7.1.1 shows the same algorithm, 256-bit hash,
+    salt and iterations as before, and a new test in each module verifies a hash written by the old configuration (fails if the algorithm
+    changes, mutation-run.log). Their constructors call a private token method (this-escape); ProblemErrorReportValve is final (Tomcat creates
+    it by name). Serializable exceptions and TenantJpaDialect/TenantTransactionManager got serialVersionUID; ApplicationProblemException.errors
+    and TenantJpaDialect.limit are transient (never serialized). OpenApiConfiguration uses ApiResponses.DEFAULT and typed receivers for the
+    same fluent calls in the same order (contract unchanged, AC-6). Unread try-with-resources variables are `_` (Java 22+).
+
+    Different from the spec or docs (for the lead):
+    1. Spec scope and backend.md "Code generation" say compiler arguments set MapStruct's defaults. Not done: javac (JDK 25,
+       JavacProcessingEnvironment.warnIfUnmatchedOptions) warns "options were not recognized by any processor" whenever a compilation
+       has no @Mapper (all of src/main and src/test now), and that warning has no lint category, so -Werror fails the build. Every policy is in
+       shared.mapping.ResponseMapperConfig instead (also MapStruct's maintainers' recommendation). Under -Werror an unmapped target still fails
+       a mapper that omits the config (MapStruct's default WARN); only the lossy-conversion policy and the Spring/constructor model depend on
+       naming the config. Options: keep it so and have backend.md say "every mapper names ResponseMapperConfig" (an ArchUnit rule could check
+       it in F23-S03), or add the -A options to default-compile only once src/main has its first mapper. Please decide.
+    2. -Xlint:-processing is excluded, as the spec allows: "No processor claimed any of these annotations" is reported for every class.
+    3. Versions to write into tech-stack.md: Spring Modulith 2.1.2 (latest 2.1.x; its source pom at tag 2.1.2 builds against Spring Boot
+       4.1.2; the reference's compatibility table still stops at 2.0), Lombok 1.18.46 (Boot 4.1.1's, JDK 25 support since 1.18.40), MapStruct
+       1.6.3, lombok-mapstruct-binding 0.2.0, Spotless Maven plugin 3.10.4, palantir-java-format 2.102.0 (Spotless 3.10.4's own default;
+       2.103.0 was two days old). Spotless runs inside Maven's JVM: it formats and checks identically on JDK 21 and JDK 25.
+    4. Dependencies: spring-modulith-starter-core excludes spring-modulith-apt (a documentation processor that never runs here). ArchUnit
+       stays test-scoped, so spring-modulith-core runs without it; at start Modulith loads only ApplicationModuleInitializerRuntimeVerification
+       (no ArchUnit) and Moments is off unless spring.modulith.moments.enabled=true. Test-scoped lombok-mapstruct-binding and
+       mapstruct-processor exist for CodeGenerationConventionsTest; it names the processors with -processor, because in-process javac
+       otherwise also discovers processors on the test class path.
+    5. lombok.config flags every Lombok feature outside the allow-list (including @AllArgsConstructor everywhere, experimental features, val/var,
+       other loggers). Lombok cannot express: class-level @Setter vs field @Setter, a public @NoArgsConstructor, Lombok on records, setters on
+       id/tenant/version fields (the entity-setter architecture rule of F23-S03).
+    6. New locations: src/test/compile-fixtures (fixtures compiled only by the test; formatted by Spotless) and shared/mapping. The image build
+       (apps/api/Dockerfile, .dockerignore) now copies lombok.config so images compile under the same allow-list.
+    7. Test infrastructure: TestPostgres max_connections=200 (above). The pre-existing flake affects any run of the full suite, including CI.
+    8. Seven JSON-reading test classes carry a class-level @SuppressWarnings("unchecked") with the reason, because removing the casts would
+       rewrite assertions (AC-7). A typed JSON helper for tests would remove them; it is not built here.
+    9. backend.md "Clean code" names `./mvnw spotless:check`; it runs in verify, after the tests (Spotless' default phase).
+
+    Timings (observed): implementation and warning fixes about 30 min after the reformat commit; first gate run 6.4 min (failed, pre-existing);
+    diagnosis and fix 5 min; second gate run 4.4 min; walkthrough 5 min. Baseline worktree run 4.9 min (in parallel).
 cases: []
 verification:
-  commands: []
+  commands:
+  - cd apps/api && ./mvnw -q verify
+  - pnpm contracts:check
   automation: []
   manual: []
   deferred: []

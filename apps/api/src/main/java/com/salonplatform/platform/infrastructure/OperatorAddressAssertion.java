@@ -1,5 +1,9 @@
 package com.salonplatform.platform.infrastructure;
 
+import com.salonplatform.shared.api.ApplicationProblemException;
+import com.salonplatform.shared.api.ErrorCode;
+import com.salonplatform.shared.api.RequestPaths;
+import jakarta.servlet.http.HttpServletRequest;
 import java.net.InetAddress;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -11,15 +15,8 @@ import java.util.HexFormat;
 import java.util.Locale;
 import java.util.StringJoiner;
 import java.util.regex.Pattern;
-
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
-
-import com.salonplatform.shared.api.ApplicationProblemException;
-import com.salonplatform.shared.api.ErrorCode;
-import com.salonplatform.shared.api.RequestPaths;
-import jakarta.servlet.http.HttpServletRequest;
-
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -36,15 +33,15 @@ public class OperatorAddressAssertion {
     public static final String HEADER = "x-salon-client-assertion";
     public static final String SIGN_IN_PATH = "/api/v1/operator/sign-in";
     private static final int MAX_LENGTH = 192;
-    private static final Pattern INSTANT = Pattern.compile(
-            "[0-9]{4}-[0-9]{2}-[0-9]{2}T(?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](?:\\.[0-9]{1,9})?Z");
+    private static final Pattern INSTANT =
+            Pattern.compile("[0-9]{4}-[0-9]{2}-[0-9]{2}T(?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](?:\\.[0-9]{1,9})?Z");
 
     private final byte[] key;
     private final Clock clock;
     private final String consoleHost;
 
-    public OperatorAddressAssertion(OperatorCrypto crypto, Clock clock,
-            @Value("${salon.platform-domain}") String platformDomain) {
+    public OperatorAddressAssertion(
+            OperatorCrypto crypto, Clock clock, @Value("${salon.platform-domain}") String platformDomain) {
         this.key = crypto.proxyKey();
         this.clock = clock;
         this.consoleHost = "console." + platformDomain.strip().toLowerCase(Locale.ROOT);
@@ -57,7 +54,9 @@ public class OperatorAddressAssertion {
             return request.getRemoteAddr();
         }
         String proof = headers.nextElement();
-        if (headers.hasMoreElements() || !"POST".equals(request.getMethod()) || !RequestPaths.is(request, SIGN_IN_PATH)) {
+        if (headers.hasMoreElements()
+                || !"POST".equals(request.getMethod())
+                || !RequestPaths.is(request, SIGN_IN_PATH)) {
             throw invalid();
         }
         return verify(proof, consoleHost, request.getMethod(), SIGN_IN_PATH);
@@ -69,8 +68,11 @@ public class OperatorAddressAssertion {
                 throw invalid();
             }
             String[] fields = proof.split(";", -1);
-            if (fields.length != 4 || !fields[0].equals("v1") || !fields[1].equals(canonicalIp(fields[1]))
-                    || !INSTANT.matcher(fields[2]).matches() || !fields[3].matches("[0-9a-f]{64}")) {
+            if (fields.length != 4
+                    || !fields[0].equals("v1")
+                    || !fields[1].equals(canonicalIp(fields[1]))
+                    || !INSTANT.matcher(fields[2]).matches()
+                    || !fields[3].matches("[0-9a-f]{64}")) {
                 throw invalid();
             }
             Instant issued = Instant.parse(fields[2]);
@@ -80,16 +82,15 @@ public class OperatorAddressAssertion {
             Mac mac = Mac.getInstance("HmacSHA256");
             mac.init(new SecretKeySpec(key, "HmacSHA256"));
             String canonical = "v1\n" + host + "\n" + method + "\n" + path + "\n" + fields[1] + "\n" + fields[2];
-            if (!MessageDigest.isEqual(mac.doFinal(canonical.getBytes(StandardCharsets.UTF_8)),
+            if (!MessageDigest.isEqual(
+                    mac.doFinal(canonical.getBytes(StandardCharsets.UTF_8)),
                     HexFormat.of().parseHex(fields[3]))) {
                 throw invalid();
             }
             return fields[1];
-        }
-        catch (ApplicationProblemException ex) {
+        } catch (ApplicationProblemException ex) {
             throw ex;
-        }
-        catch (Exception ex) {
+        } catch (Exception ex) {
             throw invalid();
         }
     }

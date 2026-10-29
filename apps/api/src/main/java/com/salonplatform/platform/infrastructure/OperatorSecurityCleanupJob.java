@@ -1,12 +1,10 @@
 package com.salonplatform.platform.infrastructure;
 
+import com.salonplatform.shared.infrastructure.PlatformDatabase;
+import com.salonplatform.shared.jobs.PlatformJob;
 import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
-
-import com.salonplatform.shared.infrastructure.PlatformDatabase;
-import com.salonplatform.shared.jobs.PlatformJob;
-
 import org.springframework.stereotype.Component;
 
 /**

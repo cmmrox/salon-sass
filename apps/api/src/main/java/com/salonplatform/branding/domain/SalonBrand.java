@@ -1,11 +1,10 @@
 package com.salonplatform.branding.domain;
 
-import java.util.UUID;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.util.UUID;
 import org.hibernate.annotations.TenantId;
 
 /**
@@ -28,8 +27,7 @@ public class SalonBrand {
     @Column(name = "brand_colour", nullable = false)
     private String brandColour;
 
-    protected SalonBrand() {
-    }
+    protected SalonBrand() {}
 
     /**
      * A brand for the current salon. The salon is not chosen here: Hibernate stamps the request's.

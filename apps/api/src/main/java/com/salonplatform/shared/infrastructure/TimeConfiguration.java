@@ -1,9 +1,7 @@
 package com.salonplatform.shared.infrastructure;
 
-import java.time.Clock;
-
 import com.salonplatform.shared.time.SalonTime;
-
+import java.time.Clock;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 

@@ -4,7 +4,6 @@ import com.salonplatform.branding.infrastructure.SalonBrandRepository;
 import com.salonplatform.shared.tenancy.CurrentTenant;
 import com.salonplatform.shared.tenancy.TenantContext;
 import com.salonplatform.shared.tenancy.TenantNotFoundException;
-
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -36,7 +35,10 @@ public class GetPublishedBrand {
     public PublishedBrand forCurrentSalon() {
         CurrentTenant salon = TenantContext.require();
         return readOnly.execute(status -> brands.findCurrent()
-                .map(brand -> new PublishedBrand(salon.slug(), brand.displayName(), brand.brandColour(),
+                .map(brand -> new PublishedBrand(
+                        salon.slug(),
+                        brand.displayName(),
+                        brand.brandColour(),
                         salon.timeZone().getId()))
                 .orElseThrow(TenantNotFoundException::new));
     }

@@ -12,7 +12,6 @@ import org.springframework.http.HttpStatusCode;
  * particular outcome, such as {@link #SALON_SUSPENDED}, is named by the handler that answers it.
  */
 public enum ErrorCode {
-
     INVALID_CLIENT_ASSERTION("invalid_client_assertion", "The client assertion could not be verified."),
     CONFIRMATION_REQUIRED("confirmation_required", "Confirm account deletion to continue."),
     INVALID_CODE("invalid_code", "The verification code could not be verified."),

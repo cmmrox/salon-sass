@@ -11,8 +11,7 @@ import java.util.UUID;
 public interface BillingProvider {
 
     /** One charge: the salon, the invoice, the attempt's idempotency key and the exact amount. */
-    record Charge(UUID salonId, UUID invoiceId, UUID attemptKey, long amount, String currency) {
-    }
+    record Charge(UUID salonId, UUID invoiceId, UUID attemptKey, long amount, String currency) {}
 
     void charge(Charge charge) throws Exception;
 }

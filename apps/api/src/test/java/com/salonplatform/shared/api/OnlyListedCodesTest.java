@@ -1,19 +1,17 @@
 package com.salonplatform.shared.api;
 
-import java.util.Map;
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import com.salonplatform.SalonApiApplication;
 import com.salonplatform.shared.infrastructure.ProblemErrorReportValve;
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
-
 import org.springframework.http.ProblemDetail;
-
-import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
-import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
-import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * CR-001: no code can be returned that is not listed. A problem body's {@code code} is written in
@@ -29,24 +27,37 @@ class OnlyListedCodesTest {
 
     @Test
     void onlyProblemsPutsAPropertyOnAProblemBody() {
-        assertThat(APPLICATION.contain(Problems.class)).as("the application's classes were found").isTrue();
+        assertThat(APPLICATION.contain(Problems.class))
+                .as("the application's classes were found")
+                .isTrue();
         // The rule below can see such a call: it finds the one that is allowed.
-        classes().that().haveFullyQualifiedName(Problems.class.getName())
-                .should().callMethod(ProblemDetail.class, "setProperty", String.class, Object.class)
+        classes()
+                .that()
+                .haveFullyQualifiedName(Problems.class.getName())
+                .should()
+                .callMethod(ProblemDetail.class, "setProperty", String.class, Object.class)
                 .check(APPLICATION);
 
-        noClasses().that().doNotHaveFullyQualifiedName(Problems.class.getName())
-                .should().callMethod(ProblemDetail.class, "setProperty", String.class, Object.class)
-                .orShould().callMethod(ProblemDetail.class, "setProperties", Map.class)
+        noClasses()
+                .that()
+                .doNotHaveFullyQualifiedName(Problems.class.getName())
+                .should()
+                .callMethod(ProblemDetail.class, "setProperty", String.class, Object.class)
+                .orShould()
+                .callMethod(ProblemDetail.class, "setProperties", Map.class)
                 .as("a problem body's code, traceId and errors are written by Problems and nowhere else")
                 .check(APPLICATION);
     }
 
     @Test
     void theTwoThatWriteACodeTakeItFromTheList() {
-        classes().that().haveFullyQualifiedName(Problems.class.getName())
-                .or().haveFullyQualifiedName(ProblemErrorReportValve.class.getName())
-                .should().callMethod(ErrorCode.class, "code")
+        classes()
+                .that()
+                .haveFullyQualifiedName(Problems.class.getName())
+                .or()
+                .haveFullyQualifiedName(ProblemErrorReportValve.class.getName())
+                .should()
+                .callMethod(ErrorCode.class, "code")
                 .as("the code written to a problem body is an ErrorCode's")
                 .check(APPLICATION);
     }

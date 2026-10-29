@@ -1,15 +1,5 @@
 package com.salonplatform.platform.application;
 
-import java.time.Clock;
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.format.DateTimeParseException;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-
 import com.salonplatform.platform.domain.BillingTerms;
 import com.salonplatform.platform.domain.OperatorPermission;
 import com.salonplatform.platform.domain.PlainText;
@@ -20,9 +10,17 @@ import com.salonplatform.shared.api.FieldProblem;
 import com.salonplatform.shared.api.NotFoundException;
 import com.salonplatform.shared.infrastructure.PlatformDatabase;
 import io.swagger.v3.oas.annotations.media.Schema;
-import tools.jackson.databind.json.JsonMapper;
-
+import java.time.Clock;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import org.springframework.stereotype.Service;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Invoices (docs/architecture/operator-console.md, "Invoices"): an Admin's paginated list per salon,
@@ -36,47 +34,119 @@ public class InvoiceBilling {
 
     static final String RECORD = "payment.record";
 
-    @Schema(requiredProperties = {"id", "number", "periodStart", "periodEnd", "amount", "currency", "status",
-        "issuedAt", "dueAt", "paidAt"})
-    public record InvoiceSummary(UUID id, String number, Instant periodStart, Instant periodEnd, long amount,
-            String currency, @Schema(allowableValues = {"open", "paid"}) String status, Instant issuedAt, Instant dueAt,
-            @Schema(types = {"string", "null"}, format = "date-time", requiredMode = Schema.RequiredMode.REQUIRED)
-            Instant paidAt) {
-    }
+    @Schema(
+            requiredProperties = {
+                "id",
+                "number",
+                "periodStart",
+                "periodEnd",
+                "amount",
+                "currency",
+                "status",
+                "issuedAt",
+                "dueAt",
+                "paidAt"
+            })
+    public record InvoiceSummary(
+            UUID id,
+            String number,
+            Instant periodStart,
+            Instant periodEnd,
+            long amount,
+            String currency,
+            @Schema(allowableValues = {"open", "paid"}) String status,
+            Instant issuedAt,
+            Instant dueAt,
+
+            @Schema(
+                    types = {"string", "null"},
+                    format = "date-time",
+                    requiredMode = Schema.RequiredMode.REQUIRED)
+            Instant paidAt) {}
 
     @Schema(requiredProperties = {"items", "page", "size", "total"})
-    public record InvoicePage(List<InvoiceSummary> items, int page, int size, long total) {
-    }
+    public record InvoicePage(List<InvoiceSummary> items, int page, int size, long total) {}
 
     @Schema(requiredProperties = {"id", "method", "reference", "providerEventId", "amount", "receivedOn", "paidAt"})
-    public record PaymentView(UUID id, @Schema(allowableValues = {"card", "bank_transfer"}) String method,
-            @Schema(types = {"string", "null"}, requiredMode = Schema.RequiredMode.REQUIRED) String reference,
-            @Schema(types = {"string", "null"}, requiredMode = Schema.RequiredMode.REQUIRED) String providerEventId,
-            long amount,
-            @Schema(types = {"string", "null"}, format = "date", requiredMode = Schema.RequiredMode.REQUIRED)
-            LocalDate receivedOn,
-            Instant paidAt) {
-    }
+    public record PaymentView(
+            UUID id,
 
-    @Schema(requiredProperties = {"id", "number", "salonId", "planKey", "planName", "periodStart", "periodEnd",
-        "amount", "currency", "status", "issuedAt", "dueAt", "paidAt", "payments"})
-    public record InvoiceDetail(UUID id, String number, UUID salonId,
-            @Schema(types = {"string", "null"}, requiredMode = Schema.RequiredMode.REQUIRED) String planKey,
-            @Schema(types = {"string", "null"}, requiredMode = Schema.RequiredMode.REQUIRED) String planName,
-            Instant periodStart, Instant periodEnd, long amount, String currency,
-            @Schema(allowableValues = {"open", "paid"}) String status, Instant issuedAt, Instant dueAt,
-            @Schema(types = {"string", "null"}, format = "date-time", requiredMode = Schema.RequiredMode.REQUIRED)
+            @Schema(allowableValues = {"card", "bank_transfer"})
+            String method,
+
+            @Schema(
+                    types = {"string", "null"},
+                    requiredMode = Schema.RequiredMode.REQUIRED)
+            String reference,
+
+            @Schema(
+                    types = {"string", "null"},
+                    requiredMode = Schema.RequiredMode.REQUIRED)
+            String providerEventId,
+
+            long amount,
+
+            @Schema(
+                    types = {"string", "null"},
+                    format = "date",
+                    requiredMode = Schema.RequiredMode.REQUIRED)
+            LocalDate receivedOn,
+
+            Instant paidAt) {}
+
+    @Schema(
+            requiredProperties = {
+                "id",
+                "number",
+                "salonId",
+                "planKey",
+                "planName",
+                "periodStart",
+                "periodEnd",
+                "amount",
+                "currency",
+                "status",
+                "issuedAt",
+                "dueAt",
+                "paidAt",
+                "payments"
+            })
+    public record InvoiceDetail(
+            UUID id,
+            String number,
+            UUID salonId,
+
+            @Schema(
+                    types = {"string", "null"},
+                    requiredMode = Schema.RequiredMode.REQUIRED)
+            String planKey,
+
+            @Schema(
+                    types = {"string", "null"},
+                    requiredMode = Schema.RequiredMode.REQUIRED)
+            String planName,
+
+            Instant periodStart,
+            Instant periodEnd,
+            long amount,
+            String currency,
+            @Schema(allowableValues = {"open", "paid"}) String status,
+            Instant issuedAt,
+            Instant dueAt,
+
+            @Schema(
+                    types = {"string", "null"},
+                    format = "date-time",
+                    requiredMode = Schema.RequiredMode.REQUIRED)
             Instant paidAt,
-            List<PaymentView> payments) {
-    }
+
+            List<PaymentView> payments) {}
 
     /** A transfer as received. */
-    public record TransferInput(String reference, Long amount, String receivedOn) {
-    }
+    public record TransferInput(String reference, Long amount, String receivedOn) {}
 
     /** The result of recording: whether it replayed an earlier one, and the payment. */
-    public record Recorded(boolean replayed, PaymentView payment) {
-    }
+    public record Recorded(boolean replayed, PaymentView payment) {}
 
     private final PlatformDatabase database;
     private final OperatorWork work;
@@ -86,8 +156,14 @@ public class InvoiceBilling {
     private final JsonMapper json;
     private final Clock clock;
 
-    public InvoiceBilling(PlatformDatabase database, OperatorWork work, OperatorAccess access,
-            ProvisioningReceipts receipts, BillingLedger ledger, JsonMapper json, Clock clock) {
+    public InvoiceBilling(
+            PlatformDatabase database,
+            OperatorWork work,
+            OperatorAccess access,
+            ProvisioningReceipts receipts,
+            BillingLedger ledger,
+            JsonMapper json,
+            Clock clock) {
         this.database = database;
         this.work = work;
         this.access = access;
@@ -98,30 +174,62 @@ public class InvoiceBilling {
     }
 
     static InvoiceSummary summary(BillingLedger.Invoice invoice) {
-        return new InvoiceSummary(invoice.id(), BillingTerms.invoiceNumber(invoice.number()), invoice.periodStart(),
-                invoice.periodEnd(), invoice.amount(), invoice.currency(), invoice.status(), invoice.issuedAt(),
-                invoice.dueAt(), invoice.paidAt());
+        return new InvoiceSummary(
+                invoice.id(),
+                BillingTerms.invoiceNumber(invoice.number()),
+                invoice.periodStart(),
+                invoice.periodEnd(),
+                invoice.amount(),
+                invoice.currency(),
+                invoice.status(),
+                invoice.issuedAt(),
+                invoice.dueAt(),
+                invoice.paidAt());
     }
 
     static PaymentView payment(BillingLedger.Payment payment) {
-        return new PaymentView(payment.id(), payment.method(), payment.reference(), payment.providerEventId(),
-                payment.amount(), payment.receivedOn(), payment.paidAt());
+        return new PaymentView(
+                payment.id(),
+                payment.method(),
+                payment.reference(),
+                payment.providerEventId(),
+                payment.amount(),
+                payment.receivedOn(),
+                payment.paidAt());
     }
 
     InvoiceDetail detail(BillingLedger.Invoice invoice) {
-        return new InvoiceDetail(invoice.id(), BillingTerms.invoiceNumber(invoice.number()), invoice.salonId(),
-                invoice.planKey(), invoice.planName(), invoice.periodStart(), invoice.periodEnd(), invoice.amount(),
-                invoice.currency(), invoice.status(), invoice.issuedAt(), invoice.dueAt(), invoice.paidAt(),
-                ledger.payments(invoice.id()).stream().map(InvoiceBilling::payment).toList());
+        return new InvoiceDetail(
+                invoice.id(),
+                BillingTerms.invoiceNumber(invoice.number()),
+                invoice.salonId(),
+                invoice.planKey(),
+                invoice.planName(),
+                invoice.periodStart(),
+                invoice.periodEnd(),
+                invoice.amount(),
+                invoice.currency(),
+                invoice.status(),
+                invoice.issuedAt(),
+                invoice.dueAt(),
+                invoice.paidAt(),
+                ledger.payments(invoice.id()).stream()
+                        .map(InvoiceBilling::payment)
+                        .toList());
     }
 
     /** A salon's invoices, newest first, inside a platform transaction. */
     InvoicePage page(UUID salonId, Paging paging) {
-        List<InvoiceSummary> items = database.jdbc().query("SELECT " + BillingLedger.INVOICE_COLUMNS
-                + " FROM invoice WHERE salon_id = ? ORDER BY issued_at DESC, number DESC LIMIT ? OFFSET ?",
-                (row, n) -> summary(BillingLedger.invoice(row)), salonId, paging.size(), paging.offset());
-        Long total = database.jdbc().queryForObject("SELECT count(*) FROM invoice WHERE salon_id = ?", Long.class,
-                salonId);
+        List<InvoiceSummary> items = database.jdbc()
+                .query(
+                        "SELECT " + BillingLedger.INVOICE_COLUMNS
+                                + " FROM invoice WHERE salon_id = ? ORDER BY issued_at DESC, number DESC LIMIT ? OFFSET ?",
+                        (row, n) -> summary(BillingLedger.invoice(row)),
+                        salonId,
+                        paging.size(),
+                        paging.offset());
+        Long total =
+                database.jdbc().queryForObject("SELECT count(*) FROM invoice WHERE salon_id = ?", Long.class, salonId);
         return new InvoicePage(items, paging.page(), paging.size(), total == null ? 0 : total);
     }
 
@@ -149,7 +257,8 @@ public class InvoiceBilling {
         access.check(OperatorPermission.BILLING_MANAGE);
         UUID key = ProvisioningReceipts.key(idempotencyKey);
         List<FieldProblem> errors = new ArrayList<>();
-        String reference = input.reference() == null ? null : PlainText.line(input.reference(), BillingTerms.REFERENCE_MAX);
+        String reference =
+                input.reference() == null ? null : PlainText.line(input.reference(), BillingTerms.REFERENCE_MAX);
         if (reference == null) {
             errors.add(new FieldProblem("reference", "must be plain text between 1 and 120 characters"));
         }
@@ -161,8 +270,7 @@ public class InvoiceBilling {
             if (input.receivedOn() != null && input.receivedOn().matches("[0-9]{4}-[0-9]{2}-[0-9]{2}")) {
                 received = LocalDate.parse(input.receivedOn());
             }
-        }
-        catch (DateTimeParseException ex) {
+        } catch (DateTimeParseException ex) {
             received = null;
         }
         if (received == null) {
@@ -186,7 +294,8 @@ public class InvoiceBilling {
             }
             BillingLedger.Invoice found = ledger.invoiceById(invoiceId, false).orElseThrow(NotFoundException::new);
             // The subscription's lock first, as the job and provider events take it, then the invoice's.
-            BillingLedger.Subscription subscription = ledger.subscription(found.subscriptionId(), true).orElseThrow();
+            BillingLedger.Subscription subscription =
+                    ledger.subscription(found.subscriptionId(), true).orElseThrow();
             BillingLedger.Invoice invoice = ledger.invoiceById(invoiceId, true).orElseThrow();
             if (!invoice.open()) {
                 throw new ApplicationProblemException(409, ErrorCode.INVALID_STATE);
@@ -203,9 +312,19 @@ public class InvoiceBilling {
             if (!refused.isEmpty()) {
                 throw new ApplicationProblemException(400, ErrorCode.BAD_REQUEST, refused);
             }
-            BillingLedger.Payment payment = ledger.pay(subscription, invoice, BillingTerms.BANK_TRANSFER, reference,
-                    null, receivedOn, operator.id(), now, PlatformAudit.OPERATOR, operator.id().toString());
+            BillingLedger.Payment payment = ledger.pay(
+                    subscription,
+                    invoice,
+                    BillingTerms.BANK_TRANSFER,
+                    reference,
+                    null,
+                    receivedOn,
+                    operator.id(),
+                    now,
+                    PlatformAudit.OPERATOR,
+                    operator.id().toString());
             PaymentView view = payment(payment);
+            // Jackson converts to a raw Map; a view is a JSON object, so every key is a string.
             @SuppressWarnings("unchecked")
             Map<String, Object> stored = json.convertValue(view, Map.class);
             receipts.store(operator.id(), RECORD, key, fingerprint, payment.id(), stored, now);

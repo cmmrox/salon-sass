@@ -1,14 +1,12 @@
 package com.salonplatform.platform.api;
 
-import java.util.Locale;
-
 import com.salonplatform.platform.application.SalonExports;
 import com.salonplatform.shared.api.NotFoundException;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
-
+import java.util.Locale;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpHeaders;
@@ -37,8 +35,12 @@ class ExportDownloadController {
         this.platformDomain = platformDomain.strip().toLowerCase(Locale.ROOT);
     }
 
-    @GetMapping(path = "/{token}", produces = {"application/zip", MediaType.APPLICATION_JSON_VALUE})
-    @ApiResponse(responseCode = "200", description = "The export archive",
+    @GetMapping(
+            path = "/{token}",
+            produces = {"application/zip", MediaType.APPLICATION_JSON_VALUE})
+    @ApiResponse(
+            responseCode = "200",
+            description = "The export archive",
             content = @Content(mediaType = "application/zip", schema = @Schema(type = "string", format = "binary")))
     ResponseEntity<byte[]> download(@PathVariable String token, HttpServletRequest request) {
         platformHost(request);

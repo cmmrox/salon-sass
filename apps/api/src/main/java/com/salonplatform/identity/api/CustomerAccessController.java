@@ -4,16 +4,13 @@ import com.salonplatform.identity.application.CustomerAccess;
 import com.salonplatform.identity.application.StaffAccess;
 import com.salonplatform.identity.infrastructure.CustomerDevice;
 import com.salonplatform.shared.tenancy.TenantContext;
-
 import jakarta.servlet.http.*;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
-
+import java.util.UUID;
 import org.springframework.core.env.Environment;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.UUID;
 
 /**
  * Customer authentication is public, salon-selected and bound to an authenticated device cookie.
@@ -49,15 +46,15 @@ class CustomerAccessController {
             @NotBlank @Size(max = 160) String deviceLabel) {}
 
     record CustomerCodeVerificationRequest(
-            @NotNull UUID challengeId, @NotBlank @Size(max = 32) String code) {}
+            @NotNull UUID challengeId,
+            @NotBlank @Size(max = 32) String code) {}
 
     @io.swagger.v3.oas.annotations.Parameter(
             name = "x-salon-client-assertion",
             in = io.swagger.v3.oas.annotations.enums.ParameterIn.HEADER,
             required = false,
-            description =
-                    "Private server-authenticated rate-address assertion; absent uses servlet peer,"
-                        + " invalid proof is rejected before accounting.",
+            description = "Private server-authenticated rate-address assertion; absent uses servlet peer,"
+                    + " invalid proof is rejected before accounting.",
             schema = @io.swagger.v3.oas.annotations.media.Schema(type = "string", maxLength = 192))
     @PostMapping(path = "/challenges", consumes = MediaType.APPLICATION_JSON_VALUE)
     @io.swagger.v3.oas.annotations.responses.ApiResponses({
@@ -76,13 +73,8 @@ class CustomerAccessController {
                 headers =
                         @io.swagger.v3.oas.annotations.headers.Header(
                                 name = "Retry-After",
-                                description =
-                                        "Positive seconds until the longest blocking window"
-                                                + " expires",
-                                schema =
-                                        @io.swagger.v3.oas.annotations.media.Schema(
-                                                type = "integer",
-                                                minimum = "1")),
+                                description = "Positive seconds until the longest blocking window" + " expires",
+                                schema = @io.swagger.v3.oas.annotations.media.Schema(type = "integer", minimum = "1")),
                 content =
                         @io.swagger.v3.oas.annotations.media.Content(
                                 mediaType = "application/problem+json",
@@ -90,8 +82,7 @@ class CustomerAccessController {
                                         @io.swagger.v3.oas.annotations.media.Schema(
                                                 ref = "#/components/schemas/Problem")))
     })
-    ResponseEntity<CustomerAccess.Challenge> request(
-            @Valid @RequestBody CodeRequest request, HttpServletRequest http) {
+    ResponseEntity<CustomerAccess.Challenge> request(@Valid @RequestBody CodeRequest request, HttpServletRequest http) {
         TenantContext.require();
         String rateAddress = assertions.rateAddress(http);
         String cookie = cookie(http);
@@ -102,14 +93,8 @@ class CustomerAccessController {
             id = devices.verifiedId(cookie);
         }
         CustomerAccess.Challenge challenge =
-                access.request(
-                        request.mobile(),
-                        request.channel(),
-                        request.deviceLabel(),
-                        id,
-                        rateAddress);
-        ResponseEntity.BodyBuilder response =
-                ResponseEntity.ok().cacheControl(CacheControl.noStore());
+                access.request(request.mobile(), request.channel(), request.deviceLabel(), id, rateAddress);
+        ResponseEntity.BodyBuilder response = ResponseEntity.ok().cacheControl(CacheControl.noStore());
         if (issued)
             response.header(
                     HttpHeaders.SET_COOKIE,

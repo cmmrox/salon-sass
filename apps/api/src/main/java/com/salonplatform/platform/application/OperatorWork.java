@@ -1,10 +1,8 @@
 package com.salonplatform.platform.application;
 
-import java.util.function.Supplier;
-
 import com.salonplatform.shared.api.ApplicationProblemException;
 import com.salonplatform.shared.infrastructure.PlatformDatabase;
-
+import java.util.function.Supplier;
 import org.springframework.stereotype.Service;
 
 /**
@@ -21,15 +19,13 @@ public class OperatorWork {
         this.database = database;
     }
 
-    private record Outcome<T>(T value, ApplicationProblemException failure) {
-    }
+    private record Outcome<T>(T value, ApplicationProblemException failure) {}
 
     public <T> T run(Supplier<T> useCase) {
         Outcome<T> outcome = database.inTransaction(status -> {
             try {
                 return new Outcome<>(useCase.get(), null);
-            }
-            catch (ApplicationProblemException ex) {
+            } catch (ApplicationProblemException ex) {
                 if (ex.status() != 401 && ex.status() != 429) {
                     throw ex;
                 }

@@ -3,18 +3,14 @@ package com.salonplatform.shared.outbox;
 import com.salonplatform.shared.observability.Traces;
 import com.salonplatform.shared.tenancy.TenantContext;
 import com.salonplatform.shared.time.SalonTime;
-
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
-
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
-
-import tools.jackson.databind.json.JsonMapper;
-
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * The way anything leaves the system (docs/engineering/backend.md, "Transactions, outbox and
@@ -25,7 +21,8 @@ import java.util.UUID;
 @Service
 public class Outbox {
 
-    @PersistenceContext private EntityManager entityManager;
+    @PersistenceContext
+    private EntityManager entityManager;
 
     private final SalonTime time;
 
@@ -62,22 +59,18 @@ public class Outbox {
                             + " there is none here");
         }
         TenantContext.resolved()
-                .orElseThrow(
-                        () ->
-                                new IllegalStateException(
-                                        "An outbox message belongs to a salon: write it inside work"
-                                                + " for one (TenantContext)"));
+                .orElseThrow(() -> new IllegalStateException(
+                        "An outbox message belongs to a salon: write it inside work" + " for one (TenantContext)"));
         if (channel == null || channel.isBlank()) {
             throw new IllegalArgumentException("a message has a channel");
         }
         UUID id = UUID.randomUUID();
-        entityManager.persist(
-                new OutboxMessage(
-                        id,
-                        channel,
-                        json.writeValueAsString(payload),
-                        traces.currentTraceParent().orElse(null),
-                        at));
+        entityManager.persist(new OutboxMessage(
+                id,
+                channel,
+                json.writeValueAsString(payload),
+                traces.currentTraceParent().orElse(null),
+                at));
         return id;
     }
 
@@ -89,13 +82,11 @@ public class Outbox {
         if (!TransactionSynchronizationManager.isActualTransactionActive()
                 || TransactionSynchronizationManager.isCurrentTransactionReadOnly())
             throw new IllegalStateException("Cancellation requires a writable tenant transaction");
-        TenantContext.resolved()
-                .orElseThrow(() -> new IllegalStateException("Cancellation requires a salon"));
+        TenantContext.resolved().orElseThrow(() -> new IllegalStateException("Cancellation requires a salon"));
         return entityManager
-                        .createNativeQuery(
-                                "UPDATE outbox_message SET status='cancelled', lease_until=NULL,"
-                                    + " lease_token=NULL, updated_at=:at WHERE tenant_id=:tenant"
-                                    + " AND id=:id AND status IN ('pending','sending','dead')")
+                        .createNativeQuery("UPDATE outbox_message SET status='cancelled', lease_until=NULL,"
+                                + " lease_token=NULL, updated_at=:at WHERE tenant_id=:tenant"
+                                + " AND id=:id AND status IN ('pending','sending','dead')")
                         .setParameter("tenant", TenantContext.require().id())
                         .setParameter("id", id)
                         .setParameter("at", at)
@@ -121,16 +112,15 @@ public class Outbox {
         UUID after = null;
         while (true) {
             String condition = after == null ? "" : " and m.id>:after";
-            var query =
-                    entityManager
-                            .createQuery(
-                                    "select m.id,m.payload from OutboxMessage m where m.channel in"
-                                        + " :channels"
-                                            + condition
-                                            + " order by m.id",
-                                    Object[].class)
-                            .setParameter("channels", channels)
-                            .setMaxResults(100);
+            var query = entityManager
+                    .createQuery(
+                            "select m.id,m.payload from OutboxMessage m where m.channel in"
+                                    + " :channels"
+                                    + condition
+                                    + " order by m.id",
+                            Object[].class)
+                    .setParameter("channels", channels)
+                    .setMaxResults(100);
             if (after != null) query.setParameter("after", after);
             var rows = query.getResultList();
             if (rows.isEmpty()) break;
@@ -141,8 +131,7 @@ public class Outbox {
                 if (correlation.isPresent()) {
                     cancel(id, at);
                     entityManager
-                            .createNativeQuery(
-                                    "DELETE FROM outbox_message WHERE tenant_id=:tenant AND id=:id")
+                            .createNativeQuery("DELETE FROM outbox_message WHERE tenant_id=:tenant AND id=:id")
                             .setParameter("tenant", tenant)
                             .setParameter("id", id)
                             .executeUpdate();

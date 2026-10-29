@@ -1,7 +1,6 @@
 package com.salonplatform.shared.infrastructure;
 
 import java.util.Map;
-
 import org.springframework.beans.factory.SmartInitializingSingleton;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;

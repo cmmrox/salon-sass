@@ -1,14 +1,12 @@
 package com.salonplatform.branding.infrastructure;
 
+import com.salonplatform.shared.infrastructure.PlatformDatabase;
+import com.salonplatform.shared.lifecycle.TenantDataModule;
+import com.salonplatform.shared.lifecycle.TenantTableRows;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-
-import com.salonplatform.shared.infrastructure.PlatformDatabase;
-import com.salonplatform.shared.lifecycle.TenantDataModule;
-import com.salonplatform.shared.lifecycle.TenantTableRows;
-
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
@@ -44,7 +42,13 @@ class BrandTenantData implements TenantDataModule {
 
     @Override
     public int erase(String table, UUID salonId, Instant at, int maxRows) {
-        return TenantTableRows.erase(platform.getObject(), "branding_erase_salon_rows", checked(table).name(), salonId, at, maxRows);
+        return TenantTableRows.erase(
+                platform.getObject(),
+                "branding_erase_salon_rows",
+                checked(table).name(),
+                salonId,
+                at,
+                maxRows);
     }
 
     private static Table checked(String table) {

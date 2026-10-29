@@ -1,5 +1,8 @@
 package com.salonplatform.contract;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
+import com.salonplatform.testing.IntegrationTest;
 import java.io.IOException;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
@@ -9,15 +12,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-
-import com.salonplatform.testing.IntegrationTest;
 import org.junit.jupiter.api.Test;
 import tools.jackson.core.util.DefaultIndenter;
 import tools.jackson.core.util.DefaultPrettyPrinter;
 import tools.jackson.core.util.Separators;
 import tools.jackson.databind.json.JsonMapper;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Generates the OpenAPI document from the controllers and keeps the committed copy honest.
@@ -39,7 +38,8 @@ class OpenApiDocumentTest extends IntegrationTest {
 
     private static final Path GENERATED = Path.of("target", "openapi.json");
 
-    private static final Path COMMITTED = Path.of(System.getProperty("contracts.document", "../../docs/api/openapi.json"));
+    private static final Path COMMITTED =
+            Path.of(System.getProperty("contracts.document", "../../docs/api/openapi.json"));
 
     @Test
     void theCommittedDocumentIsWhatTheControllersGenerate() throws IOException {
@@ -51,13 +51,15 @@ class OpenApiDocumentTest extends IntegrationTest {
         Files.writeString(GENERATED, generated, StandardCharsets.UTF_8);
 
         switch (System.getProperty("contracts.mode", "check")) {
-            case "export" -> { }
+            case "export" -> {}
             case "update" -> {
                 Files.createDirectories(COMMITTED.toAbsolutePath().getParent());
                 Files.writeString(COMMITTED, generated, StandardCharsets.UTF_8);
             }
             default -> {
-                assertThat(COMMITTED).as("docs/api/openapi.json is missing. Run `pnpm contracts:generate`.").exists();
+                assertThat(COMMITTED)
+                        .as("docs/api/openapi.json is missing. Run `pnpm contracts:generate`.")
+                        .exists();
                 assertThat(Files.readString(COMMITTED, StandardCharsets.UTF_8))
                         .as("docs/api/openapi.json is stale: it is not what the controllers generate. "
                                 + "Run `pnpm contracts:generate` and commit the result.")

@@ -1,11 +1,6 @@
 package com.salonplatform.shared.observability;
 
-import java.time.Duration;
-import java.time.Instant;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.function.Predicate;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import com.jayway.jsonpath.JsonPath;
 import com.salonplatform.testing.Http.Exchange;
@@ -18,14 +13,17 @@ import io.opentelemetry.sdk.trace.ReadWriteSpan;
 import io.opentelemetry.sdk.trace.ReadableSpan;
 import io.opentelemetry.sdk.trace.SpanProcessor;
 import io.opentelemetry.sdk.trace.data.SpanData;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.Predicate;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * The spans the API records (NFR-16), read as they end: one for each request, each delivery and
@@ -55,8 +53,7 @@ class TracesIntegrationTest {
         SpanProcessor recordingSpanProcessor() {
             return new SpanProcessor() {
                 @Override
-                public void onStart(Context parentContext, ReadWriteSpan span) {
-                }
+                public void onStart(Context parentContext, ReadWriteSpan span) {}
 
                 @Override
                 public boolean isStartRequired() {
@@ -78,9 +75,14 @@ class TracesIntegrationTest {
 
     @BeforeAll
     static void start() {
-        application = TestDatabase.createEmpty(TestPostgres.shared()).startWith(RecordedSpans.class,
-                "--spring.profiles.active=local", "--salon.outbox.enabled=true", "--salon.outbox.poll-interval=100ms",
-                "--salon.jobs.enabled=true", "--salon.jobs.poll-interval=100ms");
+        application = TestDatabase.createEmpty(TestPostgres.shared())
+                .startWith(
+                        RecordedSpans.class,
+                        "--spring.profiles.active=local",
+                        "--salon.outbox.enabled=true",
+                        "--salon.outbox.poll-interval=100ms",
+                        "--salon.jobs.enabled=true",
+                        "--salon.jobs.poll-interval=100ms");
     }
 
     @AfterAll
@@ -91,27 +93,50 @@ class TracesIntegrationTest {
     @Test
     void aRequestOnASalonsHostnameContinuesTheCallersTraceAndCarriesTheSalon() {
         String traceId = "11111111111111111111111111111111";
-        Exchange response = application.http().sendOnHost("GET", "alpha.localhost:" + application.port(), "/api/v1/salon",
-                Map.of("traceparent", "00-" + traceId + "-aaaaaaaaaaaaaaaa-01"), null);
+        Exchange response = application
+                .http()
+                .sendOnHost(
+                        "GET",
+                        "alpha.localhost:" + application.port(),
+                        "/api/v1/salon",
+                        Map.of("traceparent", "00-" + traceId + "-aaaaaaaaaaaaaaaa-01"),
+                        null);
         assertThat(response.status()).isEqualTo(200);
 
-        SpanData request = await(span -> span.getTraceId().equals(traceId) && span.getParentSpanId().equals("aaaaaaaaaaaaaaaa"));
+        SpanData request = await(span ->
+                span.getTraceId().equals(traceId) && span.getParentSpanId().equals("aaaaaaaaaaaaaaaa"));
         assertThat(request.getAttributes().get(TENANT_ID)).isEqualTo(ALPHA);
         assertThat(request.getName()).containsIgnoringCase("get");
-        assertThat(SPANS).filteredOn(span -> span.getTraceId().equals(traceId))
-                .as("every span of the request is in the caller's trace").isNotEmpty();
+        assertThat(SPANS)
+                .filteredOn(span -> span.getTraceId().equals(traceId))
+                .as("every span of the request is in the caller's trace")
+                .isNotEmpty();
     }
 
     @Test
     void aRequestOnNoSalonsHostnameHasASpanWithNoSalon() {
         String traceId = "22222222222222222222222222222222";
-        application.http().sendOnHost("GET", "localhost:" + application.port(), "/api/v1/meta",
-                Map.of("traceparent", "00-" + traceId + "-bbbbbbbbbbbbbbbb-01"), null);
-        application.http().sendOnHost("GET", "nosuchsalon.localhost:" + application.port(), "/api/v1/salon",
-                Map.of("traceparent", "00-" + traceId + "-cccccccccccccccc-01"), null);
+        application
+                .http()
+                .sendOnHost(
+                        "GET",
+                        "localhost:" + application.port(),
+                        "/api/v1/meta",
+                        Map.of("traceparent", "00-" + traceId + "-bbbbbbbbbbbbbbbb-01"),
+                        null);
+        application
+                .http()
+                .sendOnHost(
+                        "GET",
+                        "nosuchsalon.localhost:" + application.port(),
+                        "/api/v1/salon",
+                        Map.of("traceparent", "00-" + traceId + "-cccccccccccccccc-01"),
+                        null);
 
-        SpanData meta = await(span -> span.getTraceId().equals(traceId) && span.getParentSpanId().equals("bbbbbbbbbbbbbbbb"));
-        SpanData noSalon = await(span -> span.getTraceId().equals(traceId) && span.getParentSpanId().equals("cccccccccccccccc"));
+        SpanData meta = await(span ->
+                span.getTraceId().equals(traceId) && span.getParentSpanId().equals("bbbbbbbbbbbbbbbb"));
+        SpanData noSalon = await(span ->
+                span.getTraceId().equals(traceId) && span.getParentSpanId().equals("cccccccccccccccc"));
         assertThat(meta.getAttributes().get(TENANT_ID)).isNull();
         assertThat(noSalon.getAttributes().get(TENANT_ID)).isNull();
     }
@@ -119,29 +144,49 @@ class TracesIntegrationTest {
     @Test
     void aMessagesDeliveryBelongsToTheTraceOfTheRequestThatWroteItAndCarriesItsSalon() {
         String traceId = "33333333333333333333333333333333";
-        Exchange created = application.http().sendOnHost("POST", "beta.localhost:" + application.port(), "/local/probes",
-                Map.of("Content-Type", "application/json", "traceparent", "00-" + traceId + "-dddddddddddddddd-01"), "{}");
+        Exchange created = application
+                .http()
+                .sendOnHost(
+                        "POST",
+                        "beta.localhost:" + application.port(),
+                        "/local/probes",
+                        Map.of(
+                                "Content-Type",
+                                "application/json",
+                                "traceparent",
+                                "00-" + traceId + "-dddddddddddddddd-01"),
+                        "{}");
         assertThat(created.status()).isEqualTo(201);
-        assertThat(JsonPath.parse(created.body()).<String>read("$.audit[0].traceId")).isEqualTo(traceId);
+        assertThat(JsonPath.parse(created.body()).<String>read("$.audit[0].traceId"))
+                .isEqualTo(traceId);
 
-        SpanData delivery = await(span -> span.getName().equals("outbox.delivery") && span.getTraceId().equals(traceId));
+        SpanData delivery = await(span ->
+                span.getName().equals("outbox.delivery") && span.getTraceId().equals(traceId));
         assertThat(delivery.getAttributes().get(TENANT_ID)).isEqualTo(BETA);
-        SpanData request = await(span -> span.getTraceId().equals(traceId) && span.getParentSpanId().equals("dddddddddddddddd"));
+        SpanData request = await(span ->
+                span.getTraceId().equals(traceId) && span.getParentSpanId().equals("dddddddddddddddd"));
         assertThat(request.getAttributes().get(TENANT_ID)).isEqualTo(BETA);
-        assertThat(SPANS).filteredOn(span -> span.getTraceId().equals(traceId)).extracting(SpanData::getSpanId)
+        assertThat(SPANS)
+                .filteredOn(span -> span.getTraceId().equals(traceId))
+                .extracting(SpanData::getSpanId)
                 .as("the delivery's parent is a span of the request that wrote the message")
                 .contains(delivery.getParentSpanId());
     }
 
     @Test
     void aJobsRunForEachSalonIsASpanOfItsOwnTraceCarryingThatSalon() {
-        for (String salon : new String[] { ALPHA, BETA, GAMMA }) {
+        for (String salon : new String[] {ALPHA, BETA, GAMMA}) {
             SpanData run = await(span -> span.getName().equals("job.outbox-cleanup")
                     && salon.equals(span.getAttributes().get(TENANT_ID)));
-            assertThat(run.getParentSpanContext().isValid()).as("a job's run starts a trace of its own").isFalse();
+            assertThat(run.getParentSpanContext().isValid())
+                    .as("a job's run starts a trace of its own")
+                    .isFalse();
         }
-        assertThat(SPANS).filteredOn(span -> span.getName().equals("job.outbox-cleanup")).extracting(SpanData::getTraceId)
-                .as("one trace for each salon's run").doesNotHaveDuplicates();
+        assertThat(SPANS)
+                .filteredOn(span -> span.getName().equals("job.outbox-cleanup"))
+                .extracting(SpanData::getTraceId)
+                .as("one trace for each salon's run")
+                .doesNotHaveDuplicates();
     }
 
     private static SpanData await(Predicate<SpanData> matching) {
@@ -154,12 +199,13 @@ class TracesIntegrationTest {
             }
             if (Instant.now().isAfter(until)) {
                 throw new AssertionError("no such span within 5 seconds; recorded: "
-                        + SPANS.stream().map(span -> span.getName() + " " + span.getAttributes()).toList());
+                        + SPANS.stream()
+                                .map(span -> span.getName() + " " + span.getAttributes())
+                                .toList());
             }
             try {
                 Thread.sleep(25);
-            }
-            catch (InterruptedException ex) {
+            } catch (InterruptedException ex) {
                 Thread.currentThread().interrupt();
                 throw new IllegalStateException(ex);
             }

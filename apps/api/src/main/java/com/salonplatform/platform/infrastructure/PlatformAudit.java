@@ -1,17 +1,15 @@
 package com.salonplatform.platform.infrastructure;
 
+import com.salonplatform.shared.audit.SecretValues;
+import com.salonplatform.shared.infrastructure.PlatformDatabase;
+import com.salonplatform.shared.observability.Traces;
 import java.sql.Timestamp;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
-
-import com.salonplatform.shared.audit.SecretValues;
-import com.salonplatform.shared.infrastructure.PlatformDatabase;
-import com.salonplatform.shared.observability.Traces;
-import tools.jackson.databind.json.JsonMapper;
-
 import org.springframework.stereotype.Component;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * The append-only platform audit (docs/architecture/operator-console.md): actor, action, subject,
@@ -38,23 +36,44 @@ public class PlatformAudit {
         this.json = json;
     }
 
-    public UUID record(String actorKind, String actorId, String action, String subjectKind, String subjectId,
+    public UUID record(
+            String actorKind,
+            String actorId,
+            String action,
+            String subjectKind,
+            String subjectId,
             Map<String, ?> details) {
         return record(actorKind, actorId, action, subjectKind, subjectId, details, clock.instant());
     }
 
-    public UUID record(String actorKind, String actorId, String action, String subjectKind, String subjectId,
-            Map<String, ?> details, Instant at) {
+    public UUID record(
+            String actorKind,
+            String actorId,
+            String action,
+            String subjectKind,
+            String subjectId,
+            Map<String, ?> details,
+            Instant at) {
         database.requireTransaction();
         UUID id = UUID.randomUUID();
         Timestamp time = Timestamp.from(at);
-        database.jdbc().update("""
+        database.jdbc()
+                .update(
+                        """
                 INSERT INTO platform_audit_entry (id, actor_kind, actor_id, action, subject_kind, subject_id, details,
                     trace_id, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?::jsonb, ?, ?, ?)
-                """, id, actorKind, actorId, action, subjectKind, subjectId,
-                details == null ? null : json.writeValueAsString(SecretValues.redact(details)),
-                traces.currentTraceId().orElse(null), time, time);
+                """,
+                        id,
+                        actorKind,
+                        actorId,
+                        action,
+                        subjectKind,
+                        subjectId,
+                        details == null ? null : json.writeValueAsString(SecretValues.redact(details)),
+                        traces.currentTraceId().orElse(null),
+                        time,
+                        time);
         return id;
     }
 }

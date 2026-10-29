@@ -10,15 +10,16 @@ import com.salonplatform.shared.audit.AuditTrail;
 import com.salonplatform.shared.outbox.Outbox;
 import com.salonplatform.shared.tenancy.*;
 import com.salonplatform.testing.Http;
-
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import java.time.*;
 import java.util.*;
 import java.util.concurrent.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /** Personal-data boundaries and privacy effects exercised over real HTTP and PostgreSQL. */
+// JSON bodies are read as untyped maps (Map.class); each cast states the shape the assertion
+// beside it then checks, so a wrong shape fails that assertion with a ClassCastException.
+@SuppressWarnings("unchecked")
 class CustomerProfileIntegrationTest extends CustomerHttpFixture {
     @BeforeEach
     void isolateProfileFixtures() {
@@ -67,30 +68,20 @@ class CustomerProfileIntegrationTest extends CustomerHttpFixture {
         for (String role : List.of("OWNER", "MANAGER")) {
             String token = staff(role);
             var response =
-                    call(
-                            "alpha",
-                            "GET",
-                            "/api/v1/identity/audit?subjectId=" + initial.get("id"),
-                            null,
-                            token,
-                            null);
+                    call("alpha", "GET", "/api/v1/identity/audit?subjectId=" + initial.get("id"), null, token, null);
             status(response, 200);
             List<Map<String, Object>> entries =
                     (List<Map<String, Object>>) body(response).get("items");
-            var updated =
-                    entries.stream()
-                            .filter(e -> "identity.profile_updated".equals(e.get("action")))
-                            .findFirst()
-                            .orElseThrow();
+            var updated = entries.stream()
+                    .filter(e -> "identity.profile_updated".equals(e.get("action")))
+                    .findFirst()
+                    .orElseThrow();
             assertThat((Map<String, Object>) updated.get("before"))
                     .containsExactlyInAnyOrderEntriesOf(Map.of("version", 0));
             assertThat((Map<String, Object>) updated.get("after"))
                     .containsOnlyKeys("version", "changedFields")
                     .containsEntry("version", 1);
-            assertThat(
-                            (List<String>)
-                                    ((Map<String, Object>) updated.get("after"))
-                                            .get("changedFields"))
+            assertThat((List<String>) ((Map<String, Object>) updated.get("after")).get("changedFields"))
                     .containsExactly(
                             "name",
                             "email",
@@ -107,13 +98,7 @@ class CustomerProfileIntegrationTest extends CustomerHttpFixture {
                             access(customer),
                             (String) customer.get("refreshToken"));
             status(
-                    call(
-                            "beta",
-                            "GET",
-                            "/api/v1/identity/audit?subjectId=" + initial.get("id"),
-                            null,
-                            token,
-                            null),
+                    call("beta", "GET", "/api/v1/identity/audit?subjectId=" + initial.get("id"), null, token, null),
                     404);
         }
     }
@@ -124,52 +109,31 @@ class CustomerProfileIntegrationTest extends CustomerHttpFixture {
         String unexpected = UUID.randomUUID() + "@synthetic.example";
         TenantContext.callAs(
                 tenant("alpha"),
-                () ->
-                        app.bean(IdentityWork.class)
-                                .run(
-                                        () -> {
-                                            app.bean(AuditTrail.class)
-                                                    .record(
-                                                            new AuditAction(
-                                                                    Actor.system("synthetic"),
-                                                                    "identity.profile_updated",
-                                                                    "customer",
-                                                                    subject,
-                                                                    null,
-                                                                    Map.of(
-                                                                            "version",
-                                                                            unexpected,
-                                                                            "email",
-                                                                            unexpected),
-                                                                    Map.of(
-                                                                            "version",
-                                                                            1L,
-                                                                            "changedFields",
-                                                                            List.of(
-                                                                                    "name",
-                                                                                    unexpected,
-                                                                                    123),
-                                                                            "profile",
-                                                                            Map.of(
-                                                                                    "email",
-                                                                                    unexpected))));
-                                            return null;
-                                        }));
+                () -> app.bean(IdentityWork.class).run(() -> {
+                    app.bean(AuditTrail.class)
+                            .record(new AuditAction(
+                                    Actor.system("synthetic"),
+                                    "identity.profile_updated",
+                                    "customer",
+                                    subject,
+                                    null,
+                                    Map.of("version", unexpected, "email", unexpected),
+                                    Map.of(
+                                            "version",
+                                            1L,
+                                            "changedFields",
+                                            List.of("name", unexpected, 123),
+                                            "profile",
+                                            Map.of("email", unexpected))));
+                    return null;
+                }));
         String manager = staff("MANAGER");
-        var response =
-                call(
-                        "alpha",
-                        "GET",
-                        "/api/v1/identity/audit?subjectId=" + subject,
-                        null,
-                        manager,
-                        null);
+        var response = call("alpha", "GET", "/api/v1/identity/audit?subjectId=" + subject, null, manager, null);
         status(response, 200);
         var entry = ((List<Map<String, Object>>) body(response).get("items")).getFirst();
         assertThat((Map<String, Object>) entry.get("before")).isEmpty();
         assertThat((Map<String, Object>) entry.get("after"))
-                .containsExactlyInAnyOrderEntriesOf(
-                        Map.of("version", 1, "changedFields", List.of("name")));
+                .containsExactlyInAnyOrderEntriesOf(Map.of("version", 1, "changedFields", List.of("name")));
         assertThat(response.body()).doesNotContain(unexpected);
     }
 
@@ -187,8 +151,7 @@ class CustomerProfileIntegrationTest extends CustomerHttpFixture {
                 .containsEntry("marketingConsent", false)
                 .containsEntry("mobile", mobile(201));
         assertThat((Map<String, Object>) p.get("notificationPreferences"))
-                .containsExactlyInAnyOrderEntriesOf(
-                        Map.of("sms", true, "whatsapp", true, "email", true));
+                .containsExactlyInAnyOrderEntriesOf(Map.of("sms", true, "whatsapp", true, "email", true));
         assertThat(p.get("id"))
                 .isNotEqualTo(profile("alpha", other).get("id"))
                 .isNotEqualTo(profile("beta", b).get("id"));
@@ -205,14 +168,7 @@ class CustomerProfileIntegrationTest extends CustomerHttpFixture {
     void updatePersistsNormalizedCompleteRepresentationAndOmittedOptionalsClear() throws Exception {
         var a = signIn("alpha", 203);
         var p = profile("alpha", a);
-        var r =
-                call(
-                        "alpha",
-                        "PUT",
-                        ME,
-                        edit(((Number) p.get("version")).longValue()),
-                        access(a),
-                        null);
+        var r = call("alpha", "PUT", ME, edit(((Number) p.get("version")).longValue()), access(a), null);
         status(r, 200);
         var changed = body(r);
         assertThat(changed)
@@ -227,41 +183,29 @@ class CustomerProfileIntegrationTest extends CustomerHttpFixture {
         clear.remove("email");
         clear.remove("birthday");
         status(call("alpha", "PUT", ME, clear, access(a), null), 200);
-        assertThat(profile("alpha", a))
-                .containsEntry("email", null)
-                .containsEntry("birthday", null);
+        assertThat(profile("alpha", a)).containsEntry("email", null).containsEntry("birthday", null);
     }
 
     @Test
-    void invalidValuesTypesMissingRequiredAndInjectedFieldsLeaveProfileUnchanged()
-            throws Exception {
+    void invalidValuesTypesMissingRequiredAndInjectedFieldsLeaveProfileUnchanged() throws Exception {
         var a = signIn("alpha", 204);
         var original = profile("alpha", a);
-        List<Map.Entry<String, Object>> bad =
-                List.of(
-                        Map.entry("name", " "),
-                        Map.entry("name", "x".repeat(121)),
-                        Map.entry("email", "invalid"),
-                        Map.entry("birthday", "2999-01-01"),
-                        Map.entry("birthday", "2000-02-30"),
-                        Map.entry("preferredLanguage", "fr"),
-                        Map.entry("version", "0"),
-                        Map.entry("name", 123),
-                        Map.entry("marketingConsent", 1),
-                        Map.entry("mobile", mobile(205)),
-                        Map.entry("id", UUID.randomUUID().toString()),
-                        Map.entry("tenantId", tenant("beta").id().toString()),
-                        Map.entry(
-                                "notificationPreferences",
-                                Map.of(
-                                        "sms",
-                                        true,
-                                        "whatsapp",
-                                        false,
-                                        "email",
-                                        true,
-                                        "unknown",
-                                        true)));
+        List<Map.Entry<String, Object>> bad = List.of(
+                Map.entry("name", " "),
+                Map.entry("name", "x".repeat(121)),
+                Map.entry("email", "invalid"),
+                Map.entry("birthday", "2999-01-01"),
+                Map.entry("birthday", "2000-02-30"),
+                Map.entry("preferredLanguage", "fr"),
+                Map.entry("version", "0"),
+                Map.entry("name", 123),
+                Map.entry("marketingConsent", 1),
+                Map.entry("mobile", mobile(205)),
+                Map.entry("id", UUID.randomUUID().toString()),
+                Map.entry("tenantId", tenant("beta").id().toString()),
+                Map.entry(
+                        "notificationPreferences",
+                        Map.of("sms", true, "whatsapp", false, "email", true, "unknown", true)));
         for (var field : bad) {
             var update = edit(0);
             update.put(field.getKey(), field.getValue());
@@ -272,20 +216,14 @@ class CustomerProfileIntegrationTest extends CustomerHttpFixture {
             assertThat(profile("alpha", a)).isEqualTo(original);
         }
         for (String field :
-                List.of(
-                        "version",
-                        "name",
-                        "preferredLanguage",
-                        "notificationPreferences",
-                        "marketingConsent")) {
+                List.of("version", "name", "preferredLanguage", "notificationPreferences", "marketingConsent")) {
             var update = edit(0);
             update.remove(field);
             status(call("alpha", "PUT", ME, update, access(a), null), 400);
         }
         for (String channel : List.of("sms", "whatsapp", "email")) {
             var update = edit(0);
-            Map<String, Object> preferences =
-                    new HashMap<>(Map.of("sms", true, "whatsapp", true, "email", true));
+            Map<String, Object> preferences = new HashMap<>(Map.of("sms", true, "whatsapp", true, "email", true));
             preferences.remove(channel);
             update.put("notificationPreferences", preferences);
             status(call("alpha", "PUT", ME, update, access(a), null), 400);
@@ -295,15 +233,7 @@ class CustomerProfileIntegrationTest extends CustomerHttpFixture {
 
     @Test
     void birthdayUsesTheCurrentSalonDateAcrossUtcMidnight() throws Exception {
-        status(
-                call(
-                        null,
-                        "PUT",
-                        "/local/clock",
-                        Map.of("instant", "2026-10-13T20:00:00Z"),
-                        null,
-                        null),
-                200);
+        status(call(null, "PUT", "/local/clock", Map.of("instant", "2026-10-13T20:00:00Z"), null, null), 200);
         var alpha = signIn("alpha", 206);
         var gamma = signIn("gamma", 206);
         var update = edit(0);
@@ -327,21 +257,19 @@ class CustomerProfileIntegrationTest extends CustomerHttpFixture {
             CountDownLatch start = new CountDownLatch(1);
             List<Future<Http.Exchange>> jobs = new ArrayList<>();
             for (String name : List.of("Winner A", "Winner B")) {
-                jobs.add(
-                        pool.submit(
-                                () -> {
-                                    start.await();
-                                    var update = edit(1);
-                                    update.put("name", name);
-                                    return call("alpha", "PUT", ME, update, access(a), null);
-                                }));
+                jobs.add(pool.submit(() -> {
+                    start.await();
+                    var update = edit(1);
+                    update.put("name", name);
+                    return call("alpha", "PUT", ME, update, access(a), null);
+                }));
             }
             start.countDown();
             var replies = new ArrayList<Http.Exchange>();
             for (var job : jobs) replies.add(job.get());
-            assertThat(replies.stream().map(Http.Exchange::status))
-                    .containsExactlyInAnyOrder(200, 409);
-            var winner = replies.stream().filter(v -> v.status() == 200).findFirst().orElseThrow();
+            assertThat(replies.stream().map(Http.Exchange::status)).containsExactlyInAnyOrder(200, 409);
+            var winner =
+                    replies.stream().filter(v -> v.status() == 200).findFirst().orElseThrow();
             assertThat(profile("alpha", a)).isEqualTo(body(winner));
         }
     }
@@ -356,19 +284,15 @@ class CustomerProfileIntegrationTest extends CustomerHttpFixture {
             List<Future<?>> jobs = new ArrayList<>();
             for (int i = 0; i < 30; i++) {
                 boolean alpha = i % 2 == 0;
-                jobs.add(
-                        pool.submit(
-                                () ->
-                                        assertThat(profile(alpha ? "alpha" : "beta", alpha ? a : b))
-                                                .containsEntry("id", alpha ? aId : bId)));
+                jobs.add(pool.submit(() -> assertThat(profile(alpha ? "alpha" : "beta", alpha ? a : b))
+                        .containsEntry("id", alpha ? aId : bId)));
             }
             for (var job : jobs) job.get();
         }
     }
 
     @Test
-    void exportIsAnAllowlistedNoStoreDownloadOfOnlyOwnProfileAndDevicesAndAuditsRights()
-            throws Exception {
+    void exportIsAnAllowlistedNoStoreDownloadOfOnlyOwnProfileAndDevicesAndAuditsRights() throws Exception {
         var a = signIn("alpha", 209);
         var second = signIn("alpha", 209);
         var other = signIn("alpha", 210);
@@ -377,8 +301,7 @@ class CustomerProfileIntegrationTest extends CustomerHttpFixture {
         var r = call("alpha", "GET", ME + "/export", null, access(second), null);
         status(r, 200);
         assertThat(r.headers().get("cache-control")).contains("no-store");
-        assertThat(r.headers().get("content-disposition"))
-                .isEqualTo("attachment; filename=\"customer-data.json\"");
+        assertThat(r.headers().get("content-disposition")).isEqualTo("attachment; filename=\"customer-data.json\"");
         var export = body(r);
         assertThat(export.keySet()).containsExactlyInAnyOrder("generatedAt", "profile", "devices");
         assertThat(Instant.parse((String) export.get("generatedAt")))
@@ -390,8 +313,7 @@ class CustomerProfileIntegrationTest extends CustomerHttpFixture {
                 .containsExactlyInAnyOrder(a.get("sessionId"), second.get("sessionId"));
         for (var device : devices)
             assertThat(device.keySet())
-                    .containsExactlyInAnyOrder(
-                            "id", "deviceLabel", "createdAt", "expiresAt", "current");
+                    .containsExactlyInAnyOrder("id", "deviceLabel", "createdAt", "expiresAt", "current");
         assertThat(r.body())
                 .doesNotContain(
                         (String) a.get("accessToken"),
@@ -403,19 +325,17 @@ class CustomerProfileIntegrationTest extends CustomerHttpFixture {
                         "mfaSecret",
                         "tenantId",
                         "audit");
-        assertThat(
-                        database.asOwner()
-                                .queryForObject(
-                                        "SELECT count(*) FROM audit_entry WHERE"
-                                            + " action='identity.data_exported' AND subject_id=?",
-                                        Long.class,
-                                        profile("alpha", a).get("id")))
+        assertThat(database.asOwner()
+                        .queryForObject(
+                                "SELECT count(*) FROM audit_entry WHERE"
+                                        + " action='identity.data_exported' AND subject_id=?",
+                                Long.class,
+                                profile("alpha", a).get("id")))
                 .isEqualTo(1);
     }
 
     @Test
-    void confirmedDeletionErasesPersonalDataAndCredentialsButKeepsCountersAndOtherSalon()
-            throws Exception {
+    void confirmedDeletionErasesPersonalDataAndCredentialsButKeepsCountersAndOtherSalon() throws Exception {
         var a = signIn("alpha", 211);
         var second = signIn("alpha", 211);
         var b = signIn("beta", 211);
@@ -423,14 +343,13 @@ class CustomerProfileIntegrationTest extends CustomerHttpFixture {
         var beta = profile("beta", b);
         var owner = database.asOwner();
         status(call("alpha", "PUT", ME, edit(0), access(a), null), 200);
-        var refresh =
-                call(
-                        "alpha",
-                        "POST",
-                        "/api/v1/identity/sessions/refresh",
-                        Map.of("refreshToken", second.get("refreshToken")),
-                        null,
-                        null);
+        var refresh = call(
+                "alpha",
+                "POST",
+                "/api/v1/identity/sessions/refresh",
+                Map.of("refreshToken", second.get("refreshToken")),
+                null,
+                null);
         status(refresh, 200);
         second = body(refresh);
         for (Object confirm : List.of(false, "true", 1)) {
@@ -453,37 +372,29 @@ class CustomerProfileIntegrationTest extends CustomerHttpFixture {
                             null),
                     401);
         }
-        assertThat(
-                        owner.queryForObject(
-                                "SELECT count(*) FROM identity_customer WHERE id=?",
-                                Long.class,
-                                UUID.fromString((String) original.get("id"))))
+        assertThat(owner.queryForObject(
+                        "SELECT count(*) FROM identity_customer WHERE id=?", Long.class, UUID.fromString((String)
+                                original.get("id"))))
                 .isZero();
-        assertThat(
-                        owner.queryForObject(
-                                "SELECT count(*) FROM identity_session WHERE customer_account_id=?",
-                                Long.class,
-                                UUID.fromString((String) original.get("id"))))
+        assertThat(owner.queryForObject(
+                        "SELECT count(*) FROM identity_session WHERE customer_account_id=?",
+                        Long.class,
+                        UUID.fromString((String) original.get("id"))))
                 .isZero();
-        assertThat(
-                        owner.queryForObject(
-                                "SELECT count(*) FROM identity_customer_challenge WHERE"
-                                        + " tenant_id=?",
-                                Long.class,
-                                tenant("alpha").id()))
+        assertThat(owner.queryForObject(
+                        "SELECT count(*) FROM identity_customer_challenge WHERE" + " tenant_id=?",
+                        Long.class,
+                        tenant("alpha").id()))
                 .isZero();
-        assertThat(
-                        owner.queryForObject(
-                                "SELECT count(*) FROM outbox_message WHERE tenant_id=? AND channel"
-                                        + " in ('sms','whatsapp')",
-                                Long.class,
-                                tenant("alpha").id()))
+        assertThat(owner.queryForObject(
+                        "SELECT count(*) FROM outbox_message WHERE tenant_id=? AND channel" + " in ('sms','whatsapp')",
+                        Long.class,
+                        tenant("alpha").id()))
                 .isZero();
-        assertThat(
-                        owner.queryForObject(
-                                "SELECT count(*) FROM identity_rate_bucket WHERE tenant_id=? AND"
-                                        + " dimension like 'customer-%'",
-                                Long.class, tenant("alpha").id()))
+        assertThat(owner.queryForObject(
+                        "SELECT count(*) FROM identity_rate_bucket WHERE tenant_id=? AND"
+                                + " dimension like 'customer-%'",
+                        Long.class, tenant("alpha").id()))
                 .isPositive();
         assertThat(profile("beta", b)).isEqualTo(beta);
         var fresh = signIn("alpha", 211);
@@ -498,134 +409,96 @@ class CustomerProfileIntegrationTest extends CustomerHttpFixture {
                         "alpha",
                         "POST",
                         "/api/v1/identity/customers/challenges",
-                        Map.of(
-                                "mobile",
-                                mobile(211),
-                                "channel",
-                                "sms",
-                                "deviceLabel",
-                                "New device"),
+                        Map.of("mobile", mobile(211), "channel", "sms", "deviceLabel", "New device"),
                         null,
                         null),
                 429);
-        var audit =
-                owner.queryForList(
-                        "SELECT action,actor_id,subject_id,before_values::text,after_values::text"
-                                + " FROM audit_entry WHERE subject_id=?",
-                        original.get("id"));
+        var audit = owner.queryForList(
+                "SELECT action,actor_id,subject_id,before_values::text,after_values::text"
+                        + " FROM audit_entry WHERE subject_id=?",
+                original.get("id"));
         String stored = json.writeValueAsString(audit);
         assertThat(stored)
-                .contains(
-                        "identity.profile_updated",
-                        "identity.account_deleted",
-                        "changedFields",
-                        "version")
-                .doesNotContain(
-                        mobile(211), "Synthetic Customer", "copy@synthetic.example", "2000-02-29");
+                .contains("identity.profile_updated", "identity.account_deleted", "changedFields", "version")
+                .doesNotContain(mobile(211), "Synthetic Customer", "copy@synthetic.example", "2000-02-29");
     }
 
     @Test
-    void deletingAfterExpiredChallengeCleanupStillErasesRetainedDeliveryAndOlderCapture()
-            throws Exception {
+    void deletingAfterExpiredChallengeCleanupStillErasesRetainedDeliveryAndOlderCapture() throws Exception {
         var a = signIn("alpha", 212);
         var other = signIn("alpha", 213);
         var owner = database.asOwner();
-        List<UUID> ids =
-                owner.queryForList(
-                        "SELECT id FROM identity_customer_challenge WHERE tenant_id=? ORDER BY id",
-                        UUID.class,
-                        tenant("alpha").id());
+        List<UUID> ids = owner.queryForList(
+                "SELECT id FROM identity_customer_challenge WHERE tenant_id=? ORDER BY id",
+                UUID.class,
+                tenant("alpha").id());
         assertThat(ids).hasSize(2);
-        Class<?> captureClass =
-                Class.forName("com.salonplatform.identity.local.CustomerMessageCapture");
+        Class<?> captureClass = Class.forName("com.salonplatform.identity.local.CustomerMessageCapture");
         Object capture = app.bean(captureClass);
         var field = captureClass.getDeclaredField("captures");
         field.setAccessible(true);
         assertThat((Map<?, ?>) field.get(capture)).hasSize(2);
         advance(301);
-        var refreshed =
-                call(
-                        "alpha",
-                        "POST",
-                        "/api/v1/identity/sessions/refresh",
-                        Map.of("refreshToken", a.get("refreshToken")),
-                        null,
-                        null);
+        var refreshed = call(
+                "alpha",
+                "POST",
+                "/api/v1/identity/sessions/refresh",
+                Map.of("refreshToken", a.get("refreshToken")),
+                null,
+                null);
         status(refreshed, 200);
         a = body(refreshed);
         var cleanup = app.bean(CustomerAccess.class);
         var work = app.bean(IdentityWork.class);
         TenantContext.callAs(
                 tenant("alpha"),
-                () ->
-                        work.run(
-                                () -> {
-                                    cleanup.cleanup(app.bean(Clock.class).instant());
-                                    return null;
-                                }));
-        assertThat(
-                        owner.queryForObject(
-                                "SELECT count(*) FROM identity_customer_challenge WHERE"
-                                        + " tenant_id=?",
-                                Long.class,
-                                tenant("alpha").id()))
+                () -> work.run(() -> {
+                    cleanup.cleanup(app.bean(Clock.class).instant());
+                    return null;
+                }));
+        assertThat(owner.queryForObject(
+                        "SELECT count(*) FROM identity_customer_challenge WHERE" + " tenant_id=?",
+                        Long.class,
+                        tenant("alpha").id()))
                 .isZero();
-        assertThat(
-                        owner.queryForObject(
-                                "SELECT count(*) FROM outbox_message WHERE tenant_id=? AND"
-                                        + " channel='sms'",
-                                Long.class,
-                                tenant("alpha").id()))
+        assertThat(owner.queryForObject(
+                        "SELECT count(*) FROM outbox_message WHERE tenant_id=? AND" + " channel='sms'",
+                        Long.class,
+                        tenant("alpha").id()))
                 .isEqualTo(2);
         status(call("alpha", "DELETE", ME, Map.of("confirm", true), access(a), null), 204);
-        assertThat(
-                        owner.queryForObject(
-                                "SELECT count(*) FROM outbox_message WHERE tenant_id=? AND"
-                                        + " channel='sms'",
-                                Long.class,
-                                tenant("alpha").id()))
+        assertThat(owner.queryForObject(
+                        "SELECT count(*) FROM outbox_message WHERE tenant_id=? AND" + " channel='sms'",
+                        Long.class,
+                        tenant("alpha").id()))
                 .isEqualTo(1);
         assertThat((Map<?, ?>) field.get(capture)).hasSize(1);
-        assertThat(
-                        owner.queryForObject(
-                                "SELECT count(*) FROM identity_customer WHERE tenant_id=?",
-                                Long.class,
-                                tenant("alpha").id()))
+        assertThat(owner.queryForObject(
+                        "SELECT count(*) FROM identity_customer WHERE tenant_id=?",
+                        Long.class,
+                        tenant("alpha").id()))
                 .isEqualTo(1);
     }
 
     @Test
-    void recognizedCorruptEnvelopeAbortsAllPrivacyEffectsAndOrdinaryOtherPayloadIsPreserved()
-            throws Exception {
+    void recognizedCorruptEnvelopeAbortsAllPrivacyEffectsAndOrdinaryOtherPayloadIsPreserved() throws Exception {
         var a = signIn("alpha", 214);
         var p = profile("alpha", a);
         var owner = database.asOwner();
-        UUID message =
-                owner.queryForObject(
-                        "SELECT message_id FROM identity_customer_challenge WHERE tenant_id=?",
-                        UUID.class,
-                        tenant("alpha").id());
-        UUID challenge =
-                owner.queryForObject(
-                        "SELECT id FROM identity_customer_challenge WHERE tenant_id=?",
-                        UUID.class,
-                        tenant("alpha").id());
+        UUID message = owner.queryForObject(
+                "SELECT message_id FROM identity_customer_challenge WHERE tenant_id=?",
+                UUID.class,
+                tenant("alpha").id());
+        UUID challenge = owner.queryForObject(
+                "SELECT id FROM identity_customer_challenge WHERE tenant_id=?",
+                UUID.class,
+                tenant("alpha").id());
         var work = app.bean(IdentityWork.class);
         var outbox = app.bean(Outbox.class);
-        UUID ordinary =
-                TenantContext.callAs(
-                        tenant("alpha"),
-                        () ->
-                                work.run(
-                                        () ->
-                                                outbox.enqueue(
-                                                        "sms",
-                                                        Map.of("otherModule", "nonidentity"))));
+        UUID ordinary = TenantContext.callAs(
+                tenant("alpha"), () -> work.run(() -> outbox.enqueue("sms", Map.of("otherModule", "nonidentity"))));
         String payload =
-                owner.queryForObject(
-                        "SELECT payload::text FROM outbox_message WHERE id=?",
-                        String.class,
-                        message);
+                owner.queryForObject("SELECT payload::text FROM outbox_message WHERE id=?", String.class, message);
         owner.update(
                 "UPDATE outbox_message SET payload=?::jsonb WHERE id=?",
                 json.writeValueAsString(Map.of("challengeId", challenge, "encrypted", "invalid")),
@@ -634,27 +507,24 @@ class CustomerProfileIntegrationTest extends CustomerHttpFixture {
         status(failed, 500);
         assertThat(body(failed)).containsEntry("code", "internal_error");
         assertThat(profile("alpha", a)).isEqualTo(p);
-        assertThat(
-                        owner.queryForObject(
-                                "SELECT count(*) FROM outbox_message WHERE tenant_id=?",
-                                Long.class,
-                                tenant("alpha").id()))
+        assertThat(owner.queryForObject(
+                        "SELECT count(*) FROM outbox_message WHERE tenant_id=?",
+                        Long.class,
+                        tenant("alpha").id()))
                 .isEqualTo(2);
-        assertThat(
-                        owner.queryForObject(
-                                "SELECT count(*) FROM audit_entry WHERE"
-                                        + " action='identity.account_deleted' AND subject_id=?",
-                                Long.class,
-                                p.get("id")))
+        assertThat(owner.queryForObject(
+                        "SELECT count(*) FROM audit_entry WHERE"
+                                + " action='identity.account_deleted' AND subject_id=?",
+                        Long.class,
+                        p.get("id")))
                 .isZero();
         owner.update("UPDATE outbox_message SET payload=?::jsonb WHERE id=?", payload, message);
         status(call("alpha", "DELETE", ME, Map.of("confirm", true), access(a), null), 204);
-        assertThat(
-                        owner.queryForObject(
-                                "SELECT count(*) FROM outbox_message WHERE tenant_id=? AND id=?",
-                                Long.class,
-                                tenant("alpha").id(),
-                                ordinary))
+        assertThat(owner.queryForObject(
+                        "SELECT count(*) FROM outbox_message WHERE tenant_id=? AND id=?",
+                        Long.class,
+                        tenant("alpha").id(),
+                        ordinary))
                 .isEqualTo(1);
     }
 
@@ -674,14 +544,7 @@ class CustomerProfileIntegrationTest extends CustomerHttpFixture {
         long limit = System.nanoTime() + TimeUnit.SECONDS.toNanos(4);
         boolean sending = false;
         while (System.nanoTime() < limit) {
-            var view =
-                    call(
-                            "alpha",
-                            "GET",
-                            "/local/identity/deliveries/" + pending.id(),
-                            null,
-                            null,
-                            null);
+            var view = call("alpha", "GET", "/local/identity/deliveries/" + pending.id(), null, null, null);
             if (view.status() == 200 && "SENDING".equals(body(view).get("status"))) {
                 sending = true;
                 break;
@@ -691,33 +554,21 @@ class CustomerProfileIntegrationTest extends CustomerHttpFixture {
         assertThat(sending).isTrue();
         status(call("alpha", "DELETE", ME, Map.of("confirm", true), access(a), null), 204);
         Thread.sleep(1200);
-        status(
-                call("alpha", "GET", "/local/identity/captures/" + pending.id(), null, null, null),
-                404);
-        status(
-                call(
-                        "alpha",
-                        "GET",
-                        "/local/identity/deliveries/" + pending.id(),
-                        null,
-                        null,
-                        null),
-                404);
+        status(call("alpha", "GET", "/local/identity/captures/" + pending.id(), null, null, null), 404);
+        status(call("alpha", "GET", "/local/identity/deliveries/" + pending.id(), null, null, null), 404);
         status(verify("alpha", pending, "000000", pending.cookie()), 404);
-        assertThat(
-                        database.asOwner()
-                                .queryForObject(
-                                        "SELECT count(*) FROM outbox_message WHERE tenant_id=? AND"
-                                                + " channel in ('sms','whatsapp')",
-                                        Long.class,
-                                        tenant("alpha").id()))
+        assertThat(database.asOwner()
+                        .queryForObject(
+                                "SELECT count(*) FROM outbox_message WHERE tenant_id=? AND"
+                                        + " channel in ('sms','whatsapp')",
+                                Long.class,
+                                tenant("alpha").id()))
                 .isZero();
-        assertThat(
-                        database.asOwner()
-                                .queryForObject(
-                                        "SELECT count(*) FROM identity_customer WHERE tenant_id=?",
-                                        Long.class,
-                                        tenant("alpha").id()))
+        assertThat(database.asOwner()
+                        .queryForObject(
+                                "SELECT count(*) FROM identity_customer WHERE tenant_id=?",
+                                Long.class,
+                                tenant("alpha").id()))
                 .isZero();
     }
 
@@ -729,36 +580,24 @@ class CustomerProfileIntegrationTest extends CustomerHttpFixture {
         String code = (String) captured("alpha", pending).get("code");
         try (var pool = Executors.newVirtualThreadPerTaskExecutor()) {
             CountDownLatch start = new CountDownLatch(1);
-            var delete =
-                    pool.submit(
-                            () -> {
-                                start.await();
-                                return call(
-                                        "alpha",
-                                        "DELETE",
-                                        ME,
-                                        Map.of("confirm", true),
-                                        access(a),
-                                        null);
-                            });
-            var verify =
-                    pool.submit(
-                            () -> {
-                                start.await();
-                                return verify("alpha", pending, code, pending.cookie());
-                            });
-            var refresh =
-                    pool.submit(
-                            () -> {
-                                start.await();
-                                return call(
-                                        "alpha",
-                                        "POST",
-                                        "/api/v1/identity/sessions/refresh",
-                                        Map.of("refreshToken", refreshDevice.get("refreshToken")),
-                                        null,
-                                        null);
-                            });
+            var delete = pool.submit(() -> {
+                start.await();
+                return call("alpha", "DELETE", ME, Map.of("confirm", true), access(a), null);
+            });
+            var verify = pool.submit(() -> {
+                start.await();
+                return verify("alpha", pending, code, pending.cookie());
+            });
+            var refresh = pool.submit(() -> {
+                start.await();
+                return call(
+                        "alpha",
+                        "POST",
+                        "/api/v1/identity/sessions/refresh",
+                        Map.of("refreshToken", refreshDevice.get("refreshToken")),
+                        null,
+                        null);
+            });
             start.countDown();
             status(delete.get(), 204);
             var verification = verify.get();
@@ -766,23 +605,19 @@ class CustomerProfileIntegrationTest extends CustomerHttpFixture {
             var renewal = refresh.get();
             assertThat(renewal.status()).isIn(200, 401);
             for (var response : List.of(verification, renewal))
-                if (response.status() == 200)
-                    status(call("alpha", "GET", ME, null, access(body(response)), null), 401);
+                if (response.status() == 200) status(call("alpha", "GET", ME, null, access(body(response)), null), 401);
         }
-        assertThat(
-                        database.asOwner()
-                                .queryForObject(
-                                        "SELECT count(*) FROM identity_customer WHERE tenant_id=?",
-                                        Long.class,
-                                        tenant("alpha").id()))
+        assertThat(database.asOwner()
+                        .queryForObject(
+                                "SELECT count(*) FROM identity_customer WHERE tenant_id=?",
+                                Long.class,
+                                tenant("alpha").id()))
                 .isZero();
-        assertThat(
-                        database.asOwner()
-                                .queryForObject(
-                                        "SELECT count(*) FROM identity_session WHERE tenant_id=?"
-                                                + " AND kind='customer'",
-                                        Long.class,
-                                        tenant("alpha").id()))
+        assertThat(database.asOwner()
+                        .queryForObject(
+                                "SELECT count(*) FROM identity_session WHERE tenant_id=?" + " AND kind='customer'",
+                                Long.class,
+                                tenant("alpha").id()))
                 .isZero();
     }
 
@@ -790,65 +625,51 @@ class CustomerProfileIntegrationTest extends CustomerHttpFixture {
     void privacyErasureTraversesBoundedPagesWithoutSkippingDeletedRows() throws Exception {
         var a = signIn("alpha", 217);
         var owner = database.asOwner();
-        UUID source =
-                owner.queryForObject(
-                        "SELECT message_id FROM identity_customer_challenge WHERE tenant_id=?",
-                        UUID.class,
-                        tenant("alpha").id());
+        UUID source = owner.queryForObject(
+                "SELECT message_id FROM identity_customer_challenge WHERE tenant_id=?",
+                UUID.class,
+                tenant("alpha").id());
         for (int i = 0; i < 110; i++)
             owner.update(
                     "INSERT INTO"
-                        + " outbox_message(id,tenant_id,channel,payload,status,attempts,next_attempt_at,created_at,updated_at)"
-                        + " SELECT"
-                        + " ?,tenant_id,channel,payload,'cancelled',0,next_attempt_at,created_at,updated_at"
-                        + " FROM outbox_message WHERE id=?",
+                            + " outbox_message(id,tenant_id,channel,payload,status,attempts,next_attempt_at,created_at,updated_at)"
+                            + " SELECT"
+                            + " ?,tenant_id,channel,payload,'cancelled',0,next_attempt_at,created_at,updated_at"
+                            + " FROM outbox_message WHERE id=?",
                     UUID.randomUUID(),
                     source);
-        assertThat(
-                        owner.queryForObject(
-                                "SELECT count(*) FROM outbox_message WHERE tenant_id=?",
-                                Long.class,
-                                tenant("alpha").id()))
+        assertThat(owner.queryForObject(
+                        "SELECT count(*) FROM outbox_message WHERE tenant_id=?",
+                        Long.class,
+                        tenant("alpha").id()))
                 .isEqualTo(111);
         status(call("alpha", "DELETE", ME, Map.of("confirm", true), access(a), null), 204);
-        assertThat(
-                        owner.queryForObject(
-                                "SELECT count(*) FROM outbox_message WHERE tenant_id=?",
-                                Long.class,
-                                tenant("alpha").id()))
+        assertThat(owner.queryForObject(
+                        "SELECT count(*) FROM outbox_message WHERE tenant_id=?",
+                        Long.class,
+                        tenant("alpha").id()))
                 .isZero();
     }
 
     @Test
-    void aSameDeviceRefreshCanInvalidateDeletionAuthorityButCannotSurviveSuccessfulDeletion()
-            throws Exception {
+    void aSameDeviceRefreshCanInvalidateDeletionAuthorityButCannotSurviveSuccessfulDeletion() throws Exception {
         var a = signIn("alpha", 218);
         try (var pool = Executors.newVirtualThreadPerTaskExecutor()) {
             CountDownLatch start = new CountDownLatch(1);
-            var deletion =
-                    pool.submit(
-                            () -> {
-                                start.await();
-                                return call(
-                                        "alpha",
-                                        "DELETE",
-                                        ME,
-                                        Map.of("confirm", true),
-                                        access(a),
-                                        null);
-                            });
-            var refresh =
-                    pool.submit(
-                            () -> {
-                                start.await();
-                                return call(
-                                        "alpha",
-                                        "POST",
-                                        "/api/v1/identity/sessions/refresh",
-                                        Map.of("refreshToken", a.get("refreshToken")),
-                                        null,
-                                        null);
-                            });
+            var deletion = pool.submit(() -> {
+                start.await();
+                return call("alpha", "DELETE", ME, Map.of("confirm", true), access(a), null);
+            });
+            var refresh = pool.submit(() -> {
+                start.await();
+                return call(
+                        "alpha",
+                        "POST",
+                        "/api/v1/identity/sessions/refresh",
+                        Map.of("refreshToken", a.get("refreshToken")),
+                        null,
+                        null);
+            });
             start.countDown();
             var deleted = deletion.get();
             var renewed = refresh.get();
@@ -857,19 +678,16 @@ class CustomerProfileIntegrationTest extends CustomerHttpFixture {
                 status(renewed, 200);
                 var token = body(renewed);
                 assertThat(profile("alpha", token)).containsEntry("name", "");
-                status(
-                        call("alpha", "DELETE", ME, Map.of("confirm", true), access(token), null),
-                        204);
+                status(call("alpha", "DELETE", ME, Map.of("confirm", true), access(token), null), 204);
             } else if (renewed.status() == 200)
                 status(call("alpha", "GET", ME, null, access(body(renewed)), null), 401);
             else status(renewed, 401);
         }
-        assertThat(
-                        database.asOwner()
-                                .queryForObject(
-                                        "SELECT count(*) FROM identity_customer WHERE tenant_id=?",
-                                        Long.class,
-                                        tenant("alpha").id()))
+        assertThat(database.asOwner()
+                        .queryForObject(
+                                "SELECT count(*) FROM identity_customer WHERE tenant_id=?",
+                                Long.class,
+                                tenant("alpha").id()))
                 .isZero();
     }
 }
