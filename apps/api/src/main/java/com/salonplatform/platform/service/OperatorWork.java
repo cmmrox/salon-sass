@@ -11,7 +11,7 @@ import org.springframework.stereotype.Service;
  * outcome can never undo those controls; every other failure rolls the whole transaction back.
  */
 @Service
-public class OperatorWork {
+class OperatorWork {
 
     private final PlatformDatabase database;
 

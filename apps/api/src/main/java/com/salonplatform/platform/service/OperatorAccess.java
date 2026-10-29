@@ -23,7 +23,7 @@ import org.springframework.stereotype.Service;
  * {@link OperatorSessions}.
  */
 @Service
-public class OperatorAccess {
+class OperatorAccess {
 
     /** The authenticated operator of the current request, inside its transaction. */
     public record Operator(UUID id, OperatorRole role, UUID sessionId) {}

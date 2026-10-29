@@ -24,7 +24,7 @@ import org.springframework.stereotype.Service;
  * repeated or concurrent run adds nothing.
  */
 @Service
-public class InvoiceIssuing {
+class InvoiceIssuing {
 
     private final InvoiceStore invoices;
     private final PlatformAudit audit;

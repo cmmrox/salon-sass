@@ -21,7 +21,7 @@ import org.springframework.stereotype.Service;
  * written to the outbox in the caller's platform transaction.
  */
 @Service
-public class BillingNotices {
+class BillingNotices {
 
     private final InvoiceStore invoices;
     private final PlatformAudit audit;

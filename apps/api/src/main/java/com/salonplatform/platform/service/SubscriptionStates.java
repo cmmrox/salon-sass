@@ -29,7 +29,7 @@ import org.springframework.stereotype.Service;
  * subscription's row locked by the caller.
  */
 @Service
-public class SubscriptionStates {
+class SubscriptionStates {
 
     private final PlatformDatabase database;
     private final PlatformAudit audit;
