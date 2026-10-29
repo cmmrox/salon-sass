@@ -154,4 +154,17 @@ public class SalonStore {
         Timestamp value = row.getTimestamp(column);
         return value == null ? null : value.toInstant();
     }
+
+    /**
+     * Local fixtures only: an active salon with no subscription and none of the newer profile fields, as
+     * the salons created before billing were.
+     *
+     * @throws org.springframework.dao.DuplicateKeyException when the slug is taken
+     */
+    public void createUnbilled(UUID id, String slug, Instant now) {
+        database.jdbc().sql("""
+                        INSERT INTO tenant (id, slug, status, time_zone, created_at, updated_at)
+                        VALUES (?, ?, 'active', 'Asia/Colombo', ?, ?)
+                        """).params(id, slug, time(now), time(now)).update();
+    }
 }

@@ -21,6 +21,9 @@ public class SalonLifecycleStore {
     /** A salon's registry row as a lifecycle change reads it, locked. */
     public record Locked(UUID id, String slug, String status, long version, String ownerEmail) {}
 
+    /** A salon's lifecycle and access state, with what is needed to act for it. */
+    public record State(String slug, String status, String accessState, String timeZone) {}
+
     /** One lifecycle event, with the display name of the operator who made it, if one did. */
     public record Event(
             UUID id,
@@ -162,5 +165,22 @@ public class SalonLifecycleStore {
                 .param(salonId)
                 .query(Long.class)
                 .single();
+    }
+
+    public Optional<State> state(UUID salonId) {
+        return database
+                .jdbc()
+                .sql("""
+                        SELECT slug, status, access_state, time_zone FROM tenant WHERE id = ?
+                        """)
+                .param(salonId)
+                .query((row, n) -> new State(
+                        row.getString("slug"),
+                        row.getString("status"),
+                        row.getString("access_state"),
+                        row.getString("time_zone")))
+                .list()
+                .stream()
+                .findFirst();
     }
 }

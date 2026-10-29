@@ -140,4 +140,16 @@ public class OperatorUserStore {
                          WHERE id = ? AND mfa_secret IS NULL
                         """).params(encryptedSecret, time(now), id).update();
     }
+
+    /**
+     * Local fixtures only: disables or re-enables an account the fixture hook created.
+     *
+     * @return whether such an account has the email
+     */
+    public boolean setFixtureActive(String email, boolean active, Instant now) {
+        return database.jdbc().sql("""
+                        UPDATE operator_user SET active = ?, version = version + 1, updated_at = ?
+                         WHERE email = ? AND fixture
+                        """).params(active, time(now), email).update() > 0;
+    }
 }
