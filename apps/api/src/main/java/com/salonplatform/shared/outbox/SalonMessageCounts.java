@@ -1,4 +1,4 @@
-package com.salonplatform.platform.infrastructure;
+package com.salonplatform.shared.outbox;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -9,9 +9,11 @@ import org.springframework.stereotype.Component;
 
 /**
  * Local test hook only: how many of one salon's outbox messages are in each delivery status, counts and
- * nothing of a message. Read on the tenant pool inside the caller's tenant transaction with that salon
- * set, so row-level security limits it to that salon as well as its {@code tenant_id = ?} predicate.
- * Named direct-SQL exception 5 of docs/engineering/backend.md, a read model of counts.
+ * nothing of a message, for the platform's local lifecycle hook. Here because the outbox's table is
+ * {@code shared}'s and only {@code shared} names it (module-ownership.yaml). Read on the tenant pool inside
+ * the caller's tenant transaction with that salon set, so row-level security limits it to that salon as
+ * well as its {@code tenant_id = ?} predicate. Named direct-SQL exception 5 of docs/engineering/backend.md, a
+ * read model of counts.
  */
 @Component
 @Profile("local")

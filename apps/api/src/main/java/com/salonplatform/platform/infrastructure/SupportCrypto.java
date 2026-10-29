@@ -1,6 +1,7 @@
 package com.salonplatform.platform.infrastructure;
 
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
+import com.salonplatform.shared.secrets.SecretKeys;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -19,6 +20,7 @@ import java.time.Instant;
 import java.util.Base64;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.UUID;
@@ -47,7 +49,7 @@ import org.springframework.stereotype.Component;
  * <p>Entry codes are 256 random bits, URL-safe; only their SHA-256 is stored.
  */
 @Component
-public class SupportCrypto {
+public class SupportCrypto implements SecretKeys {
 
     public static final String ISSUER = "salon-support";
     public static final String AUDIENCE = "salon-api";
@@ -57,6 +59,7 @@ public class SupportCrypto {
     public record Claims(UUID salonId, UUID sessionId, UUID operatorId, Instant issuedAt, Instant expiresAt) {}
 
     private final Clock clock;
+    private final byte[] signingKey;
     private final JwtEncoder encoder;
     private final JwtDecoder decoder;
     private final SecureRandom random = new SecureRandom();
@@ -78,10 +81,6 @@ public class SupportCrypto {
             "salon.operator.encryption-key",
             "salon.operator.proxy-key",
             "salon.operator.fingerprint-key",
-            "salon.identity.signing-key",
-            "salon.identity.challenge-key",
-            "salon.identity.encryption-key",
-            "salon.identity.proxy-key",
             "salon.billing.provider-key",
             "salon.export.key"
         }) {
@@ -92,6 +91,7 @@ public class SupportCrypto {
                 throw new IllegalStateException("The support signing key must be independent of every other key");
             }
         }
+        signingKey = key;
         encoder = new NimbusJwtEncoder(new ImmutableSecret<>(key));
         NimbusJwtDecoder jwtDecoder = NimbusJwtDecoder.withSecretKey(new SecretKeySpec(key, "HmacSHA256"))
                 .macAlgorithm(MacAlgorithm.HS256)
@@ -99,6 +99,11 @@ public class SupportCrypto {
         // Issuer, audience, kind and time are checked below against the application's clock.
         jwtDecoder.setJwtValidator(jwt -> OAuth2TokenValidatorResult.success());
         decoder = jwtDecoder;
+    }
+
+    @Override
+    public Map<String, byte[]> byPurpose() {
+        return Map.of("support signing", signingKey.clone());
     }
 
     /** A support credential for one session, valid from {@code issuedAt} until the session's expiry. */

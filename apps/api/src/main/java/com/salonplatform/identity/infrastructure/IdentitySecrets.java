@@ -1,5 +1,6 @@
 package com.salonplatform.identity.infrastructure;
 
+import com.salonplatform.shared.secrets.SecretKeys;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
@@ -7,13 +8,14 @@ import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.security.SecureRandom;
 import java.util.HexFormat;
+import java.util.Map;
 import java.util.Properties;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
 /** Independent externally configured 256-bit keys; only local generates a retained ignored file. */
 @Component
-public class IdentitySecrets {
+public class IdentitySecrets implements SecretKeys {
     private final byte[] signing;
     private final byte[] challenge;
     private final byte[] encryption;
@@ -103,6 +105,15 @@ public class IdentitySecrets {
                     + name.toUpperCase(java.util.Locale.ROOT)
                     + "_KEY with an independent 64-hex-character secret");
         return HexFormat.of().parseHex(value);
+    }
+
+    @Override
+    public Map<String, byte[]> byPurpose() {
+        return Map.of(
+                "identity signing", signing(),
+                "identity challenge", challenge(),
+                "identity encryption", encryption(),
+                "identity proxy", proxy());
     }
 
     public byte[] signing() {

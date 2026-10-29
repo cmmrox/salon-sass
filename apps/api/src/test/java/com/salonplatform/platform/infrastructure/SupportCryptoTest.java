@@ -58,8 +58,9 @@ class SupportCryptoTest {
         assertThatThrownBy(() -> new SupportCrypto(new MockEnvironment(), Clock.systemUTC()))
                 .hasMessageContaining("SALON_SUPPORT_SIGNING_KEY");
         assertThatThrownBy(() -> crypto("short", NOW)).hasMessageContaining("SALON_SUPPORT_SIGNING_KEY");
-        for (String other :
-                new String[] {"salon.identity.signing-key", "salon.operator.signing-key", "salon.export.key"}) {
+        // Independence from identity's keys is checked in shared, without reading identity's settings
+        // (shared.secrets.IndependentKeysTest).
+        for (String other : new String[] {"salon.operator.signing-key", "salon.export.key"}) {
             assertThatThrownBy(() -> new SupportCrypto(
                             new MockEnvironment()
                                     .withProperty("salon.support.signing-key", KEY)

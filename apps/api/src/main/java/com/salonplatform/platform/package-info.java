@@ -23,6 +23,7 @@
             "shared :: lifecycle",
             "shared :: observability",
             "shared :: outbox",
+            "shared :: secrets",
             "shared :: tenancy",
             "shared :: time",
             "shared :: web"

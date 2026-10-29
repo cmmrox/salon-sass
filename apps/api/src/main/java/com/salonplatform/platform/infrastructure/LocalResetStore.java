@@ -57,13 +57,6 @@ public class LocalResetStore {
                         """).params(time(closeAt), time(deleteAt), time(closeAt), id).update();
     }
 
-    /** Brings every job occurrence pushed past {@code now} back to it; returns how many. */
-    public int rescheduleJobs(Instant now) {
-        return owner.sql("UPDATE scheduled_job SET next_run_at = ?, updated_at = ? WHERE next_run_at > ?")
-                .params(time(now), time(now), time(now))
-                .update();
-    }
-
     /** Removes the salon's platform rows, its registry row last, in one transaction of its own. */
     public void removePlatformRows(UUID id) {
         ownerTransactions.executeWithoutResult(tx -> {

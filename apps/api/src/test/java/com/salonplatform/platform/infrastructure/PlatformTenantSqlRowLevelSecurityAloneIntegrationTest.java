@@ -96,21 +96,6 @@ class PlatformTenantSqlRowLevelSecurityAloneIntegrationTest {
     }
 
     @Test
-    void theMessageCountsReachOnlyTheSalonSetEvenWhenAskedForAnother() throws SQLException {
-        Map<String, Long> alphas = asApplication(alpha, client -> new SalonMessageCounts(client).byStatus(alpha.id()));
-        Map<String, Long> betasAskedByAlpha =
-                asApplication(alpha, client -> new SalonMessageCounts(client).byStatus(beta.id()));
-        Map<String, Long> withoutASalon =
-                asApplication(null, client -> new SalonMessageCounts(client).byStatus(alpha.id()));
-
-        assertThat(alphas).containsExactly(Map.entry("pending", 2L));
-        assertThat(betasAskedByAlpha)
-                .as("beta's messages, asked for with alpha set")
-                .isEmpty();
-        assertThat(withoutASalon).isEmpty();
-    }
-
-    @Test
     void aMessageWrittenForANamedSalonBelongsToThatSalonOnly() {
         JdbcTemplate owner = database.asOwner();
 
