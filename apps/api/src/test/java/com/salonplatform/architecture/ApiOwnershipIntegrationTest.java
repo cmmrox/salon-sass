@@ -57,6 +57,14 @@ class ApiOwnershipIntegrationTest extends IntegrationTest {
     }
 
     @Test
+    void aModuleWithoutADocumentIsNotFound() {
+        HttpResponse<String> response = http().get("/v3/api-docs/catalogue");
+
+        assertThat(response.statusCode()).isEqualTo(404);
+        assertThat(JSON.readTree(response.body()).get("code").asString()).isEqualTo("not_found");
+    }
+
+    @Test
     void anUntaggedOperationIsFound() {
         assertThat(ApiOwnership.operationsOutsideTheirModule(
                         OWNERSHIP, fixture("/api/v1/identity/me", "get", List.of())))
