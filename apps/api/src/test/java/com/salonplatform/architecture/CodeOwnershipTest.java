@@ -50,11 +50,11 @@ class CodeOwnershipTest {
                 .as("the scan sees @Table, SQL and JPQL")
                 .contains(
                         new TableReference(
-                                BASE + ".identity.domain.StaffAccount", "identity", "identity_staff", "identity"),
+                                BASE + ".identity.entity.StaffAccount", "identity", "identity_staff", "identity"),
                         new TableReference(
                                 BASE + ".platform.infrastructure.SalonStore", "platform", "tenant", "platform"),
                         new TableReference(
-                                BASE + ".identity.infrastructure.StaffAccountRepository",
+                                BASE + ".identity.repository.StaffAccountRepository",
                                 "identity",
                                 "StaffAccount",
                                 "identity"));

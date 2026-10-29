@@ -50,7 +50,7 @@ class PersistenceConventionsTest {
         JavaClasses application = new ClassFileImporter()
                 .withImportOption(ImportOption.Predefined.DO_NOT_INCLUDE_TESTS)
                 .importPackages(BASE);
-        assertThat(application.contain(BASE + ".identity.domain.StaffAccount"))
+        assertThat(application.contain(BASE + ".identity.entity.StaffAccount"))
                 .as("the application's entities were found")
                 .isTrue();
 

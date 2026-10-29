@@ -1,6 +1,6 @@
 package com.salonplatform.identity.local;
 
-import com.salonplatform.identity.application.StaffAccounts;
+import com.salonplatform.identity.service.StaffAccounts;
 import com.salonplatform.shared.web.NotFoundException;
 import io.swagger.v3.oas.annotations.Hidden;
 import jakarta.servlet.http.HttpServletRequest;
@@ -20,12 +20,12 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/local/identity")
 class LocalIdentityController {
     private final StaffAccounts access;
-    private final com.salonplatform.identity.application.CustomerAccess customers;
+    private final com.salonplatform.identity.service.CustomerAccess customers;
     private final CustomerMessageCapture capture;
 
     LocalIdentityController(
             StaffAccounts access,
-            com.salonplatform.identity.application.CustomerAccess customers,
+            com.salonplatform.identity.service.CustomerAccess customers,
             CustomerMessageCapture capture) {
         this.customers = customers;
         this.capture = capture;

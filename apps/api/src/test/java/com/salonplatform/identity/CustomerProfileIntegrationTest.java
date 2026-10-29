@@ -2,8 +2,9 @@ package com.salonplatform.identity;
 
 import static org.assertj.core.api.Assertions.*;
 
-import com.salonplatform.identity.application.*;
 import com.salonplatform.identity.local.*;
+import com.salonplatform.identity.service.CustomerAccess;
+import com.salonplatform.identity.service.IdentityWork;
 import com.salonplatform.shared.audit.Actor;
 import com.salonplatform.shared.audit.AuditAction;
 import com.salonplatform.shared.audit.AuditTrail;

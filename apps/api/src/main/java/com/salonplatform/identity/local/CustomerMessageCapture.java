@@ -1,6 +1,6 @@
 package com.salonplatform.identity.local;
 
-import com.salonplatform.identity.application.CustomerAccess;
+import com.salonplatform.identity.service.CustomerAccess;
 import com.salonplatform.shared.outbox.*;
 import com.salonplatform.shared.tenancy.TenantContext;
 import com.salonplatform.shared.web.*;

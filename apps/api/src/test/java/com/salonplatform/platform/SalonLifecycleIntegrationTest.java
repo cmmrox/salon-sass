@@ -2,9 +2,9 @@ package com.salonplatform.platform;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.salonplatform.identity.domain.StaffAccount;
+import com.salonplatform.identity.adapter.IdentityCrypto;
 import com.salonplatform.identity.domain.StaffRole;
-import com.salonplatform.identity.infrastructure.IdentityCrypto;
+import com.salonplatform.identity.entity.StaffAccount;
 import com.salonplatform.platform.application.BillingJob;
 import com.salonplatform.platform.application.LifecycleFaults;
 import com.salonplatform.platform.application.OperatorAccounts;

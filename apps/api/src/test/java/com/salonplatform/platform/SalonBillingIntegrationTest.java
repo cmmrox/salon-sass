@@ -2,11 +2,11 @@ package com.salonplatform.platform;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.salonplatform.identity.application.SessionAccess;
-import com.salonplatform.identity.domain.CustomerAccount;
-import com.salonplatform.identity.domain.StaffAccount;
+import com.salonplatform.identity.adapter.IdentityCrypto;
 import com.salonplatform.identity.domain.StaffRole;
-import com.salonplatform.identity.infrastructure.IdentityCrypto;
+import com.salonplatform.identity.entity.CustomerAccount;
+import com.salonplatform.identity.entity.StaffAccount;
+import com.salonplatform.identity.service.SessionAccess;
 import com.salonplatform.platform.application.BillingJob;
 import com.salonplatform.platform.application.OperatorAccounts;
 import com.salonplatform.platform.infrastructure.OperatorCrypto;

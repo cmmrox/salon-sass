@@ -2,7 +2,9 @@ package com.salonplatform.identity;
 
 import static org.assertj.core.api.Assertions.*;
 
-import com.salonplatform.identity.domain.*;
+import com.salonplatform.identity.entity.AccessSession;
+import com.salonplatform.identity.entity.CustomerAccount;
+import com.salonplatform.identity.entity.CustomerChallenge;
 import com.salonplatform.shared.tenancy.TenantContext;
 import com.salonplatform.testing.*;
 import com.salonplatform.testing.TestSalons.TestSalon;

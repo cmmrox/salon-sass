@@ -2,9 +2,9 @@ package com.salonplatform.platform;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.salonplatform.identity.domain.StaffAccount;
+import com.salonplatform.identity.adapter.IdentityCrypto;
 import com.salonplatform.identity.domain.StaffRole;
-import com.salonplatform.identity.infrastructure.IdentityCrypto;
+import com.salonplatform.identity.entity.StaffAccount;
 import com.salonplatform.shared.tenancy.TenantContext;
 import com.salonplatform.testing.Http;
 import com.salonplatform.testing.TestSalons;
