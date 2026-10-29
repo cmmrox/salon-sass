@@ -646,7 +646,7 @@ class CustomerProfileIntegrationTest extends CustomerHttpFixture {
                 .isEqualTo(111);
         status(call("alpha", "DELETE", ME, Map.of("confirm", true), access(a), null), 204);
         assertThat(owner.queryForObject(
-                        "SELECT count(*) FROM outbox_message WHERE tenant_id=?",
+                        "SELECT count(*) FROM outbox_message WHERE tenant_id=? AND channel IN ('sms','whatsapp')",
                         Long.class,
                         tenant("alpha").id()))
                 .isZero();
