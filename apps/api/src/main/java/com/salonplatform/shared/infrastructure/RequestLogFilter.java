@@ -1,7 +1,7 @@
 package com.salonplatform.shared.infrastructure;
 
-import com.salonplatform.shared.api.RequestTrace;
 import com.salonplatform.shared.tenancy.TenantContext;
+import com.salonplatform.shared.web.RequestTrace;
 import io.micrometer.tracing.Span;
 import io.micrometer.tracing.Tracer;
 import jakarta.servlet.FilterChain;

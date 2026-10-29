@@ -1,10 +1,10 @@
 package com.salonplatform.shared.outbox;
 
-import com.salonplatform.shared.api.DatabaseUnavailable;
 import com.salonplatform.shared.observability.Traces;
 import com.salonplatform.shared.tenancy.ActiveTenants;
 import com.salonplatform.shared.tenancy.CurrentTenant;
 import com.salonplatform.shared.tenancy.TenantContext;
+import com.salonplatform.shared.web.DatabaseUnavailable;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;

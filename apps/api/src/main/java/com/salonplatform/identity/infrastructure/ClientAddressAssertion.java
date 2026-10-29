@@ -1,8 +1,8 @@
 package com.salonplatform.identity.infrastructure;
 
-import com.salonplatform.shared.api.ApplicationProblemException;
-import com.salonplatform.shared.api.ErrorCode;
 import com.salonplatform.shared.tenancy.TenantContext;
+import com.salonplatform.shared.web.ApplicationProblemException;
+import com.salonplatform.shared.web.ErrorCode;
 import jakarta.servlet.http.HttpServletRequest;
 import java.net.InetAddress;
 import java.nio.charset.StandardCharsets;
@@ -42,7 +42,7 @@ public final class ClientAddressAssertion {
         if (headers == null || !headers.hasMoreElements()) return request.getRemoteAddr();
         String proof = headers.nextElement();
         if (headers.hasMoreElements() || proof == null || proof.length() > MAX_LENGTH) throw invalid();
-        String path = com.salonplatform.shared.api.RequestPaths.path(request);
+        String path = com.salonplatform.shared.web.RequestPaths.path(request);
         if (!"POST".equals(request.getMethod()) || path == null || !MUTATIONS.contains(path)) throw invalid();
         return verify(proof, TenantContext.require().slug() + "." + platformDomain, request.getMethod(), path);
     }

@@ -85,8 +85,11 @@ another request. Roll back everything on a failed bootstrap step. No network/pro
 inside this transaction. The initial password is validated and hashed before storage and never
 stored in a receipt, audit or response.
 
-Identity and branding each expose a narrow public provisioning facade; platform never imports
-their internals or writes their tables. Those facades may use module-owned `SECURITY DEFINER`
+Identity and branding each offer a narrow provisioning interface in their `inprocess` named
+interface (`identity.inprocess.IdentityProvisioning`, `branding.inprocess.BrandProvisioning`),
+because both join platform's creating transaction (CR-021); platform never imports their internals
+or writes their tables. Only identity can produce a `PreparedOwner` that its bootstrap accepts, so
+platform cannot pass a password hash that skipped identity's rules. Those implementations may use module-owned `SECURITY DEFINER`
 bootstrap functions on the same platform transaction connection. Grant execution only to the
 platform role; revoke PUBLIC and tenant-role execution. Pin search paths, qualify object names,
 limit operations to inserting the initial Owner/brand for the newly created tenant, reject a second
@@ -239,11 +242,11 @@ and customer privacy rights, and every read. Every other tenant mutation answers
 `salon_read_only` before any change. The tenant registry carries the access state, changed only
 by billing and lifecycle transitions and read on every request; nothing caches it.
 
-**Entitlements.** Platform exposes one public entitlements facade that other modules call inside
+**Entitlements.** Platform implements `shared.entitlements.SalonEntitlements` (decision 057), which other modules call inside
 their own transactions: the plan's limits and features, and the salon's current usage. Staff seats
 count active staff accounts, enforced by identity on staff creation (409 `entitlement_exceeded`
 naming the limit); branches, message allowance, custom domain and dedicated app are enforced by
-the features that create those things (F04, F11, F16) through the same facade. An Admin may move a
+the features that create those things (F04, F11, F16) through the same interface. An Admin may move a
 salon to another plan; the move is refused with 409 `entitlement_exceeded` when current usage
 exceeds the new plan's limits. Staff of the salon read their entitlements and subscription state
 from the API; nothing in a client is the source of an entitlement.

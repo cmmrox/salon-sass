@@ -1,0 +1,101 @@
+package com.salonplatform.identity.application;
+
+import com.salonplatform.identity.domain.Identifiers;
+import com.salonplatform.identity.domain.PasswordPolicy;
+import com.salonplatform.identity.infrastructure.IdentityCrypto;
+import com.salonplatform.identity.inprocess.IdentityProvisioning;
+import com.salonplatform.identity.inprocess.PreparedOwner;
+import com.salonplatform.shared.infrastructure.PlatformDatabase;
+import com.salonplatform.shared.web.ApplicationProblemException;
+import com.salonplatform.shared.web.ErrorCode;
+import com.salonplatform.shared.web.FieldProblem;
+import java.sql.Timestamp;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.stereotype.Service;
+
+/**
+ * The first Owner is inserted by identity's own {@code identity_bootstrap_owner} function on the
+ * platform connection, inside the platform transaction that creates the salon.
+ */
+@Service
+class IdentityProvisioningService implements IdentityProvisioning {
+
+    private final IdentityCrypto crypto;
+    private final ObjectProvider<PlatformDatabase> platform;
+
+    IdentityProvisioningService(IdentityCrypto crypto, ObjectProvider<PlatformDatabase> platform) {
+        this.crypto = crypto;
+        this.platform = platform;
+    }
+
+    @Override
+    public boolean acceptablePassword(String password) {
+        return PasswordPolicy.valid(password);
+    }
+
+    @Override
+    public String normalizedEmail(String value) {
+        return Identifiers.email(value);
+    }
+
+    @Override
+    public String normalizedMobile(String value) {
+        return Identifiers.mobile(value);
+    }
+
+    @Override
+    public PreparedOwner prepareOwner(String prefix, String name, String email, String password) {
+        List<FieldProblem> errors = new ArrayList<>();
+        String trimmedName = name == null ? null : name.strip();
+        if (trimmedName == null
+                || trimmedName.isEmpty()
+                || trimmedName.codePointCount(0, trimmedName.length()) > 120
+                || trimmedName.codePoints().anyMatch(Character::isISOControl))
+            errors.add(new FieldProblem(prefix + "name", "must be plain text between 1 and 120 characters"));
+        String normalizedEmail = null;
+        try {
+            normalizedEmail = email != null && email.length() <= 254 ? Identifiers.email(email) : null;
+        } catch (IllegalArgumentException ex) {
+            normalizedEmail = null;
+        }
+        if (normalizedEmail == null) errors.add(new FieldProblem(prefix + "email", "must be a valid email address"));
+        if (!PasswordPolicy.valid(password))
+            errors.add(new FieldProblem(
+                    prefix + "password", "must contain 15 to 128 characters and must not be a common password"));
+        if (!errors.isEmpty()) throw new ApplicationProblemException(400, ErrorCode.BAD_REQUEST, errors);
+        return new ValidatedOwner(trimmedName, normalizedEmail, crypto.encodePassword(password));
+    }
+
+    @Override
+    public UUID bootstrapOwner(UUID tenantId, PreparedOwner owner, Instant at) {
+        if (!(owner instanceof ValidatedOwner validated)) {
+            throw new IllegalArgumentException("Only identity's prepareOwner prepares an Owner for the bootstrap");
+        }
+        PlatformDatabase database = platform.getObject();
+        database.requireTransaction();
+        UUID id = UUID.randomUUID();
+        database.jdbc()
+                .queryForObject(
+                        "SELECT identity_bootstrap_owner(?, ?, ?, ?, ?, ?)::text",
+                        String.class,
+                        tenantId,
+                        id,
+                        validated.name(),
+                        validated.email(),
+                        validated.passwordHash(),
+                        Timestamp.from(at));
+        return id;
+    }
+
+    @Override
+    public long activeStaffCount(UUID tenantId) {
+        PlatformDatabase database = platform.getObject();
+        database.requireTransaction();
+        Long count = database.jdbc().queryForObject("SELECT identity_active_staff_count(?)", Long.class, tenantId);
+        return count == null ? 0 : count;
+    }
+}

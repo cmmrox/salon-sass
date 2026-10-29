@@ -1,9 +1,9 @@
 package com.salonplatform.identity.local;
 
 import com.salonplatform.identity.application.CustomerAccess;
-import com.salonplatform.shared.api.*;
 import com.salonplatform.shared.outbox.*;
 import com.salonplatform.shared.tenancy.TenantContext;
+import com.salonplatform.shared.web.*;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.*;

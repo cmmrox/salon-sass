@@ -1,11 +1,11 @@
 package com.salonplatform.identity.application;
 
-import com.salonplatform.identity.IdentityFacade.Principal;
+import com.salonplatform.identity.Principal;
 import com.salonplatform.identity.domain.*;
 import com.salonplatform.identity.infrastructure.IdentityCrypto;
-import com.salonplatform.shared.api.*;
 import com.salonplatform.shared.audit.*;
 import com.salonplatform.shared.tenancy.*;
+import com.salonplatform.shared.web.*;
 import jakarta.persistence.*;
 import java.time.*;
 import java.util.*;

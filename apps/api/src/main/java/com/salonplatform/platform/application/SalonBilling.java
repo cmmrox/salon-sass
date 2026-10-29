@@ -1,10 +1,10 @@
 package com.salonplatform.platform.application;
 
-import com.salonplatform.identity.IdentityFacade;
-import com.salonplatform.identity.IdentityProvisioning;
-import com.salonplatform.shared.api.NotFoundException;
+import com.salonplatform.identity.Principals;
+import com.salonplatform.identity.inprocess.IdentityProvisioning;
 import com.salonplatform.shared.infrastructure.PlatformDatabase;
 import com.salonplatform.shared.tenancy.TenantContext;
+import com.salonplatform.shared.web.NotFoundException;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Clock;
 import java.time.Instant;
@@ -98,7 +98,7 @@ public class SalonBilling {
     private final PlatformDatabase database;
     private final BillingLedger ledger;
     private final InvoiceBilling invoices;
-    private final IdentityFacade identity;
+    private final Principals principals;
     private final IdentityProvisioning provisioning;
     private final Clock clock;
 
@@ -106,20 +106,20 @@ public class SalonBilling {
             PlatformDatabase database,
             BillingLedger ledger,
             InvoiceBilling invoices,
-            IdentityFacade identity,
+            Principals principals,
             IdentityProvisioning provisioning,
             Clock clock) {
         this.database = database;
         this.ledger = ledger;
         this.invoices = invoices;
-        this.identity = identity;
+        this.principals = principals;
         this.provisioning = provisioning;
         this.clock = clock;
     }
 
     public Entitlements entitlements() {
         UUID salonId = TenantContext.require().id();
-        identity.require("entitlement.read");
+        principals.require("entitlement.read");
         return database.inTransaction(status -> {
             Instant now = clock.instant();
             var limits = database
@@ -161,13 +161,13 @@ public class SalonBilling {
 
     public InvoiceBilling.InvoicePage invoices(Paging paging) {
         UUID salonId = TenantContext.require().id();
-        identity.require("invoice.read");
+        principals.require("invoice.read");
         return database.inTransaction(status -> invoices.page(salonId, paging));
     }
 
     public InvoiceBilling.InvoiceDetail invoice(UUID id) {
         UUID salonId = TenantContext.require().id();
-        identity.require("invoice.read");
+        principals.require("invoice.read");
         return database.inTransaction(status -> ledger.invoiceById(id, false)
                 .filter(invoice -> invoice.salonId().equals(salonId))
                 .map(invoices::detail)

@@ -4,11 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-import com.salonplatform.shared.api.NotFoundException;
 import com.salonplatform.shared.tenancy.ActiveTenants;
 import com.salonplatform.shared.tenancy.PlatformHostname;
 import com.salonplatform.shared.tenancy.SignedTenantVerifier;
 import com.salonplatform.shared.tenancy.TenantDirectory;
+import com.salonplatform.shared.web.NotFoundException;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.boot.test.context.runner.WebApplicationContextRunner;

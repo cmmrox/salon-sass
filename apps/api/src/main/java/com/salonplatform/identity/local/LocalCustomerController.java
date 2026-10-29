@@ -1,8 +1,8 @@
 package com.salonplatform.identity.local;
 
 import com.salonplatform.identity.application.CustomerAccess;
-import com.salonplatform.shared.api.NotFoundException;
 import com.salonplatform.shared.outbox.OutboxMessageView;
+import com.salonplatform.shared.web.NotFoundException;
 import io.swagger.v3.oas.annotations.Hidden;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;

@@ -1,6 +1,6 @@
 package com.salonplatform.shared.infrastructure;
 
-import com.salonplatform.shared.api.DatabaseUnavailable;
+import com.salonplatform.shared.web.DatabaseUnavailable;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.Duration;

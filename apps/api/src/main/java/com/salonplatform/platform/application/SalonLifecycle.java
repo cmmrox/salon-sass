@@ -1,15 +1,15 @@
 package com.salonplatform.platform.application;
 
-import com.salonplatform.identity.IdentityLifecycle;
+import com.salonplatform.identity.inprocess.IdentityLifecycle;
 import com.salonplatform.platform.domain.LifecycleTerms;
 import com.salonplatform.platform.domain.OperatorPermission;
 import com.salonplatform.platform.infrastructure.PlatformAudit;
-import com.salonplatform.shared.api.ApplicationProblemException;
-import com.salonplatform.shared.api.ErrorCode;
-import com.salonplatform.shared.api.FieldProblem;
-import com.salonplatform.shared.api.NotFoundException;
 import com.salonplatform.shared.infrastructure.PlatformDatabase;
 import com.salonplatform.shared.outbox.OutboxLifecycle;
+import com.salonplatform.shared.web.ApplicationProblemException;
+import com.salonplatform.shared.web.ErrorCode;
+import com.salonplatform.shared.web.FieldProblem;
+import com.salonplatform.shared.web.NotFoundException;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.sql.Timestamp;
 import java.time.Clock;
@@ -78,8 +78,9 @@ public class SalonLifecycle {
     private final OperatorWork work;
     private final OperatorAccess access;
     private final PlatformAudit audit;
-    private final SalonProvisioning salons;
+    private final SalonDirectory salons;
     private final BillingLedger ledger;
+    private final SubscriptionStates states;
     private final IdentityLifecycle identity;
     private final OutboxLifecycle outbox;
     private final Clock clock;
@@ -89,8 +90,9 @@ public class SalonLifecycle {
             OperatorWork work,
             OperatorAccess access,
             PlatformAudit audit,
-            SalonProvisioning salons,
+            SalonDirectory salons,
             BillingLedger ledger,
+            SubscriptionStates states,
             IdentityLifecycle identity,
             OutboxLifecycle outbox,
             Clock clock) {
@@ -100,13 +102,14 @@ public class SalonLifecycle {
         this.audit = audit;
         this.salons = salons;
         this.ledger = ledger;
+        this.states = states;
         this.identity = identity;
         this.outbox = outbox;
         this.clock = clock;
     }
 
     /** Suspends an active salon (whatever its billing state). */
-    public SalonProvisioning.SalonDetail suspend(UUID salonId, ChangeInput input) {
+    public SalonDirectory.SalonDetail suspend(UUID salonId, ChangeInput input) {
         List<FieldProblem> errors = new ArrayList<>();
         long version = version(input.version(), errors);
         String reason = reason(input.reason(), errors);
@@ -150,7 +153,7 @@ public class SalonLifecycle {
      * Reactivates a suspended salon: it is active again, with the access state its unpaid invoices imply
      * now ({@code read_only} when one is 14 or more days overdue), so its unexpired sessions work again.
      */
-    public SalonProvisioning.SalonDetail reactivate(UUID salonId, ChangeInput input) {
+    public SalonDirectory.SalonDetail reactivate(UUID salonId, ChangeInput input) {
         List<FieldProblem> errors = new ArrayList<>();
         long version = version(input.version(), errors);
         String reason = reason(input.reason(), errors);
@@ -169,7 +172,7 @@ public class SalonLifecycle {
             // Billing went on while suspended; this brings the access state to what it implies at this
             // instant, even if the billing job has not run since a boundary passed.
             ledger.subscriptionOf(salonId, true)
-                    .ifPresent(subscription -> ledger.applyState(
+                    .ifPresent(subscription -> states.applyState(
                             subscription, now, PlatformAudit.SYSTEM, "billing", BillingLedger.Changes.none()));
             String access = database.jdbc()
                     .queryForObject("SELECT access_state FROM tenant WHERE id = ?", String.class, salonId);
@@ -202,7 +205,7 @@ public class SalonLifecycle {
      * Closes an active or suspended salon for good, once the exact slug is typed to confirm. In the same
      * transaction: its sessions are revoked, its undelivered messages cancelled and its export scheduled.
      */
-    public SalonProvisioning.SalonDetail close(UUID salonId, ClosureInput input) {
+    public SalonDirectory.SalonDetail close(UUID salonId, ClosureInput input) {
         List<FieldProblem> errors = new ArrayList<>();
         long version = version(input.version(), errors);
         String reason = reason(input.reason(), errors);

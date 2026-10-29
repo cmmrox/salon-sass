@@ -1,16 +1,16 @@
 package com.salonplatform.platform.application;
 
-import com.salonplatform.identity.IdentityProvisioning;
+import com.salonplatform.identity.inprocess.IdentityProvisioning;
 import com.salonplatform.platform.domain.BillingTerms;
 import com.salonplatform.platform.domain.OperatorPermission;
 import com.salonplatform.platform.domain.ProvisioningRegions;
 import com.salonplatform.platform.infrastructure.PlatformAudit;
-import com.salonplatform.shared.api.ApplicationProblemException;
-import com.salonplatform.shared.api.ErrorCode;
-import com.salonplatform.shared.api.FieldProblem;
-import com.salonplatform.shared.api.NotFoundException;
 import com.salonplatform.shared.entitlements.SalonEntitlements;
 import com.salonplatform.shared.infrastructure.PlatformDatabase;
+import com.salonplatform.shared.web.ApplicationProblemException;
+import com.salonplatform.shared.web.ErrorCode;
+import com.salonplatform.shared.web.FieldProblem;
+import com.salonplatform.shared.web.NotFoundException;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Clock;
 import java.time.Instant;
@@ -60,7 +60,7 @@ public class SubscriptionBilling {
             @Schema(
                     types = {"object", "null"},
                     requiredMode = Schema.RequiredMode.REQUIRED)
-            SalonProvisioning.PlanSummary plan,
+            SalonDirectory.PlanSummary plan,
 
             long monthlyAmount,
             String currency,
@@ -97,7 +97,8 @@ public class SubscriptionBilling {
     private final OperatorAccess access;
     private final ProvisioningReceipts receipts;
     private final BillingLedger ledger;
-    private final SalonProvisioning salons;
+    private final SubscriptionStates states;
+    private final SalonDirectory salons;
     private final IdentityProvisioning identity;
     private final PlatformAudit audit;
     private final JsonMapper json;
@@ -109,7 +110,8 @@ public class SubscriptionBilling {
             OperatorAccess access,
             ProvisioningReceipts receipts,
             BillingLedger ledger,
-            SalonProvisioning salons,
+            SubscriptionStates states,
+            SalonDirectory salons,
             IdentityProvisioning identity,
             PlatformAudit audit,
             JsonMapper json,
@@ -119,6 +121,7 @@ public class SubscriptionBilling {
         this.access = access;
         this.receipts = receipts;
         this.ledger = ledger;
+        this.states = states;
         this.salons = salons;
         this.identity = identity;
         this.audit = audit;
@@ -129,9 +132,9 @@ public class SubscriptionBilling {
     /** The view of a salon's subscription, inside a platform transaction. */
     SubscriptionView view(BillingLedger.Subscription subscription, Instant now) {
         BillingLedger.Salon salon = ledger.salon(subscription.salonId(), false).orElseThrow();
-        SalonProvisioning.PlanSummary plan = salon.planId() == null
+        SalonDirectory.PlanSummary plan = salon.planId() == null
                 ? null
-                : new SalonProvisioning.PlanSummary(salon.planId(), salon.planKey(), salon.planName());
+                : new SalonDirectory.PlanSummary(salon.planId(), salon.planKey(), salon.planName());
         Period period = ledger.latestInvoice(subscription.id())
                 .map(invoice -> new Period(invoice.periodStart(), invoice.periodEnd()))
                 .orElse(null);
@@ -220,7 +223,7 @@ public class SubscriptionBilling {
                 throw new ApplicationProblemException(409, ErrorCode.INVALID_STATE);
             }
             Instant now = clock.instant();
-            BillingLedger.Subscription subscription = ledger.start(
+            BillingLedger.Subscription subscription = states.start(
                     salon,
                     input.monthlyAmount(),
                     salon.currency() != null ? salon.currency() : currency,
@@ -302,7 +305,7 @@ public class SubscriptionBilling {
      * progress (which share-locks it) finishes first and is counted. The next invoice carries the new
      * plan; issued invoices keep theirs.
      */
-    public SalonProvisioning.SalonDetail movePlan(UUID salonId, PlanMoveInput input) {
+    public SalonDirectory.SalonDetail movePlan(UUID salonId, PlanMoveInput input) {
         List<FieldProblem> errors = new ArrayList<>();
         if (input.version() == null || input.version() < 0) {
             errors.add(new FieldProblem("version", "must be the salon's current version"));

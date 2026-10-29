@@ -72,7 +72,10 @@ a separate service without its callers or the web and mobile clients changing:
   not weaken them to get a change in; move the code.
 - `shared` holds technical capabilities only (tenant context, errors, time, money, audit, outbox,
   jobs). A business contract never moves into `shared` to avoid a dependency cycle; invert the
-  dependency with an event instead.
+  dependency with an event instead. The one exception is `shared.entitlements.SalonEntitlements`,
+  the plan limits every module enforces inside its own transaction under the registry's share lock:
+  `platform` implements it, and neither an event (it must answer and lock now) nor a move into
+  `platform` (a cycle with `identity`) can replace it (decision 057).
 
 ## Inside a module
 
@@ -378,7 +381,7 @@ change, and a stage leaves the code it touches meeting them.
   a writable tenant transaction and clears its lease; conditional result writes cannot turn it
   back into sending/sent. A provider `OutboxCancelled` outcome does not count as a provider failure.
   Ordinary delivery failures retain the existing retry/breaker behavior. Cancellation does not
-  erase payloads by itself; a privacy-erasure operation must use a shared outbox facade to remove
+  erase payloads by itself; a privacy-erasure operation must use a shared outbox operation to remove
   identifying payloads as well.
 - **Every provider call** has a time limit (10 s), a limit on calls at once per channel (4), and a
   circuit breaker per channel that opens after 5 consecutive failures and waits 60 s. While it is
