@@ -38,7 +38,7 @@ requirement detail is in `qa/coverage.md`.
 
 | Stage | Title | Surfaces | Status | Stage QA | Blocking bugs | Next |
 | --- | --- | --- | --- | --- | --- | --- |
-| F23-S01 | Build conventions and module verification | api | planned | - | 0 | **developer**: `stage-build F23-S01` |
+| F23-S01 | Build conventions and module verification | api | in-progress | - | 0 | **developer**: `stage-build F23-S01` |
 | F23-S02 | Provided module interfaces | api | outlined | - | 0 | **lead**: `stage-plan F23-S02` |
 | F23-S03 | Persistence convention for tenant aggregates | api | outlined | - | 0 | **lead**: `stage-plan F23-S03` |
 | F23-S04 | Table and API ownership by module | api, web | outlined | - | 0 | **lead**: `stage-plan F23-S04` |
