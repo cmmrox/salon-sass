@@ -3,6 +3,10 @@ package com.salonplatform.identity.service;
 import com.salonplatform.identity.CustomerDataErased;
 import com.salonplatform.identity.adapter.IdentityCrypto;
 import com.salonplatform.identity.domain.Identifiers;
+import com.salonplatform.identity.dto.Export;
+import com.salonplatform.identity.dto.Preferences;
+import com.salonplatform.identity.dto.Profile;
+import com.salonplatform.identity.dto.SessionView;
 import com.salonplatform.identity.entity.CustomerAccount;
 import com.salonplatform.identity.entity.CustomerChallenge;
 import com.salonplatform.identity.repository.CustomerAccountRepository;
@@ -17,7 +21,6 @@ import com.salonplatform.shared.web.ApplicationProblemException;
 import com.salonplatform.shared.web.ErrorCode;
 import com.salonplatform.shared.web.FieldProblem;
 import java.time.Clock;
-import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -48,42 +51,6 @@ public class CustomerProfile {
     private final AuditTrail audit;
     private final Outbox outbox;
     private final ApplicationEventPublisher events;
-
-    @io.swagger.v3.oas.annotations.media.Schema(requiredProperties = {"sms", "whatsapp", "email"})
-    public record Preferences(boolean sms, boolean whatsapp, boolean email) {}
-
-    @io.swagger.v3.oas.annotations.media.Schema(
-            requiredProperties = {
-                "id",
-                "version",
-                "name",
-                "mobile",
-                "email",
-                "birthday",
-                "preferredLanguage",
-                "notificationPreferences",
-                "marketingConsent"
-            })
-    public record Profile(
-            UUID id,
-            long version,
-            String name,
-            String mobile,
-
-            @io.swagger.v3.oas.annotations.media.Schema(types = {"string", "null"})
-            String email,
-
-            @io.swagger.v3.oas.annotations.media.Schema(
-                    types = {"string", "null"},
-                    format = "date")
-            LocalDate birthday,
-
-            String preferredLanguage,
-            Preferences notificationPreferences,
-            boolean marketingConsent) {}
-
-    @io.swagger.v3.oas.annotations.media.Schema(requiredProperties = {"generatedAt", "profile", "devices"})
-    public record Export(Instant generatedAt, Profile profile, List<SessionView> devices) {}
 
     public record Change(
             long version,

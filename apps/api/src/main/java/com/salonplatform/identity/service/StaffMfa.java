@@ -4,6 +4,7 @@ import com.salonplatform.identity.adapter.IdentityCrypto;
 import com.salonplatform.identity.domain.MfaPurpose;
 import com.salonplatform.identity.domain.SessionKind;
 import com.salonplatform.identity.domain.StaffRole;
+import com.salonplatform.identity.dto.Enrollment;
 import com.salonplatform.identity.dto.SignIn;
 import com.salonplatform.identity.dto.Tokens;
 import com.salonplatform.identity.entity.AccessSession;
@@ -21,7 +22,6 @@ import com.salonplatform.shared.audit.AuditTrail;
 import com.salonplatform.shared.tenancy.TenantContext;
 import com.salonplatform.shared.web.NotFoundException;
 import java.time.Clock;
-import java.time.Instant;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -45,8 +45,6 @@ public class StaffMfa {
     private final IdentityCrypto crypto;
     private final Clock clock;
     private final AuditTrail audit;
-
-    public record Enrollment(UUID challengeId, String secret, String otpauthUri, Instant expiresAt) {}
 
     /** A signed-in staff member without a second step asks to enroll one. */
     public SignIn voluntaryEnrollment() {

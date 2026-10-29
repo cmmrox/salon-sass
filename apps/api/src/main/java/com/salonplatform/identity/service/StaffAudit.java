@@ -1,11 +1,11 @@
 package com.salonplatform.identity.service;
 
+import com.salonplatform.identity.dto.AuditView;
+import com.salonplatform.identity.dto.Page;
 import com.salonplatform.shared.audit.AuditTrail;
-import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -29,27 +29,8 @@ public class StaffAudit {
     private final StaffAuthority authority;
     private final AuditTrail audit;
 
-    public record AuditView(
-            UUID id,
-            Instant occurredAt,
-            String actorKind,
-            String actorId,
-            String action,
-            String subjectKind,
-            String subjectId,
-
-            @io.swagger.v3.oas.annotations.media.Schema(
-                    types = {"object", "null"},
-                    requiredMode = io.swagger.v3.oas.annotations.media.Schema.RequiredMode.REQUIRED)
-            Map<String, Object> before,
-
-            @io.swagger.v3.oas.annotations.media.Schema(
-                    types = {"object", "null"},
-                    requiredMode = io.swagger.v3.oas.annotations.media.Schema.RequiredMode.REQUIRED)
-            Map<String, Object> after) {}
-
     public Page<AuditView> list(int page, int size, String subjectId) {
-        Page.requireValid(page, size);
+        Pagination.requireValid(page, size);
         return work.run(() -> {
             authority.requireReadable("audit.list");
             AuditTrail.AuditPage rows = audit.identityPage(page, size, subjectId);

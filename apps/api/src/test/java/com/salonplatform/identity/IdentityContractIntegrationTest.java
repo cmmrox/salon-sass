@@ -2,9 +2,9 @@ package com.salonplatform.identity;
 
 import static org.assertj.core.api.Assertions.*;
 
+import com.salonplatform.identity.dto.AuditView;
 import com.salonplatform.identity.dto.SignIn;
 import com.salonplatform.identity.mapper.PrincipalResponseMapper;
-import com.salonplatform.identity.service.StaffAudit;
 import com.salonplatform.testing.IntegrationTest;
 import java.time.Instant;
 import java.util.List;
@@ -33,7 +33,7 @@ class IdentityContractIntegrationTest extends IntegrationTest {
                 (Map<String, Object>) ((Map<String, Object>) document.get("components")).get("schemas");
         Map<String, Object> audit = (Map<String, Object>) schemas.get("AuditView");
         Map<String, Object> properties = (Map<String, Object>) audit.get("properties");
-        var entry = new StaffAudit.AuditView(
+        var entry = new AuditView(
                 UUID.randomUUID(),
                 Instant.now(),
                 "staff",

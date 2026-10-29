@@ -43,6 +43,6 @@ requirement detail is in `qa/coverage.md`.
 | F23-S03 | Persistence convention for tenant aggregates | api | complete | - | 0 | - |
 | F23-S04 | Table and API ownership by module | api, web | complete | - | 0 | - |
 | F23-S07 | Module internal layout with conventional Spring folders | api | complete | - | 0 | - |
-| F23-S08 | Request and response records in dto | api | planned | - | 0 | **developer**: `stage-build F23-S08` |
+| F23-S08 | Request and response records in dto | api | in-progress | - | 0 | **developer**: `stage-build F23-S08` |
 | F23-S05 | Durable events between modules | api | outlined | - | 0 | **lead**: `stage-plan F23-S05` |
 | F23-S06 | Web app organised by module | web | outlined | - | 0 | **lead**: `stage-plan F23-S06` |

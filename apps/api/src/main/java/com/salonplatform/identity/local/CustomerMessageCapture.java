@@ -1,11 +1,11 @@
 package com.salonplatform.identity.local;
 
+import com.salonplatform.identity.dto.CapturedMessage;
 import com.salonplatform.identity.service.CustomerAccess;
 import com.salonplatform.shared.outbox.*;
 import com.salonplatform.shared.tenancy.TenantContext;
 import com.salonplatform.shared.web.*;
 import java.time.Clock;
-import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -19,9 +19,9 @@ import org.springframework.stereotype.Service;
 @Service
 @Profile("local")
 class CustomerMessageCapture {
-    record Key(UUID tenant, String channel) {}
+    private record Key(UUID tenant, String channel) {}
 
-    record ChallengeKey(UUID tenant, UUID challenge) {}
+    private record ChallengeKey(UUID tenant, UUID challenge) {}
 
     static final class Control {
         final AtomicInteger failures;
@@ -33,10 +33,8 @@ class CustomerMessageCapture {
         }
     }
 
-    record Captured(UUID challengeId, String channel, String code, int attempt, Instant deliveredAt) {}
-
     private final ConcurrentMap<Key, Control> controls = new ConcurrentHashMap<>();
-    private final ConcurrentMap<ChallengeKey, Captured> captures = new ConcurrentHashMap<>();
+    private final ConcurrentMap<ChallengeKey, CapturedMessage> captures = new ConcurrentHashMap<>();
     private final CustomerAccess customers;
     private final Clock clock;
 
@@ -60,7 +58,7 @@ class CustomerMessageCapture {
                 message,
                 clear -> captures.putIfAbsent(
                         new ChallengeKey(message.tenantId(), envelope.challengeId()),
-                        new Captured(
+                        new CapturedMessage(
                                 envelope.challengeId(),
                                 message.channel(),
                                 clear.code(),
@@ -74,9 +72,10 @@ class CustomerMessageCapture {
         controls.put(new Key(TenantContext.require().id(), channel), new Control(failures, delayMs));
     }
 
-    Captured capture(UUID id) {
+    CapturedMessage capture(UUID id) {
         if (customers.messageFor(id).isEmpty()) throw new NotFoundException();
-        Captured capture = captures.get(new ChallengeKey(TenantContext.require().id(), id));
+        CapturedMessage capture =
+                captures.get(new ChallengeKey(TenantContext.require().id(), id));
         if (capture == null) throw new NotFoundException();
         return capture;
     }

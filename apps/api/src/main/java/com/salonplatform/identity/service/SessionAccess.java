@@ -4,6 +4,8 @@ import com.salonplatform.identity.Principal;
 import com.salonplatform.identity.adapter.IdentityCrypto;
 import com.salonplatform.identity.domain.SessionKind;
 import com.salonplatform.identity.domain.StaffRole;
+import com.salonplatform.identity.dto.Page;
+import com.salonplatform.identity.dto.SessionView;
 import com.salonplatform.identity.dto.Tokens;
 import com.salonplatform.identity.entity.AccessSession;
 import com.salonplatform.identity.entity.CustomerAccount;
@@ -247,7 +249,7 @@ public class SessionAccess {
     }
 
     public Page<SessionView> sessions(int page, int size) {
-        Page.requireValid(page, size);
+        Pagination.requireValid(page, size);
         return work.run(() -> {
             Auth auth = auth();
             PageRequest request = PageRequest.of(page, size);

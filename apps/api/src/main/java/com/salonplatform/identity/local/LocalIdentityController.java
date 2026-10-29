@@ -1,14 +1,13 @@
 package com.salonplatform.identity.local;
 
+import com.salonplatform.identity.dto.SeedRequest;
+import com.salonplatform.identity.dto.SeedResult;
 import com.salonplatform.identity.service.StaffAccounts;
 import com.salonplatform.shared.web.NotFoundException;
 import io.swagger.v3.oas.annotations.Hidden;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotEmpty;
-import jakarta.validation.constraints.Size;
 import java.net.InetAddress;
-import java.util.List;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -31,10 +30,6 @@ class LocalIdentityController {
         this.capture = capture;
         this.access = access;
     }
-
-    record SeedRequest(@NotEmpty @Size(max = 20) List<StaffAccounts.SeedAccount> accounts) {}
-
-    record SeedResult(int accounts) {}
 
     @PostMapping("/seed")
     ResponseEntity<SeedResult> seed(@Valid @RequestBody SeedRequest request, HttpServletRequest http) {
