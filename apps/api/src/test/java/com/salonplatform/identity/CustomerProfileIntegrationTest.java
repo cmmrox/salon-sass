@@ -425,6 +425,47 @@ class CustomerProfileIntegrationTest extends CustomerHttpFixture {
     }
 
     @Test
+    void deletionPublishesAnErasureEventOfIdsOnlyThatTheCaptureSubscriberProcesses() throws Exception {
+        var a = signIn("alpha", 219);
+        var original = profile("alpha", a);
+        status(call("alpha", "PUT", ME, edit(0), access(a), null), 200);
+        var owner = database.asOwner();
+        List<UUID> challenges = owner.queryForList(
+                "SELECT id FROM identity_customer_challenge WHERE tenant_id=?",
+                UUID.class,
+                tenant("alpha").id());
+        assertThat(challenges).isNotEmpty();
+
+        status(call("alpha", "DELETE", ME, Map.of("confirm", true), access(a), null), 204);
+
+        var event = owner.queryForMap(
+                "SELECT id, event_type, payload::text AS payload FROM outbox_message WHERE tenant_id=? AND kind='event'",
+                tenant("alpha").id());
+        assertThat(event).containsEntry("event_type", "identity.CustomerDataErased.v1");
+        Map<String, Object> payload = json.readValue((String) event.get("payload"), Map.class);
+        assertThat(payload).containsOnlyKeys("challengeIds");
+        assertThat((List<String>) payload.get("challengeIds"))
+                .map(UUID::fromString)
+                .containsExactlyInAnyOrderElementsOf(challenges);
+        assertThat((String) event.get("payload"))
+                .doesNotContain(
+                        mobile(219), "Synthetic Customer", "copy@synthetic.example", (String) original.get("id"));
+        long deliveredBy = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+        while (owner.queryForObject(
+                                "SELECT count(*) FROM shared_processed_event WHERE event_id=?",
+                                Long.class,
+                                event.get("id"))
+                        == 0
+                && System.nanoTime() < deliveredBy) Thread.sleep(20);
+        assertThat(owner.queryForList(
+                        "SELECT subscriber FROM shared_processed_event WHERE tenant_id=? AND event_id=?",
+                        String.class,
+                        tenant("alpha").id(),
+                        event.get("id")))
+                .containsExactly("identity.local-message-capture");
+    }
+
+    @Test
     void deletingAfterExpiredChallengeCleanupStillErasesRetainedDeliveryAndOlderCapture() throws Exception {
         var a = signIn("alpha", 212);
         var other = signIn("alpha", 213);
