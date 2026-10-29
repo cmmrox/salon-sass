@@ -7,7 +7,7 @@
  * {@code docs/engineering/backend.md}.
  */
 @ApplicationModule(
-        allowedDependencies = {"shared :: infrastructure", "shared :: lifecycle", "shared :: tenancy", "shared :: web"})
+        allowedDependencies = {"shared :: lifecycle", "shared :: persistence", "shared :: tenancy", "shared :: web"})
 package com.salonplatform.branding;
 
 import org.springframework.modulith.ApplicationModule;

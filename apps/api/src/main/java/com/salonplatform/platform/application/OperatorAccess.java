@@ -6,7 +6,7 @@ import com.salonplatform.platform.infrastructure.OperatorSessionStore;
 import com.salonplatform.platform.infrastructure.OperatorSessionStore.Session;
 import com.salonplatform.platform.infrastructure.OperatorUserStore;
 import com.salonplatform.platform.infrastructure.OperatorUserStore.Account;
-import com.salonplatform.shared.infrastructure.PlatformDatabase;
+import com.salonplatform.shared.persistence.PlatformDatabase;
 import com.salonplatform.shared.tenancy.RequestCredential;
 import com.salonplatform.shared.web.ApplicationProblemException;
 import com.salonplatform.shared.web.ErrorCode;

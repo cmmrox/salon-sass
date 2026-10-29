@@ -2,7 +2,7 @@ package com.salonplatform.branding.application;
 
 import com.salonplatform.branding.infrastructure.BrandPlatformFunctions;
 import com.salonplatform.branding.inprocess.BrandProvisioning;
-import com.salonplatform.shared.infrastructure.PlatformDatabase;
+import com.salonplatform.shared.persistence.PlatformDatabase;
 import java.time.Instant;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;

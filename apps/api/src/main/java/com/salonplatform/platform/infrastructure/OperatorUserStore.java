@@ -2,7 +2,7 @@ package com.salonplatform.platform.infrastructure;
 
 import static com.salonplatform.platform.infrastructure.PlatformTimes.time;
 
-import com.salonplatform.shared.infrastructure.PlatformDatabase;
+import com.salonplatform.shared.persistence.PlatformDatabase;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;

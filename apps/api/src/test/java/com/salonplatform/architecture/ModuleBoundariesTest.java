@@ -43,7 +43,7 @@ class ModuleBoundariesTest {
         JavaClasses application = new ClassFileImporter()
                 .withImportOption(ImportOption.Predefined.DO_NOT_INCLUDE_TESTS)
                 .importPackages(BASE);
-        assertThat(application.contain(BASE + ".shared.application.MetaService"))
+        assertThat(application.contain(BASE + ".shared.web.MetaService"))
                 .as("the application's classes were found")
                 .isTrue();
         assertThat(application.stream().map(javaClass -> javaClass.getPackageName()))

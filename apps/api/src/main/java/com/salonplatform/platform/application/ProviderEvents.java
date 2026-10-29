@@ -6,7 +6,7 @@ import com.salonplatform.platform.infrastructure.InvoiceStore;
 import com.salonplatform.platform.infrastructure.InvoiceStore.ChargeAttempt;
 import com.salonplatform.platform.infrastructure.InvoiceStore.ProviderEvent;
 import com.salonplatform.platform.infrastructure.PlatformAudit;
-import com.salonplatform.shared.infrastructure.PlatformDatabase;
+import com.salonplatform.shared.persistence.PlatformDatabase;
 import com.salonplatform.shared.web.ApplicationProblemException;
 import com.salonplatform.shared.web.ErrorCode;
 import com.salonplatform.shared.web.FieldProblem;

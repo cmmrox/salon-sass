@@ -2,8 +2,8 @@ package com.salonplatform.platform.application;
 
 import com.salonplatform.platform.infrastructure.BillingLedger;
 import com.salonplatform.platform.infrastructure.PlatformAudit;
-import com.salonplatform.shared.infrastructure.PlatformDatabase;
 import com.salonplatform.shared.observability.Traces;
+import com.salonplatform.shared.persistence.PlatformDatabase;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
 import java.util.ArrayList;

@@ -1,6 +1,6 @@
 package com.salonplatform;
 
-import com.salonplatform.shared.infrastructure.UtcTimeZone;
+import com.salonplatform.shared.time.UtcTimeZone;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ConfigurableApplicationContext;

@@ -2,7 +2,7 @@ package com.salonplatform.identity.application;
 
 import com.salonplatform.identity.infrastructure.IdentityPlatformFunctions;
 import com.salonplatform.identity.inprocess.IdentityLifecycle;
-import com.salonplatform.shared.infrastructure.PlatformDatabase;
+import com.salonplatform.shared.persistence.PlatformDatabase;
 import java.time.Instant;
 import java.util.UUID;
 import org.springframework.beans.factory.ObjectProvider;

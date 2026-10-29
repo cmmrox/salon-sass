@@ -1,6 +1,5 @@
 package com.salonplatform.shared.web;
 
-import com.salonplatform.shared.application.MetaService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.MediaType;

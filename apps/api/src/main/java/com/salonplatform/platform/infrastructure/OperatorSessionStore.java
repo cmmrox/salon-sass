@@ -3,7 +3,7 @@ package com.salonplatform.platform.infrastructure;
 import static com.salonplatform.platform.infrastructure.PlatformTimes.instant;
 import static com.salonplatform.platform.infrastructure.PlatformTimes.time;
 
-import com.salonplatform.shared.infrastructure.PlatformDatabase;
+import com.salonplatform.shared.persistence.PlatformDatabase;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;

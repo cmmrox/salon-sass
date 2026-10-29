@@ -1,6 +1,6 @@
 package com.salonplatform.platform.application;
 
-import com.salonplatform.shared.infrastructure.PlatformDatabase;
+import com.salonplatform.shared.persistence.PlatformDatabase;
 import com.salonplatform.shared.web.ApplicationProblemException;
 import java.util.function.Supplier;
 import org.springframework.stereotype.Service;

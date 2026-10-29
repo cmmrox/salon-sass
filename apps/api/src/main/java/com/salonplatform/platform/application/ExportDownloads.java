@@ -5,7 +5,7 @@ import com.salonplatform.platform.infrastructure.ExportKey;
 import com.salonplatform.platform.infrastructure.PlatformAudit;
 import com.salonplatform.platform.infrastructure.SalonExportStore;
 import com.salonplatform.platform.infrastructure.SalonExportStore.Stored;
-import com.salonplatform.shared.infrastructure.PlatformDatabase;
+import com.salonplatform.shared.persistence.PlatformDatabase;
 import com.salonplatform.shared.web.ApplicationProblemException;
 import com.salonplatform.shared.web.ErrorCode;
 import com.salonplatform.shared.web.NotFoundException;

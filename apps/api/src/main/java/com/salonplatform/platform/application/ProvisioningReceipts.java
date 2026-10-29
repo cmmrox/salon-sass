@@ -3,7 +3,7 @@ package com.salonplatform.platform.application;
 import com.salonplatform.platform.infrastructure.OperatorCrypto;
 import com.salonplatform.platform.infrastructure.ProvisioningReceiptStore;
 import com.salonplatform.platform.infrastructure.ProvisioningReceiptStore.StoredReceipt;
-import com.salonplatform.shared.infrastructure.PlatformDatabase;
+import com.salonplatform.shared.persistence.PlatformDatabase;
 import com.salonplatform.shared.web.ApplicationProblemException;
 import com.salonplatform.shared.web.ErrorCode;
 import com.salonplatform.shared.web.FieldProblem;

@@ -1,7 +1,7 @@
 package com.salonplatform.platform.infrastructure;
 
-import com.salonplatform.shared.infrastructure.PlatformDatabase;
 import com.salonplatform.shared.jobs.PlatformJob;
+import com.salonplatform.shared.persistence.PlatformDatabase;
 import java.time.Duration;
 import java.time.Instant;
 import org.springframework.stereotype.Component;

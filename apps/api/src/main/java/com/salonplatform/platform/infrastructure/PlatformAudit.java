@@ -1,8 +1,8 @@
 package com.salonplatform.platform.infrastructure;
 
 import com.salonplatform.shared.audit.SecretValues;
-import com.salonplatform.shared.infrastructure.PlatformDatabase;
 import com.salonplatform.shared.observability.Traces;
+import com.salonplatform.shared.persistence.PlatformDatabase;
 import java.sql.Timestamp;
 import java.time.Clock;
 import java.time.Instant;

@@ -5,7 +5,7 @@ import com.salonplatform.identity.Principals;
 import com.salonplatform.platform.application.SupportSessions.SupportSessionView;
 import com.salonplatform.platform.infrastructure.SupportSessionStore;
 import com.salonplatform.platform.infrastructure.SupportSessionStore.Session;
-import com.salonplatform.shared.infrastructure.PlatformDatabase;
+import com.salonplatform.shared.persistence.PlatformDatabase;
 import com.salonplatform.shared.tenancy.TenantContext;
 import com.salonplatform.shared.web.NotFoundException;
 import io.swagger.v3.oas.annotations.media.Schema;

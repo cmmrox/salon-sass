@@ -12,7 +12,7 @@ import com.salonplatform.platform.infrastructure.InvoiceStore.Invoice;
 import com.salonplatform.platform.infrastructure.InvoiceStore.NewPayment;
 import com.salonplatform.platform.infrastructure.InvoiceStore.Payment;
 import com.salonplatform.platform.infrastructure.PlatformAudit;
-import com.salonplatform.shared.infrastructure.PlatformDatabase;
+import com.salonplatform.shared.persistence.PlatformDatabase;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;

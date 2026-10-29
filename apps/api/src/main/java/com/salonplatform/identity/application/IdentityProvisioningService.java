@@ -6,7 +6,7 @@ import com.salonplatform.identity.infrastructure.IdentityCrypto;
 import com.salonplatform.identity.infrastructure.IdentityPlatformFunctions;
 import com.salonplatform.identity.inprocess.IdentityProvisioning;
 import com.salonplatform.identity.inprocess.PreparedOwner;
-import com.salonplatform.shared.infrastructure.PlatformDatabase;
+import com.salonplatform.shared.persistence.PlatformDatabase;
 import com.salonplatform.shared.web.ApplicationProblemException;
 import com.salonplatform.shared.web.ErrorCode;
 import com.salonplatform.shared.web.FieldProblem;

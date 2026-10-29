@@ -11,7 +11,7 @@ import com.salonplatform.platform.infrastructure.SupportSessionStore;
 import com.salonplatform.platform.infrastructure.SupportSessionStore.NewSession;
 import com.salonplatform.platform.infrastructure.SupportSessionStore.Salon;
 import com.salonplatform.platform.infrastructure.SupportSessionStore.Session;
-import com.salonplatform.shared.infrastructure.PlatformDatabase;
+import com.salonplatform.shared.persistence.PlatformDatabase;
 import com.salonplatform.shared.web.ApplicationProblemException;
 import com.salonplatform.shared.web.ErrorCode;
 import com.salonplatform.shared.web.FieldProblem;

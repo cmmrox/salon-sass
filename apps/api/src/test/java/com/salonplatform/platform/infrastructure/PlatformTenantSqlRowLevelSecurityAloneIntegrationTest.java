@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.salonplatform.platform.infrastructure.SupportSessionStore.SalonAuditEntry;
 import com.salonplatform.shared.entitlements.SalonEntitlements.Limits;
-import com.salonplatform.shared.infrastructure.PlatformDatabase;
+import com.salonplatform.shared.persistence.PlatformDatabase;
 import com.salonplatform.testing.StartedApplication;
 import com.salonplatform.testing.TestDatabase;
 import com.salonplatform.testing.TestPostgres;

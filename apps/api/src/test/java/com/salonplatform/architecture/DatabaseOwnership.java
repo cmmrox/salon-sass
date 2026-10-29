@@ -1,6 +1,6 @@
 package com.salonplatform.architecture;
 
-import com.salonplatform.shared.infrastructure.ModuleOwnership;
+import com.salonplatform.shared.config.ModuleOwnership;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;

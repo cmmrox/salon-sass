@@ -5,7 +5,7 @@ import com.salonplatform.platform.infrastructure.SupportCrypto;
 import com.salonplatform.platform.infrastructure.SupportSessionStore;
 import com.salonplatform.platform.infrastructure.SupportSessionStore.Entered;
 import com.salonplatform.platform.infrastructure.SupportSessionStore.Session;
-import com.salonplatform.shared.infrastructure.PlatformDatabase;
+import com.salonplatform.shared.persistence.PlatformDatabase;
 import com.salonplatform.shared.tenancy.RequestSupport;
 import com.salonplatform.shared.tenancy.SupportCredentials;
 import com.salonplatform.shared.tenancy.SupportGrant;

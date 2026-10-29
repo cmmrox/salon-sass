@@ -1,6 +1,6 @@
 package com.salonplatform.platform.infrastructure;
 
-import com.salonplatform.shared.infrastructure.RequestDatabaseLimit;
+import com.salonplatform.shared.persistence.RequestDatabaseLimit;
 import com.salonplatform.shared.tenancy.ActiveTenants;
 import com.salonplatform.shared.tenancy.CurrentTenant;
 import com.salonplatform.shared.tenancy.RegisteredTenant;

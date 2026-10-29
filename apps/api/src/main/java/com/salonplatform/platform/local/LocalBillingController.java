@@ -7,7 +7,7 @@ import com.salonplatform.platform.domain.Slugs;
 import com.salonplatform.platform.infrastructure.BillingProviderKey;
 import com.salonplatform.platform.infrastructure.OperatorUserStore;
 import com.salonplatform.platform.infrastructure.SalonStore;
-import com.salonplatform.shared.infrastructure.PlatformDatabase;
+import com.salonplatform.shared.persistence.PlatformDatabase;
 import com.salonplatform.shared.web.ApplicationProblemException;
 import com.salonplatform.shared.web.ErrorCode;
 import com.salonplatform.shared.web.FieldProblem;

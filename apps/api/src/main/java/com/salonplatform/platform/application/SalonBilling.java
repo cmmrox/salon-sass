@@ -4,7 +4,7 @@ import com.salonplatform.identity.Principals;
 import com.salonplatform.identity.inprocess.IdentityProvisioning;
 import com.salonplatform.platform.infrastructure.BillingLedger;
 import com.salonplatform.platform.infrastructure.InvoiceStore;
-import com.salonplatform.shared.infrastructure.PlatformDatabase;
+import com.salonplatform.shared.persistence.PlatformDatabase;
 import com.salonplatform.shared.tenancy.TenantContext;
 import com.salonplatform.shared.web.NotFoundException;
 import io.swagger.v3.oas.annotations.media.Schema;

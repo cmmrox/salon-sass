@@ -4,7 +4,7 @@ import static com.salonplatform.platform.infrastructure.PlatformTimes.time;
 
 import com.salonplatform.platform.infrastructure.BillingLedger.Salon;
 import com.salonplatform.platform.infrastructure.BillingLedger.Subscription;
-import com.salonplatform.shared.infrastructure.PlatformDatabase;
+import com.salonplatform.shared.persistence.PlatformDatabase;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;

@@ -6,7 +6,7 @@ import static org.junit.jupiter.params.provider.Arguments.arguments;
 import com.salonplatform.SalonApiApplication;
 import com.salonplatform.architecture.CodeOwnership.TableReference;
 import com.salonplatform.architecture.FixtureCompiler.Compilation;
-import com.salonplatform.shared.infrastructure.ModuleOwnership;
+import com.salonplatform.shared.config.ModuleOwnership;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.URISyntaxException;
