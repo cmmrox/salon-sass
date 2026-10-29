@@ -119,7 +119,9 @@ The records a controller reads as a request body or returns as a response, at an
 response, are top-level types in `dto/`, not nested in a controller or service (decision 061). A
 record that is not an API shape stays nested in the class that defines it: `private` when only that
 class uses it, otherwise visible within its module (a store's row read by services, a service's
-input built by its controller), and never used by another module except through a named interface. An architecture test refuses any other sub-folder name in a business module, a
+input built by its controller), and never used by another module except through a named interface. `shared`'s local test hooks keep
+their records in `shared/local/dto/`. The cases of a sealed result type count as one contract, and a
+record declared inside a method is outside these rules. An architecture test refuses any other sub-folder name in a business module, a
 mapper outside `mapper/`, a controller outside `controller/` or `local/`, and a class named `*Impl`
 other than the Spring Data fragment `NewEntitiesImpl` and MapStruct's generated mappers. Moving a
 class changes its logger name, which is its package.
