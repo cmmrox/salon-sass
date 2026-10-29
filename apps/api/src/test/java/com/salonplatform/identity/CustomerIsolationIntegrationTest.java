@@ -86,15 +86,9 @@ class CustomerIsolationIntegrationTest {
                 assertThatThrownBy(() -> TenantContext.callAs(
                                 salons.asCurrent(a),
                                 () -> tx.execute(status -> {
-                                    AccessSession s = new AccessSession();
-                                    s.id = UUID.randomUUID();
-                                    s.kind = "customer";
-                                    s.customerAccountId = b.id();
-                                    s.refreshHash = "unusable";
-                                    s.deviceLabel = "test";
-                                    s.createdAt = Instant.now();
-                                    s.updatedAt = s.createdAt;
-                                    s.expiresAt = s.createdAt.plusSeconds(60);
+                                    AccessSession s = AccessSession.forCustomer(
+                                            b.id(), "test", Instant.now(), Duration.ofSeconds(60));
+                                    s.rotate("unusable", Instant.now());
                                     em.persist(s);
                                     em.flush();
                                     return null;

@@ -3,13 +3,13 @@ package com.salonplatform.identity.application;
 import com.salonplatform.identity.domain.Identifiers;
 import com.salonplatform.identity.domain.PasswordPolicy;
 import com.salonplatform.identity.infrastructure.IdentityCrypto;
+import com.salonplatform.identity.infrastructure.IdentityPlatformFunctions;
 import com.salonplatform.identity.inprocess.IdentityProvisioning;
 import com.salonplatform.identity.inprocess.PreparedOwner;
 import com.salonplatform.shared.infrastructure.PlatformDatabase;
 import com.salonplatform.shared.web.ApplicationProblemException;
 import com.salonplatform.shared.web.ErrorCode;
 import com.salonplatform.shared.web.FieldProblem;
-import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -26,10 +26,13 @@ class IdentityProvisioningService implements IdentityProvisioning {
 
     private final IdentityCrypto crypto;
     private final ObjectProvider<PlatformDatabase> platform;
+    private final IdentityPlatformFunctions functions;
 
-    IdentityProvisioningService(IdentityCrypto crypto, ObjectProvider<PlatformDatabase> platform) {
+    IdentityProvisioningService(
+            IdentityCrypto crypto, ObjectProvider<PlatformDatabase> platform, IdentityPlatformFunctions functions) {
         this.crypto = crypto;
         this.platform = platform;
+        this.functions = functions;
     }
 
     @Override
@@ -75,27 +78,15 @@ class IdentityProvisioningService implements IdentityProvisioning {
         if (!(owner instanceof ValidatedOwner validated)) {
             throw new IllegalArgumentException("Only identity's prepareOwner prepares an Owner for the bootstrap");
         }
-        PlatformDatabase database = platform.getObject();
-        database.requireTransaction();
+        platform.getObject().requireTransaction();
         UUID id = UUID.randomUUID();
-        database.jdbc()
-                .queryForObject(
-                        "SELECT identity_bootstrap_owner(?, ?, ?, ?, ?, ?)::text",
-                        String.class,
-                        tenantId,
-                        id,
-                        validated.name(),
-                        validated.email(),
-                        validated.passwordHash(),
-                        Timestamp.from(at));
+        functions.bootstrapOwner(tenantId, id, validated.name(), validated.email(), validated.passwordHash(), at);
         return id;
     }
 
     @Override
     public long activeStaffCount(UUID tenantId) {
-        PlatformDatabase database = platform.getObject();
-        database.requireTransaction();
-        Long count = database.jdbc().queryForObject("SELECT identity_active_staff_count(?)", Long.class, tenantId);
-        return count == null ? 0 : count;
+        platform.getObject().requireTransaction();
+        return functions.activeStaffCount(tenantId);
     }
 }

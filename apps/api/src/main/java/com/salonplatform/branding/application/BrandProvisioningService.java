@@ -1,10 +1,11 @@
 package com.salonplatform.branding.application;
 
+import com.salonplatform.branding.infrastructure.BrandPlatformFunctions;
 import com.salonplatform.branding.inprocess.BrandProvisioning;
 import com.salonplatform.shared.infrastructure.PlatformDatabase;
-import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Service;
  * connection, inside the platform transaction that creates the salon.
  */
 @Service
+@RequiredArgsConstructor
 class BrandProvisioningService implements BrandProvisioning {
 
     /** Branding's one neutral token for a newly provisioned salon: the platform ink. */
@@ -20,21 +22,11 @@ class BrandProvisioningService implements BrandProvisioning {
 
     private final ObjectProvider<PlatformDatabase> platform;
 
-    BrandProvisioningService(ObjectProvider<PlatformDatabase> platform) {
-        this.platform = platform;
-    }
+    private final BrandPlatformFunctions functions;
 
     @Override
     public void bootstrapBrand(UUID tenantId, String displayName, Instant at) {
-        PlatformDatabase database = platform.getObject();
-        database.requireTransaction();
-        database.jdbc()
-                .queryForObject(
-                        "SELECT branding_bootstrap_brand(?, ?, ?, ?)::text",
-                        String.class,
-                        tenantId,
-                        displayName,
-                        NEUTRAL_COLOUR,
-                        Timestamp.from(at));
+        platform.getObject().requireTransaction();
+        functions.bootstrapBrand(tenantId, displayName, NEUTRAL_COLOUR, at);
     }
 }

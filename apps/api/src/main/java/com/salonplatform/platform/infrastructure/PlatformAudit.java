@@ -16,7 +16,8 @@ import tools.jackson.databind.json.JsonMapper;
  * the application's clock and the trace, in the caller's platform transaction, so a rolled-back
  * creation leaves no success record and a failed sign-in's record commits with its counters. Details
  * are an allowlist the caller chooses; a value under a key that names a secret is redacted anyway.
- * Never passwords, hashes, MFA secrets, tokens, contact or profile values, or raw addresses.
+ * Never passwords, hashes, MFA secrets, tokens, contact or profile values, or raw addresses. Named
+ * direct-SQL exception 1 of docs/engineering/backend.md: a platform table with no {@code tenant_id}.
  */
 @Component
 public class PlatformAudit {
@@ -58,12 +59,12 @@ public class PlatformAudit {
         UUID id = UUID.randomUUID();
         Timestamp time = Timestamp.from(at);
         database.jdbc()
-                .update(
-                        """
-                INSERT INTO platform_audit_entry (id, actor_kind, actor_id, action, subject_kind, subject_id, details,
-                    trace_id, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?::jsonb, ?, ?, ?)
-                """,
+                .sql("""
+                        INSERT INTO platform_audit_entry (id, actor_kind, actor_id, action, subject_kind, subject_id, details,
+                            trace_id, created_at, updated_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?::jsonb, ?, ?, ?)
+                        """)
+                .params(
                         id,
                         actorKind,
                         actorId,
@@ -73,7 +74,8 @@ public class PlatformAudit {
                         details == null ? null : json.writeValueAsString(SecretValues.redact(details)),
                         traces.currentTraceId().orElse(null),
                         time,
-                        time);
+                        time)
+                .update();
         return id;
     }
 }

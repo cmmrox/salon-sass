@@ -1,6 +1,15 @@
 package com.salonplatform.identity.web;
 
-import com.salonplatform.identity.application.StaffAccess;
+import com.salonplatform.identity.application.Page;
+import com.salonplatform.identity.application.SessionAccess;
+import com.salonplatform.identity.application.SessionView;
+import com.salonplatform.identity.application.SignIn;
+import com.salonplatform.identity.application.StaffAccounts;
+import com.salonplatform.identity.application.StaffAudit;
+import com.salonplatform.identity.application.StaffMfa;
+import com.salonplatform.identity.application.StaffSignIn;
+import com.salonplatform.identity.application.Tokens;
+import com.salonplatform.identity.infrastructure.ClientAddressAssertion;
 import com.salonplatform.shared.web.NotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -9,6 +18,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -16,22 +26,15 @@ import org.springframework.web.bind.annotation.*;
 /** Validates requests and delegates one use case. Auth responses are never cached. */
 @RestController
 @RequestMapping(path = "/api/v1/identity", produces = MediaType.APPLICATION_JSON_VALUE)
+@RequiredArgsConstructor
 class StaffAccessController {
-    private final StaffAccess access;
-    private final com.salonplatform.identity.infrastructure.ClientAddressAssertion assertions;
-    private final com.salonplatform.identity.application.SessionAccess sessions;
+    private final StaffSignIn signIn;
+    private final StaffMfa mfa;
+    private final StaffAccounts accounts;
+    private final StaffAudit audit;
+    private final SessionAccess sessions;
+    private final ClientAddressAssertion assertions;
     private final PrincipalResponseMapper principals;
-
-    StaffAccessController(
-            StaffAccess access,
-            com.salonplatform.identity.application.SessionAccess sessions,
-            com.salonplatform.identity.infrastructure.ClientAddressAssertion assertions,
-            PrincipalResponseMapper principals) {
-        this.sessions = sessions;
-        this.access = access;
-        this.assertions = assertions;
-        this.principals = principals;
-    }
 
     record SignInRequest(
             @NotBlank @Size(max = 254) String identifier,
@@ -76,24 +79,24 @@ class StaffAccessController {
                     + " invalid proof is rejected before accounting.",
             schema = @io.swagger.v3.oas.annotations.media.Schema(type = "string", maxLength = 192))
     @PostMapping(path = "/staff/sign-in", consumes = MediaType.APPLICATION_JSON_VALUE)
-    ResponseEntity<StaffAccess.SignIn> signIn(@Valid @RequestBody SignInRequest request, HttpServletRequest http) {
-        return ok(access.signIn(
+    ResponseEntity<SignIn> signIn(@Valid @RequestBody SignInRequest request, HttpServletRequest http) {
+        return ok(signIn.signIn(
                 request.identifier(), request.password(), request.deviceLabel(), assertions.rateAddress(http)));
     }
 
     @PostMapping("/staff/mfa/challenges")
-    ResponseEntity<StaffAccess.SignIn> voluntary() {
-        return ok(access.voluntaryMfa());
+    ResponseEntity<SignIn> voluntary() {
+        return ok(mfa.voluntaryEnrollment());
     }
 
     @PostMapping(path = "/staff/mfa/enroll", consumes = MediaType.APPLICATION_JSON_VALUE)
-    ResponseEntity<StaffAccess.Enrollment> enroll(@Valid @RequestBody ChallengeRequest request) {
-        return ok(access.enroll(request.challengeId(), request.challengeToken()));
+    ResponseEntity<StaffMfa.Enrollment> enroll(@Valid @RequestBody ChallengeRequest request) {
+        return ok(mfa.enroll(request.challengeId(), request.challengeToken()));
     }
 
     @PostMapping(path = "/staff/mfa/verify", consumes = MediaType.APPLICATION_JSON_VALUE)
-    ResponseEntity<StaffAccess.Tokens> verify(@Valid @RequestBody VerifyRequest request) {
-        return ok(access.verifyMfa(request.challengeId(), request.challengeToken(), request.code()));
+    ResponseEntity<Tokens> verify(@Valid @RequestBody VerifyRequest request) {
+        return ok(mfa.verify(request.challengeId(), request.challengeToken(), request.code()));
     }
 
     @GetMapping("/me")
@@ -102,13 +105,13 @@ class StaffAccessController {
     }
 
     @GetMapping("/sessions")
-    ResponseEntity<StaffAccess.Page<StaffAccess.SessionView>> sessions(
+    ResponseEntity<Page<SessionView>> sessions(
             @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
         return ok(sessions.sessions(page, size));
     }
 
     @PostMapping(path = "/sessions/refresh", consumes = MediaType.APPLICATION_JSON_VALUE)
-    ResponseEntity<StaffAccess.Tokens> refresh(@Valid @RequestBody RefreshRequest request) {
+    ResponseEntity<Tokens> refresh(@Valid @RequestBody RefreshRequest request) {
         return ok(sessions.refresh(request.refreshToken()));
     }
 
@@ -127,22 +130,22 @@ class StaffAccessController {
     }
 
     @PutMapping(path = "/staff/password", consumes = MediaType.APPLICATION_JSON_VALUE)
-    ResponseEntity<StaffAccess.Tokens> password(@Valid @RequestBody PasswordRequest request) {
-        return ok(access.password(request.oldPassword(), request.newPassword()));
+    ResponseEntity<Tokens> password(@Valid @RequestBody PasswordRequest request) {
+        return ok(signIn.changePassword(request.oldPassword(), request.newPassword()));
     }
 
     @GetMapping("/staff")
-    ResponseEntity<StaffAccess.Page<StaffAccess.StaffView>> staff(
+    ResponseEntity<Page<StaffAccounts.StaffView>> staff(
             @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
-        return ok(access.staff(page, size));
+        return ok(accounts.list(page, size));
     }
 
     @PostMapping(path = "/staff", consumes = MediaType.APPLICATION_JSON_VALUE)
     @ResponseStatus(org.springframework.http.HttpStatus.CREATED)
-    ResponseEntity<StaffAccess.StaffView> create(@Valid @RequestBody CreateStaffRequest request) {
+    ResponseEntity<StaffAccounts.StaffView> create(@Valid @RequestBody CreateStaffRequest request) {
         return ResponseEntity.status(201)
                 .cacheControl(org.springframework.http.CacheControl.noStore())
-                .body(access.create(new StaffAccess.StaffInput(
+                .body(accounts.create(new StaffAccounts.StaffInput(
                         request.email(),
                         request.mobile(),
                         request.password(),
@@ -151,25 +154,25 @@ class StaffAccessController {
     }
 
     @PatchMapping(path = "/staff/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
-    ResponseEntity<StaffAccess.StaffView> change(
+    ResponseEntity<StaffAccounts.StaffView> change(
             @PathVariable String id, @Valid @RequestBody ChangeStaffRequest request) {
-        return ok(access.change(
-                id(id), new StaffAccess.StaffChange(request.version(), request.role(), request.professionalGrant())));
+        return ok(accounts.change(
+                id(id), new StaffAccounts.StaffChange(request.version(), request.role(), request.professionalGrant())));
     }
 
     @DeleteMapping("/staff/{id}")
     @ResponseStatus(org.springframework.http.HttpStatus.NO_CONTENT)
     ResponseEntity<Void> remove(@PathVariable String id) {
-        access.remove(id(id));
+        accounts.remove(id(id));
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/audit")
-    ResponseEntity<StaffAccess.Page<StaffAccess.AuditView>> audit(
+    ResponseEntity<Page<StaffAudit.AuditView>> audit(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false) @Size(max = 128) String subjectId) {
-        return ok(access.audits(page, size, subjectId));
+        return ok(audit.list(page, size, subjectId));
     }
 
     private static UUID id(String id) {

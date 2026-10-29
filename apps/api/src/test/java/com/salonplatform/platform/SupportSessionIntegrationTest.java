@@ -438,7 +438,9 @@ class SupportSessionIntegrationTest extends IntegrationTest {
 
         Http.Exchange staff = billing.identityCall(salon, "GET", "/staff", null, token);
         BillingTestSupport.status(staff, 200);
-        assertThat(staff.body()).contains(fixture.ownerAccount().email).doesNotContain("passwordHash", "mfaSecret");
+        assertThat(staff.body())
+                .contains(fixture.ownerAccount().getEmail())
+                .doesNotContain("passwordHash", "mfaSecret");
         BillingTestSupport.status(billing.identityCall(salon, "GET", "/audit", null, token), 200);
         BillingTestSupport.status(billing.salonCall(salon, "GET", "/api/v1/salon/entitlements", null, token), 200);
         BillingTestSupport.status(billing.salonCall(salon, "GET", "/api/v1/salon/invoices", null, token), 200);
@@ -451,7 +453,9 @@ class SupportSessionIntegrationTest extends IntegrationTest {
 
         int staffBefore = count("SELECT count(*) FROM identity_staff WHERE tenant_id = ?", salon.id());
         String role = owner.queryForObject(
-                "SELECT role FROM identity_staff WHERE id = ?", String.class, fixture.manager().id);
+                "SELECT role FROM identity_staff WHERE id = ?",
+                String.class,
+                fixture.manager().getId());
         List<Http.Exchange> mutations = List.of(
                 billing.identityCall(
                         salon,
@@ -463,10 +467,11 @@ class SupportSessionIntegrationTest extends IntegrationTest {
                 billing.identityCall(
                         salon,
                         "PATCH",
-                        "/staff/" + fixture.manager().id,
+                        "/staff/" + fixture.manager().getId(),
                         Map.of("version", 0, "role", "RECEPTIONIST"),
                         token),
-                billing.identityCall(salon, "DELETE", "/staff/" + fixture.manager().id, null, token),
+                billing.identityCall(
+                        salon, "DELETE", "/staff/" + fixture.manager().getId(), null, token),
                 billing.identityCall(salon, "DELETE", "/sessions", null, token),
                 billing.identityCall(
                         salon,
@@ -485,7 +490,9 @@ class SupportSessionIntegrationTest extends IntegrationTest {
         assertThat(count("SELECT count(*) FROM identity_staff WHERE tenant_id = ?", salon.id()))
                 .isEqualTo(staffBefore);
         assertThat(owner.queryForObject(
-                        "SELECT role FROM identity_staff WHERE id = ?", String.class, fixture.manager().id))
+                        "SELECT role FROM identity_staff WHERE id = ?",
+                        String.class,
+                        fixture.manager().getId()))
                 .isEqualTo(role);
         assertThat(count(
                         "SELECT count(*) FROM support_session WHERE id = ?::uuid AND ended_at IS NULL",
@@ -660,7 +667,8 @@ class SupportSessionIntegrationTest extends IntegrationTest {
         BillingTestSupport.status(billing.identityCall(salon, "GET", "/staff", null, token), 200);
         CLOCK.advance(Duration.ofSeconds(1));
         refused(
-                billing.identityCall(salon, "DELETE", "/staff/" + fixture.manager().id, null, token),
+                billing.identityCall(
+                        salon, "DELETE", "/staff/" + fixture.manager().getId(), null, token),
                 403,
                 "support_read_only");
         CLOCK.advance(Duration.ofSeconds(1));
@@ -691,7 +699,8 @@ class SupportSessionIntegrationTest extends IntegrationTest {
         // No operator email, raw path id, code or credential in the salon's trail.
         String all = rows.toString();
         assertThat(all)
-                .doesNotContain(support.operator().email(), fixture.manager().id.toString(), code(entry), token);
+                .doesNotContain(
+                        support.operator().email(), fixture.manager().getId().toString(), code(entry), token);
         assertThat(salonAudit(other.salon())).isEmpty();
 
         // Owner and Manager see the entries; other roles do not; another salon's list has none.
@@ -785,7 +794,7 @@ class SupportSessionIntegrationTest extends IntegrationTest {
                 204);
         assertThat(salonAudit(salon))
                 .anyMatch(row -> "staff".equals(row.get("actor_kind"))
-                        && fixture.ownerAccount().id.toString().equals(row.get("actor_id"))
+                        && fixture.ownerAccount().getId().toString().equals(row.get("actor_id"))
                         && String.valueOf(row.get("after_values")).contains("\"endedBy\": \"owner\""));
     }
 

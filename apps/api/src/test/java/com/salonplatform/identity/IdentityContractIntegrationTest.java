@@ -2,7 +2,8 @@ package com.salonplatform.identity;
 
 import static org.assertj.core.api.Assertions.*;
 
-import com.salonplatform.identity.application.StaffAccess;
+import com.salonplatform.identity.application.SignIn;
+import com.salonplatform.identity.application.StaffAudit;
 import com.salonplatform.identity.web.PrincipalResponseMapper;
 import com.salonplatform.testing.IntegrationTest;
 import java.time.Instant;
@@ -32,7 +33,7 @@ class IdentityContractIntegrationTest extends IntegrationTest {
                 (Map<String, Object>) ((Map<String, Object>) document.get("components")).get("schemas");
         Map<String, Object> audit = (Map<String, Object>) schemas.get("AuditView");
         Map<String, Object> properties = (Map<String, Object>) audit.get("properties");
-        var entry = new StaffAccess.AuditView(
+        var entry = new StaffAudit.AuditView(
                 UUID.randomUUID(),
                 Instant.now(),
                 "staff",
@@ -174,8 +175,8 @@ class IdentityContractIntegrationTest extends IntegrationTest {
 
     @Test
     void optionalSignInFieldsAreOmittedAndCustomerPrincipalFieldsAreNullable() {
-        StaffAccess.SignIn challenge = new StaffAccess.SignIn(
-                "enroll_mfa", UUID.randomUUID(), UUID.randomUUID().toString(), Instant.now(), null);
+        SignIn challenge =
+                new SignIn("enroll_mfa", UUID.randomUUID(), UUID.randomUUID().toString(), Instant.now(), null);
         Map<String, Object> wire = json.readValue(json.writeValueAsString(challenge), Map.class);
         assertThat(wire.containsKey("credentials")).isFalse();
         var customer = new Principal(UUID.randomUUID(), "customer", null, Set.of("session.manage"), "own", null, false);

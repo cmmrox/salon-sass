@@ -2,6 +2,8 @@ package com.salonplatform.platform.local;
 
 import com.salonplatform.platform.application.SalonDeletion;
 import com.salonplatform.platform.application.SalonExports;
+import com.salonplatform.platform.infrastructure.SalonLifecycleStore;
+import com.salonplatform.platform.infrastructure.SalonMessageCounts;
 import com.salonplatform.shared.infrastructure.PlatformDatabase;
 import com.salonplatform.shared.jobs.TenantJobActivity;
 import com.salonplatform.shared.tenancy.CurrentTenant;
@@ -16,14 +18,12 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.time.Clock;
 import java.time.ZoneId;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.CacheControl;
 import org.springframework.http.ResponseEntity;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -52,7 +52,8 @@ class LocalLifecycleController {
     private final LocalLifecycleFaults faults;
     private final LocalReset reset;
     private final PlatformDatabase database;
-    private final JdbcTemplate tenantJdbc;
+    private final SalonLifecycleStore lifecycles;
+    private final SalonMessageCounts messages;
     private final TransactionTemplate tenantReads;
     private final TenantJobActivity activity;
     private final Clock clock;
@@ -63,7 +64,8 @@ class LocalLifecycleController {
             LocalLifecycleFaults faults,
             LocalReset reset,
             PlatformDatabase database,
-            JdbcTemplate tenantJdbc,
+            SalonLifecycleStore lifecycles,
+            SalonMessageCounts messages,
             PlatformTransactionManager tenantTransactions,
             TenantJobActivity activity,
             Clock clock) {
@@ -72,7 +74,8 @@ class LocalLifecycleController {
         this.faults = faults;
         this.reset = reset;
         this.database = database;
-        this.tenantJdbc = tenantJdbc;
+        this.lifecycles = lifecycles;
+        this.messages = messages;
         this.tenantReads = new TransactionTemplate(tenantTransactions);
         this.tenantReads.setReadOnly(true);
         this.activity = activity;
@@ -165,29 +168,16 @@ class LocalLifecycleController {
     @GetMapping("/salons/{salonId}/background")
     ResponseEntity<Background> background(@PathVariable UUID salonId, HttpServletRequest http) throws Exception {
         loopback(http);
-        Map<String, Object> salon = database.inTransaction(status ->
-                database.jdbc().queryForList("""
-                SELECT slug, status, access_state, time_zone FROM tenant WHERE id = ?
-                """, salonId).stream().findFirst().orElseThrow(NotFoundException::new));
-        CurrentTenant tenant =
-                new CurrentTenant(salonId, (String) salon.get("slug"), ZoneId.of((String) salon.get("time_zone")));
-        Map<String, Long> counts = TenantContext.callAs(
-                tenant,
-                () -> tenantReads.execute(status -> {
-                    Map<String, Long> byStatus = new HashMap<>();
-                    tenantJdbc.query(
-                            "SELECT status, count(*) AS n FROM outbox_message WHERE tenant_id = ? GROUP BY status",
-                            row -> {
-                                byStatus.put(row.getString("status"), row.getLong("n"));
-                            },
-                            salonId);
-                    return byStatus;
-                }));
+        SalonLifecycleStore.State salon =
+                database.inTransaction(status -> lifecycles.state(salonId).orElseThrow(NotFoundException::new));
+        CurrentTenant tenant = new CurrentTenant(salonId, salon.slug(), ZoneId.of(salon.timeZone()));
+        Map<String, Long> counts =
+                TenantContext.callAs(tenant, () -> tenantReads.execute(status -> messages.byStatus(salonId)));
         TenantJobActivity.Counts jobs = activity.of(salonId);
         return ok(new Background(
                 salonId,
-                (String) salon.get("status"),
-                (String) salon.get("access_state"),
+                salon.status(),
+                salon.accessState(),
                 new Outbox(
                         counts.getOrDefault("pending", 0L) + counts.getOrDefault("sending", 0L),
                         counts.getOrDefault("sent", 0L),

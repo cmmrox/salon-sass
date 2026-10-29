@@ -11,6 +11,7 @@ import jakarta.persistence.EntityManagerFactory;
 import java.sql.Connection;
 import java.sql.Savepoint;
 import java.sql.Statement;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -113,15 +114,9 @@ class IdentityIsolationIntegrationTest {
                 assertThatThrownBy(() -> TenantContext.callAs(
                                 salons.asCurrent(alpha),
                                 () -> tx.execute(status -> {
-                                    AccessSession s = new AccessSession();
-                                    s.id = UUID.randomUUID();
-                                    s.accountId = beta.id();
-                                    s.kind = "staff";
-                                    s.refreshHash = "unusable";
-                                    s.deviceLabel = "test";
-                                    s.expiresAt = Instant.now().plusSeconds(60);
-                                    s.createdAt = Instant.now();
-                                    s.updatedAt = s.createdAt;
+                                    AccessSession s = AccessSession.forStaff(
+                                            beta.id(), "test", false, Instant.now(), Duration.ofSeconds(60));
+                                    s.rotate("unusable", Instant.now());
                                     em.persist(s);
                                     em.flush();
                                     return null;

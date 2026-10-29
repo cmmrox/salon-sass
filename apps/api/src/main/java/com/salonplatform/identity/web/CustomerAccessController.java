@@ -1,7 +1,7 @@
 package com.salonplatform.identity.web;
 
 import com.salonplatform.identity.application.CustomerAccess;
-import com.salonplatform.identity.application.StaffAccess;
+import com.salonplatform.identity.application.Tokens;
 import com.salonplatform.identity.infrastructure.CustomerDevice;
 import com.salonplatform.shared.tenancy.TenantContext;
 import jakarta.servlet.http.*;
@@ -111,7 +111,7 @@ class CustomerAccessController {
 
     @PostMapping(path = "/sign-in", consumes = MediaType.APPLICATION_JSON_VALUE)
     @io.swagger.v3.oas.annotations.security.SecurityRequirement(name = "customerDevice")
-    ResponseEntity<StaffAccess.Tokens> verify(
+    ResponseEntity<Tokens> verify(
             @Valid @RequestBody CustomerCodeVerificationRequest request, HttpServletRequest http) {
         TenantContext.require();
         String device = devices.verifiedId(cookie(http));

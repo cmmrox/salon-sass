@@ -38,8 +38,11 @@ class OwnerBootstrapIntegrationTest extends IntegrationTest {
         assertThatThrownBy(() ->
                         platform.inTransaction(status -> provisioning.bootstrapOwner(salon, forged, Instant.now())))
                 .isInstanceOf(IllegalArgumentException.class);
-        Long staff = platform.inTransaction(
-                status -> platform.jdbc().queryForObject("SELECT identity_active_staff_count(?)", Long.class, salon));
+        Long staff = platform.inTransaction(status -> platform.jdbc()
+                .sql("SELECT identity_active_staff_count(?)")
+                .param(salon)
+                .query(Long.class)
+                .single());
         assertThat(staff).isZero();
     }
 

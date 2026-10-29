@@ -5,6 +5,8 @@ import com.salonplatform.platform.application.BillingFaults;
 import com.salonplatform.platform.application.BillingJob;
 import com.salonplatform.platform.domain.Slugs;
 import com.salonplatform.platform.infrastructure.BillingProviderKey;
+import com.salonplatform.platform.infrastructure.OperatorUserStore;
+import com.salonplatform.platform.infrastructure.SalonStore;
 import com.salonplatform.shared.infrastructure.PlatformDatabase;
 import com.salonplatform.shared.web.ApplicationProblemException;
 import com.salonplatform.shared.web.ErrorCode;
@@ -14,7 +16,6 @@ import io.swagger.v3.oas.annotations.Hidden;
 import jakarta.servlet.http.HttpServletRequest;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.sql.Timestamp;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
@@ -56,6 +57,8 @@ class LocalBillingController {
     private final BillingJob job;
     private final BillingProviderKey key;
     private final PlatformDatabase database;
+    private final SalonStore salons;
+    private final OperatorUserStore users;
     private final BrandProvisioning branding;
     private final Clock clock;
     private final String platformDomain;
@@ -67,6 +70,8 @@ class LocalBillingController {
             BillingJob job,
             BillingProviderKey key,
             PlatformDatabase database,
+            SalonStore salons,
+            OperatorUserStore users,
             BrandProvisioning branding,
             Clock clock,
             @Value("${salon.platform-domain}") String platformDomain) {
@@ -76,6 +81,8 @@ class LocalBillingController {
         this.job = job;
         this.key = key;
         this.database = database;
+        this.salons = salons;
+        this.users = users;
         this.branding = branding;
         this.clock = clock;
         this.platformDomain = platformDomain.strip().toLowerCase(Locale.ROOT);
@@ -204,10 +211,7 @@ class LocalBillingController {
         Instant now = clock.instant();
         try {
             database.inTransaction(status -> {
-                database.jdbc().update("""
-                        INSERT INTO tenant (id, slug, status, time_zone, created_at, updated_at)
-                        VALUES (?, ?, 'active', 'Asia/Colombo', ?, ?)
-                        """, id, slug, Timestamp.from(now), Timestamp.from(now));
+                salons.createUnbilled(id, slug, now);
                 branding.bootstrapBrand(id, "Legacy fixture " + slug, now);
                 return null;
             });
@@ -227,16 +231,9 @@ class LocalBillingController {
             throw new ApplicationProblemException(
                     400, ErrorCode.BAD_REQUEST, List.of(new FieldProblem("email", "and active are required")));
         }
-        int changed = database.inTransaction(status -> database.jdbc()
-                .update(
-                        """
-                UPDATE operator_user SET active = ?, version = version + 1, updated_at = ?
-                 WHERE email = ? AND fixture
-                """,
-                        request.active(),
-                        Timestamp.from(clock.instant()),
-                        request.email().strip().toLowerCase(Locale.ROOT)));
-        if (changed == 0) {
+        boolean changed = database.inTransaction(status -> users.setFixtureActive(
+                request.email().strip().toLowerCase(Locale.ROOT), request.active(), clock.instant()));
+        if (!changed) {
             throw new NotFoundException();
         }
         return ResponseEntity.noContent().build();

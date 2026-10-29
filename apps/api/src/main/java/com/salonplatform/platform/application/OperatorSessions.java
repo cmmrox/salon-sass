@@ -1,14 +1,13 @@
 package com.salonplatform.platform.application;
 
 import static com.salonplatform.platform.application.OperatorAccess.invalidSession;
-import static com.salonplatform.platform.application.OperatorAccess.session;
-import static com.salonplatform.platform.application.OperatorAccess.time;
 
 import com.salonplatform.platform.application.OperatorAccess.Operator;
-import com.salonplatform.platform.application.OperatorAccess.Session;
 import com.salonplatform.platform.infrastructure.OperatorCrypto;
+import com.salonplatform.platform.infrastructure.OperatorSessionStore;
+import com.salonplatform.platform.infrastructure.OperatorSessionStore.Session;
+import com.salonplatform.platform.infrastructure.OperatorUserStore;
 import com.salonplatform.platform.infrastructure.PlatformAudit;
-import com.salonplatform.shared.infrastructure.PlatformDatabase;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Clock;
 import java.time.Duration;
@@ -16,7 +15,6 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 /**
@@ -49,41 +47,36 @@ public class OperatorSessions {
     @Schema(requiredProperties = {"id", "kind", "role", "permissions", "mfaEnabled"})
     public record OperatorPrincipal(UUID id, String kind, String role, List<String> permissions, boolean mfaEnabled) {}
 
-    private final PlatformDatabase database;
     private final OperatorWork work;
     private final OperatorAccess access;
+    private final OperatorSessionStore sessions;
+    private final OperatorUserStore users;
     private final OperatorCrypto crypto;
     private final PlatformAudit audit;
     private final Clock clock;
 
     public OperatorSessions(
-            PlatformDatabase database,
             OperatorWork work,
             OperatorAccess access,
+            OperatorSessionStore sessions,
+            OperatorUserStore users,
             OperatorCrypto crypto,
             PlatformAudit audit,
             Clock clock) {
-        this.database = database;
         this.work = work;
         this.access = access;
+        this.sessions = sessions;
+        this.users = users;
         this.crypto = crypto;
         this.audit = audit;
         this.clock = clock;
-    }
-
-    private JdbcTemplate jdbc() {
-        return database.jdbc();
     }
 
     OperatorTokens newSession(UUID operator, String label, Instant now) {
         UUID id = UUID.randomUUID();
         String refresh = crypto.randomToken();
         Instant expires = now.plus(SESSION_LIFETIME);
-        jdbc().update("""
-                INSERT INTO operator_session (id, user_id, refresh_hash, device_label, mfa_verified, generation,
-                    expires_at, created_at, updated_at)
-                VALUES (?, ?, ?, ?, true, 1, ?, ?, ?)
-                """, id, operator, crypto.hash("refresh", refresh), label, time(expires), time(now), time(now));
+        sessions.create(id, operator, crypto.hash("refresh", refresh), label, expires, now);
         return tokens(operator, id, 1, refresh, expires);
     }
 
@@ -99,11 +92,7 @@ public class OperatorSessions {
     }
 
     void revokeAll(UUID operator, Instant now) {
-        jdbc().update(
-                        "UPDATE operator_session SET revoked_at = ?, updated_at = ? WHERE user_id = ? AND revoked_at IS NULL",
-                        time(now),
-                        time(now),
-                        operator);
+        sessions.revokeAllOf(operator, now);
     }
 
     /**
@@ -114,21 +103,10 @@ public class OperatorSessions {
         return work.run(() -> {
             Instant now = clock.instant();
             String hash = crypto.hash("refresh", refreshToken == null ? "" : refreshToken);
-            Optional<Session> current =
-                    jdbc().query("""
-                    SELECT id, user_id, mfa_verified, generation, expires_at, revoked_at
-                      FROM operator_session WHERE refresh_hash = ? FOR UPDATE
-                    """, (row, n) -> session(row), hash).stream().findFirst();
+            Optional<Session> current = sessions.lockByRefreshHash(hash);
             if (current.isEmpty()) {
-                List<UUID> family = jdbc().queryForList(
-                                "SELECT session_id FROM operator_refresh_history WHERE credential_hash = ?",
-                                UUID.class,
-                                hash);
-                for (UUID id : family) {
-                    int revoked = jdbc().update("""
-                            UPDATE operator_session SET revoked_at = ?, updated_at = ? WHERE id = ? AND revoked_at IS NULL
-                            """, time(now), time(now), id);
-                    if (revoked > 0) {
+                for (UUID id : sessions.sessionsThatSpent(hash)) {
+                    if (sessions.revoke(id, now)) {
                         audit.record(
                                 PlatformAudit.SYSTEM,
                                 "refresh",
@@ -142,17 +120,11 @@ public class OperatorSessions {
                 throw invalidSession();
             }
             Session session = current.get();
-            if (!access.live(session, access.account("id", session.userId()), now)) {
+            if (!access.live(session, users.findById(session.userId()), now)) {
                 throw invalidSession();
             }
             String next = crypto.randomToken();
-            jdbc().update("""
-                    INSERT INTO operator_refresh_history (id, session_id, credential_hash, created_at, updated_at)
-                    VALUES (?, ?, ?, ?, ?)
-                    """, UUID.randomUUID(), session.id(), hash, time(now), time(now));
-            jdbc().update("""
-                    UPDATE operator_session SET refresh_hash = ?, generation = generation + 1, updated_at = ? WHERE id = ?
-                    """, crypto.hash("refresh", next), time(now), session.id());
+            sessions.rotate(session.id(), hash, crypto.hash("refresh", next), now);
             audit.record(
                     PlatformAudit.OPERATOR,
                     session.userId().toString(),
@@ -170,11 +142,7 @@ public class OperatorSessions {
         work.run(() -> {
             Operator operator = access.authenticated();
             Instant now = clock.instant();
-            jdbc().update(
-                            "UPDATE operator_session SET revoked_at = ?, updated_at = ? WHERE id = ? AND revoked_at IS NULL",
-                            time(now),
-                            time(now),
-                            operator.sessionId());
+            sessions.revoke(operator.sessionId(), now);
             audit.record(
                     PlatformAudit.OPERATOR,
                     operator.id().toString(),

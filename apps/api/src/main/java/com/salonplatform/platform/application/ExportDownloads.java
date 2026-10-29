@@ -3,12 +3,13 @@ package com.salonplatform.platform.application;
 import com.salonplatform.platform.domain.OperatorPermission;
 import com.salonplatform.platform.infrastructure.ExportKey;
 import com.salonplatform.platform.infrastructure.PlatformAudit;
+import com.salonplatform.platform.infrastructure.SalonExportStore;
+import com.salonplatform.platform.infrastructure.SalonExportStore.Stored;
 import com.salonplatform.shared.infrastructure.PlatformDatabase;
 import com.salonplatform.shared.web.ApplicationProblemException;
 import com.salonplatform.shared.web.ErrorCode;
 import com.salonplatform.shared.web.NotFoundException;
 import io.swagger.v3.oas.annotations.media.Schema;
-import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -57,14 +58,21 @@ public class ExportDownloads {
     public record Archive(byte[] bytes, String fileName, String sha256) {}
 
     private final PlatformDatabase database;
+    private final SalonExportStore store;
     private final OperatorWork work;
     private final OperatorAccess access;
     private final PlatformAudit audit;
     private final ExportKey key;
 
     public ExportDownloads(
-            PlatformDatabase database, OperatorWork work, OperatorAccess access, PlatformAudit audit, ExportKey key) {
+            PlatformDatabase database,
+            SalonExportStore store,
+            OperatorWork work,
+            OperatorAccess access,
+            PlatformAudit audit,
+            ExportKey key) {
         this.database = database;
+        this.store = store;
         this.work = work;
         this.access = access;
         this.audit = audit;
@@ -75,22 +83,14 @@ public class ExportDownloads {
     public ExportView status(UUID salonId) {
         return work.run(() -> {
             access.require(OperatorPermission.EXPORT_READ);
-            return database
-                    .jdbc()
-                    .query(
-                            """
-                    SELECT status, created_at, ready_at, delete_at, size_bytes, sha256 FROM salon_export WHERE salon_id = ?
-                    """,
-                            (row, n) -> new ExportView(
-                                    row.getString("status"),
-                                    row.getTimestamp("created_at").toInstant(),
-                                    instant(row.getTimestamp("ready_at")),
-                                    row.getTimestamp("delete_at").toInstant(),
-                                    (Long) row.getObject("size_bytes"),
-                                    row.getString("sha256")),
-                            salonId)
-                    .stream()
-                    .findFirst()
+            return store.statusView(salonId)
+                    .map(export -> new ExportView(
+                            export.status(),
+                            export.createdAt(),
+                            export.readyAt(),
+                            export.deleteAt(),
+                            export.sizeBytes(),
+                            export.sha256()))
                     .orElseThrow(NotFoundException::new);
         });
     }
@@ -102,16 +102,11 @@ public class ExportDownloads {
     public Archive archiveForOperator(UUID salonId) {
         return work.run(() -> {
             var operator = access.require(OperatorPermission.EXPORT_READ);
-            Map<String, Object> row = database.jdbc().queryForList("""
-                    SELECT e.id, e.status, e.archive, e.sha256, e.size_bytes, t.slug
-                      FROM salon_export e JOIN tenant t ON t.id = e.salon_id WHERE e.salon_id = ?
-                    """, salonId).stream()
-                    .findFirst()
-                    .orElseThrow(NotFoundException::new);
-            if ("pending".equals(row.get("status"))) {
+            Stored row = store.archiveOfSalon(salonId).orElseThrow(NotFoundException::new);
+            if ("pending".equals(row.status())) {
                 throw new ApplicationProblemException(409, ErrorCode.INVALID_STATE);
             }
-            if (!"ready".equals(row.get("status"))) {
+            if (!"ready".equals(row.status())) {
                 throw new NotFoundException();
             }
             Archive archive = open(row);
@@ -131,20 +126,8 @@ public class ExportDownloads {
         if (!ExportKey.tokenShaped(token)) {
             throw new NotFoundException();
         }
-        return database.inTransaction(status -> database
-                .jdbc()
-                .query(
-                        """
-                SELECT ready_at, delete_at, size_bytes, sha256 FROM salon_export WHERE token_hash = ? AND status = 'ready'
-                """,
-                        (row, n) -> new LinkView(
-                                row.getTimestamp("ready_at").toInstant(),
-                                row.getTimestamp("delete_at").toInstant(),
-                                row.getLong("size_bytes"),
-                                row.getString("sha256")),
-                        ExportKey.tokenHash(token))
-                .stream()
-                .findFirst()
+        return database.inTransaction(status -> store.readyByTokenHash(ExportKey.tokenHash(token))
+                .map(export -> new LinkView(export.readyAt(), export.deleteAt(), export.sizeBytes(), export.sha256()))
                 .orElseThrow(NotFoundException::new));
     }
 
@@ -157,44 +140,34 @@ public class ExportDownloads {
             throw new NotFoundException();
         }
         return database.inTransaction(status -> {
-            Map<String, Object> row = database.jdbc().queryForList("""
-                    SELECT e.id, e.salon_id, e.status, e.archive, e.sha256, e.size_bytes, t.slug
-                      FROM salon_export e JOIN tenant t ON t.id = e.salon_id
-                     WHERE e.token_hash = ? AND e.status = 'ready'
-                    """, ExportKey.tokenHash(token)).stream()
-                    .findFirst()
-                    .orElseThrow(NotFoundException::new);
+            Stored row =
+                    store.readyArchiveByTokenHash(ExportKey.tokenHash(token)).orElseThrow(NotFoundException::new);
             Archive archive = open(row);
             audit.record(
                     PlatformAudit.SYSTEM,
                     "export-link",
                     "export.downloaded",
                     "salon",
-                    row.get("salon_id").toString(),
+                    row.salonId().toString(),
                     downloadDetails(row, "link"));
             return archive;
         });
     }
 
-    private Archive open(Map<String, Object> row) {
-        UUID exportId = (UUID) row.get("id");
-        byte[] bytes = key.open((byte[]) row.get("archive"), "export-archive:" + exportId);
+    private Archive open(Stored row) {
+        byte[] bytes = key.open(row.sealedArchive(), "export-archive:" + row.id());
         String sha = ExportKey.sha256(bytes);
-        if (!sha.equals(row.get("sha256"))) {
+        if (!sha.equals(row.sha256())) {
             throw new IllegalStateException("A stored export does not match its checksum");
         }
-        return new Archive(bytes, "salon-export-" + row.get("slug") + ".zip", sha);
+        return new Archive(bytes, "salon-export-" + row.slug() + ".zip", sha);
     }
 
-    private static Map<String, Object> downloadDetails(Map<String, Object> row, String via) {
+    private static Map<String, Object> downloadDetails(Stored row, String via) {
         Map<String, Object> details = new LinkedHashMap<>();
-        details.put("exportId", row.get("id").toString());
+        details.put("exportId", row.id().toString());
         details.put("via", via);
-        details.put("sizeBytes", row.get("size_bytes"));
+        details.put("sizeBytes", row.sizeBytes());
         return details;
-    }
-
-    private static Instant instant(Timestamp value) {
-        return value == null ? null : value.toInstant();
     }
 }

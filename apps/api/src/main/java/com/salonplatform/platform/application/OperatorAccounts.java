@@ -4,17 +4,22 @@ import com.salonplatform.identity.inprocess.IdentityProvisioning;
 import com.salonplatform.platform.domain.OperatorRole;
 import com.salonplatform.platform.domain.PlainText;
 import com.salonplatform.platform.infrastructure.OperatorCrypto;
+import com.salonplatform.platform.infrastructure.OperatorSecurityStore;
+import com.salonplatform.platform.infrastructure.OperatorSessionStore;
+import com.salonplatform.platform.infrastructure.OperatorUserStore;
+import com.salonplatform.platform.infrastructure.OperatorUserStore.FixtureCandidate;
+import com.salonplatform.platform.infrastructure.OperatorUserStore.NewAccount;
 import com.salonplatform.platform.infrastructure.PlatformAudit;
 import com.salonplatform.shared.infrastructure.PlatformDatabase;
 import com.salonplatform.shared.web.ApplicationProblemException;
 import com.salonplatform.shared.web.ErrorCode;
 import com.salonplatform.shared.web.FieldProblem;
-import java.sql.Timestamp;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 
@@ -30,6 +35,9 @@ public class OperatorAccounts {
     public record AccountInput(String email, String displayName, String role, String password, String totpSecret) {}
 
     private final PlatformDatabase database;
+    private final OperatorUserStore users;
+    private final OperatorSessionStore sessions;
+    private final OperatorSecurityStore security;
     private final OperatorCrypto crypto;
     private final IdentityProvisioning identity;
     private final PlatformAudit audit;
@@ -37,18 +45,29 @@ public class OperatorAccounts {
 
     public OperatorAccounts(
             PlatformDatabase database,
+            OperatorUserStore users,
+            OperatorSessionStore sessions,
+            OperatorSecurityStore security,
             OperatorCrypto crypto,
             IdentityProvisioning identity,
             PlatformAudit audit,
             Clock clock) {
         this.database = database;
+        this.users = users;
+        this.sessions = sessions;
+        this.security = security;
         this.crypto = crypto;
         this.identity = identity;
         this.audit = audit;
         this.clock = clock;
     }
 
-    private record Valid(String email, String displayName, OperatorRole role, String passwordHash, String totpSecret) {}
+    private record Valid(String email, String displayName, OperatorRole role, String passwordHash, String totpSecret) {
+
+        NewAccount stored() {
+            return new NewAccount(email, displayName, passwordHash, role.name());
+        }
+    }
 
     private Valid validate(AccountInput input) {
         List<FieldProblem> errors = new ArrayList<>();
@@ -94,21 +113,8 @@ public class OperatorAccounts {
         return database.inTransaction(status -> {
             Instant now = clock.instant();
             UUID id = UUID.randomUUID();
-            int created = database.jdbc()
-                    .update(
-                            """
-                    INSERT INTO operator_user (id, email, display_name, password_hash, role, active, fixture, version,
-                        created_at, updated_at)
-                    VALUES (?, ?, ?, ?, ?, true, false, 0, ?, ?) ON CONFLICT (email) DO NOTHING
-                    """,
-                            id,
-                            account.email(),
-                            account.displayName(),
-                            account.passwordHash(),
-                            account.role().name(),
-                            Timestamp.from(now),
-                            Timestamp.from(now));
-            if (created > 0) {
+            boolean created = users.createUnlessTaken(id, account.stored(), now);
+            if (created) {
                 audit.record(
                         PlatformAudit.SYSTEM,
                         "operator-bootstrap",
@@ -118,7 +124,7 @@ public class OperatorAccounts {
                         java.util.Map.of("role", account.role().name()),
                         now);
             }
-            return created > 0;
+            return created;
         });
     }
 
@@ -134,53 +140,19 @@ public class OperatorAccounts {
         return database.inTransaction(status -> {
             Instant now = clock.instant();
             for (Valid account : accounts) {
-                UUID id = database
-                        .jdbc()
-                        .query(
-                                "SELECT id, fixture FROM operator_user WHERE email = ?",
-                                (row, n) -> {
-                                    if (!row.getBoolean("fixture")) {
-                                        throw new ApplicationProblemException(409, ErrorCode.CONFLICT);
-                                    }
-                                    return row.getObject("id", UUID.class);
-                                },
-                                account.email())
-                        .stream()
-                        .findFirst()
-                        .orElse(null);
+                Optional<FixtureCandidate> existing = users.findFixtureCandidate(account.email());
+                if (existing.isPresent() && !existing.get().fixture()) {
+                    throw new ApplicationProblemException(409, ErrorCode.CONFLICT);
+                }
+                UUID id = existing.map(FixtureCandidate::id).orElse(null);
                 if (id == null) {
                     id = UUID.randomUUID();
-                    database.jdbc()
-                            .update(
-                                    """
-                            INSERT INTO operator_user (id, email, display_name, password_hash, role, active, fixture,
-                                version, created_at, updated_at)
-                            VALUES (?, ?, ?, ?, ?, true, true, 0, ?, ?)
-                            """,
-                                    id,
-                                    account.email(),
-                                    account.displayName(),
-                                    account.passwordHash(),
-                                    account.role().name(),
-                                    Timestamp.from(now),
-                                    Timestamp.from(now));
+                    users.createFixture(id, account.stored(), now);
                 }
                 String secret = account.totpSecret() == null
                         ? null
                         : crypto.encrypt("operator-totp:" + id, account.totpSecret());
-                database.jdbc()
-                        .update(
-                                """
-                        UPDATE operator_user SET display_name = ?, password_hash = ?, role = ?, active = true,
-                            mfa_secret = ?, version = version + 1, updated_at = ?
-                         WHERE id = ? AND fixture
-                        """,
-                                account.displayName(),
-                                account.passwordHash(),
-                                account.role().name(),
-                                secret,
-                                Timestamp.from(now),
-                                id);
+                users.resetFixture(id, account.stored(), secret, now);
             }
             return accounts.size();
         });
@@ -194,25 +166,13 @@ public class OperatorAccounts {
     public void resetFixtures() {
         database.inTransaction(status -> {
             Instant now = clock.instant();
-            List<String> emails =
-                    database.jdbc().queryForList("SELECT email FROM operator_user WHERE fixture", String.class);
-            database.jdbc()
-                    .update(
-                            "DELETE FROM operator_mfa_challenge WHERE user_id IN (SELECT id FROM operator_user WHERE fixture)");
-            database.jdbc()
-                    .update(
-                            "DELETE FROM operator_mfa_step WHERE user_id IN (SELECT id FROM operator_user WHERE fixture)");
-            database.jdbc().update("""
-                    UPDATE operator_session SET revoked_at = ?, updated_at = ?
-                     WHERE revoked_at IS NULL AND user_id IN (SELECT id FROM operator_user WHERE fixture)
-                    """, Timestamp.from(now), Timestamp.from(now));
+            List<String> emails = users.fixtureEmails();
+            security.clearFixtureChallenges();
+            sessions.revokeFixtureSessions(now);
             for (String email : emails) {
-                database.jdbc()
-                        .update(
-                                "DELETE FROM operator_rate_bucket WHERE dimension = 'operator-email' AND key_hash = ?",
-                                crypto.hash("rate-operator-email", email.toLowerCase(Locale.ROOT)));
+                security.clearEmailCounter(crypto.hash("rate-operator-email", email.toLowerCase(Locale.ROOT)));
             }
-            database.jdbc().update("DELETE FROM operator_rate_bucket WHERE dimension = 'operator-address'");
+            security.clearAddressCounters();
             return null;
         });
     }

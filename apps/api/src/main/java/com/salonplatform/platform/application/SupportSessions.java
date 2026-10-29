@@ -2,21 +2,21 @@ package com.salonplatform.platform.application;
 
 import static com.salonplatform.platform.application.SupportSessionRecords.ACTIVE;
 import static com.salonplatform.platform.application.SupportSessionRecords.ENDED;
-import static com.salonplatform.platform.application.SupportSessionRecords.SELECT;
-import static com.salonplatform.platform.application.SupportSessionRecords.row;
 
-import com.salonplatform.platform.application.SupportSessionRecords.Row;
 import com.salonplatform.platform.domain.LifecycleTerms;
 import com.salonplatform.platform.domain.OperatorPermission;
 import com.salonplatform.platform.infrastructure.PlatformAudit;
 import com.salonplatform.platform.infrastructure.SupportCrypto;
+import com.salonplatform.platform.infrastructure.SupportSessionStore;
+import com.salonplatform.platform.infrastructure.SupportSessionStore.NewSession;
+import com.salonplatform.platform.infrastructure.SupportSessionStore.Salon;
+import com.salonplatform.platform.infrastructure.SupportSessionStore.Session;
 import com.salonplatform.shared.infrastructure.PlatformDatabase;
 import com.salonplatform.shared.web.ApplicationProblemException;
 import com.salonplatform.shared.web.ErrorCode;
 import com.salonplatform.shared.web.FieldProblem;
 import com.salonplatform.shared.web.NotFoundException;
 import io.swagger.v3.oas.annotations.media.Schema;
-import java.sql.Timestamp;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -119,6 +119,7 @@ public class SupportSessions {
     public record SupportSessionPage(List<SupportSessionView> items, int page, int size, long total) {}
 
     private final PlatformDatabase database;
+    private final SupportSessionStore store;
     private final OperatorWork work;
     private final OperatorAccess access;
     private final SupportSessionRecords records;
@@ -129,6 +130,7 @@ public class SupportSessions {
 
     public SupportSessions(
             PlatformDatabase database,
+            SupportSessionStore store,
             OperatorWork work,
             OperatorAccess access,
             SupportSessionRecords records,
@@ -137,6 +139,7 @@ public class SupportSessions {
             Clock clock,
             @Value("${salon.support.link-origin:https://%s}") String linkOrigin) {
         this.database = database;
+        this.store = store;
         this.work = work;
         this.access = access;
         this.records = records;
@@ -175,41 +178,18 @@ public class SupportSessions {
             }
             // The registry row is shared-locked: a suspension or closure waits for this start, or this
             // start sees its result.
-            var salon = database
-                    .jdbc()
-                    .query(
-                            "SELECT slug, status FROM tenant WHERE id = ? FOR SHARE",
-                            (row, n) -> new String[] {row.getString("slug"), row.getString("status")},
-                            salonId)
-                    .stream()
-                    .findFirst()
-                    .orElseThrow(NotFoundException::new);
-            if (!"active".equals(salon[1])) {
+            Salon salon = store.salonForStart(salonId).orElseThrow(NotFoundException::new);
+            if (!"active".equals(salon.status())) {
                 throw new ApplicationProblemException(409, ErrorCode.INVALID_STATE);
             }
             Instant now = clock.instant();
             // An earlier session of this operator for this salon that has run out ends now as expired,
             // so it no longer counts as the open one.
-            expireDue(now, "operator_id = ? AND salon_id = ?", operator.id(), salonId);
+            expireAll(store.claimExpired(operator.id(), salonId, now));
             UUID id = UUID.randomUUID();
             Instant expiresAt = now.plus(Duration.ofMinutes(minutes));
             try {
-                database.jdbc()
-                        .update(
-                                """
-                        INSERT INTO support_session (id, salon_id, operator_id, reason, duration_minutes, started_at,
-                            expires_at, created_at, updated_at)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                        """,
-                                id,
-                                salonId,
-                                operator.id(),
-                                reason,
-                                minutes,
-                                Timestamp.from(now),
-                                Timestamp.from(expiresAt),
-                                Timestamp.from(now),
-                                Timestamp.from(now));
+                store.start(new NewSession(id, salonId, operator.id(), reason, minutes), now, expiresAt);
             } catch (DuplicateKeyException ex) {
                 throw new ApplicationProblemException(409, ErrorCode.SUPPORT_SESSION_ACTIVE);
             }
@@ -232,7 +212,7 @@ public class SupportSessions {
             after.put("reason", reason);
             after.put("expiresAt", expiresAt.toString());
             records.salonAudit(salonId, "support", id.toString(), "support.session_started", id, reason, after, now);
-            return code(id, salon[0], expiresAt, now);
+            return code(id, salon.slug(), expiresAt, now);
         });
     }
 
@@ -240,7 +220,7 @@ public class SupportSessions {
     public SupportEntry entryCode(UUID sessionId) {
         return work.run(() -> {
             var operator = access.require(OperatorPermission.SUPPORT_START);
-            Row row = records.find(sessionId).orElseThrow(NotFoundException::new);
+            Session row = records.find(sessionId).orElseThrow(NotFoundException::new);
             if (!row.operatorId().equals(operator.id())) {
                 throw new ApplicationProblemException(403, ErrorCode.PERMISSION_DENIED);
             }
@@ -274,7 +254,7 @@ public class SupportSessions {
             if (!admin && !operator.role().permissions().contains(OperatorPermission.SUPPORT_START)) {
                 throw new ApplicationProblemException(403, ErrorCode.PERMISSION_DENIED);
             }
-            Row row = records.lockRow(sessionId).orElseThrow(NotFoundException::new);
+            Session row = records.lockRow(sessionId).orElseThrow(NotFoundException::new);
             if (!admin && !row.operatorId().equals(operator.id())) {
                 throw new ApplicationProblemException(403, ErrorCode.PERMISSION_DENIED);
             }
@@ -319,23 +299,13 @@ public class SupportSessions {
                 throw new ApplicationProblemException(400, ErrorCode.BAD_REQUEST, errors);
             }
             Instant now = clock.instant();
-            Timestamp at = Timestamp.from(now);
-            String where =
-                    " WHERE (?::uuid IS NULL OR s.operator_id = ?::uuid) AND (?::uuid IS NULL OR s.salon_id = ?::uuid)"
-                            + " AND (?::text IS NULL OR (?::text = 'active') = (s.ended_at IS NULL AND s.expires_at > ?))";
             UUID only = all ? null : operator.id();
-            Object[] args = {only, only, salonId, salonId, stateFilter, stateFilter, at};
-            List<Object> page = new ArrayList<>(java.util.Arrays.asList(args));
-            page.add(paging.size());
-            page.add(paging.offset());
-            List<SupportSessionView> items = database.jdbc()
-                    .query(
-                            SELECT + where + " ORDER BY s.started_at DESC, s.id LIMIT ? OFFSET ?",
-                            (row, n) -> records.view(row(row), now),
-                            page.toArray());
-            Long total =
-                    database.jdbc().queryForObject("SELECT count(*) FROM support_session s" + where, Long.class, args);
-            return new SupportSessionPage(items, paging.page(), paging.size(), total == null ? 0 : total);
+            List<SupportSessionView> items =
+                    store.page(only, salonId, stateFilter, now, paging.size(), paging.offset()).stream()
+                            .map(session -> records.view(session, now))
+                            .toList();
+            long total = store.count(only, salonId, stateFilter, now);
+            return new SupportSessionPage(items, paging.page(), paging.size(), total);
         });
     }
 
@@ -347,21 +317,13 @@ public class SupportSessions {
      * twice or concurrently.
      */
     public int expire(Instant now) {
-        Integer ended = database.inTransaction(status -> expireDue(now, "true"));
+        Integer ended = database.inTransaction(status -> expireAll(store.claimExpired(now)));
         return ended == null ? 0 : ended;
     }
 
-    private int expireDue(Instant now, String condition, Object... args) {
-        List<Object> params = new ArrayList<>(List.of(args));
-        params.add(Timestamp.from(now));
-        List<Row> due = database.jdbc()
-                .query(
-                        SELECT + " WHERE " + condition
-                                + " AND s.ended_at IS NULL AND s.expires_at <= ? ORDER BY s.expires_at, s.id FOR UPDATE OF s SKIP LOCKED",
-                        (row, n) -> row(row),
-                        params.toArray());
-        for (Row row : due) {
-            records.finish(row, "expiry", null, PlatformAudit.SYSTEM, "support-expiry", "system", "support-expiry");
+    private int expireAll(List<Session> due) {
+        for (Session session : due) {
+            records.finish(session, "expiry", null, PlatformAudit.SYSTEM, "support-expiry", "system", "support-expiry");
         }
         return due.size();
     }
@@ -369,18 +331,7 @@ public class SupportSessions {
     private SupportEntry code(UUID sessionId, String slug, Instant expiresAt, Instant now) {
         String code = crypto.newCode();
         Instant codeExpiresAt = now.plus(CODE_LIFE);
-        database.jdbc()
-                .update(
-                        """
-                INSERT INTO support_entry_code (id, session_id, code_hash, expires_at, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?)
-                """,
-                        UUID.randomUUID(),
-                        sessionId,
-                        SupportCrypto.codeHash(code),
-                        Timestamp.from(codeExpiresAt),
-                        Timestamp.from(now),
-                        Timestamp.from(now));
+        store.issueEntryCode(sessionId, SupportCrypto.codeHash(code), codeExpiresAt, now);
         return new SupportEntry(
                 sessionId,
                 expiresAt,

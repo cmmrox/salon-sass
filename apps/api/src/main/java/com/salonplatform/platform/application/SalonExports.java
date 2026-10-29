@@ -2,6 +2,12 @@ package com.salonplatform.platform.application;
 
 import com.salonplatform.platform.infrastructure.ExportKey;
 import com.salonplatform.platform.infrastructure.PlatformAudit;
+import com.salonplatform.platform.infrastructure.PlatformOutbox;
+import com.salonplatform.platform.infrastructure.SalonExportStore;
+import com.salonplatform.platform.infrastructure.SalonExportStore.ClosedSalon;
+import com.salonplatform.platform.infrastructure.SalonExportStore.Part;
+import com.salonplatform.platform.infrastructure.SalonExportStore.Pending;
+import com.salonplatform.platform.infrastructure.SalonExportStore.ReadyArchive;
 import com.salonplatform.shared.infrastructure.PlatformDatabase;
 import com.salonplatform.shared.lifecycle.TenantDataModule;
 import com.salonplatform.shared.observability.Traces;
@@ -10,10 +16,8 @@ import com.salonplatform.shared.tenancy.CurrentTenant;
 import com.salonplatform.shared.tenancy.TenantContext;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.nio.charset.StandardCharsets;
-import java.sql.Timestamp;
 import java.time.Clock;
 import java.time.Instant;
-import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -23,7 +27,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,11 +61,9 @@ public class SalonExports {
 
     public record ExportPass(UUID salonId, UUID exportId, int tablesStored, boolean ready) {}
 
-    record Pending(UUID exportId, UUID salonId, String slug, ZoneId zone) {}
-
-    record Part(String table, String module, int rows, byte[] content) {}
-
     private final PlatformDatabase database;
+    private final SalonExportStore store;
+    private final PlatformOutbox outbox;
     private final PlatformAudit audit;
     private final ExportKey key;
     private final ExportArchives archives;
@@ -77,6 +78,8 @@ public class SalonExports {
 
     public SalonExports(
             PlatformDatabase database,
+            SalonExportStore store,
+            PlatformOutbox outbox,
             PlatformAudit audit,
             ExportKey key,
             ExportArchives archives,
@@ -89,6 +92,8 @@ public class SalonExports {
             @Value("${salon.platform-domain}") String platformDomain,
             @Value("${salon.export.link-origin:https://%s}") String linkOrigin) {
         this.database = database;
+        this.store = store;
+        this.outbox = outbox;
         this.audit = audit;
         this.key = key;
         this.archives = archives;
@@ -130,18 +135,7 @@ public class SalonExports {
     }
 
     private Pass pass(Instant now) {
-        List<Pending> pending = database.inTransaction(status -> database.jdbc()
-                .query(
-                        """
-                SELECT e.id, e.salon_id, t.slug, t.time_zone FROM salon_export e JOIN tenant t ON t.id = e.salon_id
-                 WHERE e.status = 'pending' AND t.status = 'closed'
-                 ORDER BY e.created_at, e.id
-                """,
-                        (row, n) -> new Pending(
-                                row.getObject("id", UUID.class),
-                                row.getObject("salon_id", UUID.class),
-                                row.getString("slug"),
-                                ZoneId.of(row.getString("time_zone")))));
+        List<Pending> pending = database.inTransaction(status -> store.pending());
         List<ExportPass> exports = new ArrayList<>();
         List<UUID> failed = new ArrayList<>();
         int stored = 0;
@@ -167,13 +161,8 @@ public class SalonExports {
         for (Map.Entry<TenantDataModule, TenantDataModule.Table> entry : tables()) {
             TenantDataModule module = entry.getKey();
             String table = entry.getValue().name();
-            Boolean needed = database.inTransaction(
-                    status -> database.jdbc().queryForObject("""
-                    SELECT e.status = 'pending' AND NOT EXISTS (SELECT 1 FROM salon_export_part p
-                                                                 WHERE p.export_id = e.id AND p.table_name = ?)
-                      FROM salon_export e WHERE e.id = ?
-                    """, Boolean.class, table, export.exportId()));
-            if (!Boolean.TRUE.equals(needed)) {
+            boolean needed = database.inTransaction(status -> store.partNeeded(export.exportId(), table));
+            if (!needed) {
                 continue;
             }
             List<String> rows;
@@ -192,33 +181,11 @@ public class SalonExports {
             // for update, so this waits for it and then stores nothing for an export that is no longer
             // pending (its parts are already gone).
             database.inTransaction(status -> {
-                String state = database
-                        .jdbc()
-                        .queryForList(
-                                "SELECT status FROM salon_export WHERE id = ? FOR SHARE",
-                                String.class,
-                                export.exportId())
-                        .stream()
-                        .findFirst()
-                        .orElse(null);
-                if (!"pending".equals(state)) {
-                    return 0;
+                if (!"pending".equals(store.statusForShare(export.exportId()).orElse(null))) {
+                    return null;
                 }
-                return database.jdbc()
-                        .update(
-                                """
-                        INSERT INTO salon_export_part (export_id, table_name, module, row_count, content, created_at,
-                            updated_at)
-                        VALUES (?, ?, ?, ?, ?, ?, ?)
-                        ON CONFLICT (export_id, table_name) DO NOTHING
-                        """,
-                                export.exportId(),
-                                table,
-                                module.module(),
-                                count,
-                                sealed,
-                                Timestamp.from(at),
-                                Timestamp.from(at));
+                store.addPart(export.exportId(), new Part(table, module.module(), count, sealed), at);
+                return null;
             });
             stored++;
             faults.exportTableStored(stored);
@@ -229,57 +196,29 @@ public class SalonExports {
     /** Writes the archive once every table has its part; false when the export is not complete yet. */
     private boolean assemble(Pending export, Instant now) {
         return database.inTransaction(status -> {
-            String state = database
-                    .jdbc()
-                    .queryForList(
-                            "SELECT status FROM salon_export WHERE id = ? FOR UPDATE", String.class, export.exportId())
-                    .stream()
-                    .findFirst()
-                    .orElse(null);
+            String state = store.statusForUpdate(export.exportId()).orElse(null);
             if (!"pending".equals(state)) {
                 return "ready".equals(state);
             }
             Map<String, Part> parts = new HashMap<>();
-            database.jdbc()
-                    .query(
-                            "SELECT table_name, module, row_count, content FROM salon_export_part WHERE export_id = ?",
-                            (row, n) -> parts.put(
-                                    row.getString("table_name"),
-                                    new Part(
-                                            row.getString("table_name"),
-                                            row.getString("module"),
-                                            row.getInt("row_count"),
-                                            row.getBytes("content"))),
-                            export.exportId());
+            store.parts(export.exportId()).forEach(part -> parts.put(part.tableName(), part));
             List<Map.Entry<TenantDataModule, TenantDataModule.Table>> tables = tables();
             if (tables.stream()
                     .anyMatch(entry -> !parts.containsKey(entry.getValue().name()))) {
                 return false;
             }
-            Map<String, Object> salon = database.jdbc().queryForMap("""
-                    SELECT id, slug, name, country, currency, time_zone, default_language, contact_email, contact_phone,
-                           address, owner_email, created_at, closed_at, delete_at
-                      FROM tenant WHERE id = ?
-                    """, export.salonId());
+            ClosedSalon salon = store.closedSalon(export.salonId());
             byte[] zip = archives.zip(export, tables, parts, salon, now);
             String sha = ExportKey.sha256(zip);
             String token = key.newToken();
-            Timestamp at = Timestamp.from(now);
-            database.jdbc()
-                    .update(
-                            """
-                    UPDATE salon_export SET status = 'ready', ready_at = ?, size_bytes = ?, sha256 = ?, archive = ?,
-                        token_hash = ?, updated_at = ?
-                     WHERE id = ?
-                    """,
-                            at,
-                            (long) zip.length,
+            store.markReady(
+                    export.exportId(),
+                    new ReadyArchive(
+                            zip.length,
                             sha,
                             key.seal(zip, "export-archive:" + export.exportId()),
-                            ExportKey.tokenHash(token),
-                            at,
-                            export.exportId());
-            database.jdbc().update("DELETE FROM salon_export_part WHERE export_id = ?", export.exportId());
+                            ExportKey.tokenHash(token)),
+                    now);
             Map<String, Object> details = new LinkedHashMap<>();
             details.put("exportId", export.exportId().toString());
             details.put("tables", tables.size());
@@ -293,16 +232,9 @@ public class SalonExports {
                     export.salonId().toString(),
                     details,
                     now);
-            String owner = (String) salon.get("owner_email");
+            String owner = salon.ownerEmail();
             if (owner != null) {
-                enqueueEmail(
-                        export,
-                        owner,
-                        (String) salon.get("name"),
-                        token,
-                        sha,
-                        ((Timestamp) salon.get("delete_at")).toInstant(),
-                        now);
+                enqueueEmail(export, owner, salon.name(), token, sha, salon.deleteAt(), now);
             }
             audit.record(
                     PlatformAudit.SYSTEM,
@@ -340,29 +272,12 @@ public class SalonExports {
                 Base64.getEncoder()
                         .encodeToString(
                                 key.seal(json.writeValueAsBytes(List.of(link)), "export-link:" + export.exportId())));
-        database.jdbc()
-                .queryForObject(
-                        "SELECT outbox_enqueue_for_salon(?, ?, ?, ?::jsonb, ?, ?)::text",
-                        String.class,
-                        export.salonId(),
-                        UUID.randomUUID(),
-                        OutboxLifecycle.PLATFORM_EMAIL,
-                        json.writeValueAsString(payload),
-                        traces.currentTraceParent().orElse(null),
-                        Timestamp.from(now));
+        outbox.enqueue(export.salonId(), OutboxLifecycle.PLATFORM_EMAIL, payload, now);
     }
 
     /** The export-ready email's links, opened with the export key (for the delivering channel). */
     public List<String> openLinks(String exportId, String sealed) {
         byte[] plain = key.open(Base64.getDecoder().decode(sealed), "export-link:" + exportId);
         return List.of(json.readValue(plain, String[].class));
-    }
-    /** Whether a salon's export is ready (deletion waits for it). */
-    Optional<String> exportStatus(UUID salonId) {
-        return database
-                .jdbc()
-                .queryForList("SELECT status FROM salon_export WHERE salon_id = ?", String.class, salonId)
-                .stream()
-                .findFirst();
     }
 }

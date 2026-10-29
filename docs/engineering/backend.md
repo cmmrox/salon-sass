@@ -199,7 +199,12 @@ signature:
 **Spring Data JPA is the default (CR-021).** Every tenant aggregate is an entity with a Spring Data
 JPA repository: one repository per aggregate root, behaviour on the entity (`reprice()`, not
 `setPrice()`), `@Version` on the root as a wrapper `Long` (null means new, so saving a new entity
-issues no extra select). Lists read through JPQL or record projections, paginated.
+issues no extra select). An entity with an assigned id and no `@Version` is created through the
+repository fragment `shared.persistence.NewEntities` (`persist`, always an insert), because
+`save()` would merge it: an extra select and a different instance than the one the caller keeps
+changing. Its implementation is named `NewEntitiesImpl` because Spring Data finds fragment
+implementations by that suffix; it is the one `Impl` name allowed. Lists read through JPQL or
+record projections, paginated.
 
 Direct SQL through `JdbcClient` is allowed only for these named exceptions, each in
 `infrastructure/` (or in `shared` for the shared capabilities):
@@ -208,7 +213,9 @@ Direct SQL through `JdbcClient` is allowed only for these named exceptions, each
    or a transaction manager, so that `@Transactional` can never pick the platform role by accident.
 2. Calls to the `SECURITY DEFINER` functions (`tenant_by_*`, `active_tenant_ids`, `outbox_due`,
    `job_claim`, `job_finish` and the per-module erasers).
-3. Outbox and job leasing (`FOR UPDATE SKIP LOCKED`, conditional status updates).
+3. Leasing and locking: outbox and job claims (`FOR UPDATE SKIP LOCKED`, conditional status
+   updates), and a per-salon lock row created with `INSERT ... ON CONFLICT DO NOTHING` (identity's
+   `IdentityLock`), where a repository would make two first uses fail instead of both waiting.
 4. Set-based bulk work: erasure, cleanup, lifecycle row deletion.
 5. Reporting read models and exports.
 
@@ -451,7 +458,7 @@ test uses them is in `docs/qa/test-plan.md`.
 | Unit | Domain rules: availability, deposit and refund calculation, policy windows, state changes | Plain JUnit, no Spring. Use a fixed clock |
 | Integration | Use cases and endpoints against real PostgreSQL in a container | Includes the two-tenant isolation cases and the wrong-role cases |
 | Concurrency | Anything that must happen once: holds, bookings, payment notifications | Fire simultaneous requests and assert exactly one succeeds |
-| Architecture | Module boundaries (Spring Modulith `verify()`), provided-interface rules, table and path ownership, no entity setter for id, tenant or version, mappers on the shared configuration | Fails the build. Each rule has a fixture proving it fails on a violation: package fixtures under `src/test/java/<base>/architecture/fixture/`, and sources that must fail to compile (denied Lombok, unmapped MapStruct targets) under `src/test/compile-fixtures/`, compiled by a test through `javax.tools` |
+| Architecture | Module boundaries (Spring Modulith `verify()`), provided-interface rules, table and path ownership, no entity setter for id, tenant or version, mappers on the shared configuration | Fails the build. Each rule has a fixture proving it fails on a violation: package fixtures under `src/test/java/<base>/architecture/fixture/`, and sources that must fail to compile (denied Lombok, unmapped MapStruct targets) or that Spring would otherwise scan (fixture entities and repositories) under `src/test/compile-fixtures/`, compiled by a test through `javax.tools` |
 | Conventions | Formatting and warnings | `./mvnw verify` runs `spotless:check` and compiles with `-Xlint:all,-processing -Werror` |
 | Contract | The OpenAPI document and generated client are current | Fails the build. `pnpm contracts:check` regenerates the document from the controllers, so it needs the JDK and Docker |
 

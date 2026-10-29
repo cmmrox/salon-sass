@@ -1,6 +1,7 @@
 package com.salonplatform.platform.application;
 
 import com.salonplatform.platform.domain.BillingTerms;
+import com.salonplatform.platform.infrastructure.InvoiceStore;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
@@ -22,7 +23,7 @@ final class BillingEmails {
     private BillingEmails() {}
 
     static Map<String, Object> compose(
-            String kind, String recipient, BillingLedger.Invoice invoice, ZoneId zone, String link) {
+            String kind, String recipient, InvoiceStore.Invoice invoice, ZoneId zone, String link) {
         String number = BillingTerms.invoiceNumber(invoice.number());
         String amount = BillingTerms.plainAmount(invoice.amount(), invoice.currency());
         String due = DATE.format(invoice.dueAt().atZone(zone));

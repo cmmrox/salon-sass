@@ -1,6 +1,6 @@
 package com.salonplatform.identity.local;
 
-import com.salonplatform.identity.application.StaffAccess;
+import com.salonplatform.identity.application.StaffAccounts;
 import com.salonplatform.shared.web.NotFoundException;
 import io.swagger.v3.oas.annotations.Hidden;
 import jakarta.servlet.http.HttpServletRequest;
@@ -19,12 +19,12 @@ import org.springframework.web.bind.annotation.*;
 @Hidden
 @RequestMapping("/local/identity")
 class LocalIdentityController {
-    private final StaffAccess access;
+    private final StaffAccounts access;
     private final com.salonplatform.identity.application.CustomerAccess customers;
     private final CustomerMessageCapture capture;
 
     LocalIdentityController(
-            StaffAccess access,
+            StaffAccounts access,
             com.salonplatform.identity.application.CustomerAccess customers,
             CustomerMessageCapture capture) {
         this.customers = customers;
@@ -32,7 +32,7 @@ class LocalIdentityController {
         this.access = access;
     }
 
-    record SeedRequest(@NotEmpty @Size(max = 20) List<StaffAccess.SeedAccount> accounts) {}
+    record SeedRequest(@NotEmpty @Size(max = 20) List<StaffAccounts.SeedAccount> accounts) {}
 
     record SeedResult(int accounts) {}
 

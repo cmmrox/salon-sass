@@ -123,13 +123,9 @@ class SalonBillingIntegrationTest extends IntegrationTest {
         return TenantContext.callAs(
                 new TestSalons(owner).asCurrent(salon),
                 () -> new TransactionTemplate(manager).execute(status -> {
-                    CustomerAccount customer = new CustomerAccount();
-                    customer.id = UUID.randomUUID();
-                    customer.mobile = "+9477" + String.format("%07d", (int) (Math.random() * 9_000_000) + 1_000_000);
-                    customer.name = "";
-                    customer.active = true;
-                    customer.createdAt = CLOCK.instant();
-                    customer.updatedAt = customer.createdAt;
+                    CustomerAccount customer = CustomerAccount.verified(
+                            "+9477" + String.format("%07d", (int) (Math.random() * 9_000_000) + 1_000_000),
+                            CLOCK.instant());
                     em.persist(customer);
                     em.flush();
                     var tokens = sessions.newCustomer(customer, "JUnit phone");
@@ -184,8 +180,8 @@ class SalonBillingIntegrationTest extends IntegrationTest {
                 BillingTestSupport.staffRequest(
                         BillingTestSupport.email("new"), "RECEPTIONIST", "synthetic initial password")
             },
-            {"PATCH", "/staff/" + removable.id, Map.of("version", 0, "role", "MANAGER")},
-            {"DELETE", "/staff/" + removable.id, null}
+            {"PATCH", "/staff/" + removable.getId(), Map.of("version", 0, "role", "MANAGER")},
+            {"DELETE", "/staff/" + removable.getId(), null}
         };
         for (Object[] mutation : refused) {
             for (String token : new String[] {ownerToken, null}) {
@@ -201,7 +197,7 @@ class SalonBillingIntegrationTest extends IntegrationTest {
                         "SELECT role FROM identity_staff WHERE tenant_id = ? AND id = ?",
                         String.class,
                         salon.id(),
-                        removable.id))
+                        removable.getId()))
                 .isEqualTo("RECEPTIONIST");
 
         // Renewal, password change, sign-out and the customer's privacy rights still work.

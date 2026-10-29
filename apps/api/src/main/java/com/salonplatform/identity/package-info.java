@@ -16,6 +16,7 @@
             "shared :: lifecycle",
             "shared :: mapping",
             "shared :: outbox",
+            "shared :: persistence",
             "shared :: tenancy",
             "shared :: time",
             "shared :: web"

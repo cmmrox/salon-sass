@@ -1,11 +1,12 @@
 package com.salonplatform.platform.application;
 
 import com.salonplatform.platform.infrastructure.OperatorCrypto;
+import com.salonplatform.platform.infrastructure.ProvisioningReceiptStore;
+import com.salonplatform.platform.infrastructure.ProvisioningReceiptStore.StoredReceipt;
 import com.salonplatform.shared.infrastructure.PlatformDatabase;
 import com.salonplatform.shared.web.ApplicationProblemException;
 import com.salonplatform.shared.web.ErrorCode;
 import com.salonplatform.shared.web.FieldProblem;
-import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -31,11 +32,14 @@ public class ProvisioningReceipts {
     public record Receipt(UUID subjectId, Map<String, Object> result) {}
 
     private final PlatformDatabase database;
+    private final ProvisioningReceiptStore store;
     private final OperatorCrypto crypto;
     private final JsonMapper json;
 
-    public ProvisioningReceipts(PlatformDatabase database, OperatorCrypto crypto, JsonMapper json) {
+    public ProvisioningReceipts(
+            PlatformDatabase database, ProvisioningReceiptStore store, OperatorCrypto crypto, JsonMapper json) {
         this.database = database;
+        this.store = store;
         this.crypto = crypto;
         this.json = json;
     }
@@ -63,32 +67,18 @@ public class ProvisioningReceipts {
      */
     public Optional<Receipt> replay(UUID operator, String action, UUID key, String fingerprint) {
         database.requireTransaction();
-        database.jdbc()
-                .queryForObject(
-                        "SELECT pg_advisory_xact_lock(hashtextextended(?, 0))::text",
-                        String.class,
-                        operator + "|" + action + "|" + key);
-        return database
-                .jdbc()
-                .query(
-                        """
-                SELECT fingerprint, subject_id, result::text AS result FROM provisioning_receipt
-                 WHERE operator_id = ? AND action = ? AND idempotency_key = ?
-                """,
-                        (row, n) -> {
-                            if (!crypto.equalHash(row.getString("fingerprint"), fingerprint)) {
-                                throw new ApplicationProblemException(409, ErrorCode.IDEMPOTENCY_CONFLICT);
-                            }
-                            // Jackson reads a raw Map; a stored result is a JSON object, so every key is a string.
-                            @SuppressWarnings("unchecked")
-                            Map<String, Object> result = json.readValue(row.getString("result"), Map.class);
-                            return new Receipt(row.getObject("subject_id", UUID.class), result);
-                        },
-                        operator,
-                        action,
-                        key)
-                .stream()
-                .findFirst();
+        store.lockScope(operator + "|" + action + "|" + key);
+        Optional<StoredReceipt> stored = store.find(operator, action, key);
+        if (stored.isEmpty()) {
+            return Optional.empty();
+        }
+        if (!crypto.equalHash(stored.get().fingerprint(), fingerprint)) {
+            throw new ApplicationProblemException(409, ErrorCode.IDEMPOTENCY_CONFLICT);
+        }
+        // Jackson reads a raw Map; a stored result is a JSON object, so every key is a string.
+        @SuppressWarnings("unchecked")
+        Map<String, Object> result = json.readValue(stored.get().resultJson(), Map.class);
+        return Optional.of(new Receipt(stored.get().subjectId(), result));
     }
 
     /** Stores the receipt in the creating transaction. */
@@ -101,12 +91,6 @@ public class ProvisioningReceipts {
             Map<String, ?> result,
             Instant at) {
         database.requireTransaction();
-        Timestamp time = Timestamp.from(at);
-        database.jdbc()
-                .update("""
-                INSERT INTO provisioning_receipt (operator_id, action, idempotency_key, fingerprint, subject_id, result,
-                    created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?::jsonb, ?, ?)
-                """, operator, action, key, fingerprint, subject, json.writeValueAsString(result), time, time);
+        store.add(operator, action, key, fingerprint, subject, json.writeValueAsString(result), at);
     }
 }
