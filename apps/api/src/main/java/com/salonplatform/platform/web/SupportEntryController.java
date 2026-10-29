@@ -1,7 +1,7 @@
 package com.salonplatform.platform.web;
 
 import com.fasterxml.jackson.annotation.JsonAnySetter;
-import com.salonplatform.platform.application.SupportSessions;
+import com.salonplatform.platform.application.SupportSessionEntry;
 import io.swagger.v3.oas.annotations.media.Schema;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
@@ -23,9 +23,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping(path = "/api/v1/support", produces = MediaType.APPLICATION_JSON_VALUE)
 class SupportEntryController {
 
-    private final SupportSessions sessions;
+    private final SupportSessionEntry sessions;
 
-    SupportEntryController(SupportSessions sessions) {
+    SupportEntryController(SupportSessionEntry sessions) {
         this.sessions = sessions;
     }
 
@@ -41,7 +41,7 @@ class SupportEntryController {
     }
 
     @PostMapping(path = "/entry", consumes = MediaType.APPLICATION_JSON_VALUE)
-    ResponseEntity<SupportSessions.SupportCredential> enterSupportSession(@RequestBody EntryRequest request) {
+    ResponseEntity<SupportSessionEntry.SupportCredential> enterSupportSession(@RequestBody EntryRequest request) {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(sessions.enter(request.code()));
     }
 
