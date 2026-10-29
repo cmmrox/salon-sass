@@ -149,9 +149,20 @@ signature:
   of its own. Every operation is tagged with its module's name in the OpenAPI document, and the
   generated client is exported per module (`@salon/api-contracts/<module>`). This is what lets the
   edge send one module's paths to a separate service without a client noticing.
-- A business module's settings are under `salon.<module>.*`, and no module reads another module's
-  settings. `shared`'s settings keep their names: `salon.platform-domain`, `salon.database`,
-  `salon.outbox`, `salon.jobs`.
+- Each module declares the settings prefixes it owns in `module-ownership.yaml`, and no module reads
+  a setting under another module's prefix; any module may read `shared`'s. A new module uses
+  `salon.<module>.*`. Existing prefixes keep their names, because a setting's name is also its
+  environment variable (`SALON_EXPORT_KEY`): `platform` owns `salon.operator`, `salon.billing`,
+  `salon.export`, `salon.support` and `salon.retention`; `shared` owns `salon.platform-domain`,
+  `salon.database`, `salon.outbox`, `salon.jobs`, `salon.server` and `salon.platform.datasource`
+  (decision 059).
+- Secret keys are checked across modules without one module reading another's settings: each
+  key-holding class declares its keys through `shared.secrets`, and startup is refused if any two
+  are equal (compared in constant time; the message names the purposes, never a value).
+- The ownership map also gives each module a description, used as its OpenAPI tag text, and each
+  module has a springdoc `GroupedOpenApi` bean (`/v3/api-docs/<module>`, local and test profiles
+  only); a test fails when a module in the map has no bean. The ownership tests cover tables, not
+  SQL functions, and their SQL scan cannot see a table name built at run time.
 
 ## API conventions
 
