@@ -20,14 +20,21 @@ handoff:
   data: |
     No migration, seed or fixture change. Retained local database used as it was. The walkthrough created synthetic data through the local hooks and
       the API: operators f23s2-admin-<run>/f23s2-support-<run>@example.test (random credentials, not recorded), plans f23s2-<run> (2 staff seats),
-      salons f23s2-14e09f and f23s2-66bad5 (both closed, export ready), each with owner-<run>@ and reception-<run>@example.test staff, and one ended
-      support session each. POST /local/operator/reset removes them. Test clock reset to real time. The local API is left running from 29ed375.
+      salons f23s2-14e09f, f23s2-66bad5 and f23s2-d66dd5 (all closed, export ready), each with owner-<run>@ and reception-<run>@example.test staff, and one ended
+      support session each. POST /local/operator/reset removes them. Test clock reset to real time. The local API is left running from 297b0af.
   notes: |
     Developer gates (verification.commands), run from the repository root by /Users/cmmrox/Personal/Projects/salon-sass/apps/api/target/f23-s02-evidence/run-gates.sh on a clean tree (dirty=0 before and after);
-    logs, summary.txt and surefire/ in /Users/cmmrox/Personal/Projects/salon-sass/apps/api/target/f23-s02-evidence/gates1/ (ignored path; keep until closure).
+    logs, summary.txt and surefire/ in /Users/cmmrox/Personal/Projects/salon-sass/apps/api/target/f23-s02-evidence/gates3/ (ignored path; keep until closure).
     | command | revision | result | log |
-    | cd apps/api && ./mvnw -q verify | 29ed375 | exit 0, 231 s; 711 tests, 0 failures, 0 errors, 0 skipped (gates1/surefire) | gates1/1.log |
-    | pnpm contracts:check | 29ed375 | exit 0, 12 s; "docs/api/openapi.json and packages/api-contracts/src/generated are current" | gates1/2.log |
+    | cd apps/api && ./mvnw -q verify | 297b0af | exit 0, 228 s; 714 tests, 0 failures, 0 errors, 0 skipped (gates3/surefire) | gates3/1.log |
+    | pnpm contracts:check | 297b0af | exit 0, 12 s; "docs/api/openapi.json and packages/api-contracts/src/generated are current" | gates3/2.log |
+    Earlier runs, kept: gates1/ (29ed375, before the PreparedOwner fix, both exit 0, 711 tests). gates2-failed-port-collision/ (297b0af):
+    verify exit 1, all 13 SupportSessionIntegrationTest cases failed at operator sign-in with the body "Unauthorized Host (Localhost only)".
+    That answer is not ours: agy processes on this machine listen on 127.0.0.1 ephemeral ports and answer exactly that (probed 127.0.0.1:50310,
+    50328, 49718). The test server binds the wildcard address on a random port, and a client connecting to localhost reaches a process bound to
+    127.0.0.1 on the same port first. Transient and unrelated to the change (the class passed at 29ed375 and in the focused run after the fix);
+    rerun unchanged as gates3. Suggestion for the lead (test infrastructure, not changed here): bind the test server to 127.0.0.1
+    (server.address in the test profile) so the OS never hands it a port another process holds on loopback.
     Conditions: Maven on JDK 21 with the toolchain's JDK 25.0.1, Node 24.12.0, pnpm 12.11.2 (Corepack), Docker 29.8.2, Testcontainers postgres
     (max_connections 200). The local API was stopped during the gates and started afterwards from 29ed375.
 
@@ -47,16 +54,24 @@ handoff:
     AC-4 checked: identity.inprocess.IdentityLifecycle and IdentityProvisioning and branding.inprocess.BrandProvisioning, and both
       package-infos, say why they join the caller's platform transaction and that they become events if the module is extracted. The only other
       provided interfaces, identity.Principals and shared.entitlements.SalonEntitlements: Principals opens its own tenant transaction (Javadoc
-      says so); SalonEntitlements keeps its documented requirement, the one exception of decision 057.
+      says so); SalonEntitlements keeps its documented requirement, the one exception of decision 057 (it does require the caller's
+      transaction, so AC-4's "no other" holds only with that exception). Lead's review fix (297b0af): identity.inprocess.PreparedOwner is an
+      interface exposing name() and email() only; identity's package-private application.ValidatedOwner carries the hash (toString
+      "PreparedOwner[redacted]"), and bootstrapOwner refuses any other PreparedOwner with IllegalArgumentException before it touches the
+      platform connection. Proof: OwnerBootstrapIntegrationTest - a caller's own PreparedOwner is refused inside a platform transaction (and
+      identity_active_staff_count for that salon stays 0) and outside one (IllegalArgumentException, not the no-transaction IllegalStateException);
+      a prepared Owner's toString shows neither name, email nor hash and the interface has exactly name() and email(). Watched failing first:
+      owner-bootstrap-before-guard.log (2 of 3 fail, ClassCastException), passing after: owner-bootstrap-after-guard.log (with
+      OperatorProvisioningIntegrationTest 14/14 unchanged).
     AC-5 checked: find apps/api/src -type d -name api is empty; every @RestController is in a web package (branding, identity, platform,
       shared.web) or in local/ (the local-profile hooks, not part of the API, as before).
     AC-6 checked: contracts:check passes; git diff origin/main (2301191) -- docs/api packages/api-contracts/src/generated is empty. The principal
       schema is produced by identity.web.PrincipalResponse with @Schema(name = "Principal") and the same annotations.
-    AC-7 checked: test-inventory.txt compares gates1/surefire with the S01 baseline run (feature-branch base sources, 705 tests): all 705 present
-      and passing, 6 new (ModuleBoundariesTest), 8 classes moved shared.api -> shared.web. Test edits: package/import lines; in
+    AC-7 checked: test-inventory.txt compares gates3/surefire with the S01 baseline run (feature-branch base sources, 705 tests): all 705 present
+      and passing, 9 new (6 ModuleBoundariesTest, 3 OwnerBootstrapIntegrationTest), 8 classes moved shared.api -> shared.web. Test edits: package/import lines; in
       IdentityContractIntegrationTest the customer principal is serialised through PrincipalResponseMapper (its assertions unchanged); the clean
       fixture's BookingFacade and SharedThing became interfaces for the new root-package rule; new rules and fixtures. On the running product
-      (walkthrough.log, 52/52 PASS, 29ed375): operator sign-in with MFA, wrong password and wrong code 401, console host only; plan and salon
+      (walkthrough.log, 52/52 PASS on 29ed375 and again on 297b0af): operator sign-in with MFA, wrong password and wrong code 401, console host only; plan and salon
       creation with Owner, brand and trialing subscription, replay identical (201 as before), slug_taken, 400 per field; salon list, detail,
       invoices; Owner sign-in with MFA enrollment and /identity/me with exactly the eight contract fields; 401 without credential, 404 on another
       salon's host; entitlements and staff seats (third seat 409 entitlement_exceeded); receptionist 403 permission_denied on invoices; support
@@ -75,14 +90,14 @@ handoff:
       reference found only framework-invoked handlers.
 
     Commits: 266326a api -> web (moves and imports only); cdaf96a provided interfaces; 620e1c9 allowed dependencies and rules; 68d85ab, 1dd4155,
-    8c045c1, e88c0e3, 64f506b one split each; 29ed375 dead helpers and stale wording.
+    8c045c1, e88c0e3, 64f506b one split each; 29ed375 dead helpers and stale wording; 183c9f1 first hand-over; 297b0af PreparedOwner only
+    from identity (lead's review).
 
     Choices to write down (common practice, not in the docs):
     1. Implementation names follow backend.md's example (BookingQueriesService): PrincipalsService, IdentityLifecycleService,
        IdentityProvisioningService, BrandProvisioningService, SalonEntitlementsService (platform/application). All package-private.
-    2. PreparedOwner is a record nested in IdentityProvisioning, toString "PreparedOwner[redacted]". A record's constructor is public, so
-       platform could now build one with any hash; before, only identity could create it (private constructor in the same class). Moving the
-       implementation to application/ makes that unavoidable without an extra mechanism. For review.
+    2. PreparedOwner: fixed on the lead's review (AC-4 above). It is now the top-level interface identity.inprocess.PreparedOwner (it was
+       nested in IdentityProvisioning before S02's fix); SalonProvisioning imports it.
     3. The response record is identity.web.PrincipalResponse with @Schema(name = "Principal"), as SalonResponse does; the mapper is
        PrincipalResponseMapper (generated code copies permissions into a LinkedHashSet, keeping order).
     4. Empty modules declare allowedDependencies = "shared" (spec); that admits only shared's root package, which is empty, so a module that
@@ -106,7 +121,8 @@ handoff:
     Nothing left unfinished. No new dependency.
 
     Timings (observed): implementation about 30 min (00:00-00:31 local); gates 4 min; walkthrough and evidence about 10 min. Diagnosis: one
-    walkthrough expectation of mine was wrong (replay answers 201, as the base revision did), corrected and rerun.
+    walkthrough expectation of mine was wrong (replay answers 201, as the base revision did), corrected and rerun. Review fix about 10 min;
+    gate rerun after a port collision with another program (above) 4 min.
 cases: []
 verification:
   commands:
