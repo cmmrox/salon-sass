@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping(ApiPaths.V1 + "/salon")
-@Tag(name = "salon", description = "The salon the request's hostname names.")
+@Tag(name = "branding")
 class SalonController {
 
     private final GetPublishedBrand getPublishedBrand;

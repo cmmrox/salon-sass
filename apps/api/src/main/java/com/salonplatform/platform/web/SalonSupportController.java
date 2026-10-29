@@ -6,6 +6,7 @@ import com.salonplatform.shared.web.ApiPaths;
 import com.salonplatform.shared.web.NotFoundException;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.UUID;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
@@ -24,6 +25,7 @@ import org.springframework.web.bind.annotation.RestController;
  * of an active one. Salon host only; Owner only ({@code support.manage}).
  */
 @RestController
+@Tag(name = "platform")
 @RequestMapping(path = ApiPaths.V1 + "/salon/support-sessions", produces = MediaType.APPLICATION_JSON_VALUE)
 class SalonSupportController {
 

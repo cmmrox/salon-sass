@@ -74,6 +74,14 @@ public final class ModuleOwnership {
         return modules;
     }
 
+    /** A module's entry; the module must be in the map. */
+    public Module module(String name) {
+        return modules.stream()
+                .filter(module -> module.name().equals(name))
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException(RESOURCE + " has no module " + name));
+    }
+
     /** The module that owns a table, when the map lists it. */
     public Optional<String> ownerOfTable(String table) {
         return modules.stream()

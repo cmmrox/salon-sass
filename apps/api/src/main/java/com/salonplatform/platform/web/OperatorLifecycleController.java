@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.CacheControl;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
@@ -28,6 +29,7 @@ import org.springframework.web.bind.annotation.RestController;
  * and a closed salon's export status and archive. Console host only (OperatorHostFilter); Admin only.
  */
 @RestController
+@Tag(name = "platform")
 @RequestMapping(path = "/api/v1/operator/salons/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
 class OperatorLifecycleController {
 

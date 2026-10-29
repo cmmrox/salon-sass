@@ -11,6 +11,7 @@ import com.salonplatform.identity.application.StaffSignIn;
 import com.salonplatform.identity.application.Tokens;
 import com.salonplatform.identity.infrastructure.ClientAddressAssertion;
 import com.salonplatform.shared.web.NotFoundException;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
@@ -25,6 +26,7 @@ import org.springframework.web.bind.annotation.*;
 
 /** Validates requests and delegates one use case. Auth responses are never cached. */
 @RestController
+@Tag(name = "identity")
 @RequestMapping(path = "/api/v1/identity", produces = MediaType.APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor
 class StaffAccessController {

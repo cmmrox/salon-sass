@@ -3,6 +3,7 @@ package com.salonplatform.platform.web;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.salonplatform.platform.application.SupportSessionEntry;
 import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
  * another host has no salon and answers 404.
  */
 @RestController
+@Tag(name = "platform")
 @RequestMapping(path = "/api/v1/support", produces = MediaType.APPLICATION_JSON_VALUE)
 class SupportEntryController {
 

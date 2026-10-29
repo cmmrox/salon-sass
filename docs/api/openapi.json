@@ -2816,7 +2816,7 @@
           }
         },
         "tags": [
-          "billing-provider-controller"
+          "platform"
         ]
       }
     },
@@ -2857,7 +2857,7 @@
           }
         },
         "tags": [
-          "export-download-controller"
+          "platform"
         ]
       }
     },
@@ -2897,7 +2897,7 @@
           }
         },
         "tags": [
-          "export-download-controller"
+          "platform"
         ]
       }
     },
@@ -2959,7 +2959,7 @@
           }
         },
         "tags": [
-          "staff-access-controller"
+          "identity"
         ]
       }
     },
@@ -3030,7 +3030,7 @@
           }
         },
         "tags": [
-          "customer-access-controller"
+          "identity"
         ]
       }
     },
@@ -3063,7 +3063,7 @@
           }
         },
         "tags": [
-          "customer-profile-controller"
+          "identity"
         ]
       },
       "get": {
@@ -3091,7 +3091,7 @@
           }
         },
         "tags": [
-          "customer-profile-controller"
+          "identity"
         ]
       },
       "put": {
@@ -3129,7 +3129,7 @@
           }
         },
         "tags": [
-          "customer-profile-controller"
+          "identity"
         ]
       }
     },
@@ -3159,7 +3159,7 @@
           }
         },
         "tags": [
-          "customer-profile-controller"
+          "identity"
         ]
       }
     },
@@ -3204,7 +3204,7 @@
           }
         ],
         "tags": [
-          "customer-access-controller"
+          "identity"
         ]
       }
     },
@@ -3234,7 +3234,7 @@
           }
         },
         "tags": [
-          "staff-access-controller"
+          "identity"
         ]
       }
     },
@@ -3257,7 +3257,7 @@
           }
         },
         "tags": [
-          "staff-access-controller"
+          "identity"
         ]
       },
       "get": {
@@ -3307,7 +3307,7 @@
           }
         },
         "tags": [
-          "staff-access-controller"
+          "identity"
         ]
       }
     },
@@ -3347,7 +3347,7 @@
           }
         },
         "tags": [
-          "staff-access-controller"
+          "identity"
         ]
       }
     },
@@ -3380,7 +3380,7 @@
           }
         },
         "tags": [
-          "staff-access-controller"
+          "identity"
         ]
       }
     },
@@ -3432,7 +3432,7 @@
           }
         },
         "tags": [
-          "staff-access-controller"
+          "identity"
         ]
       },
       "post": {
@@ -3470,7 +3470,7 @@
           }
         },
         "tags": [
-          "staff-access-controller"
+          "identity"
         ]
       }
     },
@@ -3500,7 +3500,7 @@
           }
         },
         "tags": [
-          "staff-access-controller"
+          "identity"
         ]
       }
     },
@@ -3540,7 +3540,7 @@
           }
         },
         "tags": [
-          "staff-access-controller"
+          "identity"
         ]
       }
     },
@@ -3580,7 +3580,7 @@
           }
         },
         "tags": [
-          "staff-access-controller"
+          "identity"
         ]
       }
     },
@@ -3620,7 +3620,7 @@
           }
         },
         "tags": [
-          "staff-access-controller"
+          "identity"
         ]
       }
     },
@@ -3671,7 +3671,7 @@
           }
         },
         "tags": [
-          "staff-access-controller"
+          "identity"
         ]
       }
     },
@@ -3704,7 +3704,7 @@
           }
         },
         "tags": [
-          "staff-access-controller"
+          "identity"
         ]
       },
       "patch": {
@@ -3752,7 +3752,7 @@
           }
         },
         "tags": [
-          "staff-access-controller"
+          "identity"
         ]
       }
     },
@@ -3783,7 +3783,7 @@
         },
         "summary": "The service's name, version, commit and time.",
         "tags": [
-          "meta"
+          "shared"
         ]
       }
     },
@@ -3823,7 +3823,7 @@
           }
         },
         "tags": [
-          "operator-billing-controller"
+          "platform"
         ]
       }
     },
@@ -3882,7 +3882,7 @@
           }
         },
         "tags": [
-          "operator-billing-controller"
+          "platform"
         ]
       }
     },
@@ -3912,7 +3912,7 @@
           }
         },
         "tags": [
-          "operator-access-controller"
+          "platform"
         ]
       }
     },
@@ -3952,7 +3952,7 @@
           }
         },
         "tags": [
-          "operator-access-controller"
+          "platform"
         ]
       }
     },
@@ -3992,7 +3992,7 @@
           }
         },
         "tags": [
-          "operator-access-controller"
+          "platform"
         ]
       }
     },
@@ -4055,7 +4055,7 @@
           }
         },
         "tags": [
-          "operator-plan-controller"
+          "platform"
         ]
       },
       "post": {
@@ -4104,7 +4104,7 @@
           }
         },
         "tags": [
-          "operator-plan-controller"
+          "platform"
         ]
       }
     },
@@ -4144,7 +4144,7 @@
           }
         },
         "tags": [
-          "operator-plan-controller"
+          "platform"
         ]
       }
     },
@@ -4207,7 +4207,7 @@
           }
         },
         "tags": [
-          "operator-salon-controller"
+          "platform"
         ]
       },
       "post": {
@@ -4256,7 +4256,7 @@
           }
         },
         "tags": [
-          "operator-salon-controller"
+          "platform"
         ]
       }
     },
@@ -4296,7 +4296,7 @@
           }
         },
         "tags": [
-          "operator-salon-controller"
+          "platform"
         ]
       }
     },
@@ -4346,7 +4346,7 @@
           }
         },
         "tags": [
-          "operator-lifecycle-controller"
+          "platform"
         ]
       }
     },
@@ -4386,7 +4386,7 @@
           }
         },
         "tags": [
-          "operator-lifecycle-controller"
+          "platform"
         ]
       }
     },
@@ -4427,7 +4427,7 @@
           }
         },
         "tags": [
-          "operator-lifecycle-controller"
+          "platform"
         ]
       }
     },
@@ -4489,7 +4489,7 @@
           }
         },
         "tags": [
-          "operator-billing-controller"
+          "platform"
         ]
       }
     },
@@ -4551,7 +4551,7 @@
           }
         },
         "tags": [
-          "operator-lifecycle-controller"
+          "platform"
         ]
       }
     },
@@ -4601,7 +4601,7 @@
           }
         },
         "tags": [
-          "operator-billing-controller"
+          "platform"
         ]
       }
     },
@@ -4641,7 +4641,7 @@
           }
         },
         "tags": [
-          "operator-billing-controller"
+          "platform"
         ]
       },
       "patch": {
@@ -4689,7 +4689,7 @@
           }
         },
         "tags": [
-          "operator-billing-controller"
+          "platform"
         ]
       },
       "post": {
@@ -4746,7 +4746,7 @@
           }
         },
         "tags": [
-          "operator-billing-controller"
+          "platform"
         ]
       }
     },
@@ -4796,7 +4796,7 @@
           }
         },
         "tags": [
-          "operator-support-controller"
+          "platform"
         ]
       }
     },
@@ -4846,7 +4846,7 @@
           }
         },
         "tags": [
-          "operator-lifecycle-controller"
+          "platform"
         ]
       },
       "post": {
@@ -4894,7 +4894,7 @@
           }
         },
         "tags": [
-          "operator-lifecycle-controller"
+          "platform"
         ]
       }
     },
@@ -4934,7 +4934,7 @@
           }
         },
         "tags": [
-          "operator-access-controller"
+          "platform"
         ]
       }
     },
@@ -4957,7 +4957,7 @@
           }
         },
         "tags": [
-          "operator-access-controller"
+          "platform"
         ]
       }
     },
@@ -5008,7 +5008,7 @@
           }
         },
         "tags": [
-          "operator-access-controller"
+          "platform"
         ]
       }
     },
@@ -5083,7 +5083,7 @@
           }
         },
         "tags": [
-          "operator-support-controller"
+          "platform"
         ]
       }
     },
@@ -5116,7 +5116,7 @@
           }
         },
         "tags": [
-          "operator-support-controller"
+          "platform"
         ]
       }
     },
@@ -5156,7 +5156,7 @@
           }
         },
         "tags": [
-          "operator-support-controller"
+          "platform"
         ]
       }
     },
@@ -5217,7 +5217,7 @@
         },
         "summary": "The public brand of the salon the request's hostname names.",
         "tags": [
-          "salon"
+          "branding"
         ]
       }
     },
@@ -5247,7 +5247,7 @@
           }
         },
         "tags": [
-          "salon-billing-controller"
+          "platform"
         ]
       }
     },
@@ -5301,7 +5301,7 @@
           }
         },
         "tags": [
-          "salon-billing-controller"
+          "platform"
         ]
       }
     },
@@ -5341,7 +5341,7 @@
           }
         },
         "tags": [
-          "salon-billing-controller"
+          "platform"
         ]
       }
     },
@@ -5395,7 +5395,7 @@
           }
         },
         "tags": [
-          "salon-support-controller"
+          "platform"
         ]
       }
     },
@@ -5428,7 +5428,7 @@
           }
         },
         "tags": [
-          "salon-support-controller"
+          "platform"
         ]
       }
     },
@@ -5468,7 +5468,7 @@
           }
         },
         "tags": [
-          "support-entry-controller"
+          "platform"
         ]
       }
     },
@@ -5491,7 +5491,7 @@
           }
         },
         "tags": [
-          "support-entry-controller"
+          "platform"
         ]
       }
     }
@@ -5503,12 +5503,20 @@
   ],
   "tags": [
     {
-      "description": "The salon the request's hostname names.",
-      "name": "salon"
+      "description": "Staff accounts, roles and sessions, and customer one-time-code sign-in.",
+      "name": "identity"
     },
     {
-      "description": "The service's own metadata.",
-      "name": "meta"
+      "description": "The salon's brand and its published presentation.",
+      "name": "branding"
+    },
+    {
+      "description": "Salons, plans, entitlements, billing, lifecycle, exports, support sessions and operators.",
+      "name": "platform"
+    },
+    {
+      "description": "Technical capabilities every module runs on, and the service's own metadata.",
+      "name": "shared"
     }
   ]
 }

@@ -17,6 +17,7 @@ import io.swagger.v3.oas.models.media.StringSchema;
 import io.swagger.v3.oas.models.responses.ApiResponse;
 import io.swagger.v3.oas.models.responses.ApiResponses;
 import io.swagger.v3.oas.models.servers.Server;
+import io.swagger.v3.oas.models.tags.Tag;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.IdentityHashMap;
@@ -24,7 +25,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import org.springdoc.core.customizers.OpenApiCustomizer;
+import java.util.stream.Stream;
+import org.springdoc.core.customizers.GlobalOpenApiCustomizer;
+import org.springdoc.core.models.GroupedOpenApi;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
@@ -32,7 +35,10 @@ import org.springframework.context.annotation.Configuration;
 
 /**
  * Shapes the OpenAPI document generated from the controllers. The document is committed at
- * {@code docs/api/openapi.json}, so nothing in it may depend on where or when it was generated.
+ * {@code docs/api/openapi.json}, so nothing in it may depend on where or when it was generated. Every
+ * operation is tagged with the module that owns its path, and each module has a document of its own at
+ * {@code /v3/api-docs/<module>} holding only its paths ({@link ModuleOwnership}); the committed document
+ * holds them all and stays the contract.
  */
 @Configuration(proxyBeanMethods = false)
 @ConditionalOnProperty(name = "springdoc.api-docs.enabled", havingValue = "true")
@@ -41,18 +47,80 @@ class OpenApiConfiguration {
     static final String PROBLEM_SCHEMA = "Problem";
 
     @Bean
-    OpenAPI openApi(@Value("${spring.application.name}") String service) {
+    ModuleOwnership moduleOwnership() {
+        return ModuleOwnership.load();
+    }
+
+    @Bean
+    OpenAPI openApi(@Value("${spring.application.name}") String service, ModuleOwnership ownership) {
         return new OpenAPI()
                 .info(new Info()
                         .title(service)
                         .version("v1")
                         .description("The platform's REST API. Every error is problem details with a stable `code`."))
-                .servers(List.of(new Server().url("/")));
+                .servers(List.of(new Server().url("/")))
+                .tags(ownership.modules().stream()
+                        .map(OpenApiConfiguration::tag)
+                        .toList());
     }
 
-    /** Every operation can fail, and every failure has the same shape. */
+    // One document per module of the ownership map. Each is a bean of its own, declared here rather than
+    // registered from the map, because springdoc decides whether to serve grouped documents from the beans
+    // declared before its auto-configuration is read.
+
     @Bean
-    OpenApiCustomizer problemResponses() {
+    GroupedOpenApi identityDocument(ModuleOwnership ownership) {
+        return moduleDocument(ownership, "identity");
+    }
+
+    @Bean
+    GroupedOpenApi brandingDocument(ModuleOwnership ownership) {
+        return moduleDocument(ownership, "branding");
+    }
+
+    @Bean
+    GroupedOpenApi platformDocument(ModuleOwnership ownership) {
+        return moduleDocument(ownership, "platform");
+    }
+
+    @Bean
+    GroupedOpenApi sharedDocument(ModuleOwnership ownership) {
+        return moduleDocument(ownership, "shared");
+    }
+
+    /**
+     * The module's paths by the longest matching prefix: its own prefixes, less any longer prefix of another
+     * module beneath them ({@code /api/v1/salon} without {@code /api/v1/salon/invoices}).
+     */
+    private static GroupedOpenApi moduleDocument(ModuleOwnership ownership, String name) {
+        ModuleOwnership.Module module = ownership.module(name);
+        List<String> othersBeneath = ownership.modules().stream()
+                .filter(other -> !other.equals(module))
+                .flatMap(other -> other.paths().stream())
+                .filter(path -> module.paths().stream()
+                        .anyMatch(own -> !path.equals(own) && ModuleOwnership.underPrefix(path, own, '/')))
+                .toList();
+        return GroupedOpenApi.builder()
+                .group(module.name())
+                .pathsToMatch(withEverythingBeneath(module.paths()))
+                .pathsToExclude(withEverythingBeneath(othersBeneath))
+                .addOpenApiCustomizer(document -> document.setTags(List.of(tag(module))))
+                .build();
+    }
+
+    private static String[] withEverythingBeneath(List<String> prefixes) {
+        return prefixes.stream()
+                .flatMap(prefix -> Stream.of(prefix, prefix + "/**"))
+                .toArray(String[]::new);
+    }
+
+    private static Tag tag(ModuleOwnership.Module module) {
+        return new Tag().name(module.name()).description(module.description());
+    }
+
+    /** Every operation can fail, and every failure has the same shape, in every document. */
+    @Bean
+    GlobalOpenApiCustomizer problemResponses() {
         return openApi -> {
             if (openApi.getComponents() == null) {
                 openApi.setComponents(new Components());
@@ -92,7 +160,7 @@ class OpenApiConfiguration {
      * {@code null} among the enum values.
      */
     @Bean
-    OpenApiCustomizer nullableSchemas() {
+    GlobalOpenApiCustomizer nullableSchemas() {
         return openApi -> {
             if (openApi.getComponents() == null || openApi.getComponents().getSchemas() == null) {
                 return;

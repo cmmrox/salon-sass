@@ -6,6 +6,7 @@ import com.salonplatform.shared.web.NotFoundException;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.Locale;
 import org.springframework.beans.factory.annotation.Value;
@@ -25,6 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
  * request body.
  */
 @RestController
+@Tag(name = "platform")
 @RequestMapping(path = "/api/v1/billing", produces = MediaType.APPLICATION_JSON_VALUE)
 class BillingProviderController {
 

@@ -75,7 +75,7 @@ modules:
       - salon.retention
 
   shared:
-    description: The service's own metadata.
+    description: Technical capabilities every module runs on, and the service's own metadata.
     tables:
       - audit_entry
       - outbox_message

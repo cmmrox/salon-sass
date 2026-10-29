@@ -5,6 +5,7 @@ import com.salonplatform.platform.application.Paging;
 import com.salonplatform.platform.application.SupportSessions;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -24,6 +25,7 @@ import org.springframework.web.bind.annotation.RestController;
  * sees and revokes every one. Console host only (OperatorHostFilter).
  */
 @RestController
+@Tag(name = "platform")
 @RequestMapping(path = "/api/v1/operator", produces = MediaType.APPLICATION_JSON_VALUE)
 class OperatorSupportController {
 

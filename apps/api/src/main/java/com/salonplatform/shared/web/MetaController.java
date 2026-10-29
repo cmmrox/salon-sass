@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping(ApiPaths.V1 + "/meta")
-@Tag(name = "meta", description = "The service's own metadata.")
+@Tag(name = "shared")
 class MetaController {
 
     private final MetaService metaService;
