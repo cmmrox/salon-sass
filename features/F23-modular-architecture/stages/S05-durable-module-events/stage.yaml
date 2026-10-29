@@ -3,7 +3,7 @@ feature: F23
 title: Durable events between modules
 sequence: 7
 surfaces: [api]
-status: in-progress
+status: built
 qa_status: not-run
 blocked_reason: null
 released_in: null
@@ -12,9 +12,140 @@ depends_on: [F23-S08]
 requirements: []
 nfr_focus: [NFR-22, NFR-01, NFR-04]
 handoff:
-  run: null
-  data: null
-  notes: null
+  run: |
+    Build and checks: cd apps/api && ./mvnw verify   (Spotless, -Werror, unit, integration and architecture tests).
+      The stage's own tests: ./mvnw test -Dtest='ModuleEvents*IntegrationTest,ProcessedEventStoreRowLevelSecurityAloneIntegrationTest,OutboxEventsMigrationIntegrationTest,ModuleBoundariesTest,CustomerProfileIntegrationTest'.
+      Contract: pnpm contracts:check (corepack pnpm).
+    Running product: create an empty database in this project's container, then
+      SALON_DB_NAME=<it> infra/scripts/local-service.sh start api (local profile, API 8090). Optional, to see retries and the
+      dead state within seconds: SALON_OUTBOX_BACKOFF_INITIAL=2s SALON_OUTBOX_BACKOFF_MAX=4s SALON_OUTBOX_MAXATTEMPTS=3.
+    What this stage built is reached through a customer's data erasure: POST /api/v1/identity/customers/challenges (sms) on
+      alpha.localhost:8090, the code from GET /local/identity/captures/{challengeId}, POST /api/v1/identity/customers/sign-in,
+      then DELETE /api/v1/identity/customers/me {"confirm":true}. The event is the outbox_message row with kind 'event' and
+      channel 'event'; its processed records are in shared_processed_event.
+  data: |
+    One migration, V17__add_outbox_events.sql (additive): outbox_message gains kind (text NOT NULL DEFAULT 'delivery',
+      'delivery' or 'event') and event_type (text NULL, set exactly for an event), and an event's channel is 'event' and only an
+      event's (three CHECKs). New tenant table shared_processed_event (tenant_id, event_id, subscriber, created_at, updated_at;
+      PK (tenant_id, event_id, subscriber); FK tenant_id -> tenant; composite FK (tenant_id, event_id) -> outbox_message ON
+      DELETE CASCADE, so a record goes with its event under retention, privacy erasure and closed-salon deletion; RLS enabled
+      and forced with tenant_isolation; application role SELECT, INSERT only). outbox_erase_salon_rows is replaced (same
+      signature) to erase both outbox tables. Owned by shared in module-ownership.yaml; registered in OutboxTenantData
+      (export, then erasure: processed records first).
+    No seed or fixture change. The walk-through used a fresh database salon_f23_s05 in salon-postgres (17 migrations, local
+      seed salons alpha/beta/gamma), dropped afterwards; the retained database (with its stray V17 salon_setup) was not
+      touched. Synthetic numbers +94770005501..03 only. The API was not running before the walk-through and is stopped again.
+  notes: |
+    Developer gates (verification.commands), run from the repository root on the clean tree at cc14445; logs in
+    /Users/cmmrox/Personal/Projects/salon-sass/.local/logs/F23-S05/ (ignored path; keep until closure), surefire copies in surefire/.
+    | command | revision | result | log |
+    | cd apps/api && ./mvnw -q verify | cc14445 | exit 0 in 505 s; 130 report classes, 929 tests, 0 failures, 0 errors, 0 skipped (04:47-04:56 +05:30) | mvnw-verify.log, mvnw-verify.times |
+    | pnpm contracts:check | cc14445 | exit 0 in 48 s; "docs/api/openapi.json and packages/api-contracts/src/generated are current" | contracts-check.log |
+    An earlier verify at 962faa7 failed 1 of 860 (MigrationIntegrationTest's list of applied migrations lacked V17); fixed in
+    cc14445, log kept as mvnw-verify-962faa7-failed.log. Conditions: Maven on JDK 21.0.9 with the toolchain's JDK 25.0.1, pnpm
+    through Corepack, Testcontainers PostgreSQL (max_connections 200), test server on 127.0.0.1. No local API ran during the gates.
+
+    Acceptance criteria:
+    AC-1 checked. Tests (ModuleEventsIntegrationTest, own application with the dispatcher on): a committed event reaches both
+      subscribers of its type exactly once with its salon set and two processed records; a rolled-back publish leaves no row
+      and nothing is handled; publish is refused outside a transaction, in a read-only one, with no salon, for a record without
+      @EventType, and enqueue refuses the channel 'event'; a type with no subscriber is sent at attempt 1. Running product: an
+      erasure on alpha wrote one kind=event row, sent at attempt 1, one processed record for identity.local-message-capture.
+    AC-2 checked. Tests: a sent event set back to an expired lease is delivered again (attempts 2) and neither subscriber runs
+      twice; two concurrent deliveries of one event (a subscriber holding its transaction 300 ms) apply it once, one record;
+      two applications' dispatchers racing over 40 events in two salons deliver each to each subscriber once (80 records).
+      Running product: the same expired-lease reset on the erasure event -> "Delivered ... (attempt 2)", still 1 processed record.
+    AC-3 checked. Tests: a subscriber failing twice is retried after >= 300 ms then >= 600 ms (backoff 300 ms/600 ms) and succeeds
+      at attempt 3 while the steady subscriber ran once; one failing always goes dead after 3 attempts with last_error
+      "probe.flaky: the flaky probe refused <mark>" while another event is delivered meanwhile; a payload with an unknown or a
+      missing field goes dead with no processed record. Running product (backoff 2 s/4 s, 3 attempts): a CustomerDataErased.v1
+      row with an extra field failed at ~3 s and ~4 s gaps and went dead with the Jackson error (value redacted by Jackson) while
+      a real erasure published meanwhile was sent at once.
+    AC-4 checked. Tests: the reaching subscriber, on alpha's event with RLS on, sees through direct SQL only alpha's messages and
+      processed records, finds beta's message by id 0 times and changes it 0 times (ModuleEventsIntegrationTest); in a database
+      with RLS disabled on both outbox tables its direct SQL does see beta, while its repository reads only alpha's messages,
+      cannot find beta's by id and stamps its own write with alpha (ModuleEventsHibernateFilterAloneIntegrationTest); the
+      processed-record SQL in alpha's transaction naming beta, or with no salon, is refused by RLS (ProcessedEventStoreRow-
+      LevelSecurityAloneIntegrationTest). Running product, as salon_app: no salon set -> 0 rows; as alpha -> only alpha, beta's
+      event by id 0; inserting beta's record -> "new row violates row-level security policy"; DELETE -> permission denied.
+    AC-5 checked. Test: a suspended salon's event stays pending with 0 attempts for 500 ms and is delivered after reactivation.
+      Running product: beta suspended (its requests 403 salon_suspended), its event pending|0 after 4 s, sent|1 with its
+      processed record within 3 s of reactivation.
+    AC-6 checked. Running product: DELETE /customers/me -> 204; the row is identity.CustomerDataErased.v1, payload exactly
+      {"challengeIds":["<the erased challenge>"]}, sent, processed by identity.local-message-capture; the delivery's log line
+      carries tenant.id alpha and the DELETE request's trace.id (c84621e0...); the capture answers 404 afterwards. New test
+      deletionPublishesAnErasureEventOfIdsOnlyThatTheCaptureSubscriberProcesses (no number, name, email or customer id in the
+      payload). Under decision 063, every change to CustomerProfileIntegrationTest, each its own commit:
+        ee71779 the count right after the erasure in privacyErasureTraversesBoundedPagesWithoutSkippingDeletedRows now counts
+                channel IN ('sms','whatsapp');
+        d0b5a4f a bounded poll (5 s, 20 ms steps) before the unchanged capture hasSize(1) assertion in
+                deletingAfterExpiredChallengeCleanupStillErasesRetainedDeliveryAndOlderCapture;
+        4655653 the class's @BeforeEach reset also deletes event rows (OR kind = 'event');
+        962faa7 the new AC-6 test above.
+      With the reset, recognizedCorruptEnvelope... (count == 2) and the setup count == 111 in privacyErasure... pass unchanged
+      (they ran after several deletions in the class: 17/17 pass), so neither was narrowed. The identity erasure tests pass.
+    AC-7 checked. New ModuleRules.eventRecordsLiveInTheirModulesRootPackage: a class annotated @EventType is a record in its
+      module's root package whose type name begins with that module's name. It passes for the application and for the clean
+      fixture (clean/booking/BookingConfirmed) and fails on fixture misplacedevent naming booking.event.BookingConfirmed.
+      shared_processed_event is in shared's map entry; TableOwnershipIntegrationTest (prefix rule for tables new after V16)
+      passes.
+    AC-8 checked. 929/929 pass. Test lines removed across the stage (git diff aa13133..HEAD -- apps/api/src/test): no assertion
+      changed outside AC-6's list; the rest are inventory extensions the existing tests require of a new table or migration:
+      DatabaseIsolationCatalogueIntegrationTest (+ shared_processed_event among tenant tables, + its INSERT,SELECT grant),
+      MigrationIntegrationTest (+ ("17", "add outbox events")), ModuleRules.all() and ModuleBoundariesTest's violations (+ the
+      new rule and fixture), and OutboxStoreRowLevelSecurityAloneIntegrationTest's forged Claim (+ a null event type, as the
+      record gained a component). @Test/@ParameterizedTest annotations 476 -> 500. OpenAPI document and generated client:
+      contracts:check passes and git diff aa13133..cc14445 -- docs/api packages/api-contracts is empty. Running product: SMS and
+      WhatsApp codes were delivered and captured, a local probe was sent at attempt 1 (kind delivery); email capture is reached
+      only through billing and is covered by the billing integration tests in the gate, not walked.
+
+    Choices the documents left open (for the lead to write down):
+    - The event channel is the reserved name 'event' (refused for a provider at startup and by a CHECK), so the existing
+      outbox_due() selects events unchanged and a previous version, which asks only for its providers' channels, never claims
+      one. kind is the explicit discriminator beside it.
+    - The type name is declared by @EventType("<module>.<Event>.v<n>") on the record (shared.outbox), checked at publish, at
+      subscriber registration and by the architecture rule. A subscriber implements EventSubscriber<E> with a stable name()
+      ("<module>.<what it does>", recorded per event), event() and handle(E).
+    - Events take the provider's time limit (10 s) and a concurrency limit of provider.concurrency (4) on the 'event' channel,
+      and no circuit breaker; retry, backoff, max attempts, lease and shutdown are the outbox's.
+    - Payloads are read with FAIL_ON_UNKNOWN_PROPERTIES and FAIL_ON_MISSING_CREATOR_PROPERTIES; an explicit null is accepted.
+    - A failed delivery's last_error is "<subscriber>: <exception message>" for each failing subscriber, joined by "; ".
+    - CustomerDataErased lost its tenantId component: the salon is the event's own, and the subscriber reads it from
+      TenantContext rather than trusting the payload. CustomerMessageCapture implements the subscriber itself and stays in
+      identity/local/ (local profile only), not event/, because it is a local test hook.
+    - processed-record timestamps follow audit_entry: created_at and updated_at with CHECK updated_at = created_at.
+
+    Differences from the documents (backend.md "Events between modules" and others):
+    - backend.md "Logs, traces and meters": salon.outbox.deliveries now has a third tag, kind (delivery|event). salon.outbox.dead,
+      waiting and oldest.due.age still count events and messages together: tagging dead would break an existing test that reads
+      it untagged, and splitting the backlog gauges needs a new SECURITY DEFINER function. Delivery log lines name the event type
+      in place of the channel for an event.
+    - backend.md "Transactions, outbox and external calls" describes provider calls only; an event's attempt runs its
+      subscribers' transactions instead of a provider call, inside the same claim/record steps. "Events between modules" could
+      name @EventType, EventSubscriber, the 'event' channel and shared_processed_event.
+    - backend.md "Inside a module" says event/ holds listeners for other modules' events; the only subscriber today is a local
+      hook of the publishing module, kept in local/.
+    - backend.md "Persistence and migrations" named exception 3 (leasing and locking) now also covers the processed-record claim
+      (INSERT ... ON CONFLICT DO NOTHING in ProcessedEventStore).
+    - multi-tenancy.md and operator-console.md: the outbox's TenantDataModule now registers two tables; DatabaseIsolationCatalogue
+      lists them.
+    - identity-and-access.md "Implemented customer privacy contract" still describes "An opaque CustomerDataErased(tenantId,
+      challengeIds) event clears local captures after commit": it is now identity.CustomerDataErased.v1(challengeIds), published
+      through the outbox and handled by the dispatcher shortly after commit.
+
+    For a reviewer:
+    - OutboxDispatcher was 462 lines before this stage and is about 480 now (over backend.md's ~400). Splitting it was not in
+      scope; the event path is three small changes in it plus EventSubscribers.
+    - An event type no subscriber in the running version knows is delivered at once (spec). During a future rolling deploy, an
+      older instance would mark a newer event type delivered with nothing done; worth a rule before the first cross-version event.
+    - A subscriber's transaction may be interrupted by the 10 s time limit; its processed record then rolls back with it and the
+      event is retried.
+    - New test support EventProbes keeps probe tallies statically (two applications in one JVM add to one tally); each test uses
+      its own marks.
+
+    Not done: nothing in scope is left. Timings (from commit times and logs): implementation and tests about 60 min, two
+    test-scope rulings from the lead (decision 063) about 15 min, gates 505 s + 48 s plus one failed 401 s run, walk-through
+    about 10 min. Earlier reading time unknown.
 cases: []
 verification:
   commands:
