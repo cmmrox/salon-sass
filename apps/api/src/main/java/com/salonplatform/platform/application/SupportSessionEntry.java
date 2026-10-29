@@ -1,8 +1,10 @@
 package com.salonplatform.platform.application;
 
-import com.salonplatform.platform.application.SupportSessionRecords.Row;
 import com.salonplatform.platform.infrastructure.PlatformAudit;
 import com.salonplatform.platform.infrastructure.SupportCrypto;
+import com.salonplatform.platform.infrastructure.SupportSessionStore;
+import com.salonplatform.platform.infrastructure.SupportSessionStore.Entered;
+import com.salonplatform.platform.infrastructure.SupportSessionStore.Session;
 import com.salonplatform.shared.infrastructure.PlatformDatabase;
 import com.salonplatform.shared.tenancy.RequestSupport;
 import com.salonplatform.shared.tenancy.SupportCredentials;
@@ -12,11 +14,9 @@ import com.salonplatform.shared.web.ApplicationProblemException;
 import com.salonplatform.shared.web.ErrorCode;
 import com.salonplatform.shared.web.NotFoundException;
 import io.swagger.v3.oas.annotations.media.Schema;
-import java.sql.Timestamp;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -36,6 +36,7 @@ public class SupportSessionEntry implements SupportCredentials {
     public record SupportCredential(String accessToken, UUID sessionId, Instant issuedAt, Instant expiresAt) {}
 
     private final PlatformDatabase database;
+    private final SupportSessionStore store;
     private final OperatorWork work;
     private final SupportSessionRecords records;
     private final SupportCrypto crypto;
@@ -43,11 +44,13 @@ public class SupportSessionEntry implements SupportCredentials {
 
     public SupportSessionEntry(
             PlatformDatabase database,
+            SupportSessionStore store,
             OperatorWork work,
             SupportSessionRecords records,
             SupportCrypto crypto,
             Clock clock) {
         this.database = database;
+        this.store = store;
         this.work = work;
         this.records = records;
         this.crypto = crypto;
@@ -66,34 +69,14 @@ public class SupportSessionEntry implements SupportCredentials {
         }
         SupportCredential credential = database.inTransaction(status -> {
             Instant now = clock.instant();
-            Timestamp at = Timestamp.from(now);
-            // Consumed in one statement: of simultaneous exchanges exactly one updates the row.
-            List<Object[]> consumed = database.jdbcTemplate()
-                    .query(
-                            """
-                    UPDATE support_entry_code c SET consumed_at = ?, updated_at = ?
-                      FROM support_session s
-                     WHERE c.code_hash = ? AND c.consumed_at IS NULL AND c.expires_at > ?
-                       AND s.id = c.session_id AND s.salon_id = ? AND s.ended_at IS NULL AND s.expires_at > ?
-                    RETURNING s.id, s.operator_id, s.expires_at
-                    """,
-                            (row, n) -> new Object[] {
-                                row.getObject(1, UUID.class),
-                                row.getObject(2, UUID.class),
-                                row.getTimestamp(3).toInstant()
-                            },
-                            at,
-                            at,
-                            SupportCrypto.codeHash(code),
-                            at,
-                            salonId,
-                            at);
-            if (consumed.isEmpty()) {
+            Entered entered = store.consumeEntryCode(SupportCrypto.codeHash(code), salonId, now)
+                    .orElse(null);
+            if (entered == null) {
                 return null;
             }
-            UUID sessionId = (UUID) consumed.get(0)[0];
-            UUID operatorId = (UUID) consumed.get(0)[1];
-            Instant expiresAt = (Instant) consumed.get(0)[2];
+            UUID sessionId = entered.sessionId();
+            UUID operatorId = entered.operatorId();
+            Instant expiresAt = entered.expiresAt();
             if (!records.operatorActive(operatorId)) {
                 status.setRollbackOnly();
                 return null;
@@ -117,7 +100,7 @@ public class SupportSessionEntry implements SupportCredentials {
         SupportGrant grant = RequestSupport.current()
                 .orElseThrow(() -> new ApplicationProblemException(401, ErrorCode.INVALID_SESSION));
         work.run(() -> {
-            Row row = records.lockRow(grant.sessionId())
+            Session row = records.lockRow(grant.sessionId())
                     .filter(each -> each.salonId().equals(grant.salonId()))
                     .orElseThrow(() -> new ApplicationProblemException(401, ErrorCode.INVALID_SESSION));
             if (!row.open(clock.instant())) {
@@ -150,7 +133,7 @@ public class SupportSessionEntry implements SupportCredentials {
             throw new ApplicationProblemException(401, ErrorCode.INVALID_SESSION);
         }
         // The stored session decides: its exact expiry, and whether it is still open and its operator active.
-        Row live = database.inTransaction(status -> {
+        Session live = database.inTransaction(status -> {
             Instant now = clock.instant();
             return records.find(verified.sessionId())
                     .filter(row -> row.salonId().equals(salonId)

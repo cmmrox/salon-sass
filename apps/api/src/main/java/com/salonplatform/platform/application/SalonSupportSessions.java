@@ -1,12 +1,10 @@
 package com.salonplatform.platform.application;
 
-import static com.salonplatform.platform.application.SupportSessionRecords.SELECT;
-import static com.salonplatform.platform.application.SupportSessionRecords.row;
-
 import com.salonplatform.identity.Principal;
 import com.salonplatform.identity.Principals;
-import com.salonplatform.platform.application.SupportSessionRecords.Row;
 import com.salonplatform.platform.application.SupportSessions.SupportSessionView;
+import com.salonplatform.platform.infrastructure.SupportSessionStore;
+import com.salonplatform.platform.infrastructure.SupportSessionStore.Session;
 import com.salonplatform.shared.infrastructure.PlatformDatabase;
 import com.salonplatform.shared.tenancy.TenantContext;
 import com.salonplatform.shared.web.NotFoundException;
@@ -60,6 +58,7 @@ public class SalonSupportSessions {
     public record SalonSupportSessionPage(List<SalonSupportSession> items, int page, int size, long total) {}
 
     private final PlatformDatabase database;
+    private final SupportSessionStore store;
     private final OperatorWork work;
     private final SupportSessionRecords records;
     private final Principals principals;
@@ -67,11 +66,13 @@ public class SalonSupportSessions {
 
     public SalonSupportSessions(
             PlatformDatabase database,
+            SupportSessionStore store,
             OperatorWork work,
             SupportSessionRecords records,
             Principals principals,
             Clock clock) {
         this.database = database;
+        this.store = store;
         this.work = work;
         this.records = records;
         this.principals = principals;
@@ -84,28 +85,22 @@ public class SalonSupportSessions {
         principals.require("support.manage");
         return database.inTransaction(status -> {
             Instant now = clock.instant();
-            List<SalonSupportSession> items = database.jdbcTemplate()
-                    .query(
-                            SELECT + " WHERE s.salon_id = ? ORDER BY s.started_at DESC, s.id LIMIT ? OFFSET ?",
-                            (row, n) -> {
-                                Row each = row(row);
-                                SupportSessionView view = records.view(each, now);
-                                return new SalonSupportSession(
-                                        each.id(),
-                                        each.operatorName(),
-                                        each.reason(),
-                                        each.startedAt(),
-                                        each.expiresAt(),
-                                        view.endedAt(),
-                                        view.endedBy(),
-                                        view.state());
-                            },
-                            salonId,
-                            paging.size(),
-                            paging.offset());
-            Long total = database.jdbcTemplate()
-                    .queryForObject("SELECT count(*) FROM support_session WHERE salon_id = ?", Long.class, salonId);
-            return new SalonSupportSessionPage(items, paging.page(), paging.size(), total == null ? 0 : total);
+            List<SalonSupportSession> items = store.pageOfSalon(salonId, paging.size(), paging.offset()).stream()
+                    .map(each -> {
+                        SupportSessionView view = records.view(each, now);
+                        return new SalonSupportSession(
+                                each.id(),
+                                each.operatorName(),
+                                each.reason(),
+                                each.startedAt(),
+                                each.expiresAt(),
+                                view.endedAt(),
+                                view.endedBy(),
+                                view.state());
+                    })
+                    .toList();
+            long total = store.countOfSalon(salonId);
+            return new SalonSupportSessionPage(items, paging.page(), paging.size(), total);
         });
     }
 
@@ -114,7 +109,7 @@ public class SalonSupportSessions {
         UUID salonId = TenantContext.require().id();
         Principal owner = principals.require("support.manage");
         work.run(() -> {
-            Row row = records.lockRow(sessionId)
+            Session row = records.lockRow(sessionId)
                     .filter(each -> each.salonId().equals(salonId))
                     .orElseThrow(NotFoundException::new);
             records.finish(
