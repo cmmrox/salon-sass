@@ -1,5 +1,6 @@
 package com.salonplatform.platform.infrastructure;
 
+import com.salonplatform.shared.secrets.SecretKeys;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -18,6 +19,7 @@ import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.HexFormat;
+import java.util.Map;
 import java.util.Properties;
 import javax.crypto.Cipher;
 import javax.crypto.spec.GCMParameterSpec;
@@ -37,7 +39,7 @@ import org.springframework.stereotype.Component;
  * <p>Also issues the 256-bit download tokens, of which only a SHA-256 hash is stored.
  */
 @Component
-public class ExportKey {
+public class ExportKey implements SecretKeys {
 
     private static final int NONCE = 12;
     private static final int TAG_BITS = 128;
@@ -60,10 +62,6 @@ public class ExportKey {
             "salon.operator.encryption-key",
             "salon.operator.proxy-key",
             "salon.operator.fingerprint-key",
-            "salon.identity.signing-key",
-            "salon.identity.challenge-key",
-            "salon.identity.encryption-key",
-            "salon.identity.proxy-key",
             "salon.billing.provider-key"
         }) {
             String other = environment.getProperty(name);
@@ -74,6 +72,11 @@ public class ExportKey {
             }
         }
         key = new SecretKeySpec(bytes, "AES");
+    }
+
+    @Override
+    public Map<String, byte[]> byPurpose() {
+        return Map.of("export", key.getEncoded());
     }
 
     /** Encrypts a value for one purpose: the nonce followed by the ciphertext and its tag. */

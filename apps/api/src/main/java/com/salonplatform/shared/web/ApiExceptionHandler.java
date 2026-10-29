@@ -8,6 +8,7 @@ import java.util.List;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springdoc.api.OpenApiResourceNotFoundException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -115,10 +116,13 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         return handleExceptionInternal(ex, body, new HttpHeaders(), HttpStatus.FORBIDDEN, request);
     }
 
-    /** Something that names nothing that exists, such as a record of another salon: 404. */
-    @ExceptionHandler(NotFoundException.class)
+    /**
+     * Something that names nothing that exists, such as a record of another salon, or the OpenAPI document of
+     * a module that has none (served in the local profile only): 404.
+     */
+    @ExceptionHandler({NotFoundException.class, OpenApiResourceNotFoundException.class})
     @Nullable
-    ResponseEntity<Object> handleNotFound(NotFoundException ex, WebRequest request) {
+    ResponseEntity<Object> handleNotFound(RuntimeException ex, WebRequest request) {
         return handleExceptionInternal(ex, null, new HttpHeaders(), HttpStatus.NOT_FOUND, request);
     }
 

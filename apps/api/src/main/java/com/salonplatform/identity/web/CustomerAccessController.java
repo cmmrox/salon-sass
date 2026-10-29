@@ -4,6 +4,7 @@ import com.salonplatform.identity.application.CustomerAccess;
 import com.salonplatform.identity.application.Tokens;
 import com.salonplatform.identity.infrastructure.CustomerDevice;
 import com.salonplatform.shared.tenancy.TenantContext;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.*;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
  * Customer authentication is public, salon-selected and bound to an authenticated device cookie.
  */
 @RestController
+@Tag(name = "identity")
 @RequestMapping(path = "/api/v1/identity/customers", produces = MediaType.APPLICATION_JSON_VALUE)
 @io.swagger.v3.oas.annotations.security.SecurityScheme(
         name = "customerDevice",

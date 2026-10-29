@@ -3,6 +3,7 @@ package com.salonplatform.identity.web;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.salonplatform.identity.application.CustomerProfile;
 import com.salonplatform.shared.web.*;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import java.time.LocalDate;
@@ -11,6 +12,7 @@ import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
+@Tag(name = "identity")
 @RequestMapping(path = "/api/v1/identity/customers/me", produces = MediaType.APPLICATION_JSON_VALUE)
 class CustomerProfileController {
     private final CustomerProfile profile;

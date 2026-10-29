@@ -9,6 +9,7 @@ import com.salonplatform.platform.application.SubscriptionBilling;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -31,6 +32,7 @@ import org.springframework.web.bind.annotation.RestController;
  * bank transfers. Console host only, as every operator route.
  */
 @RestController
+@Tag(name = "platform")
 @RequestMapping(path = "/api/v1/operator", produces = MediaType.APPLICATION_JSON_VALUE)
 class OperatorBillingController {
 

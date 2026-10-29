@@ -7,6 +7,7 @@ import com.salonplatform.shared.web.ApiPaths;
 import com.salonplatform.shared.web.NotFoundException;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.UUID;
 import org.springframework.http.CacheControl;
 import org.springframework.http.MediaType;
@@ -22,6 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
  * (F03-S02). Reads only.
  */
 @RestController
+@Tag(name = "platform")
 @RequestMapping(path = ApiPaths.V1 + "/salon", produces = MediaType.APPLICATION_JSON_VALUE)
 class SalonBillingController {
 

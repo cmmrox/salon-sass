@@ -3,7 +3,7 @@ feature: F23
 title: Table and API ownership by module
 sequence: 4
 surfaces: [api, web]
-status: outlined
+status: complete
 qa_status: not-run
 blocked_reason: null
 released_in: null
@@ -12,12 +12,129 @@ depends_on: [F23-S02]
 requirements: []
 nfr_focus: [NFR-22, NFR-18]
 handoff:
-  run: null
-  data: null
-  notes: null
+  run: |
+    Build and checks: cd apps/api && ./mvnw verify   (Spotless, -Werror, unit, integration and architecture tests).
+      Ownership rules only: ./mvnw test -Dtest='TableOwnershipIntegrationTest,CodeOwnershipTest,ApiOwnershipIntegrationTest,IndependentKeysTest'.
+      Contract and per-module client: pnpm contracts:check; pnpm --filter @salon/api-contracts typecheck test.
+    Running product: infra/scripts/local-service.sh start api (local profile, API 8090) and start web (3100).
+      Documents: GET http://localhost:8090/v3/api-docs (all modules) and /v3/api-docs/{identity,branding,platform,shared}.
+  data: |
+    No migration, seed or fixture change. The walk-through ran against a fresh database salon_f23_s04 in this project's own
+      container (created, migrated with the local seed, dropped afterwards), because the retained database carries a V17
+      salon_setup table from work not on this branch and POST /local/operator/reset fails there on its foreign key to tenant
+      (it fails before reaching any code this stage changed). Synthetic owner.walk@alpha.test and admin.walk@operator.test were
+      seeded through the local hooks with random credentials, not recorded; they went with that database. The retained database
+      is untouched. The local API is left running from 2b39d2d on the retained database; the web app is stopped, as found.
+  notes: |
+    Developer gates (verification.commands), run from the repository root on a clean tree; logs in
+    /Users/cmmrox/Personal/Projects/salon-sass/.local/verification/F23-S04/ (ignored path; keep until closure), API surefire copies in surefire/.
+    | command | revision | result | log |
+    | cd apps/api && ./mvnw -q verify | 2b39d2d | exit 0; 104 classes, 823 tests, 0 failures, 0 errors, 0 skipped | 1-api-verify.log |
+    | pnpm contracts:check | 2b39d2d | exit 0; "docs/api/openapi.json and packages/api-contracts/src/generated are current" | 2-contracts-check.log |
+    | pnpm -r lint | 37d6514 | exit 0 | 3-lint.log |
+    | pnpm -r typecheck | 37d6514 | exit 0 (includes test/module-boundaries.ts) | 4-typecheck.log |
+    | pnpm -r test | 37d6514 | exit 0; api-contracts 25 tests, web 679 tests | 5-test.log |
+    | pnpm --filter @salon/web build | 37d6514 | exit 0 on the second run; the first stopped after compiling on a one-time Next.js security-advisory nudge (6-web-build.attempt1.log) | 6-web-build.log |
+    2b39d2d changed only apps/api Java (ApiExceptionHandler and its test), which none of the pnpm gates read, so their 37d6514 results stand;
+    the two API gates were rerun on 2b39d2d (earlier 37d6514 runs, also green, in superseded/). Conditions: Maven on JDK 21.0.9 with the
+    toolchain's JDK 25.0.1, Node 24.12.0, pnpm 12.11.2 (Corepack), Docker 29.8.2, Testcontainers postgres:18.6 (max_connections 200). The
+    local API was stopped while the jar was rebuilt.
+
+    Acceptance criteria:
+    AC-1 checked: TableOwnershipIntegrationTest reads the tables of a database the migrations built (pg_class, flyway_schema_history left
+      out). Passes for the application (35 tables, each in exactly one map entry). Faults, each in a rolled-back transaction: CREATE TABLE
+      stray_table -> "in the database but in no module's map entry"; DROP TABLE billing_reminder -> "in platform's map entry but not in the
+      database"; a map listing booking_hold under two modules is refused on load naming "booking_hold (booking, payment)".
+    AC-2 checked: same test over pg_constraint. Passes for the application: only tenant_id -> tenant crosses modules. Faults:
+      identity_guard(tenant_id) -> salon_brand is found; identity_guard(closed_salon) -> tenant is found (the salon, but not by tenant_id).
+      Prefix rule: tables absent after V16 (migrated to target 16 first) must start with <module>_; passes (none yet); a fixture map with
+      catalogue and a new service_variant table is found.
+    AC-3 checked: CodeOwnershipTest reads every compiled class's string constants (literals and concatenation recipes) and annotation
+      values with the JDK class-file API. @Table/@JoinTable/@CollectionTable names, and SQL or JPQL names after FROM/JOIN/INTO/UPDATE/TABLE/
+      TRUNCATE (tables, and entities by their class's module), must be the class's module's. It found the two real breaches first
+      (platform's SalonMessageCounts on outbox_message, LocalResetStore on scheduled_job), now moved into shared. Fixtures under
+      src/test/compile-fixtures/fixture/ownership: sqlliteral, jpql and tableannotation each fail naming the class; clean passes.
+    AC-4 checked: ApiOwnershipIntegrationTest over /v3/api-docs: every operation has exactly one tag, its module by longest prefix.
+      Fixture documents: untagged, two tags, tag branding on /api/v1/salon/invoices/{id}, and /api/v1/salons (no prefix) each fail with
+      their sentence. Each module's /v3/api-docs/<module> holds exactly its paths (parameterised over the map's modules). On the running
+      product: 52 paths tagged platform 39 operations, identity 21, shared 1, branding 1; per-module documents 16/1/34/1 paths.
+    AC-5 checked: the generated document, the committed one and the running product's, with every "tags" key removed, are identical to
+      origin/main's docs/api/openapi.json (diff empty). packages/api-contracts/src/generated/schema.ts is byte-identical (openapi-typescript
+      emits no tags). pnpm contracts:check passes.
+    AC-6 checked: package.json exports ./identity, ./branding, ./platform, ./shared (generated src/generated/<module>.ts: Pick of that
+      module's paths, operations and the schemas they use, transitively, plus a client bound to them). test/module-boundaries.ts imports
+      every entry by its package name and has @ts-expect-error on another module's path, schema and client call; pointing ./identity at
+      the root made typecheck fail with 2 unused directives (checked, reverted). The root export still compiles in the web (pnpm -r
+      typecheck, web build). modules.test.ts: exports match the generated files and the API's tags; module clients request their paths.
+    AC-7 checked: CodeOwnershipTest's settings rule: a string starting salon. or a ${salon.} placeholder under another business module's
+      setting prefix (map, longest prefix) is a breach; shared reads only its own. It found 13 real reads (platform of salon.identity.*),
+      now removed; fixtures valuesetting (@Value), concatsetting (getProperty("salon.identity." + name + "-key")) and sharedsetting fail.
+      Property: no secret key may equal another. Each key holder (IdentitySecrets, OperatorSecrets, BillingProviderKey, ExportKey,
+      SupportCrypto) now implements shared.secrets.SecretKeys; shared.secrets.IndependentKeys compares every key with every other at
+      startup in constant time and names the two purposes, never a value. IndependentKeysTest starts the real key beans: identity
+      signing/challenge/encryption/proxy equal to operator signing, billing provider, export and support signing are each refused; with
+      the comparison disabled 5 of its 7 tests fail (checked, reverted). On the running jar: SALON_SUPPORT_SIGNING_KEY set to the
+      retained identity signing key -> start refused, "The identity signing and support signing keys are the same: every secret key must
+      be independent of every other"; the key value appears 0 times in that log (walk-equal-keys.log).
+    AC-8 checked: all 823 API tests and 679 web tests pass. Two existing tests changed arrangement, not assertions (below). Running
+      product (fresh database, 2b39d2d, web on 3100): operator signed in with password and TOTP at console.localhost:3100, salon list
+      (3 synthetic salons), Alpha's detail with lifecycle and "No subscription"; Alpha owner signed in with TOTP at alpha.localhost:3100,
+      Account and security, Staff access, Plan and billing (entitlements and invoices: platform paths under /api/v1/salon) and Support
+      access. API log: every call 200 except operator .../subscription 404, the designed answer for an unbilled salon. Local hooks moved
+      by this stage: POST /local/operator/reset after moving the test clock to 2027 -> jobsRescheduled 7, no occurrence left in the
+      future; GET /local/operator/salons/{alpha}/background reads outbox counts (on the retained database: delivered 4, cancelled 73).
+
+    Tests changed (assertions unchanged):
+    - PlatformTenantSqlRowLevelSecurityAloneIntegrationTest: theMessageCountsReachOnlyTheSalonSetEvenWhenAskedForAnother moved, with
+      identical assertions, to shared/outbox/SalonMessageCountsRowLevelSecurityAloneIntegrationTest, because SalonMessageCounts moved to
+      shared (its messages are now inserted as the owner instead of through PlatformOutbox).
+    - SupportCryptoTest.theKeyIsRequiredAndIndependentOfEveryOtherKey: salon.identity.signing-key dropped from its loop, because
+      SupportCrypto may no longer read identity's settings; the identity-versus-support case is now IndependentKeysTest's.
+
+    Built beyond the letter of the spec, for the lead to accept or reject:
+    - module-ownership.yaml also carries each module's settings prefixes and a description (the OpenAPI tag description). The settings
+      lists are what make AC-7 checkable without renaming settings.
+    - Unknown module document (/v3/api-docs/catalogue) answered 500 internal_error once groups existed; now 404 not_found
+      (ApiExceptionHandler maps springdoc's OpenApiResourceNotFoundException). Local and test profiles only.
+    - IdentitySecrets and BillingProviderKey were brought to the clean-code standard (braces, imports, Javadoc); no behaviour change.
+
+    Differences from the documents (the lead corrects them; nothing under docs/ edited except the generated openapi.json):
+    1. backend.md "A business module's settings are under salon.<module>.*": not true of platform, whose settings are salon.operator,
+       salon.billing, salon.export, salon.support and salon.retention (the map also reserves salon.platform). Not renamed: a setting's name
+       is its environment variable's (SALON_EXPORT_KEY, SALON_EXPORT_LOCAL_KEY_FILE), so a rename changes deployments. Decision needed.
+    2. Spec/backend.md list shared's settings as salon.platform-domain, database, outbox, jobs; shared also reads salon.server.* and
+       salon.platform.datasource.* (the platform pool, PlatformDatabase). The map gives both to shared; salon.platform.datasource beats
+       platform's salon.platform by longest prefix. Every module may read shared's settings (identity and platform read
+       salon.platform-domain); a business module's may not be read by any other.
+    3. backend.md "Modules"/named interfaces: shared gains the named interface secrets (SecretKeys, IndependentKeys); identity and
+       platform declare "shared :: secrets". Key independence across modules is now shared's check, not each key class's.
+    4. Local test hooks: SalonMessageCounts moved to shared.outbox and the job rewind became shared.jobs.LocalJobRewind (both
+       @Profile("local")), because only shared names its tables.
+    5. springdoc: the global springdoc.paths-to-match was removed, because springdoc applies it in place of every group's own
+       selection. The local hooks are @Hidden and ApiOwnershipIntegrationTest holds every documented path to a map prefix. Each module's
+       GroupedOpenApi is an explicit bean in OpenApiConfiguration (springdoc decides on grouping from beans declared before its
+       auto-configuration), so a new module needs a map entry and a bean; the parameterised test fails without the bean.
+    6. web.md "imported per module": entries are generated files src/generated/<module>.ts grouped by the operations' module tags (equal
+       to the map's prefixes by AC-4), not a type filter over prefixes; ApiClient/createApiClient at the root gained a defaulted type
+       parameter. Web imports unchanged (F23-S06).
+    7. Ownership rules check tables only, not SQL functions (tenant_by_*, *_erase_salon_rows, outbox_enqueue_for_salon, ...). The SQL
+       scan sees the first table after each keyword (a comma join's second table is not seen) and cannot see a table name built at run
+       time. A future path /api/v1/salon/<new> is branding's unless platform's list claims it.
+    8. Observed: Next.js reported a known security advisory and suggests "next upgrade --agent=security"; not acted on (a dependency
+       change outside this stage). The retained local database has V17 salon_setup (see data).
+
+    Time (observed): implementation and tests about 60 min (commits 01:53-02:14 after reading); gates about 25 min including the rerun;
+    walk-through about 15 min; diagnosis/rework: the springdoc grouping (registry bean, then the global filter) and the 404 fix, about
+    15 min inside the above.
 cases: []
 verification:
-  commands: []
+  commands:
+  - cd apps/api && ./mvnw -q verify
+  - pnpm contracts:check
+  - pnpm -r lint
+  - pnpm -r typecheck
+  - pnpm -r test
+  - pnpm --filter @salon/web build
   automation: []
   manual: []
   deferred: []

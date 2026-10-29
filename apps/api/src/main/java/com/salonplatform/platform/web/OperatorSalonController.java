@@ -8,6 +8,7 @@ import com.salonplatform.platform.application.SalonProvisioning;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.UUID;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
@@ -25,6 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 /** The salon directory, salon detail and idempotent salon/first-Owner provisioning. */
 @RestController
+@Tag(name = "platform")
 @RequestMapping(path = "/api/v1/operator/salons", produces = MediaType.APPLICATION_JSON_VALUE)
 class OperatorSalonController {
 

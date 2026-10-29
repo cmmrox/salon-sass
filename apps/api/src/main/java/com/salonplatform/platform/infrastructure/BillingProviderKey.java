@@ -1,9 +1,11 @@
 package com.salonplatform.platform.infrastructure;
 
+import com.salonplatform.shared.secrets.SecretKeys;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.channels.FileChannel;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -14,6 +16,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.HexFormat;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import javax.crypto.Mac;
@@ -24,13 +27,13 @@ import org.springframework.stereotype.Component;
 /**
  * The billing provider's event-signing key (docs/architecture/operator-console.md, "Local test hooks"):
  * provider events carry a lowercase hex HMAC-SHA256 of their exact body in {@value #HEADER}. The key is
- * {@code SALON_BILLING_PROVIDER_KEY} (64 hex characters), independent of every operator and identity
- * key. {@code local} alone generates a missing one into an ignored file readable by its owner only and
+ * {@code SALON_BILLING_PROVIDER_KEY} (64 hex characters), independent of every other key the application
+ * holds ({@link SecretKeys}). {@code local} alone generates a missing one into an ignored file readable by its owner only and
  * keeps it across restarts. Elsewhere no real provider is chosen while D-06 is open: without a
  * configured key there is no provider, and the event intake answers as if it did not exist.
  */
 @Component
-public class BillingProviderKey {
+public class BillingProviderKey implements SecretKeys {
 
     /** The request header carrying an event's signature. */
     public static final String HEADER = "X-Salon-Billing-Signature";
@@ -53,11 +56,7 @@ public class BillingProviderKey {
                 "salon.operator.challenge-key",
                 "salon.operator.encryption-key",
                 "salon.operator.proxy-key",
-                "salon.operator.fingerprint-key",
-                "salon.identity.signing-key",
-                "salon.identity.challenge-key",
-                "salon.identity.encryption-key",
-                "salon.identity.proxy-key"
+                "salon.operator.fingerprint-key"
             }) {
                 String other = environment.getProperty(name);
                 if (other != null
@@ -67,6 +66,11 @@ public class BillingProviderKey {
                 }
             }
         }
+    }
+
+    @Override
+    public Map<String, byte[]> byPurpose() {
+        return key == null ? Map.of() : Map.of("billing provider", key.clone());
     }
 
     /** Whether a provider key is configured. */
@@ -94,8 +98,8 @@ public class BillingProviderKey {
             return false;
         }
         return MessageDigest.isEqual(
-                sign(body).orElseThrow().getBytes(java.nio.charset.StandardCharsets.US_ASCII),
-                signature.getBytes(java.nio.charset.StandardCharsets.US_ASCII));
+                sign(body).orElseThrow().getBytes(StandardCharsets.US_ASCII),
+                signature.getBytes(StandardCharsets.US_ASCII));
     }
 
     private static synchronized String retained(Environment environment) {

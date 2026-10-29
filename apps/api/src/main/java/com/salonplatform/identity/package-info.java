@@ -17,6 +17,7 @@
             "shared :: mapping",
             "shared :: outbox",
             "shared :: persistence",
+            "shared :: secrets",
             "shared :: tenancy",
             "shared :: time",
             "shared :: web"

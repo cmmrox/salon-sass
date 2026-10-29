@@ -190,11 +190,12 @@ salon:
     listen-on-network: ${SALON_LISTEN_ON_NETWORK:true}
 
 # The OpenAPI document is generated at build time and committed. The running service serves it
-# only where a profile turns it on.
+# only where a profile turns it on. No paths-to-match here: springdoc would apply it instead of each
+# module's own selection (OpenApiConfiguration). The local hooks are @Hidden, and a test holds every
+# documented path to a module's prefix under /api/v1 (ApiOwnershipIntegrationTest).
 springdoc:
   api-docs:
     enabled: false
-  paths-to-match: /api/**
   writer-with-order-by-keys: true
 
 # No nonlocal fallback keys. Four independent 32-byte keys encoded as 64 hexadecimal characters.

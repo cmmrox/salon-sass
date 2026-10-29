@@ -2,8 +2,8 @@ import createClient, { type Client } from 'openapi-fetch';
 
 import type { paths } from './generated/schema';
 
-/** A client for the API, typed by the generated contract. */
-export type ApiClient = Client<paths>;
+/** A client for the API, typed by the generated contract: all of it, or one module's paths. */
+export type ApiClient<Paths extends object = paths> = Client<Paths>;
 
 export interface ApiClientOptions {
   /** Where the API is, without a trailing slash: `http://localhost:8090`. */
@@ -18,8 +18,8 @@ export interface ApiClientOptions {
  * Creates a client for the API. Every path, parameter and response is typed from
  * `docs/api/openapi.json`; a call that the contract does not describe does not compile.
  */
-export function createApiClient(options: ApiClientOptions): ApiClient {
-  return createClient<paths>({
+export function createApiClient<Paths extends object = paths>(options: ApiClientOptions): ApiClient<Paths> {
+  return createClient<Paths>({
     baseUrl: options.baseUrl,
     fetch: options.fetch,
     headers: options.headers,

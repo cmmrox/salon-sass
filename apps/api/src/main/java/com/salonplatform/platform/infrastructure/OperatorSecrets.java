@@ -1,5 +1,6 @@
 package com.salonplatform.platform.infrastructure;
 
+import com.salonplatform.shared.secrets.SecretKeys;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -11,10 +12,10 @@ import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
-import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Properties;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
@@ -22,13 +23,14 @@ import org.springframework.stereotype.Component;
 /**
  * The operator console's five independent 256-bit keys (docs/architecture/operator-console.md):
  * access-token signing, challenge/refresh hashing, MFA secret encryption, the operator sign-in
- * address assertion and idempotency fingerprints. Each is separate from every identity key. Outside
+ * address assertion and idempotency fingerprints. Each is separate from every other key the application
+ * holds, the identity keys included ({@link SecretKeys}). Outside
  * {@code local} every key must be configured ({@code SALON_OPERATOR_*_KEY}); {@code local} alone
  * generates missing ones into an ignored file readable by its owner only and keeps them across
  * restarts, so sessions and fingerprints stay valid.
  */
 @Component
-public class OperatorSecrets {
+public class OperatorSecrets implements SecretKeys {
 
     static final List<String> NAMES = List.of("signing", "challenge", "encryption", "proxy", "fingerprint");
 
@@ -45,19 +47,11 @@ public class OperatorSecrets {
         encryption = read(environment, saved, "encryption");
         proxy = read(environment, saved, "proxy");
         fingerprint = read(environment, saved, "fingerprint");
-        List<byte[]> keys = new ArrayList<>(List.of(signing, challenge, encryption, proxy, fingerprint));
-        // Configured identity keys are compared too: an operator key must never equal one of them.
-        for (String name : List.of("signing", "challenge", "encryption", "proxy")) {
-            String value = environment.getProperty("salon.identity." + name + "-key");
-            if (value != null && value.matches("[0-9a-fA-F]{64}")) {
-                keys.add(HexFormat.of().parseHex(value));
-            }
-        }
+        List<byte[]> keys = List.of(signing, challenge, encryption, proxy, fingerprint);
         for (int a = 0; a < keys.size(); a++) {
             for (int b = a + 1; b < keys.size(); b++) {
                 if (MessageDigest.isEqual(keys.get(a), keys.get(b))) {
-                    throw new IllegalStateException(
-                            "Operator keys must be independent of each other and of identity keys");
+                    throw new IllegalStateException("Operator keys must be independent of each other");
                 }
             }
         }
@@ -132,6 +126,16 @@ public class OperatorSecrets {
                 }
             }
         }
+    }
+
+    @Override
+    public Map<String, byte[]> byPurpose() {
+        return Map.of(
+                "operator signing", signing(),
+                "operator challenge", challenge(),
+                "operator encryption", encryption(),
+                "operator proxy", proxy(),
+                "operator fingerprint", fingerprint());
     }
 
     byte[] signing() {

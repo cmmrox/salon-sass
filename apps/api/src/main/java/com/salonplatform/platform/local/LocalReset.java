@@ -5,6 +5,7 @@ import com.salonplatform.platform.application.SalonExports;
 import com.salonplatform.platform.domain.LifecycleTerms;
 import com.salonplatform.platform.infrastructure.LocalResetStore;
 import com.salonplatform.shared.infrastructure.PlatformDatabase;
+import com.salonplatform.shared.jobs.LocalJobRewind;
 import com.salonplatform.shared.jobs.TenantJobActivity;
 import com.salonplatform.shared.lifecycle.TenantDataModule;
 import com.salonplatform.shared.time.ResettableClock;
@@ -56,6 +57,7 @@ class LocalReset {
     private final TenantJobActivity activity;
     private final ObjectProvider<ResettableClock> clock;
     private final LocalResetStore store;
+    private final LocalJobRewind jobs;
 
     LocalReset(
             PlatformDatabase platform,
@@ -64,7 +66,8 @@ class LocalReset {
             LocalEmailCapture emails,
             TenantJobActivity activity,
             ObjectProvider<ResettableClock> clock,
-            LocalResetStore store) {
+            LocalResetStore store,
+            LocalJobRewind jobs) {
         this.platform = platform;
         this.exports = exports;
         this.accounts = accounts;
@@ -72,6 +75,7 @@ class LocalReset {
         this.activity = activity;
         this.clock = clock;
         this.store = store;
+        this.jobs = jobs;
     }
 
     synchronized Result reset() {
@@ -86,7 +90,7 @@ class LocalReset {
             store.removePlatformRows(salon.id());
             removed.add(salon.id());
         }
-        int rescheduled = store.rescheduleJobs(now);
+        int rescheduled = jobs.rewindTo(now);
         accounts.resetFixtures();
         emails.clearSalons(new HashSet<>(removed));
         activity.clear();
