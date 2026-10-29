@@ -46,7 +46,9 @@ class OutboxConfiguration {
         guards.put(
                 EventTypes.CHANNEL,
                 ChannelGuard.withoutBreaker(settings.provider().concurrency()));
+        DeliveryAttempts attempts =
+                new DeliveryAttempts(settings, store, providers, events, transactions, clock, traces, metrics);
         return new OutboxDispatcher(
-                settings, store, providers, events, Map.copyOf(guards), tenants, transactions, clock, traces, metrics);
+                settings, store, attempts, Map.copyOf(guards), tenants, transactions, clock, metrics);
     }
 }

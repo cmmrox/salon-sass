@@ -1,6 +1,5 @@
 package com.salonplatform.shared.outbox;
 
-import com.salonplatform.shared.observability.Traces;
 import com.salonplatform.shared.tenancy.ActiveTenants;
 import com.salonplatform.shared.tenancy.CurrentTenant;
 import com.salonplatform.shared.tenancy.TenantContext;
@@ -18,12 +17,9 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.SmartLifecycle;
@@ -37,11 +33,11 @@ import org.springframework.transaction.support.TransactionTemplate;
  * <ol>
  *   <li>claims it in a short transaction with a lease, once its channel has a free call and its
  *       breaker, if it has one, lets the call through, and commits;
- *   <li>calls the channel's provider with no transaction open and no lock held, with the message id
- *       as the idempotency key, within the provider's time limit; for an event, delivers it to the
- *       subscribers of its type instead, each in a transaction of its own ({@link EventSubscribers});
- *   <li>records the outcome in a new transaction: {@code sent}, or a wait by the backoff before the
- *       next attempt, or {@code dead} once the attempts are used up.
+ *   <li>hands it to {@link DeliveryAttempts}, which calls the channel's provider with no transaction open
+ *       and no lock held, with the message id as the idempotency key, within the provider's time limit
+ *       (for an event, the subscribers of its type, each in a transaction of its own, {@link
+ *       EventSubscribers}), and records the outcome in a new transaction: {@code sent}, or a wait by the
+ *       backoff before the next attempt, or {@code dead} once the attempts are used up.
  * </ol>
  *
  * <p>Two dispatchers, in one process or two, never deliver one message at the same time: a claim
@@ -65,9 +61,7 @@ final class OutboxDispatcher implements SmartLifecycle {
 
     private final OutboxStore store;
 
-    private final Map<String, OutboxProvider> providers;
-
-    private final EventSubscribers events;
+    private final DeliveryAttempts attempts;
 
     /** The channels this dispatcher delivers: its providers', and the events' channel. */
     private final Set<String> channels;
@@ -80,17 +74,11 @@ final class OutboxDispatcher implements SmartLifecycle {
 
     private final Clock clock;
 
-    private final Traces traces;
-
     private final OutboxMetrics metrics;
-
-    private final Backoff backoff;
 
     private final Set<UUID> inFlight = ConcurrentHashMap.newKeySet();
 
     private volatile boolean running;
-
-    private volatile boolean abandoning;
 
     private volatile boolean pollFailing;
 
@@ -103,44 +91,26 @@ final class OutboxDispatcher implements SmartLifecycle {
 
     private ExecutorService deliveries;
 
-    private ExecutorService calls;
-
     OutboxDispatcher(
             OutboxSettings settings,
             OutboxStore store,
-            List<OutboxProvider> providers,
-            EventSubscribers events,
+            DeliveryAttempts attempts,
             Map<String, ChannelGuard> guards,
             ActiveTenants tenants,
             PlatformTransactionManager transactionManager,
             Clock clock,
-            Traces traces,
             OutboxMetrics metrics) {
         this.settings = settings;
         this.store = store;
-        Map<String, OutboxProvider> byChannel = new HashMap<>();
-        for (OutboxProvider provider : providers) {
-            if (EventTypes.CHANNEL.equals(provider.channel())) {
-                throw new IllegalStateException("The channel '" + EventTypes.CHANNEL
-                        + "' carries events between modules; no provider delivers it");
-            }
-            if (byChannel.put(provider.channel(), provider) != null) {
-                throw new IllegalStateException(
-                        "Two outbox providers deliver the channel '" + provider.channel() + "'");
-            }
-        }
-        this.providers = Map.copyOf(byChannel);
-        this.events = events;
-        Set<String> delivered = new HashSet<>(byChannel.keySet());
+        this.attempts = attempts;
+        Set<String> delivered = new HashSet<>(attempts.providerChannels());
         delivered.add(EventTypes.CHANNEL);
         this.channels = Set.copyOf(delivered);
         this.guards = guards;
         this.tenants = tenants;
         this.transactions = new TransactionTemplate(transactionManager);
         this.clock = clock;
-        this.traces = traces;
         this.metrics = metrics;
-        this.backoff = new Backoff(settings.backoff());
     }
 
     @Override
@@ -149,12 +119,10 @@ final class OutboxDispatcher implements SmartLifecycle {
             return;
         }
         running = true;
-        abandoning = false;
         stopping = new CountDownLatch(1);
         deliveries = Executors.newThreadPerTaskExecutor(
                 Thread.ofVirtual().name("outbox-delivery-", 0).factory());
-        calls = Executors.newThreadPerTaskExecutor(
-                Thread.ofVirtual().name("outbox-call-", 0).factory());
+        attempts.open();
         poller = Thread.ofVirtual().name("outbox-dispatcher").start(this::pollUntilStopped);
         log.info("The outbox dispatcher started for the channels {}", channels);
     }
@@ -172,15 +140,14 @@ final class OutboxDispatcher implements SmartLifecycle {
         deliveries.shutdown();
         if (!awaitQuietly(deliveries, settings.shutdownGrace())) {
             // Still in flight: left to its lease, which brings it back after a restart.
-            abandoning = true;
             log.warn(
                     "Stopping with {} deliveries in flight; each is attempted again once its lease" + " runs out",
                     inFlight.size());
-            calls.shutdownNow();
+            attempts.abandon();
             deliveries.shutdownNow();
             awaitQuietly(deliveries, Duration.ofSeconds(1));
         }
-        calls.shutdownNow();
+        attempts.close();
         log.info("The outbox dispatcher stopped");
     }
 
@@ -275,7 +242,8 @@ final class OutboxDispatcher implements SmartLifecycle {
         }
         if (taken instanceof OutboxStore.OutOfAttempts) {
             metrics.dead();
-            runAs(salon, () -> log.error("Outbox message {} is dead: its last attempt was interrupted", messageId));
+            DeliveryAttempts.runAs(
+                    salon, () -> log.error("Outbox message {} is dead: its last attempt was interrupted", messageId));
             return false;
         }
         if (!(taken instanceof OutboxStore.Claimed claimed)) {
@@ -284,7 +252,13 @@ final class OutboxDispatcher implements SmartLifecycle {
         ChannelGuard.Permit permit = reserved.getFirst();
         inFlight.add(messageId);
         try {
-            deliveries.execute(() -> deliver(salon, claimed.claim(), permit));
+            deliveries.execute(() -> {
+                try {
+                    attempts.deliver(salon, claimed.claim(), permit);
+                } finally {
+                    inFlight.remove(messageId);
+                }
+            });
         } catch (RuntimeException ex) {
             // Stopping: the claim's lease brings it back.
             inFlight.remove(messageId);
@@ -297,165 +271,6 @@ final class OutboxDispatcher implements SmartLifecycle {
     private Optional<ChannelGuard.Permit> permitFor(String channel) {
         ChannelGuard guard = guards.get(channel);
         return guard == null ? Optional.empty() : guard.tryAcquire();
-    }
-
-    private void deliver(CurrentTenant salon, OutboxStore.Claim claim, ChannelGuard.Permit permit) {
-        try {
-            traces.inSpan(
-                    "outbox.delivery",
-                    salon,
-                    claim.traceParent(),
-                    () -> TenantContext.callAs(salon, () -> {
-                        try {
-                            Outcome outcome = call(salon, claim, permit);
-                            if (outcome != null) {
-                                record(claim, outcome);
-                            }
-                        } catch (RuntimeException ex) {
-                            // Written inside the span, so that the line carries the
-                            // delivery's trace.
-                            traces.failed(ex);
-                            outcomeNotRecorded(claim, ex);
-                        }
-                        return null;
-                    }));
-        } catch (Exception ex) {
-            runAs(salon, () -> outcomeNotRecorded(claim, ex));
-        } finally {
-            permit.abandoned();
-            inFlight.remove(claim.messageId());
-        }
-    }
-
-    private static void outcomeNotRecorded(OutboxStore.Claim claim, Exception ex) {
-        log.warn(
-                "The outcome of delivering outbox message {} could not be recorded ({}); it is"
-                        + " attempted again once its lease runs out",
-                claim.messageId(),
-                DatabaseUnavailable.isCauseOf(ex) ? DatabaseUnavailable.describe(ex) : ex.toString());
-    }
-
-    /** What the provider did with one attempt. */
-    private record Outcome(boolean delivered, String outcome, String error) {}
-
-    /**
-     * Makes the attempt within the provider's time limit; null when the call was abandoned because of a
-     * stop.
-     */
-    private Outcome call(CurrentTenant salon, OutboxStore.Claim claim, ChannelGuard.Permit permit) {
-        Duration limit = settings.provider().timeLimit();
-        Future<?> call;
-        try {
-            call = calls.submit(traces.inCurrentSpan(() -> TenantContext.callAs(salon, () -> {
-                attempt(claim);
-                return null;
-            })));
-        } catch (RuntimeException ex) {
-            permit.abandoned();
-            return null;
-        }
-        try {
-            call.get(limit.toMillis(), TimeUnit.MILLISECONDS);
-            permit.succeeded();
-            return new Outcome(true, "sent", null);
-        } catch (TimeoutException ex) {
-            call.cancel(true);
-            permit.failed();
-            return new Outcome(false, "timed_out", "The provider did not answer within " + limit.toMillis() + " ms");
-        } catch (ExecutionException ex) {
-            if (abandoning) {
-                permit.abandoned();
-                return null;
-            }
-            Throwable cause = ex.getCause() == null ? ex : ex.getCause();
-            if (cause instanceof OutboxCancelled) {
-                permit.succeeded();
-                return new Outcome(false, "cancelled", null);
-            }
-            permit.failed();
-            return new Outcome(
-                    false,
-                    "failed",
-                    cause.getMessage() == null ? cause.getClass().getSimpleName() : cause.getMessage());
-        } catch (InterruptedException | java.util.concurrent.CancellationException ex) {
-            call.cancel(true);
-            permit.abandoned();
-            Thread.currentThread().interrupt();
-            return null;
-        }
-    }
-
-    /** One attempt: the event's subscribers for an event, the channel's provider for a message. */
-    private void attempt(OutboxStore.Claim claim) throws Exception {
-        if (claim.isEvent()) {
-            events.deliver(claim.messageId(), claim.eventType(), claim.payload());
-            return;
-        }
-        providers
-                .get(claim.channel())
-                .deliver(new OutboxDelivery(
-                        claim.messageId(), claim.tenantId(), claim.channel(), claim.payload(), claim.attempt()));
-    }
-
-    private void record(OutboxStore.Claim claim, Outcome outcome) {
-        if (abandoning) {
-            return;
-        }
-        Instant now = clock.instant();
-        metrics.delivery(claim, outcome.outcome());
-        if ("cancelled".equals(outcome.outcome())) {
-            transactions.execute(status -> store.cancelled(claim, now));
-            return;
-        }
-        if (outcome.delivered()) {
-            if (Boolean.TRUE.equals(transactions.execute(status -> store.sent(claim, now)))) {
-                log.info(
-                        "Delivered outbox message {} on '{}' (attempt {})",
-                        claim.messageId(),
-                        destination(claim),
-                        claim.attempt());
-            }
-            return;
-        }
-        if (claim.attempt() >= settings.maxAttempts()) {
-            if (Boolean.TRUE.equals(transactions.execute(status -> store.dead(claim, outcome.error(), now)))) {
-                metrics.dead();
-                log.error(
-                        "Outbox message {} on '{}' is dead after {} attempts: {}",
-                        claim.messageId(),
-                        destination(claim),
-                        claim.attempt(),
-                        outcome.error());
-            }
-            return;
-        }
-        Instant next = now.plus(backoff.after(claim.attempt()));
-        if (Boolean.TRUE.equals(transactions.execute(status -> store.retry(claim, next, outcome.error(), now)))) {
-            log.warn(
-                    "Delivering outbox message {} on '{}' failed (attempt {} of {}): {}; next" + " attempt at {}",
-                    claim.messageId(),
-                    destination(claim),
-                    claim.attempt(),
-                    settings.maxAttempts(),
-                    outcome.error(),
-                    next);
-        }
-    }
-
-    /** Where a message goes, for the logs: its event type, or its provider's channel. */
-    private static String destination(OutboxStore.Claim claim) {
-        return claim.isEvent() ? claim.eventType() : claim.channel();
-    }
-
-    private static void runAs(CurrentTenant salon, Runnable work) {
-        try {
-            TenantContext.callAs(salon, () -> {
-                work.run();
-                return null;
-            });
-        } catch (Exception ex) {
-            throw new IllegalStateException(ex);
-        }
     }
 
     /** Waits between polls; false when the dispatcher was stopped meanwhile. */
