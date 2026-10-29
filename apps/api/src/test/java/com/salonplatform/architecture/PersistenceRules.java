@@ -20,7 +20,7 @@ import java.util.Set;
  * generation"), written so that it can be applied to any base package: to the application, and to the
  * fixtures that prove each rule fails on a violation. Every entity keeps its fields to itself and cannot be
  * given another id, salon, version or creation time; the {@code EntityManager}, {@code JdbcClient} and the
- * Spring Data repositories belong to a module's {@code infrastructure} or to {@code shared}; and no code uses
+ * Spring Data repositories belong to a module's {@code repository} or to {@code shared}; and no code uses
  * {@code JdbcTemplate}.
  */
 final class PersistenceRules {
@@ -49,8 +49,8 @@ final class PersistenceRules {
         return List.of(
                 entitiesKeepTheirFieldsToThemselves(),
                 entitiesHaveNoKeySetter(),
-                persistenceIsReachedOnlyFromInfrastructureOrShared(),
-                repositoriesAreDeclaredOnlyInInfrastructureOrShared(),
+                persistenceIsReachedOnlyFromRepositoryOrShared(),
+                repositoriesAreDeclaredOnlyInRepositoryOrShared(),
                 nothingUsesJdbcTemplate());
     }
 
@@ -80,22 +80,22 @@ final class PersistenceRules {
 
     /**
      * Use cases reach their data through repositories; direct SQL is one of the named exceptions and lives in
-     * {@code infrastructure} (or {@code shared}), so that each is found, states its tenant predicate and has
+     * {@code repository} (or {@code shared}), so that each is found, states its tenant predicate and has
      * its row-level security test.
      */
-    ArchRule persistenceIsReachedOnlyFromInfrastructureOrShared() {
+    ArchRule persistenceIsReachedOnlyFromRepositoryOrShared() {
         return noClasses()
                 .that()
                 .resideInAPackage(base + "..")
                 .and()
-                .resideOutsideOfPackages(infrastructureOrShared())
+                .resideOutsideOfPackages(repositoryOrShared())
                 .should()
                 .dependOnClassesThat(entityManagerOrJdbcClient())
-                .as("the EntityManager and JdbcClient are used only in infrastructure packages and shared")
+                .as("the EntityManager and JdbcClient are used only in repository packages and shared")
                 .allowEmptyShould(true);
     }
 
-    ArchRule repositoriesAreDeclaredOnlyInInfrastructureOrShared() {
+    ArchRule repositoriesAreDeclaredOnlyInRepositoryOrShared() {
         return classes()
                 .that()
                 .resideInAPackage(base + "..")
@@ -104,8 +104,8 @@ final class PersistenceRules {
                 .and()
                 .areAssignableTo(SPRING_DATA_REPOSITORY)
                 .should()
-                .resideInAnyPackage(infrastructureOrShared())
-                .as("Spring Data repositories are declared only in infrastructure packages and shared")
+                .resideInAnyPackage(repositoryOrShared())
+                .as("Spring Data repositories are declared only in repository packages and shared")
                 .allowEmptyShould(true);
     }
 
@@ -120,8 +120,8 @@ final class PersistenceRules {
                 .allowEmptyShould(true);
     }
 
-    private String[] infrastructureOrShared() {
-        return new String[] {base + ".*.infrastructure..", base + ".shared.."};
+    private String[] repositoryOrShared() {
+        return new String[] {base + ".*.repository..", base + ".shared.."};
     }
 
     /** The {@code EntityManager}, and {@code JdbcClient} with the statement types nested in it. */

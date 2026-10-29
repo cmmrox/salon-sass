@@ -93,32 +93,31 @@ class CodeOwnershipTest {
                 arguments(
                         "sqlliteral",
                         rule(CodeOwnership::foreignTables),
-                        fixture + "sqlliteral.platform.infrastructure.MessageCounts (platform) names outbox_message, "
+                        fixture + "sqlliteral.platform.repository.MessageCounts (platform) names outbox_message, "
                                 + "which is shared's"),
                 arguments(
                         "jpql",
                         rule(CodeOwnership::foreignTables),
-                        fixture
-                                + "jpql.identity.application.StaffGreeting (identity) names Brand, which is branding's"),
+                        fixture + "jpql.identity.service.StaffGreeting (identity) names Brand, which is branding's"),
                 arguments(
                         "tableannotation",
                         rule(CodeOwnership::foreignTables),
-                        fixture + "tableannotation.identity.domain.Brand (identity) names salon_brand, "
+                        fixture + "tableannotation.identity.entity.Brand (identity) names salon_brand, "
                                 + "which is branding's"),
                 arguments(
                         "valuesetting",
                         rule(CodeOwnership::foreignSettings),
-                        fixture + "valuesetting.platform.infrastructure.IdentityKey (platform) reads "
+                        fixture + "valuesetting.platform.adapter.IdentityKey (platform) reads "
                                 + "salon.identity.signing-key, which is identity's"),
                 arguments(
                         "concatsetting",
                         rule(CodeOwnership::foreignSettings),
-                        fixture + "concatsetting.platform.infrastructure.IdentityKeys (platform) reads "
+                        fixture + "concatsetting.platform.adapter.IdentityKeys (platform) reads "
                                 + "salon.identity., which is identity's"),
                 arguments(
                         "sharedsetting",
                         rule(CodeOwnership::foreignSettings),
-                        fixture + "sharedsetting.shared.infrastructure.OperatorKey (shared) reads "
+                        fixture + "sharedsetting.shared.secrets.OperatorKey (shared) reads "
                                 + "salon.operator.signing-key, which is platform's"));
     }
 
