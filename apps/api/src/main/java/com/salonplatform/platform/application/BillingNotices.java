@@ -55,8 +55,8 @@ public class BillingNotices {
         String conflict = attemptId == null
                 ? "(invoice_id, kind) WHERE kind <> 'failed_charge'"
                 : "(charge_attempt_id) WHERE kind = 'failed_charge'";
-        int inserted =
-                database.jdbc().update("""
+        int inserted = database.jdbcTemplate()
+                .update("""
                 INSERT INTO billing_reminder (id, invoice_id, kind, charge_attempt_id, message_id, sent_at, created_at,
                     updated_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)

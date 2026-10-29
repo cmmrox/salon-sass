@@ -122,7 +122,7 @@ public class SalonLifecycle {
             }
             current(salon, version);
             Instant now = clock.instant();
-            database.jdbc().update("""
+            database.jdbcTemplate().update("""
                     UPDATE tenant SET status = 'suspended', version = version + 1, updated_at = ? WHERE id = ?
                     """, Timestamp.from(now), salonId);
             event(
@@ -166,7 +166,7 @@ public class SalonLifecycle {
             }
             current(salon, version);
             Instant now = clock.instant();
-            database.jdbc().update("""
+            database.jdbcTemplate().update("""
                     UPDATE tenant SET status = 'active', version = version + 1, updated_at = ? WHERE id = ?
                     """, Timestamp.from(now), salonId);
             // Billing went on while suspended; this brings the access state to what it implies at this
@@ -174,7 +174,7 @@ public class SalonLifecycle {
             ledger.subscriptionOf(salonId, true)
                     .ifPresent(subscription -> states.applyState(
                             subscription, now, PlatformAudit.SYSTEM, "billing", BillingLedger.Changes.none()));
-            String access = database.jdbc()
+            String access = database.jdbcTemplate()
                     .queryForObject("SELECT access_state FROM tenant WHERE id = ?", String.class, salonId);
             event(
                     salonId,
@@ -231,7 +231,8 @@ public class SalonLifecycle {
             // with a clock or a test that counts in milliseconds.
             Instant now = clock.instant().truncatedTo(java.time.temporal.ChronoUnit.MILLIS);
             Instant deleteAt = LifecycleTerms.deleteAt(now);
-            database.jdbc().update("""
+            database.jdbcTemplate()
+                    .update("""
                     UPDATE tenant SET status = 'closed', closed_at = ?, delete_at = ?, version = version + 1,
                         updated_at = ?
                      WHERE id = ?
@@ -239,7 +240,7 @@ public class SalonLifecycle {
             int sessions = identity.revokeClosedSalonSessions(salonId, now);
             int messages = outbox.cancelClosedSalon(salonId, now);
             UUID exportId = UUID.randomUUID();
-            database.jdbc()
+            database.jdbcTemplate()
                     .update("""
                     INSERT INTO salon_export (id, salon_id, status, delete_at, created_at, updated_at)
                     VALUES (?, ?, 'pending', ?, ?, ?)
@@ -277,12 +278,12 @@ public class SalonLifecycle {
     public LifecyclePage history(UUID salonId, Paging paging) {
         return work.run(() -> {
             access.require(OperatorPermission.SALON_READ);
-            Integer exists =
-                    database.jdbc().queryForObject("SELECT count(*) FROM tenant WHERE id = ?", Integer.class, salonId);
+            Integer exists = database.jdbcTemplate()
+                    .queryForObject("SELECT count(*) FROM tenant WHERE id = ?", Integer.class, salonId);
             if (exists == null || exists == 0) {
                 throw new NotFoundException();
             }
-            List<LifecycleEvent> items = database.jdbc()
+            List<LifecycleEvent> items = database.jdbcTemplate()
                     .query(
                             """
                     SELECT e.id, e.kind, e.reason, e.actor_kind, e.actor_id, e.created_at, u.display_name
@@ -304,7 +305,7 @@ public class SalonLifecycle {
                             salonId,
                             paging.size(),
                             paging.offset());
-            Long total = database.jdbc()
+            Long total = database.jdbcTemplate()
                     .queryForObject(
                             "SELECT count(*) FROM salon_lifecycle_event WHERE salon_id = ?", Long.class, salonId);
             return new LifecyclePage(items, paging.page(), paging.size(), total == null ? 0 : total);
@@ -313,7 +314,7 @@ public class SalonLifecycle {
 
     /** Records a lifecycle event in the caller's platform transaction. */
     void event(UUID salonId, String kind, String reason, String actorKind, String actorId, Instant at) {
-        database.jdbc()
+        database.jdbcTemplate()
                 .update(
                         """
                 INSERT INTO salon_lifecycle_event (id, salon_id, kind, reason, actor_kind, actor_id, created_at, updated_at)
@@ -331,7 +332,7 @@ public class SalonLifecycle {
 
     private Locked lock(UUID salonId) {
         return database
-                .jdbc()
+                .jdbcTemplate()
                 .query(
                         """
                 SELECT id, slug, status, version, owner_email FROM tenant WHERE id = ? FOR UPDATE

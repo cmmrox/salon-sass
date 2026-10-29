@@ -28,7 +28,7 @@ class BrandProvisioningService implements BrandProvisioning {
     public void bootstrapBrand(UUID tenantId, String displayName, Instant at) {
         PlatformDatabase database = platform.getObject();
         database.requireTransaction();
-        database.jdbc()
+        database.jdbcTemplate()
                 .queryForObject(
                         "SELECT branding_bootstrap_brand(?, ?, ?, ?)::text",
                         String.class,

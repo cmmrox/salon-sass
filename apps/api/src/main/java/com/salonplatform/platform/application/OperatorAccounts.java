@@ -94,7 +94,7 @@ public class OperatorAccounts {
         return database.inTransaction(status -> {
             Instant now = clock.instant();
             UUID id = UUID.randomUUID();
-            int created = database.jdbc()
+            int created = database.jdbcTemplate()
                     .update(
                             """
                     INSERT INTO operator_user (id, email, display_name, password_hash, role, active, fixture, version,
@@ -135,7 +135,7 @@ public class OperatorAccounts {
             Instant now = clock.instant();
             for (Valid account : accounts) {
                 UUID id = database
-                        .jdbc()
+                        .jdbcTemplate()
                         .query(
                                 "SELECT id, fixture FROM operator_user WHERE email = ?",
                                 (row, n) -> {
@@ -150,7 +150,7 @@ public class OperatorAccounts {
                         .orElse(null);
                 if (id == null) {
                     id = UUID.randomUUID();
-                    database.jdbc()
+                    database.jdbcTemplate()
                             .update(
                                     """
                             INSERT INTO operator_user (id, email, display_name, password_hash, role, active, fixture,
@@ -168,7 +168,7 @@ public class OperatorAccounts {
                 String secret = account.totpSecret() == null
                         ? null
                         : crypto.encrypt("operator-totp:" + id, account.totpSecret());
-                database.jdbc()
+                database.jdbcTemplate()
                         .update(
                                 """
                         UPDATE operator_user SET display_name = ?, password_hash = ?, role = ?, active = true,
@@ -195,24 +195,24 @@ public class OperatorAccounts {
         database.inTransaction(status -> {
             Instant now = clock.instant();
             List<String> emails =
-                    database.jdbc().queryForList("SELECT email FROM operator_user WHERE fixture", String.class);
-            database.jdbc()
+                    database.jdbcTemplate().queryForList("SELECT email FROM operator_user WHERE fixture", String.class);
+            database.jdbcTemplate()
                     .update(
                             "DELETE FROM operator_mfa_challenge WHERE user_id IN (SELECT id FROM operator_user WHERE fixture)");
-            database.jdbc()
+            database.jdbcTemplate()
                     .update(
                             "DELETE FROM operator_mfa_step WHERE user_id IN (SELECT id FROM operator_user WHERE fixture)");
-            database.jdbc().update("""
+            database.jdbcTemplate().update("""
                     UPDATE operator_session SET revoked_at = ?, updated_at = ?
                      WHERE revoked_at IS NULL AND user_id IN (SELECT id FROM operator_user WHERE fixture)
                     """, Timestamp.from(now), Timestamp.from(now));
             for (String email : emails) {
-                database.jdbc()
+                database.jdbcTemplate()
                         .update(
                                 "DELETE FROM operator_rate_bucket WHERE dimension = 'operator-email' AND key_hash = ?",
                                 crypto.hash("rate-operator-email", email.toLowerCase(Locale.ROOT)));
             }
-            database.jdbc().update("DELETE FROM operator_rate_bucket WHERE dimension = 'operator-address'");
+            database.jdbcTemplate().update("DELETE FROM operator_rate_bucket WHERE dimension = 'operator-address'");
             return null;
         });
     }

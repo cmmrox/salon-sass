@@ -223,7 +223,7 @@ public class InvoiceBilling {
 
     /** A salon's invoices, newest first, inside a platform transaction. */
     InvoicePage page(UUID salonId, Paging paging) {
-        List<InvoiceSummary> items = database.jdbc()
+        List<InvoiceSummary> items = database.jdbcTemplate()
                 .query(
                         "SELECT " + BillingLedger.INVOICE_COLUMNS
                                 + " FROM invoice WHERE salon_id = ? ORDER BY issued_at DESC, number DESC LIMIT ? OFFSET ?",
@@ -231,8 +231,8 @@ public class InvoiceBilling {
                         salonId,
                         paging.size(),
                         paging.offset());
-        Long total =
-                database.jdbc().queryForObject("SELECT count(*) FROM invoice WHERE salon_id = ?", Long.class, salonId);
+        Long total = database.jdbcTemplate()
+                .queryForObject("SELECT count(*) FROM invoice WHERE salon_id = ?", Long.class, salonId);
         return new InvoicePage(items, paging.page(), paging.size(), total == null ? 0 : total);
     }
 

@@ -112,12 +112,15 @@ class SupportSessionRecords {
     }
 
     Optional<Row> find(UUID id) {
-        return database.jdbc().query(SELECT + " WHERE s.id = ?", (row, n) -> row(row), id).stream()
+        return database.jdbcTemplate().query(SELECT + " WHERE s.id = ?", (row, n) -> row(row), id).stream()
                 .findFirst();
     }
 
     Optional<Row> lockRow(UUID id) {
-        return database.jdbc().query(SELECT + " WHERE s.id = ? FOR UPDATE OF s", (row, n) -> row(row), id).stream()
+        return database
+                .jdbcTemplate()
+                .query(SELECT + " WHERE s.id = ? FOR UPDATE OF s", (row, n) -> row(row), id)
+                .stream()
                 .findFirst();
     }
 
@@ -139,7 +142,7 @@ class SupportSessionRecords {
             throw new ApplicationProblemException(409, ErrorCode.INVALID_STATE);
         }
         Instant at = expiry ? row.expiresAt() : now;
-        database.jdbc().update("""
+        database.jdbcTemplate().update("""
                 UPDATE support_session SET ended_at = ?, ended_by = ?, ended_by_id = ?, updated_at = ? WHERE id = ?
                 """, Timestamp.from(at), by, byId, Timestamp.from(now), row.id());
         Map<String, Object> details = new LinkedHashMap<>();
@@ -172,7 +175,7 @@ class SupportSessionRecords {
             String reason,
             Map<String, Object> after,
             Instant at) {
-        database.jdbc()
+        database.jdbcTemplate()
                 .queryForObject(
                         "SELECT audit_record_support(?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?, ?)",
                         Boolean.class,
@@ -189,13 +192,13 @@ class SupportSessionRecords {
     }
 
     String operatorName(UUID operatorId) {
-        return database.jdbc()
+        return database.jdbcTemplate()
                 .queryForObject("SELECT display_name FROM operator_user WHERE id = ?", String.class, operatorId);
     }
 
     boolean operatorActive(UUID operatorId) {
         return Boolean.TRUE.equals(database
-                .jdbc()
+                .jdbcTemplate()
                 .query("SELECT active FROM operator_user WHERE id = ?", (row, n) -> row.getBoolean(1), operatorId)
                 .stream()
                 .findFirst()

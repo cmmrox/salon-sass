@@ -84,7 +84,7 @@ public class SalonSupportSessions {
         principals.require("support.manage");
         return database.inTransaction(status -> {
             Instant now = clock.instant();
-            List<SalonSupportSession> items = database.jdbc()
+            List<SalonSupportSession> items = database.jdbcTemplate()
                     .query(
                             SELECT + " WHERE s.salon_id = ? ORDER BY s.started_at DESC, s.id LIMIT ? OFFSET ?",
                             (row, n) -> {
@@ -103,7 +103,7 @@ public class SalonSupportSessions {
                             salonId,
                             paging.size(),
                             paging.offset());
-            Long total = database.jdbc()
+            Long total = database.jdbcTemplate()
                     .queryForObject("SELECT count(*) FROM support_session WHERE salon_id = ?", Long.class, salonId);
             return new SalonSupportSessionPage(items, paging.page(), paging.size(), total == null ? 0 : total);
         });

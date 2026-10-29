@@ -21,7 +21,7 @@ class IdentityLifecycleService implements IdentityLifecycle {
     public int revokeClosedSalonSessions(UUID salonId, Instant at) {
         PlatformDatabase database = platform.getObject();
         database.requireTransaction();
-        Integer revoked = database.jdbc()
+        Integer revoked = database.jdbcTemplate()
                 .queryForObject(
                         "SELECT identity_revoke_closed_salon_sessions(?, ?)",
                         Integer.class,

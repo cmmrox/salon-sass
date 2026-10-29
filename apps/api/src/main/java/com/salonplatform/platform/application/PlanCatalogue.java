@@ -117,7 +117,7 @@ public class PlanCatalogue {
             access.require(OperatorPermission.PLAN_READ);
             String filter = " WHERE (?::text IS NULL OR strpos(lower(name), lower(?::text)) > 0"
                     + " OR strpos(key, lower(?::text)) > 0)";
-            List<PlanDefinition> items = database.jdbc()
+            List<PlanDefinition> items = database.jdbcTemplate()
                     .query(
                             "SELECT " + COLUMNS + " FROM plan" + filter
                                     + " ORDER BY created_at DESC, id LIMIT ? OFFSET ?",
@@ -127,7 +127,7 @@ public class PlanCatalogue {
                             paging.q(),
                             paging.size(),
                             paging.offset());
-            Long total = database.jdbc()
+            Long total = database.jdbcTemplate()
                     .queryForObject(
                             "SELECT count(*) FROM plan" + filter, Long.class, paging.q(), paging.q(), paging.q());
             return new PlanPage(items, paging.page(), paging.size(), total == null ? 0 : total);
@@ -143,7 +143,7 @@ public class PlanCatalogue {
 
     private PlanDefinition find(UUID id) {
         return database
-                .jdbc()
+                .jdbcTemplate()
                 .query("SELECT " + COLUMNS + " FROM plan WHERE id = ?", (row, n) -> definition(row), id)
                 .stream()
                 .findFirst()
@@ -166,7 +166,7 @@ public class PlanCatalogue {
             Instant now = clock.instant();
             UUID id = UUID.randomUUID();
             try {
-                database.jdbc()
+                database.jdbcTemplate()
                         .update(
                                 """
                         INSERT INTO plan (id, key, name, staff_seats, branches, message_allowance, custom_domain,

@@ -220,7 +220,7 @@ public class SalonDirectory {
             access.require(OperatorPermission.SALON_READ);
             String filter = " WHERE (?::text IS NULL OR strpos(lower(coalesce(t.name, '')), lower(?::text)) > 0"
                     + " OR strpos(t.slug, lower(?::text)) > 0)";
-            List<SalonSummary> items = database.jdbc()
+            List<SalonSummary> items = database.jdbcTemplate()
                     .query(
                             SELECT + filter + " ORDER BY t.created_at DESC, t.id LIMIT ? OFFSET ?",
                             (row, n) -> new SalonSummary(
@@ -236,7 +236,7 @@ public class SalonDirectory {
                             paging.q(),
                             paging.size(),
                             paging.offset());
-            Long total = database.jdbc()
+            Long total = database.jdbcTemplate()
                     .queryForObject(
                             "SELECT count(*) FROM tenant t" + filter, Long.class, paging.q(), paging.q(), paging.q());
             return new SalonPage(items, paging.page(), paging.size(), total == null ? 0 : total);
@@ -246,7 +246,7 @@ public class SalonDirectory {
     public SalonDetail get(UUID id) {
         return work.run(() -> {
             access.require(OperatorPermission.SALON_READ);
-            return database.jdbc().query(SELECT + " WHERE t.id = ?", (row, n) -> detail(row), id).stream()
+            return database.jdbcTemplate().query(SELECT + " WHERE t.id = ?", (row, n) -> detail(row), id).stream()
                     .findFirst()
                     .orElseThrow(NotFoundException::new);
         });

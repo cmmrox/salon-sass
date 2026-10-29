@@ -76,7 +76,7 @@ public class ExportDownloads {
         return work.run(() -> {
             access.require(OperatorPermission.EXPORT_READ);
             return database
-                    .jdbc()
+                    .jdbcTemplate()
                     .query(
                             """
                     SELECT status, created_at, ready_at, delete_at, size_bytes, sha256 FROM salon_export WHERE salon_id = ?
@@ -102,7 +102,7 @@ public class ExportDownloads {
     public Archive archiveForOperator(UUID salonId) {
         return work.run(() -> {
             var operator = access.require(OperatorPermission.EXPORT_READ);
-            Map<String, Object> row = database.jdbc().queryForList("""
+            Map<String, Object> row = database.jdbcTemplate().queryForList("""
                     SELECT e.id, e.status, e.archive, e.sha256, e.size_bytes, t.slug
                       FROM salon_export e JOIN tenant t ON t.id = e.salon_id WHERE e.salon_id = ?
                     """, salonId).stream()
@@ -132,7 +132,7 @@ public class ExportDownloads {
             throw new NotFoundException();
         }
         return database.inTransaction(status -> database
-                .jdbc()
+                .jdbcTemplate()
                 .query(
                         """
                 SELECT ready_at, delete_at, size_bytes, sha256 FROM salon_export WHERE token_hash = ? AND status = 'ready'
@@ -157,7 +157,7 @@ public class ExportDownloads {
             throw new NotFoundException();
         }
         return database.inTransaction(status -> {
-            Map<String, Object> row = database.jdbc().queryForList("""
+            Map<String, Object> row = database.jdbcTemplate().queryForList("""
                     SELECT e.id, e.salon_id, e.status, e.archive, e.sha256, e.size_bytes, t.slug
                       FROM salon_export e JOIN tenant t ON t.id = e.salon_id
                      WHERE e.token_hash = ? AND e.status = 'ready'

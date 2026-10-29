@@ -78,7 +78,7 @@ class IdentityProvisioningService implements IdentityProvisioning {
         PlatformDatabase database = platform.getObject();
         database.requireTransaction();
         UUID id = UUID.randomUUID();
-        database.jdbc()
+        database.jdbcTemplate()
                 .queryForObject(
                         "SELECT identity_bootstrap_owner(?, ?, ?, ?, ?, ?)::text",
                         String.class,
@@ -95,7 +95,8 @@ class IdentityProvisioningService implements IdentityProvisioning {
     public long activeStaffCount(UUID tenantId) {
         PlatformDatabase database = platform.getObject();
         database.requireTransaction();
-        Long count = database.jdbc().queryForObject("SELECT identity_active_staff_count(?)", Long.class, tenantId);
+        Long count =
+                database.jdbcTemplate().queryForObject("SELECT identity_active_staff_count(?)", Long.class, tenantId);
         return count == null ? 0 : count;
     }
 }

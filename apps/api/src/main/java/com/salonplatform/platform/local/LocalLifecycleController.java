@@ -165,10 +165,12 @@ class LocalLifecycleController {
     @GetMapping("/salons/{salonId}/background")
     ResponseEntity<Background> background(@PathVariable UUID salonId, HttpServletRequest http) throws Exception {
         loopback(http);
-        Map<String, Object> salon = database.inTransaction(status ->
-                database.jdbc().queryForList("""
+        Map<String, Object> salon =
+                database.inTransaction(status -> database.jdbcTemplate().queryForList("""
                 SELECT slug, status, access_state, time_zone FROM tenant WHERE id = ?
-                """, salonId).stream().findFirst().orElseThrow(NotFoundException::new));
+                """, salonId).stream()
+                        .findFirst()
+                        .orElseThrow(NotFoundException::new));
         CurrentTenant tenant =
                 new CurrentTenant(salonId, (String) salon.get("slug"), ZoneId.of((String) salon.get("time_zone")));
         Map<String, Long> counts = TenantContext.callAs(

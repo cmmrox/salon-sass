@@ -176,7 +176,7 @@ public class SupportSessions {
             // The registry row is shared-locked: a suspension or closure waits for this start, or this
             // start sees its result.
             var salon = database
-                    .jdbc()
+                    .jdbcTemplate()
                     .query(
                             "SELECT slug, status FROM tenant WHERE id = ? FOR SHARE",
                             (row, n) -> new String[] {row.getString("slug"), row.getString("status")},
@@ -194,7 +194,7 @@ public class SupportSessions {
             UUID id = UUID.randomUUID();
             Instant expiresAt = now.plus(Duration.ofMinutes(minutes));
             try {
-                database.jdbc()
+                database.jdbcTemplate()
                         .update(
                                 """
                         INSERT INTO support_session (id, salon_id, operator_id, reason, duration_minutes, started_at,
@@ -328,13 +328,13 @@ public class SupportSessions {
             List<Object> page = new ArrayList<>(java.util.Arrays.asList(args));
             page.add(paging.size());
             page.add(paging.offset());
-            List<SupportSessionView> items = database.jdbc()
+            List<SupportSessionView> items = database.jdbcTemplate()
                     .query(
                             SELECT + where + " ORDER BY s.started_at DESC, s.id LIMIT ? OFFSET ?",
                             (row, n) -> records.view(row(row), now),
                             page.toArray());
-            Long total =
-                    database.jdbc().queryForObject("SELECT count(*) FROM support_session s" + where, Long.class, args);
+            Long total = database.jdbcTemplate()
+                    .queryForObject("SELECT count(*) FROM support_session s" + where, Long.class, args);
             return new SupportSessionPage(items, paging.page(), paging.size(), total == null ? 0 : total);
         });
     }
@@ -354,7 +354,7 @@ public class SupportSessions {
     private int expireDue(Instant now, String condition, Object... args) {
         List<Object> params = new ArrayList<>(List.of(args));
         params.add(Timestamp.from(now));
-        List<Row> due = database.jdbc()
+        List<Row> due = database.jdbcTemplate()
                 .query(
                         SELECT + " WHERE " + condition
                                 + " AND s.ended_at IS NULL AND s.expires_at <= ? ORDER BY s.expires_at, s.id FOR UPDATE OF s SKIP LOCKED",
@@ -369,7 +369,7 @@ public class SupportSessions {
     private SupportEntry code(UUID sessionId, String slug, Instant expiresAt, Instant now) {
         String code = crypto.newCode();
         Instant codeExpiresAt = now.plus(CODE_LIFE);
-        database.jdbc()
+        database.jdbcTemplate()
                 .update(
                         """
                 INSERT INTO support_entry_code (id, session_id, code_hash, expires_at, created_at, updated_at)

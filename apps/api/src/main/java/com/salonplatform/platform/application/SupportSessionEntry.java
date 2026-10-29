@@ -68,7 +68,7 @@ public class SupportSessionEntry implements SupportCredentials {
             Instant now = clock.instant();
             Timestamp at = Timestamp.from(now);
             // Consumed in one statement: of simultaneous exchanges exactly one updates the row.
-            List<Object[]> consumed = database.jdbc()
+            List<Object[]> consumed = database.jdbcTemplate()
                     .query(
                             """
                     UPDATE support_entry_code c SET consumed_at = ?, updated_at = ?

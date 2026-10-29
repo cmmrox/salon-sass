@@ -50,7 +50,7 @@ public class SubscriptionStates {
         Instant trialEnd = BillingCalendar.trialEnd(start);
         LocalDateTime anchor = BillingCalendar.anchor(trialEnd, salon.zone());
         Timestamp at = Timestamp.from(start);
-        database.jdbc()
+        database.jdbcTemplate()
                 .update(
                         """
                 INSERT INTO subscription (id, salon_id, state, monthly_amount, currency, payment_method, started_at,
@@ -95,14 +95,14 @@ public class SubscriptionStates {
             return subscription;
         }
         Timestamp at = Timestamp.from(now);
-        database.jdbc()
+        database.jdbcTemplate()
                 .update(
                         "UPDATE subscription SET state = ?, updated_at = ? WHERE id = ?",
                         next.value(),
                         at,
                         subscription.id());
         String access = next == State.READ_ONLY ? "read_only" : "full";
-        database.jdbc()
+        database.jdbcTemplate()
                 .update(
                         "UPDATE tenant SET access_state = ?, updated_at = ? WHERE id = ? AND access_state <> ?",
                         access,
@@ -149,7 +149,7 @@ public class SubscriptionStates {
             String actorId) {
         UUID id = UUID.randomUUID();
         Timestamp at = Timestamp.from(now);
-        database.jdbc()
+        database.jdbcTemplate()
                 .update(
                         """
                 INSERT INTO invoice_payment (id, invoice_id, method, reference, provider_event_id, amount, received_on,
@@ -167,7 +167,7 @@ public class SubscriptionStates {
                         recordedBy,
                         at,
                         at);
-        database.jdbc()
+        database.jdbcTemplate()
                 .update(
                         "UPDATE invoice SET status = 'paid', paid_at = ?, updated_at = ? WHERE id = ?",
                         at,

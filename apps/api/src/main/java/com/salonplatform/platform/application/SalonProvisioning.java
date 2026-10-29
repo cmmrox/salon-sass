@@ -153,15 +153,15 @@ public class SalonProvisioning {
                     return new Created(true, created(earlier.get().result()));
                 }
                 UUID planId = (UUID) profile.get("planId");
-                Integer plans =
-                        database.jdbc().queryForObject("SELECT count(*) FROM plan WHERE id = ?", Integer.class, planId);
+                Integer plans = database.jdbcTemplate()
+                        .queryForObject("SELECT count(*) FROM plan WHERE id = ?", Integer.class, planId);
                 if (plans == null || plans == 0) {
                     throw new NotFoundException();
                 }
                 Instant now = clock.instant();
                 UUID id = UUID.randomUUID();
                 String slug = (String) profile.get("slug");
-                database.jdbc()
+                database.jdbcTemplate()
                         .update(
                                 """
                         INSERT INTO tenant (id, slug, status, time_zone, name, country, currency, default_language,

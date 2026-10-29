@@ -130,7 +130,7 @@ public class SalonExports {
     }
 
     private Pass pass(Instant now) {
-        List<Pending> pending = database.inTransaction(status -> database.jdbc()
+        List<Pending> pending = database.inTransaction(status -> database.jdbcTemplate()
                 .query(
                         """
                 SELECT e.id, e.salon_id, t.slug, t.time_zone FROM salon_export e JOIN tenant t ON t.id = e.salon_id
@@ -168,7 +168,7 @@ public class SalonExports {
             TenantDataModule module = entry.getKey();
             String table = entry.getValue().name();
             Boolean needed = database.inTransaction(
-                    status -> database.jdbc().queryForObject("""
+                    status -> database.jdbcTemplate().queryForObject("""
                     SELECT e.status = 'pending' AND NOT EXISTS (SELECT 1 FROM salon_export_part p
                                                                  WHERE p.export_id = e.id AND p.table_name = ?)
                       FROM salon_export e WHERE e.id = ?
@@ -193,7 +193,7 @@ public class SalonExports {
             // pending (its parts are already gone).
             database.inTransaction(status -> {
                 String state = database
-                        .jdbc()
+                        .jdbcTemplate()
                         .queryForList(
                                 "SELECT status FROM salon_export WHERE id = ? FOR SHARE",
                                 String.class,
@@ -204,7 +204,7 @@ public class SalonExports {
                 if (!"pending".equals(state)) {
                     return 0;
                 }
-                return database.jdbc()
+                return database.jdbcTemplate()
                         .update(
                                 """
                         INSERT INTO salon_export_part (export_id, table_name, module, row_count, content, created_at,
@@ -230,7 +230,7 @@ public class SalonExports {
     private boolean assemble(Pending export, Instant now) {
         return database.inTransaction(status -> {
             String state = database
-                    .jdbc()
+                    .jdbcTemplate()
                     .queryForList(
                             "SELECT status FROM salon_export WHERE id = ? FOR UPDATE", String.class, export.exportId())
                     .stream()
@@ -240,7 +240,7 @@ public class SalonExports {
                 return "ready".equals(state);
             }
             Map<String, Part> parts = new HashMap<>();
-            database.jdbc()
+            database.jdbcTemplate()
                     .query(
                             "SELECT table_name, module, row_count, content FROM salon_export_part WHERE export_id = ?",
                             (row, n) -> parts.put(
@@ -256,7 +256,7 @@ public class SalonExports {
                     .anyMatch(entry -> !parts.containsKey(entry.getValue().name()))) {
                 return false;
             }
-            Map<String, Object> salon = database.jdbc().queryForMap("""
+            Map<String, Object> salon = database.jdbcTemplate().queryForMap("""
                     SELECT id, slug, name, country, currency, time_zone, default_language, contact_email, contact_phone,
                            address, owner_email, created_at, closed_at, delete_at
                       FROM tenant WHERE id = ?
@@ -265,7 +265,7 @@ public class SalonExports {
             String sha = ExportKey.sha256(zip);
             String token = key.newToken();
             Timestamp at = Timestamp.from(now);
-            database.jdbc()
+            database.jdbcTemplate()
                     .update(
                             """
                     UPDATE salon_export SET status = 'ready', ready_at = ?, size_bytes = ?, sha256 = ?, archive = ?,
@@ -279,7 +279,7 @@ public class SalonExports {
                             ExportKey.tokenHash(token),
                             at,
                             export.exportId());
-            database.jdbc().update("DELETE FROM salon_export_part WHERE export_id = ?", export.exportId());
+            database.jdbcTemplate().update("DELETE FROM salon_export_part WHERE export_id = ?", export.exportId());
             Map<String, Object> details = new LinkedHashMap<>();
             details.put("exportId", export.exportId().toString());
             details.put("tables", tables.size());
@@ -340,7 +340,7 @@ public class SalonExports {
                 Base64.getEncoder()
                         .encodeToString(
                                 key.seal(json.writeValueAsBytes(List.of(link)), "export-link:" + export.exportId())));
-        database.jdbc()
+        database.jdbcTemplate()
                 .queryForObject(
                         "SELECT outbox_enqueue_for_salon(?, ?, ?, ?::jsonb, ?, ?)::text",
                         String.class,
@@ -360,7 +360,7 @@ public class SalonExports {
     /** Whether a salon's export is ready (deletion waits for it). */
     Optional<String> exportStatus(UUID salonId) {
         return database
-                .jdbc()
+                .jdbcTemplate()
                 .queryForList("SELECT status FROM salon_export WHERE salon_id = ?", String.class, salonId)
                 .stream()
                 .findFirst();

@@ -206,11 +206,14 @@ public class BillingLedger {
     /** A salon, optionally locking its registry row (plan moves). */
     public Optional<Salon> salon(UUID id, boolean lock) {
         database.requireTransaction();
-        return database.jdbc().query("""
+        return database
+                .jdbcTemplate()
+                .query("""
                 SELECT t.id, t.slug, t.name, t.time_zone, t.currency, t.owner_email, t.plan_id, t.status,
                        t.access_state, t.version, p.key AS plan_key, p.name AS plan_name
                   FROM tenant t LEFT JOIN plan p ON p.id = t.plan_id WHERE t.id = ?
-                """ + (lock ? " FOR UPDATE OF t" : ""), (row, n) -> salon(row), id).stream()
+                """ + (lock ? " FOR UPDATE OF t" : ""), (row, n) -> salon(row), id)
+                .stream()
                 .findFirst();
     }
 
@@ -222,7 +225,7 @@ public class BillingLedger {
     public boolean billed(UUID salonId) {
         database.requireTransaction();
         return database
-                .jdbc()
+                .jdbcTemplate()
                 .queryForList("SELECT status FROM tenant WHERE id = ? FOR SHARE", String.class, salonId)
                 .stream()
                 .findFirst()
@@ -233,7 +236,7 @@ public class BillingLedger {
     public Optional<Subscription> subscriptionOf(UUID salonId, boolean lock) {
         database.requireTransaction();
         return database
-                .jdbc()
+                .jdbcTemplate()
                 .query(
                         "SELECT * FROM subscription WHERE salon_id = ?" + (lock ? " FOR UPDATE" : ""),
                         (row, n) -> subscription(row),
@@ -245,7 +248,7 @@ public class BillingLedger {
     public Optional<Subscription> subscription(UUID id, boolean lock) {
         database.requireTransaction();
         return database
-                .jdbc()
+                .jdbcTemplate()
                 .query(
                         "SELECT * FROM subscription WHERE id = ?" + (lock ? " FOR UPDATE" : ""),
                         (row, n) -> subscription(row),
@@ -257,7 +260,7 @@ public class BillingLedger {
     public Optional<Invoice> invoiceById(UUID id, boolean lock) {
         database.requireTransaction();
         return database
-                .jdbc()
+                .jdbcTemplate()
                 .query(
                         "SELECT " + INVOICE_COLUMNS + " FROM invoice WHERE id = ?" + (lock ? " FOR UPDATE" : ""),
                         (row, n) -> invoice(row),
@@ -268,7 +271,7 @@ public class BillingLedger {
 
     public List<Invoice> openInvoices(UUID subscriptionId) {
         database.requireTransaction();
-        return database.jdbc()
+        return database.jdbcTemplate()
                 .query(
                         "SELECT " + INVOICE_COLUMNS
                                 + " FROM invoice WHERE subscription_id = ? AND status = 'open' ORDER BY due_at, number",
@@ -279,7 +282,7 @@ public class BillingLedger {
     public Optional<Invoice> latestInvoice(UUID subscriptionId) {
         database.requireTransaction();
         return database
-                .jdbc()
+                .jdbcTemplate()
                 .query(
                         "SELECT " + INVOICE_COLUMNS
                                 + " FROM invoice WHERE subscription_id = ? ORDER BY period_index DESC LIMIT 1",
@@ -291,7 +294,7 @@ public class BillingLedger {
 
     public List<Payment> payments(UUID invoiceId) {
         database.requireTransaction();
-        return database.jdbc()
+        return database.jdbcTemplate()
                 .query(
                         "SELECT * FROM invoice_payment WHERE invoice_id = ? ORDER BY paid_at, id",
                         (row, n) -> payment(row),
@@ -327,7 +330,7 @@ public class BillingLedger {
     }
 
     void enqueueWithId(UUID salon, UUID id, String channel, Map<String, Object> payload, Instant now) {
-        database.jdbc()
+        database.jdbcTemplate()
                 .queryForObject(
                         "SELECT outbox_enqueue_for_salon(?, ?, ?, ?::jsonb, ?, ?)::text",
                         String.class,

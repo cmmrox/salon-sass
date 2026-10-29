@@ -93,7 +93,7 @@ public class OperatorSignIns {
     }
 
     private JdbcTemplate jdbc() {
-        return database.jdbc();
+        return database.jdbcTemplate();
     }
 
     /** Plain text of 1 to 80 characters: a label for the operator's own session list, never trusted. */

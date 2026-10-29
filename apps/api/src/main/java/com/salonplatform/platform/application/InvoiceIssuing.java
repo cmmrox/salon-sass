@@ -65,13 +65,13 @@ public class InvoiceIssuing {
         Instant periodStart = subscription.nextInvoiceAt();
         Instant periodEnd = BillingCalendar.periodStart(subscription.anchor(), salon.zone(), index + 1);
         Instant due = BillingCalendar.due(periodStart);
-        Long number = database.jdbc()
+        Long number = database.jdbcTemplate()
                 .queryForObject(
                         "UPDATE invoice_number SET last_number = last_number + 1 WHERE id RETURNING last_number",
                         Long.class);
         UUID id = UUID.randomUUID();
         Timestamp at = Timestamp.from(now);
-        database.jdbc()
+        database.jdbcTemplate()
                 .update(
                         """
                 INSERT INTO invoice (id, number, salon_id, subscription_id, plan_id, plan_key, plan_name, period_index,
@@ -94,7 +94,7 @@ public class InvoiceIssuing {
                         Timestamp.from(due),
                         at,
                         at);
-        database.jdbc().update("""
+        database.jdbcTemplate().update("""
                 UPDATE subscription SET invoices_issued = ?, next_invoice_at = ?, updated_at = ? WHERE id = ?
                 """, index + 1, Timestamp.from(periodEnd), at, subscription.id());
         Map<String, Object> details = new LinkedHashMap<>();
@@ -124,7 +124,7 @@ public class InvoiceIssuing {
         UUID id = UUID.randomUUID();
         UUID key = UUID.randomUUID();
         Timestamp at = Timestamp.from(now);
-        int inserted = database.jdbc().update("""
+        int inserted = database.jdbcTemplate().update("""
                 INSERT INTO charge_attempt (id, invoice_id, occasion, attempt_key, status, requested_at, settled_at,
                     created_at, updated_at)
                 VALUES (?, ?, ?, ?, 'requested', ?, NULL, ?, ?)

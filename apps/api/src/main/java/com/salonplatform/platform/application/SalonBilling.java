@@ -123,7 +123,7 @@ public class SalonBilling {
         return database.inTransaction(status -> {
             Instant now = clock.instant();
             var limits = database
-                    .jdbc()
+                    .jdbcTemplate()
                     .query(
                             """
                     SELECT p.key, p.name, p.staff_seats, p.branches, p.message_allowance, p.custom_domain, p.dedicated_app

@@ -204,7 +204,7 @@ class LocalBillingController {
         Instant now = clock.instant();
         try {
             database.inTransaction(status -> {
-                database.jdbc().update("""
+                database.jdbcTemplate().update("""
                         INSERT INTO tenant (id, slug, status, time_zone, created_at, updated_at)
                         VALUES (?, ?, 'active', 'Asia/Colombo', ?, ?)
                         """, id, slug, Timestamp.from(now), Timestamp.from(now));
@@ -227,7 +227,7 @@ class LocalBillingController {
             throw new ApplicationProblemException(
                     400, ErrorCode.BAD_REQUEST, List.of(new FieldProblem("email", "and active are required")));
         }
-        int changed = database.inTransaction(status -> database.jdbc()
+        int changed = database.inTransaction(status -> database.jdbcTemplate()
                 .update(
                         """
                 UPDATE operator_user SET active = ?, version = version + 1, updated_at = ?

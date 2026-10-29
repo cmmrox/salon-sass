@@ -57,7 +57,7 @@ public class PlatformAudit {
         database.requireTransaction();
         UUID id = UUID.randomUUID();
         Timestamp time = Timestamp.from(at);
-        database.jdbc()
+        database.jdbcTemplate()
                 .update(
                         """
                 INSERT INTO platform_audit_entry (id, actor_kind, actor_id, action, subject_kind, subject_id, details,

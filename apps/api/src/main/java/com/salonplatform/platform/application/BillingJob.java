@@ -64,8 +64,8 @@ public class BillingJob {
     }
 
     private Pass pass(Instant now) {
-        List<UUID> candidates =
-                database.inTransaction(status -> database.jdbc().queryForList("""
+        List<UUID> candidates = database.inTransaction(
+                status -> database.jdbcTemplate().queryForList("""
                 SELECT s.id FROM subscription s JOIN tenant t ON t.id = s.salon_id
                  WHERE t.status NOT IN ('closed', 'deleted')
                    AND (s.next_invoice_at <= ?

@@ -44,7 +44,7 @@ public class OperatorAccess {
     }
 
     private JdbcTemplate jdbc() {
-        return database.jdbc();
+        return database.jdbcTemplate();
     }
 
     static ApplicationProblemException invalidCredentials() {

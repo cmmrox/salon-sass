@@ -72,7 +72,7 @@ public class OperatorSessions {
     }
 
     private JdbcTemplate jdbc() {
-        return database.jdbc();
+        return database.jdbcTemplate();
     }
 
     OperatorTokens newSession(UUID operator, String label, Instant now) {

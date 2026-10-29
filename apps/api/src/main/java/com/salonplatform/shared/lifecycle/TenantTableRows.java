@@ -64,7 +64,7 @@ public final class TenantTableRows {
         if (!function.matches("[a-z][a-z0-9_]{1,62}")) {
             throw new IllegalArgumentException("an eraser is a plain function name");
         }
-        Integer erased = database.jdbc()
+        Integer erased = database.jdbcTemplate()
                 .queryForObject(
                         "SELECT " + function + "(?, ?, ?, ?)",
                         Integer.class,

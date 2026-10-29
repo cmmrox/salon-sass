@@ -82,8 +82,8 @@ public class SalonDeletion {
     }
 
     private Pass pass(Instant now) {
-        List<UUID> due =
-                database.inTransaction(status -> database.jdbc().queryForList("""
+        List<UUID> due = database.inTransaction(
+                status -> database.jdbcTemplate().queryForList("""
                 SELECT id FROM tenant WHERE status = 'closed' AND delete_at <= ? ORDER BY delete_at, id
                 """, UUID.class, Timestamp.from(now)));
         List<SalonPass> salons = new ArrayList<>();
@@ -131,22 +131,21 @@ public class SalonDeletion {
 
     /** Makes the salon a tombstone, once; false when another run already did. */
     private boolean finish(UUID salon, Instant now, long rows) {
-        String state =
-                database
-                        .jdbc()
-                        .queryForList("SELECT status FROM tenant WHERE id = ? FOR UPDATE", String.class, salon)
-                        .stream()
-                        .findFirst()
-                        .orElse(null);
+        String state = database
+                .jdbcTemplate()
+                .queryForList("SELECT status FROM tenant WHERE id = ? FOR UPDATE", String.class, salon)
+                .stream()
+                .findFirst()
+                .orElse(null);
         if (!"closed".equals(state)) {
             return false;
         }
         Timestamp at = Timestamp.from(now);
-        database.jdbc().update("""
+        database.jdbcTemplate().update("""
                 UPDATE salon_export SET status = 'deleted', archive = NULL, token_hash = NULL, deleted_at = ?, updated_at = ?
                  WHERE salon_id = ? AND status <> 'deleted'
                 """, at, at, salon);
-        database.jdbc().update("""
+        database.jdbcTemplate().update("""
                 UPDATE tenant SET status = 'deleted', deleted_at = ?, version = version + 1, updated_at = ? WHERE id = ?
                 """, at, at, salon);
         lifecycle.event(salon, "deleted", null, PlatformAudit.SYSTEM, "retention", now);

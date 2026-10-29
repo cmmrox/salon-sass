@@ -36,16 +36,16 @@ class OperatorSecurityCleanupJob implements PlatformJob {
     @Override
     public void run(Instant now) {
         database.inTransaction(status -> {
-            database.jdbc().update("""
+            database.jdbcTemplate().update("""
                     DELETE FROM operator_rate_bucket WHERE id IN (SELECT id FROM operator_rate_bucket
                      WHERE window_start + interval '15 minutes' <= ? LIMIT ?)
                     """, Timestamp.from(now), BATCH);
-            database.jdbc().update("""
+            database.jdbcTemplate().update("""
                     DELETE FROM operator_mfa_challenge WHERE id IN (SELECT id FROM operator_mfa_challenge
                      WHERE expires_at <= ? LIMIT ?)
                     """, Timestamp.from(now), BATCH);
             // A step stays refused while it can still match (one adjacent step either side).
-            database.jdbc().update("""
+            database.jdbcTemplate().update("""
                     DELETE FROM operator_mfa_step WHERE id IN (SELECT id FROM operator_mfa_step WHERE step < ? LIMIT ?)
                     """, now.getEpochSecond() / 30 - 2, BATCH);
             return null;

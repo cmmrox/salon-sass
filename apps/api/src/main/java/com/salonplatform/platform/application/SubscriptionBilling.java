@@ -284,7 +284,7 @@ public class SubscriptionBilling {
                 return view(subscription, now);
             }
             details.put("fields", fields);
-            database.jdbc().update("""
+            database.jdbcTemplate().update("""
                     UPDATE subscription SET monthly_amount = ?, payment_method = ?, version = version + 1, updated_at = ?
                      WHERE id = ?
                     """, amount, method, java.sql.Timestamp.from(now), subscription.id());
@@ -320,7 +320,7 @@ public class SubscriptionBilling {
             }
             BillingLedger.Salon salon = ledger.salon(salonId, true).orElseThrow(NotFoundException::new);
             stillBilled(salon);
-            List<Integer> seats = database.jdbc()
+            List<Integer> seats = database.jdbcTemplate()
                     .queryForList("SELECT staff_seats FROM plan WHERE id = ?", Integer.class, input.planId());
             if (seats.isEmpty()) {
                 throw new NotFoundException();
@@ -336,7 +336,7 @@ public class SubscriptionBilling {
                 throw SalonEntitlements.exceeded(SalonEntitlements.STAFF_SEATS, seats.get(0));
             }
             Instant now = clock.instant();
-            database.jdbc().update("""
+            database.jdbcTemplate().update("""
                     UPDATE tenant SET plan_id = ?, version = version + 1, updated_at = ? WHERE id = ?
                     """, input.planId(), java.sql.Timestamp.from(now), salonId);
             Map<String, Object> details = new LinkedHashMap<>();

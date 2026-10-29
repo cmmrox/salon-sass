@@ -143,12 +143,12 @@ public class ProviderEvents {
     }
 
     private Acknowledged apply(Event event) {
-        database.jdbc()
+        database.jdbcTemplate()
                 .queryForObject(
                         "SELECT pg_advisory_xact_lock(hashtextextended(?, 1))::text",
                         String.class,
                         "provider-event|" + event.eventId());
-        Integer seen = database.jdbc()
+        Integer seen = database.jdbcTemplate()
                 .queryForObject(
                         "SELECT count(*) FROM provider_event WHERE event_id = ?", Integer.class, event.eventId());
         if (seen != null && seen > 0) {
@@ -157,7 +157,7 @@ public class ProviderEvents {
         Instant now = clock.instant();
         String result = outcome(event, now);
         Timestamp at = Timestamp.from(now);
-        database.jdbc()
+        database.jdbcTemplate()
                 .update(
                         """
                 INSERT INTO provider_event (event_id, invoice_id, attempt_key, outcome, occurred_at, result, created_at,
@@ -189,7 +189,7 @@ public class ProviderEvents {
 
     private String outcome(Event event, Instant now) {
         var attempt = database
-                .jdbc()
+                .jdbcTemplate()
                 .query(
                         "SELECT id, invoice_id, status FROM charge_attempt WHERE attempt_key = ?",
                         (row, n) -> new Object[] {
@@ -253,7 +253,7 @@ public class ProviderEvents {
 
     private void settle(UUID attemptId, String status, Instant now) {
         Timestamp at = Timestamp.from(now);
-        database.jdbc().update("""
+        database.jdbcTemplate().update("""
                 UPDATE charge_attempt SET status = ?, settled_at = ?, updated_at = ? WHERE id = ? AND status = 'requested'
                 """, status, at, at, attemptId);
     }

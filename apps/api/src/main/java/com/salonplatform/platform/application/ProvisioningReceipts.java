@@ -63,13 +63,13 @@ public class ProvisioningReceipts {
      */
     public Optional<Receipt> replay(UUID operator, String action, UUID key, String fingerprint) {
         database.requireTransaction();
-        database.jdbc()
+        database.jdbcTemplate()
                 .queryForObject(
                         "SELECT pg_advisory_xact_lock(hashtextextended(?, 0))::text",
                         String.class,
                         operator + "|" + action + "|" + key);
         return database
-                .jdbc()
+                .jdbcTemplate()
                 .query(
                         """
                 SELECT fingerprint, subject_id, result::text AS result FROM provisioning_receipt
@@ -102,7 +102,7 @@ public class ProvisioningReceipts {
             Instant at) {
         database.requireTransaction();
         Timestamp time = Timestamp.from(at);
-        database.jdbc()
+        database.jdbcTemplate()
                 .update("""
                 INSERT INTO provisioning_receipt (operator_id, action, idempotency_key, fingerprint, subject_id, result,
                     created_at, updated_at)

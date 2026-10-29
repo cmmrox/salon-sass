@@ -12,6 +12,7 @@ import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.SmartInitializingSingleton;
 import org.springframework.core.env.Environment;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.TransactionDefinition;
@@ -50,7 +51,9 @@ public class PlatformDatabase implements SmartInitializingSingleton, DisposableB
 
     private final HikariDataSource pool;
 
-    private final JdbcTemplate jdbc;
+    private final JdbcTemplate jdbcTemplate;
+
+    private final JdbcClient jdbc;
 
     private final TransactionTemplate transactions;
 
@@ -93,7 +96,8 @@ public class PlatformDatabase implements SmartInitializingSingleton, DisposableB
                         password),
                 environment.getRequiredProperty(DatabaseReconnectConfiguration.INTERVAL, Duration.class),
                 pool::isClosed));
-        jdbc = new JdbcTemplate(pool);
+        jdbcTemplate = new JdbcTemplate(pool);
+        jdbc = JdbcClient.create(jdbcTemplate);
         DataSourceTransactionManager manager = new DataSourceTransactionManager(pool) {
             @Override
             protected void prepareTransactionalConnection(Connection connection, TransactionDefinition definition)
@@ -122,8 +126,13 @@ public class PlatformDatabase implements SmartInitializingSingleton, DisposableB
     }
 
     /** Statements on the platform connection; inside {@link #inTransaction} they join its transaction. */
-    public JdbcTemplate jdbc() {
+    public JdbcClient jdbc() {
         return jdbc;
+    }
+
+    /** As {@link #jdbc()}, for the statements not yet moved to {@link JdbcClient}. */
+    public JdbcTemplate jdbcTemplate() {
+        return jdbcTemplate;
     }
 
     /**
@@ -139,7 +148,7 @@ public class PlatformDatabase implements SmartInitializingSingleton, DisposableB
 
     @Override
     public void afterSingletonsInstantiated() {
-        Map<String, Object> role = jdbc.queryForMap(ROLE);
+        Map<String, Object> role = jdbc.sql(ROLE).query().singleRow();
         Object name = role.get("name");
         if (Boolean.TRUE.equals(role.get("superuser"))) {
             throw refused(name, "is a superuser");
