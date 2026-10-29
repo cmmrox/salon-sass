@@ -1,9 +1,5 @@
 package com.salonplatform.shared.infrastructure;
 
-import com.salonplatform.shared.api.ApplicationProblemException;
-import com.salonplatform.shared.api.ErrorCode;
-import com.salonplatform.shared.api.NotFoundException;
-import com.salonplatform.shared.api.RequestPaths;
 import com.salonplatform.shared.audit.SupportRequestAudit;
 import com.salonplatform.shared.tenancy.ActiveTenants;
 import com.salonplatform.shared.tenancy.CurrentTenant;
@@ -15,6 +11,10 @@ import com.salonplatform.shared.tenancy.SupportCredentials;
 import com.salonplatform.shared.tenancy.SupportGrant;
 import com.salonplatform.shared.tenancy.TenantContext;
 import com.salonplatform.shared.tenancy.TenantDirectory;
+import com.salonplatform.shared.web.ApplicationProblemException;
+import com.salonplatform.shared.web.ErrorCode;
+import com.salonplatform.shared.web.NotFoundException;
+import com.salonplatform.shared.web.RequestPaths;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

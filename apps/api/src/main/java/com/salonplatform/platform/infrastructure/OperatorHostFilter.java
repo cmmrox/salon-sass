@@ -1,7 +1,7 @@
 package com.salonplatform.platform.infrastructure;
 
-import com.salonplatform.shared.api.NotFoundException;
-import com.salonplatform.shared.api.RequestPaths;
+import com.salonplatform.shared.web.NotFoundException;
+import com.salonplatform.shared.web.RequestPaths;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

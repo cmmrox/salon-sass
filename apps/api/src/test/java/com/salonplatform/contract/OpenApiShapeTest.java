@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
-import com.salonplatform.shared.api.ErrorCode;
+import com.salonplatform.shared.web.ErrorCode;
 import com.salonplatform.testing.IntegrationTest;
 import java.util.Arrays;
 import java.util.List;

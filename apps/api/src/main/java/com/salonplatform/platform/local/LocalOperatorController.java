@@ -2,10 +2,10 @@ package com.salonplatform.platform.local;
 
 import com.salonplatform.platform.application.BootstrapFaults;
 import com.salonplatform.platform.application.OperatorAccounts;
-import com.salonplatform.shared.api.ApplicationProblemException;
-import com.salonplatform.shared.api.ErrorCode;
-import com.salonplatform.shared.api.FieldProblem;
-import com.salonplatform.shared.api.NotFoundException;
+import com.salonplatform.shared.web.ApplicationProblemException;
+import com.salonplatform.shared.web.ErrorCode;
+import com.salonplatform.shared.web.FieldProblem;
+import com.salonplatform.shared.web.NotFoundException;
 import io.swagger.v3.oas.annotations.Hidden;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;

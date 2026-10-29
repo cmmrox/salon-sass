@@ -2,7 +2,7 @@ package com.salonplatform.shared.infrastructure;
 
 import static org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON_VALUE;
 
-import com.salonplatform.shared.api.ErrorCode;
+import com.salonplatform.shared.web.ErrorCode;
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.SpecVersion;

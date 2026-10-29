@@ -1,7 +1,7 @@
 package com.salonplatform.shared.infrastructure;
 
-import com.salonplatform.shared.api.RequestPaths;
 import com.salonplatform.shared.tenancy.TenantContext;
+import com.salonplatform.shared.web.RequestPaths;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 import java.util.regex.Pattern;

@@ -2,11 +2,11 @@ package com.salonplatform.platform.application;
 
 import com.salonplatform.platform.infrastructure.BillingProviderKey;
 import com.salonplatform.platform.infrastructure.PlatformAudit;
-import com.salonplatform.shared.api.ApplicationProblemException;
-import com.salonplatform.shared.api.ErrorCode;
-import com.salonplatform.shared.api.FieldProblem;
-import com.salonplatform.shared.api.NotFoundException;
 import com.salonplatform.shared.infrastructure.PlatformDatabase;
+import com.salonplatform.shared.web.ApplicationProblemException;
+import com.salonplatform.shared.web.ErrorCode;
+import com.salonplatform.shared.web.FieldProblem;
+import com.salonplatform.shared.web.NotFoundException;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.sql.Timestamp;
 import java.time.Clock;

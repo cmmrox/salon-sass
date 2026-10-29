@@ -2,8 +2,8 @@ package com.salonplatform.identity.infrastructure;
 
 import static org.assertj.core.api.Assertions.*;
 
-import com.salonplatform.shared.api.*;
 import com.salonplatform.shared.tenancy.*;
+import com.salonplatform.shared.web.*;
 import java.nio.charset.StandardCharsets;
 import java.time.*;
 import java.util.*;

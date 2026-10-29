@@ -1,7 +1,7 @@
 package com.salonplatform.shared.infrastructure;
 
-import com.salonplatform.shared.api.ErrorCode;
-import com.salonplatform.shared.api.RequestTrace;
+import com.salonplatform.shared.web.ErrorCode;
+import com.salonplatform.shared.web.RequestTrace;
 import java.io.IOException;
 import java.io.Writer;
 import java.util.LinkedHashMap;

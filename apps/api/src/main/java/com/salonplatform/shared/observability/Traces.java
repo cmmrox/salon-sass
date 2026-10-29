@@ -1,8 +1,8 @@
 package com.salonplatform.shared.observability;
 
-import com.salonplatform.shared.api.RequestTrace;
 import com.salonplatform.shared.tenancy.CurrentTenant;
 import com.salonplatform.shared.tenancy.TenantContext;
+import com.salonplatform.shared.web.RequestTrace;
 import io.micrometer.tracing.Span;
 import io.micrometer.tracing.TraceContext;
 import io.micrometer.tracing.Tracer;

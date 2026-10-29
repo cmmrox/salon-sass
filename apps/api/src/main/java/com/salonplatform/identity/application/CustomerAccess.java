@@ -2,10 +2,10 @@ package com.salonplatform.identity.application;
 
 import com.salonplatform.identity.domain.*;
 import com.salonplatform.identity.infrastructure.*;
-import com.salonplatform.shared.api.*;
 import com.salonplatform.shared.audit.*;
 import com.salonplatform.shared.outbox.*;
 import com.salonplatform.shared.tenancy.*;
+import com.salonplatform.shared.web.*;
 import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.persistence.*;
 import java.security.SecureRandom;

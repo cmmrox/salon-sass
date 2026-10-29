@@ -1,10 +1,10 @@
 package com.salonplatform.platform.application;
 
 import com.salonplatform.platform.infrastructure.OperatorCrypto;
-import com.salonplatform.shared.api.ApplicationProblemException;
-import com.salonplatform.shared.api.ErrorCode;
-import com.salonplatform.shared.api.FieldProblem;
 import com.salonplatform.shared.infrastructure.PlatformDatabase;
+import com.salonplatform.shared.web.ApplicationProblemException;
+import com.salonplatform.shared.web.ErrorCode;
+import com.salonplatform.shared.web.FieldProblem;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;

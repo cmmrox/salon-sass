@@ -1,8 +1,8 @@
 package com.salonplatform.identity.application;
 
 import com.salonplatform.identity.domain.IdentityGuard;
-import com.salonplatform.shared.api.ApplicationProblemException;
 import com.salonplatform.shared.tenancy.TenantContext;
+import com.salonplatform.shared.web.ApplicationProblemException;
 import jakarta.persistence.*;
 import java.time.Clock;
 import java.time.Instant;

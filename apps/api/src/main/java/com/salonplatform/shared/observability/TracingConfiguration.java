@@ -29,7 +29,7 @@ class TracingConfiguration {
                         && value.getValue() != null
                         && value.getValue().contains("/api/v1/exports/")) {
                     context.addHighCardinalityKeyValue(io.micrometer.common.KeyValue.of(
-                            name, com.salonplatform.shared.api.RequestPaths.loggable(value.getValue())));
+                            name, com.salonplatform.shared.web.RequestPaths.loggable(value.getValue())));
                 }
             }
             return context;

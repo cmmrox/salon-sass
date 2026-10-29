@@ -1,6 +1,6 @@
 package com.salonplatform.shared.local;
 
-import com.salonplatform.shared.api.NotFoundException;
+import com.salonplatform.shared.web.NotFoundException;
 import io.swagger.v3.oas.annotations.Hidden;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;

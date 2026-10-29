@@ -2,8 +2,8 @@ package com.salonplatform.platform.infrastructure;
 
 import com.eatthepath.otp.TimeBasedOneTimePasswordGenerator;
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
-import com.salonplatform.shared.api.ApplicationProblemException;
-import com.salonplatform.shared.api.ErrorCode;
+import com.salonplatform.shared.web.ApplicationProblemException;
+import com.salonplatform.shared.web.ErrorCode;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;

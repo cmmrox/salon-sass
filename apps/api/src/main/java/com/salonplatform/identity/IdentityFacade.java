@@ -63,8 +63,8 @@ public class IdentityFacade {
     public Principal require(String permission) {
         Principal p = current();
         if (!p.permissions().contains(permission))
-            throw new com.salonplatform.shared.api.ApplicationProblemException(
-                    403, com.salonplatform.shared.api.ErrorCode.PERMISSION_DENIED);
+            throw new com.salonplatform.shared.web.ApplicationProblemException(
+                    403, com.salonplatform.shared.web.ErrorCode.PERMISSION_DENIED);
         return p;
     }
 }

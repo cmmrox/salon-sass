@@ -1,7 +1,7 @@
 package com.salonplatform.shared.infrastructure;
 
-import com.salonplatform.shared.api.RequestTrace;
 import com.salonplatform.shared.tenancy.TenantContext;
+import com.salonplatform.shared.web.RequestTrace;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
@@ -62,7 +62,7 @@ final class RequestLog {
     }
 
     static void write(String method, String rawPath, int status, long durationNanos) {
-        String path = com.salonplatform.shared.api.RequestPaths.loggable(rawPath);
+        String path = com.salonplatform.shared.web.RequestPaths.loggable(rawPath);
         log.atInfo()
                 .addKeyValue("http.request.method", method)
                 .addKeyValue("url.path", path)

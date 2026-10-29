@@ -2,9 +2,9 @@ package com.salonplatform.platform.application;
 
 import com.salonplatform.identity.IdentityFacade;
 import com.salonplatform.identity.IdentityProvisioning;
-import com.salonplatform.shared.api.NotFoundException;
 import com.salonplatform.shared.infrastructure.PlatformDatabase;
 import com.salonplatform.shared.tenancy.TenantContext;
+import com.salonplatform.shared.web.NotFoundException;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Clock;
 import java.time.Instant;

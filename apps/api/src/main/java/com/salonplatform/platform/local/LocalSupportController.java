@@ -1,7 +1,7 @@
 package com.salonplatform.platform.local;
 
 import com.salonplatform.platform.application.SupportSessions;
-import com.salonplatform.shared.api.NotFoundException;
+import com.salonplatform.shared.web.NotFoundException;
 import io.swagger.v3.oas.annotations.Hidden;
 import jakarta.servlet.http.HttpServletRequest;
 import java.net.InetAddress;
