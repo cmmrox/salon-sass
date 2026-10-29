@@ -10,12 +10,17 @@ import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.lang.ArchRule;
 import com.tngtech.archunit.lang.EvaluationResult;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.springframework.modulith.ApplicationModule;
 import org.springframework.modulith.core.ApplicationModules;
 import org.springframework.modulith.core.Violations;
 
@@ -58,6 +63,39 @@ class ModuleBoundariesTest {
                 .containsExactlyInAnyOrderElementsOf(ModuleRules.MODULES.stream()
                         .map(module -> BASE + "." + module)
                         .toList());
+    }
+
+    /**
+     * Every module states the modules it may use, so that module verification refuses anything else; and
+     * only platform may use an in-process-only contract, which can never become a remote call.
+     */
+    @Test
+    void everyModuleDeclaresWhatItMayUse() {
+        Map<String, Optional<List<String>>> declared =
+                declaredDependencies(ApplicationModules.of(SalonApiApplication.class));
+
+        assertThat(declared).hasSize(ModuleRules.MODULES.size());
+        assertThat(declared)
+                .allSatisfy((module, dependencies) -> assertThat(dependencies)
+                        .as("module %s declares its allowed dependencies", module)
+                        .isPresent());
+        assertThat(declared.entrySet().stream()
+                        .filter(module -> module.getValue().orElseThrow().stream()
+                                .anyMatch(dependency -> dependency.endsWith(":: inprocess")))
+                        .map(Map.Entry::getKey))
+                .as("the modules that may use an inprocess contract")
+                .containsExactly("platform");
+    }
+
+    @Test
+    void aModuleThatDeclaresNothingIsFound() {
+        Map<String, Optional<List<String>>> declared =
+                declaredDependencies(ApplicationModules.of(FIXTURE + "undeclared", TEST_CLASSES_TOO));
+
+        assertThat(declared.entrySet().stream()
+                        .filter(module -> module.getValue().isEmpty())
+                        .map(Map.Entry::getKey))
+                .containsExactlyInAnyOrder("catalogue", "payment");
     }
 
     /** The two rules about the local hooks have something to check: the hooks are where they look. */
@@ -108,13 +146,19 @@ class ModuleBoundariesTest {
                         "localhookused", rule(ModuleRules::theLocalHooksAreUsedByNothingElse), "BookingUsesTestClock"),
                 arguments("localhookalways", rule(ModuleRules::theLocalHooksLoadInTheLocalProfileOnly), "AlwaysThere"),
                 arguments(
-                        "localhookalways", rule(ModuleRules::theLocalHooksLoadInTheLocalProfileOnly), "AlsoElsewhere"));
+                        "localhookalways", rule(ModuleRules::theLocalHooksLoadInTheLocalProfileOnly), "AlsoElsewhere"),
+                arguments("rootclass", rule(ModuleRules::rootPackagesHoldOnlyContracts), "BookingService"),
+                arguments("openapiroot", rule(ModuleRules::providedTypesCarryNoOpenApiAnnotation), "BookingSlot"),
+                arguments(
+                        "unconfiguredmapper",
+                        rule(ModuleRules::everyMapperNamesTheSharedConfiguration),
+                        "SlotResponseMapper"));
     }
 
     /**
      * Module verification, shown a tree that breaks it, names the class that breaks it: a cycle between
-     * modules, another module's internal package, and a sub-package of {@code shared} that is not a
-     * named interface.
+     * modules, another module's internal package, a sub-package of {@code shared} that is not a named
+     * interface, and a module its user does not declare in {@code allowedDependencies}.
      */
     @ParameterizedTest(name = "{0}")
     @MethodSource("moduleViolations")
@@ -132,7 +176,32 @@ class ModuleBoundariesTest {
         return Stream.of(
                 arguments("cycle", "PaymentFacade"),
                 arguments("internals", "PaymentUsesBookingEntity"),
-                arguments("sharedinternals", "BookingUsesSharedInternals"));
+                arguments("sharedinternals", "BookingUsesSharedInternals"),
+                arguments("undeclared", "BookingUsesPayment"));
+    }
+
+    /**
+     * Each module's {@code allowedDependencies}, by module name; empty when its {@code package-info.java}
+     * declares none, which Spring Modulith reads as "may use every module".
+     */
+    private static Map<String, Optional<List<String>>> declaredDependencies(ApplicationModules modules) {
+        return modules.stream()
+                .map(module -> module.getBasePackage().getName())
+                .collect(Collectors.toMap(
+                        basePackage -> basePackage.substring(basePackage.lastIndexOf('.') + 1),
+                        ModuleBoundariesTest::allowedDependencies));
+    }
+
+    private static Optional<List<String>> allowedDependencies(String basePackage) {
+        try {
+            Class<?> packageInfo =
+                    Class.forName(basePackage + ".package-info", false, ModuleBoundariesTest.class.getClassLoader());
+            return Optional.ofNullable(packageInfo.getAnnotation(ApplicationModule.class))
+                    .map(declaration -> List.of(declaration.allowedDependencies()))
+                    .filter(dependencies -> !dependencies.contains(ApplicationModule.OPEN_TOKEN));
+        } catch (ClassNotFoundException noPackageInfo) {
+            return Optional.empty();
+        }
     }
 
     private static Function<ModuleRules, ArchRule> rule(Function<ModuleRules, ArchRule> rule) {

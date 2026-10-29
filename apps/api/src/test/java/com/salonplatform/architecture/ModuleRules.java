@@ -16,8 +16,8 @@ import java.util.List;
  * The rules between modules, from {@code docs/engineering/backend.md}, that Spring Modulith's verification
  * does not cover, written so that they can be applied to any base package: to the application, and to the
  * fixture that proves each rule really fails on a violation. Modulith verifies that dependencies between
- * modules point one way and that another module is used only through its root package and its named
- * interfaces.
+ * modules point one way, that another module is used only through its root package and its named
+ * interfaces, and that a module uses only what its {@code allowedDependencies} declare.
  */
 final class ModuleRules {
 
@@ -51,7 +51,10 @@ final class ModuleRules {
                 nothingDependsOnReporting(),
                 domainUsesNoSpringAndNoHttp(),
                 theLocalHooksAreUsedByNothingElse(),
-                theLocalHooksLoadInTheLocalProfileOnly());
+                theLocalHooksLoadInTheLocalProfileOnly(),
+                rootPackagesHoldOnlyContracts(),
+                providedTypesCarryNoOpenApiAnnotation(),
+                everyMapperNamesTheSharedConfiguration());
     }
 
     /** A package beside the modules would escape every other rule here. */
@@ -141,9 +144,61 @@ final class ModuleRules {
                 .allowEmptyShould(true);
     }
 
+    /**
+     * A module's root package is its public surface: provided interfaces, the records they take and
+     * return, enums, exceptions and events. A class with behaviour, or a Spring bean, belongs in
+     * {@code application/}, behind the interface it implements.
+     */
+    ArchRule rootPackagesHoldOnlyContracts() {
+        return classes()
+                .that()
+                .resideInAnyPackage(rootPackages())
+                .should(beAContract())
+                .as("a module's root package holds only interfaces, records, enums and exceptions")
+                .allowEmptyShould(true);
+    }
+
+    /**
+     * A provided type is not a REST response shape: a controller that returns the same data has its own
+     * response record in {@code web/}, and only that carries OpenAPI annotations.
+     */
+    ArchRule providedTypesCarryNoOpenApiAnnotation() {
+        List<String> provided = new ArrayList<>(List.of(rootPackages()));
+        provided.add(base + ".*." + IN_PROCESS + "..");
+        return noClasses()
+                .that()
+                .resideInAnyPackage(provided.toArray(String[]::new))
+                .should()
+                .dependOnClassesThat()
+                .resideInAPackage("io.swagger..")
+                .as("no type of a root package or an inprocess package carries an OpenAPI annotation")
+                .allowEmptyShould(true);
+    }
+
+    /**
+     * Every MapStruct mapper names {@code ResponseMapperConfig}, which makes an unmapped response property
+     * and a lossy conversion build errors and the mapper a Spring bean (decision 056).
+     */
+    ArchRule everyMapperNamesTheSharedConfiguration() {
+        return classes()
+                .that()
+                .resideInAPackage(base + "..")
+                .and()
+                .areAnnotatedWith(MAPSTRUCT_MAPPER)
+                .should(nameTheSharedMapperConfiguration())
+                .as("every MapStruct mapper names ResponseMapperConfig")
+                .allowEmptyShould(true);
+    }
+
     private static final String SPRING_COMPONENT = "org.springframework.stereotype.Component";
 
     private static final String SPRING_PROFILE = "org.springframework.context.annotation.Profile";
+
+    private static final String MAPSTRUCT_MAPPER = "org.mapstruct.Mapper";
+
+    private static final String RESPONSE_MAPPER_CONFIG = "com.salonplatform.shared.mapping.ResponseMapperConfig";
+
+    private static final String IN_PROCESS = "inprocess";
 
     private String localHooks() {
         return base + "." + SHARED + ".local..";
@@ -166,6 +221,49 @@ final class ModuleRules {
                 }
             }
         };
+    }
+
+    private static ArchCondition<JavaClass> beAContract() {
+        return new ArchCondition<>("be an interface, a record, an enum or an exception, and no Spring bean") {
+            @Override
+            public void check(JavaClass javaClass, ConditionEvents events) {
+                boolean contract = javaClass.isInterface()
+                        || javaClass.isRecord()
+                        || javaClass.isEnum()
+                        || javaClass.isAssignableTo(Throwable.class);
+                if (!contract || javaClass.isMetaAnnotatedWith(SPRING_COMPONENT)) {
+                    events.add(SimpleConditionEvent.violated(
+                            javaClass,
+                            javaClass.getName()
+                                    + " is in a module's root package but is not an interface, a record, an enum"
+                                    + " or an exception, or is a Spring bean"));
+                }
+            }
+        };
+    }
+
+    private static ArchCondition<JavaClass> nameTheSharedMapperConfiguration() {
+        return new ArchCondition<>("name ResponseMapperConfig as its config") {
+            @Override
+            public void check(JavaClass javaClass, ConditionEvents events) {
+                boolean configured = javaClass
+                        .getAnnotationOfType(MAPSTRUCT_MAPPER)
+                        .get("config")
+                        .filter(config -> config instanceof JavaClass type
+                                && type.getName().equals(RESPONSE_MAPPER_CONFIG))
+                        .isPresent();
+                if (!configured) {
+                    events.add(SimpleConditionEvent.violated(
+                            javaClass,
+                            javaClass.getName() + " is a MapStruct mapper that does not name ResponseMapperConfig"));
+                }
+            }
+        };
+    }
+
+    /** Each module's root package, exactly: not its sub-packages. */
+    private String[] rootPackages() {
+        return MODULES.stream().map(module -> base + "." + module).toArray(String[]::new);
     }
 
     private String everythingIn(String module) {
