@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
 
 /**
@@ -26,10 +26,10 @@ class OutboxTenantData implements TenantDataModule {
                     "payload", "an encrypted or credential-bearing delivery payload, never exported",
                     "lease_token", "a dispatcher's internal claim token, never exported"));
 
-    private final JdbcTemplate jdbc;
+    private final JdbcClient jdbc;
     private final ObjectProvider<PlatformDatabase> platform;
 
-    OutboxTenantData(JdbcTemplate jdbc, ObjectProvider<PlatformDatabase> platform) {
+    OutboxTenantData(JdbcClient jdbc, ObjectProvider<PlatformDatabase> platform) {
         this.jdbc = jdbc;
         this.platform = platform;
     }

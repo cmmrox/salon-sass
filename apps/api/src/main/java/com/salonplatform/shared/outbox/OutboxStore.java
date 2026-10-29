@@ -1,26 +1,23 @@
 package com.salonplatform.shared.outbox;
 
-import java.sql.Array;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
-import org.springframework.jdbc.core.ConnectionCallback;
-import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.jdbc.support.SqlArrayValue;
 import org.springframework.stereotype.Component;
 
 /**
- * The dispatcher's reads and writes of the outbox. What is due across salons is asked of {@code
- * outbox_due()}, which returns ids and nothing else; everything else is done for one salon, inside
- * a transaction that the caller opened with that salon set, so that row-level security holds, and
+ * The outbox's direct SQL: the dispatcher's leasing and conditional status updates, and the cancellation and
+ * erasure of one message (named direct-SQL exceptions, {@code docs/engineering/backend.md}). What is due across
+ * salons is asked of {@code outbox_due()}, which returns ids and nothing else; everything else is done for one
+ * salon, inside a transaction that the caller opened with that salon set, so that row-level security holds, and
  * with that salon named in every statement as well.
  */
 @Component
@@ -73,11 +70,23 @@ class OutboxStore {
             DELETE FROM outbox_message WHERE tenant_id = ? AND status = 'sent' AND sent_at < ?
             """;
 
+    private static final String CANCEL_UNDELIVERED = """
+            UPDATE outbox_message SET status = 'cancelled', lease_until = NULL, lease_token = NULL, updated_at = ?
+             WHERE tenant_id = ? AND id = ? AND status IN ('pending', 'sending', 'dead')
+            """;
+
+    private static final String CANCEL_CLAIMED = """
+            UPDATE outbox_message SET status = 'cancelled', lease_until = NULL, lease_token = NULL, updated_at = ?
+             WHERE tenant_id = ? AND id = ? AND status = 'sending' AND lease_token = ?
+            """;
+
+    private static final String REMOVE = "DELETE FROM outbox_message WHERE tenant_id = ? AND id = ?";
+
     private static final int LAST_ERROR_LENGTH = 500;
 
-    private final JdbcTemplate jdbc;
+    private final JdbcClient jdbc;
 
-    OutboxStore(JdbcTemplate jdbc) {
+    OutboxStore(JdbcClient jdbc) {
         this.jdbc = jdbc;
     }
 
@@ -108,36 +117,25 @@ class OutboxStore {
     /** Not due any more, held by someone else, or its channel could not take it now. */
     record NotTaken() implements Taken {}
 
+    /** A due message, locked for this dispatcher's transaction. */
+    private record Locked(String channel, String payload, int attempts, String traceParent) {}
+
     List<Due> due(Instant now, Collection<String> channels, int perSalon, int max) {
-        return jdbc.execute((ConnectionCallback<List<Due>>) connection -> {
-            Array channelArray = connection.createArrayOf("text", channels.toArray());
-            try (PreparedStatement statement = connection.prepareStatement(DUE)) {
-                statement.setObject(1, utc(now));
-                statement.setArray(2, channelArray);
-                statement.setInt(3, perSalon);
-                statement.setInt(4, max);
-                List<Due> due = new ArrayList<>();
-                try (ResultSet rows = statement.executeQuery()) {
-                    while (rows.next()) {
-                        due.add(new Due(
-                                rows.getObject("message_id", UUID.class), rows.getObject("tenant_id", UUID.class)));
-                    }
-                }
-                return due;
-            } finally {
-                channelArray.free();
-            }
-        });
+        return jdbc.sql(DUE)
+                .params(utc(now), new SqlArrayValue("text", channels.toArray()), perSalon, max)
+                .query((row, number) ->
+                        new Due(row.getObject("message_id", UUID.class), row.getObject("tenant_id", UUID.class)))
+                .list();
     }
 
     Backlog backlog(Instant now) {
-        return jdbc.queryForObject(
-                BACKLOG,
-                (row, n) -> {
+        return jdbc.sql(BACKLOG)
+                .param(utc(now))
+                .query((row, number) -> {
                     OffsetDateTime oldest = row.getObject("oldest_due_at", OffsetDateTime.class);
                     return new Backlog(row.getLong("waiting"), oldest == null ? null : oldest.toInstant());
-                },
-                utc(now));
+                })
+                .single();
     }
 
     /**
@@ -155,78 +153,95 @@ class OutboxStore {
             int maxAttempts,
             Function<String, Optional<P>> gate,
             List<P> reserved) {
-        List<Object[]> rows = jdbc.query(
-                LOCK_DUE,
-                (row, n) -> new Object[] {
-                    row.getString("channel"),
-                    row.getString("payload"),
-                    row.getInt("attempts"),
-                    row.getString("trace_parent")
-                },
-                tenantId,
-                messageId,
-                utc(now),
-                utc(now));
-        if (rows.isEmpty()) {
+        Optional<Locked> due = jdbc.sql(LOCK_DUE)
+                .params(tenantId, messageId, utc(now), utc(now))
+                .query((row, number) -> new Locked(
+                        row.getString("channel"),
+                        row.getString("payload"),
+                        row.getInt("attempts"),
+                        row.getString("trace_parent")))
+                .optional();
+        if (due.isEmpty()) {
             return new NotTaken();
         }
-        String channel = (String) rows.getFirst()[0];
-        int attempts = (Integer) rows.getFirst()[2];
-        if (attempts >= maxAttempts) {
-            jdbc.update(INTERRUPTED_FOR_GOOD, utc(now), tenantId, messageId);
+        Locked message = due.get();
+        if (message.attempts() >= maxAttempts) {
+            jdbc.sql(INTERRUPTED_FOR_GOOD).params(utc(now), tenantId, messageId).update();
             return new OutOfAttempts();
         }
-        Optional<P> permit = gate.apply(channel);
+        Optional<P> permit = gate.apply(message.channel());
         if (permit.isEmpty()) {
             return new NotTaken();
         }
         reserved.add(permit.get());
         UUID token = UUID.randomUUID();
-        jdbc.update(CLAIM, utc(now.plus(lease)), token, utc(now), tenantId, messageId);
-        return new Claimed(
-                new Claim(messageId, tenantId, channel, (String) rows.getFirst()[1], attempts + 1, token, (String)
-                        rows.getFirst()[3]));
+        jdbc.sql(CLAIM)
+                .params(utc(now.plus(lease)), token, utc(now), tenantId, messageId)
+                .update();
+        return new Claimed(new Claim(
+                messageId,
+                tenantId,
+                message.channel(),
+                message.payload(),
+                message.attempts() + 1,
+                token,
+                message.traceParent()));
     }
 
     /** Records a delivery, if the claim still holds. */
     boolean sent(Claim claim, Instant now) {
-        return jdbc.update(SENT, utc(now), utc(now), claim.tenantId(), claim.messageId(), claim.leaseToken()) == 1;
+        return jdbc.sql(SENT)
+                        .params(utc(now), utc(now), claim.tenantId(), claim.messageId(), claim.leaseToken())
+                        .update()
+                == 1;
     }
 
+    /** Records that the provider found the message cancelled, if the claim still holds. */
     boolean cancelled(Claim claim, Instant at) {
-        return jdbc.update(
-                        "UPDATE outbox_message SET"
-                                + " status='cancelled',lease_until=NULL,lease_token=NULL,updated_at=?"
-                                + " WHERE tenant_id=? AND id=? AND status='sending' AND lease_token=?",
-                        utc(at),
-                        claim.tenantId(),
-                        claim.messageId(),
-                        claim.leaseToken())
+        return jdbc.sql(CANCEL_CLAIMED)
+                        .params(utc(at), claim.tenantId(), claim.messageId(), claim.leaseToken())
+                        .update()
                 == 1;
     }
 
     /** Records a failed attempt to be tried again at that time, if the claim still holds. */
     boolean retry(Claim claim, Instant nextAttemptAt, String error, Instant now) {
-        return jdbc.update(
-                        RETRY,
-                        utc(nextAttemptAt),
-                        shorten(error),
-                        utc(now),
-                        claim.tenantId(),
-                        claim.messageId(),
-                        claim.leaseToken())
+        return jdbc.sql(RETRY)
+                        .params(
+                                utc(nextAttemptAt),
+                                shorten(error),
+                                utc(now),
+                                claim.tenantId(),
+                                claim.messageId(),
+                                claim.leaseToken())
+                        .update()
                 == 1;
     }
 
     /** Records a failed last attempt, if the claim still holds. */
     boolean dead(Claim claim, String error, Instant now) {
-        return jdbc.update(DEAD, shorten(error), utc(now), claim.tenantId(), claim.messageId(), claim.leaseToken())
+        return jdbc.sql(DEAD)
+                        .params(shorten(error), utc(now), claim.tenantId(), claim.messageId(), claim.leaseToken())
+                        .update()
                 == 1;
     }
 
     /** Removes the salon's messages delivered before that instant; with that salon set. */
     int removeSentBefore(UUID tenantId, Instant before) {
-        return jdbc.update(REMOVE_SENT, tenantId, utc(before));
+        return jdbc.sql(REMOVE_SENT).params(tenantId, utc(before)).update();
+    }
+
+    /**
+     * Cancels one of the salon's undelivered messages, in the caller's transaction with that salon set. A
+     * message already sent or cancelled is left as it is, and a claim in flight can no longer complete it.
+     */
+    boolean cancelUndelivered(UUID tenantId, UUID messageId, Instant at) {
+        return jdbc.sql(CANCEL_UNDELIVERED).params(utc(at), tenantId, messageId).update() == 1;
+    }
+
+    /** Removes one of the salon's messages, whatever its state, in the caller's transaction with that salon set. */
+    void remove(UUID tenantId, UUID messageId) {
+        jdbc.sql(REMOVE).params(tenantId, messageId).update();
     }
 
     private static OffsetDateTime utc(Instant instant) {

@@ -85,10 +85,10 @@ class SalonBrandHibernateFilterAloneIntegrationTest {
                 alpha,
                 () -> inTransaction(() -> {
                     assertThat(brands.findAll())
-                            .extracting(SalonBrand::tenantId)
+                            .extracting(SalonBrand::getTenantId)
                             .containsExactly(alpha.id());
                     assertThat(brands.findCurrent())
-                            .map(SalonBrand::displayName)
+                            .map(SalonBrand::getDisplayName)
                             .contains(alpha.name());
                     assertThat(brands.findById(beta.id()))
                             .as("beta's row, by its id")

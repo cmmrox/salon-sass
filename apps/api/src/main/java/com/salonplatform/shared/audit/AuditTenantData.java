@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
 
 /**
@@ -21,10 +21,10 @@ class AuditTenantData implements TenantDataModule {
     private static final TenantDataModule.Table AUDIT =
             new TenantDataModule.Table("audit_entry", "created_at", Map.of());
 
-    private final JdbcTemplate jdbc;
+    private final JdbcClient jdbc;
     private final ObjectProvider<PlatformDatabase> platform;
 
-    AuditTenantData(JdbcTemplate jdbc, ObjectProvider<PlatformDatabase> platform) {
+    AuditTenantData(JdbcClient jdbc, ObjectProvider<PlatformDatabase> platform) {
         this.jdbc = jdbc;
         this.platform = platform;
     }

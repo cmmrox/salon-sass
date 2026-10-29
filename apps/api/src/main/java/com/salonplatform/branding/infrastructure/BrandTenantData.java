@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
 
 /** Branding's exporter and eraser for a closed salon (PLT-06): its published name and colour. */
@@ -17,10 +17,10 @@ class BrandTenantData implements TenantDataModule {
 
     private static final Table BRAND = new Table("salon_brand", "tenant_id", Map.of());
 
-    private final JdbcTemplate jdbc;
+    private final JdbcClient jdbc;
     private final ObjectProvider<PlatformDatabase> platform;
 
-    BrandTenantData(JdbcTemplate jdbc, ObjectProvider<PlatformDatabase> platform) {
+    BrandTenantData(JdbcClient jdbc, ObjectProvider<PlatformDatabase> platform) {
         this.jdbc = jdbc;
         this.platform = platform;
     }

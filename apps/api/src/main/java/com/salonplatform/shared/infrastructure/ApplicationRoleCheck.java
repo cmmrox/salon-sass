@@ -2,7 +2,7 @@ package com.salonplatform.shared.infrastructure;
 
 import java.util.Map;
 import org.springframework.beans.factory.SmartInitializingSingleton;
-import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
 
 /**
@@ -24,15 +24,15 @@ class ApplicationRoleCheck implements SmartInitializingSingleton {
              WHERE r.rolname = current_user
             """;
 
-    private final JdbcTemplate jdbc;
+    private final JdbcClient jdbc;
 
-    ApplicationRoleCheck(JdbcTemplate jdbc) {
+    ApplicationRoleCheck(JdbcClient jdbc) {
         this.jdbc = jdbc;
     }
 
     @Override
     public void afterSingletonsInstantiated() {
-        Map<String, Object> role = jdbc.queryForMap(ROLE);
+        Map<String, Object> role = jdbc.sql(ROLE).query().singleRow();
         Object name = role.get("name");
         if (Boolean.TRUE.equals(role.get("superuser"))) {
             throw refused(name, "is a superuser");

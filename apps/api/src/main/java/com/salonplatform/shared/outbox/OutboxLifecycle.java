@@ -29,8 +29,11 @@ public class OutboxLifecycle {
     public int cancelClosedSalon(UUID salonId, Instant at) {
         PlatformDatabase platform = database.getObject();
         platform.requireTransaction();
-        Integer cancelled = platform.jdbcTemplate()
-                .queryForObject("SELECT outbox_cancel_closed_salon(?, ?)", Integer.class, salonId, Timestamp.from(at));
-        return cancelled == null ? 0 : cancelled;
+        return platform.jdbc()
+                .sql("SELECT outbox_cancel_closed_salon(?, ?)")
+                .params(salonId, Timestamp.from(at))
+                .query(Integer.class)
+                .optional()
+                .orElse(0);
     }
 }

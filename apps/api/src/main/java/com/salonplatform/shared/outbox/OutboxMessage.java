@@ -6,18 +6,23 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.TenantId;
 import org.hibernate.type.SqlTypes;
 
 /**
  * A message on its way out of the system, written in the transaction of the change that caused it.
- * Written and read here through Hibernate (its salon stamped and filtered by {@code @TenantId},
- * checked again by row-level security); its delivery state is changed by {@link OutboxStore}, one
- * salon at a time.
+ * Written and read through {@link OutboxMessageRepository} (its salon stamped and filtered by
+ * {@code @TenantId}, checked again by row-level security); its delivery state is changed by
+ * {@link OutboxStore}, one salon at a time.
  */
 @Entity
 @Table(name = "outbox_message")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 class OutboxMessage {
 
     @Id
@@ -64,8 +69,6 @@ class OutboxMessage {
 
     @Column(name = "sent_at")
     private Instant sentAt;
-
-    protected OutboxMessage() {}
 
     /** A new message, due at once. */
     OutboxMessage(UUID id, String channel, String payload, String traceParent, Instant at) {

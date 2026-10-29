@@ -37,8 +37,8 @@ public class GetPublishedBrand {
         return readOnly.execute(status -> brands.findCurrent()
                 .map(brand -> new PublishedBrand(
                         salon.slug(),
-                        brand.displayName(),
-                        brand.brandColour(),
+                        brand.getDisplayName(),
+                        brand.getBrandColour(),
                         salon.timeZone().getId()))
                 .orElseThrow(TenantNotFoundException::new));
     }

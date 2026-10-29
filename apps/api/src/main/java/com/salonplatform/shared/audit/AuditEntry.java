@@ -6,6 +6,9 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 import org.hibernate.annotations.Immutable;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.TenantId;
@@ -18,6 +21,8 @@ import org.hibernate.type.SqlTypes;
 @Entity
 @Immutable
 @Table(name = "audit_entry")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 class AuditEntry {
 
     @Id
@@ -63,78 +68,22 @@ class AuditEntry {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
-    protected AuditEntry() {}
-
-    AuditEntry(
-            UUID id,
-            Actor actor,
-            String action,
-            String subjectKind,
-            String subjectId,
-            String reason,
-            String beforeValues,
-            String afterValues,
-            String traceId,
-            Instant at) {
+    /**
+     * @param beforeValues the values before the change, as JSON with secret values already redacted
+     * @param afterValues the values after the change, likewise
+     */
+    AuditEntry(UUID id, AuditAction action, String beforeValues, String afterValues, String traceId, Instant at) {
         this.id = id;
-        this.actorKind = actor.kind().value();
-        this.actorId = actor.id();
-        this.action = action;
-        this.subjectKind = subjectKind;
-        this.subjectId = subjectId;
-        this.reason = reason;
+        this.actorKind = action.actor().kind().value();
+        this.actorId = action.actor().id();
+        this.action = action.action();
+        this.subjectKind = action.subjectKind();
+        this.subjectId = action.subjectId();
+        this.reason = action.reason();
         this.beforeValues = beforeValues;
         this.afterValues = afterValues;
         this.traceId = traceId;
         this.createdAt = at;
         this.updatedAt = at;
-    }
-
-    UUID id() {
-        return id;
-    }
-
-    UUID tenantId() {
-        return tenantId;
-    }
-
-    String actorKind() {
-        return actorKind;
-    }
-
-    String actorId() {
-        return actorId;
-    }
-
-    String action() {
-        return action;
-    }
-
-    String subjectKind() {
-        return subjectKind;
-    }
-
-    String subjectId() {
-        return subjectId;
-    }
-
-    String reason() {
-        return reason;
-    }
-
-    String beforeValues() {
-        return beforeValues;
-    }
-
-    String afterValues() {
-        return afterValues;
-    }
-
-    String traceId() {
-        return traceId;
-    }
-
-    Instant createdAt() {
-        return createdAt;
     }
 }

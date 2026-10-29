@@ -3,12 +3,12 @@ package com.salonplatform.shared.audit;
 import com.salonplatform.shared.observability.Traces;
 import com.salonplatform.shared.tenancy.TenantContext;
 import com.salonplatform.shared.time.SalonTime;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import tools.jackson.core.type.TypeReference;
@@ -25,8 +25,7 @@ public class AuditTrail {
 
     private static final TypeReference<Map<String, Object>> VALUES = new TypeReference<>() {};
 
-    @PersistenceContext
-    private EntityManager entityManager;
+    private final AuditEntryRepository entries;
 
     private final SalonTime time;
 
@@ -34,7 +33,8 @@ public class AuditTrail {
 
     private final JsonMapper json;
 
-    AuditTrail(SalonTime time, Traces traces, JsonMapper json) {
+    AuditTrail(AuditEntryRepository entries, SalonTime time, Traces traces, JsonMapper json) {
+        this.entries = entries;
         this.time = time;
         this.traces = traces;
         this.json = json;
@@ -60,13 +60,9 @@ public class AuditTrail {
                 .orElseThrow(() -> new IllegalStateException(
                         "An audit entry belongs to a salon: record it inside work for one (TenantContext)"));
         UUID id = UUID.randomUUID();
-        entityManager.persist(new AuditEntry(
+        entries.persist(new AuditEntry(
                 id,
-                action.actor(),
-                action.action(),
-                action.subjectKind(),
-                action.subjectId(),
-                action.reason(),
+                action,
                 toJson(action.before()),
                 toJson(action.after()),
                 traces.currentTraceId().orElse(null),
@@ -76,15 +72,7 @@ public class AuditTrail {
 
     /** The current salon's entries about one subject, oldest first. Another salon's are never seen. */
     public List<AuditRecord> about(String subjectKind, String subjectId) {
-        return entityManager
-                .createQuery("""
-                select e from AuditEntry e
-                 where e.subjectKind = :kind and e.subjectId = :id
-                 order by e.createdAt, e.id
-                """, AuditEntry.class)
-                .setParameter("kind", subjectKind)
-                .setParameter("id", subjectId)
-                .getResultStream()
+        return entries.findBySubjectKindAndSubjectIdOrderByCreatedAtAscIdAsc(subjectKind, subjectId).stream()
                 .map(this::toRecord)
                 .toList();
     }
@@ -96,38 +84,27 @@ public class AuditTrail {
      * (F03-S04). Tenant filtering is still applied by Hibernate and RLS.
      */
     public AuditPage identityPage(int page, int size, String subjectId) {
-        String condition = " (e.action like 'identity.%' or e.action like 'support.%')";
-        if (subjectId != null) condition += " and e.subjectId=:subject";
-        var query = entityManager.createQuery(
-                "select e from AuditEntry e where" + condition + " order by e.createdAt desc,e.id", AuditEntry.class);
-        var count = entityManager.createQuery("select count(e) from AuditEntry e where" + condition, Long.class);
-        if (subjectId != null) {
-            query.setParameter("subject", subjectId);
-            count.setParameter("subject", subjectId);
-        }
-        return new AuditPage(
-                query.setFirstResult(page * size)
-                        .setMaxResults(size)
-                        .getResultStream()
-                        .map(this::toRecord)
-                        .toList(),
-                count.getSingleResult());
+        PageRequest request = PageRequest.of(page, size);
+        Page<AuditEntry> rows = subjectId == null
+                ? entries.findIdentityEntries(request)
+                : entries.findIdentityEntriesAbout(subjectId, request);
+        return new AuditPage(rows.stream().map(this::toRecord).toList(), rows.getTotalElements());
     }
 
     private AuditRecord toRecord(AuditEntry entry) {
         return new AuditRecord(
-                entry.id(),
-                entry.tenantId(),
-                entry.createdAt(),
-                entry.actorKind(),
-                entry.actorId(),
-                entry.action(),
-                entry.subjectKind(),
-                entry.subjectId(),
-                entry.reason(),
-                fromJson(entry.beforeValues()),
-                fromJson(entry.afterValues()),
-                entry.traceId());
+                entry.getId(),
+                entry.getTenantId(),
+                entry.getCreatedAt(),
+                entry.getActorKind(),
+                entry.getActorId(),
+                entry.getAction(),
+                entry.getSubjectKind(),
+                entry.getSubjectId(),
+                entry.getReason(),
+                fromJson(entry.getBeforeValues()),
+                fromJson(entry.getAfterValues()),
+                entry.getTraceId());
     }
 
     private String toJson(Map<String, ?> values) {

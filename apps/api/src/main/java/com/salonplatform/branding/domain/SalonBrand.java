@@ -5,6 +5,9 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.util.UUID;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 import org.hibernate.annotations.TenantId;
 
 /**
@@ -14,6 +17,8 @@ import org.hibernate.annotations.TenantId;
  */
 @Entity
 @Table(name = "salon_brand")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class SalonBrand {
 
     @Id
@@ -27,8 +32,6 @@ public class SalonBrand {
     @Column(name = "brand_colour", nullable = false)
     private String brandColour;
 
-    protected SalonBrand() {}
-
     /**
      * A brand for the current salon. The salon is not chosen here: Hibernate stamps the request's.
      *
@@ -38,17 +41,5 @@ public class SalonBrand {
     public SalonBrand(String displayName, String brandColour) {
         this.displayName = displayName;
         this.brandColour = brandColour;
-    }
-
-    public UUID tenantId() {
-        return tenantId;
-    }
-
-    public String displayName() {
-        return displayName;
-    }
-
-    public String brandColour() {
-        return brandColour;
     }
 }
