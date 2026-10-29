@@ -14,6 +14,10 @@ salon:
   # The tests start and stop the application many times; the one that tests the drain sets its own.
   server:
     drain-delay: 0s
+    # On 127.0.0.1 only (the IPv4 loopback alone on a random port): bound to the wildcard address, the
+    # server could be given a port another program already holds on 127.0.0.1, and a test connecting
+    # to localhost would reach that program instead (F23-S02). The loopback tests set their own.
+    listen-on-network: false
   # The tests share one database across application contexts; a dispatcher or a scheduler in each
   # would race the others. The tests that need them start an application of their own with them on.
   outbox:
