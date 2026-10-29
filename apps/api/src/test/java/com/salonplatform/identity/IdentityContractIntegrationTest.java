@@ -2,9 +2,9 @@ package com.salonplatform.identity;
 
 import static org.assertj.core.api.Assertions.*;
 
-import com.salonplatform.identity.application.SignIn;
-import com.salonplatform.identity.application.StaffAudit;
-import com.salonplatform.identity.web.PrincipalResponseMapper;
+import com.salonplatform.identity.dto.SignIn;
+import com.salonplatform.identity.mapper.PrincipalResponseMapper;
+import com.salonplatform.identity.service.StaffAudit;
 import com.salonplatform.testing.IntegrationTest;
 import java.time.Instant;
 import java.util.List;

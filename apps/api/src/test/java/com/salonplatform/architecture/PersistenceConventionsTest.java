@@ -50,7 +50,7 @@ class PersistenceConventionsTest {
         JavaClasses application = new ClassFileImporter()
                 .withImportOption(ImportOption.Predefined.DO_NOT_INCLUDE_TESTS)
                 .importPackages(BASE);
-        assertThat(application.contain(BASE + ".identity.domain.StaffAccount"))
+        assertThat(application.contain(BASE + ".identity.entity.StaffAccount"))
                 .as("the application's entities were found")
                 .isTrue();
 
@@ -85,32 +85,32 @@ class PersistenceConventionsTest {
                 arguments(
                         "publicfield",
                         rule(PersistenceRules::entitiesKeepTheirFieldsToThemselves),
-                        "domain.Booking",
+                        "entity.Booking",
                         "public field status"),
                 arguments(
                         "keysetter",
                         rule(PersistenceRules::entitiesHaveNoKeySetter),
-                        "domain.Booking",
+                        "entity.Booking",
                         "method setTenantId"),
                 arguments(
                         "entitymanager",
-                        rule(PersistenceRules::persistenceIsReachedOnlyFromInfrastructureOrShared),
-                        "application.BookBooking",
+                        rule(PersistenceRules::persistenceIsReachedOnlyFromRepositoryOrShared),
+                        "service.BookBooking",
                         "jakarta.persistence.EntityManager"),
                 arguments(
                         "jdbcclient",
-                        rule(PersistenceRules::persistenceIsReachedOnlyFromInfrastructureOrShared),
-                        "application.BookBooking",
+                        rule(PersistenceRules::persistenceIsReachedOnlyFromRepositoryOrShared),
+                        "service.BookBooking",
                         "org.springframework.jdbc.core.simple.JdbcClient"),
                 arguments(
                         "repository",
-                        rule(PersistenceRules::repositoriesAreDeclaredOnlyInInfrastructureOrShared),
-                        "application.BookingRepository",
-                        "infrastructure"),
+                        rule(PersistenceRules::repositoriesAreDeclaredOnlyInRepositoryOrShared),
+                        "service.BookingRepository",
+                        "repository"),
                 arguments(
                         "jdbctemplate",
                         rule(PersistenceRules::nothingUsesJdbcTemplate),
-                        "infrastructure.BookingRows",
+                        "repository.BookingRows",
                         "org.springframework.jdbc.core.JdbcTemplate"));
     }
 

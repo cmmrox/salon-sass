@@ -2,7 +2,9 @@ package com.salonplatform.identity;
 
 import static org.assertj.core.api.Assertions.*;
 
-import com.salonplatform.identity.domain.*;
+import com.salonplatform.identity.domain.Identifiers;
+import com.salonplatform.identity.domain.PasswordPolicy;
+import com.salonplatform.identity.domain.StaffRole;
 import org.junit.jupiter.api.Test;
 
 class IdentityRulesTest {

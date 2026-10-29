@@ -1,6 +1,6 @@
 package com.salonplatform.shared.lifecycle;
 
-import com.salonplatform.shared.infrastructure.PlatformDatabase;
+import com.salonplatform.shared.persistence.PlatformDatabase;
 import com.salonplatform.shared.tenancy.TenantContext;
 import java.sql.Timestamp;
 import java.time.Instant;

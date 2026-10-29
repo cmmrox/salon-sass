@@ -1,8 +1,8 @@
 package com.salonplatform.shared.outbox;
 
-import com.salonplatform.shared.infrastructure.PlatformDatabase;
 import com.salonplatform.shared.lifecycle.TenantDataModule;
 import com.salonplatform.shared.lifecycle.TenantTableRows;
+import com.salonplatform.shared.persistence.PlatformDatabase;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;

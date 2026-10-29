@@ -1,6 +1,6 @@
 package com.salonplatform.platform.local;
 
-import com.salonplatform.platform.application.SalonExports;
+import com.salonplatform.platform.service.SalonExports;
 import com.salonplatform.shared.outbox.OutboxDelivery;
 import com.salonplatform.shared.outbox.OutboxLifecycle;
 import com.salonplatform.shared.outbox.OutboxProvider;

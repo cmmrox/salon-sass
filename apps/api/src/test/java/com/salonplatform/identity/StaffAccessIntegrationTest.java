@@ -3,8 +3,10 @@ package com.salonplatform.identity;
 import static org.assertj.core.api.Assertions.*;
 
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
-import com.salonplatform.identity.domain.*;
-import com.salonplatform.identity.infrastructure.*;
+import com.salonplatform.identity.adapter.IdentityCrypto;
+import com.salonplatform.identity.adapter.IdentitySecrets;
+import com.salonplatform.identity.domain.StaffRole;
+import com.salonplatform.identity.entity.StaffAccount;
 import com.salonplatform.shared.tenancy.*;
 import com.salonplatform.testing.*;
 import com.salonplatform.testing.TestSalons.TestSalon;

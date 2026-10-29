@@ -3,8 +3,8 @@ package com.salonplatform.branding;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.salonplatform.branding.domain.SalonBrand;
-import com.salonplatform.branding.infrastructure.SalonBrandRepository;
+import com.salonplatform.branding.entity.SalonBrand;
+import com.salonplatform.branding.repository.SalonBrandRepository;
 import com.salonplatform.shared.tenancy.CurrentTenant;
 import com.salonplatform.shared.tenancy.TenantContext;
 import com.salonplatform.testing.StartedApplication;

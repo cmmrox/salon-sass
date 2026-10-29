@@ -4,7 +4,7 @@
  * tenant role reads the registry only through {@code tenant_by_slug()} and its siblings (answering
  * {@code shared}'s {@link com.salonplatform.shared.tenancy.TenantDirectory}); the operator console's
  * services use the separately configured platform runtime role
- * ({@link com.salonplatform.shared.infrastructure.PlatformDatabase}), and create a salon's first Owner
+ * ({@link com.salonplatform.shared.persistence.PlatformDatabase}), and create a salon's first Owner
  * and brand only through identity's and branding's in-process-only provisioning contracts.
  *
  * <p>What it owns, the layout inside it and the rules between modules are in
@@ -18,11 +18,11 @@
             "branding :: inprocess",
             "shared :: audit",
             "shared :: entitlements",
-            "shared :: infrastructure",
             "shared :: jobs",
             "shared :: lifecycle",
             "shared :: observability",
             "shared :: outbox",
+            "shared :: persistence",
             "shared :: secrets",
             "shared :: tenancy",
             "shared :: time",

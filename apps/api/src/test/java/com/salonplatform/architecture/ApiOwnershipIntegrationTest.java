@@ -2,7 +2,7 @@ package com.salonplatform.architecture;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.salonplatform.shared.infrastructure.ModuleOwnership;
+import com.salonplatform.shared.config.ModuleOwnership;
 import com.salonplatform.testing.IntegrationTest;
 import java.net.http.HttpResponse;
 import java.util.List;

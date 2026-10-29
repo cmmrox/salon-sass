@@ -43,7 +43,7 @@ class ModuleBoundariesTest {
         JavaClasses application = new ClassFileImporter()
                 .withImportOption(ImportOption.Predefined.DO_NOT_INCLUDE_TESTS)
                 .importPackages(BASE);
-        assertThat(application.contain(BASE + ".shared.application.MetaService"))
+        assertThat(application.contain(BASE + ".shared.web.MetaService"))
                 .as("the application's classes were found")
                 .isTrue();
         assertThat(application.stream().map(javaClass -> javaClass.getPackageName()))
@@ -140,7 +140,8 @@ class ModuleBoundariesTest {
         return Stream.of(
                 arguments("sharedusesmodule", rule(ModuleRules::sharedDependsOnNoOtherModule), "SharedUsesBooking"),
                 arguments("usesreporting", rule(ModuleRules::nothingDependsOnReporting), "BookingUsesReporting"),
-                arguments("springindomain", rule(ModuleRules::domainUsesNoSpringAndNoHttp), "SpringInDomain"),
+                arguments("springindomain", rule(ModuleRules::domainUsesNoSpringJpaOrHttp), "SpringInDomain"),
+                arguments("jpaindomain", rule(ModuleRules::domainUsesNoSpringJpaOrHttp), "PricedSlot"),
                 arguments("unlisted", rule(ModuleRules::everyClassBelongsToAKnownModule), "Points"),
                 arguments(
                         "localhookused", rule(ModuleRules::theLocalHooksAreUsedByNothingElse), "BookingUsesTestClock"),
@@ -152,7 +153,15 @@ class ModuleBoundariesTest {
                 arguments(
                         "unconfiguredmapper",
                         rule(ModuleRules::everyMapperNamesTheSharedConfiguration),
-                        "SlotResponseMapper"));
+                        "SlotResponseMapper"),
+                arguments("unknownfolder", rule(ModuleRules::businessModulesUseOnlyTheLayoutFolders), "BookBooking"),
+                arguments("misplacedmapper", rule(ModuleRules::mappersLiveInMapper), "SlotResponseMapper"),
+                arguments(
+                        "controlleroutside",
+                        rule(ModuleRules::controllersLiveInControllerOrLocal),
+                        "BookingController"),
+                arguments("responseoutsidedto", rule(ModuleRules::requestAndResponseRecordsLiveInDto), "SlotResponse"),
+                arguments("implname", rule(ModuleRules::noClassIsNamedImpl), "BookingServiceImpl"));
     }
 
     /**

@@ -1,6 +1,6 @@
 package com.salonplatform.architecture;
 
-import com.salonplatform.shared.infrastructure.ModuleOwnership;
+import com.salonplatform.shared.config.ModuleOwnership;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;

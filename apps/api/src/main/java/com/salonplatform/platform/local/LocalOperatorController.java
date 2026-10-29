@@ -1,7 +1,7 @@
 package com.salonplatform.platform.local;
 
-import com.salonplatform.platform.application.BootstrapFaults;
-import com.salonplatform.platform.application.OperatorAccounts;
+import com.salonplatform.platform.service.BootstrapFaults;
+import com.salonplatform.platform.service.OperatorAccounts;
 import com.salonplatform.shared.web.ApplicationProblemException;
 import com.salonplatform.shared.web.ErrorCode;
 import com.salonplatform.shared.web.FieldProblem;

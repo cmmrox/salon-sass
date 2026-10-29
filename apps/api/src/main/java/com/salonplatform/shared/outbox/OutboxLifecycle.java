@@ -1,6 +1,6 @@
 package com.salonplatform.shared.outbox;
 
-import com.salonplatform.shared.infrastructure.PlatformDatabase;
+import com.salonplatform.shared.persistence.PlatformDatabase;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.UUID;

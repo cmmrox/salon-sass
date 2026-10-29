@@ -6,7 +6,7 @@ import static org.junit.jupiter.params.provider.Arguments.arguments;
 import com.salonplatform.SalonApiApplication;
 import com.salonplatform.architecture.CodeOwnership.TableReference;
 import com.salonplatform.architecture.FixtureCompiler.Compilation;
-import com.salonplatform.shared.infrastructure.ModuleOwnership;
+import com.salonplatform.shared.config.ModuleOwnership;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.URISyntaxException;
@@ -50,11 +50,10 @@ class CodeOwnershipTest {
                 .as("the scan sees @Table, SQL and JPQL")
                 .contains(
                         new TableReference(
-                                BASE + ".identity.domain.StaffAccount", "identity", "identity_staff", "identity"),
+                                BASE + ".identity.entity.StaffAccount", "identity", "identity_staff", "identity"),
+                        new TableReference(BASE + ".platform.repository.SalonStore", "platform", "tenant", "platform"),
                         new TableReference(
-                                BASE + ".platform.infrastructure.SalonStore", "platform", "tenant", "platform"),
-                        new TableReference(
-                                BASE + ".identity.infrastructure.StaffAccountRepository",
+                                BASE + ".identity.repository.StaffAccountRepository",
                                 "identity",
                                 "StaffAccount",
                                 "identity"));
@@ -94,32 +93,31 @@ class CodeOwnershipTest {
                 arguments(
                         "sqlliteral",
                         rule(CodeOwnership::foreignTables),
-                        fixture + "sqlliteral.platform.infrastructure.MessageCounts (platform) names outbox_message, "
+                        fixture + "sqlliteral.platform.repository.MessageCounts (platform) names outbox_message, "
                                 + "which is shared's"),
                 arguments(
                         "jpql",
                         rule(CodeOwnership::foreignTables),
-                        fixture
-                                + "jpql.identity.application.StaffGreeting (identity) names Brand, which is branding's"),
+                        fixture + "jpql.identity.service.StaffGreeting (identity) names Brand, which is branding's"),
                 arguments(
                         "tableannotation",
                         rule(CodeOwnership::foreignTables),
-                        fixture + "tableannotation.identity.domain.Brand (identity) names salon_brand, "
+                        fixture + "tableannotation.identity.entity.Brand (identity) names salon_brand, "
                                 + "which is branding's"),
                 arguments(
                         "valuesetting",
                         rule(CodeOwnership::foreignSettings),
-                        fixture + "valuesetting.platform.infrastructure.IdentityKey (platform) reads "
+                        fixture + "valuesetting.platform.adapter.IdentityKey (platform) reads "
                                 + "salon.identity.signing-key, which is identity's"),
                 arguments(
                         "concatsetting",
                         rule(CodeOwnership::foreignSettings),
-                        fixture + "concatsetting.platform.infrastructure.IdentityKeys (platform) reads "
+                        fixture + "concatsetting.platform.adapter.IdentityKeys (platform) reads "
                                 + "salon.identity., which is identity's"),
                 arguments(
                         "sharedsetting",
                         rule(CodeOwnership::foreignSettings),
-                        fixture + "sharedsetting.shared.infrastructure.OperatorKey (shared) reads "
+                        fixture + "sharedsetting.shared.secrets.OperatorKey (shared) reads "
                                 + "salon.operator.signing-key, which is platform's"));
     }
 

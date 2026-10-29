@@ -71,7 +71,12 @@ a separate service without its callers or the web and mobile clients changing:
 - Spring Modulith's `verify()` and the remaining ArchUnit rules fail the build on a violation. Do
   not weaken them to get a change in; move the code.
 - `shared` holds technical capabilities only (tenant context, errors, time, money, audit, outbox,
-  jobs). A business contract never moves into `shared` to avoid a dependency cycle; invert the
+  jobs), organised by capability rather than by the business-module folders: `tenancy`, `web`
+  (problem details, request pipeline, service metadata), `persistence`, `secrets`, `outbox`,
+  `jobs`, `audit`, `time`, `mapping`, `entitlements`, `lifecycle`, `observability`, `local`, and an
+  internal `config` (server, OpenAPI and module-ownership configuration). Each capability other
+  modules use is a named interface; no `shared` package is named `application` or
+  `infrastructure`. A business contract never moves into `shared` to avoid a dependency cycle; invert the
   dependency with an event instead. The one exception is `shared.entitlements.SalonEntitlements`,
   the plan limits every module enforces inside its own transaction under the registry's share lock:
   `platform` implements it, and neither an event (it must answer and lock now) nor a move into
@@ -110,6 +115,11 @@ anything but the root package or a declared named interface. Controllers are thi
 one service, map the result. Business rules live in `entity`, `domain` and `service`, never in a
 controller, a repository or a mapper. Classes in the root are interfaces, records, enums and
 exceptions only; a class elsewhere is package-private when nothing outside its folder needs it.
+Request and response records are top-level types in `dto/`, not nested in a controller or service
+(decision 061). An architecture test refuses any other sub-folder name in a business module, a
+mapper outside `mapper/`, a controller outside `controller/` or `local/`, and a class named `*Impl`
+other than the Spring Data fragment `NewEntitiesImpl` and MapStruct's generated mappers. Moving a
+class changes its logger name, which is its package.
 
 ## Provided interfaces
 

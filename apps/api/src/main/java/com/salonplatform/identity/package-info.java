@@ -11,7 +11,6 @@
         allowedDependencies = {
             "shared :: audit",
             "shared :: entitlements",
-            "shared :: infrastructure",
             "shared :: jobs",
             "shared :: lifecycle",
             "shared :: mapping",

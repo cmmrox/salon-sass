@@ -1,13 +1,13 @@
 package com.salonplatform.platform.local;
 
 import com.salonplatform.branding.inprocess.BrandProvisioning;
-import com.salonplatform.platform.application.BillingFaults;
-import com.salonplatform.platform.application.BillingJob;
+import com.salonplatform.platform.adapter.BillingProviderKey;
 import com.salonplatform.platform.domain.Slugs;
-import com.salonplatform.platform.infrastructure.BillingProviderKey;
-import com.salonplatform.platform.infrastructure.OperatorUserStore;
-import com.salonplatform.platform.infrastructure.SalonStore;
-import com.salonplatform.shared.infrastructure.PlatformDatabase;
+import com.salonplatform.platform.repository.OperatorUserStore;
+import com.salonplatform.platform.repository.SalonStore;
+import com.salonplatform.platform.service.BillingFaults;
+import com.salonplatform.platform.service.BillingJob;
+import com.salonplatform.shared.persistence.PlatformDatabase;
 import com.salonplatform.shared.web.ApplicationProblemException;
 import com.salonplatform.shared.web.ErrorCode;
 import com.salonplatform.shared.web.FieldProblem;

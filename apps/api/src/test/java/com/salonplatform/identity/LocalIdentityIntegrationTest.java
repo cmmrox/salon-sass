@@ -2,7 +2,7 @@ package com.salonplatform.identity;
 
 import static org.assertj.core.api.Assertions.*;
 
-import com.salonplatform.identity.infrastructure.IdentityCrypto;
+import com.salonplatform.identity.adapter.IdentityCrypto;
 import com.salonplatform.testing.*;
 import java.nio.file.*;
 import java.util.*;

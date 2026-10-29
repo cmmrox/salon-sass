@@ -3,7 +3,7 @@ package com.salonplatform.architecture;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
-import com.salonplatform.shared.infrastructure.ModuleOwnership;
+import com.salonplatform.shared.config.ModuleOwnership;
 import com.salonplatform.testing.TestDatabase;
 import com.salonplatform.testing.TestPostgres;
 import java.io.ByteArrayInputStream;

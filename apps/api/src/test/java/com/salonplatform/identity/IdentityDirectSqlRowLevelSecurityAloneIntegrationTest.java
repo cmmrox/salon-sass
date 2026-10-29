@@ -4,10 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.salonplatform.identity.IdentityRows.SalonRows;
-import com.salonplatform.identity.infrastructure.CustomerDataErasure;
-import com.salonplatform.identity.infrastructure.ExpiredSecurityState;
-import com.salonplatform.identity.infrastructure.IdentityLock;
-import com.salonplatform.identity.infrastructure.SyntheticIdentityReset;
+import com.salonplatform.identity.repository.CustomerDataErasure;
+import com.salonplatform.identity.repository.ExpiredSecurityState;
+import com.salonplatform.identity.repository.IdentityLock;
+import com.salonplatform.identity.repository.SyntheticIdentityReset;
 import com.salonplatform.shared.tenancy.TenantContext;
 import com.salonplatform.testing.StartedApplication;
 import com.salonplatform.testing.TestDatabase;

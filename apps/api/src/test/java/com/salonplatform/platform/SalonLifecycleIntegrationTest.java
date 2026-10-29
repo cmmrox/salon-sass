@@ -2,16 +2,16 @@ package com.salonplatform.platform;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.salonplatform.identity.domain.StaffAccount;
+import com.salonplatform.identity.adapter.IdentityCrypto;
 import com.salonplatform.identity.domain.StaffRole;
-import com.salonplatform.identity.infrastructure.IdentityCrypto;
-import com.salonplatform.platform.application.BillingJob;
-import com.salonplatform.platform.application.LifecycleFaults;
-import com.salonplatform.platform.application.OperatorAccounts;
-import com.salonplatform.platform.application.SalonDeletion;
-import com.salonplatform.platform.application.SalonExports;
-import com.salonplatform.platform.infrastructure.ExportKey;
-import com.salonplatform.platform.infrastructure.OperatorCrypto;
+import com.salonplatform.identity.entity.StaffAccount;
+import com.salonplatform.platform.adapter.ExportKey;
+import com.salonplatform.platform.adapter.OperatorCrypto;
+import com.salonplatform.platform.service.BillingJob;
+import com.salonplatform.platform.service.LifecycleFaults;
+import com.salonplatform.platform.service.OperatorAccounts;
+import com.salonplatform.platform.service.SalonDeletion;
+import com.salonplatform.platform.service.SalonExports;
 import com.salonplatform.shared.lifecycle.TenantDataModule;
 import com.salonplatform.testing.Http;
 import com.salonplatform.testing.IntegrationTest;

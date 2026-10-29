@@ -2,7 +2,13 @@ package com.salonplatform.identity;
 
 import static org.assertj.core.api.Assertions.*;
 
-import com.salonplatform.identity.domain.*;
+import com.salonplatform.identity.entity.AccessSession;
+import com.salonplatform.identity.entity.IdentityGuard;
+import com.salonplatform.identity.entity.MfaChallenge;
+import com.salonplatform.identity.entity.MfaStep;
+import com.salonplatform.identity.entity.RateBucket;
+import com.salonplatform.identity.entity.RefreshHistory;
+import com.salonplatform.identity.entity.StaffAccount;
 import com.salonplatform.shared.tenancy.TenantContext;
 import com.salonplatform.testing.*;
 import com.salonplatform.testing.TestSalons.TestSalon;
