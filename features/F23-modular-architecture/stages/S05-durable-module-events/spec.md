@@ -91,7 +91,12 @@ Each criterion is one observable outcome that a test can pass or fail.
 - AC-5: A suspended salon's events are not delivered until it is active again. (NFR-22)
 - AC-6: Erasing a customer's data publishes `identity.CustomerDataErased.v1` through the outbox,
   whose payload contains ids only, and its local-profile subscriber removes the captured messages as
-  it did before; the identity erasure integration tests pass unchanged. (NFR-22, NFR-01)
+  it did before, after the erasing transaction commits rather than inside it. The identity erasure
+  integration tests pass, with exactly three assertions in `CustomerProfileIntegrationTest` narrowed
+  to keep their meaning under the asynchronous design (decision 063): the two outbox counts count
+  identity's delivery channels (`sms`, `whatsapp`) as the class's other assertions do, and the
+  capture removal is awaited for a bounded time after the response. No other assertion changes.
+  (NFR-22, NFR-01)
 - AC-7: The architecture tests fail on a fixture event record outside its module's root package and
   pass for the application; the new table is in the ownership map with the module prefix rule
   satisfied. (NFR-22)
