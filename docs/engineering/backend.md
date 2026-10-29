@@ -79,20 +79,37 @@ a separate service without its callers or the web and mobile clients changing:
 
 ## Inside a module
 
+The owner's chosen layout (CR-022): the module's API in its root package, and inside the module the
+Spring folder names every Java developer and coding agent already knows. A folder exists only when
+the module has something to put in it.
+
 ```
 <module>/
   package-info.java  @ApplicationModule(allowedDependencies = {...}) and the module's description
-  <Name>.java        provided interfaces, their records, and event records (<Thing><PastTense>, versioned)
-  web/               controllers, request and response records, MapStruct response mappers
-  application/       use cases: one public method per thing a user can do; transactions start here;
-                     the implementations of the provided interfaces
-  domain/            entities, value objects, business rules; no Spring, no HTTP
-  infrastructure/    Spring Data repositories, the named direct-SQL exceptions, adapters to external services
+  <Name>.java        the module's API: provided interfaces, their records, and event records
+                     (<Thing><PastTense>, versioned). Nothing else lives in the root
+  inprocess/         @NamedInterface: contracts that must join the caller's transaction (only when needed)
+  controller/        REST controllers; thin
+  dto/               this module's request and response records (never used by another module)
+  mapper/            MapStruct response mappers on ResponseMapperConfig
+  service/           use cases: one public method per thing a user can do; transactions start here;
+                     the implementations of the API interfaces, named for what they are (no Impl)
+  entity/            JPA entities, with their behaviour
+  domain/            pure business rules and value objects: no Spring, no JPA, no HTTP
+  repository/        Spring Data repositories and the named direct-SQL exceptions: the only folder
+                     that touches the database (the tenant-isolation audit point)
+  adapter/           calls to external systems and providers, crypto and secret holders
+  job/               scheduled and background work
+  config/            Spring configuration, filters, settings classes
+  event/             listeners for other modules' events
   local/             test hooks served only in the local profile (see "Local test hooks")
 ```
 
-Controllers are thin: validate, call one use case, map the result. Business rules live in `domain`
-and `application`, never in a controller, a repository or a mapper.
+Every sub-folder is internal to the module: Spring Modulith fails the build if another module uses
+anything but the root package or a declared named interface. Controllers are thin: validate, call
+one service, map the result. Business rules live in `entity`, `domain` and `service`, never in a
+controller, a repository or a mapper. Classes in the root are interfaces, records, enums and
+exceptions only; a class elsewhere is package-private when nothing outside its folder needs it.
 
 ## Provided interfaces
 
@@ -103,7 +120,7 @@ signature:
 - Parameters and results are records of values and ids. Never an entity, a repository type, a
   `Pageable` of entities or a lazily loaded object. Another module's object is referred to by its id.
 - The records are not REST response shapes: no OpenAPI annotation in the root package. A controller
-  that returns the same data has its own response record in `web/`.
+  that returns the same data has its own response record in `dto/`.
 - The tenant is never a parameter. The implementation reads it from `TenantContext`, as an
   extracted service will read it from the signed token.
 - An implementation opens its own transaction and does not join the caller's. A contract that
@@ -224,7 +241,7 @@ implementations by that suffix; it is the one `Impl` name allowed. Lists read th
 record projections, paginated.
 
 Direct SQL through `JdbcClient` is allowed only for these named exceptions, each in
-`infrastructure/` (or in `shared` for the shared capabilities):
+`repository/` (or in `shared` for the shared capabilities):
 
 1. The platform database pool (`PlatformDatabase`), which is deliberately not a `DataSource` bean
    or a transaction manager, so that `@Transactional` can never pick the platform role by accident.
@@ -268,7 +285,7 @@ rules, and changed through methods named for what they do.
 **Records** are the form of every request, response, provided-interface type and event. Lombok adds
 nothing to them.
 
-**MapStruct** mappers live in `web/` and map one way: from an entity or a provided record to a
+**MapStruct** mappers live in `mapper/` and map one way: from an entity or a provided record to a
 response record. No mapper writes to an entity (no request-to-entity mapping, no `@MappingTarget`
 entity), no mapping expression holds a business rule, and no mapper maps another module's types
 other than its provided records. Every mapper names the shared configuration,
@@ -390,7 +407,7 @@ change, and a stage leaves the code it touches meeting them.
 
 ## Transactions, outbox and external calls
 
-- One transaction per use case, opened in `application`.
+- One transaction per use case, opened in `service`.
 - Anything that leaves the system (message, payment call, webhook) is written to the outbox table
   in the same transaction and sent afterwards, with retry and a dead-letter state.
 - **The outbox** (`shared.outbox`): writing a message joins the caller's transaction and refuses to
