@@ -30,7 +30,7 @@ requirement detail is in `qa/coverage.md`.
 | F20 | [Bridal customer mobile experience](F20-bridal-customer-mobile-experience/) | M3-growth | backlog | - | 0/3 | 2 | after F15, F19 |
 | F21 | [Offers, loyalty and gift cards](F21-offers-loyalty-and-gift-cards/) | M3-growth | backlog | - | 0/3 | 8 | after F08, F09, F12, F14, F15, F18 |
 | F22 | [AI-assisted booking and front desk](F22-ai-assisted-booking-and-front-desk/) | M4-assistance | backlog | - | 0/3 | 8 | after F15, F19, F20, F21 |
-| F23 | [Modular, extractable architecture](F23-modular-architecture/) | M1-web | in-progress | - | 7/8 | 0 | **lead**: `stage-plan F23-S06` |
+| F23 | [Modular, extractable architecture](F23-modular-architecture/) | M1-web | in-progress | - | 7/8 | 0 | **developer**: `stage-build F23-S06` |
 
 ## In flight
 
@@ -45,4 +45,4 @@ requirement detail is in `qa/coverage.md`.
 | F23-S07 | Module internal layout with conventional Spring folders | api | complete | - | 0 | - |
 | F23-S08 | Request and response records in dto | api | complete | - | 0 | - |
 | F23-S05 | Durable events between modules | api | complete | - | 0 | - |
-| F23-S06 | Web app organised by module | web | outlined | - | 0 | **lead**: `stage-plan F23-S06` |
+| F23-S06 | Web app organised by module | web | planned | - | 0 | **developer**: `stage-build F23-S06` |
