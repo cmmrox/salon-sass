@@ -11,7 +11,7 @@ ARG JRE_IMAGE=eclipse-temurin:25.0.4.1_1-jre-alpine-3.24
 FROM ${JDK_IMAGE} AS build
 WORKDIR /build
 COPY .mvn .mvn
-COPY mvnw pom.xml ./
+COPY mvnw pom.xml lombok.config ./
 COPY src src
 ARG VERSION
 ARG COMMIT

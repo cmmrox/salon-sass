@@ -2,9 +2,7 @@ package com.salonplatform.architecture;
 
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
-import static com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.slices;
 
-import com.tngtech.archunit.core.domain.Dependency;
 import com.tngtech.archunit.core.domain.JavaAnnotation;
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.lang.ArchCondition;
@@ -15,9 +13,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * The rules between modules, from {@code docs/engineering/backend.md}, written so that they can be
- * applied to any base package: to the application, and to the fixture that proves each rule
- * really fails on a violation.
+ * The rules between modules, from {@code docs/engineering/backend.md}, that Spring Modulith's verification
+ * does not cover, written so that they can be applied to any base package: to the application, and to the
+ * fixture that proves each rule really fails on a violation. Modulith verifies that dependencies between
+ * modules point one way and that another module is used only through its root package and its named
+ * interfaces.
  */
 final class ModuleRules {
 
@@ -49,8 +49,6 @@ final class ModuleRules {
                 everyClassBelongsToAKnownModule(),
                 sharedDependsOnNoOtherModule(),
                 nothingDependsOnReporting(),
-                modulesAreFreeOfCycles(),
-                anotherModuleIsUsedOnlyThroughItsRootPackage(),
                 domainUsesNoSpringAndNoHttp(),
                 theLocalHooksAreUsedByNothingElse(),
                 theLocalHooksLoadInTheLocalProfileOnly());
@@ -95,28 +93,6 @@ final class ModuleRules {
                 .dependOnClassesThat()
                 .resideInAPackage(everythingIn(REPORTING))
                 .as("nothing depends on reporting")
-                .allowEmptyShould(true);
-    }
-
-    ArchRule modulesAreFreeOfCycles() {
-        return slices().matching(base + ".(*)..")
-                .should()
-                .beFreeOfCycles()
-                .as("dependencies between modules point one way")
-                .allowEmptyShould(true);
-    }
-
-    /**
-     * Another module is used through the types in its root package (its facade and its events),
-     * never through its controllers, use cases, entities or repositories. {@code shared} is the
-     * exception: it exists to be used.
-     */
-    ArchRule anotherModuleIsUsedOnlyThroughItsRootPackage() {
-        return noClasses()
-                .that()
-                .resideInAPackage(base + "..")
-                .should(reachIntoAnotherModule())
-                .as("another module is used only through the types in its root package")
                 .allowEmptyShould(true);
     }
 
@@ -190,35 +166,6 @@ final class ModuleRules {
                 }
             }
         };
-    }
-
-    private ArchCondition<JavaClass> reachIntoAnotherModule() {
-        return new ArchCondition<>("reach into another module") {
-            @Override
-            public void check(JavaClass origin, ConditionEvents events) {
-                String from = moduleOf(origin);
-                for (Dependency dependency : origin.getDirectDependenciesFromSelf()) {
-                    JavaClass target = dependency.getTargetClass();
-                    String to = moduleOf(target);
-                    boolean anotherModule = to != null && !to.equals(from) && !to.equals(SHARED);
-                    if (anotherModule && !target.getPackageName().equals(base + "." + to)) {
-                        events.add(SimpleConditionEvent.satisfied(dependency, dependency.getDescription()));
-                    }
-                }
-            }
-        };
-    }
-
-    /** The module a class is in, or null for a class outside every module. */
-    private String moduleOf(JavaClass javaClass) {
-        String packageName = javaClass.getPackageName();
-        for (String module : MODULES) {
-            String root = base + "." + module;
-            if (packageName.equals(root) || packageName.startsWith(root + ".")) {
-                return module;
-            }
-        }
-        return null;
     }
 
     private String everythingIn(String module) {
