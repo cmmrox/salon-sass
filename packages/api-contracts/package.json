@@ -5,7 +5,11 @@
   "description": "The TypeScript client for the API, generated from docs/api/openapi.json. Used by the web app, and later by the customer app.",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./branding": "./src/generated/branding.ts",
+    "./identity": "./src/generated/identity.ts",
+    "./platform": "./src/generated/platform.ts",
+    "./shared": "./src/generated/shared.ts"
   },
   "scripts": {
     "lint": "eslint --max-warnings 0",
