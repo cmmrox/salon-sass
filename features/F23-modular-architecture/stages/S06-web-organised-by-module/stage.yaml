@@ -1,0 +1,26 @@
+id: F23-S06
+feature: F23
+title: Web app organised by module
+sequence: 6
+surfaces: [web]
+status: outlined
+qa_status: not-run
+blocked_reason: null
+released_in: null
+reopened_by: null
+depends_on: [F23-S04]
+requirements: []
+nfr_focus: [NFR-24, NFR-18]
+handoff:
+  run: null
+  data: null
+  notes: null
+cases: []
+verification:
+  commands: []
+  automation: []
+  manual: []
+  deferred: []
+evidence:
+  last_run: null
+  last_result: null

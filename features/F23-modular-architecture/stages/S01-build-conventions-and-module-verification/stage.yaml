@@ -1,0 +1,26 @@
+id: F23-S01
+feature: F23
+title: Build conventions and module verification
+sequence: 1
+surfaces: [api]
+status: outlined
+qa_status: not-run
+blocked_reason: null
+released_in: null
+reopened_by: null
+depends_on: []
+requirements: []
+nfr_focus: [NFR-22, NFR-23, NFR-04]
+handoff:
+  run: null
+  data: null
+  notes: null
+cases: []
+verification:
+  commands: []
+  automation: []
+  manual: []
+  deferred: []
+evidence:
+  last_run: null
+  last_result: null

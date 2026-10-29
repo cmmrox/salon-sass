@@ -11,7 +11,7 @@ requirement detail is in `qa/coverage.md`.
 | F01 | [Platform foundation and tenant isolation](F01-platform-foundation/) | M1-web | complete | merged | 5/5 | 2 | - |
 | F02 | [Sign-in, accounts and roles](F02-sign-in-accounts-and-roles/) | M1-web | complete | merged | 4/4 | 10 | - |
 | F03 | [Operator console: salons, plans and billing](F03-operator-console/) | M1-web | complete | merged | 4/4 | 5 | - |
-| F04 | [Salon setup: profile, branding, hours and policies](F04-salon-setup/) | M1-web | backlog | - | - | 6 | **lead**: `feature-new F04` |
+| F04 | [Salon setup: profile, branding, hours and policies](F04-salon-setup/) | M1-web | backlog | - | - | 6 | after F23 |
 | F05 | [Service catalogue](F05-service-catalogue/) | M1-web | backlog | - | - | 6 | after F04 |
 | F06 | [Staff, schedules and leave](F06-staff-schedules-and-leave/) | M1-web | backlog | - | - | 4 | after F04, F05 |
 | F07 | [Booking engine and staff booking foundations](F07-online-booking/) | M1-web | backlog | - | - | 7 | after F05, F06 |
@@ -30,6 +30,7 @@ requirement detail is in `qa/coverage.md`.
 | F20 | [Bridal customer mobile experience](F20-bridal-customer-mobile-experience/) | M3-growth | backlog | - | 0/3 | 2 | after F15, F19 |
 | F21 | [Offers, loyalty and gift cards](F21-offers-loyalty-and-gift-cards/) | M3-growth | backlog | - | 0/3 | 8 | after F08, F09, F12, F14, F15, F18 |
 | F22 | [AI-assisted booking and front desk](F22-ai-assisted-booking-and-front-desk/) | M4-assistance | backlog | - | 0/3 | 8 | after F15, F19, F20, F21 |
+| F23 | [Modular, extractable architecture](F23-modular-architecture/) | M1-web | backlog | - | 0/6 | 0 | **lead**: `feature-new F23` |
 
 ## In flight
 
