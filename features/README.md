@@ -41,6 +41,6 @@ requirement detail is in `qa/coverage.md`.
 | F23-S01 | Build conventions and module verification | api | complete | - | 0 | - |
 | F23-S02 | Provided module interfaces | api | complete | - | 0 | - |
 | F23-S03 | Persistence convention for tenant aggregates | api | complete | - | 0 | - |
-| F23-S04 | Table and API ownership by module | api, web | planned | - | 0 | **developer**: `stage-build F23-S04` |
+| F23-S04 | Table and API ownership by module | api, web | in-progress | - | 0 | **developer**: `stage-build F23-S04` |
 | F23-S05 | Durable events between modules | api | outlined | - | 0 | **lead**: `stage-plan F23-S05` |
 | F23-S06 | Web app organised by module | web | outlined | - | 0 | **lead**: `stage-plan F23-S06` |

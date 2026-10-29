@@ -1,0 +1,91 @@
+# Which module owns each table, API path and setting (docs/engineering/backend.md, "Ownership of tables
+# and paths"; CR-021 decision 4). Only the owning module's code and migrations touch its tables, reads its
+# settings and serves its paths. A path or a setting belongs to the module with the longest matching
+# prefix, compared whole segment by whole segment (decision 058): /api/v1/salon is branding's, while
+# /api/v1/salon/invoices is platform's. The architecture tests hold the database, the code and the OpenAPI
+# document to this file, and the OpenAPI configuration builds each module's document from it.
+modules:
+  identity:
+    description: Staff accounts, roles and sessions, and customer one-time-code sign-in.
+    tables:
+      - identity_customer
+      - identity_customer_challenge
+      - identity_guard
+      - identity_mfa_challenge
+      - identity_mfa_step
+      - identity_rate_bucket
+      - identity_refresh_history
+      - identity_session
+      - identity_staff
+    paths:
+      - /api/v1/identity
+    settings:
+      - salon.identity
+
+  branding:
+    description: The salon's brand and its published presentation.
+    tables:
+      - salon_brand
+    paths:
+      - /api/v1/salon
+    settings:
+      - salon.branding
+
+  platform:
+    description: Salons, plans, entitlements, billing, lifecycle, exports, support sessions and operators.
+    tables:
+      - billing_reminder
+      - charge_attempt
+      - invoice
+      - invoice_number
+      - invoice_payment
+      - operator_mfa_challenge
+      - operator_mfa_step
+      - operator_rate_bucket
+      - operator_refresh_history
+      - operator_session
+      - operator_user
+      - plan
+      - platform_audit_entry
+      - provider_event
+      - provisioning_receipt
+      - salon_export
+      - salon_export_part
+      - salon_lifecycle_event
+      - subscription
+      - support_entry_code
+      - support_session
+      - tenant
+    paths:
+      - /api/v1/operator
+      - /api/v1/billing
+      - /api/v1/exports
+      - /api/v1/support
+      - /api/v1/salon/entitlements
+      - /api/v1/salon/invoices
+      - /api/v1/salon/support-sessions
+    # Named before CR-021 and kept, because a setting's name is also its environment variable's
+    # (salon.export.key is SALON_EXPORT_KEY).
+    settings:
+      - salon.platform
+      - salon.operator
+      - salon.billing
+      - salon.export
+      - salon.support
+      - salon.retention
+
+  shared:
+    description: The service's own metadata.
+    tables:
+      - audit_entry
+      - outbox_message
+      - scheduled_job
+    paths:
+      - /api/v1/meta
+    settings:
+      - salon.platform-domain
+      - salon.platform.datasource
+      - salon.database
+      - salon.server
+      - salon.outbox
+      - salon.jobs
