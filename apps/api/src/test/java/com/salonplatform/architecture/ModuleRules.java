@@ -6,11 +6,18 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import com.tngtech.archunit.base.DescribedPredicate;
 import com.tngtech.archunit.core.domain.JavaAnnotation;
 import com.tngtech.archunit.core.domain.JavaClass;
+import com.tngtech.archunit.core.domain.JavaGenericArrayType;
+import com.tngtech.archunit.core.domain.JavaMethod;
+import com.tngtech.archunit.core.domain.JavaModifier;
+import com.tngtech.archunit.core.domain.JavaParameterizedType;
+import com.tngtech.archunit.core.domain.JavaType;
+import com.tngtech.archunit.core.domain.JavaWildcardType;
 import com.tngtech.archunit.lang.ArchCondition;
 import com.tngtech.archunit.lang.ArchRule;
 import com.tngtech.archunit.lang.ConditionEvents;
 import com.tngtech.archunit.lang.SimpleConditionEvent;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Stream;
@@ -82,6 +89,8 @@ final class ModuleRules {
                 mappersLiveInMapper(),
                 controllersLiveInControllerOrLocal(),
                 requestAndResponseRecordsLiveInDto(),
+                controllerRecordsAreTopLevelInDto(),
+                nestedRecordsUsedOnlyByTheirClassArePrivate(),
                 noClassIsNamedImpl());
     }
 
@@ -275,6 +284,40 @@ final class ModuleRules {
     }
 
     /**
+     * The records a controller reads as a request body or returns, at any depth of the response, are
+     * top-level records in a {@code dto} package of the controller's own module, so that the API's shapes are
+     * in one place per module (decision 061). The shared problem shapes live in {@code shared.web}.
+     */
+    ArchRule controllerRecordsAreTopLevelInDto() {
+        return classes()
+                .that()
+                .resideInAPackage(base + "..")
+                .and()
+                .areMetaAnnotatedWith(SPRING_CONTROLLER)
+                .should(exchangeOnlyTopLevelRecordsOfTheirModulesDto())
+                .as("the records a controller reads or returns are top-level records in its module's dto")
+                .allowEmptyShould(true);
+    }
+
+    /**
+     * A record that is not an API shape stays nested in the class that defines it, and is {@code private}
+     * when nothing outside that class uses it (decision 062). One that other classes use keeps the visibility
+     * they need; module verification keeps it inside its module.
+     */
+    ArchRule nestedRecordsUsedOnlyByTheirClassArePrivate() {
+        return classes()
+                .that()
+                .resideInAPackage(base + "..")
+                .and(DescribedPredicate.describe(
+                        "are member records used only inside their top-level class",
+                        type -> type.isRecord() && type.isMemberClass() && isUsedOnlyInsideItsClass(type)))
+                .should()
+                .bePrivate()
+                .as("a nested record that only its own class uses is private")
+                .allowEmptyShould(true);
+    }
+
+    /**
      * An implementation is named for what it is ({@code docs/engineering/backend.md}, "Clean code"). The
      * exceptions are the Spring Data fragment and the classes MapStruct generates for a mapper.
      */
@@ -296,6 +339,10 @@ final class ModuleRules {
     private static final String SPRING_CONTROLLER = "org.springframework.stereotype.Controller";
 
     private static final String SPRING_PROFILE = "org.springframework.context.annotation.Profile";
+
+    private static final String SPRING_REQUEST_MAPPING = "org.springframework.web.bind.annotation.RequestMapping";
+
+    private static final String SPRING_REQUEST_BODY = "org.springframework.web.bind.annotation.RequestBody";
 
     private static final String MAPSTRUCT_MAPPER = "org.mapstruct.Mapper";
 
@@ -378,6 +425,95 @@ final class ModuleRules {
                 }
             }
         };
+    }
+
+    private ArchCondition<JavaClass> exchangeOnlyTopLevelRecordsOfTheirModulesDto() {
+        return new ArchCondition<>("read and return only top-level records of its module's dto") {
+            @Override
+            public void check(JavaClass controller, ConditionEvents events) {
+                String module = moduleOf(controller);
+                for (JavaMethod handler : controller.getMethods()) {
+                    if (handler.isMetaAnnotatedWith(SPRING_REQUEST_MAPPING)) {
+                        exchangedRecords(handler).stream()
+                                .filter(shape -> !shape.isTopLevelClass() || !isInADtoOf(shape, module))
+                                .forEach(shape -> events.add(SimpleConditionEvent.violated(
+                                        controller,
+                                        shape.getName() + " is read or returned by " + handler.getFullName()
+                                                + " but is not a top-level record in a dto package of '"
+                                                + module + "'")));
+                    }
+                }
+            }
+        };
+    }
+
+    /** The records of this code base in the handler's request body and in its return type, at any depth. */
+    private Set<JavaClass> exchangedRecords(JavaMethod handler) {
+        Set<JavaClass> records = new LinkedHashSet<>();
+        handler.getParameters().stream()
+                .filter(parameter -> parameter.isAnnotatedWith(SPRING_REQUEST_BODY))
+                .forEach(body -> collectRecords(body.getType(), records));
+        collectRecords(handler.getReturnType(), records);
+        return records;
+    }
+
+    private void collectRecords(JavaType type, Set<JavaClass> records) {
+        switch (type) {
+            case JavaParameterizedType parameterized -> {
+                collectRecords(parameterized.toErasure(), records);
+                parameterized.getActualTypeArguments().forEach(argument -> collectRecords(argument, records));
+            }
+            case JavaWildcardType wildcard ->
+                wildcard.getUpperBounds().forEach(bound -> collectRecords(bound, records));
+            case JavaGenericArrayType array -> collectRecords(array.getComponentType(), records);
+            case JavaClass array when array.isArray() -> collectRecords(array.getComponentType(), records);
+            case JavaClass record
+            when record.isRecord() && record.getPackageName().startsWith(base + ".") -> {
+                if (records.add(record)) {
+                    record.getFields().stream()
+                            .filter(component -> !component.getModifiers().contains(JavaModifier.STATIC))
+                            .forEach(component -> collectRecords(component.getType(), records));
+                }
+            }
+            default -> {}
+        }
+    }
+
+    private boolean isInADtoOf(JavaClass record, String module) {
+        String packageName = record.getPackageName();
+        boolean inModule = packageName.startsWith(base + "." + module + ".");
+        return (inModule && packageName.endsWith(".dto")) || packageName.equals(base + "." + SHARED + ".web");
+    }
+
+    private String moduleOf(JavaClass javaClass) {
+        return javaClass.getPackageName().substring(base.length() + 1).split("\\.")[0];
+    }
+
+    /**
+     * Nothing outside its top-level class uses the record, nor any case of an interface of that class it
+     * implements: each case of a sealed result type is part of that type's contract wherever one is matched.
+     */
+    private static boolean isUsedOnlyInsideItsClass(JavaClass nested) {
+        JavaClass owner = topLevelClassOf(nested);
+        Set<JavaClass> contract = new LinkedHashSet<>(Set.of(nested));
+        nested.getRawInterfaces().stream()
+                .filter(type -> topLevelClassOf(type).equals(owner))
+                .forEach(type -> {
+                    contract.add(type);
+                    contract.addAll(type.getSubclasses());
+                });
+        return contract.stream()
+                .flatMap(type -> type.getDirectDependenciesToSelf().stream())
+                .allMatch(dependency ->
+                        topLevelClassOf(dependency.getOriginClass()).equals(owner));
+    }
+
+    private static JavaClass topLevelClassOf(JavaClass javaClass) {
+        JavaClass outer = javaClass;
+        while (outer.getEnclosingClass().isPresent()) {
+            outer = outer.getEnclosingClass().get();
+        }
+        return outer;
     }
 
     private static boolean carriesAnOpenApiAnnotation(JavaClass type) {
