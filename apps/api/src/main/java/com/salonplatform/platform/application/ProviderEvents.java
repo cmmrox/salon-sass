@@ -47,6 +47,8 @@ public class ProviderEvents {
 
     private final PlatformDatabase database;
     private final BillingLedger ledger;
+    private final BillingNotices notices;
+    private final SubscriptionStates states;
     private final BillingProviderKey key;
     private final PlatformAudit audit;
     private final JsonMapper json;
@@ -55,6 +57,8 @@ public class ProviderEvents {
     public ProviderEvents(
             PlatformDatabase database,
             BillingLedger ledger,
+            BillingNotices notices,
+            SubscriptionStates states,
             BillingProviderKey key,
             PlatformAudit audit,
             JsonMapper json,
@@ -62,6 +66,8 @@ public class ProviderEvents {
         this.audit = audit;
         this.database = database;
         this.ledger = ledger;
+        this.notices = notices;
+        this.states = states;
         this.key = key;
         this.json = json;
         this.clock = clock;
@@ -216,7 +222,7 @@ public class ProviderEvents {
         }
         if ("success".equals(event.outcome())) {
             settle(attemptId, "succeeded", now);
-            ledger.pay(
+            states.pay(
                     subscription,
                     invoice,
                     "card",
@@ -241,7 +247,7 @@ public class ProviderEvents {
                     now);
         }
         BillingLedger.Salon salon = ledger.salon(invoice.salonId(), false).orElseThrow();
-        ledger.notice(salon, invoice, "failed_charge", attemptId, now);
+        notices.notice(salon, invoice, "failed_charge", attemptId, now);
         return "failed";
     }
 

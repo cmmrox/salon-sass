@@ -153,6 +153,7 @@ public class InvoiceBilling {
     private final OperatorAccess access;
     private final ProvisioningReceipts receipts;
     private final BillingLedger ledger;
+    private final SubscriptionStates states;
     private final JsonMapper json;
     private final Clock clock;
 
@@ -162,6 +163,7 @@ public class InvoiceBilling {
             OperatorAccess access,
             ProvisioningReceipts receipts,
             BillingLedger ledger,
+            SubscriptionStates states,
             JsonMapper json,
             Clock clock) {
         this.database = database;
@@ -169,6 +171,7 @@ public class InvoiceBilling {
         this.access = access;
         this.receipts = receipts;
         this.ledger = ledger;
+        this.states = states;
         this.json = json;
         this.clock = clock;
     }
@@ -312,7 +315,7 @@ public class InvoiceBilling {
             if (!refused.isEmpty()) {
                 throw new ApplicationProblemException(400, ErrorCode.BAD_REQUEST, refused);
             }
-            BillingLedger.Payment payment = ledger.pay(
+            BillingLedger.Payment payment = states.pay(
                     subscription,
                     invoice,
                     BillingTerms.BANK_TRANSFER,

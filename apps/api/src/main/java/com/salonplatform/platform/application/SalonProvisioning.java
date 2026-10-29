@@ -207,6 +207,7 @@ public class SalonProvisioning {
     private final BrandProvisioning branding;
     private final BootstrapFaults faults;
     private final BillingLedger ledger;
+    private final SubscriptionStates states;
     private final Clock clock;
     private final String platformDomain;
 
@@ -220,6 +221,7 @@ public class SalonProvisioning {
             BrandProvisioning branding,
             BootstrapFaults faults,
             BillingLedger ledger,
+            SubscriptionStates states,
             Clock clock,
             @Value("${salon.platform-domain}") String platformDomain) {
         this.database = database;
@@ -231,6 +233,7 @@ public class SalonProvisioning {
         this.branding = branding;
         this.faults = faults;
         this.ledger = ledger;
+        this.states = states;
         this.clock = clock;
         this.platformDomain = platformDomain.strip().toLowerCase(Locale.ROOT);
     }
@@ -395,7 +398,7 @@ public class SalonProvisioning {
                 faults.reached(BootstrapFaults.Step.OWNER);
                 branding.bootstrapBrand(id, (String) profile.get("name"), now);
                 faults.reached(BootstrapFaults.Step.BRAND);
-                ledger.start(
+                states.start(
                         ledger.salon(id, false).orElseThrow(),
                         input.subscription().monthlyAmount(),
                         (String) profile.get("currency"),

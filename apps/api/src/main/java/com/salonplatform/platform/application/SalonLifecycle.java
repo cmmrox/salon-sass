@@ -80,6 +80,7 @@ public class SalonLifecycle {
     private final PlatformAudit audit;
     private final SalonProvisioning salons;
     private final BillingLedger ledger;
+    private final SubscriptionStates states;
     private final IdentityLifecycle identity;
     private final OutboxLifecycle outbox;
     private final Clock clock;
@@ -91,6 +92,7 @@ public class SalonLifecycle {
             PlatformAudit audit,
             SalonProvisioning salons,
             BillingLedger ledger,
+            SubscriptionStates states,
             IdentityLifecycle identity,
             OutboxLifecycle outbox,
             Clock clock) {
@@ -100,6 +102,7 @@ public class SalonLifecycle {
         this.audit = audit;
         this.salons = salons;
         this.ledger = ledger;
+        this.states = states;
         this.identity = identity;
         this.outbox = outbox;
         this.clock = clock;
@@ -169,7 +172,7 @@ public class SalonLifecycle {
             // Billing went on while suspended; this brings the access state to what it implies at this
             // instant, even if the billing job has not run since a boundary passed.
             ledger.subscriptionOf(salonId, true)
-                    .ifPresent(subscription -> ledger.applyState(
+                    .ifPresent(subscription -> states.applyState(
                             subscription, now, PlatformAudit.SYSTEM, "billing", BillingLedger.Changes.none()));
             String access = database.jdbc()
                     .queryForObject("SELECT access_state FROM tenant WHERE id = ?", String.class, salonId);

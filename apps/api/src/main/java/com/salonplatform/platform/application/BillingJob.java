@@ -36,11 +36,20 @@ public class BillingJob {
 
     private final PlatformDatabase database;
     private final BillingLedger ledger;
+    private final InvoiceIssuing issuing;
+    private final SubscriptionStates states;
     private final Traces traces;
 
-    public BillingJob(PlatformDatabase database, BillingLedger ledger, Traces traces) {
+    public BillingJob(
+            PlatformDatabase database,
+            BillingLedger ledger,
+            InvoiceIssuing issuing,
+            SubscriptionStates states,
+            Traces traces) {
         this.database = database;
         this.ledger = ledger;
+        this.issuing = issuing;
+        this.states = states;
         this.traces = traces;
     }
 
@@ -99,9 +108,9 @@ public class BillingJob {
             return null;
         }
         BillingLedger.Changes changes = BillingLedger.Changes.none();
-        subscription = ledger.issueDue(subscription, now, changes);
-        ledger.remind(subscription, now, changes);
-        ledger.applyState(subscription, now, PlatformAudit.SYSTEM, "billing", changes);
+        subscription = issuing.issueDue(subscription, now, changes);
+        issuing.remind(subscription, now, changes);
+        states.applyState(subscription, now, PlatformAudit.SYSTEM, "billing", changes);
         return changes.any()
                 ? new SubscriptionPass(
                         subscription.salonId(),

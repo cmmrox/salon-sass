@@ -97,6 +97,7 @@ public class SubscriptionBilling {
     private final OperatorAccess access;
     private final ProvisioningReceipts receipts;
     private final BillingLedger ledger;
+    private final SubscriptionStates states;
     private final SalonProvisioning salons;
     private final IdentityProvisioning identity;
     private final PlatformAudit audit;
@@ -109,6 +110,7 @@ public class SubscriptionBilling {
             OperatorAccess access,
             ProvisioningReceipts receipts,
             BillingLedger ledger,
+            SubscriptionStates states,
             SalonProvisioning salons,
             IdentityProvisioning identity,
             PlatformAudit audit,
@@ -119,6 +121,7 @@ public class SubscriptionBilling {
         this.access = access;
         this.receipts = receipts;
         this.ledger = ledger;
+        this.states = states;
         this.salons = salons;
         this.identity = identity;
         this.audit = audit;
@@ -220,7 +223,7 @@ public class SubscriptionBilling {
                 throw new ApplicationProblemException(409, ErrorCode.INVALID_STATE);
             }
             Instant now = clock.instant();
-            BillingLedger.Subscription subscription = ledger.start(
+            BillingLedger.Subscription subscription = states.start(
                     salon,
                     input.monthlyAmount(),
                     salon.currency() != null ? salon.currency() : currency,
