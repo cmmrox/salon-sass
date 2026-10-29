@@ -36,8 +36,15 @@ public final class TestPostgres {
         return SHARED;
     }
 
-    /** A container of its own, for a test that stops the database or needs an empty one. */
+    /**
+     * A container of its own, for a test that stops the database or needs an empty one. Its command is
+     * Testcontainers' default with room for more connections: every cached test context keeps its pools
+     * open (14 connections), and some tests start applications of their own beside them, which overran
+     * PostgreSQL's default of 100 and failed whichever test came next.
+     */
     public static PostgreSQLContainer newContainer() {
-        return new PostgreSQLContainer(IMAGE).withInitScript("db/test-application-role.sql");
+        return new PostgreSQLContainer(IMAGE)
+                .withCommand("postgres", "-c", "fsync=off", "-c", "max_connections=200")
+                .withInitScript("db/test-application-role.sql");
     }
 }
