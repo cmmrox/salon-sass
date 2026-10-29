@@ -2,9 +2,7 @@ package com.salonplatform.shared.infrastructure;
 
 import java.sql.Connection;
 import java.sql.Statement;
-
 import javax.sql.DataSource;
-
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.health.contributor.AbstractHealthIndicator;
 import org.springframework.boot.health.contributor.Health;
@@ -27,8 +25,8 @@ class DatabaseHealthIndicator extends AbstractHealthIndicator {
 
     private final int timeoutMillis;
 
-    DatabaseHealthIndicator(DataSource dataSource,
-            @Value("${spring.datasource.hikari.validation-timeout:5000}") int timeoutMillis) {
+    DatabaseHealthIndicator(
+            DataSource dataSource, @Value("${spring.datasource.hikari.validation-timeout:5000}") int timeoutMillis) {
         super("The database health check failed");
         this.dataSource = dataSource;
         this.timeoutMillis = timeoutMillis;

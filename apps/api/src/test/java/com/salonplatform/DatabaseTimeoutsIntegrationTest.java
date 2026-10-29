@@ -1,16 +1,13 @@
 package com.salonplatform;
 
-import java.util.Properties;
-
-import javax.sql.DataSource;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import com.salonplatform.testing.IntegrationTest;
 import com.zaxxer.hikari.HikariDataSource;
+import java.util.Properties;
+import javax.sql.DataSource;
 import org.junit.jupiter.api.Test;
-
 import org.springframework.beans.factory.annotation.Autowired;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Every wait on the database has a limit in the configuration the product ships with: for a
@@ -28,12 +25,20 @@ class DatabaseTimeoutsIntegrationTest extends IntegrationTest {
         HikariDataSource pool = dataSource.unwrap(HikariDataSource.class);
         Properties driver = pool.getDataSourceProperties();
 
-        assertThat(pool.getConnectionTimeout()).as("waiting for a connection from the pool, ms").isBetween(1L, 5_000L);
-        assertThat(pool.getValidationTimeout()).as("testing that a pooled connection is alive, ms")
+        assertThat(pool.getConnectionTimeout())
+                .as("waiting for a connection from the pool, ms")
+                .isBetween(1L, 5_000L);
+        assertThat(pool.getValidationTimeout())
+                .as("testing that a pooled connection is alive, ms")
                 .isBetween(1L, pool.getConnectionTimeout());
-        assertThat(seconds(driver, "connectTimeout")).as("opening a connection, s").isBetween(1, 5);
-        assertThat(seconds(driver, "loginTimeout")).as("signing in on a new connection, s").isBetween(1, 5);
-        assertThat(seconds(driver, "socketTimeout")).as("waiting for an answer on an open connection, s")
+        assertThat(seconds(driver, "connectTimeout"))
+                .as("opening a connection, s")
+                .isBetween(1, 5);
+        assertThat(seconds(driver, "loginTimeout"))
+                .as("signing in on a new connection, s")
+                .isBetween(1, 5);
+        assertThat(seconds(driver, "socketTimeout"))
+                .as("waiting for an answer on an open connection, s")
                 .isBetween(1, 60);
     }
 

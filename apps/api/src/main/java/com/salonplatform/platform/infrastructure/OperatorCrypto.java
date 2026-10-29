@@ -1,5 +1,9 @@
 package com.salonplatform.platform.infrastructure;
 
+import com.eatthepath.otp.TimeBasedOneTimePasswordGenerator;
+import com.nimbusds.jose.jwk.source.ImmutableSecret;
+import com.salonplatform.shared.api.ApplicationProblemException;
+import com.salonplatform.shared.api.ErrorCode;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
@@ -15,17 +19,10 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
-
 import javax.crypto.Cipher;
 import javax.crypto.Mac;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
-
-import com.eatthepath.otp.TimeBasedOneTimePasswordGenerator;
-import com.nimbusds.jose.jwk.source.ImmutableSecret;
-import com.salonplatform.shared.api.ApplicationProblemException;
-import com.salonplatform.shared.api.ErrorCode;
-
 import org.springframework.security.crypto.password.DelegatingPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.crypto.password.Pbkdf2PasswordEncoder;
@@ -73,7 +70,8 @@ public class OperatorCrypto {
         dummyHash = passwords.encode(randomToken());
         encoder = new NimbusJwtEncoder(new ImmutableSecret<>(secrets.signing()));
         NimbusJwtDecoder jwtDecoder = NimbusJwtDecoder.withSecretKey(new SecretKeySpec(secrets.signing(), "HmacSHA256"))
-                .macAlgorithm(MacAlgorithm.HS256).build();
+                .macAlgorithm(MacAlgorithm.HS256)
+                .build();
         // Issuer, audience, kind and time are checked below against the application's clock.
         jwtDecoder.setJwtValidator(jwt -> OAuth2TokenValidatorResult.success());
         decoder = jwtDecoder;
@@ -114,14 +112,14 @@ public class OperatorCrypto {
             Mac mac = Mac.getInstance("HmacSHA256");
             mac.init(new SecretKeySpec(key, "HmacSHA256"));
             return HexFormat.of().formatHex(mac.doFinal(value.getBytes(StandardCharsets.UTF_8)));
-        }
-        catch (GeneralSecurityException ex) {
+        } catch (GeneralSecurityException ex) {
             throw new IllegalStateException("Keyed hashing unavailable", ex);
         }
     }
 
     public boolean equalHash(String a, String b) {
-        return a != null && b != null
+        return a != null
+                && b != null
                 && MessageDigest.isEqual(a.getBytes(StandardCharsets.US_ASCII), b.getBytes(StandardCharsets.US_ASCII));
     }
 
@@ -130,12 +128,14 @@ public class OperatorCrypto {
             byte[] nonce = new byte[12];
             random.nextBytes(nonce);
             Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
-            cipher.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(secrets.encryption(), "AES"), new GCMParameterSpec(128, nonce));
+            cipher.init(
+                    Cipher.ENCRYPT_MODE,
+                    new SecretKeySpec(secrets.encryption(), "AES"),
+                    new GCMParameterSpec(128, nonce));
             cipher.updateAAD(purpose.getBytes(StandardCharsets.UTF_8));
             return Base64.getEncoder().encodeToString(nonce) + "."
                     + Base64.getEncoder().encodeToString(cipher.doFinal(plain.getBytes(StandardCharsets.UTF_8)));
-        }
-        catch (GeneralSecurityException ex) {
+        } catch (GeneralSecurityException ex) {
             throw new IllegalStateException("Secret encryption unavailable", ex);
         }
     }
@@ -144,19 +144,19 @@ public class OperatorCrypto {
         try {
             String[] parts = encrypted.split("\\.");
             Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
-            cipher.init(Cipher.DECRYPT_MODE, new SecretKeySpec(secrets.encryption(), "AES"),
+            cipher.init(
+                    Cipher.DECRYPT_MODE,
+                    new SecretKeySpec(secrets.encryption(), "AES"),
                     new GCMParameterSpec(128, Base64.getDecoder().decode(parts[0])));
             cipher.updateAAD(purpose.getBytes(StandardCharsets.UTF_8));
             return new String(cipher.doFinal(Base64.getDecoder().decode(parts[1])), StandardCharsets.UTF_8);
-        }
-        catch (Exception ex) {
+        } catch (Exception ex) {
             throw new IllegalStateException("Stored secret could not be authenticated");
         }
     }
 
     /** What a verified operator access token says. */
-    public record Claims(UUID operatorId, UUID sessionId, long generation) {
-    }
+    public record Claims(UUID operatorId, UUID sessionId, long generation) {}
 
     /** A five-minute access token, issued at the given second-precision instant. */
     public String access(UUID operator, UUID session, long generation, Instant issued) {
@@ -170,7 +170,8 @@ public class OperatorCrypto {
                 .claim("session", session.toString())
                 .claim("generation", generation)
                 .build();
-        return encoder.encode(JwtEncoderParameters.from(JwsHeader.with(MacAlgorithm.HS256).build(), claims))
+        return encoder.encode(JwtEncoderParameters.from(
+                        JwsHeader.with(MacAlgorithm.HS256).build(), claims))
                 .getTokenValue();
     }
 
@@ -196,14 +197,17 @@ public class OperatorCrypto {
                     || !List.of(AUDIENCE).equals(jwt.getAudience())
                     || !KIND.equals(jwt.getClaimAsString("kind"))
                     || jwt.hasClaim("tenant")
-                    || jwt.getExpiresAt() == null || !now.isBefore(jwt.getExpiresAt())
-                    || jwt.getIssuedAt() == null || jwt.getIssuedAt().isAfter(now)) {
+                    || jwt.getExpiresAt() == null
+                    || !now.isBefore(jwt.getExpiresAt())
+                    || jwt.getIssuedAt() == null
+                    || jwt.getIssuedAt().isAfter(now)) {
                 throw new IllegalArgumentException();
             }
-            return new Claims(UUID.fromString(jwt.getSubject()), UUID.fromString(jwt.getClaimAsString("session")),
+            return new Claims(
+                    UUID.fromString(jwt.getSubject()),
+                    UUID.fromString(jwt.getClaimAsString("session")),
                     ((Number) jwt.getClaim("generation")).longValue());
-        }
-        catch (Exception ex) {
+        } catch (Exception ex) {
             throw new ApplicationProblemException(401, ErrorCode.INVALID_SESSION);
         }
     }
@@ -217,10 +221,9 @@ public class OperatorCrypto {
 
     public String totpCode(String secret, long step) {
         try {
-            return totp.generateOneTimePasswordString(new SecretKeySpec(unbase32(secret), "HmacSHA1"),
-                    Instant.ofEpochSecond(step * 30));
-        }
-        catch (InvalidKeyException ex) {
+            return totp.generateOneTimePasswordString(
+                    new SecretKeySpec(unbase32(secret), "HmacSHA1"), Instant.ofEpochSecond(step * 30));
+        } catch (InvalidKeyException ex) {
             throw new IllegalStateException("TOTP key unavailable", ex);
         }
     }
@@ -232,7 +235,8 @@ public class OperatorCrypto {
         }
         long current = clock.instant().getEpochSecond() / 30;
         for (long step = current - 1; step <= current + 1; step++) {
-            if (MessageDigest.isEqual(code.getBytes(StandardCharsets.US_ASCII),
+            if (MessageDigest.isEqual(
+                    code.getBytes(StandardCharsets.US_ASCII),
                     totpCode(secret, step).getBytes(StandardCharsets.US_ASCII))) {
                 return step;
             }

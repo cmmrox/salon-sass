@@ -22,18 +22,48 @@ public final class SecretValues {
 
     public static final String REDACTED = "[redacted]";
 
-    private static final Set<String> SECRET_WORDS = Set.of("password", "passwd", "pwd", "passcode", "passphrase",
-            "secret", "token", "otp", "pin", "cvv", "cvc", "credential", "credentials", "authorization", "cookie",
-            "signature", "salt", "hash");
+    private static final Set<String> SECRET_WORDS = Set.of(
+            "password",
+            "passwd",
+            "pwd",
+            "passcode",
+            "passphrase",
+            "secret",
+            "token",
+            "otp",
+            "pin",
+            "cvv",
+            "cvc",
+            "credential",
+            "credentials",
+            "authorization",
+            "cookie",
+            "signature",
+            "salt",
+            "hash");
 
-    private static final Set<String> SECRET_COMPOUNDS = Set.of("apikey", "privatekey", "secretkey", "accesskey",
-            "clientsecret", "onetimecode", "onetimepassword", "verificationcode", "otpcode", "cardnumber", "pan",
-            "securitycode", "sessionid", "refreshtoken", "accesstoken", "idtoken");
+    private static final Set<String> SECRET_COMPOUNDS = Set.of(
+            "apikey",
+            "privatekey",
+            "secretkey",
+            "accesskey",
+            "clientsecret",
+            "onetimecode",
+            "onetimepassword",
+            "verificationcode",
+            "otpcode",
+            "cardnumber",
+            "pan",
+            "securitycode",
+            "sessionid",
+            "refreshtoken",
+            "accesstoken",
+            "idtoken");
 
-    private static final Pattern WORD_BOUNDARY = Pattern.compile("(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])|[^A-Za-z]+");
+    private static final Pattern WORD_BOUNDARY =
+            Pattern.compile("(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])|[^A-Za-z]+");
 
-    private SecretValues() {
-    }
+    private SecretValues() {}
 
     /** A copy of the values with every secret's value replaced; null stays null. */
     public static Map<String, Object> redact(Map<String, ?> values) {

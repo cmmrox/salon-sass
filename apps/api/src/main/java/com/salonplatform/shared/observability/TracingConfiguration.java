@@ -1,7 +1,6 @@
 package com.salonplatform.shared.observability;
 
 import io.micrometer.tracing.otel.bridge.Slf4JEventListener;
-
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -26,9 +25,11 @@ class TracingConfiguration {
         return context -> {
             for (String name : new String[] {"http.url", "url.path", "uri"}) {
                 io.micrometer.common.KeyValue value = context.getHighCardinalityKeyValue(name);
-                if (value != null && value.getValue() != null && value.getValue().contains("/api/v1/exports/")) {
-                    context.addHighCardinalityKeyValue(io.micrometer.common.KeyValue.of(name,
-                            com.salonplatform.shared.api.RequestPaths.loggable(value.getValue())));
+                if (value != null
+                        && value.getValue() != null
+                        && value.getValue().contains("/api/v1/exports/")) {
+                    context.addHighCardinalityKeyValue(io.micrometer.common.KeyValue.of(
+                            name, com.salonplatform.shared.api.RequestPaths.loggable(value.getValue())));
                 }
             }
             return context;

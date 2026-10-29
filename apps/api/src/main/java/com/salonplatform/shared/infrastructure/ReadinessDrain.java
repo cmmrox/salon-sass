@@ -1,10 +1,8 @@
 package com.salonplatform.shared.infrastructure;
 
 import java.time.Duration;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.availability.AvailabilityChangeEvent;
 import org.springframework.boot.availability.ReadinessState;
@@ -67,8 +65,7 @@ class ReadinessDrain implements SmartLifecycle {
         Thread.ofVirtual().name("readiness-drain").start(() -> {
             try {
                 drain();
-            }
-            finally {
+            } finally {
                 callback.run();
             }
         });
@@ -87,8 +84,7 @@ class ReadinessDrain implements SmartLifecycle {
         log.info("Stopping: readiness is OUT_OF_SERVICE; requests are still answered for {} ms", delay.toMillis());
         try {
             Thread.sleep(delay);
-        }
-        catch (InterruptedException ex) {
+        } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
         }
     }

@@ -7,5 +7,4 @@ package com.salonplatform.shared.api;
  * @param field the field, as the request names it
  * @param detail what is wrong with it, safe to show
  */
-public record FieldProblem(String field, String detail) {
-}
+public record FieldProblem(String field, String detail) {}

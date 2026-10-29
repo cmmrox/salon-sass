@@ -1,9 +1,9 @@
 package com.salonplatform.shared.local;
 
-import java.time.Duration;
-import java.time.Instant;
-import java.util.List;
-import java.util.Map;
+import static com.salonplatform.shared.local.ProbeClient.ALPHA;
+import static com.salonplatform.shared.local.ProbeClient.BETA;
+import static com.salonplatform.shared.local.ProbeClient.status;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import com.jayway.jsonpath.DocumentContext;
@@ -11,12 +11,11 @@ import com.salonplatform.testing.CapturedLogs;
 import com.salonplatform.testing.StartedApplication;
 import com.salonplatform.testing.TestDatabase;
 import com.salonplatform.testing.TestPostgres;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
-
-import static com.salonplatform.shared.local.ProbeClient.ALPHA;
-import static com.salonplatform.shared.local.ProbeClient.BETA;
-import static com.salonplatform.shared.local.ProbeClient.status;
-import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * AC-15: the first recurring job, through the real scheduler and the test clock. Once a delivered
@@ -36,7 +35,9 @@ class OutboxCleanupIntegrationTest {
         TestDatabase database = TestDatabase.createEmpty(TestPostgres.shared());
         // The capture comes last: starting an application sets logging up afresh and would drop it.
         try (StartedApplication application = database.start(ProbeClient.localWithDispatcher(
-                "--salon.jobs.enabled=true", "--salon.jobs.poll-interval=100ms", "--salon.outbox.max-attempts=1"));
+                        "--salon.jobs.enabled=true",
+                        "--salon.jobs.poll-interval=100ms",
+                        "--salon.outbox.max-attempts=1"));
                 CapturedLogs logs = CapturedLogs.of("com.salonplatform.shared")) {
             ProbeClient probes = new ProbeClient(application);
             Instant start = Instant.now();
@@ -61,31 +62,44 @@ class OutboxCleanupIntegrationTest {
             awaitGone(application, probes, BETA, betaOld);
 
             DocumentContext kept = probes.view(BETA, betaNewer);
-            assertThat(kept.<String>read("$.status")).as("beta's newer message stays").isEqualTo("sent");
-            assertThat(probes.view(ALPHA, alphaDead).<String>read("$.status")).as("a message that was never delivered stays")
+            assertThat(kept.<String>read("$.status"))
+                    .as("beta's newer message stays")
+                    .isEqualTo("sent");
+            assertThat(probes.view(ALPHA, alphaDead).<String>read("$.status"))
+                    .as("a message that was never delivered stays")
                     .isEqualTo("dead");
-            assertThat(database.asOwner().queryForList("SELECT id::text FROM outbox_message ORDER BY created_at", String.class))
+            assertThat(database.asOwner()
+                            .queryForList("SELECT id::text FROM outbox_message ORDER BY created_at", String.class))
                     .containsExactlyInAnyOrder(alphaDead, betaNewer);
             assertThat(database.asOwner().queryForObject("SELECT count(*) FROM audit_entry", Integer.class))
-                    .as("the audit trail is not touched").isEqualTo(4);
+                    .as("the audit trail is not touched")
+                    .isEqualTo(4);
 
-            List<ILoggingEvent> removals = logs.events(line -> line.getFormattedMessage().startsWith("Removed 1 delivered"));
-            assertThat(removals).extracting(line -> CapturedLogs.context(line).get("tenant.id"))
+            List<ILoggingEvent> removals =
+                    logs.events(line -> line.getFormattedMessage().startsWith("Removed 1 delivered"));
+            assertThat(removals)
+                    .extracting(line -> CapturedLogs.context(line).get("tenant.id"))
                     .containsExactlyInAnyOrder(SALON_IDS.get("alpha"), SALON_IDS.get("beta"));
-            assertThat(removals).allSatisfy(line -> assertThat(CapturedLogs.context(line)).containsKeys("trace.id", "span.id"));
+            assertThat(removals)
+                    .allSatisfy(line -> assertThat(CapturedLogs.context(line)).containsKeys("trace.id", "span.id"));
             assertThat(logs.events(line -> line.getFormattedMessage().startsWith("Removed 0 delivered")))
                     .as("every active salon is visited on every run, each under its own id")
                     .extracting(line -> CapturedLogs.context(line).get("tenant.id"))
                     .contains(SALON_IDS.get("alpha"), SALON_IDS.get("beta"), SALON_IDS.get("gamma"));
             assertThat(logs.events(line -> line.getFormattedMessage().contains("ran for the salon")))
                     .as("the scheduler's own lines name the salon too")
-                    .allSatisfy(line -> assertThat(CapturedLogs.context(line).get("tenant.id")).isIn(SALON_IDS.values()));
+                    .allSatisfy(line -> assertThat(CapturedLogs.context(line).get("tenant.id"))
+                            .isIn(SALON_IDS.values()));
         }
     }
 
     private static void awaitGone(StartedApplication application, ProbeClient probes, String salon, String id) {
         Instant until = Instant.now().plusSeconds(5);
-        while (application.http().getOnHost(probes.host(salon), "/local/probes/" + id).status() != 404) {
+        while (application
+                        .http()
+                        .getOnHost(probes.host(salon), "/local/probes/" + id)
+                        .status()
+                != 404) {
             if (Instant.now().isAfter(until)) {
                 throw new AssertionError("the " + salon + " message " + id + " was not removed within 5 seconds");
             }

@@ -1,16 +1,13 @@
 package com.salonplatform.shared.infrastructure;
 
+import com.zaxxer.hikari.HikariDataSource;
+import com.zaxxer.hikari.util.DriverDataSource;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.Duration;
 import java.util.Locale;
 import java.util.Map;
-
 import javax.sql.DataSource;
-
-import com.zaxxer.hikari.HikariDataSource;
-import com.zaxxer.hikari.util.DriverDataSource;
-
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.SmartInitializingSingleton;
 import org.springframework.core.env.Environment;
@@ -81,14 +78,19 @@ public class PlatformDatabase implements SmartInitializingSingleton, DisposableB
         pool.setDriverClassName(tenantPool.getDriverClassName());
         pool.setUsername(username);
         pool.setPassword(password);
-        pool.setMaximumPoolSize(environment.getProperty("salon.platform.datasource.maximum-pool-size", Integer.class, 4));
+        pool.setMaximumPoolSize(
+                environment.getProperty("salon.platform.datasource.maximum-pool-size", Integer.class, 4));
         pool.setMinimumIdle(0);
         pool.setConnectionTimeout(tenantPool.getConnectionTimeout());
         pool.setValidationTimeout(tenantPool.getValidationTimeout());
         pool.setDataSourceProperties(tenantPool.getDataSourceProperties());
         pool.setDataSource(new SteadyReconnectDataSource(
-                new DriverDataSource(pool.getJdbcUrl(), pool.getDriverClassName(), pool.getDataSourceProperties(),
-                        username, password),
+                new DriverDataSource(
+                        pool.getJdbcUrl(),
+                        pool.getDriverClassName(),
+                        pool.getDataSourceProperties(),
+                        username,
+                        password),
                 environment.getRequiredProperty(DatabaseReconnectConfiguration.INTERVAL, Duration.class),
                 pool::isClosed));
         jdbc = new JdbcTemplate(pool);

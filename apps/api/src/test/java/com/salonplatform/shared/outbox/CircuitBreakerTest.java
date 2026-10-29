@@ -1,14 +1,13 @@
 package com.salonplatform.shared.outbox;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
-
 import org.junit.jupiter.api.Test;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 class CircuitBreakerTest {
 
@@ -132,7 +131,9 @@ class CircuitBreakerTest {
         assertThat(guard.breakerState()).isEqualTo(CircuitBreaker.State.OPEN);
         assertThat(guard.tryAcquire()).isEmpty();
         clock.advance(Duration.ofSeconds(60));
-        assertThat(guard.tryAcquire()).as("the place was not kept by the refusal").isPresent();
+        assertThat(guard.tryAcquire())
+                .as("the place was not kept by the refusal")
+                .isPresent();
     }
 
     private void open() {

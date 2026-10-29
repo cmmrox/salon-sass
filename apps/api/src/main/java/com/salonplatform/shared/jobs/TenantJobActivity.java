@@ -4,7 +4,6 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-
 import org.springframework.stereotype.Component;
 
 /**
@@ -25,14 +24,24 @@ public class TenantJobActivity {
     private final Map<UUID, Counts> salons = new ConcurrentHashMap<>();
 
     void ran(UUID salon, boolean succeeded, Instant at) {
-        salons.merge(salon, new Counts(1, succeeded ? 1 : 0, 0, succeeded ? 0 : 1, at, null),
-                (old, add) -> new Counts(old.due() + 1, old.run() + add.run(), old.skipped(), old.failed() + add.failed(),
-                        at, old.lastSkippedAt()));
+        salons.merge(
+                salon,
+                new Counts(1, succeeded ? 1 : 0, 0, succeeded ? 0 : 1, at, null),
+                (old, add) -> new Counts(
+                        old.due() + 1,
+                        old.run() + add.run(),
+                        old.skipped(),
+                        old.failed() + add.failed(),
+                        at,
+                        old.lastSkippedAt()));
     }
 
     void skipped(UUID salon, Instant at) {
-        salons.merge(salon, new Counts(1, 0, 1, 0, null, at),
-                (old, add) -> new Counts(old.due() + 1, old.run(), old.skipped() + 1, old.failed(), old.lastRunAt(), at));
+        salons.merge(
+                salon,
+                new Counts(1, 0, 1, 0, null, at),
+                (old, add) ->
+                        new Counts(old.due() + 1, old.run(), old.skipped() + 1, old.failed(), old.lastRunAt(), at));
     }
 
     /** The salon's counts; zero for a salon no occurrence has come due for. */

@@ -1,5 +1,11 @@
 package com.salonplatform.platform.infrastructure;
 
+import com.salonplatform.shared.infrastructure.RequestDatabaseLimit;
+import com.salonplatform.shared.tenancy.ActiveTenants;
+import com.salonplatform.shared.tenancy.CurrentTenant;
+import com.salonplatform.shared.tenancy.RegisteredTenant;
+import com.salonplatform.shared.tenancy.TenantDirectory;
+import com.salonplatform.shared.tenancy.TenantStatus;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -8,14 +14,6 @@ import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-
-import com.salonplatform.shared.infrastructure.RequestDatabaseLimit;
-import com.salonplatform.shared.tenancy.ActiveTenants;
-import com.salonplatform.shared.tenancy.CurrentTenant;
-import com.salonplatform.shared.tenancy.RegisteredTenant;
-import com.salonplatform.shared.tenancy.TenantDirectory;
-import com.salonplatform.shared.tenancy.TenantStatus;
-
 import org.springframework.jdbc.core.ConnectionCallback;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
@@ -70,7 +68,8 @@ class TenantRegistry implements TenantDirectory, ActiveTenants {
                     UUID id = row.getObject("id", UUID.class);
                     ZoneId zone = timeZoneOf(row);
                     boolean readOnly = READ_ONLY.equals(row.getString("access_state"));
-                    return statusOf(row.getString("status")).map(status -> new RegisteredTenant(id, status, zone, readOnly));
+                    return statusOf(row.getString("status"))
+                            .map(status -> new RegisteredTenant(id, status, zone, readOnly));
                 }
             }
         });
@@ -86,8 +85,11 @@ class TenantRegistry implements TenantDirectory, ActiveTenants {
                     if (!row.next() || statusOf(row.getString("status")).orElse(null) != TenantStatus.ACTIVE) {
                         return Optional.empty();
                     }
-                    return Optional.of(new CurrentTenant(row.getObject("id", UUID.class), row.getString("slug"),
-                            timeZoneOf(row), READ_ONLY.equals(row.getString("access_state"))));
+                    return Optional.of(new CurrentTenant(
+                            row.getObject("id", UUID.class),
+                            row.getString("slug"),
+                            timeZoneOf(row),
+                            READ_ONLY.equals(row.getString("access_state"))));
                 }
             }
         });
@@ -103,8 +105,11 @@ class TenantRegistry implements TenantDirectory, ActiveTenants {
                     if (!row.next() || !CLOSED.equals(row.getString("status"))) {
                         return Optional.empty();
                     }
-                    return Optional.of(new CurrentTenant(row.getObject("id", UUID.class), row.getString("slug"),
-                            timeZoneOf(row), READ_ONLY.equals(row.getString("access_state"))));
+                    return Optional.of(new CurrentTenant(
+                            row.getObject("id", UUID.class),
+                            row.getString("slug"),
+                            timeZoneOf(row),
+                            READ_ONLY.equals(row.getString("access_state"))));
                 }
             }
         });
@@ -154,9 +159,9 @@ class TenantRegistry implements TenantDirectory, ActiveTenants {
         String name = row.getString("time_zone");
         try {
             return ZoneId.of(name);
-        }
-        catch (DateTimeException ex) {
-            throw new IllegalStateException("The registry holds a time zone this application does not know: " + name, ex);
+        } catch (DateTimeException ex) {
+            throw new IllegalStateException(
+                    "The registry holds a time zone this application does not know: " + name, ex);
         }
     }
 }

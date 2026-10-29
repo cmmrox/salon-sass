@@ -4,11 +4,10 @@ import com.salonplatform.platform.application.SalonExports;
 import com.salonplatform.shared.outbox.OutboxDelivery;
 import com.salonplatform.shared.outbox.OutboxLifecycle;
 import com.salonplatform.shared.outbox.OutboxProvider;
-import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.json.JsonMapper;
-
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * {@code local} only: the {@code platform-email} channel's capturing fake (F03-S03), into the same
@@ -37,7 +36,11 @@ class LocalPlatformEmailCapture implements OutboxProvider {
     @Override
     public void deliver(OutboxDelivery delivery) {
         JsonNode payload = json.readTree(delivery.payload());
-        capture.capture(delivery, payload,
-                exports.openLinks(payload.path("exportId").asString(), payload.path("sealedLinks").asString()));
+        capture.capture(
+                delivery,
+                payload,
+                exports.openLinks(
+                        payload.path("exportId").asString(),
+                        payload.path("sealedLinks").asString()));
     }
 }

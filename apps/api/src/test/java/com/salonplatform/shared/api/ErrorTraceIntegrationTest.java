@@ -1,18 +1,17 @@
 package com.salonplatform.shared.api;
 
-import java.util.List;
-import java.util.Map;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import com.jayway.jsonpath.JsonPath;
 import com.salonplatform.testing.CapturedLogs;
 import com.salonplatform.testing.Http.Exchange;
 import com.salonplatform.testing.IntegrationTest;
+import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * AC-1: every error answer carries the request's trace id, the same as on the request's log line,
@@ -31,10 +30,14 @@ class ErrorTraceIntegrationTest extends IntegrationTest {
         "GET, /api/v1/meta, text/csv, 406, not_acceptable",
         "GET, /does-not-exist, application/json, 404, not_found",
     })
-    void anErrorCarriesTheTraceIdOfTheCallersTraceParent(String method, String path, String accept, int status,
-            String code) {
-        Exchange response = http().sendOnHost(method, "localhost:" + port(), path,
-                Map.of("Accept", accept, "traceparent", TRACE_PARENT), null);
+    void anErrorCarriesTheTraceIdOfTheCallersTraceParent(
+            String method, String path, String accept, int status, String code) {
+        Exchange response = http().sendOnHost(
+                        method,
+                        "localhost:" + port(),
+                        path,
+                        Map.of("Accept", accept, "traceparent", TRACE_PARENT),
+                        null);
 
         assertThat(response.status()).isEqualTo(status);
         assertThat(JsonPath.parse(response.body()).<String>read("$.code")).isEqualTo(code);
@@ -44,12 +47,13 @@ class ErrorTraceIntegrationTest extends IntegrationTest {
     @Test
     void anErrorsTraceIdIsTheTraceIdOfTheRequestsLogLine() {
         try (CapturedLogs logs = CapturedLogs.of("com.salonplatform.request")) {
-            Exchange response = http().sendOnHost("GET", "localhost:" + port(), "/api/v1/unknown-for-trace", Map.of(), null);
+            Exchange response =
+                    http().sendOnHost("GET", "localhost:" + port(), "/api/v1/unknown-for-trace", Map.of(), null);
 
             String traceId = JsonPath.parse(response.body()).read("$.traceId");
             assertThat(traceId).matches("^[0-9a-f]{32}$");
-            List<ILoggingEvent> lines = logs.events(line -> "/api/v1/unknown-for-trace".equals(
-                    CapturedLogs.keyValue(line, "url.path")));
+            List<ILoggingEvent> lines =
+                    logs.events(line -> "/api/v1/unknown-for-trace".equals(CapturedLogs.keyValue(line, "url.path")));
             assertThat(lines).hasSize(1);
             assertThat(CapturedLogs.context(lines.getFirst())).containsEntry("trace.id", traceId);
         }
@@ -65,9 +69,11 @@ class ErrorTraceIntegrationTest extends IntegrationTest {
             String body = raw.substring(raw.indexOf('{'), raw.lastIndexOf('}') + 1);
             assertThat(JsonPath.parse(body).<String>read("$.code")).isEqualTo("bad_request");
             assertThat(JsonPath.parse(body).<String>read("$.traceId")).isEqualTo(TRACE_ID);
-            assertThat(logs.events(line -> TRACE_ID.equals(CapturedLogs.context(line).get("trace.id"))))
+            assertThat(logs.events(
+                            line -> TRACE_ID.equals(CapturedLogs.context(line).get("trace.id"))))
                     .singleElement()
-                    .satisfies(line -> assertThat(CapturedLogs.keyValue(line, "http.response.status_code")).isEqualTo(400));
+                    .satisfies(line -> assertThat(CapturedLogs.keyValue(line, "http.response.status_code"))
+                            .isEqualTo(400));
         }
     }
 

@@ -16,10 +16,8 @@ import java.security.SecureRandom;
 import java.util.HexFormat;
 import java.util.Optional;
 import java.util.Properties;
-
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
-
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
@@ -46,18 +44,24 @@ public class BillingProviderKey {
         }
         if (value == null || value.isBlank()) {
             key = null;
-        }
-        else if (!value.matches("[0-9a-fA-F]{64}")) {
+        } else if (!value.matches("[0-9a-fA-F]{64}")) {
             throw new IllegalStateException("Configure SALON_BILLING_PROVIDER_KEY with a 64-hex-character secret");
-        }
-        else {
+        } else {
             key = HexFormat.of().parseHex(value);
-            for (String name : new String[] {"salon.operator.signing-key", "salon.operator.challenge-key",
-                "salon.operator.encryption-key", "salon.operator.proxy-key", "salon.operator.fingerprint-key",
-                "salon.identity.signing-key", "salon.identity.challenge-key", "salon.identity.encryption-key",
-                "salon.identity.proxy-key"}) {
+            for (String name : new String[] {
+                "salon.operator.signing-key",
+                "salon.operator.challenge-key",
+                "salon.operator.encryption-key",
+                "salon.operator.proxy-key",
+                "salon.operator.fingerprint-key",
+                "salon.identity.signing-key",
+                "salon.identity.challenge-key",
+                "salon.identity.encryption-key",
+                "salon.identity.proxy-key"
+            }) {
                 String other = environment.getProperty(name);
-                if (other != null && other.matches("[0-9a-fA-F]{64}")
+                if (other != null
+                        && other.matches("[0-9a-fA-F]{64}")
                         && MessageDigest.isEqual(key, HexFormat.of().parseHex(other))) {
                     throw new IllegalStateException("The billing provider key must be independent of every other key");
                 }
@@ -79,8 +83,7 @@ public class BillingProviderKey {
             Mac mac = Mac.getInstance("HmacSHA256");
             mac.init(new SecretKeySpec(key, "HmacSHA256"));
             return Optional.of(HexFormat.of().formatHex(mac.doFinal(body)));
-        }
-        catch (NoSuchAlgorithmException | InvalidKeyException ex) {
+        } catch (NoSuchAlgorithmException | InvalidKeyException ex) {
             throw new IllegalStateException("HMAC-SHA256 is unavailable", ex);
         }
     }
@@ -90,19 +93,23 @@ public class BillingProviderKey {
         if (key == null || signature == null || !signature.matches("[0-9a-f]{64}")) {
             return false;
         }
-        return MessageDigest.isEqual(sign(body).orElseThrow().getBytes(java.nio.charset.StandardCharsets.US_ASCII),
+        return MessageDigest.isEqual(
+                sign(body).orElseThrow().getBytes(java.nio.charset.StandardCharsets.US_ASCII),
                 signature.getBytes(java.nio.charset.StandardCharsets.US_ASCII));
     }
 
     private static synchronized String retained(Environment environment) {
-        Path path = Path.of(environment.getProperty("salon.billing.local-key-file",
-                "../../.local/billing-keys.properties")).toAbsolutePath().normalize();
+        Path path = Path.of(
+                        environment.getProperty("salon.billing.local-key-file", "../../.local/billing-keys.properties"))
+                .toAbsolutePath()
+                .normalize();
         var mode = PosixFilePermissions.fromString("rw-------");
         Properties saved = new Properties();
         try {
             Files.createDirectories(path.getParent());
             Path lockPath = path.resolveSibling(path.getFileName() + ".lock");
-            try (FileChannel channel = FileChannel.open(lockPath, StandardOpenOption.CREATE, StandardOpenOption.WRITE)) {
+            try (FileChannel channel =
+                    FileChannel.open(lockPath, StandardOpenOption.CREATE, StandardOpenOption.WRITE)) {
                 Files.setPosixFilePermissions(lockPath, mode);
                 try (var lock = channel.lock()) {
                     if (Files.exists(path)) {
@@ -115,24 +122,25 @@ public class BillingProviderKey {
                         byte[] fresh = new byte[32];
                         new SecureRandom().nextBytes(fresh);
                         saved.setProperty("provider", HexFormat.of().formatHex(fresh));
-                        Path temporary = Files.createTempFile(path.getParent(), ".billing-keys-", ".tmp",
-                                PosixFilePermissions.asFileAttribute(mode));
+                        Path temporary = Files.createTempFile(
+                                path.getParent(), ".billing-keys-", ".tmp", PosixFilePermissions.asFileAttribute(mode));
                         try {
                             try (OutputStream out = Files.newOutputStream(temporary)) {
                                 saved.store(out, "Local-only billing provider key. Never commit or print.");
                             }
-                            Files.move(temporary, path, StandardCopyOption.ATOMIC_MOVE,
+                            Files.move(
+                                    temporary,
+                                    path,
+                                    StandardCopyOption.ATOMIC_MOVE,
                                     StandardCopyOption.REPLACE_EXISTING);
-                        }
-                        finally {
+                        } finally {
                             Files.deleteIfExists(temporary);
                         }
                     }
                 }
             }
             return saved.getProperty("provider");
-        }
-        catch (IOException ex) {
+        } catch (IOException ex) {
             throw new IllegalStateException("Cannot read the retained local billing provider key", ex);
         }
     }

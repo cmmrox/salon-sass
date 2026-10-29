@@ -1,23 +1,21 @@
 package com.salonplatform;
 
-import java.net.http.HttpResponse;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.time.Duration;
-import java.util.concurrent.CompletableFuture;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
 import com.salonplatform.testing.Http;
 import com.salonplatform.testing.StartedApplication;
 import com.salonplatform.testing.TestPostgres;
+import java.net.http.HttpResponse;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.time.Duration;
+import java.util.concurrent.CompletableFuture;
 import org.junit.jupiter.api.Test;
-import org.testcontainers.postgresql.PostgreSQLContainer;
-
 import org.springframework.jdbc.core.ConnectionCallback;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.awaitility.Awaitility.await;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 
 /**
  * A database that still accepts connections and no longer answers: overloaded, or behind a network
@@ -43,26 +41,33 @@ class DatabaseFrozenIntegrationTest {
 
                 freeze(postgres);
                 try {
-                    for (String request : new String[] { "the first request", "the second request" }) {
+                    for (String request : new String[] {"the first request", "the second request"}) {
                         HttpResponse<String> response = answerWithinTheLimit(http, "/actuator/health", request);
 
                         assertThat(response.statusCode()).as(request).isEqualTo(503);
                         DocumentContext body = JsonPath.parse(response.body());
                         assertThat(body.<String>read("$.status")).as(request).isEqualTo("DOWN");
-                        assertThat(body.<String>read("$.components.db.status")).as(request).isEqualTo("DOWN");
+                        assertThat(body.<String>read("$.components.db.status"))
+                                .as(request)
+                                .isEqualTo("DOWN");
                     }
 
                     // The service itself is still answering: only what needs the database is down.
-                    assertThat(answerWithinTheLimit(http, "/api/v1/meta", "meta").statusCode()).isEqualTo(200);
-                }
-                finally {
+                    assertThat(answerWithinTheLimit(http, "/api/v1/meta", "meta")
+                                    .statusCode())
+                            .isEqualTo(200);
+                } finally {
                     thaw(postgres);
                 }
 
                 // Nobody restarts anything: the pool replaces the connections it gave up on.
-                await().atMost(Duration.ofSeconds(30)).pollInterval(Duration.ofMillis(250)).untilAsserted(
-                        () -> assertThat(http.get("/actuator/health").statusCode()).isEqualTo(200));
-                DocumentContext body = JsonPath.parse(http.get("/actuator/health").body());
+                await().atMost(Duration.ofSeconds(30))
+                        .pollInterval(Duration.ofMillis(250))
+                        .untilAsserted(
+                                () -> assertThat(http.get("/actuator/health").statusCode())
+                                        .isEqualTo(200));
+                DocumentContext body =
+                        JsonPath.parse(http.get("/actuator/health").body());
                 assertThat(body.<String>read("$.status")).isEqualTo("UP");
                 assertThat(body.<String>read("$.components.db.status")).isEqualTo("UP");
             }
@@ -79,27 +84,27 @@ class DatabaseFrozenIntegrationTest {
     void aQueryOnAConnectionAlreadyInUseFailsWithinTheSocketTimeoutInsteadOfWaitingForEver() {
         try (PostgreSQLContainer postgres = TestPostgres.newContainer()) {
             postgres.start();
-            try (StartedApplication application = StartedApplication.against(postgres,
-                    "--spring.datasource.hikari.data-source-properties.socketTimeout=2")) {
+            try (StartedApplication application = StartedApplication.against(
+                    postgres, "--spring.datasource.hikari.data-source-properties.socketTimeout=2")) {
                 try {
-                    CompletableFuture<Throwable> outcome = CompletableFuture.supplyAsync(
-                            () -> application.jdbc().execute((ConnectionCallback<Throwable>) connection -> {
+                    CompletableFuture<Throwable> outcome = CompletableFuture.supplyAsync(() -> application
+                            .jdbc()
+                            .execute((ConnectionCallback<Throwable>) connection -> {
                                 try (Statement statement = connection.createStatement()) {
                                     statement.execute("SELECT 1");
                                     freeze(postgres);
                                     statement.execute("SELECT 1");
                                     return null;
-                                }
-                                catch (SQLException ex) {
+                                } catch (SQLException ex) {
                                     return ex;
                                 }
                             }));
 
-                    assertThat(outcome).as("the query made while the database was silent")
+                    assertThat(outcome)
+                            .as("the query made while the database was silent")
                             .succeedsWithin(LIMIT)
                             .isInstanceOf(SQLException.class);
-                }
-                finally {
+                } finally {
                     thaw(postgres);
                 }
             }
@@ -108,7 +113,9 @@ class DatabaseFrozenIntegrationTest {
 
     private static HttpResponse<String> answerWithinTheLimit(Http http, String path, String request) {
         CompletableFuture<HttpResponse<String>> response = CompletableFuture.supplyAsync(() -> http.get(path));
-        assertThat(response).as("%s to %s while the database does not answer", request, path).succeedsWithin(LIMIT);
+        assertThat(response)
+                .as("%s to %s while the database does not answer", request, path)
+                .succeedsWithin(LIMIT);
         return response.join();
     }
 
@@ -118,10 +125,15 @@ class DatabaseFrozenIntegrationTest {
     }
 
     private static void thaw(PostgreSQLContainer postgres) {
-        Boolean paused = postgres.getDockerClient().inspectContainerCmd(postgres.getContainerId()).exec()
-                .getState().getPaused();
+        Boolean paused = postgres.getDockerClient()
+                .inspectContainerCmd(postgres.getContainerId())
+                .exec()
+                .getState()
+                .getPaused();
         if (Boolean.TRUE.equals(paused)) {
-            postgres.getDockerClient().unpauseContainerCmd(postgres.getContainerId()).exec();
+            postgres.getDockerClient()
+                    .unpauseContainerCmd(postgres.getContainerId())
+                    .exec();
         }
     }
 }

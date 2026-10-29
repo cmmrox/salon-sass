@@ -1,9 +1,13 @@
 package com.salonplatform.platform;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
+import com.salonplatform.platform.application.OperatorAccounts;
+import com.salonplatform.platform.infrastructure.OperatorCrypto;
+import com.salonplatform.testing.Http;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.time.Clock;
-import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.HexFormat;
@@ -13,18 +17,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
-
-import com.salonplatform.platform.application.OperatorAccounts;
-import com.salonplatform.platform.infrastructure.OperatorCrypto;
-import com.salonplatform.testing.Http;
-import tools.jackson.databind.json.JsonMapper;
-
 import org.springframework.core.env.Environment;
-
-import static org.assertj.core.api.Assertions.assertThat;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Drives the operator API over real HTTP on the console hostname: synthetic operator accounts with
@@ -35,8 +31,7 @@ public final class OperatorTestSupport {
 
     public static final String CONSOLE = "console.localhost";
 
-    public record Operator(String email, String password, String totpSecret, String role) {
-    }
+    public record Operator(String email, String password, String totpSecret, String role) {}
 
     private final Http http;
     private final int port;
@@ -48,8 +43,14 @@ public final class OperatorTestSupport {
     private final SecureRandom random = new SecureRandom();
     private final Map<String, Set<Long>> usedSteps = new ConcurrentHashMap<>();
 
-    public OperatorTestSupport(Http http, int port, OperatorAccounts accounts, OperatorCrypto crypto, JsonMapper json,
-            Environment environment, Clock clock) {
+    public OperatorTestSupport(
+            Http http,
+            int port,
+            OperatorAccounts accounts,
+            OperatorCrypto crypto,
+            JsonMapper json,
+            Environment environment,
+            Clock clock) {
         this.http = http;
         this.port = port;
         this.accounts = accounts;
@@ -99,8 +100,8 @@ public final class OperatorTestSupport {
         return callOn(host(), method, path, body, token, Map.of());
     }
 
-    public Http.Exchange callOn(String host, String method, String path, Object body, String token,
-            Map<String, String> extra) {
+    public Http.Exchange callOn(
+            String host, String method, String path, Object body, String token, Map<String, String> extra) {
         Map<String, String> headers = new HashMap<>(extra);
         if (body != null) {
             headers.put("Content-Type", "application/json");
@@ -108,7 +109,11 @@ public final class OperatorTestSupport {
         if (token != null) {
             headers.put("Authorization", "Bearer " + token);
         }
-        return http.sendOnHost(method, host, "/api/v1/operator" + path, headers,
+        return http.sendOnHost(
+                method,
+                host,
+                "/api/v1/operator" + path,
+                headers,
                 body == null ? null : body instanceof String text ? text : json.writeValueAsString(body));
     }
 
@@ -126,8 +131,7 @@ public final class OperatorTestSupport {
             String canonical = "v1\n" + CONSOLE + "\nPOST\n/api/v1/operator/sign-in\n" + address + "\n" + issued;
             return "v1;" + address + ";" + issued + ";"
                     + HexFormat.of().formatHex(mac.doFinal(canonical.getBytes(StandardCharsets.UTF_8)));
-        }
-        catch (Exception ex) {
+        } catch (Exception ex) {
             throw new IllegalStateException(ex);
         }
     }
@@ -138,8 +142,8 @@ public final class OperatorTestSupport {
         request.put("email", email);
         request.put("password", password);
         request.put("deviceLabel", "JUnit console");
-        return callOn(host(), "POST", "/sign-in", request, null,
-                Map.of("x-salon-client-assertion", assertion(address)));
+        return callOn(
+                host(), "POST", "/sign-in", request, null, Map.of("x-salon-client-assertion", assertion(address)));
     }
 
     /** The whole sign-in of an enrolled operator: the tokens. */
@@ -148,8 +152,17 @@ public final class OperatorTestSupport {
         assertThat(password.status()).withFailMessage("%s", password.body()).isEqualTo(200);
         Map<String, Object> challenge = body(password);
         assertThat(challenge.get("state")).isEqualTo("verify_mfa");
-        Http.Exchange verify = call("POST", "/mfa/verify", Map.of("challengeId", challenge.get("challengeId"),
-                "challengeToken", challenge.get("challengeToken"), "code", code(operator.totpSecret())), null);
+        Http.Exchange verify = call(
+                "POST",
+                "/mfa/verify",
+                Map.of(
+                        "challengeId",
+                        challenge.get("challengeId"),
+                        "challengeToken",
+                        challenge.get("challengeToken"),
+                        "code",
+                        code(operator.totpSecret())),
+                null);
         assertThat(verify.status()).withFailMessage("%s", verify.body()).isEqualTo(200);
         return body(verify);
     }

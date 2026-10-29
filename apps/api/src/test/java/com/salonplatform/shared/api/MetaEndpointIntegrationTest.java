@@ -1,5 +1,11 @@
 package com.salonplatform.shared.api;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.within;
+
+import com.jayway.jsonpath.JsonPath;
+import com.salonplatform.testing.Http;
+import com.salonplatform.testing.IntegrationTest;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.http.HttpResponse;
@@ -7,14 +13,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
 import java.util.Properties;
-
-import com.jayway.jsonpath.JsonPath;
-import com.salonplatform.testing.Http;
-import com.salonplatform.testing.IntegrationTest;
 import org.junit.jupiter.api.Test;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.within;
 
 class MetaEndpointIntegrationTest extends IntegrationTest {
 

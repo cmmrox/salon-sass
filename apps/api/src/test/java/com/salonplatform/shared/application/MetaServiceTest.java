@@ -1,17 +1,15 @@
 package com.salonplatform.shared.application;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.Properties;
-
 import org.junit.jupiter.api.Test;
-
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.info.BuildProperties;
 import org.springframework.boot.info.GitProperties;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 class MetaServiceTest {
 
@@ -19,8 +17,11 @@ class MetaServiceTest {
 
     @Test
     void reportsTheNameTheBuildsVersionAndCommitAndTheClocksTime() {
-        MetaService service = new MetaService("salon-api", provider(build("1.2.3")),
-                provider(git("0123456789abcdef0123456789abcdef01234567")), CLOCK);
+        MetaService service = new MetaService(
+                "salon-api",
+                provider(build("1.2.3")),
+                provider(git("0123456789abcdef0123456789abcdef01234567")),
+                CLOCK);
 
         ServiceMeta meta = service.describe();
 
@@ -42,8 +43,8 @@ class MetaServiceTest {
 
     @Test
     void reportsUnknownWhenTheBuildHadNoRepository() {
-        MetaService service = new MetaService("salon-api", provider(build("1.2.3")), provider(new GitProperties(new Properties())),
-                CLOCK);
+        MetaService service = new MetaService(
+                "salon-api", provider(build("1.2.3")), provider(new GitProperties(new Properties())), CLOCK);
 
         assertThat(service.describe().commit()).isEqualTo("unknown");
     }

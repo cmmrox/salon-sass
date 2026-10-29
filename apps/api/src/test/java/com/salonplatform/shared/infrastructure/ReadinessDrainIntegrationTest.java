@@ -1,17 +1,16 @@
 package com.salonplatform.shared.infrastructure;
 
-import java.time.Duration;
-import java.time.Instant;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.salonplatform.testing.Http;
 import com.salonplatform.testing.StartedApplication;
 import com.salonplatform.testing.TestPostgres;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * A stopping instance leaves the rotation before it stops answering (F01-S05): its readiness turns
@@ -24,8 +23,8 @@ class ReadinessDrainIntegrationTest {
 
     @Test
     void readinessFailsFirstAndRequestsAreAnsweredThroughoutTheDrain() throws Exception {
-        StartedApplication application = StartedApplication.against(TestPostgres.shared(),
-                "--salon.server.drain-delay=" + DRAIN.toMillis() + "ms");
+        StartedApplication application = StartedApplication.against(
+                TestPostgres.shared(), "--salon.server.drain-delay=" + DRAIN.toMillis() + "ms");
         Http http = application.http();
         assertThat(http.get("/actuator/health/readiness").statusCode()).isEqualTo(200);
 
@@ -34,12 +33,15 @@ class ReadinessDrainIntegrationTest {
 
         // Readiness reports the stop at once.
         Instant outOfService = null;
-        while (outOfService == null && Duration.between(stopAsked, Instant.now()).compareTo(Duration.ofSeconds(1)) < 0) {
+        while (outOfService == null
+                && Duration.between(stopAsked, Instant.now()).compareTo(Duration.ofSeconds(1)) < 0) {
             if (http.get("/actuator/health/readiness").statusCode() == 503) {
                 outOfService = Instant.now();
             }
         }
-        assertThat(outOfService).as("readiness went OUT_OF_SERVICE within a second of the stop").isNotNull();
+        assertThat(outOfService)
+                .as("readiness went OUT_OF_SERVICE within a second of the stop")
+                .isNotNull();
 
         // Every request sent during the drain is still answered.
         int answered = 0;
@@ -62,10 +64,12 @@ class ReadinessDrainIntegrationTest {
             ReadinessDrain drain = application.bean(ReadinessDrain.class);
 
             drain.stop();
-            assertThat(application.http().get("/actuator/health/readiness").statusCode()).isEqualTo(503);
+            assertThat(application.http().get("/actuator/health/readiness").statusCode())
+                    .isEqualTo(503);
             drain.start();
 
-            assertThat(application.http().get("/actuator/health/readiness").statusCode()).isEqualTo(200);
+            assertThat(application.http().get("/actuator/health/readiness").statusCode())
+                    .isEqualTo(200);
         }
     }
 }

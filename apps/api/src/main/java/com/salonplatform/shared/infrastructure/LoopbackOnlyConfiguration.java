@@ -4,13 +4,11 @@ import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.net.UnknownHostException;
-
 import org.apache.catalina.connector.Connector;
 import org.apache.coyote.AbstractProtocol;
 import org.apache.coyote.ProtocolHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.tomcat.TomcatConnectorCustomizer;
 import org.springframework.boot.tomcat.TomcatProtocolHandlerCustomizer;
@@ -57,8 +55,7 @@ class LoopbackOnlyConfiguration {
     private static boolean ipv6LoopbackExists() {
         try {
             return NetworkInterface.getByInetAddress(address(IPV6_LOOPBACK)) != null;
-        }
-        catch (SocketException ex) {
+        } catch (SocketException ex) {
             return false;
         }
     }
@@ -66,8 +63,7 @@ class LoopbackOnlyConfiguration {
     private static InetAddress address(String literal) {
         try {
             return InetAddress.getByName(literal);
-        }
-        catch (UnknownHostException ex) {
+        } catch (UnknownHostException ex) {
             throw new IllegalStateException(ex);
         }
     }
@@ -110,7 +106,8 @@ class LoopbackOnlyConfiguration {
             }
             // As the factory does for its own connector: a customizer meant for another kind of
             // protocol handler is skipped, not called with the wrong one.
-            LambdaSafe.callbacks(TomcatProtocolHandlerCustomizer.class, factory.getProtocolHandlerCustomizers(), handler)
+            LambdaSafe.callbacks(
+                            TomcatProtocolHandlerCustomizer.class, factory.getProtocolHandlerCustomizers(), handler)
                     .invoke(customizer -> customizer.customize(handler));
             for (TomcatConnectorCustomizer customizer : factory.getConnectorCustomizers()) {
                 if (customizer != this) {

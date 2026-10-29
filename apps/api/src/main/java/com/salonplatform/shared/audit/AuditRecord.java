@@ -20,7 +20,16 @@ import java.util.UUID;
  * @param after the values after, secrets removed, or null
  * @param traceId the trace of the work that wrote it, or null
  */
-public record AuditRecord(UUID id, UUID tenantId, Instant occurredAt, String actorKind, String actorId, String action,
-        String subjectKind, String subjectId, String reason, Map<String, Object> before, Map<String, Object> after,
-        String traceId) {
-}
+public record AuditRecord(
+        UUID id,
+        UUID tenantId,
+        Instant occurredAt,
+        String actorKind,
+        String actorId,
+        String action,
+        String subjectKind,
+        String subjectId,
+        String reason,
+        Map<String, Object> before,
+        Map<String, Object> after,
+        String traceId) {}

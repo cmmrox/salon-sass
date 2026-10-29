@@ -8,5 +8,4 @@ package com.salonplatform.branding.application;
  * @param brandColour its brand colour, {@code #RRGGBB}
  * @param timeZone the salon's time zone, an IANA name
  */
-public record PublishedBrand(String slug, String name, String brandColour, String timeZone) {
-}
+public record PublishedBrand(String slug, String name, String brandColour, String timeZone) {}

@@ -2,7 +2,6 @@ package com.salonplatform.shared.tenancy;
 
 import java.util.Optional;
 import java.util.concurrent.locks.ReentrantLock;
-
 import org.slf4j.MDC;
 
 /**
@@ -87,8 +86,7 @@ final class RequestTenant {
         }
         try {
             resolve();
-        }
-        catch (RuntimeException ex) {
+        } catch (RuntimeException ex) {
             earlyFailure = ex;
         }
     }
@@ -101,22 +99,26 @@ final class RequestTenant {
         lock.lock();
         try {
             if (resolution == null) {
-                resolution = directory.find(candidateSlug).map(this::resolutionOf).orElse(Resolution.NONE);
+                resolution =
+                        directory.find(candidateSlug).map(this::resolutionOf).orElse(Resolution.NONE);
                 // From here on every log line of the request names its salon (T-8, NFR-16). The
                 // request filter removes it when the request ends.
-                resolution.salon().ifPresent(salon -> MDC.put(TenantContext.LOG_FIELD, salon.id().toString()));
+                resolution
+                        .salon()
+                        .ifPresent(salon ->
+                                MDC.put(TenantContext.LOG_FIELD, salon.id().toString()));
             }
             return resolution;
-        }
-        finally {
+        } finally {
             lock.unlock();
         }
     }
 
     private Resolution resolutionOf(RegisteredTenant registered) {
         return switch (registered.status()) {
-            case ACTIVE -> Resolution.of(new CurrentTenant(registered.id(), candidateSlug, registered.timeZone(),
-                    registered.readOnly()));
+            case ACTIVE ->
+                Resolution.of(new CurrentTenant(
+                        registered.id(), candidateSlug, registered.timeZone(), registered.readOnly()));
             // Its id is dropped here: a suspended salon is never the salon of a request.
             case SUSPENDED -> Resolution.SUSPENDED;
         };

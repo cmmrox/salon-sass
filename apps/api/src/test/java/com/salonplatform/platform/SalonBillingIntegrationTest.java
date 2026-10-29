@@ -1,19 +1,6 @@
 package com.salonplatform.platform;
 
-import java.time.Clock;
-import java.time.Duration;
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.Callable;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import com.salonplatform.identity.application.SessionAccess;
 import com.salonplatform.identity.domain.CustomerAccount;
@@ -33,10 +20,22 @@ import com.salonplatform.testing.TestSalons;
 import com.salonplatform.testing.TestSalons.TestSalon;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
-import tools.jackson.databind.json.JsonMapper;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
@@ -45,8 +44,7 @@ import org.springframework.core.env.Environment;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
-
-import static org.assertj.core.api.Assertions.assertThat;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * F03-S02 on a salon's own host: a read-only salon keeps reads, sign-in, MFA, renewal, sign-out,
@@ -67,15 +65,32 @@ class SalonBillingIntegrationTest extends IntegrationTest {
         }
     }
 
-    @Autowired OperatorAccounts accounts;
-    @Autowired OperatorCrypto crypto;
-    @Autowired IdentityCrypto identityCrypto;
-    @Autowired JsonMapper json;
-    @Autowired Environment environment;
-    @Autowired PlatformTransactionManager manager;
-    @Autowired SessionAccess sessions;
-    @Autowired BillingJob job;
-    @PersistenceContext EntityManager em;
+    @Autowired
+    OperatorAccounts accounts;
+
+    @Autowired
+    OperatorCrypto crypto;
+
+    @Autowired
+    IdentityCrypto identityCrypto;
+
+    @Autowired
+    JsonMapper json;
+
+    @Autowired
+    Environment environment;
+
+    @Autowired
+    PlatformTransactionManager manager;
+
+    @Autowired
+    SessionAccess sessions;
+
+    @Autowired
+    BillingJob job;
+
+    @PersistenceContext
+    EntityManager em;
 
     private final JdbcTemplate owner = TestDatabase.of(TestPostgres.shared()).asOwner();
     private BillingTestSupport billing;
@@ -83,7 +98,8 @@ class SalonBillingIntegrationTest extends IntegrationTest {
     @BeforeEach
     void setUp() {
         CLOCK.set(Instant.now().truncatedTo(ChronoUnit.SECONDS));
-        OperatorTestSupport console = new OperatorTestSupport(http(), port(), accounts, crypto, json, environment, CLOCK);
+        OperatorTestSupport console =
+                new OperatorTestSupport(http(), port(), accounts, crypto, json, environment, CLOCK);
         billing = new BillingTestSupport(console, http(), port(), owner, identityCrypto, json, manager, em, CLOCK);
     }
 
@@ -96,13 +112,14 @@ class SalonBillingIntegrationTest extends IntegrationTest {
     }
 
     private long activeStaff(TestSalon salon) {
-        return owner.queryForObject("SELECT count(*) FROM identity_staff WHERE tenant_id = ? AND active", Long.class,
-                salon.id());
+        return owner.queryForObject(
+                "SELECT count(*) FROM identity_staff WHERE tenant_id = ? AND active", Long.class, salon.id());
     }
 
     private Map<String, Object> customerTokens(TestSalon salon) throws Exception {
-        return TenantContext.callAs(new TestSalons(owner).asCurrent(salon), () -> new TransactionTemplate(manager)
-                .execute(status -> {
+        return TenantContext.callAs(
+                new TestSalons(owner).asCurrent(salon),
+                () -> new TransactionTemplate(manager).execute(status -> {
                     CustomerAccount customer = new CustomerAccount();
                     customer.id = UUID.randomUUID();
                     customer.mobile = "+9477" + String.format("%07d", (int) (Math.random() * 9_000_000) + 1_000_000);
@@ -113,8 +130,8 @@ class SalonBillingIntegrationTest extends IntegrationTest {
                     em.persist(customer);
                     em.flush();
                     var tokens = sessions.newCustomer(customer, "JUnit phone");
-                    return Map.<String, Object>of("accessToken", tokens.accessToken(), "refreshToken",
-                            tokens.refreshToken());
+                    return Map.<String, Object>of(
+                            "accessToken", tokens.accessToken(), "refreshToken", tokens.refreshToken());
                 }));
     }
 
@@ -146,42 +163,67 @@ class SalonBillingIntegrationTest extends IntegrationTest {
         status(billing.identityCall(salon, "GET", "/audit", null, ownerToken), 200);
         status(billing.salonCall(salon, "GET", "/api/v1/salon", null, null), 200);
         status(billing.salonCall(salon, "GET", "/api/v1/salon/entitlements", null, managerToken), 200);
-        status(billing.salonCall(salon, "GET", "/api/v1/identity/customers/me", null,
-                (String) customer.get("accessToken")), 200);
-        status(billing.salonCall(salon, "GET", "/api/v1/identity/customers/me/export", null,
-                (String) customer.get("accessToken")), 200);
+        status(
+                billing.salonCall(
+                        salon, "GET", "/api/v1/identity/customers/me", null, (String) customer.get("accessToken")),
+                200);
+        status(
+                billing.salonCall(salon, "GET", "/api/v1/identity/customers/me/export", null, (String)
+                        customer.get("accessToken")),
+                200);
 
         // Every other mutation is refused before any change, signed in or not.
         long before = activeStaff(salon);
         Object[][] refused = {
-            {"POST", "/staff", BillingTestSupport.staffRequest(BillingTestSupport.email("new"), "RECEPTIONIST",
-                    "synthetic initial password")},
+            {
+                "POST",
+                "/staff",
+                BillingTestSupport.staffRequest(
+                        BillingTestSupport.email("new"), "RECEPTIONIST", "synthetic initial password")
+            },
             {"PATCH", "/staff/" + removable.id, Map.of("version", 0, "role", "MANAGER")},
-            {"DELETE", "/staff/" + removable.id, null}};
+            {"DELETE", "/staff/" + removable.id, null}
+        };
         for (Object[] mutation : refused) {
             for (String token : new String[] {ownerToken, null}) {
-                Http.Exchange denied = billing.identityCall(salon, (String) mutation[0], (String) mutation[1],
-                        mutation[2], token);
+                Http.Exchange denied =
+                        billing.identityCall(salon, (String) mutation[0], (String) mutation[1], mutation[2], token);
                 status(denied, 403);
                 assertThat(denied.body()).contains("salon_read_only");
             }
         }
         status(billing.salonCall(salon, "POST", "/api/v1/identity/not-yet-a-route", Map.of(), ownerToken), 403);
         assertThat(activeStaff(salon)).isEqualTo(before);
-        assertThat(owner.queryForObject("SELECT role FROM identity_staff WHERE tenant_id = ? AND id = ?", String.class,
-                salon.id(), removable.id)).isEqualTo("RECEPTIONIST");
+        assertThat(owner.queryForObject(
+                        "SELECT role FROM identity_staff WHERE tenant_id = ? AND id = ?",
+                        String.class,
+                        salon.id(),
+                        removable.id))
+                .isEqualTo("RECEPTIONIST");
 
         // Renewal, password change, sign-out and the customer's privacy rights still work.
-        Http.Exchange renewed = billing.identityCall(salon, "POST", "/sessions/refresh",
-                Map.of("refreshToken", managerTokens.get("refreshToken")), null);
+        Http.Exchange renewed = billing.identityCall(
+                salon, "POST", "/sessions/refresh", Map.of("refreshToken", managerTokens.get("refreshToken")), null);
         status(renewed, 200);
         String renewedToken = (String) body(renewed).get("accessToken");
-        status(billing.identityCall(salon, "PUT", "/staff/password", Map.of("oldPassword", billing.password,
-                "newPassword", "another synthetic password " + UUID.randomUUID()), renewedToken), 200);
-        status(billing.identityCall(salon, "DELETE", "/sessions/" + ownerTokens.get("sessionId"), null, ownerToken), 204);
+        status(
+                billing.identityCall(
+                        salon,
+                        "PUT",
+                        "/staff/password",
+                        Map.of(
+                                "oldPassword",
+                                billing.password,
+                                "newPassword",
+                                "another synthetic password " + UUID.randomUUID()),
+                        renewedToken),
+                200);
+        status(
+                billing.identityCall(salon, "DELETE", "/sessions/" + ownerTokens.get("sessionId"), null, ownerToken),
+                204);
         String customerToken = (String) customer.get("accessToken");
-        Map<String, Object> profile = body(billing.salonCall(salon, "GET", "/api/v1/identity/customers/me", null,
-                customerToken));
+        Map<String, Object> profile =
+                body(billing.salonCall(salon, "GET", "/api/v1/identity/customers/me", null, customerToken));
         Map<String, Object> update = new LinkedHashMap<>();
         update.put("version", profile.get("version"));
         update.put("name", "Synthetic Customer");
@@ -191,19 +233,35 @@ class SalonBillingIntegrationTest extends IntegrationTest {
         update.put("notificationPreferences", Map.of("sms", true, "whatsapp", false, "email", true));
         update.put("marketingConsent", false);
         status(billing.salonCall(salon, "PUT", "/api/v1/identity/customers/me", update, customerToken), 200);
-        status(billing.salonCall(salon, "DELETE", "/api/v1/identity/customers/me", Map.of("confirm", true),
-                customerToken), 204);
+        status(
+                billing.salonCall(
+                        salon, "DELETE", "/api/v1/identity/customers/me", Map.of("confirm", true), customerToken),
+                204);
 
         // Another salon is unaffected throughout.
         String otherToken = billing.token(other, otherOwner);
-        status(billing.identityCall(other, "POST", "/staff", BillingTestSupport.staffRequest(
-                BillingTestSupport.email("fine"), "RECEPTIONIST", "synthetic initial password"), otherToken), 201);
+        status(
+                billing.identityCall(
+                        other,
+                        "POST",
+                        "/staff",
+                        BillingTestSupport.staffRequest(
+                                BillingTestSupport.email("fine"), "RECEPTIONIST", "synthetic initial password"),
+                        otherToken),
+                201);
 
         // Paid again: mutations work on the next request.
         owner.update("UPDATE tenant SET access_state = 'full' WHERE id = ?", salon.id());
         String fresh = billing.token(salon, ownerAccount);
-        status(billing.identityCall(salon, "POST", "/staff", BillingTestSupport.staffRequest(
-                BillingTestSupport.email("back"), "RECEPTIONIST", "synthetic initial password"), fresh), 201);
+        status(
+                billing.identityCall(
+                        salon,
+                        "POST",
+                        "/staff",
+                        BillingTestSupport.staffRequest(
+                                BillingTestSupport.email("back"), "RECEPTIONIST", "synthetic initial password"),
+                        fresh),
+                201);
     }
 
     // --- AC-10 -----------------------------------------------------------------------------------
@@ -213,17 +271,34 @@ class SalonBillingIntegrationTest extends IntegrationTest {
         TestSalon salon = billing.legacy(billing.plan(2));
         StaffAccount ownerAccount = billing.staff(salon, StaffRole.OWNER, BillingTestSupport.email("owner"));
         String token = billing.token(salon, ownerAccount);
-        Http.Exchange second = billing.identityCall(salon, "POST", "/staff", BillingTestSupport.staffRequest(
-                BillingTestSupport.email("second"), "MANAGER", "synthetic initial password"), token);
+        Http.Exchange second = billing.identityCall(
+                salon,
+                "POST",
+                "/staff",
+                BillingTestSupport.staffRequest(
+                        BillingTestSupport.email("second"), "MANAGER", "synthetic initial password"),
+                token);
         status(second, 201);
-        Http.Exchange third = billing.identityCall(salon, "POST", "/staff", BillingTestSupport.staffRequest(
-                BillingTestSupport.email("third"), "MANAGER", "synthetic initial password"), token);
+        Http.Exchange third = billing.identityCall(
+                salon,
+                "POST",
+                "/staff",
+                BillingTestSupport.staffRequest(
+                        BillingTestSupport.email("third"), "MANAGER", "synthetic initial password"),
+                token);
         status(third, 409);
         assertThat(third.body()).contains("entitlement_exceeded").contains("\"field\":\"staffSeats\"");
         assertThat(activeStaff(salon)).isEqualTo(2);
         status(billing.identityCall(salon, "DELETE", "/staff/" + body(second).get("id"), null, token), 204);
-        status(billing.identityCall(salon, "POST", "/staff", BillingTestSupport.staffRequest(
-                BillingTestSupport.email("fourth"), "MANAGER", "synthetic initial password"), token), 201);
+        status(
+                billing.identityCall(
+                        salon,
+                        "POST",
+                        "/staff",
+                        BillingTestSupport.staffRequest(
+                                BillingTestSupport.email("fourth"), "MANAGER", "synthetic initial password"),
+                        token),
+                201);
         assertThat(activeStaff(salon)).isEqualTo(2);
 
         // Two (here five) simultaneous creations for the last seat create exactly one.
@@ -237,8 +312,13 @@ class SalonBillingIntegrationTest extends IntegrationTest {
             String email = BillingTestSupport.email("racer" + i);
             Callable<Integer> create = () -> {
                 start.await();
-                return billing.identityCall(race, "POST", "/staff", BillingTestSupport.staffRequest(email,
-                        "RECEPTIONIST", "synthetic initial password"), raceToken).status();
+                return billing.identityCall(
+                                race,
+                                "POST",
+                                "/staff",
+                                BillingTestSupport.staffRequest(email, "RECEPTIONIST", "synthetic initial password"),
+                                raceToken)
+                        .status();
             };
             results.add(pool.submit(create));
         }
@@ -268,7 +348,10 @@ class SalonBillingIntegrationTest extends IntegrationTest {
         status(billing.startSubscription(other.id(), start, UUID.randomUUID().toString()), 201);
         Map<StaffRole, StaffAccount> staff = new LinkedHashMap<>();
         for (StaffRole role : StaffRole.values()) {
-            staff.put(role, billing.staff(salon, role, BillingTestSupport.email(role.name().toLowerCase())));
+            staff.put(
+                    role,
+                    billing.staff(
+                            salon, role, BillingTestSupport.email(role.name().toLowerCase())));
         }
         StaffAccount otherOwner = billing.staff(other, StaffRole.OWNER, BillingTestSupport.email("owner"));
         CLOCK.advance(Duration.ofDays(14));
@@ -288,15 +371,17 @@ class SalonBillingIntegrationTest extends IntegrationTest {
             if (role == StaffRole.OWNER) {
                 status(invoices, 200);
                 assertThat(body(invoices)).containsEntry("total", 1);
-                Map<String, Object> first = ((List<Map<String, Object>>) body(invoices).get("items")).get(0);
+                Map<String, Object> first =
+                        ((List<Map<String, Object>>) body(invoices).get("items")).get(0);
                 status(billing.salonCall(salon, "GET", "/api/v1/salon/invoices/" + first.get("id"), null, token), 200);
                 // Another salon's invoice is not found, as one that does not exist.
-                Http.Exchange foreign = billing.salonCall(salon, "GET", "/api/v1/salon/invoices/" + otherInvoice, null,
-                        token);
+                Http.Exchange foreign =
+                        billing.salonCall(salon, "GET", "/api/v1/salon/invoices/" + otherInvoice, null, token);
                 status(foreign, 404);
-                status(billing.salonCall(salon, "GET", "/api/v1/salon/invoices/" + UUID.randomUUID(), null, token), 404);
-            }
-            else {
+                status(
+                        billing.salonCall(salon, "GET", "/api/v1/salon/invoices/" + UUID.randomUUID(), null, token),
+                        404);
+            } else {
                 status(invoices, 403);
                 assertThat(invoices.body()).contains("permission_denied");
             }
@@ -305,8 +390,10 @@ class SalonBillingIntegrationTest extends IntegrationTest {
         String salonOwner = billing.token(salon, staff.get(StaffRole.OWNER));
         status(billing.salonCall(other, "GET", "/api/v1/salon/entitlements", null, salonOwner), 404);
         String otherToken = billing.token(other, otherOwner);
-        assertThat(((Map<String, Object>) body(billing.salonCall(other, "GET", "/api/v1/salon/entitlements", null,
-                otherToken)).get("usage"))).containsEntry("staffSeats", 1);
+        assertThat(((Map<String, Object>)
+                        body(billing.salonCall(other, "GET", "/api/v1/salon/entitlements", null, otherToken))
+                                .get("usage")))
+                .containsEntry("staffSeats", 1);
 
         String customer = (String) customerTokens(salon).get("accessToken");
         for (String path : List.of("/api/v1/salon/entitlements", "/api/v1/salon/invoices")) {
@@ -319,8 +406,8 @@ class SalonBillingIntegrationTest extends IntegrationTest {
         // A legacy salon without a plan or subscription: no limits, no subscription, usage counted.
         TestSalon bare = billing.legacy(null);
         StaffAccount bareOwner = billing.staff(bare, StaffRole.OWNER, BillingTestSupport.email("owner"));
-        Map<String, Object> none = body(billing.salonCall(bare, "GET", "/api/v1/salon/entitlements", null,
-                billing.token(bare, bareOwner)));
+        Map<String, Object> none = body(
+                billing.salonCall(bare, "GET", "/api/v1/salon/entitlements", null, billing.token(bare, bareOwner)));
         assertThat(none.get("plan")).isNull();
         assertThat(none.get("limits")).isNull();
         assertThat(none.get("subscription")).isNull();

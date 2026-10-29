@@ -5,14 +5,6 @@ import com.nimbusds.jose.jwk.source.ImmutableSecret;
 import com.salonplatform.shared.api.ApplicationProblemException;
 import com.salonplatform.shared.api.ErrorCode;
 import com.salonplatform.shared.tenancy.SignedTenantVerifier;
-
-import org.springframework.security.crypto.password.DelegatingPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.crypto.password.Pbkdf2PasswordEncoder;
-import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
-import org.springframework.security.oauth2.jwt.*;
-import org.springframework.stereotype.Component;
-
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
@@ -22,11 +14,16 @@ import java.util.Base64;
 import java.util.HexFormat;
 import java.util.Map;
 import java.util.UUID;
-
 import javax.crypto.Cipher;
 import javax.crypto.Mac;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
+import org.springframework.security.crypto.password.DelegatingPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.crypto.password.Pbkdf2PasswordEncoder;
+import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
+import org.springframework.security.oauth2.jwt.*;
+import org.springframework.stereotype.Component;
 
 /** Maintained JWT/password/TOTP implementations; purpose-bound authenticated encryption. */
 @Component
@@ -47,21 +44,16 @@ public class IdentityCrypto implements SignedTenantVerifier {
         this.clock = clock;
         Pbkdf2PasswordEncoder pbkdf2 = new Pbkdf2PasswordEncoder("", 16, 600000, 256);
         pbkdf2.setAlgorithm(Pbkdf2PasswordEncoder.SecretKeyFactoryAlgorithm.PBKDF2WithHmacSHA256);
-        passwords =
-                new DelegatingPasswordEncoder(
-                        "pbkdf2-sha256-600k", Map.of("pbkdf2-sha256-600k", pbkdf2));
+        passwords = new DelegatingPasswordEncoder("pbkdf2-sha256-600k", Map.of("pbkdf2-sha256-600k", pbkdf2));
         dummyHash = passwords.encode(randomToken());
         encoder = new NimbusJwtEncoder(new ImmutableSecret<>(secrets.signing()));
-        NimbusJwtDecoder jwtDecoder =
-                NimbusJwtDecoder.withSecretKey(new SecretKeySpec(secrets.signing(), "HmacSHA256"))
-                        .macAlgorithm(MacAlgorithm.HS256)
-                        .build();
+        NimbusJwtDecoder jwtDecoder = NimbusJwtDecoder.withSecretKey(new SecretKeySpec(secrets.signing(), "HmacSHA256"))
+                .macAlgorithm(MacAlgorithm.HS256)
+                .build();
         // Fixed issuer/audience/time checks below use the application's controllable clock with no
         // hidden skew.
         jwtDecoder.setJwtValidator(
-                jwt ->
-                        org.springframework.security.oauth2.core.OAuth2TokenValidatorResult
-                                .success());
+                jwt -> org.springframework.security.oauth2.core.OAuth2TokenValidatorResult.success());
         decoder = jwtDecoder;
     }
 
@@ -83,9 +75,7 @@ public class IdentityCrypto implements SignedTenantVerifier {
         try {
             Mac mac = Mac.getInstance("HmacSHA256");
             mac.init(new SecretKeySpec(secrets.challenge(), "HmacSHA256"));
-            return HexFormat.of()
-                    .formatHex(
-                            mac.doFinal((purpose + ":" + value).getBytes(StandardCharsets.UTF_8)));
+            return HexFormat.of().formatHex(mac.doFinal((purpose + ":" + value).getBytes(StandardCharsets.UTF_8)));
         } catch (java.security.GeneralSecurityException ex) {
             throw new IllegalStateException("Credential hashing unavailable", ex);
         }
@@ -94,9 +84,7 @@ public class IdentityCrypto implements SignedTenantVerifier {
     public boolean equalHash(String a, String b) {
         return a != null
                 && b != null
-                && MessageDigest.isEqual(
-                        a.getBytes(StandardCharsets.US_ASCII),
-                        b.getBytes(StandardCharsets.US_ASCII));
+                && MessageDigest.isEqual(a.getBytes(StandardCharsets.US_ASCII), b.getBytes(StandardCharsets.US_ASCII));
     }
 
     public String encrypt(String purpose, String plain) {
@@ -111,8 +99,7 @@ public class IdentityCrypto implements SignedTenantVerifier {
             c.updateAAD(purpose.getBytes(StandardCharsets.UTF_8));
             return Base64.getEncoder().encodeToString(nonce)
                     + "."
-                    + Base64.getEncoder()
-                            .encodeToString(c.doFinal(plain.getBytes(StandardCharsets.UTF_8)));
+                    + Base64.getEncoder().encodeToString(c.doFinal(plain.getBytes(StandardCharsets.UTF_8)));
         } catch (java.security.GeneralSecurityException ex) {
             throw new IllegalStateException("Secret encryption unavailable", ex);
         }
@@ -127,15 +114,13 @@ public class IdentityCrypto implements SignedTenantVerifier {
                     new SecretKeySpec(secrets.encryption(), "AES"),
                     new GCMParameterSpec(128, Base64.getDecoder().decode(parts[0])));
             c.updateAAD(purpose.getBytes(StandardCharsets.UTF_8));
-            return new String(
-                    c.doFinal(Base64.getDecoder().decode(parts[1])), StandardCharsets.UTF_8);
+            return new String(c.doFinal(Base64.getDecoder().decode(parts[1])), StandardCharsets.UTF_8);
         } catch (Exception ex) {
             throw new IllegalStateException("Stored secret could not be authenticated");
         }
     }
 
-    public record Claims(
-            UUID tenantId, UUID accountId, UUID sessionId, String kind, long generation) {}
+    public record Claims(UUID tenantId, UUID accountId, UUID sessionId, String kind, long generation) {}
 
     public String access(UUID tenant, UUID account, UUID session, String kind, long generation) {
         return access(
@@ -147,23 +132,20 @@ public class IdentityCrypto implements SignedTenantVerifier {
                 clock.instant().truncatedTo(java.time.temporal.ChronoUnit.SECONDS));
     }
 
-    public String access(
-            UUID tenant, UUID account, UUID session, String kind, long generation, Instant at) {
-        JwtClaimsSet claims =
-                JwtClaimsSet.builder()
-                        .issuer(ISSUER)
-                        .audience(java.util.List.of(AUDIENCE))
-                        .subject(account.toString())
-                        .issuedAt(at)
-                        .expiresAt(at.plusSeconds(300))
-                        .claim("tenant", tenant.toString())
-                        .claim("kind", kind)
-                        .claim("session", session.toString())
-                        .claim("generation", generation)
-                        .build();
-        return encoder.encode(
-                        JwtEncoderParameters.from(
-                                JwsHeader.with(MacAlgorithm.HS256).build(), claims))
+    public String access(UUID tenant, UUID account, UUID session, String kind, long generation, Instant at) {
+        JwtClaimsSet claims = JwtClaimsSet.builder()
+                .issuer(ISSUER)
+                .audience(java.util.List.of(AUDIENCE))
+                .subject(account.toString())
+                .issuedAt(at)
+                .expiresAt(at.plusSeconds(300))
+                .claim("tenant", tenant.toString())
+                .claim("kind", kind)
+                .claim("session", session.toString())
+                .claim("generation", generation)
+                .build();
+        return encoder.encode(JwtEncoderParameters.from(
+                        JwsHeader.with(MacAlgorithm.HS256).build(), claims))
                 .getTokenValue();
     }
 
@@ -178,8 +160,7 @@ public class IdentityCrypto implements SignedTenantVerifier {
                     || !now.isBefore(jwt.getExpiresAt())
                     || jwt.getIssuedAt() == null
                     || jwt.getIssuedAt().isAfter(now)
-                    || !java.util.Set.of("staff", "customer")
-                            .contains(jwt.getClaimAsString("kind")))
+                    || !java.util.Set.of("staff", "customer").contains(jwt.getClaimAsString("kind")))
                 throw new IllegalArgumentException();
             return new Claims(
                     UUID.fromString(jwt.getClaimAsString("tenant")),
@@ -206,8 +187,7 @@ public class IdentityCrypto implements SignedTenantVerifier {
     public String totpCode(String secret, long step) {
         try {
             return totp.generateOneTimePasswordString(
-                    new SecretKeySpec(unbase32(secret), "HmacSHA1"),
-                    Instant.ofEpochSecond(step * 30));
+                    new SecretKeySpec(unbase32(secret), "HmacSHA1"), Instant.ofEpochSecond(step * 30));
         } catch (java.security.InvalidKeyException ex) {
             throw new IllegalStateException("TOTP key unavailable", ex);
         }

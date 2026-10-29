@@ -1,14 +1,12 @@
 package com.salonplatform.shared.local;
 
-import java.net.URI;
-import java.util.UUID;
-
 import com.salonplatform.shared.api.NotFoundException;
 import io.swagger.v3.oas.annotations.Hidden;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
-
+import java.net.URI;
+import java.util.UUID;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -39,14 +37,15 @@ class ProbeController {
     record CreateProbe(
             @Min(0) @Max(50) Integer failures,
             @Min(0) @Max(60000) Long delayMs,
-            Boolean abort) {
-    }
+            Boolean abort) {}
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     ResponseEntity<Probes.ProbeView> create(@Valid @RequestBody(required = false) CreateProbe body) {
         CreateProbe asked = body == null ? new CreateProbe(null, null, null) : body;
-        Probes.ProbeView probe = probes.create(new Probes.Request(asked.failures() == null ? 0 : asked.failures(),
-                asked.delayMs() == null ? 0 : asked.delayMs(), Boolean.TRUE.equals(asked.abort())));
+        Probes.ProbeView probe = probes.create(new Probes.Request(
+                asked.failures() == null ? 0 : asked.failures(),
+                asked.delayMs() == null ? 0 : asked.delayMs(),
+                Boolean.TRUE.equals(asked.abort())));
         return ResponseEntity.created(URI.create("/local/probes/" + probe.id())).body(probe);
     }
 
@@ -59,8 +58,7 @@ class ProbeController {
     private static UUID parse(String id) {
         try {
             return UUID.fromString(id);
-        }
-        catch (IllegalArgumentException ex) {
+        } catch (IllegalArgumentException ex) {
             throw new NotFoundException();
         }
     }

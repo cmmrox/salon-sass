@@ -1,11 +1,10 @@
 package com.salonplatform.platform.infrastructure;
 
-import java.util.UUID;
-
 import com.salonplatform.platform.application.BillingLedger;
 import com.salonplatform.platform.application.BillingProvider;
 import com.salonplatform.shared.outbox.OutboxDelivery;
 import com.salonplatform.shared.outbox.OutboxProvider;
+import java.util.UUID;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -32,8 +31,11 @@ public final class BillingChargeChannel implements OutboxProvider {
     @Override
     public void deliver(OutboxDelivery delivery) throws Exception {
         JsonNode payload = json.readTree(delivery.payload());
-        provider.charge(new BillingProvider.Charge(delivery.tenantId(),
-                UUID.fromString(payload.get("invoiceId").asString()), UUID.fromString(payload.get("attemptKey").asString()),
-                payload.get("amount").asLong(), payload.get("currency").asString()));
+        provider.charge(new BillingProvider.Charge(
+                delivery.tenantId(),
+                UUID.fromString(payload.get("invoiceId").asString()),
+                UUID.fromString(payload.get("attemptKey").asString()),
+                payload.get("amount").asLong(),
+                payload.get("currency").asString()));
     }
 }

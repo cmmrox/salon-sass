@@ -1,16 +1,13 @@
 package com.salonplatform.shared.infrastructure;
 
+import com.salonplatform.shared.api.DatabaseUnavailable;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.Duration;
 import java.util.function.BooleanSupplier;
-
 import javax.sql.DataSource;
-
-import com.salonplatform.shared.api.DatabaseUnavailable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.springframework.jdbc.datasource.DelegatingDataSource;
 
 /**
@@ -74,20 +71,22 @@ final class SteadyReconnectDataSource extends DelegatingDataSource {
                 Connection connection = attempt.open();
                 reachedBefore = true;
                 if (silent) {
-                    log.info("A connection to the database was opened again, {} ms after the first attempt that failed",
+                    log.info(
+                            "A connection to the database was opened again, {} ms after the first attempt that failed",
                             Duration.ofNanos(System.nanoTime() - silentSince).toMillis());
                 }
                 return connection;
-            }
-            catch (SQLException ex) {
+            } catch (SQLException ex) {
                 if (!reachedBefore || !DatabaseUnavailable.isCauseOf(ex) || poolIsClosed.getAsBoolean()) {
                     throw ex;
                 }
                 if (!silent) {
                     silent = true;
                     silentSince = System.nanoTime();
-                    log.warn("No connection to the database could be opened ({}); trying again every {} ms until one is",
-                            DatabaseUnavailable.describe(ex), intervalMillis);
+                    log.warn(
+                            "No connection to the database could be opened ({}); trying again every {} ms until one is",
+                            DatabaseUnavailable.describe(ex),
+                            intervalMillis);
                 }
                 if (!waitForTheNextAttempt()) {
                     throw ex;
@@ -101,8 +100,7 @@ final class SteadyReconnectDataSource extends DelegatingDataSource {
         try {
             Thread.sleep(intervalMillis);
             return true;
-        }
-        catch (InterruptedException ex) {
+        } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
             return false;
         }

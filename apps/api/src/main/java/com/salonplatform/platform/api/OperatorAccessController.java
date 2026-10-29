@@ -1,7 +1,5 @@
 package com.salonplatform.platform.api;
 
-import java.util.UUID;
-
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.salonplatform.platform.application.OperatorAccess;
 import com.salonplatform.platform.infrastructure.OperatorAddressAssertion;
@@ -13,7 +11,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-
+import java.util.UUID;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -42,7 +40,9 @@ class OperatorAccessController {
     }
 
     @Schema(additionalProperties = Schema.AdditionalPropertiesValue.FALSE)
-    record OperatorSignInRequest(@NotBlank @Size(max = 320) String email, @NotBlank @Size(max = 512) String password,
+    record OperatorSignInRequest(
+            @NotBlank @Size(max = 320) String email,
+            @NotBlank @Size(max = 512) String password,
             @NotBlank @Size(max = 160) String deviceLabel) {
         @JsonAnySetter
         void unknown(String field, Object ignored) {
@@ -51,7 +51,9 @@ class OperatorAccessController {
     }
 
     @Schema(additionalProperties = Schema.AdditionalPropertiesValue.FALSE)
-    record OperatorChallengeRequest(@NotNull UUID challengeId, @NotBlank @Size(max = 256) String challengeToken) {
+    record OperatorChallengeRequest(
+            @NotNull UUID challengeId,
+            @NotBlank @Size(max = 256) String challengeToken) {
         @JsonAnySetter
         void unknown(String field, Object ignored) {
             throw OperatorRequests.unexpected(field);
@@ -59,7 +61,9 @@ class OperatorAccessController {
     }
 
     @Schema(additionalProperties = Schema.AdditionalPropertiesValue.FALSE)
-    record OperatorVerifyRequest(@NotNull UUID challengeId, @NotBlank @Size(max = 256) String challengeToken,
+    record OperatorVerifyRequest(
+            @NotNull UUID challengeId,
+            @NotBlank @Size(max = 256) String challengeToken,
             @NotBlank @Size(max = 32) String code) {
         @JsonAnySetter
         void unknown(String field, Object ignored) {
@@ -79,19 +83,23 @@ class OperatorAccessController {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(body);
     }
 
-    @Parameter(name = OperatorAddressAssertion.HEADER, in = ParameterIn.HEADER, required = false,
+    @Parameter(
+            name = OperatorAddressAssertion.HEADER,
+            in = ParameterIn.HEADER,
+            required = false,
             description = "Private server-authenticated rate-address assertion of the console's BFF; absent uses the "
                     + "servlet peer, an invalid proof is refused before rate accounting.",
             schema = @Schema(type = "string", maxLength = 192))
     @PostMapping(path = "/sign-in", consumes = MediaType.APPLICATION_JSON_VALUE)
-    ResponseEntity<OperatorAccess.OperatorSignIn> operatorSignIn(@Valid @RequestBody OperatorSignInRequest request,
-            HttpServletRequest http) {
+    ResponseEntity<OperatorAccess.OperatorSignIn> operatorSignIn(
+            @Valid @RequestBody OperatorSignInRequest request, HttpServletRequest http) {
         String address = assertions.rateAddress(http);
         return ok(access.signIn(request.email(), request.password(), request.deviceLabel(), address));
     }
 
     @PostMapping(path = "/mfa/challenges", consumes = MediaType.APPLICATION_JSON_VALUE)
-    ResponseEntity<OperatorAccess.OperatorEnrollment> operatorEnroll(@Valid @RequestBody OperatorChallengeRequest request) {
+    ResponseEntity<OperatorAccess.OperatorEnrollment> operatorEnroll(
+            @Valid @RequestBody OperatorChallengeRequest request) {
         return ok(access.enroll(request.challengeId(), request.challengeToken()));
     }
 

@@ -15,12 +15,18 @@ import java.util.Objects;
  * @param before the values before, or null when there were none
  * @param after the values after, or null when there are none
  */
-public record AuditAction(Actor actor, String action, String subjectKind, String subjectId, String reason,
-        Map<String, ?> before, Map<String, ?> after) {
+public record AuditAction(
+        Actor actor,
+        String action,
+        String subjectKind,
+        String subjectId,
+        String reason,
+        Map<String, ?> before,
+        Map<String, ?> after) {
 
     public AuditAction {
         Objects.requireNonNull(actor, "actor");
-        for (String required : new String[] { action, subjectKind, subjectId }) {
+        for (String required : new String[] {action, subjectKind, subjectId}) {
             if (required == null || required.isBlank()) {
                 throw new IllegalArgumentException("an audit entry has an action and a subject");
             }

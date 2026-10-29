@@ -1,11 +1,9 @@
 package com.salonplatform.shared.local;
 
-import java.time.Instant;
-
 import io.swagger.v3.oas.annotations.Hidden;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
-
+import java.time.Instant;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -32,11 +30,9 @@ class LocalClockController {
     }
 
     /** The clock now, and whether it has been set. */
-    record ClockState(Instant now, boolean fixed) {
-    }
+    record ClockState(Instant now, boolean fixed) {}
 
-    record SetClock(@NotNull Instant instant) {
-    }
+    record SetClock(@NotNull Instant instant) {}
 
     @GetMapping
     ClockState read() {

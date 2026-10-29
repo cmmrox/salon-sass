@@ -1,7 +1,6 @@
 package com.salonplatform.shared.jobs;
 
 import java.time.Duration;
-
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 
@@ -22,7 +21,7 @@ public record JobSettings(
         @DefaultValue("1h") Duration outboxCleanup) {
 
     public JobSettings {
-        for (Duration value : new Duration[] { pollInterval, hold, outboxCleanup }) {
+        for (Duration value : new Duration[] {pollInterval, hold, outboxCleanup}) {
             if (value == null || value.isNegative() || value.isZero()) {
                 throw new IllegalArgumentException("every salon.jobs duration must be positive");
             }

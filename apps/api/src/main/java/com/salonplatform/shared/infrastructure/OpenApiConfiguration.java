@@ -1,12 +1,6 @@
 package com.salonplatform.shared.infrastructure;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.IdentityHashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import static org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON_VALUE;
 
 import com.salonplatform.shared.api.ErrorCode;
 import io.swagger.v3.oas.models.Components;
@@ -22,13 +16,18 @@ import io.swagger.v3.oas.models.media.Schema;
 import io.swagger.v3.oas.models.media.StringSchema;
 import io.swagger.v3.oas.models.responses.ApiResponse;
 import io.swagger.v3.oas.models.servers.Server;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.IdentityHashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import org.springdoc.core.customizers.OpenApiCustomizer;
-
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import static org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON_VALUE;
 
 /**
  * Shapes the OpenAPI document generated from the controllers. The document is committed at
@@ -43,7 +42,9 @@ class OpenApiConfiguration {
     @Bean
     OpenAPI openApi(@Value("${spring.application.name}") String service) {
         return new OpenAPI()
-                .info(new Info().title(service).version("v1")
+                .info(new Info()
+                        .title(service)
+                        .version("v1")
                         .description("The platform's REST API. Every error is problem details with a stable `code`."))
                 .servers(List.of(new Server().url("/")));
     }
@@ -59,14 +60,23 @@ class OpenApiConfiguration {
             if (openApi.getPaths() == null) {
                 return;
             }
-            openApi.getPaths().values().forEach(path -> path.readOperations().forEach(operation -> {
-                if (operation.getResponses().getDefault() == null) {
-                    operation.getResponses().setDefault(new ApiResponse()
-                            .description("Any error: problem details with a stable `code`.")
-                            .content(new Content().addMediaType(APPLICATION_PROBLEM_JSON_VALUE, new MediaType()
-                                    .schema(new Schema<>().$ref("#/components/schemas/" + PROBLEM_SCHEMA)))));
-                }
-            }));
+            openApi.getPaths()
+                    .values()
+                    .forEach(path -> path.readOperations().forEach(operation -> {
+                        if (operation.getResponses().getDefault() == null) {
+                            operation
+                                    .getResponses()
+                                    .setDefault(new ApiResponse()
+                                            .description("Any error: problem details with a stable `code`.")
+                                            .content(new Content()
+                                                    .addMediaType(
+                                                            APPLICATION_PROBLEM_JSON_VALUE,
+                                                            new MediaType()
+                                                                    .schema(new Schema<>()
+                                                                            .$ref("#/components/schemas/"
+                                                                                    + PROBLEM_SCHEMA)))));
+                        }
+                    }));
         };
     }
 
@@ -89,7 +99,7 @@ class OpenApiConfiguration {
         };
     }
 
-    @SuppressWarnings({ "rawtypes", "unchecked" })
+    @SuppressWarnings({"rawtypes", "unchecked"})
     private static void nullable(Schema<?> schema, Map<Schema<?>, Boolean> seen) {
         if (schema == null || seen.put(schema, Boolean.TRUE) != null) {
             return;
@@ -129,7 +139,8 @@ class OpenApiConfiguration {
         }
         Schema<?> reference = new Schema<>().specVersion(SpecVersion.V31).$ref(property.get$ref());
         Schema<?> nothing = new Schema<>().specVersion(SpecVersion.V31).types(Set.of("null"));
-        return new Schema<>().specVersion(SpecVersion.V31)
+        return new Schema<>()
+                .specVersion(SpecVersion.V31)
                 .description(property.getDescription())
                 .oneOf(List.of(reference, nothing));
     }
@@ -142,20 +153,36 @@ class OpenApiConfiguration {
                 .addProperty("status", new IntegerSchema().description("The HTTP status."))
                 .addProperty("detail", new StringSchema().description("A sentence for a person. Do not branch on it."))
                 .addProperty("instance", new StringSchema().description("The path that was requested."))
-                .addProperty("code", new StringSchema().description("The stable reason. Branch on this.")
-                        ._enum(Arrays.stream(ErrorCode.values()).map(ErrorCode::code).toList()))
-                .addProperty("traceId", new StringSchema()
-                        .description("The request's trace id: the `trace.id` of its log lines and of its trace.")
-                        .pattern("^[0-9a-f]{32}$").example("4bf92f3577b34da6a3ce929d0e0e4736"))
-                .addProperty("errors", new ArraySchema()
-                        .description("For a request body that failed validation (`bad_request`): each field that "
-                                + "failed, when the failure has a field. Never the value that was refused.")
-                        .items(new ObjectSchema()
-                                .addProperty("field", new StringSchema()
-                                        .description("The field, as the request names it; a dotted path when nested."))
-                                .addProperty("detail", new StringSchema()
-                                        .description("What is wrong with it, for a person."))
-                                .required(List.of("field", "detail"))))
+                .addProperty(
+                        "code",
+                        new StringSchema()
+                                .description("The stable reason. Branch on this.")
+                                ._enum(Arrays.stream(ErrorCode.values())
+                                        .map(ErrorCode::code)
+                                        .toList()))
+                .addProperty(
+                        "traceId",
+                        new StringSchema()
+                                .description(
+                                        "The request's trace id: the `trace.id` of its log lines and of its trace.")
+                                .pattern("^[0-9a-f]{32}$")
+                                .example("4bf92f3577b34da6a3ce929d0e0e4736"))
+                .addProperty(
+                        "errors",
+                        new ArraySchema()
+                                .description(
+                                        "For a request body that failed validation (`bad_request`): each field that "
+                                                + "failed, when the failure has a field. Never the value that was refused.")
+                                .items(new ObjectSchema()
+                                        .addProperty(
+                                                "field",
+                                                new StringSchema()
+                                                        .description(
+                                                                "The field, as the request names it; a dotted path when nested."))
+                                        .addProperty(
+                                                "detail",
+                                                new StringSchema().description("What is wrong with it, for a person."))
+                                        .required(List.of("field", "detail"))))
                 .required(List.of("title", "status", "code", "traceId"));
     }
 }

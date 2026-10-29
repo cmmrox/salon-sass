@@ -1,7 +1,7 @@
 package com.salonplatform.architecture;
 
-import java.util.function.Function;
-import java.util.stream.Stream;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 import com.salonplatform.SalonApiApplication;
 import com.tngtech.archunit.core.domain.JavaClass;
@@ -10,13 +10,12 @@ import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.lang.ArchRule;
 import com.tngtech.archunit.lang.EvaluationResult;
+import java.util.function.Function;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 /**
  * Fails the build on a forbidden dependency between modules. Do not weaken a rule to get a change
@@ -34,7 +33,8 @@ class ModuleBoundariesTest {
                 .withImportOption(ImportOption.Predefined.DO_NOT_INCLUDE_TESTS)
                 .importPackages(BASE);
         assertThat(application.contain(BASE + ".shared.application.MetaService"))
-                .as("the application's classes were found").isTrue();
+                .as("the application's classes were found")
+                .isTrue();
         assertThat(application.stream().map(javaClass -> javaClass.getPackageName()))
                 .as("no test class is taken for application code")
                 .noneMatch(packageName -> packageName.startsWith(FIXTURE));
@@ -66,7 +66,9 @@ class ModuleBoundariesTest {
     void aForbiddenDependencyIsCaught(String fixture, Function<ModuleRules, ArchRule> rule, String offender) {
         EvaluationResult result = rule.apply(new ModuleRules(FIXTURE + fixture)).evaluate(fixture(fixture));
 
-        assertThat(result.hasViolation()).as("the rule fails on fixture '%s'", fixture).isTrue();
+        assertThat(result.hasViolation())
+                .as("the rule fails on fixture '%s'", fixture)
+                .isTrue();
         assertThat(String.join("\n", result.getFailureReport().getDetails())).contains(offender);
     }
 
@@ -75,13 +77,17 @@ class ModuleBoundariesTest {
                 arguments("sharedusesmodule", rule(ModuleRules::sharedDependsOnNoOtherModule), "SharedUsesBooking"),
                 arguments("usesreporting", rule(ModuleRules::nothingDependsOnReporting), "BookingUsesReporting"),
                 arguments("cycle", rule(ModuleRules::modulesAreFreeOfCycles), "PaymentFacade"),
-                arguments("internals", rule(ModuleRules::anotherModuleIsUsedOnlyThroughItsRootPackage),
+                arguments(
+                        "internals",
+                        rule(ModuleRules::anotherModuleIsUsedOnlyThroughItsRootPackage),
                         "PaymentUsesBookingEntity"),
                 arguments("springindomain", rule(ModuleRules::domainUsesNoSpringAndNoHttp), "SpringInDomain"),
                 arguments("unlisted", rule(ModuleRules::everyClassBelongsToAKnownModule), "Points"),
-                arguments("localhookused", rule(ModuleRules::theLocalHooksAreUsedByNothingElse), "BookingUsesTestClock"),
+                arguments(
+                        "localhookused", rule(ModuleRules::theLocalHooksAreUsedByNothingElse), "BookingUsesTestClock"),
                 arguments("localhookalways", rule(ModuleRules::theLocalHooksLoadInTheLocalProfileOnly), "AlwaysThere"),
-                arguments("localhookalways", rule(ModuleRules::theLocalHooksLoadInTheLocalProfileOnly), "AlsoElsewhere"));
+                arguments(
+                        "localhookalways", rule(ModuleRules::theLocalHooksLoadInTheLocalProfileOnly), "AlsoElsewhere"));
     }
 
     private static Function<ModuleRules, ArchRule> rule(Function<ModuleRules, ArchRule> rule) {

@@ -1,14 +1,5 @@
 package com.salonplatform.platform.application;
 
-import java.time.Clock;
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.UUID;
-
 import com.salonplatform.identity.IdentityProvisioning;
 import com.salonplatform.platform.domain.BillingTerms;
 import com.salonplatform.platform.domain.OperatorPermission;
@@ -21,9 +12,16 @@ import com.salonplatform.shared.api.NotFoundException;
 import com.salonplatform.shared.entitlements.SalonEntitlements;
 import com.salonplatform.shared.infrastructure.PlatformDatabase;
 import io.swagger.v3.oas.annotations.media.Schema;
-import tools.jackson.databind.json.JsonMapper;
-
+import java.time.Clock;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.UUID;
 import org.springframework.stereotype.Service;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * An Admin's subscription actions for one salon (docs/architecture/operator-console.md): read the
@@ -38,35 +36,61 @@ public class SubscriptionBilling {
     static final String START = "subscription.start";
 
     @Schema(requiredProperties = {"start", "end"})
-    public record Period(Instant start, Instant end) {
-    }
+    public record Period(Instant start, Instant end) {}
 
-    @Schema(requiredProperties = {"version", "state", "plan", "monthlyAmount", "currency", "paymentMethod",
-        "trialEndsAt", "currentPeriod", "nextInvoiceAt", "readOnlyAt"})
-    public record SubscriptionView(long version,
-            @Schema(allowableValues = {"trialing", "active", "past_due", "read_only"}) String state,
-            @Schema(types = {"object", "null"}, requiredMode = Schema.RequiredMode.REQUIRED)
+    @Schema(
+            requiredProperties = {
+                "version",
+                "state",
+                "plan",
+                "monthlyAmount",
+                "currency",
+                "paymentMethod",
+                "trialEndsAt",
+                "currentPeriod",
+                "nextInvoiceAt",
+                "readOnlyAt"
+            })
+    public record SubscriptionView(
+            long version,
+
+            @Schema(allowableValues = {"trialing", "active", "past_due", "read_only"})
+            String state,
+
+            @Schema(
+                    types = {"object", "null"},
+                    requiredMode = Schema.RequiredMode.REQUIRED)
             SalonProvisioning.PlanSummary plan,
-            long monthlyAmount, String currency,
-            @Schema(allowableValues = {"card", "bank_transfer"}) String paymentMethod,
+
+            long monthlyAmount,
+            String currency,
+
+            @Schema(allowableValues = {"card", "bank_transfer"})
+            String paymentMethod,
+
             Instant trialEndsAt,
-            @Schema(types = {"object", "null"}, requiredMode = Schema.RequiredMode.REQUIRED) Period currentPeriod,
+
+            @Schema(
+                    types = {"object", "null"},
+                    requiredMode = Schema.RequiredMode.REQUIRED)
+            Period currentPeriod,
+
             Instant nextInvoiceAt,
-            @Schema(types = {"string", "null"}, format = "date-time", requiredMode = Schema.RequiredMode.REQUIRED)
-            Instant readOnlyAt) {
-    }
+
+            @Schema(
+                    types = {"string", "null"},
+                    format = "date-time",
+                    requiredMode = Schema.RequiredMode.REQUIRED)
+            Instant readOnlyAt) {}
 
     /** A start request as received. */
-    public record StartInput(Long monthlyAmount, String paymentMethod, String currency) {
-    }
+    public record StartInput(Long monthlyAmount, String paymentMethod, String currency) {}
 
     /** A change request as received; absent fields stay as they are. */
-    public record ChangeInput(Long version, Long monthlyAmount, String paymentMethod) {
-    }
+    public record ChangeInput(Long version, Long monthlyAmount, String paymentMethod) {}
 
     /** A plan move as received. */
-    public record PlanMoveInput(Long version, UUID planId) {
-    }
+    public record PlanMoveInput(Long version, UUID planId) {}
 
     private final PlatformDatabase database;
     private final OperatorWork work;
@@ -79,9 +103,17 @@ public class SubscriptionBilling {
     private final JsonMapper json;
     private final Clock clock;
 
-    public SubscriptionBilling(PlatformDatabase database, OperatorWork work, OperatorAccess access,
-            ProvisioningReceipts receipts, BillingLedger ledger, SalonProvisioning salons, IdentityProvisioning identity,
-            PlatformAudit audit, JsonMapper json, Clock clock) {
+    public SubscriptionBilling(
+            PlatformDatabase database,
+            OperatorWork work,
+            OperatorAccess access,
+            ProvisioningReceipts receipts,
+            BillingLedger ledger,
+            SalonProvisioning salons,
+            IdentityProvisioning identity,
+            PlatformAudit audit,
+            JsonMapper json,
+            Clock clock) {
         this.database = database;
         this.work = work;
         this.access = access;
@@ -97,21 +129,31 @@ public class SubscriptionBilling {
     /** The view of a salon's subscription, inside a platform transaction. */
     SubscriptionView view(BillingLedger.Subscription subscription, Instant now) {
         BillingLedger.Salon salon = ledger.salon(subscription.salonId(), false).orElseThrow();
-        SalonProvisioning.PlanSummary plan = salon.planId() == null ? null
+        SalonProvisioning.PlanSummary plan = salon.planId() == null
+                ? null
                 : new SalonProvisioning.PlanSummary(salon.planId(), salon.planKey(), salon.planName());
         Period period = ledger.latestInvoice(subscription.id())
-                .map(invoice -> new Period(invoice.periodStart(), invoice.periodEnd())).orElse(null);
-        return new SubscriptionView(subscription.version(), subscription.state().value(), plan,
-                subscription.monthlyAmount(), subscription.currency(), subscription.paymentMethod(),
-                subscription.trialEndsAt(), period, subscription.nextInvoiceAt(), ledger.readOnlyAt(subscription, now));
+                .map(invoice -> new Period(invoice.periodStart(), invoice.periodEnd()))
+                .orElse(null);
+        return new SubscriptionView(
+                subscription.version(),
+                subscription.state().value(),
+                plan,
+                subscription.monthlyAmount(),
+                subscription.currency(),
+                subscription.paymentMethod(),
+                subscription.trialEndsAt(),
+                period,
+                subscription.nextInvoiceAt(),
+                ledger.readOnlyAt(subscription, now));
     }
 
     public SubscriptionView get(UUID salonId) {
         return work.run(() -> {
             access.require(OperatorPermission.BILLING_READ);
             ledger.salon(salonId, false).orElseThrow(NotFoundException::new);
-            BillingLedger.Subscription subscription = ledger.subscriptionOf(salonId, false)
-                    .orElseThrow(NotFoundException::new);
+            BillingLedger.Subscription subscription =
+                    ledger.subscriptionOf(salonId, false).orElseThrow(NotFoundException::new);
             return view(subscription, clock.instant());
         });
     }
@@ -119,7 +161,8 @@ public class SubscriptionBilling {
     /** The validated amount and method of a new subscription; field names carry the given prefix. */
     static void validateTerms(String prefix, Long amount, String method, List<FieldProblem> errors) {
         if (!BillingTerms.validAmount(amount)) {
-            errors.add(new FieldProblem(prefix + "monthlyAmount",
+            errors.add(new FieldProblem(
+                    prefix + "monthlyAmount",
                     "must be a whole number of minor units from 0 to " + BillingTerms.MAX_AMOUNT));
         }
         if (!BillingTerms.validMethod(method)) {
@@ -128,8 +171,7 @@ public class SubscriptionBilling {
     }
 
     /** The result of a start: whether it replayed an earlier one, and the subscription. */
-    public record Started(boolean replayed, SubscriptionView subscription) {
-    }
+    public record Started(boolean replayed, SubscriptionView subscription) {}
 
     /**
      * Starts the subscription of an unbilled salon. A salon without a currency of its own (a legacy
@@ -140,7 +182,8 @@ public class SubscriptionBilling {
         UUID key = ProvisioningReceipts.key(idempotencyKey);
         List<FieldProblem> basic = new ArrayList<>();
         validateTerms("", input.monthlyAmount(), input.paymentMethod(), basic);
-        String currency = input.currency() == null ? null : input.currency().strip().toUpperCase(Locale.ROOT);
+        String currency =
+                input.currency() == null ? null : input.currency().strip().toUpperCase(Locale.ROOT);
         if (currency != null && !ProvisioningRegions.CURRENCIES.contains(currency)) {
             basic.add(new FieldProblem("currency", "must be a supported ISO 4217 three-letter currency code"));
         }
@@ -162,20 +205,29 @@ public class SubscriptionBilling {
             BillingLedger.Salon salon = ledger.salon(salonId, true).orElseThrow(NotFoundException::new);
             stillBilled(salon);
             if (salon.currency() == null && currency == null) {
-                throw new ApplicationProblemException(400, ErrorCode.BAD_REQUEST,
+                throw new ApplicationProblemException(
+                        400,
+                        ErrorCode.BAD_REQUEST,
                         List.of(new FieldProblem("currency", "is required for a salon without a currency")));
             }
             if (salon.currency() != null && currency != null) {
-                throw new ApplicationProblemException(400, ErrorCode.BAD_REQUEST,
+                throw new ApplicationProblemException(
+                        400,
+                        ErrorCode.BAD_REQUEST,
                         List.of(new FieldProblem("currency", "is the salon's own currency and cannot be given")));
             }
             if (ledger.subscriptionOf(salonId, true).isPresent()) {
                 throw new ApplicationProblemException(409, ErrorCode.INVALID_STATE);
             }
             Instant now = clock.instant();
-            BillingLedger.Subscription subscription = ledger.start(salon, input.monthlyAmount(),
-                    salon.currency() != null ? salon.currency() : currency, input.paymentMethod(), now,
-                    PlatformAudit.OPERATOR, operator.id().toString());
+            BillingLedger.Subscription subscription = ledger.start(
+                    salon,
+                    input.monthlyAmount(),
+                    salon.currency() != null ? salon.currency() : currency,
+                    input.paymentMethod(),
+                    now,
+                    PlatformAudit.OPERATOR,
+                    operator.id().toString());
             SubscriptionView view = view(subscription, now);
             @SuppressWarnings("unchecked")
             Map<String, Object> stored = json.convertValue(view, Map.class);
@@ -194,8 +246,8 @@ public class SubscriptionBilling {
             errors.add(new FieldProblem("monthlyAmount", "or paymentMethod must be given"));
         }
         if (input.monthlyAmount() != null && !BillingTerms.validAmount(input.monthlyAmount())) {
-            errors.add(new FieldProblem("monthlyAmount",
-                    "must be a whole number of minor units from 0 to " + BillingTerms.MAX_AMOUNT));
+            errors.add(new FieldProblem(
+                    "monthlyAmount", "must be a whole number of minor units from 0 to " + BillingTerms.MAX_AMOUNT));
         }
         if (input.paymentMethod() != null && !BillingTerms.validMethod(input.paymentMethod())) {
             errors.add(new FieldProblem("paymentMethod", "must be card or bank_transfer"));
@@ -206,8 +258,8 @@ public class SubscriptionBilling {
                 throw new ApplicationProblemException(400, ErrorCode.BAD_REQUEST, errors);
             }
             stillBilled(ledger.salon(salonId, true).orElseThrow(NotFoundException::new));
-            BillingLedger.Subscription subscription = ledger.subscriptionOf(salonId, true)
-                    .orElseThrow(NotFoundException::new);
+            BillingLedger.Subscription subscription =
+                    ledger.subscriptionOf(salonId, true).orElseThrow(NotFoundException::new);
             if (subscription.version() != input.version()) {
                 throw new ApplicationProblemException(409, ErrorCode.CONFLICT);
             }
@@ -232,8 +284,14 @@ public class SubscriptionBilling {
                     UPDATE subscription SET monthly_amount = ?, payment_method = ?, version = version + 1, updated_at = ?
                      WHERE id = ?
                     """, amount, method, java.sql.Timestamp.from(now), subscription.id());
-            audit.record(PlatformAudit.OPERATOR, operator.id().toString(), "subscription.changed", "salon",
-                    salonId.toString(), details, now);
+            audit.record(
+                    PlatformAudit.OPERATOR,
+                    operator.id().toString(),
+                    "subscription.changed",
+                    "salon",
+                    salonId.toString(),
+                    details,
+                    now);
             return view(ledger.subscription(subscription.id(), false).orElseThrow(), now);
         });
     }
@@ -258,8 +316,8 @@ public class SubscriptionBilling {
             }
             BillingLedger.Salon salon = ledger.salon(salonId, true).orElseThrow(NotFoundException::new);
             stillBilled(salon);
-            List<Integer> seats = database.jdbc().queryForList("SELECT staff_seats FROM plan WHERE id = ?",
-                    Integer.class, input.planId());
+            List<Integer> seats = database.jdbc()
+                    .queryForList("SELECT staff_seats FROM plan WHERE id = ?", Integer.class, input.planId());
             if (seats.isEmpty()) {
                 throw new NotFoundException();
             }
@@ -278,10 +336,17 @@ public class SubscriptionBilling {
                     UPDATE tenant SET plan_id = ?, version = version + 1, updated_at = ? WHERE id = ?
                     """, input.planId(), java.sql.Timestamp.from(now), salonId);
             Map<String, Object> details = new LinkedHashMap<>();
-            details.put("fromPlanId", salon.planId() == null ? null : salon.planId().toString());
+            details.put(
+                    "fromPlanId", salon.planId() == null ? null : salon.planId().toString());
             details.put("toPlanId", input.planId().toString());
-            audit.record(PlatformAudit.OPERATOR, operator.id().toString(), "salon.plan_changed", "salon",
-                    salonId.toString(), details, now);
+            audit.record(
+                    PlatformAudit.OPERATOR,
+                    operator.id().toString(),
+                    "salon.plan_changed",
+                    "salon",
+                    salonId.toString(),
+                    details,
+                    now);
             return null;
         });
         return salons.get(salonId);

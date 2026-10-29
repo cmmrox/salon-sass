@@ -1,9 +1,7 @@
 package com.salonplatform.branding;
 
-import java.lang.reflect.Field;
-import java.util.List;
-import java.util.UUID;
-import java.util.concurrent.Callable;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.salonplatform.branding.domain.SalonBrand;
 import com.salonplatform.branding.infrastructure.SalonBrandRepository;
@@ -16,17 +14,17 @@ import com.salonplatform.testing.TestSalons;
 import com.salonplatform.testing.TestSalons.TestSalon;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
+import java.lang.reflect.Field;
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.Callable;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.orm.jpa.SharedEntityManagerCreator;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * The first layer on its own: Hibernate's tenant filter ({@code @TenantId}), with row-level
@@ -64,7 +62,8 @@ class SalonBrandHibernateFilterAloneIntegrationTest {
         beta = salons.create("Beta Lounge", "#1F2937");
 
         brands = application.bean(SalonBrandRepository.class);
-        entityManager = SharedEntityManagerCreator.createSharedEntityManager(application.bean(EntityManagerFactory.class));
+        entityManager =
+                SharedEntityManagerCreator.createSharedEntityManager(application.bean(EntityManagerFactory.class));
         transaction = new TransactionTemplate(application.bean(PlatformTransactionManager.class));
     }
 
@@ -82,28 +81,50 @@ class SalonBrandHibernateFilterAloneIntegrationTest {
 
     @Test
     void alphaReadsOnlyAlphasRowAndBetasIsNotFound() throws Exception {
-        as(alpha, () -> inTransaction(() -> {
-            assertThat(brands.findAll()).extracting(SalonBrand::tenantId).containsExactly(alpha.id());
-            assertThat(brands.findCurrent()).map(SalonBrand::displayName).contains(alpha.name());
-            assertThat(brands.findById(beta.id())).as("beta's row, by its id").isEmpty();
-            assertThat(brands.count()).isEqualTo(1);
-            return null;
-        }));
+        as(
+                alpha,
+                () -> inTransaction(() -> {
+                    assertThat(brands.findAll())
+                            .extracting(SalonBrand::tenantId)
+                            .containsExactly(alpha.id());
+                    assertThat(brands.findCurrent())
+                            .map(SalonBrand::displayName)
+                            .contains(alpha.name());
+                    assertThat(brands.findById(beta.id()))
+                            .as("beta's row, by its id")
+                            .isEmpty();
+                    assertThat(brands.count()).isEqualTo(1);
+                    return null;
+                }));
     }
 
     @Test
     void alphaCannotUpdateOrDeleteBetasRow() throws Exception {
-        as(alpha, () -> inTransaction(() -> {
-            assertThat(entityManager.createQuery("update SalonBrand b set b.displayName = 'Taken' where b.tenantId = :beta")
-                    .setParameter("beta", beta.id()).executeUpdate()).as("rows updated").isZero();
-            assertThat(entityManager.createQuery("delete from SalonBrand b where b.tenantId = :beta")
-                    .setParameter("beta", beta.id()).executeUpdate()).as("rows deleted").isZero();
-            brands.deleteById(beta.id());
-            return null;
-        }));
+        as(
+                alpha,
+                () -> inTransaction(() -> {
+                    assertThat(entityManager
+                                    .createQuery(
+                                            "update SalonBrand b set b.displayName = 'Taken' where b.tenantId = :beta")
+                                    .setParameter("beta", beta.id())
+                                    .executeUpdate())
+                            .as("rows updated")
+                            .isZero();
+                    assertThat(entityManager
+                                    .createQuery("delete from SalonBrand b where b.tenantId = :beta")
+                                    .setParameter("beta", beta.id())
+                                    .executeUpdate())
+                            .as("rows deleted")
+                            .isZero();
+                    brands.deleteById(beta.id());
+                    return null;
+                }));
 
-        assertThat(database.asOwner().queryForMap("SELECT display_name, brand_colour FROM salon_brand WHERE tenant_id = ?",
-                beta.id())).containsEntry("display_name", beta.name()).containsEntry("brand_colour", beta.brandColour());
+        assertThat(database.asOwner()
+                        .queryForMap(
+                                "SELECT display_name, brand_colour FROM salon_brand WHERE tenant_id = ?", beta.id()))
+                .containsEntry("display_name", beta.name())
+                .containsEntry("brand_colour", beta.brandColour());
     }
 
     @Test
@@ -112,8 +133,10 @@ class SalonBrandHibernateFilterAloneIntegrationTest {
         TestSalon epsilon = new TestSalons(database.asOwner()).createWithoutBrand("active");
 
         as(delta, () -> inTransaction(() -> brands.saveAndFlush(new SalonBrand("Delta", "#00AA00"))));
-        assertThat(database.asOwner().queryForObject("SELECT display_name FROM salon_brand WHERE tenant_id = ?",
-                String.class, delta.id())).isEqualTo("Delta");
+        assertThat(database.asOwner()
+                        .queryForObject(
+                                "SELECT display_name FROM salon_brand WHERE tenant_id = ?", String.class, delta.id()))
+                .isEqualTo("Delta");
 
         // The key of this table is the salon, generated by @TenantId from the current salon. Saved
         // the way a repository saves an entity that already carries a key (merged), Hibernate looks
@@ -127,14 +150,19 @@ class SalonBrandHibernateFilterAloneIntegrationTest {
         // Persisted directly with the key already set: refused too.
         SalonBrand persisted = new SalonBrand("Not mine either", "#123456");
         setTenantId(persisted, epsilon.id());
-        assertThatThrownBy(() -> as(alpha, () -> inTransaction(() -> {
-            entityManager.persist(persisted);
-            entityManager.flush();
-            return null;
-        }))).isNotNull();
+        assertThatThrownBy(() -> as(
+                        alpha,
+                        () -> inTransaction(() -> {
+                            entityManager.persist(persisted);
+                            entityManager.flush();
+                            return null;
+                        })))
+                .isNotNull();
 
-        assertThat(database.asOwner().queryForObject("SELECT count(*) FROM salon_brand WHERE tenant_id = ?",
-                Integer.class, epsilon.id())).isZero();
+        assertThat(database.asOwner()
+                        .queryForObject(
+                                "SELECT count(*) FROM salon_brand WHERE tenant_id = ?", Integer.class, epsilon.id()))
+                .isZero();
     }
 
     @Test
@@ -144,9 +172,12 @@ class SalonBrandHibernateFilterAloneIntegrationTest {
         assertThat(inTransaction(brands::findCurrent)).isEmpty();
 
         assertThatThrownBy(() -> inTransaction(() -> brands.saveAndFlush(new SalonBrand("Nobody's", "#123456"))))
-                .as("stamped with the nil id, which no salon has").isNotNull();
-        assertThat(database.asOwner().queryForObject("SELECT count(*) FROM salon_brand WHERE display_name = ?",
-                Integer.class, "Nobody's")).isZero();
+                .as("stamped with the nil id, which no salon has")
+                .isNotNull();
+        assertThat(database.asOwner()
+                        .queryForObject(
+                                "SELECT count(*) FROM salon_brand WHERE display_name = ?", Integer.class, "Nobody's"))
+                .isZero();
     }
 
     private static <T> T as(TestSalon salon, Callable<T> work) throws Exception {
@@ -157,11 +188,9 @@ class SalonBrandHibernateFilterAloneIntegrationTest {
         return transaction.execute(status -> {
             try {
                 return work.call();
-            }
-            catch (RuntimeException ex) {
+            } catch (RuntimeException ex) {
                 throw ex;
-            }
-            catch (Exception ex) {
+            } catch (Exception ex) {
                 throw new IllegalStateException(ex);
             }
         });

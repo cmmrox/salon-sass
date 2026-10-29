@@ -1,13 +1,13 @@
 package com.salonplatform.shared.tenancy;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
 /** Which hostnames can name a salon: docs/architecture/multi-tenancy.md, "Salons and their hostnames". */
 class PlatformHostnameTest {
@@ -29,13 +29,26 @@ class PlatformHostnameTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {
-        "localhost", "localhost:8090", "LOCALHOST",
-        "alpha.beta.localhost", "alpha.beta.localhost:8090",
-        "alpha.localhost.example.com", "alpha.localhost.example.com:8090",
-        ".localhost", ".localhost:8090", "alpha.localhost.", "alphalocalhost",
-        "127.0.0.1", "127.0.0.1:8090", "[::1]", "[::1]:8090", "example.com", "alpha.example.com",
-    })
+    @ValueSource(
+            strings = {
+                "localhost",
+                "localhost:8090",
+                "LOCALHOST",
+                "alpha.beta.localhost",
+                "alpha.beta.localhost:8090",
+                "alpha.localhost.example.com",
+                "alpha.localhost.example.com:8090",
+                ".localhost",
+                ".localhost:8090",
+                "alpha.localhost.",
+                "alphalocalhost",
+                "127.0.0.1",
+                "127.0.0.1:8090",
+                "[::1]",
+                "[::1]:8090",
+                "example.com",
+                "alpha.example.com",
+            })
     void anyOtherHostnameNamesNoSalon(String host) {
         assertThat(localhost.slugOf(host)).isEmpty();
     }
@@ -58,7 +71,7 @@ class PlatformHostnameTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = { "", " ", ".localhost", "localhost.", "localhost:8090" })
+    @ValueSource(strings = {"", " ", ".localhost", "localhost.", "localhost:8090"})
     void aPlatformDomainThatIsNotAHostnameIsRefused(String domain) {
         assertThatIllegalArgumentException().isThrownBy(() -> new PlatformHostname(domain));
     }

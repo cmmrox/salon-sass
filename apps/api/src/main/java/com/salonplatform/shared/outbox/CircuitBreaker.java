@@ -28,7 +28,9 @@ import java.util.concurrent.locks.ReentrantLock;
 final class CircuitBreaker {
 
     enum State {
-        CLOSED, OPEN, HALF_OPEN
+        CLOSED,
+        OPEN,
+        HALF_OPEN
     }
 
     private final int failureThreshold;
@@ -76,8 +78,7 @@ final class CircuitBreaker {
                     yield true;
                 }
             };
-        }
-        finally {
+        } finally {
             lock.unlock();
         }
     }
@@ -88,8 +89,7 @@ final class CircuitBreaker {
             state = State.CLOSED;
             consecutiveFailures = 0;
             trialInFlight = false;
-        }
-        finally {
+        } finally {
             lock.unlock();
         }
     }
@@ -105,8 +105,7 @@ final class CircuitBreaker {
             if (state == State.CLOSED && consecutiveFailures >= failureThreshold) {
                 open();
             }
-        }
-        finally {
+        } finally {
             lock.unlock();
         }
     }
@@ -118,8 +117,7 @@ final class CircuitBreaker {
             if (state == State.HALF_OPEN) {
                 trialInFlight = false;
             }
-        }
-        finally {
+        } finally {
             lock.unlock();
         }
     }
@@ -128,8 +126,7 @@ final class CircuitBreaker {
         lock.lock();
         try {
             return state;
-        }
-        finally {
+        } finally {
             lock.unlock();
         }
     }

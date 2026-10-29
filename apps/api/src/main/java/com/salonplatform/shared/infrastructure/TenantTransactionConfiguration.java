@@ -1,10 +1,8 @@
 package com.salonplatform.shared.infrastructure;
 
-import java.sql.Connection;
-
 import jakarta.persistence.EntityManagerFactory;
+import java.sql.Connection;
 import org.hibernate.Session;
-
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.transaction.autoconfigure.TransactionManagerCustomizers;
 import org.springframework.context.annotation.Bean;
@@ -24,8 +22,8 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 class TenantTransactionConfiguration {
 
     @Bean
-    PlatformTransactionManager transactionManager(RequestDatabaseLimit limit,
-            ObjectProvider<TransactionManagerCustomizers> customizers) {
+    PlatformTransactionManager transactionManager(
+            RequestDatabaseLimit limit, ObjectProvider<TransactionManagerCustomizers> customizers) {
         TenantTransactionManager transactionManager = new TenantTransactionManager(new TenantJpaDialect(limit));
         customizers.ifAvailable(each -> each.customize(transactionManager));
         return transactionManager;
@@ -60,8 +58,7 @@ class TenantTransactionConfiguration {
         protected void doRollback(DefaultTransactionStatus status) {
             try {
                 super.doRollback(status);
-            }
-            catch (RuntimeException ex) {
+            } catch (RuntimeException ex) {
                 if (!connectionIsGone()) {
                     throw ex;
                 }
@@ -72,14 +69,14 @@ class TenantTransactionConfiguration {
         private boolean connectionIsGone() {
             EntityManagerFactory factory = getEntityManagerFactory();
             if (factory == null
-                    || !(TransactionSynchronizationManager.getResource(factory) instanceof EntityManagerHolder holder)) {
+                    || !(TransactionSynchronizationManager.getResource(factory)
+                            instanceof EntityManagerHolder holder)) {
                 return false;
             }
             try {
                 return Boolean.TRUE.equals(
                         holder.getEntityManager().unwrap(Session.class).doReturningWork(Connection::isClosed));
-            }
-            catch (RuntimeException ex) {
+            } catch (RuntimeException ex) {
                 return false;
             }
         }

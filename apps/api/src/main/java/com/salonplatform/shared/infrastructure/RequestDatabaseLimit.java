@@ -3,7 +3,6 @@ package com.salonplatform.shared.infrastructure;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.Duration;
-
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 

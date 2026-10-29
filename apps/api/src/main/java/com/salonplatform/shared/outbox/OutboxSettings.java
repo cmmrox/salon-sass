@@ -2,7 +2,6 @@ package com.salonplatform.shared.outbox;
 
 import java.time.Duration;
 import java.util.Objects;
-
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 
@@ -67,7 +66,9 @@ public record OutboxSettings(
      * @param multiplier how much longer each next wait is
      * @param max the longest wait
      */
-    public record Backoff(@DefaultValue("30s") Duration initial, @DefaultValue("2") double multiplier,
+    public record Backoff(
+            @DefaultValue("30s") Duration initial,
+            @DefaultValue("2") double multiplier,
             @DefaultValue("1h") Duration max) {
 
         public Backoff {
@@ -83,7 +84,9 @@ public record OutboxSettings(
      * @param timeLimit how long a provider call may take before it counts as failed
      * @param concurrency how many calls run at once per channel
      */
-    public record Provider(@DefaultValue("10s") Duration timeLimit, @DefaultValue("4") int concurrency) {
+    public record Provider(
+            @DefaultValue("10s") Duration timeLimit,
+            @DefaultValue("4") int concurrency) {
 
         public Provider {
             positive("salon.outbox.provider.time-limit", timeLimit);
@@ -97,7 +100,9 @@ public record OutboxSettings(
      * @param failureThreshold consecutive failures on a channel after which its breaker opens
      * @param waitDuration how long an open breaker waits before it lets one trial call through
      */
-    public record Breaker(@DefaultValue("5") int failureThreshold, @DefaultValue("60s") Duration waitDuration) {
+    public record Breaker(
+            @DefaultValue("5") int failureThreshold,
+            @DefaultValue("60s") Duration waitDuration) {
 
         public Breaker {
             positive("salon.outbox.breaker.wait-duration", waitDuration);

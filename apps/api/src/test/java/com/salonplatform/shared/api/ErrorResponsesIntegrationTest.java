@@ -1,21 +1,21 @@
 package com.salonplatform.shared.api;
 
-import java.net.http.HttpResponse;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
 import com.salonplatform.testing.Http;
 import com.salonplatform.testing.IntegrationTest;
+import java.net.http.HttpResponse;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 class ErrorResponsesIntegrationTest extends IntegrationTest {
 
     @ParameterizedTest
-    @ValueSource(strings = { "/api/v1/does-not-exist", "/api/v2/meta", "/api", "/does-not-exist", "/actuator/does-not-exist" })
+    @ValueSource(
+            strings = {"/api/v1/does-not-exist", "/api/v2/meta", "/api", "/does-not-exist", "/actuator/does-not-exist"})
     void anUnknownPathIsNotFoundAsProblemDetails(String path) {
         HttpResponse<String> response = http().get(path);
 
@@ -51,11 +51,12 @@ class ErrorResponsesIntegrationTest extends IntegrationTest {
 
     /** Requests the server refuses before the application sees them. */
     @ParameterizedTest
-    @ValueSource(strings = {
-        "GET /api/v1/%zz HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n",
-        "GET /api/v1/meta HTTP/1.1\r\nHost: localhost\r\nContent-Length: abc\r\nConnection: close\r\n\r\n",
-        "GET /api/v1/meta HTTP/1.1\r\nConnection: close\r\n\r\n",
-    })
+    @ValueSource(
+            strings = {
+                "GET /api/v1/%zz HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n",
+                "GET /api/v1/meta HTTP/1.1\r\nHost: localhost\r\nContent-Length: abc\r\nConnection: close\r\n\r\n",
+                "GET /api/v1/meta HTTP/1.1\r\nConnection: close\r\n\r\n",
+            })
     void aMalformedRequestIsRefusedAsProblemDetails(String request) {
         String response = http().raw(request);
 

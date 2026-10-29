@@ -19,11 +19,9 @@ import java.util.Arrays;
 import java.util.Base64;
 import java.util.HexFormat;
 import java.util.Properties;
-
 import javax.crypto.Cipher;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
-
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
@@ -56,12 +54,21 @@ public class ExportKey {
             throw new IllegalStateException("Configure SALON_EXPORT_KEY with an independent 64-hex-character secret");
         }
         byte[] bytes = HexFormat.of().parseHex(value);
-        for (String name : new String[] {"salon.operator.signing-key", "salon.operator.challenge-key",
-            "salon.operator.encryption-key", "salon.operator.proxy-key", "salon.operator.fingerprint-key",
-            "salon.identity.signing-key", "salon.identity.challenge-key", "salon.identity.encryption-key",
-            "salon.identity.proxy-key", "salon.billing.provider-key"}) {
+        for (String name : new String[] {
+            "salon.operator.signing-key",
+            "salon.operator.challenge-key",
+            "salon.operator.encryption-key",
+            "salon.operator.proxy-key",
+            "salon.operator.fingerprint-key",
+            "salon.identity.signing-key",
+            "salon.identity.challenge-key",
+            "salon.identity.encryption-key",
+            "salon.identity.proxy-key",
+            "salon.billing.provider-key"
+        }) {
             String other = environment.getProperty(name);
-            if (other != null && other.matches("[0-9a-fA-F]{64}")
+            if (other != null
+                    && other.matches("[0-9a-fA-F]{64}")
                     && MessageDigest.isEqual(bytes, HexFormat.of().parseHex(other))) {
                 throw new IllegalStateException("The export key must be independent of every other key");
             }
@@ -78,9 +85,11 @@ public class ExportKey {
             cipher.init(Cipher.ENCRYPT_MODE, key, new GCMParameterSpec(TAG_BITS, nonce));
             cipher.updateAAD(purpose.getBytes(StandardCharsets.UTF_8));
             byte[] sealed = cipher.doFinal(plain);
-            return ByteBuffer.allocate(NONCE + sealed.length).put(nonce).put(sealed).array();
-        }
-        catch (GeneralSecurityException ex) {
+            return ByteBuffer.allocate(NONCE + sealed.length)
+                    .put(nonce)
+                    .put(sealed)
+                    .array();
+        } catch (GeneralSecurityException ex) {
             throw new IllegalStateException("AES-GCM is unavailable", ex);
         }
     }
@@ -92,8 +101,7 @@ public class ExportKey {
             cipher.init(Cipher.DECRYPT_MODE, key, new GCMParameterSpec(TAG_BITS, Arrays.copyOf(sealed, NONCE)));
             cipher.updateAAD(purpose.getBytes(StandardCharsets.UTF_8));
             return cipher.doFinal(sealed, NONCE, sealed.length - NONCE);
-        }
-        catch (GeneralSecurityException ex) {
+        } catch (GeneralSecurityException ex) {
             throw new IllegalStateException("An export value could not be decrypted", ex);
         }
     }
@@ -118,21 +126,23 @@ public class ExportKey {
     public static String sha256(byte[] value) {
         try {
             return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(value));
-        }
-        catch (NoSuchAlgorithmException ex) {
+        } catch (NoSuchAlgorithmException ex) {
             throw new IllegalStateException("SHA-256 is unavailable", ex);
         }
     }
 
     private static synchronized String retained(Environment environment) {
-        Path path = Path.of(environment.getProperty("salon.export.local-key-file",
-                "../../.local/export-keys.properties")).toAbsolutePath().normalize();
+        Path path = Path.of(
+                        environment.getProperty("salon.export.local-key-file", "../../.local/export-keys.properties"))
+                .toAbsolutePath()
+                .normalize();
         var mode = PosixFilePermissions.fromString("rw-------");
         Properties saved = new Properties();
         try {
             Files.createDirectories(path.getParent());
             Path lockPath = path.resolveSibling(path.getFileName() + ".lock");
-            try (FileChannel channel = FileChannel.open(lockPath, StandardOpenOption.CREATE, StandardOpenOption.WRITE)) {
+            try (FileChannel channel =
+                    FileChannel.open(lockPath, StandardOpenOption.CREATE, StandardOpenOption.WRITE)) {
                 Files.setPosixFilePermissions(lockPath, mode);
                 try (var lock = channel.lock()) {
                     if (Files.exists(path)) {
@@ -145,24 +155,25 @@ public class ExportKey {
                         byte[] fresh = new byte[32];
                         new SecureRandom().nextBytes(fresh);
                         saved.setProperty("export", HexFormat.of().formatHex(fresh));
-                        Path temporary = Files.createTempFile(path.getParent(), ".export-keys-", ".tmp",
-                                PosixFilePermissions.asFileAttribute(mode));
+                        Path temporary = Files.createTempFile(
+                                path.getParent(), ".export-keys-", ".tmp", PosixFilePermissions.asFileAttribute(mode));
                         try {
                             try (OutputStream out = Files.newOutputStream(temporary)) {
                                 saved.store(out, "Local-only export encryption key. Never commit or print.");
                             }
-                            Files.move(temporary, path, StandardCopyOption.ATOMIC_MOVE,
+                            Files.move(
+                                    temporary,
+                                    path,
+                                    StandardCopyOption.ATOMIC_MOVE,
                                     StandardCopyOption.REPLACE_EXISTING);
-                        }
-                        finally {
+                        } finally {
                             Files.deleteIfExists(temporary);
                         }
                     }
                 }
             }
             return saved.getProperty("export");
-        }
-        catch (IOException ex) {
+        } catch (IOException ex) {
             throw new IllegalStateException("Cannot read the retained local export key", ex);
         }
     }

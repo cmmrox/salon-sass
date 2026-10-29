@@ -1,16 +1,15 @@
 package com.salonplatform;
 
-import java.net.http.HttpResponse;
-import java.time.Duration;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
 import com.salonplatform.testing.StartedApplication;
 import com.salonplatform.testing.TestPostgres;
+import java.net.http.HttpResponse;
+import java.time.Duration;
 import org.junit.jupiter.api.Test;
 import org.testcontainers.postgresql.PostgreSQLContainer;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 class DatabaseDownIntegrationTest {
 
@@ -19,7 +18,8 @@ class DatabaseDownIntegrationTest {
         try (PostgreSQLContainer postgres = TestPostgres.newContainer()) {
             postgres.start();
             try (StartedApplication application = StartedApplication.against(postgres)) {
-                assertThat(application.http().get("/actuator/health").statusCode()).isEqualTo(200);
+                assertThat(application.http().get("/actuator/health").statusCode())
+                        .isEqualTo(200);
 
                 postgres.stop();
 

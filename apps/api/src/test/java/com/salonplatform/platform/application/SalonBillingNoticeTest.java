@@ -1,10 +1,9 @@
 package com.salonplatform.platform.application;
 
-import java.time.Instant;
-
-import org.junit.jupiter.api.Test;
-
 import static org.assertj.core.api.Assertions.assertThat;
+
+import java.time.Instant;
+import org.junit.jupiter.api.Test;
 
 /** The workspace banner the API decides with its own clock (AC-12). */
 class SalonBillingNoticeTest {
@@ -13,8 +12,10 @@ class SalonBillingNoticeTest {
 
     @Test
     void aTrialShowsTheBannerFromThreeDaysBeforeItEndsAndOverdueStatesAlways() {
-        assertThat(SalonBilling.notice("trialing", TRIAL_END, TRIAL_END.minusSeconds(3 * 86400 + 1))).isNull();
-        assertThat(SalonBilling.notice("trialing", TRIAL_END, TRIAL_END.minusSeconds(3 * 86400))).isEqualTo("trial_ending");
+        assertThat(SalonBilling.notice("trialing", TRIAL_END, TRIAL_END.minusSeconds(3 * 86400 + 1)))
+                .isNull();
+        assertThat(SalonBilling.notice("trialing", TRIAL_END, TRIAL_END.minusSeconds(3 * 86400)))
+                .isEqualTo("trial_ending");
         assertThat(SalonBilling.notice("active", TRIAL_END, TRIAL_END)).isNull();
         assertThat(SalonBilling.notice("past_due", TRIAL_END, TRIAL_END)).isEqualTo("past_due");
         assertThat(SalonBilling.notice("read_only", TRIAL_END, TRIAL_END)).isEqualTo("read_only");

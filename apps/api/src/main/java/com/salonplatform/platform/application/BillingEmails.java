@@ -1,13 +1,12 @@
 package com.salonplatform.platform.application;
 
+import com.salonplatform.platform.domain.BillingTerms;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-
-import com.salonplatform.platform.domain.BillingTerms;
 
 /**
  * The billing emails to a salon's Owner contact, as {@code email} outbox payloads: recipient,
@@ -20,15 +19,15 @@ final class BillingEmails {
 
     private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("d MMMM uuuu", Locale.ENGLISH);
 
-    private BillingEmails() {
-    }
+    private BillingEmails() {}
 
-    static Map<String, Object> compose(String kind, String recipient, BillingLedger.Invoice invoice, ZoneId zone,
-            String link) {
+    static Map<String, Object> compose(
+            String kind, String recipient, BillingLedger.Invoice invoice, ZoneId zone, String link) {
         String number = BillingTerms.invoiceNumber(invoice.number());
         String amount = BillingTerms.plainAmount(invoice.amount(), invoice.currency());
         String due = DATE.format(invoice.dueAt().atZone(zone));
-        String readOnly = DATE.format(com.salonplatform.platform.domain.BillingCalendar.readOnlyAt(invoice.dueAt()).atZone(zone));
+        String readOnly = DATE.format(com.salonplatform.platform.domain.BillingCalendar.readOnlyAt(invoice.dueAt())
+                .atZone(zone));
         String subject;
         String body;
         switch (kind) {

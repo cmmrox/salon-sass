@@ -1,14 +1,12 @@
 package com.salonplatform.shared.infrastructure;
 
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
-
 import com.salonplatform.shared.tenancy.CurrentTenant;
 import com.salonplatform.shared.tenancy.TenantContext;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceException;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import org.hibernate.Session;
-
 import org.springframework.orm.jpa.vendor.HibernateJpaDialect;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.TransactionException;

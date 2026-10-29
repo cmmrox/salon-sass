@@ -21,8 +21,8 @@ public final class PlatformHostname {
     public PlatformHostname(String platformDomain) {
         String domain = platformDomain == null ? "" : platformDomain.trim().toLowerCase(Locale.ROOT);
         if (domain.isEmpty() || domain.startsWith(".") || domain.endsWith(".") || domain.contains(":")) {
-            throw new IllegalArgumentException("the platform domain must be a hostname such as 'localhost', not '"
-                    + platformDomain + "'");
+            throw new IllegalArgumentException(
+                    "the platform domain must be a hostname such as 'localhost', not '" + platformDomain + "'");
         }
         this.suffix = "." + domain;
     }

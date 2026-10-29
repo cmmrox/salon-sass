@@ -1,14 +1,13 @@
 package com.salonplatform.testing;
 
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.function.Predicate;
-
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.AppenderBase;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.Predicate;
 import org.slf4j.LoggerFactory;
 import org.slf4j.event.KeyValuePair;
 
@@ -59,7 +58,11 @@ public final class CapturedLogs implements AutoCloseable {
         if (pairs == null) {
             return null;
         }
-        return pairs.stream().filter(pair -> pair.key.equals(key)).map(pair -> pair.value).findFirst().orElse(null);
+        return pairs.stream()
+                .filter(pair -> pair.key.equals(key))
+                .map(pair -> pair.value)
+                .findFirst()
+                .orElse(null);
     }
 
     public static Map<String, String> context(ILoggingEvent event) {

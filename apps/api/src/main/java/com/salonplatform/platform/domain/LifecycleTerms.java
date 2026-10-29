@@ -17,8 +17,7 @@ public final class LifecycleTerms {
     /** How long a closed salon's data and export are kept. */
     public static final Duration RETENTION = Duration.ofDays(30);
 
-    private LifecycleTerms() {
-    }
+    private LifecycleTerms() {}
 
     /** The trimmed reason when it is 10 to 500 characters of plain text (line breaks allowed); else null. */
     public static String reason(String value) {

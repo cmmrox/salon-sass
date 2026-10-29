@@ -1,4 +1,3 @@
 package com.salonplatform.architecture.fixture.sharedusesmodule.booking;
 
-public class BookingFacade {
-}
+public class BookingFacade {}

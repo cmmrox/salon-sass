@@ -4,23 +4,23 @@ import com.salonplatform.shared.api.ApplicationProblemException;
 import com.salonplatform.shared.api.ErrorCode;
 import com.salonplatform.shared.api.NotFoundException;
 import com.salonplatform.shared.api.RequestPaths;
+import com.salonplatform.shared.audit.SupportRequestAudit;
 import com.salonplatform.shared.tenancy.ActiveTenants;
 import com.salonplatform.shared.tenancy.CurrentTenant;
 import com.salonplatform.shared.tenancy.PlatformHostname;
 import com.salonplatform.shared.tenancy.RequestCredential;
-import com.salonplatform.shared.audit.SupportRequestAudit;
 import com.salonplatform.shared.tenancy.RequestSupport;
 import com.salonplatform.shared.tenancy.SignedTenantVerifier;
 import com.salonplatform.shared.tenancy.SupportCredentials;
 import com.salonplatform.shared.tenancy.SupportGrant;
 import com.salonplatform.shared.tenancy.TenantContext;
 import com.salonplatform.shared.tenancy.TenantDirectory;
-
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-
+import java.io.IOException;
+import java.util.Optional;
 import org.slf4j.MDC;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.core.Ordered;
@@ -28,9 +28,6 @@ import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
-
-import java.io.IOException;
-import java.util.Optional;
 
 /**
  * Binds the salon a request's hostname names for the extent of the request, before anything that
@@ -132,8 +129,13 @@ class TenantFilter extends OncePerRequestFilter {
      * Serves a request made under a live support session: refuses every mutation but ending it, then
      * records the request (method, route template, outcome) in the salon's audit trail.
      */
-    private void underSupport(SupportGrant grant, String credential, HttpServletRequest request,
-            HttpServletResponse response, FilterChain chain) throws Exception {
+    private void underSupport(
+            SupportGrant grant,
+            String credential,
+            HttpServletRequest request,
+            HttpServletResponse response,
+            FilterChain chain)
+            throws Exception {
         RequestSupport.callAs(grant, () -> {
             try {
                 if (ReadOnlyRoutes.mutating(request.getMethod()) && !supportMayChange(request)) {
@@ -144,11 +146,9 @@ class TenantFilter extends OncePerRequestFilter {
                     chain.doFilter(request, response);
                     return null;
                 });
-            }
-            catch (ApplicationProblemException | NotFoundException ex) {
+            } catch (ApplicationProblemException | NotFoundException ex) {
                 errors.resolveException(request, response, null, ex);
-            }
-            finally {
+            } finally {
                 SupportRequestAudit audit = supportAudit.getIfAvailable();
                 if (audit != null) {
                     audit.record(grant, request.getMethod(), routeOf(request), response.getStatus());
@@ -160,7 +160,8 @@ class TenantFilter extends OncePerRequestFilter {
 
     /** The route template the request matched (never its raw path, which carries ids). */
     private String routeOf(HttpServletRequest request) {
-        Object pattern = request.getAttribute(org.springframework.web.servlet.HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE);
+        Object pattern =
+                request.getAttribute(org.springframework.web.servlet.HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE);
         if (pattern == null) {
             try {
                 // A request refused before dispatch: the route it would have reached.
@@ -168,8 +169,7 @@ class TenantFilter extends OncePerRequestFilter {
                     pattern = request.getAttribute(
                             org.springframework.web.servlet.HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE);
                 }
-            }
-            catch (Exception ex) {
+            } catch (Exception ex) {
                 pattern = null;
             }
         }
@@ -177,8 +177,7 @@ class TenantFilter extends OncePerRequestFilter {
     }
 
     @Override
-    protected void doFilterInternal(
-            HttpServletRequest request, HttpServletResponse response, FilterChain chain)
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
         long started = System.nanoTime();
         boolean failed = false;
@@ -186,9 +185,7 @@ class TenantFilter extends OncePerRequestFilter {
         String candidateSlug = hostnames.slugOf(host).orElse(null);
         String authorization = request.getHeader(HttpHeaders.AUTHORIZATION);
         String credential =
-                authorization != null && authorization.startsWith("Bearer ")
-                        ? authorization.substring(7)
-                        : "";
+                authorization != null && authorization.startsWith("Bearer ") ? authorization.substring(7) : "";
         try {
             // A path that is not already canonical could dispatch to a handler while every path
             // check below reads it differently (;parameters, percent-escapes, dot or empty
@@ -199,80 +196,66 @@ class TenantFilter extends OncePerRequestFilter {
             // Only a raw API address may use token-only tenancy. Unknown/reserved salon hosts
             // remain closed.
             String name = host == null ? "" : host.toLowerCase(java.util.Locale.ROOT);
-            boolean nativeAddress =
-                    name.matches("^(localhost|[0-9]{1,3}(\\.[0-9]{1,3}){3})(:[0-9]+)?$")
-                            || name.matches("^\\[[0-9a-f:]+\\](:[0-9]+)?$");
+            boolean nativeAddress = name.matches("^(localhost|[0-9]{1,3}(\\.[0-9]{1,3}){3})(:[0-9]+)?$")
+                    || name.matches("^\\[[0-9a-f:]+\\](:[0-9]+)?$");
             String path = RequestPaths.path(request);
-            boolean publicPath =
-                    path.contains("/sign-in")
-                            || path.equals("/api/v1/identity/customers/challenges")
-                            || path.contains("/mfa/")
-                            || path.endsWith("/sessions/refresh")
-                            || RequestPaths.under(request, "/local");
+            boolean publicPath = path.contains("/sign-in")
+                    || path.equals("/api/v1/identity/customers/challenges")
+                    || path.contains("/mfa/")
+                    || path.endsWith("/sessions/refresh")
+                    || RequestPaths.under(request, "/local");
             if (isOperatorEndpoint(request)) {
                 TenantContext.callForRequest(
                         null,
                         directory,
-                        () ->
-                                RequestCredential.callWith(
-                                        credential,
-                                        () -> {
-                                            chain.doFilter(request, response);
-                                            return null;
-                                        }));
+                        () -> RequestCredential.callWith(credential, () -> {
+                            chain.doFilter(request, response);
+                            return null;
+                        }));
             } else if (candidateSlug == null
                     && nativeAddress
                     && !credential.isBlank()
                     && !isPlatformEndpoint(request)
                     && !publicPath) {
                 CurrentTenant tenant =
-                        tenants.findActive(verifier.tenantOf(credential))
-                                .orElseThrow(NotFoundException::new);
-                TenantContext.callAs(
-                        tenant,
-                        () -> {
-                            refuseWhenReadOnly(request);
-                            return RequestCredential.callWith(
-                                    credential,
-                                    () -> {
-                                        chain.doFilter(request, response);
-                                        return null;
-                                    });
-                        });
+                        tenants.findActive(verifier.tenantOf(credential)).orElseThrow(NotFoundException::new);
+                TenantContext.callAs(tenant, () -> {
+                    refuseWhenReadOnly(request);
+                    return RequestCredential.callWith(credential, () -> {
+                        chain.doFilter(request, response);
+                        return null;
+                    });
+                });
             } else {
-                TenantContext.callForRequest(
-                        candidateSlug,
-                        directory,
-                        () -> {
-                            if (candidateSlug != null && !isPlatformEndpoint(request))
-                                TenantContext.resolveEarly();
-                            // A caller supplying a signed identity must match even a public salon
-                            // endpoint.
-                            if (!credential.isBlank()
-                                    && !isPlatformEndpoint(request)
-                                    && !RequestPaths.under(request, "/local")) {
-                                // A support credential (F03-S04) is verified against its live
-                                // session and bound to this salon only; it never becomes a staff one.
-                                SupportCredentials supports = support.getIfAvailable();
-                                Optional<SupportGrant> grant = supports == null ? Optional.empty()
-                                        : supports.verify(credential, () -> TenantContext.require().id());
-                                if (grant.isPresent()) {
-                                    underSupport(grant.get(), credential, request, response, chain);
-                                    return null;
-                                }
-                                if (!verifier.tenantOf(credential)
-                                        .equals(TenantContext.require().id()))
-                                    throw new NotFoundException();
-                            }
-                            refuseWhenReadOnly(request);
-                            RequestCredential.callWith(
-                                    credential,
-                                    () -> {
-                                        chain.doFilter(request, response);
-                                        return null;
-                                    });
+                TenantContext.callForRequest(candidateSlug, directory, () -> {
+                    if (candidateSlug != null && !isPlatformEndpoint(request)) TenantContext.resolveEarly();
+                    // A caller supplying a signed identity must match even a public salon
+                    // endpoint.
+                    if (!credential.isBlank()
+                            && !isPlatformEndpoint(request)
+                            && !RequestPaths.under(request, "/local")) {
+                        // A support credential (F03-S04) is verified against its live
+                        // session and bound to this salon only; it never becomes a staff one.
+                        SupportCredentials supports = support.getIfAvailable();
+                        Optional<SupportGrant> grant = supports == null
+                                ? Optional.empty()
+                                : supports.verify(
+                                        credential,
+                                        () -> TenantContext.require().id());
+                        if (grant.isPresent()) {
+                            underSupport(grant.get(), credential, request, response, chain);
                             return null;
-                        });
+                        }
+                        if (!verifier.tenantOf(credential)
+                                .equals(TenantContext.require().id())) throw new NotFoundException();
+                    }
+                    refuseWhenReadOnly(request);
+                    RequestCredential.callWith(credential, () -> {
+                        chain.doFilter(request, response);
+                        return null;
+                    });
+                    return null;
+                });
             }
         } catch (ApplicationProblemException | NotFoundException ex) {
             errors.resolveException(request, response, null, ex);
@@ -291,8 +274,7 @@ class TenantFilter extends OncePerRequestFilter {
             try {
                 int status = failed && !response.isCommitted() ? 500 : response.getStatus();
                 RequestLog.writeIfMissing(request, status, System.nanoTime() - started);
-            }
-            finally {
+            } finally {
                 // The salon's id was put on the request's log lines when it was resolved.
                 MDC.remove(TenantContext.LOG_FIELD);
             }

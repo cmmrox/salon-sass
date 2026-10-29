@@ -1,15 +1,14 @@
 package com.salonplatform.platform.infrastructure;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.UUID;
-
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.env.MockEnvironment;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /** The support credential and entry codes (F03-S04): kind, issuer, salon, expiry and an independent key. */
 class SupportCryptoTest {
@@ -18,8 +17,8 @@ class SupportCryptoTest {
     private static final String KEY = "ab".repeat(32);
 
     private static SupportCrypto crypto(String key, Instant now) {
-        return new SupportCrypto(new MockEnvironment().withProperty("salon.support.signing-key", key),
-                Clock.fixed(now, ZoneOffset.UTC));
+        return new SupportCrypto(
+                new MockEnvironment().withProperty("salon.support.signing-key", key), Clock.fixed(now, ZoneOffset.UTC));
     }
 
     @Test
@@ -36,15 +35,19 @@ class SupportCryptoTest {
         assertThat(claims.expiresAt()).isEqualTo(NOW.plusSeconds(1800));
         assertThat(crypto.current(claims)).isTrue();
         assertThat(crypto(KEY, NOW.plusSeconds(1800)).current(claims)).isFalse();
-        assertThat(crypto(KEY, NOW.minusSeconds(1)).current(claims)).as("issued in the future").isFalse();
+        assertThat(crypto(KEY, NOW.minusSeconds(1)).current(claims))
+                .as("issued in the future")
+                .isFalse();
     }
 
     @Test
     void anotherKeysOrAnAlteredOrMalformedTokenIsNoSupportCredential() {
         SupportCrypto crypto = crypto(KEY, NOW);
-        String token = crypto.credential(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), NOW, NOW.plusSeconds(60));
+        String token =
+                crypto.credential(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), NOW, NOW.plusSeconds(60));
         assertThat(crypto(KEY.replace('a', 'c'), NOW).claims(token)).isEmpty();
-        assertThat(crypto.claims(token.substring(0, token.length() - 3) + "abc")).isEmpty();
+        assertThat(crypto.claims(token.substring(0, token.length() - 3) + "abc"))
+                .isEmpty();
         assertThat(crypto.claims("not-a-token")).isEmpty();
         assertThat(crypto.claims("")).isEmpty();
         assertThat(crypto.claims(null)).isEmpty();
@@ -55,9 +58,14 @@ class SupportCryptoTest {
         assertThatThrownBy(() -> new SupportCrypto(new MockEnvironment(), Clock.systemUTC()))
                 .hasMessageContaining("SALON_SUPPORT_SIGNING_KEY");
         assertThatThrownBy(() -> crypto("short", NOW)).hasMessageContaining("SALON_SUPPORT_SIGNING_KEY");
-        for (String other : new String[] {"salon.identity.signing-key", "salon.operator.signing-key", "salon.export.key"}) {
-            assertThatThrownBy(() -> new SupportCrypto(new MockEnvironment().withProperty("salon.support.signing-key", KEY)
-                    .withProperty(other, KEY.toUpperCase()), Clock.systemUTC())).hasMessageContaining("independent");
+        for (String other :
+                new String[] {"salon.identity.signing-key", "salon.operator.signing-key", "salon.export.key"}) {
+            assertThatThrownBy(() -> new SupportCrypto(
+                            new MockEnvironment()
+                                    .withProperty("salon.support.signing-key", KEY)
+                                    .withProperty(other, KEY.toUpperCase()),
+                            Clock.systemUTC()))
+                    .hasMessageContaining("independent");
         }
     }
 

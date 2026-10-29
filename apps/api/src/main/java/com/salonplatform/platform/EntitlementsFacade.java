@@ -1,14 +1,11 @@
 package com.salonplatform.platform;
 
-import java.util.List;
-import java.util.Optional;
-
 import com.salonplatform.shared.entitlements.SalonEntitlements;
 import com.salonplatform.shared.tenancy.TenantContext;
-
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
-
+import java.util.List;
+import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
@@ -41,7 +38,11 @@ public class EntitlementsFacade implements SalonEntitlements {
             return Optional.empty();
         }
         Object[] row = rows.get(0);
-        return Optional.of(new Limits(((Number) row[1]).intValue(), ((Number) row[2]).intValue(),
-                ((Number) row[3]).intValue(), (Boolean) row[4], (Boolean) row[5]));
+        return Optional.of(new Limits(
+                ((Number) row[1]).intValue(),
+                ((Number) row[2]).intValue(),
+                ((Number) row[3]).intValue(),
+                (Boolean) row[4],
+                (Boolean) row[5]));
     }
 }

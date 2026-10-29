@@ -17,6 +17,14 @@ import java.util.UUID;
  * @param createdAt when it was written
  * @param sentAt when it was delivered, or null
  */
-public record OutboxMessageView(UUID id, UUID tenantId, String channel, OutboxStatus status, int attempts,
-        Instant nextAttemptAt, Instant leaseUntil, String lastError, Instant createdAt, Instant sentAt) {
-}
+public record OutboxMessageView(
+        UUID id,
+        UUID tenantId,
+        String channel,
+        OutboxStatus status,
+        int attempts,
+        Instant nextAttemptAt,
+        Instant leaseUntil,
+        String lastError,
+        Instant createdAt,
+        Instant sentAt) {}

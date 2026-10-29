@@ -1,10 +1,5 @@
 package com.salonplatform.platform.local;
 
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.util.List;
-import java.util.Locale;
-
 import com.salonplatform.platform.application.BootstrapFaults;
 import com.salonplatform.platform.application.OperatorAccounts;
 import com.salonplatform.shared.api.ApplicationProblemException;
@@ -16,7 +11,10 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Size;
-
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.util.List;
+import java.util.Locale;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.CacheControl;
 import org.springframework.http.ResponseEntity;
@@ -48,22 +46,20 @@ class LocalOperatorController {
         this.faults = faults;
     }
 
-    record SeedRequest(@NotEmpty @Size(max = 20) List<OperatorAccounts.AccountInput> accounts) {
-    }
+    record SeedRequest(@NotEmpty @Size(max = 20) List<OperatorAccounts.AccountInput> accounts) {}
 
-    record SeedResult(int accounts) {
-    }
+    record SeedResult(int accounts) {}
 
-    record FaultRequest(String step) {
-    }
+    record FaultRequest(String step) {}
 
-    record FaultState(String step) {
-    }
+    record FaultState(String step) {}
 
     @PostMapping("/seed")
     ResponseEntity<SeedResult> seed(@Valid @RequestBody SeedRequest request, HttpServletRequest http) {
         loopback(http);
-        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(new SeedResult(accounts.seed(request.accounts())));
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.noStore())
+                .body(new SeedResult(accounts.seed(request.accounts())));
     }
 
     @DeleteMapping("/fixtures")
@@ -81,9 +77,10 @@ class LocalOperatorController {
         if (request.step() != null && !request.step().isBlank()) {
             try {
                 step = BootstrapFaults.Step.valueOf(request.step().strip().toUpperCase(Locale.ROOT));
-            }
-            catch (IllegalArgumentException ex) {
-                throw new ApplicationProblemException(400, ErrorCode.BAD_REQUEST,
+            } catch (IllegalArgumentException ex) {
+                throw new ApplicationProblemException(
+                        400,
+                        ErrorCode.BAD_REQUEST,
                         List.of(new FieldProblem("step", "must be owner, brand, receipt or null")));
             }
         }
@@ -99,7 +96,8 @@ class LocalOperatorController {
 
     private ResponseEntity<FaultState> state() {
         BootstrapFaults.Step step = faults.current();
-        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.noStore())
                 .body(new FaultState(step == null ? null : step.name().toLowerCase(Locale.ROOT)));
     }
 
@@ -108,8 +106,7 @@ class LocalOperatorController {
             if (!InetAddress.getByName(request.getRemoteAddr()).isLoopbackAddress()) {
                 throw new NotFoundException();
             }
-        }
-        catch (UnknownHostException ex) {
+        } catch (UnknownHostException ex) {
             throw new NotFoundException();
         }
     }

@@ -1,7 +1,5 @@
 package com.salonplatform.shared.infrastructure;
 
-import java.io.IOException;
-
 import com.salonplatform.shared.api.RequestTrace;
 import com.salonplatform.shared.tenancy.TenantContext;
 import io.micrometer.tracing.Span;
@@ -10,8 +8,8 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import org.slf4j.MDC;
-
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
@@ -41,7 +39,8 @@ class RequestLogFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
         long started = System.nanoTime();
         Span span = currentSpan();
-        String traceId = span != null && RequestTrace.isTraceId(span.context().traceId()) ? span.context().traceId()
+        String traceId = span != null && RequestTrace.isTraceId(span.context().traceId())
+                ? span.context().traceId()
                 : RequestTrace.of(request);
         request.setAttribute(RequestTrace.ATTRIBUTE, traceId);
         // Without a span nothing else puts the trace id on the request's lines; this does.
@@ -52,15 +51,15 @@ class RequestLogFilter extends OncePerRequestFilter {
         boolean failed = false;
         try {
             chain.doFilter(request, response);
-        }
-        catch (IOException | ServletException | RuntimeException ex) {
+        } catch (IOException | ServletException | RuntimeException ex) {
             failed = true;
             throw ex;
-        }
-        finally {
+        } finally {
             int status = failed && !response.isCommitted() ? 500 : response.getStatus();
             if (span != null) {
-                TenantContext.resolved().ifPresent(salon -> span.tag(TenantContext.LOG_FIELD, salon.id().toString()));
+                TenantContext.resolved()
+                        .ifPresent(salon ->
+                                span.tag(TenantContext.LOG_FIELD, salon.id().toString()));
             }
             RequestLog.write(request.getMethod(), request.getRequestURI(), status, System.nanoTime() - started);
             request.setAttribute(RequestLog.LOGGED, Boolean.TRUE);

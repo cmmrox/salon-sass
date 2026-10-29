@@ -1,7 +1,6 @@
 package com.salonplatform.shared.api;
 
 import java.util.List;
-
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
 
@@ -18,8 +17,7 @@ final class Problems {
 
     static final String ERRORS = "errors";
 
-    private Problems() {
-    }
+    private Problems() {}
 
     /** The answer for an error known only by its status. */
     static ProblemDetail of(HttpStatusCode status) {

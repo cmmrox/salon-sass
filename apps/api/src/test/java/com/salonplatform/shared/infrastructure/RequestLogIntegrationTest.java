@@ -1,8 +1,6 @@
 package com.salonplatform.shared.infrastructure;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.UUID;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import com.jayway.jsonpath.JsonPath;
 import com.salonplatform.testing.CapturedLogs;
@@ -10,10 +8,11 @@ import com.salonplatform.testing.IntegrationTest;
 import com.salonplatform.testing.TestDatabase;
 import com.salonplatform.testing.TestPostgres;
 import com.salonplatform.testing.TestSalons;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.UUID;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 /** Each request, including a denial before the logging filter, writes one sanitized event. */
 class RequestLogIntegrationTest extends IntegrationTest {
@@ -31,9 +30,10 @@ class RequestLogIntegrationTest extends IntegrationTest {
         "active, false, true, 200, unused",
         "active, false, false, 200, unused",
     })
-    void requestsAndEarlyDenialsWriteExactlyOneSafeEvent(String address, boolean invalidBearer,
-            boolean continueTrace, int status, String code) {
-        TestSalons salons = new TestSalons(TestDatabase.of(TestPostgres.shared()).asOwner());
+    void requestsAndEarlyDenialsWriteExactlyOneSafeEvent(
+            String address, boolean invalidBearer, boolean continueTrace, int status, String code) {
+        TestSalons salons =
+                new TestSalons(TestDatabase.of(TestPostgres.shared()).asOwner());
         var salon = salons.create("Request logging studio", "#D6086A");
         if (address.equals("suspended")) {
             salons.suspend(salon);
@@ -55,13 +55,19 @@ class RequestLogIntegrationTest extends IntegrationTest {
         }
 
         try (CapturedLogs logs = CapturedLogs.ofApplication()) {
-            var response = http().sendOnHost("GET", host, "/api/v1/salon?secret=log-query-marker",
-                    headers, "{\"note\":\"log-body-marker\"}");
+            var response = http().sendOnHost(
+                            "GET",
+                            host,
+                            "/api/v1/salon?secret=log-query-marker",
+                            headers,
+                            "{\"note\":\"log-body-marker\"}");
 
             assertThat(response.status()).isEqualTo(status);
-            String responseTrace = status == 200 ? null : JsonPath.parse(response.body()).read("$.traceId");
+            String responseTrace =
+                    status == 200 ? null : JsonPath.parse(response.body()).read("$.traceId");
             if (status != 200) {
-                assertThat(JsonPath.parse(response.body()).<String>read("$.code")).isEqualTo(code);
+                assertThat(JsonPath.parse(response.body()).<String>read("$.code"))
+                        .isEqualTo(code);
                 assertThat(responseTrace).matches("[0-9a-f]{32}");
                 if (continueTrace) {
                     assertThat(responseTrace).isEqualTo(callerTrace);
@@ -72,7 +78,8 @@ class RequestLogIntegrationTest extends IntegrationTest {
             var event = events.getFirst();
             assertThat(CapturedLogs.keyValue(event, "http.request.method")).isEqualTo("GET");
             assertThat(CapturedLogs.keyValue(event, "url.path")).isEqualTo("/api/v1/salon");
-            assertThat(CapturedLogs.keyValue(event, "http.response.status_code")).isEqualTo(status);
+            assertThat(CapturedLogs.keyValue(event, "http.response.status_code"))
+                    .isEqualTo(status);
             assertThat((Long) CapturedLogs.keyValue(event, "event.duration")).isPositive();
             assertThat(CapturedLogs.context(event).get("trace.id")).matches("[0-9a-f]{32}");
             if (continueTrace || status != 200) {
@@ -80,15 +87,20 @@ class RequestLogIntegrationTest extends IntegrationTest {
                         .isEqualTo(continueTrace ? callerTrace : responseTrace);
             }
             if (status == 200) {
-                assertThat(CapturedLogs.context(event)).containsEntry("tenant.id", salon.id().toString());
-            }
-            else {
+                assertThat(CapturedLogs.context(event))
+                        .containsEntry("tenant.id", salon.id().toString());
+            } else {
                 assertThat(CapturedLogs.context(event)).doesNotContainKey("tenant.id");
             }
             for (var line : logs.events()) {
                 String everything = line.getFormattedMessage() + line.getKeyValuePairs() + line.getMDCPropertyMap();
-                assertThat(everything).doesNotContain("log-query-marker", "log-cookie-marker",
-                        "log-credential-marker", "log-body-marker", "secret=");
+                assertThat(everything)
+                        .doesNotContain(
+                                "log-query-marker",
+                                "log-cookie-marker",
+                                "log-credential-marker",
+                                "log-body-marker",
+                                "secret=");
             }
         }
     }

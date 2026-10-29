@@ -1,7 +1,6 @@
 package com.salonplatform.shared.infrastructure;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
@@ -9,20 +8,19 @@ import com.salonplatform.testing.Http.Exchange;
 import com.salonplatform.testing.StartedApplication;
 import com.salonplatform.testing.TestDatabase;
 import com.salonplatform.testing.TestPostgres;
-import com.salonplatform.testing.TestSalons.TestSalon;
 import com.salonplatform.testing.TestSalons;
+import com.salonplatform.testing.TestSalons.TestSalon;
 import jakarta.servlet.http.HttpServletRequest;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.function.RouterFunction;
 import org.springframework.web.servlet.function.RouterFunctions;
 import org.springframework.web.servlet.function.ServerResponse;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * The staging profile behind the edge (F01-S05): X-Forwarded-Proto and X-Forwarded-For are believed
@@ -52,16 +50,18 @@ class ForwardedHeadersIntegrationTest {
 
         @Bean
         RouterFunction<ServerResponse> forwardedEcho() {
-            return RouterFunctions.route().GET("/test/forwarded", request -> {
-                HttpServletRequest servlet = request.servletRequest();
-                Map<String, Object> seen = new LinkedHashMap<>();
-                seen.put("scheme", servlet.getScheme());
-                seen.put("secure", servlet.isSecure());
-                seen.put("remoteAddr", servlet.getRemoteAddr());
-                seen.put("serverName", servlet.getServerName());
-                seen.put("host", servlet.getHeader("Host"));
-                return ServerResponse.ok().body(seen);
-            }).build();
+            return RouterFunctions.route()
+                    .GET("/test/forwarded", request -> {
+                        HttpServletRequest servlet = request.servletRequest();
+                        Map<String, Object> seen = new LinkedHashMap<>();
+                        seen.put("scheme", servlet.getScheme());
+                        seen.put("secure", servlet.isSecure());
+                        seen.put("remoteAddr", servlet.getRemoteAddr());
+                        seen.put("serverName", servlet.getServerName());
+                        seen.put("host", servlet.getHeader("Host"));
+                        return ServerResponse.ok().body(seen);
+                    })
+                    .build();
         }
     }
 
@@ -114,8 +114,12 @@ class ForwardedHeadersIntegrationTest {
 
     @Test
     void aForwardedHostNamingAnotherSalonStillShowsTheSalonTheHostNames() {
-        Exchange salon = behindTheEdge.http().getOnHost(alpha.slug() + ".localhost:" + behindTheEdge.port(),
-                "/api/v1/salon", forwardedFor(beta, behindTheEdge));
+        Exchange salon = behindTheEdge
+                .http()
+                .getOnHost(
+                        alpha.slug() + ".localhost:" + behindTheEdge.port(),
+                        "/api/v1/salon",
+                        forwardedFor(beta, behindTheEdge));
 
         assertThat(salon.status()).isEqualTo(200);
         assertThat(JsonPath.parse(salon.body()).<String>read("$.slug")).isEqualTo(alpha.slug());
@@ -124,8 +128,12 @@ class ForwardedHeadersIntegrationTest {
 
     @Test
     void fromAnywhereElseNoForwardedHeaderIsBelieved() {
-        Exchange echo = notFromTheEdge.http().getOnHost(alpha.slug() + ".localhost:" + notFromTheEdge.port(),
-                "/test/forwarded", forwardedFor(beta, notFromTheEdge));
+        Exchange echo = notFromTheEdge
+                .http()
+                .getOnHost(
+                        alpha.slug() + ".localhost:" + notFromTheEdge.port(),
+                        "/test/forwarded",
+                        forwardedFor(beta, notFromTheEdge));
 
         DocumentContext seen = JsonPath.parse(echo.body());
         assertThat(seen.<String>read("$.scheme")).isEqualTo("http");
@@ -136,9 +144,13 @@ class ForwardedHeadersIntegrationTest {
 
     @Test
     void theStagingProfileHasNoLocalHookAndNoMeters() {
-        for (String path : new String[] { "/local/clock", "/local/probes", "/actuator/metrics", "/actuator/info" }) {
-            assertThat(behindTheEdge.http().getOnHost("localhost:" + behindTheEdge.port(), path).status())
-                    .as(path).isEqualTo(404);
+        for (String path : new String[] {"/local/clock", "/local/probes", "/actuator/metrics", "/actuator/info"}) {
+            assertThat(behindTheEdge
+                            .http()
+                            .getOnHost("localhost:" + behindTheEdge.port(), path)
+                            .status())
+                    .as(path)
+                    .isEqualTo(404);
         }
     }
 }

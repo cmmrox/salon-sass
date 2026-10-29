@@ -6,14 +6,13 @@ import java.util.Set;
 public final class PasswordPolicy {
     private PasswordPolicy() {}
 
-    public static final Set<String> COMMON =
-            Set.of(
-                    "passwordpassword",
-                    "password123456789",
-                    "123456789012345",
-                    "qwertyuiopasdfgh",
-                    "letmeinletmeinletmein",
-                    "welcome123456789");
+    public static final Set<String> COMMON = Set.of(
+            "passwordpassword",
+            "password123456789",
+            "123456789012345",
+            "qwertyuiopasdfgh",
+            "letmeinletmeinletmein",
+            "welcome123456789");
 
     public static boolean valid(String value) {
         if (value == null) return false;

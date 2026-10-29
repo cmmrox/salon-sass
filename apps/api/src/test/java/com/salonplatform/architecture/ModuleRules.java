@@ -1,7 +1,8 @@
 package com.salonplatform.architecture;
 
-import java.util.ArrayList;
-import java.util.List;
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
+import static com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.slices;
 
 import com.tngtech.archunit.core.domain.Dependency;
 import com.tngtech.archunit.core.domain.JavaAnnotation;
@@ -10,10 +11,8 @@ import com.tngtech.archunit.lang.ArchCondition;
 import com.tngtech.archunit.lang.ArchRule;
 import com.tngtech.archunit.lang.ConditionEvents;
 import com.tngtech.archunit.lang.SimpleConditionEvent;
-
-import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
-import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
-import static com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.slices;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * The rules between modules, from {@code docs/engineering/backend.md}, written so that they can be
@@ -22,8 +21,18 @@ import static com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.sli
  */
 final class ModuleRules {
 
-    static final List<String> MODULES = List.of("platform", "shared", "identity", "catalogue", "staff", "booking",
-            "payment", "notification", "customer", "reporting", "branding");
+    static final List<String> MODULES = List.of(
+            "platform",
+            "shared",
+            "identity",
+            "catalogue",
+            "staff",
+            "booking",
+            "payment",
+            "notification",
+            "customer",
+            "reporting",
+            "branding");
 
     private static final String SHARED = "shared";
 
@@ -36,9 +45,15 @@ final class ModuleRules {
     }
 
     List<ArchRule> all() {
-        return List.of(everyClassBelongsToAKnownModule(), sharedDependsOnNoOtherModule(), nothingDependsOnReporting(),
-                modulesAreFreeOfCycles(), anotherModuleIsUsedOnlyThroughItsRootPackage(), domainUsesNoSpringAndNoHttp(),
-                theLocalHooksAreUsedByNothingElse(), theLocalHooksLoadInTheLocalProfileOnly());
+        return List.of(
+                everyClassBelongsToAKnownModule(),
+                sharedDependsOnNoOtherModule(),
+                nothingDependsOnReporting(),
+                modulesAreFreeOfCycles(),
+                anotherModuleIsUsedOnlyThroughItsRootPackage(),
+                domainUsesNoSpringAndNoHttp(),
+                theLocalHooksAreUsedByNothingElse(),
+                theLocalHooksLoadInTheLocalProfileOnly());
     }
 
     /** A package beside the modules would escape every other rule here. */
@@ -46,30 +61,47 @@ final class ModuleRules {
         List<String> allowed = new ArrayList<>();
         allowed.add(base);
         MODULES.forEach(module -> allowed.add(everythingIn(module)));
-        return classes().that().resideInAPackage(base + "..")
-                .should().resideInAnyPackage(allowed.toArray(String[]::new))
+        return classes()
+                .that()
+                .resideInAPackage(base + "..")
+                .should()
+                .resideInAnyPackage(allowed.toArray(String[]::new))
                 .as("every class belongs to a module listed in docs/engineering/backend.md")
                 .allowEmptyShould(true);
     }
 
     ArchRule sharedDependsOnNoOtherModule() {
-        String[] otherModules = MODULES.stream().filter(module -> !module.equals(SHARED)).map(this::everythingIn)
+        String[] otherModules = MODULES.stream()
+                .filter(module -> !module.equals(SHARED))
+                .map(this::everythingIn)
                 .toArray(String[]::new);
-        return noClasses().that().resideInAPackage(everythingIn(SHARED))
-                .should().dependOnClassesThat().resideInAnyPackage(otherModules)
+        return noClasses()
+                .that()
+                .resideInAPackage(everythingIn(SHARED))
+                .should()
+                .dependOnClassesThat()
+                .resideInAnyPackage(otherModules)
                 .as("shared depends on no other module")
                 .allowEmptyShould(true);
     }
 
     ArchRule nothingDependsOnReporting() {
-        return noClasses().that().resideInAPackage(base + "..").and().resideOutsideOfPackage(everythingIn(REPORTING))
-                .should().dependOnClassesThat().resideInAPackage(everythingIn(REPORTING))
+        return noClasses()
+                .that()
+                .resideInAPackage(base + "..")
+                .and()
+                .resideOutsideOfPackage(everythingIn(REPORTING))
+                .should()
+                .dependOnClassesThat()
+                .resideInAPackage(everythingIn(REPORTING))
                 .as("nothing depends on reporting")
                 .allowEmptyShould(true);
     }
 
     ArchRule modulesAreFreeOfCycles() {
-        return slices().matching(base + ".(*)..").should().beFreeOfCycles()
+        return slices().matching(base + ".(*)..")
+                .should()
+                .beFreeOfCycles()
                 .as("dependencies between modules point one way")
                 .allowEmptyShould(true);
     }
@@ -80,15 +112,21 @@ final class ModuleRules {
      * exception: it exists to be used.
      */
     ArchRule anotherModuleIsUsedOnlyThroughItsRootPackage() {
-        return noClasses().that().resideInAPackage(base + "..")
+        return noClasses()
+                .that()
+                .resideInAPackage(base + "..")
                 .should(reachIntoAnotherModule())
                 .as("another module is used only through the types in its root package")
                 .allowEmptyShould(true);
     }
 
     ArchRule domainUsesNoSpringAndNoHttp() {
-        return noClasses().that().resideInAPackage(base + ".*.domain..")
-                .should().dependOnClassesThat().resideInAnyPackage("org.springframework..", "jakarta.servlet..")
+        return noClasses()
+                .that()
+                .resideInAPackage(base + ".*.domain..")
+                .should()
+                .dependOnClassesThat()
+                .resideInAnyPackage("org.springframework..", "jakarta.servlet..")
                 .as("domain code uses no Spring and no HTTP")
                 .allowEmptyShould(true);
     }
@@ -99,8 +137,14 @@ final class ModuleRules {
      * something that exists on a developer's machine only.
      */
     ArchRule theLocalHooksAreUsedByNothingElse() {
-        return noClasses().that().resideInAPackage(base + "..").and().resideOutsideOfPackage(localHooks())
-                .should().dependOnClassesThat().resideInAPackage(localHooks())
+        return noClasses()
+                .that()
+                .resideInAPackage(base + "..")
+                .and()
+                .resideOutsideOfPackage(localHooks())
+                .should()
+                .dependOnClassesThat()
+                .resideInAPackage(localHooks())
                 .as("the local test hooks are used by nothing outside shared.local")
                 .allowEmptyShould(true);
     }
@@ -111,7 +155,11 @@ final class ModuleRules {
      * exists in any other environment.
      */
     ArchRule theLocalHooksLoadInTheLocalProfileOnly() {
-        return classes().that().resideInAPackage(localHooks()).and().areMetaAnnotatedWith(SPRING_COMPONENT)
+        return classes()
+                .that()
+                .resideInAPackage(localHooks())
+                .and()
+                .areMetaAnnotatedWith(SPRING_COMPONENT)
                 .should(loadInTheLocalProfileOnly())
                 .as("every Spring bean of the local test hooks loads in the local profile only")
                 .allowEmptyShould(true);
@@ -135,8 +183,10 @@ final class ModuleRules {
                         .anyMatch(properties -> properties.get("value") instanceof String[] profiles
                                 && List.of(profiles).equals(List.of("local")));
                 if (!localOnly) {
-                    events.add(SimpleConditionEvent.violated(javaClass,
-                            javaClass.getName() + " is a Spring bean of the local test hooks without @Profile(\"local\")"));
+                    events.add(SimpleConditionEvent.violated(
+                            javaClass,
+                            javaClass.getName()
+                                    + " is a Spring bean of the local test hooks without @Profile(\"local\")"));
                 }
             }
         };

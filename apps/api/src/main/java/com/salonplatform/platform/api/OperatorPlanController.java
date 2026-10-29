@@ -7,7 +7,6 @@ import com.salonplatform.platform.application.ProvisioningReceipts;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.media.Schema;
-
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -33,13 +32,24 @@ class OperatorPlanController {
         this.plans = plans;
     }
 
-    @Schema(additionalProperties = Schema.AdditionalPropertiesValue.FALSE,
-            requiredProperties = {"key", "name", "staffSeats", "branches", "messageAllowance", "customDomain",
-                "dedicatedApp"})
-    record PlanRequest(@Schema(minLength = 3, maxLength = 30) String key, @Schema(maxLength = 120) String name,
+    @Schema(
+            additionalProperties = Schema.AdditionalPropertiesValue.FALSE,
+            requiredProperties = {
+                "key",
+                "name",
+                "staffSeats",
+                "branches",
+                "messageAllowance",
+                "customDomain",
+                "dedicatedApp"
+            })
+    record PlanRequest(
+            @Schema(minLength = 3, maxLength = 30) String key,
+            @Schema(maxLength = 120) String name,
             @Schema(minimum = "1", maximum = "1000000") Integer staffSeats,
             @Schema(minimum = "1", maximum = "1000000") Integer branches,
-            @Schema(minimum = "0", maximum = "1000000") Integer messageAllowance, Boolean customDomain,
+            @Schema(minimum = "0", maximum = "1000000") Integer messageAllowance,
+            Boolean customDomain,
             Boolean dedicatedApp) {
         @JsonAnySetter
         void unknown(String field, Object ignored) {
@@ -50,9 +60,11 @@ class OperatorPlanController {
     @GetMapping
     ResponseEntity<PlanCatalogue.PlanPage> listPlans(
             @Parameter(schema = @Schema(type = "integer", minimum = "0", maximum = "100000", defaultValue = "0"))
-            @RequestParam(required = false) String page,
+                    @RequestParam(required = false)
+                    String page,
             @Parameter(schema = @Schema(type = "integer", minimum = "1", maximum = "100", defaultValue = "20"))
-            @RequestParam(required = false) String size,
+                    @RequestParam(required = false)
+                    String size,
             @Parameter(schema = @Schema(type = "string", maxLength = 120)) @RequestParam(required = false) String q) {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(plans.list(Paging.of(page, size, q)));
     }
@@ -65,13 +77,26 @@ class OperatorPlanController {
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
     ResponseEntity<PlanCatalogue.PlanDefinition> createPlan(
-            @Parameter(name = ProvisioningReceipts.HEADER, in = ParameterIn.HEADER, required = true,
-                    schema = @Schema(type = "string", format = "uuid"))
-            @RequestHeader(name = ProvisioningReceipts.HEADER, required = false) String key,
+            @Parameter(
+                            name = ProvisioningReceipts.HEADER,
+                            in = ParameterIn.HEADER,
+                            required = true,
+                            schema = @Schema(type = "string", format = "uuid"))
+                    @RequestHeader(name = ProvisioningReceipts.HEADER, required = false)
+                    String key,
             @RequestBody PlanRequest request) {
-        var created = plans.create(key, new PlanCatalogue.PlanInput(request.key(), request.name(),
-                request.staffSeats(), request.branches(), request.messageAllowance(), request.customDomain(),
-                request.dedicatedApp()));
-        return ResponseEntity.status(HttpStatus.CREATED).cacheControl(CacheControl.noStore()).body(created.plan());
+        var created = plans.create(
+                key,
+                new PlanCatalogue.PlanInput(
+                        request.key(),
+                        request.name(),
+                        request.staffSeats(),
+                        request.branches(),
+                        request.messageAllowance(),
+                        request.customDomain(),
+                        request.dedicatedApp()));
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .cacheControl(CacheControl.noStore())
+                .body(created.plan());
     }
 }

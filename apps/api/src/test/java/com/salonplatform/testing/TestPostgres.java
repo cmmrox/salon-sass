@@ -29,8 +29,7 @@ public final class TestPostgres {
         SHARED.start();
     }
 
-    private TestPostgres() {
-    }
+    private TestPostgres() {}
 
     /** One container for the whole test run. It is removed when the JVM exits. */
     public static PostgreSQLContainer shared() {

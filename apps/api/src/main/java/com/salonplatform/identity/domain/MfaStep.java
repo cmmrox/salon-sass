@@ -1,11 +1,9 @@
 package com.salonplatform.identity.domain;
 
 import jakarta.persistence.*;
-
-import org.hibernate.annotations.TenantId;
-
 import java.time.Instant;
 import java.util.UUID;
+import org.hibernate.annotations.TenantId;
 
 @Entity
 @Table(name = "identity_mfa_step")

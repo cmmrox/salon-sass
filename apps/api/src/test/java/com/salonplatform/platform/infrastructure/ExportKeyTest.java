@@ -1,12 +1,11 @@
 package com.salonplatform.platform.infrastructure;
 
-import java.nio.charset.StandardCharsets;
-
-import org.junit.jupiter.api.Test;
-import org.springframework.mock.env.MockEnvironment;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
+
+import java.nio.charset.StandardCharsets;
+import org.junit.jupiter.api.Test;
+import org.springframework.mock.env.MockEnvironment;
 
 class ExportKeyTest {
 
@@ -38,9 +37,11 @@ class ExportKeyTest {
     @Test
     void theKeyIsRequiredAndIndependentOutsideLocal() {
         assertThatIllegalStateException().isThrownBy(() -> new ExportKey(new MockEnvironment()));
-        assertThatIllegalStateException().isThrownBy(() -> new ExportKey(new MockEnvironment()
-                .withProperty("salon.export.key", "short")));
-        assertThatIllegalStateException().isThrownBy(() -> new ExportKey(new MockEnvironment()
-                .withProperty("salon.export.key", KEY).withProperty("salon.billing.provider-key", KEY)));
+        assertThatIllegalStateException()
+                .isThrownBy(() -> new ExportKey(new MockEnvironment().withProperty("salon.export.key", "short")));
+        assertThatIllegalStateException()
+                .isThrownBy(() -> new ExportKey(new MockEnvironment()
+                        .withProperty("salon.export.key", KEY)
+                        .withProperty("salon.billing.provider-key", KEY)));
     }
 }

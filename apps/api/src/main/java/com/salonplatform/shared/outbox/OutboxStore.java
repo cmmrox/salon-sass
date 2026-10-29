@@ -1,9 +1,5 @@
 package com.salonplatform.shared.outbox;
 
-import org.springframework.jdbc.core.ConnectionCallback;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.stereotype.Component;
-
 import java.sql.Array;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -17,6 +13,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
+import org.springframework.jdbc.core.ConnectionCallback;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Component;
 
 /**
  * The dispatcher's reads and writes of the outbox. What is due across salons is asked of {@code
@@ -31,53 +30,46 @@ class OutboxStore {
 
     private static final String BACKLOG = "SELECT waiting, oldest_due_at FROM outbox_backlog(?)";
 
-    private static final String LOCK_DUE =
-            """
+    private static final String LOCK_DUE = """
             SELECT channel, payload::text AS payload, attempts, trace_parent FROM outbox_message
              WHERE tenant_id = ? AND id = ?
                AND ((status = 'pending' AND next_attempt_at <= ?) OR (status = 'sending' AND lease_until <= ?))
                FOR UPDATE SKIP LOCKED
             """;
 
-    private static final String CLAIM =
-            """
+    private static final String CLAIM = """
             UPDATE outbox_message
                SET status = 'sending', attempts = attempts + 1, lease_until = ?, lease_token = ?, updated_at = ?
              WHERE tenant_id = ? AND id = ?
             """;
 
-    private static final String INTERRUPTED_FOR_GOOD =
-            """
+    private static final String INTERRUPTED_FOR_GOOD = """
             UPDATE outbox_message
                SET status = 'dead', lease_until = NULL, lease_token = NULL, updated_at = ?,
                    last_error = 'Its last attempt was interrupted, and no attempts are left'
              WHERE tenant_id = ? AND id = ?
             """;
 
-    private static final String SENT =
-            """
+    private static final String SENT = """
             UPDATE outbox_message
                SET status = 'sent', sent_at = ?, lease_until = NULL, lease_token = NULL, last_error = NULL, updated_at = ?
              WHERE tenant_id = ? AND id = ? AND status = 'sending' AND lease_token = ?
             """;
 
-    private static final String RETRY =
-            """
+    private static final String RETRY = """
             UPDATE outbox_message
                SET status = 'pending', next_attempt_at = ?, lease_until = NULL, lease_token = NULL, last_error = ?,
                    updated_at = ?
              WHERE tenant_id = ? AND id = ? AND status = 'sending' AND lease_token = ?
             """;
 
-    private static final String DEAD =
-            """
+    private static final String DEAD = """
             UPDATE outbox_message
                SET status = 'dead', lease_until = NULL, lease_token = NULL, last_error = ?, updated_at = ?
              WHERE tenant_id = ? AND id = ? AND status = 'sending' AND lease_token = ?
             """;
 
-    private static final String REMOVE_SENT =
-            """
+    private static final String REMOVE_SENT = """
             DELETE FROM outbox_message WHERE tenant_id = ? AND status = 'sent' AND sent_at < ?
             """;
 
@@ -117,30 +109,25 @@ class OutboxStore {
     record NotTaken() implements Taken {}
 
     List<Due> due(Instant now, Collection<String> channels, int perSalon, int max) {
-        return jdbc.execute(
-                (ConnectionCallback<List<Due>>)
-                        connection -> {
-                            Array channelArray =
-                                    connection.createArrayOf("text", channels.toArray());
-                            try (PreparedStatement statement = connection.prepareStatement(DUE)) {
-                                statement.setObject(1, utc(now));
-                                statement.setArray(2, channelArray);
-                                statement.setInt(3, perSalon);
-                                statement.setInt(4, max);
-                                List<Due> due = new ArrayList<>();
-                                try (ResultSet rows = statement.executeQuery()) {
-                                    while (rows.next()) {
-                                        due.add(
-                                                new Due(
-                                                        rows.getObject("message_id", UUID.class),
-                                                        rows.getObject("tenant_id", UUID.class)));
-                                    }
-                                }
-                                return due;
-                            } finally {
-                                channelArray.free();
-                            }
-                        });
+        return jdbc.execute((ConnectionCallback<List<Due>>) connection -> {
+            Array channelArray = connection.createArrayOf("text", channels.toArray());
+            try (PreparedStatement statement = connection.prepareStatement(DUE)) {
+                statement.setObject(1, utc(now));
+                statement.setArray(2, channelArray);
+                statement.setInt(3, perSalon);
+                statement.setInt(4, max);
+                List<Due> due = new ArrayList<>();
+                try (ResultSet rows = statement.executeQuery()) {
+                    while (rows.next()) {
+                        due.add(new Due(
+                                rows.getObject("message_id", UUID.class), rows.getObject("tenant_id", UUID.class)));
+                    }
+                }
+                return due;
+            } finally {
+                channelArray.free();
+            }
+        });
     }
 
     Backlog backlog(Instant now) {
@@ -148,8 +135,7 @@ class OutboxStore {
                 BACKLOG,
                 (row, n) -> {
                     OffsetDateTime oldest = row.getObject("oldest_due_at", OffsetDateTime.class);
-                    return new Backlog(
-                            row.getLong("waiting"), oldest == null ? null : oldest.toInstant());
+                    return new Backlog(row.getLong("waiting"), oldest == null ? null : oldest.toInstant());
                 },
                 utc(now));
     }
@@ -169,20 +155,18 @@ class OutboxStore {
             int maxAttempts,
             Function<String, Optional<P>> gate,
             List<P> reserved) {
-        List<Object[]> rows =
-                jdbc.query(
-                        LOCK_DUE,
-                        (row, n) ->
-                                new Object[] {
-                                    row.getString("channel"),
-                                    row.getString("payload"),
-                                    row.getInt("attempts"),
-                                    row.getString("trace_parent")
-                                },
-                        tenantId,
-                        messageId,
-                        utc(now),
-                        utc(now));
+        List<Object[]> rows = jdbc.query(
+                LOCK_DUE,
+                (row, n) -> new Object[] {
+                    row.getString("channel"),
+                    row.getString("payload"),
+                    row.getInt("attempts"),
+                    row.getString("trace_parent")
+                },
+                tenantId,
+                messageId,
+                utc(now),
+                utc(now));
         if (rows.isEmpty()) {
             return new NotTaken();
         }
@@ -200,33 +184,20 @@ class OutboxStore {
         UUID token = UUID.randomUUID();
         jdbc.update(CLAIM, utc(now.plus(lease)), token, utc(now), tenantId, messageId);
         return new Claimed(
-                new Claim(
-                        messageId,
-                        tenantId,
-                        channel,
-                        (String) rows.getFirst()[1],
-                        attempts + 1,
-                        token,
-                        (String) rows.getFirst()[3]));
+                new Claim(messageId, tenantId, channel, (String) rows.getFirst()[1], attempts + 1, token, (String)
+                        rows.getFirst()[3]));
     }
 
     /** Records a delivery, if the claim still holds. */
     boolean sent(Claim claim, Instant now) {
-        return jdbc.update(
-                        SENT,
-                        utc(now),
-                        utc(now),
-                        claim.tenantId(),
-                        claim.messageId(),
-                        claim.leaseToken())
-                == 1;
+        return jdbc.update(SENT, utc(now), utc(now), claim.tenantId(), claim.messageId(), claim.leaseToken()) == 1;
     }
 
     boolean cancelled(Claim claim, Instant at) {
         return jdbc.update(
                         "UPDATE outbox_message SET"
-                            + " status='cancelled',lease_until=NULL,lease_token=NULL,updated_at=?"
-                            + " WHERE tenant_id=? AND id=? AND status='sending' AND lease_token=?",
+                                + " status='cancelled',lease_until=NULL,lease_token=NULL,updated_at=?"
+                                + " WHERE tenant_id=? AND id=? AND status='sending' AND lease_token=?",
                         utc(at),
                         claim.tenantId(),
                         claim.messageId(),
@@ -249,13 +220,7 @@ class OutboxStore {
 
     /** Records a failed last attempt, if the claim still holds. */
     boolean dead(Claim claim, String error, Instant now) {
-        return jdbc.update(
-                        DEAD,
-                        shorten(error),
-                        utc(now),
-                        claim.tenantId(),
-                        claim.messageId(),
-                        claim.leaseToken())
+        return jdbc.update(DEAD, shorten(error), utc(now), claim.tenantId(), claim.messageId(), claim.leaseToken())
                 == 1;
     }
 
@@ -269,10 +234,7 @@ class OutboxStore {
     }
 
     private static String shorten(String error) {
-        String text =
-                error == null || error.isBlank()
-                        ? "The provider failed without saying why"
-                        : error.strip();
+        String text = error == null || error.isBlank() ? "The provider failed without saying why" : error.strip();
         return text.length() <= LAST_ERROR_LENGTH ? text : text.substring(0, LAST_ERROR_LENGTH);
     }
 }

@@ -1,12 +1,11 @@
 package com.salonplatform.shared.audit;
 
-import java.time.Instant;
-import java.util.UUID;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.time.Instant;
+import java.util.UUID;
 import org.hibernate.annotations.Immutable;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.TenantId;
@@ -64,11 +63,19 @@ class AuditEntry {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
-    protected AuditEntry() {
-    }
+    protected AuditEntry() {}
 
-    AuditEntry(UUID id, Actor actor, String action, String subjectKind, String subjectId, String reason,
-            String beforeValues, String afterValues, String traceId, Instant at) {
+    AuditEntry(
+            UUID id,
+            Actor actor,
+            String action,
+            String subjectKind,
+            String subjectId,
+            String reason,
+            String beforeValues,
+            String afterValues,
+            String traceId,
+            Instant at) {
         this.id = id;
         this.actorKind = actor.kind().value();
         this.actorId = actor.id();

@@ -13,11 +13,11 @@ public final class Slugs {
 
     public static final Pattern GRAMMAR = Pattern.compile("^[a-z0-9][a-z0-9-]{1,28}[a-z0-9]$");
 
-    public static final Set<String> RESERVED = Set.of("admin", "api", "app", "apps", "assets", "auth", "cdn",
-            "console", "docs", "help", "login", "mail", "staging", "static", "status", "support", "www");
+    public static final Set<String> RESERVED = Set.of(
+            "admin", "api", "app", "apps", "assets", "auth", "cdn", "console", "docs", "help", "login", "mail",
+            "staging", "static", "status", "support", "www");
 
-    private Slugs() {
-    }
+    private Slugs() {}
 
     /** Trimmed and lower case: the form uniqueness is decided on. Null stays null. */
     public static String normalize(String value) {

@@ -1,13 +1,11 @@
 package com.salonplatform.shared.outbox;
 
-import java.time.Duration;
-import java.time.Instant;
-import java.util.concurrent.atomic.AtomicLong;
-
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
-
+import java.time.Duration;
+import java.time.Instant;
+import java.util.concurrent.atomic.AtomicLong;
 import org.springframework.stereotype.Component;
 
 /**
@@ -43,23 +41,36 @@ class OutboxMetrics {
 
     OutboxMetrics(MeterRegistry registry) {
         this.registry = registry;
-        Gauge.builder(WAITING, waiting, AtomicLong::get).description("Messages waiting to be delivered")
-                .baseUnit("messages").register(registry);
+        Gauge.builder(WAITING, waiting, AtomicLong::get)
+                .description("Messages waiting to be delivered")
+                .baseUnit("messages")
+                .register(registry);
         Gauge.builder(OLDEST_DUE_AGE, oldestDueAgeSeconds, AtomicLong::get)
-                .description("How long the oldest due message has been due").baseUnit("seconds").register(registry);
-        this.dead = Counter.builder(DEAD).description("Messages that ran out of attempts").baseUnit("messages")
+                .description("How long the oldest due message has been due")
+                .baseUnit("seconds")
+                .register(registry);
+        this.dead = Counter.builder(DEAD)
+                .description("Messages that ran out of attempts")
+                .baseUnit("messages")
                 .register(registry);
     }
 
     void backlog(OutboxStore.Backlog backlog, Instant now) {
         waiting.set(backlog.waiting());
-        oldestDueAgeSeconds.set(backlog.oldestDueAt() == null ? 0
-                : Math.max(0, Duration.between(backlog.oldestDueAt(), now).toSeconds()));
+        oldestDueAgeSeconds.set(
+                backlog.oldestDueAt() == null
+                        ? 0
+                        : Math.max(
+                                0, Duration.between(backlog.oldestDueAt(), now).toSeconds()));
     }
 
     void delivery(String channel, String outcome) {
-        Counter.builder(DELIVERIES).description("Delivery attempts by channel and outcome")
-                .tag("channel", channel).tag("outcome", outcome).register(registry).increment();
+        Counter.builder(DELIVERIES)
+                .description("Delivery attempts by channel and outcome")
+                .tag("channel", channel)
+                .tag("outcome", outcome)
+                .register(registry)
+                .increment();
     }
 
     void dead() {

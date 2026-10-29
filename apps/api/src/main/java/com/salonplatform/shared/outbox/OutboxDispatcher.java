@@ -5,13 +5,6 @@ import com.salonplatform.shared.observability.Traces;
 import com.salonplatform.shared.tenancy.ActiveTenants;
 import com.salonplatform.shared.tenancy.CurrentTenant;
 import com.salonplatform.shared.tenancy.TenantContext;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.context.SmartLifecycle;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.support.TransactionTemplate;
-
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -30,6 +23,11 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.context.SmartLifecycle;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * Delivers the outbox (NFR-15). On each poll it asks what is due across salons (ids only), then for
@@ -137,12 +135,10 @@ final class OutboxDispatcher implements SmartLifecycle {
         running = true;
         abandoning = false;
         stopping = new CountDownLatch(1);
-        deliveries =
-                Executors.newThreadPerTaskExecutor(
-                        Thread.ofVirtual().name("outbox-delivery-", 0).factory());
-        calls =
-                Executors.newThreadPerTaskExecutor(
-                        Thread.ofVirtual().name("outbox-call-", 0).factory());
+        deliveries = Executors.newThreadPerTaskExecutor(
+                Thread.ofVirtual().name("outbox-delivery-", 0).factory());
+        calls = Executors.newThreadPerTaskExecutor(
+                Thread.ofVirtual().name("outbox-call-", 0).factory());
         poller = Thread.ofVirtual().name("outbox-dispatcher").start(this::pollUntilStopped);
         log.info("The outbox dispatcher started for the channels {}", providers.keySet());
     }
@@ -162,8 +158,7 @@ final class OutboxDispatcher implements SmartLifecycle {
             // Still in flight: left to its lease, which brings it back after a restart.
             abandoning = true;
             log.warn(
-                    "Stopping with {} deliveries in flight; each is attempted again once its lease"
-                        + " runs out",
+                    "Stopping with {} deliveries in flight; each is attempted again once its lease" + " runs out",
                     inFlight.size());
             calls.shutdownNow();
             deliveries.shutdownNow();
@@ -193,18 +188,15 @@ final class OutboxDispatcher implements SmartLifecycle {
             // No channel has a provider in this environment yet: nothing can be delivered.
             return 0;
         }
-        List<OutboxStore.Due> due =
-                store.due(now, providers.keySet(), settings.perSalon(), settings.batchSize());
+        List<OutboxStore.Due> due = store.due(now, providers.keySet(), settings.perSalon(), settings.batchSize());
         Map<UUID, Optional<Deliverable>> salons = new HashMap<>();
         int started = 0;
         for (OutboxStore.Due message : due) {
             if (!running || inFlight.contains(message.messageId())) {
                 continue;
             }
-            Optional<Deliverable> salon =
-                    salons.computeIfAbsent(message.tenantId(), this::deliverable);
-            if (salon.isPresent()
-                    && take(salon.get().salon(), salon.get().closed(), message.messageId(), now)) {
+            Optional<Deliverable> salon = salons.computeIfAbsent(message.tenantId(), this::deliverable);
+            if (salon.isPresent() && take(salon.get().salon(), salon.get().closed(), message.messageId(), now)) {
                 started++;
             }
         }
@@ -225,9 +217,7 @@ final class OutboxDispatcher implements SmartLifecycle {
                     pollFailing = true;
                     log.warn(
                             "The outbox dispatcher cannot read the outbox ({}); it keeps trying",
-                            DatabaseUnavailable.isCauseOf(ex)
-                                    ? DatabaseUnavailable.describe(ex)
-                                    : ex.toString());
+                            DatabaseUnavailable.isCauseOf(ex) ? DatabaseUnavailable.describe(ex) : ex.toString());
                 }
             }
             if (!pause(started > 0 ? BUSY_PAUSE : settings.pollInterval())) {
@@ -255,38 +245,25 @@ final class OutboxDispatcher implements SmartLifecycle {
         List<ChannelGuard.Permit> reserved = new ArrayList<>(1);
         OutboxStore.Taken taken;
         try {
-            taken =
-                    TenantContext.callAs(
-                            salon,
-                            () ->
-                                    transactions.execute(
-                                            status ->
-                                                    store.claim(
-                                                            salon.id(),
-                                                            messageId,
-                                                            now,
-                                                            settings.lease(),
-                                                            settings.maxAttempts(),
-                                                            channel ->
-                                                                    closed
-                                                                                    && !OutboxLifecycle
-                                                                                            .PLATFORM_EMAIL
-                                                                                            .equals(channel)
-                                                                            ? Optional.empty()
-                                                                            : permitFor(channel),
-                                                            reserved)));
+            taken = TenantContext.callAs(
+                    salon,
+                    () -> transactions.execute(status -> store.claim(
+                            salon.id(),
+                            messageId,
+                            now,
+                            settings.lease(),
+                            settings.maxAttempts(),
+                            channel -> closed && !OutboxLifecycle.PLATFORM_EMAIL.equals(channel)
+                                    ? Optional.empty()
+                                    : permitFor(channel),
+                            reserved)));
         } catch (Exception ex) {
             reserved.forEach(ChannelGuard.Permit::abandoned);
             throw ex instanceof RuntimeException runtime ? runtime : new IllegalStateException(ex);
         }
         if (taken instanceof OutboxStore.OutOfAttempts) {
             metrics.dead();
-            runAs(
-                    salon,
-                    () ->
-                            log.error(
-                                    "Outbox message {} is dead: its last attempt was interrupted",
-                                    messageId));
+            runAs(salon, () -> log.error("Outbox message {} is dead: its last attempt was interrupted", messageId));
             return false;
         }
         if (!(taken instanceof OutboxStore.Claimed claimed)) {
@@ -316,23 +293,20 @@ final class OutboxDispatcher implements SmartLifecycle {
                     "outbox.delivery",
                     salon,
                     claim.traceParent(),
-                    () ->
-                            TenantContext.callAs(
-                                    salon,
-                                    () -> {
-                                        try {
-                                            Outcome outcome = call(salon, claim, permit);
-                                            if (outcome != null) {
-                                                record(claim, outcome);
-                                            }
-                                        } catch (RuntimeException ex) {
-                                            // Written inside the span, so that the line carries the
-                                            // delivery's trace.
-                                            traces.failed(ex);
-                                            outcomeNotRecorded(claim, ex);
-                                        }
-                                        return null;
-                                    }));
+                    () -> TenantContext.callAs(salon, () -> {
+                        try {
+                            Outcome outcome = call(salon, claim, permit);
+                            if (outcome != null) {
+                                record(claim, outcome);
+                            }
+                        } catch (RuntimeException ex) {
+                            // Written inside the span, so that the line carries the
+                            // delivery's trace.
+                            traces.failed(ex);
+                            outcomeNotRecorded(claim, ex);
+                        }
+                        return null;
+                    }));
         } catch (Exception ex) {
             runAs(salon, () -> outcomeNotRecorded(claim, ex));
         } finally {
@@ -344,11 +318,9 @@ final class OutboxDispatcher implements SmartLifecycle {
     private static void outcomeNotRecorded(OutboxStore.Claim claim, Exception ex) {
         log.warn(
                 "The outcome of delivering outbox message {} could not be recorded ({}); it is"
-                    + " attempted again once its lease runs out",
+                        + " attempted again once its lease runs out",
                 claim.messageId(),
-                DatabaseUnavailable.isCauseOf(ex)
-                        ? DatabaseUnavailable.describe(ex)
-                        : ex.toString());
+                DatabaseUnavailable.isCauseOf(ex) ? DatabaseUnavailable.describe(ex) : ex.toString());
     }
 
     /** What the provider did with one attempt. */
@@ -359,26 +331,15 @@ final class OutboxDispatcher implements SmartLifecycle {
      */
     private Outcome call(CurrentTenant salon, OutboxStore.Claim claim, ChannelGuard.Permit permit) {
         OutboxProvider provider = providers.get(claim.channel());
-        OutboxDelivery delivery =
-                new OutboxDelivery(
-                        claim.messageId(),
-                        claim.tenantId(),
-                        claim.channel(),
-                        claim.payload(),
-                        claim.attempt());
+        OutboxDelivery delivery = new OutboxDelivery(
+                claim.messageId(), claim.tenantId(), claim.channel(), claim.payload(), claim.attempt());
         Duration limit = settings.provider().timeLimit();
         Future<?> call;
         try {
-            call =
-                    calls.submit(
-                            traces.inCurrentSpan(
-                                    () ->
-                                            TenantContext.callAs(
-                                                    salon,
-                                                    () -> {
-                                                        provider.deliver(delivery);
-                                                        return null;
-                                                    })));
+            call = calls.submit(traces.inCurrentSpan(() -> TenantContext.callAs(salon, () -> {
+                provider.deliver(delivery);
+                return null;
+            })));
         } catch (RuntimeException ex) {
             permit.abandoned();
             return null;
@@ -390,10 +351,7 @@ final class OutboxDispatcher implements SmartLifecycle {
         } catch (TimeoutException ex) {
             call.cancel(true);
             permit.failed();
-            return new Outcome(
-                    false,
-                    "timed_out",
-                    "The provider did not answer within " + limit.toMillis() + " ms");
+            return new Outcome(false, "timed_out", "The provider did not answer within " + limit.toMillis() + " ms");
         } catch (ExecutionException ex) {
             if (abandoning) {
                 permit.abandoned();
@@ -408,9 +366,7 @@ final class OutboxDispatcher implements SmartLifecycle {
             return new Outcome(
                     false,
                     "failed",
-                    cause.getMessage() == null
-                            ? cause.getClass().getSimpleName()
-                            : cause.getMessage());
+                    cause.getMessage() == null ? cause.getClass().getSimpleName() : cause.getMessage());
         } catch (InterruptedException | java.util.concurrent.CancellationException ex) {
             call.cancel(true);
             permit.abandoned();
@@ -440,8 +396,7 @@ final class OutboxDispatcher implements SmartLifecycle {
             return;
         }
         if (claim.attempt() >= settings.maxAttempts()) {
-            if (Boolean.TRUE.equals(
-                    transactions.execute(status -> store.dead(claim, outcome.error(), now)))) {
+            if (Boolean.TRUE.equals(transactions.execute(status -> store.dead(claim, outcome.error(), now)))) {
                 metrics.dead();
                 log.error(
                         "Outbox message {} on '{}' is dead after {} attempts: {}",
@@ -453,11 +408,9 @@ final class OutboxDispatcher implements SmartLifecycle {
             return;
         }
         Instant next = now.plus(backoff.after(claim.attempt()));
-        if (Boolean.TRUE.equals(
-                transactions.execute(status -> store.retry(claim, next, outcome.error(), now)))) {
+        if (Boolean.TRUE.equals(transactions.execute(status -> store.retry(claim, next, outcome.error(), now)))) {
             log.warn(
-                    "Delivering outbox message {} on '{}' failed (attempt {} of {}): {}; next"
-                        + " attempt at {}",
+                    "Delivering outbox message {} on '{}' failed (attempt {} of {}): {}; next" + " attempt at {}",
                     claim.messageId(),
                     claim.channel(),
                     claim.attempt(),
@@ -469,12 +422,10 @@ final class OutboxDispatcher implements SmartLifecycle {
 
     private static void runAs(CurrentTenant salon, Runnable work) {
         try {
-            TenantContext.callAs(
-                    salon,
-                    () -> {
-                        work.run();
-                        return null;
-                    });
+            TenantContext.callAs(salon, () -> {
+                work.run();
+                return null;
+            });
         } catch (Exception ex) {
             throw new IllegalStateException(ex);
         }

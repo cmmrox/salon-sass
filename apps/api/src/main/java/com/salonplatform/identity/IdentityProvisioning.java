@@ -7,15 +7,13 @@ import com.salonplatform.shared.api.ApplicationProblemException;
 import com.salonplatform.shared.api.ErrorCode;
 import com.salonplatform.shared.api.FieldProblem;
 import com.salonplatform.shared.infrastructure.PlatformDatabase;
-
-import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.stereotype.Service;
-
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.stereotype.Service;
 
 /**
  * Identity's narrow public provisioning facade (docs/architecture/operator-console.md): the identity
@@ -94,7 +92,9 @@ public class IdentityProvisioning {
     public PreparedOwner prepareOwner(String prefix, String name, String email, String password) {
         List<FieldProblem> errors = new ArrayList<>();
         String trimmedName = name == null ? null : name.strip();
-        if (trimmedName == null || trimmedName.isEmpty() || trimmedName.codePointCount(0, trimmedName.length()) > 120
+        if (trimmedName == null
+                || trimmedName.isEmpty()
+                || trimmedName.codePointCount(0, trimmedName.length()) > 120
                 || trimmedName.codePoints().anyMatch(Character::isISOControl))
             errors.add(new FieldProblem(prefix + "name", "must be plain text between 1 and 120 characters"));
         String normalizedEmail = null;
@@ -105,8 +105,8 @@ public class IdentityProvisioning {
         }
         if (normalizedEmail == null) errors.add(new FieldProblem(prefix + "email", "must be a valid email address"));
         if (!PasswordPolicy.valid(password))
-            errors.add(new FieldProblem(prefix + "password",
-                    "must contain 15 to 128 characters and must not be a common password"));
+            errors.add(new FieldProblem(
+                    prefix + "password", "must contain 15 to 128 characters and must not be a common password"));
         if (!errors.isEmpty()) throw new ApplicationProblemException(400, ErrorCode.BAD_REQUEST, errors);
         return new PreparedOwner(trimmedName, normalizedEmail, crypto.encodePassword(password));
     }
@@ -123,8 +123,16 @@ public class IdentityProvisioning {
         PlatformDatabase database = platform.getObject();
         database.requireTransaction();
         UUID id = UUID.randomUUID();
-        database.jdbc().queryForObject("SELECT identity_bootstrap_owner(?, ?, ?, ?, ?, ?)::text", String.class,
-                tenantId, id, owner.name, owner.email, owner.passwordHash, Timestamp.from(at));
+        database.jdbc()
+                .queryForObject(
+                        "SELECT identity_bootstrap_owner(?, ?, ?, ?, ?, ?)::text",
+                        String.class,
+                        tenantId,
+                        id,
+                        owner.name,
+                        owner.email,
+                        owner.passwordHash,
+                        Timestamp.from(at));
         return id;
     }
 

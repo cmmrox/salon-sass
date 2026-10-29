@@ -1,14 +1,13 @@
 package com.salonplatform.shared.infrastructure;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
 import com.salonplatform.SalonApiApplication;
 import com.salonplatform.testing.TestDatabase;
 import com.salonplatform.testing.TestPostgres;
 import org.junit.jupiter.api.Test;
-import org.testcontainers.postgresql.PostgreSQLContainer;
-
 import org.springframework.boot.builder.SpringApplicationBuilder;
-
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 
 /**
  * T-3 does not depend on every environment being configured right: given a database role that could
@@ -58,12 +57,15 @@ class ApplicationRoleCheckIntegrationTest {
 
     private static void start(TestDatabase database, String username, String password) {
         PostgreSQLContainer postgres = database.container();
-        new SpringApplicationBuilder(SalonApiApplication.class).profiles("test").run(
-                "--server.port=0",
-                "--spring.datasource.url=" + database.url(),
-                "--spring.datasource.username=" + username,
-                "--spring.datasource.password=" + password,
-                "--spring.flyway.user=" + postgres.getUsername(),
-                "--spring.flyway.password=" + postgres.getPassword()).close();
+        new SpringApplicationBuilder(SalonApiApplication.class)
+                .profiles("test")
+                .run(
+                        "--server.port=0",
+                        "--spring.datasource.url=" + database.url(),
+                        "--spring.datasource.username=" + username,
+                        "--spring.datasource.password=" + password,
+                        "--spring.flyway.user=" + postgres.getUsername(),
+                        "--spring.flyway.password=" + postgres.getPassword())
+                .close();
     }
 }

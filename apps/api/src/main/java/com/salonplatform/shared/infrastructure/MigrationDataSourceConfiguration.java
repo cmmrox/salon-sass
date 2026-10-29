@@ -1,11 +1,8 @@
 package com.salonplatform.shared.infrastructure;
 
-import java.util.Properties;
-
-import javax.sql.DataSource;
-
 import com.zaxxer.hikari.HikariDataSource;
-
+import java.util.Properties;
+import javax.sql.DataSource;
 import org.springframework.boot.flyway.autoconfigure.FlywayConfigurationCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

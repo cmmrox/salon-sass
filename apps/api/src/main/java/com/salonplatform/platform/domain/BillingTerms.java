@@ -17,8 +17,7 @@ public final class BillingTerms {
     public static final Set<String> METHODS = Set.of(CARD, BANK_TRANSFER);
     public static final int REFERENCE_MAX = 120;
 
-    private BillingTerms() {
-    }
+    private BillingTerms() {}
 
     public static boolean validAmount(Long amount) {
         return amount != null && amount >= 0 && amount <= MAX_AMOUNT;

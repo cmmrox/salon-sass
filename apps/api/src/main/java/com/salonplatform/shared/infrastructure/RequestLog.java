@@ -1,10 +1,9 @@
 package com.salonplatform.shared.infrastructure;
 
-import java.util.concurrent.TimeUnit;
-
 import com.salonplatform.shared.api.RequestTrace;
 import com.salonplatform.shared.tenancy.TenantContext;
 import jakarta.servlet.http.HttpServletRequest;
+import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
@@ -27,8 +26,7 @@ final class RequestLog {
 
     private static final Logger log = LoggerFactory.getLogger("com.salonplatform.request");
 
-    private RequestLog() {
-    }
+    private RequestLog() {}
 
     /**
      * Records a request denied before the inner logging filter ran. The problem response has
@@ -42,14 +40,14 @@ final class RequestLog {
         String outerTrace = MDC.get(TRACE_ID);
         String outerTenant = MDC.get(TenantContext.LOG_FIELD);
         MDC.put(TRACE_ID, RequestTrace.of(request));
-        TenantContext.resolved().ifPresentOrElse(
-                tenant -> MDC.put(TenantContext.LOG_FIELD, tenant.id().toString()),
-                () -> MDC.remove(TenantContext.LOG_FIELD));
+        TenantContext.resolved()
+                .ifPresentOrElse(
+                        tenant -> MDC.put(TenantContext.LOG_FIELD, tenant.id().toString()),
+                        () -> MDC.remove(TenantContext.LOG_FIELD));
         try {
             write(request.getMethod(), request.getRequestURI(), status, durationNanos);
             request.setAttribute(LOGGED, Boolean.TRUE);
-        }
-        finally {
+        } finally {
             restore(TRACE_ID, outerTrace);
             restore(TenantContext.LOG_FIELD, outerTenant);
         }
@@ -58,8 +56,7 @@ final class RequestLog {
     private static void restore(String field, String value) {
         if (value == null) {
             MDC.remove(field);
-        }
-        else {
+        } else {
             MDC.put(field, value);
         }
     }
