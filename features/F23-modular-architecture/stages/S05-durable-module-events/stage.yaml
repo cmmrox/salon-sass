@@ -3,7 +3,7 @@ feature: F23
 title: Durable events between modules
 sequence: 7
 surfaces: [api]
-status: in-progress
+status: built
 qa_status: not-run
 blocked_reason: null
 released_in: null
@@ -29,28 +29,37 @@ handoff:
       event's (three CHECKs). New tenant table shared_processed_event (tenant_id, event_id, subscriber, created_at, updated_at;
       PK (tenant_id, event_id, subscriber); FK tenant_id -> tenant; composite FK (tenant_id, event_id) -> outbox_message ON
       DELETE CASCADE, so a record goes with its event under retention, privacy erasure and closed-salon deletion; RLS enabled
-      and forced with tenant_isolation; application role SELECT, INSERT only). outbox_erase_salon_rows is replaced (same
+      and forced with tenant_isolation; application role SELECT, INSERT only). New SECURITY DEFINER function
+      outbox_due_events(at, event_types[], per_salon, max) for the application role: ids of due events of the named types
+      in active salons, nothing else (decision 064). outbox_due is unchanged. outbox_erase_salon_rows is replaced (same
       signature) to erase both outbox tables. Owned by shared in module-ownership.yaml; registered in OutboxTenantData
       (export, then erasure: processed records first).
-    No seed or fixture change. The walk-through used a fresh database salon_f23_s05 in salon-postgres (17 migrations, local
-      seed salons alpha/beta/gamma), dropped afterwards; the retained database (with its stray V17 salon_setup) was not
+    No seed or fixture change. Both walk-throughs (at cc14445, then the decision-064 changes at fba541c) used a fresh database
+      salon_f23_s05 in salon-postgres (17 migrations, local seed salons alpha/beta/gamma), dropped afterwards; the retained database (with its stray V17 salon_setup) was not
       touched. Synthetic numbers +94770005501..03 only. The API was not running before the walk-through and is stopped again.
   notes: |
-    Developer gates (verification.commands), run from the repository root on the clean tree at cc14445; logs in
-    /Users/cmmrox/Personal/Projects/salon-sass/.local/logs/F23-S05/ (ignored path; keep until closure), surefire copies in surefire/.
+    Developer gates (verification.commands), run from the repository root on the clean tree at fba541c (after the lead's
+    review, decision 064); logs in /Users/cmmrox/Personal/Projects/salon-sass/.local/logs/F23-S05/ (ignored path; keep until
+    closure), surefire copies of this run in surefire/.
     | command | revision | result | log |
-    | cd apps/api && ./mvnw -q verify | cc14445 | exit 0 in 505 s; 130 report classes, 929 tests, 0 failures, 0 errors, 0 skipped (04:47-04:56 +05:30) | mvnw-verify.log, mvnw-verify.times |
-    | pnpm contracts:check | cc14445 | exit 0 in 48 s; "docs/api/openapi.json and packages/api-contracts/src/generated are current" | contracts-check.log |
-    An earlier verify at 962faa7 failed 1 of 860 (MigrationIntegrationTest's list of applied migrations lacked V17); fixed in
-    cc14445, log kept as mvnw-verify-962faa7-failed.log. Conditions: Maven on JDK 21.0.9 with the toolchain's JDK 25.0.1, pnpm
+    | cd apps/api && ./mvnw -q verify | fba541c | exit 0 in 371 s; 130 report classes, 931 tests, 0 failures, 0 errors, 0 skipped (05:09-05:15 +05:30) | mvnw-verify.log, mvnw-verify.times |
+    | pnpm contracts:check | fba541c | exit 0 in 18 s; "docs/api/openapi.json and packages/api-contracts/src/generated are current" | contracts-check.log |
+    Superseded runs, kept: verify at cc14445 passed 929/929 (mvnw-verify-cc14445.log); verify at 962faa7 failed 1 of 860
+    (MigrationIntegrationTest's list of applied migrations lacked V17, fixed in cc14445; mvnw-verify-962faa7-failed.log). Conditions: Maven on JDK 21.0.9 with the toolchain's JDK 25.0.1, pnpm
     through Corepack, Testcontainers PostgreSQL (max_connections 200), test server on 127.0.0.1. No local API ran during the gates.
 
     Acceptance criteria:
     AC-1 checked. Tests (ModuleEventsIntegrationTest, own application with the dispatcher on): a committed event reaches both
       subscribers of its type exactly once with its salon set and two processed records; a rolled-back publish leaves no row
       and nothing is handled; publish is refused outside a transaction, in a read-only one, with no salon, for a record without
-      @EventType, and enqueue refuses the channel 'event'; a type with no subscriber is sent at attempt 1. Running product: an
-      erasure on alpha wrote one kind=event row, sent at attempt 1, one processed record for identity.local-message-capture.
+      @EventType, and enqueue refuses the channel 'event'; an event of a declared type with no subscriber is sent at attempt
+      1; an event of a type this build does not declare stays pending with 0 attempts and no lease while a known event is
+      delivered (anEventOfATypeThisBuildDoesNotDeclareStaysPendingAndUnclaimedWhileKnownEventsFlow); outbox_due_events
+      returns only the named types (OutboxEventsMigrationIntegrationTest). Running product: an erasure on alpha wrote one
+      kind=event row, sent at attempt 1, one processed record for identity.local-message-capture. At fba541c the dispatcher
+      started "for the channels [...] and the event types [identity.CustomerDataErased.v1]"; a hand-written
+      identity.CustomerDataErased.v2 row stayed pending|0 with no lease and no log line while a real erasure's v1 event was
+      sent and processed.
     AC-2 checked. Tests: a sent event set back to an expired lease is delivered again (attempts 2) and neither subscriber runs
       twice; two concurrent deliveries of one event (a subscriber holding its transaction 300 ms) apply it once, one record;
       two applications' dispatchers racing over 40 events in two salons deliver each to each subscriber once (80 records).
@@ -60,7 +69,9 @@ handoff:
       "probe.flaky: the flaky probe refused <mark>" while another event is delivered meanwhile; a payload with an unknown or a
       missing field goes dead with no processed record. Running product (backoff 2 s/4 s, 3 attempts): a CustomerDataErased.v1
       row with an extra field failed at ~3 s and ~4 s gaps and went dead with the Jackson error (value redacted by Jackson) while
-      a real erasure published meanwhile was sent at once.
+      a real erasure published meanwhile was sent at once. Unchanged by the decision-064 changes: the dispatcher's six delivery
+      integration tests (probe delivery, two dispatchers, interrupted delivery, provider limits, database outage, cleanup)
+      and the event tests passed after the split, before the known-types change.
     AC-4 checked. Tests: the reaching subscriber, on alpha's event with RLS on, sees through direct SQL only alpha's messages and
       processed records, finds beta's message by id 0 times and changes it 0 times (ModuleEventsIntegrationTest); in a database
       with RLS disabled on both outbox tables its direct SQL does see beta, while its repository reads only alpha's messages,
@@ -89,15 +100,34 @@ handoff:
       fixture (clean/booking/BookingConfirmed) and fails on fixture misplacedevent naming booking.event.BookingConfirmed.
       shared_processed_event is in shared's map entry; TableOwnershipIntegrationTest (prefix rule for tables new after V16)
       passes.
-    AC-8 checked. 929/929 pass. Test lines removed across the stage (git diff aa13133..HEAD -- apps/api/src/test): no assertion
+    AC-8 checked. 931/931 pass at fba541c. Test lines removed across the stage (git diff aa13133..HEAD -- apps/api/src/test): no assertion
       changed outside AC-6's list; the rest are inventory extensions the existing tests require of a new table or migration:
       DatabaseIsolationCatalogueIntegrationTest (+ shared_processed_event among tenant tables, + its INSERT,SELECT grant),
       MigrationIntegrationTest (+ ("17", "add outbox events")), ModuleRules.all() and ModuleBoundariesTest's violations (+ the
       new rule and fixture), and OutboxStoreRowLevelSecurityAloneIntegrationTest's forged Claim (+ a null event type, as the
-      record gained a component). @Test/@ParameterizedTest annotations 476 -> 500. OpenAPI document and generated client:
-      contracts:check passes and git diff aa13133..cc14445 -- docs/api packages/api-contracts is empty. Running product: SMS and
+      record gained a component), and the catalogue's SECURITY DEFINER function list (+ outbox_due_events).
+      @Test/@ParameterizedTest annotations 476 -> 502. OpenAPI document and generated client:
+      contracts:check passes and git diff aa13133..fba541c -- docs/api packages/api-contracts is empty. Running product: SMS and
       WhatsApp codes were delivered and captured, a local probe was sent at attempt 1 (kind delivery); email capture is reached
       only through billing and is covered by the billing integration tests in the gate, not walked.
+
+    Lead's review fixes (decision 064):
+    - Known event types only (fba541c). The types a build declares are the @EventType records in the application's packages,
+      found once at startup by a classpath scan of AutoConfigurationPackages (DeclaredEventTypes). The dispatcher asks
+      outbox_due for its providers' channels only and the new outbox_due_events for those types, each with its own
+      per-salon and batch budget, so an unknown event never takes a polling slot from known work. Added to V17 rather than a
+      V18 because V17 is merged nowhere yet; the retained local database must be reset (as planned) before it meets it.
+    - Meters for an unknown type: it counts in salon.outbox.waiting and ages salon.outbox.oldest.due.age (outbox_backlog is
+      unchanged) until an instance that knows it delivers it. Seen at fba541c: waiting 1, oldest due age rising
+      6 s -> 35 s. That is accurate (the event is waiting) and changes no existing meter or test; an alert on a long
+      oldest-due age would flag an event no running version handles. It is never claimed, so it never reaches
+      salon.outbox.deliveries or salon.outbox.dead.
+    - Test classpath: the scan also finds the test probe events and the architecture fixtures' booking.BookingConfirmed.v1
+      (declared twice, by the clean and the misplaced fixture); a set of names, so no harm. Two records declaring one type
+      are not refused at startup for that reason.
+    - OutboxDispatcher split (44119a1): what happens to one claimed message (the attempt on its own executor within the time
+      limit, and the recorded outcome) moved verbatim into DeliveryAttempts, with the providers it calls; it logs under
+      OutboxDispatcher's logger, so log lines and logger names are unchanged. OutboxDispatcher 310 lines, DeliveryAttempts 274.
 
     Choices the documents left open (for the lead to write down):
     - The event channel is the reserved name 'event' (refused for a provider at startup and by a CHECK), so the existing
@@ -125,6 +155,8 @@ handoff:
       name @EventType, EventSubscriber, the 'event' channel and shared_processed_event.
     - backend.md "Inside a module" says event/ holds listeners for other modules' events; the only subscriber today is a local
       hook of the publishing module, kept in local/.
+    - backend.md "Events between modules" and multi-tenancy.md "How the tenant reaches the database": outbox_due_events is
+      a new cross-salon SECURITY DEFINER function (ids only), and an unknown type waits rather than being delivered.
     - backend.md "Persistence and migrations" named exception 3 (leasing and locking) now also covers the processed-record claim
       (INSERT ... ON CONFLICT DO NOTHING in ProcessedEventStore).
     - multi-tenancy.md and operator-console.md: the outbox's TenantDataModule now registers two tables; DatabaseIsolationCatalogue
@@ -134,18 +166,18 @@ handoff:
       through the outbox and handled by the dispatcher shortly after commit.
 
     For a reviewer:
-    - OutboxDispatcher was 462 lines before this stage and is about 480 now (over backend.md's ~400). Splitting it was not in
-      scope; the event path is three small changes in it plus EventSubscribers.
-    - An event type no subscriber in the running version knows is delivered at once (spec). During a future rolling deploy, an
-      older instance would mark a newer event type delivered with nothing done; worth a rule before the first cross-version event.
+    - An event of an unknown type waits for ever if no running version ever declares it (a removed type, a typo written by
+      hand); it shows in the backlog meters and can be cancelled or removed by hand. A known type's retirement needs its
+      record kept until no such event is pending.
     - A subscriber's transaction may be interrupted by the 10 s time limit; its processed record then rolls back with it and the
       event is retried.
     - New test support EventProbes keeps probe tallies statically (two applications in one JVM add to one tally); each test uses
       its own marks.
 
     Not done: nothing in scope is left. Timings (from commit times and logs): implementation and tests about 60 min, two
-    test-scope rulings from the lead (decision 063) about 15 min, gates 505 s + 48 s plus one failed 401 s run, walk-through
-    about 10 min. Earlier reading time unknown.
+    test-scope rulings from the lead (decision 063) about 15 min, first gates 505 s + 48 s plus one failed 401 s run,
+    walk-through about 10 min; decision-064 rework about 25 min, gates 371 s + 18 s, walk-through about 5 min. Earlier
+    reading time unknown.
 cases: []
 verification:
   commands:
