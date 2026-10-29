@@ -3,7 +3,7 @@ feature: F23
 title: Table and API ownership by module
 sequence: 4
 surfaces: [api, web]
-status: built
+status: complete
 qa_status: not-run
 blocked_reason: null
 released_in: null
