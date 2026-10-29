@@ -5,6 +5,7 @@ import com.salonplatform.platform.domain.BillingTerms;
 import com.salonplatform.platform.domain.OperatorPermission;
 import com.salonplatform.platform.domain.ProvisioningRegions;
 import com.salonplatform.platform.infrastructure.BillingLedger;
+import com.salonplatform.platform.infrastructure.InvoiceStore;
 import com.salonplatform.platform.infrastructure.PlanStore;
 import com.salonplatform.platform.infrastructure.PlatformAudit;
 import com.salonplatform.shared.entitlements.SalonEntitlements;
@@ -98,6 +99,7 @@ public class SubscriptionBilling {
     private final OperatorAccess access;
     private final ProvisioningReceipts receipts;
     private final BillingLedger ledger;
+    private final InvoiceStore invoices;
     private final SubscriptionStates states;
     private final SalonDirectory salons;
     private final IdentityProvisioning identity;
@@ -111,6 +113,7 @@ public class SubscriptionBilling {
             OperatorAccess access,
             ProvisioningReceipts receipts,
             BillingLedger ledger,
+            InvoiceStore invoices,
             SubscriptionStates states,
             SalonDirectory salons,
             IdentityProvisioning identity,
@@ -122,6 +125,7 @@ public class SubscriptionBilling {
         this.access = access;
         this.receipts = receipts;
         this.ledger = ledger;
+        this.invoices = invoices;
         this.states = states;
         this.salons = salons;
         this.identity = identity;
@@ -136,7 +140,7 @@ public class SubscriptionBilling {
         SalonDirectory.PlanSummary plan = salon.planId() == null
                 ? null
                 : new SalonDirectory.PlanSummary(salon.planId(), salon.planKey(), salon.planName());
-        Period period = ledger.latestInvoice(subscription.id())
+        Period period = invoices.latestInvoice(subscription.id())
                 .map(invoice -> new Period(invoice.periodStart(), invoice.periodEnd()))
                 .orElse(null);
         return new SubscriptionView(

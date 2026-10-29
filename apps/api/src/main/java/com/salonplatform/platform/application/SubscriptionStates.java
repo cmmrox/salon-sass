@@ -4,13 +4,13 @@ import com.salonplatform.platform.domain.BillingCalendar;
 import com.salonplatform.platform.domain.BillingCalendar.State;
 import com.salonplatform.platform.domain.BillingTerms;
 import com.salonplatform.platform.infrastructure.BillingLedger;
-import com.salonplatform.platform.infrastructure.BillingLedger.Invoice;
 import com.salonplatform.platform.infrastructure.BillingLedger.NewSubscription;
-import com.salonplatform.platform.infrastructure.BillingLedger.Payment;
 import com.salonplatform.platform.infrastructure.BillingLedger.Salon;
 import com.salonplatform.platform.infrastructure.BillingLedger.Subscription;
 import com.salonplatform.platform.infrastructure.InvoiceStore;
+import com.salonplatform.platform.infrastructure.InvoiceStore.Invoice;
 import com.salonplatform.platform.infrastructure.InvoiceStore.NewPayment;
+import com.salonplatform.platform.infrastructure.InvoiceStore.Payment;
 import com.salonplatform.platform.infrastructure.PlatformAudit;
 import com.salonplatform.shared.infrastructure.PlatformDatabase;
 import java.time.Instant;
@@ -61,7 +61,7 @@ public class SubscriptionStates {
 
     /** The due instant of the oldest unpaid invoice past due, or null. */
     public Instant pastDueSince(Subscription subscription, Instant now) {
-        return ledger.openInvoices(subscription.id()).stream()
+        return invoices.openInvoices(subscription.id()).stream()
                 .map(Invoice::dueAt)
                 .filter(due -> !now.isBefore(due))
                 .min(Instant::compareTo)
@@ -95,7 +95,7 @@ public class SubscriptionStates {
      */
     public Subscription applyState(
             Subscription subscription, Instant now, String actorKind, String actorId, BillingChanges changes) {
-        List<Invoice> open = ledger.openInvoices(subscription.id());
+        List<Invoice> open = invoices.openInvoices(subscription.id());
         State next = BillingCalendar.stateAt(
                 now,
                 subscription.invoicesIssued(),
@@ -159,7 +159,7 @@ public class SubscriptionStates {
                 actorKind,
                 actorId,
                 BillingChanges.none());
-        return ledger.payments(invoice.id()).stream()
+        return invoices.payments(invoice.id()).stream()
                 .filter(p -> p.id().equals(id))
                 .findFirst()
                 .orElseThrow();

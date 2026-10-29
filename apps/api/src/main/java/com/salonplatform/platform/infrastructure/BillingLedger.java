@@ -8,7 +8,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Instant;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
@@ -18,11 +17,10 @@ import org.springframework.stereotype.Component;
 
 /**
  * Subscription billing's records on the platform connection (docs/architecture/operator-console.md,
- * "Subscriptions, invoices and entitlements"): salons, subscriptions, invoices and payments as billing
- * reads them, and the subscription and registry changes billing makes. Named direct-SQL exception 1 of
+ * "Subscriptions, invoices and entitlements"): salons and subscriptions as billing reads them, and the subscription and registry changes billing makes. Named direct-SQL exception 1 of
  * docs/engineering/backend.md: platform tables with no {@code tenant_id}. Every method runs inside the
- * caller's platform transaction, and a subscription is changed only while its row is locked. The
- * invoice-side writes are {@link InvoiceStore}, the outbox messages billing writes {@link PlatformOutbox}.
+ * caller's platform transaction, and a subscription is changed only while its row is locked. Invoices and
+ * payments are {@link InvoiceStore}, the outbox messages billing writes {@link PlatformOutbox}.
  */
 @Component
 public class BillingLedger {
@@ -62,41 +60,6 @@ public class BillingLedger {
             Instant createdAt,
             Instant updatedAt) {}
 
-    /** An invoice row. */
-    public record Invoice(
-            UUID id,
-            long number,
-            UUID salonId,
-            UUID subscriptionId,
-            UUID planId,
-            String planKey,
-            String planName,
-            int periodIndex,
-            Instant periodStart,
-            Instant periodEnd,
-            long amount,
-            String currency,
-            Instant issuedAt,
-            Instant dueAt,
-            String status,
-            Instant paidAt) {
-
-        public boolean open() {
-            return "open".equals(status);
-        }
-    }
-
-    /** A payment row. */
-    public record Payment(
-            UUID id,
-            UUID invoiceId,
-            String method,
-            String reference,
-            String providerEventId,
-            long amount,
-            LocalDate receivedOn,
-            Instant paidAt) {}
-
     /** A new subscription: trialing, with its first invoice due at the end of the trial. */
     public record NewSubscription(
             UUID salonId,
@@ -116,11 +79,6 @@ public class BillingLedger {
             int messageAllowance,
             boolean customDomain,
             boolean dedicatedApp) {}
-
-    private static final String INVOICE_COLUMNS = """
-            id, number, salon_id, subscription_id, plan_id, plan_key, plan_name, period_index, period_start,
-            period_end, amount, currency, issued_at, due_at, status, paid_at
-            """;
 
     private final PlatformDatabase database;
 
@@ -291,70 +249,6 @@ public class BillingLedger {
                 .update();
     }
 
-    // --- invoices and payments -------------------------------------------------------------------
-
-    public Optional<Invoice> invoiceById(UUID id, boolean lock) {
-        database.requireTransaction();
-        return database
-                .jdbc()
-                .sql("SELECT " + INVOICE_COLUMNS + " FROM invoice WHERE id = ?" + (lock ? " FOR UPDATE" : ""))
-                .param(id)
-                .query((row, n) -> invoice(row))
-                .list()
-                .stream()
-                .findFirst();
-    }
-
-    public List<Invoice> openInvoices(UUID subscriptionId) {
-        database.requireTransaction();
-        return database.jdbc()
-                .sql("SELECT " + INVOICE_COLUMNS
-                        + " FROM invoice WHERE subscription_id = ? AND status = 'open' ORDER BY due_at, number")
-                .param(subscriptionId)
-                .query((row, n) -> invoice(row))
-                .list();
-    }
-
-    public Optional<Invoice> latestInvoice(UUID subscriptionId) {
-        database.requireTransaction();
-        return database
-                .jdbc()
-                .sql("SELECT " + INVOICE_COLUMNS
-                        + " FROM invoice WHERE subscription_id = ? ORDER BY period_index DESC LIMIT 1")
-                .param(subscriptionId)
-                .query((row, n) -> invoice(row))
-                .list()
-                .stream()
-                .findFirst();
-    }
-
-    /** One page of a salon's invoices, newest first. */
-    public List<Invoice> invoicesOf(UUID salonId, int size, long offset) {
-        return database.jdbc()
-                .sql("SELECT " + INVOICE_COLUMNS
-                        + " FROM invoice WHERE salon_id = ? ORDER BY issued_at DESC, number DESC LIMIT ? OFFSET ?")
-                .params(salonId, size, offset)
-                .query((row, n) -> invoice(row))
-                .list();
-    }
-
-    public long countInvoicesOf(UUID salonId) {
-        return database.jdbc()
-                .sql("SELECT count(*) FROM invoice WHERE salon_id = ?")
-                .param(salonId)
-                .query(Long.class)
-                .single();
-    }
-
-    public List<Payment> payments(UUID invoiceId) {
-        database.requireTransaction();
-        return database.jdbc()
-                .sql("SELECT * FROM invoice_payment WHERE invoice_id = ? ORDER BY paid_at, id")
-                .param(invoiceId)
-                .query((row, n) -> payment(row))
-                .list();
-    }
-
     // --- rows ------------------------------------------------------------------------------------
 
     private static Instant instant(ResultSet row, String column) throws SQLException {
@@ -394,38 +288,5 @@ public class BillingLedger {
                 row.getLong("version"),
                 instant(row, "created_at"),
                 instant(row, "updated_at"));
-    }
-
-    private static Invoice invoice(ResultSet row) throws SQLException {
-        return new Invoice(
-                row.getObject("id", UUID.class),
-                row.getLong("number"),
-                row.getObject("salon_id", UUID.class),
-                row.getObject("subscription_id", UUID.class),
-                row.getObject("plan_id", UUID.class),
-                row.getString("plan_key"),
-                row.getString("plan_name"),
-                row.getInt("period_index"),
-                instant(row, "period_start"),
-                instant(row, "period_end"),
-                row.getLong("amount"),
-                row.getString("currency"),
-                instant(row, "issued_at"),
-                instant(row, "due_at"),
-                row.getString("status"),
-                instant(row, "paid_at"));
-    }
-
-    private static Payment payment(ResultSet row) throws SQLException {
-        java.sql.Date received = row.getDate("received_on");
-        return new Payment(
-                row.getObject("id", UUID.class),
-                row.getObject("invoice_id", UUID.class),
-                row.getString("method"),
-                row.getString("reference"),
-                row.getString("provider_event_id"),
-                row.getLong("amount"),
-                received == null ? null : received.toLocalDate(),
-                instant(row, "paid_at"));
     }
 }

@@ -2,9 +2,9 @@ package com.salonplatform.platform.application;
 
 import com.salonplatform.platform.domain.BillingTerms;
 import com.salonplatform.platform.infrastructure.BillingLedger;
-import com.salonplatform.platform.infrastructure.BillingLedger.Invoice;
 import com.salonplatform.platform.infrastructure.BillingLedger.Salon;
 import com.salonplatform.platform.infrastructure.InvoiceStore;
+import com.salonplatform.platform.infrastructure.InvoiceStore.Invoice;
 import com.salonplatform.platform.infrastructure.PlatformAudit;
 import com.salonplatform.platform.infrastructure.PlatformOutbox;
 import java.time.Instant;

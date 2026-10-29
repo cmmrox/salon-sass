@@ -184,14 +184,14 @@ public class ProviderEvents {
         if (attempt == null || !event.invoiceId().equals(attempt.invoiceId())) {
             return "unknown";
         }
-        BillingLedger.Invoice found =
-                ledger.invoiceById(event.invoiceId(), false).orElse(null);
+        InvoiceStore.Invoice found =
+                invoices.invoiceById(event.invoiceId(), false).orElse(null);
         if (found == null) {
             return "unknown";
         }
         BillingLedger.Subscription subscription =
                 ledger.subscription(found.subscriptionId(), true).orElseThrow();
-        BillingLedger.Invoice invoice = ledger.invoiceById(found.id(), true).orElseThrow();
+        InvoiceStore.Invoice invoice = invoices.invoiceById(found.id(), true).orElseThrow();
         UUID attemptId = attempt.id();
         boolean pending = "requested".equals(attempt.status());
         if (!invoice.open()) {

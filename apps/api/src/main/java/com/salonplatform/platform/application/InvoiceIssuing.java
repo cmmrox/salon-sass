@@ -4,10 +4,10 @@ import com.salonplatform.platform.domain.BillingCalendar;
 import com.salonplatform.platform.domain.BillingCalendar.Reminder;
 import com.salonplatform.platform.domain.BillingTerms;
 import com.salonplatform.platform.infrastructure.BillingLedger;
-import com.salonplatform.platform.infrastructure.BillingLedger.Invoice;
 import com.salonplatform.platform.infrastructure.BillingLedger.Salon;
 import com.salonplatform.platform.infrastructure.BillingLedger.Subscription;
 import com.salonplatform.platform.infrastructure.InvoiceStore;
+import com.salonplatform.platform.infrastructure.InvoiceStore.Invoice;
 import com.salonplatform.platform.infrastructure.PlatformAudit;
 import com.salonplatform.platform.infrastructure.PlatformOutbox;
 import java.time.Instant;
@@ -84,7 +84,7 @@ public class InvoiceIssuing {
         audit.record(PlatformAudit.SYSTEM, "billing", "invoice.issued", "invoice", id.toString(), details, now);
         changes.issued().add(BillingTerms.invoiceNumber(number));
         faults.reached(BillingFaults.Point.AFTER_INVOICE_ISSUE);
-        Invoice invoice = ledger.invoiceById(id, false).orElseThrow();
+        Invoice invoice = invoices.invoiceById(id, false).orElseThrow();
         if (BillingTerms.CARD.equals(subscription.paymentMethod())) {
             requestCharge(salon, invoice, "issue", now, changes);
         }
@@ -126,7 +126,7 @@ public class InvoiceIssuing {
      */
     public void remind(Subscription subscription, Instant now, BillingChanges changes) {
         Salon salon = ledger.salon(subscription.salonId(), false).orElseThrow();
-        for (Invoice invoice : ledger.openInvoices(subscription.id())) {
+        for (Invoice invoice : invoices.openInvoices(subscription.id())) {
             for (Reminder reminder : BillingCalendar.remindersDue(now, invoice.dueAt())) {
                 if (notices.notice(salon, invoice, reminder.kind(), null, now)) {
                     changes.reminders().add(BillingTerms.invoiceNumber(invoice.number()) + ":" + reminder.kind());

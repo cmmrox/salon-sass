@@ -3,6 +3,7 @@ package com.salonplatform.platform.application;
 import com.salonplatform.identity.Principals;
 import com.salonplatform.identity.inprocess.IdentityProvisioning;
 import com.salonplatform.platform.infrastructure.BillingLedger;
+import com.salonplatform.platform.infrastructure.InvoiceStore;
 import com.salonplatform.shared.infrastructure.PlatformDatabase;
 import com.salonplatform.shared.tenancy.TenantContext;
 import com.salonplatform.shared.web.NotFoundException;
@@ -98,6 +99,7 @@ public class SalonBilling {
 
     private final PlatformDatabase database;
     private final BillingLedger ledger;
+    private final InvoiceStore invoiceStore;
     private final SubscriptionStates states;
     private final InvoiceBilling invoices;
     private final Principals principals;
@@ -107,6 +109,7 @@ public class SalonBilling {
     public SalonBilling(
             PlatformDatabase database,
             BillingLedger ledger,
+            InvoiceStore invoiceStore,
             SubscriptionStates states,
             InvoiceBilling invoices,
             Principals principals,
@@ -114,6 +117,7 @@ public class SalonBilling {
             Clock clock) {
         this.database = database;
         this.ledger = ledger;
+        this.invoiceStore = invoiceStore;
         this.states = states;
         this.invoices = invoices;
         this.principals = principals;
@@ -160,7 +164,8 @@ public class SalonBilling {
     public InvoiceBilling.InvoiceDetail invoice(UUID id) {
         UUID salonId = TenantContext.require().id();
         principals.require("invoice.read");
-        return database.inTransaction(status -> ledger.invoiceById(id, false)
+        return database.inTransaction(status -> invoiceStore
+                .invoiceById(id, false)
                 .filter(invoice -> invoice.salonId().equals(salonId))
                 .map(invoices::detail)
                 .orElseThrow(NotFoundException::new));

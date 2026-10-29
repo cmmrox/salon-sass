@@ -4,6 +4,7 @@ import com.salonplatform.platform.domain.BillingTerms;
 import com.salonplatform.platform.domain.OperatorPermission;
 import com.salonplatform.platform.domain.PlainText;
 import com.salonplatform.platform.infrastructure.BillingLedger;
+import com.salonplatform.platform.infrastructure.InvoiceStore;
 import com.salonplatform.platform.infrastructure.PlatformAudit;
 import com.salonplatform.shared.web.ApplicationProblemException;
 import com.salonplatform.shared.web.ErrorCode;
@@ -152,6 +153,7 @@ public class InvoiceBilling {
     private final OperatorAccess access;
     private final ProvisioningReceipts receipts;
     private final BillingLedger ledger;
+    private final InvoiceStore invoices;
     private final SubscriptionStates states;
     private final JsonMapper json;
     private final Clock clock;
@@ -161,6 +163,7 @@ public class InvoiceBilling {
             OperatorAccess access,
             ProvisioningReceipts receipts,
             BillingLedger ledger,
+            InvoiceStore invoices,
             SubscriptionStates states,
             JsonMapper json,
             Clock clock) {
@@ -168,12 +171,13 @@ public class InvoiceBilling {
         this.access = access;
         this.receipts = receipts;
         this.ledger = ledger;
+        this.invoices = invoices;
         this.states = states;
         this.json = json;
         this.clock = clock;
     }
 
-    static InvoiceSummary summary(BillingLedger.Invoice invoice) {
+    static InvoiceSummary summary(InvoiceStore.Invoice invoice) {
         return new InvoiceSummary(
                 invoice.id(),
                 BillingTerms.invoiceNumber(invoice.number()),
@@ -187,7 +191,7 @@ public class InvoiceBilling {
                 invoice.paidAt());
     }
 
-    static PaymentView payment(BillingLedger.Payment payment) {
+    static PaymentView payment(InvoiceStore.Payment payment) {
         return new PaymentView(
                 payment.id(),
                 payment.method(),
@@ -198,7 +202,7 @@ public class InvoiceBilling {
                 payment.paidAt());
     }
 
-    InvoiceDetail detail(BillingLedger.Invoice invoice) {
+    InvoiceDetail detail(InvoiceStore.Invoice invoice) {
         return new InvoiceDetail(
                 invoice.id(),
                 BillingTerms.invoiceNumber(invoice.number()),
@@ -213,17 +217,17 @@ public class InvoiceBilling {
                 invoice.issuedAt(),
                 invoice.dueAt(),
                 invoice.paidAt(),
-                ledger.payments(invoice.id()).stream()
+                invoices.payments(invoice.id()).stream()
                         .map(InvoiceBilling::payment)
                         .toList());
     }
 
     /** A salon's invoices, newest first, inside a platform transaction. */
     InvoicePage page(UUID salonId, Paging paging) {
-        List<InvoiceSummary> items = ledger.invoicesOf(salonId, paging.size(), paging.offset()).stream()
+        List<InvoiceSummary> items = invoices.invoicesOf(salonId, paging.size(), paging.offset()).stream()
                 .map(InvoiceBilling::summary)
                 .toList();
-        long total = ledger.countInvoicesOf(salonId);
+        long total = invoices.countInvoicesOf(salonId);
         return new InvoicePage(items, paging.page(), paging.size(), total);
     }
 
@@ -238,7 +242,7 @@ public class InvoiceBilling {
     public InvoiceDetail get(UUID invoiceId) {
         return work.run(() -> {
             access.require(OperatorPermission.BILLING_READ);
-            return detail(ledger.invoiceById(invoiceId, false).orElseThrow(NotFoundException::new));
+            return detail(invoices.invoiceById(invoiceId, false).orElseThrow(NotFoundException::new));
         });
     }
 
@@ -286,11 +290,11 @@ public class InvoiceBilling {
             if (earlier.isPresent()) {
                 return new Recorded(true, json.convertValue(earlier.get().result(), PaymentView.class));
             }
-            BillingLedger.Invoice found = ledger.invoiceById(invoiceId, false).orElseThrow(NotFoundException::new);
+            InvoiceStore.Invoice found = invoices.invoiceById(invoiceId, false).orElseThrow(NotFoundException::new);
             // The subscription's lock first, as the job and provider events take it, then the invoice's.
             BillingLedger.Subscription subscription =
                     ledger.subscription(found.subscriptionId(), true).orElseThrow();
-            BillingLedger.Invoice invoice = ledger.invoiceById(invoiceId, true).orElseThrow();
+            InvoiceStore.Invoice invoice = invoices.invoiceById(invoiceId, true).orElseThrow();
             if (!invoice.open()) {
                 throw new ApplicationProblemException(409, ErrorCode.INVALID_STATE);
             }
@@ -306,7 +310,7 @@ public class InvoiceBilling {
             if (!refused.isEmpty()) {
                 throw new ApplicationProblemException(400, ErrorCode.BAD_REQUEST, refused);
             }
-            BillingLedger.Payment payment = states.pay(
+            InvoiceStore.Payment payment = states.pay(
                     subscription,
                     invoice,
                     BillingTerms.BANK_TRANSFER,
