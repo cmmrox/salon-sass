@@ -2,6 +2,7 @@ package com.salonplatform.platform.application;
 
 import com.salonplatform.branding.inprocess.BrandProvisioning;
 import com.salonplatform.identity.inprocess.IdentityProvisioning;
+import com.salonplatform.identity.inprocess.PreparedOwner;
 import com.salonplatform.platform.domain.OperatorPermission;
 import com.salonplatform.platform.domain.PlainText;
 import com.salonplatform.platform.domain.ProvisioningRegions;
@@ -123,7 +124,7 @@ public class SalonProvisioning {
             errors.addAll(ex.errors());
         }
         OwnerInput owner = input.owner();
-        IdentityProvisioning.PreparedOwner preparedOwner = null;
+        PreparedOwner preparedOwner = null;
         if (owner != null) {
             try {
                 preparedOwner = identity.prepareOwner("owner.", owner.name(), owner.email(), owner.password());
@@ -136,7 +137,7 @@ public class SalonProvisioning {
             throw new ApplicationProblemException(400, ErrorCode.BAD_REQUEST, errors);
         }
         Map<String, Object> profile = checked;
-        IdentityProvisioning.PreparedOwner prepared = preparedOwner;
+        PreparedOwner prepared = preparedOwner;
         Map<String, Object> request = new LinkedHashMap<>(profile);
         request.put("owner.name", prepared.name());
         request.put("owner.email", prepared.email());

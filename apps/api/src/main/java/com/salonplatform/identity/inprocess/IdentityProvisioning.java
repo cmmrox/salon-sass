@@ -17,18 +17,6 @@ import java.util.UUID;
  */
 public interface IdentityProvisioning {
 
-    /**
-     * A first Owner whose input passed identity's rules, with the password already hashed. Created only
-     * by {@link #prepareOwner}; its text form never shows the hash or the address.
-     */
-    record PreparedOwner(String name, String email, String passwordHash) {
-
-        @Override
-        public String toString() {
-            return "PreparedOwner[redacted]";
-        }
-    }
-
     /** Identity's password rule: 15 to 128 code points and not a listed common password. */
     boolean acceptablePassword(String password);
 
@@ -61,6 +49,8 @@ public interface IdentityProvisioning {
      * Owner, no MFA secret and no session. The database refuses any other salon and a second bootstrap.
      *
      * @return the new Owner's staff id
+     * @throws IllegalArgumentException when the owner was not produced by {@link #prepareOwner}, before
+     *     anything is read or written
      * @throws IllegalStateException outside a platform transaction
      */
     UUID bootstrapOwner(UUID tenantId, PreparedOwner owner, Instant at);

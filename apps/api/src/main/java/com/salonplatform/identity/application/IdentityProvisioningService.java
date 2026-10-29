@@ -4,6 +4,7 @@ import com.salonplatform.identity.domain.Identifiers;
 import com.salonplatform.identity.domain.PasswordPolicy;
 import com.salonplatform.identity.infrastructure.IdentityCrypto;
 import com.salonplatform.identity.inprocess.IdentityProvisioning;
+import com.salonplatform.identity.inprocess.PreparedOwner;
 import com.salonplatform.shared.infrastructure.PlatformDatabase;
 import com.salonplatform.shared.web.ApplicationProblemException;
 import com.salonplatform.shared.web.ErrorCode;
@@ -66,11 +67,14 @@ class IdentityProvisioningService implements IdentityProvisioning {
             errors.add(new FieldProblem(
                     prefix + "password", "must contain 15 to 128 characters and must not be a common password"));
         if (!errors.isEmpty()) throw new ApplicationProblemException(400, ErrorCode.BAD_REQUEST, errors);
-        return new PreparedOwner(trimmedName, normalizedEmail, crypto.encodePassword(password));
+        return new ValidatedOwner(trimmedName, normalizedEmail, crypto.encodePassword(password));
     }
 
     @Override
     public UUID bootstrapOwner(UUID tenantId, PreparedOwner owner, Instant at) {
+        if (!(owner instanceof ValidatedOwner validated)) {
+            throw new IllegalArgumentException("Only identity's prepareOwner prepares an Owner for the bootstrap");
+        }
         PlatformDatabase database = platform.getObject();
         database.requireTransaction();
         UUID id = UUID.randomUUID();
@@ -80,9 +84,9 @@ class IdentityProvisioningService implements IdentityProvisioning {
                         String.class,
                         tenantId,
                         id,
-                        owner.name(),
-                        owner.email(),
-                        owner.passwordHash(),
+                        validated.name(),
+                        validated.email(),
+                        validated.passwordHash(),
                         Timestamp.from(at));
         return id;
     }
