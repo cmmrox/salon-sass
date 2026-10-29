@@ -1,6 +1,5 @@
 package com.salonplatform.identity.application;
 
-import com.salonplatform.identity.IdentityFacade.Principal;
 import com.salonplatform.identity.domain.*;
 import com.salonplatform.identity.infrastructure.IdentityCrypto;
 import com.salonplatform.shared.audit.*;
@@ -229,22 +228,6 @@ public class StaffAccess {
     /** A read a support session (F03-S04) may make as the Owner would; otherwise the staff check. */
     private void readable(String permission) {
         if (!SessionAccess.supportMay(permission)) permitted(permission);
-    }
-
-    private Principal principal(StaffAccount a) {
-        StaffRole r = role(a);
-        return new Principal(
-                a.id,
-                "staff",
-                a.role,
-                r.permissions(a.professionalGrant),
-                r.scope(a.professionalGrant),
-                a.id,
-                a.mfaSecret != null);
-    }
-
-    public Principal me() {
-        return work(() -> principal(auth().account()));
     }
 
     public SignIn signIn(String identifier, String password, String label, String address) {

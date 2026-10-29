@@ -1,4 +1,4 @@
-package com.salonplatform.platform;
+package com.salonplatform.platform.application;
 
 import com.salonplatform.shared.entitlements.SalonEntitlements;
 import com.salonplatform.shared.tenancy.TenantContext;
@@ -10,14 +10,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 /**
- * Platform's public entitlements facade (docs/architecture/operator-console.md, "Entitlements"): the
- * current salon's plan limits and features, read through {@code salon_entitlements()} on the caller's
- * own tenant transaction, which can see only the salon set in that transaction and locks its registry
- * row for share until the transaction ends. Staff seats are enforced by identity with it; branches,
- * message allowance, custom domain and dedicated app by the features that create those things.
+ * Platform's answer to {@link SalonEntitlements} (docs/architecture/operator-console.md, "Entitlements"):
+ * the current salon's plan limits and features, read through {@code salon_entitlements()} on the
+ * caller's own tenant transaction, which can see only the salon set in that transaction and locks its
+ * registry row for share until the transaction ends. Staff seats are enforced by identity with it;
+ * branches, message allowance, custom domain and dedicated app by the features that create those things.
  */
 @Service
-public class EntitlementsFacade implements SalonEntitlements {
+class SalonEntitlementsService implements SalonEntitlements {
 
     @PersistenceContext
     private EntityManager entityManager;

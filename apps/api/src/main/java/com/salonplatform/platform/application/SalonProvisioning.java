@@ -1,7 +1,7 @@
 package com.salonplatform.platform.application;
 
-import com.salonplatform.branding.BrandProvisioning;
-import com.salonplatform.identity.IdentityProvisioning;
+import com.salonplatform.branding.inprocess.BrandProvisioning;
+import com.salonplatform.identity.inprocess.IdentityProvisioning;
 import com.salonplatform.platform.domain.OperatorPermission;
 import com.salonplatform.platform.domain.PlainText;
 import com.salonplatform.platform.domain.ProvisioningRegions;

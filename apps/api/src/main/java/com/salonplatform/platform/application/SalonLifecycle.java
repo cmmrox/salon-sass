@@ -1,6 +1,6 @@
 package com.salonplatform.platform.application;
 
-import com.salonplatform.identity.IdentityLifecycle;
+import com.salonplatform.identity.inprocess.IdentityLifecycle;
 import com.salonplatform.platform.domain.LifecycleTerms;
 import com.salonplatform.platform.domain.OperatorPermission;
 import com.salonplatform.platform.infrastructure.PlatformAudit;

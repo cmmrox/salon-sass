@@ -1,6 +1,6 @@
 package com.salonplatform.platform.application;
 
-import com.salonplatform.identity.IdentityProvisioning;
+import com.salonplatform.identity.inprocess.IdentityProvisioning;
 import com.salonplatform.platform.domain.OperatorRole;
 import com.salonplatform.platform.domain.PlainText;
 import com.salonplatform.platform.infrastructure.OperatorCrypto;

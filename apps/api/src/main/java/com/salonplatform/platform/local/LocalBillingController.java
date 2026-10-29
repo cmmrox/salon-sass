@@ -1,6 +1,6 @@
 package com.salonplatform.platform.local;
 
-import com.salonplatform.branding.BrandProvisioning;
+import com.salonplatform.branding.inprocess.BrandProvisioning;
 import com.salonplatform.platform.application.BillingFaults;
 import com.salonplatform.platform.application.BillingJob;
 import com.salonplatform.platform.domain.Slugs;

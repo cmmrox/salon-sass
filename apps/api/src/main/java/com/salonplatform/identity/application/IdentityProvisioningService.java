@@ -1,8 +1,9 @@
-package com.salonplatform.identity;
+package com.salonplatform.identity.application;
 
 import com.salonplatform.identity.domain.Identifiers;
 import com.salonplatform.identity.domain.PasswordPolicy;
 import com.salonplatform.identity.infrastructure.IdentityCrypto;
+import com.salonplatform.identity.inprocess.IdentityProvisioning;
 import com.salonplatform.shared.infrastructure.PlatformDatabase;
 import com.salonplatform.shared.web.ApplicationProblemException;
 import com.salonplatform.shared.web.ErrorCode;
@@ -16,79 +17,36 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 
 /**
- * Identity's narrow public provisioning facade (docs/architecture/operator-console.md): the identity
- * rules platform needs for an operator or a salon's contact, and the one bootstrap of a new salon's
- * first Owner. The Owner is inserted by identity's own {@code identity_bootstrap_owner} function on
- * the platform connection, inside the platform transaction that creates the salon; platform never
- * writes identity's tables, and this facade never commits on its own.
+ * The first Owner is inserted by identity's own {@code identity_bootstrap_owner} function on the
+ * platform connection, inside the platform transaction that creates the salon.
  */
 @Service
-public class IdentityProvisioning {
-
-    /** A first Owner whose input passed identity's rules; the password is already hashed. */
-    public static final class PreparedOwner {
-        private final String name;
-        private final String email;
-        private final String passwordHash;
-
-        private PreparedOwner(String name, String email, String passwordHash) {
-            this.name = name;
-            this.email = email;
-            this.passwordHash = passwordHash;
-        }
-
-        public String email() {
-            return email;
-        }
-
-        public String name() {
-            return name;
-        }
-
-        @Override
-        public String toString() {
-            return "PreparedOwner[redacted]";
-        }
-    }
+class IdentityProvisioningService implements IdentityProvisioning {
 
     private final IdentityCrypto crypto;
     private final ObjectProvider<PlatformDatabase> platform;
 
-    public IdentityProvisioning(IdentityCrypto crypto, ObjectProvider<PlatformDatabase> platform) {
+    IdentityProvisioningService(IdentityCrypto crypto, ObjectProvider<PlatformDatabase> platform) {
         this.crypto = crypto;
         this.platform = platform;
     }
 
-    /** Identity's password rule: 15 to 128 code points and not a listed common password. */
+    @Override
     public boolean acceptablePassword(String password) {
         return PasswordPolicy.valid(password);
     }
 
-    /**
-     * Identity's email normalization: trimmed, lower case, a plausible address of at most 254
-     * characters. Blank is null.
-     *
-     * @throws IllegalArgumentException when it is not an acceptable address
-     */
+    @Override
     public String normalizedEmail(String value) {
         return Identifiers.email(value);
     }
 
-    /**
-     * Identity's Sri Lankan mobile normalization to {@code +947XXXXXXXX}. Blank is null.
-     *
-     * @throws IllegalArgumentException when it is not such a number
-     */
+    @Override
     public String normalizedMobile(String value) {
         return Identifiers.mobile(value);
     }
 
-    /**
-     * Validates a first Owner with identity's rules and hashes the password, before any
-     * transaction opens. Field names are prefixed (for example {@code owner.email}).
-     *
-     * @throws ApplicationProblemException 400 {@code bad_request} naming every failing field
-     */
+    @Override
     public PreparedOwner prepareOwner(String prefix, String name, String email, String password) {
         List<FieldProblem> errors = new ArrayList<>();
         String trimmedName = name == null ? null : name.strip();
@@ -111,14 +69,7 @@ public class IdentityProvisioning {
         return new PreparedOwner(trimmedName, normalizedEmail, crypto.encodePassword(password));
     }
 
-    /**
-     * Inserts the prepared Owner of a salon created in the current platform transaction: active,
-     * role Owner, no MFA secret and no session. The database refuses any other salon and a second
-     * bootstrap.
-     *
-     * @return the new Owner's staff id
-     * @throws IllegalStateException outside a platform transaction
-     */
+    @Override
     public UUID bootstrapOwner(UUID tenantId, PreparedOwner owner, Instant at) {
         PlatformDatabase database = platform.getObject();
         database.requireTransaction();
@@ -129,20 +80,14 @@ public class IdentityProvisioning {
                         String.class,
                         tenantId,
                         id,
-                        owner.name,
-                        owner.email,
-                        owner.passwordHash,
+                        owner.name(),
+                        owner.email(),
+                        owner.passwordHash(),
                         Timestamp.from(at));
         return id;
     }
 
-    /**
-     * The number of active staff accounts of a salon (its staff-seat usage), read through identity's
-     * {@code identity_active_staff_count} function in the current platform transaction: a count and
-     * nothing else of the salon's staff.
-     *
-     * @throws IllegalStateException outside a platform transaction
-     */
+    @Override
     public long activeStaffCount(UUID tenantId) {
         PlatformDatabase database = platform.getObject();
         database.requireTransaction();

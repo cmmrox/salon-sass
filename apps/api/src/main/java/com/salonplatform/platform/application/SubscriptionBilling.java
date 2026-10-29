@@ -1,6 +1,6 @@
 package com.salonplatform.platform.application;
 
-import com.salonplatform.identity.IdentityProvisioning;
+import com.salonplatform.identity.inprocess.IdentityProvisioning;
 import com.salonplatform.platform.domain.BillingTerms;
 import com.salonplatform.platform.domain.OperatorPermission;
 import com.salonplatform.platform.domain.ProvisioningRegions;

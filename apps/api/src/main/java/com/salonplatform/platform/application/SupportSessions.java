@@ -1,6 +1,7 @@
 package com.salonplatform.platform.application;
 
-import com.salonplatform.identity.IdentityFacade;
+import com.salonplatform.identity.Principal;
+import com.salonplatform.identity.Principals;
 import com.salonplatform.platform.domain.LifecycleTerms;
 import com.salonplatform.platform.domain.OperatorPermission;
 import com.salonplatform.platform.infrastructure.PlatformAudit;
@@ -187,7 +188,7 @@ public class SupportSessions implements SupportCredentials {
     private final OperatorAccess access;
     private final PlatformAudit audit;
     private final SupportCrypto crypto;
-    private final IdentityFacade identity;
+    private final Principals principals;
     private final Traces traces;
     private final JsonMapper json;
     private final Clock clock;
@@ -200,7 +201,7 @@ public class SupportSessions implements SupportCredentials {
             OperatorAccess access,
             PlatformAudit audit,
             SupportCrypto crypto,
-            IdentityFacade identity,
+            Principals principals,
             Traces traces,
             JsonMapper json,
             Clock clock,
@@ -211,7 +212,7 @@ public class SupportSessions implements SupportCredentials {
         this.access = access;
         this.audit = audit;
         this.crypto = crypto;
-        this.identity = identity;
+        this.principals = principals;
         this.traces = traces;
         this.json = json;
         this.clock = clock;
@@ -417,7 +418,7 @@ public class SupportSessions implements SupportCredentials {
     /** The salon's own sessions, active and past, for its Owner. */
     public SalonSupportSessionPage salonList(Paging paging) {
         UUID salonId = TenantContext.require().id();
-        identity.require("support.manage");
+        principals.require("support.manage");
         return database.inTransaction(status -> {
             Instant now = clock.instant();
             List<SalonSupportSession> items = database.jdbc()
@@ -448,7 +449,7 @@ public class SupportSessions implements SupportCredentials {
     /** The Owner revokes an active session of the salon; another salon's is not found. */
     public void salonRevoke(UUID sessionId) {
         UUID salonId = TenantContext.require().id();
-        IdentityFacade.Principal owner = identity.require("support.manage");
+        Principal owner = principals.require("support.manage");
         work.run(() -> {
             Row row = lockRow(sessionId)
                     .filter(each -> each.salonId().equals(salonId))

@@ -3,6 +3,7 @@ package com.salonplatform.identity;
 import static org.assertj.core.api.Assertions.*;
 
 import com.salonplatform.identity.application.StaffAccess;
+import com.salonplatform.identity.web.PrincipalResponseMapper;
 import com.salonplatform.testing.IntegrationTest;
 import java.time.Instant;
 import java.util.List;
@@ -20,6 +21,9 @@ import tools.jackson.databind.json.JsonMapper;
 class IdentityContractIntegrationTest extends IntegrationTest {
     @Autowired
     JsonMapper json;
+
+    @Autowired
+    PrincipalResponseMapper principals;
 
     @Test
     void auditBeforeAndAfterExplicitlyAllowNullAsSerialized() {
@@ -174,9 +178,9 @@ class IdentityContractIntegrationTest extends IntegrationTest {
                 "enroll_mfa", UUID.randomUUID(), UUID.randomUUID().toString(), Instant.now(), null);
         Map<String, Object> wire = json.readValue(json.writeValueAsString(challenge), Map.class);
         assertThat(wire.containsKey("credentials")).isFalse();
-        var customer = new IdentityFacade.Principal(
-                UUID.randomUUID(), "customer", null, Set.of("session.manage"), "own", null, false);
-        Map<String, Object> principal = json.readValue(json.writeValueAsString(customer), Map.class);
+        var customer = new Principal(UUID.randomUUID(), "customer", null, Set.of("session.manage"), "own", null, false);
+        Map<String, Object> principal =
+                json.readValue(json.writeValueAsString(principals.toResponse(customer)), Map.class);
         assertThat(principal.containsKey("role")).isTrue();
         assertThat(principal.get("role")).isNull();
         assertThat(principal.containsKey("staffId")).isTrue();

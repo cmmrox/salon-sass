@@ -1,6 +1,6 @@
 package com.salonplatform.identity.application;
 
-import com.salonplatform.identity.IdentityFacade.Principal;
+import com.salonplatform.identity.Principal;
 import com.salonplatform.identity.domain.*;
 import com.salonplatform.identity.infrastructure.IdentityCrypto;
 import com.salonplatform.shared.audit.*;

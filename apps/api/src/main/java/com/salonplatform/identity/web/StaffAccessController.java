@@ -1,6 +1,5 @@
 package com.salonplatform.identity.web;
 
-import com.salonplatform.identity.IdentityFacade.Principal;
 import com.salonplatform.identity.application.StaffAccess;
 import com.salonplatform.shared.web.NotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -21,14 +20,17 @@ class StaffAccessController {
     private final StaffAccess access;
     private final com.salonplatform.identity.infrastructure.ClientAddressAssertion assertions;
     private final com.salonplatform.identity.application.SessionAccess sessions;
+    private final PrincipalResponseMapper principals;
 
     StaffAccessController(
             StaffAccess access,
             com.salonplatform.identity.application.SessionAccess sessions,
-            com.salonplatform.identity.infrastructure.ClientAddressAssertion assertions) {
+            com.salonplatform.identity.infrastructure.ClientAddressAssertion assertions,
+            PrincipalResponseMapper principals) {
         this.sessions = sessions;
         this.access = access;
         this.assertions = assertions;
+        this.principals = principals;
     }
 
     record SignInRequest(
@@ -95,8 +97,8 @@ class StaffAccessController {
     }
 
     @GetMapping("/me")
-    ResponseEntity<Principal> me() {
-        return ok(sessions.me());
+    ResponseEntity<PrincipalResponse> me() {
+        return ok(principals.toResponse(sessions.me()));
     }
 
     @GetMapping("/sessions")
