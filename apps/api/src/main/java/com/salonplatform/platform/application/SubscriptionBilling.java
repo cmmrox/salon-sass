@@ -4,6 +4,7 @@ import com.salonplatform.identity.inprocess.IdentityProvisioning;
 import com.salonplatform.platform.domain.BillingTerms;
 import com.salonplatform.platform.domain.OperatorPermission;
 import com.salonplatform.platform.domain.ProvisioningRegions;
+import com.salonplatform.platform.infrastructure.BillingLedger;
 import com.salonplatform.platform.infrastructure.PlatformAudit;
 import com.salonplatform.shared.entitlements.SalonEntitlements;
 import com.salonplatform.shared.infrastructure.PlatformDatabase;

@@ -1,4 +1,4 @@
-package com.salonplatform.platform.application;
+package com.salonplatform.platform.infrastructure;
 
 import com.salonplatform.platform.domain.BillingCalendar;
 import com.salonplatform.platform.domain.BillingCalendar.State;
@@ -165,7 +165,7 @@ public class BillingLedger {
                 instant(row, "updated_at"));
     }
 
-    static Invoice invoice(ResultSet row) throws SQLException {
+    public static Invoice invoice(ResultSet row) throws SQLException {
         return new Invoice(
                 row.getObject("id", UUID.class),
                 row.getLong("number"),
@@ -185,7 +185,7 @@ public class BillingLedger {
                 instant(row, "paid_at"));
     }
 
-    static Payment payment(ResultSet row) throws SQLException {
+    public static Payment payment(ResultSet row) throws SQLException {
         java.sql.Date received = row.getDate("received_on");
         return new Payment(
                 row.getObject("id", UUID.class),
@@ -198,7 +198,7 @@ public class BillingLedger {
                 instant(row, "paid_at"));
     }
 
-    static final String INVOICE_COLUMNS = """
+    public static final String INVOICE_COLUMNS = """
             id, number, salon_id, subscription_id, plan_id, plan_key, plan_name, period_index, period_start,
             period_end, amount, currency, issued_at, due_at, status, paid_at
             """;
@@ -325,11 +325,11 @@ public class BillingLedger {
 
     // --- outbox ---------------------------------------------------------------------------------
 
-    void enqueue(UUID salon, String channel, Map<String, Object> payload, Instant now) {
+    public void enqueue(UUID salon, String channel, Map<String, Object> payload, Instant now) {
         enqueueWithId(salon, UUID.randomUUID(), channel, payload, now);
     }
 
-    void enqueueWithId(UUID salon, UUID id, String channel, Map<String, Object> payload, Instant now) {
+    public void enqueueWithId(UUID salon, UUID id, String channel, Map<String, Object> payload, Instant now) {
         database.jdbcTemplate()
                 .queryForObject(
                         "SELECT outbox_enqueue_for_salon(?, ?, ?, ?::jsonb, ?, ?)::text",

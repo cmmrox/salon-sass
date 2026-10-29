@@ -1,12 +1,13 @@
 package com.salonplatform.platform.application;
 
-import com.salonplatform.platform.application.BillingLedger.Changes;
-import com.salonplatform.platform.application.BillingLedger.Invoice;
-import com.salonplatform.platform.application.BillingLedger.Salon;
-import com.salonplatform.platform.application.BillingLedger.Subscription;
 import com.salonplatform.platform.domain.BillingCalendar;
 import com.salonplatform.platform.domain.BillingCalendar.Reminder;
 import com.salonplatform.platform.domain.BillingTerms;
+import com.salonplatform.platform.infrastructure.BillingLedger;
+import com.salonplatform.platform.infrastructure.BillingLedger.Changes;
+import com.salonplatform.platform.infrastructure.BillingLedger.Invoice;
+import com.salonplatform.platform.infrastructure.BillingLedger.Salon;
+import com.salonplatform.platform.infrastructure.BillingLedger.Subscription;
 import com.salonplatform.platform.infrastructure.PlatformAudit;
 import com.salonplatform.shared.infrastructure.PlatformDatabase;
 import java.sql.Timestamp;
