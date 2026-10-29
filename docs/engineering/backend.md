@@ -165,6 +165,24 @@ signature:
 - Use an event when another module reacts to a change (booking confirmed: send confirmations, update
   reports). Use a provided interface when the caller needs an answer now (availability needs staff
   hours and service durations).
+- **How it is built** (F23-S05): an event record carries `@EventType("<module>.<Name>.v<n>")` and is
+  published with `Outbox.publish`, which joins the caller's writable tenant transaction and stores
+  the row with kind `event`, the reserved channel `event`, the type name, the JSON payload (strict
+  reading: an unknown or missing field is refused), the salon and the trace. A subscriber implements
+  `EventSubscriber` for one event type and lives in its module's `event/` folder (a local test hook's
+  subscriber lives in `local/`). Each subscriber runs in its own transaction with the salon set, and
+  its change commits with its row in `shared_processed_event` (salon, event, subscriber), so a repeat
+  delivery is ignored; the event is delivered when every subscriber has processed it. A subscriber's
+  work counts against the outbox's 10-second provider time limit.
+- **Only known types are claimed** (decision 064): at startup an instance collects the `@EventType`
+  records of its build and asks `outbox_due_events` for due events of those types only. An event of
+  a type the instance does not know stays pending, unattempted, for an instance that knows it, so a
+  rolling deployment never loses a newer event; it shows in the waiting and oldest-due meters
+  meanwhile. A declared type with no subscriber is delivered at once. An event record is therefore
+  kept in the code until none of its events is pending anywhere; retiring a type means deleting its
+  pending rows deliberately.
+- Meters: `salon.outbox.deliveries` carries a `kind` tag (`delivery` or `event`); the waiting, dead
+  and oldest-due meters count both kinds.
 
 ## Ownership of tables and paths
 
@@ -261,10 +279,12 @@ Direct SQL through `JdbcClient` is allowed only for these named exceptions, each
 1. The platform database pool (`PlatformDatabase`), which is deliberately not a `DataSource` bean
    or a transaction manager, so that `@Transactional` can never pick the platform role by accident.
 2. Calls to the `SECURITY DEFINER` functions (`tenant_by_*`, `active_tenant_ids`, `outbox_due`,
+   `outbox_due_events`,
    `job_claim`, `job_finish` and the per-module erasers).
 3. Leasing and locking: outbox and job claims (`FOR UPDATE SKIP LOCKED`, conditional status
    updates), and a per-salon lock row created with `INSERT ... ON CONFLICT DO NOTHING` (identity's
-   `IdentityLock`), where a repository would make two first uses fail instead of both waiting.
+   `IdentityLock`), where a repository would make two first uses fail instead of both waiting; and
+   recording a processed event in `shared_processed_event` in the subscriber's transaction.
 4. Set-based bulk work: erasure, cleanup, lifecycle row deletion.
 5. Reporting read models and exports.
 
