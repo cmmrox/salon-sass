@@ -120,20 +120,27 @@ one service, map the result.
 
 - Each business service is an interface `service/FooService` with its implementation
   `service/impl/FooServiceImpl`. Write the interface first: its methods are the use cases, in the
-  business's words, with records, ids and DTOs in their signatures, never an entity or a repository
-  type.
-- `@Service` and `@Transactional` go on the implementation (`readOnly = true` for reads), never on
-  the interface. Dependencies come through the constructor (`@RequiredArgsConstructor`).
+  business's words, with records, ids and DTOs in their signatures (input records may be nested in
+  the interface), never an entity or a repository type.
+- `@Service` goes on the implementation, and the implementation starts the transaction, through
+  the module's transaction runner (`IdentityWork`, `OperatorWork`, `PlatformDatabase`) or
+  `@Transactional`; never on the interface. A method that joins its caller's transaction says so in
+  its Javadoc. Dependencies come through the constructor (`@RequiredArgsConstructor`).
 - Controllers, jobs, listeners and other services inject the interface, never an `Impl` class.
-- The module's root API interfaces (what other modules call) are implemented in `service/impl/`
-  too, named `<Interface>Impl`. Another module only ever sees the root interface.
+- The module's root API interfaces (what other modules call), and `shared` contracts a module
+  implements (`SalonEntitlements`, decision 057), are implemented in `service/impl/` too, named
+  `<Interface>Impl`. Another module only ever sees the interface.
+- In `shared`, each capability package holds its API (`Outbox`, `AuditTrail`, ...) and its
+  internals sit in `<capability>/impl/`, package-private, outside the named interface.
 - Helpers that are not services (calculators, validators, policies, a store's row records) are not
   `Impl` classes and get no interface: they live in `domain/` when pure, or stay package-private
   beside the implementation that uses them, in `service/impl/`. Every public class in
   `service/impl/` implements an interface.
 - An external provider with several adapters (SMS, email, payment) is an interface in the module
   with one class per adapter in `adapter/` (and `local/` for the local fake), named for the
-  provider, not `Impl`. Business rules live in `entity`, `domain` and `service`, never in a
+  provider, not `Impl`.
+
+Business rules live in `entity`, `domain` and `service`, never in a
 controller, a repository or a mapper. Classes in the root are interfaces, records, enums and
 exceptions only; a class elsewhere is package-private when nothing outside its folder needs it.
 The records a controller reads as a request body or returns as a response, at any depth of the
