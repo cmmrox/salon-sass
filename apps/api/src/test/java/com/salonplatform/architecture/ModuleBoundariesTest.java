@@ -175,7 +175,8 @@ class ModuleBoundariesTest {
     /**
      * Module verification, shown a tree that breaks it, names the class that breaks it: a cycle between
      * modules, another module's internal package, a sub-package of {@code shared} that is not a named
-     * interface, and a module its user does not declare in {@code allowedDependencies}.
+     * interface, the {@code impl} package beneath a named interface of {@code shared} (a named interface does
+     * not cover its sub-packages), and a module its user does not declare in {@code allowedDependencies}.
      */
     @ParameterizedTest(name = "{0}")
     @MethodSource("moduleViolations")
@@ -194,6 +195,7 @@ class ModuleBoundariesTest {
                 arguments("cycle", "PaymentFacade"),
                 arguments("internals", "PaymentUsesBookingEntity"),
                 arguments("sharedinternals", "BookingUsesSharedInternals"),
+                arguments("sharedimplinternals", "BookingUsesSharedImplementation"),
                 arguments("undeclared", "BookingUsesPayment"));
     }
 

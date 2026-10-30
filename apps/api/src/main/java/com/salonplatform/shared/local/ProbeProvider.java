@@ -18,9 +18,9 @@ import tools.jackson.databind.json.JsonMapper;
  */
 @Component
 @Profile("local")
-class ProbeProvider implements OutboxProvider {
+public class ProbeProvider implements OutboxProvider {
 
-    static final String CHANNEL = "probe";
+    public static final String CHANNEL = "probe";
 
     private final Map<UUID, AtomicInteger> calls = new ConcurrentHashMap<>();
 
@@ -52,7 +52,7 @@ class ProbeProvider implements OutboxProvider {
     }
 
     /** How many calls the provider has received for this message since the API started. */
-    int callsFor(UUID messageId) {
+    public int callsFor(UUID messageId) {
         AtomicInteger count = calls.get(messageId);
         return count == null ? 0 : count.get();
     }
