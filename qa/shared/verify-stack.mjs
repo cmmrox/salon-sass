@@ -40,7 +40,18 @@ await one('TC-F01-S05-001','images are unprivileged, report the tested commit an
 });
 await one('TC-F01-S05-002','image scanner passes clean images and refuses a fixable vulnerable image',()=>{
   const version=versions().SALON_API_1_VERSION;const output=script('images-scan',[`${settings.SALON_IMAGE_PREFIX||''}salon-api:${version}`,`${settings.SALON_IMAGE_PREFIX||''}salon-web:${version}`]);fs.writeFileSync(path.join(report,'images-scan.log'),output);
-  run('docker',['pull','alpine:3.18.0']);let failed=false;try{script('images-scan',['alpine:3.18.0']);}catch(e){const out=String(e.stdout)+String(e.stderr);fs.writeFileSync(path.join(report,'images-scan-vulnerable.log'),out);failed=e.status!==0&&/CVE-\d{4}-\d+/.test(out);}assert(failed,'scanner must reject and name a vulnerability');
+  run('docker',['pull','alpine:3.18.0']);let failed=false;try{script('images-scan',['alpine:3.18.0']);}catch(e){const out=String(e.stdout)+String(e.stderr);fs.writeFileSync(path.join(report,'images-scan-vulnerable.log'),out);failed=e.status===1&&/CVE-\d{4}-\d+/.test(out);}assert(failed,'scanner must reject with exit 1 and name a vulnerability');
+  // BUG-F01-005: a scan that cannot complete (Trivy's own fatal error, which it reports with exit 1) is
+  // reported as that, naming the image and Trivy's message (exit 2, docs/operations/environments-and-releases.md),
+  // never as vulnerabilities and never as clean. Trivy is replaced by a stand-in that fails as the real one did.
+  const image=`${settings.SALON_IMAGE_PREFIX||''}salon-api:${version}`;const fatal='FATAL Fatal error image scan error: failed to analyze layer (sha256:qa0f01005): post analysis error: walk dir error: walk error: context deadline exceeded';
+  const stub=fs.mkdtempSync('/tmp/salon-qa-trivy-');const real=run('sh',['-c','command -v docker']).trim();
+  fs.writeFileSync(path.join(stub,'docker'),`#!/bin/sh\nif [ "$1" = run ]; then for a in "$@"; do case "$a" in aquasec/trivy*) echo '2026-10-30T00:00:00Z\t${fatal}' >&2; exit 1;; esac; done; fi\nexec '${real}' "$@"\n`,{mode:0o755});
+  try{let incomplete=null;try{script('images-scan',[image],{env:{...process.env,PATH:`${stub}:${process.env.PATH}`}});}catch(e){incomplete={status:e.status,out:String(e.stdout)+String(e.stderr)};}
+    assert(incomplete,'a scan that could not complete must not pass');fs.writeFileSync(path.join(report,'images-scan-incomplete.log'),incomplete.out);
+    assert.equal(incomplete.status,2,'a scan that could not complete exits 2');assert(!/vulnerabilities with a fix/.test(incomplete.out),'a scanner failure is not reported as vulnerabilities');
+    assert.match(incomplete.out,/could not complete/);assert(incomplete.out.includes(image),'names the image');assert(incomplete.out.includes('context deadline exceeded'),"carries Trivy's message");}
+  finally{fs.rmSync(stub,{recursive:true,force:true});}
 });
 await one('TC-F01-S05-003','HTTP hostname routing preserves salon and neutral hosts',()=>{
   for(const s of salons){const entry=curl(s.slug,'/');assert.equal(entry.status,307);const location=(entry.headers.match(/^location: (\S+)\r?$/im)||[])[1];assert([url(s.slug,'/workspace'),'/workspace'].includes(location),`${s.slug}: same-host workspace entry, got ${location}`);assert.match(entry.headers,/^cache-control: .*no-store/im);const r=curl(s.slug,ENTRY);assert.equal(r.status,200);assert(r.body.includes(s.name.replaceAll('&','&amp;')));const api=curl(s.slug,'/api/v1/salon');assert.equal(api.status,200);assert.deepEqual(JSON.parse(api.body),{slug:s.slug,name:s.name,brandColour:s.brandColour,timeZone:s.timeZone});}
