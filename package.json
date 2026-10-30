@@ -9,6 +9,13 @@
   },
   "scripts": {
     "contracts:generate": "node packages/api-contracts/scripts/contracts.mjs generate",
-    "contracts:check": "node packages/api-contracts/scripts/contracts.mjs check"
+    "contracts:check": "node packages/api-contracts/scripts/contracts.mjs check",
+    "format": "prettier --write apps/web packages",
+    "format:check": "prettier --check apps/web packages"
+  },
+  "devDependencies": {
+    "knip": "6.43.0",
+    "prettier": "3.9.10",
+    "prettier-plugin-tailwindcss": "0.8.1"
   }
 }
