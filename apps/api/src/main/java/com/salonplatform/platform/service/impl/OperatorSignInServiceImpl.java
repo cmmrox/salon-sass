@@ -25,6 +25,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -77,12 +78,21 @@ class OperatorSignInServiceImpl implements OperatorSignInService {
 
     // --- sign-in ---------------------------------------------------------------------------------
 
+    /**
+     * In three short platform transactions, with the password check (PBKDF2, deliberately slow)
+     * between them and inside none: the attempt is counted and committed first, so every attempt
+     * counts and the limit is exact even if what follows fails; then the account is read; then the
+     * outcome is recorded. Checking the password inside the counting transaction would hold a
+     * connection of the small platform pool, and the counter row's lock, for as long as the check
+     * takes, so that a burst of sign-ins queues behind one another and starves every other request
+     * on that pool.
+     */
     @Override
     public OperatorSignIn signIn(String email, String password, String label, String address) {
         String device = deviceLabel(label);
-        return work.run(() -> {
-            String key = email == null ? "" : email.strip().toLowerCase(Locale.ROOT);
-            Instant now = clock.instant();
+        String key = email == null ? "" : email.strip().toLowerCase(Locale.ROOT);
+        Instant now = clock.instant();
+        work.run(() -> {
             Attempt byEmail = attempt("operator-email", key, EMAIL_CEILING, now);
             Attempt byAddress = attempt("operator-address", address == null ? "" : address, ADDRESS_CEILING, now);
             if (!byEmail.allowed() || !byAddress.allowed()) {
@@ -98,10 +108,18 @@ class OperatorSignInServiceImpl implements OperatorSignInService {
                         byEmail.allowed() ? 0 : byEmail.retryAfter(), byAddress.allowed() ? 0 : byAddress.retryAfter());
                 throw new ApplicationProblemException(429, ErrorCode.RATE_LIMITED).retryAfter(Math.max(1, retry));
             }
-            Optional<Account> found = users.findByEmail(key);
-            boolean correct = crypto.matchesPassword(
-                    password, found.map(Account::passwordHash).orElse(null));
+            return null;
+        });
+        Optional<Account> checked = work.run(() -> users.findByEmail(key));
+        boolean correct = crypto.matchesPassword(
+                password, checked.map(Account::passwordHash).orElse(null));
+        return work.run(() -> {
+            // The account as it is now: one disabled, or whose password changed, while its password
+            // was being checked is refused like any other wrong credential.
+            Optional<Account> found = checked.isEmpty() ? checked : users.findByEmail(key);
             if (found.isEmpty()
+                    || !found.get().id().equals(checked.get().id())
+                    || !Objects.equals(found.get().passwordHash(), checked.get().passwordHash())
                     || !found.get().active()
                     || !correct
                     || OperatorRole.of(found.get().role()).isEmpty()) {
