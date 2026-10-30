@@ -265,7 +265,7 @@ Every case is automated; no manual or deferred acceptance cases. Human API/opera
 - **Expected:** Escalation refused; RLS cannot be bypassed; rows/catalogue unchanged.
 - **Automation:** `qa/checks/F01/S02-database-isolation.sh`
 
-### TC-F01-S02-033 The registry is reached only through tenant_by_slug, which gives one slug's id, status and time zone, to the application's role alone, and cannot be redirected
+### TC-F01-S02-033 The registry is reached only through tenant_by_slug, which gives one slug's id, status, time zone and access state, to the application's role alone, and cannot be redirected
 
 - **Type:** security
 - **Priority:** high
@@ -274,7 +274,7 @@ Every case is automated; no manual or deferred acceptance cases. Human API/opera
 - **Preconditions:** Product is up with the three synthetic salons; every isolation check proves the target owner’s data exists first.
 - **Steps:**
   1. Call tenant_by_slug for each salon and a lookalike/injection; inspect definer/search_path/execute grants; call from unprivileged role in rollback.
-- **Expected:** Only exact slug lookup returns id/status; function fixed search_path and restricted execution; no broad tenant read.
+- **Expected:** Only exact slug lookup returns id/status (and, since F03-S02, time zone and access state); function fixed search_path and restricted execution; no broad tenant read.
 - **Automation:** `qa/checks/F01/S02-database-isolation.sh`
 
 ### TC-F01-S02-034 With no tenant set, the application's role sees no row of salon_brand, although three exist
