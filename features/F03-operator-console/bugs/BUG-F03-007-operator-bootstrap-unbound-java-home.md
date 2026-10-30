@@ -52,7 +52,8 @@ export `RESOLVED_JAVA_HOME` to a Java 25 home by hand, which no document mention
 
 ## Evidence
 
-Run log in the QA scratch folder (no credential in it): the two lines above. The account file was
+Run log kept in the local, uncommitted `qa/reports/20261030-F23-preflight/operator-bootstrap-run1.log`
+(no credential in it): the two lines above. The account file was
 random, synthetic and deleted afterwards; the fresh database is dropped at the end of the pass.
 
 ## Re-verification

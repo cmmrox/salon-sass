@@ -52,8 +52,8 @@ is not affected. Every time (2 of 2 requests on each build).
 
 ## Evidence
 
-QA scratch logs `standalone/server-127.log` (F23 head) and `standalone/main-server.log`
-(`origin/main`): repeated `GET /salon-site/nowhere 200` lines; no secrets.
+Server logs kept in the local, uncommitted `qa/reports/20261030-F23-preflight/`:
+`server-127.log` (F23 head) and `main-server.log` (`origin/main`): repeated `GET /salon-site/nowhere 200` lines; no secrets.
 
 ## Re-verification
 
