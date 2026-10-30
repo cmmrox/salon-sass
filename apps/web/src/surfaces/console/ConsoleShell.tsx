@@ -1,7 +1,7 @@
 import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 import { SidebarInset } from '@/components/ui/sidebar';
-import { Navigation, NavigationProvider, NavigationTrigger, type NavigationItem } from '@/components/shell/Navigation';
+import { Navigation, NavigationProvider, NavigationTrigger, type NavigationItem } from '@/components/shared/Navigation';
 import { ConsoleSignOut } from './ConsoleSignOut';
 
 export type ConsoleView = 'salons' | 'plans' | 'support' | 'none';

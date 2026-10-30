@@ -39,9 +39,9 @@ const COLOUR_VALUE = /(?<![\w&])#(?:[0-9a-f]{8}|[0-9a-f]{6}|[0-9a-f]{3,4})\b|\b(
 /** An arbitrary value holding a colour: `bg-[#D6086A]`, `text-[rgb(…)]`, `border-[color:…]`. */
 const ARBITRARY_COLOUR = /[\w-]+-\[(?:color:)?[^\]\s]*?(?:#[0-9a-f]{3,8}\b|\b(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch|color-mix|color)\()[^\]\s]*\]/gi;
 
-/** A file a component lives in: every .tsx, and the code of src/components and src/app. */
+/** A file a component lives in: every .tsx, and the code of src/app, src/surfaces, src/features and src/components. */
 function isComponentFile(path: string): boolean {
-  return !TEST_FILE.test(path) && (path.endsWith('.tsx') || (/^src\/(components|app)\//.test(path) && CODE_FILE.test(path)));
+  return !TEST_FILE.test(path) && (path.endsWith('.tsx') || (/^src\/(app|surfaces|features|components)\//.test(path) && CODE_FILE.test(path)));
 }
 
 /** Every rule a set of files breaks, one line each. */

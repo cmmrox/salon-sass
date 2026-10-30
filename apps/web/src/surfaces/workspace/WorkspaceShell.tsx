@@ -3,7 +3,7 @@ import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 import type { Salon } from '@/features/branding/server/salon';
 import { SidebarInset } from '@/components/ui/sidebar';
-import { Navigation, NavigationProvider, NavigationTrigger, type NavigationItem } from './Navigation';
+import { Navigation, NavigationProvider, NavigationTrigger, type NavigationItem } from '@/components/shared/Navigation';
 
 /**
  * The prototype's Salon workspace frame: a sticky header with the salon's name, the shadcn/ui

@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 
-import { Notice } from '@/components/notice/Notice';
+import { Notice } from '@/components/shared/Notice';
 
 export default function NotFound() {
   const t = useTranslations('notFound');

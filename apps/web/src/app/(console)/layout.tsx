@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
-import { BrandStyle } from '@/components/shell/BrandStyle';
+import { BrandStyle } from '@/components/shared/BrandStyle';
 
 /**
  * The operator console, at its reserved hostname that never resolves to a salon

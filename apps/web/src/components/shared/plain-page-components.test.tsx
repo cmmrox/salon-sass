@@ -1,12 +1,12 @@
 import { screen } from '@testing-library/react';
 import { expect, it } from 'vitest';
 
-import { Notice } from '@/components/notice/Notice';
-import { AppShell } from '@/components/shell/AppShell';
-import { StatusBody, StatusPanel } from '@/components/status/Status';
+import { Notice } from './Notice';
+import { AppShell } from './AppShell';
+import { StatusBody, StatusPanel } from './Status';
 import { renderWithMessages } from '@/test/render';
 
-import { plainPageHtml, type PlainPage } from './plain-page';
+import { plainPageHtml, type PlainPage } from '@/lib/plain-page/plain-page';
 
 // The plain pages repeat the markup of the React components (CR-017): the same elements, the same
 // shadcn/ui data-slots and the same Tailwind classes, so they look the same with no React. Each

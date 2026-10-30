@@ -86,8 +86,8 @@ describe('the salon theme', () => {
   });
 
   it('draws the sign-in accents in the salon brand (CR-012, CR-013)', () => {
-    const signIn = read('components/account/SignIn.tsx');
-    const frame = read('components/account/StaffSignInFrame.tsx');
+    const signIn = read('features/identity/components/SignIn.tsx');
+    const frame = read('surfaces/workspace/StaffSignInFrame.tsx');
     const button = read('components/ui/button.tsx');
     // The sign-in action is the default (brand) action; the recovery control is the brand link.
     expect(signIn).toMatch(/testId="account-sign-in-submit"(?![^>]*secondary)/);
@@ -113,7 +113,7 @@ describe('the salon theme', () => {
   it('draws the workspace navigation\'s current route in the salon brand', () => {
     // The Sidebar (CR-017): the current route's menu button is active, and an active button is
     // filled with the sidebar's primary colours, which are the salon's brand and its readable colour.
-    expect(read('components/shell/Navigation.tsx')).toContain('isActive={Boolean(item.current)}');
+    expect(read('components/shared/Navigation.tsx')).toContain('isActive={Boolean(item.current)}');
     expect(read('components/ui/sidebar.tsx')).toContain('data-[active=true]:bg-sidebar-primary data-[active=true]:text-sidebar-primary-foreground');
     expect(tailwindNames().get('--color-sidebar-primary')).toBe('var(--sidebar-primary)');
     expect(tailwindNames().get('--color-sidebar-primary-foreground')).toBe('var(--sidebar-primary-foreground)');

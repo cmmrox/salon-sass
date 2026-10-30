@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-import { AppShell } from '@/components/shell/AppShell';
+import { AppShell } from './AppShell';
 import { Card, CardTitle } from '@/components/ui/card';
 
 /**

@@ -1,8 +1,8 @@
 import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 import type { Salon } from '@/features/branding/server/salon';
-import { BrandStyle } from '@/components/shell/BrandStyle';
-import { WorkspaceShell, type WorkspaceView } from '@/components/shell/WorkspaceShell';
+import { BrandStyle } from '@/components/shared/BrandStyle';
+import { WorkspaceShell, type WorkspaceView } from './WorkspaceShell';
 import { StaffSignInFrame } from './StaffSignInFrame';
 /** Every salon screen carries the salon's resolved identity and its brand accent. */
 export function AccountFrame({ salon, children, permissions, view = 'account', signIn = false, banner, supportBanner, support = false }: { salon: Salon;  children: ReactNode; permissions?: string[]; view?: WorkspaceView; signIn?: boolean; banner?: ReactNode; supportBanner?: ReactNode; support?: boolean }) {

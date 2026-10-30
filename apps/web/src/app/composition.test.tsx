@@ -3,17 +3,17 @@ import { join, relative, sep } from 'node:path';
 import { fireEvent, screen } from '@testing-library/react';
 import type { AnchorHTMLAttributes } from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import NotFound from '@/app/not-found';
-import { Notice } from '@/components/notice/Notice';
-import { AppShell } from '@/components/shell/AppShell';
-import { WorkspaceShell } from '@/components/shell/WorkspaceShell';
-import { StatusBody, StatusPanel } from '@/components/status/Status';
+import NotFound from './not-found';
+import { Notice } from '@/components/shared/Notice';
+import { AppShell } from '@/components/shared/AppShell';
+import { WorkspaceShell } from '@/surfaces/workspace/WorkspaceShell';
+import { StatusBody, StatusPanel } from '@/components/shared/Status';
 import { renderWithMessages } from '@/test/render';
 import { setViewportWidth } from '@/test/viewport';
 
 /**
  * docs/engineering/web.md, "Styling", rules 1 and 10 (CR-016, CR-017): every product component
- * under src/components and src/app is composed of shadcn/ui components from components/ui. This
+ * under src/app, src/surfaces, src/features and src/components is composed of shadcn/ui components from components/ui. This
  * fails on a raw control, table or dialog element, on Native Select, and when a screen stops
  * rendering the shadcn/ui component (its `data-slot`) the component map names for its job.
  * Fix the code, never this test.
@@ -42,24 +42,24 @@ export function compositionViolations(files: SourceFile[]): string[] {
   return found;
 }
 
-/** The product's component files: .tsx under src/components and src/app, except components/ui and tests. */
+/** The product's component files: .tsx under src/app, src/surfaces, src/features and src/components, except components/ui and tests. */
 function productComponents(): SourceFile[] {
   const walk = (dir: string): string[] => readdirSync(dir).flatMap((name) => {
     const path = join(dir, name);
     return statSync(path).isDirectory() ? walk(path) : [path];
   });
-  return ['components', 'app']
+  return ['app', 'surfaces', 'features', 'components']
     .flatMap((area) => walk(join(web, 'src', area)))
     .map((path) => relative(web, path).split(sep).join('/'))
     .filter((path) => path.endsWith('.tsx') && !path.includes('.test.') && !path.startsWith('src/components/ui/'))
     .map((path) => ({ path, content: readFileSync(join(web, path), 'utf8') }));
 }
 
-describe('every product component (src/components and src/app)', () => {
+describe('every product component (src/app, src/surfaces, src/features and src/components)', () => {
   it('writes no raw control, table or dialog element and no Native Select', () => {
     const files = productComponents();
     expect(files.length).toBeGreaterThan(20);
-    expect(files.map((file) => file.path)).toEqual(expect.arrayContaining(['src/app/not-found.tsx', 'src/components/shell/Navigation.tsx', 'src/components/account/AccountScreen.tsx']));
+    expect(files.map((file) => file.path)).toEqual(expect.arrayContaining(['src/app/not-found.tsx', 'src/components/shared/Navigation.tsx', 'src/features/identity/components/AccountScreen.tsx']));
     expect(compositionViolations(files)).toEqual([]);
   });
 

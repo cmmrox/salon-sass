@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
-import { AppShell } from '@/components/shell/AppShell';
-import { BrandStyle } from '@/components/shell/BrandStyle';
+import { AppShell } from '@/components/shared/AppShell';
+import { BrandStyle } from '@/components/shared/BrandStyle';
 import { ExportDownload } from '@/features/platform/components/ExportDownload';
 
 /**

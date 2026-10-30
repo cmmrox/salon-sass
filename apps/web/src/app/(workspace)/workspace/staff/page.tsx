@@ -1,2 +1,2 @@
-import { AccountPage } from '@/components/account/AccountPage';
+import { AccountPage } from '@/surfaces/workspace/AccountPage';
 export default function Page() { return <AccountPage kind="staff" view="staff" />; }

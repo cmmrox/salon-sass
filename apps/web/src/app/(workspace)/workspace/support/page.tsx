@@ -1,8 +1,8 @@
 import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
-import { BrandStyle } from '@/components/shell/BrandStyle';
-import { StaffSignInFrame } from '@/components/account/StaffSignInFrame';
-import { SupportEntry } from '@/components/support/SupportEntry';
+import { BrandStyle } from '@/components/shared/BrandStyle';
+import { StaffSignInFrame } from '@/surfaces/workspace/StaffSignInFrame';
+import { SupportEntry } from '@/surfaces/workspace/SupportEntry';
 import { decodeSalon, SALON_HEADER } from '@/features/branding/server/salon-header';
 
 /** The support entry page (F03-S04): the console's link opens it with the entry code in its fragment. */

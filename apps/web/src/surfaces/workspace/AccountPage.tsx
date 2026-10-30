@@ -10,8 +10,8 @@ import { BillingBanner, type Entitlements } from '@/features/platform/components
 import { BillingScreen } from './BillingScreen';
 import { Denied } from '@/features/identity/components/Controls';
 import { SignIn } from '@/features/identity/components/SignIn';
-import { SupportAccessScreen } from '@/components/support/SupportAccessScreen';
-import { SupportBanner } from '@/components/support/SupportBanner';
+import { SupportAccessScreen } from './SupportAccessScreen';
+import { SupportBanner } from './SupportBanner';
 
 type View = 'account' | 'staff' | 'audit' | 'billing' | 'support-access';
 type PageProps = { kind: Kind; view?: View; signIn?: boolean };
