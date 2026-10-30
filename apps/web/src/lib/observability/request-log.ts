@@ -37,7 +37,11 @@ function onRequest({ request, response, server }: RequestStart, sink: LogSink | 
   const started = process.hrtime.bigint();
   const context = contextFromTraceparent(request.headers.traceparent);
   context.deadline = performance.now() + 3000;
-  try { context.clientAddress = clientAddress(request.socket.remoteAddress, request.headers['x-forwarded-for']); } catch { /* BFF fails closed without an address. */ }
+  try {
+    context.clientAddress = clientAddress(request.socket.remoteAddress, request.headers['x-forwarded-for']);
+  } catch {
+    /* BFF fails closed without an address. */
+  }
   enterRequest(context);
 
   const state = serverState();

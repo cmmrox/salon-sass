@@ -71,7 +71,9 @@ describe('drain', () => {
 describe('drainSettingsFromEnvironment', () => {
   it('waits 5 s and gives requests 30 s unless told otherwise', () => {
     expect(drainSettingsFromEnvironment({})).toMatchObject({ delayMs: 5000, graceMs: 30000 });
-    expect(drainSettingsFromEnvironment({ SALON_DRAIN_DELAY_SECONDS: '2', SALON_SHUTDOWN_GRACE_SECONDS: '10' })).toMatchObject({
+    expect(
+      drainSettingsFromEnvironment({ SALON_DRAIN_DELAY_SECONDS: '2', SALON_SHUTDOWN_GRACE_SECONDS: '10' }),
+    ).toMatchObject({
       delayMs: 2000,
       graceMs: 10000,
     });

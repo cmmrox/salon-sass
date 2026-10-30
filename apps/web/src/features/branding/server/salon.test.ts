@@ -45,11 +45,19 @@ describe('findSalon', () => {
   it('carries the API timezone but excludes unrelated fields', async () => {
     const { client } = clientAnswering(200, { ...alpha, timeZone: 'Europe/London', secret: 'x' });
 
-    await expect(findSalon('alpha', 'alpha.localhost', client)).resolves.toEqual({ kind: 'found', salon: { ...alpha, timeZone: 'Europe/London' } });
+    await expect(findSalon('alpha', 'alpha.localhost', client)).resolves.toEqual({
+      kind: 'found',
+      salon: { ...alpha, timeZone: 'Europe/London' },
+    });
   });
 
   it('never returns the brand of another salon than the one asked for', async () => {
-    const { client } = clientAnswering(200, { slug: 'beta', name: 'Beta', brandColour: '#1F2937', timeZone: 'Asia/Colombo' });
+    const { client } = clientAnswering(200, {
+      slug: 'beta',
+      name: 'Beta',
+      brandColour: '#1F2937',
+      timeZone: 'Asia/Colombo',
+    });
 
     await expect(findSalon('alpha', 'alpha.localhost', client)).resolves.toEqual({ kind: 'unavailable' });
   });
@@ -69,7 +77,7 @@ describe('findSalon', () => {
   it.each([
     ['the database is down', 503, problem(503, 'service_unavailable')],
     ['an internal error', 500, problem(500, 'internal_error')],
-    ['a 404 that is not the contract\'s', 404, { message: 'no' }],
+    ["a 404 that is not the contract's", 404, { message: 'no' }],
     ['a 403 with another code', 403, problem(403, 'request_rejected')],
   ])('is unavailable, not "not found", when the answer is %s', async (_, status, body) => {
     const { client } = clientAnswering(status, body, 'application/problem+json');
@@ -96,9 +104,17 @@ describe('findSalon', () => {
     ['no colour', undefined],
     ['a colour that is not text', 0xd6086a],
   ])('gives a salon with %s the default brand colour', async (_, brandColour) => {
-    const { client } = clientAnswering(200, { slug: 'alpha', name: 'Alpha Studio', timeZone: 'Asia/Colombo', ...(brandColour === undefined ? {} : { brandColour }) });
+    const { client } = clientAnswering(200, {
+      slug: 'alpha',
+      name: 'Alpha Studio',
+      timeZone: 'Asia/Colombo',
+      ...(brandColour === undefined ? {} : { brandColour }),
+    });
 
-    await expect(findSalon('alpha', 'alpha.localhost', client)).resolves.toEqual({ kind: 'found', salon: { slug: 'alpha', name: 'Alpha Studio', brandColour: '#D6086A', timeZone: 'Asia/Colombo' } });
+    await expect(findSalon('alpha', 'alpha.localhost', client)).resolves.toEqual({
+      kind: 'found',
+      salon: { slug: 'alpha', name: 'Alpha Studio', brandColour: '#D6086A', timeZone: 'Asia/Colombo' },
+    });
   });
 
   it('is unavailable when the API cannot be reached', async () => {
@@ -145,7 +161,8 @@ describe('findSalon', () => {
     let status = 200;
     const client = createApiClient({
       baseUrl: 'http://api.test',
-      fetch: async () => new Response(JSON.stringify(answer), { status, headers: { 'Content-Type': 'application/json' } }),
+      fetch: async () =>
+        new Response(JSON.stringify(answer), { status, headers: { 'Content-Type': 'application/json' } }),
     });
 
     await expect(findSalon('alpha', 'alpha.localhost', client)).resolves.toEqual({ kind: 'found', salon: alpha });

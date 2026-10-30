@@ -33,8 +33,12 @@ export async function workspaceEntry(kind: Kind, credentials: Credentials, hostn
   try {
     let status = 401;
     if (credentials.access) {
-      const answer = await client.GET('/api/v1/identity/me', { headers: { Authorization: `Bearer ${credentials.access}` }, signal: requestSignal() });
-      if (answer.data) return answer.data.kind === kind ? { kind: 'signed-in', principal: answer.data } : { kind: 'signed-out' };
+      const answer = await client.GET('/api/v1/identity/me', {
+        headers: { Authorization: `Bearer ${credentials.access}` },
+        signal: requestSignal(),
+      });
+      if (answer.data)
+        return answer.data.kind === kind ? { kind: 'signed-in', principal: answer.data } : { kind: 'signed-out' };
       status = answer.response.status;
       // An outage is not a sign-out: the workspace offers its safe retry instead.
       if (status !== 401 && status !== 403) return { kind: 'pending' };

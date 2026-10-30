@@ -16,7 +16,8 @@ export async function register(): Promise<void> {
     const { trustedPeer } = await import('./lib/http/network');
     proxyKey();
     trustedPeer('127.0.0.1');
-    if (!['true', 'false', undefined].includes(process.env.SALON_WEB_LOCAL_HTTP)) throw new Error('SALON_WEB_LOCAL_HTTP must be true or false');
+    if (!['true', 'false', undefined].includes(process.env.SALON_WEB_LOCAL_HTTP))
+      throw new Error('SALON_WEB_LOCAL_HTTP must be true or false');
   }
   writeConsoleAsJson();
   installRequestLog();

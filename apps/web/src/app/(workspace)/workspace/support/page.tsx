@@ -8,5 +8,12 @@ import { decodeSalon, SALON_HEADER } from '@/features/branding/server';
 export default async function Page() {
   const salon = decodeSalon((await headers()).get(SALON_HEADER));
   if (!salon) notFound();
-  return <><BrandStyle colour={salon.brandColour} /><StaffSignInFrame salon={salon}><SupportEntry /></StaffSignInFrame></>;
+  return (
+    <>
+      <BrandStyle colour={salon.brandColour} />
+      <StaffSignInFrame salon={salon}>
+        <SupportEntry />
+      </StaffSignInFrame>
+    </>
+  );
 }

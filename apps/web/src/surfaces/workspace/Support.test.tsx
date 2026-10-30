@@ -22,7 +22,10 @@ beforeEach(() => {
   Object.defineProperty(window, 'location', { configurable: true, value: location });
   vi.spyOn(window.history, 'replaceState').mockImplementation(() => undefined);
 });
-afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
 
 const CODE = 'B'.repeat(43);
 
@@ -95,16 +98,45 @@ describe('support banner', () => {
   });
 });
 
-const ACTIVE = { id: 's1', operatorName: 'Nimal Support', reason: 'Owner asked about staff access', startedAt: '2026-01-01T08:00:00Z', expiresAt: '2026-01-01T08:30:00Z', endedAt: null, endedBy: null, state: 'active' };
+const ACTIVE = {
+  id: 's1',
+  operatorName: 'Nimal Support',
+  reason: 'Owner asked about staff access',
+  startedAt: '2026-01-01T08:00:00Z',
+  expiresAt: '2026-01-01T08:30:00Z',
+  endedAt: null,
+  endedBy: null,
+  state: 'active',
+};
 const PAST = { ...ACTIVE, id: 's0', endedAt: '2026-01-01T07:10:00Z', endedBy: 'owner', state: 'ended' };
-const PRINCIPAL = { id: 'o', kind: 'staff', role: 'OWNER', permissions: ['support.manage'], scope: 'salon', staffId: 'o', mfaEnabled: true, expiresAt: null };
+const PRINCIPAL = {
+  id: 'o',
+  kind: 'staff',
+  role: 'OWNER',
+  permissions: ['support.manage'],
+  scope: 'salon',
+  staffId: 'o',
+  mfaEnabled: true,
+  expiresAt: null,
+};
 
 describe('Owner support access page', () => {
   it('lists active and past sessions with operator, reason, times and state, and revokes after confirmation', async () => {
     let revoked = false;
-    stubApi((url) => url.includes('principal') ? Response.json(PRINCIPAL)
-      : url.includes('support-revoke') ? (revoked = true, Response.json({ ok: true }))
-        : Response.json({ items: revoked ? [{ ...ACTIVE, state: 'ended', endedBy: 'owner', endedAt: ACTIVE.startedAt }, PAST] : [ACTIVE, PAST], page: 0, size: 10, total: 2 }));
+    stubApi((url) =>
+      url.includes('principal')
+        ? Response.json(PRINCIPAL)
+        : url.includes('support-revoke')
+          ? ((revoked = true), Response.json({ ok: true }))
+          : Response.json({
+              items: revoked
+                ? [{ ...ACTIVE, state: 'ended', endedBy: 'owner', endedAt: ACTIVE.startedAt }, PAST]
+                : [ACTIVE, PAST],
+              page: 0,
+              size: 10,
+              total: 2,
+            }),
+    );
     renderWithMessages(<SupportAccessScreen timeZone="Asia/Colombo" />);
     const rows = await screen.findAllByTestId('support-access-row');
     expect(rows).toHaveLength(2);
@@ -123,13 +155,19 @@ describe('Owner support access page', () => {
   });
 
   it('cancels revocation with nothing sent, and shows the empty state', async () => {
-    stubApi((url) => url.includes('principal') ? Response.json(PRINCIPAL) : Response.json({ items: [], page: 0, size: 10, total: 0 }));
+    stubApi((url) =>
+      url.includes('principal') ? Response.json(PRINCIPAL) : Response.json({ items: [], page: 0, size: 10, total: 0 }),
+    );
     renderWithMessages(<SupportAccessScreen timeZone="Asia/Colombo" />);
     expect(await screen.findByTestId('support-access-empty')).toHaveTextContent('No support sessions yet');
   });
 
   it('says when another role is refused', async () => {
-    stubApi((url) => url.includes('principal') ? Response.json(PRINCIPAL) : Response.json({ code: 'permission_denied' }, { status: 403 }));
+    stubApi((url) =>
+      url.includes('principal')
+        ? Response.json(PRINCIPAL)
+        : Response.json({ code: 'permission_denied' }, { status: 403 }),
+    );
     renderWithMessages(<SupportAccessScreen timeZone="Asia/Colombo" />);
     expect(await screen.findByTestId('support-access-error')).toHaveTextContent('Only the Owner');
   });

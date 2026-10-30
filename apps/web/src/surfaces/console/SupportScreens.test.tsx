@@ -7,7 +7,10 @@ import { ConsoleShell } from './ConsoleShell';
 import { SalonDetail } from './SalonScreens';
 import { SupportCard, SupportSessionList } from './SupportScreens';
 
-vi.mock('next/navigation', () => ({ useRouter: () => ({ replace: vi.fn(), refresh: vi.fn() }), usePathname: () => '/console/support' }));
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ replace: vi.fn(), refresh: vi.fn() }),
+  usePathname: () => '/console/support',
+}));
 vi.mock('next/link', () => ({ default: (props: AnchorHTMLAttributes<HTMLAnchorElement>) => <a {...props} /> }));
 
 type Call = { url: string; body: Record<string, unknown> | null };
@@ -24,20 +27,79 @@ beforeEach(() => {
   vi.stubGlobal('navigator', { locks: { request: (_name: string, work: () => Promise<unknown>) => work() } });
   vi.stubGlobal('BroadcastChannel', undefined);
 });
-afterEach(() => { vi.unstubAllGlobals(); });
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
-const SALON = { id: '22222222-0000-4000-8000-000000000002', version: 0, name: 'Synthetic Salon', slug: 'synthetic', hostname: 'synthetic.localhost', status: 'active', country: 'LK', currency: 'LKR', timeZone: 'Asia/Colombo', defaultLanguage: 'en', contactEmail: null, contactPhone: null, address: null, plan: null, ownerEmail: null, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', closedAt: null, deleteAt: null, deletedAt: null };
-const ENTRY = { id: '33333333-0000-4000-8000-000000000003', expiresAt: '2026-01-01T00:30:00Z', entryUrl: 'http://synthetic.localhost:3100/workspace/support#' + 'C'.repeat(43), codeExpiresAt: '2026-01-01T00:01:00Z' };
-const PRINCIPAL = { id: 'op', kind: 'operator', role: 'OPERATOR_SUPPORT', permissions: ['operator.salon.read', 'operator.session.manage', 'operator.support.start'], mfaEnabled: true };
-const SESSION = { id: ENTRY.id, salon: { id: SALON.id, slug: 'synthetic', name: 'Synthetic Salon', hostname: 'synthetic.localhost' }, operator: { id: 'op', displayName: 'Nimal Support' }, reason: 'Owner asked about staff access', startedAt: '2026-01-01T00:00:00Z', expiresAt: ENTRY.expiresAt, endedAt: null, endedBy: null, state: 'active' };
+const SALON = {
+  id: '22222222-0000-4000-8000-000000000002',
+  version: 0,
+  name: 'Synthetic Salon',
+  slug: 'synthetic',
+  hostname: 'synthetic.localhost',
+  status: 'active',
+  country: 'LK',
+  currency: 'LKR',
+  timeZone: 'Asia/Colombo',
+  defaultLanguage: 'en',
+  contactEmail: null,
+  contactPhone: null,
+  address: null,
+  plan: null,
+  ownerEmail: null,
+  createdAt: '2026-01-01T00:00:00Z',
+  updatedAt: '2026-01-01T00:00:00Z',
+  closedAt: null,
+  deleteAt: null,
+  deletedAt: null,
+};
+const ENTRY = {
+  id: '33333333-0000-4000-8000-000000000003',
+  expiresAt: '2026-01-01T00:30:00Z',
+  entryUrl: 'http://synthetic.localhost:3100/workspace/support#' + 'C'.repeat(43),
+  codeExpiresAt: '2026-01-01T00:01:00Z',
+};
+const PRINCIPAL = {
+  id: 'op',
+  kind: 'operator',
+  role: 'OPERATOR_SUPPORT',
+  permissions: ['operator.salon.read', 'operator.session.manage', 'operator.support.start'],
+  mfaEnabled: true,
+};
+const SESSION = {
+  id: ENTRY.id,
+  salon: { id: SALON.id, slug: 'synthetic', name: 'Synthetic Salon', hostname: 'synthetic.localhost' },
+  operator: { id: 'op', displayName: 'Nimal Support' },
+  reason: 'Owner asked about staff access',
+  startedAt: '2026-01-01T00:00:00Z',
+  expiresAt: ENTRY.expiresAt,
+  endedAt: null,
+  endedBy: null,
+  state: 'active',
+};
 
 describe('console navigation by role (F03-S04)', () => {
   it('shows Salons, Plans and Support sessions to an Admin and Salons and Support sessions to Support', () => {
-    const { unmount } = renderWithMessages(<ConsoleShell permissions={['operator.salon.read', 'operator.plan.read', 'operator.support.read']} view="salons"><p /></ConsoleShell>);
-    expect(screen.getAllByTestId(/^console-nav-/).map((item) => item.getAttribute('data-testid'))).toEqual(['console-nav-salons', 'console-nav-plans', 'console-nav-support']);
+    const { unmount } = renderWithMessages(
+      <ConsoleShell permissions={['operator.salon.read', 'operator.plan.read', 'operator.support.read']} view="salons">
+        <p />
+      </ConsoleShell>,
+    );
+    expect(screen.getAllByTestId(/^console-nav-/).map((item) => item.getAttribute('data-testid'))).toEqual([
+      'console-nav-salons',
+      'console-nav-plans',
+      'console-nav-support',
+    ]);
     unmount();
-    renderWithMessages(<ConsoleShell permissions={PRINCIPAL.permissions} view="support"><p /></ConsoleShell>);
-    expect(screen.getAllByTestId(/^console-nav-/).map((item) => item.getAttribute('data-testid'))).toEqual(['console-nav-salons', 'console-nav-support']);
+    renderWithMessages(
+      <ConsoleShell permissions={PRINCIPAL.permissions} view="support">
+        <p />
+      </ConsoleShell>,
+    );
+    expect(screen.getAllByTestId(/^console-nav-/).map((item) => item.getAttribute('data-testid'))).toEqual([
+      'console-nav-salons',
+      'console-nav-support',
+    ]);
   });
 });
 
@@ -52,7 +114,7 @@ describe('a salon for Support', () => {
   });
 
   it('starts a session with a reason and a duration, then offers the single-use link in a new tab', async () => {
-    stubApi((url) => url.includes('principal') ? Response.json(PRINCIPAL) : Response.json(ENTRY, { status: 201 }));
+    stubApi((url) => (url.includes('principal') ? Response.json(PRINCIPAL) : Response.json(ENTRY, { status: 201 })));
     renderWithMessages(<SupportCard salon={SALON as never} />);
     fireEvent.click(screen.getByTestId('console-support-start'));
     const sheet = await screen.findByTestId('console-support-sheet');
@@ -64,11 +126,19 @@ describe('a salon for Support', () => {
     expect(link).toHaveAttribute('href', ENTRY.entryUrl);
     expect(link).toHaveAttribute('target', '_blank');
     expect(link).toHaveAttribute('rel', 'noopener noreferrer');
-    expect(calls.find((call) => call.url === '/operator-web/support-start')?.body).toEqual({ id: SALON.id, reason: 'Owner asked about staff access', durationMinutes: 60 });
+    expect(calls.find((call) => call.url === '/operator-web/support-start')?.body).toEqual({
+      id: SALON.id,
+      reason: 'Owner asked about staff access',
+      durationMinutes: 60,
+    });
   });
 
   it('shows a field error and the refusal for a short reason or a second open session', async () => {
-    stubApi((url) => url.includes('principal') ? Response.json(PRINCIPAL) : Response.json({ code: 'support_session_active', errors: [] }, { status: 409 }));
+    stubApi((url) =>
+      url.includes('principal')
+        ? Response.json(PRINCIPAL)
+        : Response.json({ code: 'support_session_active', errors: [] }, { status: 409 }),
+    );
     renderWithMessages(<SupportCard salon={SALON as never} />);
     fireEvent.click(screen.getByTestId('console-support-start'));
     await screen.findByTestId('console-support-sheet');
@@ -86,10 +156,15 @@ describe('a salon for Support', () => {
 describe('support sessions list', () => {
   it('lets Support make a new entry link and end its own session after confirming', async () => {
     let ended = false;
-    stubApi((url) => url.includes('principal') ? Response.json(PRINCIPAL)
-      : url.includes('support-entry-code') ? Response.json(ENTRY, { status: 201 })
-        : url.includes('support-end') ? (ended = true, Response.json({ ok: true }))
-          : Response.json({ items: ended ? [] : [SESSION], page: 0, size: 20, total: ended ? 0 : 1 }));
+    stubApi((url) =>
+      url.includes('principal')
+        ? Response.json(PRINCIPAL)
+        : url.includes('support-entry-code')
+          ? Response.json(ENTRY, { status: 201 })
+          : url.includes('support-end')
+            ? ((ended = true), Response.json({ ok: true }))
+            : Response.json({ items: ended ? [] : [SESSION], page: 0, size: 20, total: ended ? 0 : 1 }),
+    );
     renderWithMessages(<SupportSessionList admin={false} />);
     const row = await screen.findByTestId('console-support-row');
     expect(within(row).getByTestId('console-support-operator')).toHaveTextContent('Nimal Support');
@@ -104,7 +179,13 @@ describe('support sessions list', () => {
   });
 
   it('lets an Admin revoke any session, with no entry link to make', async () => {
-    stubApi((url) => url.includes('principal') ? Response.json({ ...PRINCIPAL, role: 'OPERATOR_ADMIN' }) : url.includes('support-end') ? Response.json({ ok: true }) : Response.json({ items: [SESSION], page: 0, size: 20, total: 1 }));
+    stubApi((url) =>
+      url.includes('principal')
+        ? Response.json({ ...PRINCIPAL, role: 'OPERATOR_ADMIN' })
+        : url.includes('support-end')
+          ? Response.json({ ok: true })
+          : Response.json({ items: [SESSION], page: 0, size: 20, total: 1 }),
+    );
     renderWithMessages(<SupportSessionList admin />);
     const row = await screen.findByTestId('console-support-row');
     expect(within(row).queryByTestId('console-support-open')).toBeNull();

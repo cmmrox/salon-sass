@@ -18,10 +18,12 @@ export function salonAccountFor(hostname: string) {
   return {
     entitlements: (call: Call) => client.GET('/api/v1/salon/entitlements', call),
     invoices: (call: Call, query: Page) => client.GET('/api/v1/salon/invoices', { ...call, params: { query } }),
-    supportSessions: (call: Call, query: Page) => client.GET('/api/v1/salon/support-sessions', { ...call, params: { query } }),
+    supportSessions: (call: Call, query: Page) =>
+      client.GET('/api/v1/salon/support-sessions', { ...call, params: { query } }),
     revokeSupportSession: (call: Call, id: string) =>
       client.DELETE('/api/v1/salon/support-sessions/{id}', { ...call, params: { path: { id } } }),
-    enterSupport: (signal: AbortSignal, code: string) => client.POST('/api/v1/support/entry', { signal, body: { code } }),
+    enterSupport: (signal: AbortSignal, code: string) =>
+      client.POST('/api/v1/support/entry', { signal, body: { code } }),
     endSupport: (call: Call) => client.DELETE('/api/v1/support/session', call),
   };
 }
@@ -31,7 +33,10 @@ export async function readEntitlements(hostname: string, access: string): Promis
   const client = platformClient(hostname);
   if (!client) return null;
   try {
-    const answer = await client.GET('/api/v1/salon/entitlements', { headers: { Authorization: `Bearer ${access}` }, signal: requestSignal() });
+    const answer = await client.GET('/api/v1/salon/entitlements', {
+      headers: { Authorization: `Bearer ${access}` },
+      signal: requestSignal(),
+    });
     return answer.data ?? null;
   } catch {
     return null;

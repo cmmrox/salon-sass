@@ -34,7 +34,11 @@ function expectSameFrame(document: Document, label: string) {
   const plainName = document.querySelector('[data-testid="app-name"]');
   expectSame(name, plainName, `${label}: app-name`);
   expectSame(name.closest('header'), plainName?.closest('header') ?? null, `${label}: header`);
-  expectSame(name.closest('header')!.parentElement, plainName?.closest('header')?.parentElement ?? null, `${label}: frame`);
+  expectSame(
+    name.closest('header')!.parentElement,
+    plainName?.closest('header')?.parentElement ?? null,
+    `${label}: frame`,
+  );
   expectSame(screen.getByRole('main'), document.querySelector('main'), `${label}: main`);
 }
 
@@ -51,7 +55,7 @@ it.each([
   }
 });
 
-it('service-unavailable repeats the status page\'s unavailable state: Card, CardTitle, Alert, AlertTitle and Button', () => {
+it("service-unavailable repeats the status page's unavailable state: Card, CardTitle, Alert, AlertTitle and Button", () => {
   renderWithMessages(
     <AppShell>
       <StatusPanel>
@@ -62,7 +66,14 @@ it('service-unavailable repeats the status page\'s unavailable state: Card, Card
   const document = plain('service-unavailable');
 
   expectSameFrame(document, 'service-unavailable');
-  for (const id of ['status-panel', 'status-heading', 'status-unavailable', 'status-unavailable-title', 'status-unavailable-body', 'status-retry']) {
+  for (const id of [
+    'status-panel',
+    'status-heading',
+    'status-unavailable',
+    'status-unavailable-title',
+    'status-unavailable-body',
+    'status-retry',
+  ]) {
     expectSame(screen.getByTestId(id), document.querySelector(`[data-testid="${id}"]`), id);
   }
 });

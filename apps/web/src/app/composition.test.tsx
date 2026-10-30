@@ -44,10 +44,11 @@ export function compositionViolations(files: SourceFile[]): string[] {
 
 /** The product's component files: .tsx under src/app, src/surfaces, src/features and src/components, except components/ui and tests. */
 function productComponents(): SourceFile[] {
-  const walk = (dir: string): string[] => readdirSync(dir).flatMap((name) => {
-    const path = join(dir, name);
-    return statSync(path).isDirectory() ? walk(path) : [path];
-  });
+  const walk = (dir: string): string[] =>
+    readdirSync(dir).flatMap((name) => {
+      const path = join(dir, name);
+      return statSync(path).isDirectory() ? walk(path) : [path];
+    });
   return ['app', 'surfaces', 'features', 'components']
     .flatMap((area) => walk(join(web, 'src', area)))
     .map((path) => relative(web, path).split(sep).join('/'))
@@ -59,7 +60,13 @@ describe('every product component (src/app, src/surfaces, src/features and src/c
   it('writes no raw control, table or dialog element and no Native Select', () => {
     const files = productComponents();
     expect(files.length).toBeGreaterThan(20);
-    expect(files.map((file) => file.path)).toEqual(expect.arrayContaining(['src/app/not-found.tsx', 'src/components/shared/Navigation.tsx', 'src/features/identity/components/AccountScreen.tsx']));
+    expect(files.map((file) => file.path)).toEqual(
+      expect.arrayContaining([
+        'src/app/not-found.tsx',
+        'src/components/shared/Navigation.tsx',
+        'src/features/identity/components/AccountScreen.tsx',
+      ]),
+    );
     expect(compositionViolations(files)).toEqual([]);
   });
 
@@ -69,7 +76,8 @@ describe('every product component (src/app, src/surfaces, src/features and src/c
 
   it('catches each violation', () => {
     const one = (content: string) => compositionViolations([{ path: 'src/components/x/X.tsx', content }]);
-    for (const element of ['button', 'input type="checkbox"', 'select', 'textarea', 'table', 'dialog open']) expect(one(`<${element} />`), element).toHaveLength(1);
+    for (const element of ['button', 'input type="checkbox"', 'select', 'textarea', 'table', 'dialog open'])
+      expect(one(`<${element} />`), element).toHaveLength(1);
     expect(one("import { NativeSelect } from '@/components/ui/native-select';")).toHaveLength(1);
     expect(one('<NativeSelectOption value="a" />')).toHaveLength(1);
     expect(one('<Button>x</Button><Input /><Select /><SelectTrigger /><Table />')).toEqual([]);
@@ -85,7 +93,11 @@ const salon = { slug: 'beta', name: 'Beta Hair and Beauty', brandColour: '#1F293
 describe('the shell, status and notice screens render the shadcn/ui components of the component map', () => {
   it('workspace frame from 900px: SidebarProvider, Sidebar rail with SidebarMenu buttons, SidebarTrigger and SidebarInset', () => {
     setViewportWidth(1280);
-    renderWithMessages(<WorkspaceShell salon={salon} permissions={['staff.list', 'audit.list']} view="staff"><p /></WorkspaceShell>);
+    renderWithMessages(
+      <WorkspaceShell salon={salon} permissions={['staff.list', 'audit.list']} view="staff">
+        <p />
+      </WorkspaceShell>,
+    );
     expect(slot('workspace-shell')).toBe('sidebar-wrapper');
     expect(slot('workspace-main')).toBe('sidebar-inset');
     expect(slot('workspace-menu')).toBe('sidebar-trigger');
@@ -94,12 +106,17 @@ describe('the shell, status and notice screens render the shadcn/ui components o
     expect(navigation.closest('[data-slot="sidebar-content"]')).not.toBeNull();
     expect(navigation.querySelectorAll('[data-slot="sidebar-menu"]')).toHaveLength(1);
     expect(navigation.querySelectorAll('[data-slot="sidebar-menu-item"]')).toHaveLength(3);
-    for (const id of ['workspace-account', 'workspace-staff', 'workspace-audit']) expect(slot(id)).toBe('sidebar-menu-button');
+    for (const id of ['workspace-account', 'workspace-staff', 'workspace-audit'])
+      expect(slot(id)).toBe('sidebar-menu-button');
   });
 
   it('workspace frame below 900px: the Sidebar is its Sheet, opened by the SidebarTrigger', () => {
     setViewportWidth(360);
-    renderWithMessages(<WorkspaceShell salon={salon} permissions={['staff.list']}><p /></WorkspaceShell>);
+    renderWithMessages(
+      <WorkspaceShell salon={salon} permissions={['staff.list']}>
+        <p />
+      </WorkspaceShell>,
+    );
     fireEvent.click(screen.getByTestId('workspace-menu'));
     const sheet = screen.getByRole('dialog');
     expect(sheet).toHaveAttribute('data-slot', 'sidebar');
@@ -108,7 +125,13 @@ describe('the shell, status and notice screens render the shadcn/ui components o
   });
 
   it('status page: Card and CardTitle, Skeleton while loading, a positive Alert when reachable, a caution Alert and Button when not', () => {
-    const { unmount } = renderWithMessages(<AppShell><StatusPanel><StatusBody state={{ kind: 'loading' }} retryHref="/" /></StatusPanel></AppShell>);
+    const { unmount } = renderWithMessages(
+      <AppShell>
+        <StatusPanel>
+          <StatusBody state={{ kind: 'loading' }} retryHref="/" />
+        </StatusPanel>
+      </AppShell>,
+    );
     expect(slot('status-panel')).toBe('card');
     expect(slot('status-heading')).toBe('card-title');
     expect(screen.getByTestId('status-loading').querySelectorAll('[data-slot="skeleton"]')).toHaveLength(3);

@@ -13,7 +13,12 @@ describe('writeLog', () => {
   it('writes one JSON object on one line, shaped as the API writes its lines', () => {
     const out = capture();
 
-    writeLog('WARN', 'first\nsecond', { 'http.response.status_code': 503, 'tenant.slug': 'alpha', skipped: undefined }, out.sink);
+    writeLog(
+      'WARN',
+      'first\nsecond',
+      { 'http.response.status_code': 503, 'tenant.slug': 'alpha', skipped: undefined },
+      out.sink,
+    );
 
     expect(out.lines).toHaveLength(1);
     expect(out.lines[0]).toMatch(/^\{.*\}\n$/);
@@ -31,7 +36,7 @@ describe('writeLog', () => {
     expect(line).not.toHaveProperty('trace');
   });
 
-  it("carries the trace of the request it is written for", () => {
+  it('carries the trace of the request it is written for', () => {
     const out = capture();
     const context = { traceId: '4bf92f3577b34da6a3ce929d0e0e4736', spanId: '00f067aa0ba902b7', sampled: true };
 

@@ -8,7 +8,9 @@ export function formatDate(value: string, timeZone: string, locale = 'en-LK'): s
 }
 /** A time of day in the zone, on the 24-hour clock (`14:05`): a support session's end. */
 export function formatTime(value: string, timeZone: string, locale = 'en-LK'): string {
-  return new Intl.DateTimeFormat(locale, { timeZone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(value));
+  return new Intl.DateTimeFormat(locale, { timeZone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(
+    new Date(value),
+  );
 }
 export function formatPhone(value: string): string {
   return value.replace(/^\+94(7\d)(\d{3})(\d{4})$/, '+94 $1 $2 $3');
@@ -33,8 +35,12 @@ export function formatMoney(minor: number, currency: string, locale = 'en-LK'): 
     return `${negative ? '-' : ''}Rs. ${grouped}${cents ? `.${String(cents).padStart(2, '0')}` : ''}`;
   }
   const digits = cents ? 2 : 0;
-  return new Intl.NumberFormat(locale, { style: 'currency', currency, minimumFractionDigits: digits, maximumFractionDigits: digits })
-    .format(Number(`${negative ? '-' : ''}${whole}.${String(cents).padStart(2, '0')}`));
+  return new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  }).format(Number(`${negative ? '-' : ''}${whole}.${String(cents).padStart(2, '0')}`));
 }
 
 /**
@@ -61,6 +67,14 @@ export function formatBytes(bytes: number, locale = 'en-LK'): string {
   const units = ['byte', 'kilobyte', 'megabyte', 'gigabyte'] as const;
   let value = bytes;
   let unit = 0;
-  while (value >= 1000 && unit < units.length - 1) { value /= 1000; unit++; }
-  return new Intl.NumberFormat(locale, { style: 'unit', unit: units[unit], unitDisplay: 'short', maximumFractionDigits: unit === 0 ? 0 : 1 }).format(value);
+  while (value >= 1000 && unit < units.length - 1) {
+    value /= 1000;
+    unit++;
+  }
+  return new Intl.NumberFormat(locale, {
+    style: 'unit',
+    unit: units[unit],
+    unitDisplay: 'short',
+    maximumFractionDigits: unit === 0 ? 0 : 1,
+  }).format(value);
 }

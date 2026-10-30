@@ -78,7 +78,7 @@ describe('fetchForHostname', () => {
     await expect(fetchForHostname('alpha.localhost')(`${address}/x`)).rejects.toThrow();
   });
 
-  it('gives up when the signal says so, with the signal\'s reason', async () => {
+  it("gives up when the signal says so, with the signal's reason", async () => {
     answer = () => {
       // Accepts the request and answers nothing.
     };
@@ -92,10 +92,19 @@ describe('fetchForHostname', () => {
     let receivedBody = '';
     server.removeAllListeners('request');
     server.on('request', (request, response) => {
-      request.on('data', (chunk) => { receivedBody += chunk.toString(); });
-      request.on('end', () => { response.writeHead(204); response.end(); });
+      request.on('data', (chunk) => {
+        receivedBody += chunk.toString();
+      });
+      request.on('end', () => {
+        response.writeHead(204);
+        response.end();
+      });
     });
-    const result = await fetchForHostname('alpha.localhost')(`${base()}/api/v1/identity/customers/me`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ confirm: true }) });
+    const result = await fetchForHostname('alpha.localhost')(`${base()}/api/v1/identity/customers/me`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ confirm: true }),
+    });
     expect(result.status).toBe(204);
     expect(receivedBody).toBe('{"confirm":true}');
   });
@@ -103,7 +112,9 @@ describe('fetchForHostname', () => {
   it('refuses at once when the signal has already given up', async () => {
     const signal = AbortSignal.abort();
 
-    await expect(fetchForHostname('alpha.localhost')(`${base()}/x`, { signal })).rejects.toMatchObject({ name: 'AbortError' });
+    await expect(fetchForHostname('alpha.localhost')(`${base()}/x`, { signal })).rejects.toMatchObject({
+      name: 'AbortError',
+    });
     expect(received).toHaveLength(0);
   });
 });

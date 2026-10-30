@@ -13,8 +13,32 @@ const replace = vi.fn();
 vi.mock('next/navigation', () => ({ useRouter: () => ({ replace, refresh: vi.fn() }) }));
 vi.mock('next/link', () => ({ default: (props: AnchorHTMLAttributes<HTMLAnchorElement>) => <a {...props} /> }));
 
-const PLAN = { id: '11111111-0000-4000-8000-000000000001', key: 'fixture-basic', name: 'Synthetic Basic', staffSeats: 5, branches: 1, messageAllowance: 0, customDomain: false, dedicatedApp: true, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z' };
-const ADMIN_PERMISSIONS = ['operator.billing.manage', 'operator.billing.read', 'operator.export.read', 'operator.plan.create', 'operator.plan.read', 'operator.salon.close', 'operator.salon.create', 'operator.salon.read', 'operator.salon.suspend', 'operator.session.manage', 'operator.support.read', 'operator.support.revoke'];
+const PLAN = {
+  id: '11111111-0000-4000-8000-000000000001',
+  key: 'fixture-basic',
+  name: 'Synthetic Basic',
+  staffSeats: 5,
+  branches: 1,
+  messageAllowance: 0,
+  customDomain: false,
+  dedicatedApp: true,
+  createdAt: '2026-01-01T00:00:00Z',
+  updatedAt: '2026-01-01T00:00:00Z',
+};
+const ADMIN_PERMISSIONS = [
+  'operator.billing.manage',
+  'operator.billing.read',
+  'operator.export.read',
+  'operator.plan.create',
+  'operator.plan.read',
+  'operator.salon.close',
+  'operator.salon.create',
+  'operator.salon.read',
+  'operator.salon.suspend',
+  'operator.session.manage',
+  'operator.support.read',
+  'operator.support.revoke',
+];
 type Call = { url: string; body: Record<string, unknown> | null };
 let calls: Call[];
 
@@ -28,15 +52,38 @@ function stubApi(answer: (url: string, body: Record<string, unknown> | null) => 
 
 beforeEach(() => {
   calls = [];
-  vi.stubGlobal('navigator', { locks: { request: (_name: string, work: () => Promise<unknown>) => work() }, clipboard: { writeText: async () => undefined } });
+  vi.stubGlobal('navigator', {
+    locks: { request: (_name: string, work: () => Promise<unknown>) => work() },
+    clipboard: { writeText: async () => undefined },
+  });
   vi.stubGlobal('BroadcastChannel', undefined);
-  vi.stubGlobal('crypto', { randomUUID: (() => { let n = 0; return () => `00000000-0000-4000-8000-${String(++n).padStart(12, '0')}`; })() });
+  vi.stubGlobal('crypto', {
+    randomUUID: (() => {
+      let n = 0;
+      return () => `00000000-0000-4000-8000-${String(++n).padStart(12, '0')}`;
+    })(),
+  });
 });
-afterEach(() => { vi.unstubAllGlobals(); replace.mockReset(); });
+afterEach(() => {
+  vi.unstubAllGlobals();
+  replace.mockReset();
+});
 
 describe('operator sign-in', () => {
   it('enrolls an authenticator after the password and never shows a session credential', async () => {
-    stubApi((url) => Response.json(url.endsWith('/sign-in') ? { state: 'enroll_mfa', expiresAt: '2026-01-01T00:05:00Z' } : url.endsWith('/mfa-enroll') ? { secret: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567', otpauthUri: 'otpauth://totp/x', expiresAt: '2026-01-01T00:05:00Z' } : { ok: true }));
+    stubApi((url) =>
+      Response.json(
+        url.endsWith('/sign-in')
+          ? { state: 'enroll_mfa', expiresAt: '2026-01-01T00:05:00Z' }
+          : url.endsWith('/mfa-enroll')
+            ? {
+                secret: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567',
+                otpauthUri: 'otpauth://totp/x',
+                expiresAt: '2026-01-01T00:05:00Z',
+              }
+            : { ok: true },
+      ),
+    );
     renderWithMessages(<ConsoleSignIn />);
     await waitFor(() => expect(screen.getByTestId('console-sign-in-submit')).toBeEnabled());
     fireEvent.change(screen.getByTestId('console-email'), { target: { value: 'op@example.test' } });
@@ -49,7 +96,11 @@ describe('operator sign-in', () => {
     fireEvent.change(screen.getByTestId('console-code'), { target: { value: '123456' } });
     fireEvent.submit(screen.getByTestId('console-sign-in-submit').closest('form')!);
     await waitFor(() => expect(replace).toHaveBeenCalledWith('/console/salons'));
-    expect(calls.map((call) => call.url)).toEqual(['/operator-web/sign-in', '/operator-web/mfa-enroll', '/operator-web/mfa-verify']);
+    expect(calls.map((call) => call.url)).toEqual([
+      '/operator-web/sign-in',
+      '/operator-web/mfa-enroll',
+      '/operator-web/mfa-verify',
+    ]);
   });
 
   it('announces a refusal with its wait, clears the password and keeps the email', async () => {
@@ -76,15 +127,30 @@ describe('operator sign-in', () => {
 
 describe('the console frame', () => {
   it('shows an Admin exactly Salons, Plans and Sign out', () => {
-    renderWithMessages(<ConsoleShell permissions={['operator.session.manage', 'operator.salon.read', 'operator.plan.read']} view="salons"><p /></ConsoleShell>);
+    renderWithMessages(
+      <ConsoleShell
+        permissions={['operator.session.manage', 'operator.salon.read', 'operator.plan.read']}
+        view="salons"
+      >
+        <p />
+      </ConsoleShell>,
+    );
     expect(screen.getByTestId('console-nav-salons')).toHaveAttribute('aria-current', 'page');
     expect(screen.getByTestId('console-nav-plans')).toBeInTheDocument();
     expect(screen.getByTestId('console-sign-out')).toBeInTheDocument();
-    expect(within(screen.getByTestId('console-shell')).queryAllByRole('link').map((link) => link.getAttribute('href'))).toEqual(['/console/salons', '/console/plans']);
+    expect(
+      within(screen.getByTestId('console-shell'))
+        .queryAllByRole('link')
+        .map((link) => link.getAttribute('href')),
+    ).toEqual(['/console/salons', '/console/plans']);
   });
 
   it('shows Support no management link, only Sign out', () => {
-    renderWithMessages(<ConsoleShell permissions={['operator.session.manage']}><p /></ConsoleShell>);
+    renderWithMessages(
+      <ConsoleShell permissions={['operator.session.manage']}>
+        <p />
+      </ConsoleShell>,
+    );
     expect(screen.queryByTestId('console-nav-salons')).not.toBeInTheDocument();
     expect(screen.queryByTestId('console-nav-plans')).not.toBeInTheDocument();
     expect(screen.queryByTestId('console-menu')).not.toBeInTheDocument();
@@ -95,10 +161,36 @@ describe('the console frame', () => {
 describe('the salon directory', () => {
   it('shows loading, then rows with status, plan and hostname, and searches literally', async () => {
     let release!: () => void;
-    const gate = new Promise<void>((resolve) => { release = resolve; });
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
     stubApi(async (url) => {
       if (url.startsWith('/operator-web/salons')) await gate;
-      return Response.json({ items: [{ id: 's1', name: null, slug: 'legacy', hostname: 'legacy.localhost', status: 'active', plan: null, createdAt: '2026-01-01T00:00:00Z' }, { id: 's2', name: 'A very long salon name that keeps going and going without any break at all', slug: 'long', hostname: 'long.localhost', status: 'suspended', plan: { id: 'p', key: 'k', name: 'Basic' }, createdAt: '2026-01-01T00:00:00Z' }], page: 0, size: 20, total: 2 });
+      return Response.json({
+        items: [
+          {
+            id: 's1',
+            name: null,
+            slug: 'legacy',
+            hostname: 'legacy.localhost',
+            status: 'active',
+            plan: null,
+            createdAt: '2026-01-01T00:00:00Z',
+          },
+          {
+            id: 's2',
+            name: 'A very long salon name that keeps going and going without any break at all',
+            slug: 'long',
+            hostname: 'long.localhost',
+            status: 'suspended',
+            plan: { id: 'p', key: 'k', name: 'Basic' },
+            createdAt: '2026-01-01T00:00:00Z',
+          },
+        ],
+        page: 0,
+        size: 20,
+        total: 2,
+      });
     });
     renderWithMessages(<SalonDirectory platformDomain="localhost" />);
     expect(await screen.findByTestId('console-loading')).toHaveAttribute('role', 'status');
@@ -118,7 +210,11 @@ describe('the salon directory', () => {
 
   it('says what belongs there when empty, and offers a retry on an outage', async () => {
     let fail = true;
-    stubApi(() => (fail ? Response.json({ code: 'service_unavailable' }, { status: 503 }) : Response.json({ items: [], page: 0, size: 20, total: 0 })));
+    stubApi(() =>
+      fail
+        ? Response.json({ code: 'service_unavailable' }, { status: 503 })
+        : Response.json({ items: [], page: 0, size: 20, total: 0 }),
+    );
     renderWithMessages(<SalonDirectory platformDomain="localhost" />);
     expect(await screen.findByTestId('console-error')).toHaveTextContent('cannot reach');
     fail = false;
@@ -130,11 +226,15 @@ describe('the salon directory', () => {
     let outcome: 'uncertain' | 'taken' | 'created' = 'uncertain';
     stubApi((url) => {
       if (url.startsWith('/operator-web/plans')) return Response.json({ items: [PLAN], page: 0, size: 100, total: 1 });
-      if (url === '/operator-web/principal') return Response.json({ id: 'op', kind: 'operator', role: 'OPERATOR_ADMIN', permissions: [], mfaEnabled: true });
+      if (url === '/operator-web/principal')
+        return Response.json({ id: 'op', kind: 'operator', role: 'OPERATOR_ADMIN', permissions: [], mfaEnabled: true });
       if (url === '/operator-web/salon-create') {
         if (outcome === 'uncertain') return Response.json({ code: 'service_unavailable' }, { status: 503 });
         if (outcome === 'taken') return Response.json({ code: 'slug_taken', errors: [] }, { status: 409 });
-        return Response.json({ id: 'new', slug: 'fresh', hostname: 'fresh.localhost', planId: PLAN.id, createdAt: '2026-01-01T00:00:00Z' }, { status: 201 });
+        return Response.json(
+          { id: 'new', slug: 'fresh', hostname: 'fresh.localhost', planId: PLAN.id, createdAt: '2026-01-01T00:00:00Z' },
+          { status: 201 },
+        );
       }
       return Response.json({ items: [], page: 0, size: 20, total: 0 });
     });
@@ -149,7 +249,9 @@ describe('the salon directory', () => {
     fireEvent.change(within(sheet).getByTestId('console-slug'), { target: { value: 'fresh' } });
     fireEvent.change(within(sheet).getByTestId('console-owner-name'), { target: { value: 'Owner' } });
     fireEvent.change(within(sheet).getByTestId('console-owner-email'), { target: { value: 'owner@example.test' } });
-    fireEvent.change(within(sheet).getByTestId('console-owner-password'), { target: { value: 'private owner password' } });
+    fireEvent.change(within(sheet).getByTestId('console-owner-password'), {
+      target: { value: 'private owner password' },
+    });
     const submit = () => fireEvent.submit(within(sheet).getByTestId('console-create-salon-submit').closest('form')!);
     submit();
     expect(await within(sheet).findByTestId('console-uncertain')).toBeInTheDocument();
@@ -161,7 +263,9 @@ describe('the salon directory', () => {
     expect(creates[1]!.body!.idempotencyKey).toBe(creates[0]!.body!.idempotencyKey);
     expect(within(sheet).getByTestId('console-owner-password')).toHaveValue('');
     fireEvent.change(within(sheet).getByTestId('console-slug'), { target: { value: 'fresh-two' } });
-    fireEvent.change(within(sheet).getByTestId('console-owner-password'), { target: { value: 'private owner password' } });
+    fireEvent.change(within(sheet).getByTestId('console-owner-password'), {
+      target: { value: 'private owner password' },
+    });
     outcome = 'created';
     submit();
     expect(await screen.findByTestId('console-salon-created')).toHaveTextContent('fresh.localhost');
@@ -174,44 +278,55 @@ describe('the salon directory', () => {
 
 describe('the plan picker in Create salon (BUG-F03-006)', () => {
   // Opens three pages of 100-option Selects: about a second alone, up to five in a full parallel run.
-  it('offers every plan, beyond the newest 100: one found by search and one on a later page', { timeout: 15_000 }, async () => {
-    stubApi((url) => {
-      if (url.startsWith('/operator-web/plans')) return Response.json(planPage(url, 250));
-      return Response.json({ items: [], page: 0, size: 20, total: 0 });
-    });
-    renderWithMessages(<SalonDirectory platformDomain="localhost" />);
-    fireEvent.click(await screen.findByTestId('console-create-salon'));
-    const sheet = await screen.findByTestId('console-create-salon-sheet');
-    await waitFor(() => expect(within(sheet).getByTestId('console-plan-id')).toBeEnabled());
-    expect(within(sheet).getByTestId('console-plan-id-total')).toHaveTextContent('250 results');
+  it(
+    'offers every plan, beyond the newest 100: one found by search and one on a later page',
+    { timeout: 15_000 },
+    async () => {
+      stubApi((url) => {
+        if (url.startsWith('/operator-web/plans')) return Response.json(planPage(url, 250));
+        return Response.json({ items: [], page: 0, size: 20, total: 0 });
+      });
+      renderWithMessages(<SalonDirectory platformDomain="localhost" />);
+      fireEvent.click(await screen.findByTestId('console-create-salon'));
+      const sheet = await screen.findByTestId('console-create-salon-sheet');
+      await waitFor(() => expect(within(sheet).getByTestId('console-plan-id')).toBeEnabled());
+      expect(within(sheet).getByTestId('console-plan-id-total')).toHaveTextContent('250 results');
 
-    fireEvent.change(within(sheet).getByTestId('console-plan-id-search'), { target: { value: ' plan-249 ' } });
-    fireEvent.keyDown(within(sheet).getByTestId('console-plan-id-search'), { key: 'Enter' });
-    await waitFor(() => expect(calls.at(-1)!.url).toBe('/operator-web/plans?page=0&size=100&q=plan-249'));
-    await chooseOption(within(sheet).getByTestId('console-plan-id'), 'Plan 249 (plan-249)');
-    expect(within(sheet).getByTestId('console-plan-id')).toHaveTextContent('Plan 249 (plan-249)');
+      fireEvent.change(within(sheet).getByTestId('console-plan-id-search'), { target: { value: ' plan-249 ' } });
+      fireEvent.keyDown(within(sheet).getByTestId('console-plan-id-search'), { key: 'Enter' });
+      await waitFor(() => expect(calls.at(-1)!.url).toBe('/operator-web/plans?page=0&size=100&q=plan-249'));
+      await chooseOption(within(sheet).getByTestId('console-plan-id'), 'Plan 249 (plan-249)');
+      expect(within(sheet).getByTestId('console-plan-id')).toHaveTextContent('Plan 249 (plan-249)');
 
-    fireEvent.change(within(sheet).getByTestId('console-plan-id-search'), { target: { value: '' } });
-    fireEvent.click(within(sheet).getByTestId('console-plan-id-search-submit'));
-    await waitFor(() => expect(calls.at(-1)!.url).toBe('/operator-web/plans?page=0&size=100'));
-    expect(within(sheet).getByTestId('console-plan-id')).toHaveTextContent('Plan 249 (plan-249)');
-    fireEvent.click(within(sheet).getByTestId('console-plan-id-next'));
-    await waitFor(() => expect(calls.at(-1)!.url).toBe('/operator-web/plans?page=1&size=100'));
-    expect(within(sheet).getByTestId('console-plan-id-page')).toHaveTextContent('Page 2 of 3');
-    await chooseOption(within(sheet).getByTestId('console-plan-id'), 'Plan 150 (plan-150)');
-    expect(within(sheet).getByTestId('console-plan-id')).toHaveTextContent('Plan 150 (plan-150)');
-    expect(calls.some((call) => call.url === '/operator-web/salon-create')).toBe(false);
-  });
+      fireEvent.change(within(sheet).getByTestId('console-plan-id-search'), { target: { value: '' } });
+      fireEvent.click(within(sheet).getByTestId('console-plan-id-search-submit'));
+      await waitFor(() => expect(calls.at(-1)!.url).toBe('/operator-web/plans?page=0&size=100'));
+      expect(within(sheet).getByTestId('console-plan-id')).toHaveTextContent('Plan 249 (plan-249)');
+      fireEvent.click(within(sheet).getByTestId('console-plan-id-next'));
+      await waitFor(() => expect(calls.at(-1)!.url).toBe('/operator-web/plans?page=1&size=100'));
+      expect(within(sheet).getByTestId('console-plan-id-page')).toHaveTextContent('Page 2 of 3');
+      await chooseOption(within(sheet).getByTestId('console-plan-id'), 'Plan 150 (plan-150)');
+      expect(within(sheet).getByTestId('console-plan-id')).toHaveTextContent('Plan 150 (plan-150)');
+      expect(calls.some((call) => call.url === '/operator-web/salon-create')).toBe(false);
+    },
+  );
 
   it('says when no plan matches the search', async () => {
-    stubApi((url) => (url.startsWith('/operator-web/plans') ? Response.json(planPage(url, 3)) : Response.json({ items: [], page: 0, size: 20, total: 0 })));
+    stubApi((url) =>
+      url.startsWith('/operator-web/plans')
+        ? Response.json(planPage(url, 3))
+        : Response.json({ items: [], page: 0, size: 20, total: 0 }),
+    );
     renderWithMessages(<SalonDirectory platformDomain="localhost" />);
     fireEvent.click(await screen.findByTestId('console-create-salon'));
     const sheet = await screen.findByTestId('console-create-salon-sheet');
     await waitFor(() => expect(within(sheet).getByTestId('console-plan-id')).toBeEnabled());
     fireEvent.change(within(sheet).getByTestId('console-plan-id-search'), { target: { value: 'nothing-like-it' } });
     fireEvent.click(within(sheet).getByTestId('console-plan-id-search-submit'));
-    expect(await within(sheet).findByText('No plan matches this search')).toHaveAttribute('id', 'console-plan-id-description');
+    expect(await within(sheet).findByText('No plan matches this search')).toHaveAttribute(
+      'id',
+      'console-plan-id-description',
+    );
     expect(within(sheet).getByTestId('console-plan-id')).toBeDisabled();
   });
 });
@@ -219,17 +334,50 @@ describe('the plan picker in Create salon (BUG-F03-006)', () => {
 /** A plans page like the API's: newest first, a literal name or key search, `size` per page. */
 function planPage(url: string, count: number) {
   const params = new URL(url, 'http://console.localhost').searchParams;
-  const page = Number(params.get('page')); const size = Number(params.get('size')); const q = params.get('q')?.toLowerCase();
-  const all = Array.from({ length: count }, (_, n) => ({ ...PLAN, id: `11111111-0000-4000-8000-${String(n).padStart(12, '0')}`, key: `plan-${n}`, name: `Plan ${n}`, createdAt: new Date(Date.UTC(2026, 0, 1) - n * 60_000).toISOString() }));
+  const page = Number(params.get('page'));
+  const size = Number(params.get('size'));
+  const q = params.get('q')?.toLowerCase();
+  const all = Array.from({ length: count }, (_, n) => ({
+    ...PLAN,
+    id: `11111111-0000-4000-8000-${String(n).padStart(12, '0')}`,
+    key: `plan-${n}`,
+    name: `Plan ${n}`,
+    createdAt: new Date(Date.UTC(2026, 0, 1) - n * 60_000).toISOString(),
+  }));
   const matching = q ? all.filter((plan) => plan.key.includes(q) || plan.name.toLowerCase().includes(q)) : all;
   return { items: matching.slice(page * size, page * size + size), page, size, total: matching.length };
 }
 
 describe('detail pages', () => {
-  it('shows a legacy salon\'s unconfigured values as not configured and its hostname to copy', async () => {
-    stubApi((url) => url.startsWith('/operator-web/subscription') ? Response.json({ code: 'not_found' }, { status: 404 })
-      : url.startsWith('/operator-web/lifecycle') ? Response.json({ items: [], page: 0, size: 10, total: 0 })
-        : Response.json({ id: 's', version: 0, name: null, slug: 'legacy', hostname: 'legacy.localhost', status: 'active', country: null, currency: null, timeZone: 'Asia/Colombo', defaultLanguage: null, contactEmail: null, contactPhone: null, address: null, plan: null, ownerEmail: null, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', closedAt: null, deleteAt: null, deletedAt: null }));
+  it("shows a legacy salon's unconfigured values as not configured and its hostname to copy", async () => {
+    stubApi((url) =>
+      url.startsWith('/operator-web/subscription')
+        ? Response.json({ code: 'not_found' }, { status: 404 })
+        : url.startsWith('/operator-web/lifecycle')
+          ? Response.json({ items: [], page: 0, size: 10, total: 0 })
+          : Response.json({
+              id: 's',
+              version: 0,
+              name: null,
+              slug: 'legacy',
+              hostname: 'legacy.localhost',
+              status: 'active',
+              country: null,
+              currency: null,
+              timeZone: 'Asia/Colombo',
+              defaultLanguage: null,
+              contactEmail: null,
+              contactPhone: null,
+              address: null,
+              plan: null,
+              ownerEmail: null,
+              createdAt: '2026-01-01T00:00:00Z',
+              updatedAt: '2026-01-01T00:00:00Z',
+              closedAt: null,
+              deleteAt: null,
+              deletedAt: null,
+            }),
+    );
     renderWithMessages(<SalonDetail id="s" permissions={ADMIN_PERMISSIONS} />);
     expect(await screen.findByTestId('console-salon-name')).toHaveTextContent('Not configured');
     expect(screen.getByTestId('console-salon-country')).toHaveTextContent('Not configured');
@@ -242,7 +390,7 @@ describe('detail pages', () => {
     expect(screen.getByTestId('console-start-subscription')).toBeInTheDocument();
   });
 
-  it('shows a plan\'s exact limits and explicit features, and not found without a retry', async () => {
+  it("shows a plan's exact limits and explicit features, and not found without a retry", async () => {
     stubApi(() => Response.json(PLAN));
     renderWithMessages(<PlanDetail id={PLAN.id} />);
     expect(await screen.findByTestId('console-plan-staff-seats')).toHaveTextContent('5');

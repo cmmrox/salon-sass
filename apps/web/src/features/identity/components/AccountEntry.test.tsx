@@ -5,14 +5,30 @@ import { AccountScreen } from './AccountScreen';
 
 const navigation = vi.hoisted(() => ({ replace: vi.fn(), refresh: vi.fn() }));
 vi.mock('next/navigation', () => ({ useRouter: () => navigation }));
-afterEach(() => { vi.unstubAllGlobals(); vi.clearAllMocks(); });
-const principal = { id: 'owner', kind: 'staff', role: 'OWNER', scope: 'salon', mfaEnabled: true, permissions: ['session.manage', 'password.change'] } as never;
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.clearAllMocks();
+});
+const principal = {
+  id: 'owner',
+  kind: 'staff',
+  role: 'OWNER',
+  scope: 'salon',
+  mfaEnabled: true,
+  permissions: ['session.manage', 'password.change'],
+} as never;
 
 it('shows a server-confirmed member their account at once; only the device list is pending (CR-013)', async () => {
   let release: ((response: Response) => void) | undefined;
   vi.stubGlobal('navigator', { locks: { request: (_name: string, work: () => Promise<unknown>) => work() } });
   vi.stubGlobal('BroadcastChannel', undefined);
-  vi.stubGlobal('fetch', async (url: string) => url.endsWith('/principal') ? Response.json(principal) : new Promise<Response>((resolve) => { release = resolve; }));
+  vi.stubGlobal('fetch', async (url: string) =>
+    url.endsWith('/principal')
+      ? Response.json(principal)
+      : new Promise<Response>((resolve) => {
+          release = resolve;
+        }),
+  );
   renderWithMessages(<AccountScreen kind="staff" initialPrincipal={principal} timeZone="Asia/Colombo" />);
 
   expect(screen.getByTestId('account-role')).toBeInTheDocument();

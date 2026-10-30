@@ -7,7 +7,11 @@ export default function NotFound() {
   const t = useTranslations('notFound');
   return (
     <Notice testId="not-found" title={t('title')} body={t('body')}>
-      <Link className="inline-flex min-h-touch items-center self-start font-semibold text-foreground" href="/" data-testid="not-found-home">
+      <Link
+        className="inline-flex min-h-touch items-center self-start font-semibold text-foreground"
+        href="/"
+        data-testid="not-found-home"
+      >
         {t('home')}
       </Link>
     </Notice>

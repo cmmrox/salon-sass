@@ -15,14 +15,22 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 
-export type NavigationItem = { href: string; label: string; testId: string; icon: 'home' | 'account' | 'staff' | 'audit' | 'salons' | 'plans' | 'billing' | 'support'; current?: boolean; alias?: string };
+export type NavigationItem = {
+  href: string;
+  label: string;
+  testId: string;
+  icon: 'home' | 'account' | 'staff' | 'audit' | 'salons' | 'plans' | 'billing' | 'support';
+  current?: boolean;
+  alias?: string;
+};
 
 /** The prototype's own navigation glyphs, drawn in the current text colour. */
 export function NavigationIcon({ icon }: { icon: NavigationItem['icon'] }) {
   const paths = {
     home: 'm3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z',
     account: 'M20 21v-2a7 7 0 0 0-14 0v2M17 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z',
-    staff: 'M16 21v-2a6 6 0 0 0-12 0v2M14 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0ZM20 21v-2a6 6 0 0 0-3-5.2M17 3.2a4 4 0 0 1 0 7.6',
+    staff:
+      'M16 21v-2a6 6 0 0 0-12 0v2M14 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0ZM20 21v-2a6 6 0 0 0-3-5.2M17 3.2a4 4 0 0 1 0 7.6',
     audit: 'M8 3h8v4H8ZM8 5H5v16h14V5h-3M8 12h8M8 16h6',
     // The prototype's own list and bars glyphs, for the operator console's salons and plans.
     salons: 'M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01',
@@ -32,7 +40,20 @@ export function NavigationIcon({ icon }: { icon: NavigationItem['icon'] }) {
     // The prototype's clock glyph, for time-limited support sessions (F03-S04).
     support: 'M3 12a9 9 0 1 0 18 0a9 9 0 1 0-18 0ZM12 7v5l3 2',
   };
-  return <svg className="size-icon flex-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={paths[icon]} /></svg>;
+  return (
+    <svg
+      className="size-icon flex-none"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d={paths[icon]} />
+    </svg>
+  );
 }
 
 /**
@@ -47,7 +68,9 @@ const keepRailOpen = () => {};
  * The workspace's Sidebar state. The rail is always shown from 900px (the prototype's rail does not
  * collapse, and the menu button exists only below 900px), so only the phone sheet opens and closes.
  */
-export function NavigationProvider(props: Omit<ComponentProps<typeof SidebarProvider>, 'open' | 'onOpenChange' | 'defaultOpen'>) {
+export function NavigationProvider(
+  props: Omit<ComponentProps<typeof SidebarProvider>, 'open' | 'onOpenChange' | 'defaultOpen'>,
+) {
   return <SidebarProvider open onOpenChange={keepRailOpen} {...props} />;
 }
 
@@ -61,7 +84,11 @@ export function NavigationTrigger({ label }: { label: string }) {
     }
   }, [triggerRef]);
   return (
-    <SidebarTrigger className="-ml-2.5 flex-none text-foreground rail:hidden" aria-label={label} data-testid="workspace-menu">
+    <SidebarTrigger
+      className="-ml-2.5 flex-none text-foreground rail:hidden"
+      aria-label={label}
+      data-testid="workspace-menu"
+    >
       <MenuIcon aria-hidden="true" />
     </SidebarTrigger>
   );
@@ -72,7 +99,15 @@ export function NavigationTrigger({ label }: { label: string }) {
  * rail below the sticky header, below 900px its sheet. The current route is filled with the
  * salon's brand. Choosing a route closes the sheet.
  */
-export function Navigation({ items, label, description }: { items: NavigationItem[]; label: string; description: string }) {
+export function Navigation({
+  items,
+  label,
+  description,
+}: {
+  items: NavigationItem[];
+  label: string;
+  description: string;
+}) {
   const { isMobile, setOpenMobile } = useSidebar();
   return (
     <Sidebar sheetTitle={label} sheetDescription={description} className="top-header">

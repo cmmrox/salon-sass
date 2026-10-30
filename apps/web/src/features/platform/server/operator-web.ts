@@ -29,7 +29,9 @@ const SIGN_IN_PATH = '/api/v1/operator/sign-in';
 export function operatorCsrf(request: NextRequest): boolean {
   const host = consoleRequestHost(request.headers.get('host'));
   const site = request.headers.get('sec-fetch-site');
-  return Boolean(host && request.headers.get('origin') === host.origin && site !== 'cross-site' && site !== 'same-site');
+  return Boolean(
+    host && request.headers.get('origin') === host.origin && site !== 'cross-site' && site !== 'same-site',
+  );
 }
 
 /** The console's own proxy key, shared with the API and independent of every identity key. */
@@ -47,7 +49,9 @@ export function operatorAssertion(host: string, ip: string, time: string): strin
 
 export type OperatorCredentials = { access?: string; refresh?: string; expiry?: string };
 
-export function credentialsOf(request: { cookies: { get(name: string): { value: string } | undefined } }): OperatorCredentials {
+export function credentialsOf(request: {
+  cookies: { get(name: string): { value: string } | undefined };
+}): OperatorCredentials {
   return {
     access: request.cookies.get(operatorCookie('access'))?.value,
     refresh: request.cookies.get(operatorCookie('refresh'))?.value,
@@ -59,7 +63,11 @@ export function credentialsOf(request: { cookies: { get(name: string): { value: 
  * Whether the refresh family may renew: only when the access credential is gone or answered 401 and,
  * when present, its recorded expiry has passed by the API's clock. Expiry metadata never authorizes.
  */
-export async function operatorRenewal(hostname: string, { access, refresh, expiry }: OperatorCredentials, status: number): Promise<'renewable' | 'spent' | 'unknown'> {
+export async function operatorRenewal(
+  hostname: string,
+  { access, refresh, expiry }: OperatorCredentials,
+  status: number,
+): Promise<'renewable' | 'spent' | 'unknown'> {
   if (!refresh || !(status === 401 || !access)) return 'spent';
   const time = await apiTime(hostname);
   if (!time) return 'unknown';
@@ -82,20 +90,32 @@ export function archive(bytes: ArrayBuffer, upstream: Response) {
       'Content-Type': 'application/zip',
       'Content-Disposition': `attachment; filename="${name}"`,
       'Cache-Control': 'private, no-store',
-      ...(upstream.headers.get('x-content-sha256') ? { 'X-Content-SHA256': upstream.headers.get('x-content-sha256')! } : {}),
+      ...(upstream.headers.get('x-content-sha256')
+        ? { 'X-Content-SHA256': upstream.headers.get('x-content-sha256')! }
+        : {}),
     },
   });
 }
 function setCookie(response: NextResponse, name: (typeof OPERATOR_COOKIES)[number], value: string, maxAge: number) {
-  response.cookies.set(operatorCookie(name), value, { httpOnly: true, secure: !localHttp(), sameSite: 'lax', path: '/', maxAge });
+  response.cookies.set(operatorCookie(name), value, {
+    httpOnly: true,
+    secure: !localHttp(),
+    sameSite: 'lax',
+    path: '/',
+    maxAge,
+  });
 }
 export function clearOperatorCookies(response: NextResponse) {
   for (const name of OPERATOR_COOKIES) setCookie(response, name, '', 0);
 }
 function issue(response: NextResponse, tokens: Tokens) {
-  if (!strictInstant(tokens.accessExpiresAt) || !strictInstant(tokens.refreshExpiresAt)) throw new Error('Invalid credential expiry');
+  if (!strictInstant(tokens.accessExpiresAt) || !strictInstant(tokens.refreshExpiresAt))
+    throw new Error('Invalid credential expiry');
   // Both instants come from the API's clock; the web machine's clock is never subtracted.
-  const lifetime = Math.max(1, Math.floor((Date.parse(tokens.refreshExpiresAt) - Date.parse(tokens.accessExpiresAt)) / 1000) + 300);
+  const lifetime = Math.max(
+    1,
+    Math.floor((Date.parse(tokens.refreshExpiresAt) - Date.parse(tokens.accessExpiresAt)) / 1000) + 300,
+  );
   setCookie(response, 'access', tokens.accessToken, 300);
   setCookie(response, 'refresh', tokens.refreshToken, lifetime);
   setCookie(response, 'expires', tokens.accessExpiresAt, lifetime);
@@ -111,11 +131,41 @@ function failure(r: { error?: { code?: string; errors?: { field?: string }[] }; 
   });
 }
 
-const READS = new Set(['principal', 'plans', 'plan', 'salons', 'salon', 'subscription', 'invoices', 'invoice', 'lifecycle', 'export', 'export-archive', 'support-sessions']);
+const READS = new Set([
+  'principal',
+  'plans',
+  'plan',
+  'salons',
+  'salon',
+  'subscription',
+  'invoices',
+  'invoice',
+  'lifecycle',
+  'export',
+  'export-archive',
+  'support-sessions',
+]);
 const PUBLIC = new Set(['sign-in', 'mfa-enroll', 'mfa-verify']);
-const MUTATIONS = new Set(['sign-in', 'mfa-enroll', 'mfa-verify', 'refresh', 'sign-out', 'clear', 'plan-create', 'salon-create',
-  'subscription-start', 'subscription-change', 'plan-move', 'payment-record', 'salon-suspend', 'salon-reactivate', 'salon-close',
-  'support-start', 'support-entry-code', 'support-end']);
+const MUTATIONS = new Set([
+  'sign-in',
+  'mfa-enroll',
+  'mfa-verify',
+  'refresh',
+  'sign-out',
+  'clear',
+  'plan-create',
+  'salon-create',
+  'subscription-start',
+  'subscription-change',
+  'plan-move',
+  'payment-record',
+  'salon-suspend',
+  'salon-reactivate',
+  'salon-close',
+  'support-start',
+  'support-entry-code',
+  'support-end',
+]);
 
 /** One allowlisted console operation; neither an upstream URL nor a tenant selector comes from input. */
 export async function handleOperator(request: NextRequest, action: string): Promise<NextResponse> {
@@ -124,7 +174,8 @@ export async function handleOperator(request: NextRequest, action: string): Prom
     if (!host) return problem('not_found', 404);
     if (!READS.has(action) && !MUTATIONS.has(action)) return problem('not_found', 404);
     if (request.method === 'GET' && !READS.has(action)) return problem('method_not_allowed', 405);
-    if (request.method !== 'GET' && (request.method !== 'POST' || !MUTATIONS.has(action))) return problem('method_not_allowed', 405);
+    if (request.method !== 'GET' && (request.method !== 'POST' || !MUTATIONS.has(action)))
+      return problem('method_not_allowed', 405);
     if (request.method !== 'GET' && !operatorCsrf(request)) return problem('request_rejected', 403);
     const client = platformClient(host.hostname);
     if (!client) return problem('service_unavailable', 503);
@@ -153,8 +204,16 @@ export async function handleOperator(request: NextRequest, action: string): Prom
             clearOperatorCookies(response);
             return response;
           }
-          const rotated = await client.POST('/api/v1/operator/sessions/refresh', { body: { refreshToken: credentials.refresh! }, signal: requestSignal() });
-          const verified = rotated.data ? await client.GET('/api/v1/operator/me', { headers: { Authorization: `Bearer ${rotated.data.accessToken}` }, signal: requestSignal() }) : null;
+          const rotated = await client.POST('/api/v1/operator/sessions/refresh', {
+            body: { refreshToken: credentials.refresh! },
+            signal: requestSignal(),
+          });
+          const verified = rotated.data
+            ? await client.GET('/api/v1/operator/me', {
+                headers: { Authorization: `Bearer ${rotated.data.accessToken}` },
+                signal: requestSignal(),
+              })
+            : null;
           const valid = Boolean(rotated.data && verified?.data?.kind === 'operator');
           const response = valid ? output({ ok: true }) : problem('invalid_session', 401);
           if (valid && rotated.data) issue(response, rotated.data);
@@ -176,7 +235,13 @@ export async function handleOperator(request: NextRequest, action: string): Prom
       case 'plans':
       case 'salons': {
         // Forwarded as numbers; anything else arrives as NaN, which the API refuses with a field error.
-        const params = { query: { page: Number(query.get('page') ?? 0), size: Number(query.get('size') ?? 20), ...(query.get('q') ? { q: query.get('q')! } : {}) } };
+        const params = {
+          query: {
+            page: Number(query.get('page') ?? 0),
+            size: Number(query.get('size') ?? 20),
+            ...(query.get('q') ? { q: query.get('q')! } : {}),
+          },
+        };
         if (action === 'plans') {
           const r = await client.GET('/api/v1/operator/plans', { ...options, params });
           return r.data ? output(r.data) : failure(r);
@@ -188,9 +253,10 @@ export async function handleOperator(request: NextRequest, action: string): Prom
       case 'salon': {
         const id = query.get('id') ?? '';
         if (!UUID.test(id)) return problem('bad_request', 400, { errors: [{ field: 'id' }] });
-        const r = action === 'plan'
-          ? await client.GET('/api/v1/operator/plans/{id}', { ...options, params: { path: { id } } })
-          : await client.GET('/api/v1/operator/salons/{id}', { ...options, params: { path: { id } } });
+        const r =
+          action === 'plan'
+            ? await client.GET('/api/v1/operator/plans/{id}', { ...options, params: { path: { id } } })
+            : await client.GET('/api/v1/operator/salons/{id}', { ...options, params: { path: { id } } });
         return r.data ? output(r.data) : failure(r);
       }
       case 'subscription':
@@ -199,7 +265,10 @@ export async function handleOperator(request: NextRequest, action: string): Prom
         const id = query.get('id') ?? '';
         if (!UUID.test(id)) return problem('bad_request', 400, { errors: [{ field: 'id' }] });
         if (action === 'subscription') {
-          const r = await client.GET('/api/v1/operator/salons/{id}/subscription', { ...options, params: { path: { id } } });
+          const r = await client.GET('/api/v1/operator/salons/{id}/subscription', {
+            ...options,
+            params: { path: { id } },
+          });
           return r.data ? output(r.data) : failure(r);
         }
         if (action === 'invoice') {
@@ -208,7 +277,10 @@ export async function handleOperator(request: NextRequest, action: string): Prom
         }
         const r = await client.GET('/api/v1/operator/salons/{id}/invoices', {
           ...options,
-          params: { path: { id }, query: { page: Number(query.get('page') ?? 0), size: Number(query.get('size') ?? 20) } },
+          params: {
+            path: { id },
+            query: { page: Number(query.get('page') ?? 0), size: Number(query.get('size') ?? 20) },
+          },
         });
         return r.data ? output(r.data) : failure(r);
       }
@@ -220,7 +292,10 @@ export async function handleOperator(request: NextRequest, action: string): Prom
         if (action === 'lifecycle') {
           const r = await client.GET('/api/v1/operator/salons/{id}/lifecycle', {
             ...options,
-            params: { path: { id }, query: { page: Number(query.get('page') ?? 0), size: Number(query.get('size') ?? 20) } },
+            params: {
+              path: { id },
+              query: { page: Number(query.get('page') ?? 0), size: Number(query.get('size') ?? 20) },
+            },
           });
           return r.data ? output(r.data) : failure(r);
         }
@@ -228,8 +303,14 @@ export async function handleOperator(request: NextRequest, action: string): Prom
           const r = await client.GET('/api/v1/operator/salons/{id}/export', { ...options, params: { path: { id } } });
           return r.data ? output(r.data) : failure(r);
         }
-        const r = await client.GET('/api/v1/operator/salons/{id}/export/archive', { ...options, params: { path: { id } }, parseAs: 'arrayBuffer' });
-        return r.data ? archive(r.data as ArrayBuffer, r.response) : failure(r as unknown as Parameters<typeof failure>[0]);
+        const r = await client.GET('/api/v1/operator/salons/{id}/export/archive', {
+          ...options,
+          params: { path: { id } },
+          parseAs: 'arrayBuffer',
+        });
+        return r.data
+          ? archive(r.data as ArrayBuffer, r.response)
+          : failure(r as unknown as Parameters<typeof failure>[0]);
       }
       case 'support-sessions': {
         // Forwarded as typed; the API names a bad page, size, salon or state as a field error.
@@ -237,7 +318,14 @@ export async function handleOperator(request: NextRequest, action: string): Prom
         const state = query.get('state');
         const r = await client.GET('/api/v1/operator/support-sessions', {
           ...options,
-          params: { query: { page: Number(query.get('page') ?? 0), size: Number(query.get('size') ?? 20), ...(salonId ? { salonId } : {}), ...(state ? { state: state as 'active' | 'ended' } : {}) } },
+          params: {
+            query: {
+              page: Number(query.get('page') ?? 0),
+              size: Number(query.get('size') ?? 20),
+              ...(salonId ? { salonId } : {}),
+              ...(state ? { state: state as 'active' | 'ended' } : {}),
+            },
+          },
         });
         return r.data ? output(r.data) : failure(r);
       }
@@ -248,16 +336,44 @@ export async function handleOperator(request: NextRequest, action: string): Prom
         if (!UUID.test(id)) return problem('bad_request', 400, { errors: [{ field: 'id' }] });
         if (action === 'support-start') {
           const r = await client.POST('/api/v1/operator/salons/{id}/support-sessions', {
-            ...options, params: { path: { id } }, body: { reason: text('reason'), durationMinutes: body.durationMinutes as number },
+            ...options,
+            params: { path: { id } },
+            body: { reason: text('reason'), durationMinutes: body.durationMinutes as number },
           });
           // The entry code is meant for this operator's browser: it opens the salon's workspace once.
-          return r.data ? output({ id: r.data.id, expiresAt: r.data.expiresAt, entryUrl: r.data.entryUrl, codeExpiresAt: r.data.codeExpiresAt }, 201) : failure(r);
+          return r.data
+            ? output(
+                {
+                  id: r.data.id,
+                  expiresAt: r.data.expiresAt,
+                  entryUrl: r.data.entryUrl,
+                  codeExpiresAt: r.data.codeExpiresAt,
+                },
+                201,
+              )
+            : failure(r);
         }
         if (action === 'support-entry-code') {
-          const r = await client.POST('/api/v1/operator/support-sessions/{id}/entry-codes', { ...options, params: { path: { id } } });
-          return r.data ? output({ id: r.data.id, expiresAt: r.data.expiresAt, entryUrl: r.data.entryUrl, codeExpiresAt: r.data.codeExpiresAt }, 201) : failure(r);
+          const r = await client.POST('/api/v1/operator/support-sessions/{id}/entry-codes', {
+            ...options,
+            params: { path: { id } },
+          });
+          return r.data
+            ? output(
+                {
+                  id: r.data.id,
+                  expiresAt: r.data.expiresAt,
+                  entryUrl: r.data.entryUrl,
+                  codeExpiresAt: r.data.codeExpiresAt,
+                },
+                201,
+              )
+            : failure(r);
         }
-        const r = await client.DELETE('/api/v1/operator/support-sessions/{id}', { ...options, params: { path: { id } } });
+        const r = await client.DELETE('/api/v1/operator/support-sessions/{id}', {
+          ...options,
+          params: { path: { id } },
+        });
         return r.response.ok ? output({ ok: true }) : failure(r);
       }
       case 'salon-suspend':
@@ -268,12 +384,25 @@ export async function handleOperator(request: NextRequest, action: string): Prom
         const params = { path: { id } };
         const version = body.version as number;
         if (action === 'salon-close') {
-          const r = await client.POST('/api/v1/operator/salons/{id}/closure', { ...options, params, body: { version, confirmSlug: text('confirmSlug'), reason: text('reason') } });
+          const r = await client.POST('/api/v1/operator/salons/{id}/closure', {
+            ...options,
+            params,
+            body: { version, confirmSlug: text('confirmSlug'), reason: text('reason') },
+          });
           return r.data ? output(r.data) : failure(r);
         }
-        const r = action === 'salon-suspend'
-          ? await client.POST('/api/v1/operator/salons/{id}/suspension', { ...options, params, body: { version, reason: text('reason') } })
-          : await client.DELETE('/api/v1/operator/salons/{id}/suspension', { ...options, params, body: { version, reason: text('reason') } });
+        const r =
+          action === 'salon-suspend'
+            ? await client.POST('/api/v1/operator/salons/{id}/suspension', {
+                ...options,
+                params,
+                body: { version, reason: text('reason') },
+              })
+            : await client.DELETE('/api/v1/operator/salons/{id}/suspension', {
+                ...options,
+                params,
+                body: { version, reason: text('reason') },
+              });
         return r.data ? output(r.data) : failure(r);
       }
       case 'subscription-start':
@@ -298,7 +427,11 @@ export async function handleOperator(request: NextRequest, action: string): Prom
           return r.data ? output(r.data) : failure(r);
         }
         if (action === 'plan-move') {
-          const r = await client.PUT('/api/v1/operator/salons/{id}/plan', { ...options, params: { path: { id } }, body: { version: body.version as number, planId: text('planId') } });
+          const r = await client.PUT('/api/v1/operator/salons/{id}/plan', {
+            ...options,
+            params: { path: { id } },
+            body: { version: body.version as number, planId: text('planId') },
+          });
           return r.data ? output(r.data) : failure(r);
         }
         const key = text('idempotencyKey');
@@ -308,7 +441,11 @@ export async function handleOperator(request: NextRequest, action: string): Prom
           const r = await client.POST('/api/v1/operator/salons/{id}/subscription', {
             ...idempotent,
             params: { path: { id }, header: { 'Idempotency-Key': key } },
-            body: { monthlyAmount: amount('monthlyAmount'), paymentMethod: text('paymentMethod') as 'card' | 'bank_transfer', ...(text('currency') ? { currency: text('currency') } : {}) },
+            body: {
+              monthlyAmount: amount('monthlyAmount'),
+              paymentMethod: text('paymentMethod') as 'card' | 'bank_transfer',
+              ...(text('currency') ? { currency: text('currency') } : {}),
+            },
           });
           return r.data ? output(r.data, 201) : failure(r);
         }
@@ -340,11 +477,19 @@ export async function handleOperator(request: NextRequest, action: string): Prom
         const challengeToken = request.cookies.get(operatorCookie('challenge'))?.value ?? '';
         if (!UUID.test(challengeId) || !challengeToken) return problem('invalid_credentials', 401);
         if (action === 'mfa-enroll') {
-          const r = await client.POST('/api/v1/operator/mfa/challenges', { signal: requestSignal(), body: { challengeId, challengeToken } });
+          const r = await client.POST('/api/v1/operator/mfa/challenges', {
+            signal: requestSignal(),
+            body: { challengeId, challengeToken },
+          });
           // The documented transient setup display: the secret and its URI, shown once to be copied.
-          return r.data ? output({ secret: r.data.secret, otpauthUri: r.data.otpauthUri, expiresAt: r.data.expiresAt }) : failure(r);
+          return r.data
+            ? output({ secret: r.data.secret, otpauthUri: r.data.otpauthUri, expiresAt: r.data.expiresAt })
+            : failure(r);
         }
-        const r = await client.POST('/api/v1/operator/mfa/verify', { signal: requestSignal(), body: { challengeId, challengeToken, code: text('code') } });
+        const r = await client.POST('/api/v1/operator/mfa/verify', {
+          signal: requestSignal(),
+          body: { challengeId, challengeToken, code: text('code') },
+        });
         const response = r.data ? output({ ok: true }) : failure(r);
         if (r.data) issue(response, r.data);
         return response;
@@ -363,24 +508,60 @@ export async function handleOperator(request: NextRequest, action: string): Prom
         if (action === 'plan-create') {
           const r = await client.POST('/api/v1/operator/plans', {
             ...idempotent,
-            body: { key: text('key'), name: text('name'), staffSeats: body.staffSeats as number, branches: body.branches as number, messageAllowance: body.messageAllowance as number, customDomain: body.customDomain as boolean, dedicatedApp: body.dedicatedApp as boolean },
+            body: {
+              key: text('key'),
+              name: text('name'),
+              staffSeats: body.staffSeats as number,
+              branches: body.branches as number,
+              messageAllowance: body.messageAllowance as number,
+              customDomain: body.customDomain as boolean,
+              dedicatedApp: body.dedicatedApp as boolean,
+            },
           });
           return r.data ? output(r.data, 201) : failure(r);
         }
-        const owner = (typeof body.owner === 'object' && body.owner !== null ? body.owner : {}) as Record<string, unknown>;
-        const subscription = (typeof body.subscription === 'object' && body.subscription !== null ? body.subscription : {}) as Record<string, unknown>;
+        const owner = (typeof body.owner === 'object' && body.owner !== null ? body.owner : {}) as Record<
+          string,
+          unknown
+        >;
+        const subscription = (
+          typeof body.subscription === 'object' && body.subscription !== null ? body.subscription : {}
+        ) as Record<string, unknown>;
         const ownerText = (name: string) => (typeof owner[name] === 'string' ? (owner[name] as string) : '');
         const optional = (name: string) => (text(name).trim() === '' ? null : text(name));
         const r = await client.POST('/api/v1/operator/salons', {
           ...idempotent,
           body: {
-            name: text('name'), slug: text('slug'), country: text('country'), currency: text('currency'), timeZone: text('timeZone'),
-            defaultLanguage: text('defaultLanguage') as 'en' | 'si' | 'ta', contactEmail: optional('contactEmail'), contactPhone: optional('contactPhone'), address: optional('address'),
-            planId: text('planId'), owner: { name: ownerText('name'), email: ownerText('email'), password: ownerText('password') },
-            subscription: { monthlyAmount: subscription.monthlyAmount as number, paymentMethod: (typeof subscription.paymentMethod === 'string' ? subscription.paymentMethod : '') as 'card' | 'bank_transfer' },
+            name: text('name'),
+            slug: text('slug'),
+            country: text('country'),
+            currency: text('currency'),
+            timeZone: text('timeZone'),
+            defaultLanguage: text('defaultLanguage') as 'en' | 'si' | 'ta',
+            contactEmail: optional('contactEmail'),
+            contactPhone: optional('contactPhone'),
+            address: optional('address'),
+            planId: text('planId'),
+            owner: { name: ownerText('name'), email: ownerText('email'), password: ownerText('password') },
+            subscription: {
+              monthlyAmount: subscription.monthlyAmount as number,
+              paymentMethod: (typeof subscription.paymentMethod === 'string' ? subscription.paymentMethod : '') as
+                'card' | 'bank_transfer',
+            },
           },
         });
-        return r.data ? output({ id: r.data.id, slug: r.data.slug, hostname: r.data.hostname, planId: r.data.planId, createdAt: r.data.createdAt }, 201) : failure(r);
+        return r.data
+          ? output(
+              {
+                id: r.data.id,
+                slug: r.data.slug,
+                hostname: r.data.hostname,
+                planId: r.data.planId,
+                createdAt: r.data.createdAt,
+              },
+              201,
+            )
+          : failure(r);
       }
       default:
         return problem('not_found', 404);

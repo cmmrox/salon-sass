@@ -66,12 +66,16 @@ export function contextFromTraceparent(header: string | string[] | undefined): R
   const value = Array.isArray(header) ? header[0] : header;
   const match = value === undefined ? null : TRACEPARENT.exec(value.trim());
   if (match) {
-    const [, version, traceId, parentId, flags, rest] = match as unknown as [string, string, string, string, string, string?];
+    const [, version, traceId, parentId, flags, rest] = match as unknown as [
+      string,
+      string,
+      string,
+      string,
+      string,
+      string?,
+    ];
     const valid =
-      version !== 'ff' &&
-      (version !== '00' || rest === undefined) &&
-      !/^0+$/.test(traceId) &&
-      !/^0+$/.test(parentId);
+      version !== 'ff' && (version !== '00' || rest === undefined) && !/^0+$/.test(traceId) && !/^0+$/.test(parentId);
     if (valid) {
       return { traceId, spanId: newSpanId(), sampled: (parseInt(flags, 16) & 1) === 1 };
     }

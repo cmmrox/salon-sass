@@ -7,15 +7,31 @@ const TOKEN = 'AbCdEfGhIjKlMnOpQrStUvWxYz0123456789_-abcde';
 let bodies: unknown[];
 
 function stub(answer: (url: string) => Response) {
-  vi.stubGlobal('fetch', async (url: string, init?: RequestInit) => { bodies.push(JSON.parse(String(init?.body))); return answer(url); });
+  vi.stubGlobal('fetch', async (url: string, init?: RequestInit) => {
+    bodies.push(JSON.parse(String(init?.body)));
+    return answer(url);
+  });
 }
 
-beforeEach(() => { bodies = []; window.history.replaceState(null, '', `/exports#${TOKEN}`); });
-afterEach(() => { vi.unstubAllGlobals(); window.history.replaceState(null, '', '/'); });
+beforeEach(() => {
+  bodies = [];
+  window.history.replaceState(null, '', `/exports#${TOKEN}`);
+});
+afterEach(() => {
+  vi.unstubAllGlobals();
+  window.history.replaceState(null, '', '/');
+});
 
 describe('the Owner export download page (F03-S03)', () => {
   it('takes the token from the fragment, removes it from the address and shows the archive facts', async () => {
-    stub(() => Response.json({ readyAt: '2026-01-02T00:01:00Z', deleteAt: '2026-02-01T00:00:00Z', sizeBytes: 2048, sha256: 'cd'.repeat(32) }));
+    stub(() =>
+      Response.json({
+        readyAt: '2026-01-02T00:01:00Z',
+        deleteAt: '2026-02-01T00:00:00Z',
+        sizeBytes: 2048,
+        sha256: 'cd'.repeat(32),
+      }),
+    );
     renderWithMessages(<ExportDownload />);
     expect(screen.getByTestId('exports-loading')).toBeInTheDocument();
     expect(await screen.findByTestId('exports-sha256')).toHaveTextContent('cd'.repeat(32));
@@ -59,4 +75,3 @@ describe('the Owner export download page (F03-S03)', () => {
     expect(window.location.hash).toBe('');
   });
 });
-

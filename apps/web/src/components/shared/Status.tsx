@@ -8,9 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 /** What the status page knows about the API at this moment. */
 export type StatusState =
-  | { kind: 'loading' }
-  | { kind: 'loaded'; service: string; version: string }
-  | { kind: 'unavailable' };
+  { kind: 'loading' } | { kind: 'loaded'; service: string; version: string } | { kind: 'unavailable' };
 
 /** The frame of the status page: its heading, and whichever state is inside. */
 export function StatusPanel({ children }: { children: ReactNode }) {

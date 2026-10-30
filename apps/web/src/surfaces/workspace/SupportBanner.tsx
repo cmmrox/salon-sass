@@ -25,28 +25,62 @@ export function SupportBanner({ expiresAt, timeZone }: { expiresAt: string | nul
     const wait = Date.parse(expiresAt) - Date.now();
     // The server decides; this only stops showing a view that has ended. A long wait is capped by the
     // browser's timer limit, far above a session's two hours.
-    const id = setTimeout(() => window.location.replace(SUPPORT_ENDED), Math.max(0, Math.min(wait + 1000, 2 ** 31 - 1)));
+    const id = setTimeout(
+      () => window.location.replace(SUPPORT_ENDED),
+      Math.max(0, Math.min(wait + 1000, 2 ** 31 - 1)),
+    );
     return () => clearTimeout(id);
   }, [expiresAt]);
   async function end() {
-    setBusy(true); setFailed(false);
+    setBusy(true);
+    setFailed(false);
     try {
       await identityRequest('support', 'end', {});
       window.location.replace(SUPPORT_ENDED);
     } catch (failure) {
-      if (failure instanceof IdentityFailure && failure.code === 'invalid_session') { window.location.replace(SUPPORT_ENDED); return; }
-      setFailed(true); setBusy(false);
+      if (failure instanceof IdentityFailure && failure.code === 'invalid_session') {
+        window.location.replace(SUPPORT_ENDED);
+        return;
+      }
+      setFailed(true);
+      setBusy(false);
     }
   }
   return (
-    <Alert variant="caution" role="alert" className="rounded-none px-4 py-3 rail:flex-row rail:items-center rail:px-7" data-testid="support-banner" data-expires-at={expiresAt ?? undefined}>
+    <Alert
+      variant="caution"
+      role="alert"
+      className="rounded-none px-4 py-3 rail:flex-row rail:items-center rail:px-7"
+      data-testid="support-banner"
+      data-expires-at={expiresAt ?? undefined}
+    >
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <AlertTitle data-testid="support-banner-title">{t('bannerTitle')}</AlertTitle>
-        <AlertDescription data-testid="support-banner-ends">{expiresAt ? t('bannerEnds', { time: formatTime(expiresAt, timeZone) }) : t('bannerReadOnly')}</AlertDescription>
-        {failed && <p className="m-0" role="status" data-testid="support-banner-error">{t('endFailed')}</p>}
+        <AlertDescription data-testid="support-banner-ends">
+          {expiresAt ? t('bannerEnds', { time: formatTime(expiresAt, timeZone) }) : t('bannerReadOnly')}
+        </AlertDescription>
+        {failed && (
+          <p className="m-0" role="status" data-testid="support-banner-error">
+            {t('endFailed')}
+          </p>
+        )}
       </div>
-      <Button variant="outline" className="self-start rail:self-center" data-testid="support-banner-end" disabled={busy} aria-busy={busy || undefined} onClick={() => void end()}>
-        {busy ? <><Spinner />{t('ending')}</> : t('endSession')}
+      <Button
+        variant="outline"
+        className="self-start rail:self-center"
+        data-testid="support-banner-end"
+        disabled={busy}
+        aria-busy={busy || undefined}
+        onClick={() => void end()}
+      >
+        {busy ? (
+          <>
+            <Spinner />
+            {t('ending')}
+          </>
+        ) : (
+          t('endSession')
+        )}
       </Button>
     </Alert>
   );

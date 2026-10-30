@@ -67,11 +67,13 @@ export function withTraceparent(send: typeof fetch): typeof fetch {
 
 /** What is left, in milliseconds, of the request's shared API budget; a whole budget outside one. */
 export function remainingBudget(): number {
-  return (currentRequest()?.deadline ?? (performance.now() + API_TIMEOUT_MS)) - performance.now();
+  return (currentRequest()?.deadline ?? performance.now() + API_TIMEOUT_MS) - performance.now();
 }
 
 /** One original request budget, shared across proxy, metadata and account API calls. */
 export function requestSignal(): AbortSignal {
   const remaining = remainingBudget();
-  return remaining <= 0 ? AbortSignal.abort(new DOMException("Request deadline exceeded", "TimeoutError")) : AbortSignal.timeout(Math.ceil(remaining));
+  return remaining <= 0
+    ? AbortSignal.abort(new DOMException('Request deadline exceeded', 'TimeoutError'))
+    : AbortSignal.timeout(Math.ceil(remaining));
 }

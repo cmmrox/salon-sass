@@ -13,13 +13,22 @@ export function ConsolePending() {
   const [failure, setFailure] = useState<OperatorFailure | null>(null);
   const [busy, setBusy] = useState(true);
   async function attempt() {
-    setBusy(true); setFailure(null);
-    try { await ensurePrincipal(); router.refresh(); }
-    catch (error) {
+    setBusy(true);
+    setFailure(null);
+    try {
+      await ensurePrincipal();
+      router.refresh();
+    } catch (error) {
       const f = error instanceof OperatorFailure ? error : new OperatorFailure('service_unavailable');
-      if (f.code === 'invalid_session') { router.replace('/console/sign-in'); router.refresh(); return; }
+      if (f.code === 'invalid_session') {
+        router.replace('/console/sign-in');
+        router.refresh();
+        return;
+      }
       setFailure(f);
-    } finally { setBusy(false); }
+    } finally {
+      setBusy(false);
+    }
   }
   useEffect(() => {
     let active = true;
@@ -42,5 +51,11 @@ export function ConsolePending() {
 export function ConsoleUnavailable() {
   const router = useRouter();
   const [retrying, startRetry] = useTransition();
-  return <ConsoleFailure failure={new OperatorFailure('service_unavailable')} busy={retrying} onRetry={() => startRetry(() => router.refresh())} />;
+  return (
+    <ConsoleFailure
+      failure={new OperatorFailure('service_unavailable')}
+      busy={retrying}
+      onRetry={() => startRetry(() => router.refresh())}
+    />
+  );
 }

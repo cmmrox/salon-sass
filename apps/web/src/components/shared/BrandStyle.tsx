@@ -8,5 +8,10 @@ import { neutralRootRule, salonBrandRule } from '@/styles/brand';
  * to no salon.
  */
 export function BrandStyle({ colour, neutral = false }: { colour?: unknown; neutral?: boolean }) {
-  return <style data-testid={neutral ? 'console-accent' : 'salon-brand'} dangerouslySetInnerHTML={{ __html: neutral ? neutralRootRule() : salonBrandRule(colour) }} />;
+  return (
+    <style
+      data-testid={neutral ? 'console-accent' : 'salon-brand'}
+      dangerouslySetInnerHTML={{ __html: neutral ? neutralRootRule() : salonBrandRule(colour) }}
+    />
+  );
 }

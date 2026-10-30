@@ -17,5 +17,10 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default function ConsoleLayout({ children }: { children: ReactNode }) {
-  return <><BrandStyle neutral />{children}</>;
+  return (
+    <>
+      <BrandStyle neutral />
+      {children}
+    </>
+  );
 }

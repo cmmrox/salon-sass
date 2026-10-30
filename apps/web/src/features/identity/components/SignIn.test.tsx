@@ -4,7 +4,10 @@ import { renderWithMessages } from '@test/render';
 import { SignIn } from './SignIn';
 const replace = vi.fn();
 vi.mock('next/navigation', () => ({ useRouter: () => ({ replace, refresh: vi.fn() }) }));
-afterEach(() => { vi.unstubAllGlobals(); replace.mockReset(); });
+afterEach(() => {
+  vi.unstubAllGlobals();
+  replace.mockReset();
+});
 describe('account sign-in', () => {
   it('blocks credential changes with a clear explanation when safe tab locks are absent', async () => {
     vi.stubGlobal('navigator', {});
@@ -23,7 +26,9 @@ describe('account sign-in', () => {
   });
   it('shows field feedback for wrong credentials and clears the password', async () => {
     vi.stubGlobal('navigator', { locks: { request: (_name: string, work: () => Promise<unknown>) => work() } });
-    vi.stubGlobal('fetch', async () => Response.json({ code: 'invalid_credentials', errors: [{ field: 'identifier' }] }, { status: 401 }));
+    vi.stubGlobal('fetch', async () =>
+      Response.json({ code: 'invalid_credentials', errors: [{ field: 'identifier' }] }, { status: 401 }),
+    );
     renderWithMessages(<SignIn kind="staff" timeZone="Asia/Colombo" />);
     await waitFor(() => expect(screen.getByTestId('account-sign-in-submit')).toBeEnabled());
     fireEvent.change(screen.getByTestId('account-identifier'), { target: { value: 'owner@alpha.test' } });
@@ -43,7 +48,9 @@ it('offers staff password and authenticator steps without customer OTP controls'
   const calls: string[] = [];
   vi.stubGlobal('fetch', async (url: string) => {
     calls.push(url);
-    return Response.json(url.endsWith('/sign-in') ? { state: 'verify_mfa', expiresAt: '2026-01-01T00:05:00Z' } : { ok: true });
+    return Response.json(
+      url.endsWith('/sign-in') ? { state: 'verify_mfa', expiresAt: '2026-01-01T00:05:00Z' } : { ok: true },
+    );
   });
   renderWithMessages(<SignIn kind="staff" timeZone="Asia/Colombo" />);
   await waitFor(() => expect(screen.getByTestId('account-sign-in-submit')).toBeEnabled());
@@ -66,7 +73,8 @@ it('offers staff password and authenticator steps without customer OTP controls'
 
 it('reveals the password only on request and offers administrator guidance without a request', async () => {
   vi.stubGlobal('navigator', { locks: { request: (_name: string, work: () => Promise<unknown>) => work() } });
-  const fetch = vi.fn(); vi.stubGlobal('fetch', fetch);
+  const fetch = vi.fn();
+  vi.stubGlobal('fetch', fetch);
   renderWithMessages(<SignIn kind="staff" timeZone="Asia/Colombo" />);
   const password = screen.getByTestId('account-password');
   expect(password).toHaveAttribute('type', 'password');

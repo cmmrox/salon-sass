@@ -1,2 +1,4 @@
 import { AccountPage } from '@/surfaces/workspace';
-export default function Page() { return <AccountPage kind="staff" view="billing" />; }
+export default function Page() {
+  return <AccountPage kind="staff" view="billing" />;
+}

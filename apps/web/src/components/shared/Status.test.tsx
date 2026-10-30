@@ -47,7 +47,9 @@ describe('StatusBody', () => {
     const unavailable = screen.getByRole('alert');
     expect(unavailable).toHaveAttribute('data-testid', 'status-unavailable');
     expect(within(unavailable).getByRole('heading', { name: messages.status.unavailable.title })).toBeVisible();
-    expect(within(unavailable).getByTestId('status-unavailable-body')).toHaveTextContent(messages.status.unavailable.body);
+    expect(within(unavailable).getByTestId('status-unavailable-body')).toHaveTextContent(
+      messages.status.unavailable.body,
+    );
     const retry = within(unavailable).getByRole('link', { name: messages.status.unavailable.retry });
     expect(retry).toHaveAttribute('href', '/again');
     expect(retry).toHaveAttribute('data-testid', 'status-retry');

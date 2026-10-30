@@ -38,7 +38,11 @@ afterEach(async () => {
   await new Promise<void>((resolve) => server.close(() => resolve()));
 });
 
-const request: RequestContext = { traceId: '4bf92f3577b34da6a3ce929d0e0e4736', spanId: 'a1b2c3d4e5f60718', sampled: true };
+const request: RequestContext = {
+  traceId: '4bf92f3577b34da6a3ce929d0e0e4736',
+  spanId: 'a1b2c3d4e5f60718',
+  sampled: true,
+};
 
 describe('calls to the API made while a request is served', () => {
   it("send the request's W3C traceparent with a salon's call, beside the salon's hostname", async () => {
@@ -58,7 +62,11 @@ describe('calls to the API made while a request is served', () => {
   });
 
   it('send each request its own trace when two are served at once', async () => {
-    const other: RequestContext = { traceId: 'ffffffffffffffffffffffffffffffff', spanId: '0102030405060708', sampled: false };
+    const other: RequestContext = {
+      traceId: 'ffffffffffffffffffffffffffffffff',
+      spanId: '0102030405060708',
+      sampled: false,
+    };
 
     await Promise.all([
       runInRequest(request, () => findSalon('alpha', 'alpha.localhost')),
@@ -74,7 +82,11 @@ describe('calls to the API made while a request is served', () => {
 
 describe('calls made outside a request', () => {
   it('send no traceparent, and the API starts a trace of its own', async () => {
-    await findSalon('alpha', 'alpha.localhost', createServerApiClient(createApiClient, { hostname: 'alpha.localhost' }));
+    await findSalon(
+      'alpha',
+      'alpha.localhost',
+      createServerApiClient(createApiClient, { hostname: 'alpha.localhost' }),
+    );
 
     expect(received[0]?.traceparent).toBeUndefined();
   });

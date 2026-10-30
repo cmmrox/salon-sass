@@ -13,7 +13,9 @@ import { createServerApiClient, requestSignal } from '@/lib/api-core/client';
 
 /** These cases never reach the platform module's paths: any call to them fails. */
 const unreached: SalonAccountFor = () =>
-  new Proxy({} as SalonAccount, { get: () => () => Promise.reject(new Error('the platform module is not reached here')) });
+  new Proxy({} as SalonAccount, {
+    get: () => () => Promise.reject(new Error('the platform module is not reached here')),
+  });
 const handleIdentity = createIdentityWeb(unreached);
 
 /**
@@ -26,60 +28,105 @@ setFlagsFromString('--expose_gc');
 const collect = runInNewContext('gc') as () => void;
 
 type Phase = 'silent' | 'headers-only' | 'unread';
-let server: Server; let phase: Phase; const sockets = new Set<Socket>(); let held: ServerResponse[] = [];
+let server: Server;
+let phase: Phase;
+const sockets = new Set<Socket>();
+let held: ServerResponse[] = [];
 beforeEach(async () => {
   held = [];
   server = createServer((request, response) => {
     held.push(response);
-    if (phase === 'headers-only') { response.writeHead(200, { 'Content-Type': 'application/json', 'Content-Length': '64' }); response.write('{"partial":'); }
+    if (phase === 'headers-only') {
+      response.writeHead(200, { 'Content-Type': 'application/json', 'Content-Length': '64' });
+      response.write('{"partial":');
+    }
     // 'silent': accepts and reads the request, then never answers.
   });
-  server.on('connection', (socket) => { sockets.add(socket); if (phase === 'unread') socket.pause(); });
+  server.on('connection', (socket) => {
+    sockets.add(socket);
+    if (phase === 'unread') socket.pause();
+  });
   await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
   vi.stubEnv('SALON_API_BASE_URL', `http://127.0.0.1:${(server.address() as AddressInfo).port}`);
-  vi.stubEnv('SALON_PLATFORM_DOMAIN', 'localhost'); vi.stubEnv('SALON_WEB_LOCAL_HTTP', 'true'); vi.stubEnv('SALON_IDENTITY_PROXY_KEY', '12'.repeat(32));
+  vi.stubEnv('SALON_PLATFORM_DOMAIN', 'localhost');
+  vi.stubEnv('SALON_WEB_LOCAL_HTTP', 'true');
+  vi.stubEnv('SALON_IDENTITY_PROXY_KEY', '12'.repeat(32));
 });
 afterEach(async () => {
-  for (const socket of sockets) socket.destroy(); sockets.clear();
+  for (const socket of sockets) socket.destroy();
+  sockets.clear();
   await new Promise<void>((r) => server.close(() => r()));
   vi.unstubAllEnvs();
 });
 
 const BUDGET = 400;
 function inRequest<T>(work: () => Promise<T>) {
-  const context = { ...contextFromTraceparent(undefined), clientAddress: '127.0.0.2', deadline: performance.now() + BUDGET };
+  const context = {
+    ...contextFromTraceparent(undefined),
+    clientAddress: '127.0.0.2',
+    deadline: performance.now() + BUDGET,
+  };
   return runInRequest(context, work);
 }
 /** Runs the call while forcing collections, and measures when it settles. */
 async function settle<T>(work: () => Promise<T>) {
   const started = performance.now();
-  const collector = setInterval(() => { collect(); collect(); }, 25);
+  const collector = setInterval(() => {
+    collect();
+    collect();
+  }, 25);
   const watchdog = new Promise<'still waiting'>((r) => setTimeout(() => r('still waiting'), BUDGET + 2500));
   try {
-    const outcome = await Promise.race([work().then((value) => ({ value }), (error: unknown) => ({ error })), watchdog]);
+    const outcome = await Promise.race([
+      work().then(
+        (value) => ({ value }),
+        (error: unknown) => ({ error }),
+      ),
+      watchdog,
+    ]);
     return { outcome, elapsed: performance.now() - started };
-  } finally { clearInterval(collector); }
+  } finally {
+    clearInterval(collector);
+  }
 }
 
 describe.each(['silent', 'headers-only', 'unread'] as const)('an API that stops answering (%s)', (stop) => {
-  beforeEach(() => { phase = stop; });
+  beforeEach(() => {
+    phase = stop;
+  });
 
   it('a salon call through the hostname transport gives up within the budget', async () => {
-    const { outcome, elapsed } = await settle(() => inRequest(() => createServerApiClient(createApiClient, { hostname: 'alpha.localhost' })!.GET('/api/v1/meta', { signal: requestSignal() })));
+    const { outcome, elapsed } = await settle(() =>
+      inRequest(() =>
+        createServerApiClient(createApiClient, { hostname: 'alpha.localhost' })!.GET('/api/v1/meta', {
+          signal: requestSignal(),
+        }),
+      ),
+    );
     expect(outcome).not.toBe('still waiting');
     expect(outcome).toHaveProperty('error');
     expect(elapsed).toBeLessThan(BUDGET + 1000);
   });
 
   it('a platform call through the platform fetch gives up within the budget', async () => {
-    const { outcome, elapsed } = await settle(() => inRequest(() => createServerApiClient(createApiClient)!.GET('/api/v1/meta', { signal: requestSignal() })));
+    const { outcome, elapsed } = await settle(() =>
+      inRequest(() => createServerApiClient(createApiClient)!.GET('/api/v1/meta', { signal: requestSignal() })),
+    );
     expect(outcome).not.toBe('still waiting');
     expect(outcome).toHaveProperty('error');
     expect(elapsed).toBeLessThan(BUDGET + 1000);
   });
 
   it('staff sign-in answers 503 within the budget', async () => {
-    const request = new NextRequest('http://alpha.localhost:3100/identity-web/staff/sign-in', { method: 'POST', headers: { Host: 'alpha.localhost:3100', Origin: 'http://alpha.localhost:3100', 'Content-Type': 'application/json' }, body: JSON.stringify({ identifier: 'staff@alpha.test', password: 'private-password', deviceLabel: 'Browser' }) });
+    const request = new NextRequest('http://alpha.localhost:3100/identity-web/staff/sign-in', {
+      method: 'POST',
+      headers: {
+        Host: 'alpha.localhost:3100',
+        Origin: 'http://alpha.localhost:3100',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ identifier: 'staff@alpha.test', password: 'private-password', deviceLabel: 'Browser' }),
+    });
     const { outcome, elapsed } = await settle(() => inRequest(() => handleIdentity(request, 'staff', 'sign-in')));
     expect(outcome).not.toBe('still waiting');
     expect((outcome as { value: Response }).value.status).toBe(503);
@@ -88,13 +135,22 @@ describe.each(['silent', 'headers-only', 'unread'] as const)('an API that stops 
 });
 
 describe('the caller keeps control of its own call', () => {
-  beforeEach(() => { phase = 'silent'; });
-  it.each([{ hostname: 'alpha.localhost' }, {}])('an abort by the caller still ends the call at once (%o)', async (options) => {
-    const caller = new AbortController();
-    const context = { ...contextFromTraceparent(undefined), deadline: performance.now() + 60_000 };
-    setTimeout(() => caller.abort(new Error('caller gave up')), 100);
-    const { outcome, elapsed } = await settle(() => runInRequest(context, () => createServerApiClient(createApiClient, options)!.GET('/api/v1/meta', { signal: caller.signal })));
-    expect(outcome).toHaveProperty('error');
-    expect(elapsed).toBeLessThan(1000);
+  beforeEach(() => {
+    phase = 'silent';
   });
+  it.each([{ hostname: 'alpha.localhost' }, {}])(
+    'an abort by the caller still ends the call at once (%o)',
+    async (options) => {
+      const caller = new AbortController();
+      const context = { ...contextFromTraceparent(undefined), deadline: performance.now() + 60_000 };
+      setTimeout(() => caller.abort(new Error('caller gave up')), 100);
+      const { outcome, elapsed } = await settle(() =>
+        runInRequest(context, () =>
+          createServerApiClient(createApiClient, options)!.GET('/api/v1/meta', { signal: caller.signal }),
+        ),
+      );
+      expect(outcome).toHaveProperty('error');
+      expect(elapsed).toBeLessThan(1000);
+    },
+  );
 });

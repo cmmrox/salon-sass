@@ -12,17 +12,25 @@ it('the status summary pairs normal-size positive feedback with AA readable text
   renderWithMessages(<StatusBody state={{ kind: 'loaded', service: 'salon-api', version: '1.2.3' }} retryHref="/" />);
   const classes = [...screen.getByTestId('status-summary').classList];
   const background = classes.find((name) => name.startsWith('bg-'));
-  const text = classes.find((name) => name.startsWith('text-') && !/^text-(small|body|large|title|label|field|nav|rail|login-)/.test(name));
+  const text = classes.find(
+    (name) => name.startsWith('text-') && !/^text-(small|body|large|title|label|field|nav|rail|login-)/.test(name),
+  );
 
   expect(background).toBe('bg-positive-surface');
   expect(contrastRatio(utilityColour(text!, 'text'), utilityColour(background!, 'bg'))).toBeGreaterThanOrEqual(4.5);
 });
 
 it('the account success notice pairs normal-size positive feedback with AA readable text', () => {
-  renderWithMessages(<Alert variant="success" data-testid="success">done</Alert>);
+  renderWithMessages(
+    <Alert variant="success" data-testid="success">
+      done
+    </Alert>,
+  );
   const classes = [...screen.getByTestId('success').classList];
   const background = classes.find((name) => name.startsWith('bg-'));
-  const text = classes.find((name) => name.startsWith('text-') && !/^text-(small|body|large|title|label|field|nav|rail|login-)/.test(name));
+  const text = classes.find(
+    (name) => name.startsWith('text-') && !/^text-(small|body|large|title|label|field|nav|rail|login-)/.test(name),
+  );
 
   expect(background).toBe('bg-positive-surface');
   expect(contrastRatio(utilityColour(text!, 'text'), utilityColour(background!, 'bg'))).toBeGreaterThanOrEqual(4.5);

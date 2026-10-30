@@ -62,7 +62,9 @@ async function check() {
 
   const documentState = compareDocument(document, committedDocument);
   if (documentState !== 'current') {
-    stale.push(`${shown(committedDocument)} (${documentState === 'missing' ? 'missing' : "not what the API's controllers generate"})`);
+    stale.push(
+      `${shown(committedDocument)} (${documentState === 'missing' ? 'missing' : "not what the API's controllers generate"})`,
+    );
   }
 
   // The client is compared with what the controllers' document generates, not with the committed

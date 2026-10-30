@@ -28,7 +28,9 @@ export function requestHost(raw: string | null): { hostname: string; origin: str
 }
 export function csrf(request: NextRequest): boolean {
   const host = requestHost(request.headers.get('host'));
-  return Boolean(host && request.headers.get('origin') === host.origin && request.headers.get('sec-fetch-site') !== 'cross-site');
+  return Boolean(
+    host && request.headers.get('origin') === host.origin && request.headers.get('sec-fetch-site') !== 'cross-site',
+  );
 }
 /** A support session's mutations (F03-S04): the exact salon origin, and same-origin Fetch Metadata only. */
 export function supportCsrf(request: NextRequest): boolean {
@@ -54,19 +56,34 @@ export type Credentials = { access?: string; refresh?: string; expiry?: string }
  * and, if it is still present, its recorded expiry has passed by the API's clock. Expiry metadata
  * never authorizes access; `unknown` means the API's clock could not be read.
  */
-export async function renewal(hostname: string, { access, refresh, expiry }: Credentials, status: number): Promise<'renewable' | 'spent' | 'unknown'> {
+export async function renewal(
+  hostname: string,
+  { access, refresh, expiry }: Credentials,
+  status: number,
+): Promise<'renewable' | 'spent' | 'unknown'> {
   if (!refresh || !(status === 401 || !access)) return 'spent';
   const time = await apiTime(hostname);
   if (!time) return 'unknown';
   return !access || (strictInstant(expiry) && Date.parse(expiry) <= Date.parse(time)) ? 'renewable' : 'spent';
 }
-function output(data: unknown, status = 200) { return NextResponse.json(data, { status, headers: { 'Cache-Control': 'private, no-store' } }); }
-function problem(code: string, status: number, extra: Record<string, unknown> = {}) { return output({ code, ...extra }, status); }
+function output(data: unknown, status = 200) {
+  return NextResponse.json(data, { status, headers: { 'Cache-Control': 'private, no-store' } });
+}
+function problem(code: string, status: number, extra: Record<string, unknown> = {}) {
+  return output({ code, ...extra }, status);
+}
 function setCookie(response: NextResponse, kind: Kind, name: string, value: string, maxAge: number) {
-  response.cookies.set(cookieName(kind, name), value, { httpOnly: true, secure: !localHttp(), sameSite: 'lax', path: '/', maxAge });
+  response.cookies.set(cookieName(kind, name), value, {
+    httpOnly: true,
+    secure: !localHttp(),
+    sameSite: 'lax',
+    path: '/',
+    maxAge,
+  });
 }
 export function clearCookies(response: NextResponse, kind: Kind) {
-  const names = kind === 'support' ? SUPPORT_COOKIES : ['access', 'refresh', 'expires', 'session', 'challenge', 'challenge_id'];
+  const names =
+    kind === 'support' ? SUPPORT_COOKIES : ['access', 'refresh', 'expires', 'session', 'challenge', 'challenge_id'];
   for (const name of names) setCookie(response, kind, name, '', 0);
 }
 /**
@@ -83,13 +100,26 @@ export function supportEnded(request: { cookies: { get(name: string): { value: s
 /** A support session that ended: its cookies cleared host-only, the ended marker left behind. */
 export function endSupportView(response: NextResponse) {
   clearCookies(response, 'support');
-  response.cookies.set(SUPPORT_ENDED_COOKIE, 'support', { httpOnly: true, secure: !localHttp(), sameSite: 'lax', path: '/', maxAge: SUPPORT_ENDED_SECONDS });
+  response.cookies.set(SUPPORT_ENDED_COOKIE, 'support', {
+    httpOnly: true,
+    secure: !localHttp(),
+    sameSite: 'lax',
+    path: '/',
+    maxAge: SUPPORT_ENDED_SECONDS,
+  });
 }
 function forgetSupportEnded(response: NextResponse) {
-  response.cookies.set(SUPPORT_ENDED_COOKIE, '', { httpOnly: true, secure: !localHttp(), sameSite: 'lax', path: '/', maxAge: 0 });
+  response.cookies.set(SUPPORT_ENDED_COOKIE, '', {
+    httpOnly: true,
+    secure: !localHttp(),
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 0,
+  });
 }
 function issueSupport(response: NextResponse, credential: SupportCredential) {
-  if (!strictInstant(credential.issuedAt) || !strictInstant(credential.expiresAt)) throw new Error('Invalid credential expiry');
+  if (!strictInstant(credential.issuedAt) || !strictInstant(credential.expiresAt))
+    throw new Error('Invalid credential expiry');
   // Both instants are the API's; the support credential lives until its session's expiry, with no refresh.
   const lifetime = Math.max(1, Math.floor((Date.parse(credential.expiresAt) - Date.parse(credential.issuedAt)) / 1000));
   setCookie(response, 'support', 'access', credential.accessToken, lifetime);
@@ -102,17 +132,31 @@ function issueSupport(response: NextResponse, credential: SupportCredential) {
  * `end` ends the session; `clear` leaves the support view; reads are the Owner's reads. Every other
  * mutation is refused here as the API refuses it: 403 `support_read_only`, with no upstream call.
  */
-async function handleSupport(request: NextRequest, action: string, host: { hostname: string }, salonAccountFor: SalonAccountFor) {
-  if (request.method === 'GET' && !SUPPORT_READS.includes(action)) return action === 'sessions' || action === 'support-sessions' ? problem('permission_denied', 403) : problem('method_not_allowed', 405);
+async function handleSupport(
+  request: NextRequest,
+  action: string,
+  host: { hostname: string },
+  salonAccountFor: SalonAccountFor,
+) {
+  if (request.method === 'GET' && !SUPPORT_READS.includes(action))
+    return action === 'sessions' || action === 'support-sessions'
+      ? problem('permission_denied', 403)
+      : problem('method_not_allowed', 405);
   if (request.method !== 'GET' && request.method !== 'POST') return problem('method_not_allowed', 405);
   if (request.method === 'POST' && !supportCsrf(request)) return problem('request_rejected', 403);
-  if (request.method === 'POST' && !['entry', 'end', 'clear'].includes(action)) return problem('support_read_only', 403);
+  if (request.method === 'POST' && !['entry', 'end', 'clear'].includes(action))
+    return problem('support_read_only', 403);
   const client = identityClient(host.hostname);
   const account = salonAccountFor(host.hostname);
   if (!client || !account) return problem('service_unavailable', 503);
   const access = request.cookies.get(cookieName('support', 'access'))?.value;
   const options = { headers: access ? { Authorization: `Bearer ${access}` } : {}, signal: requestSignal() };
-  if (action === 'clear') { const response = output({ ok: true }); clearCookies(response, 'support'); forgetSupportEnded(response); return response; }
+  if (action === 'clear') {
+    const response = output({ ok: true });
+    clearCookies(response, 'support');
+    forgetSupportEnded(response);
+    return response;
+  }
   if (action === 'entry') {
     const read = await readBoundedJson(request, 1024);
     if (!read.ok) return problem('bad_request', 400);
@@ -133,29 +177,53 @@ async function handleSupport(request: NextRequest, action: string, host: { hostn
   }
   const answer = await client.GET('/api/v1/identity/me', options);
   if (!answer.data || answer.data.kind !== 'support') {
-    if (answer.response.status === 503 || (answer.response.status !== 401 && answer.response.status !== 403 && !answer.data)) return problem('service_unavailable', 503);
+    if (
+      answer.response.status === 503 ||
+      (answer.response.status !== 401 && answer.response.status !== 403 && !answer.data)
+    )
+      return problem('service_unavailable', 503);
     // The session ended (expiry, End session, Admin or Owner revocation): the browser leaves the support view.
     const response = problem('invalid_session', 401, { renewable: false });
     endSupportView(response);
     return response;
   }
   const principal = answer.data;
-  const permission: Record<string, string> = { entitlements: 'entitlement.read', invoices: 'invoice.read', staff: 'staff.list', audit: 'audit.list' };
-  if (permission[action] && !principal.permissions.includes(permission[action]!)) return problem('permission_denied', 403);
+  const permission: Record<string, string> = {
+    entitlements: 'entitlement.read',
+    invoices: 'invoice.read',
+    staff: 'staff.list',
+    audit: 'audit.list',
+  };
+  if (permission[action] && !principal.permissions.includes(permission[action]!))
+    return problem('permission_denied', 403);
   if (action === 'principal') return output(principal);
   const page = Number(request.nextUrl.searchParams.get('page') ?? 0);
   const query = { page, size: 10 };
-  const result = action === 'staff' ? await client.GET('/api/v1/identity/staff', { ...options, params: { query } })
-    : action === 'audit' ? await client.GET('/api/v1/identity/audit', { ...options, params: { query } })
-    : action === 'entitlements' ? await account.entitlements(options)
-    : await account.invoices(options, query);
-  if (result.response.status === 401) { const response = problem('invalid_session', 401, { renewable: false }); endSupportView(response); return response; }
-  return result.data ? output(result.data) : problem(result.error?.code ?? 'service_unavailable', result.response.status, { errors: result.error?.errors });
+  const result =
+    action === 'staff'
+      ? await client.GET('/api/v1/identity/staff', { ...options, params: { query } })
+      : action === 'audit'
+        ? await client.GET('/api/v1/identity/audit', { ...options, params: { query } })
+        : action === 'entitlements'
+          ? await account.entitlements(options)
+          : await account.invoices(options, query);
+  if (result.response.status === 401) {
+    const response = problem('invalid_session', 401, { renewable: false });
+    endSupportView(response);
+    return response;
+  }
+  return result.data
+    ? output(result.data)
+    : problem(result.error?.code ?? 'service_unavailable', result.response.status, { errors: result.error?.errors });
 }
 function issue(response: NextResponse, kind: Kind, tokens: Tokens) {
-  if (!strictInstant(tokens.accessExpiresAt) || !strictInstant(tokens.refreshExpiresAt)) throw new Error('Invalid credential expiry');
+  if (!strictInstant(tokens.accessExpiresAt) || !strictInstant(tokens.refreshExpiresAt))
+    throw new Error('Invalid credential expiry');
   // Both instants are API Clock-derived; never subtract the web machine clock.
-  const lifetime = Math.max(1, Math.floor((Date.parse(tokens.refreshExpiresAt) - Date.parse(tokens.accessExpiresAt)) / 1000) + 300);
+  const lifetime = Math.max(
+    1,
+    Math.floor((Date.parse(tokens.refreshExpiresAt) - Date.parse(tokens.accessExpiresAt)) / 1000) + 300,
+  );
   setCookie(response, kind, 'access', tokens.accessToken, 300);
   setCookie(response, kind, 'refresh', tokens.refreshToken, lifetime);
   setCookie(response, kind, 'expires', tokens.accessExpiresAt, lifetime);
@@ -191,7 +259,7 @@ async function handleIdentity(request: NextRequest, kind: Kind, action: string, 
     if (!read.ok) return problem('bad_request', 400);
     const body: Record<string, unknown> = read.value;
     // Input values are forwarded only through each generated contract's explicit fields.
-    const text = (name: string) => typeof body[name] === 'string' ? body[name] as string : '';
+    const text = (name: string) => (typeof body[name] === 'string' ? (body[name] as string) : '');
     const page = Number(request.nextUrl.searchParams.get('page') ?? 0);
     const query = { page, size: 10 };
     const options = { headers, signal };
@@ -202,36 +270,77 @@ async function handleIdentity(request: NextRequest, kind: Kind, action: string, 
       principal = answer.data;
       if (!principal || principal.kind !== kind) {
         const expiry = request.cookies.get(cookieName(kind, 'expires'))?.value;
-        const renewable = await renewal(host.hostname, { access, refresh, expiry }, answer.response.status) === 'renewable';
+        const renewable =
+          (await renewal(host.hostname, { access, refresh, expiry }, answer.response.status)) === 'renewable';
         if (action === 'refresh' && renewable) {
-          const rotated = await client.POST('/api/v1/identity/sessions/refresh', { body: { refreshToken: refresh! }, signal: requestSignal() });
-          const verified = rotated.data ? await client.GET('/api/v1/identity/me', { headers: { Authorization: `Bearer ${rotated.data.accessToken}` }, signal: requestSignal() }) : null;
+          const rotated = await client.POST('/api/v1/identity/sessions/refresh', {
+            body: { refreshToken: refresh! },
+            signal: requestSignal(),
+          });
+          const verified = rotated.data
+            ? await client.GET('/api/v1/identity/me', {
+                headers: { Authorization: `Bearer ${rotated.data.accessToken}` },
+                signal: requestSignal(),
+              })
+            : null;
           const valid = Boolean(rotated.data && verified?.data?.kind === kind);
           const response = valid ? output({ ok: true }) : problem('invalid_session', 401);
-          if (valid && rotated.data) issue(response, kind, rotated.data); else clearCookies(response, kind);
+          if (valid && rotated.data) issue(response, kind, rotated.data);
+          else clearCookies(response, kind);
           return response;
         }
         if (action === 'refresh') {
-          const response = problem('invalid_session', 401); clearCookies(response, kind); return response;
+          const response = problem('invalid_session', 401);
+          clearCookies(response, kind);
+          return response;
         }
         if (answer.response.status === 503) return problem('service_unavailable', 503);
         return problem('invalid_session', 401, { renewable });
       }
     }
-    const permission: Record<string, string> = { entitlements: 'entitlement.read', invoices: 'invoice.read', staff: 'staff.list', audit: 'audit.list', 'staff-create': 'staff.manage', 'staff-change': 'staff.manage', 'staff-remove': 'staff.manage', password: 'password.change', 'mfa-start': 'mfa.enroll', 'support-sessions': 'support.manage', 'support-revoke': 'support.manage' };
-    if (principal && permission[action] && !principal.permissions.includes(permission[action]!)) return problem('permission_denied', 403);
+    const permission: Record<string, string> = {
+      entitlements: 'entitlement.read',
+      invoices: 'invoice.read',
+      staff: 'staff.list',
+      audit: 'audit.list',
+      'staff-create': 'staff.manage',
+      'staff-change': 'staff.manage',
+      'staff-remove': 'staff.manage',
+      password: 'password.change',
+      'mfa-start': 'mfa.enroll',
+      'support-sessions': 'support.manage',
+      'support-revoke': 'support.manage',
+    };
+    if (principal && permission[action] && !principal.permissions.includes(permission[action]!))
+      return problem('permission_denied', 403);
     if (action === 'principal') return output(principal);
     if (action === 'refresh') return output({ ok: true }); // A competing tab already renewed.
-    if (action === 'clear') { const response = output({ ok: true }); clearCookies(response, kind); return response; }
+    if (action === 'clear') {
+      const response = output({ ok: true });
+      clearCookies(response, kind);
+      return response;
+    }
     if (request.method === 'GET') {
-      const result = action === 'sessions' ? await client.GET('/api/v1/identity/sessions', { ...options, params: { query } })
-        : action === 'staff' ? await client.GET('/api/v1/identity/staff', { ...options, params: { query } })
-        : action === 'audit' ? await client.GET('/api/v1/identity/audit', { ...options, params: { query } })
-        : action === 'entitlements' ? await account.entitlements(options)
-        : action === 'invoices' ? await account.invoices(options, { page, size: 10 })
-        : action === 'support-sessions' ? await account.supportSessions(options, query) : null;
+      const result =
+        action === 'sessions'
+          ? await client.GET('/api/v1/identity/sessions', { ...options, params: { query } })
+          : action === 'staff'
+            ? await client.GET('/api/v1/identity/staff', { ...options, params: { query } })
+            : action === 'audit'
+              ? await client.GET('/api/v1/identity/audit', { ...options, params: { query } })
+              : action === 'entitlements'
+                ? await account.entitlements(options)
+                : action === 'invoices'
+                  ? await account.invoices(options, { page, size: 10 })
+                  : action === 'support-sessions'
+                    ? await account.supportSessions(options, query)
+                    : null;
       if (!result) return problem('not_found', 404);
-      return result.data ? output(result.data) : problem(result.error?.code ?? 'service_unavailable', result.response.status, { errors: result.error?.errors });
+      return result.data
+        ? output(result.data)
+        : problem(result.error?.code ?? 'service_unavailable', result.response.status, {
+            errors: result.error?.errors,
+          });
     }
     if (request.method !== 'POST') return problem('method_not_allowed', 405);
     if (action === 'sign-in') {
@@ -245,7 +354,10 @@ async function handleIdentity(request: NextRequest, kind: Kind, action: string, 
     const challengeToken = request.cookies.get(cookieName(kind, 'challenge'))?.value ?? '';
     switch (action) {
       case 'sign-in': {
-        const r = await client.POST('/api/v1/identity/staff/sign-in', { ...options, body: { identifier: text('identifier'), password: text('password'), deviceLabel: text('deviceLabel') } });
+        const r = await client.POST('/api/v1/identity/staff/sign-in', {
+          ...options,
+          body: { identifier: text('identifier'), password: text('password'), deviceLabel: text('deviceLabel') },
+        });
         if (!r.data) return failure(r);
         const response = output({ state: r.data.state, expiresAt: r.data.expiresAt });
         if (r.data.credentials) issue(response, kind, r.data.credentials);
@@ -264,36 +376,82 @@ async function handleIdentity(request: NextRequest, kind: Kind, action: string, 
         return response;
       }
       case 'mfa-enroll': {
-        const r = await client.POST('/api/v1/identity/staff/mfa/enroll', { ...options, body: { challengeId, challengeToken } });
-        return r.data ? output({ secret: r.data.secret, otpauthUri: r.data.otpauthUri, expiresAt: r.data.expiresAt }) : failure(r);
+        const r = await client.POST('/api/v1/identity/staff/mfa/enroll', {
+          ...options,
+          body: { challengeId, challengeToken },
+        });
+        return r.data
+          ? output({ secret: r.data.secret, otpauthUri: r.data.otpauthUri, expiresAt: r.data.expiresAt })
+          : failure(r);
       }
       case 'mfa-verify': {
-        const r = await client.POST('/api/v1/identity/staff/mfa/verify', { ...options, body: { challengeId, challengeToken, code: text('code') } });
-        const response = r.data ? output({ ok: true }) : failure(r); if (r.data) issue(response, kind, r.data); return response;
-      }
-      case 'password': {
-        const r = await client.PUT('/api/v1/identity/staff/password', { ...options, body: { oldPassword: text('oldPassword'), newPassword: text('newPassword') } });
-        const response = r.data ? output({ ok: true }) : failure(r); if (r.data) issue(response, kind, r.data); return response;
-      }
-      case 'logout': case 'revoke': case 'revoke-all': {
-        const id = action === 'logout' ? request.cookies.get(cookieName(kind, 'session'))?.value ?? '' : text('id');
-        const r = action === 'revoke-all' ? await client.DELETE('/api/v1/identity/sessions', options)
-          : await client.DELETE('/api/v1/identity/sessions/{id}', { ...options, params: { path: { id } } });
-        const response = r.response.ok ? output({ ok: true }) : failure(r);
-        if (r.response.ok && (action !== 'revoke' || id === request.cookies.get(cookieName(kind, 'session'))?.value)) clearCookies(response, kind);
+        const r = await client.POST('/api/v1/identity/staff/mfa/verify', {
+          ...options,
+          body: { challengeId, challengeToken, code: text('code') },
+        });
+        const response = r.data ? output({ ok: true }) : failure(r);
+        if (r.data) issue(response, kind, r.data);
         return response;
       }
-      case 'staff-create': case 'staff-change': case 'staff-remove': {
-        const r = action === 'staff-create' ? await client.POST('/api/v1/identity/staff', { ...options, body: { email: text('email'), mobile: text('mobile'), password: text('password'), role: text('role'), professionalGrant: body.professionalGrant as boolean } })
-          : action === 'staff-change' ? await client.PATCH('/api/v1/identity/staff/{id}', { ...options, params: { path: { id: text('id') } }, body: { version: body.version as number, role: text('role'), professionalGrant: body.professionalGrant as boolean } })
-          : await client.DELETE('/api/v1/identity/staff/{id}', { ...options, params: { path: { id: text('id') } } });
+      case 'password': {
+        const r = await client.PUT('/api/v1/identity/staff/password', {
+          ...options,
+          body: { oldPassword: text('oldPassword'), newPassword: text('newPassword') },
+        });
+        const response = r.data ? output({ ok: true }) : failure(r);
+        if (r.data) issue(response, kind, r.data);
+        return response;
+      }
+      case 'logout':
+      case 'revoke':
+      case 'revoke-all': {
+        const id = action === 'logout' ? (request.cookies.get(cookieName(kind, 'session'))?.value ?? '') : text('id');
+        const r =
+          action === 'revoke-all'
+            ? await client.DELETE('/api/v1/identity/sessions', options)
+            : await client.DELETE('/api/v1/identity/sessions/{id}', { ...options, params: { path: { id } } });
+        const response = r.response.ok ? output({ ok: true }) : failure(r);
+        if (r.response.ok && (action !== 'revoke' || id === request.cookies.get(cookieName(kind, 'session'))?.value))
+          clearCookies(response, kind);
+        return response;
+      }
+      case 'staff-create':
+      case 'staff-change':
+      case 'staff-remove': {
+        const r =
+          action === 'staff-create'
+            ? await client.POST('/api/v1/identity/staff', {
+                ...options,
+                body: {
+                  email: text('email'),
+                  mobile: text('mobile'),
+                  password: text('password'),
+                  role: text('role'),
+                  professionalGrant: body.professionalGrant as boolean,
+                },
+              })
+            : action === 'staff-change'
+              ? await client.PATCH('/api/v1/identity/staff/{id}', {
+                  ...options,
+                  params: { path: { id: text('id') } },
+                  body: {
+                    version: body.version as number,
+                    role: text('role'),
+                    professionalGrant: body.professionalGrant as boolean,
+                  },
+                })
+              : await client.DELETE('/api/v1/identity/staff/{id}', {
+                  ...options,
+                  params: { path: { id: text('id') } },
+                });
         return r.response.ok ? output(r.data ?? { ok: true }) : failure(r);
       }
       case 'support-revoke': {
         const r = await account.revokeSupportSession(options, text('id'));
         return r.response.ok ? output({ ok: true }) : failure(r);
       }
-      default: return problem('not_found', 404);
+      default:
+        return problem('not_found', 404);
     }
   } catch {
     const response = problem('service_unavailable', 503);
@@ -304,5 +462,8 @@ async function handleIdentity(request: NextRequest, kind: Kind, action: string, 
 }
 function failure(r: { error?: { code?: string; errors?: unknown }; response: Response }) {
   const retry = r.response.headers.get('retry-after');
-  return problem(r.error?.code ?? 'service_unavailable', r.response.status, { errors: r.error?.errors, ...(retry ? { retryAfter: Number(retry) } : {}) });
+  return problem(r.error?.code ?? 'service_unavailable', r.response.status, {
+    errors: r.error?.errors,
+    ...(retry ? { retryAfter: Number(retry) } : {}),
+  });
 }

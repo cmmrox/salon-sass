@@ -19,7 +19,11 @@ const ACTIONS = new Set(['export-info', 'export-download']);
 /** The bare platform host of a request and its exact origin, or null when the request is not on it. */
 export function platformRequestHost(raw: string | null): { hostname: string; origin: string } | null {
   let domain: string;
-  try { domain = platformDomainOf(process.env.SALON_PLATFORM_DOMAIN); } catch { return null; }
+  try {
+    domain = platformDomainOf(process.env.SALON_PLATFORM_DOMAIN);
+  } catch {
+    return null;
+  }
   if (!raw || !/^[a-zA-Z0-9.-]+(?::[0-9]{1,5})?$/.test(raw)) return null;
   const port = raw.split(':')[1];
   if (port !== undefined && (Number(port) < 1 || Number(port) > 65535)) return null;
@@ -38,7 +42,8 @@ export async function handlePlatform(request: NextRequest, action: string): Prom
     if (!host || !ACTIONS.has(action)) return output({ code: 'not_found' }, 404);
     if (request.method !== 'POST') return output({ code: 'method_not_allowed' }, 405);
     const site = request.headers.get('sec-fetch-site');
-    if (request.headers.get('origin') !== host.origin || site === 'cross-site' || site === 'same-site') return output({ code: 'request_rejected' }, 403);
+    if (request.headers.get('origin') !== host.origin || site === 'cross-site' || site === 'same-site')
+      return output({ code: 'request_rejected' }, 403);
     const read = await readBoundedJson(request, 1024);
     if (!read.ok) return output({ code: 'bad_request' }, 400);
     const body = read.value;
@@ -50,11 +55,24 @@ export async function handlePlatform(request: NextRequest, action: string): Prom
     const params = { path: { token } };
     if (action === 'export-info') {
       const r = await client.GET('/api/v1/exports/{token}/metadata', { params, signal: requestSignal() });
-      if (!r.data) return output({ code: r.response.status === 404 ? 'not_found' : 'service_unavailable' }, r.response.status === 404 ? 404 : 503);
-      return output({ readyAt: r.data.readyAt, deleteAt: r.data.deleteAt, sizeBytes: r.data.sizeBytes, sha256: r.data.sha256 });
+      if (!r.data)
+        return output(
+          { code: r.response.status === 404 ? 'not_found' : 'service_unavailable' },
+          r.response.status === 404 ? 404 : 503,
+        );
+      return output({
+        readyAt: r.data.readyAt,
+        deleteAt: r.data.deleteAt,
+        sizeBytes: r.data.sizeBytes,
+        sha256: r.data.sha256,
+      });
     }
     const r = await client.GET('/api/v1/exports/{token}', { params, signal: requestSignal(), parseAs: 'arrayBuffer' });
-    if (!r.data) return output({ code: r.response.status === 404 ? 'not_found' : 'service_unavailable' }, r.response.status === 404 ? 404 : 503);
+    if (!r.data)
+      return output(
+        { code: r.response.status === 404 ? 'not_found' : 'service_unavailable' },
+        r.response.status === 404 ? 404 : 503,
+      );
     return archive(r.data as ArrayBuffer, r.response);
   } catch {
     return output({ code: 'service_unavailable' }, 503);

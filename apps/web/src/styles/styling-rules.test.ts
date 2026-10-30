@@ -31,17 +31,23 @@ const STYLE_SHEET = /\.(css|scss|sass|less|styl)$/;
 const TEST_FILE = /\.test\.[cm]?[jt]sx?$|^src\/test\//;
 const CODE_FILE = /\.[cm]?[jt]sx?$/;
 /** `import x from '…css'` and `import '…css'` statements, and `require('…css')` or `import('…css')`. */
-const STYLE_SHEET_IMPORT = /(?:^\s*import\s+(?:[\w*{}\s,]+\s+from\s+)?|(?<![@\w])(?:require|import)\s*\(\s*)['"]([^'"]+\.(?:css|scss|sass|less|styl)(?:\?[^'"]*)?)['"]/gm;
+const STYLE_SHEET_IMPORT =
+  /(?:^\s*import\s+(?:[\w*{}\s,]+\s+from\s+)?|(?<![@\w])(?:require|import)\s*\(\s*)['"]([^'"]+\.(?:css|scss|sass|less|styl)(?:\?[^'"]*)?)['"]/gm;
 /** Comments, which may show an import as an example. */
 const COMMENT = /\/\*[\s\S]*?\*\/|(?<![:'"\w])\/\/[^\n]*/g;
 /** A colour written as a value: `#RGB`, `#RRGGBB` (and alpha forms) or a CSS colour function. */
-const COLOUR_VALUE = /(?<![\w&])#(?:[0-9a-f]{8}|[0-9a-f]{6}|[0-9a-f]{3,4})\b|\b(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch|color-mix|color)\(/gi;
+const COLOUR_VALUE =
+  /(?<![\w&])#(?:[0-9a-f]{8}|[0-9a-f]{6}|[0-9a-f]{3,4})\b|\b(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch|color-mix|color)\(/gi;
 /** An arbitrary value holding a colour: `bg-[#D6086A]`, `text-[rgb(…)]`, `border-[color:…]`. */
-const ARBITRARY_COLOUR = /[\w-]+-\[(?:color:)?[^\]\s]*?(?:#[0-9a-f]{3,8}\b|\b(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch|color-mix|color)\()[^\]\s]*\]/gi;
+const ARBITRARY_COLOUR =
+  /[\w-]+-\[(?:color:)?[^\]\s]*?(?:#[0-9a-f]{3,8}\b|\b(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch|color-mix|color)\()[^\]\s]*\]/gi;
 
 /** A file a component lives in: every .tsx, and the code of src/app, src/surfaces, src/features and src/components. */
 function isComponentFile(path: string): boolean {
-  return !TEST_FILE.test(path) && (path.endsWith('.tsx') || (/^src\/(app|surfaces|features|components)\//.test(path) && CODE_FILE.test(path)));
+  return (
+    !TEST_FILE.test(path) &&
+    (path.endsWith('.tsx') || (/^src\/(app|surfaces|features|components)\//.test(path) && CODE_FILE.test(path)))
+  );
 }
 
 /** Every rule a set of files breaks, one line each. */
@@ -98,7 +104,9 @@ describe('the styling rules (docs/engineering/web.md, "Styling")', () => {
   });
 
   it('allow exactly the two hand-written style sheets and the generated one, with no exception', () => {
-    const sheets = filesUnder(webRoot, join(webRoot, 'src')).map((file) => file.path).filter((path) => STYLE_SHEET.test(path));
+    const sheets = filesUnder(webRoot, join(webRoot, 'src'))
+      .map((file) => file.path)
+      .filter((path) => STYLE_SHEET.test(path));
     expect(sheets.sort()).toEqual([...STYLE_SHEETS].sort());
   });
 });
@@ -107,14 +115,18 @@ describe('the styling rules catch', () => {
   const component = (content: string, path = 'src/components/shell/Example.tsx') => violations([{ path, content }]);
 
   it('a CSS Module, anywhere', () => {
-    expect(violations([{ path: 'src/components/shell/Example.module.css', content: '.x { color: inherit; }' }])).toHaveLength(1);
+    expect(
+      violations([{ path: 'src/components/shell/Example.module.css', content: '.x { color: inherit; }' }]),
+    ).toHaveLength(1);
     expect(violations([{ path: 'src/components/account/Account.module.css', content: '' }])).toHaveLength(1);
   });
 
   it('a second style sheet', () => {
     expect(violations([{ path: 'src/styles/extra.css', content: ':root{}' }])).toHaveLength(1);
     expect(violations([{ path: 'src/app/page.scss', content: '' }])).toHaveLength(1);
-    expect(violations([{ path: 'src/lib/plain-page/plain-page.css', content: '.shell { display: flex; }' }])).toHaveLength(1);
+    expect(
+      violations([{ path: 'src/lib/plain-page/plain-page.css', content: '.shell { display: flex; }' }]),
+    ).toHaveLength(1);
     expect(violations(HAND_WRITTEN.map((path) => ({ path, content: '' })))).toEqual([]);
   });
 
@@ -127,12 +139,26 @@ describe('the styling rules catch', () => {
     expect(component("import styles from './Example.module.css';")).toHaveLength(1);
     expect(component("import '../../app/globals.css';")).toHaveLength(1);
     expect(component("const Lazy = () => import('./lazy.css');")).toHaveLength(1);
-    expect(component("// import styles from './Example.module.css';\nconst css = \"@import './theme.css'\";")).toEqual([]);
+    expect(component("// import styles from './Example.module.css';\nconst css = \"@import './theme.css'\";")).toEqual(
+      [],
+    );
     expect(violations([{ path: 'src/app/layout.tsx', content: "import './other.css';" }])).toHaveLength(1);
     expect(violations([{ path: 'src/app/layout.tsx', content: "import './globals.css';" }])).toEqual([]);
-    expect(violations([{ path: 'src/lib/plain-page/plain-page.ts', content: "import theme from '../../styles/theme.css?raw';" }])).toEqual([]);
-    expect(violations([{ path: 'src/components/account/SignIn.tsx', content: "import styles from './Account.module.css';" }])).toHaveLength(1);
-    expect(violations([{ path: 'src/components/shell/X.tsx', content: "import styles from '../account/Account.module.css';" }])).toHaveLength(1);
+    expect(
+      violations([
+        { path: 'src/lib/plain-page/plain-page.ts', content: "import theme from '../../styles/theme.css?raw';" },
+      ]),
+    ).toEqual([]);
+    expect(
+      violations([
+        { path: 'src/components/account/SignIn.tsx', content: "import styles from './Account.module.css';" },
+      ]),
+    ).toHaveLength(1);
+    expect(
+      violations([
+        { path: 'src/components/shell/X.tsx', content: "import styles from '../account/Account.module.css';" },
+      ]),
+    ).toHaveLength(1);
   });
 
   it('an arbitrary colour in a class name', () => {
@@ -140,7 +166,11 @@ describe('the styling rules catch', () => {
     expect(component('<p className="p-2 text-[rgb(20_20_19)]" />')).toHaveLength(1);
     expect(component('<p className="border-[color:#fff]" />')).toHaveLength(1);
     expect(component('<p className="bg-[oklch(0.5_0.2_10)]" />')).toHaveLength(1);
-    expect(component('<p className="bg-primary text-primary-foreground w-(--size-sidebar) h-[calc(100vh-var(--size-header))]" />')).toEqual([]);
+    expect(
+      component(
+        '<p className="bg-primary text-primary-foreground w-(--size-sidebar) h-[calc(100vh-var(--size-header))]" />',
+      ),
+    ).toEqual([]);
   });
 
   it('a hex or rgb() colour in a component file', () => {

@@ -8,7 +8,11 @@ import { StaffSignInFrame } from './StaffSignInFrame';
 const slot = (element: Element | null) => element?.getAttribute('data-slot');
 
 it('draws the sign-in salon initial as an Avatar', () => {
-  renderWithMessages(<StaffSignInFrame salon={{ name: 'Alpha Salon' } as never}><p>child</p></StaffSignInFrame>);
+  renderWithMessages(
+    <StaffSignInFrame salon={{ name: 'Alpha Salon' } as never}>
+      <p>child</p>
+    </StaffSignInFrame>,
+  );
   expect(slot(screen.getByTestId('staff-sign-in-initial'))).toBe('avatar');
   expect(screen.getByTestId('staff-sign-in-initial')).toHaveTextContent('A');
 });

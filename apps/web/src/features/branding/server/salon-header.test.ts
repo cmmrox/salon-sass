@@ -5,7 +5,12 @@ import { decodeSalon, encodeSalon } from './salon-header';
 describe('the salon header', () => {
   it('carries a salon there and back, whatever its name', () => {
     for (const salon of [
-      { slug: 'beta', name: 'Beta Hair, Beauty & Wellness Lounge of Colombo Seven', brandColour: '#1F2937', timeZone: 'Asia/Colombo' },
+      {
+        slug: 'beta',
+        name: 'Beta Hair, Beauty & Wellness Lounge of Colombo Seven',
+        brandColour: '#1F2937',
+        timeZone: 'Asia/Colombo',
+      },
       { slug: 'alpha', name: 'ඇල්ෆා ස්ටුඩියෝ "quoted"; ;', brandColour: '#D6086A', timeZone: 'Asia/Colombo' },
     ]) {
       const value = encodeSalon(salon);
@@ -15,10 +20,21 @@ describe('the salon header', () => {
     }
   });
 
-  it('carries only the contract\'s fields', () => {
-    const value = encodeSalon({ slug: 'alpha', name: 'Alpha', brandColour: '#D6086A', timeZone: 'Asia/Colombo', extra: 'x' } as never);
+  it("carries only the contract's fields", () => {
+    const value = encodeSalon({
+      slug: 'alpha',
+      name: 'Alpha',
+      brandColour: '#D6086A',
+      timeZone: 'Asia/Colombo',
+      extra: 'x',
+    } as never);
 
-    expect(decodeSalon(value)).toEqual({ slug: 'alpha', name: 'Alpha', brandColour: '#D6086A', timeZone: 'Asia/Colombo' });
+    expect(decodeSalon(value)).toEqual({
+      slug: 'alpha',
+      name: 'Alpha',
+      brandColour: '#D6086A',
+      timeZone: 'Asia/Colombo',
+    });
   });
 
   it.each([

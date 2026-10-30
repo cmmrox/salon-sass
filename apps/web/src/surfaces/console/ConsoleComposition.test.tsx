@@ -16,20 +16,42 @@ vi.mock('next/link', () => ({ default: (props: AnchorHTMLAttributes<HTMLAnchorEl
  * is the shadcn/ui component the component map names, shown by its `data-slot`.
  */
 const slot = (testId: string) => screen.getByTestId(testId).getAttribute('data-slot');
-const PLAN = { id: 'p1', key: 'fixture-basic', name: 'Synthetic Basic', staffSeats: 5, branches: 1, messageAllowance: 0, customDomain: false, dedicatedApp: true, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z' };
+const PLAN = {
+  id: 'p1',
+  key: 'fixture-basic',
+  name: 'Synthetic Basic',
+  staffSeats: 5,
+  branches: 1,
+  messageAllowance: 0,
+  customDomain: false,
+  dedicatedApp: true,
+  createdAt: '2026-01-01T00:00:00Z',
+  updatedAt: '2026-01-01T00:00:00Z',
+};
 
 beforeEach(() => {
   vi.stubGlobal('navigator', { locks: { request: (_name: string, work: () => Promise<unknown>) => work() } });
   vi.stubGlobal('BroadcastChannel', undefined);
   // jsdom has no ResizeObserver; Radix Checkbox measures itself with one.
-  vi.stubGlobal('ResizeObserver', class { observe() {} unobserve() {} disconnect() {} });
+  vi.stubGlobal(
+    'ResizeObserver',
+    class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    },
+  );
 });
 afterEach(() => vi.unstubAllGlobals());
 
 describe('the console screens render the shadcn/ui components of the component map', () => {
   it('frame: Sidebar rail from 900px with its menu buttons and inset, and its Sheet below 900px', () => {
     setViewportWidth(1280);
-    const { unmount } = renderWithMessages(<ConsoleShell permissions={['operator.salon.read', 'operator.plan.read']} view="plans"><p /></ConsoleShell>);
+    const { unmount } = renderWithMessages(
+      <ConsoleShell permissions={['operator.salon.read', 'operator.plan.read']} view="plans">
+        <p />
+      </ConsoleShell>,
+    );
     expect(slot('console-shell')).toBe('sidebar-wrapper');
     expect(slot('console-main')).toBe('sidebar-inset');
     expect(slot('console-nav-salons')).toBe('sidebar-menu-button');
@@ -37,7 +59,11 @@ describe('the console screens render the shadcn/ui components of the component m
     expect(slot('console-sign-out')).toBe('button');
     unmount();
     setViewportWidth(360);
-    renderWithMessages(<ConsoleShell permissions={['operator.salon.read', 'operator.plan.read']} view="plans"><p /></ConsoleShell>);
+    renderWithMessages(
+      <ConsoleShell permissions={['operator.salon.read', 'operator.plan.read']} view="plans">
+        <p />
+      </ConsoleShell>,
+    );
     fireEvent.click(screen.getByTestId('workspace-menu'));
     expect(screen.getByRole('dialog')).toHaveAttribute('data-slot', 'sidebar');
   });
@@ -55,7 +81,13 @@ describe('the console screens render the shadcn/ui components of the component m
   });
 
   it('directories: Item rows with Badges, Pagination, Empty, Skeleton, and the create Sheet with Field, Select and Checkbox', async () => {
-    vi.stubGlobal('fetch', async (url: string) => Response.json(url.startsWith('/operator-web/plans') ? { items: [PLAN], page: 0, size: 20, total: 1 } : { items: [], page: 0, size: 20, total: 0 }));
+    vi.stubGlobal('fetch', async (url: string) =>
+      Response.json(
+        url.startsWith('/operator-web/plans')
+          ? { items: [PLAN], page: 0, size: 20, total: 1 }
+          : { items: [], page: 0, size: 20, total: 0 },
+      ),
+    );
     const { unmount } = renderWithMessages(<PlanDirectory />);
     expect(screen.getByTestId('console-loading').querySelectorAll('[data-slot="skeleton"]')).toHaveLength(3);
     expect(await screen.findByTestId('console-plan-row')).toHaveAttribute('data-slot', 'item');

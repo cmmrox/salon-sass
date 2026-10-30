@@ -47,7 +47,15 @@ export async function findSalon(
     });
     if (response.status === 200) {
       return isSalon(data, slug)
-        ? { kind: 'found', salon: { slug: data.slug, name: data.name, brandColour: isHexColour(data.brandColour) ? data.brandColour : DEFAULT_BRAND_COLOUR, timeZone: data.timeZone } }
+        ? {
+            kind: 'found',
+            salon: {
+              slug: data.slug,
+              name: data.name,
+              brandColour: isHexColour(data.brandColour) ? data.brandColour : DEFAULT_BRAND_COLOUR,
+              timeZone: data.timeZone,
+            },
+          }
         : unavailable(slug, 'the API answered with something that is not this salon');
     }
     const code = typeof error === 'object' && error !== null ? (error as { code?: unknown }).code : undefined;

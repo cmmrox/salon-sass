@@ -7,5 +7,7 @@ import { expect } from 'vitest';
 export function expectListOfItems(list: HTMLElement, count: number) {
   expect(list).toHaveAttribute('role', 'list');
   const children = Array.from(list.children);
-  expect(children.map((child) => child.getAttribute('role') ?? child.tagName.toLowerCase())).toEqual(Array(count).fill('listitem'));
+  expect(children.map((child) => child.getAttribute('role') ?? child.tagName.toLowerCase())).toEqual(
+    Array(count).fill('listitem'),
+  );
 }

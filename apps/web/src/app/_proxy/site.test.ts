@@ -2,7 +2,6 @@ import type { Salon } from '@/features/branding';
 import type { SalonLookup } from '@/features/branding/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-
 import { contextFromTraceparent, runInRequest } from '@/lib/observability/request-context';
 
 import { resolveSite, type FindSalon } from './site';
@@ -25,7 +24,10 @@ describe('resolveSite', () => {
   it('asks the API about the slug, by its canonical hostname, and shows the salon it found', async () => {
     const find = finder({ kind: 'found', salon: alpha });
 
-    await expect(resolveSite('Alpha.LocalHost:3100', find, 'localhost')).resolves.toEqual({ kind: 'salon', salon: alpha });
+    await expect(resolveSite('Alpha.LocalHost:3100', find, 'localhost')).resolves.toEqual({
+      kind: 'salon',
+      salon: alpha,
+    });
     expect(find).toHaveBeenCalledExactlyOnceWith('alpha', 'alpha.localhost');
   });
 
@@ -37,12 +39,15 @@ describe('resolveSite', () => {
     await expect(resolveSite('gamma.localhost:3100', finder(lookup), 'localhost')).resolves.toEqual(site);
   });
 
-  it.each(['localhost', 'localhost:3100', 'LOCALHOST'])('the platform domain itself is the platform, without asking the API: %j', async (host) => {
-    const find = finder({ kind: 'found', salon: alpha });
+  it.each(['localhost', 'localhost:3100', 'LOCALHOST'])(
+    'the platform domain itself is the platform, without asking the API: %j',
+    async (host) => {
+      const find = finder({ kind: 'found', salon: alpha });
 
-    await expect(resolveSite(host, find, 'localhost')).resolves.toEqual({ kind: 'platform' });
-    expect(find).not.toHaveBeenCalled();
-  });
+      await expect(resolveSite(host, find, 'localhost')).resolves.toEqual({ kind: 'platform' });
+      expect(find).not.toHaveBeenCalled();
+    },
+  );
 
   it.each([
     'alpha.beta.localhost',
@@ -86,11 +91,14 @@ describe('resolveSite', () => {
     ['a suspended salon', { kind: 'suspended' }, 'alpha'],
     ['no salon', { kind: 'not-found' }, undefined],
     ['an API that cannot say', { kind: 'unavailable' }, undefined],
-  ] as const)("names the salon on the request's log line only once the API says it is one: %s", async (_, lookup, slug) => {
-    const request = contextFromTraceparent(undefined);
+  ] as const)(
+    "names the salon on the request's log line only once the API says it is one: %s",
+    async (_, lookup, slug) => {
+      const request = contextFromTraceparent(undefined);
 
-    await runInRequest(request, () => resolveSite('alpha.localhost:3100', finder(lookup), 'localhost'));
+      await runInRequest(request, () => resolveSite('alpha.localhost:3100', finder(lookup), 'localhost'));
 
-    expect(request.tenantSlug).toBe(slug);
-  });
+      expect(request.tenantSlug).toBe(slug);
+    },
+  );
 });

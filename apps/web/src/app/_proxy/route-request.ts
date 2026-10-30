@@ -46,7 +46,13 @@ const NOT_STORED = 'private, no-cache, no-store, max-age=0, must-revalidate';
 const SIGN_IN = '/workspace/sign-in';
 
 /** The protected workspace pages, whose entry is decided here before anything renders (CR-013). */
-const PROTECTED = new Set(['/workspace/account', '/workspace/staff', '/workspace/audit', '/workspace/billing', '/workspace/support-access']);
+const PROTECTED = new Set([
+  '/workspace/account',
+  '/workspace/staff',
+  '/workspace/audit',
+  '/workspace/billing',
+  '/workspace/support-access',
+]);
 
 /** The support entry page (F03-S04), where a support view starts and where it lands when it ends. */
 const SUPPORT_ENTRY = '/workspace/support';
@@ -62,7 +68,11 @@ export type DecideConsoleEntry = (request: NextRequest) => Promise<OperatorEntry
 
 const decideConsoleEntry: DecideConsoleEntry = (request) => {
   let domain: string;
-  try { domain = platformDomainOf(process.env.SALON_PLATFORM_DOMAIN); } catch { return Promise.resolve({ kind: 'pending' }); }
+  try {
+    domain = platformDomainOf(process.env.SALON_PLATFORM_DOMAIN);
+  } catch {
+    return Promise.resolve({ kind: 'pending' });
+  }
   return operatorEntry(operatorCredentialsOf(request), consoleHostname(domain));
 };
 
@@ -135,7 +145,11 @@ export async function routeRequest(
     return rewrite(request, NOWHERE, headers);
   }
   let platformDomain: string | null = null;
-  try { platformDomain = platformDomainOf(process.env.SALON_PLATFORM_DOMAIN); } catch { platformDomain = null; }
+  try {
+    platformDomain = platformDomainOf(process.env.SALON_PLATFORM_DOMAIN);
+  } catch {
+    platformDomain = null;
+  }
   if (platformDomain && isConsoleHost(request.headers.get('host'), platformDomain)) {
     return routeConsole(request, path, headers, decideConsole);
   }
@@ -170,7 +184,8 @@ export async function routeRequest(
       // by a refused prefetch or read, but a page without any session still belongs on the notice.
       const ended = supportEnded(request);
       if (path === '/workspace') {
-        if (hasCredentials(support) || hasCredentials(credentialsOf(request))) return redirect(request, '/workspace/account');
+        if (hasCredentials(support) || hasCredentials(credentialsOf(request)))
+          return redirect(request, '/workspace/account');
         return ended ? redirect(request, SUPPORT_ENTRY, 'ended') : redirect(request, SIGN_IN);
       }
       if (PROTECTED.has(path) && hasCredentials(support)) {
@@ -183,7 +198,8 @@ export async function routeRequest(
         }
       } else if (PROTECTED.has(path)) {
         const credentials = credentialsOf(request);
-        if (!hasCredentials(credentials)) return ended ? redirect(request, SUPPORT_ENTRY, 'ended') : redirect(request, SIGN_IN);
+        if (!hasCredentials(credentials))
+          return ended ? redirect(request, SUPPORT_ENTRY, 'ended') : redirect(request, SIGN_IN);
         if ((await decide(request, credentials)).kind === 'signed-out') {
           // The same clearing the BFF does for a session that cannot renew (BUG-F02-011): the
           // revoked family's credentials leave the browser with the redirect, host-only.
@@ -205,7 +221,12 @@ export async function routeRequest(
  * salon directory; a protected page without a usable operator session is redirected to sign-in
  * before anything renders; every path that is not the console's is not found.
  */
-async function routeConsole(request: NextRequest, path: string, headers: Headers, decide: DecideConsoleEntry): Promise<NextResponse> {
+async function routeConsole(
+  request: NextRequest,
+  path: string,
+  headers: Headers,
+  decide: DecideConsoleEntry,
+): Promise<NextResponse> {
   if (path === '/' || path === '/console' || path === '/console/') return redirect(request, CONSOLE_HOME);
   if (!isConsolePath(path)) return rewrite(request, NOWHERE, headers);
   if (CONSOLE_PROTECTED.some((prefix) => isUnder(path, prefix))) {

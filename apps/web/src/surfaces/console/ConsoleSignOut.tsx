@@ -13,12 +13,29 @@ export function ConsoleSignOut() {
   const [busy, setBusy] = useState(false);
   async function signOut() {
     setBusy(true);
-    try { await withOperatorLock(() => operatorRequest('sign-out', {})); }
-    catch (failure) {
+    try {
+      await withOperatorLock(() => operatorRequest('sign-out', {}));
+    } catch (failure) {
       // Even when the server could not be reached, this browser forgets its credentials.
-      if (!(failure instanceof OperatorFailure) || failure.code !== 'browser_unsupported') await operatorRequest('clear', {}).catch(() => undefined);
+      if (!(failure instanceof OperatorFailure) || failure.code !== 'browser_unsupported')
+        await operatorRequest('clear', {}).catch(() => undefined);
+    } finally {
+      setBusy(false);
+      router.replace('/console/sign-in');
+      router.refresh();
     }
-    finally { setBusy(false); router.replace('/console/sign-in'); router.refresh(); }
   }
-  return <Button variant="outline" size="sm" data-testid="console-sign-out" disabled={busy} aria-busy={busy || undefined} onClick={() => void signOut()}>{busy && <Spinner />}{t('signOut')}</Button>;
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      data-testid="console-sign-out"
+      disabled={busy}
+      aria-busy={busy || undefined}
+      onClick={() => void signOut()}
+    >
+      {busy && <Spinner />}
+      {t('signOut')}
+    </Button>
+  );
 }

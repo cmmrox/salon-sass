@@ -13,23 +13,32 @@ import { SignIn } from './SignIn';
 // is app/composition.test.tsx, over every product component.
 vi.mock('next/navigation', () => ({ useRouter: () => ({ replace: vi.fn(), refresh: vi.fn() }) }));
 afterEach(() => vi.unstubAllGlobals());
-const locks = () => vi.stubGlobal('navigator', { locks: { request: (_name: string, work: () => Promise<unknown>) => work() } });
+const locks = () =>
+  vi.stubGlobal('navigator', { locks: { request: (_name: string, work: () => Promise<unknown>) => work() } });
 const slot = (element: Element | null) => element?.getAttribute('data-slot');
 const field = (element: Element | null) => element?.closest('[data-slot="field"]');
 
 it('builds staff sign-in from Card, Field, Input, Input Group, Button and Alert', async () => {
   locks();
-  vi.stubGlobal('fetch', async () => Response.json({ code: 'invalid_credentials', errors: [{ field: 'identifier' }] }, { status: 401 }));
+  vi.stubGlobal('fetch', async () =>
+    Response.json({ code: 'invalid_credentials', errors: [{ field: 'identifier' }] }, { status: 401 }),
+  );
   renderWithMessages(<SignIn kind="staff" timeZone="Asia/Colombo" />);
   expect(slot(screen.getByTestId('staff-sign-in-card'))).toBe('card');
   expect(slot(screen.getByTestId('account-identifier'))).toBe('input');
   expect(field(screen.getByTestId('account-identifier'))).not.toBeNull();
-  expect(field(screen.getByTestId('account-identifier'))!.querySelector('[data-slot="field-label"]')).toHaveAttribute('for', 'identifier');
+  expect(field(screen.getByTestId('account-identifier'))!.querySelector('[data-slot="field-label"]')).toHaveAttribute(
+    'for',
+    'identifier',
+  );
   expect(slot(screen.getByTestId('account-password'))).toBe('input-group-control');
-  expect(screen.getByTestId('account-password').closest('[data-slot="input-group"]')).toContainElement(screen.getByTestId('account-password-toggle'));
+  expect(screen.getByTestId('account-password').closest('[data-slot="input-group"]')).toContainElement(
+    screen.getByTestId('account-password-toggle'),
+  );
   expect(screen.getByTestId('account-password-toggle').closest('[data-slot="input-group-addon"]')).not.toBeNull();
   expect(screen.getByTestId('account-password').closest('[data-slot="field-group"]')).not.toBeNull();
-  for (const id of ['account-password-toggle', 'account-forgot-password', 'account-sign-in-submit']) expect(slot(screen.getByTestId(id))).toBe('button');
+  for (const id of ['account-password-toggle', 'account-forgot-password', 'account-sign-in-submit'])
+    expect(slot(screen.getByTestId(id))).toBe('button');
   fireEvent.click(screen.getByTestId('account-forgot-password'));
   expect(slot(screen.getByTestId('account-password-help'))).toBe('alert');
   await waitFor(() => expect(screen.getByTestId('account-sign-in-submit')).toBeEnabled());
@@ -43,13 +52,21 @@ it('builds staff sign-in from Card, Field, Input, Input Group, Button and Alert'
 it('shows a Spinner in the busy sign-in action and an Alert for the retry wait', async () => {
   locks();
   let answer: (response: Response) => void = () => {};
-  vi.stubGlobal('fetch', () => new Promise<Response>((resolve) => { answer = resolve; }));
+  vi.stubGlobal(
+    'fetch',
+    () =>
+      new Promise<Response>((resolve) => {
+        answer = resolve;
+      }),
+  );
   renderWithMessages(<SignIn kind="staff" timeZone="Asia/Colombo" />);
   await waitFor(() => expect(screen.getByTestId('account-sign-in-submit')).toBeEnabled());
   fireEvent.change(screen.getByTestId('account-identifier'), { target: { value: 'owner@alpha.test' } });
   fireEvent.change(screen.getByTestId('account-password'), { target: { value: 'synthetic' } });
   fireEvent.submit(screen.getByTestId('account-sign-in-submit').closest('form')!);
-  await waitFor(() => expect(screen.getByTestId('account-sign-in-submit').querySelector('[data-slot="spinner"]')).not.toBeNull());
+  await waitFor(() =>
+    expect(screen.getByTestId('account-sign-in-submit').querySelector('[data-slot="spinner"]')).not.toBeNull(),
+  );
   expect(screen.getByTestId('account-sign-in-submit')).toHaveAttribute('aria-busy', 'true');
   answer(Response.json({ code: 'rate_limited', errors: [], retryAfter: 30 }, { status: 429 }));
   expect(slot(await screen.findByTestId('account-retry-wait'))).toBe('alert');
@@ -57,8 +74,15 @@ it('shows a Spinner in the busy sign-in action and an Alert for the retry wait',
 });
 
 it('takes the sign-in authenticator code in an Input OTP of six slots, with the setup in Fields', async () => {
-  locks(); vi.stubGlobal('BroadcastChannel', undefined);
-  vi.stubGlobal('fetch', async (url: string) => Response.json(url.endsWith('/sign-in') ? { state: 'enroll_mfa', expiresAt: '2026-01-01T00:05:00Z' } : { secret: 'SYNTHETICKEY', otpauthUri: 'synthetic uri' }));
+  locks();
+  vi.stubGlobal('BroadcastChannel', undefined);
+  vi.stubGlobal('fetch', async (url: string) =>
+    Response.json(
+      url.endsWith('/sign-in')
+        ? { state: 'enroll_mfa', expiresAt: '2026-01-01T00:05:00Z' }
+        : { secret: 'SYNTHETICKEY', otpauthUri: 'synthetic uri' },
+    ),
+  );
   renderWithMessages(<SignIn kind="staff" timeZone="Asia/Colombo" />);
   await waitFor(() => expect(screen.getByTestId('account-sign-in-submit')).toBeEnabled());
   fireEvent.change(screen.getByTestId('account-identifier'), { target: { value: 'owner@alpha.test' } });
@@ -73,19 +97,41 @@ it('takes the sign-in authenticator code in an Input OTP of six slots, with the 
 });
 
 it('opens the confirmation as a Sheet', () => {
-  renderWithMessages(<Confirmation title="Confirm" onCancel={() => {}}><p>body</p></Confirmation>);
+  renderWithMessages(
+    <Confirmation title="Confirm" onCancel={() => {}}>
+      <p>body</p>
+    </Confirmation>,
+  );
   expect(slot(screen.getByTestId('account-confirmation'))).toBe('sheet-content');
 });
 
 it('builds the account from Card, Badge, Input Group, Input OTP, Item, Pagination and Skeleton', async () => {
-  const principal: Principal = { id: 'r', staffId: 'r', kind: 'staff', role: 'RECEPTIONIST', permissions: ['session.manage', 'mfa.enroll'], scope: 'salon', mfaEnabled: false, expiresAt: null };
-  locks(); vi.stubGlobal('BroadcastChannel', undefined);
+  const principal: Principal = {
+    id: 'r',
+    staffId: 'r',
+    kind: 'staff',
+    role: 'RECEPTIONIST',
+    permissions: ['session.manage', 'mfa.enroll'],
+    scope: 'salon',
+    mfaEnabled: false,
+    expiresAt: null,
+  };
+  locks();
+  vi.stubGlobal('BroadcastChannel', undefined);
   let release: () => void = () => {};
-  const pending = new Promise<void>((resolve) => { release = resolve; });
+  const pending = new Promise<void>((resolve) => {
+    release = resolve;
+  });
   vi.stubGlobal('fetch', async (url: string) => {
     if (url.endsWith('/principal')) return Response.json(principal);
     if (url.endsWith('/mfa-enroll')) return Response.json({ secret: 'synthetic key', otpauthUri: 'synthetic uri' });
-    if (url.includes('sessions')) { await pending; return Response.json({ items: [{ id: 'd1', deviceLabel: 'This browser', current: true, createdAt: '2026-01-01T00:00:00Z' }], total: 1 }); }
+    if (url.includes('sessions')) {
+      await pending;
+      return Response.json({
+        items: [{ id: 'd1', deviceLabel: 'This browser', current: true, createdAt: '2026-01-01T00:00:00Z' }],
+        total: 1,
+      });
+    }
     return Response.json({ ok: true });
   });
   renderWithMessages(<AccountScreen kind="staff" initialPrincipal={principal} timeZone="Asia/Colombo" />);
@@ -110,22 +156,43 @@ it('builds the account from Card, Badge, Input Group, Input OTP, Item, Paginatio
   expect(screen.getByTestId('account-page')).toHaveAttribute('aria-current', 'page');
   expect(slot(screen.getByTestId('account-page-previous'))).toBe('pagination-previous');
   expect(slot(screen.getByTestId('account-page-next'))).toBe('pagination-next');
-  for (const id of ['account-device-revoke', 'account-revoke-all', 'account-logout', 'account-password-save', 'account-mfa-start']) expect(slot(screen.getByTestId(id))).toBe('button');
+  for (const id of [
+    'account-device-revoke',
+    'account-revoke-all',
+    'account-logout',
+    'account-password-save',
+    'account-mfa-start',
+  ])
+    expect(slot(screen.getByTestId(id))).toBe('button');
   fireEvent.click(screen.getByTestId('account-mfa-start'));
   expect(slot(await screen.findByTestId('account-code'))).toBe('input-otp');
   expect(slot(screen.getByTestId('account-mfa-notice'))).toBe('alert');
 });
 
-it('draws the server\'s denied page as an Alert too', () => {
+it("draws the server's denied page as an Alert too", () => {
   renderWithMessages(<Denied />);
   expect(slot(screen.getByTestId('account-denied'))).toBe('alert');
 });
 
 it('shows an empty list as Empty, and the denied page as an Alert', async () => {
-  const principal: Principal = { id: 'm', staffId: 'm', kind: 'staff', role: 'MANAGER', permissions: ['session.manage', 'audit.list'], scope: 'salon', mfaEnabled: true, expiresAt: null };
-  locks(); vi.stubGlobal('BroadcastChannel', undefined);
-  vi.stubGlobal('fetch', async (url: string) => Response.json(url.endsWith('/principal') ? principal : { items: [], total: 0 }));
-  const { unmount } = renderWithMessages(<AccountScreen kind="staff" initialPrincipal={principal} timeZone="Asia/Colombo" view="audit" />);
+  const principal: Principal = {
+    id: 'm',
+    staffId: 'm',
+    kind: 'staff',
+    role: 'MANAGER',
+    permissions: ['session.manage', 'audit.list'],
+    scope: 'salon',
+    mfaEnabled: true,
+    expiresAt: null,
+  };
+  locks();
+  vi.stubGlobal('BroadcastChannel', undefined);
+  vi.stubGlobal('fetch', async (url: string) =>
+    Response.json(url.endsWith('/principal') ? principal : { items: [], total: 0 }),
+  );
+  const { unmount } = renderWithMessages(
+    <AccountScreen kind="staff" initialPrincipal={principal} timeZone="Asia/Colombo" view="audit" />,
+  );
   expect(slot(await screen.findByTestId('account-audit-empty'))).toBe('empty');
   unmount();
   renderWithMessages(<AccountScreen kind="staff" initialPrincipal={principal} timeZone="Asia/Colombo" view="staff" />);
@@ -135,9 +202,37 @@ it('shows an empty list as Empty, and the denied page as an Alert', async () => 
 });
 
 it('builds the staff list from Item, Badge, Select, a horizontal Field with Checkbox, Separator and Button', async () => {
-  const principal: Principal = { id: 'o', staffId: 'o', kind: 'staff', role: 'OWNER', permissions: ['staff.list', 'staff.manage'], scope: 'salon', mfaEnabled: true, expiresAt: null };
-  locks(); vi.stubGlobal('BroadcastChannel', undefined);
-  vi.stubGlobal('fetch', async (url: string) => Response.json(url.endsWith('/principal') ? principal : { items: [{ id: 's1', email: 'pro@alpha.test', role: 'PROFESSIONAL', active: true, version: 1, professionalGrant: false }], total: 1 }));
+  const principal: Principal = {
+    id: 'o',
+    staffId: 'o',
+    kind: 'staff',
+    role: 'OWNER',
+    permissions: ['staff.list', 'staff.manage'],
+    scope: 'salon',
+    mfaEnabled: true,
+    expiresAt: null,
+  };
+  locks();
+  vi.stubGlobal('BroadcastChannel', undefined);
+  vi.stubGlobal('fetch', async (url: string) =>
+    Response.json(
+      url.endsWith('/principal')
+        ? principal
+        : {
+            items: [
+              {
+                id: 's1',
+                email: 'pro@alpha.test',
+                role: 'PROFESSIONAL',
+                active: true,
+                version: 1,
+                professionalGrant: false,
+              },
+            ],
+            total: 1,
+          },
+    ),
+  );
   renderWithMessages(<AccountScreen kind="staff" initialPrincipal={principal} timeZone="Asia/Colombo" view="staff" />);
   const row = await screen.findByTestId('account-staff-row');
   expect(slot(row)).toBe('item');
@@ -150,6 +245,8 @@ it('builds the staff list from Item, Badge, Select, a horizontal Field with Chec
   expect(slot(screen.getByTestId('account-professional-grant'))).toBe('checkbox');
   expect(field(screen.getByTestId('account-professional-grant'))).toHaveAttribute('data-orientation', 'horizontal');
   expect(slot(screen.getByTestId('account-staff-separator'))).toBe('separator');
-  for (const id of ['account-staff-email', 'account-staff-mobile', 'account-staff-password']) expect(field(screen.getByTestId(id))).not.toBeNull();
-  for (const id of ['account-staff-remove', 'account-staff-create']) expect(slot(screen.getByTestId(id))).toBe('button');
+  for (const id of ['account-staff-email', 'account-staff-mobile', 'account-staff-password'])
+    expect(field(screen.getByTestId(id))).not.toBeNull();
+  for (const id of ['account-staff-remove', 'account-staff-create'])
+    expect(slot(screen.getByTestId(id))).toBe('button');
 });

@@ -39,7 +39,10 @@ export function consoleRequestHost(raw: string | null): { hostname: string; orig
 export function isCanonicalPath(path: string): boolean {
   if (!path.startsWith('/') || /[;%\\]/.test(path)) return false;
   const segments = path.slice(1).split('/');
-  return segments.every((segment, index) => !(segment === '.' || segment === '..' || (segment === '' && index < segments.length - 1 && segments.length > 1)));
+  return segments.every(
+    (segment, index) =>
+      !(segment === '.' || segment === '..' || (segment === '' && index < segments.length - 1 && segments.length > 1)),
+  );
 }
 
 /** Whether a canonical path is the prefix itself or below it. */

@@ -25,7 +25,9 @@ export function BillingBanner({ entitlements, timeZone }: { entitlements: Entitl
     return (
       <Alert variant="caution" role="status" data-testid="workspace-billing-banner" data-notice="past_due">
         <AlertTitle>{t('bannerPastDueTitle')}</AlertTitle>
-        <AlertDescription>{t('bannerPastDue', { due: date(subscription.pastDueSince), readOnly: date(subscription.readOnlyAt) })}</AlertDescription>
+        <AlertDescription>
+          {t('bannerPastDue', { due: date(subscription.pastDueSince), readOnly: date(subscription.readOnlyAt) })}
+        </AlertDescription>
       </Alert>
     );
   }

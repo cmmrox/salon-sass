@@ -15,4 +15,6 @@ export async function generateMetadata(): Promise<Metadata> {
   return salon ? { title: salon.name } : {};
 }
 /** Salon staff pages share the salon-branded responsive workspace frame. */
-export default function WorkspaceLayout({ children }: { children: ReactNode }) { return children; }
+export default function WorkspaceLayout({ children }: { children: ReactNode }) {
+  return children;
+}

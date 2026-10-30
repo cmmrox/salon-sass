@@ -99,10 +99,7 @@ function notice(testId: string, text: { title: string; body: string }): { title:
 
 /** The style sheets as one, without their comments, unable to close the style element. */
 function styles(): string {
-  return PLAIN_PAGE_STYLE_SHEETS.map((sheet) =>
-    sheet
-      .replace(/\/\*[\s\S]*?\*\//g, ''),
-  )
+  return PLAIN_PAGE_STYLE_SHEETS.map((sheet) => sheet.replace(/\/\*[\s\S]*?\*\//g, ''))
     .join('\n')
     .replace(/<\//g, '<\\/');
 }

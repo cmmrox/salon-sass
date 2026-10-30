@@ -34,7 +34,9 @@ function drawnBackground(element: HTMLElement): string {
 }
 
 function expectReadable(element: HTMLElement) {
-  expect(contrastRatio(drawnText(element), drawnBackground(element)), element.textContent ?? '').toBeGreaterThanOrEqual(4.5);
+  expect(contrastRatio(drawnText(element), drawnBackground(element)), element.textContent ?? '').toBeGreaterThanOrEqual(
+    4.5,
+  );
 }
 
 // BUG-F03-004: muted text is 4.83:1 on white but 4.25:1 on the warm canvas, so descriptions on the
@@ -44,8 +46,15 @@ describe('muted descriptions', () => {
     renderWithMessages(
       <Sheet open>
         <SheetContent>
-          <SheetHeader><SheetTitle>Title</SheetTitle><SheetDescription data-testid="sheet-description">What happens</SheetDescription></SheetHeader>
-          <Field><FieldLabel htmlFor="f">Field</FieldLabel><Input id="f" /><FieldDescription data-testid="field-description">Help</FieldDescription></Field>
+          <SheetHeader>
+            <SheetTitle>Title</SheetTitle>
+            <SheetDescription data-testid="sheet-description">What happens</SheetDescription>
+          </SheetHeader>
+          <Field>
+            <FieldLabel htmlFor="f">Field</FieldLabel>
+            <Input id="f" />
+            <FieldDescription data-testid="field-description">Help</FieldDescription>
+          </Field>
         </SheetContent>
       </Sheet>,
     );
@@ -56,8 +65,18 @@ describe('muted descriptions', () => {
   it('are readable in an empty state on the canvas, and stay muted on white', () => {
     renderWithMessages(
       <>
-        <Empty surface="canvas" data-testid="canvas-empty"><EmptyHeader><EmptyTitle>None</EmptyTitle><EmptyDescription data-testid="canvas-empty-description">Nothing yet</EmptyDescription></EmptyHeader></Empty>
-        <Empty surface="card" data-testid="card-empty"><EmptyHeader><EmptyTitle>None</EmptyTitle><EmptyDescription data-testid="card-empty-description">Nothing yet</EmptyDescription></EmptyHeader></Empty>
+        <Empty surface="canvas" data-testid="canvas-empty">
+          <EmptyHeader>
+            <EmptyTitle>None</EmptyTitle>
+            <EmptyDescription data-testid="canvas-empty-description">Nothing yet</EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+        <Empty surface="card" data-testid="card-empty">
+          <EmptyHeader>
+            <EmptyTitle>None</EmptyTitle>
+            <EmptyDescription data-testid="card-empty-description">Nothing yet</EmptyDescription>
+          </EmptyHeader>
+        </Empty>
       </>,
     );
     expectReadable(screen.getByTestId('canvas-empty-description'));
@@ -71,7 +90,16 @@ describe('muted descriptions', () => {
   });
 
   it('stay muted on a white list row', () => {
-    renderWithMessages(<ItemGroup><Item variant="outline" className="bg-card"><ItemContent><ItemTitle>Row</ItemTitle><ItemDescription data-testid="row-description">Detail</ItemDescription></ItemContent></Item></ItemGroup>);
+    renderWithMessages(
+      <ItemGroup>
+        <Item variant="outline" className="bg-card">
+          <ItemContent>
+            <ItemTitle>Row</ItemTitle>
+            <ItemDescription data-testid="row-description">Detail</ItemDescription>
+          </ItemContent>
+        </Item>
+      </ItemGroup>,
+    );
     expect(drawnText(screen.getByTestId('row-description'))).toBe(themeValue('--muted-foreground'));
     expectReadable(screen.getByTestId('row-description'));
   });

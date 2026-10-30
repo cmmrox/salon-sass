@@ -37,32 +37,68 @@ export function SupportEntry() {
         window.location.replace('/workspace/account');
       } catch (failure) {
         const code = failure instanceof IdentityFailure ? failure.code : 'service_unavailable';
-        if (active) setState(code === 'invalid_code' || code === 'request_rejected' || code === 'bad_request' ? 'refused' : 'unavailable');
+        if (active)
+          setState(
+            code === 'invalid_code' || code === 'request_rejected' || code === 'bad_request'
+              ? 'refused'
+              : 'unavailable',
+          );
       }
     }
     void read();
     // A new link opened in this same tab changes only the fragment: read it too.
-    const again = () => { void read(); };
+    const again = () => {
+      void read();
+    };
     window.addEventListener('hashchange', again);
-    return () => { active = false; window.removeEventListener('hashchange', again); };
+    return () => {
+      active = false;
+      window.removeEventListener('hashchange', again);
+    };
   }, []);
-  const message: Record<Exclude<State, 'loading' | 'success'>, { title: string; body: string; variant: 'notice' | 'default' }> = {
+  const message: Record<
+    Exclude<State, 'loading' | 'success'>,
+    { title: string; body: string; variant: 'notice' | 'default' }
+  > = {
     refused: { title: t('refusedTitle'), body: t('refused'), variant: 'notice' },
     unavailable: { title: t('unavailableTitle'), body: t('unavailable'), variant: 'notice' },
     ended: { title: t('endedTitle'), body: t('ended'), variant: 'default' },
     none: { title: t('noneTitle'), body: t('none'), variant: 'default' },
   };
   return (
-    <Card asChild className="block w-full max-w-(--size-login-card) gap-0 rounded-(--radius-login-card) border border-border bg-surface-translucent px-(--space-login-card-inline) py-(--space-login-card-block) shadow-(--shadow-login-card) max-login:px-6 max-login:py-8">
-      <section data-testid="support-entry" data-state={state} aria-labelledby="support-entry-title" aria-busy={state === 'loading' || undefined}>
-        <h1 id="support-entry-title" className="mb-6 text-center text-login-welcome leading-heading font-normal wrap-anywhere max-login:text-title" data-testid="support-entry-title">{t('entryTitle')}</h1>
+    <Card
+      asChild
+      className="block w-full max-w-(--size-login-card) gap-0 rounded-(--radius-login-card) border border-border bg-surface-translucent px-(--space-login-card-inline) py-(--space-login-card-block) shadow-(--shadow-login-card) max-login:px-6 max-login:py-8"
+    >
+      <section
+        data-testid="support-entry"
+        data-state={state}
+        aria-labelledby="support-entry-title"
+        aria-busy={state === 'loading' || undefined}
+      >
+        <h1
+          id="support-entry-title"
+          className="mb-6 text-center text-login-welcome leading-heading font-normal wrap-anywhere max-login:text-title"
+          data-testid="support-entry-title"
+        >
+          {t('entryTitle')}
+        </h1>
         {(state === 'loading' || state === 'success') && (
-          <p className="flex items-center justify-center gap-3 text-center" role="status" data-testid={state === 'loading' ? 'support-entry-loading' : 'support-entry-success'}>
-            <Spinner />{state === 'loading' ? t('opening') : t('opened')}
+          <p
+            className="flex items-center justify-center gap-3 text-center"
+            role="status"
+            data-testid={state === 'loading' ? 'support-entry-loading' : 'support-entry-success'}
+          >
+            <Spinner />
+            {state === 'loading' ? t('opening') : t('opened')}
           </p>
         )}
         {state !== 'loading' && state !== 'success' && (
-          <Alert variant={message[state].variant} role={state === 'refused' || state === 'unavailable' ? 'alert' : 'status'} data-testid={`support-entry-${state}`}>
+          <Alert
+            variant={message[state].variant}
+            role={state === 'refused' || state === 'unavailable' ? 'alert' : 'status'}
+            data-testid={`support-entry-${state}`}
+          >
             <AlertTitle>{message[state].title}</AlertTitle>
             <AlertDescription>{message[state].body}</AlertDescription>
           </Alert>

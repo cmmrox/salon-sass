@@ -21,7 +21,8 @@ export function trustedPeer(peer: string, setting = process.env.SALON_WEB_TRUSTE
   for (const cidr of setting.split(',').filter(Boolean)) {
     const [ip, bits, extra] = cidr.trim().split('/');
     const normalized = normalizeIp(ip);
-    if (!normalized || bits === undefined || extra || !/^\d+$/.test(bits)) throw new Error('Invalid SALON_WEB_TRUSTED_PROXIES CIDR');
+    if (!normalized || bits === undefined || extra || !/^\d+$/.test(bits))
+      throw new Error('Invalid SALON_WEB_TRUSTED_PROXIES CIDR');
     const family = isIP(normalized) === 4 ? 'ipv4' : 'ipv6';
     const prefix = Number(bits);
     if (prefix > (family === 'ipv4' ? 32 : 128)) throw new Error('Invalid proxy prefix');

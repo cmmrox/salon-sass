@@ -6,7 +6,8 @@ import nextTs from 'eslint-config-next/typescript';
 import boundaries from 'eslint-plugin-boundaries';
 
 // Attributes whose value a person sees or hears. Their text comes from the translation files too.
-const SPOKEN_ATTRIBUTES = 'aria-label|aria-description|aria-placeholder|aria-roledescription|aria-valuetext|alt|label|placeholder|title';
+const SPOKEN_ATTRIBUTES =
+  'aria-label|aria-description|aria-placeholder|aria-roledescription|aria-valuetext|alt|label|placeholder|title';
 
 // Every string a person sees comes from the translation files (docs/engineering/web.md).
 const SPOKEN_LITERALS = [
@@ -22,7 +23,9 @@ const SPOKEN_LITERALS = [
 
 // The API's modules, as the generated client exports them (`@salon/api-contracts/<module>`).
 const CONTRACTS = '@salon/api-contracts';
-const API_MODULES = Object.keys(JSON.parse(readFileSync(new URL('../../packages/api-contracts/package.json', import.meta.url), 'utf8')).exports)
+const API_MODULES = Object.keys(
+  JSON.parse(readFileSync(new URL('../../packages/api-contracts/package.json', import.meta.url), 'utf8')).exports,
+)
   .filter((entry) => entry !== '.')
   .map((entry) => entry.slice(2));
 
@@ -72,7 +75,11 @@ const IMPORT_POLICIES = [
   { from: { element: { type: 'app' } }, allow: [element('app'), SURFACE_ENTRY, FEATURE_ENTRIES, ...CROSS_CUTTING] },
   {
     from: { element: { type: 'surface' } },
-    allow: [element('surface', { captured: { surface: '{{ from.element.captured.surface }}' } }), FEATURE_ENTRIES, ...CROSS_CUTTING],
+    allow: [
+      element('surface', { captured: { surface: '{{ from.element.captured.surface }}' } }),
+      FEATURE_ENTRIES,
+      ...CROSS_CUTTING,
+    ],
   },
   {
     from: { element: { type: 'feature' } },
