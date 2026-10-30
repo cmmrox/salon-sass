@@ -372,5 +372,10 @@ shows the hostname-resolved salon name/initial and a shared decorative interior 
   states or branches. Assert behaviour, roles and test ids, not utility class names.
 - Give every interactive element a `data-testid`, named as `docs/design/ui-ux-standards.md` says.
   QA's browser tests depend on them, and QA cannot add them.
-- The gates are lint, type check, unit tests and a production build, as listed in the stage's
-  `verification.commands`.
+- Every screen a stage adds or changes ships with an automated accessibility check run by the
+  developer: `@axe-core/playwright` (or `vitest-axe` on the rendered component) with no violation at
+  WCAG 2.2 AA, colour contrast included. Three of F01 to F03's major bugs were contrast defects QA
+  found late (decision 068). A stage planned from now on lists it in `verification.commands`; adding
+  the tool to the workspace is part of the first stage that needs it.
+- The gates are lint, type check, unit tests, the accessibility check and a production build, as
+  listed in the stage's `verification.commands`.
