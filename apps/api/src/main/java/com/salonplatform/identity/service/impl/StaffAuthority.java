@@ -1,4 +1,4 @@
-package com.salonplatform.identity.service;
+package com.salonplatform.identity.service.impl;
 
 import com.salonplatform.identity.entity.AccessSession;
 import com.salonplatform.identity.entity.StaffAccount;

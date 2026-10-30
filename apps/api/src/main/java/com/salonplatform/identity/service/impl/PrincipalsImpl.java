@@ -1,23 +1,24 @@
-package com.salonplatform.identity.service;
+package com.salonplatform.identity.service.impl;
 
 import com.salonplatform.identity.Principal;
 import com.salonplatform.identity.Principals;
+import com.salonplatform.identity.service.SessionService;
 import com.salonplatform.shared.web.ApplicationProblemException;
 import com.salonplatform.shared.web.ErrorCode;
 import org.springframework.stereotype.Service;
 
 @Service
-class PrincipalsService implements Principals {
+class PrincipalsImpl implements Principals {
 
-    private final SessionAccess access;
+    private final SessionService sessions;
 
-    PrincipalsService(SessionAccess access) {
-        this.access = access;
+    PrincipalsImpl(SessionService sessions) {
+        this.sessions = sessions;
     }
 
     @Override
     public Principal current() {
-        return access.me();
+        return sessions.me();
     }
 
     @Override

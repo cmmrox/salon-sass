@@ -1,4 +1,4 @@
-package com.salonplatform.identity.service;
+package com.salonplatform.identity.service.impl;
 
 import com.salonplatform.identity.adapter.IdentityCrypto;
 import com.salonplatform.identity.domain.Identifiers;
@@ -11,6 +11,8 @@ import com.salonplatform.identity.entity.RateBucket;
 import com.salonplatform.identity.entity.StaffAccount;
 import com.salonplatform.identity.repository.RateBucketRepository;
 import com.salonplatform.identity.repository.StaffAccountRepository;
+import com.salonplatform.identity.service.IdentityWork;
+import com.salonplatform.identity.service.StaffSignInService;
 import com.salonplatform.shared.audit.Actor;
 import com.salonplatform.shared.audit.ActorKind;
 import com.salonplatform.shared.audit.AuditAction;
@@ -24,14 +26,9 @@ import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-/**
- * Staff password sign-in and password change (docs/architecture/identity-and-access.md). A sign-in counts
- * against two limits, 10 attempts per identifier and 30 per address in fifteen minutes, before the password is
- * checked; an Owner, and anyone enrolled, continues to a second step.
- */
 @Service
 @RequiredArgsConstructor
-public class StaffSignIn {
+class StaffSignInServiceImpl implements StaffSignInService {
 
     private static final Duration RATE_WINDOW = Duration.ofMinutes(15);
 
@@ -42,13 +39,14 @@ public class StaffSignIn {
     private final IdentityWork work;
     private final StaffAccountRepository accounts;
     private final RateBucketRepository rateBuckets;
-    private final StaffMfa mfa;
+    private final StaffMfaChallenges mfaChallenges;
     private final SessionAccess sessions;
     private final StaffAuthority authority;
     private final IdentityCrypto crypto;
     private final Clock clock;
     private final AuditTrail audit;
 
+    @Override
     public SignIn signIn(String identifier, String password, String deviceLabel, String address) {
         return work.run(() -> {
             String key = normalized(identifier);
@@ -72,7 +70,7 @@ public class StaffSignIn {
             }
             StaffValidation.requireDeviceLabel(deviceLabel);
             if (account.hasMfa() || account.getRole() == StaffRole.OWNER) {
-                return mfa.challenge(
+                return mfaChallenges.issue(
                         account, null, account.hasMfa() ? MfaPurpose.VERIFY : MfaPurpose.ENROLL, deviceLabel);
             }
             Tokens tokens = sessions.newStaff(account, deviceLabel, false);
@@ -88,10 +86,7 @@ public class StaffSignIn {
         });
     }
 
-    /**
-     * Changes the signed-in staff member's password, ends their other sessions and rotates the current one
-     * (docs/architecture/identity-and-access.md).
-     */
+    @Override
     public Tokens changePassword(String oldPassword, String newPassword) {
         return work.run(() -> {
             StaffAuthority.SignedIn current = authority.permitted("password.change");

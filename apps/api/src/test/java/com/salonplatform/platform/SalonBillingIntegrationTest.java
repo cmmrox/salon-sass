@@ -6,7 +6,7 @@ import com.salonplatform.identity.adapter.IdentityCrypto;
 import com.salonplatform.identity.domain.StaffRole;
 import com.salonplatform.identity.entity.CustomerAccount;
 import com.salonplatform.identity.entity.StaffAccount;
-import com.salonplatform.identity.service.SessionAccess;
+import com.salonplatform.identity.service.SessionService;
 import com.salonplatform.platform.adapter.OperatorCrypto;
 import com.salonplatform.platform.service.BillingJob;
 import com.salonplatform.platform.service.OperatorAccounts;
@@ -87,7 +87,7 @@ class SalonBillingIntegrationTest extends IntegrationTest {
     PlatformTransactionManager manager;
 
     @Autowired
-    SessionAccess sessions;
+    SessionService sessions;
 
     @Autowired
     BillingJob job;
@@ -128,7 +128,7 @@ class SalonBillingIntegrationTest extends IntegrationTest {
                             CLOCK.instant());
                     em.persist(customer);
                     em.flush();
-                    var tokens = sessions.newCustomer(customer, "JUnit phone");
+                    var tokens = sessions.openCustomerSession(customer.getId(), "JUnit phone");
                     return Map.<String, Object>of(
                             "accessToken", tokens.accessToken(), "refreshToken", tokens.refreshToken());
                 }));

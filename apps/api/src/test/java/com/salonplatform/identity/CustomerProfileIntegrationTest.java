@@ -3,7 +3,7 @@ package com.salonplatform.identity;
 import static org.assertj.core.api.Assertions.*;
 
 import com.salonplatform.identity.local.*;
-import com.salonplatform.identity.service.CustomerAccess;
+import com.salonplatform.identity.service.CustomerAccessService;
 import com.salonplatform.identity.service.IdentityWork;
 import com.salonplatform.shared.audit.Actor;
 import com.salonplatform.shared.audit.AuditAction;
@@ -490,7 +490,7 @@ class CustomerProfileIntegrationTest extends CustomerHttpFixture {
                 null);
         status(refreshed, 200);
         a = body(refreshed);
-        var cleanup = app.bean(CustomerAccess.class);
+        var cleanup = app.bean(CustomerAccessService.class);
         var work = app.bean(IdentityWork.class);
         TenantContext.callAs(
                 tenant("alpha"),

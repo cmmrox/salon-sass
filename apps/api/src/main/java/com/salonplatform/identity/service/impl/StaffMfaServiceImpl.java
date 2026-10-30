@@ -1,4 +1,4 @@
-package com.salonplatform.identity.service;
+package com.salonplatform.identity.service.impl;
 
 import com.salonplatform.identity.adapter.IdentityCrypto;
 import com.salonplatform.identity.domain.MfaPurpose;
@@ -15,6 +15,8 @@ import com.salonplatform.identity.repository.AccessSessionRepository;
 import com.salonplatform.identity.repository.MfaChallengeRepository;
 import com.salonplatform.identity.repository.MfaStepRepository;
 import com.salonplatform.identity.repository.StaffAccountRepository;
+import com.salonplatform.identity.service.IdentityWork;
+import com.salonplatform.identity.service.StaffMfaService;
 import com.salonplatform.shared.audit.Actor;
 import com.salonplatform.shared.audit.ActorKind;
 import com.salonplatform.shared.audit.AuditAction;
@@ -26,14 +28,9 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-/**
- * A staff member's second step (docs/architecture/identity-and-access.md): authenticator-app enrollment, offered
- * after a correct password or from a signed-in session, and verification of a code, each through a single-use
- * challenge. A code's time step is accepted once per account.
- */
 @Service
 @RequiredArgsConstructor
-public class StaffMfa {
+class StaffMfaServiceImpl implements StaffMfaService {
 
     private final IdentityWork work;
     private final MfaChallengeRepository challenges;
@@ -42,18 +39,19 @@ public class StaffMfa {
     private final AccessSessionRepository sessionRows;
     private final SessionAccess sessions;
     private final StaffAuthority authority;
+    private final StaffMfaChallenges mfaChallenges;
     private final IdentityCrypto crypto;
     private final Clock clock;
     private final AuditTrail audit;
 
-    /** A signed-in staff member without a second step asks to enroll one. */
+    @Override
     public SignIn voluntaryEnrollment() {
         return work.run(() -> {
             StaffAuthority.SignedIn current = authority.permitted("mfa.enroll");
             if (current.account().hasMfa()) {
                 throw IdentityProblems.conflict();
             }
-            return challenge(
+            return mfaChallenges.issue(
                     current.account(),
                     current.session(),
                     MfaPurpose.ENROLL,
@@ -61,24 +59,7 @@ public class StaffMfa {
         });
     }
 
-    /**
-     * A new challenge, whose token is handed to the caller once and kept only as a hash.
-     *
-     * @param session the session that asked for it, or null after a password sign-in
-     */
-    SignIn challenge(StaffAccount account, AccessSession session, String purpose, String deviceLabel) {
-        String token = crypto.randomToken();
-        MfaChallenge challenge = challenges.persist(MfaChallenge.issue(
-                account.getId(),
-                session == null ? null : session.getId(),
-                purpose,
-                deviceLabel,
-                crypto.hash("challenge", token),
-                clock.instant()));
-        return new SignIn(purpose, challenge.getId(), token, challenge.getExpiresAt(), null);
-    }
-
-    /** The authenticator secret of an enrollment challenge, shown once with its {@code otpauth} URI. */
+    @Override
     public Enrollment enroll(UUID challengeId, String token) {
         return work.run(() -> {
             MfaChallenge challenge = verified(challengeId, token);
@@ -104,10 +85,7 @@ public class StaffMfa {
         });
     }
 
-    /**
-     * Verifies a code against the account's secret, or the secret being enrolled, and signs the staff member in.
-     * Confirming an enrollment ends the account's other sessions.
-     */
+    @Override
     public Tokens verify(UUID challengeId, String token, String code) {
         return work.run(() -> {
             MfaChallenge challenge = verified(challengeId, token);

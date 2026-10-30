@@ -1,4 +1,4 @@
-package com.salonplatform.identity.service;
+package com.salonplatform.identity.service.impl;
 
 import com.salonplatform.identity.adapter.IdentityCrypto;
 import com.salonplatform.identity.domain.Identifiers;
@@ -22,13 +22,13 @@ import org.springframework.stereotype.Service;
  * platform connection, inside the platform transaction that creates the salon.
  */
 @Service
-class IdentityProvisioningService implements IdentityProvisioning {
+class IdentityProvisioningImpl implements IdentityProvisioning {
 
     private final IdentityCrypto crypto;
     private final ObjectProvider<PlatformDatabase> platform;
     private final IdentityPlatformFunctions functions;
 
-    IdentityProvisioningService(
+    IdentityProvisioningImpl(
             IdentityCrypto crypto, ObjectProvider<PlatformDatabase> platform, IdentityPlatformFunctions functions) {
         this.crypto = crypto;
         this.platform = platform;

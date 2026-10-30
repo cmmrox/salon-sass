@@ -1,4 +1,4 @@
-package com.salonplatform.identity.service;
+package com.salonplatform.identity.service.impl;
 
 import com.salonplatform.identity.inprocess.IdentityLifecycle;
 import com.salonplatform.identity.repository.IdentityPlatformFunctions;
@@ -9,12 +9,12 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 
 @Service
-class IdentityLifecycleService implements IdentityLifecycle {
+class IdentityLifecycleImpl implements IdentityLifecycle {
 
     private final ObjectProvider<PlatformDatabase> platform;
     private final IdentityPlatformFunctions functions;
 
-    IdentityLifecycleService(ObjectProvider<PlatformDatabase> platform, IdentityPlatformFunctions functions) {
+    IdentityLifecycleImpl(ObjectProvider<PlatformDatabase> platform, IdentityPlatformFunctions functions) {
         this.platform = platform;
         this.functions = functions;
     }

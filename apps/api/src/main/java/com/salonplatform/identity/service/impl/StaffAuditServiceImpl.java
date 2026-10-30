@@ -1,7 +1,9 @@
-package com.salonplatform.identity.service;
+package com.salonplatform.identity.service.impl;
 
 import com.salonplatform.identity.dto.AuditView;
 import com.salonplatform.identity.dto.Page;
+import com.salonplatform.identity.service.IdentityWork;
+import com.salonplatform.identity.service.StaffAuditService;
 import com.salonplatform.shared.audit.AuditTrail;
 import java.util.HashMap;
 import java.util.List;
@@ -9,13 +11,9 @@ import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-/**
- * The salon's identity and support-session audit entries, as the Owner and Manager read them: only nonsecret
- * values, allowlisted per action (docs/architecture/identity-and-access.md).
- */
 @Service
 @RequiredArgsConstructor
-public class StaffAudit {
+class StaffAuditServiceImpl implements StaffAuditService {
 
     private static final List<String> ACCESS_VALUES = List.of("role", "professionalGrant", "active");
 
@@ -29,6 +27,7 @@ public class StaffAudit {
     private final StaffAuthority authority;
     private final AuditTrail audit;
 
+    @Override
     public Page<AuditView> list(int page, int size, String subjectId) {
         Pagination.requireValid(page, size);
         return work.run(() -> {

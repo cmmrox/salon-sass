@@ -1,4 +1,4 @@
-package com.salonplatform.identity.service;
+package com.salonplatform.identity.service.impl;
 
 import com.salonplatform.identity.adapter.IdentityCrypto;
 import com.salonplatform.identity.domain.SessionKind;
@@ -9,6 +9,8 @@ import com.salonplatform.identity.dto.StaffView;
 import com.salonplatform.identity.entity.StaffAccount;
 import com.salonplatform.identity.repository.StaffAccountRepository;
 import com.salonplatform.identity.repository.SyntheticIdentityReset;
+import com.salonplatform.identity.service.IdentityWork;
+import com.salonplatform.identity.service.StaffAccountService;
 import com.salonplatform.shared.audit.Actor;
 import com.salonplatform.shared.audit.ActorKind;
 import com.salonplatform.shared.audit.AuditAction;
@@ -26,14 +28,9 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
-/**
- * The salon's staff accounts as the Owner manages them (docs/architecture/identity-and-access.md): created within
- * the plan's staff seats, their role and Professional grant changed, removed; never the last active Owner. A
- * change names the version it was made against.
- */
 @Service
 @RequiredArgsConstructor
-public class StaffAccounts {
+class StaffAccountServiceImpl implements StaffAccountService {
 
     private static final Sort OLDEST_FIRST = Sort.by("createdAt", "id");
 
@@ -47,10 +44,7 @@ public class StaffAccounts {
     private final Clock clock;
     private final AuditTrail audit;
 
-    public record StaffInput(String email, String mobile, String password, String role, Boolean professionalGrant) {}
-
-    public record StaffChange(long version, String role, Boolean professionalGrant) {}
-
+    @Override
     public StaffView create(StaffInput input) {
         return work.run(() -> {
             StaffAuthority.SignedIn current = authority.permitted("staff.manage");
@@ -61,16 +55,19 @@ public class StaffAccounts {
         });
     }
 
+    @Override
     public Page<StaffView> list(int page, int size) {
         Pagination.requireValid(page, size);
         return work.run(() -> {
             authority.requireReadable("staff.list");
             org.springframework.data.domain.Page<StaffAccount> rows =
                     accounts.findAll(PageRequest.of(page, size, OLDEST_FIRST));
-            return new Page<>(rows.stream().map(StaffAccounts::view).toList(), page, size, rows.getTotalElements());
+            return new Page<>(
+                    rows.stream().map(StaffAccountServiceImpl::view).toList(), page, size, rows.getTotalElements());
         });
     }
 
+    @Override
     public StaffView change(UUID id, StaffChange change) {
         return work.run(() -> {
             StaffAuthority.SignedIn actor = authority.permitted("staff.manage");
@@ -95,6 +92,7 @@ public class StaffAccounts {
         });
     }
 
+    @Override
     public void remove(UUID id) {
         work.run(() -> {
             StaffAuthority.SignedIn actor = authority.permitted("staff.manage");
@@ -108,10 +106,7 @@ public class StaffAccounts {
         });
     }
 
-    /**
-     * Local fixtures only (no production route reaches this): creates each account that no account holds the
-     * email or mobile of yet, with its authenticator secret when one is given.
-     */
+    @Override
     public List<StaffView> seed(List<SeedAccount> inputs) {
         return work.run(() -> {
             SyntheticSalons.requireCurrentIsSynthetic();
@@ -141,7 +136,7 @@ public class StaffAccounts {
         });
     }
 
-    /** Local fixtures only: removes every staff and customer record of the salon. */
+    @Override
     public void reset() {
         work.run(() -> {
             SyntheticSalons.requireCurrentIsSynthetic();

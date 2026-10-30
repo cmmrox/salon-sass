@@ -2,7 +2,7 @@ package com.salonplatform.identity.local;
 
 import com.salonplatform.identity.CustomerDataErased;
 import com.salonplatform.identity.dto.CapturedMessage;
-import com.salonplatform.identity.service.CustomerAccess;
+import com.salonplatform.identity.service.CustomerAccessService;
 import com.salonplatform.shared.outbox.EventSubscriber;
 import com.salonplatform.shared.outbox.OutboxCancelled;
 import com.salonplatform.shared.outbox.OutboxDelivery;
@@ -42,10 +42,10 @@ class CustomerMessageCapture implements EventSubscriber<CustomerDataErased> {
 
     private final ConcurrentMap<Key, Control> controls = new ConcurrentHashMap<>();
     private final ConcurrentMap<ChallengeKey, CapturedMessage> captures = new ConcurrentHashMap<>();
-    private final CustomerAccess customers;
+    private final CustomerAccessService customers;
     private final Clock clock;
 
-    CustomerMessageCapture(CustomerAccess customers, Clock clock) {
+    CustomerMessageCapture(CustomerAccessService customers, Clock clock) {
         this.customers = customers;
         this.clock = clock;
     }
@@ -58,8 +58,8 @@ class CustomerMessageCapture implements EventSubscriber<CustomerDataErased> {
         if (control.delayMs > 0) Thread.sleep(control.delayMs);
         if (control.failures.getAndUpdate(n -> Math.max(0, n - 1)) > 0)
             throw new IllegalStateException("The local message provider refused this attempt");
-        CustomerAccess.Envelope envelope =
-                JsonMapper.builder().build().readValue(message.payload(), CustomerAccess.Envelope.class);
+        CustomerAccessService.Envelope envelope =
+                JsonMapper.builder().build().readValue(message.payload(), CustomerAccessService.Envelope.class);
         boolean captured = customers.captureIfLive(
                 message,
                 clear -> captures.putIfAbsent(

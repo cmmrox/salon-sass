@@ -1,4 +1,4 @@
-package com.salonplatform.identity.service;
+package com.salonplatform.identity.service.impl;
 
 import com.salonplatform.identity.adapter.IdentityCrypto;
 import com.salonplatform.identity.config.CustomerCodeSettings;
@@ -13,6 +13,9 @@ import com.salonplatform.identity.repository.CustomerChallengeRepository;
 import com.salonplatform.identity.repository.ExpiredSecurityState;
 import com.salonplatform.identity.repository.RateBucketRepository;
 import com.salonplatform.identity.repository.SyntheticIdentityReset;
+import com.salonplatform.identity.service.CustomerAccessService;
+import com.salonplatform.identity.service.IdentityWork;
+import com.salonplatform.identity.service.SessionService;
 import com.salonplatform.shared.audit.Actor;
 import com.salonplatform.shared.audit.ActorKind;
 import com.salonplatform.shared.audit.AuditAction;
@@ -42,15 +45,14 @@ import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.json.JsonMapper;
 
-/** Salon-scoped, one-use customer codes with atomic accepted-send ceilings and encrypted delivery. */
 @Service
 @RequiredArgsConstructor
-public class CustomerAccess {
+class CustomerAccessServiceImpl implements CustomerAccessService {
 
     private static final Duration CODE_WINDOW = Duration.ofMinutes(15);
 
     private final IdentityWork work;
-    private final SessionAccess sessions;
+    private final SessionService sessions;
     private final CustomerChallengeRepository challenges;
     private final CustomerAccountRepository customers;
     private final RateBucketRepository rateBuckets;
@@ -66,10 +68,6 @@ public class CustomerAccess {
     private final JsonMapper json;
     private final SecureRandom random = new SecureRandom();
 
-    public record Envelope(UUID challengeId, String encrypted) {}
-
-    public record ClearMessage(String mobile, String code) {}
-
     private static ApplicationProblemException invalid() {
         return new ApplicationProblemException(401, ErrorCode.INVALID_CODE);
     }
@@ -82,6 +80,7 @@ public class CustomerAccess {
         audit.record(new AuditAction(actor, "identity." + action, "customer_challenge", subject, null, null, null));
     }
 
+    @Override
     public Challenge request(String mobile, String channel, String label, String deviceId, String address) {
         TenantContext.require();
         String number;
@@ -192,6 +191,7 @@ public class CustomerAccess {
         return new Candidate(row, true, expired ? start : row.getWindowStart(), expired ? 0 : row.getAttempts());
     }
 
+    @Override
     public Tokens verify(UUID id, String code, String deviceId) {
         return work.run(() -> {
             CustomerChallenge challenge = challenges.findById(id).orElseThrow(NotFoundException::new);
@@ -242,7 +242,7 @@ public class CustomerAccess {
                         "code_cancelled",
                         challenge.getId().toString());
             }
-            Tokens credentials = sessions.newCustomer(account, challenge.getDeviceLabel());
+            Tokens credentials = sessions.openCustomerSession(account.getId(), challenge.getDeviceLabel());
             audit.record(new AuditAction(
                     new Actor(ActorKind.CUSTOMER, account.getId().toString()),
                     "identity.sign_in",
@@ -255,10 +255,7 @@ public class CustomerAccess {
         });
     }
 
-    /**
-     * Called outside provider I/O after its delay, then atomically rechecks challenge state before
-     * capture.
-     */
+    @Override
     public boolean captureIfLive(OutboxDelivery delivery, Consumer<ClearMessage> capture) {
         Envelope payload = json.readValue(delivery.payload(), Envelope.class);
         return work.run(() -> {
@@ -289,10 +286,12 @@ public class CustomerAccess {
         });
     }
 
+    @Override
     public Optional<UUID> messageFor(UUID challenge) {
         return work.run(() -> challenges.findById(challenge).map(CustomerChallenge::getMessageId));
     }
 
+    @Override
     public OutboxMessageView delivery(UUID challenge) {
         return work.run(() -> {
             UUID message = challenges
@@ -303,7 +302,7 @@ public class CustomerAccess {
         });
     }
 
-    /** Local fixtures only: cancels the salon's queued codes and removes its customers and their records. */
+    @Override
     public void resetCustomer() {
         work.run(() -> {
             SyntheticSalons.requireCurrentIsSynthetic();
@@ -315,7 +314,7 @@ public class CustomerAccess {
         });
     }
 
-    /** Cancels and removes expired codes, and removes code rate buckets whose window has run out. */
+    @Override
     public void cleanup(Instant now) {
         for (CustomerChallenge challenge : challenges.findByExpiresAtLessThanEqual(now)) {
             outbox.cancel(challenge.getMessageId(), now);

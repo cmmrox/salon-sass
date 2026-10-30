@@ -1,4 +1,4 @@
-package com.salonplatform.identity.service;
+package com.salonplatform.identity.service.impl;
 
 import com.salonplatform.identity.CustomerDataErased;
 import com.salonplatform.identity.adapter.IdentityCrypto;
@@ -12,6 +12,10 @@ import com.salonplatform.identity.entity.CustomerChallenge;
 import com.salonplatform.identity.repository.CustomerAccountRepository;
 import com.salonplatform.identity.repository.CustomerChallengeRepository;
 import com.salonplatform.identity.repository.CustomerDataErasure;
+import com.salonplatform.identity.service.CustomerAccessService;
+import com.salonplatform.identity.service.CustomerProfileService;
+import com.salonplatform.identity.service.IdentityWork;
+import com.salonplatform.identity.service.SessionService;
 import com.salonplatform.shared.audit.AuditAction;
 import com.salonplatform.shared.audit.AuditTrail;
 import com.salonplatform.shared.outbox.Outbox;
@@ -21,7 +25,6 @@ import com.salonplatform.shared.web.ApplicationProblemException;
 import com.salonplatform.shared.web.ErrorCode;
 import com.salonplatform.shared.web.FieldProblem;
 import java.time.Clock;
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -34,13 +37,13 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.json.JsonMapper;
 
-/** Own profile and data rights; all privacy effects share the identity security transaction. */
 @Service
 @RequiredArgsConstructor
-public class CustomerProfile {
+class CustomerProfileServiceImpl implements CustomerProfileService {
 
     private final IdentityWork work;
-    private final SessionAccess sessions;
+    private final SessionAccess access;
+    private final SessionService sessions;
     private final CustomerAccountRepository customers;
     private final CustomerChallengeRepository challenges;
     private final CustomerDataErasure erasure;
@@ -50,22 +53,15 @@ public class CustomerProfile {
     private final AuditTrail audit;
     private final Outbox outbox;
 
-    public record Change(
-            long version,
-            String name,
-            String email,
-            LocalDate birthday,
-            String preferredLanguage,
-            Preferences preferences,
-            boolean marketingConsent) {}
-
+    @Override
     public Profile read() {
-        return work.run(() -> view(sessions.customerAuth().customer()));
+        return work.run(() -> view(access.customerAuth().customer()));
     }
 
+    @Override
     public Profile update(Change change) {
         return work.run(() -> {
-            SessionAccess.Auth auth = sessions.customerAuth();
+            SessionAccess.Auth auth = access.customerAuth();
             CustomerAccount account = auth.customer();
             String name = change.name() == null ? null : change.name().trim();
             if (name == null || name.isBlank() || name.codePointCount(0, name.length()) > 120) {
@@ -135,9 +131,10 @@ public class CustomerProfile {
         });
     }
 
+    @Override
     public Export export() {
         return work.run(() -> {
-            SessionAccess.Auth auth = sessions.customerAuth();
+            SessionAccess.Auth auth = access.customerAuth();
             List<SessionView> devices = new ArrayList<>();
             int page = 0;
             while (true) {
@@ -157,9 +154,10 @@ public class CustomerProfile {
         });
     }
 
+    @Override
     public void delete(boolean confirm) {
         work.run(() -> {
-            SessionAccess.Auth auth = sessions.customerAuth();
+            SessionAccess.Auth auth = access.customerAuth();
             if (!confirm) {
                 throw new ApplicationProblemException(
                         400, ErrorCode.CONFIRMATION_REQUIRED, List.of(new FieldProblem("confirm", "must be true")));
@@ -193,12 +191,12 @@ public class CustomerProfile {
         if (!node.isObject() || !node.has("challengeId") || !node.has("encrypted") || node.size() != 2)
             return Optional.empty();
         try {
-            CustomerAccess.Envelope envelope = json.readValue(payload, CustomerAccess.Envelope.class);
-            CustomerAccess.ClearMessage clear = json.readValue(
+            CustomerAccessService.Envelope envelope = json.readValue(payload, CustomerAccessService.Envelope.class);
+            CustomerAccessService.ClearMessage clear = json.readValue(
                     crypto.decrypt(
                             "customer-code:" + TenantContext.require().id() + ":" + envelope.challengeId(),
                             envelope.encrypted()),
-                    CustomerAccess.ClearMessage.class);
+                    CustomerAccessService.ClearMessage.class);
             return crypto.equalHash(numberHash, crypto.hash("customer-number", clear.mobile()))
                     ? Optional.of(envelope.challengeId())
                     : Optional.empty();

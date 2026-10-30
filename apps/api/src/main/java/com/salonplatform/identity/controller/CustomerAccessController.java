@@ -5,7 +5,7 @@ import com.salonplatform.identity.dto.Challenge;
 import com.salonplatform.identity.dto.CodeRequest;
 import com.salonplatform.identity.dto.CustomerCodeVerificationRequest;
 import com.salonplatform.identity.dto.Tokens;
-import com.salonplatform.identity.service.CustomerAccess;
+import com.salonplatform.identity.service.CustomerAccessService;
 import com.salonplatform.shared.tenancy.TenantContext;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.*;
@@ -27,13 +27,13 @@ import org.springframework.web.bind.annotation.*;
         paramName = "salon_device")
 class CustomerAccessController {
     static final String DEVICE_COOKIE = "salon_device";
-    private final CustomerAccess access;
+    private final CustomerAccessService access;
     private final com.salonplatform.identity.adapter.ClientAddressAssertion assertions;
     private final CustomerDevice devices;
     private final Environment environment;
 
     CustomerAccessController(
-            CustomerAccess access,
+            CustomerAccessService access,
             CustomerDevice devices,
             Environment environment,
             com.salonplatform.identity.adapter.ClientAddressAssertion assertions) {

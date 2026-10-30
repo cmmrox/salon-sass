@@ -1,4 +1,4 @@
-package com.salonplatform.identity.service;
+package com.salonplatform.identity.service.impl;
 
 import com.salonplatform.shared.tenancy.CurrentTenant;
 import com.salonplatform.shared.tenancy.TenantContext;

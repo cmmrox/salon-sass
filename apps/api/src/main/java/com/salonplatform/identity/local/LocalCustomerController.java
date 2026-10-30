@@ -3,7 +3,7 @@ package com.salonplatform.identity.local;
 import com.salonplatform.identity.dto.CapturedMessage;
 import com.salonplatform.identity.dto.DeliveryView;
 import com.salonplatform.identity.dto.ProviderControl;
-import com.salonplatform.identity.service.CustomerAccess;
+import com.salonplatform.identity.service.CustomerAccessService;
 import com.salonplatform.shared.web.NotFoundException;
 import io.swagger.v3.oas.annotations.Hidden;
 import jakarta.servlet.http.HttpServletRequest;
@@ -19,10 +19,10 @@ import org.springframework.web.bind.annotation.*;
 @Hidden
 @RequestMapping("/local/identity")
 class LocalCustomerController {
-    private final CustomerAccess customers;
+    private final CustomerAccessService customers;
     private final CustomerMessageCapture capture;
 
-    LocalCustomerController(CustomerAccess customers, CustomerMessageCapture capture) {
+    LocalCustomerController(CustomerAccessService customers, CustomerMessageCapture capture) {
         this.customers = customers;
         this.capture = capture;
     }
