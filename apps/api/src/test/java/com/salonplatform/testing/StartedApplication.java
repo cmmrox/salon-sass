@@ -64,9 +64,13 @@ public final class StartedApplication implements AutoCloseable {
         arguments.addAll(List.of(
                 "--spring.datasource.url=" + jdbcUrl,
                 "--spring.datasource.username=" + TestPostgres.APP_USER,
-                "--spring.datasource.password=" + TestPostgres.APP_PASSWORD,
-                "--spring.flyway.user=" + migrationUser,
-                "--spring.flyway.password=" + migrationPassword));
+                "--spring.datasource.password=" + TestPostgres.APP_PASSWORD));
+        // No migration role: an instance of the production-like stack, which is never given the
+        // owning role's settings (TestDatabase#startAsInstance).
+        if (migrationUser != null) {
+            arguments.add("--spring.flyway.user=" + migrationUser);
+            arguments.add("--spring.flyway.password=" + migrationPassword);
+        }
         // The platform runtime role of every test container, unless the test names its own (a
         // repeated command-line setting would be joined, not replaced).
         if (List.of(settings).stream().noneMatch(setting -> setting.startsWith("--salon.platform.datasource."))) {

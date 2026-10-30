@@ -12,6 +12,8 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -175,6 +177,50 @@ class PlatformDatabaseIntegrationTest {
                         "--salon.platform.datasource.username=" + TestPostgres.APP_USER,
                         "--salon.platform.datasource.password=" + TestPostgres.APP_PASSWORD))
                 .hasStackTraceContaining("must be a role of its own");
+    }
+
+    /**
+     * BUG-F01-007: an instance of the production-like stack runs the staging profile, which never
+     * migrates, and is never given the owning role's settings (only the migration container is). It
+     * starts on the tenant and platform roles alone and becomes ready.
+     */
+    @Test
+    void anInstanceThatNeverMigratesStartsWithoutTheOwningRolesSettings() {
+        assertThat(System.getenv("SALON_DB_USER"))
+                .as("the owning role's setting is absent, as it is in a stack instance")
+                .isNull();
+        try (StartedApplication instance = database.startAsInstance(stackInstance())) {
+            assertThat(instance.http().get("/actuator/health/readiness").statusCode())
+                    .isEqualTo(200);
+        }
+    }
+
+    /**
+     * Without the owning role's name, an instance still refuses that role as its platform role: it owns
+     * the tables, which the database itself shows.
+     */
+    @Test
+    void anInstanceStillRefusesTheOwningRoleAsItsPlatformRole() {
+        TestDatabase ordinary = TestDatabase.createEmptyOwnedByAnOrdinaryRole(TestPostgres.shared());
+        try (StartedApplication _ = ordinary.start()) {
+            // Started once to apply the migrations as the ordinary owning role.
+        }
+        List<String> settings = new ArrayList<>(List.of(stackInstance()));
+        settings.add("--salon.platform.datasource.username=" + TestDatabase.ORDINARY_OWNER);
+        settings.add("--salon.platform.datasource.password=" + TestDatabase.ORDINARY_OWNER_PASSWORD);
+        assertThatThrownBy(() -> ordinary.startAsInstance(settings.toArray(String[]::new)))
+                .hasStackTraceContaining("owns tables");
+    }
+
+    /** The settings a stack instance starts with that a test can give (infra/stack/compose.yaml). */
+    private static String[] stackInstance() {
+        return new String[] {
+            "--spring.profiles.active=staging",
+            "--SALON_TRUSTED_PROXIES=10.255.255.0/24",
+            "--SALON_OTLP_ENDPOINT=http://127.0.0.1:9",
+            "--management.tracing.export.otlp.enabled=false",
+            "--management.otlp.metrics.export.enabled=false",
+        };
     }
 
     @Test

@@ -31,7 +31,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  * <p>The role must be configured explicitly ({@code salon.platform.datasource.*}); a missing value
  * fails the start rather than falling back to another role. At start the role is refused, like the
  * tenant role, when it is a superuser, can bypass row-level security or owns a table, and when it is
- * the tenant role or the owning role itself. Every wait has the tenant pool's limits, a transaction's
+ * the tenant role or, in a process that migrates and so is given its name, the owning role itself. Every wait has the tenant pool's limits, a transaction's
  * statements the request limit, and an unreachable database is found again at the same steady
  * interval.
  */
@@ -62,7 +62,12 @@ public class PlatformDatabase implements SmartInitializingSingleton, DisposableB
         String username = required(environment, "salon.platform.datasource.username");
         String password = required(environment, "salon.platform.datasource.password");
         this.tenantRole = environment.getProperty("spring.datasource.username", "");
-        this.owningRole = environment.getProperty("spring.flyway.user", "");
+        // Only a process that migrates is given the owning role (spring.flyway.user); an instance of the
+        // stack never is, and its placeholder is left unresolved there (BUG-F01-007). There the database
+        // check below refuses the owning role instead: it owns the tables.
+        this.owningRole = environment.getProperty("spring.flyway.enabled", Boolean.class, true)
+                ? environment.getProperty("spring.flyway.user", "")
+                : "";
         if (username.equals(tenantRole) || username.equals(owningRole)) {
             throw new IllegalStateException("The platform database role must be a role of its own, neither the "
                     + "tenant role (spring.datasource.username) nor the owning role (spring.flyway.user). "
