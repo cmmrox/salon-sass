@@ -31,7 +31,10 @@ import { resolveSite, type Site } from './site';
  */
 export const SALON_SHELL_ROUTE = '/salon-site';
 
-/** A path no page answers, so the application's own not-found page answers it. */
+/**
+ * A path no page answers, so the application's own not-found page answers it. Every rewrite that
+ * means "not found" goes here, and the proxy passes it straight through (see routeRequest).
+ */
 const NOWHERE = '/salon-site/nowhere';
 
 const INTERNAL_PREFIX = SALON_SHELL_ROUTE;
@@ -130,6 +133,15 @@ export async function routeRequest(
   headers.delete(SALON_HEADER);
 
   const path = request.nextUrl.pathname;
+  // The not-found target ends here, before anything that could rewrite it again or ask the API. A server
+  // bound to one address (HOSTNAME=127.0.0.1) proxies a rewrite whose origin is the Host header's over
+  // HTTP to itself, so the target comes back through this proxy (BUG-F02-014). No page answers it, so
+  // it is the application's 404 page, with no salon handed on, whichever hostname asked.
+  if (path === NOWHERE) {
+    const response = NextResponse.next({ request: { headers } });
+    response.headers.set('Cache-Control', NOT_STORED);
+    return response;
+  }
   // This retired namespace has no tenant surface. Reject it before salon lookup so even an
   // unavailable API cannot turn removed customer operations into upstream calls or 503s.
   if (path === '/identity-web/customer' || path.startsWith('/identity-web/customer/')) {
