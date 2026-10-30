@@ -4,7 +4,7 @@ import type { AddressInfo } from 'node:net';
 import { NextRequest } from 'next/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { contextFromTraceparent, runInRequest } from '@/lib/observability/request-context';
-import { handleIdentity, supportCsrf } from './server';
+import { handleIdentity, supportCsrf } from './identity-web';
 
 /** The support session's BFF (F03-S04) against a fake API on loopback. */
 let server: Server; let calls: { method: string; path: string; host?: string; authorization?: string; body: string }[];

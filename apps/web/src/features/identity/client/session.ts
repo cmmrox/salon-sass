@@ -1,5 +1,5 @@
 'use client';
-import type { Kind, Principal } from './server';
+import type { Kind, Principal } from '@/features/identity/server/identity-web';
 export class IdentityFailure extends Error {
   constructor(public code: string, public fields: string[] = [], public retryAfter = 0, public renewable = false) { super(code); }
 }

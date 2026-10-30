@@ -12,7 +12,7 @@ import { Item, ItemActions, ItemContent, ItemDescription, ItemGroup, ItemTitle }
 import { Pagination, PaginationContent, PaginationCurrent, PaginationItem, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Spinner } from '@/components/ui/spinner';
-import { ensurePrincipal, IdentityFailure, identityRequest, principalInsideLock, supportsLocks, withIdentityLock } from '@/lib/identity/browser';
+import { ensurePrincipal, IdentityFailure, identityRequest, principalInsideLock, supportsLocks, withIdentityLock } from '@/features/identity/client/session';
 import { formatInstant } from '@/lib/format';
 
 type Session = components['schemas']['SalonSupportSession'];

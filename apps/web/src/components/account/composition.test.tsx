@@ -1,11 +1,11 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 import { renderWithMessages } from '@/test/render';
-import type { Principal } from '@/lib/identity/server';
-import { AccountScreen } from './AccountScreen';
-import { Confirmation } from './Confirmation';
-import { Denied } from './Controls';
-import { SignIn } from './SignIn';
+import type { Principal } from '@/features/identity/server/identity-web';
+import { AccountScreen } from '@/features/identity/components/AccountScreen';
+import { Confirmation } from '@/features/identity/components/Confirmation';
+import { Denied } from '@/features/identity/components/Controls';
+import { SignIn } from '@/features/identity/components/SignIn';
 import { StaffSignInFrame } from './StaffSignInFrame';
 
 // F02-S04 AC-12 and AC-14 (CR-016, CR-017): the staff screens use the shadcn/ui component the

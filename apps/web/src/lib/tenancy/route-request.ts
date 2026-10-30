@@ -1,8 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
 import { createServerApiClient } from '@/lib/api-core/client';
-import { hasCredentials, workspaceEntry, type Entry } from '@/lib/identity/entry';
-import { clearCookies, cookieName, endSupportView, requestHost, supportEnded, type Credentials, type Kind } from '@/lib/identity/server';
+import { hasCredentials, workspaceEntry, type Entry } from '@/features/identity/server/entry';
+import { clearCookies, cookieName, endSupportView, requestHost, supportEnded, type Credentials, type Kind } from '@/features/identity/server/identity-web';
 import { plainPageHtml, plainPageStatus, type PlainPage } from '@/lib/plain-page/plain-page';
 import { hasOperatorCredentials, operatorEntry, type OperatorEntry } from '@/lib/operator/entry';
 import { consoleHostname, isCanonicalPath, isConsoleHost, isConsolePath, isUnder } from './console-host';

@@ -9,9 +9,9 @@ import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/u
 import { Item, ItemContent, ItemDescription, ItemGroup, ItemTitle } from '@/components/ui/item';
 import { Pagination, PaginationContent, PaginationCurrent, PaginationItem, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
 import { formatDate, formatMoney } from '@/lib/format';
-import { ensurePrincipal, leaveEndedSession, identityRequest, IdentityFailure } from '@/lib/identity/browser';
-import type { Kind } from '@/lib/identity/server';
-import { AccountLoading, Button, Section } from './Controls';
+import { ensurePrincipal, leaveEndedSession, identityRequest, IdentityFailure } from '@/features/identity/client/session';
+import type { Kind } from '@/features/identity/server/identity-web';
+import { AccountLoading, Button, Section } from '@/features/identity/components/Controls';
 import type { Entitlements } from './BillingBanner';
 
 type InvoicePage = components['schemas']['InvoicePage'];

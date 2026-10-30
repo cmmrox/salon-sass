@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { hasCredentials } from '@/lib/identity/entry';
-import { cookieName } from '@/lib/identity/server';
+import { hasCredentials } from '@/features/identity/server/entry';
+import { cookieName } from '@/features/identity/server/identity-web';
 /** Entry decided on the server: sign-in without credentials, otherwise the account (which checks them). */
 export default async function Page() {
   const store = await cookies();

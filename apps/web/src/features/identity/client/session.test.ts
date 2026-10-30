@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ensurePrincipal, withIdentityLock } from './browser';
+import { ensurePrincipal, withIdentityLock } from './session';
 afterEach(() => { vi.unstubAllGlobals(); });
 describe('cross-tab renewal', () => {
   it('rechecks live principal inside the lock so two tabs only renew once', async () => {

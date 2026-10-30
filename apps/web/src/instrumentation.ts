@@ -12,7 +12,7 @@ export async function register(): Promise<void> {
   const { installRequestLog } = await import('./lib/observability/request-log');
   const { installDrain } = await import('./lib/observability/drain');
   if (process.env.SALON_PLATFORM_DOMAIN) {
-    const { proxyKey } = await import('./lib/identity/server');
+    const { proxyKey } = await import('./features/identity/server/identity-web');
     const { trustedPeer } = await import('./lib/http/network');
     proxyKey();
     trustedPeer('127.0.0.1');

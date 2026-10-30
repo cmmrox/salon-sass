@@ -1,6 +1,6 @@
 import type { ApiClient } from '@salon/api-contracts';
 import { requestSignal } from '@/lib/api-core/client';
-import { renewal, type Credentials, type Kind, type Principal } from './server';
+import { renewal, type Credentials, type Kind, type Principal } from './identity-web';
 
 /**
  * Where a request for a protected workspace page belongs, decided on the server before anything

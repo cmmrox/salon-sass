@@ -5,7 +5,7 @@ import { setFlagsFromString } from 'node:v8';
 import { runInNewContext } from 'node:vm';
 import { NextRequest } from 'next/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { handleIdentity } from '@/lib/identity/server';
+import { handleIdentity } from './identity-web';
 import { contextFromTraceparent, runInRequest } from '@/lib/observability/request-context';
 import { createServerApiClient, requestSignal } from '@/lib/api-core/client';
 

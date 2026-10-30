@@ -1,7 +1,7 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { renderWithMessages } from '@/test/render';
-import type { Principal } from '@/lib/identity/server';
+import type { Principal } from '@/features/identity/server/identity-web';
 import { AccountScreen } from './AccountScreen';
 import { messages } from '@/test/render';
 import { chooseOption } from '@/test/select';

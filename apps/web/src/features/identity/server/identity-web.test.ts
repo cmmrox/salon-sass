@@ -4,7 +4,7 @@ import type { AddressInfo } from 'node:net';
 import { NextRequest } from 'next/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { contextFromTraceparent, runInRequest } from '@/lib/observability/request-context';
-import { assertion, cookieName, csrf, handleIdentity, requestHost } from './server';
+import { assertion, cookieName, csrf, handleIdentity, requestHost } from './identity-web';
 import { normalizeIp, strictInstant } from '@/lib/http/network';
 import { formatInstant } from '@/lib/format';
 let server: Server; let calls: { path: string; host?: string; proof?: string }[];
