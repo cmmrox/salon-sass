@@ -29,7 +29,9 @@ HANDED_OVER = ("built", "complete", "released")
 BUILDABLE_ON = ("complete", "released")
 
 TOOLS = ("playwright", "maestro", "k6", "script")
-SUITES = ("smoke", "regression")
+# smoke: minutes, on every PR and merge; regression: before a release and for refactors of
+# delivered work; release: the slow checks (load, production-like stack, image scan) before a deploy.
+SUITES = ("smoke", "regression", "release")
 CASE_TYPES = (
     "functional", "api", "tenant-isolation", "permissions", "concurrency", "load",
     "payment-integrity", "accessibility", "responsive", "branding", "security",

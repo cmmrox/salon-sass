@@ -21,8 +21,8 @@ assert, is `docs/qa/test-types.md`.
    screen), follow the spec and note it.
 4. If you rule out a type whose trigger is true, say why. Types the product's catalogue marks as
    always required are never ruled out and never deferred where they apply.
-5. Write the choices, and what was ruled out, in the "Test approach" table at the top of the
-   feature's `cases.md`.
+5. Write the choices, and what was ruled out, in the "Test approach" section of the feature's
+   `review.md`.
 
 Some types need the owner's go-ahead before they are run; the catalogue lists them.
 
@@ -41,14 +41,8 @@ Some types need the owner's go-ahead before they are run; the catalogue lists th
   the right behaviour is not stated anywhere, ask the lead; do not invent the expectation.
 - One case proves one thing. Its title is a statement that is true when it passes ("A second
   customer cannot hold a slot that is already held").
-- Give each case a type from the catalogue, a priority, and the criteria it covers.
-
-| Priority | Meaning |
-| --- | --- |
-| `critical` | If this fails, someone's data, money or appointment is wrong |
-| `high` | An acceptance criterion or a main path |
-| `medium` | A secondary path or an edge that has a workaround |
-| `low` | Cosmetic or rare |
+- A case is `critical` when its failure leaves someone's data, money or appointment wrong; the
+  limits below use that word.
 
 ## Where to stop
 
@@ -76,20 +70,25 @@ marks as always required.
 
 ## Writing a case
 
-Use `assets/cases.md`. A case another person could run without asking you has: who performs it and
-as which role, what must exist first, exact steps, and an expected result that says what must
-happen and what must not. "Works correctly" is not an expected result.
+A case is the test that proves it. Its title starts with the case id and the criteria it covers,
+then a statement that is true when it passes:
+`test('TC-F07-S02-003 AC-2: a second customer cannot hold a slot that is already held', ...)`.
+A k6 or shell check carries the same line as a header comment (`# TC-F07-S02-004 AC-5: ...`). A
+journey across stages is `TC-F07-001` and names the requirements it covers (`TC-F07-001 BKG-04: ...`).
+The tooling reads the cases from the registered files, so there is no list or `cases.md` to keep in
+step. F01 to F03 keep their older yaml cases and `cases.md`.
 
-Declare every case in the yaml of the scope it belongs to, with the same id as its heading in that
-scope's `cases.md`: a stage's criteria under `cases:` in its `stage.yaml`, a journey in `feature.yaml`.
+The test reads as the case: who acts and in which role, what exists first (arranged in the test),
+the steps, and assertions on what must happen and what must not. "Works correctly" is not an
+expected result. Number cases in order within their scope and never reuse a retired number.
 
 ## Automated, manual or deferred
 
 | Outcome | When | Record |
 | --- | --- | --- |
-| Automated | Whenever it can be | The file under `verification.automation`, covering the case |
-| Manual | It needs a person's judgement, or automating it would cost far more than it protects | `verification.manual` with the reason and the date it was performed |
-| Deferred | What it tests cannot exist yet: it depends on a later feature, or on an event outside this one that a spec's "Done criteria" or the lead has acknowledged | `verification.deferred` with the reason and what unblocks it: a stage id, or the event |
+| Automated | Whenever it can be | A titled test in a file under `verification.automation` |
+| Manual | It needs a person's judgement, or automating it would cost far more than it protects | `verification.manual`: the case id, the criteria it `covers`, the reason and the date performed |
+| Deferred | What it tests cannot exist yet: it depends on a later feature, or on an event outside this one that a spec's "Done criteria" or the lead has acknowledged | `verification.deferred`: the case id, `covers`, the reason and what unblocks it (a stage id, or the event) |
 
 Deferred and blocked are different. Deferred: the thing under test does not exist yet, and everyone
 has agreed it will be tested later. Blocked (`qa_status: blocked`): the thing exists and could be

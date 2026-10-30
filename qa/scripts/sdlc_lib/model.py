@@ -13,6 +13,13 @@ import yaml
 
 AC_RE = re.compile(r"^\s*[-*]\s+\**(AC-\d+)\**\s*[:.]", re.M)
 CASE_HEADING_RE = re.compile(r"^#{2,4}\s+(TC-[A-Za-z0-9-]+)", re.M)
+# A case is declared by the test that proves it (decision 068): a Playwright title, or a header
+# comment in a k6 or shell script, that starts with the case id and names what it covers before
+# a colon, for example test('TC-F04-S01-003 AC-2: an owner saves the salon's hours', ...).
+TITLE_CASE_RE = re.compile(
+    r"""(?:\btest(?:\.describe)?(?:\.\w+)?\(\s*['"`]|^[ \t]*(?:#|//)[ \t]*)"""
+    r"""(TC-F\d{2}(?:-S\d{2}[a-z]?)?-\d{3})\b([^'"`\n]*)""", re.M)
+COVER_RE = re.compile(r"\b(?!TC-|BUG-|CR-)[A-Z]{2,5}-\d{1,3}\b")
 H2_RE = re.compile(r"^##\s+(.+?)\s*$", re.M)
 
 # A path to a project document, wherever it is mentioned. Placeholders such as
@@ -135,6 +142,22 @@ def _automation(scope):
     return ((scope.get("verification") or {}).get("automation")) or []
 
 
+def _title_cases(data):
+    """Cases named in the titles of a scope's registered tests; each entry learns what it covers."""
+    found, prefix = [], f"TC-{data.get('id')}-"
+    for entry in _automation(data):
+        if not isinstance(entry, dict) or not entry.get("file"):
+            continue
+        text = _text(entry["file"]) or ""
+        ids = []
+        for cid, rest in TITLE_CASE_RE.findall(text):
+            if cid.startswith(prefix) and cid[len(prefix):].isdigit():
+                found.append({"id": cid, "covers": COVER_RE.findall(rest.split(":", 1)[0]), "file": entry["file"]})
+                ids.append(cid)
+        entry["_covers"] = sorted(set(ids))
+    return found
+
+
 def _scope(directory, yaml_name):
     """Loads a feature or a stage: its yaml plus the facts about its sibling files."""
     path = os.path.join(directory, yaml_name)
@@ -145,6 +168,9 @@ def _scope(directory, yaml_name):
     data["_spec"] = None if spec is None else _spec(spec)
     cases = _text(os.path.join(directory, "cases.md"))
     data["_cases_md"] = None if cases is None else CASE_HEADING_RE.findall(cases)
+    # F01 to F03 declare cases in yaml and cases.md; later work declares them in test titles.
+    if not data.get("cases") and cases is None:
+        data["_title_cases"] = _title_cases(data)
     data["_bugs"] = _bugs(directory)
     data["_has_review"] = os.path.isfile(os.path.join(directory, "review.md"))
     data["_has_readme"] = os.path.isfile(os.path.join(directory, "README.md"))

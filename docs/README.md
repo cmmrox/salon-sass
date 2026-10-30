@@ -58,7 +58,7 @@ full before starting; this table is for everything the spec did not anticipate.
 | `operations/environments-and-releases.md` | The environments, what a test may and may not touch, and the rules this product imposes on a release |
 | `operations/git-delivery.md` | GitHub repository and authorisation, feature PR/merge records, cleanup evidence, and the existing-history transition |
 | `operations/skill-evaluation.md` | The requests used to check that the skills and these documents lead an agent to the right behaviour |
-| `operations/verification-evidence.md` | Recorded gate/full-feature proof, environment identity, progress and safe reuse at closure |
+| `operations/verification-evidence.md` | Developer-gate records, how long a QA pass holds, run progress and interruption |
 | `decisions/DECISION_LOG.md` | Decisions taken, one entry each |
 | `changes/README.md` | Change requests: how a requirement changes after the baseline |
 | `changes/CR-007-prototype-design-fidelity.md` | Owner-approved HTML design authority and existing UI repair |

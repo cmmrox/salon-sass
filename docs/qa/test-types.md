@@ -40,7 +40,7 @@ The `type` values are the ones the validator accepts (`qa/scripts/sdlc_lib/schem
   criterion can be violated.
 - **`tenant-isolation` for every new endpoint and every new kind of record that holds or returns
   salon data.** Where it applies it is never skipped, never deferred and never trimmed. A feature
-  with no salon data at all says so in `cases.md`.
+  with no salon data at all says so in its review's test approach.
 - **`permissions` for every endpoint that is not public.** Check each role, not just one allowed and
   one refused.
 

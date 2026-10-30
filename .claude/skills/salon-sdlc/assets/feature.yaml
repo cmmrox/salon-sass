@@ -20,9 +20,8 @@ surfaces: []                # api | web | mobile | infra | docs
 requirements: []            # functional requirement ids this feature owns; each has one owner
 extends: []                 # requirements another feature owns that this one delivers on one more surface
 nfr_focus: []               # non-functional requirements this feature must prove
-cases: []                   # feature journeys, added by feature-verify: TC-F00-001
-verification:
-  automation: []
+verification:               # journeys across stages, added by feature-verify
+  automation: []            # tests titled 'TC-F00-001 BKG-04: ...'; same fields as in stage.yaml
   manual: []
   deferred: []
 evidence:

@@ -1,6 +1,6 @@
 ---
 name: salon-dev
-description: Builds stages and fixes filed product bugs. Use for application code, migrations, contracts, infrastructure, unit or integration tests, stage-build and bug-fix. QA automation and project process changes belong to other roles.
+description: Builds stages, refactors and upgrades, and fixes filed product bugs. Use for application code, migrations, contracts, infrastructure, unit or integration tests, stage-build, refactors and bug-fix. QA automation and project process changes belong to other roles.
 ---
 
 # Building a stage
@@ -11,18 +11,12 @@ with, and the rules of this particular product, are not in this skill: they are 
 
 ## Read before building
 
-1. The stage's `spec.md`: understand both scope and acceptance criteria.
-2. Its named "Read first" rules, using the context-reading rule in `salon-sdlc`'s
-   `references/progress.md`; reuse unchanged material already available in this role's context.
-3. `docs/README.md`, for the row that matches each part of the product you are about to touch.
-   Read additional rules when the work touches them; the rules are requirements, not background.
-4. The `AGENTS.md` in the application folder you are working in, when there is one.
-5. For user-facing work, establish audience, target platform and delivery milestone from
-   `docs/ROADMAP.md` and the matching engineering document before mapping a design. An HTML
-   preview or mode switch can represent a different platform; it does not expand delivery scope.
-   Inspect the supplied design reference before coding. Record the mapped
-   screen, responsive layout and visual states; a passing functional check does not prove design
-   fidelity. Follow `docs/design/ui-ux-standards.md` for the project's reference and comparison gates.
+1. The stage's `spec.md`, then its "Read first" rules (`salon-sdlc` `references/progress.md` on
+   reading context), then the `docs/README.md` rows for each part of the product you touch and the
+   `AGENTS.md` of the application folder. The rules are requirements, not background.
+2. For user-facing work, the audience, platform and milestone (`docs/ROADMAP.md`) and the supplied
+   design reference before coding, following `docs/design/ui-ux-standards.md`. A preview of another
+   platform does not widen the scope; a passing functional check does not prove design fidelity.
 
 When the documents do not cover something:
 
@@ -52,6 +46,9 @@ When the documents do not cover something:
    For risky new logic and bug fixes, observe a meaningful failing test before implementing the
    fix. Assert promised behavior through stable interfaces, with independent expected values;
    retain database-level checks where persistence, isolation or integrity is the promise.
+   A screen ships with its automated accessibility check and an endpoint with its strict contract
+   check (the tools are named in `docs/engineering/web.md` and `backend.md`, "Tests"): contrast,
+   labels, nullable fields and status codes are cheaper to catch here than in a QA round trip.
 5. **Generated files are regenerated, never edited by hand,** and committed with the change that
    caused them.
 6. **Nothing secret in code, logs, tests or commits.**
@@ -63,34 +60,32 @@ When the documents do not cover something:
 
 ## Building a stage
 
-1. Read, as above.
-2. Set the status and branch as `stage-build` in `salon-sdlc` describes. Branch from the feature's
-   integration branch; the lead integrates closed stages there. Follow `references/git-workflow.md`
-   in `salon-sdlc`: unfinished stages do not merge into `main`.
-3. Implement against the acceptance criteria, with tests alongside.
-4. Use focused tests while building, then satisfy every declared `verification.commands` gate
-   before handoff using `references/progress.md` in `salon-sdlc`. Diagnose failures before rerunning.
-   Record complete command results under `docs/operations/verification-evidence.md` so the lead
-   can close the stage without repeating unchanged checks.
-5. Start the product and walk through every acceptance criterion yourself, from outside: the
-   screen, the endpoint, the command, including the criterion's negative case. Later stages are
-   built on this one before QA sees it, so this walk-through is the stage's acceptance check. Do not
-   hand over something you have not seen work.
-6. Hand over as `stage-build` describes. In `handoff.notes`, account for each acceptance criterion:
-   checked on the running product, or not checked and why. For screens, include reference-to-product
-   comparison evidence at representative widths and resolve visual differences before handoff.
-   Report any reference preview limitation explicitly. The lead closes the stage on that record.
+Follow `stage-build` in `salon-sdlc`. Two parts of it carry the stage's quality:
 
-For visual work, inspect the complete mapped screen/state set together, including representative
-device sizes. Correct confirmed differences in one batch and confirm that batch. End refinement
-when the approved design and acceptance criteria hold; a fresh defect needs diagnosis, while a
-new design preference belongs to the lead's scope process.
+- **The gates.** Iterate with focused tests, then pass every `verification.commands` gate on the
+  final committed source and record each in `handoff.notes` (`docs/operations/verification-evidence.md`)
+  so the lead closes without rerunning. Diagnose a failure before rerunning.
+- **The walk-through.** Start the product and check every acceptance criterion from outside, its
+  negative case included. Later stages build on this one before QA sees it. For screens, compare the
+  whole mapped screen and state set with its reference at representative widths, fix confirmed
+  differences in one batch, and record the comparison; a new design preference is the lead's, not a
+  defect to chase.
+
+## Building a refactor or upgrade
+
+A change to how the product is built (architecture, code organisation, an upgrade, tooling) has no
+stage and no QA cases: your gates are its whole proof. Work on the `refactor/` branch the lead names,
+one area per commit, the rule changes in their own commit. Keep every existing test and its
+assertions (a test may move with its code), add a fixture proving each new rule fails, keep public
+contracts byte-identical unless the decision says otherwise, and show on the running product that
+nothing visible changed. Report what you moved, the gates with revision and log paths, and anything
+the documents now get wrong.
 
 ## What you owe QA
 
-QA tests the whole feature from outside, once every stage is closed, and cannot edit your code. A
-stage that is hard to test is found out late, when it is most expensive. Make the product testable
-as you build it:
+QA tests the whole feature from outside and cannot edit your code; it dry-runs its tests against
+each stage as it closes, so a stage that is hard to test is found out early. Make the product
+testable as you build it:
 
 - Give every interactive element a stable test id, named for what it is, not how it looks.
 - Keep seed data deterministic.
@@ -103,7 +98,8 @@ as you build it:
 
 ## Fixing a bug from QA
 
-Bugs arrive together, after the feature's QA pass, and may be in any of its stages. Reproduce each
+Bugs arrive together after the feature's QA pass, or from smoke and regression after a merge, and
+may be in any stage. Reproduce each
 one first, compare a working path, and trace the failing input to its cause. Test one hypothesis
 at a time. Add a unit or integration test that fails for the reason in the bug, then fix
 the cause, not the symptom the test happens to check. Never edit anything under `qa/`. If the test

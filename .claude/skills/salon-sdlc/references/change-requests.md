@@ -56,9 +56,9 @@ apart.
 A change to a feature that has not been through QA triggers no QA of its own: the stage is built
 and closed again, and the feature pass covers it. A change to a feature that has been through QA
 sends the affected scope through independent re-verification under `references/progress.md`,
-retaining unaffected passing results. Process-only changes do not trigger product QA. It is not a
-reason to run regression. If the change reaches into behaviour that earlier features rely on, say so in the impact
-analysis and let the owner decide whether to ask for a regression run.
+retaining unaffected passing results. Process-only changes do not trigger product QA. If the change
+reaches into behaviour earlier features rely on, say so in the impact analysis; regression then runs
+before its PR, as for a refactor.
 
 ## Suggestions from QA
 

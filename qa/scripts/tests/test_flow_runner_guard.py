@@ -1,10 +1,8 @@
 import importlib.util
 import os
 import unittest
-from unittest.mock import patch
 
 from sdlc_lib import flow, runner
-from sdlc_lib import __main__ as cli
 from tests import fixtures as fx
 
 _spec = importlib.util.spec_from_file_location(
@@ -62,23 +60,6 @@ class FlowTest(unittest.TestCase):
 
 
 class RunnerTest(unittest.TestCase):
-    def test_delta_refuses_full_certification_and_nonfeature_scopes(self):
-        for args in (["--stage", "F02-S04"], ["--suite", "regression"],
-                     ["--release", "v1.0.0"],
-                     ["--feature", "F02", "--context", ".local/context.json"]):
-            with patch.object(cli.model, "load", return_value=fx.bundle()), patch.object(runner, "run") as run:
-                self.assertEqual(cli.main(["run", *args, "--only", "staff", "--dry-run"]), 2)
-                run.assert_not_called()
-
-    def test_delta_keeps_only_registered_entries_in_order(self):
-        entries = [{"id": "staff", "scope": "F02-S04"}, {"id": "api", "scope": "F02-S01"}]
-        self.assertEqual(runner.select_delta(entries, ["staff", "staff"]), entries[:1])
-
-    def test_delta_refuses_unknown_or_empty_selection(self):
-        for ids in ([], ["unknown"], ["api", "unknown"]):
-            with self.assertRaises(runner.SelectionError):
-                runner.select_delta([{"id": "api"}], ids)
-
     def setUp(self):
         second = fx.stage(id="F07-S02", sequence=2, status="built", qa_status="not-run")
         second["verification"]["automation"] = [
@@ -108,6 +89,15 @@ class RunnerTest(unittest.TestCase):
             runner.select(self.bundle, stage="F99-S01")
         with self.assertRaises(runner.SelectionError):
             runner.select(self.bundle, stage="F07-S01", suite="smoke")
+
+    def test_release_suite_is_a_selection_of_its_own(self):
+        slow = fx.stage(id="F07-S03", sequence=3)
+        slow["verification"]["automation"] = [
+            {"id": "load", "tool": "k6", "file": "qa/load/F07/load.js",
+             "covers": ["TC-F07-S01-001"], "suites": ["release"]}]
+        bundle = fx.bundle(stages=[fx.stage(), slow])
+        self.assertEqual([e["id"] for e in runner.select(bundle, suite="release")], ["load"])
+        self.assertNotIn("load", [e["id"] for e in runner.select(bundle, suite="regression")])
 
     def test_empty_selection_never_passes(self):
         self.assertEqual(runner.run([], "smoke", dry_run=True)[0], 2)

@@ -34,8 +34,8 @@ positive profile tests; negative missing-secret cases deliberately omit them.
 
 Develop and exercise changed automation before committing its final version. A diagnostic file
 run establishes only that file's behavior. The independent feature pass still runs every
-registered automation entry through `qa/scripts/sdlc run`, with the recorded context described in
-`docs/operations/verification-evidence.md`. Never edit certified source during a run.
+registered automation entry through `qa/scripts/sdlc run` (`docs/operations/verification-evidence.md`
+says how long that pass holds). Never edit the source under test during a run.
 
 ## Playwright: layout and projects
 

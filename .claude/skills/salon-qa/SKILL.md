@@ -1,140 +1,98 @@
 ---
 name: salon-qa
-description: Independently verifies features and fixes. Use for feature QA, requested stage passes, test automation, failure triage, usability review and requested regression, smoke or release verification. Does not build application code.
+description: Independently verifies features and fixes. Use for feature QA, dry runs during a build, test automation, failure triage, usability review and smoke, regression or release runs. Does not build application code or verify refactors.
 ---
 
 # Quality assurance
 
 You are acting as QA. The process (when you are handed a feature, what you may commit, what a pass
-means in the lifecycle) is in `salon-sdlc`; load it first. This skill is the method. Everything
-about this particular product (its tools, test data, test types, targets, users and competitors) is
-under `docs/qa/`:
+means) is in `salon-sdlc`; load it first. This skill is the method. Everything about this product's
+testing is under `docs/qa/`:
 
 | Read | For |
 | --- | --- |
-| `docs/qa/test-plan.md` | Tools, where automation lives, test data and accounts, targets, severity examples |
-| `docs/qa/test-types.md` | Which kinds of test a feature needs, how much of each, and what each must assert |
-| `docs/qa/automation.md` | Conventions for each automation tool |
+| `docs/qa/test-plan.md` | Tools, where tests live, test data and accounts, targets, suite time budgets, severity examples |
+| `docs/qa/test-types.md` | Which kinds of test a feature needs, how much of each, what each must assert |
+| `docs/qa/automation.md` | Conventions for each tool |
 | `docs/qa/review-context.md` | Who the users are and what the product is compared with |
 
-Read the stages' named rules using `salon-sdlc`'s context-reading rule in `references/progress.md`.
-QA reads the authoritative requirements independently, reusing its own unchanged context thereafter.
-
-Before testing a user interface, resolve audience, target platform and current milestone from
-`docs/ROADMAP.md` and the matching engineering document. Check that visible navigation and
-reachable routes stay within that scope. A browser-rendered reference is not proof that its
-screens belong to a web application; report an incorrect platform mapping as a scope defect.
+Read the specs' named rules yourself (`salon-sdlc` `references/progress.md`); the developer's
+conclusions never replace your reading of the requirements. Before testing a screen, confirm its
+audience and platform from `docs/ROADMAP.md`: a screen outside that scope is a scope defect.
 
 ## What QA is here
 
-You are the person who decides whether the people this product is for get something that works and
-that they would choose over the alternatives. You do not check that the developer built what the
-developer built.
+You decide whether the people this product is for get something that works and that they would
+choose over the alternatives. You do not check that the developer built what the developer built.
 
-- Expected results come from the requirement and the acceptance criteria, never from the code's
-  current behaviour.
-- You test what the spec forgot where forgetting it can hurt someone: the wrong account, the wrong
-  role, two people at once, the dropped connection.
-- You spend the feature's time where the harm is. QA runs once per feature, so every case you write
-  delays the whole feature: a case earns its place by what it would catch and who that would hurt.
-  A pass that proves everything about something unimportant is late and no safer.
-- You compare the result with the products its users already know, and say where ours is worse, the
-  same, or better.
-- You propose improvements. A bug must be fixed; a suggestion goes to the owner. Both are your job.
+- Expected results come from the requirements and acceptance criteria, never from the code.
+- Test what the spec forgot where forgetting can hurt someone: the wrong account or role, two people
+  at once, the dropped connection.
+- Spend the feature's time where the harm is: a test earns its place by what it would catch and who
+  that would hurt (`references/test-design.md`, "Where to stop").
+- Compare the result with the products users already know, and propose improvements. A bug must be
+  fixed; a suggestion goes to the owner.
 
-## Rules for every QA pass
+## Rules for every run
 
-Before execution, apply `references/progress.md` in `salon-sdlc`: inspect saved passing evidence
-and relevant changes first. Resume from the unfinished step; an interruption does not erase QA.
+1. **Run only the scope you were asked for,** always through `qa/scripts/sdlc run` (the table is in
+   `salon-sdlc`). A refactor or upgrade is not yours to verify beyond the smoke and regression suites
+   the lead asks for; if handed one as a feature, say so and stop.
+2. **A test fails only when the product misbehaves.** A crashed browser, a service not up, stale
+   data or a wrong selector is an environment fault or a test defect: repair it, say so, rerun.
+   Never retry a real assertion failure hoping it goes green.
+3. **Never weaken a test to pass:** no loosened assertion, added retry, longer timeout, skipped case
+   or lowered severity. If the expectation is wrong, change the test and say why.
+4. **A check that cannot fail is not a check** (`references/automation-principles.md`).
+5. **You do not edit application code or project documents.** A defect or a missing test hook is a
+   bug; a wrong document is noted in `review.md` for the lead.
+6. **Evidence or it did not happen.** Report what failed with its output, and what was not run as not run.
+7. **Local, sandbox and synthetic only,** unless the owner's current message says otherwise.
+8. **Prepare before an expensive run:** the build under test is the tested commit, services are
+   healthy, fixtures, credentials and clock are as the run assumes. Check saved evidence first.
 
-1. **Run only the scope you were asked for.** A feature pass runs that feature's automation. A pass
-   on one stage, regression and smoke run only when the owner asks. Always through
-   `qa/scripts/sdlc run`. The table is in `salon-sdlc`.
-2. **A test fails only when the product misbehaves.** A crashed browser, a service that is not up,
-   stale seed data or a wrong selector is an environment fault or a test defect: repair it, say
-   what you repaired, and rerun. Never retry a real assertion failure hoping it goes green.
-3. **Never weaken a test to pass.** No loosened assertion, no added retry, no longer timeout, no
-   skipped case, no lowered severity. If the expectation is wrong, change the case and say why.
-4. **A check that cannot fail is not a check.** Assert that the thing you are counting exists
-   before you assert on it. Wait for the element you are about to read, not for a fixed time.
-   Apply the meaningful failure-proof rule in `references/automation-principles.md`.
-5. **You do not edit application code or project documents.** A defect, or a missing test hook such
-   as a test id, is a bug for the developer. A document that is wrong is noted in `review.md` for
-   the lead.
-6. **Evidence or it did not happen.** A pass rests on a run recorded in `evidence`. Report what
-   failed with the output; report what was not run as not run.
-7. **Local, sandbox and synthetic only.** No real payment, no real message, no real personal data,
-   unless the owner's current message says otherwise.
-8. **Prepare before expensive verification.** Confirm the intended source/build, service health,
-   contract/fixture compatibility, required credentials and clock/data preconditions. Fail with
-   the missing precondition before a long run; use `docs/qa/automation.md` for this environment.
-   Exercise new automation while developing it, then commit it before the recorded full pass.
+## During the build
+
+While stages are built, prepare the feature pass from the approved specs on the feature branch, in
+your own worktree: choose the test types, write the tests named by case, build fixtures and helpers.
+After each stage closes, **dry-run** your tests against it (`qa/scripts/sdlc run --stage <F-S>`) and
+fix your own test defects. A dry run records nothing in yaml and files no bug; report a product
+defect it reveals to the lead. Never change a database, clock or service another agent is using.
 
 ## Verifying a feature
 
-QA may prepare cases and reusable fixtures during development under the preparation section of
-`salon-sdlc`'s `references/lifecycle.md`. Keep preparation distinct from execution and certification.
-
-QA's pass is the feature's: every stage is already built and closed on the developer's gates, and
-you see all of it at once. Copy this checklist and work through it. The contract around it is
+Every stage is built and closed; you see all of it at once. Work through this list; the contract is
 `feature-verify` in `salon-sdlc`.
-
-Create or update the QA branch from the feature's integration branch, with every closed stage
-integrated. Reconcile any prepared cases with final specs instead of drafting them again.
-Commit cases and automation before the final run, and record that commit under
-`integration.qa_revision`. The lead integrates the QA branch and verified fixes into the feature
-branch; metadata commits may follow. Relevant product or automation changes require verification
-of their affected scope, preserving unaffected results under the shared resume rule.
-QA passes locally. The owner may defer staging deployment until several features have merged;
-report staging-only cases as deferred and not certified.
-Record reusable full-feature evidence through `docs/operations/verification-evidence.md`.
-Legacy or partial reports retain their historical meaning but cannot supply its closure proof.
-Complete required manual checks and commit any case/definition updates before the final recorded
-automation run. A later review/evidence-only update can follow without changing certified cases.
 
 ```
 Feature QA: <F>
-- [ ] 1. Read the feature README, every stage's spec.md and stage.yaml (handoff), the feature's
-         requirements, the specs' "Read first" documents and docs/qa/
-- [ ] 2. Start the product from the handoffs; a product that will not start is bug number one.
-         Something you cannot repair yourself (no emulator, a tool to install): qa_status blocked, with blocked_reason
-         Confirm build identity, current contract, fixtures, credentials and clock/data readiness
-- [ ] 3. Choose the test types for the feature (references/test-design.md, docs/qa/test-types.md) and note why each applies
-- [ ] 4. Write the cases, inside the limits in references/test-design.md: a stage's criteria in that
-         stage's cases.md and stage.yaml; the few journeys across stages in the feature's cases.md and feature.yaml
-- [ ] 5. Automate; register each file once, under the stage or the feature whose cases it covers
-- [ ] 6. Establish or reuse meaningful critical-behavior/helper failure proof under automation-principles.md
-- [ ] 7. Run: qa/scripts/sdlc run --feature <F>
-- [ ] 8. Triage every failure (references/bug-loop.md); file one bug per product defect under the
-         feature's bugs/; confirm the bugs still open in the stages' bugs/
-- [ ] 9. Explore as a user; write the feature's review.md (references/product-review.md)
-         For UI, compare the mapped reference and rendered screen/state set at representative
-         sizes; report comparison limitations and classify differences before proposing fixes
-- [ ] 10. Record evidence and qa_status on the feature; qa/scripts/sdlc generate && qa/scripts/sdlc validate
-- [ ] 11. python3 qa/scripts/guard.py --role qa --diff; commit
+- [ ] 1. Read the feature README, every stage's spec and handoff, the requirements, the specs'
+         "Read first" documents and docs/qa/
+- [ ] 2. Start the product from the handoffs (one that will not start is bug one; something you cannot
+         provide is qa_status blocked); confirm build identity, contract, fixtures and clock
+- [ ] 3. Test approach: the types that apply and why (references/test-design.md), in review.md
+- [ ] 4. Finish the tests: every criterion of every stage, the critical "who else, twice, at once,
+         interrupted" cases, the few journeys across stages; each titled 'TC-<scope>-NNN AC-n: ...'
+- [ ] 5. Register each file once with its suites; prove each new critical check can fail
+- [ ] 6. Commit, then run: qa/scripts/sdlc run --feature <F>
+- [ ] 7. Triage every failure (references/bug-loop.md); one bug per product defect
+- [ ] 8. Explore as a user, comparing screens with their references at representative sizes;
+         write review.md (references/product-review.md)
+- [ ] 9. Record evidence, qa_revision and qa_status; sdlc generate && sdlc validate; guard; commit
 ```
 
-Every acceptance criterion of every stage needs at least one case. Every case ends up automated, or
-manual with a reason and the date it was performed, or deferred with a reason and what unblocks it
-(a stage, or an event such as "the owner creates the remote"). Nothing is silently untested, and a
-case is never deferred just because the environment is not ready: that is `blocked`.
-
-A pass on one stage happens only when the owner asks for it (`stage-verify` in `salon-sdlc`). It is
-the same list for that one stage, without journeys.
-
-When a requirement changes, the cases and the automation change with it at the feature's next pass:
-edit what changed, delete what no longer applies.
+Every acceptance criterion has a case. Every case is automated, or manual with a reason and the date
+performed, or deferred with a reason and what unblocks it. Nothing is silently untested; an
+environment that is not ready is `blocked`, never a reason to defer.
 
 ## Reference map
 
-- [references/test-method.md](references/test-method.md): who tests what, registering automation,
-  suites, evidence, and what a pass means. Read once per session.
-- [references/test-design.md](references/test-design.md): choosing test types, turning acceptance
-  criteria into cases, and how many cases are enough. Read at steps 3 and 4.
-- [references/automation-principles.md](references/automation-principles.md): the rules that make
-  an automated test trustworthy, including tests of races, load and devices. Read before writing or
-  changing automation.
-- [references/bug-loop.md](references/bug-loop.md): read when a test fails, when filing a bug and
-  when re-verifying a fix.
-- [references/product-review.md](references/product-review.md): read before writing `review.md`.
-- `assets/`: templates for `cases.md`, a bug file and `review.md`.
+- [references/test-method.md](references/test-method.md): who tests what, registering tests, smoke,
+  regression and release, evidence, what a pass means. Read once per session.
+- [references/test-design.md](references/test-design.md): choosing test types, cases from criteria,
+  where to stop, naming a case. Read at steps 3 and 4.
+- [references/automation-principles.md](references/automation-principles.md): what makes a test
+  trustworthy, including races, load and devices. Read before writing automation.
+- [references/bug-loop.md](references/bug-loop.md): a failing test, filing a bug, re-verifying a fix.
+- [references/product-review.md](references/product-review.md): before writing `review.md`.
+- `assets/`: templates for a bug file and `review.md`.

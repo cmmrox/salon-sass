@@ -2,98 +2,61 @@
 
 ## Start and update
 
-State the feature/stage, role, intended outcome and next check at the start. During active work,
-give a compact update about every 30–60 seconds and whenever a meaningful step completes, a
-failure changes the plan, or a blocker appears. The lead remains responsible for owner-visible
-updates while another agent runs; each delegated role sends the lead the same information.
+State the feature or stage, your role, the intended outcome and the next check. While working, give
+a short update about every minute and whenever a step completes, a failure changes the plan or a
+blocker appears. The lead reports to the owner while other agents run; each agent reports to the lead.
 
-An update answers:
+An update says:
 
-- **Current:** feature/stage, role and the concrete step running.
-- **Completed:** observed work or checks, with counts when available.
+- **Current:** the scope, role and the step running.
+- **Completed:** what was observed or checked, with counts against a stated total.
 - **Remaining:** the next step and what it will establish.
-- **Blocker:** the observed cause, its effect and the action resolving it, when one exists.
+- **Blocker:** the observed cause, its effect and what resolves it.
 
-Use plain language. Explain what a check establishes instead of streaming raw implementation
-details. Label automation groups separately from individual cases. Separate implementation,
-diagnosis, independent QA and delivery: finished code is not a passed feature or a merged PR.
-Use counts tied to a defined denominator; report elapsed time rather than guessed percentages
-or an unsupported completion estimate. When nothing has changed, name the command still running,
-its elapsed time and the next observable result without implying new progress.
-At handoff, record observed time for implementation, automation preparation, verification,
-diagnosis/rework and delivery waiting where available. Use existing logs and handoff notes;
-label missing timings unknown rather than creating a separate tracking system.
+Use plain language: say what a check establishes, not raw output. Keep implementation, diagnosis,
+QA and delivery apart: finished code is not a passed feature or a merged PR. Report elapsed time,
+not guessed percentages. At handoff, note the observed time spent building, testing, diagnosing and
+waiting where the logs show it; say "unknown" otherwise.
 
-## Read and retain relevant context
+## Read and keep context
 
-Read the current spec, acceptance criteria and named project rules before acting. Load relevant
-sections with enough surrounding context to understand their constraints; read a whole document
-when its rules span the work or its dependencies are unclear. Do not skim away security, ownership,
-data integrity or platform requirements to save time.
-
-Within a continuing role session, reuse unchanged material that is still available in context.
-Read again when it changed, was truncated or lost, or a new area becomes relevant. A fresh role
-context reads its own authoritative brief; the developer's conclusions never replace QA's reading
-of requirements. Keep handoffs concise and link evidence instead of copying documents or logs.
+Read the current spec, its criteria and the documents it names before acting, with enough context
+to understand their constraints; read the whole document when its rules span the work. Do not skim
+past security, ownership, data integrity or platform rules. In a continuing session reuse what is
+unchanged; read again what changed, was truncated or is newly relevant. A fresh QA context reads its
+own brief: the developer's conclusions never replace QA's reading of the requirements.
 
 ## Long-running commands
 
-Use bounded waits so the lead can communicate while a command runs. Keep the original process
-and its evidence across updates. Read the runner's current entry, completed counts and elapsed
-time; use `docs/operations/verification-evidence.md` for this project's tooling. Report missing
-tools, stopped processes and capacity limits promptly. Keep secrets and private data out of chat.
-Capture complete output once and inspect the saved log for diagnosis; do not repeat execution just
-to change output formatting or recover a truncated display. Reuse and refine the existing test or
-reproduction script instead of creating near-identical variants.
+Wait in bounded intervals so the lead can keep the owner informed. Read progress from the
+command's own record (the runner's `summary.json`, a log) instead of rerunning it. Report missing
+tools, stopped processes and capacity limits at once. Capture output once and inspect the saved
+log; never rerun to change formatting or recover a truncated display. Refine an existing test or
+reproduction instead of writing near-copies. Keep secrets out of chat.
 
 ## Interruptions and resuming
 
-New owner instructions steer ongoing work. Preserve its branch, edits, running-process identity,
-completed evidence and remaining steps. Before resuming, inspect those records and the process
-state; continue from the last valid boundary. An interruption alone is not a reason to rebuild
-or rerun completed checks. This includes a token/context limit, compaction, a new agent or client
-session, a machine restart and a later "continue" message.
+New owner instructions steer the work; keep its branch, edits, running processes, completed results
+and remaining steps. A token limit, compaction, a new session, a restart or "continue" is not a
+reason to rerun anything: inspect what was done and continue from the last finished step.
 
-### Reuse before rerunning
+**Reuse before rerunning.** Before running developer gates or QA, compare the saved result's tested
+revision with the relevant changes (including untracked files) and its conditions. Unchanged
+source, tests, requirements and conditions with an intact passing result mean the result stands;
+a documentation, skill or status change never invalidates product proof. The rule and the paths
+are in `docs/operations/verification-evidence.md`.
 
-Before starting QA or developer gates, inspect the saved result and tested revision, compare the
-relevant working-tree changes (including untracked files), and check the recorded test conditions.
-If the relevant application code, tests, requirements and test conditions are unchanged and the
-complete passing evidence is intact, reuse it and continue with the next unfinished step. Do not
-restart QA because the session restarted, a commit SHA/date changed, or only review, documentation,
-skill or status metadata changed. A skill edit receives its own validation, not product QA.
+When something relevant changed, name it and the checks it affects, then run those, keeping
+unaffected results. For a batch of fixes, test each fix, then run each affected gate once.
+Uncertain impact, shared code or changed conditions call for broader checks with a stated reason;
+cost never justifies dropping required proof. A targeted run is never reported as a full pass.
+Repeat a whole feature only when the change is broad or the owner asks.
 
-This applies at stage handoff and closure as well as feature closure. During implementation use
-focused tests for short feedback loops. Before handoff, every declared developer gate must have
-complete passing evidence for the final relevant source and conditions. The lead validates that
-evidence rather than rerunning it. Missing or invalidated gates must run; diagnose and correct a
-failed gate before a meaningful rerun. A narrower test
-does not silently replace a declared gate. The project's evidence document defines the record.
-
-For a batch of related fixes, reproduce and test each defect, then deduplicate the affected stages'
-gate commands and run each invalidated command once after the batch is ready. Keep unrelated valid
-results. Shared changes, uncertain impact or changed runtime conditions require broader checks
-with a stated reason; cost or elapsed time never justifies dropping required proof.
-
-When something relevant changed, name the change and the checks it affects before execution.
-Retain unaffected passing results; independently verify a fix and its affected dependencies.
-Repeat a whole feature only when its affected scope warrants that breadth, or when the owner
-explicitly requests it. A failed or incomplete check is unfinished work; finish that scope without
-discarding unrelated completed evidence. Never describe targeted checks as a new full-feature pass.
-
-Persist a short checkpoint in the existing handoff/evidence record: tested revision, report/log
-paths, completed results, remaining work and relevant environment/fixture identity. Verify a
-surviving runner's identity before starting another. Missing or uncertain proof calls for a
-specific inspection first; do not assume that all QA must start over. Follow the project's
-evidence documentation for integrity and tooling limits. Repeating a check without an identified
-invalidating change or an explicit owner request wastes time and tokens without new evidence.
-
-When priorities change, let an already running command reach a safe boundary if appropriate and
-report what remains in progress. Resume dependent work only within the owner's current scope.
+Persist a short checkpoint in the handoff or evidence record: tested revision, report paths,
+results, what remains. Before starting a run, make sure an earlier one is not still alive.
 
 ## Completion
 
-Lead with the delivered behavior and the evidence proving it. State the tested revision, relevant
-results and material limitations. Distinguish checks not run, explicitly deferred work and
-remaining owner actions. Provide the reviewable artifact or PR when one exists. Completion
-claims rest on complete evidence for the current scope, never on a prediction or a partial run.
+Lead with the delivered behaviour and the evidence for it: tested revision, results and material
+limits. Name what was not run, what is deferred and what the owner must do. Give the PR when there
+is one. A completion claim rests on complete evidence for the current scope, never on a prediction.
