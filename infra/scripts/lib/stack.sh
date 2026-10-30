@@ -145,6 +145,7 @@ version_key() { # <service> -> the setting that names its version
     api-2) printf 'SALON_API_2_VERSION' ;;
     web-1) printf 'SALON_WEB_1_VERSION' ;;
     web-2) printf 'SALON_WEB_2_VERSION' ;;
+    web-surge) printf 'SALON_WEB_SURGE_VERSION' ;;
     migrate) printf 'SALON_MIGRATE_VERSION' ;;
     *) fail "no such instance: $1" ;;
   esac

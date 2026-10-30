@@ -129,6 +129,17 @@ services:
     image: ${SALON_IMAGE_PREFIX:-}salon-web:${SALON_WEB_2_VERSION:?SALON_WEB_2_VERSION is set by infra/scripts}
     container_name: salon-stack-web-2
 
+  # A third web app instance that runs only while stack-deploy.sh replaces web-1 and web-2: started
+  # on the new version before the first is taken out and stopped after the second is back, so that
+  # two web app instances serve throughout. A web app instance is one Node.js process, whose one
+  # main thread is its capacity, so one instance alone is the tier at half its capacity
+  # (BUG-F01-009). Never started by stack-up.sh.
+  web-surge:
+    <<: *web
+    profiles: [surge]
+    image: ${SALON_IMAGE_PREFIX:-}salon-web:${SALON_WEB_SURGE_VERSION:-not-deployed}
+    container_name: salon-stack-web-surge
+
   # Local development and QA use this HTTP-only edge. Staging has its own profile and Caddyfile.
   edge-http:
     profiles: [local]

@@ -67,7 +67,8 @@ http://{$SALON_PLATFORM_DOMAIN}:{$SALON_EDGE_HTTP_PORT}, http://*.{$SALON_PLATFO
 		}
 	}
 	handle {
-		reverse_proxy web-1:3000 web-2:3000 {
+		# web-surge serves only during a deployment (stack-deploy.sh); otherwise it is down here.
+		reverse_proxy web-1:3000 web-2:3000 web-surge:3000 {
 			import instances /healthz
 		}
 	}
