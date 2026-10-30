@@ -247,7 +247,7 @@ verification:
     - "pnpm contracts:check"
     - "qa/scripts/sdlc selftest"
   automation:
-    - {"id": "api", "tool": "playwright", "file": "qa/api/F01/S02-salon.spec.ts", "covers": ["TC-F01-S02-001", "TC-F01-S02-002", "TC-F01-S02-003", "TC-F01-S02-004", "TC-F01-S02-005", "TC-F01-S02-006", "TC-F01-S02-007", "TC-F01-S02-008", "TC-F01-S02-009", "TC-F01-S02-010", "TC-F01-S02-011", "TC-F01-S02-012", "TC-F01-S02-013", "TC-F01-S02-014", "TC-F01-S02-015"], "project": "api"}
+    - {"id": "api", "tool": "playwright", "file": "qa/api/F01/S02-salon.spec.ts", "covers": ["TC-F01-S02-001", "TC-F01-S02-002", "TC-F01-S02-003", "TC-F01-S02-004", "TC-F01-S02-005", "TC-F01-S02-006", "TC-F01-S02-007", "TC-F01-S02-008", "TC-F01-S02-009", "TC-F01-S02-010", "TC-F01-S02-011", "TC-F01-S02-012", "TC-F01-S02-013", "TC-F01-S02-014", "TC-F01-S02-015"], "project": "api", "suites": ["regression"]}
     - {"id": "rush", "tool": "k6", "file": "qa/load/F01/S02-salon-rush.js", "covers": ["TC-F01-S02-020"], "suites": ["release"]}
     - {"id": "read-load", "tool": "k6", "file": "qa/load/F01/S02-salon-read-load.js", "covers": ["TC-F01-S02-021"], "suites": ["release"]}
     - {"id": "database-isolation", "tool": "script", "file": "qa/checks/F01/S02-database-isolation.sh", "covers": ["TC-F01-S02-030", "TC-F01-S02-031", "TC-F01-S02-032", "TC-F01-S02-033", "TC-F01-S02-034", "TC-F01-S02-035", "TC-F01-S02-036", "TC-F01-S02-037", "TC-F01-S02-038", "TC-F01-S02-039", "TC-F01-S02-040", "TC-F01-S02-041", "TC-F01-S02-042", "TC-F01-S02-043"], "suites": ["regression"]}

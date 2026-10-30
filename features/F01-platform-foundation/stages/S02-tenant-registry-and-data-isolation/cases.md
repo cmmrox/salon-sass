@@ -106,7 +106,7 @@ Every case is automated; no manual or deferred acceptance cases. Human API/opera
 - **Preconditions:** Product is up with the three synthetic salons; every isolation check proves the target owner’s data exists first.
 - **Steps:**
   1. Confirm beta exists; request alpha with beta’s slug/id/hostname in each query variant and all variants together; reverse the salons.
-- **Expected:** Only the Host salon is returned.
+- **Expected:** Only the Host salon is returned. A `;` path parameter makes the path non-canonical: since F03-S01 it is refused 400 `bad_request` before routing, showing nothing of the other salon.
 - **Automation:** `qa/api/F01/S02-salon.spec.ts`
 
 ### TC-F01-S02-008 a salon named in a request header other than Host is never trusted: alpha's hostname returns alpha's brand
