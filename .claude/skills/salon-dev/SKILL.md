@@ -105,7 +105,8 @@ at a time. Add a unit or integration test that fails for the reason in the bug, 
 the cause, not the symptom the test happens to check. Never edit anything under `qa/`. If the test
 or the expectation is wrong, say so in `developer_note` on the bug and leave it for QA to decide.
 When repeated fixes fail, revisit the cause and affected interfaces with the lead before another
-patch. Record the failing and passing evidence and any unchecked behavior in the handoff.
+patch. Iterate with fast, focused checks; a load or release-suite check runs only when the owner
+asks (`references/progress.md` in `salon-sdlc`). Record the failing and passing evidence and any unchecked behavior in the handoff.
 Batch compatible fixes before the broader developer gates, following the shared verification rule
 in `salon-sdlc`'s `references/progress.md`; each defect still needs its own reproduction and fix test.
 
