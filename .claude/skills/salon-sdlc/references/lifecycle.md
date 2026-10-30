@@ -572,7 +572,8 @@ two suites directly: `qa/scripts/sdlc run --suite smoke`, then `--suite regressi
 | --- | --- | --- |
 | In `feature-verify` | `features/<feature>/bugs/` | The feature is `in-qa`; set `qa_status: failing` |
 | In a stage pass the owner asked for | `<stage>/bugs/` | The stage stays `built`, `qa_status: failing`. A bug left open when the stage closes is settled at the feature pass |
-| In `release-verify`, or any time before release | `features/<feature>/bugs/` of the feature that owns the failing case | The lead sets that feature back to `status: in-qa`, `qa_status: failing`. Its stages stay `complete` |
+| In `release-verify`, or any time before release, in a feature not yet merged | `features/<feature>/bugs/` of the feature that owns the failing case | The lead sets that feature back to `status: in-qa`, `qa_status: failing`. Its stages stay `complete` |
+| After the feature's merge, before release (regression, smoke) | `features/<feature>/bugs/`, with `found_after_merge: <date>` | Statuses stay as they are. The fix ships in a later PR, which carries the bug to `verified` |
 | After release, in a shipped version | `features/<feature>/bugs/`, with `found_in_release: <version>` | Statuses stay `released`. Fixed on a `hotfix` branch and shipped as a PATCH release |
 
 In every case but a stage pass, the developer fixes with `bug-fix <F>`, QA re-verifies the affected

@@ -182,6 +182,12 @@ class ValidateTest(unittest.TestCase):
         self.assertEqual(findings(fx.bundle(stages=[released])), [])
         self.assertFinding(fx.bundle(stages=[fx.stage(_bugs=[late])]), "QA cannot pass")
 
+    def test_bug_found_after_merge_does_not_un_pass_the_closed_feature(self):
+        late = fx.bug(found_after_merge="2026-10-30")
+        self.assertEqual(findings(fx.bundle(stages=[fx.stage(_bugs=[late])])), [])
+        self.assertFinding(fx.bundle(stages=[fx.stage(_bugs=[fx.bug()])]), "QA cannot pass")
+        self.assertFinding(fx.bundle(stages=[fx.stage(status="built", _bugs=[late])]), "QA cannot pass")
+
     def test_blocked_qa_needs_a_reason(self):
         blocked = fx.stage(status="built", qa_status="blocked", evidence={})
         self.assertFinding(fx.bundle(stages=[blocked]), "gives no blocked_reason")

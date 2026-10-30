@@ -3,6 +3,7 @@ id: BUG-F03-007
 title: The documented offline operator bootstrap command stops with "RESOLVED_JAVA_HOME unbound variable" and creates no operator
 severity: minor
 status: open
+found_after_merge: 2026-10-30
 found_by: exploratory
 breaks: "docs/architecture/operator-console.md, Operator authentication: bootstrap is an explicit offline administrative command (F03-S01 handoff.run)"
 found_on: 2026-10-30

@@ -3,6 +3,7 @@ id: BUG-F02-014
 title: Under the standalone server bound to 127.0.0.1, /salon-site never answers 404 and the proxy rewrites it into itself without end
 severity: minor
 status: open
+found_after_merge: 2026-10-30
 found_by: exploratory
 breaks: "F02-S04 spec, UI and UX: /salon-site remains externally 404 (CR-010); docs/engineering/web.md, Tenant routing"
 found_on: 2026-10-30

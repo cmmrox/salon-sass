@@ -161,12 +161,16 @@ def blocking_bugs(scope):
 
     A bug found in a version that has already shipped (found_in_release) does not un-pass the
     released work it was found in; it is fixed as a hotfix and gates the next release instead.
+    Likewise a bug found after a closed feature's merge (found_after_merge, decision 068): the
+    feature stays closed and the fix ships in a later PR, so the bug gates that PR, not the
+    feature's past QA.
     """
     return [
         bug for bug in scope.get("_bugs") or []
         if bug.get("severity") in S.BLOCKING_SEVERITIES
         and bug.get("status") not in S.RESOLVED_BUG_STATUSES
         and not (scope.get("status") == "released" and bug.get("found_in_release"))
+        and not (scope.get("status") in S.CLAIMED and bug.get("found_after_merge"))
     ]
 
 
