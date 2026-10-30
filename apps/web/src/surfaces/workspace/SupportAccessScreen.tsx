@@ -46,7 +46,8 @@ const SIZE = 10;
 /**
  * The Owner's Support access page (F03-S04): every support session of the salon, active and past,
  * with its operator's name, reason, start, end and state, and Revoke for an active one (confirmed in
- * an Alert Dialog). A revoked session stops on its next request.
+ * an Alert Dialog). A revoked session stops on its next request. Longer than 200 lines: the list,
+ * its pager and the revoke confirmation share one load, lock and refusal state.
  */
 export function SupportAccessScreen({ timeZone }: { timeZone: string }) {
   const t = useTranslations('support');

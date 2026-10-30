@@ -15,6 +15,11 @@ import { Button, CodeField, glyph, PasswordField, TextField } from './Controls';
 const secret = 'rounded-field bg-background p-3 font-mono text-small whitespace-pre-wrap wrap-anywhere';
 
 type Step = 'initial' | 'enroll_mfa' | 'verify_mfa';
+
+/**
+ * Staff sign-in: the password, then the authenticator's enrolment or its code. Longer than 200
+ * lines: the steps share one challenge, cross-tab lock and refusal state.
+ */
 export function SignIn({ kind, timeZone }: { kind: Kind; timeZone: string }) {
   const t = useTranslations('account');
   const router = useRouter();

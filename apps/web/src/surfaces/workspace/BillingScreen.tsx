@@ -36,7 +36,8 @@ const PAGE = 10;
 /**
  * The Owner's Plan and billing page (F03-S02): the plan, its limits with current usage, its features,
  * the subscription state and the salon's invoices, paged in place. There is no payment entry here;
- * payment is by card through the platform or by bank transfer recorded by the platform.
+ * payment is by card through the platform or by bank transfer recorded by the platform. Longer than
+ * 200 lines: mostly the markup of the one page these sections load and refresh together.
  */
 export function BillingScreen({ kind, timeZone }: { kind: Kind; timeZone: string }) {
   const t = useTranslations('billing');

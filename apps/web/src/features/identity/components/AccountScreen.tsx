@@ -53,6 +53,12 @@ const actions = 'flex flex-wrap items-center gap-2';
 const form = 'flex min-w-0 flex-col gap-4';
 const secret = 'rounded-field bg-background p-3 font-mono text-small whitespace-pre-wrap wrap-anywhere';
 const ROLES = ['OWNER', 'MANAGER', 'RECEPTIONIST', 'PROFESSIONAL', 'ACCOUNTANT'] as const;
+
+/**
+ * The staff workspace's account, staff and activity views. Longer than 200 lines: the three views
+ * share one session's principal, cross-tab renewal, feedback, confirmation and pager, so splitting
+ * them means moving that state into a hook first.
+ */
 export function AccountScreen({
   kind,
   initialPrincipal,

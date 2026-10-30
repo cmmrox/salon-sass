@@ -224,7 +224,9 @@ export function SupportCard({ salon }: { salon: Detail }) {
 
 /**
  * Support sessions in the console (F03-S04): an Admin sees every session and may revoke an active one;
- * a Support operator sees its own, opens the workspace again with a fresh link and ends them.
+ * a Support operator sees its own, opens the workspace again with a fresh link and ends them. Longer
+ * than 200 lines: the list, the fresh link and the end and revoke confirmations share one load, lock
+ * and refusal state.
  */
 export function SupportSessionList({ admin }: { admin: boolean }) {
   const t = useTranslations('console');

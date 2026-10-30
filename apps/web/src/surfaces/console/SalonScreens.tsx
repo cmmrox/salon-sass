@@ -143,7 +143,8 @@ type Values = typeof EMPTY;
  * Create salon, in its sheet: the provisioning profile, an existing plan and the first Owner. One
  * idempotency key per unchanged pending submission; after an uncertain failure the same request can
  * be retried. The initial password lives only in this form's state and is cleared on success, on
- * cancel and after any definite refusal; it is never shown afterwards.
+ * cancel and after any definite refusal; it is never shown afterwards. Longer than 200 lines: one
+ * form whose idempotency key, pending state and refusals span its three sections.
  */
 function CreateSalon({ platformDomain, onCreated }: { platformDomain: string; onCreated: () => void }) {
   const t = useTranslations('console');
