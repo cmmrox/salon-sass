@@ -167,18 +167,27 @@ it locally does not create or certify a real staging environment.
 | Script | Does |
 | --- | --- |
 | `infra/scripts/images-build.sh [version]` | Builds non-root API and web images, tagged with the version and source commit; verifies labels and absence of environment files |
-| `infra/scripts/images-scan.sh [image ...]` | Scans the two current-version images by default; fails on HIGH or CRITICAL vulnerabilities with a fix |
+| `infra/scripts/images-scan.sh [image ...]` | Scans the two current-version images by default. Exit 0 when clean; 1 on a HIGH or CRITICAL vulnerability with a fix, naming it; 2 when a scan could not complete, naming the image and Trivy's message (BUG-F01-005) |
 | `infra/scripts/stack-up.sh` | Provisions the two database roles, runs migrations once, then starts the collector, two API and two web instances and the HTTP edge; waits for readiness |
 | `infra/scripts/stack-seed.sh` | Explicitly creates alpha, beta and gamma without duplicates; no salon is seeded by stack startup |
 | `infra/scripts/stack-seed.sh add <slug> [name] [colour]` | Adds a synthetic salon while the stack runs |
-| `infra/scripts/stack-deploy.sh <version>` | Checks both images first, migrates once, then drains and replaces one instance at a time; deploying the preceding version rolls back application images while retaining newer migrations |
+| `infra/scripts/stack-deploy.sh <version>` | Checks both images first, migrates once, then drains and replaces one instance at a time, waiting for each to be ready and then 15 s for it to warm up before the next. A third web instance, `web-surge` (Compose profile `surge`), serves on the new version while `web-1` and `web-2` are replaced, so two web instances always serve; it is removed when the deployment ends, also when it fails, and one left by an interrupted deployment is removed first. A deployment takes about 5 minutes. Deploying the preceding version rolls back application images while retaining newer migrations (BUG-F01-009) |
 | `infra/scripts/stack-down.sh` | Stops the `salon-stack` containers and networks, retaining data; `--delete-data` explicitly removes this stack's volumes and telemetry |
 | `infra/scripts/lint-workflows.sh` | Checks Actions workflows with actionlint and rejects third-party actions without a full commit pin |
 
 Default addresses are `http://stack.localhost:8089/` for status,
 `http://alpha.stack.localhost:8089/` (also beta and gamma) for salons, and
 `http://alpha.stack.localhost:8089/api/v1/salon` for the API. Only the edge publishes a host port,
-on `127.0.0.1` by default; the database, apps and collector stay on Docker networks. Local
+on `127.0.0.1` by default; the database, apps and collector stay on Docker networks. On the edge
+network the edge and every instance (`api-1`, `api-2`, `web-1`, `web-2`, `web-surge`) have fixed
+addresses at the top of `SALON_STACK_EDGE_SUBNET` (a /16 to /26 network address; Docker allocates
+other containers from its lower half only), derived by `infra/scripts/lib/stack.sh`. The edge
+proxies to those addresses and the web app calls the edge at its address, never by a name, so an
+instance that is being replaced can never be resolved outside the stack. The edge balances to the
+instance with the fewest requests in flight, takes an instance out after 3 failed health checks of
+5 s each, and writes one JSON access-log line per request to `docker logs salon-stack-edge`
+without headers, client address, query string or export-link token. Moving a running stack to
+these addresses recreates its edge network once: `stack-down.sh`, then `stack-up.sh`. Local
 development and QA make no TLS, certificate, HTTPS redirect or HSTS assertion. The staging edge
 configuration uses public DNS-challenge certificates; certificate issuance, HTTPS, redirects and
 HSTS are tested only after the owner requests deployment to the VPS staging environment.
@@ -187,10 +196,9 @@ Container and network names carry `salon-stack`; its persistent data volume is
 `salon-stack-postgres-data` by default. The optional `SALON_STACK_DB_VOLUME` in `.env.stack` may
 name an isolated local QA volume; an absent or empty value preserves the default. This setting
 changes only the PostgreSQL volume, never the edge volumes or the local development database.
-For CR-007, the retained F01 QA volume contains its historical rollout-probe migration V8, which
-conflicts with the real F02 V8. Preserve that volume and select `salon-stack-cr007-postgres-data`
-for current synthetic QA; do not remove or rewrite the historical migrations. The full stack,
-deployment and rollback scripts all use the explicit setting. This stack never shares the local
+The full stack, deployment and rollback scripts all use the explicit setting. The earlier QA
+volumes with historical probe migrations were deleted on 2026-10-30 at the owner's request; a QA run
+starts from a new, empty volume. This stack never shares the local
 database. `infra/scripts/test-stack-db-volume.sh` verifies defaults and custom isolation.
 An administrator provisions a non-superuser owning role and an application role that owns no
 table and cannot bypass RLS. Only the migration container receives the owning role's password;
