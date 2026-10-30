@@ -6,7 +6,9 @@
 # It runs as an unprivileged user, holds no secret and no environment file: every setting arrives
 # from the environment the container is started with (infra/stack/compose.yaml).
 
-ARG NODE_IMAGE=node:24.21.0-alpine3.24
+# Node.js 24.22.1 or later: the built-in brotli decoder carries the fix of CVE-2026-111497 (the same
+# advisory as BUG-F01-008 in the API image's Alpine package, which the image scan cannot see here).
+ARG NODE_IMAGE=node:24.22.2-alpine3.24
 
 FROM ${NODE_IMAGE} AS build
 WORKDIR /workspace

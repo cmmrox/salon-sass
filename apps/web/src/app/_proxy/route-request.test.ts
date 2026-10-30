@@ -191,6 +191,52 @@ describe('routeRequest', () => {
       expect(resolve).not.toHaveBeenCalled();
     },
   );
+
+  // BUG-F02-014: a server bound to one address (HOSTNAME=127.0.0.1) proxies a rewrite whose origin is
+  // the Host header's over HTTP to itself, so the not-found target comes back through the proxy. It must
+  // end there, on every hostname and whatever the API says, or the request rewrites itself without end.
+  it.each([
+    ['alpha.localhost:3100', SALON_SHELL_ROUTE],
+    ['alpha.localhost:3100', `${SALON_SHELL_ROUTE}/x`],
+    ['alpha.localhost:3100', '/workspace;x'],
+    ['alpha.localhost:3100', '/exports/x'],
+    ['alpha.localhost:3100', '/console/salons'],
+    ['console.localhost:3100', '/workspace'],
+    ['console.localhost:3100', SALON_SHELL_ROUTE],
+  ])(
+    'answers the not-found target %s%s rewrites to when it comes back, without rewriting again',
+    async (host, path) => {
+      vi.stubEnv('SALON_PLATFORM_DOMAIN', 'localhost');
+      try {
+        const resolve = resolving({ kind: 'salon', salon: alpha });
+        const first = await routeRequest(
+          new NextRequest(`http://${host}${path}`, { headers: { host } }),
+          resolve,
+          vi.fn(),
+          vi.fn(),
+        );
+        expect(isRewrite(first)).toBe(true);
+        const target = new URL(getRewrittenUrl(first)!);
+
+        const unavailable = resolving({ kind: 'unavailable' });
+        const again = await routeRequest(
+          new NextRequest(target, { headers: { host, [SALON_HEADER]: encodeSalon(beta) } }),
+          unavailable,
+          vi.fn(),
+          vi.fn(),
+        );
+
+        expect(isRewrite(again)).toBe(false);
+        expect(again.headers.has('location')).toBe(false);
+        expect(again.status).toBe(200);
+        expect(handedOn(again)).toBeNull();
+        expect(again.headers.get('cache-control')).toContain('no-store');
+        expect(unavailable).not.toHaveBeenCalled();
+      } finally {
+        vi.unstubAllEnvs();
+      }
+    },
+  );
 });
 
 describe('the proxy runs on', () => {

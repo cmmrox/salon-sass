@@ -33,7 +33,9 @@ LABEL org.opencontainers.image.title="salon-api" \
 # which has the HIGH CVE-2026-77214, fixed in Alpine 3.24's 2.9.0-r0. Until Temurin publishes a
 # rebuilt tag, take the fixed package from Alpine; the build fails if it is not there. Remove this
 # when the base tag is moved to one that already contains libexpat 2.9.0-r0 or later.
-RUN apk add --no-cache --upgrade 'libexpat>=2.9.0-r0'
+# BUG-F01-008: the same JRE image carries brotli-libs 1.2.0-r1 (pulled in by freetype), which has the
+# CRITICAL CVE-2026-111497, fixed in Alpine 3.24's 1.2.1-r0. Same floor, removed on the same condition.
+RUN apk add --no-cache --upgrade 'libexpat>=2.9.0-r0' 'brotli-libs>=1.2.1-r0'
 RUN addgroup -S -g 10001 salon && adduser -S -D -H -u 10001 -G salon -h /app salon
 WORKDIR /app
 # Least-changing layer first. The files belong to root and cannot be changed by the user that runs them.

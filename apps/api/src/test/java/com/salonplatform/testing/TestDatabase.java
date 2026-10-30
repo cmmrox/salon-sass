@@ -18,7 +18,7 @@ public final class TestDatabase {
     /** An owning role that is not a superuser, as the owning role is everywhere but on a developer's machine. */
     public static final String ORDINARY_OWNER = "salon_owner_test";
 
-    private static final String ORDINARY_OWNER_PASSWORD = "salon-owner-test";
+    public static final String ORDINARY_OWNER_PASSWORD = "salon-owner-test";
 
     private final PostgreSQLContainer postgres;
 
@@ -122,5 +122,15 @@ public final class TestDatabase {
     /** The application started against this database. */
     public StartedApplication start(String... settings) {
         return StartedApplication.against(url, migrationUser, migrationPassword, settings);
+    }
+
+    /**
+     * The application started the way an instance of the production-like stack starts it
+     * (infra/stack/compose.yaml): the tenant and platform roles only, never the owning role's settings,
+     * so {@code spring.flyway.user} stays the unresolved {@code ${SALON_DB_USER}}. The database must
+     * already be migrated, and the settings must turn migrations off (the staging profile does).
+     */
+    public StartedApplication startAsInstance(String... settings) {
+        return StartedApplication.against(url, null, null, null, settings);
     }
 }
