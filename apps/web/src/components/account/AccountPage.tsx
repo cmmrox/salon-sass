@@ -1,7 +1,7 @@
 import { cookies, headers } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
-import { createServerApiClient, requestSignal } from '@/lib/api/client';
-import { decodeSalon, SALON_HEADER } from '@/lib/tenancy/salon-header';
+import { createServerApiClient, requestSignal } from '@/lib/api-core/client';
+import { decodeSalon, SALON_HEADER } from '@/features/branding/server/salon-header';
 import { workspaceEntry } from '@/lib/identity/entry';
 import { cookieName, requestHost, type Kind } from '@/lib/identity/server';
 import { AccountFrame } from './AccountFrame';

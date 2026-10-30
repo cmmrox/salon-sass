@@ -2,7 +2,7 @@
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createServerApiClient } from '@/lib/api/client';
+import { createServerApiClient } from '@/lib/api-core/client';
 import { contextFromTraceparent, runInRequest } from '@/lib/observability/request-context';
 import { hasCredentials, workspaceEntry } from './entry';
 

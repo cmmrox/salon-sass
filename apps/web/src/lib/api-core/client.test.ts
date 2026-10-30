@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { runInRequest, type RequestContext } from '@/lib/observability/request-context';
 
 import { createServerApiClient } from './client';
-import { findSalon } from './salon';
+import { findSalon } from '@/features/branding/server/salon';
 import { getMeta } from './meta';
 
 /** A stand-in for the API that records what it was sent. */

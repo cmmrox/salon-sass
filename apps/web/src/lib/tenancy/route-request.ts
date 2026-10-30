@@ -1,16 +1,16 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
-import { createServerApiClient } from '@/lib/api/client';
+import { createServerApiClient } from '@/lib/api-core/client';
 import { hasCredentials, workspaceEntry, type Entry } from '@/lib/identity/entry';
 import { clearCookies, cookieName, endSupportView, requestHost, supportEnded, type Credentials, type Kind } from '@/lib/identity/server';
 import { plainPageHtml, plainPageStatus, type PlainPage } from '@/lib/plain-page/plain-page';
 import { hasOperatorCredentials, operatorEntry, type OperatorEntry } from '@/lib/operator/entry';
-import { consoleHostname, isCanonicalPath, isConsoleHost, isConsolePath, isUnder } from '@/lib/operator/host';
+import { consoleHostname, isCanonicalPath, isConsoleHost, isConsolePath, isUnder } from './console-host';
 import { clearOperatorCookies, credentialsOf as operatorCredentialsOf } from '@/lib/operator/server';
 
 import { platformDomainOf } from './hostname';
 
-import { SALON_HEADER, encodeSalon } from './salon-header';
+import { SALON_HEADER, encodeSalon } from '@/features/branding/server/salon-header';
 import { resolveSite, type Site } from './site';
 
 /**

@@ -7,7 +7,7 @@ import { NextRequest } from 'next/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { handleIdentity } from '@/lib/identity/server';
 import { contextFromTraceparent, runInRequest } from '@/lib/observability/request-context';
-import { createServerApiClient, requestSignal } from './client';
+import { createServerApiClient, requestSignal } from '@/lib/api-core/client';
 
 /**
  * BUG-F02-012: every server call to the API ends within the request's shared budget, whatever

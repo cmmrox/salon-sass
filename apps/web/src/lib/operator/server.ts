@@ -1,10 +1,10 @@
 import { createHmac } from 'node:crypto';
 import type { ApiClient, components } from '@salon/api-contracts';
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerApiClient, requestSignal } from '@/lib/api/client';
-import { strictInstant } from '@/lib/identity/network';
+import { createServerApiClient, requestSignal } from '@/lib/api-core/client';
+import { strictInstant } from '@/lib/http/network';
 import { currentRequest } from '@/lib/observability/request-context';
-import { consoleRequestHost } from './host';
+import { consoleRequestHost } from '@/lib/tenancy/console-host';
 import { readBoundedJson } from '@/lib/http/bounded-json';
 
 export type OperatorPrincipal = components['schemas']['OperatorPrincipal'];

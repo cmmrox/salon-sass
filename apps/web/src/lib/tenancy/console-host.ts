@@ -1,4 +1,4 @@
-import { platformDomainOf } from '@/lib/tenancy/hostname';
+import { platformDomainOf } from './hostname';
 
 /**
  * The operator console's one hostname (docs/architecture/operator-console.md):

@@ -13,7 +13,7 @@ export async function register(): Promise<void> {
   const { installDrain } = await import('./lib/observability/drain');
   if (process.env.SALON_PLATFORM_DOMAIN) {
     const { proxyKey } = await import('./lib/identity/server');
-    const { trustedPeer } = await import('./lib/identity/network');
+    const { trustedPeer } = await import('./lib/http/network');
     proxyKey();
     trustedPeer('127.0.0.1');
     if (!['true', 'false', undefined].includes(process.env.SALON_WEB_LOCAL_HTTP)) throw new Error('SALON_WEB_LOCAL_HTTP must be true or false');

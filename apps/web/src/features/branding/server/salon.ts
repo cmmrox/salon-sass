@@ -2,8 +2,8 @@ import type { ApiClient, Salon as ContractSalon } from '@salon/api-contracts';
 
 import { DEFAULT_BRAND_COLOUR, isHexColour } from '@/styles/brand';
 
-import { requestSignal, createServerApiClient } from './client';
-import { describeFailure } from './failure';
+import { requestSignal, createServerApiClient } from '@/lib/api-core/client';
+import { describeFailure } from '@/lib/api-core/failure';
 
 /**
  * What the web app carries about a salon: its public brand. The contract's salon holds more (its

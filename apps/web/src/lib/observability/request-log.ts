@@ -4,7 +4,7 @@ import type { IncomingMessage, Server, ServerResponse } from 'node:http';
 import { writeLog, type LogSink } from './log';
 import { contextFromTraceparent, enterRequest } from './request-context';
 import { serverState } from './server-state';
-import { clientAddress } from '@/lib/identity/network';
+import { clientAddress } from '@/lib/http/network';
 
 type RequestStart = { request: IncomingMessage; response: ServerResponse; server: Server };
 

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { headers } from 'next/headers';
 import type { ReactNode } from 'react';
-import { decodeSalon, SALON_HEADER } from '@/lib/tenancy/salon-header';
+import { decodeSalon, SALON_HEADER } from '@/features/branding/server/salon-header';
 
 /**
  * Salon staff pages block on the server (CR-013): entry is decided from the request's session

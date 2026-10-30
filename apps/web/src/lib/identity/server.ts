@@ -1,10 +1,10 @@
 import { createHmac } from 'node:crypto';
 import type { ApiClient, components } from '@salon/api-contracts';
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerApiClient, requestSignal } from '@/lib/api/client';
+import { createServerApiClient, requestSignal } from '@/lib/api-core/client';
 import { currentRequest } from '@/lib/observability/request-context';
 import { hasSlugForm, platformDomainOf, slugOf } from '@/lib/tenancy/hostname';
-import { strictInstant } from './network';
+import { strictInstant } from '@/lib/http/network';
 import { readBoundedJson } from '@/lib/http/bounded-json';
 
 export type Kind = 'staff' | 'support';

@@ -1,8 +1,8 @@
 import { cookies, headers } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
-import { createServerApiClient } from '@/lib/api/client';
+import { createServerApiClient } from '@/lib/api-core/client';
 import { operatorEntry } from '@/lib/operator/entry';
-import { consoleRequestHost } from '@/lib/operator/host';
+import { consoleRequestHost } from '@/lib/tenancy/console-host';
 import { operatorCookie } from '@/lib/operator/server';
 import { platformDomainOf } from '@/lib/tenancy/hostname';
 import { ConsoleDenied } from './ConsoleControls';

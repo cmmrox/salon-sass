@@ -1,6 +1,6 @@
 import { connection } from 'next/server';
 
-import { getMeta } from '@/lib/api/meta';
+import { getMeta } from '@/lib/api-core/meta';
 
 import { StatusBody } from './Status';
 

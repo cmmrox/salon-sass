@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { BrandStyle } from '@/components/shell/BrandStyle';
 import { StaffSignInFrame } from '@/components/account/StaffSignInFrame';
 import { SupportEntry } from '@/components/support/SupportEntry';
-import { decodeSalon, SALON_HEADER } from '@/lib/tenancy/salon-header';
+import { decodeSalon, SALON_HEADER } from '@/features/branding/server/salon-header';
 
 /** The support entry page (F03-S04): the console's link opens it with the entry code in its fragment. */
 export default async function Page() {

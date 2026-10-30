@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { consoleRequestHost, isCanonicalPath, isConsoleHost, isConsolePath } from './host';
+import { consoleRequestHost, isCanonicalPath, isConsoleHost, isConsolePath } from './console-host';
 
 afterEach(() => vi.unstubAllEnvs());
 

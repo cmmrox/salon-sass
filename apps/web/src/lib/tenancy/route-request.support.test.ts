@@ -1,5 +1,5 @@
 // @vitest-environment node
-import type { Salon } from '@/lib/api/salon';
+import type { Salon } from '@/features/branding/server/salon';
 import { NextRequest } from 'next/server';
 import { describe, expect, it, vi } from 'vitest';
 import { routeRequest } from './route-request';

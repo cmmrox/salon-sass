@@ -1,5 +1,5 @@
 import type { ApiClient } from '@salon/api-contracts';
-import { requestSignal } from '@/lib/api/client';
+import { requestSignal } from '@/lib/api-core/client';
 import { operatorRenewal, type OperatorCredentials, type OperatorPrincipal } from './server';
 
 /**
