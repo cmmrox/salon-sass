@@ -6,7 +6,7 @@ import { workspaceEntry } from '@/features/identity/server/entry';
 import { cookieName, requestHost, type Kind } from '@/features/identity/server/identity-web';
 import { AccountFrame } from './AccountFrame';
 import { AccountScreen } from '@/features/identity/components/AccountScreen';
-import { BillingBanner, type Entitlements } from './BillingBanner';
+import { BillingBanner, type Entitlements } from '@/features/platform/components/BillingBanner';
 import { BillingScreen } from './BillingScreen';
 import { Denied } from '@/features/identity/components/Controls';
 import { SignIn } from '@/features/identity/components/SignIn';

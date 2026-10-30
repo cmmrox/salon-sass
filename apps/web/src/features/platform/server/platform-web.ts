@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerApiClient, requestSignal } from '@/lib/api-core/client';
 import { readBoundedJson } from '@/lib/http/bounded-json';
-import { archive } from '@/lib/operator/server';
+import { archive } from './operator-web';
 import { classifyHostname, platformDomainOf } from '@/lib/tenancy/hostname';
 
 /**

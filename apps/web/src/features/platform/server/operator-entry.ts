@@ -1,6 +1,6 @@
 import type { ApiClient } from '@salon/api-contracts';
 import { requestSignal } from '@/lib/api-core/client';
-import { operatorRenewal, type OperatorCredentials, type OperatorPrincipal } from './server';
+import { operatorRenewal, type OperatorCredentials, type OperatorPrincipal } from './operator-web';
 
 /**
  * Where a request for a protected console page belongs, decided on the server before anything

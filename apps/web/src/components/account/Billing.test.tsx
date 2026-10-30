@@ -6,7 +6,7 @@ import { renderWithMessages } from '@/test/render';
 import { formatDate } from '@/lib/format';
 import { WorkspaceShell } from '@/components/shell/WorkspaceShell';
 import { AccountScreen } from '@/features/identity/components/AccountScreen';
-import { BillingBanner, type Entitlements } from './BillingBanner';
+import { BillingBanner, type Entitlements } from '@/features/platform/components/BillingBanner';
 import { BillingScreen } from './BillingScreen';
 
 const navigation = vi.hoisted(() => ({ replace: vi.fn(), refresh: vi.fn() }));

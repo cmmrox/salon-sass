@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { knownKeyValues, scanArtifacts } from '../../../scripts/scan-artifacts.mjs';
+import { knownKeyValues, scanArtifacts } from '../../../../scripts/scan-artifacts.mjs';
 
 const folders: string[] = [];
 afterEach(() => folders.splice(0).forEach((folder) => rmSync(folder, { recursive: true, force: true })));

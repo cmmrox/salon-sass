@@ -14,10 +14,10 @@ import { Item, ItemContent, ItemDescription, ItemGroup, ItemTitle } from '@/comp
 import { Skeleton } from '@/components/ui/skeleton';
 import { Spinner } from '@/components/ui/spinner';
 import { formatBytes, formatDate, formatInstant } from '@/lib/format';
-import { operatorRead, operatorRequest, OperatorFailure, principalInsideLock, withOperatorLock } from '@/lib/operator/browser';
-import { ConsoleFailure, ConsoleTextArea, ConsoleTextField } from './ConsoleControls';
-import { ConsoleSheet } from './ConsoleSheet';
-import { DirectoryPager } from './DirectoryControls';
+import { operatorRead, operatorRequest, OperatorFailure, principalInsideLock, withOperatorLock } from '@/features/platform/client/operator-session';
+import { ConsoleFailure, ConsoleTextArea, ConsoleTextField } from '@/features/platform/components/ConsoleControls';
+import { ConsoleSheet } from '@/features/platform/components/ConsoleSheet';
+import { DirectoryPager } from '@/features/platform/components/DirectoryControls';
 
 type Detail = components['schemas']['SalonDetail'];
 type LifecyclePage = components['schemas']['LifecyclePage'];

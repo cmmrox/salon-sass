@@ -14,11 +14,11 @@ import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Item, ItemContent, ItemDescription, ItemGroup, ItemTitle } from '@/components/ui/item';
 import { Spinner } from '@/components/ui/spinner';
 import { formatInstant, viewerTimeZone } from '@/lib/format';
-import { operatorRead, operatorRequest, OperatorFailure, withOperatorLock, principalInsideLock } from '@/lib/operator/browser';
+import { operatorRead, operatorRequest, OperatorFailure, withOperatorLock, principalInsideLock } from '@/features/platform/client/operator-session';
 import { ConsoleFailure, ConsoleLoading, ConsoleTextField, consoleTestId, uncertain } from './ConsoleControls';
 import { ConsoleSheet } from './ConsoleSheet';
 import { DirectoryPager, DirectorySearch } from './DirectoryControls';
-import { PAGE_SIZE, useDirectory } from './useDirectory';
+import { PAGE_SIZE, useDirectory } from '@/features/platform/hooks/use-directory';
 
 export type Plan = components['schemas']['PlanDefinition'];
 

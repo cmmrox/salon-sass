@@ -4,7 +4,7 @@ import type { AddressInfo } from 'node:net';
 import { NextRequest } from 'next/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { contextFromTraceparent, runInRequest } from '@/lib/observability/request-context';
-import { handlePlatform } from './server';
+import { handlePlatform } from './platform-web';
 
 type Call = { method: string; path: string; host?: string };
 let server: Server; let calls: Call[];

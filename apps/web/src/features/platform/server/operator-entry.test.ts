@@ -4,7 +4,7 @@ import type { AddressInfo } from 'node:net';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createServerApiClient } from '@/lib/api-core/client';
 import { contextFromTraceparent, runInRequest } from '@/lib/observability/request-context';
-import { operatorEntry } from './entry';
+import { operatorEntry } from './operator-entry';
 
 let server: Server; let calls: string[];
 let answer: (path: string) => { status: number; data: unknown } | null;

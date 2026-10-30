@@ -4,9 +4,9 @@ import { createServerApiClient } from '@/lib/api-core/client';
 import { hasCredentials, workspaceEntry, type Entry } from '@/features/identity/server/entry';
 import { clearCookies, cookieName, endSupportView, requestHost, supportEnded, type Credentials, type Kind } from '@/features/identity/server/identity-web';
 import { plainPageHtml, plainPageStatus, type PlainPage } from '@/lib/plain-page/plain-page';
-import { hasOperatorCredentials, operatorEntry, type OperatorEntry } from '@/lib/operator/entry';
+import { hasOperatorCredentials, operatorEntry, type OperatorEntry } from '@/features/platform/server/operator-entry';
 import { consoleHostname, isCanonicalPath, isConsoleHost, isConsolePath, isUnder } from './console-host';
-import { clearOperatorCookies, credentialsOf as operatorCredentialsOf } from '@/lib/operator/server';
+import { clearOperatorCookies, credentialsOf as operatorCredentialsOf } from '@/features/platform/server/operator-web';
 
 import { platformDomainOf } from './hostname';
 

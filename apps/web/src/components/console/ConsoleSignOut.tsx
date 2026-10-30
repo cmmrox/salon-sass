@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
-import { operatorRequest, OperatorFailure, withOperatorLock } from '@/lib/operator/browser';
+import { operatorRequest, OperatorFailure, withOperatorLock } from '@/features/platform/client/operator-session';
 
 /** Signs the operator out under the cross-tab lock; the server revokes the session and clears the cookies. */
 export function ConsoleSignOut() {

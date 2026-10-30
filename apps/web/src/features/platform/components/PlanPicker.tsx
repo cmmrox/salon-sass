@@ -4,11 +4,11 @@ import { useTranslations } from 'next-intl';
 import { Search } from 'lucide-react';
 import { Field, FieldDescription, FieldLabel } from '@/components/ui/field';
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from '@/components/ui/input-group';
-import { operatorRead, OperatorFailure } from '@/lib/operator/browser';
+import { operatorRead, OperatorFailure } from '@/features/platform/client/operator-session';
 import { ConsoleChoiceField, consoleTestId } from './ConsoleControls';
 import { DirectoryPager } from './DirectoryControls';
 import type { Plan } from './PlanScreens';
-import type { DirectoryPage } from './useDirectory';
+import type { DirectoryPage } from '@/features/platform/hooks/use-directory';
 
 /** Plans per page of the picker: the Select lists one page, newest first, as the plan list does. */
 export const PLAN_PICKER_SIZE = 100;

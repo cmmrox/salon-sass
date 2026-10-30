@@ -1,8 +1,8 @@
 'use client';
 import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { ensurePrincipal, OperatorFailure } from '@/lib/operator/browser';
-import { ConsoleFailure, ConsoleLoading } from './ConsoleControls';
+import { ensurePrincipal, OperatorFailure } from '@/features/platform/client/operator-session';
+import { ConsoleFailure, ConsoleLoading } from '@/features/platform/components/ConsoleControls';
 
 /**
  * The server could not confirm the operator (access expired, or the API did not answer in time):

@@ -14,13 +14,13 @@ import { Item, ItemActions, ItemContent, ItemDescription, ItemGroup, ItemTitle }
 import { Skeleton } from '@/components/ui/skeleton';
 import { Spinner } from '@/components/ui/spinner';
 import { formatDate, formatMoney, minorUnitsText, parseMinorUnits } from '@/lib/format';
-import { operatorRead, operatorRequest, OperatorFailure, principalInsideLock, withOperatorLock } from '@/lib/operator/browser';
+import { operatorRead, operatorRequest, OperatorFailure, principalInsideLock, withOperatorLock } from '@/features/platform/client/operator-session';
 import { ConsoleChoiceField, ConsoleFailure, ConsoleLoading, ConsoleTextField, uncertain, useFailureMessage } from './ConsoleControls';
 import { ConsoleSheet } from './ConsoleSheet';
 import { DirectoryPager } from './DirectoryControls';
 import { useIdempotencyKey } from './PlanScreens';
 import { PlanPicker } from './PlanPicker';
-import { PAGE_SIZE, type DirectoryPage } from './useDirectory';
+import { PAGE_SIZE, type DirectoryPage } from '@/features/platform/hooks/use-directory';
 
 type Detail = components['schemas']['SalonDetail'];
 type Subscription = components['schemas']['SubscriptionView'];

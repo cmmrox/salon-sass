@@ -1,16 +1,16 @@
 import { cookies, headers } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
 import { createServerApiClient } from '@/lib/api-core/client';
-import { operatorEntry } from '@/lib/operator/entry';
+import { operatorEntry } from '@/features/platform/server/operator-entry';
 import { consoleRequestHost } from '@/lib/tenancy/console-host';
-import { operatorCookie } from '@/lib/operator/server';
+import { operatorCookie } from '@/features/platform/server/operator-web';
 import { platformDomainOf } from '@/lib/tenancy/hostname';
-import { ConsoleDenied } from './ConsoleControls';
+import { ConsoleDenied } from '@/features/platform/components/ConsoleControls';
 import { ConsolePending, ConsoleUnavailable } from './ConsolePending';
 import { ConsoleShell, type ConsoleView } from './ConsoleShell';
-import { PlanDetail, PlanDirectory } from './PlanScreens';
+import { PlanDetail, PlanDirectory } from '@/features/platform/components/PlanScreens';
 import { SalonDetail, SalonDirectory } from './SalonScreens';
-import { InvoiceList } from './BillingScreens';
+import { InvoiceList } from '@/features/platform/components/BillingScreens';
 import { SupportSessionList } from './SupportScreens';
 
 /**

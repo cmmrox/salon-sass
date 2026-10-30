@@ -14,10 +14,10 @@ import { FieldGroup } from '@/components/ui/field';
 import { Item, ItemActions, ItemContent, ItemDescription, ItemGroup, ItemTitle } from '@/components/ui/item';
 import { Spinner } from '@/components/ui/spinner';
 import { formatInstant, viewerTimeZone } from '@/lib/format';
-import { operatorRead, operatorRequest, OperatorFailure, principalInsideLock, withOperatorLock } from '@/lib/operator/browser';
-import { ConsoleChoiceField, ConsoleFailure, ConsoleLoading, ConsoleTextArea } from './ConsoleControls';
-import { ConsoleSheet } from './ConsoleSheet';
-import { DirectoryPager } from './DirectoryControls';
+import { operatorRead, operatorRequest, OperatorFailure, principalInsideLock, withOperatorLock } from '@/features/platform/client/operator-session';
+import { ConsoleChoiceField, ConsoleFailure, ConsoleLoading, ConsoleTextArea } from '@/features/platform/components/ConsoleControls';
+import { ConsoleSheet } from '@/features/platform/components/ConsoleSheet';
+import { DirectoryPager } from '@/features/platform/components/DirectoryControls';
 
 type Detail = components['schemas']['SalonDetail'];
 type Entry = components['schemas']['SupportEntry'];

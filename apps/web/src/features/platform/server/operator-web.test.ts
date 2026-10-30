@@ -4,7 +4,7 @@ import type { AddressInfo } from 'node:net';
 import { NextRequest } from 'next/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { contextFromTraceparent, runInRequest } from '@/lib/observability/request-context';
-import { handleOperator, operatorAssertion, operatorCookie, operatorCsrf } from './server';
+import { handleOperator, operatorAssertion, operatorCookie, operatorCsrf } from './operator-web';
 
 type Call = { method: string; path: string; host?: string; proof?: string; authorization?: string; idempotency?: string; body: string };
 let server: Server; let calls: Call[];

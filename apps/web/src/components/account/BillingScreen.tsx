@@ -12,7 +12,7 @@ import { formatDate, formatMoney } from '@/lib/format';
 import { ensurePrincipal, leaveEndedSession, identityRequest, IdentityFailure } from '@/features/identity/client/session';
 import type { Kind } from '@/features/identity/server/identity-web';
 import { AccountLoading, Button, Section } from '@/features/identity/components/Controls';
-import type { Entitlements } from './BillingBanner';
+import type { Entitlements } from '@/features/platform/components/BillingBanner';
 
 type InvoicePage = components['schemas']['InvoicePage'];
 

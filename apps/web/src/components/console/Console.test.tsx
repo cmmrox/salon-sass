@@ -6,7 +6,7 @@ import { expectListOfItems } from '@/test/list';
 import { chooseOption } from '@/test/select';
 import { ConsoleShell } from './ConsoleShell';
 import { ConsoleSignIn } from './ConsoleSignIn';
-import { PlanDetail, PlanDirectory } from './PlanScreens';
+import { PlanDetail, PlanDirectory } from '@/features/platform/components/PlanScreens';
 import { SalonDetail, SalonDirectory } from './SalonScreens';
 
 const replace = vi.fn();
