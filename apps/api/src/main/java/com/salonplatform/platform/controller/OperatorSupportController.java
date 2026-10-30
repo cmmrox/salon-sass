@@ -1,10 +1,10 @@
 package com.salonplatform.platform.controller;
 
+import com.salonplatform.platform.domain.Paging;
 import com.salonplatform.platform.dto.StartRequest;
 import com.salonplatform.platform.dto.SupportEntry;
 import com.salonplatform.platform.dto.SupportSessionPage;
-import com.salonplatform.platform.service.Paging;
-import com.salonplatform.platform.service.SupportSessions;
+import com.salonplatform.platform.service.SupportSessionService;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -31,9 +31,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping(path = "/api/v1/operator", produces = MediaType.APPLICATION_JSON_VALUE)
 class OperatorSupportController {
 
-    private final SupportSessions sessions;
+    private final SupportSessionService sessions;
 
-    OperatorSupportController(SupportSessions sessions) {
+    OperatorSupportController(SupportSessionService sessions) {
         this.sessions = sessions;
     }
 
@@ -44,7 +44,7 @@ class OperatorSupportController {
                 .cacheControl(CacheControl.noStore())
                 .body(sessions.start(
                         OperatorRequests.id(id),
-                        new SupportSessions.StartInput(request.reason(), request.durationMinutes())));
+                        new SupportSessionService.StartInput(request.reason(), request.durationMinutes())));
     }
 
     @PostMapping("/support-sessions/{id}/entry-codes")

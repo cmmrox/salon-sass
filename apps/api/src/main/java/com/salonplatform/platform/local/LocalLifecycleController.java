@@ -10,8 +10,8 @@ import com.salonplatform.platform.dto.LocalResetResult;
 import com.salonplatform.platform.dto.OutboxCounts;
 import com.salonplatform.platform.dto.SalonBackground;
 import com.salonplatform.platform.repository.SalonLifecycleStore;
-import com.salonplatform.platform.service.SalonDeletion;
-import com.salonplatform.platform.service.SalonExports;
+import com.salonplatform.platform.service.SalonDeletionService;
+import com.salonplatform.platform.service.SalonExportService;
 import com.salonplatform.shared.jobs.TenantJobActivity;
 import com.salonplatform.shared.outbox.SalonMessageCounts;
 import com.salonplatform.shared.persistence.PlatformDatabase;
@@ -56,8 +56,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/local/operator")
 class LocalLifecycleController {
 
-    private final SalonExports exports;
-    private final SalonDeletion deletion;
+    private final SalonExportService exports;
+    private final SalonDeletionService deletion;
     private final LocalLifecycleFaults faults;
     private final LocalReset reset;
     private final PlatformDatabase database;
@@ -68,8 +68,8 @@ class LocalLifecycleController {
     private final Clock clock;
 
     LocalLifecycleController(
-            SalonExports exports,
-            SalonDeletion deletion,
+            SalonExportService exports,
+            SalonDeletionService deletion,
             LocalLifecycleFaults faults,
             LocalReset reset,
             PlatformDatabase database,

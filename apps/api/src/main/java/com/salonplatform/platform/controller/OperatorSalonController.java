@@ -1,13 +1,13 @@
 package com.salonplatform.platform.controller;
 
+import com.salonplatform.platform.domain.IdempotencyKey;
+import com.salonplatform.platform.domain.Paging;
 import com.salonplatform.platform.dto.SalonCreated;
 import com.salonplatform.platform.dto.SalonDetail;
 import com.salonplatform.platform.dto.SalonPage;
 import com.salonplatform.platform.dto.SalonRequest;
-import com.salonplatform.platform.service.Paging;
-import com.salonplatform.platform.service.ProvisioningReceipts;
-import com.salonplatform.platform.service.SalonDirectory;
-import com.salonplatform.platform.service.SalonProvisioning;
+import com.salonplatform.platform.service.SalonDirectoryService;
+import com.salonplatform.platform.service.SalonProvisioningService;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -32,10 +32,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping(path = "/api/v1/operator/salons", produces = MediaType.APPLICATION_JSON_VALUE)
 class OperatorSalonController {
 
-    private final SalonDirectory salons;
-    private final SalonProvisioning provisioning;
+    private final SalonDirectoryService salons;
+    private final SalonProvisioningService provisioning;
 
-    OperatorSalonController(SalonDirectory salons, SalonProvisioning provisioning) {
+    OperatorSalonController(SalonDirectoryService salons, SalonProvisioningService provisioning) {
         this.salons = salons;
         this.provisioning = provisioning;
     }
@@ -61,25 +61,25 @@ class OperatorSalonController {
     @ResponseStatus(HttpStatus.CREATED)
     ResponseEntity<SalonCreated> createSalon(
             @Parameter(
-                            name = ProvisioningReceipts.HEADER,
+                            name = IdempotencyKey.HEADER,
                             in = ParameterIn.HEADER,
                             required = true,
                             schema = @Schema(type = "string", format = "uuid"))
-                    @RequestHeader(name = ProvisioningReceipts.HEADER, required = false)
+                    @RequestHeader(name = IdempotencyKey.HEADER, required = false)
                     String key,
             @RequestBody SalonRequest request) {
         SalonRequest r = request;
-        SalonProvisioning.OwnerInput owner = r.owner() == null
+        SalonProvisioningService.OwnerInput owner = r.owner() == null
                 ? null
-                : new SalonProvisioning.OwnerInput(
+                : new SalonProvisioningService.OwnerInput(
                         r.owner().name(), r.owner().email(), r.owner().password());
-        SalonProvisioning.SubscriptionInput subscription = r.subscription() == null
+        SalonProvisioningService.SubscriptionInput subscription = r.subscription() == null
                 ? null
-                : new SalonProvisioning.SubscriptionInput(
+                : new SalonProvisioningService.SubscriptionInput(
                         r.subscription().monthlyAmount(), r.subscription().paymentMethod());
         var created = provisioning.create(
                 key,
-                new SalonProvisioning.SalonInput(
+                new SalonProvisioningService.SalonInput(
                         r.name(),
                         r.slug(),
                         r.country(),

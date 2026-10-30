@@ -7,9 +7,9 @@ import com.salonplatform.platform.adapter.BillingProviderKey;
 import com.salonplatform.platform.adapter.OperatorCrypto;
 import com.salonplatform.platform.dto.BillingJobPass;
 import com.salonplatform.platform.service.BillingFaults;
-import com.salonplatform.platform.service.BillingJob;
-import com.salonplatform.platform.service.OperatorAccounts;
-import com.salonplatform.platform.service.ProviderEvents;
+import com.salonplatform.platform.service.BillingJobService;
+import com.salonplatform.platform.service.OperatorAccountService;
+import com.salonplatform.platform.service.ProviderEventService;
 import com.salonplatform.testing.Http;
 import com.salonplatform.testing.IntegrationTest;
 import com.salonplatform.testing.MovableClock;
@@ -79,7 +79,7 @@ class SubscriptionBillingIntegrationTest extends IntegrationTest {
     }
 
     @Autowired
-    OperatorAccounts accounts;
+    OperatorAccountService accounts;
 
     @Autowired
     OperatorCrypto crypto;
@@ -97,10 +97,10 @@ class SubscriptionBillingIntegrationTest extends IntegrationTest {
     PlatformTransactionManager manager;
 
     @Autowired
-    BillingJob job;
+    BillingJobService job;
 
     @Autowired
-    ProviderEvents events;
+    ProviderEventService events;
 
     @Autowired
     BillingProviderKey providerKey;

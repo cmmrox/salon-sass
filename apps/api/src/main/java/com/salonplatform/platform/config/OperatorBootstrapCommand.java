@@ -1,7 +1,7 @@
 package com.salonplatform.platform.config;
 
 import com.salonplatform.platform.dto.AccountInput;
-import com.salonplatform.platform.service.OperatorAccounts;
+import com.salonplatform.platform.service.OperatorAccountService;
 import java.io.IOException;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;
@@ -30,10 +30,10 @@ class OperatorBootstrapCommand implements ApplicationRunner {
 
     private static final Logger log = LoggerFactory.getLogger(OperatorBootstrapCommand.class);
 
-    private final OperatorAccounts accounts;
+    private final OperatorAccountService accounts;
     private final String file;
 
-    OperatorBootstrapCommand(OperatorAccounts accounts, @Value("${salon.operator.bootstrap-file:}") String file) {
+    OperatorBootstrapCommand(OperatorAccountService accounts, @Value("${salon.operator.bootstrap-file:}") String file) {
         this.accounts = accounts;
         this.file = file;
     }

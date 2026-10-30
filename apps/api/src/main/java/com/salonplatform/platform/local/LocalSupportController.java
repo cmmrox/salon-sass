@@ -1,7 +1,7 @@
 package com.salonplatform.platform.local;
 
 import com.salonplatform.platform.dto.SupportExpiryPass;
-import com.salonplatform.platform.service.SupportSessions;
+import com.salonplatform.platform.service.SupportSessionService;
 import com.salonplatform.shared.web.NotFoundException;
 import io.swagger.v3.oas.annotations.Hidden;
 import jakarta.servlet.http.HttpServletRequest;
@@ -27,10 +27,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/local/operator")
 class LocalSupportController {
 
-    private final SupportSessions sessions;
+    private final SupportSessionService sessions;
     private final Clock clock;
 
-    LocalSupportController(SupportSessions sessions, Clock clock) {
+    LocalSupportController(SupportSessionService sessions, Clock clock) {
         this.sessions = sessions;
         this.clock = clock;
     }

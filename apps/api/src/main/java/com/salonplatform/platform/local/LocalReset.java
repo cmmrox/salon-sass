@@ -3,8 +3,8 @@ package com.salonplatform.platform.local;
 import com.salonplatform.platform.domain.LifecycleTerms;
 import com.salonplatform.platform.dto.LocalResetResult;
 import com.salonplatform.platform.repository.LocalResetStore;
-import com.salonplatform.platform.service.OperatorAccounts;
-import com.salonplatform.platform.service.SalonExports;
+import com.salonplatform.platform.service.OperatorAccountService;
+import com.salonplatform.platform.service.SalonExportService;
 import com.salonplatform.shared.jobs.LocalJobRewind;
 import com.salonplatform.shared.jobs.TenantJobActivity;
 import com.salonplatform.shared.lifecycle.TenantDataModule;
@@ -50,8 +50,8 @@ class LocalReset {
             UUID.fromString("c3c3c3c3-0000-4000-8000-000000000003"));
 
     private final PlatformDatabase platform;
-    private final SalonExports exports;
-    private final OperatorAccounts accounts;
+    private final SalonExportService exports;
+    private final OperatorAccountService accounts;
     private final LocalEmailCapture emails;
     private final TenantJobActivity activity;
     private final ObjectProvider<ResettableClock> clock;
@@ -60,8 +60,8 @@ class LocalReset {
 
     LocalReset(
             PlatformDatabase platform,
-            SalonExports exports,
-            OperatorAccounts accounts,
+            SalonExportService exports,
+            OperatorAccountService accounts,
             LocalEmailCapture emails,
             TenantJobActivity activity,
             ObjectProvider<ResettableClock> clock,

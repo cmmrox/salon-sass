@@ -1,6 +1,6 @@
 package com.salonplatform.platform.job;
 
-import com.salonplatform.platform.service.SupportSessions;
+import com.salonplatform.platform.service.SupportSessionService;
 import com.salonplatform.shared.jobs.PlatformJob;
 import java.time.Duration;
 import java.time.Instant;
@@ -16,7 +16,7 @@ import org.springframework.context.annotation.Configuration;
 class SupportSessionJobSchedule {
 
     @Bean
-    PlatformJob supportSessionExpiryJob(SupportSessions sessions) {
+    PlatformJob supportSessionExpiryJob(SupportSessionService sessions) {
         return new PlatformJob() {
             @Override
             public String name() {

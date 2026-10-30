@@ -5,7 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.salonplatform.identity.adapter.IdentityCrypto;
 import com.salonplatform.platform.OperatorTestSupport.Operator;
 import com.salonplatform.platform.adapter.OperatorCrypto;
-import com.salonplatform.platform.service.OperatorAccounts;
+import com.salonplatform.platform.service.OperatorAccountService;
 import com.salonplatform.testing.Http;
 import com.salonplatform.testing.IntegrationTest;
 import com.salonplatform.testing.TestDatabase;
@@ -42,7 +42,7 @@ import tools.jackson.databind.json.JsonMapper;
 class OperatorAccessIntegrationTest extends IntegrationTest {
 
     @Autowired
-    OperatorAccounts accounts;
+    OperatorAccountService accounts;
 
     @Autowired
     OperatorCrypto crypto;

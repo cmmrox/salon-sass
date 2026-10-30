@@ -1,10 +1,10 @@
 package com.salonplatform.platform.controller;
 
+import com.salonplatform.platform.domain.Paging;
 import com.salonplatform.platform.dto.Entitlements;
 import com.salonplatform.platform.dto.InvoiceDetail;
 import com.salonplatform.platform.dto.InvoicePage;
-import com.salonplatform.platform.service.Paging;
-import com.salonplatform.platform.service.SalonBilling;
+import com.salonplatform.platform.service.SalonBillingService;
 import com.salonplatform.shared.web.ApiPaths;
 import com.salonplatform.shared.web.NotFoundException;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -29,9 +29,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping(path = ApiPaths.V1 + "/salon", produces = MediaType.APPLICATION_JSON_VALUE)
 class SalonBillingController {
 
-    private final SalonBilling billing;
+    private final SalonBillingService billing;
 
-    SalonBillingController(SalonBilling billing) {
+    SalonBillingController(SalonBillingService billing) {
         this.billing = billing;
     }
 

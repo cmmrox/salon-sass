@@ -9,11 +9,11 @@ import com.salonplatform.platform.adapter.ExportKey;
 import com.salonplatform.platform.adapter.OperatorCrypto;
 import com.salonplatform.platform.dto.DeletionJobPass;
 import com.salonplatform.platform.dto.ExportJobPass;
-import com.salonplatform.platform.service.BillingJob;
+import com.salonplatform.platform.service.BillingJobService;
 import com.salonplatform.platform.service.LifecycleFaults;
-import com.salonplatform.platform.service.OperatorAccounts;
-import com.salonplatform.platform.service.SalonDeletion;
-import com.salonplatform.platform.service.SalonExports;
+import com.salonplatform.platform.service.OperatorAccountService;
+import com.salonplatform.platform.service.SalonDeletionService;
+import com.salonplatform.platform.service.SalonExportService;
 import com.salonplatform.shared.lifecycle.TenantDataModule;
 import com.salonplatform.testing.Http;
 import com.salonplatform.testing.IntegrationTest;
@@ -104,7 +104,7 @@ class SalonLifecycleIntegrationTest extends IntegrationTest {
     }
 
     @Autowired
-    OperatorAccounts accounts;
+    OperatorAccountService accounts;
 
     @Autowired
     OperatorCrypto crypto;
@@ -122,13 +122,13 @@ class SalonLifecycleIntegrationTest extends IntegrationTest {
     PlatformTransactionManager manager;
 
     @Autowired
-    BillingJob billingJob;
+    BillingJobService billingJob;
 
     @Autowired
-    SalonExports exports;
+    SalonExportService exports;
 
     @Autowired
-    SalonDeletion deletion;
+    SalonDeletionService deletion;
 
     @Autowired
     List<TenantDataModule> modules;
