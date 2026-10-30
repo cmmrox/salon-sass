@@ -12,7 +12,12 @@ source=pathlib.Path(sys.argv[1]).read_text()
 # Disposable fixture values only: never read the real environment or print config credentials.
 keys=('SALON_DB_ADMIN_PASSWORD','SALON_DB_PASSWORD','SALON_DB_APP_PASSWORD',
       'SALON_IDENTITY_SIGNING_KEY','SALON_IDENTITY_CHALLENGE_KEY',
-      'SALON_IDENTITY_ENCRYPTION_KEY','SALON_IDENTITY_PROXY_KEY')
+      'SALON_IDENTITY_ENCRYPTION_KEY','SALON_IDENTITY_PROXY_KEY',
+      'SALON_DB_PLATFORM_PASSWORD','SALON_OPERATOR_SIGNING_KEY','SALON_OPERATOR_CHALLENGE_KEY',
+      'SALON_OPERATOR_ENCRYPTION_KEY','SALON_OPERATOR_PROXY_KEY','SALON_OPERATOR_FINGERPRINT_KEY',
+      'SALON_EXPORT_KEY','SALON_SUPPORT_SIGNING_KEY')
+for key in keys:
+    assert key+'=\n' in source, key+' is no longer an empty secret in .env.stack.example'
 for key in keys:
     source=source.replace(key+'=\n',key+'='+'a'*64+'\n')
 source+='\n'+''.join(key+'=volume-config-test\n' for key in
