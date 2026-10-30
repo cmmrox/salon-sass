@@ -129,7 +129,8 @@ one service, map the result.
   too, named `<Interface>Impl`. Another module only ever sees the root interface.
 - Helpers that are not services (calculators, validators, policies, a store's row records) are not
   `Impl` classes and get no interface: they live in `domain/` when pure, or stay package-private
-  beside the service that uses them.
+  beside the implementation that uses them, in `service/impl/`. Every public class in
+  `service/impl/` implements an interface.
 - An external provider with several adapters (SMS, email, payment) is an interface in the module
   with one class per adapter in `adapter/` (and `local/` for the local fake), named for the
   provider, not `Impl`. Business rules live in `entity`, `domain` and `service`, never in a
@@ -143,7 +144,7 @@ input built by its controller), and never used by another module except through 
 their records in `shared/local/dto/`. The cases of a sealed result type count as one contract, and a
 record declared inside a method is outside these rules. An architecture test refuses any other sub-folder name in a business module, a
 mapper outside `mapper/`, a controller outside `controller/` or `local/`, an `@Service` class that
-is not in `service/impl/` or does not implement an interface of its module, a class in
+is not in `service/impl/` or does not implement an interface of its module, a public class in
 `service/impl/` that is not an implementation, `@Transactional` on an interface, a controller that
 depends on an implementation class, and a class named `*Impl` outside `service/impl/` (except the
 Spring Data fragment `NewEntitiesImpl` and MapStruct's generated mappers). Moving a
