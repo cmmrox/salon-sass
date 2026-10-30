@@ -191,8 +191,16 @@ export function SalonDetail({ id, permissions = [] }: { id: string; permissions?
       setFailure(f);
     } finally { setLoading(false); }
   }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { let active = true; Promise.resolve().then(() => { if (active) void load(); }); return () => { active = false; }; }, [id]);
+  useEffect(() => {
+    let active = true;
+    Promise.resolve().then(() => {
+      if (active) void load();
+    });
+    return () => {
+      active = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
   const value = (text: string | null | undefined, testId: string) => <dd className="m-0 wrap-anywhere whitespace-pre-line" data-testid={testId}>{text ?? <span className="text-muted-foreground">{t('notConfigured')}</span>}</dd>;
   return (
     <div className="flex min-w-0 flex-col gap-6" data-testid="console-salon-detail">

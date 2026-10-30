@@ -44,8 +44,16 @@ export function SupportAccessScreen({ timeZone }: { timeZone: string }) {
       setFailure(f);
     } finally { setLoading(false); }
   }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { let active = true; Promise.resolve().then(() => { if (active) void load(0); }); return () => { active = false; }; }, []);
+  useEffect(() => {
+    let active = true;
+    Promise.resolve().then(() => {
+      if (active) void load(0);
+    });
+    return () => {
+      active = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   async function revoke(session: Session) {
     setBusy(session.id); setFailure(null); setRevoked(false);
     try {

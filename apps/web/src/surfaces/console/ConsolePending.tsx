@@ -21,8 +21,16 @@ export function ConsolePending() {
       setFailure(f);
     } finally { setBusy(false); }
   }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { let active = true; Promise.resolve().then(() => { if (active) void attempt(); }); return () => { active = false; }; }, []);
+  useEffect(() => {
+    let active = true;
+    Promise.resolve().then(() => {
+      if (active) void attempt();
+    });
+    return () => {
+      active = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   return failure ? <ConsoleFailure failure={failure} busy={busy} onRetry={() => void attempt()} /> : <ConsoleLoading />;
 }
 
