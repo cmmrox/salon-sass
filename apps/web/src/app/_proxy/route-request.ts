@@ -5,10 +5,10 @@ import { hasCredentials, workspaceEntry, type Entry } from '@/features/identity/
 import { clearCookies, cookieName, endSupportView, requestHost, supportEnded, type Credentials, type Kind } from '@/features/identity/server/identity-web';
 import { plainPageHtml, plainPageStatus, type PlainPage } from '@/lib/plain-page/plain-page';
 import { hasOperatorCredentials, operatorEntry, type OperatorEntry } from '@/features/platform/server/operator-entry';
-import { consoleHostname, isCanonicalPath, isConsoleHost, isConsolePath, isUnder } from './console-host';
+import { consoleHostname, isCanonicalPath, isConsoleHost, isConsolePath, isUnder } from '@/lib/tenancy/console-host';
 import { clearOperatorCookies, credentialsOf as operatorCredentialsOf } from '@/features/platform/server/operator-web';
 
-import { platformDomainOf } from './hostname';
+import { platformDomainOf } from '@/lib/tenancy/hostname';
 
 import { SALON_HEADER, encodeSalon } from '@/features/branding/server/salon-header';
 import { resolveSite, type Site } from './site';

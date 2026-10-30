@@ -1,7 +1,7 @@
 import { findSalon, type Salon, type SalonLookup } from '@/features/branding/server/salon';
 import { markTenant } from '@/lib/observability/request-context';
 
-import { classifyHostname, hasSlugForm, platformDomainOf, salonHostname } from './hostname';
+import { classifyHostname, hasSlugForm, platformDomainOf, salonHostname } from '@/lib/tenancy/hostname';
 
 /** What a request's hostname shows. */
 export type Site =
