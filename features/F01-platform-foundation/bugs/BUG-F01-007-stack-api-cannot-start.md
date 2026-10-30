@@ -2,7 +2,7 @@
 id: BUG-F01-007
 title: In the production-like stack every API instance fails to start, because the platform database reads the owning role's setting that instances are never given
 severity: major
-status: fixed
+status: verified
 found_after_merge: 2026-10-30
 found_by: TC-F01-S05-001
 breaks: AC-3
@@ -10,7 +10,7 @@ found_on: 2026-10-30
 fixed_in: 9a02ddb
 fix_note: "PlatformDatabase reads the owning role's name (spring.flyway.user) only where migrations run (spring.flyway.enabled), so a stack instance starts on the tenant and platform roles alone; it still refuses the owning role as its platform role because the database shows it owns tables. No credential was added to the runtime."
 developer_note: "Integration tests start the API as a stack instance (staging profile, no owning-role settings): it becomes ready, and it refuses the owning role as platform role; both failed with the bug's PlaceholderResolutionException before. Real stack on a throwaway volume (salon-stack-bugfix-20261030, removed), images from 9a02ddb: migrations ran, both instances started with no SALON_DB_USER/SALON_DB_PASSWORD and became healthy; after stack-seed, alpha /api/v1/salon 200, unknown salon 404, meta commit 9a02ddb, web sign-in 200. stack-up itself exited 1 because api-1 took 72.6 s to start (healthcheck start period 60 s) on a machine at load average 28 from another project's database; it turned healthy seconds later. Not changed: a slow host can still trip the 60 s start period. Gates at 0dbe7d2 (complete logs in /Users/cmmrox/Personal/Projects/salon-sass-bugfix/build/regression-bugfix-evidence/gates, summary.txt): ./mvnw -q verify exit 0 (864 tests; three earlier runs failed only OperatorAccessIntegrationTest.simultaneousAttemptsOnOneEmailCountEveryAttempt under load averages 10-40, which passes alone and with the new tests run first, and base fbab6d0 passed at the same time), pnpm -r lint/typecheck/test exit 0 (web 700/700 on retry after load timeouts), web build, format:check, knip, contracts:check, lint-workflows, images-build, images-scan, test-edge-health-tolerance, test-script-prerequisites, sdlc selftest exit 0."
-verified_on: null
+verified_on: 2026-10-30
 approved_by: null
 found_in_release: null
 ---
@@ -65,4 +65,7 @@ run's log in the QA scratch folder. No secret appears in these lines.
 
 ## Re-verification
 
-<QA, after a fix.>
+QA, 2026-10-30: images built from d9c8379, `.env.stack` with every required setting (QA's local random F03 values, the
+original file restored afterwards) and a new empty volume `salon-stack-qa-d9c8379`: `stack-up.sh` exits 0 with both API
+instances healthy and no "Application run failed"; after `stack-seed.sh`, alpha's and beta's brands are served over the
+edge, alpha's sign-in page answers 200, and `/api/v1/meta` reports d9c8379. Verified.

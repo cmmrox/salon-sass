@@ -2,7 +2,7 @@
 id: BUG-F02-015
 title: When the database goes silent, in-flight identity requests answer 500 internal_error instead of 503 service_unavailable
 severity: major
-status: fixed
+status: verified
 found_after_merge: 2026-10-30
 found_by: TC-F02-S01-029
 breaks: AC-10
@@ -10,7 +10,7 @@ found_on: 2026-10-30
 fixed_in: 94bbee9
 fix_note: "Both transaction managers (tenant JPA and platform JDBC) now answer 503 when a commit or rollback fails on a connection already closed: they throw TransactionSystemException caused by DataAccessResourceFailureException, replacing whatever the use case concluded from what it read (kept as its application exception, logged); failures on a live connection and genuine 404s are unchanged."
 developer_note: "Cause (Hibernate 7.4.5 bytecode and a probe): SessionImpl.find returns null for a JDBCConnectionException when the transaction is already rollback-only (HHH-12472). The refactor's SessionAccess.owner uses Spring Data findById (em.find), so the lost connection read as no account, the use case answered 401, IdentityWorkImpl committed as it does for 401, and the commit's rollback failed on the closed connection in doCommit, which the old doRollback guard never covered: 500. origin/main used JPQL, which throws, so it reached the guarded rollback. The platform connection's DataSourceTransactionManager had no guard, so its failed rollback replaced the database failure with a TransactionSystemException (500) for any platform/operator request; fixed under the same rule. Tests: IdentityDatabaseSilentIntegrationTest (QA's steps: lock identity_staff, /me in flight, pause; 503 within 5 s, then 200) and TransactionOnLostConnectionIntegrationTest (tenant lookup returning normally, lookup turned into 404, failing tenant work, failing platform work, and a genuine 404 on a live connection in both); 4 of 6 failed before the fix. Rule set by the lead: once a transaction's connection is lost, the request answers 503, whatever the use case concluded. Gates on the combined tree at 94bbee9 (logs in /Users/cmmrox/Personal/Projects/salon-sass-bugfix/build/regression-bugfix-evidence/f02-015/gates): cd apps/api && ./mvnw -q verify exit 0, 928 tests, 0 failures, 475 s at load average 7-9; pnpm contracts:check exit 0."
-verified_on: null
+verified_on: 2026-10-30
 approved_by: null
 found_in_release: null
 ---
@@ -69,4 +69,6 @@ head-api-run3.log: the API log above). No secret in them.
 
 ## Re-verification
 
-<QA, after a fix.>
+QA, 2026-10-30, on d9c8379 (fresh database salon_qa_d9c8379): TC-F02-S01-029 alone, 3 runs, all pass: both in-flight
+requests answer 503 `service_unavailable` in 3.19 to 3.47 s each time (6 of 6), and the API recovers (200 afterwards).
+The API log shows `GET /api/v1/identity/me` 503 for every request during the outages and no 500. Verified.

@@ -2,7 +2,7 @@
 id: BUG-F03-007
 title: The documented offline operator bootstrap command stops with "RESOLVED_JAVA_HOME unbound variable" and creates no operator
 severity: minor
-status: fixed
+status: verified
 found_after_merge: 2026-10-30
 found_by: exploratory
 breaks: "docs/architecture/operator-console.md, Operator authentication: bootstrap is an explicit offline administrative command (F03-S01 handoff.run)"
@@ -10,7 +10,7 @@ found_on: 2026-10-30
 fixed_in: b6c84f9
 fix_note: "operator-bootstrap.sh asks require_prerequisites for postgres and api, so the api prerequisite resolves RESOLVED_JAVA_HOME (or reports the missing JDK 25 as local-service.sh does); infra/scripts/test-script-prerequisites.sh holds every Java-running script to it."
 developer_note: "Checked on a throwaway database (salon_bugfix_f03_007, dropped): before, exit 1 'RESOLVED_JAVA_HOME: unbound variable'; after, the account is created (exit 0), a second run leaves it unchanged (exit 0), and JAVA25_HOME=/nonexistent stops at the prerequisite check naming JDK 25 (exit 1). The new test failed 4 checks before the fix and passes 5 after. Gates at 0dbe7d2 (complete logs in /Users/cmmrox/Personal/Projects/salon-sass-bugfix/build/regression-bugfix-evidence/gates, summary.txt): ./mvnw -q verify exit 0 (864 tests; three earlier runs failed only OperatorAccessIntegrationTest.simultaneousAttemptsOnOneEmailCountEveryAttempt under load averages 10-40, which passes alone and with the new tests run first, and base fbab6d0 passed at the same time), pnpm -r lint/typecheck/test exit 0 (web 700/700 on retry after load timeouts), web build, format:check, knip, contracts:check, lint-workflows, images-build, images-scan, test-edge-health-tolerance, test-script-prerequisites, sdlc selftest exit 0."
-verified_on: null
+verified_on: 2026-10-30
 approved_by: null
 found_in_release: null
 ---
@@ -59,4 +59,7 @@ random, synthetic and deleted afterwards; the fresh database is dropped at the e
 
 ## Re-verification
 
-<QA, after a fix.>
+QA, 2026-10-30, on d9c8379 (fresh database salon_qa_d9c8379, RESOLVED_JAVA_HOME unset): `operator-bootstrap.sh` with a synthetic
+`OPERATOR_ADMIN` file exits 0 and prints "Operator bootstrap: the account was created; it enrolls MFA at its first sign-in";
+`operator_user` holds the account (1 row). A second run exits 0, "an account with that email already exists and was left
+unchanged". The account file was random and deleted. Verified.
