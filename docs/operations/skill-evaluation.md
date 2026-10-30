@@ -332,6 +332,16 @@ merge. Before the staging deploy, the `release` suite (load, production-like sta
 with the owner's explicit staging request in the current message. Each through
 `qa/scripts/sdlc run --suite <name>`, within the budgets in `docs/qa/test-plan.md`.
 
+## 38. Re-running after a fix
+
+**Request:** "QA found 3 of 15 checks failing; the developer fixed them. Test it." Later, during a
+bug fix to the deploy scripts: "Is it fixed?"
+
+**Expected:** QA re-runs the 3 failed checks and only those of the other 12 whose code the fix
+touched, naming the changed paths and why; the other passes stand. No whole suite or regression
+because a fix landed. The developer iterates with fast, focused checks and does not repeat a load or
+`release` check per adjustment; load checks run only when the owner asks (decision 069).
+
 ## CR-010 platform mapping evaluation
 
 A fresh independent Codex context received the raw owner request and shared skill paths. It

@@ -92,7 +92,7 @@ A refactor or upgrade has no command: "Refactors and upgrades" in `references/li
 | Feature QA | The feature's acceptance criteria, tenant isolation, a hands-on check of its new screens | Once per feature, after its stages close (`feature-verify`). QA dry-runs its tests against each closed stage during the build; a dry run certifies nothing |
 | Smoke (`suites: [smoke]`) | The few critical checks that prove each delivered feature is alive | Every PR, after every merge, before and after any deploy |
 | Regression (`suites: [regression]`) | Everything that must keep working, in parallel | Before a release, and for a refactor or upgrade that touches delivered features (the lead runs it unasked then); otherwise when the owner asks |
-| Release (`suites: [release]`) | The slow checks: load, the production-like stack, image scans | Before any deploy, and at `release-verify` |
+| Release (`suites: [release]`) | The slow checks: load, the production-like stack, image scans | Only when the owner asks: before a deploy they request, and at `release-verify`. Never part of building, a fix or re-verification |
 | Stage pass | One stage's tests | Only when the owner asks |
 
 Time budgets per kind are in `docs/qa/test-plan.md`. The developer's gates are not QA runs; they

@@ -181,7 +181,7 @@ and its time budget on the local machine:
 | --- | --- | --- |
 | `smoke` | 10 to 15 critical checks: the API and web start and answer their health checks; staff and operator sign-in; one request from salon A refused on salon B; one key journey per delivered feature (today: a staff account journey, the operator lifecycle; once booking exists, book and pay in the sandbox and see the booking on the salon's calendar) | Under 5 minutes |
 | `regression` | Every test that must keep working, including every tenant-isolation test and every concurrency test on bookings; Playwright runs fully parallel across workers | Under 20 minutes |
-| `release` | The slow checks: k6 load baselines, the production-like stack with its rolling deploy, image builds and scans | Before any deploy; no budget, but run only then |
+| `release` | The slow checks: k6 load baselines, the production-like stack with its rolling deploy, image builds and scans | Only when the owner asks (before a deploy they request, or `release-verify`); never during a fix or re-verification (decision 069). No budget |
 
 A test that would take a suite past its budget is made faster (arrange through the API, reuse
 signed-in state, run in parallel) or moves to `release`. Going over budget is a defect in the suite.

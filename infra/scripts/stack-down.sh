@@ -25,7 +25,8 @@ if [ ! -f "$STACK_DEPLOYED" ]; then
   ensure_deployed_file
 fi
 
-args=(--profile migrate down --remove-orphans --timeout 45)
+# The surge profile too, so that a web-surge left by an interrupted deployment stops with the rest.
+args=(--profile migrate --profile surge down --remove-orphans --timeout 45)
 [ "$delete_data" -eq 1 ] && args+=(--volumes)
 stack_compose "${args[@]}"
 

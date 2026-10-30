@@ -48,6 +48,12 @@ are in `docs/operations/verification-evidence.md`.
 
 When something relevant changed, name it and the checks it affects, then run those, keeping
 unaffected results. For a batch of fixes, test each fix, then run each affected gate once.
+After a fix or a test repair, run only the checks that failed and the checks whose code the change
+touched; a check that passed on code the change did not touch stays passed. A slow check (load, the
+production-like stack, a whole suite) is never the loop for trying fixes: diagnose with fast,
+focused measurements, and run the slow check once on the final source, and a load check only when
+the owner asks. Repeating a 15-minute load check after each adjustment of one fix, and whole
+regressions after small test repairs, once cost hours and proved nothing new.
 Uncertain impact, shared code or changed conditions call for broader checks with a stated reason;
 cost never justifies dropping required proof. A targeted run is never reported as a full pass.
 Repeat a whole feature only when the change is broad or the owner asks.

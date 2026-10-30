@@ -99,7 +99,8 @@ For each `fixed` bug:
 2. Run the test that found it and the tests of what the fix touches, batching overlapping fixes into
    one run on the final source, with a result per bug. Record the changed paths and why those tests
    cover them. A whole-feature run needs a reason in the scope of the change. A fix that breaks a
-   neighbour reopens the bug.
+   neighbour reopens the bug. A load or release-suite check is re-run only when the owner asks;
+   otherwise record it on the bug as not re-run, and why.
 3. Make sure a test would catch it again.
 4. Set `verified` with the run folder, or `reopened` with what still happens.
 

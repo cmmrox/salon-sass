@@ -55,7 +55,11 @@ the current session. Disabled users and revoked sessions stop working immediatel
 Password attempts are capped at 10 per normalized email and 30 per trusted address in fifteen
 minutes, counting unknown users. Use the identity policy's address assertion design with the
 operator-specific path and an independent proxy secret; the existing staff assertion cannot be
-replayed here. Persist failures, counters and replay consumption even on denied responses. A
+replayed here. Persist failures, counters and replay consumption even on denied responses. The attempt is counted
+and committed in its own short transaction before the password is checked, and the password check
+(deliberately slow) runs inside no transaction, so that a burst of sign-ins cannot hold the small
+platform pool's connections; the outcome is recorded with the account read again, refusing one
+disabled or whose password changed meanwhile. A
 denied limit returns 429 `rate_limited` with positive `Retry-After`; expired buckets/challenges
 are cleaned by a bounded platform job. Never expose account existence through sign-in errors.
 

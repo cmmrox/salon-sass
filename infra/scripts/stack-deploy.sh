@@ -9,7 +9,11 @@
 #   3. Replaces the instances one at a time, the API's before the web app's. Each is stopped (its
 #      readiness fails at once and it drains while the edge takes it out of the rotation, then it
 #      finishes what it accepted), started again on the new version, and waited for until it is ready
-#      and back in the rotation; only then is the next one replaced.
+#      and back in the rotation; only then is the next one replaced. Before the first web app
+#      instance is replaced, a third one (web-surge) is started on the new version, and it is stopped
+#      after the last: a web app instance is one Node.js process, so one alone would be the tier at
+#      half its capacity while its partner is replaced (BUG-F01-009). The API's instances each use
+#      the whole machine, and one carries the tier while the other is replaced.
 #
 # Deploying the previous version the same way is the rollback. Its migrations find nothing to do:
 # the database stays as the newer version's migrations left it.
@@ -18,9 +22,14 @@
 set -euo pipefail
 . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/stack.sh"
 
-# How long after an instance is ready the next one waits, so that the edge, which checks every
-# second, has sent it traffic again.
-EDGE_SETTLE_SECONDS=3
+# How long after an instance is ready the next one is taken out of the rotation. The edge, which
+# checks every second, sends the new instance traffic within a second or two; the rest is for it to
+# warm up (a JVM compiling its hot code, a web server its first pages), which costs it and the
+# machine CPU for a while. Taking the next one out sooner leaves its partner to carry the whole tier
+# while it is still at its slowest (BUG-F01-009).
+EDGE_SETTLE_SECONDS=15
+# How long a started instance may take to become ready.
+READY_TIMEOUT_SECONDS=300
 
 [ $# -eq 1 ] || fail "usage: infra/scripts/stack-deploy.sh <version>"
 version="$1"
@@ -58,22 +67,64 @@ if ! stack_compose --profile migrate run --rm --no-deps migrate >"$log" 2>&1; th
   fail "the migrations of version $version failed (see .stack/logs/migrate-$version.log). No instance was replaced; the stack keeps serving what it served."
 fi
 
+# web-surge exists only while a deployment runs: one left by an earlier deployment that was
+# interrupted is removed now, whatever this one replaces, and this one removes its own when it ends,
+# failed or not, so that no instance on another version stays in the rotation.
+remove_surge() {
+  stack_compose --profile surge stop --timeout 45 web-surge >>"$STACK_LOG_DIR/deploy.log" 2>&1 || true
+  stack_compose --profile surge rm --force web-surge >>"$STACK_LOG_DIR/deploy.log" 2>&1 || true
+}
+if docker inspect salon-stack-web-surge >/dev/null 2>&1; then
+  say "web-surge: left by an earlier deployment; draining and removing it"
+  remove_surge
+fi
+surge=0
+end_deploy() {
+  local status=$?
+  if [ "$surge" -eq 1 ]; then
+    say "web-surge: draining and removing"
+    remove_surge
+  fi
+  rm -rf "$STACK_LOCK"
+  exit "$status"
+}
+trap end_deploy EXIT
+
+# Starts <service> on the new version and waits until it is ready and settled in the rotation.
+start_instance() { # <service> [compose options...]
+  local service="$1"; shift
+  set_deployed_version "$service" "$version"
+  say "$service: starting $version"
+  if ! stack_compose "$@" up --detach --no-deps "$service" >>"$STACK_LOG_DIR/deploy.log" 2>&1 \
+      || ! wait_until_ready "$service" "$READY_TIMEOUT_SECONDS"; then
+    tail -n 30 "$STACK_LOG_DIR/deploy.log" >&2
+    fail "$service did not become ready on version $version (docker logs salon-stack-$service). The instances not yet replaced keep serving; deploy the previous version to roll back."
+  fi
+  sleep "$EDGE_SETTLE_SECONDS"
+}
+
 for service in "${STACK_INSTANCES[@]}"; do
   if [ "$(deployed_version "$service")" = "$version" ] && container_running "$service"; then
     say "$service: already $version"
     continue
   fi
+  if [[ "$service" == web-* ]] && [ "$surge" -eq 0 ]; then
+    instance_started=$(date +%s)
+    surge=1
+    start_instance web-surge --profile surge
+    say "web-surge: ready on $version ($(( $(date +%s) - instance_started )) s); three web app instances serve"
+  fi
   instance_started=$(date +%s)
   say "$service: draining and stopping"
   stack_compose stop --timeout 45 "$service" >>"$STACK_LOG_DIR/deploy.log" 2>&1
-  set_deployed_version "$service" "$version"
-  say "$service: starting $version"
-  if ! stack_compose up --detach --no-deps --wait --wait-timeout 300 "$service" >>"$STACK_LOG_DIR/deploy.log" 2>&1; then
-    tail -n 30 "$STACK_LOG_DIR/deploy.log" >&2
-    fail "$service did not become ready on version $version (docker logs salon-stack-$service). The instances not yet replaced keep serving; deploy the previous version to roll back."
-  fi
-  sleep "$EDGE_SETTLE_SECONDS"
+  start_instance "$service"
   say "$service: ready on $version ($(( $(date +%s) - instance_started )) s)"
 done
+
+if [ "$surge" -eq 1 ]; then
+  say "web-surge: draining and removing"
+  remove_surge
+  surge=0
+fi
 
 say "deploy: version $version is running everywhere ($(( $(date +%s) - started )) s)"
