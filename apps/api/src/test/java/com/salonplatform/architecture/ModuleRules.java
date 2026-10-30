@@ -65,7 +65,7 @@ final class ModuleRules {
             "inprocess",
             "local");
 
-    /** The one {@code Impl} name: Spring Data finds a repository fragment's implementation by that suffix. */
+    /** The one {@code Impl} name that is no service: Spring Data finds a repository fragment's implementation by it. */
     private static final String REPOSITORY_FRAGMENT = "NewEntitiesImpl";
 
     private final String base;
@@ -91,7 +91,11 @@ final class ModuleRules {
                 requestAndResponseRecordsLiveInDto(),
                 controllerRecordsAreTopLevelInDto(),
                 nestedRecordsUsedOnlyByTheirClassArePrivate(),
-                noClassIsNamedImpl(),
+                servicesAreImplementationsOfTheirModulesInterfaces(),
+                publicClassesOfImplementationPackagesAreImplementations(),
+                noTransactionalOnAnInterface(),
+                controllersDoNotDependOnImplementations(),
+                onlyImplementationsAreNamedImpl(),
                 eventRecordsLiveInTheirModulesRootPackage());
     }
 
@@ -333,25 +337,97 @@ final class ModuleRules {
     }
 
     /**
-     * An implementation is named for what it is ({@code docs/engineering/backend.md}, "Clean code"). The
-     * exceptions are the Spring Data fragment and the classes MapStruct generates for a mapper.
+     * A service is an interface first, then its implementation (decision 067): every {@code @Service} class is
+     * in an implementation package ({@code <module>.service.impl}, or {@code shared.<capability>.impl}) and
+     * implements an interface of its own module, or the contract of {@code shared} it answers for
+     * {@code shared} (decision 057).
      */
-    ArchRule noClassIsNamedImpl() {
+    ArchRule servicesAreImplementationsOfTheirModulesInterfaces() {
+        return classes()
+                .that()
+                .resideInAPackage(base + "..")
+                .and()
+                .areAnnotatedWith(SPRING_SERVICE)
+                .should(beInAnImplementationPackageAndImplementAnInterfaceOfItsModule())
+                .as("every @Service is in service.impl (or a shared capability's impl) and implements an interface"
+                        + " of its module")
+                .allowEmptyShould(true);
+    }
+
+    /**
+     * Nothing outside an implementation package can see a package-private class, so a public class there is
+     * one an implementation's callers could come to depend on: it must be an implementation. A helper of the
+     * implementations beside it is package-private (decision 067).
+     */
+    ArchRule publicClassesOfImplementationPackagesAreImplementations() {
+        return classes()
+                .that()
+                .resideInAnyPackage(implementationPackages())
+                .and()
+                .areTopLevelClasses()
+                .and()
+                .arePublic()
+                .should(implementAnInterfaceOfItsModule())
+                .as("a public class of an implementation package implements an interface of its module")
+                .allowEmptyShould(true);
+    }
+
+    /** Transactions start in an implementation; an annotation on an interface is easily missed or misread. */
+    ArchRule noTransactionalOnAnInterface() {
+        return classes()
+                .that()
+                .resideInAPackage(base + "..")
+                .and()
+                .areInterfaces()
+                .should(carryNoTransactionalAnnotation())
+                .as("no interface or interface method carries @Transactional")
+                .allowEmptyShould(true);
+    }
+
+    /** A controller calls a service through its interface, never its implementation. */
+    ArchRule controllersDoNotDependOnImplementations() {
         return noClasses()
                 .that()
                 .resideInAPackage(base + "..")
                 .and()
+                .areMetaAnnotatedWith(SPRING_CONTROLLER)
+                .should()
+                .dependOnClassesThat()
+                .resideInAnyPackage(implementationPackages())
+                .as("controllers do not depend on implementation classes")
+                .allowEmptyShould(true);
+    }
+
+    /**
+     * {@code Impl} names an implementation and nothing else (docs/engineering/backend.md, "Clean code"): a class
+     * named {@code <Interface>Impl} is in an implementation package and implements {@code <Interface>}. The
+     * exceptions are the Spring Data fragment and the classes MapStruct generates for a mapper.
+     */
+    ArchRule onlyImplementationsAreNamedImpl() {
+        return classes()
+                .that()
+                .resideInAPackage(base + "..")
+                .and()
+                .haveSimpleNameEndingWith(IMPL)
+                .and()
                 .haveSimpleNameNotEndingWith(REPOSITORY_FRAGMENT)
                 .and(DescribedPredicate.not(implementAMapper()))
-                .should()
-                .haveSimpleNameEndingWith("Impl")
-                .as("no class is named ...Impl except NewEntitiesImpl and generated mappers")
+                .should(beTheImplementationOfTheInterfaceItIsNamedFor())
+                .as("a class named <Interface>Impl is in an implementation package and implements <Interface>,"
+                        + " except NewEntitiesImpl and generated mappers")
                 .allowEmptyShould(true);
     }
 
     private static final String EVENT_TYPE = "com.salonplatform.shared.outbox.EventType";
 
     private static final String SPRING_COMPONENT = "org.springframework.stereotype.Component";
+
+    private static final String SPRING_SERVICE = "org.springframework.stereotype.Service";
+
+    private static final List<String> TRANSACTIONAL =
+            List.of("org.springframework.transaction.annotation.Transactional", "jakarta.transaction.Transactional");
+
+    private static final String IMPL = "Impl";
 
     private static final String SPRING_CONTROLLER = "org.springframework.stereotype.Controller";
 
@@ -388,6 +464,98 @@ final class ModuleRules {
                 }
             }
         };
+    }
+
+    private ArchCondition<JavaClass> beInAnImplementationPackageAndImplementAnInterfaceOfItsModule() {
+        return new ArchCondition<>("be in an implementation package and implement an interface of its module") {
+            @Override
+            public void check(JavaClass javaClass, ConditionEvents events) {
+                if (!isInAnImplementationPackage(javaClass)) {
+                    events.add(SimpleConditionEvent.violated(
+                            javaClass,
+                            javaClass.getName() + " is a @Service outside service.impl (or a shared capability's"
+                                    + " impl)"));
+                }
+                if (!implementsAnInterfaceOfItsModule(javaClass)) {
+                    events.add(SimpleConditionEvent.violated(
+                            javaClass,
+                            javaClass.getName() + " is a @Service that implements no interface of its module"));
+                }
+            }
+        };
+    }
+
+    private ArchCondition<JavaClass> implementAnInterfaceOfItsModule() {
+        return new ArchCondition<>("implement an interface of its module") {
+            @Override
+            public void check(JavaClass javaClass, ConditionEvents events) {
+                if (!implementsAnInterfaceOfItsModule(javaClass)) {
+                    events.add(SimpleConditionEvent.violated(
+                            javaClass,
+                            javaClass.getName() + " is public in an implementation package but implements no"
+                                    + " interface of its module; a helper there is package-private"));
+                }
+            }
+        };
+    }
+
+    private static ArchCondition<JavaClass> carryNoTransactionalAnnotation() {
+        return new ArchCondition<>("carry no @Transactional, on the interface or its methods") {
+            @Override
+            public void check(JavaClass javaClass, ConditionEvents events) {
+                boolean onType = TRANSACTIONAL.stream().anyMatch(javaClass::isAnnotatedWith);
+                boolean onMethod = javaClass.getMethods().stream()
+                        .anyMatch(method -> TRANSACTIONAL.stream().anyMatch(method::isAnnotatedWith));
+                if (onType || onMethod) {
+                    events.add(SimpleConditionEvent.violated(
+                            javaClass,
+                            javaClass.getName() + " is an interface that carries @Transactional; it belongs on the"
+                                    + " implementation"));
+                }
+            }
+        };
+    }
+
+    private ArchCondition<JavaClass> beTheImplementationOfTheInterfaceItIsNamedFor() {
+        return new ArchCondition<>("be in an implementation package and implement the interface it is named for") {
+            @Override
+            public void check(JavaClass javaClass, ConditionEvents events) {
+                String implemented = javaClass
+                        .getSimpleName()
+                        .substring(0, javaClass.getSimpleName().length() - IMPL.length());
+                boolean named = javaClass.getAllRawInterfaces().stream()
+                        .anyMatch(type -> type.getSimpleName().equals(implemented));
+                if (!isInAnImplementationPackage(javaClass) || !named) {
+                    events.add(SimpleConditionEvent.violated(
+                            javaClass,
+                            javaClass.getName() + " is named ...Impl but is not an implementation of " + implemented
+                                    + " in an implementation package"));
+                }
+            }
+        };
+    }
+
+    /** {@code <module>.service.impl}, and {@code shared.<capability>.impl}, with their sub-packages. */
+    private String[] implementationPackages() {
+        return new String[] {base + ".*.service.impl..", base + "." + SHARED + ".*.impl.."};
+    }
+
+    private boolean isInAnImplementationPackage(JavaClass javaClass) {
+        String relative = javaClass.getPackageName().substring(base.length() + 1);
+        return relative.matches("[a-z]+\\.service\\.impl(\\..+)?")
+                || relative.matches(SHARED + "\\.[a-z]+\\.impl(\\..+)?");
+    }
+
+    /**
+     * Its module's own interface, or a contract of {@code shared} that it answers for {@code shared}, such as
+     * {@code SalonEntitlements} (decision 057).
+     */
+    private boolean implementsAnInterfaceOfItsModule(JavaClass javaClass) {
+        String module = moduleOf(javaClass);
+        return javaClass.getAllRawInterfaces().stream()
+                .filter(type -> type.getPackageName().startsWith(base + "."))
+                .map(this::moduleOf)
+                .anyMatch(owner -> owner.equals(module) || owner.equals(SHARED));
     }
 
     private static ArchCondition<JavaClass> beAContract() {

@@ -165,7 +165,30 @@ class ModuleBoundariesTest {
                         "nestedrecordvisible",
                         rule(ModuleRules::nestedRecordsUsedOnlyByTheirClassArePrivate),
                         "BookBooking$Window"),
-                arguments("implname", rule(ModuleRules::noClassIsNamedImpl), "BookingServiceImpl"),
+                arguments("implname", rule(ModuleRules::onlyImplementationsAreNamedImpl), "BookingServiceImpl"),
+                arguments("implnamemismatch", rule(ModuleRules::onlyImplementationsAreNamedImpl), "SlotsImpl"),
+                arguments(
+                        "servicenotinimpl",
+                        rule(ModuleRules::servicesAreImplementationsOfTheirModulesInterfaces),
+                        "HoldSlots"),
+                arguments(
+                        "servicewithoutinterface",
+                        rule(ModuleRules::servicesAreImplementationsOfTheirModulesInterfaces),
+                        "SlotFinder"),
+                arguments(
+                        "sharedservice",
+                        rule(ModuleRules::servicesAreImplementationsOfTheirModulesInterfaces),
+                        "SystemClockService"),
+                arguments(
+                        "publichelper",
+                        rule(ModuleRules::publicClassesOfImplementationPackagesAreImplementations),
+                        "SlotCalendar"),
+                arguments("transactionalinterface", rule(ModuleRules::noTransactionalOnAnInterface), "BookingService"),
+                arguments("transactionalinterface", rule(ModuleRules::noTransactionalOnAnInterface), "PaymentService"),
+                arguments(
+                        "controllerusesimpl",
+                        rule(ModuleRules::controllersDoNotDependOnImplementations),
+                        "SlotBookingController"),
                 arguments(
                         "misplacedevent",
                         rule(ModuleRules::eventRecordsLiveInTheirModulesRootPackage),

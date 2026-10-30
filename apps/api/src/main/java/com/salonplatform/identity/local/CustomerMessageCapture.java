@@ -15,7 +15,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.springframework.context.annotation.Profile;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
@@ -23,7 +23,7 @@ import tools.jackson.databind.json.JsonMapper;
  * locks. It subscribes to {@link CustomerDataErased} so that an erased customer's captured codes go
  * once the erasure has committed.
  */
-@Service
+@Component
 @Profile("local")
 class CustomerMessageCapture implements EventSubscriber<CustomerDataErased> {
     private record Key(UUID tenant, String channel) {}
