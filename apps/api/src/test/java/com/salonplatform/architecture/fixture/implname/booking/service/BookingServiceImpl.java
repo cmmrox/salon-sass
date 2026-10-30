@@ -1,4 +1,4 @@
 package com.salonplatform.architecture.fixture.implname.booking.service;
 
-/** An implementation named for being one, instead of for what it is. */
+/** Named Impl outside an implementation package, and implementing nothing. */
 public class BookingServiceImpl {}

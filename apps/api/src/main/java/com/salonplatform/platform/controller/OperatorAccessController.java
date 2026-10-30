@@ -9,8 +9,8 @@ import com.salonplatform.platform.dto.OperatorSignIn;
 import com.salonplatform.platform.dto.OperatorSignInRequest;
 import com.salonplatform.platform.dto.OperatorTokens;
 import com.salonplatform.platform.dto.OperatorVerifyRequest;
-import com.salonplatform.platform.service.OperatorSessions;
-import com.salonplatform.platform.service.OperatorSignIns;
+import com.salonplatform.platform.service.OperatorSessionService;
+import com.salonplatform.platform.service.OperatorSignInService;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -37,11 +37,12 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping(path = "/api/v1/operator", produces = MediaType.APPLICATION_JSON_VALUE)
 class OperatorAccessController {
 
-    private final OperatorSignIns signIns;
-    private final OperatorSessions sessions;
+    private final OperatorSignInService signIns;
+    private final OperatorSessionService sessions;
     private final OperatorAddressAssertion assertions;
 
-    OperatorAccessController(OperatorSignIns signIns, OperatorSessions sessions, OperatorAddressAssertion assertions) {
+    OperatorAccessController(
+            OperatorSignInService signIns, OperatorSessionService sessions, OperatorAddressAssertion assertions) {
         this.signIns = signIns;
         this.sessions = sessions;
         this.assertions = assertions;

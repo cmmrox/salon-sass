@@ -1,11 +1,11 @@
 package com.salonplatform.platform.controller;
 
+import com.salonplatform.platform.domain.IdempotencyKey;
+import com.salonplatform.platform.domain.Paging;
 import com.salonplatform.platform.dto.PlanDefinition;
 import com.salonplatform.platform.dto.PlanPage;
 import com.salonplatform.platform.dto.PlanRequest;
-import com.salonplatform.platform.service.Paging;
-import com.salonplatform.platform.service.PlanCatalogue;
-import com.salonplatform.platform.service.ProvisioningReceipts;
+import com.salonplatform.platform.service.PlanCatalogueService;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -30,9 +30,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping(path = "/api/v1/operator/plans", produces = MediaType.APPLICATION_JSON_VALUE)
 class OperatorPlanController {
 
-    private final PlanCatalogue plans;
+    private final PlanCatalogueService plans;
 
-    OperatorPlanController(PlanCatalogue plans) {
+    OperatorPlanController(PlanCatalogueService plans) {
         this.plans = plans;
     }
 
@@ -57,16 +57,16 @@ class OperatorPlanController {
     @ResponseStatus(HttpStatus.CREATED)
     ResponseEntity<PlanDefinition> createPlan(
             @Parameter(
-                            name = ProvisioningReceipts.HEADER,
+                            name = IdempotencyKey.HEADER,
                             in = ParameterIn.HEADER,
                             required = true,
                             schema = @Schema(type = "string", format = "uuid"))
-                    @RequestHeader(name = ProvisioningReceipts.HEADER, required = false)
+                    @RequestHeader(name = IdempotencyKey.HEADER, required = false)
                     String key,
             @RequestBody PlanRequest request) {
         var created = plans.create(
                 key,
-                new PlanCatalogue.PlanInput(
+                new PlanCatalogueService.PlanInput(
                         request.key(),
                         request.name(),
                         request.staffSeats(),

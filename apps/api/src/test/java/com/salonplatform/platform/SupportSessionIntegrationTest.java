@@ -7,8 +7,8 @@ import com.salonplatform.identity.domain.StaffRole;
 import com.salonplatform.identity.entity.StaffAccount;
 import com.salonplatform.platform.adapter.OperatorCrypto;
 import com.salonplatform.platform.adapter.SupportCrypto;
-import com.salonplatform.platform.service.OperatorAccounts;
-import com.salonplatform.platform.service.SupportSessions;
+import com.salonplatform.platform.service.OperatorAccountService;
+import com.salonplatform.platform.service.SupportSessionService;
 import com.salonplatform.testing.Http;
 import com.salonplatform.testing.IntegrationTest;
 import com.salonplatform.testing.MovableClock;
@@ -65,7 +65,7 @@ class SupportSessionIntegrationTest extends IntegrationTest {
     }
 
     @Autowired
-    OperatorAccounts accounts;
+    OperatorAccountService accounts;
 
     @Autowired
     OperatorCrypto crypto;
@@ -83,7 +83,7 @@ class SupportSessionIntegrationTest extends IntegrationTest {
     PlatformTransactionManager manager;
 
     @Autowired
-    SupportSessions sessions;
+    SupportSessionService sessions;
 
     @PersistenceContext
     EntityManager em;

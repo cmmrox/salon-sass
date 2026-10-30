@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.salonplatform.platform.adapter.OperatorCrypto;
 import com.salonplatform.platform.dto.AccountInput;
-import com.salonplatform.platform.service.OperatorAccounts;
+import com.salonplatform.platform.service.OperatorAccountService;
 import com.salonplatform.testing.Http;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
@@ -36,7 +36,7 @@ public final class OperatorTestSupport {
 
     private final Http http;
     private final int port;
-    private final OperatorAccounts accounts;
+    private final OperatorAccountService accounts;
     private final OperatorCrypto crypto;
     private final JsonMapper json;
     private final byte[] proxyKey;
@@ -47,7 +47,7 @@ public final class OperatorTestSupport {
     public OperatorTestSupport(
             Http http,
             int port,
-            OperatorAccounts accounts,
+            OperatorAccountService accounts,
             OperatorCrypto crypto,
             JsonMapper json,
             Environment environment,

@@ -1,5 +1,7 @@
 package com.salonplatform.platform.controller;
 
+import com.salonplatform.platform.domain.IdempotencyKey;
+import com.salonplatform.platform.domain.Paging;
 import com.salonplatform.platform.dto.ChangeSubscriptionRequest;
 import com.salonplatform.platform.dto.InvoiceDetail;
 import com.salonplatform.platform.dto.InvoicePage;
@@ -9,10 +11,8 @@ import com.salonplatform.platform.dto.RecordTransferRequest;
 import com.salonplatform.platform.dto.SalonDetail;
 import com.salonplatform.platform.dto.StartSubscriptionRequest;
 import com.salonplatform.platform.dto.SubscriptionView;
-import com.salonplatform.platform.service.InvoiceBilling;
-import com.salonplatform.platform.service.Paging;
-import com.salonplatform.platform.service.ProvisioningReceipts;
-import com.salonplatform.platform.service.SubscriptionBilling;
+import com.salonplatform.platform.service.InvoiceBillingService;
+import com.salonplatform.platform.service.SubscriptionBillingService;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -43,10 +43,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping(path = "/api/v1/operator", produces = MediaType.APPLICATION_JSON_VALUE)
 class OperatorBillingController {
 
-    private final SubscriptionBilling subscriptions;
-    private final InvoiceBilling invoices;
+    private final SubscriptionBillingService subscriptions;
+    private final InvoiceBillingService invoices;
 
-    OperatorBillingController(SubscriptionBilling subscriptions, InvoiceBilling invoices) {
+    OperatorBillingController(SubscriptionBillingService subscriptions, InvoiceBillingService invoices) {
         this.subscriptions = subscriptions;
         this.invoices = invoices;
     }
@@ -63,17 +63,17 @@ class OperatorBillingController {
     ResponseEntity<SubscriptionView> startSubscription(
             @PathVariable String id,
             @Parameter(
-                            name = ProvisioningReceipts.HEADER,
+                            name = IdempotencyKey.HEADER,
                             in = ParameterIn.HEADER,
                             required = true,
                             schema = @Schema(type = "string", format = "uuid"))
-                    @RequestHeader(name = ProvisioningReceipts.HEADER, required = false)
+                    @RequestHeader(name = IdempotencyKey.HEADER, required = false)
                     String key,
             @RequestBody StartSubscriptionRequest request) {
         var started = subscriptions.start(
                 OperatorRequests.id(id),
                 key,
-                new SubscriptionBilling.StartInput(
+                new SubscriptionBillingService.StartInput(
                         request.monthlyAmount(), request.paymentMethod(), request.currency()));
         return ResponseEntity.status(HttpStatus.CREATED)
                 .cacheControl(CacheControl.noStore())
@@ -87,7 +87,7 @@ class OperatorBillingController {
                 .cacheControl(CacheControl.noStore())
                 .body(subscriptions.change(
                         OperatorRequests.id(id),
-                        new SubscriptionBilling.ChangeInput(
+                        new SubscriptionBillingService.ChangeInput(
                                 request.version(), request.monthlyAmount(), request.paymentMethod())));
     }
 
@@ -97,7 +97,7 @@ class OperatorBillingController {
                 .cacheControl(CacheControl.noStore())
                 .body(subscriptions.movePlan(
                         OperatorRequests.id(id),
-                        new SubscriptionBilling.PlanMoveInput(request.version(), request.planId())));
+                        new SubscriptionBillingService.PlanMoveInput(request.version(), request.planId())));
     }
 
     @GetMapping("/salons/{id}/invoices")
@@ -124,17 +124,17 @@ class OperatorBillingController {
     ResponseEntity<PaymentView> recordTransfer(
             @PathVariable String id,
             @Parameter(
-                            name = ProvisioningReceipts.HEADER,
+                            name = IdempotencyKey.HEADER,
                             in = ParameterIn.HEADER,
                             required = true,
                             schema = @Schema(type = "string", format = "uuid"))
-                    @RequestHeader(name = ProvisioningReceipts.HEADER, required = false)
+                    @RequestHeader(name = IdempotencyKey.HEADER, required = false)
                     String key,
             @RequestBody RecordTransferRequest request) {
         var recorded = invoices.recordTransfer(
                 OperatorRequests.id(id),
                 key,
-                new InvoiceBilling.TransferInput(request.reference(), request.amount(), request.receivedOn()));
+                new InvoiceBillingService.TransferInput(request.reference(), request.amount(), request.receivedOn()));
         return ResponseEntity.status(HttpStatus.CREATED)
                 .cacheControl(CacheControl.noStore())
                 .body(recorded.payment());

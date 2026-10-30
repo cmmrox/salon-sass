@@ -16,7 +16,7 @@ import com.salonplatform.platform.dto.UnbilledSalon;
 import com.salonplatform.platform.repository.OperatorUserStore;
 import com.salonplatform.platform.repository.SalonStore;
 import com.salonplatform.platform.service.BillingFaults;
-import com.salonplatform.platform.service.BillingJob;
+import com.salonplatform.platform.service.BillingJobService;
 import com.salonplatform.shared.persistence.PlatformDatabase;
 import com.salonplatform.shared.web.ApplicationProblemException;
 import com.salonplatform.shared.web.ErrorCode;
@@ -64,7 +64,7 @@ class LocalBillingController {
     private final LocalBillingProvider provider;
     private final LocalEmailCapture emails;
     private final LocalBillingFaults faults;
-    private final BillingJob job;
+    private final BillingJobService job;
     private final BillingProviderKey key;
     private final PlatformDatabase database;
     private final SalonStore salons;
@@ -77,7 +77,7 @@ class LocalBillingController {
             LocalBillingProvider provider,
             LocalEmailCapture emails,
             LocalBillingFaults faults,
-            BillingJob job,
+            BillingJobService job,
             BillingProviderKey key,
             PlatformDatabase database,
             SalonStore salons,

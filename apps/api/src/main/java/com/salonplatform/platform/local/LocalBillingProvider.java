@@ -3,7 +3,7 @@ package com.salonplatform.platform.local;
 import com.salonplatform.platform.adapter.BillingChargeChannel;
 import com.salonplatform.platform.adapter.BillingProviderKey;
 import com.salonplatform.platform.service.BillingProvider;
-import com.salonplatform.platform.service.ProviderEvents;
+import com.salonplatform.platform.service.ProviderEventService;
 import com.salonplatform.shared.outbox.OutboxProvider;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
@@ -27,12 +27,12 @@ import tools.jackson.databind.json.JsonMapper;
 class LocalBillingProvider implements BillingProvider {
 
     private final Map<UUID, String> outcomes = new ConcurrentHashMap<>();
-    private final ProviderEvents events;
+    private final ProviderEventService events;
     private final BillingProviderKey key;
     private final JsonMapper json;
     private final Clock clock;
 
-    LocalBillingProvider(ProviderEvents events, BillingProviderKey key, JsonMapper json, Clock clock) {
+    LocalBillingProvider(ProviderEventService events, BillingProviderKey key, JsonMapper json, Clock clock) {
         this.events = events;
         this.key = key;
         this.json = json;

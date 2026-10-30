@@ -1,7 +1,7 @@
 package com.salonplatform.identity.job;
 
 import com.salonplatform.identity.repository.ExpiredSecurityState;
-import com.salonplatform.identity.service.CustomerAccess;
+import com.salonplatform.identity.service.CustomerAccessService;
 import com.salonplatform.shared.jobs.TenantJob;
 import com.salonplatform.shared.tenancy.CurrentTenant;
 import java.time.Duration;
@@ -23,7 +23,7 @@ class IdentityCleanupJob implements TenantJob {
 
     private static final Duration STAFF_RATE_WINDOW = Duration.ofMinutes(15);
 
-    private final CustomerAccess customers;
+    private final CustomerAccessService customers;
 
     private final ExpiredSecurityState expired;
 

@@ -1,7 +1,7 @@
 package com.salonplatform.platform.controller;
 
 import com.salonplatform.platform.dto.LinkView;
-import com.salonplatform.platform.service.ExportDownloads;
+import com.salonplatform.platform.service.ExportDownloadService;
 import com.salonplatform.shared.web.NotFoundException;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -30,10 +30,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping(path = "/api/v1/exports", produces = MediaType.APPLICATION_JSON_VALUE)
 class ExportDownloadController {
 
-    private final ExportDownloads exports;
+    private final ExportDownloadService exports;
     private final String platformDomain;
 
-    ExportDownloadController(ExportDownloads exports, @Value("${salon.platform-domain}") String platformDomain) {
+    ExportDownloadController(ExportDownloadService exports, @Value("${salon.platform-domain}") String platformDomain) {
         this.exports = exports;
         this.platformDomain = platformDomain.strip().toLowerCase(Locale.ROOT);
     }

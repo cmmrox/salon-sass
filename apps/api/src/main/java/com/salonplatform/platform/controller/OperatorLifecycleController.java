@@ -1,13 +1,13 @@
 package com.salonplatform.platform.controller;
 
+import com.salonplatform.platform.domain.Paging;
 import com.salonplatform.platform.dto.ClosureRequest;
 import com.salonplatform.platform.dto.ExportView;
 import com.salonplatform.platform.dto.LifecyclePage;
 import com.salonplatform.platform.dto.LifecycleRequest;
 import com.salonplatform.platform.dto.SalonDetail;
-import com.salonplatform.platform.service.ExportDownloads;
-import com.salonplatform.platform.service.Paging;
-import com.salonplatform.platform.service.SalonLifecycle;
+import com.salonplatform.platform.service.ExportDownloadService;
+import com.salonplatform.platform.service.SalonLifecycleService;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -36,10 +36,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping(path = "/api/v1/operator/salons/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
 class OperatorLifecycleController {
 
-    private final SalonLifecycle lifecycle;
-    private final ExportDownloads exports;
+    private final SalonLifecycleService lifecycle;
+    private final ExportDownloadService exports;
 
-    OperatorLifecycleController(SalonLifecycle lifecycle, ExportDownloads exports) {
+    OperatorLifecycleController(SalonLifecycleService lifecycle, ExportDownloadService exports) {
         this.lifecycle = lifecycle;
         this.exports = exports;
     }
@@ -49,7 +49,8 @@ class OperatorLifecycleController {
         return ResponseEntity.ok()
                 .cacheControl(CacheControl.noStore())
                 .body(lifecycle.suspend(
-                        OperatorRequests.id(id), new SalonLifecycle.ChangeInput(request.version(), request.reason())));
+                        OperatorRequests.id(id),
+                        new SalonLifecycleService.ChangeInput(request.version(), request.reason())));
     }
 
     @DeleteMapping(path = "/suspension", consumes = MediaType.APPLICATION_JSON_VALUE)
@@ -57,7 +58,8 @@ class OperatorLifecycleController {
         return ResponseEntity.ok()
                 .cacheControl(CacheControl.noStore())
                 .body(lifecycle.reactivate(
-                        OperatorRequests.id(id), new SalonLifecycle.ChangeInput(request.version(), request.reason())));
+                        OperatorRequests.id(id),
+                        new SalonLifecycleService.ChangeInput(request.version(), request.reason())));
     }
 
     @PostMapping(path = "/closure", consumes = MediaType.APPLICATION_JSON_VALUE)
@@ -66,7 +68,8 @@ class OperatorLifecycleController {
                 .cacheControl(CacheControl.noStore())
                 .body(lifecycle.close(
                         OperatorRequests.id(id),
-                        new SalonLifecycle.ClosureInput(request.version(), request.confirmSlug(), request.reason())));
+                        new SalonLifecycleService.ClosureInput(
+                                request.version(), request.confirmSlug(), request.reason())));
     }
 
     @GetMapping("/lifecycle")
@@ -99,7 +102,7 @@ class OperatorLifecycleController {
         return attachment(exports.archiveForOperator(OperatorRequests.id(id)));
     }
 
-    static ResponseEntity<byte[]> attachment(ExportDownloads.Archive archive) {
+    static ResponseEntity<byte[]> attachment(ExportDownloadService.Archive archive) {
         return ResponseEntity.ok()
                 .cacheControl(CacheControl.noStore())
                 .header(

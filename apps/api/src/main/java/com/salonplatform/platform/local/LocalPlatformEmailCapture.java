@@ -1,6 +1,6 @@
 package com.salonplatform.platform.local;
 
-import com.salonplatform.platform.service.SalonExports;
+import com.salonplatform.platform.service.SalonExportService;
 import com.salonplatform.shared.outbox.OutboxDelivery;
 import com.salonplatform.shared.outbox.OutboxLifecycle;
 import com.salonplatform.shared.outbox.OutboxProvider;
@@ -19,10 +19,10 @@ import tools.jackson.databind.json.JsonMapper;
 class LocalPlatformEmailCapture implements OutboxProvider {
 
     private final LocalEmailCapture capture;
-    private final SalonExports exports;
+    private final SalonExportService exports;
     private final JsonMapper json;
 
-    LocalPlatformEmailCapture(LocalEmailCapture capture, SalonExports exports, JsonMapper json) {
+    LocalPlatformEmailCapture(LocalEmailCapture capture, SalonExportService exports, JsonMapper json) {
         this.capture = capture;
         this.exports = exports;
         this.json = json;

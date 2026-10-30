@@ -2,7 +2,7 @@ package com.salonplatform.platform.controller;
 
 import com.salonplatform.platform.dto.EntryRequest;
 import com.salonplatform.platform.dto.SupportCredential;
-import com.salonplatform.platform.service.SupportSessionEntry;
+import com.salonplatform.platform.service.SupportEntryService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
@@ -25,9 +25,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping(path = "/api/v1/support", produces = MediaType.APPLICATION_JSON_VALUE)
 class SupportEntryController {
 
-    private final SupportSessionEntry sessions;
+    private final SupportEntryService sessions;
 
-    SupportEntryController(SupportSessionEntry sessions) {
+    SupportEntryController(SupportEntryService sessions) {
         this.sessions = sessions;
     }
 

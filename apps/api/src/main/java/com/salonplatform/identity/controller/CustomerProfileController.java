@@ -5,7 +5,7 @@ import com.salonplatform.identity.dto.CustomerProfileUpdateRequest;
 import com.salonplatform.identity.dto.Export;
 import com.salonplatform.identity.dto.Preferences;
 import com.salonplatform.identity.dto.Profile;
-import com.salonplatform.identity.service.CustomerProfile;
+import com.salonplatform.identity.service.CustomerProfileService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.*;
@@ -15,9 +15,9 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "identity")
 @RequestMapping(path = "/api/v1/identity/customers/me", produces = MediaType.APPLICATION_JSON_VALUE)
 class CustomerProfileController {
-    private final CustomerProfile profile;
+    private final CustomerProfileService profile;
 
-    CustomerProfileController(CustomerProfile profile) {
+    CustomerProfileController(CustomerProfileService profile) {
         this.profile = profile;
     }
 
@@ -31,7 +31,7 @@ class CustomerProfileController {
         var p = r.notificationPreferences();
         return ResponseEntity.ok()
                 .cacheControl(CacheControl.noStore())
-                .body(profile.update(new CustomerProfile.Change(
+                .body(profile.update(new CustomerProfileService.Change(
                         r.version(),
                         r.name(),
                         r.email(),

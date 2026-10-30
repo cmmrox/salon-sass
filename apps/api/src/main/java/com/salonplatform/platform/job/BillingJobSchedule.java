@@ -1,6 +1,6 @@
 package com.salonplatform.platform.job;
 
-import com.salonplatform.platform.service.BillingJob;
+import com.salonplatform.platform.service.BillingJobService;
 import com.salonplatform.shared.jobs.PlatformJob;
 import java.time.Duration;
 import java.time.Instant;
@@ -14,9 +14,9 @@ import org.springframework.stereotype.Component;
 @Component
 class BillingJobSchedule implements PlatformJob {
 
-    private final BillingJob job;
+    private final BillingJobService job;
 
-    BillingJobSchedule(BillingJob job) {
+    BillingJobSchedule(BillingJobService job) {
         this.job = job;
     }
 

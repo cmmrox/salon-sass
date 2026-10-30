@@ -1,8 +1,8 @@
 package com.salonplatform.platform.controller;
 
+import com.salonplatform.platform.domain.Paging;
 import com.salonplatform.platform.dto.SalonSupportSessionPage;
-import com.salonplatform.platform.service.Paging;
-import com.salonplatform.platform.service.SalonSupportSessions;
+import com.salonplatform.platform.service.SalonSupportSessionService;
 import com.salonplatform.shared.web.ApiPaths;
 import com.salonplatform.shared.web.NotFoundException;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -30,9 +30,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping(path = ApiPaths.V1 + "/salon/support-sessions", produces = MediaType.APPLICATION_JSON_VALUE)
 class SalonSupportController {
 
-    private final SalonSupportSessions sessions;
+    private final SalonSupportSessionService sessions;
 
-    SalonSupportController(SalonSupportSessions sessions) {
+    SalonSupportController(SalonSupportSessionService sessions) {
         this.sessions = sessions;
     }
 

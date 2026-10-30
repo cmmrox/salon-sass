@@ -5,7 +5,7 @@ import com.salonplatform.platform.dto.BootstrapFaultState;
 import com.salonplatform.platform.dto.OperatorSeedRequest;
 import com.salonplatform.platform.dto.OperatorSeedResult;
 import com.salonplatform.platform.service.BootstrapFaults;
-import com.salonplatform.platform.service.OperatorAccounts;
+import com.salonplatform.platform.service.OperatorAccountService;
 import com.salonplatform.shared.web.ApplicationProblemException;
 import com.salonplatform.shared.web.ErrorCode;
 import com.salonplatform.shared.web.FieldProblem;
@@ -40,10 +40,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/local/operator")
 class LocalOperatorController {
 
-    private final OperatorAccounts accounts;
+    private final OperatorAccountService accounts;
     private final LocalBootstrapFaults faults;
 
-    LocalOperatorController(OperatorAccounts accounts, LocalBootstrapFaults faults) {
+    LocalOperatorController(OperatorAccountService accounts, LocalBootstrapFaults faults) {
         this.accounts = accounts;
         this.faults = faults;
     }

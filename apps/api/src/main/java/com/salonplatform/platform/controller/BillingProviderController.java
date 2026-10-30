@@ -2,7 +2,7 @@ package com.salonplatform.platform.controller;
 
 import com.salonplatform.platform.adapter.BillingProviderKey;
 import com.salonplatform.platform.dto.Acknowledged;
-import com.salonplatform.platform.service.ProviderEvents;
+import com.salonplatform.platform.service.ProviderEventService;
 import com.salonplatform.shared.web.NotFoundException;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
@@ -31,10 +31,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping(path = "/api/v1/billing", produces = MediaType.APPLICATION_JSON_VALUE)
 class BillingProviderController {
 
-    private final ProviderEvents events;
+    private final ProviderEventService events;
     private final String platformDomain;
 
-    BillingProviderController(ProviderEvents events, @Value("${salon.platform-domain}") String platformDomain) {
+    BillingProviderController(ProviderEventService events, @Value("${salon.platform-domain}") String platformDomain) {
         this.events = events;
         this.platformDomain = platformDomain.strip().toLowerCase(Locale.ROOT);
     }

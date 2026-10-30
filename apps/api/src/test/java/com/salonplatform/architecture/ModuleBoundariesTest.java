@@ -165,7 +165,30 @@ class ModuleBoundariesTest {
                         "nestedrecordvisible",
                         rule(ModuleRules::nestedRecordsUsedOnlyByTheirClassArePrivate),
                         "BookBooking$Window"),
-                arguments("implname", rule(ModuleRules::noClassIsNamedImpl), "BookingServiceImpl"),
+                arguments("implname", rule(ModuleRules::onlyImplementationsAreNamedImpl), "BookingServiceImpl"),
+                arguments("implnamemismatch", rule(ModuleRules::onlyImplementationsAreNamedImpl), "SlotsImpl"),
+                arguments(
+                        "servicenotinimpl",
+                        rule(ModuleRules::servicesAreImplementationsOfTheirModulesInterfaces),
+                        "HoldSlots"),
+                arguments(
+                        "servicewithoutinterface",
+                        rule(ModuleRules::servicesAreImplementationsOfTheirModulesInterfaces),
+                        "SlotFinder"),
+                arguments(
+                        "sharedservice",
+                        rule(ModuleRules::servicesAreImplementationsOfTheirModulesInterfaces),
+                        "SystemClockService"),
+                arguments(
+                        "publichelper",
+                        rule(ModuleRules::publicClassesOfImplementationPackagesAreImplementations),
+                        "SlotCalendar"),
+                arguments("transactionalinterface", rule(ModuleRules::noTransactionalOnAnInterface), "BookingService"),
+                arguments("transactionalinterface", rule(ModuleRules::noTransactionalOnAnInterface), "PaymentService"),
+                arguments(
+                        "controllerusesimpl",
+                        rule(ModuleRules::controllersDoNotDependOnImplementations),
+                        "SlotBookingController"),
                 arguments(
                         "misplacedevent",
                         rule(ModuleRules::eventRecordsLiveInTheirModulesRootPackage),
@@ -175,7 +198,8 @@ class ModuleBoundariesTest {
     /**
      * Module verification, shown a tree that breaks it, names the class that breaks it: a cycle between
      * modules, another module's internal package, a sub-package of {@code shared} that is not a named
-     * interface, and a module its user does not declare in {@code allowedDependencies}.
+     * interface, the {@code impl} package beneath a named interface of {@code shared} (a named interface does
+     * not cover its sub-packages), and a module its user does not declare in {@code allowedDependencies}.
      */
     @ParameterizedTest(name = "{0}")
     @MethodSource("moduleViolations")
@@ -194,6 +218,7 @@ class ModuleBoundariesTest {
                 arguments("cycle", "PaymentFacade"),
                 arguments("internals", "PaymentUsesBookingEntity"),
                 arguments("sharedinternals", "BookingUsesSharedInternals"),
+                arguments("sharedimplinternals", "BookingUsesSharedImplementation"),
                 arguments("undeclared", "BookingUsesPayment"));
     }
 

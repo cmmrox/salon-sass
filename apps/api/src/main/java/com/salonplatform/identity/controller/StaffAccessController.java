@@ -17,11 +17,11 @@ import com.salonplatform.identity.dto.StaffView;
 import com.salonplatform.identity.dto.Tokens;
 import com.salonplatform.identity.dto.VerifyRequest;
 import com.salonplatform.identity.mapper.PrincipalResponseMapper;
-import com.salonplatform.identity.service.SessionAccess;
-import com.salonplatform.identity.service.StaffAccounts;
-import com.salonplatform.identity.service.StaffAudit;
-import com.salonplatform.identity.service.StaffMfa;
-import com.salonplatform.identity.service.StaffSignIn;
+import com.salonplatform.identity.service.SessionService;
+import com.salonplatform.identity.service.StaffAccountService;
+import com.salonplatform.identity.service.StaffAuditService;
+import com.salonplatform.identity.service.StaffMfaService;
+import com.salonplatform.identity.service.StaffSignInService;
 import com.salonplatform.shared.web.NotFoundException;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
@@ -39,11 +39,11 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping(path = "/api/v1/identity", produces = MediaType.APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor
 class StaffAccessController {
-    private final StaffSignIn signIn;
-    private final StaffMfa mfa;
-    private final StaffAccounts accounts;
-    private final StaffAudit audit;
-    private final SessionAccess sessions;
+    private final StaffSignInService signIn;
+    private final StaffMfaService mfa;
+    private final StaffAccountService accounts;
+    private final StaffAuditService audit;
+    private final SessionService sessions;
     private final ClientAddressAssertion assertions;
     private final PrincipalResponseMapper principals;
 
@@ -127,7 +127,7 @@ class StaffAccessController {
     ResponseEntity<StaffView> create(@Valid @RequestBody CreateStaffRequest request) {
         return ResponseEntity.status(201)
                 .cacheControl(org.springframework.http.CacheControl.noStore())
-                .body(accounts.create(new StaffAccounts.StaffInput(
+                .body(accounts.create(new StaffAccountService.StaffInput(
                         request.email(),
                         request.mobile(),
                         request.password(),
@@ -138,7 +138,8 @@ class StaffAccessController {
     @PatchMapping(path = "/staff/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
     ResponseEntity<StaffView> change(@PathVariable String id, @Valid @RequestBody ChangeStaffRequest request) {
         return ok(accounts.change(
-                id(id), new StaffAccounts.StaffChange(request.version(), request.role(), request.professionalGrant())));
+                id(id),
+                new StaffAccountService.StaffChange(request.version(), request.role(), request.professionalGrant())));
     }
 
     @DeleteMapping("/staff/{id}")

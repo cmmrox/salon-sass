@@ -1,7 +1,7 @@
 package com.salonplatform.platform.job;
 
-import com.salonplatform.platform.service.SalonDeletion;
-import com.salonplatform.platform.service.SalonExports;
+import com.salonplatform.platform.service.SalonDeletionService;
+import com.salonplatform.platform.service.SalonExportService;
 import com.salonplatform.shared.jobs.PlatformJob;
 import java.time.Duration;
 import java.time.Instant;
@@ -18,12 +18,12 @@ import org.springframework.context.annotation.Configuration;
 class SalonLifecycleJobSchedule {
 
     @Bean
-    PlatformJob salonExportJob(SalonExports exports) {
+    PlatformJob salonExportJob(SalonExportService exports) {
         return job("salon-export", exports::run);
     }
 
     @Bean
-    PlatformJob salonDeletionJob(SalonDeletion deletion) {
+    PlatformJob salonDeletionJob(SalonDeletionService deletion) {
         return job("salon-deletion", deletion::run);
     }
 
