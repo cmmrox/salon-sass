@@ -364,7 +364,7 @@ verification:
       file: qa/api/F01/S01-meta-health-info.spec.ts
       project: api
       covers: [TC-F01-S01-010, TC-F01-S01-011, TC-F01-S01-012, TC-F01-S01-013, TC-F01-S01-014, TC-F01-S01-019, TC-F01-S01-020]
-      suites: []
+      suites: [smoke, regression]
     - id: api-errors
       tool: playwright
       file: qa/api/F01/S01-errors.spec.ts
@@ -376,7 +376,7 @@ verification:
       file: qa/web/F01/S01-status-page.spec.ts
       project: web
       covers: [TC-F01-S01-032, TC-F01-S01-033, TC-F01-S01-034, TC-F01-S01-035, TC-F01-S01-036, TC-F01-S01-037, TC-F01-S01-038, TC-F01-S01-039]
-      suites: []
+      suites: [smoke, regression]
     - id: web-status-page-api-down
       tool: playwright
       file: qa/web/F01/S01-status-page-api-down.spec.ts

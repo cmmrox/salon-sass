@@ -179,16 +179,14 @@ verification:
     - TC-F01-S05-010
     - TC-F01-S05-011
     - TC-F01-S05-012
-    suites:
-    - regression
+    suites: [release]
   - id: deployment-traffic
     tool: script
     file: qa/checks/F01/S05-deployment.sh
     covers:
     - TC-F01-S05-008
     - TC-F01-S05-009
-    suites:
-    - regression
+    suites: [release]
   manual: []
   deferred: []
 evidence:

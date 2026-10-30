@@ -243,8 +243,7 @@ verification:
     file: qa/load/F01/S03-web-rush.js
     covers:
     - TC-F01-S03-007
-    suites:
-    - regression
+    suites: [release]
   - id: styling-setup
     tool: script
     file: qa/checks/F01/S03-styling-setup.sh
