@@ -72,4 +72,31 @@ and deleted.
 
 ## Re-verification
 
-<QA, after a fix.>
+Not verified; status stays `fixed`. This bug's own steps are the load check TC-F01-S05-008/009
+(`qa/checks/F01/S05-deployment.sh`, 50 virtual users). The owner excluded load testing from this re-verification
+(decision 069), so the load re-run on 78860f5 is deferred until the owner asks for it.
+
+What QA re-ran without load on 2026-10-30, on branch `charithm/bugfix/F01-009-rolling-deploy` (fix 78860f5, product
+source 3bafe84; QA head ddc3010). Images: N = 0.1.0-SNAPSHOT and N+1 = qa-f009-n1, both from ddc3010. The stack ran on
+a new, empty volume `salon-stack-qa-f01009` and was seeded. Run folder (local, ignored):
+`qa/reports/20261030-180546-F01-S05-production-like-stack-direct`.
+
+- Changed paths: `infra/stack/compose.yaml`, `infra/stack/edge/Caddyfile*`, `infra/scripts/stack-deploy.sh`,
+  `infra/scripts/lib/stack.sh` and `stack-down.sh`. `qa/checks/F01/S05-stack.sh` exercises them through stack-up,
+  edge routing, isolation, roles, health and the refused deploy. It was run once: TC-F01-S05-001 to -007 and -010 to
+  -012 all passed, 10 of 10, in 23 s. The three salons and the API answered through the edge, unknown hosts got 404,
+  only the edge was published, forged tenant selectors were ignored, and the missing-version deploy changed nothing.
+- One plain `stack-deploy.sh` N -> N+1, then N+1 -> N, with no traffic generator (`bug-f01-009-plain-deploy.log`,
+  and `bug-f01-009-watch.log` with one record a second). Each deploy exited 0 in 140 s: API instances ready in
+  26-27 s, web-surge in 20 s, web instances in 25-27 s. After each deploy, alpha, beta and gamma answered 200 on
+  `/api/v1/salon` and the sign-in page, and `/api/v1/meta` reported the deployed version.
+- web-surge appeared (10.89.43.249) only while web-1 and web-2 were replaced: 18:07:38 to 18:08:55 and 18:09:57 to
+  18:11:15. It was absent before, between and after the deploys, and `docker ps -a` showed no web-surge container
+  after either deploy. Docker's health status showed at least two healthy web instances in every record (2 or 3 of
+  web-1, web-2 and web-surge). The API had one healthy instance while its partner was replaced, as documented.
+- Fixed addresses (`docker inspect`, subnet 10.89.43.0/24): edge .254, api-1 .253, api-2 .252, web-1 .251,
+  web-2 .250, web-surge .249. They were the same before, after both deploys and across every replacement, and the
+  edge's SALON_EDGE_* upstream settings name the same addresses.
+- Not re-run: TC-F01-S05-008 (deploy and rollback under 50 virtual users) and TC-F01-S05-009 (instance loss under
+  traffic). They are the checks this bug is about, and they wait for the owner's request. The edge access log's
+  privacy filter (no headers, client address, query or export token) was not checked by QA.
