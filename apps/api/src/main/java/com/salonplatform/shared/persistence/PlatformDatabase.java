@@ -12,9 +12,11 @@ import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.SmartInitializingSingleton;
 import org.springframework.core.env.Environment;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.jdbc.datasource.ConnectionHolder;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.DefaultTransactionStatus;
 import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -105,6 +107,38 @@ public class PlatformDatabase implements SmartInitializingSingleton, DisposableB
                     throws SQLException {
                 super.prepareTransactionalConnection(connection, definition);
                 limit.applyTo(connection);
+            }
+
+            // The same rule as the tenant transactions (TenantTransactionConfiguration), BUG-F02-015: a
+            // transaction that ends on a connection already given up answers that the database is
+            // unavailable, whatever the work concluded from what it read.
+            @Override
+            protected void doRollback(DefaultTransactionStatus status) {
+                try {
+                    super.doRollback(status);
+                } catch (RuntimeException ex) {
+                    if (!connectionIsGone()) {
+                        throw ex;
+                    }
+                    throw LostConnection.atTransactionEnd(ex);
+                }
+            }
+
+            @Override
+            protected void doCommit(DefaultTransactionStatus status) {
+                try {
+                    super.doCommit(status);
+                } catch (RuntimeException ex) {
+                    if (!connectionIsGone()) {
+                        throw ex;
+                    }
+                    throw LostConnection.atTransactionEnd(ex);
+                }
+            }
+
+            private boolean connectionIsGone() {
+                return TransactionSynchronizationManager.getResource(pool) instanceof ConnectionHolder holder
+                        && LostConnection.isClosed(holder.getConnection());
             }
         };
         manager.afterPropertiesSet();

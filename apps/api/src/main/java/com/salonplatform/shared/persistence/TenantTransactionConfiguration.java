@@ -16,8 +16,8 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 
 /**
  * The application's transaction manager: Spring Boot's own JPA transaction manager, except that every
- * transaction starts through {@link TenantJpaDialect}, and that a rollback on a connection that is
- * already gone does not hide why the work failed.
+ * transaction starts through {@link TenantJpaDialect}, and that a transaction ending on a connection
+ * that is already gone does not hide that the database is unavailable.
  */
 @Configuration(proxyBeanMethods = false)
 class TenantTransactionConfiguration {
@@ -52,12 +52,28 @@ class TenantTransactionConfiguration {
         }
 
         /**
-         * When work fails because the database went silent, the driver gives the connection up, and
-         * the rollback that follows fails too: there is no connection left to roll back on. The
-         * database discards the transaction with the connection, so nothing is left undone, and the
-         * failure worth reporting is the first one. Only that case is let pass; a rollback that
-         * fails on a connection that is still open is reported as it always was.
+         * A transaction that ends on a connection the driver gave up (the database went silent or away
+         * while the work held it) answers that the database is unavailable, whatever the work concluded
+         * (BUG-F02-015). Nothing it read can be trusted: Hibernate's {@code find} answers "no such row"
+         * for a lost connection once the transaction is marked rollback-only (HHH-12472), so a lookup
+         * reads as not found and the work may answer 401 or 404, or even finish normally. Its commit or
+         * rollback then fails too, and says nothing of why. The database discards the transaction with
+         * the connection, so nothing is left undone. A commit or rollback that fails on a connection
+         * still open is reported as it always was.
          */
+        @Override
+        protected void doCommit(DefaultTransactionStatus status) {
+            try {
+                super.doCommit(status);
+            } catch (RuntimeException ex) {
+                if (!connectionIsGone()) {
+                    throw ex;
+                }
+                throw LostConnection.atTransactionEnd(ex);
+            }
+        }
+
+        /** The same as {@link #doCommit}: on a connection already gone, the database is unavailable. */
         @Override
         protected void doRollback(DefaultTransactionStatus status) {
             try {
@@ -66,7 +82,7 @@ class TenantTransactionConfiguration {
                 if (!connectionIsGone()) {
                     throw ex;
                 }
-                logger.debug("Nothing to roll back: the connection is already closed");
+                throw LostConnection.atTransactionEnd(ex);
             }
         }
 
