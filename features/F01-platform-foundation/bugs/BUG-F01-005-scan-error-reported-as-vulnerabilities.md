@@ -2,13 +2,13 @@
 id: BUG-F01-005
 title: images-scan.sh reports a scanner failure as fixable critical or high vulnerabilities
 severity: minor
-status: open
+status: fixed
 found_by: TC-F01-S05-002
 breaks: AC-2
 found_on: 2026-10-17
-fixed_in: null
-fix_note: null
-developer_note: null
+fixed_in: 1fc9f2a
+fix_note: "images-scan.sh gives Trivy's findings an exit code of their own (3, as Trivy uses 1 for fatal errors), so a scan that could not complete is reported as such (exit 2, naming the image and the scanner's message) and never as vulnerabilities (exit 1)."
+developer_note: "infra/scripts/test-images-scan.sh (stub Docker playing Trivy) failed 4 of 10 checks on 4ad5e9b and passes 10 of 10 on 1fc9f2a. Real Trivy 0.75.0 on 1fc9f2a: salon-api and salon-web images exit 0 (clean); alpine:3.18.0 exit 1 naming 7 CVEs and \"vulnerabilities with a fix\" (unchanged for TC-F01-S05-002); Trivy killed mid-scan exit 2 with \"the scan of salon-web:f009-next could not complete (scanner exit 137)\" and no vulnerability claim. Trivy's own FATAL deadline error was not reproduced live; the stub replays its message."
 verified_on: null
 approved_by: null
 found_in_release: null
