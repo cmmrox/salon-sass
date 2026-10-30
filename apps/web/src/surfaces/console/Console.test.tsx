@@ -1,9 +1,9 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import type { AnchorHTMLAttributes } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { renderWithMessages } from '@/test/render';
-import { expectListOfItems } from '@/test/list';
-import { chooseOption } from '@/test/select';
+import { renderWithMessages } from '@test/render';
+import { expectListOfItems } from '@test/list';
+import { chooseOption } from '@test/select';
 import { ConsoleShell } from './ConsoleShell';
 import { ConsoleSignIn } from './ConsoleSignIn';
 import { PlanDetail, PlanDirectory } from '@/features/platform/components/PlanScreens';

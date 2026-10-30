@@ -1,6 +1,6 @@
 import { fireEvent, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { renderWithMessages } from '@/test/render';
+import { renderWithMessages } from '@test/render';
 import { ConsoleUnavailable } from './ConsolePending';
 
 const refresh = vi.fn();

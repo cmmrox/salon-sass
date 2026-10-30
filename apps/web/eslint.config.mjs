@@ -13,7 +13,7 @@ const eslintConfig = defineConfig([
   globalIgnores(['.next/**', 'out/**', 'build/**', 'coverage/**', 'next-env.d.ts']),
   {
     files: ['src/**/*.{ts,tsx}'],
-    ignores: ['src/**/*.test.{ts,tsx}', 'src/test/**'],
+    ignores: ['src/**/*.test.{ts,tsx}'],
     rules: {
       // Every string a person sees comes from the translation files (docs/engineering/web.md).
       'react/jsx-no-literals': ['error', { noStrings: true, ignoreProps: true }],

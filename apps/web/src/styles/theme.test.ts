@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { declarations, globalSheet, tailwindNames, themeSheet, themeValue } from '@/test/theme';
+import { declarations, globalSheet, tailwindNames, themeSheet, themeValue } from '@test/theme';
 
 /** CR-013 and CR-016: one salon theme, the prototype's final tokens under shadcn/ui's names, with
  * the salon's brand as the accent. */

@@ -1,6 +1,6 @@
 import { screen, waitFor } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
-import { renderWithMessages } from '@/test/render';
+import { renderWithMessages } from '@test/render';
 import { AccountScreen } from './AccountScreen';
 
 const navigation = vi.hoisted(() => ({ replace: vi.fn(), refresh: vi.fn() }));

@@ -6,8 +6,8 @@ import { Field, FieldDescription, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Item, ItemContent, ItemDescription, ItemGroup, ItemTitle } from '@/components/ui/item';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { renderWithMessages } from '@/test/render';
-import { themeValue, utilityColour } from '@/test/theme';
+import { renderWithMessages } from '@test/render';
+import { themeValue, utilityColour } from '@test/theme';
 import { contrastRatio } from '@/styles/brand';
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ replace: vi.fn(), refresh: vi.fn() }) }));

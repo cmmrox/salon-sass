@@ -1,6 +1,6 @@
 import { screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { renderWithMessages } from '@/test/render';
+import { renderWithMessages } from '@test/render';
 import { brandRootRule } from '@/styles/brand';
 import { AccountFrame } from './AccountFrame';
 const salon = { slug: 'beta', name: 'Beta Hair, Beauty & Wellness Lounge of Colombo Seven', brandColour: '#1F2937', timeZone: 'Asia/Colombo' };

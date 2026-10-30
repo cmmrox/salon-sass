@@ -2,8 +2,8 @@ import { screen } from '@testing-library/react';
 import { expect, it } from 'vitest';
 import { StatusBody } from './Status';
 import { Alert } from '@/components/ui/alert';
-import { renderWithMessages } from '@/test/render';
-import { themeValue, utilityColour } from '@/test/theme';
+import { renderWithMessages } from '@test/render';
+import { themeValue, utilityColour } from '@test/theme';
 import { contrastRatio } from '@/styles/brand';
 
 // BUG-F01-003: the reference's positive text is not AA on its surface, so normal-size success text

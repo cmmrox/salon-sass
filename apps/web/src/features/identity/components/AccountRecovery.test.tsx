@@ -1,8 +1,8 @@
 import { act, cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import type { Principal } from '@/features/identity/server/identity-web';
-import { messages, renderWithMessages } from '@/test/render';
-import { chooseOption } from '@/test/select';
+import { messages, renderWithMessages } from '@test/render';
+import { chooseOption } from '@test/select';
 import { AccountScreen } from './AccountScreen';
 
 const navigation = vi.hoisted(() => ({ replace: vi.fn(), refresh: vi.fn() }));

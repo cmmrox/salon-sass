@@ -1,8 +1,8 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import type { AnchorHTMLAttributes } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { renderWithMessages } from '@/test/render';
-import { chooseOption } from '@/test/select';
+import { renderWithMessages } from '@test/render';
+import { chooseOption } from '@test/select';
 import { InvoiceList, SubscriptionCard } from './BillingScreens';
 
 const replace = vi.fn();

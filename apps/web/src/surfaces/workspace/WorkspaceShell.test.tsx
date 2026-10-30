@@ -1,8 +1,8 @@
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import type { AnchorHTMLAttributes } from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import { messages, renderWithMessages } from '@/test/render';
-import { setViewportWidth } from '@/test/viewport';
+import { messages, renderWithMessages } from '@test/render';
+import { setViewportWidth } from '@test/viewport';
 import { WorkspaceShell } from './WorkspaceShell';
 
 // A route choice is a click on next/link; here it only runs the shell's own handler.

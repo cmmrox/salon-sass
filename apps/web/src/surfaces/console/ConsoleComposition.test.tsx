@@ -1,8 +1,8 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import type { AnchorHTMLAttributes } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { renderWithMessages } from '@/test/render';
-import { setViewportWidth } from '@/test/viewport';
+import { renderWithMessages } from '@test/render';
+import { setViewportWidth } from '@test/viewport';
 import { ConsoleShell } from './ConsoleShell';
 import { ConsoleSignIn } from './ConsoleSignIn';
 import { PlanDirectory } from '@/features/platform/components/PlanScreens';

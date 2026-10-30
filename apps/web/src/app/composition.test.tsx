@@ -8,8 +8,8 @@ import { Notice } from '@/components/shared/Notice';
 import { AppShell } from '@/components/shared/AppShell';
 import { WorkspaceShell } from '@/surfaces/workspace/WorkspaceShell';
 import { StatusBody, StatusPanel } from '@/components/shared/Status';
-import { renderWithMessages } from '@/test/render';
-import { setViewportWidth } from '@/test/viewport';
+import { renderWithMessages } from '@test/render';
+import { setViewportWidth } from '@test/viewport';
 
 /**
  * docs/engineering/web.md, "Styling", rules 1 and 10 (CR-016, CR-017): every product component

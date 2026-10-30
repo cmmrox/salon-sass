@@ -1,6 +1,6 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
-import { renderWithMessages } from '@/test/render';
+import { renderWithMessages } from '@test/render';
 import type { Principal } from '@/features/identity/server/identity-web';
 import { AccountScreen } from '@/features/identity/components/AccountScreen';
 import { Confirmation } from '@/features/identity/components/Confirmation';

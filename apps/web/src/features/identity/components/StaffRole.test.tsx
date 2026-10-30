@@ -1,7 +1,7 @@
 import { screen, waitFor } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
-import { messages, renderWithMessages } from '@/test/render';
-import { chooseOption } from '@/test/select';
+import { messages, renderWithMessages } from '@test/render';
+import { chooseOption } from '@test/select';
 import { AccountScreen } from './AccountScreen';
 vi.mock('next/navigation', () => ({ useRouter: () => ({ replace: vi.fn(), refresh: vi.fn() }) }));
 afterEach(() => vi.unstubAllGlobals());

@@ -1,10 +1,10 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { renderWithMessages } from '@/test/render';
+import { renderWithMessages } from '@test/render';
 import type { Principal } from '@/features/identity/server/identity-web';
 import { AccountScreen } from './AccountScreen';
-import { messages } from '@/test/render';
-import { chooseOption } from '@/test/select';
+import { messages } from '@test/render';
+import { chooseOption } from '@test/select';
 import { Check, ChoiceField, CodeField, PasswordField, TextField } from './Controls';
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ replace: vi.fn(), refresh: vi.fn() }) }));

@@ -2,7 +2,7 @@ import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import type { AnchorHTMLAttributes } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Principal } from '@/features/identity/server/identity-web';
-import { renderWithMessages } from '@/test/render';
+import { renderWithMessages } from '@test/render';
 import { formatDate } from '@/lib/format';
 import { WorkspaceShell } from './WorkspaceShell';
 import { AccountScreen } from '@/features/identity/components/AccountScreen';

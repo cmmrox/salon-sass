@@ -1,7 +1,7 @@
 import { screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
-import { messages, renderWithMessages } from '@/test/render';
+import { messages, renderWithMessages } from '@test/render';
 
 import { StatusBody, StatusPanel } from './Status';
 

@@ -4,7 +4,7 @@ import { expect, it } from 'vitest';
 import { Notice } from './Notice';
 import { AppShell } from './AppShell';
 import { StatusBody, StatusPanel } from './Status';
-import { renderWithMessages } from '@/test/render';
+import { renderWithMessages } from '@test/render';
 
 import { plainPageHtml, type PlainPage } from '@/lib/plain-page/plain-page';
 

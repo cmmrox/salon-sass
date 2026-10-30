@@ -33,11 +33,11 @@ function rawStyleSheets(): Plugin {
 
 export default defineConfig({
   plugins: [rawStyleSheets(), react()],
-  // The `@/` alias, from tsconfig.json.
+  // The `@/` and `@test/` aliases, from tsconfig.json.
   resolve: { tsconfigPaths: true },
   test: {
     environment: 'jsdom',
     include: ['src/**/*.test.{ts,tsx}'],
-    setupFiles: ['./src/test/setup.ts'],
+    setupFiles: ['./test/setup.ts'],
   },
 });

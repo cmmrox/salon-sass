@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 /** The theme's sources, for tests that check its values (docs/engineering/web.md, "Styling"). */
-const source = join(__dirname, '..');
+const source = join(__dirname, '..', 'src');
 export const themeSheet = readFileSync(join(source, 'styles', 'theme.css'), 'utf8');
 export const globalSheet = readFileSync(join(source, 'app', 'globals.css'), 'utf8');
 
