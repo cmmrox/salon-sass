@@ -29,7 +29,7 @@ message or customer-cookie work. Existing direct customer Java APIs remain mobil
 - The API is reached at its one configured address, `SALON_API_BASE_URL`, never at an address taken
   from the request. The salon is named to it by the `Host` header of that request,
   `<slug>.<platform domain>`, sent through a fetch built on `node:http`
-  (`src/lib/api-core/forward-hostname.ts`; `src/lib/api/` until F23-S06 moves it), because Node's `fetch` drops a `Host` header.
+  (`src/lib/api-core/forward-hostname.ts`), because Node's `fetch` drops a `Host` header.
 - **Status codes (decision 028).** The proxy answers "salon not found" (404), "temporarily
   unavailable" (503, a suspended salon, on every path of its hostname) and "service unavailable"
   (503, the API cannot be reached within three seconds, or `SALON_PLATFORM_DOMAIN` is unset) itself,
@@ -50,25 +50,44 @@ The web app is organised by the same business modules as the API (CR-021, delive
 apps/web/src/
   app/                    routing only: route groups (workspace), (console), (platform); pages,
                           layouts and thin route handlers (the BFF) that delegate to a feature
-  surfaces/<surface>/     workspace, console, platform: shells, navigation and screens that compose features
+    _proxy/               the proxy's routing (it composes several modules, so it is not in lib/)
+  surfaces/<surface>/     workspace, console: shells, navigation and screens that compose features.
+                          The platform host's two pages compose shared parts directly, so there is
+                          no surfaces/platform
   features/<module>/      one folder per API module that the web uses (identity, platform, branding,
                           catalogue, staff, booking, payment, notification, customer, reporting)
     server/               'server-only' calls to that module's API through the generated client; returns what the UI needs
+    client/               the browser side of that module's BFF session (requests, cross-tab lock, failures)
     components/           that module's product components, built from components/ui and Tailwind
     hooks/  schemas/      client hooks; zod schemas for convenience validation
+    types.ts              types shared by the module's server and client code
+    index.ts  server.ts   the client-safe entry and the server entry; nothing else is imported from outside
   components/ui/          shadcn/ui (unchanged)
-  components/shared/      product components used by several features (notices, status)
+  components/shared/      product components used by several features or both surfaces: AppShell,
+                          BrandStyle, Navigation, Notice, Status, LiveStatus
   lib/                    cross-cutting only, no business module: tenancy, http, observability,
                           plain-page, api-core, utils
   hooks/  i18n/  styles/
+apps/web/test/            test helpers, imported as @test/*
 ```
+
+`src/proxy.ts` and `src/instrumentation.ts` are framework entry files outside every element.
 
 - Imports point one way: `app` -> `surfaces` -> `features` -> `components`, `lib`. A feature never
   imports another feature; the surface composes them. A surface never imports another surface.
-  `eslint-plugin-boundaries` enforces both, and lint fails on a violation.
-- Each feature exposes a client-safe `index.ts` and a server entry `server.ts`; code under
-  `features/*/server/` starts with `import 'server-only'`. No deep import into another folder's
-  internals.
+  `eslint-plugin-boundaries` enforces both, and lint fails on a violation; its element types are
+  `app`, `surface`, `feature`, `shared-component`, `ui`, `lib` (which also covers `hooks`, `i18n`
+  and `styles`) and `test-support`, and the rules apply to tests too.
+- When one feature needs another's data, it declares a small interface (a port) and the route that
+  composes them passes the other feature's implementation in. The workspace BFF reaches platform's
+  entitlements, invoices and support sessions this way (`SalonAccount`, wired in the `identity-web`
+  route).
+- Each feature exposes a client-safe `index.ts` and a server entry `server.ts`; a surface exposes
+  `index.ts`. Code under `features/*/server/` and every `server.ts` starts with
+  `import 'server-only'`. No deep import into another folder's internals. A lint rule refuses the
+  contracts package root, another module's client, a client outside server code and the shared
+  module's client outside `lib/api-core`; `src/app/module-boundaries.test.ts` proves each rule
+  fails on a fixture.
 - Route groups per surface: `(workspace)`, `(console)`; legacy route aliases contain no customer UI.
 - Pages and layouts compose; they do not hold business rules. Data access goes through the
   generated client in `packages/api-contracts`, imported per module (`@salon/api-contracts/<module>`),
@@ -281,9 +300,10 @@ because the owner set one standard for all Next.js work in this product.
     any hand-written style sheet other than `globals.css` and `theme.css`, any style sheet import
     outside the root layout and the generated plain-page CSS, an arbitrary colour in a class name,
     or a colour value (hex, `rgb()`, `hsl()`, `oklch()`, `color-mix()` and the like) in any `.tsx`
-    file or any code under `src/components` and `src/app`. `src/styles/brand.ts`, which computes
+    file or any code under `src/components`, `src/surfaces`, `src/features` and `src/app`. `src/styles/brand.ts`, which computes
     brand colours, is the one code file that holds colour values. A composition test enforces rule 1
-    across every product component under `src/components` and `src/app`: no raw `button`, `input`,
+    across every product component under `src/components`, `src/surfaces`, `src/features` and
+    `src/app`: no raw `button`, `input`,
     `select`, `textarea`, `table` or `dialog` element, no import of Native Select, and the
     expected shadcn/ui `data-slot`s rendered on each screen. Fix the code, never the test.
 11. The confirmation overlay is the shadcn/ui Sheet, a bottom sheet on phones (capped by
@@ -311,8 +331,8 @@ because the owner set one standard for all Next.js work in this product.
   root: ink `#111827` as `--color-brand`, white as `--color-on-brand`, `#EAE5DC` as
   `--color-brand-soft` and ink as `--color-brand-text`, from named constants beside the brand rule
   in `src/styles/brand.ts` (decision 047). The operator console (F03) does this in its layout.
-- Entry decides on the server, in the proxy (`src/lib/tenancy/route-request.ts`,
-  `src/lib/identity/entry.ts`), with real HTTP 307s: a page's own `redirect()` streams as a client
+- Entry decides on the server, in the proxy (`src/app/_proxy/route-request.ts`,
+  `src/features/identity/server/entry.ts`), with real HTTP 307s: a page's own `redirect()` streams as a client
   meta redirect after a shell is painted, under `cacheComponents`. `/workspace` decides on the
   presence of the session cookies, with no API call; a protected workspace page costs one
   `/identity/me` call from the proxy, inside the same three-second budget, and the page checks the

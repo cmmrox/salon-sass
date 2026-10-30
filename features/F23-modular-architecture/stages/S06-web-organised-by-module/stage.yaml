@@ -3,7 +3,7 @@ feature: F23
 title: Web app organised by module
 sequence: 8
 surfaces: [web]
-status: built
+status: complete
 qa_status: not-run
 blocked_reason: null
 released_in: null

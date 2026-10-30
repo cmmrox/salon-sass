@@ -99,7 +99,9 @@ Each criterion is one observable outcome that a test can pass or fail.
 - AC-6: Nothing visible or routable changes: every existing web test passes with unchanged
   assertions; for the operator console and a salon workspace (sign-in, account, staff, activity,
   billing, support, console salons, plans, invoices), the rendered HTML of each page before and
-  after the stage differs only in build-specific asset names; the BFF paths answer as before. (NFR-18)
+  after the stage differs only in build-specific asset names (and, clarified by the lead at
+  stage-close under decision 065, in the order of class tokens inside one `class` attribute, which
+  the required class-sorting plugin sets); the BFF paths answer as before. (NFR-18)
 - AC-7: `@salon/format` is used by the web, its tests pass, and no formatting code remains in
   `apps/web/src`. (NFR-24)
 
