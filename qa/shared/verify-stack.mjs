@@ -44,7 +44,8 @@ await one('TC-F01-S05-002','image scanner passes clean images and refuses a fixa
 });
 await one('TC-F01-S05-003','HTTP hostname routing preserves salon and neutral hosts',()=>{
   for(const s of salons){const entry=curl(s.slug,'/');assert.equal(entry.status,307);const location=(entry.headers.match(/^location: (\S+)\r?$/im)||[])[1];assert([url(s.slug,'/workspace'),'/workspace'].includes(location),`${s.slug}: same-host workspace entry, got ${location}`);assert.match(entry.headers,/^cache-control: .*no-store/im);const r=curl(s.slug,ENTRY);assert.equal(r.status,200);assert(r.body.includes(s.name.replaceAll('&','&amp;')));const api=curl(s.slug,'/api/v1/salon');assert.equal(api.status,200);assert.deepEqual(JSON.parse(api.body),{slug:s.slug,name:s.name,brandColour:s.brandColour,timeZone:s.timeZone});}
-  for(const slug of ['','unknown','console']){const r=curl(slug);assert.equal(r.status,slug?404:200);}
+  // Since F03, console.<domain> is the operator console (its routing is F03's cases), not a neutral host.
+  for(const slug of ['','unknown']){const r=curl(slug);assert.equal(r.status,slug?404:200);}
 });
 await one('TC-F01-S05-004','a new salon is served over HTTP immediately without a restart',()=>{
   const slug=`qa-${Date.now().toString(36)}`;const before=run('docker',['inspect','--format','{{.Id}} {{.State.StartedAt}}','salon-stack-edge']);script('stack-seed',['add',slug,'QA New Salon','#2563EB']);const r=curl(slug,ENTRY);assert.equal(r.status,200);assert(r.body.includes('QA New Salon'));assert.equal(JSON.parse(curl(slug,'/api/v1/salon').body).slug,slug);assert.equal(run('docker',['inspect','--format','{{.Id}} {{.State.StartedAt}}','salon-stack-edge']),before);
