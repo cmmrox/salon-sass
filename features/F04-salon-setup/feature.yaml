@@ -6,7 +6,7 @@ milestone: M1-web
 status: backlog
 qa_status: not-run
 released_in: null
-depends_on: [F02, F23]
+depends_on: [F02]
 surfaces: [api, web]
 requirements: [BRD-01, BRD-02, BRD-04, STF-04, BKG-02, BKG-09]
 nfr_focus: [NFR-13]

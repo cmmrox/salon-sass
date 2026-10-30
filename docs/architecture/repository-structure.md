@@ -9,7 +9,7 @@
 | `apps/web/scripts/` | The local custom server (`serve.mjs`); local startup is described in `docs/operations/environments-and-releases.md` | Developer |
 | `apps/mobile` | The customer app: one Expo codebase for the shared container app and a dedicated app per salon. Created in milestone `M2-mobile` | Developer |
 | `packages/api-contracts` | The TypeScript client generated from the API's OpenAPI document, exported per API module (`@salon/api-contracts/<module>`), used by the web app and the customer app | Developer (generated) |
-| `packages/format` | Formatting of money, dates and phone numbers, shared by the web app and the customer app (CR-021, created by F23-S06). Further shared packages (`tokens`, `i18n`, `schemas`) are added with `M2-mobile` | Developer |
+| `packages/format` | Formatting of money, dates and phone numbers, shared by the web app and the customer app (CR-021). Further shared packages (`tokens`, `i18n`, `schemas`) are added with `M2-mobile` | Developer |
 | `infra/` | Docker Compose for the local environment, its scripts, and `infra/postgres/` (the application role's definition) | Developer |
 | `.github/` | Continuous integration | Developer |
 | `package.json`, `pnpm-workspace.yaml`, `pnpm-lock.yaml`, `.nvmrc`, `.sdkmanrc`, `.editorconfig`, `.env.example` | The workspace, the pinned tool versions and the settings of the local environment | Developer |

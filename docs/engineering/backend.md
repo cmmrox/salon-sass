@@ -97,8 +97,10 @@ the module has something to put in it.
   controller/        REST controllers; thin
   dto/               this module's request and response records (never used by another module)
   mapper/            MapStruct response mappers on ResponseMapperConfig
-  service/           use cases: one public method per thing a user can do; transactions start here;
-                     the implementations of the API interfaces, named for what they are (no Impl)
+  service/           the service interfaces (FooService): one method per thing a user can do,
+                     taking and returning records and ids, never entities
+    impl/            their implementations (FooServiceImpl, @Service), and the implementations of
+                     the module's root API interfaces; transactions start here
   entity/            JPA entities, with their behaviour
   domain/            pure business rules and value objects: no Spring, no JPA, no HTTP
   repository/        Spring Data repositories and the named direct-SQL exceptions: the only folder
@@ -112,7 +114,25 @@ the module has something to put in it.
 
 Every sub-folder is internal to the module: Spring Modulith fails the build if another module uses
 anything but the root package or a declared named interface. Controllers are thin: validate, call
-one service, map the result. Business rules live in `entity`, `domain` and `service`, never in a
+one service, map the result.
+
+**Services are an interface first, then its implementation** (the owner's rule, decision 067):
+
+- Each business service is an interface `service/FooService` with its implementation
+  `service/impl/FooServiceImpl`. Write the interface first: its methods are the use cases, in the
+  business's words, with records, ids and DTOs in their signatures, never an entity or a repository
+  type.
+- `@Service` and `@Transactional` go on the implementation (`readOnly = true` for reads), never on
+  the interface. Dependencies come through the constructor (`@RequiredArgsConstructor`).
+- Controllers, jobs, listeners and other services inject the interface, never an `Impl` class.
+- The module's root API interfaces (what other modules call) are implemented in `service/impl/`
+  too, named `<Interface>Impl`. Another module only ever sees the root interface.
+- Helpers that are not services (calculators, validators, policies, a store's row records) are not
+  `Impl` classes and get no interface: they live in `domain/` when pure, or stay package-private
+  beside the service that uses them.
+- An external provider with several adapters (SMS, email, payment) is an interface in the module
+  with one class per adapter in `adapter/` (and `local/` for the local fake), named for the
+  provider, not `Impl`. Business rules live in `entity`, `domain` and `service`, never in a
 controller, a repository or a mapper. Classes in the root are interfaces, records, enums and
 exceptions only; a class elsewhere is package-private when nothing outside its folder needs it.
 The records a controller reads as a request body or returns as a response, at any depth of the
@@ -122,8 +142,11 @@ class uses it, otherwise visible within its module (a store's row read by servic
 input built by its controller), and never used by another module except through a named interface. `shared`'s local test hooks keep
 their records in `shared/local/dto/`. The cases of a sealed result type count as one contract, and a
 record declared inside a method is outside these rules. An architecture test refuses any other sub-folder name in a business module, a
-mapper outside `mapper/`, a controller outside `controller/` or `local/`, and a class named `*Impl`
-other than the Spring Data fragment `NewEntitiesImpl` and MapStruct's generated mappers. Moving a
+mapper outside `mapper/`, a controller outside `controller/` or `local/`, an `@Service` class that
+is not in `service/impl/` or does not implement an interface of its module, a class in
+`service/impl/` that is not an implementation, `@Transactional` on an interface, a controller that
+depends on an implementation class, and a class named `*Impl` outside `service/impl/` (except the
+Spring Data fragment `NewEntitiesImpl` and MapStruct's generated mappers). Moving a
 class changes its logger name, which is its package.
 
 ## Provided interfaces
@@ -165,7 +188,7 @@ signature:
 - Use an event when another module reacts to a change (booking confirmed: send confirmations, update
   reports). Use a provided interface when the caller needs an answer now (availability needs staff
   hours and service durations).
-- **How it is built** (F23-S05): an event record carries `@EventType("<module>.<Name>.v<n>")` and is
+- **How it is built:** an event record carries `@EventType("<module>.<Name>.v<n>")` and is
   published with `Outbox.publish`, which joins the caller's writable tenant transaction and stores
   the row with kind `event`, the reserved channel `event`, the type name, the JSON payload (strict
   reading: an unknown or missing field is refused), the salon and the trace. A subscriber implements
@@ -270,7 +293,7 @@ issues no extra select). An entity with an assigned id and no `@Version` is crea
 repository fragment `shared.persistence.NewEntities` (`persist`, always an insert), because
 `save()` would merge it: an extra select and a different instance than the one the caller keeps
 changing. Its implementation is named `NewEntitiesImpl` because Spring Data finds fragment
-implementations by that suffix; it is the one `Impl` name allowed. Lists read through JPQL or
+implementations by that suffix; it is the one `Impl` name outside `service/impl/`. Lists read through JPQL or
 record projections, paginated.
 
 Direct SQL through `JdbcClient` is allowed only for these named exceptions, each in
@@ -337,8 +360,8 @@ The owner's standard (CR-021): code a person can read without its author. These 
 change, and a stage leaves the code it touches meeting them.
 
 - **Names** use the business's words from `docs/architecture/glossary.md` and say what a thing is
-  or does. No abbreviations, no `Manager`, `Helper`, `Util` or `Impl`-only names; an implementation
-  of a provided interface is named for what it is (`BookingQueriesService`).
+  or does. No abbreviations, no `Manager`, `Helper` or `Util` names; a service implementation is
+  its interface's name plus `Impl` (`BookingServiceImpl`), and nothing else is named `Impl`.
 - **Small units.** A use-case class serves one capability; a class that grows past about 400 lines,
   or a method past about 40, is split along the business's seams unless the reason it is not is
   written beside it. A long parameter list becomes a record.

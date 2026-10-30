@@ -30,14 +30,6 @@ asked for; the cases of a stage are written at its feature's pass.
 | F03-S02 | complete | - | PLT-04, PLT-05 | 16 | 28 | 28 | 0 | 0 |
 | F03-S03 | complete | - | PLT-06 | 12 | 17 | 17 | 0 | 0 |
 | F03-S04 | complete | - | PLT-07, NFR-20 | 10 | 17 | 17 | 0 | 0 |
-| F23-S01 | complete | - | NFR-22, NFR-23, NFR-04 | 8 | 0 | 0 | 0 | 0 |
-| F23-S02 | complete | - | NFR-22, NFR-01, NFR-04 | 9 | 0 | 0 | 0 | 0 |
-| F23-S03 | complete | - | NFR-23, NFR-01 | 8 | 0 | 0 | 0 | 0 |
-| F23-S04 | complete | - | NFR-22, NFR-18 | 8 | 0 | 0 | 0 | 0 |
-| F23-S05 | complete | - | NFR-22, NFR-01, NFR-04 | 8 | 0 | 0 | 0 | 0 |
-| F23-S06 | complete | - | NFR-24, NFR-18 | 7 | 0 | 0 | 0 | 0 |
-| F23-S07 | complete | - | NFR-23, NFR-22 | 6 | 0 | 0 | 0 | 0 |
-| F23-S08 | complete | - | NFR-23, NFR-22 | 4 | 0 | 0 | 0 | 0 |
 
 ## Deferred cases
 

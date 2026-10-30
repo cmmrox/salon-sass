@@ -6,8 +6,8 @@ requested_by: owner
 requested_on: 2026-10-29
 decided_on: 2026-10-29
 requirements: [NFR-22, NFR-23, NFR-24]
-features: [F23, F04]
-stages: [F23-S01, F23-S02, F23-S03, F23-S04, F23-S05, F23-S06]
+features: [F04]
+stages: []
 ---
 
 # CR-021 Modular, extractable architecture and code conventions
@@ -124,6 +124,10 @@ notification) is still empty, so this is the cheapest moment to set the conventi
 built with.
 
 ## Decision
+
+> **Decision 066 (2026-10-30):** the owner ruled that architecture work is not a feature. What this
+> request approved was delivered as one refactor branch (planned as "F23" and its stages, a
+> numbering that survives only in commit messages), recorded here and in the decision log.
 
 Approved by the owner on 2026-10-29 ("ok proceed"), with the lead's recommended answers to the three
 open questions: a separate feature before F04; custom domains designed now and built later; module

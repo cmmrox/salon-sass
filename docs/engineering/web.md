@@ -44,7 +44,7 @@ message or customer-cookie work. Existing direct customer Java APIs remain mobil
 
 ## Structure
 
-The web app is organised by the same business modules as the API (CR-021, delivered by F23-S06):
+The web app is organised by the same business modules as the API (CR-021):
 
 ```
 apps/web/src/

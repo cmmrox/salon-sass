@@ -10,7 +10,7 @@ order and is edited by the lead when the owner changes it.
 
 | Milestone | What is delivered | Features | Starts when |
 | --- | --- | --- | --- |
-| `M1-web` | The operator console and each salon's owner/admin/staff workspace; no customer web surface | F01 to F14, and F23 (delivered between F03 and F04) | Now |
+| `M1-web` | The operator console and each salon's owner/admin/staff workspace; no customer web surface | F01 to F14 | Now |
 | `M2-mobile` | The customer mobile app, and a dedicated store app per salon | F15, F16 | Every `M1-web` feature is released |
 | `M3-growth` | Service customisation, multi-branch operations, Bridal/occasion workflows and expanded commerce | F17 to F21 | Every R1 feature is released |
 | `M4-assistance` | Guided customer and staff AI assistants with human handoff | F22 | Every `M3-growth` feature is released |
@@ -33,7 +33,6 @@ Delivered in this order. Each feature depends on the ones before it that it name
 | F01 Platform foundation and tenant isolation | One deployment, isolated salons, a web address per salon, the shared services |
 | F02 Sign-in, accounts and roles | Staff sign-in, roles, sessions, audit trail; retained customer API foundations only |
 | F03 Operator console | Creating, billing, suspending and supporting salons |
-| F23 Modular, extractable architecture | Provided interfaces, events and ownership per module, one persistence and code-generation convention, clean-code rules, and the web organised by module (CR-021). Started early on the owner's instruction; F04 depends on it |
 | F04 Salon setup | Profile, branding, hours, holidays, policies |
 | F05 Service catalogue | Services, categories, variants, prices, tax |
 | F06 Staff, schedules and leave | Professionals, working hours, leave, blocked time |

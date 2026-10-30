@@ -6,8 +6,8 @@ requested_by: owner
 requested_on: 2026-10-30
 decided_on: 2026-10-30
 requirements: [NFR-23]
-features: [F23]
-stages: [F23-S07, F23-S08, F23-S06]
+features: []
+stages: []
 ---
 
 # CR-022 Module internal layout with conventional Spring folders
@@ -41,6 +41,10 @@ and extraction trade-offs, including a measurement of both local projects.
   the boundary, and `Impl` names are widely disliked.
 
 ## Decision
+
+> **Decision 066 (2026-10-30):** the owner ruled that architecture work is not a feature. What this
+> request approved was delivered as one refactor branch (planned as "F23" and its stages, a
+> numbering that survives only in commit messages), recorded here and in the decision log.
 
 Approved by the owner on 2026-10-30, with the lead's recommendations:
 
