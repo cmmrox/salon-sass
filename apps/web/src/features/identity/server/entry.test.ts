@@ -2,7 +2,6 @@
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createServerApiClient } from '@/lib/api-core/client';
 import { contextFromTraceparent, runInRequest } from '@/lib/observability/request-context';
 import { hasCredentials, workspaceEntry } from './entry';
 
@@ -22,7 +21,7 @@ beforeEach(async () => {
 afterEach(async () => { server.closeAllConnections(); await new Promise<void>((r) => server.close(() => r())); vi.unstubAllEnvs(); });
 function decide(credentials: Parameters<typeof workspaceEntry>[1], deadline = performance.now() + 3000) {
   const context = { ...contextFromTraceparent(undefined), clientAddress: '127.0.0.1', deadline };
-  return runInRequest(context, () => workspaceEntry('staff', credentials, createServerApiClient({ hostname: 'alpha.localhost' })));
+  return runInRequest(context, () => workspaceEntry('staff', credentials, 'alpha.localhost'));
 }
 const paths = () => calls.map((call) => call.path);
 
@@ -74,6 +73,7 @@ describe('server-side workspace entry (CR-013)', () => {
   });
 
   it('is pending, never signed-in, when no API is configured', async () => {
-    expect(await workspaceEntry('staff', { access: 'private-access' }, null)).toEqual({ kind: 'pending' });
+    vi.stubEnv('SALON_API_BASE_URL', '');
+    expect(await workspaceEntry('staff', { access: 'private-access' }, 'alpha.localhost')).toEqual({ kind: 'pending' });
   });
 });

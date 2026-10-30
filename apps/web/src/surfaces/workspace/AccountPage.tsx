@@ -1,15 +1,12 @@
 import { cookies, headers } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
-import { createServerApiClient, requestSignal } from '@/lib/api-core/client';
-import { decodeSalon, SALON_HEADER } from '@/features/branding/server/salon-header';
-import { workspaceEntry } from '@/features/identity/server/entry';
-import { cookieName, requestHost, type Kind } from '@/features/identity/server/identity-web';
+import { decodeSalon, SALON_HEADER } from '@/features/branding/server';
+import { AccountScreen, Denied, SignIn } from '@/features/identity';
+import { workspaceEntry, cookieName, requestHost, type Kind } from '@/features/identity/server';
+import { BillingBanner } from '@/features/platform';
+import { readEntitlements } from '@/features/platform/server';
 import { AccountFrame } from './AccountFrame';
-import { AccountScreen } from '@/features/identity/components/AccountScreen';
-import { BillingBanner, type Entitlements } from '@/features/platform/components/BillingBanner';
 import { BillingScreen } from './BillingScreen';
-import { Denied } from '@/features/identity/components/Controls';
-import { SignIn } from '@/features/identity/components/SignIn';
 import { SupportAccessScreen } from './SupportAccessScreen';
 import { SupportBanner } from './SupportBanner';
 
@@ -35,11 +32,10 @@ export async function AccountPage({ kind: requested, view, signIn }: PageProps) 
   const kind: Kind = supportAccess ? 'support' : requested;
   const support = kind === 'support';
   const access = support ? supportAccess : store.get(cookieName(kind, 'access'))?.value;
-  const client = createServerApiClient({ hostname: host.hostname });
-  const entry = await workspaceEntry(kind, support ? { access } : { access, refresh: store.get(cookieName(kind, 'refresh'))?.value, expiry: store.get(cookieName(kind, 'expires'))?.value }, client);
+  const entry = await workspaceEntry(kind, support ? { access } : { access, refresh: store.get(cookieName(kind, 'refresh'))?.value, expiry: store.get(cookieName(kind, 'expires'))?.value }, host.hostname);
   if (entry.kind === 'signed-out') redirect(support ? '/workspace/support#ended' : '/workspace/sign-in');
   const principal = entry.kind === 'signed-in' ? entry.principal : null;
-  const entitlements = principal && access && client ? await readEntitlements(client, access) : null;
+  const entitlements = principal && access ? await readEntitlements(host.hostname, access) : null;
   const banner = <BillingBanner entitlements={entitlements} timeZone={salon.timeZone} />;
   const supportBanner = support ? <SupportBanner expiresAt={principal?.expiresAt ?? null} timeZone={salon.timeZone} /> : undefined;
   // The support view has no account of its own: its account page shows what it may read.
@@ -57,14 +53,4 @@ export async function AccountPage({ kind: requested, view, signIn }: PageProps) 
           : <AccountScreen kind={kind} initialPrincipal={principal} timeZone={salon.timeZone} view={view} readOnly={readOnly} />}
     </AccountFrame>
   );
-}
-
-/** The salon's entitlements and subscription state for the banner; nothing when the API cannot say. */
-async function readEntitlements(client: NonNullable<ReturnType<typeof createServerApiClient>>, access: string): Promise<Entitlements | null> {
-  try {
-    const answer = await client.GET('/api/v1/salon/entitlements', { headers: { Authorization: `Bearer ${access}` }, signal: requestSignal() });
-    return answer.data ?? null;
-  } catch {
-    return null;
-  }
 }

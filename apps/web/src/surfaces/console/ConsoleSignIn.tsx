@@ -8,8 +8,7 @@ import { Card, CardDescription, CardTitle } from '@/components/ui/card';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Spinner } from '@/components/ui/spinner';
 import { formatInstant, viewerTimeZone } from '@salon/format';
-import { operatorRequest, OperatorFailure, supportsLocks, withOperatorLock } from '@/features/platform/client/operator-session';
-import { ConsoleCodeField, ConsoleFailure, ConsolePasswordField, ConsoleTextField } from '@/features/platform/components/ConsoleControls';
+import { operatorRequest, OperatorFailure, supportsLocks, withOperatorLock, ConsoleCodeField, ConsoleFailure, ConsolePasswordField, ConsoleTextField } from '@/features/platform';
 
 const secret = 'rounded-field bg-background p-3 font-mono text-small whitespace-pre-wrap wrap-anywhere';
 type Step = 'password' | 'enroll_mfa' | 'verify_mfa';

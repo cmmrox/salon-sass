@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from 'vitest';
 import NotFound from './not-found';
 import { Notice } from '@/components/shared/Notice';
 import { AppShell } from '@/components/shared/AppShell';
-import { WorkspaceShell } from '@/surfaces/workspace/WorkspaceShell';
+import { WorkspaceShell } from '@/surfaces/workspace';
 import { StatusBody, StatusPanel } from '@/components/shared/Status';
 import { renderWithMessages } from '@test/render';
 import { setViewportWidth } from '@test/viewport';

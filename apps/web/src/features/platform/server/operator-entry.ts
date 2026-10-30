@@ -1,6 +1,8 @@
-import type { ApiClient } from '@salon/api-contracts';
+import 'server-only';
 import { requestSignal } from '@/lib/api-core/client';
-import { operatorRenewal, type OperatorCredentials, type OperatorPrincipal } from './operator-web';
+import type { OperatorPrincipal } from '../types';
+import { platformClient } from './client';
+import { operatorRenewal, type OperatorCredentials } from './operator-web';
 
 /**
  * Where a request for a protected console page belongs, decided on the server before anything
@@ -17,8 +19,10 @@ export function hasOperatorCredentials({ access, refresh }: OperatorCredentials)
   return Boolean(access || refresh);
 }
 
-export async function operatorEntry(credentials: OperatorCredentials, client: ApiClient | null): Promise<OperatorEntry> {
+/** Decides entry to the console served under this hostname; never throws. */
+export async function operatorEntry(credentials: OperatorCredentials, hostname: string): Promise<OperatorEntry> {
   if (!hasOperatorCredentials(credentials)) return { kind: 'signed-out' };
+  const client = platformClient(hostname);
   if (!client) return { kind: 'pending' };
   try {
     let status = 401;
@@ -29,7 +33,7 @@ export async function operatorEntry(credentials: OperatorCredentials, client: Ap
       if (status >= 500) return { kind: 'unavailable' };
       if (status !== 401) return { kind: 'pending' };
     }
-    const state = await operatorRenewal(client, credentials, status);
+    const state = await operatorRenewal(hostname, credentials, status);
     return state === 'spent' ? { kind: 'signed-out' } : state === 'unknown' ? { kind: 'unavailable' } : { kind: 'pending' };
   } catch {
     // Aborted by the request's budget, refused or reset: the API could not say in time.

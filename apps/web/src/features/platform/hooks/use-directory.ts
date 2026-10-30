@@ -1,7 +1,7 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { operatorRead, OperatorFailure } from '@/features/platform/client/operator-session';
+import { operatorRead, OperatorFailure } from '../client/operator-session';
 
 export type DirectoryPage<T> = { items: T[]; page: number; size: number; total: number };
 

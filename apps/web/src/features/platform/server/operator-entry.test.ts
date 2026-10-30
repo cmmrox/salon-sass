@@ -2,7 +2,6 @@
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createServerApiClient } from '@/lib/api-core/client';
 import { contextFromTraceparent, runInRequest } from '@/lib/observability/request-context';
 import { operatorEntry } from './operator-entry';
 
@@ -24,7 +23,7 @@ beforeEach(async () => {
 afterEach(async () => { server.closeAllConnections(); await new Promise<void>((r) => server.close(() => r())); vi.unstubAllEnvs(); });
 function decide(credentials: Parameters<typeof operatorEntry>[0], deadline = performance.now() + 3000) {
   const context = { ...contextFromTraceparent(undefined), clientAddress: '127.0.0.1', deadline };
-  return runInRequest(context, () => operatorEntry(credentials, createServerApiClient({ hostname: 'console.localhost' })));
+  return runInRequest(context, () => operatorEntry(credentials, 'console.localhost'));
 }
 
 describe('server-side console entry', () => {
@@ -52,6 +51,7 @@ describe('server-side console entry', () => {
   });
 
   it('is pending, never signed-in, when no API is configured', async () => {
-    expect(await operatorEntry({ access: 'private-access' }, null)).toEqual({ kind: 'pending' });
+    vi.stubEnv('SALON_API_BASE_URL', '');
+    expect(await operatorEntry({ access: 'private-access' }, 'console.localhost')).toEqual({ kind: 'pending' });
   });
 });

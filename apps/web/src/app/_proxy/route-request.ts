@@ -1,16 +1,29 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
-import { createServerApiClient } from '@/lib/api-core/client';
-import { hasCredentials, workspaceEntry, type Entry } from '@/features/identity/server/entry';
-import { clearCookies, cookieName, endSupportView, requestHost, supportEnded, type Credentials, type Kind } from '@/features/identity/server/identity-web';
+import { SALON_HEADER, encodeSalon } from '@/features/branding/server';
+import {
+  clearCookies,
+  cookieName,
+  endSupportView,
+  hasCredentials,
+  requestHost,
+  supportEnded,
+  workspaceEntry,
+  type Credentials,
+  type Entry,
+  type Kind,
+} from '@/features/identity/server';
+import {
+  clearOperatorCookies,
+  credentialsOf as operatorCredentialsOf,
+  hasOperatorCredentials,
+  operatorEntry,
+  type OperatorEntry,
+} from '@/features/platform/server';
 import { plainPageHtml, plainPageStatus, type PlainPage } from '@/lib/plain-page/plain-page';
-import { hasOperatorCredentials, operatorEntry, type OperatorEntry } from '@/features/platform/server/operator-entry';
 import { consoleHostname, isCanonicalPath, isConsoleHost, isConsolePath, isUnder } from '@/lib/tenancy/console-host';
-import { clearOperatorCookies, credentialsOf as operatorCredentialsOf } from '@/features/platform/server/operator-web';
-
 import { platformDomainOf } from '@/lib/tenancy/hostname';
 
-import { SALON_HEADER, encodeSalon } from '@/features/branding/server/salon-header';
 import { resolveSite, type Site } from './site';
 
 /**
@@ -50,7 +63,7 @@ export type DecideConsoleEntry = (request: NextRequest) => Promise<OperatorEntry
 const decideConsoleEntry: DecideConsoleEntry = (request) => {
   let domain: string;
   try { domain = platformDomainOf(process.env.SALON_PLATFORM_DOMAIN); } catch { return Promise.resolve({ kind: 'pending' }); }
-  return operatorEntry(operatorCredentialsOf(request), createServerApiClient({ hostname: consoleHostname(domain) }));
+  return operatorEntry(operatorCredentialsOf(request), consoleHostname(domain));
 };
 
 /**
@@ -74,7 +87,7 @@ function supportCredentialsOf(request: NextRequest): Credentials {
 
 const decideEntry: DecideEntry = (request, credentials, kind = 'staff') => {
   const host = requestHost(request.headers.get('host'));
-  return workspaceEntry(kind, credentials, host ? createServerApiClient({ hostname: host.hostname }) : null);
+  return workspaceEntry(kind, credentials, host ? host.hostname : null);
 };
 
 /**

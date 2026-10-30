@@ -1,10 +1,10 @@
-import { createApiClient, type Meta } from '@salon/api-contracts';
+import { createApiClient, type components } from '@salon/api-contracts/shared';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createServerApiClient } from './client';
 import { getMeta } from './meta';
 
-const meta: Meta = {
+const meta: components['schemas']['Meta'] = {
   service: 'salon-api',
   version: '1.2.3',
   commit: '0123456789abcdef0123456789abcdef01234567',
@@ -110,7 +110,7 @@ describe('createServerApiClient', () => {
       return new Response(JSON.stringify(meta), { status: 200, headers: { 'Content-Type': 'application/json' } });
     });
     try {
-      await createServerApiClient()?.GET('/api/v1/meta');
+      await createServerApiClient(createApiClient)?.GET('/api/v1/meta');
     } finally {
       vi.unstubAllGlobals();
     }
@@ -121,6 +121,6 @@ describe('createServerApiClient', () => {
   it('is null when the address is not set', () => {
     vi.stubEnv('SALON_API_BASE_URL', '');
 
-    expect(createServerApiClient()).toBeNull();
+    expect(createServerApiClient(createApiClient)).toBeNull();
   });
 });

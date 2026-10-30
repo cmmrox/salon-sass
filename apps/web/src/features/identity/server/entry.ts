@@ -1,6 +1,7 @@
-import type { ApiClient } from '@salon/api-contracts';
+import 'server-only';
 import { requestSignal } from '@/lib/api-core/client';
-import { renewal, type Credentials, type Kind, type Principal } from './identity-web';
+import type { Kind, Principal } from '../types';
+import { identityClient, renewal, type Credentials } from './identity-web';
 
 /**
  * Where a request for a protected workspace page belongs, decided on the server before anything
@@ -21,10 +22,14 @@ export function hasCredentials({ access, refresh }: Credentials): boolean {
   return Boolean(access || refresh);
 }
 
-/** Decides entry for a principal of `kind`; never throws. */
-export async function workspaceEntry(kind: Kind, credentials: Credentials, client: ApiClient | null): Promise<Entry> {
+/**
+ * Decides entry for a principal of `kind` on the salon with this hostname (none when the request
+ * named no usable salon host); never throws.
+ */
+export async function workspaceEntry(kind: Kind, credentials: Credentials, hostname: string | null): Promise<Entry> {
   if (!hasCredentials(credentials)) return { kind: 'signed-out' };
-  if (!client) return { kind: 'pending' };
+  const client = hostname ? identityClient(hostname) : null;
+  if (!hostname || !client) return { kind: 'pending' };
   try {
     let status = 401;
     if (credentials.access) {
@@ -34,7 +39,7 @@ export async function workspaceEntry(kind: Kind, credentials: Credentials, clien
       // An outage is not a sign-out: the workspace offers its safe retry instead.
       if (status !== 401 && status !== 403) return { kind: 'pending' };
     }
-    const state = await renewal(client, credentials, status);
+    const state = await renewal(hostname, credentials, status);
     return state === 'spent' ? { kind: 'signed-out' } : { kind: 'pending' };
   } catch {
     return { kind: 'pending' };

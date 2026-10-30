@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import type { components } from '@salon/api-contracts';
+import type { components } from '@salon/api-contracts/platform';
 import { Alert, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -14,13 +14,13 @@ import { Item, ItemActions, ItemContent, ItemDescription, ItemGroup, ItemTitle }
 import { Skeleton } from '@/components/ui/skeleton';
 import { Spinner } from '@/components/ui/spinner';
 import { formatDate, formatMoney, minorUnitsText, parseMinorUnits } from '@salon/format';
-import { operatorRead, operatorRequest, OperatorFailure, principalInsideLock, withOperatorLock } from '@/features/platform/client/operator-session';
+import { operatorRead, operatorRequest, OperatorFailure, principalInsideLock, withOperatorLock } from '../client/operator-session';
 import { ConsoleChoiceField, ConsoleFailure, ConsoleLoading, ConsoleTextField, uncertain, useFailureMessage } from './ConsoleControls';
 import { ConsoleSheet } from './ConsoleSheet';
 import { DirectoryPager } from './DirectoryControls';
 import { useIdempotencyKey } from './PlanScreens';
 import { PlanPicker } from './PlanPicker';
-import { PAGE_SIZE, type DirectoryPage } from '@/features/platform/hooks/use-directory';
+import { PAGE_SIZE, type DirectoryPage } from '../hooks/use-directory';
 
 type Detail = components['schemas']['SalonDetail'];
 type Subscription = components['schemas']['SubscriptionView'];

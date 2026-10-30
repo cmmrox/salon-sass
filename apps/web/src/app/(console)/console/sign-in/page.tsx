@@ -1,7 +1,6 @@
 import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
-import { ConsoleShell } from '@/surfaces/console/ConsoleShell';
-import { ConsoleSignIn } from '@/surfaces/console/ConsoleSignIn';
+import { ConsoleShell, ConsoleSignIn } from '@/surfaces/console';
 import { consoleRequestHost } from '@/lib/tenancy/console-host';
 
 /** Operator sign-in and MFA, on the console host only. */

@@ -1,13 +1,15 @@
+import 'server-only';
 import { createHmac } from 'node:crypto';
-import type { ApiClient, components } from '@salon/api-contracts';
+import type { components } from '@salon/api-contracts/platform';
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerApiClient, requestSignal } from '@/lib/api-core/client';
+import { requestSignal } from '@/lib/api-core/client';
+import { apiTime } from '@/lib/api-core/meta';
 import { strictInstant } from '@/lib/http/network';
 import { currentRequest } from '@/lib/observability/request-context';
 import { consoleRequestHost } from '@/lib/tenancy/console-host';
 import { readBoundedJson } from '@/lib/http/bounded-json';
+import { platformClient } from './client';
 
-export type OperatorPrincipal = components['schemas']['OperatorPrincipal'];
 type Tokens = components['schemas']['OperatorTokens'];
 
 /**
@@ -57,11 +59,11 @@ export function credentialsOf(request: { cookies: { get(name: string): { value: 
  * Whether the refresh family may renew: only when the access credential is gone or answered 401 and,
  * when present, its recorded expiry has passed by the API's clock. Expiry metadata never authorizes.
  */
-export async function operatorRenewal(client: ApiClient, { access, refresh, expiry }: OperatorCredentials, status: number): Promise<'renewable' | 'spent' | 'unknown'> {
+export async function operatorRenewal(hostname: string, { access, refresh, expiry }: OperatorCredentials, status: number): Promise<'renewable' | 'spent' | 'unknown'> {
   if (!refresh || !(status === 401 || !access)) return 'spent';
-  const meta = await client.GET('/api/v1/meta', { signal: requestSignal() });
-  if (!meta.data || !strictInstant(meta.data.time)) return 'unknown';
-  return !access || (strictInstant(expiry) && Date.parse(expiry) <= Date.parse(meta.data.time)) ? 'renewable' : 'spent';
+  const time = await apiTime(hostname);
+  if (!time) return 'unknown';
+  return !access || (strictInstant(expiry) && Date.parse(expiry) <= Date.parse(time)) ? 'renewable' : 'spent';
 }
 
 function output(data: unknown, status = 200) {
@@ -124,7 +126,7 @@ export async function handleOperator(request: NextRequest, action: string): Prom
     if (request.method === 'GET' && !READS.has(action)) return problem('method_not_allowed', 405);
     if (request.method !== 'GET' && (request.method !== 'POST' || !MUTATIONS.has(action))) return problem('method_not_allowed', 405);
     if (request.method !== 'GET' && !operatorCsrf(request)) return problem('request_rejected', 403);
-    const client = createServerApiClient({ hostname: host.hostname });
+    const client = platformClient(host.hostname);
     if (!client) return problem('service_unavailable', 503);
     const credentials = credentialsOf(request);
     const headers: Record<string, string> = credentials.access ? { Authorization: `Bearer ${credentials.access}` } : {};
@@ -144,7 +146,7 @@ export async function handleOperator(request: NextRequest, action: string): Prom
     if (!PUBLIC.has(action)) {
       const answer = await client.GET('/api/v1/operator/me', options);
       if (!answer.data) {
-        const renewable = (await operatorRenewal(client, credentials, answer.response.status)) === 'renewable';
+        const renewable = (await operatorRenewal(host.hostname, credentials, answer.response.status)) === 'renewable';
         if (action === 'refresh') {
           if (!renewable) {
             const response = problem('invalid_session', 401);
@@ -319,10 +321,10 @@ export async function handleOperator(request: NextRequest, action: string): Prom
       }
       case 'sign-in': {
         const ip = currentRequest()?.clientAddress;
-        const meta = await client.GET('/api/v1/meta', { signal: requestSignal() });
-        if (!ip || !meta.data || !strictInstant(meta.data.time)) return problem('service_unavailable', 503);
+        const time = await apiTime(host.hostname);
+        if (!ip || !time) return problem('service_unavailable', 503);
         const r = await client.POST('/api/v1/operator/sign-in', {
-          headers: { 'x-salon-client-assertion': operatorAssertion(host.hostname, ip, meta.data.time) },
+          headers: { 'x-salon-client-assertion': operatorAssertion(host.hostname, ip, time) },
           signal: requestSignal(),
           body: { email: text('email'), password: text('password'), deviceLabel: text('deviceLabel') },
         });

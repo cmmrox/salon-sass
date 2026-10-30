@@ -1,5 +1,6 @@
 // @vitest-environment node
-import type { Salon } from '@/features/branding/server/salon';
+import type { Salon } from '@/features/branding';
+import { SALON_HEADER, decodeSalon, encodeSalon } from '@/features/branding/server';
 import { getRewrittenUrl, isRewrite, unstable_doesMiddlewareMatch } from 'next/experimental/testing/server';
 import { NextRequest } from 'next/server';
 import { describe, expect, it, vi } from 'vitest';
@@ -7,7 +8,6 @@ import { describe, expect, it, vi } from 'vitest';
 import { config } from '@/proxy';
 
 import { SALON_SHELL_ROUTE, routeRequest } from './route-request';
-import { SALON_HEADER, decodeSalon, encodeSalon } from '@/features/branding/server/salon-header';
 import type { Site } from './site';
 
 const alpha: Salon = { slug: 'alpha', name: 'Alpha Studio', brandColour: '#D6086A', timeZone: 'Asia/Colombo' };

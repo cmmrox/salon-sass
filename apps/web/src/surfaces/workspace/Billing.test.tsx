@@ -1,12 +1,12 @@
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import type { AnchorHTMLAttributes } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Principal } from '@/features/identity/server/identity-web';
+import type { Principal } from '@/features/identity/server';
 import { renderWithMessages } from '@test/render';
 import { formatDate } from '@salon/format';
 import { WorkspaceShell } from './WorkspaceShell';
-import { AccountScreen } from '@/features/identity/components/AccountScreen';
-import { BillingBanner, type Entitlements } from '@/features/platform/components/BillingBanner';
+import { AccountScreen } from '@/features/identity';
+import { BillingBanner, type Entitlements } from '@/features/platform';
 import { BillingScreen } from './BillingScreen';
 
 const navigation = vi.hoisted(() => ({ replace: vi.fn(), refresh: vi.fn() }));

@@ -4,7 +4,7 @@ import { useTranslations } from 'next-intl';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
-import { IdentityFailure, identityRequest } from '@/features/identity/client/session';
+import { IdentityFailure, identityRequest } from '@/features/identity';
 import { formatTime } from '@salon/format';
 
 /** Where the browser goes when its support view ends: the entry page, told why. */

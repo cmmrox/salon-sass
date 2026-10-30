@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import { AppShell } from '@/components/shared/AppShell';
 import { BrandStyle } from '@/components/shared/BrandStyle';
-import { ExportDownload } from '@/features/platform/components/ExportDownload';
+import { ExportDownload } from '@/features/platform';
 
 /**
  * The Owner's export download page, on the bare platform host only (F03-S03): `/exports#<token>`. The

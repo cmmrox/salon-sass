@@ -6,7 +6,7 @@ import { expectListOfItems } from '@test/list';
 import { chooseOption } from '@test/select';
 import { ConsoleShell } from './ConsoleShell';
 import { ConsoleSignIn } from './ConsoleSignIn';
-import { PlanDetail, PlanDirectory } from '@/features/platform/components/PlanScreens';
+import { PlanDetail, PlanDirectory } from '@/features/platform';
 import { SalonDetail, SalonDirectory } from './SalonScreens';
 
 const replace = vi.fn();
@@ -173,7 +173,8 @@ describe('the salon directory', () => {
 });
 
 describe('the plan picker in Create salon (BUG-F03-006)', () => {
-  it('offers every plan, beyond the newest 100: one found by search and one on a later page', async () => {
+  // Opens three pages of 100-option Selects: about a second alone, up to five in a full parallel run.
+  it('offers every plan, beyond the newest 100: one found by search and one on a later page', { timeout: 15_000 }, async () => {
     stubApi((url) => {
       if (url.startsWith('/operator-web/plans')) return Response.json(planPage(url, 250));
       return Response.json({ items: [], page: 0, size: 20, total: 0 });

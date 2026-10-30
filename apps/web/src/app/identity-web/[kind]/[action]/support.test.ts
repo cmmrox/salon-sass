@@ -4,9 +4,11 @@ import type { AddressInfo } from 'node:net';
 import { NextRequest } from 'next/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { contextFromTraceparent, runInRequest } from '@/lib/observability/request-context';
-import { handleIdentity, supportCsrf } from './identity-web';
+import { createIdentityWeb, supportCsrf } from '@/features/identity/server';
+import { salonAccountFor } from '@/features/platform/server';
 
-/** The support session's BFF (F03-S04) against a fake API on loopback. */
+/** The support session's BFF (F03-S04), as the route wires it, against a fake API on loopback. */
+const handleIdentity = createIdentityWeb(salonAccountFor);
 let server: Server; let calls: { method: string; path: string; host?: string; authorization?: string; body: string }[];
 let answer: (method: string, path: string) => { status: number; data: unknown };
 const CODE = 'A'.repeat(43);

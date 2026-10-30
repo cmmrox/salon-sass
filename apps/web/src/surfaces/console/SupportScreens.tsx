@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import type { components } from '@salon/api-contracts';
+import type { components } from '@salon/api-contracts/platform';
 import { ExternalLink } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
@@ -14,10 +14,7 @@ import { FieldGroup } from '@/components/ui/field';
 import { Item, ItemActions, ItemContent, ItemDescription, ItemGroup, ItemTitle } from '@/components/ui/item';
 import { Spinner } from '@/components/ui/spinner';
 import { formatInstant, viewerTimeZone } from '@salon/format';
-import { operatorRead, operatorRequest, OperatorFailure, principalInsideLock, withOperatorLock } from '@/features/platform/client/operator-session';
-import { ConsoleChoiceField, ConsoleFailure, ConsoleLoading, ConsoleTextArea } from '@/features/platform/components/ConsoleControls';
-import { ConsoleSheet } from '@/features/platform/components/ConsoleSheet';
-import { DirectoryPager } from '@/features/platform/components/DirectoryControls';
+import { operatorRead, operatorRequest, OperatorFailure, principalInsideLock, withOperatorLock, ConsoleChoiceField, ConsoleFailure, ConsoleLoading, ConsoleTextArea, ConsoleSheet, DirectoryPager } from '@/features/platform';
 
 type Detail = components['schemas']['SalonDetail'];
 type Entry = components['schemas']['SupportEntry'];

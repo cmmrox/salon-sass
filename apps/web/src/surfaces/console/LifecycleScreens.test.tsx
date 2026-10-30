@@ -1,6 +1,6 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { components } from '@salon/api-contracts';
+import type { components } from '@salon/api-contracts/platform';
 import { expectListOfItems } from '@test/list';
 import { renderWithMessages } from '@test/render';
 import { ExportCard, LifecycleCard } from './LifecycleScreens';

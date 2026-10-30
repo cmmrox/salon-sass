@@ -4,7 +4,7 @@ import { useTranslations } from 'next-intl';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Card } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
-import { IdentityFailure, identityRequest } from '@/features/identity/client/session';
+import { IdentityFailure, identityRequest } from '@/features/identity';
 
 type State = 'loading' | 'success' | 'refused' | 'unavailable' | 'ended' | 'none';
 const CODE = /^[A-Za-z0-9_-]{43}$/;

@@ -1,16 +1,12 @@
 import { cookies, headers } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
-import { createServerApiClient } from '@/lib/api-core/client';
-import { operatorEntry } from '@/features/platform/server/operator-entry';
+import { ConsoleDenied, PlanDetail, PlanDirectory, InvoiceList } from '@/features/platform';
+import { operatorEntry, operatorCookie } from '@/features/platform/server';
 import { consoleRequestHost } from '@/lib/tenancy/console-host';
-import { operatorCookie } from '@/features/platform/server/operator-web';
 import { platformDomainOf } from '@/lib/tenancy/hostname';
-import { ConsoleDenied } from '@/features/platform/components/ConsoleControls';
 import { ConsolePending, ConsoleUnavailable } from './ConsolePending';
 import { ConsoleShell, type ConsoleView } from './ConsoleShell';
-import { PlanDetail, PlanDirectory } from '@/features/platform/components/PlanScreens';
 import { SalonDetail, SalonDirectory } from './SalonScreens';
-import { InvoiceList } from '@/features/platform/components/BillingScreens';
 import { SupportSessionList } from './SupportScreens';
 
 /**
@@ -22,7 +18,7 @@ export async function ConsolePage({ view, id, section }: { view: Exclude<Console
   const host = consoleRequestHost((await headers()).get('host'));
   if (!host) notFound();
   const store = await cookies();
-  const entry = await operatorEntry({ access: store.get(operatorCookie('access'))?.value, refresh: store.get(operatorCookie('refresh'))?.value, expiry: store.get(operatorCookie('expires'))?.value }, createServerApiClient({ hostname: host.hostname }));
+  const entry = await operatorEntry({ access: store.get(operatorCookie('access'))?.value, refresh: store.get(operatorCookie('refresh'))?.value, expiry: store.get(operatorCookie('expires'))?.value }, host.hostname);
   if (entry.kind === 'signed-out') redirect('/console/sign-in');
   if (entry.kind === 'pending') return <ConsoleShell><ConsolePending /></ConsoleShell>;
   if (entry.kind === 'unavailable') return <ConsoleShell><ConsoleUnavailable /></ConsoleShell>;

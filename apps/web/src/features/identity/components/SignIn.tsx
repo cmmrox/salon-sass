@@ -2,8 +2,8 @@
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
-import type { Kind } from '@/features/identity/server/identity-web';
-import { IdentityFailure, identityRequest, supportsLocks, withIdentityLock } from '@/features/identity/client/session';
+import type { Kind } from '../types';
+import { IdentityFailure, identityRequest, supportsLocks, withIdentityLock } from '../client/session';
 import { formatInstant } from '@salon/format';
 import { Alert } from '@/components/ui/alert';
 import { Button as UiButton } from '@/components/ui/button';

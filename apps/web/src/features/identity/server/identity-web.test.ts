@@ -4,9 +4,15 @@ import type { AddressInfo } from 'node:net';
 import { NextRequest } from 'next/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { contextFromTraceparent, runInRequest } from '@/lib/observability/request-context';
-import { assertion, cookieName, csrf, handleIdentity, requestHost } from './identity-web';
+import { assertion, cookieName, createIdentityWeb, csrf, requestHost } from './identity-web';
+import type { SalonAccount, SalonAccountFor } from './salon-account';
 import { normalizeIp, strictInstant } from '@/lib/http/network';
 import { formatInstant } from '@salon/format';
+
+/** These cases never reach the platform module's paths: any call to them fails. */
+const unreached: SalonAccountFor = () =>
+  new Proxy({} as SalonAccount, { get: () => () => Promise.reject(new Error('the platform module is not reached here')) });
+const handleIdentity = createIdentityWeb(unreached);
 let server: Server; let calls: { path: string; host?: string; proof?: string }[];
 let answer: (path: string) => { status: number; data: unknown };
 const token = { state: 'authenticated', sessionId: 'session', accessToken: 'private-access', refreshToken: 'private-refresh', accessExpiresAt: '2026-01-01T00:05:00Z', refreshExpiresAt: '2026-01-08T00:00:00Z' };

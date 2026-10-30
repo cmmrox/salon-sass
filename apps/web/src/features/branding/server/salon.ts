@@ -1,15 +1,13 @@
-import type { ApiClient, Salon as ContractSalon } from '@salon/api-contracts';
+import 'server-only';
+
+import { createApiClient, type ApiClient } from '@salon/api-contracts/branding';
 
 import { DEFAULT_BRAND_COLOUR, isHexColour } from '@/styles/brand';
 
 import { requestSignal, createServerApiClient } from '@/lib/api-core/client';
 import { describeFailure } from '@/lib/api-core/failure';
 
-/**
- * What the web app carries about a salon: its public brand. The contract's salon holds more (its
- * time zone, from F01-S04), which no screen uses yet; a screen that shows a time takes it then.
- */
-export type Salon = Pick<ContractSalon, 'slug' | 'name' | 'brandColour' | 'timeZone'>;
+import type { Salon } from '../types';
 
 /** What the API said about the salon a hostname names. */
 export type SalonLookup =
@@ -38,7 +36,7 @@ export type SalonLookup =
 export async function findSalon(
   slug: string,
   hostname: string,
-  client: ApiClient | null = createServerApiClient({ hostname }),
+  client: ApiClient | null = createServerApiClient(createApiClient, { hostname }),
 ): Promise<SalonLookup> {
   if (!client) {
     return unavailable(slug, 'SALON_API_BASE_URL is not set');

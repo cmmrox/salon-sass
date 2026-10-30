@@ -2,7 +2,7 @@
 import { NextRequest } from 'next/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 const handleIdentity = vi.hoisted(() => vi.fn());
-vi.mock('@/features/identity/server/identity-web', () => ({ handleIdentity }));
+vi.mock('@/features/identity/server', () => ({ createIdentityWeb: () => handleIdentity }));
 import { GET, POST } from './route';
 beforeEach(() => handleIdentity.mockReset());
 describe('staff-only web boundary', () => {

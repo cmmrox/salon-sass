@@ -1,8 +1,10 @@
+import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerApiClient, requestSignal } from '@/lib/api-core/client';
+import { requestSignal } from '@/lib/api-core/client';
 import { readBoundedJson } from '@/lib/http/bounded-json';
-import { archive } from './operator-web';
 import { classifyHostname, platformDomainOf } from '@/lib/tenancy/hostname';
+import { platformClient } from './client';
+import { archive } from './operator-web';
 
 /**
  * The platform host's BFF (F03-S03): `/platform-web/{action}` on the bare platform domain only, for the
@@ -43,7 +45,7 @@ export async function handlePlatform(request: NextRequest, action: string): Prom
     const token = typeof body.token === 'string' ? body.token : '';
     // A malformed token is answered as an unknown one, without asking the API.
     if (!TOKEN.test(token)) return output({ code: 'not_found' }, 404);
-    const client = createServerApiClient({ hostname: host.hostname });
+    const client = platformClient(host.hostname);
     if (!client) return output({ code: 'service_unavailable' }, 503);
     const params = { path: { token } };
     if (action === 'export-info') {

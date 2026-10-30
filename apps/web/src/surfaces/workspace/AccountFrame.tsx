@@ -1,6 +1,6 @@
 import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
-import type { Salon } from '@/features/branding/server/salon';
+import type { Salon } from '@/features/branding';
 import { BrandStyle } from '@/components/shared/BrandStyle';
 import { WorkspaceShell, type WorkspaceView } from './WorkspaceShell';
 import { StaffSignInFrame } from './StaffSignInFrame';

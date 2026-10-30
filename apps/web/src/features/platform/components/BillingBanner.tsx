@@ -1,9 +1,7 @@
 import { useTranslations } from 'next-intl';
-import type { components } from '@salon/api-contracts';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { formatDate } from '@salon/format';
-
-export type Entitlements = components['schemas']['Entitlements'];
+import type { Entitlements } from '../types';
 
 /**
  * The workspace's billing banner for every staff member (F03-S02): a trial ending within three days,

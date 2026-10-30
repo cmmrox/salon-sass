@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import type { components } from '@salon/api-contracts';
+import type { components } from '@salon/api-contracts/platform';
 import { Download, RefreshCw } from 'lucide-react';
 import { Alert, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -14,10 +14,7 @@ import { Item, ItemContent, ItemDescription, ItemGroup, ItemTitle } from '@/comp
 import { Skeleton } from '@/components/ui/skeleton';
 import { Spinner } from '@/components/ui/spinner';
 import { formatBytes, formatDate, formatInstant } from '@salon/format';
-import { operatorRead, operatorRequest, OperatorFailure, principalInsideLock, withOperatorLock } from '@/features/platform/client/operator-session';
-import { ConsoleFailure, ConsoleTextArea, ConsoleTextField } from '@/features/platform/components/ConsoleControls';
-import { ConsoleSheet } from '@/features/platform/components/ConsoleSheet';
-import { DirectoryPager } from '@/features/platform/components/DirectoryControls';
+import { operatorRead, operatorRequest, OperatorFailure, principalInsideLock, withOperatorLock, ConsoleFailure, ConsoleTextArea, ConsoleTextField, ConsoleSheet, DirectoryPager } from '@/features/platform';
 
 type Detail = components['schemas']['SalonDetail'];
 type LifecyclePage = components['schemas']['LifecyclePage'];

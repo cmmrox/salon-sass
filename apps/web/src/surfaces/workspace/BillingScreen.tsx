@@ -2,17 +2,16 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import type { components } from '@salon/api-contracts';
+import type { components } from '@salon/api-contracts/platform';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/ui/empty';
 import { Item, ItemContent, ItemDescription, ItemGroup, ItemTitle } from '@/components/ui/item';
 import { Pagination, PaginationContent, PaginationCurrent, PaginationItem, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
 import { formatDate, formatMoney } from '@salon/format';
-import { ensurePrincipal, leaveEndedSession, identityRequest, IdentityFailure } from '@/features/identity/client/session';
-import type { Kind } from '@/features/identity/server/identity-web';
-import { AccountLoading, Button, Section } from '@/features/identity/components/Controls';
-import type { Entitlements } from '@/features/platform/components/BillingBanner';
+import { ensurePrincipal, leaveEndedSession, identityRequest, IdentityFailure, AccountLoading, Button, Section } from '@/features/identity';
+import type { Kind } from '@/features/identity/server';
+import type { Entitlements } from '@/features/platform';
 
 type InvoicePage = components['schemas']['InvoicePage'];
 

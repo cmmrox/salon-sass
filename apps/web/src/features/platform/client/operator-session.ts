@@ -1,5 +1,5 @@
 'use client';
-import type { OperatorPrincipal } from '@/features/platform/server/operator-web';
+import type { OperatorPrincipal } from '../types';
 
 /** A refused console operation: its stable code, the fields it names and any wait. */
 export class OperatorFailure extends Error {

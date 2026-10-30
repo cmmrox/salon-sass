@@ -2,7 +2,7 @@
 import { getRewrittenUrl, isRewrite } from 'next/experimental/testing/server';
 import { NextRequest } from 'next/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { OperatorEntry } from '@/features/platform/server/operator-entry';
+import type { OperatorEntry } from '@/features/platform/server';
 import { routeRequest } from './route-request';
 import type { Site } from './site';
 

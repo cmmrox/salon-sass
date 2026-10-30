@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { Eye, EyeOff } from 'lucide-react';
-import type { OperatorFailure } from '@/features/platform/client/operator-session';
+import type { OperatorFailure } from '../client/operator-session';
 
 /** A console test id: `console-<kebab name>`. */
 export const consoleTestId = (name: string) => `console-${name.replace(/[.]/g, '-').replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase()}`;

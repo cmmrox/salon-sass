@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 import react from '@vitejs/plugin-react';
 import { defineConfig, type Plugin } from 'vitest/config';
@@ -33,8 +34,12 @@ function rawStyleSheets(): Plugin {
 
 export default defineConfig({
   plugins: [rawStyleSheets(), react()],
-  // The `@/` and `@test/` aliases, from tsconfig.json.
-  resolve: { tsconfigPaths: true },
+  resolve: {
+    // The `@/` and `@test/` aliases, from tsconfig.json.
+    tsconfigPaths: true,
+    // Tests run server code as Next.js's server compilers do, where `server-only` is an empty module.
+    alias: { 'server-only': fileURLToPath(new URL('./node_modules/server-only/empty.js', import.meta.url)) },
+  },
   test: {
     environment: 'jsdom',
     include: ['src/**/*.test.{ts,tsx}'],

@@ -3,11 +3,18 @@ import { createServer, type Server, type ServerResponse } from 'node:http';
 import type { AddressInfo, Socket } from 'node:net';
 import { setFlagsFromString } from 'node:v8';
 import { runInNewContext } from 'node:vm';
+import { createApiClient } from '@salon/api-contracts/shared';
 import { NextRequest } from 'next/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { handleIdentity } from './identity-web';
+import { createIdentityWeb } from './identity-web';
+import type { SalonAccount, SalonAccountFor } from './salon-account';
 import { contextFromTraceparent, runInRequest } from '@/lib/observability/request-context';
 import { createServerApiClient, requestSignal } from '@/lib/api-core/client';
+
+/** These cases never reach the platform module's paths: any call to them fails. */
+const unreached: SalonAccountFor = () =>
+  new Proxy({} as SalonAccount, { get: () => () => Promise.reject(new Error('the platform module is not reached here')) });
+const handleIdentity = createIdentityWeb(unreached);
 
 /**
  * BUG-F02-012: every server call to the API ends within the request's shared budget, whatever
@@ -58,14 +65,14 @@ describe.each(['silent', 'headers-only', 'unread'] as const)('an API that stops 
   beforeEach(() => { phase = stop; });
 
   it('a salon call through the hostname transport gives up within the budget', async () => {
-    const { outcome, elapsed } = await settle(() => inRequest(() => createServerApiClient({ hostname: 'alpha.localhost' })!.GET('/api/v1/meta', { signal: requestSignal() })));
+    const { outcome, elapsed } = await settle(() => inRequest(() => createServerApiClient(createApiClient, { hostname: 'alpha.localhost' })!.GET('/api/v1/meta', { signal: requestSignal() })));
     expect(outcome).not.toBe('still waiting');
     expect(outcome).toHaveProperty('error');
     expect(elapsed).toBeLessThan(BUDGET + 1000);
   });
 
   it('a platform call through the platform fetch gives up within the budget', async () => {
-    const { outcome, elapsed } = await settle(() => inRequest(() => createServerApiClient()!.GET('/api/v1/meta', { signal: requestSignal() })));
+    const { outcome, elapsed } = await settle(() => inRequest(() => createServerApiClient(createApiClient)!.GET('/api/v1/meta', { signal: requestSignal() })));
     expect(outcome).not.toBe('still waiting');
     expect(outcome).toHaveProperty('error');
     expect(elapsed).toBeLessThan(BUDGET + 1000);
@@ -86,7 +93,7 @@ describe('the caller keeps control of its own call', () => {
     const caller = new AbortController();
     const context = { ...contextFromTraceparent(undefined), deadline: performance.now() + 60_000 };
     setTimeout(() => caller.abort(new Error('caller gave up')), 100);
-    const { outcome, elapsed } = await settle(() => runInRequest(context, () => createServerApiClient(options)!.GET('/api/v1/meta', { signal: caller.signal })));
+    const { outcome, elapsed } = await settle(() => runInRequest(context, () => createServerApiClient(createApiClient, options)!.GET('/api/v1/meta', { signal: caller.signal })));
     expect(outcome).toHaveProperty('error');
     expect(elapsed).toBeLessThan(1000);
   });

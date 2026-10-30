@@ -1,4 +1,6 @@
-import type { Salon } from './salon';
+import 'server-only';
+
+import type { Salon } from '../types';
 
 import { isHexColour } from '@/styles/brand';
 

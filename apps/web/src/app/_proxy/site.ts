@@ -1,4 +1,5 @@
-import { findSalon, type Salon, type SalonLookup } from '@/features/branding/server/salon';
+import type { Salon } from '@/features/branding';
+import { findSalon, type SalonLookup } from '@/features/branding/server';
 import { markTenant } from '@/lib/observability/request-context';
 
 import { classifyHostname, hasSlugForm, platformDomainOf, salonHostname } from '@/lib/tenancy/hostname';

@@ -1,7 +1,7 @@
-import type { Salon } from '@/features/branding/server/salon';
+import type { Salon } from '@/features/branding';
+import type { SalonLookup } from '@/features/branding/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { SalonLookup } from '@/features/branding/server/salon';
 
 import { contextFromTraceparent, runInRequest } from '@/lib/observability/request-context';
 

@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import type { components } from '@salon/api-contracts';
+import type { components } from '@salon/api-contracts/platform';
 import { Alert, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -14,11 +14,11 @@ import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Item, ItemContent, ItemDescription, ItemGroup, ItemTitle } from '@/components/ui/item';
 import { Spinner } from '@/components/ui/spinner';
 import { formatInstant, viewerTimeZone } from '@salon/format';
-import { operatorRead, operatorRequest, OperatorFailure, withOperatorLock, principalInsideLock } from '@/features/platform/client/operator-session';
+import { operatorRead, operatorRequest, OperatorFailure, withOperatorLock, principalInsideLock } from '../client/operator-session';
 import { ConsoleFailure, ConsoleLoading, ConsoleTextField, consoleTestId, uncertain } from './ConsoleControls';
 import { ConsoleSheet } from './ConsoleSheet';
 import { DirectoryPager, DirectorySearch } from './DirectoryControls';
-import { PAGE_SIZE, useDirectory } from '@/features/platform/hooks/use-directory';
+import { PAGE_SIZE, useDirectory } from '../hooks/use-directory';
 
 export type Plan = components['schemas']['PlanDefinition'];
 

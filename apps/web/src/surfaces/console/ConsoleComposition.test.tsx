@@ -5,7 +5,7 @@ import { renderWithMessages } from '@test/render';
 import { setViewportWidth } from '@test/viewport';
 import { ConsoleShell } from './ConsoleShell';
 import { ConsoleSignIn } from './ConsoleSignIn';
-import { PlanDirectory } from '@/features/platform/components/PlanScreens';
+import { PlanDirectory } from '@/features/platform';
 import { SalonDirectory } from './SalonScreens';
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ replace: vi.fn(), refresh: vi.fn() }) }));

@@ -1,7 +1,10 @@
-import { createApiClient, type Problem } from '@salon/api-contracts';
+import { createApiClient, type components } from '@salon/api-contracts/branding';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { findSalon, type Salon } from './salon';
+import type { Salon } from '../types';
+import { findSalon } from './salon';
+
+type Problem = components['schemas']['Problem'];
 
 const alpha: Salon = { slug: 'alpha', name: 'Alpha Studio', brandColour: '#D6086A', timeZone: 'Asia/Colombo' };
 

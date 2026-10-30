@@ -1,17 +1,16 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 import { renderWithMessages } from '@test/render';
-import type { Principal } from '@/features/identity/server/identity-web';
-import { AccountScreen } from '@/features/identity/components/AccountScreen';
-import { Confirmation } from '@/features/identity/components/Confirmation';
-import { Denied } from '@/features/identity/components/Controls';
-import { SignIn } from '@/features/identity/components/SignIn';
-import { StaffSignInFrame } from './StaffSignInFrame';
+import type { Principal } from '../types';
+import { AccountScreen } from './AccountScreen';
+import { Confirmation } from './Confirmation';
+import { Denied } from './Controls';
+import { SignIn } from './SignIn';
 
 // F02-S04 AC-12 and AC-14 (CR-016, CR-017): the staff screens use the shadcn/ui component the
 // component map of docs/engineering/web.md, "Styling", names for each job. Each check reads the
 // `data-slot` the shadcn/ui component renders. The source rule (no raw control, no Native Select)
-// is components/composition.test.tsx, over every product component.
+// is app/composition.test.tsx, over every product component.
 vi.mock('next/navigation', () => ({ useRouter: () => ({ replace: vi.fn(), refresh: vi.fn() }) }));
 afterEach(() => vi.unstubAllGlobals());
 const locks = () => vi.stubGlobal('navigator', { locks: { request: (_name: string, work: () => Promise<unknown>) => work() } });
@@ -71,12 +70,6 @@ it('takes the sign-in authenticator code in an Input OTP of six slots, with the 
   expect(await screen.findByTestId('account-setup-key')).toHaveTextContent('SYNTHETICKEY');
   expect(field(screen.getByTestId('account-setup-key'))).not.toBeNull();
   expect(slot(screen.getByTestId('account-mfa-notice'))).toBe('alert');
-});
-
-it('draws the sign-in salon initial as an Avatar', () => {
-  renderWithMessages(<StaffSignInFrame salon={{ name: 'Alpha Salon' } as never}><p>child</p></StaffSignInFrame>);
-  expect(slot(screen.getByTestId('staff-sign-in-initial'))).toBe('avatar');
-  expect(screen.getByTestId('staff-sign-in-initial')).toHaveTextContent('A');
 });
 
 it('opens the confirmation as a Sheet', () => {

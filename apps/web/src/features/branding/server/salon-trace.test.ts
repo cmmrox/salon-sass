@@ -2,13 +2,14 @@
 import { createServer, type IncomingHttpHeaders, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 
+import { createApiClient } from '@salon/api-contracts/branding';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { createServerApiClient } from '@/lib/api-core/client';
+import { getMeta } from '@/lib/api-core/meta';
 import { runInRequest, type RequestContext } from '@/lib/observability/request-context';
 
-import { createServerApiClient } from './client';
-import { findSalon } from '@/features/branding/server/salon';
-import { getMeta } from './meta';
+import { findSalon } from './salon';
 
 /** A stand-in for the API that records what it was sent. */
 let server: Server;
@@ -73,7 +74,7 @@ describe('calls to the API made while a request is served', () => {
 
 describe('calls made outside a request', () => {
   it('send no traceparent, and the API starts a trace of its own', async () => {
-    await findSalon('alpha', 'alpha.localhost', createServerApiClient({ hostname: 'alpha.localhost' }));
+    await findSalon('alpha', 'alpha.localhost', createServerApiClient(createApiClient, { hostname: 'alpha.localhost' }));
 
     expect(received[0]?.traceparent).toBeUndefined();
   });

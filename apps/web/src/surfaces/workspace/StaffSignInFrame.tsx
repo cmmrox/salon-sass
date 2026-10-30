@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import type { Salon } from '@/features/branding/server/salon';
+import type { Salon } from '@/features/branding';
 
 /** Public staff entry (CR-012) uses only the salon identity resolved from this request's Host. */
 export function StaffSignInFrame({ salon, children }: { salon: Salon; children: ReactNode }) {
