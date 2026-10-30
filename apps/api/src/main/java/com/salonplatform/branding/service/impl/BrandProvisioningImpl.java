@@ -1,4 +1,4 @@
-package com.salonplatform.branding.service;
+package com.salonplatform.branding.service.impl;
 
 import com.salonplatform.branding.inprocess.BrandProvisioning;
 import com.salonplatform.branding.repository.BrandPlatformFunctions;
@@ -15,7 +15,7 @@ import org.springframework.stereotype.Service;
  */
 @Service
 @RequiredArgsConstructor
-class BrandProvisioningService implements BrandProvisioning {
+class BrandProvisioningImpl implements BrandProvisioning {
 
     /** Branding's one neutral token for a newly provisioned salon: the platform ink. */
     private static final String NEUTRAL_COLOUR = "#111827";

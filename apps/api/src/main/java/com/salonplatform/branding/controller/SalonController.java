@@ -1,7 +1,7 @@
 package com.salonplatform.branding.controller;
 
 import com.salonplatform.branding.dto.SalonResponse;
-import com.salonplatform.branding.service.GetPublishedBrand;
+import com.salonplatform.branding.service.PublishedBrandService;
 import com.salonplatform.shared.web.ApiPaths;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -18,10 +18,10 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "branding")
 class SalonController {
 
-    private final GetPublishedBrand getPublishedBrand;
+    private final PublishedBrandService publishedBrand;
 
-    SalonController(GetPublishedBrand getPublishedBrand) {
-        this.getPublishedBrand = getPublishedBrand;
+    SalonController(PublishedBrandService publishedBrand) {
+        this.publishedBrand = publishedBrand;
     }
 
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
@@ -49,6 +49,6 @@ class SalonController {
                             mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                             schema = @Schema(ref = "#/components/schemas/Problem")))
     SalonResponse salon() {
-        return SalonResponse.from(getPublishedBrand.forCurrentSalon());
+        return SalonResponse.from(publishedBrand.forCurrentSalon());
     }
 }
