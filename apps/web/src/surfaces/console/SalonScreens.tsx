@@ -13,7 +13,7 @@ import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/u
 import { FieldGroup, FieldLegend, FieldSet } from '@/components/ui/field';
 import { Item, ItemContent, ItemDescription, ItemGroup, ItemTitle } from '@/components/ui/item';
 import { Spinner } from '@/components/ui/spinner';
-import { formatInstant, formatPhone, parseMinorUnits, viewerTimeZone } from '@/lib/format';
+import { formatInstant, formatPhone, parseMinorUnits, viewerTimeZone } from '@salon/format';
 import { operatorRead, operatorRequest, OperatorFailure, principalInsideLock, withOperatorLock } from '@/features/platform/client/operator-session';
 import { ConsoleChoiceField, ConsoleFailure, ConsoleLoading, ConsolePasswordField, ConsoleTextArea, ConsoleTextField, uncertain } from '@/features/platform/components/ConsoleControls';
 import { ConsoleSheet } from '@/features/platform/components/ConsoleSheet';

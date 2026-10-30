@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatMoney, minorUnitsText, parseMinorUnits } from './index';
+import { formatMoney, minorUnitsText, parseMinorUnits } from '../src/index';
 
 describe('money formatting', () => {
   it('writes rupees with cents only when they are not zero', () => {

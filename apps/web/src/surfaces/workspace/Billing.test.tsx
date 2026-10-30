@@ -3,7 +3,7 @@ import type { AnchorHTMLAttributes } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Principal } from '@/features/identity/server/identity-web';
 import { renderWithMessages } from '@test/render';
-import { formatDate } from '@/lib/format';
+import { formatDate } from '@salon/format';
 import { WorkspaceShell } from './WorkspaceShell';
 import { AccountScreen } from '@/features/identity/components/AccountScreen';
 import { BillingBanner, type Entitlements } from '@/features/platform/components/BillingBanner';

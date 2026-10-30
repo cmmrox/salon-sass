@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@salon/api-contracts": "workspace:*",
+    "@salon/format": "workspace:*",
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
     "input-otp": "1.5.0",

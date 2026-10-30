@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/ui/empty';
 import { Item, ItemContent, ItemDescription, ItemGroup, ItemTitle } from '@/components/ui/item';
 import { Pagination, PaginationContent, PaginationCurrent, PaginationItem, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
-import { formatDate, formatMoney } from '@/lib/format';
+import { formatDate, formatMoney } from '@salon/format';
 import { ensurePrincipal, leaveEndedSession, identityRequest, IdentityFailure } from '@/features/identity/client/session';
 import type { Kind } from '@/features/identity/server/identity-web';
 import { AccountLoading, Button, Section } from '@/features/identity/components/Controls';

@@ -1,7 +1,7 @@
 import { useTranslations } from 'next-intl';
 import type { components } from '@salon/api-contracts';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { formatDate } from '@/lib/format';
+import { formatDate } from '@salon/format';
 
 export type Entitlements = components['schemas']['Entitlements'];
 

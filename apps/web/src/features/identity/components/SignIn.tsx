@@ -4,7 +4,7 @@ import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import type { Kind } from '@/features/identity/server/identity-web';
 import { IdentityFailure, identityRequest, supportsLocks, withIdentityLock } from '@/features/identity/client/session';
-import { formatInstant } from '@/lib/format';
+import { formatInstant } from '@salon/format';
 import { Alert } from '@/components/ui/alert';
 import { Button as UiButton } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';

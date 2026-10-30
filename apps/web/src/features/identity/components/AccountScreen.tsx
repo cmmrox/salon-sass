@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl';
 import type { components } from '@salon/api-contracts';
 import type { Kind, Principal } from '@/features/identity/server/identity-web';
 import { ensurePrincipal, leaveEndedSession, identityRequest, IdentityFailure, principalInsideLock, supportsLocks, withIdentityLock } from '@/features/identity/client/session';
-import { formatInstant } from '@/lib/format';
+import { formatInstant } from '@salon/format';
 import { AccountLoading, Button, Check, ChoiceField, CodeField, Denied, PasswordField, Section, TextField } from './Controls';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';

@@ -17,6 +17,7 @@ RUN corepack enable
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/web/package.json apps/web/
 COPY packages/api-contracts/package.json packages/api-contracts/
+COPY packages/format/package.json packages/format/
 RUN --mount=type=cache,id=salon-pnpm-store,target=/root/.local/share/pnpm/store \
     pnpm install --frozen-lockfile
 COPY packages packages

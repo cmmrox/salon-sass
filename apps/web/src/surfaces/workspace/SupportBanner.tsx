@@ -5,7 +5,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { IdentityFailure, identityRequest } from '@/features/identity/client/session';
-import { formatTime } from '@/lib/format';
+import { formatTime } from '@salon/format';
 
 /** Where the browser goes when its support view ends: the entry page, told why. */
 export const SUPPORT_ENDED = '/workspace/support#ended';

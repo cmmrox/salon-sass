@@ -13,7 +13,7 @@ import { Pagination, PaginationContent, PaginationCurrent, PaginationItem, Pagin
 import { Skeleton } from '@/components/ui/skeleton';
 import { Spinner } from '@/components/ui/spinner';
 import { ensurePrincipal, IdentityFailure, identityRequest, principalInsideLock, supportsLocks, withIdentityLock } from '@/features/identity/client/session';
-import { formatInstant } from '@/lib/format';
+import { formatInstant } from '@salon/format';
 
 type Session = components['schemas']['SalonSupportSession'];
 type Page = components['schemas']['SalonSupportSessionPage'];

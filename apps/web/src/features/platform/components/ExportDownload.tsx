@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Spinner } from '@/components/ui/spinner';
-import { formatBytes, formatDate, formatInstant, viewerTimeZone } from '@/lib/format';
+import { formatBytes, formatDate, formatInstant, viewerTimeZone } from '@salon/format';
 
 type Info = { readyAt: string; deleteAt: string; sizeBytes: number; sha256: string };
 type State =

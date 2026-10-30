@@ -13,7 +13,7 @@ import { FieldGroup } from '@/components/ui/field';
 import { Item, ItemContent, ItemDescription, ItemGroup, ItemTitle } from '@/components/ui/item';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Spinner } from '@/components/ui/spinner';
-import { formatBytes, formatDate, formatInstant } from '@/lib/format';
+import { formatBytes, formatDate, formatInstant } from '@salon/format';
 import { operatorRead, operatorRequest, OperatorFailure, principalInsideLock, withOperatorLock } from '@/features/platform/client/operator-session';
 import { ConsoleFailure, ConsoleTextArea, ConsoleTextField } from '@/features/platform/components/ConsoleControls';
 import { ConsoleSheet } from '@/features/platform/components/ConsoleSheet';

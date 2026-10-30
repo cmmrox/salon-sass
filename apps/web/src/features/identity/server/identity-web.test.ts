@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { contextFromTraceparent, runInRequest } from '@/lib/observability/request-context';
 import { assertion, cookieName, csrf, handleIdentity, requestHost } from './identity-web';
 import { normalizeIp, strictInstant } from '@/lib/http/network';
-import { formatInstant } from '@/lib/format';
+import { formatInstant } from '@salon/format';
 let server: Server; let calls: { path: string; host?: string; proof?: string }[];
 let answer: (path: string) => { status: number; data: unknown };
 const token = { state: 'authenticated', sessionId: 'session', accessToken: 'private-access', refreshToken: 'private-refresh', accessExpiresAt: '2026-01-01T00:05:00Z', refreshExpiresAt: '2026-01-08T00:00:00Z' };
