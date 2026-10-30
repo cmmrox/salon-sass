@@ -33,8 +33,10 @@ test('TC-F01-S04-002 invalid probe bodies name their fields and write no data',a
 test('TC-F01-S04-003 the contract lists exactly all documented stable error codes',async()=>{
   const prop=committedContract().components.schemas.Problem.properties!.code as {enum:string[]};
   const expected=['bad_request','internal_error','method_not_allowed','not_acceptable','not_found','request_rejected','salon_suspended','service_unavailable','unsupported_media_type',
-    'invalid_client_assertion','confirmation_required','invalid_code','code_expired','provider_unavailable','invalid_credentials','invalid_session','permission_denied','conflict','rate_limited'];
-  expect(new Set(prop.enum).size).toBe(19);
+    'invalid_client_assertion','confirmation_required','invalid_code','code_expired','provider_unavailable','invalid_credentials','invalid_session','permission_denied','conflict','rate_limited',
+    // F03's codes, documented in docs/architecture/operator-console.md.
+    'entitlement_exceeded','idempotency_conflict','invalid_state','plan_key_taken','salon_read_only','slug_taken','support_read_only','support_session_active'];
+  expect(new Set(prop.enum).size).toBe(27);
   expect([...prop.enum].sort()).toEqual(expected.sort());
 });
 
