@@ -13,7 +13,7 @@ import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/u
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Item, ItemContent, ItemDescription, ItemGroup, ItemTitle } from '@/components/ui/item';
 import { Spinner } from '@/components/ui/spinner';
-import { formatInstant, viewerTimeZone } from '@salon/format';
+import { formatCount, formatInstant, viewerTimeZone } from '@salon/format';
 import {
   operatorRead,
   operatorRequest,
@@ -89,7 +89,7 @@ export function PlanDirectory() {
                   <div className="flex flex-wrap gap-2">
                     {LIMITS.map((limit) => (
                       <Badge key={limit} variant="secondary" className="max-w-full wrap-anywhere whitespace-normal">
-                        {t('labelValue', { label: t(limit), value: plan[limit].toLocaleString('en-LK') })}
+                        {t('labelValue', { label: t(limit), value: formatCount(plan[limit]) })}
                       </Badge>
                     ))}
                   </div>
@@ -366,7 +366,7 @@ export function PlanDetail({ id }: { id: string }) {
                 <div key={limit} className="rounded-field bg-background p-3">
                   <dt className="text-small">{t(limit)}</dt>
                   <dd className="m-0 text-large font-semibold" data-testid={consoleTestId(`plan-${limit}`)}>
-                    {plan[limit].toLocaleString('en-LK')}
+                    {formatCount(plan[limit])}
                   </dd>
                 </div>
               ))}

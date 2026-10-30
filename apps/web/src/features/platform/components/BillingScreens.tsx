@@ -13,7 +13,7 @@ import { FieldGroup } from '@/components/ui/field';
 import { Item, ItemActions, ItemContent, ItemDescription, ItemGroup, ItemTitle } from '@/components/ui/item';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Spinner } from '@/components/ui/spinner';
-import { formatDate, formatMoney, minorUnitsText, parseMinorUnits } from '@salon/format';
+import { formatDate, formatMoney, minorUnitsText, parseMinorUnits, todayInZone } from '@salon/format';
 import {
   operatorRead,
   operatorRequest,
@@ -802,10 +802,7 @@ function RecordTransfer({
   const router = useRouter();
   const message = useFailureMessage();
   const [open, setOpen] = useState(false);
-  const today = () =>
-    new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(
-      new Date(),
-    );
+  const today = () => todayInZone(timeZone);
   const [values, setValues] = useState({ reference: '', amount: minorUnitsText(invoice.amount), receivedOn: '' });
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<OperatorFailure | null>(null);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatMoney, minorUnitsText, parseMinorUnits } from '../src/index';
+import { formatCount, formatMoney, minorUnitsText, parseMinorUnits, todayInZone } from '../src/index';
 
 describe('money formatting', () => {
   it('writes rupees with cents only when they are not zero', () => {
@@ -21,5 +21,17 @@ describe('money formatting', () => {
     expect(parseMinorUnits('abc')).toBe('abc');
     expect(minorUnitsText(250050)).toBe('2500.50');
     expect(minorUnitsText(250000)).toBe('2500');
+  });
+});
+
+describe('counts and dates', () => {
+  it('groups a count for the locale', () => {
+    expect(formatCount(1000)).toBe('1,000');
+    expect(formatCount(25)).toBe('25');
+  });
+  it("gives today's date in the zone, not the machine's", () => {
+    const evening = new Date('2026-10-29T20:00:00Z');
+    expect(todayInZone('Asia/Colombo', evening)).toBe('2026-10-30');
+    expect(todayInZone('Europe/London', evening)).toBe('2026-10-29');
   });
 });

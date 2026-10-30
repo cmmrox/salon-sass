@@ -15,6 +15,14 @@ export function formatTime(value: string, timeZone: string, locale = 'en-LK'): s
 export function formatPhone(value: string): string {
   return value.replace(/^\+94(7\d)(\d{3})(\d{4})$/, '+94 $1 $2 $3');
 }
+/** A whole count, such as a plan's staff seats or message allowance, grouped for the locale: `1,000`. */
+export function formatCount(value: number, locale = 'en-LK'): string {
+  return value.toLocaleString(locale);
+}
+/** Today's calendar date in the zone, as a date field's value (`2026-10-30`). */
+export function todayInZone(timeZone: string, now = new Date()): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
+}
 /** The viewer's own time zone, for screens that belong to no salon (the operator console). */
 export function viewerTimeZone(): string {
   return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
