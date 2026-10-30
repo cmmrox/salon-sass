@@ -107,7 +107,7 @@ export function salonBrandRule(brandColour: unknown): string {
  * brand: the operator console. Ink as the accent with white on it, the canvas's secondary tone as the
  * soft tint, and ink as accent-coloured text. The console never takes a salon's brand.
  */
-export const NEUTRAL_ACCENT = { brand: '#111827', onBrand: '#ffffff', soft: '#EAE5DC', text: '#111827' } as const;
+const NEUTRAL_ACCENT = { brand: '#111827', onBrand: '#ffffff', soft: '#EAE5DC', text: '#111827' } as const;
 
 /** The neutral accent's root rule: the same four properties a salon's brand sets. */
 export function neutralRootRule(): string {

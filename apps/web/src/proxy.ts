@@ -1,6 +1,6 @@
 import type { NextRequest } from 'next/server';
 
-import { routeRequest } from '@/lib/tenancy/route-request';
+import { routeRequest } from '@/app/_proxy/route-request';
 
 /**
  * Tenant routing (docs/engineering/web.md): the request's `Host` header decides whether it shows

@@ -17,7 +17,8 @@ export const PLAIN_PAGE_CLASSES = {
   panel: 'flex min-w-0 flex-col gap-4 rounded-card bg-card p-6 text-card-foreground',
   panelTitle: 'text-title leading-heading font-semibold',
   // Status.tsx's "unavailable" state: Alert (caution), AlertTitle, Button (outline, sm)
-  alert: 'relative flex w-full min-w-0 flex-col gap-3 rounded-field p-4 text-foreground bg-caution-surface *:data-[slot=alert-title]:text-caution',
+  alert:
+    'relative flex w-full min-w-0 flex-col gap-3 rounded-field p-4 text-foreground bg-caution-surface *:data-[slot=alert-title]:text-caution',
   alertTitle: 'text-large leading-heading font-semibold wrap-anywhere',
   retry:
     "inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-action border whitespace-normal no-underline wrap-anywhere disabled:cursor-not-allowed disabled:opacity-(--opacity-disabled) [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-icon border-foreground text-foreground min-h-action px-4 py-2 self-start bg-card font-semibold",

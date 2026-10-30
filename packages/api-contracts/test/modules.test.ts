@@ -66,7 +66,9 @@ describe('module entries', () => {
   it('refuses an operation with two tags, and a path whose operations name two modules', () => {
     const twoTags = { paths: { '/api/v1/booking/holds': { post: operation('hold', ['booking', 'payment']) } } };
     const twoModules = {
-      paths: { '/api/v1/booking/holds': { post: operation('hold', ['booking']), get: operation('holds', ['payment']) } },
+      paths: {
+        '/api/v1/booking/holds': { post: operation('hold', ['booking']), get: operation('holds', ['payment']) },
+      },
     };
 
     expect(() => pathsByModule(twoTags)).toThrow('2 tags');
@@ -75,7 +77,10 @@ describe('module entries', () => {
 });
 
 describe('the committed module entries', () => {
-  const exported = JSON.parse(readFileSync(join(packageRoot, 'package.json'), 'utf8')).exports as Record<string, string>;
+  const exported = JSON.parse(readFileSync(join(packageRoot, 'package.json'), 'utf8')).exports as Record<
+    string,
+    string
+  >;
   const modules = readdirSync(generatedDirectory)
     .filter((file) => file !== SCHEMA_FILE)
     .map((file) => file.replace(/\.ts$/, ''));

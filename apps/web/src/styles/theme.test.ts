@@ -1,16 +1,17 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { declarations, globalSheet, tailwindNames, themeSheet, themeValue } from '@/test/theme';
+import { declarations, globalSheet, tailwindNames, themeSheet, themeValue } from '@test/theme';
 
 /** CR-013 and CR-016: one salon theme, the prototype's final tokens under shadcn/ui's names, with
  * the salon's brand as the accent. */
 const source = join(__dirname, '..');
 const read = (file: string) => readFileSync(join(source, file), 'utf8');
-const modules = (dir: string): string[] => readdirSync(dir).flatMap((name) => {
-  const path = join(dir, name);
-  return statSync(path).isDirectory() ? modules(path) : name.endsWith('.module.css') ? [path] : [];
-});
+const modules = (dir: string): string[] =>
+  readdirSync(dir).flatMap((name) => {
+    const path = join(dir, name);
+    return statSync(path).isDirectory() ? modules(path) : name.endsWith('.module.css') ? [path] : [];
+  });
 
 describe('the salon theme', () => {
   it.each([
@@ -29,7 +30,7 @@ describe('the salon theme', () => {
     ['--radius', '1.25rem'],
     ['--radius-medium', '1.5rem'],
     ['--radius-pill', '999px'],
-  ])('keeps the prototype\'s final %s under its shadcn/ui name', (name, value) => {
+  ])("keeps the prototype's final %s under its shadcn/ui name", (name, value) => {
     expect(themeValue(name)).toBe(value);
   });
 
@@ -38,13 +39,34 @@ describe('the salon theme', () => {
     expect(theme.get('--primary')).toBe('var(--color-brand)');
     expect(theme.get('--primary-foreground')).toBe('var(--color-on-brand)');
     expect(theme.get('--accent')).toBe('var(--color-brand-soft)');
-    expect([...theme.keys()].filter((name) => name.startsWith('--color-brand') || name === '--color-on-brand')).toEqual([]);
+    expect([...theme.keys()].filter((name) => name.startsWith('--color-brand') || name === '--color-on-brand')).toEqual(
+      [],
+    );
     expect(themeSheet).not.toMatch(/#D6086A/i);
   });
 
   it('maps every theme colour to its Tailwind name in globals.css', () => {
     const names = tailwindNames();
-    for (const name of ['background', 'foreground', 'card', 'primary', 'primary-foreground', 'secondary', 'muted', 'muted-foreground', 'accent', 'accent-foreground', 'destructive', 'border', 'input', 'ring', 'positive', 'positive-surface', 'caution', 'caution-surface']) {
+    for (const name of [
+      'background',
+      'foreground',
+      'card',
+      'primary',
+      'primary-foreground',
+      'secondary',
+      'muted',
+      'muted-foreground',
+      'accent',
+      'accent-foreground',
+      'destructive',
+      'border',
+      'input',
+      'ring',
+      'positive',
+      'positive-surface',
+      'caution',
+      'caution-surface',
+    ]) {
       expect(names.get(`--color-${name}`), name).toBe(`var(--${name})`);
     }
     expect(names.get('--font-sans')).toBe('var(--font-family)');
@@ -52,7 +74,13 @@ describe('the salon theme', () => {
   });
 
   it('holds globals.css in the order the styling rules give, with no dark mode', () => {
-    const order = ["@import 'tailwindcss'", "@import 'tw-animate-css'", "@import '../styles/theme.css'", '@theme inline', '@layer base'].map((part) => globalSheet.indexOf(part));
+    const order = [
+      "@import 'tailwindcss'",
+      "@import 'tw-animate-css'",
+      "@import '../styles/theme.css'",
+      '@theme inline',
+      '@layer base',
+    ].map((part) => globalSheet.indexOf(part));
     expect(order.every((index) => index >= 0)).toBe(true);
     expect([...order].sort((a, b) => a - b)).toEqual(order);
     expect(globalSheet).toContain('@custom-variant dark (&:is(.dark *));');
@@ -61,14 +89,24 @@ describe('the salon theme', () => {
 
   it('gives no font size the name of a colour, so a text-* utility is never ambiguous', () => {
     const names = tailwindNames();
-    const sizes = [...names.keys()].filter((name) => name.startsWith('--text-')).map((name) => name.slice('--text-'.length));
-    const colours = new Set([...names.keys()].filter((name) => name.startsWith('--color-')).map((name) => name.slice('--color-'.length)));
+    const sizes = [...names.keys()]
+      .filter((name) => name.startsWith('--text-'))
+      .map((name) => name.slice('--text-'.length));
+    const colours = new Set(
+      [...names.keys()].filter((name) => name.startsWith('--color-')).map((name) => name.slice('--color-'.length)),
+    );
     expect(sizes.filter((size) => colours.has(size))).toEqual([]);
   });
 
   it('loads the three Poppins weights the prototype uses', () => {
-    for (const [weight, file] of [['400', 'Regular'], ['500', 'Medium'], ['600', 'SemiBold']]) {
-      expect(themeSheet).toContain(`font-weight: ${weight}; font-display: swap; src: url('/fonts/poppins/Poppins-${file}.ttf')`);
+    for (const [weight, file] of [
+      ['400', 'Regular'],
+      ['500', 'Medium'],
+      ['600', 'SemiBold'],
+    ]) {
+      expect(themeSheet).toContain(
+        `font-weight: ${weight}; font-display: swap; src: url('/fonts/poppins/Poppins-${file}.ttf')`,
+      );
     }
   });
 
@@ -80,14 +118,21 @@ describe('the salon theme', () => {
   });
 
   it('keeps no former token name beside the shadcn/ui ones', () => {
-    for (const name of ['--color-text', '--color-surface', '--color-background', '--color-border', '--space-4', '--font-weight-strong']) {
+    for (const name of [
+      '--color-text',
+      '--color-surface',
+      '--color-background',
+      '--color-border',
+      '--space-4',
+      '--font-weight-strong',
+    ]) {
       expect(declarations(themeSheet).has(name), name).toBe(name === '--font-weight-strong');
     }
   });
 
   it('draws the sign-in accents in the salon brand (CR-012, CR-013)', () => {
-    const signIn = read('components/account/SignIn.tsx');
-    const frame = read('components/account/StaffSignInFrame.tsx');
+    const signIn = read('features/identity/components/SignIn.tsx');
+    const frame = read('surfaces/workspace/StaffSignInFrame.tsx');
     const button = read('components/ui/button.tsx');
     // The sign-in action is the default (brand) action; the recovery control is the brand link.
     expect(signIn).toMatch(/testId="account-sign-in-submit"(?![^>]*secondary)/);
@@ -102,19 +147,29 @@ describe('the salon theme', () => {
     expect(frame).toContain('text-foreground');
   });
 
-  it('draws the fields\' focus and the checked box in the salon brand, and refusal in the negative colour', () => {
-    expect(read('components/ui/input.tsx')).toContain('focus-visible:shadow-field-focus aria-invalid:shadow-field-invalid');
-    expect(declarations(themeSheet).get('--field-ring-focus')).toBe('inset 0 0 0 var(--size-focus-offset) var(--color-brand)');
-    expect(declarations(themeSheet).get('--field-ring-invalid')).toBe('inset 0 0 0 var(--size-field-inset) var(--destructive)');
+  it("draws the fields' focus and the checked box in the salon brand, and refusal in the negative colour", () => {
+    expect(read('components/ui/input.tsx')).toContain(
+      'focus-visible:shadow-field-focus aria-invalid:shadow-field-invalid',
+    );
+    expect(declarations(themeSheet).get('--field-ring-focus')).toBe(
+      'inset 0 0 0 var(--size-focus-offset) var(--color-brand)',
+    );
+    expect(declarations(themeSheet).get('--field-ring-invalid')).toBe(
+      'inset 0 0 0 var(--size-field-inset) var(--destructive)',
+    );
     expect(declarations(themeSheet).get('--field-ring')).toBe('inset 0 0 0 var(--size-field-inset) var(--border)');
-    expect(read('components/ui/checkbox.tsx')).toContain('data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground');
+    expect(read('components/ui/checkbox.tsx')).toContain(
+      'data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground',
+    );
   });
 
-  it('draws the workspace navigation\'s current route in the salon brand', () => {
+  it("draws the workspace navigation's current route in the salon brand", () => {
     // The Sidebar (CR-017): the current route's menu button is active, and an active button is
     // filled with the sidebar's primary colours, which are the salon's brand and its readable colour.
-    expect(read('components/shell/Navigation.tsx')).toContain('isActive={Boolean(item.current)}');
-    expect(read('components/ui/sidebar.tsx')).toContain('data-[active=true]:bg-sidebar-primary data-[active=true]:text-sidebar-primary-foreground');
+    expect(read('components/shared/Navigation.tsx')).toContain('isActive={Boolean(item.current)}');
+    expect(read('components/ui/sidebar.tsx')).toContain(
+      'data-[active=true]:bg-sidebar-primary data-[active=true]:text-sidebar-primary-foreground',
+    );
     expect(tailwindNames().get('--color-sidebar-primary')).toBe('var(--sidebar-primary)');
     expect(tailwindNames().get('--color-sidebar-primary-foreground')).toBe('var(--sidebar-primary-foreground)');
     expect(declarations(themeSheet).get('--sidebar-primary')).toBe('var(--color-brand)');

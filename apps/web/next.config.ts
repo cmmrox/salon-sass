@@ -20,8 +20,8 @@ const nextConfig: NextConfig = {
   partialPrefetching: true,
   // AGENTS.md here is the lead's file; `next dev` must not write to it.
   agentRules: false,
-  // The generated API client is a workspace package shipped as TypeScript source.
-  transpilePackages: ['@salon/api-contracts'],
+  // The workspace's packages (the generated API client, formatting) are shipped as TypeScript source.
+  transpilePackages: ['@salon/api-contracts', '@salon/format'],
   poweredByHeader: false,
   turbopack: {
     rules: {

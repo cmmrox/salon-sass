@@ -35,13 +35,19 @@ describe('the bounded JSON body reader', () => {
   it('accepts a body of exactly the limit', async () => {
     const value = `{"a":"${'x'.repeat(1024 - 8)}"}`;
     expect(new TextEncoder().encode(value).byteLength).toBe(1024);
-    expect(await readBoundedJson(streamed([value.slice(0, 500), value.slice(500)]), 1024)).toEqual({ ok: true, value: { a: 'x'.repeat(1016) } });
+    expect(await readBoundedJson(streamed([value.slice(0, 500), value.slice(500)]), 1024)).toEqual({
+      ok: true,
+      value: { a: 'x'.repeat(1016) },
+    });
     expect(await readBoundedJson(streamed([value + ' ']), 1024)).toEqual({ ok: false });
   });
 
   it('reads invalid JSON, an array or nothing as an empty object', async () => {
     expect(await readBoundedJson(streamed(['{"a":']), 1024)).toEqual({ ok: true, value: {} });
     expect(await readBoundedJson(streamed(['[1,2]']), 1024)).toEqual({ ok: true, value: {} });
-    expect(await readBoundedJson(new Request('http://localhost/x', { method: 'POST' }), 1024)).toEqual({ ok: true, value: {} });
+    expect(await readBoundedJson(new Request('http://localhost/x', { method: 'POST' }), 1024)).toEqual({
+      ok: true,
+      value: {},
+    });
   });
 });

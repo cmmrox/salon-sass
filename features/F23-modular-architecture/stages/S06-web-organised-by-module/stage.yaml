@@ -3,7 +3,7 @@ feature: F23
 title: Web app organised by module
 sequence: 8
 surfaces: [web]
-status: outlined
+status: complete
 qa_status: not-run
 blocked_reason: null
 released_in: null
@@ -12,12 +12,171 @@ depends_on: [F23-S07]
 requirements: []
 nfr_focus: [NFR-24, NFR-18]
 handoff:
-  run: null
-  data: null
-  notes: null
+  run: |
+    Gates (repository root, pnpm through Corepack): pnpm install --frozen-lockfile; pnpm -r lint; pnpm -r typecheck; pnpm -r test;
+      pnpm --filter @salon/web build; pnpm format:check; pnpm knip; pnpm contracts:check.
+      Boundary and contract-import rules alone: pnpm --filter @salon/web exec vitest run src/app/module-boundaries.test.ts.
+    Running product: create an empty database in this project's container (the retained one carries a stray V17 salon_setup),
+      SALON_DB_NAME=<it> infra/scripts/local-service.sh start api, then SALON_DB_NAME=<it> infra/scripts/local-service.sh start web
+      (web 3100: http://alpha.localhost:3100/workspace, http://console.localhost:3100/console). Staff through
+      POST /local/identity/seed on alpha (API 8090); an operator through infra/scripts/operator-bootstrap.sh <file>, which needs
+      RESOLVED_JAVA_HOME set by hand today (see notes).
+    AC-6 comparison (tools and logs in .local/logs/F23-S06/ac6-tools, ac6-*.log): ac6.py setup|capture, ac6layers.py <before> <after>.
+  data: |
+    No migration, seed, fixture or API change. The walk-through used a fresh database salon_f23_s06 in salon-postgres (17 migrations,
+      local seed salons), dropped afterwards; the retained database was not touched. Synthetic accounts seeded there with random
+      local-only credentials (ac6-owner, ac6-manager, ac6-reception @example.invalid on alpha; ac6-operator@example.invalid), plus a
+      plan ac6-standard and a trialing subscription for alpha created through the operator BFF; all went with that database. The
+      API and the web app were stopped afterwards, as found.
+  notes: |
+    Built by the developer agent on 2026-10-30, about 1 h 20 min from first read to handoff (the gates about 3 min of it).
+    Commits on charithm/feature/F23-S06-web-organised-by-module, in the spec's order: 43d49bd, da1ce8d, 201000c, 3be6e2a, b7948c0,
+      5523e4e, fcad833 (moves, imports only, one per area; formatting to packages/format); 2254f48 (per-module clients behind feature
+      entries); 31e8fd3 (boundary rules); 43952eb, f7f70e6, 89bf711 (Prettier: config, a prepared suppression, the reformat alone);
+      638ea0f (knip and its removals); 928be89 (reasons beside long components); 447f9e6 (Next.js 16.4.1); e8027f2, ca399d5 (last
+      formatting calls into @salon/format; ESLint loaded once in the boundary test). Not pushed.
+
+    Developer gates (verification.commands), run in order from the repository root on the clean tree at ca399d5; logs in
+    /Users/cmmrox/Personal/Projects/salon-sass/.local/logs/F23-S06/gates/ (ignored path; keep until closure), summary.txt there.
+    | command | revision | result | log |
+    | pnpm install --frozen-lockfile | ca399d5 | exit 0, 0 s | 1-install.log |
+    | pnpm -r lint | ca399d5 | exit 0, 13 s (eslint --max-warnings 0 in web, format and api-contracts) | 2-lint.log |
+    | pnpm -r typecheck | ca399d5 | exit 0, 8 s | 3-typecheck.log |
+    | pnpm -r test | ca399d5 | exit 0, 44 s; web 65 files 693 tests, format 5, api-contracts 25, 0 failed | 4-test.log |
+    | pnpm --filter @salon/web build | ca399d5 | exit 0, 26 s; Next.js 16.4.1, no security stop; artifact scan clean | 5-build.log |
+    | pnpm format:check | ca399d5 | exit 0, 9 s | 6-format-check.log |
+    | pnpm knip | ca399d5 | exit 0, 2 s | 7-knip.log |
+    | pnpm contracts:check | ca399d5 | exit 0, 66 s; "openapi.json and src/generated are current" | 8-contracts-check.log |
+    Conditions: Node 24.12.0, pnpm 12.11.2 through Corepack, Maven with the toolchain's JDK 25.0.1 and Docker for contracts:check;
+      no local web or API process ran during the gates. Superseded full run at 447f9e6, all eight passed: gates-447f9e6/.
+      Baseline before any change (19d4bbf): web tests 64 files / 679 passed, lint and typecheck clean (baseline-web-*.log); the
+      16.4.0 build compiled, then stopped with SecurityFatalError (build-baseline-16.4.0.log).
+
+    Acceptance criteria:
+    AC-1 checked (ac-checks.log at ca399d5): apps/web/src holds app, components (shared, ui), features (branding, identity,
+      platform), hooks, i18n, lib (api-core, http, observability, plain-page, tenancy, utils), styles, surfaces (console, workspace)
+      and the framework files proxy.ts and instrumentation.ts; src/components/{account,console,notice,platform,shell,status,support}
+      and src/lib/{api,identity,operator,platform,format} and src/test no longer exist.
+    AC-2 checked: src/app/module-boundaries.test.ts lints fixtures as named files and each is refused by boundaries/dependencies: a
+      feature importing another feature, a surface importing another surface, a feature importing a surface, a deep import into a
+      feature and into a surface, lib importing a feature, a shared component importing a feature; entries, same-folder internals and
+      routes using a server entry are allowed (17 cases pass). With the rules switched off, 8 cases fail (they bite). The application
+      passes pnpm -r lint with --max-warnings 0. The stale (booking) surface rule is gone.
+    AC-3 checked: every API call is in features/<module>/server through @salon/api-contracts/<module> (identity, platform, branding),
+      the shared module's GET /api/v1/meta only in lib/api-core (getMeta, apiTime); nothing imports the package root; all 13 server
+      files (10 under server/, 3 server.ts entries) start with import 'server-only'. Lint refuses the package root, another module's
+      client, a client outside server code, the shared client outside lib/api-core and server code without the guard (fixture cases
+      in the same test). The built browser chunks contain none of the proxy keys, createHmac, the sign-in paths, the refresh cookie
+      name or /api/v1/salon/entitlements (ac-checks.log).
+    AC-4 checked (ac4-fixtures.log): pnpm format:check fails on an unformatted apps/web/src/lib/format-probe.ts (exit 1) and pnpm knip
+      on an unused export appended to lib/utils.ts (exit 1, "Unused exports (1) unusedProbe"); both pass again once removed. Both are
+      gates above.
+    AC-5 checked: next 16.4.1 (and eslint-config-next 16.4.1). Advisories, from npm's bulk advisory service and the GitHub Advisory
+      Database, each next >=16.0.0 <=16.4.0, first patched 16.4.1: GHSA-p3m5-59mp-jv5r (CVE-2026-94482, high, DoS through Server
+      Actions), GHSA-2464-fhr4-w9xw (critical, RCE in image optimisation with SVG), GHSA-673q-mjm6-r5xr (critical, RCE in 'use cache'
+      returning typed arrays). 16.4.1 (published 2026-10-14) is the smallest fixed version and past pnpm's minimum release age; npm
+      lists no advisory against it. The production build completes with no security stop (gate 5). The next upgrade agent command
+      and the instructions in the build's message were not used; the version changed through pnpm.
+    AC-6 checked, with one difference to decide (below). The saved 16.4.0 baseline build (captured before the first move) and the
+      final build were served back to back by the same standalone harness, with the same sessions and database state; 44 responses
+      each: workspace sign-in, account, staff, activity, billing, support, support access, workspace home and legacy redirects,
+      console sign-in, salons, a salon, its invoices, plans, a plan, support sessions, the platform host pages, unknown salon, bare
+      address, not-found, healthz and 13 BFF reads and refusals (ac6-compare.log; tools in ac6-tools/). Result: status and kept
+      headers (cache-control, content-type, location, ...) identical 44/44; the DOM without scripts and asset names identical on 28,
+      and on 16 differing only in token order inside one class attribute; the flight data identical in every string except its list
+      of chunk script tags (the build splits its JavaScript into a different number of files). The same comparison of two captures of
+      the baseline build is identical on all layers 44/44 (ac6-self-check.log). /salon-site answers 404 under the local server.
+      Every existing web test passes with unchanged assertions (test edits listed below). The F01-F03 Playwright regression is QA's.
+      The difference: prettier-plugin-tailwindcss puts three class strings in its canonical order, so the main container
+      ("min-w-0 max-w-content" -> "max-w-content min-w-0") on console and workspace pages and the notice title ("text-foreground
+      wrap-anywhere" -> "wrap-anywhere text-foreground") on not-found and the platform pages carry the same classes in another order.
+      No class is added or removed and nothing renders differently; but AC-6 as written ("differs only in build-specific asset
+      names") is not met byte for byte. The spec requires the plugin; the lead decides whether this is acceptable.
+    AC-7 checked: @salon/format (packages/format) holds money, date, time, phone, size, count and zone-date formatting with 5 tests;
+      15 web files import it; apps/web/src has no Intl, toLocale* or toFixed call left (ac-checks.log).
+    Running product walk-through (16.4.1 build, local-service.sh start web): staff sign-in with password then authenticator code
+      through the UI, then account (devices), billing (plan, limits, trial, invoices through the new identity-to-platform port),
+      staff, activity and support access by client navigation; operator sign-in with code, then salons, a salon, its invoices,
+      plans, a plan and support sessions; no console error or warning. From outside: an alpha session on beta's host gets 401 for
+      principal, entitlements and invoices; support reads without a session 401; a cross-site support entry 403; customer and unknown
+      kinds 404; the operator and platform BFFs off their hosts 404; a malformed export token 404.
+
+    Placement choices that needed judgement (the spec's mapping could not all hold together with its boundary rules):
+    1. The workspace BFF keeps its session logic in identity and reaches the platform paths (entitlements, invoices, salon support
+       sessions, support entry and end) through a SalonAccount port; the identity-web route wires platform's salonAccountFor into
+       createIdentityWeb. Workspace and operator entry take a hostname instead of a client.
+    2. BillingScreen and the support screens (SupportAccessScreen, SupportBanner, SupportEntry) went to surfaces/workspace, not
+       features/platform: they drive identity's browser session (renewal lock, ended-session handling) around platform data, which a
+       platform feature may not import. BillingBanner, the console plan and billing parts and ExportDownload are in features/platform.
+    3. Console: PlanScreens, PlanPicker, BillingScreens, ConsoleControls, ConsoleSheet, DirectoryControls and the directory hook in
+       features/platform (the platform parts import the controls); the console page, shell, pending state, sign-in, sign-out and the
+       salon, lifecycle and support screens in surfaces/console.
+    4. AppShell, BrandStyle and Navigation went to components/shared, not surfaces: Notice (shared) and the root not-found use
+       AppShell, and both surfaces use Navigation and BrandStyle. There is no surfaces/platform: the platform host's two pages compose
+       shared parts and ExportDownload directly.
+    5. lib/api/meta.ts is in lib/api-core (it serves the status page and the API clock for both sign-ins: the shared module).
+       lib/operator/host.ts became lib/tenancy/console-host.ts (hostname routing, used by the proxy and the console sign-in page);
+       lib/identity/network.ts became lib/http/network.ts (the request log uses it); the salon header is in features/branding/server.
+    6. The proxy's routing (route-request.ts, site.ts) composes branding, identity and platform, so it left lib/tenancy for
+       src/app/_proxy (a private folder beside the routes); lib/tenancy keeps hostname.ts and console-host.ts.
+    7. Inside a feature, beside the listed folders: client/ (the browser side of its BFF session: identityRequest, the cross-tab
+       lock, OperatorFailure ...) and types.ts (types shared by its server and client code).
+    8. Test helpers moved from src/test to apps/web/test, imported as @test/*.
+
+    Differences from the documents (for the lead to correct):
+    - web.md "Structure": add client/ and types.ts inside a feature, apps/web/test (@test), src/app/_proxy for the proxy's routing,
+      and that there is no surfaces/platform; components/shared holds AppShell, BrandStyle, Navigation, Notice, Status, LiveStatus.
+    - web.md "Tenant routing" still says forward-hostname is in src/lib/api/ "until F23-S06"; "Branding" names
+      src/lib/tenancy/route-request.ts and src/lib/identity/entry.ts, now src/app/_proxy/route-request.ts and
+      src/features/identity/server/entry.ts.
+    - web.md, Styling rule 10 says the styling and composition tests cover src/components and src/app; they now also cover
+      src/surfaces and src/features (scope widened so moved components stay covered).
+    - Import rules as built: boundaries element types app, surface, feature, shared-component, ui, lib (lib also covers hooks, i18n
+      and styles) and test-support; another folder is reached only through a feature's index.ts or server.ts or a surface's index.ts;
+      the boundary rules apply to tests too, the contract-import rule to non-test files only; src/proxy.ts and src/instrumentation.ts
+      sit in no element (framework entry files) and are not checked by boundaries.
+    - tech-stack.md: Next.js 16.4.1; eslint-plugin-boundaries 7.4.0, prettier 3.9.10, prettier-plugin-tailwindcss 0.8.1 (printWidth
+      120, single quotes, tailwindFunctions cn and cva), knip 6.43.0 (6.44.0 was a day old), server-only 0.0.1 (new dependencies, all
+      implied by the spec). Prettier ignores src/styles/theme.css (inlined byte for byte into the plain pages; formatting lowercases
+      the prototype's hex tokens the theme tests read) and src/components/ui (shadcn/ui unchanged, per the spec). knip exempts only
+      the generated contract and shadcn/ui's unused parts, and reads `pnpm -r lint|typecheck` in CI as binaries (ignoreBinaries).
+    - Clean code: six components exceed about 200 lines once formatted (AccountScreen 675, CreateSalon 334, SignIn 269, BillingScreen
+      258, SupportAccessScreen 218, SupportSessionList 212); each now has its reason beside it. AccountScreen's three views share one
+      session, lock, feedback, confirmation and pager state; splitting it means a session hook first, a refactor I recommend as its
+      own planned work rather than inside this move. No commented-out code; no TODO.
+
+    Test changes (no assertion changed in meaning): tests moved with their code; tests that read sources by path point at the new
+    paths (theme.test, app/composition.test with its two expected file paths); the composition and styling-rules scans include
+    src/surfaces and src/features; vi.mock targets and client construction follow the new modules; the null-client "no API
+    configured" entry cases arrange it with an empty SALON_API_BASE_URL; the support-view BFF test runs beside the identity-web
+    route with the real wiring; identity's own BFF tests use a port double that fails if reached; the account composition test is
+    split by module (its staff-sign-in-frame case is StaffSignInFrame.test.tsx); Console.test's plan-picker case (three pages of
+    100-option Selects, 1-5 s in a full run) has an explicit 15 s timeout. New: module-boundaries.test.ts, salon-trace test (moved
+    client.test), format tests for formatCount and todayInZone.
+
+    For QA (qa/ is not mine to edit): these white-box checks name moved source paths and will fail until updated:
+    qa/checks/F01/S01-strings-and-test-ids.sh lines 19, 60, 61, 63, 71, 72 (Status.tsx -> src/components/shared/Status.tsx;
+    AccountScreen.tsx and Controls.tsx -> src/features/identity/components/); qa/checks/F01/S03-component-rules.sh lines 24, 72, 76
+    (src/components/composition.test.tsx -> src/app/composition.test.tsx; shell/AppShell.tsx -> shared/AppShell.tsx;
+    account/AccountScreen.tsx -> features/identity/components/); qa/checks/F01/S03-styling-setup.sh lines 111-114 (probe files in
+    src/components/shell, which no longer exists); qa/shared/scan-web-source.mjs line 69 (Controls.tsx); qa/web/F02/S04-presentation.spec.ts
+    line 110 (apps/web/src/components/account -> src/features/identity/components).
+
+    Other observations: infra/scripts/operator-bootstrap.sh calls require_prerequisites without "api", so RESOLVED_JAVA_HOME is never
+    set and the script stops ("unbound variable"); worked round by exporting RESOLVED_JAVA_HOME (pre-existing, not in this stage).
+    Under Next.js's standalone server bound to 127.0.0.1 in my harness, /salon-site looped through the proxy's rewrite instead of
+    answering 404 (the local server answers 404; the image binds 0.0.0.0 and QA's stack check expects 404); not investigated further.
 cases: []
 verification:
-  commands: []
+  commands:
+  - pnpm install --frozen-lockfile
+  - pnpm -r lint
+  - pnpm -r typecheck
+  - pnpm -r test
+  - pnpm --filter @salon/web build
+  - pnpm format:check
+  - pnpm knip
+  - pnpm contracts:check
   automation: []
   manual: []
   deferred: []

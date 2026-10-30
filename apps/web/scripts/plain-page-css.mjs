@@ -38,13 +38,17 @@ export async function plainPageCss() {
   let entry = await readFile(globals, 'utf8');
   for (const [from, to] of EDITS) {
     if (!entry.includes(from)) {
-      throw new Error(`src/app/globals.css no longer contains ${JSON.stringify(from)}; update scripts/plain-page-css.mjs`);
+      throw new Error(
+        `src/app/globals.css no longer contains ${JSON.stringify(from)}; update scripts/plain-page-css.mjs`,
+      );
     }
     entry = entry.replace(from, to);
   }
   // Optimised (nesting flattened for older browsers) but not minified, so that a change reads in
   // a diff. The output depends only on the pinned Tailwind version and these two files.
-  const result = await postcss([tailwindcss({ base: web, optimize: { minify: false } })]).process(entry, { from: globals });
+  const result = await postcss([tailwindcss({ base: web, optimize: { minify: false } })]).process(entry, {
+    from: globals,
+  });
   return HEADER + result.css.trim() + '\n';
 }
 

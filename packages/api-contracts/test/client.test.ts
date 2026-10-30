@@ -33,7 +33,12 @@ describe('createApiClient', () => {
   });
 
   it('returns an error response as problem details, with its code', async () => {
-    const problem: Problem = { title: 'Not Found', status: 404, code: 'not_found', traceId: '4bf92f3577b34da6a3ce929d0e0e4736' };
+    const problem: Problem = {
+      title: 'Not Found',
+      status: 404,
+      code: 'not_found',
+      traceId: '4bf92f3577b34da6a3ce929d0e0e4736',
+    };
     const { fetch } = respondingWith(404, problem, 'application/problem+json');
     const client = createApiClient({ baseUrl: 'http://api.test:8090', fetch });
 
@@ -78,7 +83,13 @@ describe('createApiClient', () => {
   it('returns forbidden for a suspended salon, with its code and nothing of its brand', async () => {
     // The contract lists every code, so a code it does not list does not compile.
     const code: Problem['code'] = 'salon_suspended';
-    const problem: Problem = { title: 'Forbidden', status: 403, code, instance: '/api/v1/salon', traceId: '4bf92f3577b34da6a3ce929d0e0e4736' };
+    const problem: Problem = {
+      title: 'Forbidden',
+      status: 403,
+      code,
+      instance: '/api/v1/salon',
+      traceId: '4bf92f3577b34da6a3ce929d0e0e4736',
+    };
     const { fetch } = respondingWith(403, problem, 'application/problem+json');
     const client = createApiClient({ baseUrl: 'http://gamma.localhost:8090', fetch });
 

@@ -29,8 +29,14 @@ const onNetwork = process.env.SALON_LISTEN_ON_NETWORK === 'true';
 // Next.js reads this when it is loaded, so it is set first and Next.js is imported afterwards.
 process.env.NODE_ENV = dev ? 'development' : 'production';
 // Local-only key file handling stays outside every deployed Next.js bundle.
-loadIdentityRuntime(process.env, resolve(dirname(fileURLToPath(import.meta.url)), '../../../.local/identity-keys.properties'));
-loadOperatorRuntime(process.env, resolve(dirname(fileURLToPath(import.meta.url)), '../../../.local/operator-keys.properties'));
+loadIdentityRuntime(
+  process.env,
+  resolve(dirname(fileURLToPath(import.meta.url)), '../../../.local/identity-keys.properties'),
+);
+loadOperatorRuntime(
+  process.env,
+  resolve(dirname(fileURLToPath(import.meta.url)), '../../../.local/operator-keys.properties'),
+);
 const { default: next } = await import('next');
 
 const hasIPv6Loopback = Object.values(networkInterfaces())

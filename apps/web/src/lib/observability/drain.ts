@@ -18,7 +18,9 @@ const INSTALLED = Symbol.for('salon.web.drain');
  * edge's health check, which runs every second, to take the instance out of its rotation) and
  * `SALON_SHUTDOWN_GRACE_SECONDS` (30, the API's own grace for requests in flight).
  */
-export function drainSettingsFromEnvironment(environment: Record<string, string | undefined> = process.env): DrainSettings {
+export function drainSettingsFromEnvironment(
+  environment: Record<string, string | undefined> = process.env,
+): DrainSettings {
   return {
     delayMs: seconds(environment.SALON_DRAIN_DELAY_SECONDS, 5) * 1000,
     graceMs: seconds(environment.SALON_SHUTDOWN_GRACE_SECONDS, 30) * 1000,
@@ -53,7 +55,12 @@ export function installDrain(settings: DrainSettings = drainSettingsFromEnvironm
  * Stops the server as {@link installDrain} describes, and resolves once it has called `exit`. A
  * second call while one is under way does nothing.
  */
-export async function drain({ delayMs, graceMs, exit = (code) => process.exit(code), sink }: DrainSettings): Promise<void> {
+export async function drain({
+  delayMs,
+  graceMs,
+  exit = (code) => process.exit(code),
+  sink,
+}: DrainSettings): Promise<void> {
   const state = serverState();
   if (state.draining) {
     return;
@@ -72,7 +79,9 @@ export async function drain({ delayMs, graceMs, exit = (code) => process.exit(co
   }
   writeLog(
     settled ? 'INFO' : 'WARN',
-    settled ? 'Stopped: every request was answered' : `Stopped: ${state.inFlight} request(s) were not answered within ${graceMs} ms`,
+    settled
+      ? 'Stopped: every request was answered'
+      : `Stopped: ${state.inFlight} request(s) were not answered within ${graceMs} ms`,
     {},
     sink,
   );

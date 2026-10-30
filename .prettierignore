@@ -1,0 +1,13 @@
+# Generated files: each is checked against its generator instead.
+packages/api-contracts/src/generated/
+apps/web/src/lib/plain-page/plain-page.generated.css
+apps/web/next-env.d.ts
+# Build output.
+.next/
+coverage/
+# The prototype's theme tokens, kept as written: the proxy's plain pages inline this file byte for byte,
+# and the theme tests read its values as the prototype states them.
+apps/web/src/styles/theme.css
+# shadcn/ui components as the CLI wrote them and the theme adapted them (docs/engineering/web.md,
+# "Styling"); they stay unchanged, and the theme tests read their variants as written.
+apps/web/src/components/ui/

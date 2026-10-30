@@ -56,7 +56,11 @@ export function pathsByModule(document) {
       modules.set(owner, [...(modules.get(owner) ?? []), path]);
     }
   }
-  return new Map([...modules].sort(([first], [second]) => first.localeCompare(second)).map(([module, paths]) => [module, paths.sort()]));
+  return new Map(
+    [...modules]
+      .sort(([first], [second]) => first.localeCompare(second))
+      .map(([module, paths]) => [module, paths.sort()]),
+  );
 }
 
 function operationsOf(item) {
