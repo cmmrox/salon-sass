@@ -8,10 +8,11 @@
     "node": ">=24"
   },
   "scripts": {
-    "contracts:generate": "node packages/api-contracts/scripts/contracts.mjs generate",
     "contracts:check": "node packages/api-contracts/scripts/contracts.mjs check",
+    "contracts:generate": "node packages/api-contracts/scripts/contracts.mjs generate",
     "format": "prettier --write apps/web packages",
-    "format:check": "prettier --check apps/web packages"
+    "format:check": "prettier --check apps/web packages",
+    "knip": "knip"
   },
   "devDependencies": {
     "knip": "6.43.0",

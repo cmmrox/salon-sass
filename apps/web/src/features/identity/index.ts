@@ -12,4 +12,3 @@ export {
   supportsLocks,
   withIdentityLock,
 } from './client/session';
-export type { Kind, Principal } from './types';

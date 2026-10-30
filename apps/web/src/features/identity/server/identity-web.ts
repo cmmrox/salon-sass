@@ -38,7 +38,7 @@ export function supportCsrf(request: NextRequest): boolean {
   return csrf(request) && site !== 'same-site';
 }
 /** The support credential's host-only HttpOnly cookies on the salon's host (F03-S04). */
-export const SUPPORT_COOKIES = ['access', 'session'] as const;
+const SUPPORT_COOKIES = ['access', 'session'] as const;
 /** Support reads: what the Owner can read; support-access and own-account reads are refused by the API. */
 const SUPPORT_READS = ['principal', 'staff', 'audit', 'entitlements', 'invoices'];
 export function proxyKey(): Buffer {
@@ -92,7 +92,7 @@ export function clearCookies(response: NextResponse, kind: Kind) {
  * must still land on the "session ended" notice rather than the staff sign-in. It carries no
  * credential and authorizes nothing; it only chooses the notice, and the entry page forgets it.
  */
-export const SUPPORT_ENDED_COOKIE = 'salon_session_ended';
+const SUPPORT_ENDED_COOKIE = 'salon_session_ended';
 const SUPPORT_ENDED_SECONDS = 600;
 export function supportEnded(request: { cookies: { get(name: string): { value: string } | undefined } }): boolean {
   return request.cookies.get(SUPPORT_ENDED_COOKIE)?.value === 'support';

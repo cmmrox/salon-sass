@@ -15,8 +15,8 @@ export class OperatorFailure extends Error {
 }
 
 /** Credential changes are serialized across tabs with this Web Lock; nonsecret change events follow. */
-export const OPERATOR_LOCK = 'salon:identity:operator';
-export const OPERATOR_CHANNEL = 'salon:identity';
+const OPERATOR_LOCK = 'salon:identity:operator';
+const OPERATOR_CHANNEL = 'salon:identity';
 export const supportsLocks = () => typeof navigator !== 'undefined' && Boolean(navigator.locks);
 
 export async function operatorRequest<T>(action: string, body?: unknown): Promise<T> {

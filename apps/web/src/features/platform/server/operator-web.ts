@@ -35,7 +35,7 @@ export function operatorCsrf(request: NextRequest): boolean {
 }
 
 /** The console's own proxy key, shared with the API and independent of every identity key. */
-export function operatorProxyKey(): Buffer {
+function operatorProxyKey(): Buffer {
   const value = process.env.SALON_OPERATOR_PROXY_KEY;
   if (!value || !/^[a-fA-F0-9]{64}$/.test(value)) throw new Error('Configure SALON_OPERATOR_PROXY_KEY');
   return Buffer.from(value, 'hex');

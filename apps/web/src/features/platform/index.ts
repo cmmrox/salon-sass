@@ -28,4 +28,4 @@ export {
   supportsLocks,
   withOperatorLock,
 } from './client/operator-session';
-export type { Entitlements, OperatorPrincipal } from './types';
+export type { Entitlements } from './types';

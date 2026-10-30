@@ -8,7 +8,7 @@ import { IdentityFailure, identityRequest } from '@/features/identity';
 import { formatTime } from '@salon/format';
 
 /** Where the browser goes when its support view ends: the entry page, told why. */
-export const SUPPORT_ENDED = '/workspace/support#ended';
+const SUPPORT_ENDED = '/workspace/support#ended';
 
 /**
  * The support view's banner (F03-S04) on every workspace page: "Support view, read only, ends at

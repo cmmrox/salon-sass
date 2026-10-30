@@ -11,7 +11,7 @@ import type { Plan } from './PlanScreens';
 import type { DirectoryPage } from '../hooks/use-directory';
 
 /** Plans per page of the picker: the Select lists one page, newest first, as the plan list does. */
-export const PLAN_PICKER_SIZE = 100;
+const PLAN_PICKER_SIZE = 100;
 
 /**
  * The plan to assign (Create salon) or move to (Move plan), from every plan there is (BUG-F03-006):

@@ -17,7 +17,7 @@ const TOKEN = /^[A-Za-z0-9_-]{43}$/;
 const ACTIONS = new Set(['export-info', 'export-download']);
 
 /** The bare platform host of a request and its exact origin, or null when the request is not on it. */
-export function platformRequestHost(raw: string | null): { hostname: string; origin: string } | null {
+function platformRequestHost(raw: string | null): { hostname: string; origin: string } | null {
   let domain: string;
   try {
     domain = platformDomainOf(process.env.SALON_PLATFORM_DOMAIN);

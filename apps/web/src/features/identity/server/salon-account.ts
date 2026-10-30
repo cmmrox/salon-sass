@@ -1,14 +1,14 @@
 import 'server-only';
 
 /** What a call the workspace BFF hands on answers: its data or the API's problem, and the response. */
-export type Answer<Data = unknown> = {
+type Answer<Data = unknown> = {
   data?: Data;
   error?: { code?: string; errors?: unknown };
   response: Response;
 };
 
 /** The caller's credential and the request's shared API budget, for one call. */
-export type Call = { headers: Record<string, string | undefined>; signal: AbortSignal };
+type Call = { headers: Record<string, string | undefined>; signal: AbortSignal };
 
 /** The credential a support view's single-use entry code is exchanged for (F03-S04). */
 export type SupportCredential = { accessToken: string; sessionId: string; issuedAt: string; expiresAt: string };

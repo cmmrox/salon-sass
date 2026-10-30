@@ -14,5 +14,4 @@ export {
   supportEnded,
   type Credentials,
 } from './server/identity-web';
-export type { SalonAccount, SalonAccountFor } from './server/salon-account';
 export type { Kind, Principal } from './types';

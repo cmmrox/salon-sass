@@ -25,7 +25,7 @@ export type NavigationItem = {
 };
 
 /** The prototype's own navigation glyphs, drawn in the current text colour. */
-export function NavigationIcon({ icon }: { icon: NavigationItem['icon'] }) {
+function NavigationIcon({ icon }: { icon: NavigationItem['icon'] }) {
   const paths = {
     home: 'm3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z',
     account: 'M20 21v-2a7 7 0 0 0-14 0v2M17 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z',

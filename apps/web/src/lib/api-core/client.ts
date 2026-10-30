@@ -44,7 +44,7 @@ export function createServerApiClient<Client>(
  *   holds its controller strongly, and its signal is handed to the transport directly. An abort of
  *   the caller's own signal is forwarded too, while it still arrives.
  */
-export function withTraceparent(send: typeof fetch): typeof fetch {
+function withTraceparent(send: typeof fetch): typeof fetch {
   return (input, init) => {
     const request = new Request(input, init);
     const context = currentRequest();
@@ -66,7 +66,7 @@ export function withTraceparent(send: typeof fetch): typeof fetch {
 }
 
 /** What is left, in milliseconds, of the request's shared API budget; a whole budget outside one. */
-export function remainingBudget(): number {
+function remainingBudget(): number {
   return (currentRequest()?.deadline ?? performance.now() + API_TIMEOUT_MS) - performance.now();
 }
 

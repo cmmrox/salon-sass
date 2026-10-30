@@ -48,13 +48,7 @@ function asFailure(error: unknown): OperatorFailure {
 }
 
 /** A subscription state as a status label: a word, never a colour alone. */
-export function SubscriptionBadge({
-  state,
-  testId = 'console-subscription-state',
-}: {
-  state: string;
-  testId?: string;
-}) {
+function SubscriptionBadge({ state, testId = 'console-subscription-state' }: { state: string; testId?: string }) {
   const t = useTranslations('console');
   const variant =
     state === 'active'
@@ -71,7 +65,7 @@ export function SubscriptionBadge({
   );
 }
 
-export function InvoiceBadge({ status }: { status: string }) {
+function InvoiceBadge({ status }: { status: string }) {
   const t = useTranslations('console');
   return (
     <Badge
@@ -536,7 +530,7 @@ function ChangeSubscription({
 }
 
 /** Move plan: refused while the salon's usage exceeds the new plan's limits. */
-export function MovePlan({ salon, onMoved }: { salon: Detail; onMoved: () => void }) {
+function MovePlan({ salon, onMoved }: { salon: Detail; onMoved: () => void }) {
   const t = useTranslations('console');
   const router = useRouter();
   const [open, setOpen] = useState(false);
