@@ -7,6 +7,8 @@ restore(){ "$SCRIPTS/local-service.sh" stop api >/dev/null 2>&1; "$SCRIPTS/local
 trap restore EXIT
 begin_case TC-F01-S04-016 "Nonlocal profiles expose no test clock probe or metrics and contract describes none"
 "$SCRIPTS/local-service.sh" stop api >"$REPORT_DIR/S04-profile-stop.log" 2>&1
+# F03 made its own settings required outside local (platform role, operator, export and support keys).
+later_feature_nonlocal_settings
 with_identity_keys env SPRING_PROFILES_ACTIVE=qa-other "$SCRIPTS/local-service.sh" start api >"$REPORT_DIR/S04-profile-start.log" 2>&1 || environment_fault "nonlocal API did not start; see profile-start log"
 for target in /local/ /local/clock /local/probes /local/probes/missing /local/anything /actuator/metrics /actuator/metrics/salon.outbox.dead; do
   for method in GET PUT DELETE POST; do
