@@ -2,8 +2,10 @@
 
 The API: one deployable, a modular monolith. Before changing anything here, read in full:
 
-- `docs/engineering/backend.md`: modules, API conventions, persistence, migrations, booking
-  integrity, virtual threads, security, tests.
+- `docs/engineering/backend.md`: modules and the folders inside one ("Inside a module"),
+  provided interfaces, events, table and path ownership, API conventions, persistence, code
+  generation (Lombok, MapStruct), clean code, migrations, booking integrity, virtual threads,
+  security, tests.
 - `docs/architecture/multi-tenancy.md`: the isolation rules, the checklists for a new table and a
   new endpoint, and the rules for jobs, caches, files and logs.
 - `docs/architecture/tech-stack.md`: versions. Read the installed version's documentation before

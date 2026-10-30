@@ -3,6 +3,12 @@
 Reviewed as: <which of the people in docs/qa/review-context.md>.
 Compared with: <which of the products in docs/qa/review-context.md>.
 
+## Test approach
+
+| Type | Applies because | Ruled out because |
+| --- | --- | --- |
+| <type from docs/qa/test-types.md> | <the trigger, or the spec's risk> | <only when a triggered type is not run> |
+
 ## Verdict
 
 <Two or three sentences: is this good enough to put in front of its users, and what is the one

@@ -5,11 +5,9 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.UUID;
-
-import org.testcontainers.postgresql.PostgreSQLContainer;
-
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 
 /**
  * One database in a test container, reached directly as either role: as the owner, the way
@@ -20,7 +18,7 @@ public final class TestDatabase {
     /** An owning role that is not a superuser, as the owning role is everywhere but on a developer's machine. */
     public static final String ORDINARY_OWNER = "salon_owner_test";
 
-    private static final String ORDINARY_OWNER_PASSWORD = "salon-owner-test";
+    public static final String ORDINARY_OWNER_PASSWORD = "salon-owner-test";
 
     private final PostgreSQLContainer postgres;
 
@@ -50,11 +48,11 @@ public final class TestDatabase {
     /** A new, empty database in the container, for a test that must start from nothing. */
     public static TestDatabase createEmpty(PostgreSQLContainer postgres) {
         String name = "test_" + UUID.randomUUID().toString().replace("-", "");
-        try (Connection connection = DriverManager.getConnection(postgres.getJdbcUrl(), postgres.getUsername(),
-                postgres.getPassword()); Statement statement = connection.createStatement()) {
+        try (Connection connection = DriverManager.getConnection(
+                        postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword());
+                Statement statement = connection.createStatement()) {
             statement.execute("CREATE DATABASE " + name);
-        }
-        catch (SQLException ex) {
+        } catch (SQLException ex) {
             throw new IllegalStateException("could not create database " + name, ex);
         }
         return new TestDatabase(postgres, postgres.getJdbcUrl().replace("/" + postgres.getDatabaseName(), "/" + name));
@@ -69,8 +67,9 @@ public final class TestDatabase {
      */
     public static TestDatabase createEmptyOwnedByAnOrdinaryRole(PostgreSQLContainer postgres) {
         String name = "test_" + UUID.randomUUID().toString().replace("-", "");
-        try (Connection connection = DriverManager.getConnection(postgres.getJdbcUrl(), postgres.getUsername(),
-                postgres.getPassword()); Statement statement = connection.createStatement()) {
+        try (Connection connection = DriverManager.getConnection(
+                        postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword());
+                Statement statement = connection.createStatement()) {
             // Two tests may arrive here at once in one container; the lock makes "create if absent" safe.
             statement.execute("SELECT pg_advisory_lock(7401)");
             statement.execute("DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '" + ORDINARY_OWNER
@@ -78,12 +77,14 @@ public final class TestDatabase {
                     + "' NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS; END IF; END $$");
             statement.execute("SELECT pg_advisory_unlock(7401)");
             statement.execute("CREATE DATABASE " + name + " OWNER " + ORDINARY_OWNER);
-        }
-        catch (SQLException ex) {
+        } catch (SQLException ex) {
             throw new IllegalStateException("could not create database " + name, ex);
         }
-        return new TestDatabase(postgres, postgres.getJdbcUrl().replace("/" + postgres.getDatabaseName(), "/" + name),
-                ORDINARY_OWNER, ORDINARY_OWNER_PASSWORD);
+        return new TestDatabase(
+                postgres,
+                postgres.getJdbcUrl().replace("/" + postgres.getDatabaseName(), "/" + name),
+                ORDINARY_OWNER,
+                ORDINARY_OWNER_PASSWORD);
     }
 
     public String url() {
@@ -121,5 +122,15 @@ public final class TestDatabase {
     /** The application started against this database. */
     public StartedApplication start(String... settings) {
         return StartedApplication.against(url, migrationUser, migrationPassword, settings);
+    }
+
+    /**
+     * The application started the way an instance of the production-like stack starts it
+     * (infra/stack/compose.yaml): the tenant and platform roles only, never the owning role's settings,
+     * so {@code spring.flyway.user} stays the unresolved {@code ${SALON_DB_USER}}. The database must
+     * already be migrated, and the settings must turn migrations off (the staging profile does).
+     */
+    public StartedApplication startAsInstance(String... settings) {
+        return StartedApplication.against(url, null, null, null, settings);
     }
 }

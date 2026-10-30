@@ -12,10 +12,13 @@ it is about this product it is in this folder, and nowhere else.
 | Start in this repository for the first time | `ROADMAP.md`, `architecture/ARCHITECTURE.md`, `architecture/repository-structure.md`, `architecture/glossary.md` |
 | Plan a feature or a stage | `ROADMAP.md`, `brd/requirements.yaml`, `architecture/ARCHITECTURE.md`, `design/prototype/index.html` |
 | Review the approved expanded salon and Bridal scope | `changes/CR-020-expanded-salon-and-bridal-capabilities.md` |
+| `changes/CR-022-module-internal-layout.md` | Owner-approved: the folders inside a module (`controller/ dto/ mapper/ service/ entity/ domain/ repository/ ...`) with the API in the module root, based on five community research passes |
+| `changes/CR-021-modular-extractable-architecture.md` | Owner-approved: extractable modules (provided interfaces, outbox events, table and path ownership), JPA by default, Lombok and MapStruct conventions, web organised by module, Caddy edge with hostname-resolved tenants and the design for salon-owned domains |
 | Store, read, cache, log or schedule any salon's data | `architecture/multi-tenancy.md` |
 | Build sign-in, sessions or permissions | `architecture/identity-and-access.md`, `architecture/multi-tenancy.md` |
 | Build operator access, salon provisioning or plan definitions | `architecture/operator-console.md`, `architecture/multi-tenancy.md` |
-| Change the API (`apps/api`) | `engineering/backend.md`, `architecture/multi-tenancy.md` |
+| Change the API (`apps/api`) | `engineering/backend.md` (modules, provided interfaces, events, ownership, persistence, code generation), `architecture/multi-tenancy.md` |
+| Understand why the code is organised by module, or plan a module's extraction | `changes/CR-021-modular-extractable-architecture.md`, `architecture/ARCHITECTURE.md` |
 | Change the web app (`apps/web`) | `engineering/web.md`, `design/ui-ux-standards.md` |
 | Change the customer app (`apps/mobile`) | `engineering/mobile.md`, `design/ui-ux-standards.md` |
 | Build or change any screen | `design/ui-ux-standards.md`, `design/prototype/index.html`, and on the web `engineering/web.md` "Styling" (Tailwind CSS and shadcn/ui only) |
@@ -55,7 +58,7 @@ full before starting; this table is for everything the spec did not anticipate.
 | `operations/environments-and-releases.md` | The environments, what a test may and may not touch, and the rules this product imposes on a release |
 | `operations/git-delivery.md` | GitHub repository and authorisation, feature PR/merge records, cleanup evidence, and the existing-history transition |
 | `operations/skill-evaluation.md` | The requests used to check that the skills and these documents lead an agent to the right behaviour |
-| `operations/verification-evidence.md` | Recorded gate/full-feature proof, environment identity, progress and safe reuse at closure |
+| `operations/verification-evidence.md` | Developer-gate records, how long a QA pass holds, run progress and interruption |
 | `decisions/DECISION_LOG.md` | Decisions taken, one entry each |
 | `changes/README.md` | Change requests: how a requirement changes after the baseline |
 | `changes/CR-007-prototype-design-fidelity.md` | Owner-approved HTML design authority and existing UI repair |

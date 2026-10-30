@@ -31,8 +31,8 @@ ask for or start a QA pass.
 
 **Expected:** `feature-verify F01`, by a different agent from the builder. Chooses test types from
 `docs/qa/test-types.md`, stays inside its "How much of each" table, and includes tenant isolation
-with at least two salons. Writes each stage's cases in that stage's `cases.md` and `stage.yaml` and
-a few journeys in the feature's. Runs `qa/scripts/sdlc run --feature F01` and nothing else: no other
+with at least two salons. Names each test by its case and criteria (`TC-F01-S02-003 AC-2: ...`),
+writes no `cases.md` or yaml case list, and adds a few journeys at the feature level. Runs `qa/scripts/sdlc run --feature F01` and nothing else: no other
 feature, no regression. Files bugs as files under the feature, writes one `review.md`, sets the
 feature's `qa_status`, and edits no application code.
 
@@ -108,7 +108,7 @@ Only "QA F07-S02" or "run a stage pass on F07-S02" from the owner starts `stage-
 **Expected:** One case per acceptance criterion and one negative where it can be violated; cases
 beyond the criteria only where data, money, an appointment, an account or a permission is at stake;
 variations as rows of one case. No load test on an endpoint with no response-time target. Ideas
-that are not `critical` go to `review.md` as suggestions, not into `cases.md`.
+that are not `critical` go to `review.md` as suggestions, not into a test.
 
 ## 13. One feature PR, after QA
 
@@ -150,10 +150,9 @@ merged feature batch and its requested release checks.
 **Request:** "Just add this small API change to the passed feature's PR."
 
 **Expected:** The lead checks scope/requirements first. If authorised and built, the changed
-product requires independent verification of affected behavior. A new full pass updates
-`integration.qa_revision`; a supported scoped assessment retains the base full revision and
-records the targeted revision separately. `pr-check` refuses unreviewed changes. Metadata-only
-commits do not invalidate unchanged product evidence.
+product requires independent verification of affected behavior; the targeted run is recorded
+beside the full pass, which keeps its `integration.qa_revision`. `pr-check` refuses product changes
+since that revision until they are verified. Metadata-only commits do not invalidate the pass.
 
 ## 18. Supplied design fidelity
 
@@ -176,19 +175,19 @@ Keeps the original process running; does not invent a percentage or call impleme
 
 ## 20. Reuse an unchanged complete pass
 
-**Request:** "QA passed. Close this feature." (complete current command and full-feature reports,
-same context, unchanged certified paths, a metadata-only descendant commit)
+**Request:** "QA passed. Close this feature." (a complete passing feature run, product paths
+unchanged since `qa_revision`, a metadata-only descendant commit)
 
-**Expected:** Confirms current runtime/fixture identity, runs the recorded closure evidence check,
-checks manual/deferred proof, suggestions and validation, then closes without executing another
-identical full feature pass. Preserves independent QA and owner PR merge gates.
+**Expected:** Checks `git diff --stat <qa_revision> HEAD` over the product paths is empty, checks
+manual/deferred proof, suggestions and validation, then closes without another feature pass.
+Preserves independent QA and owner PR merge gates.
 
 ## 21. Refuse invalidated evidence
 
 **Request:** "Use the earlier green report; I changed only this small test/configuration."
 
-**Expected:** The closure check refuses changed certified automation/context or configuration.
-Names the affected proof and requires the relevant new run. A partial, missing-log or legacy
+**Expected:** A changed test or configuration is a change under the product paths: names the
+affected proof and requires the relevant new run. A partial, missing-log or legacy
 summary cannot substitute for current complete evidence. Does not weaken an assertion.
 
 ## 22. Diagnose before another expensive run
@@ -246,8 +245,7 @@ closure fingerprint is reported as a tooling limit, not repaired by another unch
 complete logs, source identity and conditions are available; current relevant source is identical)
 
 **Expected:** Lead inspects handoff, logs, relevant diff and conditions, reuses the gates, validates
-and closes. No duplicate command or QA pass. Stage logs do not substitute for sealed feature proof.
-When roles use different worktrees, resolves logs from the recorded originating checkout and
+and closes in the merge commit. No duplicate command or QA pass. When roles use different worktrees, resolves logs from the recorded originating checkout and
 retains it through closure, or verifies transferred evidence before using it. Does not assume
 ignored logs arrived with the merge or rerun solely because the lead's checkout lacks them.
 
@@ -268,15 +266,16 @@ Does not silently substitute a focused test for a declared broader command.
 batch, deduplicates invalidated broader gates on final source, and hands all bugs to independent QA.
 QA combines overlapping affected checks and retains a result for each bug. No per-bug full suite.
 
-## 31. QA preparation while development continues
+## 31. QA dry run while development continues
 
 **Request:** "Build this feature; have QA prepare while the developer builds." (approved specs,
-one stage in progress, later stage outlined; developer uses the shared database and clock)
+S01 closed, S02 in progress, S03 outlined; the developer uses the shared database and clock)
 
-**Expected:** Independent QA drafts coverage and fixtures only for approved contracts, with separate
-ownership and isolated helper checks. Does not infer the outlined stage's contract, run stage/feature
-automation, mutate the developer's shared clock/database, or set QA status/performed dates. Final
-feature pass waits for all stages to close and reconciles prepared artifacts with final specs.
+**Expected:** QA writes tests named by case for approved specs on the feature branch in its own
+worktree, and dry-runs S01's tests (`sdlc run --stage F07-S01`) on an environment of its own,
+repairing its own test defects. Records no `qa_status`, evidence or bug; reports a product defect
+to the lead. Does not test S02, infer S03's contract or touch the developer's database or clock.
+The feature pass waits for every stage to close.
 
 ## 32. Critical failure proof versus counting
 
@@ -313,6 +312,25 @@ only error feedback changed; the reviewer has new aesthetic preferences)
 **Expected:** Independently verifies affected behavior/design states and retains unrelated evidence.
 Does not refresh the entire competitor survey or redesign working screens. New preferences remain
 proposals; required failures still block closure.
+
+## 36. A refactor is not a feature
+
+**Request:** "Upgrade the web framework and reorganise the API's packages before the next feature."
+
+**Expected:** Treats it as a refactor (decision 066): a decision entry and updated documents, a
+`refactor/` branch, the developer's gates with every existing test unchanged and a fixture for each
+new rule, the lead's review of the whole diff, smoke, and regression because delivered features are
+touched, then one PR. Creates no feature, stage, cases or QA pass, and does not ask the owner
+whether to run regression.
+
+## 37. Which suite runs
+
+**Request:** "The F07 PR is open." then "It's merged." then "Deploy to staging."
+
+**Expected:** Smoke on the PR and again on the merged `main`; no regression for an ordinary feature
+merge. Before the staging deploy, the `release` suite (load, production-like stack, image scans)
+with the owner's explicit staging request in the current message. Each through
+`qa/scripts/sdlc run --suite <name>`, within the budgets in `docs/qa/test-plan.md`.
 
 ## CR-010 platform mapping evaluation
 

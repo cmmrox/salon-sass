@@ -2,19 +2,19 @@ package com.salonplatform.identity;
 
 import static org.assertj.core.api.Assertions.*;
 
-import com.salonplatform.identity.infrastructure.*;
-
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-import org.springframework.mock.env.MockEnvironment;
-
+import com.salonplatform.identity.adapter.IdentityCrypto;
+import com.salonplatform.identity.adapter.IdentitySecrets;
 import java.nio.file.*;
 import java.security.SecureRandom;
 import java.time.*;
 import java.util.*;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.springframework.mock.env.MockEnvironment;
 
 class IdentityCryptoTest {
-    @TempDir Path directory;
+    @TempDir
+    Path directory;
 
     private static String key() {
         byte[] b = new byte[32];
@@ -37,13 +37,9 @@ class IdentityCryptoTest {
                 .withMessageContaining("SALON_IDENTITY_SIGNING_KEY");
         String same = key();
         assertThatIllegalStateException()
-                .isThrownBy(
-                        () ->
-                                new IdentitySecrets(
-                                        configured()
-                                                .withProperty("salon.identity.signing-key", same)
-                                                .withProperty(
-                                                        "salon.identity.challenge-key", same)))
+                .isThrownBy(() -> new IdentitySecrets(configured()
+                        .withProperty("salon.identity.signing-key", same)
+                        .withProperty("salon.identity.challenge-key", same)))
                 .withMessageContaining("independent");
     }
 
@@ -63,9 +59,7 @@ class IdentityCryptoTest {
                 .withMessageContaining("SALON_IDENTITY_PROXY_KEY");
         for (String name : List.of("signing", "challenge", "encryption")) {
             MockEnvironment duplicate = configured();
-            duplicate.setProperty(
-                    "salon.identity.proxy-key",
-                    duplicate.getProperty("salon.identity." + name + "-key"));
+            duplicate.setProperty("salon.identity.proxy-key", duplicate.getProperty("salon.identity." + name + "-key"));
             assertThatIllegalStateException()
                     .isThrownBy(() -> new IdentitySecrets(duplicate))
                     .withMessageContaining("independent");
@@ -76,14 +70,11 @@ class IdentityCryptoTest {
     void appendingProxyKeyPreservesEveryExistingKeyAndItsPermissions() throws Exception {
         Path file = directory.resolve("keys.properties");
         Properties before = new Properties();
-        for (String name : List.of("signing", "challenge", "encryption"))
-            before.setProperty(name, key());
+        for (String name : List.of("signing", "challenge", "encryption")) before.setProperty(name, key());
         try (var out = Files.newOutputStream(file)) {
             before.store(out, "Synthetic test keys");
         }
-        MockEnvironment env =
-                new MockEnvironment()
-                        .withProperty("salon.identity.local-key-file", file.toString());
+        MockEnvironment env = new MockEnvironment().withProperty("salon.identity.local-key-file", file.toString());
         env.setActiveProfiles("local");
         IdentitySecrets first = new IdentitySecrets(env), second = new IdentitySecrets(env);
         Properties after = new Properties();
@@ -107,11 +98,10 @@ class IdentityCryptoTest {
 
     @Test
     void localRetainsKeysAndCredentialsAcrossRestart() throws Exception {
-        MockEnvironment env =
-                new MockEnvironment()
-                        .withProperty(
-                                "salon.identity.local-key-file",
-                                directory.resolve("keys.properties").toString());
+        MockEnvironment env = new MockEnvironment()
+                .withProperty(
+                        "salon.identity.local-key-file",
+                        directory.resolve("keys.properties").toString());
         env.setActiveProfiles("local");
         Clock now = Clock.fixed(Instant.parse("2026-10-13T10:00:00Z"), ZoneOffset.UTC);
         IdentityCrypto first = new IdentityCrypto(new IdentitySecrets(env), now),
@@ -125,8 +115,7 @@ class IdentityCryptoTest {
 
     @Test
     void passwordsHaveIdentifiedSaltedEncodingAndEncryptionIsPurposeBound() {
-        IdentityCrypto crypto =
-                new IdentityCrypto(new IdentitySecrets(configured()), Clock.systemUTC());
+        IdentityCrypto crypto = new IdentityCrypto(new IdentitySecrets(configured()), Clock.systemUTC());
         String password = UUID.randomUUID() + " synthetic";
         String first = crypto.encodePassword(password), second = crypto.encodePassword(password);
         assertThat(first)
@@ -150,6 +139,22 @@ class IdentityCryptoTest {
         assertThat(crypto.matchingStep(publicVector, "287082")).isEqualTo(1L);
         assertThat(crypto.matchingStep(publicVector, crypto.totpCode(publicVector, 2)))
                 .isEqualTo(2L);
-        assertThat(crypto.matchingStep(publicVector, crypto.totpCode(publicVector, 3))).isNull();
+        assertThat(crypto.matchingStep(publicVector, crypto.totpCode(publicVector, 3)))
+                .isNull();
+    }
+
+    /**
+     * A hash written by the encoder as configured before F23-S01 (PBKDF2 with HMAC-SHA256, 16-byte salt,
+     * 600000 iterations, 256-bit hash) for a synthetic password. Every stored staff password depends on it
+     * still verifying.
+     */
+    @Test
+    void aPasswordHashStoredEarlierStillVerifies() {
+        IdentityCrypto crypto = new IdentityCrypto(new IdentitySecrets(configured()), Clock.systemUTC());
+        String stored = "{pbkdf2-sha256-600k}49aedb7ab90d4121766bb213f8e06b4c4d7434bea8b04319e3e623c0febf25b2"
+                + "4abed20b5cadaf46122f5c3c007d73f7";
+
+        assertThat(crypto.matchesPassword("a stored password of 2026", stored)).isTrue();
+        assertThat(crypto.matchesPassword("another password of 2026", stored)).isFalse();
     }
 }

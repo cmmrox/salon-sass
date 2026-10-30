@@ -213,9 +213,11 @@ test(`${id(10)} Thirty days after closure the salon's tenant data is deleted and
   const auditBefore = platformAudit(target.created.id).length;
   expect(invoicesBefore, 'the salon has an invoice').toBe(1);
   expect(paymentsBefore, 'and its payment').toBe(1);
-  await clock.set(plusMs(closed.deleteAt!, -SECOND));
+  // The test clock runs on after it is set and the scheduler's own deletion pass becomes due at once,
+  // so the instant before deletion is taken a minute early (one second let that pass start after it).
+  await clock.set(plusMs(closed.deleteAt!, -60 * SECOND));
   await operator.runDeletions();
-  expect(tenantRowCounts(target.created.id), 'nothing deleted one second earlier').toEqual(counts);
+  expect(tenantRowCounts(target.created.id), 'nothing deleted before the deletion instant').toEqual(counts);
   await operator.renew(admin);
   expect((await operator.salonDetail(admin, target.created.id)).status).toBe('closed');
   await clock.set(closed.deleteAt!);

@@ -1,7 +1,6 @@
 package com.salonplatform.branding;
 
-import java.util.List;
-import java.util.Map;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import com.jayway.jsonpath.JsonPath;
 import com.salonplatform.testing.Http.Exchange;
@@ -10,10 +9,10 @@ import com.salonplatform.testing.TestDatabase;
 import com.salonplatform.testing.TestPostgres;
 import com.salonplatform.testing.TestSalons;
 import com.salonplatform.testing.TestSalons.TestSalon;
+import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * A suspended salon, through HTTP: its hostname answers 403 {@code salon_suspended} with nothing of
@@ -46,10 +45,17 @@ class SuspendedSalonIntegrationTest extends IntegrationTest {
         assertThat(response.contentType()).startsWith("application/problem+json");
         Map<String, Object> body = JsonPath.parse(response.body()).read("$");
         assertThat(body).containsOnlyKeys("title", "status", "detail", "instance", "code", "traceId");
-        assertThat(body).containsEntry("code", "salon_suspended").containsEntry("status", 403)
-                .containsEntry("title", "Forbidden").containsEntry("instance", SALON);
-        assertThat(response.body()).as("nothing of the suspended salon").doesNotContain(closed.name())
-                .doesNotContain(closed.brandColour()).doesNotContain(closed.slug()).doesNotContain(closed.id().toString())
+        assertThat(body)
+                .containsEntry("code", "salon_suspended")
+                .containsEntry("status", 403)
+                .containsEntry("title", "Forbidden")
+                .containsEntry("instance", SALON);
+        assertThat(response.body())
+                .as("nothing of the suspended salon")
+                .doesNotContain(closed.name())
+                .doesNotContain(closed.brandColour())
+                .doesNotContain(closed.slug())
+                .doesNotContain(closed.id().toString())
                 .doesNotContain("brandColour");
     }
 
@@ -62,8 +68,10 @@ class SuspendedSalonIntegrationTest extends IntegrationTest {
         Exchange after = http().getOnHost(open.host(port()), SALON);
         assertThat(after.status()).isEqualTo(200);
         assertThat(after.body()).isEqualTo(before.body());
-        assertThat(JsonPath.parse(after.body()).<Map<String, Object>>read("$")).containsEntry("slug", open.slug())
-                .containsEntry("name", open.name()).containsEntry("brandColour", open.brandColour());
+        assertThat(JsonPath.parse(after.body()).<Map<String, Object>>read("$"))
+                .containsEntry("slug", open.slug())
+                .containsEntry("name", open.name())
+                .containsEntry("brandColour", open.brandColour());
         assertThat(after.body()).doesNotContain(closed.name()).doesNotContain(closed.brandColour());
     }
 
@@ -74,7 +82,10 @@ class SuspendedSalonIntegrationTest extends IntegrationTest {
 
         List<Exchange> responses = List.of(
                 http().getOnHost(closed.host(port()), SALON, Map.of("X-Forwarded-Host", open.host(port()))),
-                http().getOnHost(closed.host(port()), SALON, Map.of("X-Tenant-Id", open.id().toString())),
+                http().getOnHost(
+                                closed.host(port()),
+                                SALON,
+                                Map.of("X-Tenant-Id", open.id().toString())),
                 http().getOnHost(closed.host(port()), SALON + "?salon=" + open.slug() + "&tenantId=" + open.id()));
 
         for (Exchange response : responses) {
@@ -88,8 +99,10 @@ class SuspendedSalonIntegrationTest extends IntegrationTest {
     void thePlatformsOwnEndpointsStillAnswerOnASuspendedSalonsHostname() {
         salons.suspend(closed);
 
-        assertThat(http().getOnHost(closed.host(port()), "/api/v1/meta").status()).isEqualTo(200);
-        assertThat(http().getOnHost(closed.host(port()), "/actuator/health").status()).isEqualTo(200);
+        assertThat(http().getOnHost(closed.host(port()), "/api/v1/meta").status())
+                .isEqualTo(200);
+        assertThat(http().getOnHost(closed.host(port()), "/actuator/health").status())
+                .isEqualTo(200);
     }
 
     /** Nothing about a salon's status is kept between requests: the next request sees the change. */

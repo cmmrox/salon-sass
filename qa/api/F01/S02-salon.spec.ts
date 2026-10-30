@@ -255,8 +255,22 @@ test('TC-F01-S02-007 a salon named in a query parameter is never trusted: alpha\
   await expectOwnerSeesBrand(beta);
   const queries = queriesNaming(beta);
   expect(queries.length).toBeGreaterThan(60);
+  // Since F03-S01 a path with a ';' path parameter is not canonical and is refused before routing
+  // (RequestPaths): 400 bad_request, and nothing of beta's brand. The query parameters still get alpha's.
+  const pathParameters = queries.filter((query) => query.startsWith(';'));
+  expect(pathParameters.length, 'path-parameter rows are still asked').toBe(3);
   for (const query of queries) {
-    expectBrandOf(await ask(hostOf(alpha), { target: `${SALON_PATH}${query}` }), alpha, `alpha with ${query.slice(0, 80)}`);
+    const label = `alpha with ${query.slice(0, 80)}`;
+    const answer = await ask(hostOf(alpha), { target: `${SALON_PATH}${query}` });
+    if (!query.startsWith(';')) {
+      expectBrandOf(answer, alpha, label);
+      continue;
+    }
+    expect(answer.status, `${label}: status`).toBe(400);
+    expect(expectProblem(answer, label).code, `${label}: code`).toBe('bad_request');
+    for (const value of [beta.name, beta.brandColour, '"brandColour"', '"timeZone"']) {
+      expect(answer.body, `${label}: shows nothing of beta's brand`).not.toContain(value);
+    }
   }
   // The other way round as well: beta asking with alpha's id gets beta's.
   expectBrandOf(await ask(hostOf(beta), { target: `${SALON_PATH}?tenantId=${alpha.id}&slug=${alpha.slug}` }), beta, 'beta with alpha\'s id');

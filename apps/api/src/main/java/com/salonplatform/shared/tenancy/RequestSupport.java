@@ -11,8 +11,7 @@ public final class RequestSupport {
 
     private static final ScopedValue<SupportGrant> VALUE = ScopedValue.newInstance();
 
-    private RequestSupport() {
-    }
+    private RequestSupport() {}
 
     /** The support session behind this request, if the request is made under one. */
     public static Optional<SupportGrant> current() {

@@ -1,5 +1,15 @@
 package com.salonplatform.platform;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
+import com.salonplatform.identity.adapter.IdentityCrypto;
+import com.salonplatform.identity.domain.StaffRole;
+import com.salonplatform.identity.entity.StaffAccount;
+import com.salonplatform.shared.tenancy.TenantContext;
+import com.salonplatform.testing.Http;
+import com.salonplatform.testing.TestSalons;
+import com.salonplatform.testing.TestSalons.TestSalon;
+import jakarta.persistence.EntityManager;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.HashMap;
@@ -7,22 +17,10 @@ import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
-
-import com.salonplatform.identity.domain.StaffAccount;
-import com.salonplatform.identity.domain.StaffRole;
-import com.salonplatform.identity.infrastructure.IdentityCrypto;
-import com.salonplatform.shared.tenancy.TenantContext;
-import com.salonplatform.testing.Http;
-import com.salonplatform.testing.TestSalons;
-import com.salonplatform.testing.TestSalons.TestSalon;
-import jakarta.persistence.EntityManager;
-import tools.jackson.databind.json.JsonMapper;
-
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
-
-import static org.assertj.core.api.Assertions.assertThat;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Billing fixtures over real HTTP and PostgreSQL: plans and salons through the operator API, unbilled
@@ -46,8 +44,16 @@ final class BillingTestSupport {
     private final Map<UUID, String> totp = new HashMap<>();
     final String password = "synthetic staff " + UUID.randomUUID();
 
-    BillingTestSupport(OperatorTestSupport console, Http http, int port, JdbcTemplate owner, IdentityCrypto identity,
-            JsonMapper json, PlatformTransactionManager manager, EntityManager em, Clock clock) {
+    BillingTestSupport(
+            OperatorTestSupport console,
+            Http http,
+            int port,
+            JdbcTemplate owner,
+            IdentityCrypto identity,
+            JsonMapper json,
+            PlatformTransactionManager manager,
+            EntityManager em,
+            Clock clock) {
         this.console = console;
         this.http = http;
         this.port = port;
@@ -75,7 +81,9 @@ final class BillingTestSupport {
     }
 
     static void status(Http.Exchange exchange, int expected) {
-        assertThat(exchange.status()).withFailMessage("%s %s", exchange.status(), exchange.body()).isEqualTo(expected);
+        assertThat(exchange.status())
+                .withFailMessage("%s %s", exchange.status(), exchange.body())
+                .isEqualTo(expected);
     }
 
     /** A fresh admin token (after the clock has moved past a session's life). */
@@ -86,7 +94,12 @@ final class BillingTestSupport {
     String plan(int staffSeats) {
         Map<String, Object> plan = OperatorTestSupport.plan(OperatorTestSupport.uniqueKey("bill"));
         plan.put("staffSeats", staffSeats);
-        Http.Exchange created = console.callOn(console.host(), "POST", "/plans", plan, admin(),
+        Http.Exchange created = console.callOn(
+                console.host(),
+                "POST",
+                "/plans",
+                plan,
+                admin(),
                 Map.of("Idempotency-Key", UUID.randomUUID().toString()));
         status(created, 201);
         return (String) body(created).get("id");
@@ -95,11 +108,16 @@ final class BillingTestSupport {
     /** A salon created by the operator API with a subscription; returns its detail. */
     Map<String, Object> provisioned(String planId, long amount, String method, String timeZone) {
         String slug = OperatorTestSupport.uniqueKey("bl");
-        Map<String, Object> request = OperatorTestSupport.salon(slug, planId, "owner-" + slug + "@example.test",
-                "synthetic owner " + UUID.randomUUID());
+        Map<String, Object> request = OperatorTestSupport.salon(
+                slug, planId, "owner-" + slug + "@example.test", "synthetic owner " + UUID.randomUUID());
         request.put("timeZone", timeZone);
         request.put("subscription", Map.of("monthlyAmount", amount, "paymentMethod", method));
-        Http.Exchange created = console.callOn(console.host(), "POST", "/salons", request, admin(),
+        Http.Exchange created = console.callOn(
+                console.host(),
+                "POST",
+                "/salons",
+                request,
+                admin(),
                 Map.of("Idempotency-Key", UUID.randomUUID().toString()));
         status(created, 201);
         Http.Exchange detail = console.call("GET", "/salons/" + body(created).get("id"), null, admin());
@@ -122,29 +140,30 @@ final class BillingTestSupport {
     }
 
     Http.Exchange startSubscription(UUID salon, Map<String, Object> request, String key) {
-        return console.callOn(console.host(), "POST", "/salons/" + salon + "/subscription", request, admin(),
+        return console.callOn(
+                console.host(),
+                "POST",
+                "/salons/" + salon + "/subscription",
+                request,
+                admin(),
                 Map.of("Idempotency-Key", key));
     }
 
     /** A staff account of the salon, written as the identity fixtures write it. */
     StaffAccount staff(TestSalon salon, StaffRole role, String email) throws Exception {
-        return TenantContext.callAs(salons.asCurrent(salon), () -> new TransactionTemplate(manager).execute(status -> {
-            StaffAccount a = new StaffAccount();
-            a.id = UUID.randomUUID();
-            a.email = email;
-            a.role = role.name();
-            a.active = true;
-            a.createdAt = clock.instant();
-            a.updatedAt = a.createdAt;
-            a.passwordHash = identity.encodePassword(password);
-            if (role == StaffRole.OWNER) {
-                String secret = identity.newTotpSecret();
-                totp.put(a.id, secret);
-                a.mfaSecret = identity.encrypt("totp:" + salon.id() + ":" + a.id, secret);
-            }
-            em.persist(a);
-            return a;
-        }));
+        return TenantContext.callAs(
+                salons.asCurrent(salon),
+                () -> new TransactionTemplate(manager).execute(status -> {
+                    StaffAccount a = StaffAccount.create(
+                            email, null, identity.encodePassword(password), role, false, clock.instant());
+                    if (role == StaffRole.OWNER) {
+                        String secret = identity.newTotpSecret();
+                        totp.put(a.getId(), secret);
+                        a.enrollMfa(identity.encrypt("totp:" + salon.id() + ":" + a.getId(), secret), a.getCreatedAt());
+                    }
+                    em.persist(a);
+                    return a;
+                }));
     }
 
     Http.Exchange identityCall(TestSalon salon, String method, String path, Object request, String token) {
@@ -157,29 +176,45 @@ final class BillingTestSupport {
         if (token != null) {
             headers.put("Authorization", "Bearer " + token);
         }
-        return http.sendOnHost(method, salon.host(port), path, headers,
-                request == null ? null : json.writeValueAsString(request));
+        return http.sendOnHost(
+                method, salon.host(port), path, headers, request == null ? null : json.writeValueAsString(request));
     }
 
     private final Map<UUID, java.util.Set<Long>> used = new HashMap<>();
 
     /** The staff member's access token through the real sign-in (with MFA for an Owner). */
+    // JSON is read as an untyped map (Map.class); the cast states the shape the assertions then check.
     @SuppressWarnings("unchecked")
     Map<String, Object> tokens(TestSalon salon, StaffAccount account) {
-        Http.Exchange sign = identityCall(salon, "POST", "/staff/sign-in",
-                Map.of("identifier", account.email, "password", password, "deviceLabel", "JUnit billing"), null);
+        Http.Exchange sign = identityCall(
+                salon,
+                "POST",
+                "/staff/sign-in",
+                Map.of("identifier", account.getEmail(), "password", password, "deviceLabel", "JUnit billing"),
+                null);
         status(sign, 200);
         Map<String, Object> result = body(sign);
         if (result.get("credentials") != null) {
             return (Map<String, Object>) result.get("credentials");
         }
         long current = clock.instant().getEpochSecond() / 30;
-        java.util.Set<Long> steps = used.computeIfAbsent(account.id, id -> new java.util.HashSet<>());
-        long step = java.util.stream.LongStream.of(current, current - 1, current + 1).filter(steps::add).findFirst()
+        java.util.Set<Long> steps = used.computeIfAbsent(account.getId(), id -> new java.util.HashSet<>());
+        long step = java.util.stream.LongStream.of(current, current - 1, current + 1)
+                .filter(steps::add)
+                .findFirst()
                 .orElseThrow(() -> new IllegalStateException("every step in the window is used for this Owner"));
-        Http.Exchange verify = identityCall(salon, "POST", "/staff/mfa/verify", Map.of("challengeId",
-                result.get("challengeId"), "challengeToken", result.get("challengeToken"), "code",
-                identity.totpCode(totp.get(account.id), step)), null);
+        Http.Exchange verify = identityCall(
+                salon,
+                "POST",
+                "/staff/mfa/verify",
+                Map.of(
+                        "challengeId",
+                        result.get("challengeId"),
+                        "challengeToken",
+                        result.get("challengeToken"),
+                        "code",
+                        identity.totpCode(totp.get(account.getId()), step)),
+                null);
         status(verify, 200);
         return body(verify);
     }

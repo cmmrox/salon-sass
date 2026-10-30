@@ -2,10 +2,11 @@
 
 This is the only sanctioned way to run QA automation, because the scope rule is the
 point: a stage run executes that stage's automation and nothing else, a feature run
-executes that feature's, and a suite run (regression, smoke) happens only when the owner
-asks for it. Selection is pure and tested; execution is a thin loop over subprocesses.
+executes that feature's, and a suite run (smoke, regression, release) executes the closed
+work tagged with it. Selection is pure and tested; execution is a thin loop over subprocesses.
 """
 import datetime
+import hashlib
 import json
 import os
 import signal
@@ -19,16 +20,6 @@ from . import schema as S
 
 class SelectionError(Exception):
     pass
-
-
-def select_delta(entries, ids):
-    """Select explicitly registered automation; never certify a full feature pass."""
-    requested = set(ids)
-    known = {entry.get("id") for entry in entries}
-    if not requested or requested - known:
-        raise SelectionError("--only needs registered automation ids in this feature; unknown: "
-                             + ", ".join(sorted(requested - known)))
-    return [entry for entry in entries if entry.get("id") in requested]
 
 
 def _entries(scope):
@@ -152,14 +143,26 @@ def _cancel_process_tree(child, grace_seconds=2):
     return result
 
 
-def run(entries, label, dry_run=False, reports_root="qa/reports", *, certification=None,
-        certify_again=None, stop_first_failure=False, heartbeat_seconds=30):
-    """Returns (exit code, report directory). Existing callers need no new arguments.
+def _file_digest(path):
+    with open(path, "rb") as handle:
+        return hashlib.sha256(handle.read()).hexdigest()
+
+
+def _revision():
+    """The tested commit, so a pass can be compared with later changes (feature-close)."""
+    try:
+        found = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True)
+        return found.stdout.strip() if found.returncode == 0 else None
+    except OSError:
+        return None
+
+
+def run(entries, label, dry_run=False, reports_root="qa/reports", *, heartbeat_seconds=30):
+    """Returns (exit code, report directory).
 
     A heartbeat is a subprocess wait interval, never a test timeout or retry. Raw
     child output stays in its log; progress prints only scope, counts and timings.
     """
-    from . import evidence
     if not entries:
         print(f"refusing: {label} selects no automation; there is nothing to run", flush=True)
         return 2, None
@@ -177,17 +180,9 @@ def run(entries, label, dry_run=False, reports_root="qa/reports", *, certificati
     os.makedirs(report_dir, exist_ok=False)
     env = {**os.environ, "QA_REPORT_DIR": os.path.abspath(report_dir)}
     started = time.monotonic()
-    try:
-        source_revision = evidence.git("rev-parse", "HEAD")
-    except evidence.Refusal:
-        source_revision = None  # Legacy execution can work outside a Git checkout.
-    summary = {"label": label, "run_id": run_id, "source_revision": source_revision,
-               "state": "running", "result": "running",
-               "selected_count": len(entries), "selection_sha256": evidence.selection_digest(entries),
+    summary = {"label": label, "run_id": run_id, "source_revision": _revision(),
+               "state": "running", "result": "running", "selected_count": len(entries),
                "entries": [], "started_at": datetime.datetime.now(datetime.timezone.utc).isoformat()}
-    if certification is not None:
-        summary["certification"] = certification
-        summary["source_revision"] = certification.get("source_revision")
     summary["runner"] = {"pid": os.getpid(), "process_start": _process_start(os.getpid()),
                          "started_at": summary["started_at"]}
     results = summary["entries"]
@@ -247,29 +242,19 @@ def run(entries, label, dry_run=False, reports_root="qa/reports", *, certificati
             outcome = "pass" if code == 0 else ("tool-missing" if code == 127 else "fail")
             print(f"  {outcome.upper():12} {entry['scope']} {entry.get('id')}", flush=True)
             results.append({**entry, "argv": argv, "exit_code": code, "outcome": outcome,
-                            "log": log_path, "log_sha256": evidence.file_digest(log_path),
+                            "log": log_path, "log_sha256": _file_digest(log_path),
                             "elapsed_seconds": round(time.monotonic() - entry_started, 3)})
             progress(index, entry, entry_started)
             active_child = None
-            if stop_first_failure and code != 0:
-                break
         passed = len(results) == len(entries) and all(r["outcome"] == "pass" for r in results)
         summary.update(state="complete", result="pass" if passed else "fail", current=None,
                        finished_at=datetime.datetime.now(datetime.timezone.utc).isoformat())
-        if certification is not None:
-            if certify_again is None:
-                raise evidence.Refusal("reusable evidence requires a final source/context check")
-            if not evidence.unchanged(certification, certify_again()):
-                raise evidence.Refusal("certified source or context changed during the run")
         _write_summary(report_dir, summary)
-        if certification is not None:
-            evidence.seal(report_dir)
-    except (KeyboardInterrupt, evidence.Refusal, OSError):
+    except (KeyboardInterrupt, OSError):
         if active_child is not None:
             summary["cancellation"] = _cancel_process_tree(active_child)
         summary.update(state="interrupted", result="interrupted",
                        elapsed_seconds=round(time.monotonic() - started, 3))
-        # An interrupted or invalidated run has no reusable certification receipt.
         _write_summary(report_dir, summary)
         raise
     finally:

@@ -32,11 +32,12 @@ public final class ProvisioningRegions {
     /** The database's {@code is_iana_time_zone} form; abbreviations and private names are refused. */
     private static final Pattern IANA = Pattern.compile("^(UTC|[A-Z][A-Za-z_]+(/[A-Za-z0-9_+-]+){1,2})$");
 
-    private ProvisioningRegions() {
-    }
+    private ProvisioningRegions() {}
 
     public static boolean timeZone(String zone) {
-        return zone != null && IANA.matcher(zone).matches() && ZoneId.getAvailableZoneIds().contains(zone);
+        return zone != null
+                && IANA.matcher(zone).matches()
+                && ZoneId.getAvailableZoneIds().contains(zone);
     }
 
     private static Set<String> activeTwoDigitCurrencies() {
@@ -47,8 +48,7 @@ public final class ProvisioningRegions {
                 if (currency != null && currency.getDefaultFractionDigits() == 2) {
                     codes.add(currency.getCurrencyCode());
                 }
-            }
-            catch (IllegalArgumentException ex) {
+            } catch (IllegalArgumentException ex) {
                 // A country the JDK knows no currency for contributes none.
             }
         }

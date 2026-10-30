@@ -17,8 +17,8 @@ public interface SupportCredentials {
      * @param salonId the salon the hostname names, asked only once the credential is known to be a
      *        support credential (it may refuse: no such salon, a suspended one)
      * @return empty when the credential is not a support credential at all
-     * @throws com.salonplatform.shared.api.NotFoundException when it is one for another salon
-     * @throws com.salonplatform.shared.api.ApplicationProblemException 401 {@code invalid_session} when
+     * @throws com.salonplatform.shared.web.NotFoundException when it is one for another salon
+     * @throws com.salonplatform.shared.web.ApplicationProblemException 401 {@code invalid_session} when
      *         its session has ended, expired or cannot be found
      */
     Optional<SupportGrant> verify(String credential, Supplier<UUID> salonId);

@@ -85,8 +85,10 @@ expect_equal "may create in the public schema" f "$(printf "select has_schema_pr
 expect_equal "may create a schema in the database" f "$(printf "select has_database_privilege('%s', current_database(), 'create');\n" "$APP" | owner_psql)"
 # The owner of the tables is a different role from the one the API logs in as.
 expect_not_equal "the owner of salon_brand" "$APP" "$(printf "select relowner::regrole from pg_class where oid = 'public.salon_brand'::regclass;\n" | owner_psql)"
-# The running API really is connected as this role, and as no other.
-expect_equal "roles the API's connections to the database use" "$APP" "$(printf "select coalesce(string_agg(distinct usename, ', '), '') from pg_stat_activity where datname = current_database() and backend_type = 'client backend' and pid <> pg_backend_pid() and application_name <> 'psql';\n" | owner_psql)"
+# The running API really is connected as this role, and as no other, apart from the platform runtime
+# role F03 added for operator work (its own pool; docs/architecture/operator-console.md).
+PLATFORM="$(_setting SALON_DB_PLATFORM_USER salon_platform)"
+expect_equal "roles the API's connections to the database use" "$(printf '%s\n%s\n' "$APP" "$PLATFORM" | sort | paste -sd, - | sed 's/,/, /g')" "$(printf "select coalesce(string_agg(distinct usename, ', '), '') from pg_stat_activity where datname = current_database() and backend_type = 'client backend' and pid <> pg_backend_pid() and application_name <> 'psql';\n" | owner_psql)"
 
 # ---------------------------------------------------------------------------------------------
 begin_case TC-F01-S02-031 "The application's role is refused any read of the tenant table, by row, by column or by count"
@@ -154,16 +156,17 @@ expect_matches "set row_security = off, then read salon_brand" 'row-level securi
 expect_state_unchanged "after every attempt"
 
 # ---------------------------------------------------------------------------------------------
-begin_case TC-F01-S02-033 "The registry is reached only through tenant_by_slug, which gives one slug's id, status and time zone, to the application's role alone, and cannot be redirected"
-expect_equal "tenant_by_slug('$ALPHA_SLUG')" "$ALPHA_ID|active|Asia/Colombo" "$(as_salon none "select * from tenant_by_slug('$ALPHA_SLUG')")"
-expect_equal "tenant_by_slug('$BETA_SLUG')" "$BETA_ID|active|Asia/Colombo" "$(as_salon none "select * from tenant_by_slug('$BETA_SLUG')")"
+begin_case TC-F01-S02-033 "The registry is reached only through tenant_by_slug, which gives one slug's id, status, time zone and access state, to the application's role alone, and cannot be redirected"
+expect_equal "tenant_by_slug('$ALPHA_SLUG')" "$ALPHA_ID|active|Asia/Colombo|full" "$(as_salon none "select * from tenant_by_slug('$ALPHA_SLUG')")"
+expect_equal "tenant_by_slug('$BETA_SLUG')" "$BETA_ID|active|Asia/Colombo|full" "$(as_salon none "select * from tenant_by_slug('$BETA_SLUG')")"
 for nothing in "'nobody-here'" "null" "''" "'%'" "'_____'" "'$(printf '%s' "$ALPHA_SLUG" | tr '[:lower:]' '[:upper:]')'" "'$ALPHA_SLUG'' or ''1''=''1'" "'$ALPHA_ID'"; do
   expect_equal "tenant_by_slug($nothing): no row, so it cannot be used to list salons" "" "$(as_salon none "select * from tenant_by_slug($nothing)")"
 done
-expect_equal "the columns it returns" "id status time_zone" "$(printf "select string_agg(a, ' ') from unnest((select proargnames[2:] from pg_proc where oid = 'public.tenant_by_slug(text)'::regprocedure)) a;\n" | owner_psql)"
+# F03-S02 added access_state (full or read_only, decision 051).
+expect_equal "the columns it returns" "id status time_zone access_state" "$(printf "select string_agg(a, ' ') from unnest((select proargnames[2:] from pg_proc where oid = 'public.tenant_by_slug(text)'::regprocedure)) a;\n" | owner_psql)"
 # A table of the caller's own named tenant must not be what the function reads.
 SHADOWED="$(as_salon none "create temp table tenant (id uuid, slug text, status text) on commit drop; insert into tenant values ('$BETA_ID', '$ALPHA_SLUG', 'active'); select * from tenant_by_slug('$ALPHA_SLUG')")"
-expect_equal "tenant_by_slug('$ALPHA_SLUG') with a temporary table named tenant that says alpha is beta" "$ALPHA_ID|active|Asia/Colombo" "$SHADOWED"
+expect_equal "tenant_by_slug('$ALPHA_SLUG') with a temporary table named tenant that says alpha is beta" "$ALPHA_ID|active|Asia/Colombo|full" "$SHADOWED"
 expect_equal "who may execute it, apart from its owner" "$APP" "$(printf "select coalesce(string_agg(case when a.grantee = 0 then 'PUBLIC' else a.grantee::regrole::text end, ', '), '') from pg_proc p, aclexplode(p.proacl) a where p.oid = 'public.tenant_by_slug(text)'::regprocedure and a.privilege_type = 'EXECUTE' and a.grantee <> p.proowner;\n" | owner_psql)"
 expect_matches "another role calling it" 'permission denied for function tenant_by_slug' "$(owner_tx "create role qa_probe_nobody nologin; set local role qa_probe_nobody; select * from public.tenant_by_slug('$ALPHA_SLUG')")"
 # Every function that runs with its owner's rights pins where it looks, and is not open to everyone.

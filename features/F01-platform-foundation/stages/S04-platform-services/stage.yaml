@@ -288,8 +288,7 @@ verification:
     - TC-F01-S04-015
     - TC-F01-S04-017
     - TC-F01-S04-018
-    suites:
-    - regression
+    suites: [release]
     project: api
   - id: nonlocal-hooks
     tool: script

@@ -1,9 +1,8 @@
 package com.salonplatform.shared.jobs;
 
+import com.salonplatform.shared.tenancy.CurrentTenant;
 import java.time.Duration;
 import java.time.Instant;
-
-import com.salonplatform.shared.tenancy.CurrentTenant;
 
 /**
  * Recurring work over salon data (T-7). On each occurrence the scheduler runs it once for every

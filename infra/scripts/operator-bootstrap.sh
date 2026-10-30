@@ -16,7 +16,8 @@ set -euo pipefail
 ACCOUNT_FILE="$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"
 
 load_settings
-require_prerequisites
+# postgres and api: the bootstrap runs the API jar, with the JDK 25 the api prerequisite finds.
+require_prerequisites postgres api
 postgres_is_running || fail "PostgreSQL is not running. Start it first: infra/scripts/local-service.sh start postgres"
 ensure_application_role
 if [ ! -f "$ROOT/apps/api/target/salon-api.jar" ]; then

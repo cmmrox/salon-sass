@@ -3,7 +3,7 @@ import { format } from 'node:util';
 import { currentRequest } from './request-context';
 
 /** The name every line of the web app carries, beside the API's `salon-api`. */
-export const SERVICE_NAME = 'salon-web';
+const SERVICE_NAME = 'salon-web';
 
 export type LogLevel = 'DEBUG' | 'INFO' | 'WARN' | 'ERROR';
 

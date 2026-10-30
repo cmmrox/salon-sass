@@ -1,5 +1,22 @@
 package com.salonplatform.platform;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
+import com.salonplatform.identity.adapter.IdentityCrypto;
+import com.salonplatform.identity.domain.StaffRole;
+import com.salonplatform.identity.entity.StaffAccount;
+import com.salonplatform.platform.adapter.OperatorCrypto;
+import com.salonplatform.platform.adapter.SupportCrypto;
+import com.salonplatform.platform.service.OperatorAccountService;
+import com.salonplatform.platform.service.SupportSessionService;
+import com.salonplatform.testing.Http;
+import com.salonplatform.testing.IntegrationTest;
+import com.salonplatform.testing.MovableClock;
+import com.salonplatform.testing.TestDatabase;
+import com.salonplatform.testing.TestPostgres;
+import com.salonplatform.testing.TestSalons.TestSalon;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -12,24 +29,6 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-
-import com.salonplatform.identity.domain.StaffAccount;
-import com.salonplatform.identity.domain.StaffRole;
-import com.salonplatform.identity.infrastructure.IdentityCrypto;
-import com.salonplatform.platform.application.OperatorAccounts;
-import com.salonplatform.platform.application.SupportSessions;
-import com.salonplatform.platform.infrastructure.OperatorCrypto;
-import com.salonplatform.platform.infrastructure.SupportCrypto;
-import com.salonplatform.testing.Http;
-import com.salonplatform.testing.IntegrationTest;
-import com.salonplatform.testing.MovableClock;
-import com.salonplatform.testing.TestDatabase;
-import com.salonplatform.testing.TestPostgres;
-import com.salonplatform.testing.TestSalons.TestSalon;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
-import tools.jackson.databind.json.JsonMapper;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,11 +36,10 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 import org.springframework.core.env.Environment;
-import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.transaction.PlatformTransactionManager;
-
-import static org.assertj.core.api.Assertions.assertThat;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * F03-S04 over real HTTP and PostgreSQL with a movable application clock: starting a session (AC-1),
@@ -66,14 +64,29 @@ class SupportSessionIntegrationTest extends IntegrationTest {
         }
     }
 
-    @Autowired OperatorAccounts accounts;
-    @Autowired OperatorCrypto crypto;
-    @Autowired IdentityCrypto identityCrypto;
-    @Autowired JsonMapper json;
-    @Autowired Environment environment;
-    @Autowired PlatformTransactionManager manager;
-    @Autowired SupportSessions sessions;
-    @PersistenceContext EntityManager em;
+    @Autowired
+    OperatorAccountService accounts;
+
+    @Autowired
+    OperatorCrypto crypto;
+
+    @Autowired
+    IdentityCrypto identityCrypto;
+
+    @Autowired
+    JsonMapper json;
+
+    @Autowired
+    Environment environment;
+
+    @Autowired
+    PlatformTransactionManager manager;
+
+    @Autowired
+    SupportSessionService sessions;
+
+    @PersistenceContext
+    EntityManager em;
 
     private final JdbcTemplate owner = TestDatabase.of(TestPostgres.shared()).asOwner();
     private BillingTestSupport billing;
@@ -88,8 +101,8 @@ class SupportSessionIntegrationTest extends IntegrationTest {
 
     // --- fixtures -----------------------------------------------------------------------------------
 
-    private record Fixture(TestSalon salon, StaffAccount ownerAccount, StaffAccount manager, StaffAccount receptionist) {
-    }
+    private record Fixture(
+            TestSalon salon, StaffAccount ownerAccount, StaffAccount manager, StaffAccount receptionist) {}
 
     private Fixture fixture() throws Exception {
         TestSalon salon = billing.legacy(null);
@@ -100,8 +113,7 @@ class SupportSessionIntegrationTest extends IntegrationTest {
         return new Fixture(salon, ownerAccount, manager, receptionist);
     }
 
-    private record Support(OperatorTestSupport.Operator operator, String token) {
-    }
+    private record Support(OperatorTestSupport.Operator operator, String token) {}
 
     private Support support() {
         OperatorTestSupport.Operator operator = console.create("OPERATOR_SUPPORT");
@@ -115,8 +127,8 @@ class SupportSessionIntegrationTest extends IntegrationTest {
     }
 
     private Map<String, Object> started(UUID salon, String token) {
-        Http.Exchange created = start(salon, Map.of("reason", "Owner reported a missing staff member", "durationMinutes", 30),
-                token);
+        Http.Exchange created =
+                start(salon, Map.of("reason", "Owner reported a missing staff member", "durationMinutes", 30), token);
         BillingTestSupport.status(created, 201);
         return console.body(created);
     }
@@ -164,41 +176,60 @@ class SupportSessionIntegrationTest extends IntegrationTest {
         Support support = support();
         UUID salon = fixture.salon().id();
 
-        refused(start(salon, Map.of("reason", "too short", "durationMinutes", 30), support.token()), 400, "bad_request");
-        assertThat(start(salon, Map.of("reason", "too short"), support.token()).body()).contains("\"field\":\"reason\"");
+        refused(
+                start(salon, Map.of("reason", "too short", "durationMinutes", 30), support.token()),
+                400,
+                "bad_request");
+        assertThat(start(salon, Map.of("reason", "too short"), support.token()).body())
+                .contains("\"field\":\"reason\"");
         for (Object minutes : List.of(4, 121, "30", 30.5)) {
-            Http.Exchange bad = start(salon, Map.of("reason", "A reason long enough", "durationMinutes", minutes),
-                    support.token());
+            Http.Exchange bad =
+                    start(salon, Map.of("reason", "A reason long enough", "durationMinutes", minutes), support.token());
             refused(bad, 400, "bad_request");
             assertThat(bad.body()).contains("\"field\":\"durationMinutes\"");
         }
-        Http.Exchange unknown = start(salon, Map.of("reason", "A reason long enough", "salonId", UUID.randomUUID()),
-                support.token());
+        Http.Exchange unknown =
+                start(salon, Map.of("reason", "A reason long enough", "salonId", UUID.randomUUID()), support.token());
         refused(unknown, 400, "bad_request");
-        assertThat(count("SELECT count(*) FROM support_session WHERE salon_id = ?", salon)).isZero();
+        assertThat(count("SELECT count(*) FROM support_session WHERE salon_id = ?", salon))
+                .isZero();
 
         Http.Exchange created = start(salon, Map.of("reason", "  Owner asked for help with staff  "), support.token());
         BillingTestSupport.status(created, 201);
         Map<String, Object> entry = console.body(created);
-        assertThat(Instant.parse((String) entry.get("expiresAt"))).isEqualTo(CLOCK.instant().plus(Duration.ofMinutes(30)));
-        assertThat(Instant.parse((String) entry.get("codeExpiresAt"))).isEqualTo(CLOCK.instant().plusSeconds(60));
+        assertThat(Instant.parse((String) entry.get("expiresAt")))
+                .isEqualTo(CLOCK.instant().plus(Duration.ofMinutes(30)));
+        assertThat(Instant.parse((String) entry.get("codeExpiresAt")))
+                .isEqualTo(CLOCK.instant().plusSeconds(60));
         assertThat(code(entry)).matches("[A-Za-z0-9_-]{43}");
-        assertThat((String) entry.get("entryUrl")).isEqualTo(
-                "https://" + fixture.salon().slug() + ".localhost/workspace/support#" + code(entry));
-        assertThat(owner.queryForObject("SELECT reason FROM support_session WHERE id = ?::uuid", String.class,
-                entry.get("id"))).isEqualTo("Owner asked for help with staff");
+        assertThat((String) entry.get("entryUrl"))
+                .isEqualTo("https://" + fixture.salon().slug() + ".localhost/workspace/support#" + code(entry));
+        assertThat(owner.queryForObject(
+                        "SELECT reason FROM support_session WHERE id = ?::uuid", String.class, entry.get("id")))
+                .isEqualTo("Owner asked for help with staff");
         // Only the code's hash is stored.
-        assertThat(count("SELECT count(*) FROM support_entry_code WHERE code_hash = ?", SupportCrypto.codeHash(code(entry))))
+        assertThat(count(
+                        "SELECT count(*) FROM support_entry_code WHERE code_hash = ?",
+                        SupportCrypto.codeHash(code(entry))))
                 .isEqualTo(1);
-        assertThat(count("SELECT count(*) FROM support_entry_code WHERE code_hash = ?", code(entry))).isZero();
+        assertThat(count("SELECT count(*) FROM support_entry_code WHERE code_hash = ?", code(entry)))
+                .isZero();
 
         // One open session per operator and salon.
-        refused(start(salon, Map.of("reason", "Another look at the staff list"), support.token()), 409,
+        refused(
+                start(salon, Map.of("reason", "Another look at the staff list"), support.token()),
+                409,
                 "support_session_active");
         // Admin cannot start one.
-        refused(start(salon, Map.of("reason", "Admin wants to look around"), billing.admin()), 403, "permission_denied");
+        refused(
+                start(salon, Map.of("reason", "Admin wants to look around"), billing.admin()),
+                403,
+                "permission_denied");
         // Unknown salon.
-        refused(start(UUID.randomUUID(), Map.of("reason", "Nobody is at this salon"), support.token()), 404, "not_found");
+        refused(
+                start(UUID.randomUUID(), Map.of("reason", "Nobody is at this salon"), support.token()),
+                404,
+                "not_found");
     }
 
     @Test
@@ -206,15 +237,23 @@ class SupportSessionIntegrationTest extends IntegrationTest {
         Support support = support();
         TestSalon suspended = billing.legacy(null);
         owner.update("UPDATE tenant SET status = 'suspended' WHERE id = ?", suspended.id());
-        refused(start(suspended.id(), Map.of("reason", "Look at a suspended salon"), support.token()), 409, "invalid_state");
+        refused(
+                start(suspended.id(), Map.of("reason", "Look at a suspended salon"), support.token()),
+                409,
+                "invalid_state");
         // A salon with no tenant rows, so the shared database's deletion job has nothing of it to remove;
         // it ends as a deleted tombstone, which is refused too.
         TestSalon closed = new com.salonplatform.testing.TestSalons(owner).createWithoutBrand("active");
         Instant now = CLOCK.instant().truncatedTo(ChronoUnit.MILLIS);
-        owner.update("UPDATE tenant SET status = 'closed', closed_at = ?, delete_at = ? WHERE id = ?",
-                java.sql.Timestamp.from(now), java.sql.Timestamp.from(now.plus(Duration.ofDays(30))), closed.id());
+        owner.update(
+                "UPDATE tenant SET status = 'closed', closed_at = ?, delete_at = ? WHERE id = ?",
+                java.sql.Timestamp.from(now),
+                java.sql.Timestamp.from(now.plus(Duration.ofDays(30))),
+                closed.id());
         refused(start(closed.id(), Map.of("reason", "Look at a closed salon"), support.token()), 409, "invalid_state");
-        owner.update("UPDATE tenant SET status = 'deleted', deleted_at = ? WHERE id = ?", java.sql.Timestamp.from(now),
+        owner.update(
+                "UPDATE tenant SET status = 'deleted', deleted_at = ? WHERE id = ?",
+                java.sql.Timestamp.from(now),
                 closed.id());
         refused(start(closed.id(), Map.of("reason", "Look at a deleted salon"), support.token()), 409, "invalid_state");
         assertThat(count("SELECT count(*) FROM support_session WHERE salon_id IN (?, ?)", suspended.id(), closed.id()))
@@ -226,19 +265,39 @@ class SupportSessionIntegrationTest extends IntegrationTest {
         String token = credential(readOnly, code(entry));
         BillingTestSupport.status(billing.identityCall(readOnly, "GET", "/me", null, token), 200);
         // A mutation is refused as a support one, before the salon's read-only rule.
-        refused(billing.identityCall(readOnly, "POST", "/staff",
-                BillingTestSupport.staffRequest(BillingTestSupport.email("ro"), "RECEPTIONIST", billing.password), token),
-                403, "support_read_only");
+        refused(
+                billing.identityCall(
+                        readOnly,
+                        "POST",
+                        "/staff",
+                        BillingTestSupport.staffRequest(
+                                BillingTestSupport.email("ro"), "RECEPTIONIST", billing.password),
+                        token),
+                403,
+                "support_read_only");
         BillingTestSupport.status(billing.salonCall(readOnly, "DELETE", "/api/v1/support/session", null, token), 204);
         // The Owner of a read-only salon can still revoke support access.
         StaffAccount readOnlyOwner = billing.staff(readOnly, StaffRole.OWNER, BillingTestSupport.email("roo"));
         Map<String, Object> another = started(readOnly.id(), support.token());
-        BillingTestSupport.status(billing.salonCall(readOnly, "DELETE", "/api/v1/salon/support-sessions/" + another.get("id"),
-                null, billing.token(readOnly, readOnlyOwner)), 204);
+        BillingTestSupport.status(
+                billing.salonCall(
+                        readOnly,
+                        "DELETE",
+                        "/api/v1/salon/support-sessions/" + another.get("id"),
+                        null,
+                        billing.token(readOnly, readOnlyOwner)),
+                204);
         // Staff changes in the same salon stay refused as read-only.
-        refused(billing.identityCall(readOnly, "POST", "/staff",
-                BillingTestSupport.staffRequest(BillingTestSupport.email("ro2"), "RECEPTIONIST", billing.password),
-                billing.token(readOnly, readOnlyOwner)), 403, "salon_read_only");
+        refused(
+                billing.identityCall(
+                        readOnly,
+                        "POST",
+                        "/staff",
+                        BillingTestSupport.staffRequest(
+                                BillingTestSupport.email("ro2"), "RECEPTIONIST", billing.password),
+                        billing.token(readOnly, readOnlyOwner)),
+                403,
+                "salon_read_only");
     }
 
     @Test
@@ -249,8 +308,9 @@ class SupportSessionIntegrationTest extends IntegrationTest {
         try {
             List<Future<Integer>> results = new ArrayList<>();
             for (int i = 0; i < 5; i++) {
-                results.add(pool.submit(() -> start(fixture.salon().id(),
-                        Map.of("reason", "Simultaneous start attempt"), support.token()).status()));
+                results.add(pool.submit(() -> start(
+                                fixture.salon().id(), Map.of("reason", "Simultaneous start attempt"), support.token())
+                        .status()));
             }
             List<Integer> statuses = new ArrayList<>();
             for (Future<Integer> result : results) {
@@ -258,8 +318,7 @@ class SupportSessionIntegrationTest extends IntegrationTest {
             }
             assertThat(statuses).filteredOn(status -> status == 201).hasSize(1);
             assertThat(statuses).filteredOn(status -> status == 409).hasSize(4);
-        }
-        finally {
+        } finally {
             pool.shutdownNow();
         }
     }
@@ -275,12 +334,27 @@ class SupportSessionIntegrationTest extends IntegrationTest {
 
         // Another salon's host, the console host and the bare platform host issue nothing.
         refused(enter(other.salon(), code(entry)), 401, "invalid_code");
-        refused(http().sendOnHost("POST", console.host(), "/api/v1/support/entry", Map.of("Content-Type",
-                "application/json"), json.writeValueAsString(Map.of("code", code(entry)))), 404, "not_found");
-        refused(http().sendOnHost("POST", "localhost:" + port(), "/api/v1/support/entry", Map.of("Content-Type",
-                "application/json"), json.writeValueAsString(Map.of("code", code(entry)))), 404, "not_found");
+        refused(
+                http().sendOnHost(
+                                "POST",
+                                console.host(),
+                                "/api/v1/support/entry",
+                                Map.of("Content-Type", "application/json"),
+                                json.writeValueAsString(Map.of("code", code(entry)))),
+                404,
+                "not_found");
+        refused(
+                http().sendOnHost(
+                                "POST",
+                                "localhost:" + port(),
+                                "/api/v1/support/entry",
+                                Map.of("Content-Type", "application/json"),
+                                json.writeValueAsString(Map.of("code", code(entry)))),
+                404,
+                "not_found");
         // Altered and malformed codes.
-        String altered = (code(entry).charAt(0) == 'A' ? "B" : "A") + code(entry).substring(1);
+        String altered =
+                (code(entry).charAt(0) == 'A' ? "B" : "A") + code(entry).substring(1);
         refused(enter(fixture.salon(), altered), 401, "invalid_code");
         refused(enter(fixture.salon(), "short"), 401, "invalid_code");
 
@@ -295,20 +369,28 @@ class SupportSessionIntegrationTest extends IntegrationTest {
         refused(enter(fixture.salon(), code(entry)), 401, "invalid_code");
 
         // A fresh code expires after 60 seconds.
-        Http.Exchange fresh = console.call("POST", "/support-sessions/" + entry.get("id") + "/entry-codes", null,
-                support.token());
+        Http.Exchange fresh =
+                console.call("POST", "/support-sessions/" + entry.get("id") + "/entry-codes", null, support.token());
         BillingTestSupport.status(fresh, 201);
         CLOCK.advance(Duration.ofSeconds(60));
         refused(enter(fixture.salon(), code(console.body(fresh))), 401, "invalid_code");
-        Http.Exchange inTime = console.call("POST", "/support-sessions/" + entry.get("id") + "/entry-codes", null,
-                support.token());
+        Http.Exchange inTime =
+                console.call("POST", "/support-sessions/" + entry.get("id") + "/entry-codes", null, support.token());
         CLOCK.advance(Duration.ofSeconds(59));
         BillingTestSupport.status(enter(fixture.salon(), code(console.body(inTime))), 200);
         // Another operator cannot mint a code for this session.
-        refused(console.call("POST", "/support-sessions/" + entry.get("id") + "/entry-codes", null, support().token()),
-                403, "permission_denied");
-        refused(console.call("POST", "/support-sessions/" + UUID.randomUUID() + "/entry-codes", null, support.token()),
-                404, "not_found");
+        refused(
+                console.call(
+                        "POST",
+                        "/support-sessions/" + entry.get("id") + "/entry-codes",
+                        null,
+                        support().token()),
+                403,
+                "permission_denied");
+        refused(
+                console.call("POST", "/support-sessions/" + UUID.randomUUID() + "/entry-codes", null, support.token()),
+                404,
+                "not_found");
     }
 
     @Test
@@ -327,8 +409,7 @@ class SupportSessionIntegrationTest extends IntegrationTest {
             }
             assertThat(statuses).filteredOn(status -> status == 200).hasSize(1);
             assertThat(statuses).filteredOn(status -> status == 401).hasSize(5);
-        }
-        finally {
+        } finally {
             pool.shutdownNow();
         }
     }
@@ -349,6 +430,7 @@ class SupportSessionIntegrationTest extends IntegrationTest {
         assertThat(principal.get("expiresAt")).isEqualTo(entry.get("expiresAt"));
         assertThat(principal.get("role")).isNull();
         assertThat(principal.get("staffId")).isNull();
+        // JSON is read as an untyped map (Map.class); the cast states the shape the assertions then check.
         @SuppressWarnings("unchecked")
         List<String> permissions = (List<String>) principal.get("permissions");
         assertThat(permissions).containsExactlyInAnyOrderElementsOf(StaffRole.SUPPORT_READS);
@@ -356,27 +438,47 @@ class SupportSessionIntegrationTest extends IntegrationTest {
 
         Http.Exchange staff = billing.identityCall(salon, "GET", "/staff", null, token);
         BillingTestSupport.status(staff, 200);
-        assertThat(staff.body()).contains(fixture.ownerAccount().email).doesNotContain("passwordHash", "mfaSecret");
+        assertThat(staff.body())
+                .contains(fixture.ownerAccount().getEmail())
+                .doesNotContain("passwordHash", "mfaSecret");
         BillingTestSupport.status(billing.identityCall(salon, "GET", "/audit", null, token), 200);
         BillingTestSupport.status(billing.salonCall(salon, "GET", "/api/v1/salon/entitlements", null, token), 200);
         BillingTestSupport.status(billing.salonCall(salon, "GET", "/api/v1/salon/invoices", null, token), 200);
         // Own-account and Owner-only management reads are not the support view's.
         refused(billing.identityCall(salon, "GET", "/sessions", null, token), 403, "permission_denied");
-        refused(billing.salonCall(salon, "GET", "/api/v1/salon/support-sessions", null, token), 403, "permission_denied");
+        refused(
+                billing.salonCall(salon, "GET", "/api/v1/salon/support-sessions", null, token),
+                403,
+                "permission_denied");
 
         int staffBefore = count("SELECT count(*) FROM identity_staff WHERE tenant_id = ?", salon.id());
-        String role = owner.queryForObject("SELECT role FROM identity_staff WHERE id = ?", String.class,
-                fixture.manager().id);
+        String role = owner.queryForObject(
+                "SELECT role FROM identity_staff WHERE id = ?",
+                String.class,
+                fixture.manager().getId());
         List<Http.Exchange> mutations = List.of(
-                billing.identityCall(salon, "POST", "/staff",
-                        BillingTestSupport.staffRequest(BillingTestSupport.email("sup"), "RECEPTIONIST", billing.password),
+                billing.identityCall(
+                        salon,
+                        "POST",
+                        "/staff",
+                        BillingTestSupport.staffRequest(
+                                BillingTestSupport.email("sup"), "RECEPTIONIST", billing.password),
                         token),
-                billing.identityCall(salon, "PATCH", "/staff/" + fixture.manager().id,
-                        Map.of("version", 0, "role", "RECEPTIONIST"), token),
-                billing.identityCall(salon, "DELETE", "/staff/" + fixture.manager().id, null, token),
+                billing.identityCall(
+                        salon,
+                        "PATCH",
+                        "/staff/" + fixture.manager().getId(),
+                        Map.of("version", 0, "role", "RECEPTIONIST"),
+                        token),
+                billing.identityCall(
+                        salon, "DELETE", "/staff/" + fixture.manager().getId(), null, token),
                 billing.identityCall(salon, "DELETE", "/sessions", null, token),
-                billing.identityCall(salon, "PUT", "/staff/password",
-                        Map.of("oldPassword", billing.password, "newPassword", "another synthetic password"), token),
+                billing.identityCall(
+                        salon,
+                        "PUT",
+                        "/staff/password",
+                        Map.of("oldPassword", billing.password, "newPassword", "another synthetic password"),
+                        token),
                 billing.identityCall(salon, "POST", "/staff/mfa/challenges", null, token),
                 billing.identityCall(salon, "POST", "/sessions/refresh", Map.of("refreshToken", token), token),
                 billing.salonCall(salon, "POST", "/api/v1/support/entry", Map.of("code", code(entry)), token),
@@ -385,10 +487,16 @@ class SupportSessionIntegrationTest extends IntegrationTest {
         for (Http.Exchange mutation : mutations) {
             refused(mutation, 403, "support_read_only");
         }
-        assertThat(count("SELECT count(*) FROM identity_staff WHERE tenant_id = ?", salon.id())).isEqualTo(staffBefore);
-        assertThat(owner.queryForObject("SELECT role FROM identity_staff WHERE id = ?", String.class,
-                fixture.manager().id)).isEqualTo(role);
-        assertThat(count("SELECT count(*) FROM support_session WHERE id = ?::uuid AND ended_at IS NULL", entry.get("id")))
+        assertThat(count("SELECT count(*) FROM identity_staff WHERE tenant_id = ?", salon.id()))
+                .isEqualTo(staffBefore);
+        assertThat(owner.queryForObject(
+                        "SELECT role FROM identity_staff WHERE id = ?",
+                        String.class,
+                        fixture.manager().getId()))
+                .isEqualTo(role);
+        assertThat(count(
+                        "SELECT count(*) FROM support_session WHERE id = ?::uuid AND ended_at IS NULL",
+                        entry.get("id")))
                 .isEqualTo(1);
         // Nothing the support view reads carries a password, an MFA secret or a token.
         assertThat(me.body()).doesNotContain("password", "mfaSecret", "accessToken", "refreshToken");
@@ -411,19 +519,34 @@ class SupportSessionIntegrationTest extends IntegrationTest {
         refused(billing.identityCall(other.salon(), "GET", "/me", null, token), 404, "not_found");
         refused(billing.identityCall(other.salon(), "GET", "/staff", null, token), 404, "not_found");
         // The bare API address, which resolves a salon only from a staff or customer token.
-        BillingTestSupport.status(http().sendOnHost("GET", "localhost:" + port(), "/api/v1/identity/me",
-                Map.of("Authorization", "Bearer " + token), null), 401);
+        BillingTestSupport.status(
+                http().sendOnHost(
+                                "GET",
+                                "localhost:" + port(),
+                                "/api/v1/identity/me",
+                                Map.of("Authorization", "Bearer " + token),
+                                null),
+                401);
         // An altered credential is no support credential.
-        refused(billing.identityCall(fixture.salon(), "GET", "/me", null, token.substring(0, token.length() - 2) + "xx"),
-                401, "invalid_session");
+        refused(
+                billing.identityCall(
+                        fixture.salon(), "GET", "/me", null, token.substring(0, token.length() - 2) + "xx"),
+                401,
+                "invalid_session");
 
         // A salon staff credential cannot start or use support sessions.
         String ownerToken = billing.token(fixture.salon(), fixture.ownerAccount());
-        refused(start(fixture.salon().id(), Map.of("reason", "Staff trying to start one"), ownerToken), 401,
+        refused(
+                start(fixture.salon().id(), Map.of("reason", "Staff trying to start one"), ownerToken),
+                401,
                 "invalid_session");
-        refused(console.call("POST", "/support-sessions/" + entry.get("id") + "/entry-codes", null, ownerToken), 401,
+        refused(
+                console.call("POST", "/support-sessions/" + entry.get("id") + "/entry-codes", null, ownerToken),
+                401,
                 "invalid_session");
-        refused(billing.salonCall(fixture.salon(), "DELETE", "/api/v1/support/session", null, ownerToken), 401,
+        refused(
+                billing.salonCall(fixture.salon(), "DELETE", "/api/v1/support/session", null, ownerToken),
+                401,
                 "invalid_session");
         // An operator credential alone opens no workspace.
         refused(billing.identityCall(fixture.salon(), "GET", "/me", null, support.token()), 401, "invalid_session");
@@ -445,41 +568,62 @@ class SupportSessionIntegrationTest extends IntegrationTest {
         BillingTestSupport.status(billing.salonCall(salon, "DELETE", "/api/v1/support/session", null, token), 204);
         refused(billing.identityCall(salon, "GET", "/me", null, token), 401, "invalid_session");
         refused(billing.salonCall(salon, "DELETE", "/api/v1/support/session", null, token), 401, "invalid_session");
-        refused(console.call("POST", "/support-sessions/" + one.get("id") + "/entry-codes", null, first.token()), 409,
+        refused(
+                console.call("POST", "/support-sessions/" + one.get("id") + "/entry-codes", null, first.token()),
+                409,
                 "invalid_state");
 
         // The operator ends it in the console, with an unused code outstanding.
         Map<String, Object> two = started(salon.id(), first.token());
         String second = credential(salon, code(two));
-        Map<String, Object> spare = console.body(console.call("POST", "/support-sessions/" + two.get("id")
-                + "/entry-codes", null, first.token()));
-        BillingTestSupport.status(console.call("DELETE", "/support-sessions/" + two.get("id"), null, first.token()), 204);
+        Map<String, Object> spare = console.body(
+                console.call("POST", "/support-sessions/" + two.get("id") + "/entry-codes", null, first.token()));
+        BillingTestSupport.status(
+                console.call("DELETE", "/support-sessions/" + two.get("id"), null, first.token()), 204);
         refused(billing.identityCall(salon, "GET", "/staff", null, second), 401, "invalid_session");
         refused(enter(salon, code(spare)), 401, "invalid_code");
-        refused(console.call("DELETE", "/support-sessions/" + two.get("id"), null, first.token()), 409, "invalid_state");
+        refused(
+                console.call("DELETE", "/support-sessions/" + two.get("id"), null, first.token()),
+                409,
+                "invalid_state");
 
         // An Admin revokes it.
         Map<String, Object> three = started(salon.id(), first.token());
         String third = credential(salon, code(three));
         // Another Support operator cannot end it.
-        refused(console.call("DELETE", "/support-sessions/" + three.get("id"), null, support().token()), 403,
+        refused(
+                console.call(
+                        "DELETE",
+                        "/support-sessions/" + three.get("id"),
+                        null,
+                        support().token()),
+                403,
                 "permission_denied");
-        refused(console.call("DELETE", "/support-sessions/" + UUID.randomUUID(), null, billing.admin()), 404, "not_found");
-        BillingTestSupport.status(console.call("DELETE", "/support-sessions/" + three.get("id"), null, billing.admin()), 204);
+        refused(
+                console.call("DELETE", "/support-sessions/" + UUID.randomUUID(), null, billing.admin()),
+                404,
+                "not_found");
+        BillingTestSupport.status(
+                console.call("DELETE", "/support-sessions/" + three.get("id"), null, billing.admin()), 204);
         refused(billing.identityCall(salon, "GET", "/me", null, third), 401, "invalid_session");
 
         // The Owner revokes it in the workspace.
         Map<String, Object> four = started(salon.id(), first.token());
         String fourth = credential(salon, code(four));
-        BillingTestSupport.status(billing.salonCall(salon, "DELETE", "/api/v1/salon/support-sessions/" + four.get("id"),
-                null, ownerToken), 204);
+        BillingTestSupport.status(
+                billing.salonCall(
+                        salon, "DELETE", "/api/v1/salon/support-sessions/" + four.get("id"), null, ownerToken),
+                204);
         refused(billing.identityCall(salon, "GET", "/me", null, fourth), 401, "invalid_session");
-        refused(billing.salonCall(salon, "DELETE", "/api/v1/salon/support-sessions/" + four.get("id"), null, ownerToken),
-                409, "invalid_state");
+        refused(
+                billing.salonCall(
+                        salon, "DELETE", "/api/v1/salon/support-sessions/" + four.get("id"), null, ownerToken),
+                409,
+                "invalid_state");
 
         // It expires.
-        Http.Exchange shortOne = start(salon.id(), Map.of("reason", "A short look at the audit", "durationMinutes", 5),
-                first.token());
+        Http.Exchange shortOne =
+                start(salon.id(), Map.of("reason", "A short look at the audit", "durationMinutes", 5), first.token());
         BillingTestSupport.status(shortOne, 201);
         String fiveId = (String) console.body(shortOne).get("id");
         String fiveCode = code(console.body(shortOne));
@@ -490,20 +634,26 @@ class SupportSessionIntegrationTest extends IntegrationTest {
         refused(billing.identityCall(salon, "GET", "/me", null, fifth), 401, "invalid_session");
         assertThat(sessions.expire(CLOCK.instant())).isGreaterThanOrEqualTo(1);
         assertThat(sessions.expire(CLOCK.instant())).isZero();
-        assertThat(owner.queryForObject("SELECT ended_by FROM support_session WHERE id = ?::uuid", String.class, fiveId))
+        assertThat(owner.queryForObject(
+                        "SELECT ended_by FROM support_session WHERE id = ?::uuid", String.class, fiveId))
                 .isEqualTo("expiry");
 
         // How each one ended, and no ended session can be changed by any role.
-        assertThat(owner.queryForList("SELECT ended_by FROM support_session WHERE salon_id = ? ORDER BY started_at, id",
-                String.class, salon.id())).containsExactly("operator", "operator", "admin", "owner", "expiry");
+        assertThat(owner.queryForList(
+                        "SELECT ended_by FROM support_session WHERE salon_id = ? ORDER BY started_at, id",
+                        String.class,
+                        salon.id()))
+                .containsExactly("operator", "operator", "admin", "owner", "expiry");
         org.assertj.core.api.Assertions.assertThatThrownBy(() -> owner.update(
-                "UPDATE support_session SET ended_at = NULL, ended_by = NULL WHERE id = ?::uuid", fiveId))
-                .rootCause().hasMessageContaining("never changed");
+                        "UPDATE support_session SET ended_at = NULL, ended_by = NULL WHERE id = ?::uuid", fiveId))
+                .rootCause()
+                .hasMessageContaining("never changed");
     }
 
     // --- AC-6 and AC-7 ----------------------------------------------------------------------------------
 
     @Test
+    // JSON is read as an untyped map (Map.class); the cast states the shape the assertions then check.
     @SuppressWarnings("unchecked")
     void theSalonsAuditShowsStartRequestsAndEndToOwnerAndManagerOnly() throws Exception {
         Fixture fixture = fixture();
@@ -516,54 +666,76 @@ class SupportSessionIntegrationTest extends IntegrationTest {
         CLOCK.advance(Duration.ofSeconds(1));
         BillingTestSupport.status(billing.identityCall(salon, "GET", "/staff", null, token), 200);
         CLOCK.advance(Duration.ofSeconds(1));
-        refused(billing.identityCall(salon, "DELETE", "/staff/" + fixture.manager().id, null, token), 403,
+        refused(
+                billing.identityCall(
+                        salon, "DELETE", "/staff/" + fixture.manager().getId(), null, token),
+                403,
                 "support_read_only");
         CLOCK.advance(Duration.ofSeconds(1));
         BillingTestSupport.status(billing.salonCall(salon, "DELETE", "/api/v1/support/session", null, token), 204);
 
         List<Map<String, Object>> rows = salonAudit(salon);
-        List<String> actions = rows.stream().map(row -> (String) row.get("action")).toList();
+        List<String> actions =
+                rows.stream().map(row -> (String) row.get("action")).toList();
         assertThat(actions.get(0)).isEqualTo("support.session_started");
         assertThat(actions).contains("support.session_entered", "support.request", "support.session_ended");
         // The end is recorded, and so is the request that ended it.
-        assertThat(rows).anyMatch(row -> String.valueOf(row.get("after_values")).contains("\"route\": \"/api/v1/support/session\"")
-                && String.valueOf(row.get("after_values")).contains("\"status\": 204"));
+        assertThat(rows)
+                .anyMatch(row ->
+                        String.valueOf(row.get("after_values")).contains("\"route\": \"/api/v1/support/session\"")
+                                && String.valueOf(row.get("after_values")).contains("\"status\": 204"));
         Map<String, Object> startRow = rows.get(0);
         assertThat(startRow.get("actor_kind")).isEqualTo("support");
         assertThat(startRow.get("reason")).isEqualTo("Owner reported a missing staff member");
-        assertThat((String) startRow.get("after_values")).contains("Synthetic OPERATOR_SUPPORT", entry.get("expiresAt")
-                .toString());
+        assertThat((String) startRow.get("after_values"))
+                .contains("Synthetic OPERATOR_SUPPORT", entry.get("expiresAt").toString());
         assertThat(rows.stream().map(row -> String.valueOf(row.get("after_values"))))
-                .anyMatch(after -> after.contains("\"route\": \"/api/v1/identity/staff\"") && after.contains("\"status\": 200"))
-                .anyMatch(after -> after.contains("\"route\": \"/api/v1/identity/staff/{id}\"") && after.contains("\"method\": \"DELETE\"")
+                .anyMatch(after ->
+                        after.contains("\"route\": \"/api/v1/identity/staff\"") && after.contains("\"status\": 200"))
+                .anyMatch(after -> after.contains("\"route\": \"/api/v1/identity/staff/{id}\"")
+                        && after.contains("\"method\": \"DELETE\"")
                         && after.contains("\"status\": 403"))
                 .anyMatch(after -> after.contains("\"endedBy\": \"operator\""));
         // No operator email, raw path id, code or credential in the salon's trail.
         String all = rows.toString();
-        assertThat(all).doesNotContain(support.operator().email(), fixture.manager().id.toString(), code(entry), token);
+        assertThat(all)
+                .doesNotContain(
+                        support.operator().email(), fixture.manager().getId().toString(), code(entry), token);
         assertThat(salonAudit(other.salon())).isEmpty();
 
         // Owner and Manager see the entries; other roles do not; another salon's list has none.
         for (StaffAccount reader : List.of(fixture.ownerAccount(), fixture.manager())) {
-            Http.Exchange audit = billing.identityCall(salon, "GET", "/audit?size=100", null, billing.token(salon, reader));
+            Http.Exchange audit =
+                    billing.identityCall(salon, "GET", "/audit?size=100", null, billing.token(salon, reader));
             BillingTestSupport.status(audit, 200);
-            List<Map<String, Object>> items = (List<Map<String, Object>>) console.body(audit).get("items");
-            assertThat(items).anyMatch(item -> "support.session_started".equals(item.get("action"))
-                    && ((Map<String, Object>) item.get("after")).get("operatorName").equals("Synthetic OPERATOR_SUPPORT")
-                    && ((Map<String, Object>) item.get("after")).get("reason").equals("Owner reported a missing staff member"));
-            assertThat(items).anyMatch(item -> "support.request".equals(item.get("action"))
-                    && "/api/v1/identity/staff".equals(((Map<String, Object>) item.get("after")).get("route")));
-            assertThat(items).anyMatch(item -> "support.session_ended".equals(item.get("action"))
-                    && "operator".equals(((Map<String, Object>) item.get("after")).get("endedBy")));
+            List<Map<String, Object>> items =
+                    (List<Map<String, Object>>) console.body(audit).get("items");
+            assertThat(items)
+                    .anyMatch(item -> "support.session_started".equals(item.get("action"))
+                            && ((Map<String, Object>) item.get("after"))
+                                    .get("operatorName")
+                                    .equals("Synthetic OPERATOR_SUPPORT")
+                            && ((Map<String, Object>) item.get("after"))
+                                    .get("reason")
+                                    .equals("Owner reported a missing staff member"));
+            assertThat(items)
+                    .anyMatch(item -> "support.request".equals(item.get("action"))
+                            && "/api/v1/identity/staff".equals(((Map<String, Object>) item.get("after")).get("route")));
+            assertThat(items)
+                    .anyMatch(item -> "support.session_ended".equals(item.get("action"))
+                            && "operator".equals(((Map<String, Object>) item.get("after")).get("endedBy")));
         }
-        refused(billing.identityCall(salon, "GET", "/audit", null, billing.token(salon, fixture.receptionist())), 403,
+        refused(
+                billing.identityCall(salon, "GET", "/audit", null, billing.token(salon, fixture.receptionist())),
+                403,
                 "permission_denied");
-        Http.Exchange otherAudit = billing.identityCall(other.salon(), "GET", "/audit?size=100", null,
-                billing.token(other.salon(), other.ownerAccount()));
+        Http.Exchange otherAudit = billing.identityCall(
+                other.salon(), "GET", "/audit?size=100", null, billing.token(other.salon(), other.ownerAccount()));
         assertThat(otherAudit.body()).doesNotContain("support.");
     }
 
     @Test
+    // JSON is read as an untyped map (Map.class); the cast states the shape the assertions then check.
     @SuppressWarnings("unchecked")
     void theOwnerListsAndRevokesTheSalonsSessionsAndNoOtherRoleOrSalonCan() throws Exception {
         Fixture fixture = fixture();
@@ -571,52 +743,75 @@ class SupportSessionIntegrationTest extends IntegrationTest {
         TestSalon salon = fixture.salon();
         Support support = support();
         Map<String, Object> past = started(salon.id(), support.token());
-        BillingTestSupport.status(console.call("DELETE", "/support-sessions/" + past.get("id"), null, support.token()), 204);
+        BillingTestSupport.status(
+                console.call("DELETE", "/support-sessions/" + past.get("id"), null, support.token()), 204);
         Map<String, Object> active = started(salon.id(), support.token());
         Map<String, Object> elsewhere = started(other.salon().id(), support.token());
 
         String ownerToken = billing.token(salon, fixture.ownerAccount());
         Http.Exchange list = billing.salonCall(salon, "GET", "/api/v1/salon/support-sessions", null, ownerToken);
         BillingTestSupport.status(list, 200);
-        List<Map<String, Object>> items = (List<Map<String, Object>>) console.body(list).get("items");
+        List<Map<String, Object>> items =
+                (List<Map<String, Object>>) console.body(list).get("items");
         assertThat(items).extracting(item -> item.get("id")).containsExactly(active.get("id"), past.get("id"));
-        assertThat(items.get(0)).containsEntry("state", "active").containsEntry("operatorName", "Synthetic OPERATOR_SUPPORT")
-                .containsEntry("reason", "Owner reported a missing staff member").containsEntry("endedAt", null);
+        assertThat(items.get(0))
+                .containsEntry("state", "active")
+                .containsEntry("operatorName", "Synthetic OPERATOR_SUPPORT")
+                .containsEntry("reason", "Owner reported a missing staff member")
+                .containsEntry("endedAt", null);
         assertThat(items.get(1)).containsEntry("state", "ended").containsEntry("endedBy", "operator");
         assertThat(list.body()).doesNotContain(support.operator().email(), "operatorId");
 
         for (StaffAccount role : List.of(fixture.manager(), fixture.receptionist())) {
             String staffToken = billing.token(salon, role);
-            refused(billing.salonCall(salon, "GET", "/api/v1/salon/support-sessions", null, staffToken), 403,
+            refused(
+                    billing.salonCall(salon, "GET", "/api/v1/salon/support-sessions", null, staffToken),
+                    403,
                     "permission_denied");
-            refused(billing.salonCall(salon, "DELETE", "/api/v1/salon/support-sessions/" + active.get("id"), null,
-                    staffToken), 403, "permission_denied");
+            refused(
+                    billing.salonCall(
+                            salon, "DELETE", "/api/v1/salon/support-sessions/" + active.get("id"), null, staffToken),
+                    403,
+                    "permission_denied");
         }
         // Another salon's session is not found for this Owner, and is untouched.
-        refused(billing.salonCall(salon, "DELETE", "/api/v1/salon/support-sessions/" + elsewhere.get("id"), null,
-                ownerToken), 404, "not_found");
-        refused(billing.salonCall(salon, "DELETE", "/api/v1/salon/support-sessions/not-a-uuid", null, ownerToken), 404,
+        refused(
+                billing.salonCall(
+                        salon, "DELETE", "/api/v1/salon/support-sessions/" + elsewhere.get("id"), null, ownerToken),
+                404,
                 "not_found");
-        assertThat(count("SELECT count(*) FROM support_session WHERE id = ?::uuid AND ended_at IS NULL",
-                elsewhere.get("id"))).isEqualTo(1);
-        BillingTestSupport.status(billing.salonCall(salon, "DELETE", "/api/v1/salon/support-sessions/" + active.get("id"),
-                null, ownerToken), 204);
-        assertThat(salonAudit(salon)).anyMatch(row -> "staff".equals(row.get("actor_kind"))
-                && fixture.ownerAccount().id.toString().equals(row.get("actor_id"))
-                && String.valueOf(row.get("after_values")).contains("\"endedBy\": \"owner\""));
+        refused(
+                billing.salonCall(salon, "DELETE", "/api/v1/salon/support-sessions/not-a-uuid", null, ownerToken),
+                404,
+                "not_found");
+        assertThat(count(
+                        "SELECT count(*) FROM support_session WHERE id = ?::uuid AND ended_at IS NULL",
+                        elsewhere.get("id")))
+                .isEqualTo(1);
+        BillingTestSupport.status(
+                billing.salonCall(
+                        salon, "DELETE", "/api/v1/salon/support-sessions/" + active.get("id"), null, ownerToken),
+                204);
+        assertThat(salonAudit(salon))
+                .anyMatch(row -> "staff".equals(row.get("actor_kind"))
+                        && fixture.ownerAccount().getId().toString().equals(row.get("actor_id"))
+                        && String.valueOf(row.get("after_values")).contains("\"endedBy\": \"owner\""));
     }
 
     // --- AC-8 -----------------------------------------------------------------------------------------
 
     @Test
+    // JSON is read as an untyped map (Map.class); the cast states the shape the assertions then check.
     @SuppressWarnings("unchecked")
     void supportFindsSalonsAndAdminOverseesEverySessionWithPlatformAudit() throws Exception {
         Fixture fixture = fixture();
         Fixture other = fixture();
         Support first = support();
         Support second = support();
-        BillingTestSupport.status(console.call("GET", "/salons?q=" + fixture.salon().slug(), null, first.token()), 200);
-        BillingTestSupport.status(console.call("GET", "/salons/" + fixture.salon().id(), null, first.token()), 200);
+        BillingTestSupport.status(
+                console.call("GET", "/salons?q=" + fixture.salon().slug(), null, first.token()), 200);
+        BillingTestSupport.status(
+                console.call("GET", "/salons/" + fixture.salon().id(), null, first.token()), 200);
         refused(console.call("GET", "/plans", null, first.token()), 403, "permission_denied");
 
         Map<String, Object> a = started(fixture.salon().id(), first.token());
@@ -625,32 +820,43 @@ class SupportSessionIntegrationTest extends IntegrationTest {
         Http.Exchange ownList = console.call("GET", "/support-sessions", null, first.token());
         BillingTestSupport.status(ownList, 200);
         Map<String, Object> own = console.body(ownList);
-        assertThat((List<Map<String, Object>>) own.get("items")).extracting(item -> item.get("id"))
+        assertThat((List<Map<String, Object>>) own.get("items"))
+                .extracting(item -> item.get("id"))
                 .containsExactly(a.get("id"));
-        Http.Exchange all = console.call("GET", "/support-sessions?salonId=" + other.salon().id() + "&state=active", null,
-                billing.admin());
+        Http.Exchange all = console.call(
+                "GET", "/support-sessions?salonId=" + other.salon().id() + "&state=active", null, billing.admin());
         BillingTestSupport.status(all, 200);
-        List<Map<String, Object>> items = (List<Map<String, Object>>) console.body(all).get("items");
+        List<Map<String, Object>> items =
+                (List<Map<String, Object>>) console.body(all).get("items");
         assertThat(items).extracting(item -> item.get("id")).containsExactly(b.get("id"));
         Map<String, Object> row = items.get(0);
-        assertThat((Map<String, Object>) row.get("salon")).containsEntry("slug", other.salon().slug());
-        assertThat((Map<String, Object>) row.get("operator")).containsEntry("displayName", "Synthetic OPERATOR_SUPPORT");
-        assertThat(row).containsEntry("reason", "Owner reported a missing staff member").containsEntry("state", "active");
+        assertThat((Map<String, Object>) row.get("salon"))
+                .containsEntry("slug", other.salon().slug());
+        assertThat((Map<String, Object>) row.get("operator"))
+                .containsEntry("displayName", "Synthetic OPERATOR_SUPPORT");
+        assertThat(row)
+                .containsEntry("reason", "Owner reported a missing staff member")
+                .containsEntry("state", "active");
         refused(console.call("GET", "/support-sessions?state=open", null, billing.admin()), 400, "bad_request");
         refused(console.call("GET", "/support-sessions?salonId=nope", null, billing.admin()), 400, "bad_request");
 
-        BillingTestSupport.status(console.call("DELETE", "/support-sessions/" + b.get("id"), null, billing.admin()), 204);
+        BillingTestSupport.status(
+                console.call("DELETE", "/support-sessions/" + b.get("id"), null, billing.admin()), 204);
         BillingTestSupport.status(console.call("DELETE", "/support-sessions/" + a.get("id"), null, first.token()), 204);
         List<String> actions = owner.queryForList("""
                 SELECT action FROM platform_audit_entry WHERE subject_id IN (?, ?) ORDER BY created_at, id
                 """, String.class, a.get("id"), b.get("id"));
         assertThat(actions).contains("support.session_started", "support.session_revoked", "support.session_ended");
-        List<String> details = owner.queryForList("SELECT details::text FROM platform_audit_entry WHERE subject_id IN (?, ?)",
-                String.class, a.get("id"), b.get("id"));
+        List<String> details = owner.queryForList(
+                "SELECT details::text FROM platform_audit_entry WHERE subject_id IN (?, ?)",
+                String.class,
+                a.get("id"),
+                b.get("id"));
         assertThat(details.toString()).doesNotContain(first.operator().email(), code(a), code(b));
         assertThat(owner.queryForList("""
                 SELECT action || ':' || coalesce(trace_id, 'none') FROM platform_audit_entry WHERE subject_id IN (?, ?)
-                """, String.class, a.get("id"), b.get("id"))).allMatch(trace -> trace.matches(".*:[0-9a-f]{32}"));
+                """, String.class, a.get("id"), b.get("id")))
+                .allMatch(trace -> trace.matches(".*:[0-9a-f]{32}"));
     }
 
     // --- AC-9 -----------------------------------------------------------------------------------------
@@ -668,12 +874,13 @@ class SupportSessionIntegrationTest extends IntegrationTest {
 
         refused(billing.identityCall(other.salon(), "GET", "/me", null, a), 404, "not_found");
         refused(billing.identityCall(fixture.salon(), "GET", "/me", null, c), 404, "not_found");
-        BillingTestSupport.status(console.call("DELETE", "/support-sessions/" + bEntry.get("id"), null, second.token()),
-                204);
+        BillingTestSupport.status(
+                console.call("DELETE", "/support-sessions/" + bEntry.get("id"), null, second.token()), 204);
         refused(billing.identityCall(fixture.salon(), "GET", "/me", null, b), 401, "invalid_session");
         BillingTestSupport.status(billing.identityCall(fixture.salon(), "GET", "/me", null, a), 200);
         BillingTestSupport.status(billing.identityCall(other.salon(), "GET", "/me", null, c), 200);
-        BillingTestSupport.status(billing.salonCall(fixture.salon(), "DELETE", "/api/v1/support/session", null, a), 204);
+        BillingTestSupport.status(
+                billing.salonCall(fixture.salon(), "DELETE", "/api/v1/support/session", null, a), 204);
         BillingTestSupport.status(billing.identityCall(other.salon(), "GET", "/me", null, c), 200);
     }
 
@@ -682,9 +889,13 @@ class SupportSessionIntegrationTest extends IntegrationTest {
         Fixture fixture = fixture();
         OperatorTestSupport.Operator operator = console.create("OPERATOR_SUPPORT");
         String token = credential(fixture.salon(), code(started(fixture.salon().id(), console.token(operator))));
-        owner.update("UPDATE tenant SET status = 'suspended' WHERE id = ?", fixture.salon().id());
+        owner.update(
+                "UPDATE tenant SET status = 'suspended' WHERE id = ?",
+                fixture.salon().id());
         refused(billing.identityCall(fixture.salon(), "GET", "/me", null, token), 403, "salon_suspended");
-        owner.update("UPDATE tenant SET status = 'active' WHERE id = ?", fixture.salon().id());
+        owner.update(
+                "UPDATE tenant SET status = 'active' WHERE id = ?",
+                fixture.salon().id());
         BillingTestSupport.status(billing.identityCall(fixture.salon(), "GET", "/me", null, token), 200);
         owner.update("UPDATE operator_user SET active = false WHERE email = ?", operator.email());
         refused(billing.identityCall(fixture.salon(), "GET", "/me", null, token), 401, "invalid_session");

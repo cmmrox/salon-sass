@@ -55,17 +55,14 @@ verification:
     file: qa/checks/F02/F02-read-baseline.sh
     covers:
     - TC-F02-004
-    suites:
-    - regression
+    suites: [release]
   - id: account-journeys
     tool: playwright
     file: qa/web/F02/feature-journeys.spec.ts
     project: web
     covers:
     - TC-F02-001
-    suites:
-    - regression
-    - smoke
+    suites: [smoke, regression]
   manual: []
   deferred: []
 evidence:

@@ -30,7 +30,7 @@ test(`${c(31)} sign-in and account screens use the shadcn/ui component for every
  let release:()=>void=()=>{};const held=new Promise<void>(resolve=>{release=resolve;});
  await page.route('**/identity-web/staff/sign-in',async route=>{await held;await route.continue();});
  await handle(page,'sign-in-submit').click();const spinner=handle(page,'sign-in-submit').locator('[data-slot="spinner"]');await expect(spinner,'a busy sign-in shows the Spinner').toBeVisible();
- await expect(handle(page,'sign-in-submit')).toHaveAttribute('aria-busy','true');release();await page.unroute('**/identity-web/staff/sign-in');
+ await expect(handle(page,'sign-in-submit')).toHaveAttribute('aria-busy','true');const answered=page.waitForResponse(r=>new URL(r.url()).pathname.endsWith('/identity-web/staff/sign-in'));release();await answered;await page.unroute('**/identity-web/staff/sign-in');
  await expect(handle(page,'error')).toBeVisible();await slot(handle(page,'error'),'alert');await expect(handle(page,'error')).toHaveAttribute('role','alert');await expect(spinner).toHaveCount(0);
  await page.close();
  // MFA challenge: the code is an Input OTP of six slots, digits only, named for screen readers.

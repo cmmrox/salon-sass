@@ -16,10 +16,12 @@ layout and conventions are in `docs/qa/automation.md`.
 
 ## One test, one case
 
-- One test proves one case, and carries the case id in its title so a report line maps to `cases.md`.
+- One test proves one case and is titled with its id and criteria (`TC-F07-S02-003 AC-2: ...`); the
+  title is how the tooling finds the case and how a report line maps to it.
 - Arrange through the fastest honest route (usually the API), act through the surface under test,
   assert the outcome the acceptance criterion promises.
-- Register the file under `verification.automation` with every case id it contains.
+- Register the file once under `verification.automation`, with its `suites`. Tag the suite in the
+  entry, not in the test, so `qa/scripts/sdlc run --suite` stays the one selector.
 - No test depends on another test, on the order of files, or on data left by an earlier run.
 
 ## Reliability rules
@@ -27,14 +29,10 @@ layout and conventions are in `docs/qa/automation.md`.
 - **A test that passes on retry has failed.** Retries are off; find the cause.
 - **Assert there was something to count before asserting on the count.** A scrape that found nothing
   must fail, not report "0 of 0 correct".
-- **Prove meaningful failure detection.** For a new critical behavior or a new/changed shared
-  verification helper, establish that the check rejects a realistic violation for the intended
-  reason. An observed regression failure before the fix is sufficient. Otherwise use a controlled
-  negative fixture or isolated faulty response, without editing application code or weakening the
-  committed expectation. Record and reuse this proof while the assertion and relevant mechanism
-  remain unchanged. A shared-helper proof may cover callers only for that mechanism, not distinct
-  security or integrity invariants. Do not add an extra failure run merely because a test uses a
-  count/scrape, and do not treat an arbitrary inverted expectation as proof of defect detection.
+- **Prove a new critical check can fail.** For a new critical behaviour or shared helper, show it
+  rejects a realistic violation for the intended reason: an observed failure before a fix, or a
+  controlled faulty fixture or response, never an edit to application code or an inverted
+  expectation. Reuse that proof while the assertion and mechanism are unchanged.
 - **Scope an assertion to what it is about.** "No error text anywhere on the page" fires on correct
   pages and gets ignored.
 - **Assert the outcome, not the arrival.** That a screen opened proves only that it opened.
@@ -106,8 +104,8 @@ for this product are in `docs/qa/automation.md`.
 
 If a gate fails, repair it and do not start the run. If you cannot repair it yourself, set
 `qa_status: blocked` with a `blocked_reason`; do not defer the cases to get the pass through. A
-platform that was not run is recorded, never implied: declare a case for it and list it under
-`verification.deferred` with the reason and what unblocks it.
+platform that was not run is recorded, never implied: a `verification.deferred` entry gives the
+reason and what unblocks it.
 
 ## Running and recording
 

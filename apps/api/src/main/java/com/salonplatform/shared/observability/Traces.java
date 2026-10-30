@@ -1,18 +1,16 @@
 package com.salonplatform.shared.observability;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.Callable;
-
-import com.salonplatform.shared.api.RequestTrace;
 import com.salonplatform.shared.tenancy.CurrentTenant;
 import com.salonplatform.shared.tenancy.TenantContext;
+import com.salonplatform.shared.web.RequestTrace;
 import io.micrometer.tracing.Span;
 import io.micrometer.tracing.TraceContext;
 import io.micrometer.tracing.Tracer;
 import io.micrometer.tracing.propagation.Propagator;
-
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.Callable;
 import org.springframework.stereotype.Component;
 
 /**
@@ -47,7 +45,10 @@ public class Traces {
     /** The trace id of the current span, when there is one. */
     public Optional<String> currentTraceId() {
         Span span = tracer.currentSpan();
-        return Optional.ofNullable(span).map(Span::context).map(TraceContext::traceId).filter(RequestTrace::isTraceId);
+        return Optional.ofNullable(span)
+                .map(Span::context)
+                .map(TraceContext::traceId)
+                .filter(RequestTrace::isTraceId);
     }
 
     /**
@@ -57,15 +58,14 @@ public class Traces {
      * {@code span.id}. A failure is recorded on the span and thrown on.
      */
     public <R> R inSpan(String name, CurrentTenant salon, String parentTraceParent, Callable<R> work) throws Exception {
-        Span span = start(name, parentTraceParent).tag(TenantContext.LOG_FIELD, salon.id().toString());
-        try (Tracer.SpanInScope scope = tracer.withSpan(span)) {
+        Span span = start(name, parentTraceParent)
+                .tag(TenantContext.LOG_FIELD, salon.id().toString());
+        try (Tracer.SpanInScope _ = tracer.withSpan(span)) {
             return work.call();
-        }
-        catch (Exception | Error ex) {
+        } catch (Exception | Error ex) {
             span.error(ex);
             throw ex;
-        }
-        finally {
+        } finally {
             span.end();
         }
     }
@@ -76,14 +76,12 @@ public class Traces {
      */
     public <R> R inPlatformSpan(String name, Callable<R> work) throws Exception {
         Span span = start(name, null);
-        try (Tracer.SpanInScope scope = tracer.withSpan(span)) {
+        try (Tracer.SpanInScope _ = tracer.withSpan(span)) {
             return work.call();
-        }
-        catch (Exception | Error ex) {
+        } catch (Exception | Error ex) {
             span.error(ex);
             throw ex;
-        }
-        finally {
+        } finally {
             span.end();
         }
     }
@@ -106,19 +104,22 @@ public class Traces {
             return work;
         }
         return () -> {
-            try (Tracer.SpanInScope scope = tracer.withSpan(span)) {
+            try (Tracer.SpanInScope _ = tracer.withSpan(span)) {
                 return work.call();
             }
         };
     }
 
     private Span start(String name, String parentTraceParent) {
-        if (parentTraceParent != null && RequestTrace.fromTraceParent(parentTraceParent).isPresent()) {
-            return propagator.extract(Map.of(RequestTrace.TRACE_PARENT, parentTraceParent), Map::get)
-                    .name(name).start();
+        if (parentTraceParent != null
+                && RequestTrace.fromTraceParent(parentTraceParent).isPresent()) {
+            return propagator
+                    .extract(Map.of(RequestTrace.TRACE_PARENT, parentTraceParent), Map::get)
+                    .name(name)
+                    .start();
         }
         // A new trace: nothing of whatever happens to be current on this thread is its parent.
-        try (Tracer.SpanInScope none = tracer.withSpan(null)) {
+        try (Tracer.SpanInScope _ = tracer.withSpan(null)) {
             return tracer.nextSpan().name(name).start();
         }
     }

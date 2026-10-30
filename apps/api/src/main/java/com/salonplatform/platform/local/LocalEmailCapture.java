@@ -1,20 +1,18 @@
 package com.salonplatform.platform.local;
 
+import com.salonplatform.platform.dto.CapturedEmail;
+import com.salonplatform.shared.outbox.OutboxDelivery;
+import com.salonplatform.shared.outbox.OutboxProvider;
 import java.time.Clock;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
-
-import com.salonplatform.shared.outbox.OutboxDelivery;
-import com.salonplatform.shared.outbox.OutboxProvider;
-import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.json.JsonMapper;
-
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * {@code local} only: the {@code email} channel's capturing fake, as for {@code sms} and
@@ -24,10 +22,6 @@ import org.springframework.stereotype.Component;
 @Component
 @Profile("local")
 class LocalEmailCapture implements OutboxProvider {
-
-    record CapturedEmail(UUID messageId, UUID salonId, String recipient, String kind, String subject, String body,
-            List<String> links, Instant deliveredAt) {
-    }
 
     private final List<CapturedEmail> captured = new CopyOnWriteArrayList<>();
     private final JsonMapper json;
@@ -56,9 +50,15 @@ class LocalEmailCapture implements OutboxProvider {
         if (captured.stream().anyMatch(each -> each.messageId().equals(delivery.messageId()))) {
             return;
         }
-        captured.add(new CapturedEmail(delivery.messageId(), delivery.tenantId(), payload.path("recipient").asString(),
-                payload.path("kind").asString(), payload.path("subject").asString(), payload.path("body").asString(),
-                List.copyOf(links), clock.instant()));
+        captured.add(new CapturedEmail(
+                delivery.messageId(),
+                delivery.tenantId(),
+                payload.path("recipient").asString(),
+                payload.path("kind").asString(),
+                payload.path("subject").asString(),
+                payload.path("body").asString(),
+                List.copyOf(links),
+                clock.instant()));
     }
 
     /** Forgets the emails of these salons (the local reset removes them). */
@@ -68,7 +68,9 @@ class LocalEmailCapture implements OutboxProvider {
 
     List<CapturedEmail> list(String recipient) {
         String wanted = recipient == null ? null : recipient.strip().toLowerCase(Locale.ROOT);
-        return captured.stream().filter(each -> wanted == null || each.recipient().equalsIgnoreCase(wanted)).toList();
+        return captured.stream()
+                .filter(each -> wanted == null || each.recipient().equalsIgnoreCase(wanted))
+                .toList();
     }
 
     void clear(String recipient) {

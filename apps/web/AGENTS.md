@@ -3,7 +3,8 @@
 One Next.js application serving salon owner/admin/staff workspaces and the operator console.
 Customer screens belong only to the later React Native app after M1-web release (CR-010). Before changing anything here, read in full:
 
-- `docs/engineering/web.md`: the surfaces, tenant routing, structure, branding, sessions, tests.
+- `docs/engineering/web.md`: the surfaces, tenant routing, structure (features by API module,
+  surfaces, import boundaries), clean code, branding, sessions, tests.
 - `docs/design/ui-ux-standards.md` and the prototype at `docs/design/prototype/index.html`: before
   building or changing any screen.
 - `docs/engineering/web.md`, "Styling": every screen uses Tailwind CSS and shadcn/ui only (CR-016,

@@ -1,14 +1,13 @@
 package com.salonplatform.shared.tenancy;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+
 import java.time.ZoneId;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import org.junit.jupiter.api.Test;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 /**
  * What a request learns about its salon from the tenant context: the salon, that there is none, or
@@ -35,7 +34,9 @@ class TenantContextTest {
         TenantDirectory registry = registryWith(new RegisteredTenant(ID, TenantStatus.ACTIVE, ZONE));
 
         TenantContext.callForRequest("alpha", registry, () -> {
-            assertThat(TenantContext.resolved()).as("nothing is resolved until it is needed").isEmpty();
+            assertThat(TenantContext.resolved())
+                    .as("nothing is resolved until it is needed")
+                    .isEmpty();
             assertThat(TenantContext.require()).isEqualTo(new CurrentTenant(ID, "alpha", ZONE));
             assertThat(TenantContext.require()).isEqualTo(new CurrentTenant(ID, "alpha", ZONE));
             assertThat(TenantContext.resolved()).contains(new CurrentTenant(ID, "alpha", ZONE));
@@ -52,7 +53,8 @@ class TenantContextTest {
         TenantContext.callForRequest("alpha", registry, () -> {
             assertThatExceptionOfType(TenantSuspendedException.class).isThrownBy(TenantContext::require);
             assertThat(TenantContext.resolved())
-                    .as("the database is given no salon, so nothing of a suspended salon can be read").isEmpty();
+                    .as("the database is given no salon, so nothing of a suspended salon can be read")
+                    .isEmpty();
             assertThatExceptionOfType(TenantSuspendedException.class).isThrownBy(TenantContext::require);
             return null;
         });
@@ -91,7 +93,7 @@ class TenantContextTest {
 
     @Test
     void theAnswerOfOneRequestIsNotCarriedIntoTheNext() throws Exception {
-        RegisteredTenant[] registered = { new RegisteredTenant(ID, TenantStatus.SUSPENDED, ZONE) };
+        RegisteredTenant[] registered = {new RegisteredTenant(ID, TenantStatus.SUSPENDED, ZONE)};
         TenantDirectory registry = slug -> Optional.of(registered[0]);
 
         TenantContext.callForRequest("alpha", registry, () -> {

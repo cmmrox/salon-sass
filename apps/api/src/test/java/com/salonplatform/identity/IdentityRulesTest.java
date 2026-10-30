@@ -2,8 +2,9 @@ package com.salonplatform.identity;
 
 import static org.assertj.core.api.Assertions.*;
 
-import com.salonplatform.identity.domain.*;
-
+import com.salonplatform.identity.domain.Identifiers;
+import com.salonplatform.identity.domain.PasswordPolicy;
+import com.salonplatform.identity.domain.StaffRole;
 import org.junit.jupiter.api.Test;
 
 class IdentityRulesTest {
@@ -26,8 +27,7 @@ class IdentityRulesTest {
 
     @Test
     void permissionsAndProfessionalScopeMatchPolicy() {
-        assertThat(StaffRole.OWNER.permissions(false))
-                .contains("staff.manage", "financial.read", "customer.export");
+        assertThat(StaffRole.OWNER.permissions(false)).contains("staff.manage", "financial.read", "customer.export");
         assertThat(StaffRole.MANAGER.permissions(false))
                 .contains("staff.list", "audit.list")
                 .doesNotContain("staff.manage");

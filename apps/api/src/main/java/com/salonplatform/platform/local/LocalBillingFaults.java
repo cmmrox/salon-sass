@@ -1,9 +1,7 @@
 package com.salonplatform.platform.local;
 
+import com.salonplatform.platform.service.BillingFaults;
 import java.util.concurrent.atomic.AtomicReference;
-
-import com.salonplatform.platform.application.BillingFaults;
-
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 

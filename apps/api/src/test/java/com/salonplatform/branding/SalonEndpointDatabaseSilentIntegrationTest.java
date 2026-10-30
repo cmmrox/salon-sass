@@ -1,13 +1,7 @@
 package com.salonplatform.branding;
 
-import java.time.Duration;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 import com.jayway.jsonpath.JsonPath;
 import com.salonplatform.testing.Http;
@@ -17,11 +11,16 @@ import com.salonplatform.testing.TestDatabase;
 import com.salonplatform.testing.TestPostgres;
 import com.salonplatform.testing.TestSalons;
 import com.salonplatform.testing.TestSalons.TestSalon;
+import java.time.Duration;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.Test;
 import org.testcontainers.postgresql.PostgreSQLContainer;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.awaitility.Awaitility.await;
 
 /**
  * CR-003: a database that is stopped, or that accepts connections and answers nothing, costs a
@@ -71,40 +70,59 @@ class SalonEndpointDatabaseSilentIntegrationTest {
                     freeze(postgres);
                     try {
                         Thread.sleep(1_000);
-                        for (String request : new String[] { "the first request", "the second request" }) {
+                        for (String request : new String[] {"the first request", "the second request"}) {
                             Exchange response = within(LIMIT, () -> http.getOnHost(host, SALON), request);
 
                             assertThat(response.status()).as(request).isEqualTo(503);
                             assertThat(response.contentType()).startsWith("application/problem+json");
-                            assertThat(JsonPath.parse(response.body()).<String>read("$.code")).isEqualTo("service_unavailable");
-                            assertThat(response.body()).doesNotContainIgnoringCase("exception").doesNotContainIgnoringCase("sql")
-                                    .doesNotContainIgnoringCase("hikari").doesNotContainIgnoringCase("postgres");
+                            assertThat(JsonPath.parse(response.body()).<String>read("$.code"))
+                                    .isEqualTo("service_unavailable");
+                            assertThat(response.body())
+                                    .doesNotContainIgnoringCase("exception")
+                                    .doesNotContainIgnoringCase("sql")
+                                    .doesNotContainIgnoringCase("hikari")
+                                    .doesNotContainIgnoringCase("postgres");
                         }
                         // A salon's hostname does not make the platform's own endpoints wait on the database.
-                        assertThat(within(LIMIT, () -> http.getOnHost(host, "/api/v1/meta"), "meta").status()).isEqualTo(200);
-                    }
-                    finally {
+                        assertThat(within(LIMIT, () -> http.getOnHost(host, "/api/v1/meta"), "meta")
+                                        .status())
+                                .isEqualTo(200);
+                    } finally {
                         thaw(postgres);
                     }
                     long thawed = System.nanoTime();
-                    await().atMost(LIMIT).pollInterval(Duration.ofMillis(100))
-                            .untilAsserted(() -> assertThat(http.getOnHost(host, SALON).status()).isEqualTo(200));
-                    assertThat(Duration.ofNanos(System.nanoTime() - thawed)).as("time to recover").isLessThan(LIMIT);
+                    await().atMost(LIMIT)
+                            .pollInterval(Duration.ofMillis(100))
+                            .untilAsserted(
+                                    () -> assertThat(http.getOnHost(host, SALON).status())
+                                            .isEqualTo(200));
+                    assertThat(Duration.ofNanos(System.nanoTime() - thawed))
+                            .as("time to recover")
+                            .isLessThan(LIMIT);
 
                     keepGoing.set(false);
                     clients.shutdown();
                     assertThat(clients.awaitTermination(30, TimeUnit.SECONDS)).isTrue();
                 }
 
-                assertThat(timed).as("every request, in flight at the freeze or made during it")
+                assertThat(timed)
+                        .as("every request, in flight at the freeze or made during it")
                         .allSatisfy(request -> {
                             assertThat(request.status()).isIn(200, 503);
                             assertThat(request.took()).isLessThan(LIMIT);
                         });
-                assertThat(timed).extracting(Timed::status).as("some requests met the silent database").contains(503);
-                assertThat(timed).extracting(Timed::status).as("and some were served before or after it").contains(200);
+                assertThat(timed)
+                        .extracting(Timed::status)
+                        .as("some requests met the silent database")
+                        .contains(503);
+                assertThat(timed)
+                        .extracting(Timed::status)
+                        .as("and some were served before or after it")
+                        .contains(200);
                 for (int request = 0; request < 10; request++) {
-                    assertThat(http.getOnHost(host, SALON).status()).as("after the database answered again").isEqualTo(200);
+                    assertThat(http.getOnHost(host, SALON).status())
+                            .as("after the database answered again")
+                            .isEqualTo(200);
                 }
             }
         }
@@ -147,8 +165,7 @@ class SalonEndpointDatabaseSilentIntegrationTest {
                     freeze(postgres);
                     try {
                         Thread.sleep(LONG_SILENCE.toMillis());
-                    }
-                    finally {
+                    } finally {
                         thawAsked = System.nanoTime();
                         thaw(postgres);
                     }
@@ -168,9 +185,12 @@ class SalonEndpointDatabaseSilentIntegrationTest {
                         .filter(answer -> answer.status() == 200 && answer.at() > asked)
                         .map(answer -> Duration.ofNanos(answer.at() - asked))
                         .min(Duration::compareTo)
-                        .orElseThrow(() -> new AssertionError("no request was answered 200 after the database was thawed"));
+                        .orElseThrow(
+                                () -> new AssertionError("no request was answered 200 after the database was thawed"));
                 assertThat(recovery)
-                        .as("from asking for the database to be thawed, after %s of silence, to the first 200", LONG_SILENCE)
+                        .as(
+                                "from asking for the database to be thawed, after %s of silence, to the first 200",
+                                LONG_SILENCE)
                         .isLessThan(RECOVERY);
             }
         }
@@ -188,12 +208,14 @@ class SalonEndpointDatabaseSilentIntegrationTest {
 
                 postgres.stop();
 
-                for (String request : new String[] { "the first request", "the second request" }) {
+                for (String request : new String[] {"the first request", "the second request"}) {
                     Exchange response = within(LIMIT, () -> http.getOnHost(host, SALON), request);
 
                     assertThat(response.status()).as(request).isEqualTo(503);
-                    assertThat(JsonPath.parse(response.body()).<String>read("$.code")).isEqualTo("service_unavailable");
-                    assertThat(JsonPath.parse(response.body()).<String>read("$.traceId")).as("the trace id of a 503")
+                    assertThat(JsonPath.parse(response.body()).<String>read("$.code"))
+                            .isEqualTo("service_unavailable");
+                    assertThat(JsonPath.parse(response.body()).<String>read("$.traceId"))
+                            .as("the trace id of a 503")
                             .matches("^[0-9a-f]{32}$");
                 }
                 assertThat(http.getOnHost(host, "/api/v1/meta").status()).isEqualTo(200);
@@ -212,17 +234,20 @@ class SalonEndpointDatabaseSilentIntegrationTest {
     }
 
     private static void thaw(PostgreSQLContainer postgres) {
-        Boolean paused = postgres.getDockerClient().inspectContainerCmd(postgres.getContainerId()).exec()
-                .getState().getPaused();
+        Boolean paused = postgres.getDockerClient()
+                .inspectContainerCmd(postgres.getContainerId())
+                .exec()
+                .getState()
+                .getPaused();
         if (Boolean.TRUE.equals(paused)) {
-            postgres.getDockerClient().unpauseContainerCmd(postgres.getContainerId()).exec();
+            postgres.getDockerClient()
+                    .unpauseContainerCmd(postgres.getContainerId())
+                    .exec();
         }
     }
 
-    private record Timed(int status, Duration took) {
-    }
+    private record Timed(int status, Duration took) {}
 
     /** A request's status and when its answer arrived, on the clock of {@link System#nanoTime()}. */
-    private record Answered(int status, long at) {
-    }
+    private record Answered(int status, long at) {}
 }

@@ -1,13 +1,12 @@
 package com.salonplatform;
 
-import java.net.http.HttpResponse;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
 import com.salonplatform.testing.IntegrationTest;
+import java.net.http.HttpResponse;
 import org.junit.jupiter.api.Test;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 class HealthIntegrationTest extends IntegrationTest {
 
@@ -30,8 +29,10 @@ class HealthIntegrationTest extends IntegrationTest {
 
     @Test
     void otherActuatorEndpointsAreNotExposed() {
-        for (String endpoint : new String[] { "env", "beans", "metrics", "configprops", "loggers", "heapdump" }) {
-            assertThat(http().get("/actuator/" + endpoint).statusCode()).as(endpoint).isEqualTo(404);
+        for (String endpoint : new String[] {"env", "beans", "metrics", "configprops", "loggers", "heapdump"}) {
+            assertThat(http().get("/actuator/" + endpoint).statusCode())
+                    .as(endpoint)
+                    .isEqualTo(404);
         }
     }
 }

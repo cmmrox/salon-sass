@@ -1,11 +1,10 @@
 package com.salonplatform.shared.entitlements;
 
+import com.salonplatform.shared.web.ApplicationProblemException;
+import com.salonplatform.shared.web.ErrorCode;
+import com.salonplatform.shared.web.FieldProblem;
 import java.util.List;
 import java.util.Optional;
-
-import com.salonplatform.shared.api.ApplicationProblemException;
-import com.salonplatform.shared.api.ErrorCode;
-import com.salonplatform.shared.api.FieldProblem;
 
 /**
  * What a salon's plan allows (PLT-04; docs/architecture/operator-console.md, "Entitlements"), as
@@ -17,8 +16,7 @@ import com.salonplatform.shared.api.FieldProblem;
 public interface SalonEntitlements {
 
     /** A plan's limits and features. */
-    record Limits(int staffSeats, int branches, int messageAllowance, boolean customDomain, boolean dedicatedApp) {
-    }
+    record Limits(int staffSeats, int branches, int messageAllowance, boolean customDomain, boolean dedicatedApp) {}
 
     /** The limits named in an {@code entitlement_exceeded} problem. */
     String STAFF_SEATS = "staffSeats";
@@ -36,7 +34,7 @@ public interface SalonEntitlements {
 
     /** 409 {@code entitlement_exceeded}, naming the limit and what the plan allows. */
     static ApplicationProblemException exceeded(String limit, long allowed) {
-        return new ApplicationProblemException(409, ErrorCode.ENTITLEMENT_EXCEEDED,
-                List.of(new FieldProblem(limit, "The plan allows " + allowed)));
+        return new ApplicationProblemException(
+                409, ErrorCode.ENTITLEMENT_EXCEEDED, List.of(new FieldProblem(limit, "The plan allows " + allowed)));
     }
 }

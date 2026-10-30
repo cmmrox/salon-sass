@@ -19,7 +19,7 @@ Every failure is exactly one of these. Decide which before changing anything.
 | --- | --- | --- |
 | **Product defect** | The product did something the spec, the requirement or plain sense says it should not. It happens again when repeated by hand | File a bug. Do not rerun hoping, do not adjust the test |
 | **Environment fault** | The product was never really exercised: a service was down, the wrong build was installed, a fixture was missing or stale, a tool crashed, the network dropped | Repair it, rerun what it affected, and record what was repaired. The rerun's result is the result |
-| **Test defect** | The test is wrong: a bad selector, a race in the test, a wrong expectation, a step for a dialog that did not appear | Fix the test, rerun it, and say so. If the expectation was wrong, correct the case in `cases.md` too |
+| **Test defect** | The test is wrong: a bad selector, a race in the test, a wrong expectation, a step for a dialog that did not appear | Fix the test, rerun it, and say so. If the expectation was wrong, correct the test's title and assertion |
 
 Rules that follow:
 
@@ -29,8 +29,6 @@ Rules that follow:
   never hide it.
 - An environment fault you cannot repair yourself is not a failure of the product and not a reason
   to defer cases. Set `qa_status: blocked` with `blocked_reason`; the lead removes the blocker.
-- Apply the saved-evidence and affected-scope rule in `salon-sdlc`'s `references/progress.md`;
-  a repaired fixture or product fix does not automatically invalidate the entire feature.
 - A check of a time limit that fails once in several runs is a result that changes between runs.
   Before anything else, find where the time went: in the product, or in the test's own work around
   it. If the run did not record enough to tell, that is a test defect to repair first.
@@ -50,10 +48,8 @@ A bug the developer can act on without asking has:
 - what was expected and what happened, with the evidence (response body, screenshot, log line);
 - how often it happens.
 
-A bug found by exploring has no case yet. Write the case when you file the bug. If the bug is fixed
-in this pass, automate the case at re-verification. If it is `minor` or `trivial` and is being left
-open, declare the case and list it under `verification.deferred`, unblocked by the bug's id, so the
-run stays honest and the case is not forgotten.
+A bug found by exploring has no test yet: write one when you file it, titled with a new case id. A
+`minor` or `trivial` bug left open gets a `verification.deferred` entry unblocked by the bug's id.
 
 One defect per bug. Two symptoms with one cause are one bug; one screen with two unrelated faults
 is two.
@@ -90,35 +86,25 @@ through. `blocker` and `major` bugs stop `qa_status: pass`.
 
 ## The loop
 
-```
-QA runs the feature  ->  files bugs, sets qa_status: failing
-Developer fixes each open or reopened bug, sets it fixed
-QA re-verifies  ->  verified or reopened
-... until no blocker or major bug is unresolved and the feature run passes  ->  qa_status: pass
-```
-
-This is the one place a feature's defects are fixed: everything QA finds in the feature is fixed
-here, in rounds, before the feature closes. There is no limit on rounds. The loop ends when the
-product is right, not when it has been tried enough times. If the same bug is reopened twice, tell the lead: the spec may be unclear.
+QA files bugs (`qa_status: failing`), the developer fixes them (`fixed`), QA re-verifies (`verified`
+or `reopened`), in rounds, until no `blocker` or `major` bug is unresolved and the feature run
+passes. The loop ends when the product is right, not after a number of rounds. A bug reopened twice
+goes to the lead: the spec may be unclear.
 
 ## Re-verifying
 
 For each `fixed` bug:
 
-1. Repeat the bug's own steps by hand or with its case. The original symptom is gone.
-2. Select the case that found it and checks covering affected dependencies, using the shared
-   saved-evidence rule. Batch overlapping selections across compatible fixed bugs into one run
-   on the completed source; keep a result for each bug. Record changed paths, impact rationale
-   and selected checks. A full feature run needs a scope-based reason; it is not automatic after
-   each fix. A fix that breaks a neighbour in the same feature is `reopened`.
-3. Check that the case would catch it again. If the bug was found by exploring and no case covers
-   it, add one.
-4. Set `verified` with the run folder as evidence, or `reopened` with what still happens.
+1. Repeat the bug's own steps; the symptom is gone.
+2. Run the test that found it and the tests of what the fix touches, batching overlapping fixes into
+   one run on the final source, with a result per bug. Record the changed paths and why those tests
+   cover them. A whole-feature run needs a reason in the scope of the change. A fix that breaks a
+   neighbour reopens the bug.
+3. Make sure a test would catch it again.
+4. Set `verified` with the run folder, or `reopened` with what still happens.
 
-Re-verification stays inside the feature. It does not run other features.
-
-Where a defect is filed when it is found in a release run or in a shipped version is the table
-"Where a bug is filed", in `lifecycle.md` in `salon-sdlc`.
+Re-verification stays inside the feature. Where a bug found by smoke, regression or in a shipped
+version is filed: "Where a bug is filed" in `salon-sdlc`'s `references/lifecycle.md`.
 
 ## Disagreements
 

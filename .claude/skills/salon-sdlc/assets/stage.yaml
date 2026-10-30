@@ -21,15 +21,10 @@ handoff:
   notes: null               # criterion-to-result/evidence; gate commands, tested source, log paths,
                             # results and relevant conditions; gaps and differences from docs/
 
-# Written by QA during preparation or the feature pass; preparation does not set a QA result.
-# Each case is described in cases.md under a "### TC-..." heading.
-cases: []
-#  - id: TC-F00-S01-001
-#    title: <what is proved>
-#    type: api               # one of the types in docs/qa/test-types.md
-#    priority: high          # critical | high | medium | low
-#    covers: [AC-1]
-
+# Written by QA. A case is the test that proves it, titled with its id and the criteria it
+# covers before a colon: test('TC-F00-S01-001 AC-1, AC-2: a free slot is listed', ...), or a
+# '# TC-F00-S01-002 AC-3: ...' header comment in a k6 or shell script. The tooling reads the
+# cases from the registered files; there is no case list or cases.md to keep in step.
 verification:
   commands: []              # developer gates, exact shell commands, run from the repository root
   automation: []
@@ -37,14 +32,15 @@ verification:
   #    tool: playwright      # playwright | maestro | k6 | script
   #    file: <path under qa/, as laid out in docs/qa/test-plan.md>
   #    project: <name>       # only for a tool that groups tests into projects
-  #    covers: [TC-F00-S01-001]
-  #    suites: []            # regression | smoke; decided at feature-verify
+  #    suites: [regression]  # smoke | regression | release; decided at feature-verify
   manual: []
   #  - case: TC-F00-S01-009
+  #    covers: [AC-4]
   #    reason: <why it cannot be automated, and how it was checked>
   #    performed_on: <YYYY-MM-DD>   # required: a manual case counts only once it was done
   deferred: []
   #  - case: TC-F00-S01-010
+  #    covers: [AC-5]
   #    reason: <why it cannot be run yet>
   #    unblocked_by: <a stage id, or the event the spec names>
 

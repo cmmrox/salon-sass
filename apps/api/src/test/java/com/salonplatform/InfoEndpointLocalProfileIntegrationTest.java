@@ -1,17 +1,15 @@
 package com.salonplatform;
 
-import java.net.http.HttpResponse;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
 import com.salonplatform.testing.IntegrationTest;
+import java.net.http.HttpResponse;
 import org.junit.jupiter.api.Test;
-
 import org.springframework.test.context.ActiveProfiles;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
-@ActiveProfiles({ "test", "local" })
+@ActiveProfiles({"test", "local"})
 class InfoEndpointLocalProfileIntegrationTest extends IntegrationTest {
 
     @Test

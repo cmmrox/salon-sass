@@ -46,8 +46,7 @@ verification:
     file: qa/web/F01/journey-salon-isolation.spec.ts
     covers:
     - TC-F01-001
-    suites:
-    - regression
+    suites: [smoke, regression]
     project: web
   manual: []
   deferred:

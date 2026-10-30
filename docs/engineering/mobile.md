@@ -38,7 +38,12 @@ demands before launch (icon, splash, display name) is fixed in the build.
 ## Structure
 
 - Screens are thin. A screen composes components and calls a feature module; rules, API calls and
-  state live in the feature module.
+  state live in the feature module. Feature modules are named and divided like the API's modules and
+  the web's `features/<module>` (CR-021), with the same rule that a feature never imports another.
+- Shared with the web through `packages/*`: the generated API client per module, formatting
+  (`@salon/format`), messages and design tokens. No UI component is shared: the web's shadcn/ui is
+  DOM-only, and the native component library is chosen when `M2-mobile` starts. Turborepo is added to
+  the workspace then, when there are two applications to build and cache.
 - All API access goes through the generated client. No money, availability or policy logic on the
   device.
 - Tokens are kept in the platform's secure storage, never in plain storage.

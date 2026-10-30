@@ -1,27 +1,36 @@
 package com.salonplatform.platform.local;
 
+import com.salonplatform.branding.inprocess.BrandProvisioning;
+import com.salonplatform.platform.adapter.BillingProviderKey;
+import com.salonplatform.platform.domain.Slugs;
+import com.salonplatform.platform.dto.BillingInterruptRequest;
+import com.salonplatform.platform.dto.BillingInterruptState;
+import com.salonplatform.platform.dto.BillingJobPass;
+import com.salonplatform.platform.dto.CapturedEmails;
+import com.salonplatform.platform.dto.OperatorActiveRequest;
+import com.salonplatform.platform.dto.ProviderEventSignature;
+import com.salonplatform.platform.dto.ProviderOutcomeRequest;
+import com.salonplatform.platform.dto.ProviderOutcomeState;
+import com.salonplatform.platform.dto.UnbilledRequest;
+import com.salonplatform.platform.dto.UnbilledSalon;
+import com.salonplatform.platform.repository.OperatorUserStore;
+import com.salonplatform.platform.repository.SalonStore;
+import com.salonplatform.platform.service.BillingFaults;
+import com.salonplatform.platform.service.BillingJobService;
+import com.salonplatform.shared.persistence.PlatformDatabase;
+import com.salonplatform.shared.web.ApplicationProblemException;
+import com.salonplatform.shared.web.ErrorCode;
+import com.salonplatform.shared.web.FieldProblem;
+import com.salonplatform.shared.web.NotFoundException;
+import io.swagger.v3.oas.annotations.Hidden;
+import jakarta.servlet.http.HttpServletRequest;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.sql.Timestamp;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
-
-import com.salonplatform.branding.BrandProvisioning;
-import com.salonplatform.platform.application.BillingFaults;
-import com.salonplatform.platform.application.BillingJob;
-import com.salonplatform.platform.domain.Slugs;
-import com.salonplatform.platform.infrastructure.BillingProviderKey;
-import com.salonplatform.shared.api.ApplicationProblemException;
-import com.salonplatform.shared.api.ErrorCode;
-import com.salonplatform.shared.api.FieldProblem;
-import com.salonplatform.shared.api.NotFoundException;
-import com.salonplatform.shared.infrastructure.PlatformDatabase;
-import io.swagger.v3.oas.annotations.Hidden;
-import jakarta.servlet.http.HttpServletRequest;
-
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.dao.DuplicateKeyException;
@@ -55,15 +64,26 @@ class LocalBillingController {
     private final LocalBillingProvider provider;
     private final LocalEmailCapture emails;
     private final LocalBillingFaults faults;
-    private final BillingJob job;
+    private final BillingJobService job;
     private final BillingProviderKey key;
     private final PlatformDatabase database;
+    private final SalonStore salons;
+    private final OperatorUserStore users;
     private final BrandProvisioning branding;
     private final Clock clock;
     private final String platformDomain;
 
-    LocalBillingController(LocalBillingProvider provider, LocalEmailCapture emails, LocalBillingFaults faults,
-            BillingJob job, BillingProviderKey key, PlatformDatabase database, BrandProvisioning branding, Clock clock,
+    LocalBillingController(
+            LocalBillingProvider provider,
+            LocalEmailCapture emails,
+            LocalBillingFaults faults,
+            BillingJobService job,
+            BillingProviderKey key,
+            PlatformDatabase database,
+            SalonStore salons,
+            OperatorUserStore users,
+            BrandProvisioning branding,
+            Clock clock,
             @Value("${salon.platform-domain}") String platformDomain) {
         this.provider = provider;
         this.emails = emails;
@@ -71,36 +91,11 @@ class LocalBillingController {
         this.job = job;
         this.key = key;
         this.database = database;
+        this.salons = salons;
+        this.users = users;
         this.branding = branding;
         this.clock = clock;
         this.platformDomain = platformDomain.strip().toLowerCase(Locale.ROOT);
-    }
-
-    record OutcomeRequest(String outcome) {
-    }
-
-    record OutcomeState(UUID salonId, String outcome) {
-    }
-
-    record Signature(String header, String signature) {
-    }
-
-    record Emails(List<LocalEmailCapture.CapturedEmail> items) {
-    }
-
-    record InterruptRequest(String point) {
-    }
-
-    record InterruptState(String point) {
-    }
-
-    record UnbilledRequest(String slug) {
-    }
-
-    record UnbilledSalon(UUID id, String slug, String hostname) {
-    }
-
-    record OperatorActiveRequest(String email, Boolean active) {
     }
 
     private static <T> ResponseEntity<T> ok(T body) {
@@ -109,34 +104,36 @@ class LocalBillingController {
 
     /** The fake provider's outcome for every later charge of this salon: success (default) or failure. */
     @PutMapping("/billing/provider-outcomes/{salonId}")
-    ResponseEntity<OutcomeState> setOutcome(@PathVariable UUID salonId, @RequestBody OutcomeRequest request,
-            HttpServletRequest http) {
+    ResponseEntity<ProviderOutcomeState> setOutcome(
+            @PathVariable UUID salonId, @RequestBody ProviderOutcomeRequest request, HttpServletRequest http) {
         loopback(http);
         if (request == null || !List.of("success", "failure").contains(request.outcome())) {
-            throw new ApplicationProblemException(400, ErrorCode.BAD_REQUEST,
-                    List.of(new FieldProblem("outcome", "must be success or failure")));
+            throw new ApplicationProblemException(
+                    400, ErrorCode.BAD_REQUEST, List.of(new FieldProblem("outcome", "must be success or failure")));
         }
         provider.outcome(salonId, request.outcome());
-        return ok(new OutcomeState(salonId, request.outcome()));
+        return ok(new ProviderOutcomeState(salonId, request.outcome()));
     }
 
     @GetMapping("/billing/provider-outcomes/{salonId}")
-    ResponseEntity<OutcomeState> outcome(@PathVariable UUID salonId, HttpServletRequest http) {
+    ResponseEntity<ProviderOutcomeState> outcome(@PathVariable UUID salonId, HttpServletRequest http) {
         loopback(http);
-        return ok(new OutcomeState(salonId, provider.outcome(salonId)));
+        return ok(new ProviderOutcomeState(salonId, provider.outcome(salonId)));
     }
 
     /** Signs the exact request body, whatever it is, with the local provider key. */
     @PostMapping("/billing/provider-events/signature")
-    ResponseEntity<Signature> sign(@RequestBody(required = false) byte[] body, HttpServletRequest http) {
+    ResponseEntity<ProviderEventSignature> sign(@RequestBody(required = false) byte[] body, HttpServletRequest http) {
         loopback(http);
-        return ok(new Signature(BillingProviderKey.HEADER, key.sign(body == null ? new byte[0] : body).orElseThrow()));
+        return ok(new ProviderEventSignature(
+                BillingProviderKey.HEADER,
+                key.sign(body == null ? new byte[0] : body).orElseThrow()));
     }
 
     @GetMapping("/emails")
-    ResponseEntity<Emails> emails(@RequestParam(required = false) String recipient, HttpServletRequest http) {
+    ResponseEntity<CapturedEmails> emails(@RequestParam(required = false) String recipient, HttpServletRequest http) {
         loopback(http);
-        return ok(new Emails(emails.list(recipient)));
+        return ok(new CapturedEmails(emails.list(recipient)));
     }
 
     @DeleteMapping("/emails")
@@ -148,18 +145,21 @@ class LocalBillingController {
 
     /** One billing pass, now, at the application clock's instant (the test clock when it is set). */
     @PostMapping("/billing/run")
-    ResponseEntity<BillingJob.Pass> run(HttpServletRequest http) {
+    ResponseEntity<BillingJobPass> run(HttpServletRequest http) {
         loopback(http);
         return ok(job.run(clock.instant()));
     }
 
     @PutMapping("/billing/interrupt")
-    ResponseEntity<InterruptState> interrupt(@RequestBody InterruptRequest request, HttpServletRequest http) {
+    ResponseEntity<BillingInterruptState> interrupt(
+            @RequestBody BillingInterruptRequest request, HttpServletRequest http) {
         loopback(http);
         BillingFaults.Point point = null;
         if (request != null && request.point() != null && !request.point().isBlank()) {
             if (!"after-invoice-issue".equals(request.point())) {
-                throw new ApplicationProblemException(400, ErrorCode.BAD_REQUEST,
+                throw new ApplicationProblemException(
+                        400,
+                        ErrorCode.BAD_REQUEST,
                         List.of(new FieldProblem("point", "must be after-invoice-issue or null")));
             }
             point = BillingFaults.Point.AFTER_INVOICE_ISSUE;
@@ -169,13 +169,13 @@ class LocalBillingController {
     }
 
     @GetMapping("/billing/interrupt")
-    ResponseEntity<InterruptState> interruptState(HttpServletRequest http) {
+    ResponseEntity<BillingInterruptState> interruptState(HttpServletRequest http) {
         loopback(http);
         return interruptState();
     }
 
-    private ResponseEntity<InterruptState> interruptState() {
-        return ok(new InterruptState(faults.current() == null ? null : "after-invoice-issue"));
+    private ResponseEntity<BillingInterruptState> interruptState() {
+        return ok(new BillingInterruptState(faults.current() == null ? null : "after-invoice-issue"));
     }
 
     /**
@@ -184,32 +184,35 @@ class LocalBillingController {
      * needs. Its staff are seeded with the identity hooks.
      */
     @PostMapping("/unbilled-salons")
-    ResponseEntity<UnbilledSalon> unbilled(@RequestBody(required = false) UnbilledRequest request,
-            HttpServletRequest http) {
+    ResponseEntity<UnbilledSalon> unbilled(
+            @RequestBody(required = false) UnbilledRequest request, HttpServletRequest http) {
         loopback(http);
-        String slug = request == null || request.slug() == null || request.slug().isBlank()
-                ? "legacy-" + UUID.randomUUID().toString().replace("-", "").substring(0, 10)
-                : Slugs.normalize(request.slug());
-        if (!Slugs.wellFormed(slug) || Slugs.RESERVED.contains(slug) || List.of("alpha", "beta", "gamma").contains(slug)) {
-            throw new ApplicationProblemException(400, ErrorCode.BAD_REQUEST,
+        String slug =
+                request == null || request.slug() == null || request.slug().isBlank()
+                        ? "legacy-"
+                                + UUID.randomUUID().toString().replace("-", "").substring(0, 10)
+                        : Slugs.normalize(request.slug());
+        if (!Slugs.wellFormed(slug)
+                || Slugs.RESERVED.contains(slug)
+                || List.of("alpha", "beta", "gamma").contains(slug)) {
+            throw new ApplicationProblemException(
+                    400,
+                    ErrorCode.BAD_REQUEST,
                     List.of(new FieldProblem("slug", "must be a free, well-formed, unreserved slug")));
         }
         UUID id = UUID.randomUUID();
         Instant now = clock.instant();
         try {
             database.inTransaction(status -> {
-                database.jdbc().update("""
-                        INSERT INTO tenant (id, slug, status, time_zone, created_at, updated_at)
-                        VALUES (?, ?, 'active', 'Asia/Colombo', ?, ?)
-                        """, id, slug, Timestamp.from(now), Timestamp.from(now));
+                salons.createUnbilled(id, slug, now);
                 branding.bootstrapBrand(id, "Legacy fixture " + slug, now);
                 return null;
             });
-        }
-        catch (DuplicateKeyException ex) {
+        } catch (DuplicateKeyException ex) {
             throw new ApplicationProblemException(409, ErrorCode.SLUG_TAKEN);
         }
-        return ResponseEntity.status(HttpStatus.CREATED).cacheControl(CacheControl.noStore())
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .cacheControl(CacheControl.noStore())
                 .body(new UnbilledSalon(id, slug, slug + "." + platformDomain));
     }
 
@@ -218,14 +221,12 @@ class LocalBillingController {
     ResponseEntity<Void> operatorActive(@RequestBody OperatorActiveRequest request, HttpServletRequest http) {
         loopback(http);
         if (request == null || request.email() == null || request.active() == null) {
-            throw new ApplicationProblemException(400, ErrorCode.BAD_REQUEST,
-                    List.of(new FieldProblem("email", "and active are required")));
+            throw new ApplicationProblemException(
+                    400, ErrorCode.BAD_REQUEST, List.of(new FieldProblem("email", "and active are required")));
         }
-        int changed = database.inTransaction(status -> database.jdbc().update("""
-                UPDATE operator_user SET active = ?, version = version + 1, updated_at = ?
-                 WHERE email = ? AND fixture
-                """, request.active(), Timestamp.from(clock.instant()), request.email().strip().toLowerCase(Locale.ROOT)));
-        if (changed == 0) {
+        boolean changed = database.inTransaction(status -> users.setFixtureActive(
+                request.email().strip().toLowerCase(Locale.ROOT), request.active(), clock.instant()));
+        if (!changed) {
             throw new NotFoundException();
         }
         return ResponseEntity.noContent().build();
@@ -236,8 +237,7 @@ class LocalBillingController {
             if (!InetAddress.getByName(request.getRemoteAddr()).isLoopbackAddress()) {
                 throw new NotFoundException();
             }
-        }
-        catch (UnknownHostException ex) {
+        } catch (UnknownHostException ex) {
             throw new NotFoundException();
         }
     }

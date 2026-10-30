@@ -41,7 +41,9 @@ test('TC-F01-S03-002 signed-out staff entry identifies its own salon with no wor
 });
 
 test('TC-F01-S03-003 every unknown and lookalike hostname shares the neutral 404 page', async ({ request }) => {
-  const hosts = [`not-a-salon.${PLATFORM_DOMAIN}`, `www.${PLATFORM_DOMAIN}`, `console.${PLATFORM_DOMAIN}`, `${alpha.slug}.${beta.slug}.${PLATFORM_DOMAIN}`, `${alpha.hostname}.example.com`];
+  // Since F03, console.<platform domain> is the operator console (its routing is F03's cases), so it is
+  // no longer an unknown hostname.
+  const hosts = [`not-a-salon.${PLATFORM_DOMAIN}`, `www.${PLATFORM_DOMAIN}`, `${alpha.slug}.${beta.slug}.${PLATFORM_DOMAIN}`, `${alpha.hostname}.example.com`];
   let first: string | undefined;
   for (const host of hosts) {
     const r = await request.get(`${webUrl}/`, {headers:{Host:host}});

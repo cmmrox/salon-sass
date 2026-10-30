@@ -1,0 +1,133 @@
+package com.salonplatform.platform.service.impl;
+
+import com.salonplatform.platform.dto.DeletionJobPass;
+import com.salonplatform.platform.dto.SalonPass;
+import com.salonplatform.platform.repository.PlatformAudit;
+import com.salonplatform.platform.repository.SalonExportStore;
+import com.salonplatform.platform.repository.SalonLifecycleStore;
+import com.salonplatform.platform.service.LifecycleFaults;
+import com.salonplatform.platform.service.SalonDeletionService;
+import com.salonplatform.platform.service.SalonExportService;
+import com.salonplatform.shared.lifecycle.TenantDataModule;
+import com.salonplatform.shared.observability.Traces;
+import com.salonplatform.shared.persistence.PlatformDatabase;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+@Service
+class SalonDeletionServiceImpl implements SalonDeletionService {
+
+    private static final Logger log = LoggerFactory.getLogger(SalonDeletionServiceImpl.class);
+
+    private final PlatformDatabase database;
+    private final PlatformAudit audit;
+    private final SalonExportService exports;
+    private final SalonLifecycleStore lifecycles;
+    private final SalonExportStore exportStore;
+    private final LifecycleFaults faults;
+    private final Traces traces;
+    private final int batchSize;
+
+    SalonDeletionServiceImpl(
+            PlatformDatabase database,
+            PlatformAudit audit,
+            SalonExportService exports,
+            SalonLifecycleStore lifecycles,
+            SalonExportStore exportStore,
+            LifecycleFaults faults,
+            Traces traces,
+            @Value("${salon.retention.batch-size:500}") int batchSize) {
+        this.database = database;
+        this.audit = audit;
+        this.exports = exports;
+        this.lifecycles = lifecycles;
+        this.exportStore = exportStore;
+        this.faults = faults;
+        this.traces = traces;
+        if (batchSize < 1 || batchSize > 10_000) {
+            throw new IllegalStateException("salon.retention.batch-size must be from 1 to 10000");
+        }
+        this.batchSize = batchSize;
+    }
+
+    @Override
+    public DeletionJobPass run(Instant now) {
+        try {
+            return traces.inPlatformSpan("job.salon-deletion", () -> pass(now));
+        } catch (RuntimeException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            throw new IllegalStateException(ex);
+        }
+    }
+
+    private DeletionJobPass pass(Instant now) {
+        List<UUID> due = database.inTransaction(status -> lifecycles.dueForDeletion(now));
+        List<SalonPass> salons = new ArrayList<>();
+        List<UUID> waiting = new ArrayList<>();
+        List<UUID> failed = new ArrayList<>();
+        int batches = 0;
+        for (UUID salon : due) {
+            String export = database.inTransaction(
+                    status -> exportStore.statusOfSalon(salon).orElse(null));
+            if ("pending".equals(export)) {
+                waiting.add(salon);
+                log.warn("A closed salon's deletion waits for its export to be ready");
+                continue;
+            }
+            int before = batches;
+            long rows = 0;
+            try {
+                for (Map.Entry<TenantDataModule, TenantDataModule.Table> entry : exports.tables()) {
+                    TenantDataModule module = entry.getKey();
+                    String table = entry.getValue().name();
+                    while (true) {
+                        int erased = database.inTransaction(status -> module.erase(table, salon, now, batchSize));
+                        if (erased == 0) {
+                            break;
+                        }
+                        rows += erased;
+                        batches++;
+                        faults.deletionBatchCommitted(batches);
+                        if (erased < batchSize) {
+                            break;
+                        }
+                    }
+                }
+                long erasedRows = rows;
+                boolean deleted = database.inTransaction(status -> finish(salon, now, erasedRows));
+                salons.add(new SalonPass(salon, batches - before, rows, deleted));
+            } catch (RuntimeException ex) {
+                failed.add(salon);
+                log.error("The deletion job failed for one salon; the next run resumes it", ex);
+            }
+        }
+        log.info("Deletion pass: {} due, {} waiting, {} failed", due.size(), waiting.size(), failed.size());
+        return new DeletionJobPass(now, salons, waiting, failed);
+    }
+
+    /** Makes the salon a tombstone, once; false when another run already did. */
+    private boolean finish(UUID salon, Instant now, long rows) {
+        String state = lifecycles.lockStatus(salon).orElse(null);
+        if (!"closed".equals(state)) {
+            return false;
+        }
+        exportStore.markDeleted(salon, now);
+        lifecycles.markDeleted(salon, now);
+        lifecycles.recordEvent(salon, "deleted", null, PlatformAudit.SYSTEM, "retention", now);
+        Map<String, Object> details = new LinkedHashMap<>();
+        details.put("from", "closed");
+        details.put("to", "deleted");
+        details.put("rowsErasedThisRun", rows);
+        audit.record(PlatformAudit.SYSTEM, "retention", "salon.deleted", "salon", salon.toString(), details, now);
+        return true;
+    }
+}

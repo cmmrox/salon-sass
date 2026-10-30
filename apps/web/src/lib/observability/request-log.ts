@@ -4,7 +4,7 @@ import type { IncomingMessage, Server, ServerResponse } from 'node:http';
 import { writeLog, type LogSink } from './log';
 import { contextFromTraceparent, enterRequest } from './request-context';
 import { serverState } from './server-state';
-import { clientAddress } from '@/lib/identity/network';
+import { clientAddress } from '@/lib/http/network';
 
 type RequestStart = { request: IncomingMessage; response: ServerResponse; server: Server };
 
@@ -37,7 +37,11 @@ function onRequest({ request, response, server }: RequestStart, sink: LogSink | 
   const started = process.hrtime.bigint();
   const context = contextFromTraceparent(request.headers.traceparent);
   context.deadline = performance.now() + 3000;
-  try { context.clientAddress = clientAddress(request.socket.remoteAddress, request.headers['x-forwarded-for']); } catch { /* BFF fails closed without an address. */ }
+  try {
+    context.clientAddress = clientAddress(request.socket.remoteAddress, request.headers['x-forwarded-for']);
+  } catch {
+    /* BFF fails closed without an address. */
+  }
   enterRequest(context);
 
   const state = serverState();

@@ -44,7 +44,8 @@ await one('TC-F01-S05-002','image scanner passes clean images and refuses a fixa
 });
 await one('TC-F01-S05-003','HTTP hostname routing preserves salon and neutral hosts',()=>{
   for(const s of salons){const entry=curl(s.slug,'/');assert.equal(entry.status,307);const location=(entry.headers.match(/^location: (\S+)\r?$/im)||[])[1];assert([url(s.slug,'/workspace'),'/workspace'].includes(location),`${s.slug}: same-host workspace entry, got ${location}`);assert.match(entry.headers,/^cache-control: .*no-store/im);const r=curl(s.slug,ENTRY);assert.equal(r.status,200);assert(r.body.includes(s.name.replaceAll('&','&amp;')));const api=curl(s.slug,'/api/v1/salon');assert.equal(api.status,200);assert.deepEqual(JSON.parse(api.body),{slug:s.slug,name:s.name,brandColour:s.brandColour,timeZone:s.timeZone});}
-  for(const slug of ['','unknown','console']){const r=curl(slug);assert.equal(r.status,slug?404:200);}
+  // Since F03, console.<domain> is the operator console (its routing is F03's cases), not a neutral host.
+  for(const slug of ['','unknown']){const r=curl(slug);assert.equal(r.status,slug?404:200);}
 });
 await one('TC-F01-S05-004','a new salon is served over HTTP immediately without a restart',()=>{
   const slug=`qa-${Date.now().toString(36)}`;const before=run('docker',['inspect','--format','{{.Id}} {{.State.StartedAt}}','salon-stack-edge']);script('stack-seed',['add',slug,'QA New Salon','#2563EB']);const r=curl(slug,ENTRY);assert.equal(r.status,200);assert(r.body.includes('QA New Salon'));assert.equal(JSON.parse(curl(slug,'/api/v1/salon').body).slug,slug);assert.equal(run('docker',['inspect','--format','{{.Id}} {{.State.StartedAt}}','salon-stack-edge']),before);
@@ -56,8 +57,9 @@ await one('TC-F01-S05-005','only edge ports are published and forged tenant sele
 await one('TC-F01-S05-006','database roles cannot bypass tenant isolation and reprovisioning is idempotent',()=>{
   for(const role of [settings.SALON_DB_USER,settings.SALON_DB_APP_USER])assert.equal(db(`SELECT rolsuper||'|'||rolbypassrls FROM pg_roles WHERE rolname='${role}';`),'false|false');assert.equal(db(`SELECT count(*) FROM pg_class WHERE relowner='${settings.SALON_DB_APP_USER}'::regrole;`),'0');let refused=false;try{db('SELECT * FROM tenant;',settings.SALON_DB_APP_USER);}catch(e){refused=String(e.stderr).includes('permission denied');}assert(refused);
   const snapshot=()=>db("SELECT rolname||'|'||rolsuper||'|'||rolbypassrls FROM pg_roles WHERE rolname NOT LIKE 'pg_%' ORDER BY rolname;");const before=snapshot();
+  // F03-S01 added the platform runtime role to the provisioning, so its two settings are passed too.
   const input=fs.readFileSync(path.join(root,'infra/postgres/provision-roles.sql'),'utf8');
-  run('docker',['exec','-i','-e','SALON_DB_NAME','-e','SALON_DB_USER','-e','SALON_DB_PASSWORD','-e','SALON_DB_APP_USER','-e','SALON_DB_APP_PASSWORD','salon-stack-postgres','psql','-U',settings.SALON_DB_ADMIN_USER,'-d',settings.SALON_DB_NAME,'-X','-q','-v','ON_ERROR_STOP=1'],{input,env:{...process.env,...settings}});assert.equal(snapshot(),before);
+  run('docker',['exec','-i','-e','SALON_DB_NAME','-e','SALON_DB_USER','-e','SALON_DB_PASSWORD','-e','SALON_DB_APP_USER','-e','SALON_DB_APP_PASSWORD','-e','SALON_DB_PLATFORM_USER','-e','SALON_DB_PLATFORM_PASSWORD','salon-stack-postgres','psql','-U',settings.SALON_DB_ADMIN_USER,'-d',settings.SALON_DB_NAME,'-X','-q','-v','ON_ERROR_STOP=1'],{input,env:{...process.env,...settings}});assert.equal(snapshot(),before);
 });
 await one('TC-F01-S05-007','staging hides local hooks and refuses missing secrets',()=>{
   for(const p of ['/local/','/local/clock','/local/probes','/local/probes/missing','/actuator/metrics','/actuator/metrics/salon.outbox.dead'])assert.equal(curl('alpha',p).status,404);

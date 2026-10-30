@@ -107,9 +107,12 @@ test(`${c(19)} staff screens identify only their own salon on the shared warm ca
  expect(new Set(colours).size,'all staff workspaces share the warm canvas; the accent is the brand (TC-F02-S04-024)').toBe(1);expect(colours[0]).toBe('rgb(243, 240, 235)');
 });
 test(`${c(21)} translation and test-id inventories cover every new screen state`,async({identity,accounts})=>{
- const source=path.join(productRoot,'apps/web/src/components/account');const files=fs.readdirSync(source).filter(file=>file.endsWith('.tsx')&&!file.endsWith('.test.tsx'));expect(files.length).toBeGreaterThan(0);
+ // F23-S06 moved the files of the old src/components/account into identity's components, the workspace surface and platform's billing banner; the inventory still reads all of them.
+ const web=path.join(productRoot,'apps/web/src');const identityComponents=path.join(web,'features/identity/components');
+ const files=[...fs.readdirSync(identityComponents).filter(file=>file.endsWith('.tsx')&&!file.endsWith('.test.tsx')).map(file=>path.join(identityComponents,file)),
+  ...['surfaces/workspace/AccountFrame.tsx','surfaces/workspace/AccountPage.tsx','surfaces/workspace/BillingScreen.tsx','surfaces/workspace/StaffSignInFrame.tsx','features/platform/components/BillingBanner.tsx'].map(file=>path.join(web,file))];expect(files.length).toBeGreaterThan(5);
  const messages=JSON.parse(fs.readFileSync(path.join(productRoot,'apps/web/messages/en.json'),'utf8')).account as Record<string,string>;expect(Object.keys(messages).length).toBeGreaterThan(50);const leaves=(node:unknown,prefix=''): [string,unknown][]=>node&&typeof node==='object'?Object.entries(node).flatMap(([key,value])=>leaves(value,prefix?prefix+'.'+key:key)):[[prefix,node]];const flattened=Object.fromEntries(leaves(messages));expect(Object.keys(flattened).length).toBeGreaterThan(50);for(const [key,value]of Object.entries(flattened))expect(typeof value==='string'&&value.trim().length>0,`nonempty account translation ${key}`).toBe(true);
- const texts=files.map(file=>fs.readFileSync(path.join(source,file),'utf8'));
+ const texts=files.map(file=>fs.readFileSync(file,'utf8'));
  // Each file's keys are looked up in its own namespace: F03-S02 added billing components here that use `billing`.
  const all=JSON.parse(fs.readFileSync(path.join(productRoot,'apps/web/messages/en.json'),'utf8')) as Record<string,unknown>;
  const keys=texts.flatMap(text=>{const ns=/useTranslations\(['"]([^'"]+)['"]\)/.exec(text)?.[1]??'account';const space=ns==='account'?flattened:Object.fromEntries(leaves(all[ns]));return [...text.matchAll(/\bt\(['"]([^'"]+)['"]/g)].map(match=>({ns,key:match[1],found:Object.hasOwn(space,match[1])}));});

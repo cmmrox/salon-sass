@@ -1,15 +1,14 @@
 package com.salonplatform.platform.local;
 
+import com.salonplatform.platform.dto.SupportExpiryPass;
+import com.salonplatform.platform.service.SupportSessionService;
+import com.salonplatform.shared.web.NotFoundException;
+import io.swagger.v3.oas.annotations.Hidden;
+import jakarta.servlet.http.HttpServletRequest;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.time.Clock;
 import java.time.Instant;
-
-import com.salonplatform.platform.application.SupportSessions;
-import com.salonplatform.shared.api.NotFoundException;
-import io.swagger.v3.oas.annotations.Hidden;
-import jakarta.servlet.http.HttpServletRequest;
-
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.CacheControl;
 import org.springframework.http.ResponseEntity;
@@ -28,28 +27,26 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/local/operator")
 class LocalSupportController {
 
-    record Pass(Instant at, int ended) {
-    }
-
-    private final SupportSessions sessions;
+    private final SupportSessionService sessions;
     private final Clock clock;
 
-    LocalSupportController(SupportSessions sessions, Clock clock) {
+    LocalSupportController(SupportSessionService sessions, Clock clock) {
         this.sessions = sessions;
         this.clock = clock;
     }
 
     @PostMapping("/support-sessions/expire")
-    ResponseEntity<Pass> expire(HttpServletRequest http) {
+    ResponseEntity<SupportExpiryPass> expire(HttpServletRequest http) {
         try {
             if (!InetAddress.getByName(http.getRemoteAddr()).isLoopbackAddress()) {
                 throw new NotFoundException();
             }
-        }
-        catch (UnknownHostException ex) {
+        } catch (UnknownHostException ex) {
             throw new NotFoundException();
         }
         Instant now = clock.instant();
-        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(new Pass(now, sessions.expire(now)));
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.noStore())
+                .body(new SupportExpiryPass(now, sessions.expire(now)));
     }
 }

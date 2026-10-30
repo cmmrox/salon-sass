@@ -8,7 +8,8 @@
 | `apps/web` | One Next.js application serving salon owner/admin/staff workspaces and the operator console; no customer web interface | Developer |
 | `apps/web/scripts/` | The local custom server (`serve.mjs`); local startup is described in `docs/operations/environments-and-releases.md` | Developer |
 | `apps/mobile` | The customer app: one Expo codebase for the shared container app and a dedicated app per salon. Created in milestone `M2-mobile` | Developer |
-| `packages/api-contracts` | The TypeScript client generated from the API's OpenAPI document, used by the web app and the customer app | Developer (generated) |
+| `packages/api-contracts` | The TypeScript client generated from the API's OpenAPI document, exported per API module (`@salon/api-contracts/<module>`), used by the web app and the customer app | Developer (generated) |
+| `packages/format` | Formatting of money, dates and phone numbers, shared by the web app and the customer app (CR-021). Further shared packages (`tokens`, `i18n`, `schemas`) are added with `M2-mobile` | Developer |
 | `infra/` | Docker Compose for the local environment, its scripts, and `infra/postgres/` (the application role's definition) | Developer |
 | `.github/` | Continuous integration | Developer |
 | `package.json`, `pnpm-workspace.yaml`, `pnpm-lock.yaml`, `.nvmrc`, `.sdkmanrc`, `.editorconfig`, `.env.example` | The workspace, the pinned tool versions and the settings of the local environment | Developer |
@@ -42,7 +43,7 @@ apps packages infra .github package.json pnpm-workspace.yaml pnpm-lock.yaml .nvm
 ```
 
 `qa/scripts/sdlc pr-check` and the live merge gate refuse changes in these paths after that
-revision, and also check the feature's `cases.md` and each stage's `spec.md` and `cases.md`.
+revision, and also check each stage's `spec.md` (and, for F01 to F03, their `cases.md`).
 Feature/QA metadata and documentation commits may follow. The tooling's
 `schema.FEATURE_QA_PATHS` is the machine-readable counterpart of this list.
 
@@ -59,16 +60,19 @@ features/
   README.md                         generated portfolio: status, and whose turn it is
   BACKLOG.md                        candidates for later releases, and ideas from QA reviews
   F07-online-booking/
-    feature.yaml                    the feature's state, requirements and feature-level tests
+    feature.yaml                    the feature's state, requirements and journey tests
     README.md                       why the feature is divided into its stages
-    cases.md, review.md, bugs/      feature-level QA, written at feature-verify
+    review.md, bugs/                QA's test approach and product review; defects, at feature-verify
     stages/S02-slot-search-and-hold/
       spec.md                       what to build, and the acceptance criteria
-      stage.yaml                    state, handoff, cases, automation, evidence
-      cases.md                      the test cases in full
-      review.md                     QA's product review
-      bugs/BUG-F07-S02-001-*.md     one file per defect
+      stage.yaml                    state, handoff, registered tests, evidence
+      bugs/BUG-F07-S02-001-*.md     one file per defect (a stage pass the owner asked for)
 ```
+
+A test case is the registered test titled with its id and criteria (`TC-F07-S02-001 AC-2: ...`);
+the tooling reads the cases from those titles (decision 068). F01 to F03 keep their earlier
+`cases.md` files and yaml case lists. A refactor or upgrade has no folder here: it is recorded in
+`docs/decisions/DECISION_LOG.md` and the documents it changes.
 
 ## Inside `qa/`
 

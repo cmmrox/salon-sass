@@ -1,19 +1,17 @@
 package com.salonplatform.testing;
 
+import com.salonplatform.SalonApiApplication;
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
-
-import com.salonplatform.SalonApiApplication;
 import org.apache.catalina.connector.Connector;
 import org.apache.coyote.AbstractProtocol;
-import org.testcontainers.postgresql.PostgreSQLContainer;
-
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.boot.tomcat.TomcatWebServer;
 import org.springframework.boot.web.server.context.WebServerApplicationContext;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 
 /**
  * The application started the way {@code main} starts it, on a free port, against a database the
@@ -44,8 +42,8 @@ public final class StartedApplication implements AutoCloseable {
     }
 
     /** Against a database whose migrations run as this role, which then owns its tables. */
-    public static StartedApplication against(String jdbcUrl, String migrationUser, String migrationPassword,
-            String... settings) {
+    public static StartedApplication against(
+            String jdbcUrl, String migrationUser, String migrationPassword, String... settings) {
         return against(jdbcUrl, migrationUser, migrationPassword, null, settings);
     }
 
@@ -53,8 +51,12 @@ public final class StartedApplication implements AutoCloseable {
      * As above, with one more configuration class added to the application's own: for a test that
      * must see inside it (the spans it records), never to change what it does.
      */
-    public static StartedApplication against(String jdbcUrl, String migrationUser, String migrationPassword,
-            Class<?> testConfiguration, String... settings) {
+    public static StartedApplication against(
+            String jdbcUrl,
+            String migrationUser,
+            String migrationPassword,
+            Class<?> testConfiguration,
+            String... settings) {
         List<String> arguments = new ArrayList<>();
         if (List.of(settings).stream().noneMatch(setting -> setting.startsWith("--server.port="))) {
             arguments.add("--server.port=0");
@@ -62,9 +64,13 @@ public final class StartedApplication implements AutoCloseable {
         arguments.addAll(List.of(
                 "--spring.datasource.url=" + jdbcUrl,
                 "--spring.datasource.username=" + TestPostgres.APP_USER,
-                "--spring.datasource.password=" + TestPostgres.APP_PASSWORD,
-                "--spring.flyway.user=" + migrationUser,
-                "--spring.flyway.password=" + migrationPassword));
+                "--spring.datasource.password=" + TestPostgres.APP_PASSWORD));
+        // No migration role: an instance of the production-like stack, which is never given the
+        // owning role's settings (TestDatabase#startAsInstance).
+        if (migrationUser != null) {
+            arguments.add("--spring.flyway.user=" + migrationUser);
+            arguments.add("--spring.flyway.password=" + migrationPassword);
+        }
         // The platform runtime role of every test container, unless the test names its own (a
         // repeated command-line setting would be joined, not replaced).
         if (List.of(settings).stream().noneMatch(setting -> setting.startsWith("--salon.platform.datasource."))) {

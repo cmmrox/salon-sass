@@ -5,6 +5,5 @@ import org.springframework.web.bind.annotation.RestController;
 
 /** A hook that also loads in another profile. */
 @RestController
-@Profile({ "local", "staging" })
-public class AlsoElsewhere {
-}
+@Profile({"local", "staging"})
+public class AlsoElsewhere {}

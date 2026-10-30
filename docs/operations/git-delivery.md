@@ -9,9 +9,10 @@ evidence storage and transition from its earlier local workflow.
 - Repository: `https://github.com/cmmrox/salon-sass.git`; remote `origin`; trunk `main`.
 - Branch prefix: `charithm/`, keeping the existing convention.
 - The owner authorises pushing reviewed feature and process changes and opening the corresponding
-  GitHub PRs. Feature PRs are created after independent full feature QA and closure gates pass.
-- The owner reviews and merges PRs into `main`. Agents may integrate stage/QA branches into the
-  feature branch locally, but do not merge the owner's GitHub PRs or push directly to `main`.
+  GitHub PRs. Feature PRs are created after independent full feature QA and closure gates pass; a refactor PR
+  after the lead's review of its diff and its smoke and regression runs.
+- The owner reviews and merges PRs into `main`. Agents may integrate stage and fix branches into
+  the feature branch locally, but do not merge the owner's GitHub PRs or push directly to `main`.
 - For F01 only, the owner's request on 2026-10-13 explicitly authorises the lead to merge its
   GitHub PR after independent full feature QA, closure and required GitHub checks pass, then
   remove its related merged branches and worktrees. This does not authorise merging later
@@ -56,12 +57,9 @@ the live start check. The merge commit is included in `origin/main`, and the PR 
 QA revision without changes to the certified paths listed in `docs/architecture/repository-structure.md`.
 The live check also requires successful `Verification commands` CI on the PR's head revision.
 
-For owner-directed proportional re-verification (CR-009), `evidence.scoped_assessment` may point to
-the independent committed assessment described in `docs/operations/verification-evidence.md`.
-Its original full QA revision stays in `integration.qa_revision`; targeted verification has its own
-`reviewed_revision`. Submission and merge gates validate that assessment and refuse subsequent
-unreviewed product changes. This preserves both actual tested scopes without repeating unaffected
-QA or presenting a targeted check as a new full pass.
+A targeted re-verification after a full pass (a fixed bug and what depends on it) is recorded
+beside the full pass, never in place of its `integration.qa_revision` (decision 068). Earlier
+features' `evidence.scoped_assessment` files are historical.
 
 A merge happens after the PR's own metadata commit. Record its resulting SHA on a bookkeeping,
 release or next feature branch, while the next feature is still in the backlog. That record is

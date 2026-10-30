@@ -1,15 +1,14 @@
 package com.salonplatform.platform.domain;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
+import com.salonplatform.platform.domain.BillingCalendar.Reminder;
+import com.salonplatform.platform.domain.BillingCalendar.State;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
-
-import com.salonplatform.platform.domain.BillingCalendar.Reminder;
-import com.salonplatform.platform.domain.BillingCalendar.State;
 import org.junit.jupiter.api.Test;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 /** The owner's billing terms as pure rules (decision 049), each boundary one second either side. */
 class BillingCalendarTest {
@@ -27,11 +26,15 @@ class BillingCalendarTest {
     void aThirtyFirstAnchorFallsOnTheLastDayOfShorterMonthsAndReturnsToTheThirtyFirst() {
         LocalDateTime anchor = LocalDateTime.parse("2027-01-31T10:00:00");
         List<String> starts = java.util.stream.IntStream.range(0, 4)
-                .mapToObj(n -> BillingCalendar.periodStart(anchor, COLOMBO, n).atZone(COLOMBO).toLocalDate().toString())
+                .mapToObj(n -> BillingCalendar.periodStart(anchor, COLOMBO, n)
+                        .atZone(COLOMBO)
+                        .toLocalDate()
+                        .toString())
                 .toList();
         assertThat(starts).containsExactly("2027-01-31", "2027-02-28", "2027-03-31", "2027-04-30");
         LocalDateTime leap = LocalDateTime.parse("2028-01-31T10:00:00");
-        assertThat(BillingCalendar.periodStart(leap, COLOMBO, 1).atZone(COLOMBO).toLocalDate()).hasToString("2028-02-29");
+        assertThat(BillingCalendar.periodStart(leap, COLOMBO, 1).atZone(COLOMBO).toLocalDate())
+                .hasToString("2028-02-29");
     }
 
     @Test
@@ -57,14 +60,17 @@ class BillingCalendarTest {
     void theStateChangesAtEachBoundaryAndNotOneSecondBefore() {
         Instant due = Instant.parse("2026-11-08T09:00:00Z");
         assertThat(BillingCalendar.stateAt(due.minusSeconds(1), 0, List.of())).isEqualTo(State.TRIALING);
-        assertThat(BillingCalendar.stateAt(due.minusSeconds(1), 1, List.of(due))).isEqualTo(State.ACTIVE);
+        assertThat(BillingCalendar.stateAt(due.minusSeconds(1), 1, List.of(due)))
+                .isEqualTo(State.ACTIVE);
         assertThat(BillingCalendar.stateAt(due, 1, List.of(due))).isEqualTo(State.PAST_DUE);
         Instant readOnly = BillingCalendar.readOnlyAt(due);
-        assertThat(BillingCalendar.stateAt(readOnly.minusSeconds(1), 1, List.of(due))).isEqualTo(State.PAST_DUE);
+        assertThat(BillingCalendar.stateAt(readOnly.minusSeconds(1), 1, List.of(due)))
+                .isEqualTo(State.PAST_DUE);
         assertThat(BillingCalendar.stateAt(readOnly, 1, List.of(due))).isEqualTo(State.READ_ONLY);
         assertThat(BillingCalendar.stateAt(readOnly, 2, List.of())).isEqualTo(State.ACTIVE);
         // One of two overdue invoices still unpaid keeps the oldest boundary.
-        assertThat(BillingCalendar.stateAt(readOnly, 2, List.of(due.plusSeconds(86400 * 30)))).isEqualTo(State.ACTIVE);
+        assertThat(BillingCalendar.stateAt(readOnly, 2, List.of(due.plusSeconds(86400 * 30))))
+                .isEqualTo(State.ACTIVE);
     }
 
     @Test
@@ -72,9 +78,12 @@ class BillingCalendarTest {
         Instant due = Instant.parse("2026-11-08T09:00:00Z");
         assertThat(BillingCalendar.remindersDue(due.minusSeconds(1), due)).isEmpty();
         assertThat(BillingCalendar.remindersDue(due, due)).containsExactly(Reminder.DUE);
-        assertThat(BillingCalendar.remindersDue(due.plusSeconds(3 * 86400 - 1), due)).containsExactly(Reminder.DUE);
-        assertThat(BillingCalendar.remindersDue(due.plusSeconds(3 * 86400), due)).containsExactly(Reminder.DUE, Reminder.DUE_3);
-        assertThat(BillingCalendar.remindersDue(due.plusSeconds(10 * 86400 - 1), due)).hasSize(2);
+        assertThat(BillingCalendar.remindersDue(due.plusSeconds(3 * 86400 - 1), due))
+                .containsExactly(Reminder.DUE);
+        assertThat(BillingCalendar.remindersDue(due.plusSeconds(3 * 86400), due))
+                .containsExactly(Reminder.DUE, Reminder.DUE_3);
+        assertThat(BillingCalendar.remindersDue(due.plusSeconds(10 * 86400 - 1), due))
+                .hasSize(2);
         assertThat(BillingCalendar.remindersDue(due.plusSeconds(10 * 86400), due))
                 .containsExactly(Reminder.DUE, Reminder.DUE_3, Reminder.DUE_10);
     }

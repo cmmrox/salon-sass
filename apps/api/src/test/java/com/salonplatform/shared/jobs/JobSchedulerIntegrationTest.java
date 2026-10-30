@@ -1,14 +1,8 @@
 package com.salonplatform.shared.jobs;
 
-import java.sql.SQLException;
-import java.time.Duration;
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.function.BooleanSupplier;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;
@@ -25,20 +19,24 @@ import com.salonplatform.testing.TestSalons;
 import com.salonplatform.testing.TestSalons.TestSalon;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
+import java.sql.SQLException;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.BooleanSupplier;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.slf4j.MDC;
-
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
 /**
  * The scheduler of recurring jobs against PostgreSQL, on a clock the test moves: a job runs salon
@@ -103,23 +101,32 @@ class JobSchedulerIntegrationTest {
             await(() -> job.runs.size() == 3);
             pause(400);
 
-            assertThat(job.runs).as("once for each active salon, and not for the suspended one")
-                    .extracting(Run::salon).containsExactlyInAnyOrder(alpha.id(), beta.id(), gamma.id());
+            assertThat(job.runs)
+                    .as("once for each active salon, and not for the suspended one")
+                    .extracting(Run::salon)
+                    .containsExactlyInAnyOrder(alpha.id(), beta.id(), gamma.id());
             assertThat(job.runs).allSatisfy(run -> {
-                assertThat(run.settingInTheDatabase()).as("app.tenant_id of the transaction").isEqualTo(run.salon().toString());
+                assertThat(run.settingInTheDatabase())
+                        .as("app.tenant_id of the transaction")
+                        .isEqualTo(run.salon().toString());
                 assertThat(run.brandsSeen()).as("only its own salon's rows").containsExactly(run.salon());
-                assertThat(run.salonOnLogLines()).as("tenant.id of the log lines").isEqualTo(run.salon().toString());
+                assertThat(run.salonOnLogLines())
+                        .as("tenant.id of the log lines")
+                        .isEqualTo(run.salon().toString());
                 assertThat(run.now()).isEqualTo(clock.instant());
             });
 
             assertThat(messagesOf(job, alpha)).as("alpha's work was committed").isEqualTo(1);
             assertThat(messagesOf(job, gamma)).as("gamma's work was committed").isEqualTo(1);
-            assertThat(messagesOf(job, beta)).as("beta's failed and left nothing behind").isZero();
+            assertThat(messagesOf(job, beta))
+                    .as("beta's failed and left nothing behind")
+                    .isZero();
 
             List<ILoggingEvent> failures = logs.events(line -> line.getLevel() == Level.ERROR);
             assertThat(failures).singleElement().satisfies(line -> {
                 assertThat(line.getFormattedMessage()).contains(job.name()).contains("failed for the salon");
-                assertThat(CapturedLogs.context(line)).containsEntry("tenant.id", beta.id().toString())
+                assertThat(CapturedLogs.context(line))
+                        .containsEntry("tenant.id", beta.id().toString())
                         .containsKey("trace.id");
             });
             assertThat(logs.events(line -> line.getFormattedMessage().contains("ran for the salon")))
@@ -127,7 +134,11 @@ class JobSchedulerIntegrationTest {
                     .containsExactlyInAnyOrder(alpha.id().toString(), gamma.id().toString());
         }
 
-        Timer delay = application.bean(MeterRegistry.class).find(JobScheduler.START_DELAY).tag("job", job.name()).timer();
+        Timer delay = application
+                .bean(MeterRegistry.class)
+                .find(JobScheduler.START_DELAY)
+                .tag("job", job.name())
+                .timer();
         assertThat(delay).as("how late the occurrence started is metered").isNotNull();
         assertThat(delay.count()).isEqualTo(1);
     }
@@ -142,7 +153,9 @@ class JobSchedulerIntegrationTest {
         start(onTwo);
         await(() -> runsOf(onOne, onTwo) == 3);
         pause(500);
-        assertThat(runsOf(onOne, onTwo)).as("the first occurrence, once for each of three salons").isEqualTo(3);
+        assertThat(runsOf(onOne, onTwo))
+                .as("the first occurrence, once for each of three salons")
+                .isEqualTo(3);
 
         clock.advance(HOURLY);
         await(() -> runsOf(onOne, onTwo) == 6);
@@ -152,7 +165,9 @@ class JobSchedulerIntegrationTest {
         clock.advance(HOURLY.multipliedBy(5));
         await(() -> runsOf(onOne, onTwo) == 9);
         pause(500);
-        assertThat(runsOf(onOne, onTwo)).as("five occurrences were missed: the job runs once, not five times").isEqualTo(9);
+        assertThat(runsOf(onOne, onTwo))
+                .as("five occurrences were missed: the job runs once, not five times")
+                .isEqualTo(9);
 
         clock.advance(Duration.ofMinutes(59));
         pause(500);
@@ -163,13 +178,23 @@ class JobSchedulerIntegrationTest {
     void aJobHeldByAnInstanceThatStoppedRunsAgainOnlyOnceItsHoldHasRunOut() {
         RecordingJob job = new RecordingJob(null);
         Instant claimedAt = clock.instant();
-        assertThat(application.bean(JobStore.class).claim(job.name(), claimedAt, HOURLY, "an-instance-that-stopped",
-                claimedAt.plus(Duration.ofHours(3)))).as("claimed by the instance that then stopped").contains(claimedAt);
+        assertThat(application
+                        .bean(JobStore.class)
+                        .claim(
+                                job.name(),
+                                claimedAt,
+                                HOURLY,
+                                "an-instance-that-stopped",
+                                claimedAt.plus(Duration.ofHours(3))))
+                .as("claimed by the instance that then stopped")
+                .contains(claimedAt);
 
         start(job);
         clock.advance(Duration.ofHours(2));
         pause(500);
-        assertThat(job.runs).as("the next occurrence is due, but the job is still held").isEmpty();
+        assertThat(job.runs)
+                .as("the next occurrence is due, but the job is still held")
+                .isEmpty();
 
         clock.advance(Duration.ofMinutes(61));
         await(() -> job.runs.size() == 3);
@@ -183,25 +208,35 @@ class JobSchedulerIntegrationTest {
         Outbox outbox = application.bean(Outbox.class);
 
         transactions.executeWithoutResult(status -> {
-            for (String table : new String[] { "salon_brand", "outbox_message", "audit_entry" }) {
-                assertThat(jdbc.queryForObject("SELECT count(*) FROM " + table, Integer.class)).as(table).isZero();
+            for (String table : new String[] {"salon_brand", "outbox_message", "audit_entry"}) {
+                assertThat(jdbc.queryForObject("SELECT count(*) FROM " + table, Integer.class))
+                        .as(table)
+                        .isZero();
             }
         });
-        assertThatIllegalStateException().isThrownBy(() -> transactions.executeWithoutResult(
-                status -> outbox.enqueue("job-test", Map.of())));
-        assertThatExceptionOfType(DataAccessException.class).isThrownBy(() -> transactions.executeWithoutResult(
-                status -> jdbc.update("INSERT INTO outbox_message (tenant_id, id, channel, payload, status, next_attempt_at, "
-                        + "created_at, updated_at) VALUES (?, gen_random_uuid(), 'job-test', '{}', 'pending', now(), now(), "
-                        + "now())", alpha.id())))
-                .satisfies(refused -> assertThat(refused.getCause()).isInstanceOfSatisfying(SQLException.class,
-                        sql -> assertThat(sql.getSQLState()).isEqualTo("42501")));
+        assertThatIllegalStateException()
+                .isThrownBy(() -> transactions.executeWithoutResult(status -> outbox.enqueue("job-test", Map.of())));
+        assertThatExceptionOfType(DataAccessException.class)
+                .isThrownBy(() -> transactions.executeWithoutResult(status -> jdbc.update(
+                        "INSERT INTO outbox_message (tenant_id, id, channel, payload, status, next_attempt_at, "
+                                + "created_at, updated_at) VALUES (?, gen_random_uuid(), 'job-test', '{}', 'pending', now(), now(), "
+                                + "now())",
+                        alpha.id())))
+                .satisfies(refused -> assertThat(refused.getCause())
+                        .isInstanceOfSatisfying(
+                                SQLException.class,
+                                sql -> assertThat(sql.getSQLState()).isEqualTo("42501")));
     }
 
     private void start(TenantJob job) {
         JobScheduler scheduler = new JobScheduler(
                 new JobSettings(true, Duration.ofMillis(50), Duration.ofMinutes(10), HOURLY),
-                application.bean(JobStore.class), List.of(job), application.bean(ActiveTenants.class),
-                application.bean(PlatformTransactionManager.class), clock, application.bean(Traces.class),
+                application.bean(JobStore.class),
+                List.of(job),
+                application.bean(ActiveTenants.class),
+                application.bean(PlatformTransactionManager.class),
+                clock,
+                application.bean(Traces.class),
                 application.bean(MeterRegistry.class));
         schedulers.add(scheduler);
         scheduler.start();
@@ -216,8 +251,11 @@ class JobSchedulerIntegrationTest {
     }
 
     private static int messagesOf(RecordingJob job, TestSalon salon) {
-        return owner.queryForObject("SELECT count(*) FROM outbox_message WHERE tenant_id = ? AND channel = ?",
-                Integer.class, salon.id(), job.name());
+        return owner.queryForObject(
+                "SELECT count(*) FROM outbox_message WHERE tenant_id = ? AND channel = ?",
+                Integer.class,
+                salon.id(),
+                job.name());
     }
 
     private static String jobName() {
@@ -237,16 +275,15 @@ class JobSchedulerIntegrationTest {
     private static void pause(long millis) {
         try {
             Thread.sleep(millis);
-        }
-        catch (InterruptedException ex) {
+        } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
             throw new IllegalStateException(ex);
         }
     }
 
     /** What one run for one salon saw. */
-    private record Run(UUID salon, Instant now, String settingInTheDatabase, List<UUID> brandsSeen, String salonOnLogLines) {
-    }
+    private record Run(
+            UUID salon, Instant now, String settingInTheDatabase, List<UUID> brandsSeen, String salonOnLogLines) {}
 
     /**
      * A job that records what each run saw and writes one outbox message on a channel named after
@@ -282,9 +319,12 @@ class JobSchedulerIntegrationTest {
         @Override
         public void runFor(CurrentTenant salon, Instant now) {
             JdbcTemplate jdbc = application.jdbc();
-            runs.add(new Run(salon.id(), now,
+            runs.add(new Run(
+                    salon.id(),
+                    now,
                     jdbc.queryForObject("SELECT current_setting('app.tenant_id', true)", String.class),
-                    jdbc.queryForList("SELECT tenant_id FROM salon_brand", UUID.class), MDC.get("tenant.id")));
+                    jdbc.queryForList("SELECT tenant_id FROM salon_brand", UUID.class),
+                    MDC.get("tenant.id")));
             application.bean(Outbox.class).enqueue(name, Map.of("for", salon.slug()));
             if (salon.id().equals(failsFor)) {
                 throw new IllegalStateException("the job fails for this salon");

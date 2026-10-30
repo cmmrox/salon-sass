@@ -89,7 +89,9 @@ browser session is issued.
 
 ## Role permissions
 
-Check permission values in use cases and expose an `IdentityFacade` for later modules. The current
+Check permission values in use cases. Later modules read the signed-in principal through identity's
+provided interface `identity.Principals` (`current()`, `require(permission)`), whose `Principal`
+record is separate from the API's principal response (CR-021). The current
 principal response exposes permissions and a data scope (`salon` or `own`) and the staff id for
 Professional filtering. Later calendar/revenue/customer modules must enforce that scope; F02 does
 not fabricate their data or endpoints. The Owner's Professional grant is a specific boolean for
@@ -152,7 +154,7 @@ delivery and returns a clear service-unavailable response rather than pretending
 failures retry through the outbox; an expired challenge is not delivered. No raw number, password,
 code, secret, cookie, refresh credential or JWT appears in logs, public errors or audit values.
 Outbox cancellation is an explicit `CANCELLED` outcome. The shared `Outbox.cancel(id, instant)`
-facade joins the caller's writable tenant transaction, clears pending/sending/dead work and its
+operation joins the caller's writable tenant transaction, clears pending/sending/dead work and its
 lease, and conditional finalization cannot resurrect it. Sent or already-cancelled work stays
 unchanged. Resend, consumption and provider-expiry cancellation record `identity.code_cancelled`
 when a row changed; scheduled expiry cleanup and synthetic fixture reset do not add a duplicate
@@ -179,7 +181,7 @@ use `profile.manage`, `data.export` and `account.delete`, alongside `session.man
 Export is a JSON download of the current customer's profile, preferences and signed-in-device
 metadata with a generated time; allowlist fields, never include credentials, other customers or
 audit internals. The synchronous export is the data-copy request at this feature's size. Later
-modules extend exports through their public facades when customer-owned data exists.
+modules extend exports through their provided interfaces when customer-owned data exists.
 
 Deletion requires a current customer sign-in and explicit confirmation. Remove the profile and
 identifying data, encrypted challenges/messages for its number and all sessions/refresh history
@@ -358,7 +360,8 @@ writable tenant transaction. It scans bounded keyset pages and erases matching i
 in every delivery state, including messages whose expired challenge rows were already cleaned up.
 Identity recognizes its own encrypted payload shape; an unreadable recognized envelope rolls back
 deletion with a safe internal-error response. Conditional dispatcher finalization cannot recreate
-erased rows. An opaque `CustomerDataErased(tenantId,challengeIds)` event clears local captures after
-commit; core identity code never imports local hooks. Other numbers/salons and ordinary hashed
+erased rows. An opaque `identity.CustomerDataErased.v1` event (challenge ids only) is published through the
+outbox in the erasing transaction and clears local captures when its subscriber runs, shortly after
+commit (decision 063); core identity code never imports local hooks. Other numbers/salons and ordinary hashed
 anti-abuse counters remain. V10 adds profile defaults to the existing customer table; it introduces
 no new tenant table or cross-module table access.

@@ -17,7 +17,8 @@ import java.util.Map;
 /** Calls the running application over real HTTP, the way a client does. */
 public final class Http {
 
-    private static final HttpClient CLIENT = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
+    private static final HttpClient CLIENT =
+            HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
 
     private final int port;
 
@@ -36,11 +37,9 @@ public final class Http {
                 .build();
         try {
             return CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
-        }
-        catch (IOException ex) {
+        } catch (IOException ex) {
             throw new IllegalStateException(method + " " + path + " failed", ex);
-        }
-        catch (InterruptedException ex) {
+        } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
             throw new IllegalStateException(method + " " + path + " was interrupted", ex);
         }
@@ -52,9 +51,14 @@ public final class Http {
      * clients refuse to set {@code Host} themselves.
      */
     public Exchange getOnHost(String host, String path, Map<String, String> headers) {
-        StringBuilder request = new StringBuilder("GET ").append(path).append(" HTTP/1.1\r\n")
-                .append("Host: ").append(host).append("\r\n");
-        headers.forEach((name, value) -> request.append(name).append(": ").append(value).append("\r\n"));
+        StringBuilder request = new StringBuilder("GET ")
+                .append(path)
+                .append(" HTTP/1.1\r\n")
+                .append("Host: ")
+                .append(host)
+                .append("\r\n");
+        headers.forEach(
+                (name, value) -> request.append(name).append(": ").append(value).append("\r\n"));
         request.append("Accept: application/json\r\nConnection: close\r\n\r\n");
         return Exchange.parse(raw("127.0.0.1", request.toString()));
     }
@@ -68,9 +72,15 @@ public final class Http {
      * body (sent as UTF-8 with its length).
      */
     public Exchange sendOnHost(String method, String host, String path, Map<String, String> headers, String body) {
-        StringBuilder request = new StringBuilder(method).append(' ').append(path).append(" HTTP/1.1\r\n")
-                .append("Host: ").append(host).append("\r\n");
-        headers.forEach((name, value) -> request.append(name).append(": ").append(value).append("\r\n"));
+        StringBuilder request = new StringBuilder(method)
+                .append(' ')
+                .append(path)
+                .append(" HTTP/1.1\r\n")
+                .append("Host: ")
+                .append(host)
+                .append("\r\n");
+        headers.forEach(
+                (name, value) -> request.append(name).append(": ").append(value).append("\r\n"));
         if (headers.keySet().stream().noneMatch(name -> name.equalsIgnoreCase("Accept"))) {
             request.append("Accept: application/json\r\n");
         }
@@ -103,8 +113,7 @@ public final class Http {
             socket.getOutputStream().write(request.getBytes(StandardCharsets.ISO_8859_1));
             socket.getOutputStream().flush();
             return new String(socket.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
-        }
-        catch (IOException ex) {
+        } catch (IOException ex) {
             throw new IllegalStateException("the raw request failed", ex);
         }
     }
@@ -126,7 +135,9 @@ public final class Http {
             Map<String, String> headers = new LinkedHashMap<>();
             for (int i = 1; i < lines.length; i++) {
                 int colon = lines[i].indexOf(':');
-                headers.put(lines[i].substring(0, colon).trim().toLowerCase(Locale.ROOT), lines[i].substring(colon + 1).trim());
+                headers.put(
+                        lines[i].substring(0, colon).trim().toLowerCase(Locale.ROOT),
+                        lines[i].substring(colon + 1).trim());
             }
             String body = response.substring(headerEnd + 4);
             if ("chunked".equalsIgnoreCase(headers.get("transfer-encoding"))) {
@@ -141,7 +152,8 @@ public final class Http {
             int at = 0;
             while (at < bytes.length) {
                 int lineEnd = indexOf(bytes, at);
-                int size = Integer.parseInt(new String(bytes, at, lineEnd - at, StandardCharsets.US_ASCII).split(";")[0].trim(), 16);
+                int size = Integer.parseInt(
+                        new String(bytes, at, lineEnd - at, StandardCharsets.US_ASCII).split(";")[0].trim(), 16);
                 if (size == 0) {
                     break;
                 }

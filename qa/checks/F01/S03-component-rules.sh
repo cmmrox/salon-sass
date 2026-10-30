@@ -21,7 +21,7 @@ COPY="$SCRATCH/repository/apps/web"
 cleanup() { rm -rf "$SCRATCH"; }
 trap cleanup EXIT
 
-COMPOSITION="src/components/composition.test.tsx"
+COMPOSITION="src/app/composition.test.tsx"
 FRESHNESS="src/lib/plain-page/plain-page-css.test.ts"
 GENERATED="src/lib/plain-page/plain-page.generated.css"
 CLASSES="src/lib/plain-page/classes.ts"
@@ -69,11 +69,11 @@ expect_equal "$FRESHNESS on the unaltered committed copy (exit)" 0 "$TEST_EXIT"
 expect_matches "it executed its test" 'Tests +[0-9]+ passed' "$(cat "$TEST_LOG")"
 
 # The composition test: a raw control, a Native Select and a raw <select> in product components.
-altered raw-button "$COMPOSITION" src/components/shell/AppShell.tsx \
+altered raw-button "$COMPOSITION" src/components/shared/AppShell.tsx \
   "s.replace('<main className=\"w-full max-w-content\">{children}</main>', '<main className=\"w-full max-w-content\"><button type=\"button\">x</button>{children}</main>', 1)"
 altered native-select-import "$COMPOSITION" src/app/not-found.tsx \
   "\"import { NativeSelect } from '@/components/ui/native-select';\\n\" + s"
-altered raw-select "$COMPOSITION" src/components/account/AccountScreen.tsx \
+altered raw-select "$COMPOSITION" src/features/identity/components/AccountScreen.tsx \
   "s.replace('return (', 'const qaProbe = <select aria-label=\"x\" />;\\n  return (', 1)"
 # The freshness test: a hand edit of the generated CSS, and a class added without regenerating.
 altered generated-hand-edit "$FRESHNESS" "$GENERATED" "s + '\\n.qa-hand-edit { margin: 1px; }\\n'" "qa-hand-edit"

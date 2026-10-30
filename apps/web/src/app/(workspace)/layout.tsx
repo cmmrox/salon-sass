@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { headers } from 'next/headers';
 import type { ReactNode } from 'react';
-import { decodeSalon, SALON_HEADER } from '@/lib/tenancy/salon-header';
+import { decodeSalon, SALON_HEADER } from '@/features/branding/server';
 
 /**
  * Salon staff pages block on the server (CR-013): entry is decided from the request's session
@@ -15,4 +15,6 @@ export async function generateMetadata(): Promise<Metadata> {
   return salon ? { title: salon.name } : {};
 }
 /** Salon staff pages share the salon-branded responsive workspace frame. */
-export default function WorkspaceLayout({ children }: { children: ReactNode }) { return children; }
+export default function WorkspaceLayout({ children }: { children: ReactNode }) {
+  return children;
+}

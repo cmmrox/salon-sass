@@ -2,18 +2,18 @@ package com.salonplatform.identity;
 
 import static org.assertj.core.api.Assertions.*;
 
-import com.salonplatform.identity.infrastructure.IdentityCrypto;
+import com.salonplatform.identity.adapter.IdentityCrypto;
 import com.salonplatform.testing.*;
-
-import org.junit.jupiter.api.*;
-
-import tools.jackson.databind.json.JsonMapper;
-
 import java.time.*;
 import java.util.*;
 import java.util.concurrent.*;
+import org.junit.jupiter.api.*;
+import tools.jackson.databind.json.JsonMapper;
 
 /** Real local-profile HTTP fixture. Every case begins with isolated synthetic identity state. */
+// JSON bodies are read as untyped maps (Map.class); each cast states the shape the assertion
+// beside it then checks, so a wrong shape fails that assertion with a ClassCastException.
+@SuppressWarnings("unchecked")
 abstract class CustomerHttpFixture {
     protected static StartedApplication app;
     protected static TestDatabase database;
@@ -22,13 +22,12 @@ abstract class CustomerHttpFixture {
     @BeforeAll
     static void start() {
         database = TestDatabase.createEmpty(TestPostgres.shared());
-        app =
-                database.start(
-                        "--spring.profiles.active=test,local",
-                        "--spring.flyway.locations=classpath:db/migration,classpath:db/local",
-                        "--salon.outbox.enabled=true",
-                        "--salon.outbox.poll-interval=50ms",
-                        "--salon.jobs.enabled=false");
+        app = database.start(
+                "--spring.profiles.active=test,local",
+                "--spring.flyway.locations=classpath:db/migration,classpath:db/local",
+                "--salon.outbox.enabled=true",
+                "--salon.outbox.poll-interval=50ms",
+                "--salon.jobs.enabled=false");
         json = app.bean(JsonMapper.class);
     }
 
@@ -57,20 +56,13 @@ abstract class CustomerHttpFixture {
 
     protected record Requested(UUID id, String cookie) {}
 
-    protected Http.Exchange call(
-            String salon, String method, String path, Object body, String token, String cookie) {
+    protected Http.Exchange call(String salon, String method, String path, Object body, String token, String cookie) {
         String host = (salon == null ? "localhost" : salon + ".localhost") + ":" + app.port();
         Map<String, String> headers = new HashMap<>();
         headers.put("Content-Type", "application/json");
         if (token != null) headers.put("Authorization", "Bearer " + token);
         if (cookie != null) headers.put("Cookie", cookie);
-        return app.http()
-                .sendOnHost(
-                        method,
-                        host,
-                        path,
-                        headers,
-                        body == null ? null : json.writeValueAsString(body));
+        return app.http().sendOnHost(method, host, path, headers, body == null ? null : json.writeValueAsString(body));
     }
 
     protected Map<String, Object> body(Http.Exchange response) {
@@ -88,20 +80,13 @@ abstract class CustomerHttpFixture {
     }
 
     protected Requested request(String salon, String mobile, String channel, String cookie) {
-        Http.Exchange response =
-                call(
-                        salon,
-                        "POST",
-                        "/api/v1/identity/customers/challenges",
-                        Map.of(
-                                "mobile",
-                                mobile,
-                                "channel",
-                                channel,
-                                "deviceLabel",
-                                "Synthetic browser"),
-                        null,
-                        cookie);
+        Http.Exchange response = call(
+                salon,
+                "POST",
+                "/api/v1/identity/customers/challenges",
+                Map.of("mobile", mobile, "channel", channel, "deviceLabel", "Synthetic browser"),
+                null,
+                cookie);
         status(response, 200);
         String received = response.headers().get("set-cookie");
         if (received != null) cookie = received.split(";", 2)[0];
@@ -111,14 +96,7 @@ abstract class CustomerHttpFixture {
     protected Map<String, Object> captured(String salon, Requested request) throws Exception {
         long limit = System.nanoTime() + TimeUnit.SECONDS.toNanos(12);
         while (System.nanoTime() < limit) {
-            Http.Exchange r =
-                    call(
-                            salon,
-                            "GET",
-                            "/local/identity/captures/" + request.id(),
-                            null,
-                            null,
-                            null);
+            Http.Exchange r = call(salon, "GET", "/local/identity/captures/" + request.id(), null, null, null);
             if (r.status() == 200) return body(r);
             assertThat(r.status()).isEqualTo(404);
             Thread.sleep(25);
@@ -138,8 +116,7 @@ abstract class CustomerHttpFixture {
 
     protected Map<String, Object> signIn(String salon, int number) throws Exception {
         Requested r = request(salon, mobile(number), "sms", null);
-        Http.Exchange verified =
-                verify(salon, r, (String) captured(salon, r).get("code"), r.cookie());
+        Http.Exchange verified = verify(salon, r, (String) captured(salon, r).get("code"), r.cookie());
         status(verified, 200);
         return body(verified);
     }
@@ -168,50 +145,32 @@ abstract class CustomerHttpFixture {
         account.put("password", password);
         account.put("role", role);
         if (role.equals("OWNER")) account.put("totpSecret", secret);
-        status(
-                call(
-                        "alpha",
-                        "POST",
-                        "/local/identity/seed",
-                        Map.of("accounts", List.of(account)),
-                        null,
-                        null),
-                200);
-        Http.Exchange sign =
-                call(
-                        "alpha",
-                        "POST",
-                        "/api/v1/identity/staff/sign-in",
-                        Map.of(
-                                "identifier",
-                                account.get("email"),
-                                "password",
-                                password,
-                                "deviceLabel",
-                                "Staff browser"),
-                        null,
-                        null);
+        status(call("alpha", "POST", "/local/identity/seed", Map.of("accounts", List.of(account)), null, null), 200);
+        Http.Exchange sign = call(
+                "alpha",
+                "POST",
+                "/api/v1/identity/staff/sign-in",
+                Map.of("identifier", account.get("email"), "password", password, "deviceLabel", "Staff browser"),
+                null,
+                null);
         status(sign, 200);
         Map<String, Object> result = body(sign);
-        if (result.get("credentials") != null)
-            return access((Map<String, Object>) result.get("credentials"));
+        if (result.get("credentials") != null) return access((Map<String, Object>) result.get("credentials"));
         String code =
-                app.bean(IdentityCrypto.class)
-                        .totpCode(secret, Instant.now().getEpochSecond() / 30);
-        Http.Exchange verify =
-                call(
-                        "alpha",
-                        "POST",
-                        "/api/v1/identity/staff/mfa/verify",
-                        Map.of(
-                                "challengeId",
-                                result.get("challengeId"),
-                                "challengeToken",
-                                result.get("challengeToken"),
-                                "code",
-                                code),
-                        null,
-                        null);
+                app.bean(IdentityCrypto.class).totpCode(secret, Instant.now().getEpochSecond() / 30);
+        Http.Exchange verify = call(
+                "alpha",
+                "POST",
+                "/api/v1/identity/staff/mfa/verify",
+                Map.of(
+                        "challengeId",
+                        result.get("challengeId"),
+                        "challengeToken",
+                        result.get("challengeToken"),
+                        "code",
+                        code),
+                null,
+                null);
         status(verify, 200);
         return access(body(verify));
     }

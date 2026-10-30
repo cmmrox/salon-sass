@@ -5,7 +5,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CADDY_IMAGE="caddy:2.11.7-alpine"
-NODE_IMAGE="node:24.21.0-alpine3.24"
+NODE_IMAGE="node:24.22.2-alpine3.24"
 suffix="$$"
 network="salon-edge-health-test-${suffix}"
 mock="salon-edge-health-mock-${suffix}"

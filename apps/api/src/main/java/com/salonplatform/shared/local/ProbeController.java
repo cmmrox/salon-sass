@@ -1,14 +1,12 @@
 package com.salonplatform.shared.local;
 
-import java.net.URI;
-import java.util.UUID;
-
-import com.salonplatform.shared.api.NotFoundException;
+import com.salonplatform.shared.local.dto.CreateProbe;
+import com.salonplatform.shared.local.dto.ProbeView;
+import com.salonplatform.shared.web.NotFoundException;
 import io.swagger.v3.oas.annotations.Hidden;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
-
+import java.net.URI;
+import java.util.UUID;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -35,23 +33,18 @@ class ProbeController {
         this.probes = probes;
     }
 
-    /** What the probe's provider is told to do. Every field is optional. */
-    record CreateProbe(
-            @Min(0) @Max(50) Integer failures,
-            @Min(0) @Max(60000) Long delayMs,
-            Boolean abort) {
-    }
-
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
-    ResponseEntity<Probes.ProbeView> create(@Valid @RequestBody(required = false) CreateProbe body) {
+    ResponseEntity<ProbeView> create(@Valid @RequestBody(required = false) CreateProbe body) {
         CreateProbe asked = body == null ? new CreateProbe(null, null, null) : body;
-        Probes.ProbeView probe = probes.create(new Probes.Request(asked.failures() == null ? 0 : asked.failures(),
-                asked.delayMs() == null ? 0 : asked.delayMs(), Boolean.TRUE.equals(asked.abort())));
+        ProbeView probe = probes.create(new Probes.Request(
+                asked.failures() == null ? 0 : asked.failures(),
+                asked.delayMs() == null ? 0 : asked.delayMs(),
+                Boolean.TRUE.equals(asked.abort())));
         return ResponseEntity.created(URI.create("/local/probes/" + probe.id())).body(probe);
     }
 
     @GetMapping("/{id}")
-    Probes.ProbeView read(@PathVariable String id) {
+    ProbeView read(@PathVariable String id) {
         return probes.find(parse(id)).orElseThrow(NotFoundException::new);
     }
 
@@ -59,8 +52,7 @@ class ProbeController {
     private static UUID parse(String id) {
         try {
             return UUID.fromString(id);
-        }
-        catch (IllegalArgumentException ex) {
+        } catch (IllegalArgumentException ex) {
             throw new NotFoundException();
         }
     }

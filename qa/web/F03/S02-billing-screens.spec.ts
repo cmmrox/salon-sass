@@ -60,7 +60,9 @@ test(`${id(21)} Every staff member sees the state banner and the Owner sees Plan
   const owner = await ownerSession(identity, salon, input);
   const receptionist = await identity.staff(salon, 'RECEPTIONIST');
   const trialEnd = (await operator.subscription(admin, created.id)).trialEndsAt;
-  await clock.set(plusMs(trialEnd, -3 * DAY - SECOND));
+  // The test clock runs on after it is set, and two sign-ins and four pages follow: a minute before the
+  // three-day window keeps every page before it (one second was too little on a busy machine).
+  await clock.set(plusMs(trialEnd, -3 * DAY - 60 * SECOND));
   let actors = await signedIn(identity, owner, receptionist);
   for (const actor of [actors.owner, actors.receptionist]) await bannerOn(accounts, actor, null);
   await clock.set(plusMs(trialEnd, -3 * DAY + 60 * SECOND));

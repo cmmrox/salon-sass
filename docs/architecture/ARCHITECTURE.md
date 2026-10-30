@@ -43,19 +43,34 @@ row-level security does not already give.
 | Address | Serves |
 | --- | --- |
 | A subdomain of the platform per salon | That salon's staff workspace under `/workspace`; root enters it |
-| A domain the salon owns (later release) | The same, through a custom-hostname service at the edge that issues the certificate |
+| A domain the salon owns (later release) | The same, resolved by the API from a verified `tenant_domain` row; Caddy issues its certificate on demand. Design in `docs/architecture/multi-tenancy.md`, "Domains a salon owns" |
 | A reserved console hostname | The operator console; never resolves to a tenant |
 
 The tenant is resolved on the server from the hostname or the signed token. The web app's request
 proxy routes by hostname but is not a security boundary.
 
+## Modules and how they could be separated
+
+The API is a modular monolith (CR-021). Each business module offers its services to other modules
+through provided interfaces of records, tells them about changes through versioned events written
+to the tenant-aware outbox, and owns its tables and its `/api/v1` paths. Spring Modulith and
+architecture tests hold these boundaries in the build. The web app is organised by the same modules.
+
+This keeps a later split cheap without paying for it now: a module could run as its own service
+behind the same edge, with Caddy routing its paths and the clients unchanged, its provided
+interfaces implemented by an HTTP client adapter, and its events carried by the same outbox. Nothing
+is split until there is a measured reason (failure isolation, a different scaling profile, a separate
+team). The first step would be the same jar run as a separate worker for the outbox and jobs; the
+first candidates are `notification`, then `reporting`. Rules: `docs/engineering/backend.md`.
+
 ## Booking integrity
 
 A hold and a booking are one kind of record in different states. A PostgreSQL exclusion constraint
 forbids two active records for the same salon and professional with overlapping times, so the
-database refuses a double booking even under simultaneous requests. Confirming a payment, converting
-the hold and scheduling notifications happen in one transaction; messages are sent afterwards from
-the outbox.
+database refuses a double booking even under simultaneous requests. Confirming a payment and
+converting the hold happen in one transaction, which also writes a `BookingConfirmed` event to the
+outbox; notifications are scheduled when that event is consumed, and messages are sent afterwards
+from the outbox.
 
 ## Customer app distribution
 

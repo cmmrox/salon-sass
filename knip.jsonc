@@ -1,0 +1,27 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema-jsonc.json",
+  "workspaces": {
+    // The root holds only the workspace's tooling configuration; qa/ is QA's own package and lock file.
+    ".": {
+      "entry": [],
+      "project": ["*.{js,mjs,ts}"],
+    },
+    "apps/web": {
+      // Run by infra/scripts and the build, outside Next.js's own entries: the local server, its key
+      // loading and the build's artifact scan.
+      "entry": ["scripts/*.mjs"],
+    },
+    "packages/api-contracts": {
+      // The generator, and a fixture the type check compiles to prove each module entry's paths.
+      "entry": ["scripts/*.mjs", "test/module-boundaries.ts"],
+    },
+  },
+  "ignoreIssues": {
+    // Generated from the OpenAPI document and checked by pnpm contracts:check.
+    "packages/api-contracts/src/generated/**": ["exports", "types"],
+    // shadcn/ui components keep the CLI's full set of parts (docs/engineering/web.md, "Styling").
+    "apps/web/src/components/ui/**": ["exports"],
+  },
+  // CI runs the workspace scripts as `pnpm -r lint` and `pnpm -r typecheck`, which knip reads as binaries.
+  "ignoreBinaries": ["lint", "typecheck"],
+}

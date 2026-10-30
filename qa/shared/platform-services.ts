@@ -10,7 +10,7 @@ import { expect } from './fixtures';
 export type Probe = {id:string;status:string;attempts:number;providerCalls:number;nextAttemptAt:string|null;lastError:string|null;createdAt:string;createdAtLocal:string;sentAt:string|null;audit:{action:string;occurredAt:string;actorKind:string;after:Record<string,unknown>;traceId:string}[]};
 export const logs = () => fs.readFileSync(path.join(PRODUCT_ROOT,'.local/logs/api.log'),'utf8').split('\n').filter(Boolean).map(line=>ecsRecord(JSON.parse(line)));
 export function sql(query:string, role='salon', strict=true):string {
-  return execFileSync('docker',['exec','-i','salon-postgres','psql','-U',role,'-d','salon','-X','-qAt',...(strict?['-v','ON_ERROR_STOP=1']:[])],{input:query,encoding:'utf8'}).trim();
+  return execFileSync('docker',['exec','-i','salon-postgres','psql','-U',role,'-d',process.env.SALON_DB_NAME??'salon','-X','-qAt',...(strict?['-v','ON_ERROR_STOP=1']:[])],{input:query,encoding:'utf8'}).trim();
 }
 export const service=(action:string,name:string, env?:Record<string,string>) => execFileSync(path.join(PRODUCT_ROOT,'infra/scripts/local-service.sh'),[action,name],{cwd:PRODUCT_ROOT,env:{...process.env,...env},timeout:180000,stdio:'pipe'});
 export async function clock(api:ApiClient,instant?:string){const r=await api.send(instant?'PUT':'DELETE','/local/clock',{headers:{'Content-Type':'application/json'},data:instant?JSON.stringify({instant}):undefined});expect(r.status()).toBe(200);return r.json();}

@@ -19,7 +19,7 @@ Requirement text is in `docs/brd/requirements.yaml`.
 | Payment operations: payment links, day-end summary, reconciliation, late fees | PAY-09, PAY-10, PAY-11, PAY-12 |
 | Customer insight: segments and blocking | CRM-07, CRM-08 |
 | Deeper reports | REP-05, REP-06 |
-| Custom domains and app links | BRD-11, BRD-12 |
+| Custom domains and app links (design approved in CR-021: `docs/architecture/multi-tenancy.md`, "Domains a salon owns") | BRD-11, BRD-12 |
 
 ## Release 3 candidates
 

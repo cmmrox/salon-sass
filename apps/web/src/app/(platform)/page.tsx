@@ -1,8 +1,8 @@
 import { Suspense } from 'react';
 
-import { AppShell } from '@/components/shell/AppShell';
-import { LiveStatus } from '@/components/status/LiveStatus';
-import { StatusBody, StatusPanel } from '@/components/status/Status';
+import { AppShell } from '@/components/shared/AppShell';
+import { LiveStatus } from '@/components/shared/LiveStatus';
+import { StatusBody, StatusPanel } from '@/components/shared/Status';
 
 const HOME = '/';
 

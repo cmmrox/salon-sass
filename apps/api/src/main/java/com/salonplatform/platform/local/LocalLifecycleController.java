@@ -1,31 +1,38 @@
 package com.salonplatform.platform.local;
 
+import com.salonplatform.platform.dto.DeletionInterrupt;
+import com.salonplatform.platform.dto.DeletionJobPass;
+import com.salonplatform.platform.dto.ExportInterrupt;
+import com.salonplatform.platform.dto.ExportJobPass;
+import com.salonplatform.platform.dto.JobCounts;
+import com.salonplatform.platform.dto.LifecycleInterruptRequest;
+import com.salonplatform.platform.dto.LocalResetResult;
+import com.salonplatform.platform.dto.OutboxCounts;
+import com.salonplatform.platform.dto.SalonBackground;
+import com.salonplatform.platform.repository.SalonLifecycleStore;
+import com.salonplatform.platform.service.SalonDeletionService;
+import com.salonplatform.platform.service.SalonExportService;
+import com.salonplatform.shared.jobs.TenantJobActivity;
+import com.salonplatform.shared.outbox.SalonMessageCounts;
+import com.salonplatform.shared.persistence.PlatformDatabase;
+import com.salonplatform.shared.tenancy.CurrentTenant;
+import com.salonplatform.shared.tenancy.TenantContext;
+import com.salonplatform.shared.web.ApplicationProblemException;
+import com.salonplatform.shared.web.ErrorCode;
+import com.salonplatform.shared.web.FieldProblem;
+import com.salonplatform.shared.web.NotFoundException;
+import io.swagger.v3.oas.annotations.Hidden;
+import jakarta.servlet.http.HttpServletRequest;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.time.Clock;
 import java.time.ZoneId;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-
-import com.salonplatform.platform.application.SalonDeletion;
-import com.salonplatform.platform.application.SalonExports;
-import com.salonplatform.shared.api.ApplicationProblemException;
-import com.salonplatform.shared.api.ErrorCode;
-import com.salonplatform.shared.api.FieldProblem;
-import com.salonplatform.shared.api.NotFoundException;
-import com.salonplatform.shared.infrastructure.PlatformDatabase;
-import com.salonplatform.shared.jobs.TenantJobActivity;
-import com.salonplatform.shared.tenancy.CurrentTenant;
-import com.salonplatform.shared.tenancy.TenantContext;
-import io.swagger.v3.oas.annotations.Hidden;
-import jakarta.servlet.http.HttpServletRequest;
-
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.CacheControl;
 import org.springframework.http.ResponseEntity;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -49,48 +56,39 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/local/operator")
 class LocalLifecycleController {
 
-    private final SalonExports exports;
-    private final SalonDeletion deletion;
+    private final SalonExportService exports;
+    private final SalonDeletionService deletion;
     private final LocalLifecycleFaults faults;
     private final LocalReset reset;
     private final PlatformDatabase database;
-    private final JdbcTemplate tenantJdbc;
+    private final SalonLifecycleStore lifecycles;
+    private final SalonMessageCounts messages;
     private final TransactionTemplate tenantReads;
     private final TenantJobActivity activity;
     private final Clock clock;
 
-    LocalLifecycleController(SalonExports exports, SalonDeletion deletion, LocalLifecycleFaults faults, LocalReset reset,
-            PlatformDatabase database, JdbcTemplate tenantJdbc, PlatformTransactionManager tenantTransactions,
-            TenantJobActivity activity, Clock clock) {
+    LocalLifecycleController(
+            SalonExportService exports,
+            SalonDeletionService deletion,
+            LocalLifecycleFaults faults,
+            LocalReset reset,
+            PlatformDatabase database,
+            SalonLifecycleStore lifecycles,
+            SalonMessageCounts messages,
+            PlatformTransactionManager tenantTransactions,
+            TenantJobActivity activity,
+            Clock clock) {
         this.exports = exports;
         this.deletion = deletion;
         this.faults = faults;
         this.reset = reset;
         this.database = database;
-        this.tenantJdbc = tenantJdbc;
+        this.lifecycles = lifecycles;
+        this.messages = messages;
         this.tenantReads = new TransactionTemplate(tenantTransactions);
         this.tenantReads.setReadOnly(true);
         this.activity = activity;
         this.clock = clock;
-    }
-
-    record InterruptRequest(Integer afterTables, Integer afterBatches) {
-    }
-
-    record ExportInterrupt(Integer afterTables) {
-    }
-
-    record DeletionInterrupt(Integer afterBatches) {
-    }
-
-    record Outbox(long waiting, long delivered, long cancelled, long dead) {
-    }
-
-    record Jobs(long due, long run, long skipped, long failed, java.time.Instant lastRunAt,
-            java.time.Instant lastSkippedAt) {
-    }
-
-    record Background(UUID salonId, String status, String accessState, Outbox outbox, Jobs jobs) {
     }
 
     private static <T> ResponseEntity<T> ok(T body) {
@@ -99,25 +97,27 @@ class LocalLifecycleController {
 
     /** One export pass, now, at the application clock's instant (the test clock when it is set). */
     @PostMapping("/exports/run")
-    ResponseEntity<SalonExports.Pass> runExport(HttpServletRequest http) {
+    ResponseEntity<ExportJobPass> runExport(HttpServletRequest http) {
         loopback(http);
         return ok(exports.run(clock.instant()));
     }
 
     /** One deletion pass, now, at the application clock's instant. */
     @PostMapping("/deletions/run")
-    ResponseEntity<SalonDeletion.Pass> runDeletion(HttpServletRequest http) {
+    ResponseEntity<DeletionJobPass> runDeletion(HttpServletRequest http) {
         loopback(http);
         return ok(deletion.run(clock.instant()));
     }
 
     @PutMapping("/exports/interrupt")
-    ResponseEntity<ExportInterrupt> interruptExport(@RequestBody(required = false) InterruptRequest request,
-            HttpServletRequest http) {
+    ResponseEntity<ExportInterrupt> interruptExport(
+            @RequestBody(required = false) LifecycleInterruptRequest request, HttpServletRequest http) {
         loopback(http);
         Integer after = request == null ? null : request.afterTables();
         if (after != null && (after < 1 || after > 1000)) {
-            throw new ApplicationProblemException(400, ErrorCode.BAD_REQUEST,
+            throw new ApplicationProblemException(
+                    400,
+                    ErrorCode.BAD_REQUEST,
                     List.of(new FieldProblem("afterTables", "must be from 1 to 1000, or null")));
         }
         faults.armExport(after);
@@ -131,12 +131,14 @@ class LocalLifecycleController {
     }
 
     @PutMapping("/deletions/interrupt")
-    ResponseEntity<DeletionInterrupt> interruptDeletion(@RequestBody(required = false) InterruptRequest request,
-            HttpServletRequest http) {
+    ResponseEntity<DeletionInterrupt> interruptDeletion(
+            @RequestBody(required = false) LifecycleInterruptRequest request, HttpServletRequest http) {
         loopback(http);
         Integer after = request == null ? null : request.afterBatches();
         if (after != null && (after < 1 || after > 100000)) {
-            throw new ApplicationProblemException(400, ErrorCode.BAD_REQUEST,
+            throw new ApplicationProblemException(
+                    400,
+                    ErrorCode.BAD_REQUEST,
                     List.of(new FieldProblem("afterBatches", "must be from 1 to 100000, or null")));
         }
         faults.armDeletion(after);
@@ -155,32 +157,35 @@ class LocalLifecycleController {
      * skipped (while suspended) and failed since the API started. Counts only.
      */
     @GetMapping("/salons/{salonId}/background")
-    ResponseEntity<Background> background(@PathVariable UUID salonId, HttpServletRequest http) throws Exception {
+    ResponseEntity<SalonBackground> background(@PathVariable UUID salonId, HttpServletRequest http) throws Exception {
         loopback(http);
-        Map<String, Object> salon = database.inTransaction(status -> database.jdbc().queryForList("""
-                SELECT slug, status, access_state, time_zone FROM tenant WHERE id = ?
-                """, salonId).stream().findFirst().orElseThrow(NotFoundException::new));
-        CurrentTenant tenant = new CurrentTenant(salonId, (String) salon.get("slug"),
-                ZoneId.of((String) salon.get("time_zone")));
-        Map<String, Long> counts = TenantContext.callAs(tenant, () -> tenantReads.execute(status -> {
-            Map<String, Long> byStatus = new HashMap<>();
-            tenantJdbc.query("SELECT status, count(*) AS n FROM outbox_message WHERE tenant_id = ? GROUP BY status",
-                    row -> {
-                        byStatus.put(row.getString("status"), row.getLong("n"));
-                    }, salonId);
-            return byStatus;
-        }));
+        SalonLifecycleStore.State salon =
+                database.inTransaction(status -> lifecycles.state(salonId).orElseThrow(NotFoundException::new));
+        CurrentTenant tenant = new CurrentTenant(salonId, salon.slug(), ZoneId.of(salon.timeZone()));
+        Map<String, Long> counts =
+                TenantContext.callAs(tenant, () -> tenantReads.execute(status -> messages.byStatus(salonId)));
         TenantJobActivity.Counts jobs = activity.of(salonId);
-        return ok(new Background(salonId, (String) salon.get("status"), (String) salon.get("access_state"),
-                new Outbox(counts.getOrDefault("pending", 0L) + counts.getOrDefault("sending", 0L),
-                        counts.getOrDefault("sent", 0L), counts.getOrDefault("cancelled", 0L),
+        return ok(new SalonBackground(
+                salonId,
+                salon.status(),
+                salon.accessState(),
+                new OutboxCounts(
+                        counts.getOrDefault("pending", 0L) + counts.getOrDefault("sending", 0L),
+                        counts.getOrDefault("sent", 0L),
+                        counts.getOrDefault("cancelled", 0L),
                         counts.getOrDefault("dead", 0L)),
-                new Jobs(jobs.due(), jobs.run(), jobs.skipped(), jobs.failed(), jobs.lastRunAt(), jobs.lastSkippedAt())));
+                new JobCounts(
+                        jobs.due(),
+                        jobs.run(),
+                        jobs.skipped(),
+                        jobs.failed(),
+                        jobs.lastRunAt(),
+                        jobs.lastSkippedAt())));
     }
 
     /** Back to the synthetic baseline (see {@link LocalReset}). */
     @PostMapping("/reset")
-    ResponseEntity<LocalReset.Result> reset(HttpServletRequest http) {
+    ResponseEntity<LocalResetResult> reset(HttpServletRequest http) {
         loopback(http);
         return ok(reset.reset());
     }
@@ -190,8 +195,7 @@ class LocalLifecycleController {
             if (!InetAddress.getByName(request.getRemoteAddr()).isLoopbackAddress()) {
                 throw new NotFoundException();
             }
-        }
-        catch (UnknownHostException ex) {
+        } catch (UnknownHostException ex) {
             throw new NotFoundException();
         }
     }

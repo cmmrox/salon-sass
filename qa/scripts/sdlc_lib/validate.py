@@ -31,10 +31,16 @@ def _automation(scope):
     return [e for e in _list(_verification(scope).get("automation")) if isinstance(e, dict)]
 
 
+def entry_covers(entry):
+    """The cases an automation entry proves: listed under covers (F01 to F03), or else named in
+    its tests' titles."""
+    return _list(entry.get("covers")) or _list(entry.get("_covers"))
+
+
 def _covered_cases(scope):
     covered = set()
     for entry in _automation(scope):
-        covered.update(_list(entry.get("covers")))
+        covered.update(entry_covers(entry))
     return covered
 
 
@@ -66,30 +72,54 @@ def check_requirements(bundle):
 
 # --- cases, automation, bugs: shared by stages and features -----------------------------
 
+def declared_cases(scope):
+    """A scope's cases: its yaml list (F01 to F03, with cases.md), or else the cases named in its
+    tests' titles plus its manual and deferred entries (decision 068)."""
+    if "_title_cases" not in scope:
+        return [c for c in _list(scope.get("cases")) if isinstance(c, dict)]
+    cases = {}
+    for case in scope["_title_cases"]:
+        known = cases.setdefault(case["id"], {"id": case["id"], "covers": []})
+        known["covers"] += [c for c in case["covers"] if c not in known["covers"]]
+    for key in ("manual", "deferred"):
+        for entry in _case_refs(scope, key):
+            cases.setdefault(entry.get("case"), {"id": entry.get("case"), "covers": _list(entry.get("covers"))})
+    return list(cases.values())
+
+
 def check_cases(scope, scope_id, cover_targets, target_name):
     findings = []
-    cases = [c for c in _list(scope.get("cases")) if isinstance(c, dict)]
+    titled = "_title_cases" in scope
+    cases = declared_cases(scope)
     ids = [c.get("id") for c in cases]
+    if titled:
+        files = {}
+        for case in scope["_title_cases"]:
+            files.setdefault(case["id"], set()).add(case["file"])
+        for cid, paths in sorted(files.items()):
+            if len(paths) > 1:
+                _add(findings, scope, f"case {cid} is the title of tests in {len(paths)} files; one test proves one case")
     for case in cases:
         cid = case.get("id") or ""
         match = S.CASE_ID_RE.match(cid)
         if not match or match.group(1) != scope_id:
             _add(findings, scope, f"case id '{cid}' must look like TC-{scope_id}-001")
-        if ids.count(cid) > 1:
-            _add(findings, scope, f"case {cid} is declared more than once")
-        if case.get("type") not in S.CASE_TYPES:
-            _add(findings, scope, f"case {cid} has type '{case.get('type')}', expected one of {S.CASE_TYPES}")
-        if case.get("priority") not in S.CASE_PRIORITIES:
-            _add(findings, scope, f"case {cid} has priority '{case.get('priority')}', expected one of {S.CASE_PRIORITIES}")
-        if not case.get("title"):
-            _add(findings, scope, f"case {cid} has no title")
+        if not titled:  # a yaml case carries its own description; a titled test is its own
+            if ids.count(cid) > 1:
+                _add(findings, scope, f"case {cid} is declared more than once")
+            if case.get("type") not in S.CASE_TYPES:
+                _add(findings, scope, f"case {cid} has type '{case.get('type')}', expected one of {S.CASE_TYPES}")
+            if case.get("priority") not in S.CASE_PRIORITIES:
+                _add(findings, scope, f"case {cid} has priority '{case.get('priority')}', expected one of {S.CASE_PRIORITIES}")
+            if not case.get("title"):
+                _add(findings, scope, f"case {cid} has no title")
         if cover_targets is not None:
             for target in _list(case.get("covers")):
                 if target not in cover_targets:
                     _add(findings, scope, f"case {cid} covers '{target}', which is not a {target_name} of {scope_id}")
 
     documented = scope.get("_cases_md")
-    if cases and documented is None:
+    if not titled and cases and documented is None:
         _add(findings, scope, "cases are declared but cases.md does not exist")
     if documented is not None:
         for cid in sorted(set(ids) - set(documented)):
@@ -105,9 +135,10 @@ def check_cases(scope, scope_id, cover_targets, target_name):
             _add(findings, scope, f"automation {eid} has tool '{entry.get('tool')}', expected one of {S.TOOLS}")
         if not entry.get("file"):
             _add(findings, scope, f"automation {eid} names no file")
-        if not _list(entry.get("covers")):
-            _add(findings, scope, f"automation {eid} covers no case; automation that proves nothing is not coverage")
-        for cid in _list(entry.get("covers")):
+        if not entry_covers(entry):
+            hint = f"; name each test 'TC-{scope_id}-001 AC-1: ...'" if titled else ""
+            _add(findings, scope, f"automation {eid} covers no case; automation that proves nothing is not coverage{hint}")
+        for cid in entry_covers(entry):
             if cid not in ids:
                 _add(findings, scope, f"automation {eid} covers {cid}, which is not a declared case")
         for suite in _list(entry.get("suites")):
@@ -161,12 +192,16 @@ def blocking_bugs(scope):
 
     A bug found in a version that has already shipped (found_in_release) does not un-pass the
     released work it was found in; it is fixed as a hotfix and gates the next release instead.
+    Likewise a bug found after a closed feature's merge (found_after_merge, decision 068): the
+    feature stays closed and the fix ships in a later PR, so the bug gates that PR, not the
+    feature's past QA.
     """
     return [
         bug for bug in scope.get("_bugs") or []
         if bug.get("severity") in S.BLOCKING_SEVERITIES
         and bug.get("status") not in S.RESOLVED_BUG_STATUSES
         and not (scope.get("status") == "released" and bug.get("found_in_release"))
+        and not (scope.get("status") in S.CLAIMED and bug.get("found_after_merge"))
     ]
 
 
@@ -179,16 +214,12 @@ def check_qa_status(scope, scope_id):
     return findings
 
 
-def _cases(scope):
-    return [c for c in _list(scope.get("cases")) if isinstance(c, dict)]
-
-
 def check_coverage(scope, acceptance_criteria):
     """Every criterion has a case, every case is accounted for, and no blocking bug is left.
 
     acceptance_criteria is the list of AC ids for a stage, or None for a feature.
     """
-    findings, cases = [], _cases(scope)
+    findings, cases = [], declared_cases(scope)
     asserted = set()
     for case in cases:
         asserted.update(_list(case.get("covers")))
@@ -221,7 +252,7 @@ def check_qa_gate(scope, scope_id, acceptance_criteria):
     evidence = scope.get("evidence") if isinstance(scope.get("evidence"), dict) else {}
     if evidence.get("last_result") != "pass" or not evidence.get("last_run"):
         _add(findings, scope, f"{scope_id} claims a QA pass without evidence.last_run and evidence.last_result: pass")
-    if not _cases(scope):
+    if not declared_cases(scope):
         _add(findings, scope, f"{scope_id} claims a QA pass with no test cases")
     findings += check_coverage(scope, acceptance_criteria)
     if not scope.get("_has_review"):

@@ -1551,3 +1551,30 @@ requirements:
     changed_by: CR-013
     text: "The supplied HTML prototype is visual authority: Salon mode maps to the salon staff web workspace, while Customer mode is only the deferred React Native mobile design reference. Extend the mapped visual grammar for missing screens, verify responsive layouts and accessibility, and never infer a customer web application from the HTML preview. The owner-approved CR-012 mockup governs the composition of tenant staff sign-in with hostname-resolved salon identity. Sign-in and workspace share one theme, the prototype's final tokens, whose accent is the salon's brand colour with a computed readable foreground and the prototype default #D6086A when a salon has none. Entering the salon web application shows the requested screen directly, never an intermediate generic loading frame."
     target: "Reference mapping, visual assertions and independent rendered UI comparison before closure"
+  - id: NFR-22
+    module: NFR
+    priority: must
+    release: R1
+    prototype: none
+    status: active
+    area: "Extractable modules"
+    text: "Each backend business module offers its capabilities to other modules only through provided interfaces of records and through versioned, durable events; owns its tables and its API paths; and can be moved into a separate service without a change to the web or mobile clients."
+    target: "Module verification, table-ownership and API-ownership tests fail the build on a violation"
+  - id: NFR-23
+    module: NFR
+    priority: must
+    release: R1
+    prototype: none
+    status: active
+    area: "Backend code conventions"
+    text: "Backend persistence follows one convention, Spring Data JPA repositories with direct SQL only for named exceptions, and repetitive code is generated within enforced limits (Lombok allow-list, MapStruct response mappers), so that the code a developer writes is the business logic; the code meets the written clean-code standard, with one formatter and no dead or commented-out code."
+    target: "Build-time checks refuse denied Lombok annotations, unmapped fields and setters on identity fields"
+  - id: NFR-24
+    module: NFR
+    priority: must
+    release: R1
+    prototype: none
+    status: active
+    area: "Client code structure"
+    text: "Web and mobile client code is organised by the same business modules as the API, with import boundaries enforced, and shares only non-UI packages (the generated API client, formatting, messages and design tokens); the code meets the written clean-code standard, with one formatter and no unused files, exports or dependencies."
+    target: "Lint refuses an import across a feature boundary; the generated client is exported per module"

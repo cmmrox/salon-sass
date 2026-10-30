@@ -47,7 +47,8 @@ Environment: local only; the synthetic alpha, beta and gamma salons of docs/qa/t
 - **Performed as:** QA operator on synthetic local data; public caller on each salon hostname.
 - **Preconditions:** Final integrated F01 tree is committed; local product is running and all salons are active. Stack cases also require the local production-like stack seeded and its exported CA; deployment cases require versions N and N+1 from this tested tree.
 - **Steps:**
-  1. Request unknown, www, console, two-prefix and suffix-lookalike hosts.
+  1. Request unknown, www, two-prefix and suffix-lookalike hosts. (`console.<domain>` was one until F03
+     made it the operator console's host; the console's routing is proved by F03's cases.)
 - **Expected:** 404, identical safe body, no salon identifiers.
 - **Automation:** `qa/web/F01/S03-branded-shell.spec.ts`
 

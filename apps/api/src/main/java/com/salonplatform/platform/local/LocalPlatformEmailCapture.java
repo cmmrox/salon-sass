@@ -1,14 +1,13 @@
 package com.salonplatform.platform.local;
 
-import com.salonplatform.platform.application.SalonExports;
+import com.salonplatform.platform.service.SalonExportService;
 import com.salonplatform.shared.outbox.OutboxDelivery;
 import com.salonplatform.shared.outbox.OutboxLifecycle;
 import com.salonplatform.shared.outbox.OutboxProvider;
-import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.json.JsonMapper;
-
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * {@code local} only: the {@code platform-email} channel's capturing fake (F03-S03), into the same
@@ -20,10 +19,10 @@ import org.springframework.stereotype.Component;
 class LocalPlatformEmailCapture implements OutboxProvider {
 
     private final LocalEmailCapture capture;
-    private final SalonExports exports;
+    private final SalonExportService exports;
     private final JsonMapper json;
 
-    LocalPlatformEmailCapture(LocalEmailCapture capture, SalonExports exports, JsonMapper json) {
+    LocalPlatformEmailCapture(LocalEmailCapture capture, SalonExportService exports, JsonMapper json) {
         this.capture = capture;
         this.exports = exports;
         this.json = json;
@@ -37,7 +36,11 @@ class LocalPlatformEmailCapture implements OutboxProvider {
     @Override
     public void deliver(OutboxDelivery delivery) {
         JsonNode payload = json.readTree(delivery.payload());
-        capture.capture(delivery, payload,
-                exports.openLinks(payload.path("exportId").asString(), payload.path("sealedLinks").asString()));
+        capture.capture(
+                delivery,
+                payload,
+                exports.openLinks(
+                        payload.path("exportId").asString(),
+                        payload.path("sealedLinks").asString()));
     }
 }
