@@ -2,14 +2,14 @@
 id: BUG-F01-008
 title: The API production image ships brotli-libs 1.2.0-r1 with a fixable critical vulnerability, so the image scan refuses it
 severity: major
-status: open
+status: fixed
 found_after_merge: 2026-10-30
 found_by: TC-F01-S05-002
 breaks: AC-2
 found_on: 2026-10-30
-fixed_in: null
-fix_note: null
-developer_note: null
+fixed_in: f415df7
+fix_note: "The API runtime stage adds the Alpine floor brotli-libs>=1.2.1-r0 beside libexpat's (the BUG-F01-006 pattern), failing the build if absent; 0dbe7d2 also moves the web image to Node.js 24.22.2, whose built-in brotli carries the same CVE's fix. images-scan.sh exits 0 for both images."
+developer_note: "Reproduced by scanning salon-api:7049bf21a1e6 (exit 1, one CRITICAL). The web image had no brotli-libs package but Node 24.21.0 builds in brotli 1.2.0, invisible to the scan; Node 24.22.1 LTS (security release, 2026-10-21) names CVE-2026-111497 in its changelog, so 0dbe7d2 pins node:24.22.2-alpine3.24 (the lead's direction). Remove the brotli-libs floor once the Temurin tag carries 1.2.1-r0. Gates at 0dbe7d2 (complete logs in /Users/cmmrox/Personal/Projects/salon-sass-bugfix/build/regression-bugfix-evidence/gates, summary.txt): ./mvnw -q verify exit 0 (864 tests; three earlier runs failed only OperatorAccessIntegrationTest.simultaneousAttemptsOnOneEmailCountEveryAttempt under load averages 10-40, which passes alone and with the new tests run first, and base fbab6d0 passed at the same time), pnpm -r lint/typecheck/test exit 0 (web 700/700 on retry after load timeouts), web build, format:check, knip, contracts:check, lint-workflows, images-build, images-scan, test-edge-health-tolerance, test-script-prerequisites, sdlc selftest exit 0."
 verified_on: null
 approved_by: null
 found_in_release: null
