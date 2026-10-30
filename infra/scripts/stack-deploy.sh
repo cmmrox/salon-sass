@@ -67,6 +67,29 @@ if ! stack_compose --profile migrate run --rm --no-deps migrate >"$log" 2>&1; th
   fail "the migrations of version $version failed (see .stack/logs/migrate-$version.log). No instance was replaced; the stack keeps serving what it served."
 fi
 
+# web-surge exists only while a deployment runs: one left by an earlier deployment that was
+# interrupted is removed now, whatever this one replaces, and this one removes its own when it ends,
+# failed or not, so that no instance on another version stays in the rotation.
+remove_surge() {
+  stack_compose --profile surge stop --timeout 45 web-surge >>"$STACK_LOG_DIR/deploy.log" 2>&1 || true
+  stack_compose --profile surge rm --force web-surge >>"$STACK_LOG_DIR/deploy.log" 2>&1 || true
+}
+if docker inspect salon-stack-web-surge >/dev/null 2>&1; then
+  say "web-surge: left by an earlier deployment; draining and removing it"
+  remove_surge
+fi
+surge=0
+end_deploy() {
+  local status=$?
+  if [ "$surge" -eq 1 ]; then
+    say "web-surge: draining and removing"
+    remove_surge
+  fi
+  rm -rf "$STACK_LOCK"
+  exit "$status"
+}
+trap end_deploy EXIT
+
 # Starts <service> on the new version and waits until it is ready and settled in the rotation.
 start_instance() { # <service> [compose options...]
   local service="$1"; shift
@@ -80,7 +103,6 @@ start_instance() { # <service> [compose options...]
   sleep "$EDGE_SETTLE_SECONDS"
 }
 
-surge=0
 for service in "${STACK_INSTANCES[@]}"; do
   if [ "$(deployed_version "$service")" = "$version" ] && container_running "$service"; then
     say "$service: already $version"
@@ -88,8 +110,8 @@ for service in "${STACK_INSTANCES[@]}"; do
   fi
   if [[ "$service" == web-* ]] && [ "$surge" -eq 0 ]; then
     instance_started=$(date +%s)
-    start_instance web-surge --profile surge
     surge=1
+    start_instance web-surge --profile surge
     say "web-surge: ready on $version ($(( $(date +%s) - instance_started )) s); three web app instances serve"
   fi
   instance_started=$(date +%s)
@@ -100,8 +122,9 @@ for service in "${STACK_INSTANCES[@]}"; do
 done
 
 if [ "$surge" -eq 1 ]; then
-  say "web-surge: draining and stopping"
-  stack_compose --profile surge stop --timeout 45 web-surge >>"$STACK_LOG_DIR/deploy.log" 2>&1
+  say "web-surge: draining and removing"
+  remove_surge
+  surge=0
 fi
 
 say "deploy: version $version is running everywhere ($(( $(date +%s) - started )) s)"

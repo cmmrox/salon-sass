@@ -99,6 +99,44 @@ stack_public_url() {
   fi
 }
 
+# --- addresses on the edge network ----------------------------------------------------------------
+
+# The fixed addresses of the edge and of every instance on the edge network, and the range Docker
+# may give everything else, from SALON_STACK_EDGE_SUBNET: printed as NAME=value lines.
+#
+# The edge proxies to these addresses and the web app calls the edge at its own, never at a name
+# (BUG-F01-009). An instance's name does not exist while it is replaced (and web-surge's while no
+# deployment runs), and Docker's DNS then asks the host's resolvers, which could answer with an
+# address outside the stack. An address of a stopped instance is simply refused. Docker gives other
+# containers addresses from the subnet's lower half only, so none can ever take one of these, which
+# are the last of the upper half: the edge's the highest.
+edge_ip() { printf '%d.%d.%d.%d' $(( ($1 >> 24) & 255 )) $(( ($1 >> 16) & 255 )) $(( ($1 >> 8) & 255 )) $(( $1 & 255 )); }
+edge_addresses() { # [subnet]
+  local subnet="${1:-$(file_setting SALON_STACK_EDGE_SUBNET)}" a b c d prefix network size top i name
+  if ! [[ "$subnet" =~ ^([0-9]{1,3})\.([0-9]{1,3})\.([0-9]{1,3})\.([0-9]{1,3})/([0-9]{1,2})$ ]]; then
+    printf 'error: SALON_STACK_EDGE_SUBNET must be an IPv4 range such as 10.89.43.0/24 (found "%s").\n' "$subnet" >&2
+    return 1
+  fi
+  a="${BASH_REMATCH[1]}" b="${BASH_REMATCH[2]}" c="${BASH_REMATCH[3]}" d="${BASH_REMATCH[4]}" prefix="${BASH_REMATCH[5]}"
+  if [ "$a" -gt 255 ] || [ "$b" -gt 255 ] || [ "$c" -gt 255 ] || [ "$d" -gt 255 ] || [ "$prefix" -lt 16 ] || [ "$prefix" -gt 26 ]; then
+    printf 'error: SALON_STACK_EDGE_SUBNET must be an IPv4 range from /16 to /26 (found "%s").\n' "$subnet" >&2
+    return 1
+  fi
+  size=$(( 1 << (32 - prefix) ))
+  network=$(( ((a << 24) | (b << 16) | (c << 8) | d) & ~(size - 1) & 0xFFFFFFFF ))
+  if [ "$network" -ne $(( (a << 24) | (b << 16) | (c << 8) | d )) ]; then
+    printf 'error: SALON_STACK_EDGE_SUBNET must start at its network address (found "%s").\n' "$subnet" >&2
+    return 1
+  fi
+  printf 'SALON_STACK_EDGE_DYNAMIC_RANGE=%s/%d\n' "$(edge_ip "$network")" $(( prefix + 1 ))
+  top=$(( network + size - 2 )) # the last address before the broadcast address
+  i=0
+  for name in EDGE API_1 API_2 WEB_1 WEB_2 WEB_SURGE; do
+    printf 'SALON_STACK_%s_ADDRESS=%s\n' "$name" "$(edge_ip $(( top - i )))"
+    i=$(( i + 1 ))
+  done
+}
+
 # Docker Compose for the stack, with the stack's environment file and the versions deployed, and an
 # otherwise empty environment. Leading NAME=value arguments are put in that environment, for a
 # command that hands a value to a container by name (`exec -e NAME`) without it appearing on any
@@ -113,6 +151,12 @@ stack_compose() {
     pass+=("$1")
     shift
   done
+  # The addresses on the edge network (edge_addresses); without a valid subnet Compose itself says
+  # which setting is missing.
+  local addresses line
+  if addresses="$(edge_addresses 2>/dev/null)"; then
+    while IFS= read -r line; do pass+=("$line"); done <<<"$addresses"
+  fi
   local -a files=(--profile "$SALON_STACK_ENV" --env-file "$STACK_ENV_FILE")
   [ -f "$STACK_DEPLOYED" ] && files+=(--env-file "$STACK_DEPLOYED")
   env -i "${pass[@]}" docker compose -p "$STACK_PROJECT" -f "$STACK_COMPOSE_FILE" "${files[@]}" "$@"
@@ -122,6 +166,7 @@ stack_compose() {
 # required setting of every service (infra/stack/compose.yaml) before it starts anything.
 require_settings() {
   local problem
+  edge_addresses >/dev/null || { printf 'Nothing was started. Every setting is described in .env.stack.example.\n' >&2; exit 1; }
   if ! problem="$(stack_compose --profile migrate config --quiet 2>&1)"; then
     # Compose names the setting once for every place it is used; it is said once.
     printf 'error: the stack cannot start: %s\n' "$(printf '%s\n' "$problem" | sed 's/^error while interpolating [^:]*: //' | awk '!seen[$0]++')" >&2

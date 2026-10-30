@@ -52,9 +52,10 @@ x-web: &web
   stop_grace_period: 45s
   environment:
     SALON_PLATFORM_DOMAIN: ${SALON_PLATFORM_DOMAIN:?SALON_PLATFORM_DOMAIN is required (.env.stack.example)}
-    # The API's one address: the edge's internal listener, which spreads calls over both API
-    # instances and passes the salon's hostname on unchanged.
-    SALON_API_BASE_URL: http://edge:8080
+    # The edge's fixed address, never a name (infra/scripts/lib/stack.sh, edge_addresses): the
+    # internal listener, which spreads calls over both API instances and passes the salon's
+    # hostname on unchanged.
+    SALON_API_BASE_URL: http://${SALON_STACK_EDGE_ADDRESS:?set by infra/scripts from SALON_STACK_EDGE_SUBNET}:8080
     SALON_IDENTITY_PROXY_KEY: ${SALON_IDENTITY_PROXY_KEY:?SALON_IDENTITY_PROXY_KEY is a required secret}
     SALON_OPERATOR_PROXY_KEY: ${SALON_OPERATOR_PROXY_KEY:?SALON_OPERATOR_PROXY_KEY is a required secret}
     SALON_WEB_LOCAL_HTTP: ${SALON_WEB_LOCAL_HTTP:?SALON_WEB_LOCAL_HTTP must be explicit}
@@ -105,6 +106,10 @@ services:
     <<: *api
     image: ${SALON_IMAGE_PREFIX:-}salon-api:${SALON_API_1_VERSION:?SALON_API_1_VERSION is set by infra/scripts}
     container_name: salon-stack-api-1
+    networks:
+      edge:
+        ipv4_address: ${SALON_STACK_API_1_ADDRESS:?set by infra/scripts from SALON_STACK_EDGE_SUBNET}
+      data: {}
     environment:
       <<: *api-environment
       # Which instance a span or a meter came from.
@@ -114,6 +119,10 @@ services:
     <<: *api
     image: ${SALON_IMAGE_PREFIX:-}salon-api:${SALON_API_2_VERSION:?SALON_API_2_VERSION is set by infra/scripts}
     container_name: salon-stack-api-2
+    networks:
+      edge:
+        ipv4_address: ${SALON_STACK_API_2_ADDRESS:?set by infra/scripts from SALON_STACK_EDGE_SUBNET}
+      data: {}
     environment:
       <<: *api-environment
       # Which instance a span or a meter came from.
@@ -123,11 +132,17 @@ services:
     <<: *web
     image: ${SALON_IMAGE_PREFIX:-}salon-web:${SALON_WEB_1_VERSION:?SALON_WEB_1_VERSION is set by infra/scripts}
     container_name: salon-stack-web-1
+    networks:
+      edge:
+        ipv4_address: ${SALON_STACK_WEB_1_ADDRESS:?set by infra/scripts from SALON_STACK_EDGE_SUBNET}
 
   web-2:
     <<: *web
     image: ${SALON_IMAGE_PREFIX:-}salon-web:${SALON_WEB_2_VERSION:?SALON_WEB_2_VERSION is set by infra/scripts}
     container_name: salon-stack-web-2
+    networks:
+      edge:
+        ipv4_address: ${SALON_STACK_WEB_2_ADDRESS:?set by infra/scripts from SALON_STACK_EDGE_SUBNET}
 
   # A third web app instance that runs only while stack-deploy.sh replaces web-1 and web-2: started
   # on the new version before the first is taken out and stopped after the second is back, so that
@@ -137,8 +152,13 @@ services:
   web-surge:
     <<: *web
     profiles: [surge]
+    # Only stack-deploy.sh starts it, and it removes it when a deployment ends, failed or not.
+    restart: "no"
     image: ${SALON_IMAGE_PREFIX:-}salon-web:${SALON_WEB_SURGE_VERSION:-not-deployed}
     container_name: salon-stack-web-surge
+    networks:
+      edge:
+        ipv4_address: ${SALON_STACK_WEB_SURGE_ADDRESS:?set by infra/scripts from SALON_STACK_EDGE_SUBNET}
 
   # Local development and QA use this HTTP-only edge. Staging has its own profile and Caddyfile.
   edge-http:
@@ -151,11 +171,18 @@ services:
     environment:
       SALON_PLATFORM_DOMAIN: ${SALON_PLATFORM_DOMAIN}
       SALON_EDGE_HTTP_PORT: ${SALON_EDGE_HTTP_PORT:-8089}
+      # The instances' fixed addresses, which the Caddyfile proxies to (never their names).
+      SALON_EDGE_API_1: ${SALON_STACK_API_1_ADDRESS:?set by infra/scripts from SALON_STACK_EDGE_SUBNET}
+      SALON_EDGE_API_2: ${SALON_STACK_API_2_ADDRESS:?set by infra/scripts from SALON_STACK_EDGE_SUBNET}
+      SALON_EDGE_WEB_1: ${SALON_STACK_WEB_1_ADDRESS:?set by infra/scripts from SALON_STACK_EDGE_SUBNET}
+      SALON_EDGE_WEB_2: ${SALON_STACK_WEB_2_ADDRESS:?set by infra/scripts from SALON_STACK_EDGE_SUBNET}
+      SALON_EDGE_WEB_SURGE: ${SALON_STACK_WEB_SURGE_ADDRESS:?set by infra/scripts from SALON_STACK_EDGE_SUBNET}
     volumes:
       - ./edge/Caddyfile:/etc/caddy/Caddyfile:ro
     networks:
       edge:
         aliases: [edge]
+        ipv4_address: ${SALON_STACK_EDGE_ADDRESS:?set by infra/scripts from SALON_STACK_EDGE_SUBNET}
 
   # Selected only when SALON_STACK_ENV=staging on the deployment host. Public DNS and the
   # certificate provider are configured there; local development never starts this service.
@@ -172,6 +199,12 @@ services:
       SALON_EDGE_ACME_EMAIL: ${SALON_EDGE_ACME_EMAIL:-}
       SALON_EDGE_DNS_PROVIDER: ${SALON_EDGE_DNS_PROVIDER:-}
       SALON_EDGE_DNS_CREDENTIALS: ${SALON_EDGE_DNS_CREDENTIALS:-}
+      # The instances' fixed addresses, which the Caddyfile proxies to (never their names).
+      SALON_EDGE_API_1: ${SALON_STACK_API_1_ADDRESS:?set by infra/scripts from SALON_STACK_EDGE_SUBNET}
+      SALON_EDGE_API_2: ${SALON_STACK_API_2_ADDRESS:?set by infra/scripts from SALON_STACK_EDGE_SUBNET}
+      SALON_EDGE_WEB_1: ${SALON_STACK_WEB_1_ADDRESS:?set by infra/scripts from SALON_STACK_EDGE_SUBNET}
+      SALON_EDGE_WEB_2: ${SALON_STACK_WEB_2_ADDRESS:?set by infra/scripts from SALON_STACK_EDGE_SUBNET}
+      SALON_EDGE_WEB_SURGE: ${SALON_STACK_WEB_SURGE_ADDRESS:?set by infra/scripts from SALON_STACK_EDGE_SUBNET}
     volumes:
       - ./edge/Caddyfile.staging:/etc/caddy/Caddyfile:ro
       - edge-data:/data
@@ -179,6 +212,7 @@ services:
     networks:
       edge:
         aliases: [edge]
+        ipv4_address: ${SALON_STACK_EDGE_ADDRESS:?set by infra/scripts from SALON_STACK_EDGE_SUBNET}
 
   collector:
     image: otel/opentelemetry-collector-contrib:0.162.0
@@ -205,6 +239,9 @@ networks:
     ipam:
       config:
         - subnet: ${SALON_STACK_EDGE_SUBNET}
+          # Docker gives addresses from the lower half only; the edge and the instances have fixed
+          # ones in the upper half (infra/scripts/lib/stack.sh, edge_addresses).
+          ip_range: ${SALON_STACK_EDGE_DYNAMIC_RANGE:?set by infra/scripts from SALON_STACK_EDGE_SUBNET}
   # The API, the database and the collector. Nothing on it reaches anything outside.
   data:
     name: salon-stack-data

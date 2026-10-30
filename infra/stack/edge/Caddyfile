@@ -7,6 +7,8 @@
 	}
 }
 
+# Every instance is reached at its fixed address on the stack's network (SALON_EDGE_*, from
+# infra/scripts/lib/stack.sh), never by a name that may not exist and be resolved outside the stack.
 # The Host header is passed unchanged; the apps resolve the salon from it alone. X-Forwarded-Host
 # is removed and Caddy overwrites the forwarded client/protocol headers (T-5).
 # One JSON line per request on standard output (docker logs salon-stack-edge), so that a failed
@@ -62,13 +64,14 @@ http://{$SALON_PLATFORM_DOMAIN}:{$SALON_EDGE_HTTP_PORT}, http://*.{$SALON_PLATFO
 	import access-log
 	@api path /api /api/* /actuator /actuator/* /local /local/*
 	handle @api {
-		reverse_proxy api-1:8080 api-2:8080 {
+		reverse_proxy {$SALON_EDGE_API_1}:8080 {$SALON_EDGE_API_2}:8080 {
 			import instances /actuator/health/readiness
 		}
 	}
 	handle {
-		# web-surge serves only during a deployment (stack-deploy.sh); otherwise it is down here.
-		reverse_proxy web-1:3000 web-2:3000 web-surge:3000 {
+		# The third address is web-surge's, which serves only during a deployment (stack-deploy.sh);
+		# otherwise it refuses and the health check keeps it out of the rotation.
+		reverse_proxy {$SALON_EDGE_WEB_1}:3000 {$SALON_EDGE_WEB_2}:3000 {$SALON_EDGE_WEB_SURGE}:3000 {
 			import instances /healthz
 		}
 	}
@@ -78,7 +81,7 @@ http://{$SALON_PLATFORM_DOMAIN}:{$SALON_EDGE_HTTP_PORT}, http://*.{$SALON_PLATFO
 http://:8080 {
 	header -Server
 	import access-log
-	reverse_proxy api-1:8080 api-2:8080 {
+	reverse_proxy {$SALON_EDGE_API_1}:8080 {$SALON_EDGE_API_2}:8080 {
 		import instances /actuator/health/readiness
 	}
 }

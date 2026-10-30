@@ -35,6 +35,8 @@
 	log_append upstream_duration_ms {rp.upstream.duration_ms}
 }
 
+# Every instance is reached at its fixed address on the stack's network (SALON_EDGE_*, from
+# infra/scripts/lib/stack.sh), never by a name that may not exist and be resolved outside the stack.
 (instances) {
 	# The instance with the fewest requests in flight (BUG-F01-009): one that answers slowly, because
 	# it has only just started or is busy, is given less, instead of half of every request and a
@@ -67,13 +69,14 @@
 	import access-log
 	@api path /api /api/* /actuator /actuator/* /local /local/*
 	handle @api {
-		reverse_proxy api-1:8080 api-2:8080 {
+		reverse_proxy {$SALON_EDGE_API_1}:8080 {$SALON_EDGE_API_2}:8080 {
 			import instances /actuator/health/readiness
 		}
 	}
 	handle {
-		# web-surge serves only during a deployment (stack-deploy.sh); otherwise it is down here.
-		reverse_proxy web-1:3000 web-2:3000 web-surge:3000 {
+		# The third address is web-surge's, which serves only during a deployment (stack-deploy.sh);
+		# otherwise it refuses and the health check keeps it out of the rotation.
+		reverse_proxy {$SALON_EDGE_WEB_1}:3000 {$SALON_EDGE_WEB_2}:3000 {$SALON_EDGE_WEB_SURGE}:3000 {
 			import instances /healthz
 		}
 	}
@@ -88,7 +91,7 @@ http://{$SALON_PLATFORM_DOMAIN}, http://*.{$SALON_PLATFORM_DOMAIN} {
 http://:8080 {
 	header -Server
 	import access-log
-	reverse_proxy api-1:8080 api-2:8080 {
+	reverse_proxy {$SALON_EDGE_API_1}:8080 {$SALON_EDGE_API_2}:8080 {
 		import instances /actuator/health/readiness
 	}
 }
