@@ -9,15 +9,45 @@
 
 # The Host header is passed unchanged; the apps resolve the salon from it alone. X-Forwarded-Host
 # is removed and Caddy overwrites the forwarded client/protocol headers (T-5).
+# One JSON line per request on standard output (docker logs salon-stack-edge), so that a failed
+# or slow request can be traced to the instance that answered it. Nothing personal or secret: no
+# header (cookies, authorization, user agent), no client address, no query string, and the token
+# of an export download link (/api/v1/exports/<token>) is cut from the path.
+(access-log) {
+	log {
+		output stdout
+		format filter {
+			wrap json
+			request>uri regexp "^(?:(.*/exports/)[^/?]+)?([^?]*).*$" "${1}${2}"
+			request>headers delete
+			request>remote_ip delete
+			request>remote_port delete
+			request>client_ip delete
+			request>tls delete
+			resp_headers delete
+			user_id delete
+		}
+	}
+	log_append upstream {rp.upstream.hostport}
+	log_append upstream_duration_ms {rp.upstream.duration_ms}
+}
+
 (instances) {
-	lb_policy round_robin
+	# The instance with the fewest requests in flight (BUG-F01-009): one that answers slowly, because
+	# it has only just started or is busy, is given less, instead of half of every request and a
+	# queue the other instance does not have.
+	lb_policy least_conn
 	lb_retries 2
 	lb_try_duration 5s
 	lb_try_interval 100ms
 	fail_duration 10s
 	health_uri {args[0]}
 	health_interval 1s
-	health_timeout 2s
+	# A stopping instance answers not-ready at once, so it leaves the rotation within health_fails
+	# seconds. A busy one that still answers, perhaps slowly, stays in it: under a burst, health
+	# checks wait in the same queue as requests, and a check timeout must not remove an instance
+	# that is still answering (BUG-F01-009).
+	health_timeout 5s
 	# A single transient readiness response must not eject the only remaining instance during rollout.
 	health_fails 3
 	health_passes 1
@@ -29,6 +59,7 @@
 
 http://{$SALON_PLATFORM_DOMAIN}:{$SALON_EDGE_HTTP_PORT}, http://*.{$SALON_PLATFORM_DOMAIN}:{$SALON_EDGE_HTTP_PORT} {
 	header -Server
+	import access-log
 	@api path /api /api/* /actuator /actuator/* /local /local/*
 	handle @api {
 		reverse_proxy api-1:8080 api-2:8080 {
@@ -45,6 +76,7 @@ http://{$SALON_PLATFORM_DOMAIN}:{$SALON_EDGE_HTTP_PORT}, http://*.{$SALON_PLATFO
 # The API address used by the web app is private to the stack network.
 http://:8080 {
 	header -Server
+	import access-log
 	reverse_proxy api-1:8080 api-2:8080 {
 		import instances /actuator/health/readiness
 	}

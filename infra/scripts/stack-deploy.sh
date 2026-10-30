@@ -18,9 +18,14 @@
 set -euo pipefail
 . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/stack.sh"
 
-# How long after an instance is ready the next one waits, so that the edge, which checks every
-# second, has sent it traffic again.
-EDGE_SETTLE_SECONDS=3
+# How long after an instance is ready the next one is taken out of the rotation. The edge, which
+# checks every second, sends the new instance traffic within a second or two; the rest is for it to
+# warm up (a JVM compiling its hot code, a web server its first pages), which costs it and the
+# machine CPU for a while. Taking the next one out sooner leaves its partner to carry the whole tier
+# while it is still at its slowest (BUG-F01-009).
+EDGE_SETTLE_SECONDS=15
+# How long a started instance may take to become ready.
+READY_TIMEOUT_SECONDS=300
 
 [ $# -eq 1 ] || fail "usage: infra/scripts/stack-deploy.sh <version>"
 version="$1"
@@ -68,7 +73,8 @@ for service in "${STACK_INSTANCES[@]}"; do
   stack_compose stop --timeout 45 "$service" >>"$STACK_LOG_DIR/deploy.log" 2>&1
   set_deployed_version "$service" "$version"
   say "$service: starting $version"
-  if ! stack_compose up --detach --no-deps --wait --wait-timeout 300 "$service" >>"$STACK_LOG_DIR/deploy.log" 2>&1; then
+  if ! stack_compose up --detach --no-deps "$service" >>"$STACK_LOG_DIR/deploy.log" 2>&1 \
+      || ! wait_until_ready "$service" "$READY_TIMEOUT_SECONDS"; then
     tail -n 30 "$STACK_LOG_DIR/deploy.log" >&2
     fail "$service did not become ready on version $version (docker logs salon-stack-$service). The instances not yet replaced keep serving; deploy the previous version to roll back."
   fi

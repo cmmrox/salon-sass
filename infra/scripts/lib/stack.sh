@@ -191,6 +191,27 @@ ensure_image() {
 
 container_running() { [ "$(docker inspect -f '{{.State.Running}}' "salon-stack-$1" 2>/dev/null)" = "true" ]; }
 
+# Waits until an instance's health check says it is ready, at most <seconds>. Returns non-zero when
+# the time runs out or the container stops. An instance that reports unhealthy on the way is waited
+# for still: a new instance is given traffic as soon as it first answers ready, and while it warms
+# up under that traffic its health check can time out a few times before it settles. Compose's own
+# `--wait` gives up at the first unhealthy report (BUG-F01-009).
+wait_until_ready() { # <service> <seconds>
+  local service="$1" limit="$2" waited=0 state
+  while [ "$waited" -lt "$limit" ]; do
+    state="$(docker inspect -f '{{.State.Status}} {{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "salon-stack-$service" 2>/dev/null || true)"
+    case "$state" in
+      "running healthy") return 0 ;;
+      "running "*) ;;
+      *) printf 'salon-stack-%s is no longer running (%s)\n' "$service" "${state:-gone}" >>"$STACK_LOG_DIR/deploy.log"; return 1 ;;
+    esac
+    sleep 1
+    waited=$((waited + 1))
+  done
+  printf 'salon-stack-%s was not ready after %s s (%s)\n' "$service" "$limit" "$state" >>"$STACK_LOG_DIR/deploy.log"
+  return 1
+}
+
 port_in_use() { (exec 3<>"/dev/tcp/127.0.0.1/$1") 2>/dev/null; }
 
 # One of these scripts at a time: a second waits for the first. The lock is a directory holding the
