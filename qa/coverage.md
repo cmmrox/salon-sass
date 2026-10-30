@@ -13,7 +13,7 @@
 ## Stages
 
 QA runs once, on the whole feature. `Stage QA` shows a result only for a stage pass the owner
-asked for; the cases of a stage are written at its feature's pass.
+asked for. A case is a test titled with its id and criteria, or a manual or deferred entry.
 
 | Stage | Status | Stage QA | Requirements | Criteria | Cases | Automated | Manual | Deferred |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
