@@ -2,7 +2,7 @@
 import { join } from 'node:path';
 
 import { ESLint } from 'eslint';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 
 /**
  * docs/engineering/web.md, "Structure" (CR-021, F23-S06): the lint rules that keep the web app organised
@@ -10,6 +10,10 @@ import { describe, expect, it } from 'vitest';
  * the `lint` gate with the same configuration.
  */
 const eslint = new ESLint({ cwd: join(__dirname, '..', '..') });
+
+// Loading the configuration (Next.js's rules, the plugins and the import resolver) takes seconds on a
+// busy machine; it is done once here, so that each case's time is its own lint.
+beforeAll(() => eslint.lintText('', { filePath: 'src/lib/probe.ts' }), 60_000);
 
 async function ruleIds(filePath: string, code: string): Promise<string[]> {
   const [result] = await eslint.lintText(code, { filePath });
