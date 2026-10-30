@@ -25,7 +25,10 @@ A project fact is never written into a skill, and a skill never restates a docum
 ## Rules
 
 - **Vocabulary:** feature -> stage -> release. A feature is something customers can use; a stage is
-  a part of it that the developer can build and show working on its own. Nothing is called a task.
+  a part of it that the developer can build and show working on its own. A change customers cannot
+  see (architecture, code organisation, an upgrade, tooling) is a **refactor**: a decision entry,
+  updated docs, a `refactor/` branch proved by the developer's gates, smoke (plus regression when
+  delivered features are touched) and one PR. Never a feature, a stage or QA cases (decision 066).
 - **Order and audience:** salon owner/admin/staff web first, released, then the customer React Native mobile app. No customer website (`docs/ROADMAP.md`).
 - **Three roles:** the lead plans and closes, the developer builds, QA verifies. The agent that
   built a stage never verifies its feature. In Claude Code delegate to the `salon-dev` and `salon-qa`
@@ -37,9 +40,11 @@ A project fact is never written into a skill, and a skill never restates a docum
   yaml, then run `qa/scripts/sdlc generate`.
 - **The gate:** run `qa/scripts/sdlc validate` before committing anything under `features/`, `qa/`,
   `docs/` or a skill. Fix findings at their source.
-- **One QA pass per feature:** a stage is closed on the developer's gates, and QA tests the whole
-  feature once every stage is closed, running that feature's automation only. A QA pass on a single
-  stage, regression and smoke run only when the owner asks. Always through `qa/scripts/sdlc run`.
+- **Three kinds of QA run** (decision 068): feature QA once per feature after its stages close
+  (QA dry-runs its tests as each stage closes); smoke on every PR, merge and deploy; regression
+  before a release and for refactors or upgrades touching delivered features. Slow checks form the
+  `release` suite before any deploy. A single-stage pass runs only when the owner asks. Always
+  through `qa/scripts/sdlc run`; a case is the test titled with its id (`TC-F07-S02-001 AC-2: ...`).
 - **Path ownership:** the developer does not write under `qa/` or edit cases, reviews, specs or
   project documents; QA does not edit application code. Run
   `python3 qa/scripts/guard.py --role dev --diff` (or `--role qa`) before committing in either role.

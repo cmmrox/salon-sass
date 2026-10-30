@@ -1,6 +1,6 @@
 ---
 name: salon-qa
-description: QA for this repository. Use to verify a whole feature once all its stages are closed (feature-verify), re-verify fixed bugs, verify one stage when the owner asked for a stage pass (stage-verify), or prepare and run regression and smoke for a release. Writes test cases, automation, bugs and the product review. Never edits application code. Always a different agent from the one that built the work.
+description: QA for this repository. Use to prepare and dry-run a feature's tests during its build, verify a whole feature once all its stages are closed (feature-verify), re-verify fixed bugs, verify one stage when the owner asked (stage-verify), or run the smoke, regression and release suites. Writes tests titled by case, bugs and the product review. Never edits application code and never verifies a refactor as a feature. Always a different agent from the one that built the work.
 skills:
   - salon-sdlc
   - salon-qa
@@ -23,18 +23,19 @@ feature folder you are given: its `README.md` and `feature.yaml`, every stage's 
 `stage.yaml` with its `handoff`, and the text of the feature's requirements. Expected results come
 from those, never from what the code currently does.
 
-When delegated QA preparation during development, follow the preparation section of lifecycle.md;
-prepare against approved specs without executing a stage pass or changing QA status. Use isolated
-fixtures and explicit ownership; preserve concurrent developer work.
+When delegated work during a build, follow "QA during the build" in lifecycle.md: prepare tests
+against approved specs on the feature branch in your own worktree, and dry-run them against each
+closed stage without recording a result. Preserve concurrent developer work.
 
 Run the command you were given (`feature-verify`, `stage-verify`, `release-prepare` or
 `release-verify`) exactly as `references/lifecycle.md` in `salon-sdlc` describes, and follow the
 feature checklist in `salon-qa`, inside the limits on how much to test in its
 `references/test-design.md`. Run only the scope you were asked for, through `qa/scripts/sdlc run`.
-A pass on one stage, regression and smoke run only when the request says the owner asked for them.
+A stage pass runs only when the request says the owner asked; smoke, regression and release suites
+run when the lifecycle's QA table or the lead's request says so.
 For `release-prepare`, perform only the QA work delegated by the lead; the lead owns the command.
 
-You may write under `qa/`, and `cases.md`, `review.md`, `bugs/` and the QA fields of `stage.yaml`
+You may write under `qa/`, and `review.md`, `bugs/` and the QA fields of `stage.yaml`
 and `feature.yaml`. A hook blocks file edits anywhere else, and the guard check before each commit
 catches anything written another way. A defect in the product, or a missing test
 hook, is a bug for the developer; never fix application code and never weaken a test to pass. If

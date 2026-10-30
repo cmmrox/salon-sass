@@ -1,200 +1,121 @@
 ---
 name: salon-sdlc
-description: Coordinates feature, stage and release delivery. Use before repository work and for planning, role handoffs, closure, requirement changes, Git delivery, releases or changes to these skills.
+description: Coordinates feature, stage and release delivery. Use before repository work and for planning, role handoffs, closure, refactors, requirement changes, QA scope, Git delivery, releases or changes to these skills.
 ---
 
 # Delivery lifecycle
 
-This skill is the process. `salon-dev` is how a developer works and `salon-qa` is how QA works; load
-the one that matches your role after this one.
+This skill is the process; `salon-dev` is how a developer works and `salon-qa` how QA works. Load
+the one for your role after this one. Everything about this product (architecture, stack, rules,
+design, test plan, environments, roadmap, decisions) is under `docs/`, indexed by `docs/README.md`.
+Never restate it in a skill.
 
-The skills hold how work is done. Everything about this particular product (architecture, stack,
-repository structure, engineering rules, design standards, test plan, environments, roadmap) is
-under `docs/`, and `docs/README.md` is its index. Read from there; never restate it in a skill.
-
-Invoke a lifecycle command as `/salon-sdlc <command> <id>` in Claude Code or
-`$salon-sdlc <command> <id>` in Codex. When a command is given, open
-[references/lifecycle.md](references/lifecycle.md), go to that command's section and follow it
-exactly, including every refusal. When no command is given, do "Start every session" below and then
-work out which command the request maps to.
+Invoke a command as `/salon-sdlc <command> <id>` (Claude Code) or `$salon-sdlc <command> <id>`
+(Codex), then follow its section of [references/lifecycle.md](references/lifecycle.md) exactly,
+including every refusal. With no command, do "Start every session" and map the request to one.
 
 ## Vocabulary
 
-Use these words and no others. "Task", "ticket", "slice", "phase" and "sprint" do not name anything here.
+Use these words and no others; "task", "ticket", "slice", "phase" and "sprint" name nothing here.
 
 | Term | Id | Meaning |
 | --- | --- | --- |
-| Feature | `F07` | Something the product's customers can use, and that can be released to them. It cuts across the layers of the product. |
-| Stage | `F07-S02` | A part of a feature that the developer can build, show working and hand over on its own. Never a small change. |
-| Release | `v1.2.0` | A set of complete features shipped together. |
-| Release band | `R1` | The BRD's planning horizon for a requirement or feature (`R1`, `R2`, `R3`). Not a version. |
-| Milestone | `M1-web` | A group of features delivered and released before the next group starts. The order is in `docs/ROADMAP.md`. |
-| Requirement | `BKG-04` | One line of `docs/brd/requirements.yaml`, the living requirement register. |
-| Acceptance criterion | `AC-3` | A testable statement in a stage's `spec.md`. |
-| Test case | `TC-F07-S02-001` | Declared in `stage.yaml`, described in `cases.md`. |
-| Bug | `BUG-F07-S02-001` | One file under the stage's `bugs/`. |
-| Change request | `CR-004` | One file under `docs/changes/`. |
+| Feature | `F07` | Something customers can use and that can be released to them |
+| Stage | `F07-S02` | A part of a feature the developer can build, show working and hand over on its own |
+| Refactor | - | A change to how the product is built that customers cannot see: architecture, code organisation, an upgrade, tooling. Never a feature or a stage |
+| Release / release band / milestone | `v1.2.0` / `R1` / `M1-web` | Shipped features / BRD horizon / delivery group (`docs/ROADMAP.md`) |
+| Requirement / acceptance criterion | `BKG-04` / `AC-3` | A line of `docs/brd/requirements.yaml` / a testable statement in a stage's `spec.md` |
+| Test case | `TC-F07-S02-001` | The test that proves it is titled with its id and criteria (`TC-F07-S02-001 AC-3: ...`) |
+| Bug / change request | `BUG-F07-001` / `CR-004` | A file under `bugs/` / under `docs/changes/` |
 
 ## Roles
 
 | Role | Does | Writes | Never |
 | --- | --- | --- | --- |
-| Lead | Plans features and stages, owns scope and requirement changes, keeps the project documents true, closes stages and features, cuts releases, talks to the owner | `spec.md`, feature `README.md`, `docs/`, change requests, releases, skills | Closes a stage the developer has not checked, or a feature QA has not passed |
-| Developer | Builds a stage, checks its acceptance criteria on the running product, and fixes the bugs QA files | Application code, infrastructure, the build pipeline, generated files, unit and integration tests, `status` and `handoff` in `stage.yaml`, the fix fields of a bug | Writes QA automation, cases, reviews, specs, project documents or skills; edits a test to make it pass |
-| QA | Decides how a feature must be tested, writes cases and automation, runs them, files bugs, reviews usability, prepares regression and smoke | QA automation, `cases.md`, `review.md`, `bugs/`, QA fields in `stage.yaml` and `feature.yaml` | Edits application code; weakens an assertion; passes work it has not run |
+| Lead | Plans, owns scope, keeps `docs/` true, closes stages and features, releases, talks to the owner | Specs, feature READMEs, `docs/`, change requests, releases, skills | Closes a stage the developer has not checked or a feature QA has not passed |
+| Developer | Builds stages and refactors, checks criteria on the running product, fixes bugs | Application code, infrastructure, pipeline, unit/integration tests, `status` and `handoff`, bug fix fields | Writes QA automation, specs, docs or skills; edits a test to make it pass |
+| QA | Decides how a feature is tested, writes and runs the tests, files bugs, reviews usability, keeps smoke, regression and release suites | QA automation, `review.md`, `bugs/`, QA fields of the yaml | Edits application code; weakens an assertion; passes work it has not run |
 
-The exact paths each role may write are enforced by `qa/scripts/guard.py` and described in
-`docs/architecture/repository-structure.md`. The lead may write anywhere, and fills in the
-Disposition column of a `review.md`.
+`qa/scripts/guard.py` enforces the paths (`docs/architecture/repository-structure.md`); run
+`python3 qa/scripts/guard.py --role dev --diff` (or `--role qa`) before committing in a role.
 
-The lead is the session the owner is talking to. The developer and QA are separate agents: the
-`salon-dev` and `salon-qa` subagents in Claude Code, the `salon_dev` and `salon_qa` agents in Codex,
-or separate terminal sessions in either tool. Any mix works, because the handoff is in files.
-
-**The agent that built any stage of a feature never verifies that feature.** A check written from
-the same assumptions as the code agrees with the code. QA starts from a fresh context holding the
-specs, the requirements and the running product. If no second agent is available, tell the owner
-and ask how to proceed; do not verify your own build in the same context.
-
-A session takes the role of the command it is given. When the owner runs a developer or QA
-command directly (`stage-build`, `bug-fix`, `feature-verify`, `stage-verify`), that session is the
-developer or QA for that command, and says so. When the owner asks the lead for the outcome ("build
-F07-S02", "QA F07"), the lead delegates to the matching agent. If the agent or a skill is not
-available in the session (they are picked up when a session starts), read the files under
-`.claude/skills/` directly and act in the role yourself, under the same rules.
-
-State the role you are acting in at the start of your work, and act in one role at a time. Before
-committing as developer or QA, run `python3 qa/scripts/guard.py --role dev --diff` (or `--role qa`).
-
-Read [references/progress.md](references/progress.md) at session start. Keep the owner informed
-while work runs, including work delegated to another agent; the lead aggregates role updates.
+The lead is the session the owner talks to. Developer and QA are separate agents (`salon-dev` and
+`salon-qa` in Claude Code, `salon_dev` and `salon_qa` in Codex) or separate sessions; the handoff is
+in files. **The agent that built any stage of a feature never verifies that feature.** If no second
+agent is available, ask the owner. A session given a developer or QA command directly takes that
+role and says so; when asked for an outcome, the lead delegates. State your role, act in one at a
+time, and keep the owner informed as [references/progress.md](references/progress.md) describes.
 
 ## Where state lives
 
-- `features/<feature>/feature.yaml` and `features/<feature>/stages/<stage>/stage.yaml` are the only
-  places status is written. Everything else is derived from them.
-- `features/README.md` and `qa/coverage.md` are generated. Never edit them; edit the yaml and run
-  `qa/scripts/sdlc generate`.
-- The handoff is `status`, `qa_status` and the bug files. `qa/scripts/sdlc status` prints whose turn
-  it is for every stage in flight. Nothing is handed over in conversation.
+- `feature.yaml` and `stage.yaml` hold all status; `features/README.md` and `qa/coverage.md` are
+  generated from them (`qa/scripts/sdlc generate`), never edited.
+- The handoff is `status`, `qa_status` and the bug files; `qa/scripts/sdlc status` says whose turn it is.
 
 | Tool command | Use |
 | --- | --- |
-| `qa/scripts/sdlc status` | Whose turn it is and which command comes next |
-| `qa/scripts/sdlc validate` | The gate over features, stages, cases, bugs, releases and these skills. Run before every commit that touches `features/`, `qa/`, `docs/` or a skill |
-| `qa/scripts/sdlc generate` | Rewrite the generated documents |
-| `qa/scripts/sdlc run --stage F07-S02` | Run QA automation for exactly one scope (`--feature`, `--suite`, `--release` likewise; `--dry-run` to preview) |
-| `qa/scripts/sdlc pr-check F07` | Check closure, clean branch and unchanged QA revision before a feature PR |
-| `qa/scripts/sdlc merge-sync F07 --check` | Verify the owner's GitHub merge without changing files |
-| `qa/scripts/sdlc merge-sync F07` | Record that verified merge in feature.yaml on a bookkeeping or next feature branch |
-| `qa/scripts/sdlc start-check F08` | Verify preceding feature merges live before the next feature starts |
-| `qa/scripts/sdlc cleanup --branch <exact-branch>` | Preview cleanup of a merged branch and its worktrees; `--apply` archives evidence and removes verified targets |
+| `qa/scripts/sdlc status` / `validate` / `generate` | Whose turn; the gate before committing under `features/`, `qa/`, `docs/` or a skill; rewrite generated documents |
+| `qa/scripts/sdlc run --feature F07` | QA automation for one scope (`--stage`, `--suite smoke|regression|release`, `--release`; `--dry-run` previews) |
+| `qa/scripts/sdlc pr-check F07` | Closed, clean, and unchanged since QA's revision, before a feature PR |
+| `qa/scripts/sdlc start-check F08` / `merge-sync F07 [--check]` | Earlier merges verified live / record a verified owner merge |
+| `qa/scripts/sdlc cleanup --branch <exact>` | Preview, then `--apply`, removal of merged branches and worktrees |
 
 ## Start every session
 
-1. Run `git status --short` and note the branch. Changes you did not make belong to someone else:
-   leave them alone.
-2. Read `features/README.md`. It is the portfolio and says what is next.
-   On resumed work, first apply the saved-evidence check in `references/progress.md`; do not
-   interpret a generated "QA next" label as a reason to repeat a completed pass.
-3. Read the folder of the one stage you are working on: `spec.md` and `stage.yaml`, then its named
-   project rules using `references/progress.md`'s context-reading rule. Do not read other stages'
-   folders unless the work spans them. Feature QA, QA preparation, changes and releases may do so.
-4. Load the role skill: `salon-dev` to build or fix, `salon-qa` to test.
-5. Run the lifecycle command for the work, from [references/lifecycle.md](references/lifecycle.md).
+1. `git status --short`; changes you did not make are someone else's.
+2. Read `features/README.md`. On resumed work, check saved evidence first (`references/progress.md`).
+3. Read the one stage you work on (`spec.md`, `stage.yaml`) and the documents its spec names.
+4. Load `salon-dev` or `salon-qa`, then run the command from `references/lifecycle.md`.
 
 ## Commands
 
 | Command | Role | Status afterwards |
 | --- | --- | --- |
-| `feature-new <F>` | Lead | Feature `planned`, its stages `outlined` |
+| `feature-new <F>` | Lead | Feature `planned`, stages `outlined`, design confirmed |
 | `stage-plan <F-S>` | Lead | Stage `planned` |
-| `stage-build <F-S>` | Developer | Stage `in-progress`, then `built` at handoff |
-| `stage-close <F-S>` | Lead | Stage `complete`, on the developer's gates |
-| `feature-verify <F>` | QA | Feature `in-qa`, `qa_status` `failing`, `blocked` or `pass` |
-| `bug-fix <F>` or `<F-S>` | Developer | Bugs `fixed`; back to QA |
-| `feature-close <F>` | Lead | Feature `complete`, ready for its feature PR |
-| `feature-submit <F>` | Lead | One feature PR awaiting the owner's merge |
-| `feature-integrate <F>` | Lead | Confirmed merge recorded; related branches/worktrees cleaned up safely |
-| `stage-verify <F-S>` | QA, only when the owner asks | The stage's `qa_status` `failing`, `blocked` or `pass` |
-| `change-request <title>` | Lead | A `CR-nnn` file; affected stages reopened once approved |
-| `release-prepare <vX.Y.Z>` | Lead, with QA | A release manifest; nothing is run |
-| `release-verify <vX.Y.Z>` | QA | `RESULTS.md` for the release |
-| `release-cut <vX.Y.Z>` | Lead | Stages and features `released` |
+| `stage-build <F-S>` | Developer | `in-progress`, then `built` at handoff |
+| `stage-close <F-S>` | Lead | `complete`, merged into the feature branch |
+| `feature-verify <F>` | QA | Feature `in-qa`; `qa_status` `failing`, `blocked` or `pass` |
+| `bug-fix <F>` | Developer | Bugs `fixed`; back to QA |
+| `feature-close <F>` | Lead | `complete`, ready for its PR |
+| `feature-submit <F>` / `feature-integrate <F>` | Lead | One PR for the owner / merge recorded, branches cleaned |
+| `stage-verify <F-S>` | QA, only when the owner asks | The stage's `qa_status` |
+| `change-request <title>` | Lead | A `CR-nnn`; affected stages reopened once approved |
+| `release-prepare`, `release-verify`, `release-cut <v>` | Lead, QA, lead | Manifest; `RESULTS.md`; `released` |
+
+A refactor or upgrade has no command: "Refactors and upgrades" in `references/lifecycle.md`.
 
 ## What QA runs, and when
 
-QA tests a feature once, when every one of its stages is closed. A stage is closed on the
-developer's gates and nobody from QA tests it then: a full pass on every stage cost more time than
-the defects it caught early were worth. This is a rule, not an optimisation. Running more than the
-scope asked for is a process violation, the same as running less.
-
-| Trigger | Runs | Does not run |
+| Kind | What | When |
 | --- | --- | --- |
-| `stage-close` | Validate developer-gate evidence; run missing or invalidated gates only | Repeated unchanged gates; QA automation |
-| `feature-verify` | That feature's stage automation and its feature journeys | Other features |
-| `feature-close` | Validate saved QA and developer-gate evidence; execute only genuinely invalidated checks | Repeated unchanged QA; other features |
-| `stage-verify`, when the owner asked for a pass on one stage | That stage's automation | Earlier stages of the feature, other features |
-| `release-verify`, or the owner asks for regression or smoke | The regression and smoke suites | - |
+| Feature QA | The feature's acceptance criteria, tenant isolation, a hands-on check of its new screens | Once per feature, after its stages close (`feature-verify`). QA dry-runs its tests against each closed stage during the build; a dry run certifies nothing |
+| Smoke (`suites: [smoke]`) | The few critical checks that prove each delivered feature is alive | Every PR, after every merge, before and after any deploy |
+| Regression (`suites: [regression]`) | Everything that must keep working, in parallel | Before a release, and for a refactor or upgrade that touches delivered features (the lead runs it unasked then); otherwise when the owner asks |
+| Release (`suites: [release]`) | The slow checks: load, the production-like stack, image scans | Before any deploy, and at `release-verify` |
+| Stage pass | One stage's tests | Only when the owner asks |
 
-- A stage pass, regression and smoke run only when the owner asks, in so many words. Finishing a
-  stage, fixing a bug or changing shared code is not a request for any of them. If you believe a
-  stage is too risky to build on untested, or that a change puts earlier work at risk, say so and
-  let the owner decide.
-- When the owner does ask for a regression in the middle of a feature, run
-  `qa/scripts/sdlc run --feature <F>` for the feature in flight (its stages so far), and
-  `qa/scripts/sdlc run --suite regression` for the features already delivered.
-- The developer's own gates (compile, lint, unit and integration tests of the modules touched) are
-  not QA runs. Run them for relevant changes through `verification.commands`; reuse intact passing
-  evidence on an unchanged resume or handoff, following `references/progress.md`.
-- During an authorised feature build, the lead may delegate independent QA preparation against
-  approved specs while development continues. Follow the preparation section in
-  `references/lifecycle.md`; preparation does not start a stage pass or certify unfinished work.
-- Always go through `qa/scripts/sdlc run`. It selects by scope, refuses an empty selection and
-  writes the evidence.
+Time budgets per kind are in `docs/qa/test-plan.md`. The developer's gates are not QA runs; they
+are reused while their source is unchanged (`docs/operations/verification-evidence.md`). Always run
+QA through `qa/scripts/sdlc run`; running more than the scope asked for is as wrong as running less.
 
 ## Rules that hold everywhere
 
-- **Requirements change through a change request.** Never edit a spec, a case or the register to
-  match what was built. See [references/change-requests.md](references/change-requests.md).
-- **A suggestion is not a requirement.** QA proposes improvements; nothing is built from one until
-  the owner approves it.
-- **Refusals are the point.** When a command says refuse, print the reason and stop. Do not work
-  around a gate, mark something "probably fine", or lower a severity to pass.
-- **Local by default.** Staging or production is touched only when the owner's current message names
-  it. Earlier permission does not carry forward.
-- **One feature PR after QA.** Stage and QA branches integrate into the feature branch. The owner
-  merges its PR into `main`; the next feature waits for the confirmed merge. `complete`, merged
-  and deployed are separate facts. See `references/git-workflow.md`.
-- **Deployment is optional.** Feature closure and merge do not deploy or require staging. The owner
-  may deploy several merged features together; staging-only cases stay explicitly deferred.
-- **Git authorisation:** follow the owner's recorded policy in `docs/operations/git-delivery.md`
-  for pushes, PR creation and cleanup. Never merge the owner's feature PR, push a tag, deploy,
-  publish an app build, send a real message or charge a real payment without the relevant request.
-- **No secrets** in code, logs, test evidence, bug files or skills.
-- **Research before calling something a blocker.** Check the official documentation and the issue
-  tracker of the dependency first, and record what was searched.
-- **Ask the owner** when a business rule is ambiguous, when two requirements conflict, or when a
-  decision the project lists as open blocks the stage. Otherwise the lead decides, records the
-  decision in `docs/decisions/DECISION_LOG.md`, and continues.
-- **Project facts live in `docs/`.** When a session teaches you something about this product that
-  the next session will need, it goes into the right document under `docs/` (through the lead), not
-  into a skill and not into a spec.
+- **Requirements change through a change request** ([references/change-requests.md](references/change-requests.md)); never edit a spec or the register to match what was built. A QA suggestion is not a requirement until the owner approves it.
+- **Refusals are the point.** When a command refuses, print why and stop.
+- **Local by default.** Staging, production, real payments and real messages only when the owner's current message says so.
+- **One PR per feature or refactor, merged by the owner** ([references/git-workflow.md](references/git-workflow.md), `docs/operations/git-delivery.md`). Never merge it yourself, push a tag, deploy or publish without the request. Merge and deployment are separate facts.
+- **No secrets** in code, logs, evidence, bug files or skills.
+- **Research before calling something a blocker:** the dependency's documentation and issue tracker, recorded.
+- **Ask the owner** when a business rule is ambiguous, requirements conflict or an open decision blocks; otherwise the lead decides and records it in `docs/decisions/DECISION_LOG.md`.
+- **Project facts live in `docs/`,** written there by the lead, never in a skill or a spec.
 
 ## Reference map
 
-- [references/lifecycle.md](references/lifecycle.md): the contract of every command. Read the
-  section for the command you are running.
-- [references/git-workflow.md](references/git-workflow.md): read before creating a branch,
-  committing, opening a pull request or merging.
-- [references/change-requests.md](references/change-requests.md): read when a requirement is added
-  or changed, when QA proposes an improvement, or when finished work must be reopened.
-- [references/releases.md](references/releases.md): read before choosing a version or preparing,
-  verifying or cutting a release. The environments and the product's own release rules are in
-  `docs/operations/environments-and-releases.md`.
-- [references/skill-maintenance.md](references/skill-maintenance.md): read before editing any skill,
-  agent file, `AGENTS.md` or `CLAUDE.md`.
-- [references/progress.md](references/progress.md): read at session start; progress, long-running
-  commands, interruptions and completion reports for every role.
-- `assets/`: the templates the commands copy (`feature.yaml`, `feature-README.md`, `stage.yaml`,
-  `spec.md`, `change-request.md`, `release.yaml`).
+- [references/lifecycle.md](references/lifecycle.md): every command's contract, refactors, where bugs are filed.
+- [references/git-workflow.md](references/git-workflow.md): before branching, committing, a PR or a merge.
+- [references/change-requests.md](references/change-requests.md): a requirement changes, QA suggests, finished work reopens.
+- [references/releases.md](references/releases.md): versions and releases (with `docs/operations/environments-and-releases.md`).
+- [references/skill-maintenance.md](references/skill-maintenance.md): before editing a skill, agent file, `AGENTS.md` or `CLAUDE.md`.
+- [references/progress.md](references/progress.md): at session start; updates, long commands, resuming, completion.
+- `assets/`: templates for `feature.yaml`, `feature-README.md`, `stage.yaml`, `spec.md`, `change-request.md`, `release.yaml`.

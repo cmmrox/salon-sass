@@ -1,12 +1,9 @@
 # Git workflow
 
-`main` is the trunk and is always releasable. The hosting service and the continuous integration
-system are named in `docs/architecture/tech-stack.md`.
-
-- If no remote is configured, consult `docs/operations/git-delivery.md`. Configure only the
-  repository the owner supplied and authorised; never create an external repository yourself.
-- If `git log` shows no commits, stop. The first commit is the lead's, on `main`, at the owner's
-  request; nothing can branch until it exists.
+`main` is the trunk and is always releasable. The hosting service and CI are named in
+`docs/architecture/tech-stack.md`; remotes and push authorisation in `docs/operations/git-delivery.md`
+(never create an external repository yourself). If `git log` shows no commits, stop: the first
+commit is the lead's, on `main`, at the owner's request.
 
 ## Contents
 
@@ -20,63 +17,51 @@ system are named in `docs/architecture/tech-stack.md`.
 
 ## Branches
 
-One integration branch per feature, one branch per stage, and one for the feature's QA pass.
-`main` receives the complete feature only after independent QA, through the owner's PR merge.
+One branch per feature, one per stage, and one per refactor. QA works on the feature branch itself,
+in its own worktree: path ownership (`guard.py`) keeps the roles apart, so there is no QA branch to
+keep in sync. `main` receives a feature only after its QA pass, through the owner's PR merge.
 
 ```
 {username}/{type}/{id}-{slug}
-^[a-z]+/(feature|bugfix|hotfix|test|refactor|docs|chore)/[A-Za-z0-9]+(-[A-Za-z0-9]+)*$
+^[a-z]+/(feature|bugfix|hotfix|refactor|docs|chore)/[A-Za-z0-9]+(-[A-Za-z0-9]+)*$
 ```
 
 | Type | Use | Example |
 | --- | --- | --- |
-| `feature` | A feature integration branch, or a stage | `charithm/feature/F07-online-booking`, `charithm/feature/F07-S02-slot-search-and-hold` |
-| `bugfix` | A defect found after its stage was closed | `charithm/bugfix/F07-S02-hold-expiry-off-by-one` |
+| `feature` | A feature branch, or one of its stages | `charithm/feature/F07-online-booking`, `charithm/feature/F07-S02-slot-search-and-hold` |
+| `refactor` | A refactor or upgrade; a sub-branch for parallel parts of one | `charithm/refactor/modular-architecture`, `charithm/refactor/service-interfaces` |
+| `bugfix` | Bugs found after a stage closed or after a merge | `charithm/bugfix/F07-S02-hold-expiry-off-by-one` |
 | `hotfix` | A defect in a released version | `charithm/hotfix/v1-2-1-payment-callback` |
-| `test` | The feature's QA pass, or cases drafted ahead of it | `charithm/test/F07-feature-qa` |
-| `refactor`, `docs`, `chore` | Work that belongs to no stage (tooling, skills, documents, a change request, a release) | `charithm/docs/CR-004-per-salon-hold-time`, `charithm/chore/release-v0-1-0` |
+| `docs`, `chore` | Documents, skills, tooling, a change request, a release | `charithm/docs/CR-004-per-salon-hold-time`, `charithm/chore/release-v0-1-0` |
 
-A stage reopened by a change request gets a new branch that names both:
-`charithm/feature/F07-S02-cr-004-per-salon-hold-time`.
-
-- `{username}` is the short lowercase handle of the person running the session. Read it from the
-  existing branches (`git branch -a`); if there are none, ask once. Never use `claude/`, `codex/` or
-  an agent name.
-- Start a feature's integration branch from the latest `origin/main`, after `start-check` verifies
-  the preceding feature merges. Record it in `feature.yaml` under `integration.branch`.
-- Branch its stages, QA and pre-release fixes from that integration branch. The lead merges their
-  commits back there with merge commits after the relevant role's gates; no stage PR targets `main`.
-- `release/X-Y-Z` exists only to maintain a version that is already shipped. Do not create one
-  unless the owner asks.
+- `{username}` is the short lowercase handle used by the existing branches (`git branch -a`); ask
+  once if there are none. Never `claude/`, `codex/` or an agent name.
+- A feature branch starts from the latest `origin/main` after `start-check`, and is recorded in
+  `integration.branch`. Stages and fixes branch from it, and the lead merges them back with merge
+  commits; no stage PR targets `main`. A stage reopened by a change request gets a branch naming
+  both (`charithm/feature/F07-S02-cr-004-per-salon-hold-time`).
+- `release/X-Y-Z` exists only to maintain a shipped version, when the owner asks.
 
 ## Commits
 
-Conventional Commits. The scope is the stage or feature id when the work belongs to one.
+Conventional Commits, scoped to the stage, feature, refactor area or `CR-nnn`:
 
 ```
 <type>(<scope>): <imperative summary, under 72 characters>
-^(feat|fix|test|docs|refactor|perf|build|ci|chore|revert)(\([A-Za-z0-9-]+\))?!?: .+
+^(feat|fix|test|docs|refactor|perf|build|ci|chore|revert|merge)(\([A-Za-z0-9-]+\))?!?: .+
 ```
 
-| Who | Commit | Example |
-| --- | --- | --- |
-| Lead | Planning | `docs(F07-S02): plan slot search and hold`, on its stage branch. A feature's outline is committed on its integration branch |
-| Developer | Building | `feat(F07-S02): hold a slot for ten minutes` |
-| Developer | Fixing a bug | `fix(F07-S02): release expired holds at the exact expiry` with `Fixes BUG-F07-S02-003` in the body |
-| Developer | Handing over | `chore(F07-S02): hand over` |
-| Lead | Closing a stage | `chore(F07-S02): close stage - slot search and hold` |
-| QA | Cases and automation | `test(F07-S02): cover simultaneous holds on one slot`, or `test(F07): ...` for a journey |
-| QA | Results and review | `test(F07): record first QA pass, 3 bugs filed` |
-| Developer | Fixing a bug from the feature pass | `fix(F07): ...` with `Fixes BUG-F07-002` in the body |
-| Lead | Closing a feature | `chore(F07): close feature - online booking` |
-| Lead | A change request | `docs(CR-004): propose per-salon hold time`, later `docs(CR-004): apply to register and specs` |
-| Lead | Release | `chore(release): cut v1.2.0` |
+| Who | Example |
+| --- | --- |
+| Lead plans | `docs(F07-S02): plan slot search and hold` |
+| Developer builds, hands over in the last commit | `feat(F07-S02): hold a slot for ten minutes` |
+| Lead closes (the merge commit carries `status: complete`) | `merge(F07-S02): slot search and hold` |
+| QA writes and records | `test(F07): cover simultaneous holds on one slot`, `test(F07): record QA pass, 3 bugs filed` |
+| Developer fixes | `fix(F07): release expired holds at expiry` with `Fixes BUG-F07-003` in the body |
+| Refactor | `refactor(identity): services as interface and implementation` |
+| Lead closes a feature, a CR, a release | `chore(F07): close feature - online booking`, `docs(CR-004): ...`, `chore(release): cut v1.2.0` |
 
-Scopes outside a stage: a change request id (`CR-004`), `sdlc`, `skills`, `infra`, `docs`, `release`. Work on a
-stage reopened by a change request keeps the stage id as its scope and names the request in the body.
-
-Keep commits by role separate. A commit that mixes application code and QA automation hides who
-decided what; the guard check below will flag it.
+Keep commits by role separate: one that mixes application code and QA automation hides who decided what.
 
 ## Before every commit
 
@@ -86,69 +71,46 @@ python3 qa/scripts/guard.py --role dev --diff     # or --role qa; the lead skips
 qa/scripts/sdlc validate                           # when features/, qa/, docs/ or a skill changed
 ```
 
-Stage files by name. Never commit `.env` files, anything under `qa/reports/`, build output, native
-folders a tool generates, or credentials. Review the staged diff before committing.
+Stage files by name. Never commit `.env` files, `qa/reports/`, build output or credentials. Review
+the staged diff.
 
 ## Pull requests and merging
 
-- One feature PR into `main`, opened after independent full feature QA and `feature-close`, using
-  the feature integration branch. Title: `F07 Online booking`.
-- Run `qa/scripts/sdlc pr-check F07` before pushing the final branch and creating the PR. Record
-  its URL in `integration.pull_request`, regenerate/validate and push the metadata commit. That
-  metadata commit does not change the product or automation tested at `integration.qa_revision`.
-  Complete that metadata before waiting on CI, batch subsequent bookkeeping, and update the PR
-  body for progress. Always check the final head's required CI; an earlier green run is insufficient.
-- Include what customers can do, the developer gates, the QA result and tested revision, verified
-  bugs, manual/deferred cases, unresolved minor issues, and the deployment status. Attach the PR
-  to the current chat when the tool supports it. Staging is not a merge prerequisite.
-- The owner reviews and merges with a merge commit. Do not merge the feature PR yourself. Required
-  CI checks must pass; configure the repository's protection according to
-  `docs/operations/git-delivery.md`. Do not require an unavailable separate human reviewer.
-- Subsequent product, automation or delivery changes require an impact assessment and verification
-  of affected checks under `references/progress.md`. Preserve unaffected passing evidence; do not
-  rerun QA for unchanged code or metadata-only commits. Record each actually tested revision
-  before presenting the final PR for merge; a targeted pass is not a new full-feature pass.
-- Process, documentation, release and hotfix changes outside feature development use separate,
-  scoped PRs with their appropriate checks; a skill update does not run product feature QA.
+- One PR into `main` per feature (after `feature-close`, title `F07 Online booking`) or per
+  refactor (after the lead's review of its diff and its smoke and regression runs).
+- Run `qa/scripts/sdlc pr-check F07` before the final push. Record the PR URL in
+  `integration.pull_request` in one metadata commit; later progress goes in the PR body.
+- The body says what customers can do (or, for a refactor, what changed in the codebase and that
+  nothing visible changed), the developer gates, the QA or suite results with the tested revision,
+  verified bugs, manual and deferred cases, open minor issues and deployment status.
+- Required CI must pass on the final head. The owner merges with a merge commit; never merge it
+  yourself. Staging is not a merge prerequisite.
+- A product change after QA's revision is verified for its affected scope before the PR is merged;
+  a documentation, skill or status change is not.
 
 ## Confirming a merge and cleanup
 
-1. Verify live: `qa/scripts/sdlc merge-sync F07 --check`. It checks the PR's repository and branches,
-   merged state, tested history, successful head CI and inclusion in freshly fetched `origin/main`. A local merge or
-   a `complete` status is not proof of the owner's GitHub merge.
-2. Update a clean retained checkout of `main` with a fast-forward from `origin/main`.
-3. Preview cleanup with repeated `--branch <exact-related-branch>` arguments, then run the same
-   `qa/scripts/sdlc cleanup` command with `--apply`. Include only this feature's integration,
-   stage, QA and fix branches. The owner has authorised this post-merge cleanup in the project
-   policy; do not ask again for targets that pass the checks.
-4. Cleanup refuses `main`, the current branch, dirty or locked worktrees, local service pid files,
-   unknown ignored files, and local or remote commits outside `origin/main`. It archives QA
-   reports before removal, deletes without forcing local branches/worktrees, uses an expected-SHA
-   lease for remote deletion, and verifies absence. Archive/receipt paths are printed. If a target
-   is unsafe, preserve it and report the concrete reason; never discard work to make cleanup pass.
-5. Create the next feature integration branch from updated `origin/main` while its feature remains
-   in the backlog. Run `qa/scripts/sdlc merge-sync F07` there to record the preceding merge, then
-   generate/validate and commit the bookkeeping. This metadata is included in the next feature
-   PR; it avoids an extra PR or a direct write to `main` solely to record the previous PR's merge.
-6. Run `qa/scripts/sdlc start-check F08` before planning or building. It verifies the recorded
-   merges against GitHub again. The next feature can start without a VPS deployment.
+1. `qa/scripts/sdlc merge-sync F07 --check` verifies the owner's GitHub merge live; a local merge or
+   a `complete` status is not proof.
+2. Fast-forward a clean checkout of `main`; run smoke on it.
+3. `qa/scripts/sdlc cleanup --branch <exact>` (repeat per branch) previews; the same with `--apply`
+   archives QA reports and removes only verified merged targets. Include only this feature's or
+   refactor's branches; the owner authorised this cleanup. It refuses `main`, the current branch,
+   dirty or locked worktrees and unmerged commits; keep any refused target and report why.
+4. On the next feature's branch (or a bookkeeping branch), `qa/scripts/sdlc merge-sync F07` records
+   the merge; commit it there, never on `main`. Then `start-check F08`.
 
 ## Working in parallel
 
-- Two sessions that share one checkout take turns: only the role whose turn it is writes.
-- Different stages of the same feature may be built in separate git worktrees and branches.
-  Different features proceed in portfolio order; only an explicit owner exception recorded in
-  `started_early` changes that order, and a dependency still needs its confirmed merge.
-- QA may draft cases from the specs while the stages are still being built, on the feature's
-  `test` branch in its own worktree. Follow lifecycle.md's QA preparation section for isolated
-  helper checks and ownership. Drafting never records an acceptance pass or changes QA status.
+- Roles share a branch through separate worktrees; only the role whose turn it is writes a given path.
+- Different stages may be built at once in separate worktrees and branches. Features proceed in
+  portfolio order unless the owner records `started_early`; a dependency still needs its merge.
+- Keep runtime changes (clock, services, databases) out of an environment another agent is using.
 
 ## Never
 
-- Commit to `main` directly. The only exception is the repository's first commit.
-- Push or open a PR outside the owner's recorded authorisation. The authorisation to push or
-  create a PR is not authorisation to merge it, tag, or deploy.
+- Commit to `main` directly (except the first commit), push or open a PR outside the owner's
+  authorisation, merge a PR, tag or deploy without the request.
 - Rewrite the history of a pushed branch.
-- Run `git reset --hard`, `git clean`, `git checkout -- <path>`, forced worktree removal, or
-  forced local branch deletion to tidy up. Use only the checked cleanup procedure above;
-  uncommitted changes you did not make are someone's work.
+- Run `git reset --hard`, `git clean`, `git checkout -- <path>`, forced worktree removal or forced
+  branch deletion to tidy up. Uncommitted changes you did not make are someone's work.

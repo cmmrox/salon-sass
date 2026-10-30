@@ -1,15 +1,15 @@
 # Test method
 
-How testing is organised in this lifecycle: who tests what, how automation is registered, what
-counts as evidence and what a pass means. The product's own tools, test data and targets are in
-`docs/qa/test-plan.md`.
+How testing is organised: who tests what, how tests are registered, the three kinds of QA run, what
+counts as evidence and what a pass means. The product's tools, data, targets and time budgets are
+in `docs/qa/test-plan.md`.
 
 ## Contents
 
 - Who tests what
-- Registering automation
+- Registering tests
 - Independent tests
-- Suites: regression and smoke
+- Smoke, regression and release
 - Evidence
 - What a pass means
 - When a requirement changes
@@ -18,106 +18,74 @@ counts as evidence and what a pass means. The product's own tools, test data and
 
 | Level | Owner | Proves | Runs |
 | --- | --- | --- | --- |
-| Unit, integration, architecture, contract | Developer | The code does what the developer intended | Focused checks during development; declared gates before handoff, reused at closure when valid |
-| Acceptance, on the running product | Developer | Each acceptance criterion of the stage holds when used from outside | Before handing a stage over; recorded in `handoff.notes`, which the stage is closed on |
-| Feature QA | QA | Every stage meets its acceptance criteria and requirements from outside, and the stages work together as something a person can use | Initial `feature-verify`; reuse at `feature-close`; scoped re-verification for relevant changes |
-| Stage QA | QA | One stage, ahead of its feature | Only when the owner asks: `stage-verify` |
-| Regression and smoke | QA | What was delivered earlier still works | Only when the owner asks, and at `release-verify` |
+| Unit, integration, architecture, contract, accessibility | Developer | The code does what was intended | Gates before handoff, reused while unchanged |
+| Acceptance on the running product | Developer | Each criterion of the stage holds from outside | Before handoff, recorded in `handoff.notes` |
+| Feature QA | QA | Every criterion and requirement from outside, tenant isolation, and the stages working together | Once per feature (`feature-verify`), dry-runs during the build |
+| Smoke, regression, release | QA | What was delivered still works | See below |
+| Stage QA | QA | One stage ahead of its feature | Only when the owner asks |
 
-QA tests a feature once, when all its stages are closed. Nothing is tested by QA stage by stage
-unless the owner asks for it.
-Independent preparation may happen earlier under the lifecycle's preparation section. Prepared
-cases are not performed cases and do not change feature/stage QA status.
+QA tests through the doors a user or client application uses, never by editing the build, and does
+not repeat or rely on the developer's unit tests. A refactor or upgrade gets no feature QA: its proof
+is the developer's gates plus smoke and, where delivered features are touched, regression.
 
-QA tests through the same doors a user or a client application uses. QA does not repeat the
-developer's unit tests and does not rely on them. A criterion about the build itself (every string
-in a translation file, a check that fails on a stale file) is tested with a script that inspects the
-build, never by editing it.
+## Registering tests
 
-## Registering automation
-
-- An automation file belongs to exactly one stage or feature and is registered once, under
-  `verification` in that `stage.yaml` or `feature.yaml`. A file that is not registered is never run
-  by the lifecycle.
-- Where each kind of file lives, and how it is named, is in `docs/qa/test-plan.md`.
-- Shared helpers go in the shared folder. Do not copy sign-in, setup or data builders into a test.
-
-The fields QA writes. `cases` and `verification` are the same in `stage.yaml` (a stage's criteria)
-and `feature.yaml` (the journeys); `qa_status` and `evidence` are set on the feature, and on a stage
-only by a stage pass the owner asked for. The full templates are `assets/stage.yaml` and
-`assets/feature.yaml` in `salon-sdlc`:
+- A test file belongs to one stage or feature and is registered once, under `verification.automation`
+  of that `stage.yaml` or `feature.yaml`, with its `suites`. An unregistered file never runs.
+- Each test is titled with its case id and the criteria it covers (`references/test-design.md`).
+- Where files live and how they are named: `docs/qa/test-plan.md`. Shared helpers go in the shared
+  folder; do not copy sign-in, setup or data builders into a test.
 
 ```yaml
-qa_status: failing            # not-run | failing | blocked | pass
-blocked_reason: null          # required when qa_status is blocked
-cases:
-  - {id: TC-F07-S02-001, title: "...", type: api, priority: high, covers: [AC-1]}
 verification:
   automation:
-    - id: holds                 # unique within the stage
-      tool: playwright          # one of the tools in docs/qa/test-plan.md
-      file: <path under qa/>
-      project: api              # only for a tool that groups tests into projects
-      covers: [TC-F07-S02-001]
-      suites: [regression]      # regression | smoke; decided at feature-verify
+    - {id: holds, tool: playwright, file: qa/api/F07/holds.spec.ts, project: api, suites: [regression]}
   manual:
-    - {case: TC-F07-S02-007, reason: "...", performed_on: 2026-10-12}
+    - {case: TC-F07-S02-007, covers: [AC-4], reason: "...", performed_on: 2026-10-12}
   deferred:
-    - {case: TC-F07-S02-009, reason: "...", unblocked_by: "F07-S03"}
-evidence:
-  last_run: qa/reports/<folder>
-  last_result: pass             # pass | fail
+    - {case: TC-F07-S02-009, covers: [AC-6], reason: "...", unblocked_by: "F07-S03"}
+qa_status: failing            # feature, or a stage pass the owner asked for
+evidence: {last_run: qa/reports/<folder>, last_result: fail}
 ```
 
 ## Independent tests
 
-A test creates the data it needs and does not depend on another test having run, on the order of
-files, or on data left by an earlier run. Tests may run in any order and, where the tool allows, at
-the same time. Use unique names and times so that parallel tests do not collide unless the
-collision is the point of the test. Control the clock; never write a test that only passes at
-certain times.
+A test creates its own data and does not depend on another test, on file order or on an earlier
+run, so tests can run in any order and in parallel. Use unique names and times unless a collision is
+the point. Control the clock; never write a test that only passes at certain times.
 
-## Suites: regression and smoke
+## Smoke, regression and release
 
-Suite membership is a field on an automation entry, `suites: [regression, smoke]`, decided at
-`feature-verify` and reviewed at `release-prepare`. There is no separate list to keep in step.
+Membership is the `suites` field of an automation entry, decided at `feature-verify` and reviewed at
+`release-prepare`. A suite draws only on closed work.
 
-| Suite | Contains | Size |
+| Suite | Contains | When it runs |
 | --- | --- | --- |
-| `regression` | Everything that must keep working once delivered | As large as it needs to be |
-| `smoke` | The few checks that prove each delivered feature is alive | A few minutes in total |
+| `smoke` | The few critical checks that prove each delivered feature is alive: the apps start, sign-in, one cross-salon refusal, one key journey per feature | Every PR, after every merge, before and after a deploy |
+| `regression` | Everything that must keep working, run in parallel | Before a release; for refactors and upgrades that touch delivered features; when the owner asks |
+| `release` | The slow checks: load, the production-like stack, image scans | Before any deploy and at `release-verify` |
 
-A suite draws only on stages and features that are `complete` or `released`. What smoke means for
-this product is in `docs/qa/test-plan.md`.
+Keep each suite inside its budget in `docs/qa/test-plan.md`: a slow test moves to `release` or is
+made faster; it is not left to stretch smoke or regression. A suite that grows past its budget is a
+defect in the suite.
 
 ## Evidence
 
-- `qa/scripts/sdlc run` writes a folder under `qa/reports/` with a log per automation entry and a
-  `summary.json`. Screenshots, traces and recordings go in the same folder.
-- `qa/reports/` is not committed. What is committed is `evidence.last_run` (the folder's path,
-  `qa/reports/<folder>`) and `evidence.last_result` in the yaml, the bug files, and `review.md`.
-- Commit automation before the final feature run and record the tested full commit SHA in
-  `feature.yaml` under `integration.qa_revision`. A pass cannot certify later product or automation
-  changes without re-verification of the affected scope. Preserve base full-pass evidence and
-  distinguish later targeted verification from a full run; follow `salon-sdlc`'s resume rule.
-- Preserve report files before a worktree is removed. The cleanup command archives evidence and
-  writes a receipt outside the worktree; the storage location is in
-  `docs/operations/git-delivery.md`.
-- A manual case is evidence only with a `performed_on` date on its entry under
-  `verification.manual`. Perform it again when the code it covers changes.
-- Evidence must not contain secrets, tokens or real personal data. Turn off traces and recordings
-  around sign-in.
+- `qa/scripts/sdlc run` writes `qa/reports/<folder>/` with a log per entry and `summary.json`,
+  including the tested commit. Screenshots and traces go there too. Reports are not committed;
+  `evidence.last_run`, `evidence.last_result`, `integration.qa_revision`, bugs and `review.md` are.
+- A pass holds while the product is unchanged since `integration.qa_revision`
+  (`docs/operations/verification-evidence.md`); a later change is verified for its affected scope.
+- A manual case is evidence only with `performed_on`, and is performed again when its code changes.
+- No secrets, tokens or real personal data in evidence: turn traces and recordings off around sign-in.
 
 ## What a pass means
 
-The conditions for `qa_status: pass`, `failing` and `blocked` are the table "Which `qa_status` to
-set", in `lifecycle.md` in `salon-sdlc`. Two points that table does not spell out: every manual case
-must have been performed on the code as it is now, and a fix counts only once QA has verified it.
-
-A `minor` or `trivial` bug may stay open; it is listed in the feature's close report.
+The conditions are the `qa_status` table in `salon-sdlc`'s `references/lifecycle.md`. Every manual case
+was performed on the code as it is now, and a fix counts only once QA verified it. A `minor` or
+`trivial` bug may stay open and is listed in the close report.
 
 ## When a requirement changes
 
-A change request tells you which stages it touches. At the feature's next pass, for each one:
-reread the changed spec, edit the cases whose expectation changed, delete the cases and automation
-that no longer apply, and add what is new. Do not run other features because of it.
+At the feature's next pass, reread the changed specs, change the tests whose expectation changed,
+delete what no longer applies and add what is new. Do not run other features because of it.
