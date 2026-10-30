@@ -66,7 +66,7 @@ function scan(file) {
   };
   const literalText = (node) =>
     ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node) ? node.text : ts.isTemplateExpression(node) ? node.head.text + node.templateSpans.map((span) => span.literal.text).join('') : null;
-  const controls=path.join(root,'src/components/account/Controls.tsx');
+  const controls=path.join(root,'src/features/identity/components/Controls.tsx');
   const buttonContract=fs.existsSync(controls)&&/data-testid=\{testId\}/.test(fs.readFileSync(controls,'utf8'));
   const inUiPrimitives = /^src[\\/]components[\\/]ui[\\/]/.test(shown);
   // Local names of pressable shadcn/ui components imported into this file (`Button as UiButton` too).
@@ -74,7 +74,7 @@ function scan(file) {
     /^@\/components\/ui\//.test(statement.moduleSpecifier.text)&&statement.importClause?.namedBindings&&ts.isNamedImports(statement.importClause.namedBindings)?
     statement.importClause.namedBindings.elements.filter(element=>PRESSABLE_UI.has(element.propertyName?.text??element.name.text)).map(element=>element.name.text):[]));
   const importsButton=source.statements.some(statement=>ts.isImportDeclaration(statement)&&ts.isStringLiteral(statement.moduleSpecifier)&&
-    /(?:^@\/components\/account\/Controls$|^\.\/Controls$)/.test(statement.moduleSpecifier.text)&&statement.importClause?.namedBindings&&ts.isNamedImports(statement.importClause.namedBindings)&&
+    /(?:^@\/features\/identity\/components\/Controls$|^@\/features\/identity$|^\.\/Controls$)/.test(statement.moduleSpecifier.text)&&statement.importClause?.namedBindings&&ts.isNamedImports(statement.importClause.namedBindings)&&
     statement.importClause.namedBindings.elements.some(element=>element.name.text==='Button'&&(element.propertyName?.text??element.name.text)==='Button'));
 
   /** String literals an expression can evaluate to: `'a'`, `x ? 'a' : 'b'`, `x && 'a'`, `x ?? 'a'`. */

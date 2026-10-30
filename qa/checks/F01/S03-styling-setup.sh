@@ -108,10 +108,10 @@ violation() {
   expect_not_equal "styling-rules.test.ts with $label (exit)" 0 "$RULES_EXIT"
   expect_contains "the failure names $file" "$file" "$(cat "$RULES_LOG")"
 }
-violation css-module src/components/shell/QaProbe.module.css '.probe { color: inherit; }'
+violation css-module src/surfaces/workspace/QaProbe.module.css '.probe { color: inherit; }'
 violation second-style-sheet src/styles/qa-probe.css ':root { --qa-probe: 1px; }'
-violation arbitrary-colour-class src/components/shell/QaProbe.tsx 'export function QaProbe() { return <div className="p-2 bg-[#D6086A]" />; }'
-violation hex-colour-in-component src/components/shell/QaProbe.tsx "export const qaProbeBrand = '#D6086A';"
+violation arbitrary-colour-class src/surfaces/workspace/QaProbe.tsx 'export function QaProbe() { return <div className="p-2 bg-[#D6086A]" />; }'
+violation hex-colour-in-component src/surfaces/workspace/QaProbe.tsx "export const qaProbeBrand = '#D6086A';"
 # After the alterations are removed, the copy passes again: each failure was the alteration's doing.
 run_rules restored
 expect_equal "styling-rules.test.ts on the restored copy (exit)" 0 "$RULES_EXIT"
