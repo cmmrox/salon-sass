@@ -1,0 +1,25 @@
+id: F04-S03
+feature: F04
+title: "Opening hours, holidays and closures"
+sequence: 3
+surfaces: [api, web]
+status: outlined
+qa_status: not-run
+blocked_reason: null
+released_in: null
+reopened_by: null
+depends_on: [F04-S01]
+requirements: [STF-04]
+nfr_focus: [NFR-13]
+handoff:
+  run: null
+  data: null
+  notes: null
+verification:
+  commands: []
+  automation: []
+  manual: []
+  deferred: []
+evidence:
+  last_run: null
+  last_result: null

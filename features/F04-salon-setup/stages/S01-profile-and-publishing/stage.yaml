@@ -1,0 +1,25 @@
+id: F04-S01
+feature: F04
+title: "Settings, salon profile and publishing"
+sequence: 1
+surfaces: [api, web]
+status: outlined
+qa_status: not-run
+blocked_reason: null
+released_in: null
+reopened_by: null
+depends_on: []
+requirements: [BRD-02, BRD-04]
+nfr_focus: [NFR-13]
+handoff:
+  run: null
+  data: null
+  notes: null
+verification:
+  commands: []
+  automation: []
+  manual: []
+  deferred: []
+evidence:
+  last_run: null
+  last_result: null

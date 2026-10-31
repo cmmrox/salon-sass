@@ -6,7 +6,7 @@
 
 | Release | Requirements | Owned by a feature | Assigned to a stage | Passed QA |
 | --- | --- | --- | --- | --- |
-| R1 | 97 | 97 | 17 | 17 |
+| R1 | 97 | 97 | 23 | 17 |
 | R2 | 74 | 48 | 44 | 0 |
 | R3 | 21 | 8 | 8 | 0 |
 
@@ -89,21 +89,21 @@ Cases waiting for something else. `feature-verify` and `release-prepare` go thro
 | STF-01 | R1 | must | F06 | - |
 | STF-02 | R1 | must | F06 | - |
 | STF-03 | R1 | must | F06 | - |
-| STF-04 | R1 | must | F04 | - |
+| STF-04 | R1 | must | F04 | F04-S03 (outlined) |
 | STF-05 | R1 | must | F06 | - |
 | STF-06 | R1 | should | F10 | - |
 | STF-07 | R2 | should | unowned | - |
 | STF-08 | R2 | should | unowned | - |
 | STF-09 | R3 | could | unowned | - |
 | BKG-01 | R1 | must | F07 | - |
-| BKG-02 | R1 | must | F04 | - |
+| BKG-02 | R1 | must | F04 | F04-S04 (outlined) |
 | BKG-03 | R1 | must | F07 | - |
 | BKG-04 | R1 | must | F07 | - |
 | BKG-05 | R1 | must | F07 | - |
 | BKG-06 | R1 | must | F07 | - |
 | BKG-07 | R1 | must | F09 | - |
 | BKG-08 | R1 | must | F09 | - |
-| BKG-09 | R1 | must | F04 | - |
+| BKG-09 | R1 | must | F04 | F04-S04 (outlined) |
 | BKG-10 | R1 | must | F10 | - |
 | BKG-11 | R1 | must | F10 | - |
 | BKG-12 | R1 | must | F10 | - |
@@ -195,10 +195,10 @@ Cases waiting for something else. `feature-verify` and `release-prepare` go thro
 | REP-08 | R3 | should | unowned | - |
 | REP-09 | R3 | could | unowned | - |
 | REP-10 | R1 | must | F13 | - |
-| BRD-01 | R1 | must | F04 | - |
-| BRD-02 | R1 | must | F04 | - |
+| BRD-01 | R1 | must | F04 | F04-S02 (outlined) |
+| BRD-02 | R1 | must | F04 | F04-S01 (outlined) |
 | BRD-03 | R1 | must | F01 | F01-S03 (complete), F01-S05 (complete) |
-| BRD-04 | R1 | must | F04 | - |
+| BRD-04 | R1 | must | F04 | F04-S01 (outlined) |
 | BRD-05 | R2 | must | F16 | - |
 | BRD-06 | R2 | must | F16 | - |
 | BRD-07 | R2 | must | F16 | - |
