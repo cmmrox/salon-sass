@@ -320,3 +320,7 @@ CR-017 (AC-14) replaces the role `<select>` with the shadcn/ui Select, and adds 
 - **Steps:** For every sign-in and account state, list each element by job and the shadcn/ui component it renders (`data-slot`), and any control not inside a shadcn/ui component; compare with `docs/engineering/web.md`, "Styling", rule 1.
 - **Expected:** Each job uses the component the map names; no native or hand-built control and no Native Select; plain HTML only where the map allows (headings, plain-text lists, the setup key and URI outputs).
 - **Manual:** performed 2026-10-18; judging an element's job against the map needs a person. Evidence `qa/reports/20261018-CR017-manual/pairs/facts.json`.
+
+## CR-023 update (2026-11-01)
+
+CR-023 (decision 070) adopts the expanded design prototype, which keeps CR-010's Salon-first presentation and adds a third design view. TC-F02-S04-023's prototype check now expects three buttons in the "Design reference platform" group, in the order Customer mobile design (later), Salon web, Platform console. At 360, 768 and 1440px: Salon web is pressed and shown by default with Customer and Platform console not pressed; the deferred React Native note is kept; no pair of the three buttons overlaps; each lies inside the viewport with no clipped text; the identity does not overlap the group; Platform console can be chosen (its view shows) and Salon web chosen again; the Customer switch behaves as before. Its other expected results are unchanged.

@@ -124,20 +124,30 @@ test(`${c(21)} translation and test-id inventories cover every new screen state`
  }
 });
 
-test(`${c(23)} prototype defaults to Salon web and labels the deferred Customer mobile reference`,async({browser},testInfo)=>{
+// CR-023 (decision 070): the adopted prototype keeps CR-010's Salon-first presentation and adds a third view, Platform console.
+test(`${c(23)} prototype defaults to Salon web, labels the deferred Customer mobile reference and offers the Platform console view`,async({browser},testInfo)=>{
  const html=fs.readFileSync(path.join(productRoot,'docs/design/prototype/index.html'),'utf8');
  const server=createServer((_request,response)=>{response.writeHead(200,{'Content-Type':'text/html'});response.end(html);});
  await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const address=server.address();if(!address||typeof address==='string')throw Error('ENVIRONMENT: prototype preview listener absent');
  const page=await browser.newPage();try{
   for(const width of [360,768,1440]){await page.setViewportSize({width,height:1000});await page.goto(`http://127.0.0.1:${address.port}/`);
-   const salon=page.getByRole('button',{name:'Salon web',exact:true}),customer=page.getByRole('button',{name:'Customer mobile design (later)',exact:true});
+   const group=page.getByRole('group',{name:'Design reference platform'});
+   const salon=page.getByRole('button',{name:'Salon web',exact:true}),customer=page.getByRole('button',{name:'Customer mobile design (later)',exact:true}),console_=page.getByRole('button',{name:'Platform console',exact:true});
    await expect(salon).toHaveAttribute('aria-pressed','true');await expect(customer).toHaveAttribute('aria-pressed','false');await expect(page.locator('body')).toHaveClass(/adm/);
+   await expect(console_).toBeVisible();await expect(console_).toHaveAttribute('aria-pressed','false');await expect(group.locator('button')).toHaveText(['Customer mobile design (later)','Salon web','Platform console']);
+   await expect(page.getByRole('heading',{name:'Usage and revenue',exact:true}),'Salon web is the view shown by default, not the console').toHaveCount(0);
    await expect(page.locator('#platform-note')).toContainText('React Native mobile reference for after the salon web release');
-   const bounds=await page.getByRole('group',{name:'Design reference platform'}).locator('button').evaluateAll(buttons=>buttons.map(button=>{const r=button.getBoundingClientRect();return{left:r.left,right:r.right,top:r.top,bottom:r.bottom,client:button.clientHeight,scroll:button.scrollHeight};}));expect(bounds).toHaveLength(2);
-   for(const box of bounds){expect(box.left).toBeGreaterThanOrEqual(0);expect(box.right).toBeLessThanOrEqual(width);expect(box.scroll).toBeLessThanOrEqual(box.client);}
-   expect(bounds[0].right<=bounds[1].left||bounds[0].bottom<=bounds[1].top,'platform labels do not overlap').toBe(true);
+   const bounds=await group.locator('button').evaluateAll(buttons=>buttons.map(button=>{const r=button.getBoundingClientRect();return{left:r.left,right:r.right,top:r.top,bottom:r.bottom,client:button.clientHeight,scroll:button.scrollHeight,clientWidth:button.clientWidth,scrollWidth:button.scrollWidth};}));expect(bounds).toHaveLength(3);
+   for(const box of bounds){expect(box.left).toBeGreaterThanOrEqual(0);expect(box.right).toBeLessThanOrEqual(width);expect(box.scroll).toBeLessThanOrEqual(box.client);expect(box.scrollWidth,'platform label text is not clipped sideways').toBeLessThanOrEqual(box.clientWidth);}
+   // Every pair, in reading order: an earlier label sits wholly left of or wholly above a later one.
+   for(let i=0;i<bounds.length;i++)for(let j=i+1;j<bounds.length;j++)expect(bounds[i].right<=bounds[j].left||bounds[i].bottom<=bounds[j].top,`platform labels ${i} and ${j} do not overlap`).toBe(true);
    const identity=await page.locator('#bm').boundingBox(),platform=await page.getByRole('group',{name:'Design reference platform'}).boundingBox();expect(identity).not.toBeNull();expect(platform).not.toBeNull();expect(identity!.x+identity!.width<=platform!.x||platform!.x+platform!.width<=identity!.x||identity!.y+identity!.height<=platform!.y||platform!.y+platform!.height<=identity!.y,'identity does not overlap the platform labels').toBe(true);
    await page.screenshot({path:testInfo.outputPath(`prototype-staff-default-${width}.png`)});
+   await console_.click();await expect(console_).toHaveAttribute('aria-pressed','true');await expect(salon).toHaveAttribute('aria-pressed','false');await expect(customer).toHaveAttribute('aria-pressed','false');
+   await expect(page.getByRole('heading',{name:'Usage and revenue',exact:true})).toBeVisible();
+   await page.screenshot({path:testInfo.outputPath(`prototype-platform-console-${width}.png`)});
+   await salon.click();await expect(salon).toHaveAttribute('aria-pressed','true');await expect(console_).toHaveAttribute('aria-pressed','false');await expect(page.locator('body')).toHaveClass(/adm/);
+   await expect(page.getByRole('heading',{name:'Usage and revenue',exact:true})).toHaveCount(0);await expect(page.locator('#platform-note')).toContainText('React Native mobile reference for after the salon web release');
    await customer.click();await expect(customer).toHaveAttribute('aria-pressed','true');await expect(page.locator('body')).not.toHaveClass(/adm/);await expect(page.locator('#platform-note')).toContainText('React Native');
    await salon.click();await expect(page.locator('body')).toHaveClass(/adm/);
   }
