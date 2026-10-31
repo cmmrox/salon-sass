@@ -161,6 +161,9 @@ Three consequences of how the framework works, which every later stage follows:
       placeholder for the application role (never to a role name written into the migration, and
       no migration creates a role).
 - [ ] An isolation test covers the table (see below).
+- [ ] From F04, a salon-operations table (catalogue, staff, booking, payment, customer activity) also
+      carries `branch_id`, with a composite foreign key `(tenant_id, branch_id)`. Each salon has one
+      default branch in R1; a query never assumes there is only one (decision 073).
 
 ## Adding an endpoint
 
@@ -205,6 +208,9 @@ recorded reason and an expiry, visible to the salon's owner and written to the a
 Operator authentication, the dedicated platform database connection and the narrowly granted
 initial Owner/brand bootstrap are specified in `docs/architecture/operator-console.md`.
 Initial creation does not grant an operator ongoing access to tenant records or a tenant session.
+
+The yearly Sri Lankan holiday and Poya calendar is platform reference data with no `tenant_id`,
+published by the operator. A salon's accepted or edited copy of it is tenant data (STF-04, decision 078).
 
 ## Tests you must write
 

@@ -72,13 +72,32 @@ converting the hold happen in one transaction, which also writes a `BookingConfi
 outbox; notifications are scheduled when that event is consumed, and messages are sent afterwards
 from the outbox.
 
+Service time is stored as ordered segments (active, processing, buffer). The overlap constraint
+and the availability engine work on the segments, so processing time can free a professional
+without a new engine (decision 074). A booking's state changes only through the booking module's
+state machine (decision 075).
+
+## Salon operations model (CR-023)
+
+- **Branch scope from the start.** From F04, salon-operations data carries a branch scope. Each
+  salon has one default branch in R1, and F18 adds more (decision 073).
+- **One payment record.** A booking or sale has one append-only record of charges, payments by
+  tender, refunds and deposits held. Checkout, the day-end close, reports, occasion balances (F19)
+  and gift cards (F21) all use it (decision 076).
+- **Modules are entitlements.** A salon's modules are its plan's features plus add-ons the operator
+  activates, enforced by the API. Navigation only reflects them (decision 077).
+- **Metered messaging and platform reference data.** Messages are metered per salon, with a warning
+  before the allowance runs out. The holiday and Poya calendar is platform data published each year
+  (decision 078).
+
 ## Customer app distribution
 
 One Expo codebase. A shared container app in the operator's store accounts opens one salon by link,
 QR code or short code. A salon that wants its own listing gets a dedicated app built from the same
 code and published in the salon's own Apple and Google developer accounts, which is what the stores
 require of white-label apps. Branding and content are delivered from the API at run time, so a
-brand change needs no app release. The distribution model is open decision D-01.
+brand change needs no app release. D-01 is settled (decision 071): the shared app is the standard
+route for every salon (M2-mobile, F15), and the dedicated app is a plan feature (F16, M3-growth).
 
 ## Integrations
 

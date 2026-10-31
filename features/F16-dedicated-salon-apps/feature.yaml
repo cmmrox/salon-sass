@@ -1,8 +1,8 @@
 id: F16
 title: "Dedicated salon apps and store pipeline"
-summary: "A salon gets its own app in the stores under its own developer accounts, built, signed, submitted and updated from the shared codebase by an automated pipeline."
-release: R1
-milestone: M2-mobile
+summary: "A salon on a plan that includes it gets its own app in the stores under its own developer accounts, built, signed, submitted and updated from the shared codebase by an automated pipeline."
+release: R2
+milestone: M3-growth
 status: backlog
 qa_status: not-run
 released_in: null

@@ -1,6 +1,6 @@
 id: F04
 title: "Salon setup: profile, branding, hours and policies"
-summary: "A salon owner sets the business profile, brand, opening hours, holidays and booking policies, and customers see the published brand without an app release."
+summary: "A salon owner sets the business profile, brand, opening hours, holidays and closures (with the bookings a closure affects), tax and booking policies in tabbed settings, and customers see the published brand without an app release. Every new table carries the branch scope with one default branch (CR-023)."
 release: R1
 milestone: M1-web
 status: backlog

@@ -1,8 +1,8 @@
 id: F15
 title: Customer mobile app
 summary: 'After all salon administration web features are released, build the React Native customer app:
-  salon entry, sign-in, profile, booking, payments, appointment management and push, using the shared
-  API.'
+  salon entry through the shared app (D-01), sign-in, profile, booking, payments, appointment management
+  and push, using the shared API.'
 release: R1
 milestone: M2-mobile
 status: backlog
@@ -27,9 +27,9 @@ requirements:
 - APP-10
 - IAM-02
 - MKT-01
+- APP-08
 extends:
 - APP-03
-- APP-08
 - IAM-01
 - IAM-05
 - BRD-04
@@ -39,6 +39,16 @@ extends:
 - IAM-04
 - IAM-09
 - IAM-10
+- PAY-01
+- PAY-04
+- BKG-04
+- BKG-07
+- BKG-08
+- BKG-17
+- NOT-03
+- NOT-06
+- CAT-06
+- STF-01
 nfr_focus:
 - NFR-14
 cases: []

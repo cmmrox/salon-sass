@@ -1,6 +1,6 @@
 id: F06
 title: "Staff, schedules and leave"
-summary: "A salon maintains its professionals, the services each performs, their working hours, leave and blocked time."
+summary: "A salon adds, edits and removes team members (removal refused while they have upcoming bookings), the services each performs, their public profile, working hours, leave and blocked time; a professional can be bookable without a sign-in account."
 release: R1
 milestone: M1-web
 status: backlog

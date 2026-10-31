@@ -36,8 +36,9 @@ requirements:
     priority: must
     release: R1
     prototype: none
-    status: active
-    text: "A guided onboarding checklist takes the salon owner through opening hours, services, staff, policies, branding and payment set-up, and shows what remains before the salon can go live."
+    status: changed
+    changed_by: CR-023
+    text: "A guided onboarding checklist takes the salon owner through opening hours, services, staff, policies, branding and payment set-up, and shows what remains before the salon can go live. The owner can leave and resume it, and it ends with a test booking that is then removed."
   - id: PLT-03
     module: PLT
     priority: should
@@ -78,8 +79,9 @@ requirements:
     priority: should
     release: R1
     prototype: none
-    status: active
-    text: "Import of customers, services and future appointments from a spreadsheet, with validation, a preview of what will be created, and an error report."
+    status: changed
+    changed_by: CR-023
+    text: "Import of customers, services and future appointments from a spreadsheet, with a template, validation, a preview of what will be created, possible duplicates flagged by normalised phone number and email, and a downloadable error report."
   - id: PLT-09
     module: PLT
     priority: should
@@ -122,6 +124,13 @@ requirements:
     prototype: partial
     status: active
     text: "Removing a module stops new sales and configuration while preserving confirmed work, historical records, exports, financial obligations and the access needed to honour them."
+  - id: PLT-15
+    module: PLT
+    priority: should
+    release: R2
+    prototype: none
+    status: active
+    text: "The staff workspace is available in Sinhala and Tamil as well as English."
   - id: IAM-01
     module: IAM
     priority: must
@@ -216,13 +225,21 @@ requirements:
     prototype: none
     status: active
     text: "The Owner can adjust which permissions each role has."
+  - id: IAM-14
+    module: IAM
+    priority: should
+    release: R1
+    prototype: none
+    status: active
+    text: "The Owner sets which roles may give discounts and up to what amount or percentage, and which roles may issue refunds. The API enforces these limits."
   - id: CAT-01
     module: CAT
     priority: must
     release: R1
-    prototype: partial
-    status: active
-    text: "A service has a name, description, category, price, duration, buffer, optional image, and a setting for whether it can be booked online."
+    prototype: yes
+    status: changed
+    changed_by: CR-023
+    text: "A service has a name, description, category, price, duration, buffer, optional image, and a setting for whether it can be booked online. Staff can create, edit, duplicate (the copy starts hidden), and hide or show a service online. A service can be deleted only when no upcoming booking uses it; otherwise it can only be hidden."
   - id: CAT-02
     module: CAT
     priority: must
@@ -249,8 +266,9 @@ requirements:
     priority: must
     release: R1
     prototype: none
-    status: active
-    text: "Tax and service charge settings per tenant, with prices shown to customers inclusive of them."
+    status: changed
+    changed_by: CR-023
+    text: "Tax and service charge settings per tenant, off unless the salon is registered for them, with labels from configuration and prices shown to customers inclusive of them."
   - id: CAT-06
     module: CAT
     priority: should
@@ -270,8 +288,9 @@ requirements:
     priority: should
     release: R2
     prototype: none
-    status: active
-    text: "A professional can have their own price or duration for a service (for example a senior stylist)."
+    status: changed
+    changed_by: CR-023
+    text: "Professionals are given a price level (for example Junior, Senior, Director). A service’s price and duration can be set per level, with an optional override for one professional; the price applied is recorded on the booking."
   - id: CAT-09
     module: CAT
     priority: should
@@ -319,9 +338,10 @@ requirements:
     module: STF
     priority: must
     release: R1
-    prototype: partial
-    status: active
-    text: "Staff profile: name, photo, title, short biography, the services they perform, and whether they are shown for online booking."
+    prototype: yes
+    status: changed
+    changed_by: CR-023
+    text: "Staff profile: name, photo, title, short biography, the services they perform, and whether they are shown for online booking. Team members can be added, edited and removed; removal is refused while the person has upcoming bookings. A professional can be bookable without a sign-in account."
   - id: STF-02
     module: STF
     priority: must
@@ -341,8 +361,9 @@ requirements:
     priority: must
     release: R1
     prototype: partial
-    status: active
-    text: "Salon opening hours, special closures and public holidays. A Sri Lankan holiday calendar, including Poya days, is supplied as a preset the salon can accept or edit."
+    status: changed
+    changed_by: CR-023
+    text: "Salon opening hours, special closures and public holidays. The Sri Lankan holiday calendar, including Poya days, is published each year by the operator from the official government calendar, not built into the code, and each salon accepts or edits it. Closing a date lists the bookings it affects for action."
   - id: STF-05
     module: STF
     priority: must
@@ -367,10 +388,11 @@ requirements:
   - id: STF-08
     module: STF
     priority: should
-    release: R3
+    release: R2
     prototype: none
-    status: active
-    text: "Commission rules per professional and a commission report."
+    status: changed
+    changed_by: CR-023
+    text: "A commission percentage per service and per product for each professional, with tips kept separate, and a commission report."
   - id: STF-09
     module: STF
     priority: could
@@ -418,8 +440,9 @@ requirements:
     priority: must
     release: R1
     prototype: yes
-    status: active
-    text: "Booking states: held, pending payment, confirmed, arrived, in service, completed, cancelled, no-show. Each change records who made it, when, and why."
+    status: changed
+    changed_by: CR-023
+    text: "Booking states: held, pending payment, confirmed, arrived, in service, completed, cancelled, no-show. Completed is reached only through checkout; no-show can be set only after the start time and undone the same day; cancellation is only before the start time. Each change records who made it, when, and why."
   - id: BKG-07
     module: BKG
     priority: must
@@ -453,8 +476,9 @@ requirements:
     priority: must
     release: R1
     prototype: yes
-    status: active
-    text: "Staff can create a booking on a customer’s behalf, recording the source (phone, WhatsApp, in person)."
+    status: changed
+    changed_by: CR-023
+    text: "Staff can create a booking on a customer’s behalf on any open day: a mobile number is required, free times across eligible professionals are offered, and the source (phone, WhatsApp, front desk) is recorded."
   - id: BKG-12
     module: BKG
     priority: must
@@ -489,8 +513,8 @@ requirements:
     release: R1
     prototype: partial
     status: changed
-    changed_by: CR-010
-    text: "Every booking records its channel: customer app, staff web, shared app link, Instagram, Google, WhatsApp, phone or walk-in. Existing historical channel labels may be retained as data; no customer website is delivered."
+    changed_by: CR-023
+    text: "Every booking records its channel: customer app, staff web, shared app link, Instagram, Google, WhatsApp, phone, front desk or walk-in. Existing historical channel labels may be retained as data; no customer website is delivered."
   - id: BKG-17
     module: BKG
     priority: should
@@ -737,9 +761,10 @@ requirements:
     module: PAY
     priority: must
     release: R1
-    prototype: none
-    status: active
-    text: "In-salon checkout: settle the balance, add or remove services, apply a discount with a reason, record the tender (cash, card terminal, bank transfer, LANKAQR), and issue a receipt by WhatsApp, SMS or email."
+    prototype: partial
+    status: changed
+    changed_by: CR-023
+    text: "In-salon checkout: settle the balance in one or more payments, add or remove services and products, apply a discount with a reason, record each tender (cash, card terminal, bank transfer with a required reference, LANKAQR), show the balance still due, complete the visit once paid, and issue a receipt by WhatsApp, SMS or email."
   - id: PAY-07
     module: PAY
     priority: must
@@ -756,18 +781,20 @@ requirements:
     text: "Gateway credentials are entered by the Owner, stored encrypted, and tested with a trial transaction before online payment is switched on."
   - id: PAY-09
     module: PAY
-    priority: should
-    release: R2
+    priority: must
+    release: R1
     prototype: none
-    status: active
-    text: "A payment link can be sent for a staff-created booking so that a deposit can be taken for phone and WhatsApp bookings."
+    status: changed
+    changed_by: CR-023
+    text: "A payment link can be sent by WhatsApp or SMS for a staff-created booking so that a deposit can be taken for phone, WhatsApp and front-desk bookings. The link opens the gateway’s hosted checkout and returns to a salon-branded payment result; it is not a booking website. Only the gateway’s verified notification confirms the payment."
   - id: PAY-10
     module: PAY
     priority: should
-    release: R2
+    release: R1
     prototype: none
-    status: active
-    text: "Day-end summary by tender and by staff member, with expected cash."
+    status: changed
+    changed_by: CR-023
+    text: "Cash drawer and day-end close: opening float, cash paid in and out with a reason, expected against counted cash with the difference recorded, and a day-end summary by tender and by staff member."
   - id: PAY-11
     module: PAY
     priority: should
@@ -815,8 +842,9 @@ requirements:
     priority: must
     release: R1
     prototype: partial
-    status: active
-    text: "Channels: push, WhatsApp, SMS and email. Each event has a channel order with fallback, and stops at the first successful delivery."
+    status: changed
+    changed_by: CR-023
+    text: "Channels: WhatsApp, SMS and email, and push once the customer app is released. Each event has a channel order with fallback (for example WhatsApp, else SMS), and stops at the first successful delivery. Automated WhatsApp messaging is a plan feature."
   - id: NOT-03
     module: NOT
     priority: must
@@ -836,15 +864,17 @@ requirements:
     priority: must
     release: R1
     prototype: none
-    status: active
-    text: "Every message is logged with channel, status and cost. Cost is attributed to the salon."
+    status: changed
+    changed_by: CR-023
+    text: "Every message is logged with channel, status and cost. Cost is attributed to the salon. The salon sees its usage and is warned before its message allowance or balance runs out; reminders never stop without warning."
   - id: NOT-06
     module: NOT
     priority: must
     release: R1
     prototype: none
-    status: active
-    text: "Customers control which messages they receive and by which channel. Marketing messages require recorded consent and always include a way to opt out. Quiet hours are respected."
+    status: changed
+    changed_by: CR-023
+    text: "Customers control which messages they receive and by which channel. Marketing messages require recorded consent and always include a way to opt out. WhatsApp opt-in is recorded before any WhatsApp message is sent. Messages held by quiet hours are queued, never dropped; confirmations and payment messages are exempt."
   - id: NOT-07
     module: NOT
     priority: should
@@ -885,15 +915,17 @@ requirements:
     priority: must
     release: R1
     prototype: yes
-    status: active
-    text: "A customer record with contact details, visits, total spend, no-shows, upcoming appointments and preferred professional."
+    status: changed
+    changed_by: CR-023
+    text: "A customer record with contact details, tags, visits, total spend, no-shows, upcoming appointments and preferred professional."
   - id: CRM-02
     module: CRM
     priority: must
     release: R1
     prototype: none
-    status: active
-    text: "Customer records exist independently of bookings. Two people can share a phone number; duplicates are merged only by a deliberate staff action that can be reviewed."
+    status: changed
+    changed_by: CR-023
+    text: "Customer records exist independently of bookings. Two people can share a phone number. When a record is created or imported, possible duplicates are flagged by normalised phone number and email; duplicates are merged only by a deliberate, audited staff action that can be reviewed."
   - id: CRM-03
     module: CRM
     priority: must
@@ -1055,8 +1087,9 @@ requirements:
     priority: should
     release: R2
     prototype: partial
-    status: active
-    text: "Financial reports: sales by tender, tax, discounts, refunds, outstanding balances."
+    status: changed
+    changed_by: CR-023
+    text: "Financial reports: tax, discounts, refunds and outstanding balances. Collections by tender and deposits held are REP-10."
   - id: REP-07
     module: REP
     priority: should
@@ -1078,6 +1111,13 @@ requirements:
     prototype: none
     status: active
     text: "Scheduled report by email to the owner."
+  - id: REP-10
+    module: REP
+    priority: must
+    release: R1
+    prototype: none
+    status: active
+    text: "A payments report shows amounts collected by tender (cash, card terminal, bank transfer, LANKAQR, gateway) and deposits held for future bookings, for any period, with download."
   - id: BRD-01
     module: BRD
     priority: must
@@ -1090,8 +1130,9 @@ requirements:
     priority: must
     release: R1
     prototype: partial
-    status: active
-    text: "Business profile: address and map position, phone, WhatsApp number, social links, opening hours, description."
+    status: changed
+    changed_by: CR-023
+    text: "Business profile: address and map position, phone, WhatsApp number, social links, opening hours, description. The customer’s “chat on WhatsApp” link to the salon’s own number is available on every plan."
   - id: BRD-03
     module: BRD
     priority: must
@@ -1111,38 +1152,43 @@ requirements:
   - id: BRD-05
     module: BRD
     priority: must
-    release: R1
+    release: R2
     prototype: none
-    status: active
+    status: changed
+    changed_by: CR-023
     text: "A dedicated app per salon can be produced from the shared codebase with its own name, icon, splash screen, identifiers and store listings, published in the salon’s own developer accounts."
   - id: BRD-06
     module: BRD
     priority: must
-    release: R1
+    release: R2
     prototype: none
-    status: active
+    status: changed
+    changed_by: CR-023
     text: "An automated pipeline builds, signs and submits each salon’s app from a tenant app registry, and can deliver JavaScript-only updates over the air to each app separately."
   - id: BRD-07
     module: BRD
     priority: must
-    release: R1
+    release: R2
     prototype: none
-    status: active
+    status: changed
+    changed_by: CR-023
     text: "A store listing kit per salon: description, keywords, screenshots rendered with the salon’s branding and services, privacy and data-safety answers."
   - id: BRD-08
     module: BRD
     priority: must
-    release: R1
+    release: R2
     prototype: none
-    status: active
+    status: changed
+    changed_by: CR-023
     text: "A developer-account onboarding guide and tracker for each salon: Apple and Google enrolment, D-U-N-S, granting access to the operator, renewal dates."
   - id: BRD-09
     module: BRD
-    priority: should
+    priority: must
     release: R1
     prototype: none
-    status: active
-    text: "A shared container app in the operator’s store accounts. A salon’s link, QR code or short code opens that salon’s branded experience, and no other salon is shown or suggested."
+    status: changed
+    changed_by: CR-023
+    text: "A shared container app in the operator’s store accounts is the standard way customers reach a salon (D-01). A salon’s link, QR code or short code opens that salon’s branded experience, and no other salon is shown or suggested."
   - id: BRD-10
     module: BRD
     priority: should
@@ -1175,10 +1221,11 @@ requirements:
   - id: INV-01
     module: INV
     priority: could
-    release: R3
+    release: R1
     prototype: none
-    status: active
-    text: "A product catalogue; products can be sold at checkout."
+    status: changed
+    changed_by: CR-023
+    text: "A product catalogue (name, price, tax) whose products can be sold at checkout. Stock is not tracked until INV-02."
   - id: INV-02
     module: INV
     priority: could

@@ -250,7 +250,9 @@ by billing and lifecycle transitions and read on every request; nothing caches i
 their own transactions: the plan's limits and features, and the salon's current usage. Staff seats
 count active staff accounts, enforced by identity on staff creation (409 `entitlement_exceeded`
 naming the limit); branches, message allowance, custom domain and dedicated app are enforced by
-the features that create those things (F04, F11, F16) through the same interface. An Admin may move a
+the features that create those things (F04, F11, F16) through the same interface. Add-on modules
+an operator activates for one salon (F18, decision 077) extend the plan's features through the same
+interface; the plan itself stays immutable. An Admin may move a
 salon to another plan; the move is refused with 409 `entitlement_exceeded` when current usage
 exceeds the new plan's limits. Staff of the salon read their entitlements and subscription state
 from the API; nothing in a client is the source of an entitlement.

@@ -16,17 +16,19 @@ Requirement text is in `docs/brd/requirements.yaml`.
 | Reviews and ratings | APP-13, STF-07, NOT-09 |
 | Customer campaigns | MKT-03, MKT-04 |
 | Customer app extras: Sinhala and Tamil, favourites, gallery, saved payment method | APP-12, APP-14, APP-17, APP-19 |
-| Payment operations: payment links, day-end summary, reconciliation, late fees | PAY-09, PAY-10, PAY-11, PAY-12 |
+| Payment operations: reconciliation and late fees (payment links and the day-end close moved to R1 under CR-023) | PAY-11, PAY-12 |
 | Customer insight: segments and blocking | CRM-07, CRM-08 |
 | Deeper reports | REP-05, REP-06 |
+| Commission (moved from R3 under CR-023) | STF-08 |
+| Staff workspace in Sinhala and Tamil (CR-023) | PLT-15 |
 | Custom domains and app links (design approved in CR-021: `docs/architecture/multi-tenancy.md`, "Domains a salon owns") | BRD-11, BRD-12 |
 
 ## Release 3 candidates
 
 | Candidate feature | Requirements |
 | --- | --- |
-| Retail and inventory | INV-01, INV-02, INV-03 |
-| Staff pay and attendance | STF-08, STF-09, REP-08, PAY-13 |
+| Stock and back-bar inventory (selling products moved to R1 under CR-023) | INV-02, INV-03 |
+| Staff attendance, targets and tips | STF-09, REP-08, PAY-13 |
 | Recurring appointments | BKG-21 |
 | Memberships and referrals | MKT-07, MKT-08 |
 | Smaller additions | PLT-12, IAM-13, APP-22, PAY-14, REP-09 |

@@ -401,6 +401,18 @@ change, and a stage leaves the code it touches meeting them.
   `BookingConfirmed` event to the outbox; `notification` schedules the messages when it consumes
   the event, not inside the confirming transaction (CR-021).
 - Every state change records who, when and why.
+- Service time is a list of segments (active, processing, buffer), copied onto the booking when it
+  is made. The exclusion constraint covers the segments that occupy the professional; a processing
+  segment occupies only the resources it names (decision 074). A price or duration change never
+  rewrites a booking's copy (CAT-04).
+- States change only through the booking module's state machine, which refuses a change the rules
+  forbid: completed only through checkout, no-show only after the start time, cancellation only
+  before it (BKG-06, decision 075).
+- Money for a booking or sale is one append-only payment record: charges, payments by tender with
+  their references, refunds, and deposits held as an amount owed to the customer. No module keeps a
+  separate balance; occasion balances and gift cards are entries in the same record (decision 076).
+- From F04, every salon-operations table carries `branch_id` beside `tenant_id`. R1 has one default
+  branch per salon (decision 073).
 
 ## Health and service metadata
 

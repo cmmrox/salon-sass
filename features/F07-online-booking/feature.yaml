@@ -1,7 +1,8 @@
 id: F07
 title: Booking engine and staff booking foundations
-summary: Staff create bookings using shared availability, holds and conflict prevention. Customer-facing
-  booking screens are delivered later in the React Native app.
+summary: Staff create bookings on any open day using shared availability, holds and conflict prevention,
+  with one enforced booking-state model (completed only through checkout). Customer-facing booking screens
+  are delivered later in the React Native app.
 release: R1
 milestone: M1-web
 status: backlog

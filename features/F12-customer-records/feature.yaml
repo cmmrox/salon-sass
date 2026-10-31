@@ -1,6 +1,6 @@
 id: F12
 title: "Customer records"
-summary: "A salon keeps a record of each customer with visits, spend, notes and consents, and authorised staff can export the list."
+summary: "A salon keeps a record of each customer with tags, visits, spend, notes and consents, is warned of possible duplicates, and authorised staff can export the list."
 release: R1
 milestone: M1-web
 status: backlog
