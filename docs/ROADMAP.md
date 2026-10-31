@@ -11,13 +11,13 @@ order and is edited by the lead when the owner changes it.
 | Milestone | What is delivered | Features | Starts when |
 | --- | --- | --- | --- |
 | `M1-web` | The operator console and each salon's owner/admin/staff workspace; no customer web surface | F01 to F14 | Now |
-| `M2-mobile` | The customer mobile app, and a dedicated store app per salon | F15, F16 | Every `M1-web` feature is released |
-| `M3-growth` | Service customisation, multi-branch operations, Bridal/occasion workflows and expanded commerce | F17 to F21 | Every R1 feature is released |
+| `M2-mobile` | The customer mobile app, reached through the shared app (D-01) | F15 | Every `M1-web` feature is released |
+| `M3-growth` | Dedicated salon apps, service customisation, multi-branch operations, Bridal/occasion workflows and expanded commerce | F16 to F21 | Every R1 feature (F01 to F15) is released |
 | `M4-assistance` | Guided customer and staff AI assistants with human handoff | F22 | Every `M3-growth` feature is released |
 
 A milestone may ship as more than one version. `M2-mobile` waits for the last `M1-web` feature to
 be released, not merely complete; `features/README.md` shows "after M1-web is released" until then,
-and `feature-new` refuses to start F15 or F16 before it.
+and `feature-new` refuses to start F15 before it.
 
 If the owner changes the order, the lead edits this file and the `milestone` of the features
 affected, and records the decision. If the owner wants one feature started early without changing
@@ -45,6 +45,14 @@ Delivered in this order. Each feature depends on the ones before it that it name
 | F13 Reports | How the business did over a period |
 | F14 Guided onboarding and data import | A new salon sets itself up |
 
+CR-023 adopted the current prototype and refined these features without enlarging R1's shape. The
+salon's settings are tabbed, with hours, closures and policies. Services and the team have full
+add, edit and remove with guards. The desk books any open day. Bookings follow one state model.
+Checkout takes part payments by tender and closes the cash drawer at day end. Staff send deposit
+links. Messaging warns before its balance runs out. Reports show collections by tender and deposits
+held. From F04 the data carries a branch scope, and from F05 service time is stored as segments, so
+that R2 needs no rework (decisions 073 to 076).
+
 During M1, only salon owners, managers and relevant staff use the web workspace; the operator
 uses the console. Customers do not book, sign in or manage accounts in a browser. Staff can
 manage customer records and bookings. Build versioned shared APIs and retain already-implemented
@@ -57,22 +65,23 @@ preferences are delivered by F15 after every M1 feature is released.
 | Feature | Delivers |
 | --- | --- |
 | F15 Customer mobile app | The app shell, opening a salon in the shared app, customer sign-in/accounts, booking, payments and appointment management, push notifications, calendar and directions, minimum-version control |
-| F16 Dedicated salon apps and store pipeline | A salon's own app in the stores under its own developer accounts, built and updated by an automated pipeline |
 
 F15 owns the customer app and booking-flow requirements, including IAM-02 and APP-06. Its
 `extends` list maps shared backend requirements to their first customer-facing mobile screens:
 sign-in, profile/privacy, appointment self-service, payments, branding and notification preferences.
 A completed backend requirement is not evidence of a delivered customer interface.
 
-Open decision D-01 (the mobile distribution model) must be settled before F15 is planned.
+D-01 is settled (decision 071): the shared container app is the standard way customers reach a salon,
+and a dedicated app is a plan feature published in the salon's own developer accounts (F16, M3).
 
-## M3-growth: R2 service, branch, occasion and commerce expansion
+## M3-growth: R2 apps, service, branch, occasion and commerce expansion
 
-Approved under CR-020. These features remain backlog until their dependencies have passed QA, merged
+Approved under CR-020; F16 joined under CR-023. These features remain backlog until their dependencies have passed QA, merged
 and the milestone gate opens. Their stage outlines do not authorise early implementation.
 
 | Feature | Delivers |
 | --- | --- |
+| F16 Dedicated salon apps and store pipeline | A salon's own app in the stores under its own developer accounts, built and updated by an automated pipeline, for plans that include it |
 | F17 Service customisation and treatment readiness | Conditional options and add-ons, pricing types, packages, resources, processing time, consultations and customer intake |
 | F18 Multi-branch salons and module administration | Service lines, branch-scoped operations and reports, mobile branch selection and safe module offboarding |
 | F19 Bridal and occasion operations | Staff enquiry, package and quote workflows, party/event scheduling, travel, ledgers, changes and reports |

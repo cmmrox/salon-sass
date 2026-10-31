@@ -82,6 +82,9 @@ apps/web/test/            test helpers, imported as @test/*
   composes them passes the other feature's implementation in. The workspace BFF reaches platform's
   entitlements, invoices and support sessions this way (`SalonAccount`, wired in the `identity-web`
   route).
+- The workspace navigation lists only delivered features and the modules the salon is entitled to.
+  It reads them from the API (plan features plus add-on modules, decision 077). Hiding an item is a
+  convenience; the API refuses the module's routes on its own.
 - Each feature exposes a client-safe `index.ts` and a server entry `server.ts`; a surface exposes
   `index.ts`. Code under `features/*/server/` and every `server.ts` starts with
   `import 'server-only'`. No deep import into another folder's internals. A lint rule refuses the

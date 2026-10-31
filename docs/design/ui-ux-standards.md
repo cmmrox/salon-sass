@@ -21,6 +21,32 @@ into production. Show only available routes. Future catalogue, booking, branding
 capabilities stay in their roadmap features; Customer mode remains their mobile design reference.
 If a spec contradicts this authority, ask the lead to correct it through a change request.
 
+### The prototype adopted under CR-023
+
+Since 2026-11-01 the prototype is the owner's expanded design (decision 070). Its theme tokens are
+unchanged. It has three views: **Salon web** (the default, the staff workspace), **Customer mobile
+design (later)** (the React Native reference) and **Platform console** (the operator console
+reference, which stays neutral). The modules CR-020 added (Bridal, branches, gift cards, offers,
+add-ons, the AI assistant) are drawn in it. They are design references for F17 to F22 only: an R1
+screen shows no navigation item, button or banner for a module that is not delivered.
+
+Read as demonstration, never as requirements: the demo guide (`?`), "Reset demo data", the
+development simulation tools in the Platform console, random gateway results and offline
+simulation, the seeded salons, staff, services, branches, gift cards and 90-day history, the
+in-memory state, and publishing by downloading `brand.json`. Where the prototype differs from an
+approved requirement, the requirement wins. In particular, the following are not built:
+
+- The percentage premium per professional. Price levels replace it (CAT-08, decision 081).
+- The guest "Find a booking" by booking ID and mobile number. Customers verify their number
+  instead (decision 072).
+- Hiding the customer's "chat on WhatsApp" link when the salon has no WhatsApp module (BRD-02).
+
+Neither prototype draws these screens: opening hours and closures, booking policies, the
+professional's schedule editor, notification settings and message balance, the cash drawer and
+day-end close, payment links, role discount and refund limits, and data import. The lead draws each
+one in the prototype's grammar (settings tabs, sheets, chips, tables) at its feature's
+`feature-new`, and the owner confirms it before the feature is planned (decision 068).
+
 ## Staff sign-in composition (CR-012, CR-013)
 
 The owner's `docs/design/references/staff-sign-in.png` governs the composition of tenant staff

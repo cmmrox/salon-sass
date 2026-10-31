@@ -6,9 +6,9 @@
 
 | Release | Requirements | Owned by a feature | Assigned to a stage | Passed QA |
 | --- | --- | --- | --- | --- |
-| R1 | 96 | 96 | 17 | 17 |
-| R2 | 70 | 44 | 44 | 0 |
-| R3 | 23 | 8 | 8 | 0 |
+| R1 | 97 | 97 | 17 | 17 |
+| R2 | 74 | 48 | 44 | 0 |
+| R3 | 21 | 8 | 8 | 0 |
 
 ## Stages
 
@@ -57,6 +57,7 @@ Cases waiting for something else. `feature-verify` and `release-prepare` go thro
 | PLT-12 | R3 | could | unowned | - |
 | PLT-13 | R2 | should | F18 | F18-S01 (outlined) |
 | PLT-14 | R2 | must | F18 | F18-S03 (outlined) |
+| PLT-15 | R2 | should | unowned | - |
 | IAM-01 | R1 | must | F02 | F02-S02 (complete), F02-S04 (complete) |
 | IAM-02 | R1 | must | F15 | - |
 | IAM-03 | R1 | must | F02 | F02-S02 (complete), F02-S03 (complete), F02-S04 (complete) |
@@ -70,6 +71,7 @@ Cases waiting for something else. `feature-verify` and `release-prepare` go thro
 | IAM-11 | R1 | must | F02 | F02-S01 (complete), F02-S02 (complete), F02-S03 (complete), F02-S04 (complete) |
 | IAM-12 | R2 | should | unowned | - |
 | IAM-13 | R3 | could | unowned | - |
+| IAM-14 | R1 | should | F10 | - |
 | CAT-01 | R1 | must | F05 | - |
 | CAT-02 | R1 | must | F05 | - |
 | CAT-03 | R1 | should | F05 | - |
@@ -91,7 +93,7 @@ Cases waiting for something else. `feature-verify` and `release-prepare` go thro
 | STF-05 | R1 | must | F06 | - |
 | STF-06 | R1 | should | F10 | - |
 | STF-07 | R2 | should | unowned | - |
-| STF-08 | R3 | should | unowned | - |
+| STF-08 | R2 | should | unowned | - |
 | STF-09 | R3 | could | unowned | - |
 | BKG-01 | R1 | must | F07 | - |
 | BKG-02 | R1 | must | F04 | - |
@@ -123,7 +125,7 @@ Cases waiting for something else. `feature-verify` and `release-prepare` go thro
 | APP-05 | R1 | must | F15 | - |
 | APP-06 | R1 | must | F15 | - |
 | APP-07 | R1 | must | F15 | - |
-| APP-08 | R1 | must | F08 | - |
+| APP-08 | R1 | must | F15 | - |
 | APP-09 | R1 | must | F15 | - |
 | APP-10 | R1 | must | F15 | - |
 | APP-11 | R1 | must | F15 | - |
@@ -146,8 +148,8 @@ Cases waiting for something else. `feature-verify` and `release-prepare` go thro
 | PAY-06 | R1 | must | F10 | - |
 | PAY-07 | R1 | must | F08 | - |
 | PAY-08 | R1 | must | F08 | - |
-| PAY-09 | R2 | should | unowned | - |
-| PAY-10 | R2 | should | unowned | - |
+| PAY-09 | R1 | must | F08 | - |
+| PAY-10 | R1 | should | F10 | - |
 | PAY-11 | R2 | should | unowned | - |
 | PAY-12 | R2 | should | unowned | - |
 | PAY-13 | R3 | could | unowned | - |
@@ -192,20 +194,21 @@ Cases waiting for something else. `feature-verify` and `release-prepare` go thro
 | REP-07 | R2 | should | F18 | F18-S02 (outlined) |
 | REP-08 | R3 | should | unowned | - |
 | REP-09 | R3 | could | unowned | - |
+| REP-10 | R1 | must | F13 | - |
 | BRD-01 | R1 | must | F04 | - |
 | BRD-02 | R1 | must | F04 | - |
 | BRD-03 | R1 | must | F01 | F01-S03 (complete), F01-S05 (complete) |
 | BRD-04 | R1 | must | F04 | - |
-| BRD-05 | R1 | must | F16 | - |
-| BRD-06 | R1 | must | F16 | - |
-| BRD-07 | R1 | must | F16 | - |
-| BRD-08 | R1 | must | F16 | - |
-| BRD-09 | R1 | should | F15 | - |
+| BRD-05 | R2 | must | F16 | - |
+| BRD-06 | R2 | must | F16 | - |
+| BRD-07 | R2 | must | F16 | - |
+| BRD-08 | R2 | must | F16 | - |
+| BRD-09 | R1 | must | F15 | - |
 | BRD-10 | R1 | should | F11 | - |
 | BRD-11 | R2 | should | unowned | - |
 | BRD-12 | R2 | should | unowned | - |
 | BRD-13 | R2 | should | unowned | - |
-| INV-01 | R3 | could | unowned | - |
+| INV-01 | R1 | could | F05 | - |
 | INV-02 | R3 | could | unowned | - |
 | INV-03 | R3 | could | unowned | - |
 | OCC-01 | R2 | must | F19 | F19-S01 (outlined) |

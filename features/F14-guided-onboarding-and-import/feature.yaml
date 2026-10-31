@@ -1,6 +1,6 @@
 id: F14
 title: "Guided onboarding and data import"
-summary: "A new salon is led through setup by a checklist, can start from a template menu, and can import its customers, services and future appointments."
+summary: "A new salon is led through setup by a checklist it can leave and resume, ending in a test booking; it can start from a template menu and import its customers, services and future appointments with duplicate warnings."
 release: R1
 milestone: M1-web
 status: backlog

@@ -1,7 +1,7 @@
 id: F11
 title: Notifications and reminders
-summary: Customers and staff are told about confirmations, reminders and changes by push, WhatsApp, SMS
-  or email, with fallback, salon-branded templates, preferences and a cost log. M1 delivers staff web
+summary: Customers and staff are told about confirmations, reminders and changes by WhatsApp, SMS or email
+  (push joins with F15), with fallback, a message balance warning, queued quiet hours, salon-branded templates, preferences and a cost log. M1 delivers staff web
   controls and shared backend capability; customer self-service screens belong to F15 React Native after
   M1 release.
 release: R1

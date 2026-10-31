@@ -1,7 +1,8 @@
 id: F08
 title: Payments, deposits and refunds
 summary: A customer pays a deposit or in full through the salon's own gateway account, the booking is
-  confirmed by the gateway's verified notification, and the salon can refund and issue receipts. M1 delivers
+  confirmed by the gateway's verified notification, and the salon can refund and issue receipts. Staff send a
+  deposit payment link by WhatsApp or SMS for bookings they create (CR-023). M1 delivers
   staff web controls and shared backend capability; customer self-service screens belong to F15 React
   Native after M1 release.
 release: R1
@@ -22,7 +23,7 @@ requirements:
 - PAY-05
 - PAY-07
 - PAY-08
-- APP-08
+- PAY-09
 nfr_focus:
 - NFR-11
 cases: []

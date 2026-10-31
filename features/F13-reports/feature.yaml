@@ -1,6 +1,6 @@
 id: F13
 title: "Reports"
-summary: "A salon owner sees how the business did over a period, compared with the one before, broken down by source, service, professional and day, and can download it."
+summary: "A salon owner sees how the business did over a period, compared with the one before, broken down by source, service, professional and day, and can download it, including collections by tender and deposits held."
 release: R1
 milestone: M1-web
 status: backlog
@@ -8,7 +8,7 @@ qa_status: not-run
 released_in: null
 depends_on: [F10]
 surfaces: [api, web]
-requirements: [REP-02, REP-03, REP-04]
+requirements: [REP-02, REP-03, REP-04, REP-10]
 nfr_focus: []
 cases: []
 verification:
