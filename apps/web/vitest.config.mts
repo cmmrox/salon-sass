@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 import react from '@vitejs/plugin-react';
+import { playwright } from '@vitest/browser-playwright';
 import { defineConfig, type Plugin } from 'vitest/config';
 
 /**
@@ -41,8 +42,44 @@ export default defineConfig({
     alias: { 'server-only': fileURLToPath(new URL('./node_modules/server-only/empty.js', import.meta.url)) },
   },
   test: {
-    environment: 'jsdom',
-    include: ['src/**/*.test.{ts,tsx}'],
-    setupFiles: ['./test/setup.ts'],
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: 'unit',
+          environment: 'jsdom',
+          include: ['src/**/*.test.{ts,tsx}'],
+          exclude: ['src/**/*.a11y.test.{ts,tsx}'],
+          setupFiles: ['./test/setup.ts'],
+        },
+      },
+      {
+        // The accessibility check (docs/engineering/web.md, "Tests"; F04-S01): each screen rendered in
+        // real Chromium with the application's own compiled Tailwind CSS, so axe-core measures colour
+        // contrast from the real styles, which jsdom cannot.
+        extends: true,
+        // These files are outside tsconfig.json (see tsconfig.a11y.json), which is where `tsconfigPaths`
+        // finds the `@/` and `@test/` aliases, so they are named here as well.
+        resolve: {
+          alias: [
+            { find: /^@\//, replacement: fileURLToPath(new URL('./src/', import.meta.url)) },
+            { find: /^@test\//, replacement: fileURLToPath(new URL('./test/', import.meta.url)) },
+          ],
+        },
+        test: {
+          name: 'a11y',
+          include: ['src/**/*.a11y.test.{ts,tsx}'],
+          setupFiles: ['./test/a11y-setup.ts'],
+          browser: {
+            enabled: true,
+            headless: true,
+            provider: playwright(),
+            instances: [{ browser: 'chromium' }],
+            // Nothing is written into the source tree; a failure's axe report says what is wrong.
+            screenshotFailures: false,
+          },
+        },
+      },
+    ],
   },
 });

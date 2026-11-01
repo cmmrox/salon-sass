@@ -162,8 +162,12 @@ Three consequences of how the framework works, which every later stage follows:
       no migration creates a role).
 - [ ] An isolation test covers the table (see below).
 - [ ] From F04, a salon-operations table (catalogue, staff, booking, payment, customer activity) also
-      carries `branch_id`, with a composite foreign key `(tenant_id, branch_id)`. Each salon has one
-      default branch in R1; a query never assumes there is only one (decision 073).
+      carries `branch_id uuid NOT NULL`. Branches belong to `branding` (`branding_branch`), so only
+      `branding`'s own tables have the composite foreign key `(tenant_id, branch_id)`; every other
+      module holds the branch as an id, with no cross-module key, and checks it through `branding`'s
+      provided interface `SalonBranches` when it is written. An index a query filters by branch
+      leads with `(tenant_id, branch_id)`. Each salon has one default branch in R1; a query never
+      assumes there is only one (decisions 073 and 083).
 
 ## Adding an endpoint
 

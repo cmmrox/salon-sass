@@ -1684,7 +1684,7 @@
         "type": "object"
       },
       "Salon": {
-        "description": "The public brand of the salon the request's hostname names.",
+        "description": "The public brand and published profile of the salon the request's hostname names.",
         "properties": {
           "brandColour": {
             "description": "The salon's brand colour, `#RRGGBB`.",
@@ -1696,6 +1696,17 @@
             "description": "The salon's published display name.",
             "example": "Alpha Studio",
             "type": "string"
+          },
+          "profile": {
+            "description": "The salon's published business profile, exactly as last published; null before the first publication. A draft is never served here.",
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/SalonProfile"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "slug": {
             "description": "The salon's slug: its subdomain on the platform domain.",
@@ -1711,6 +1722,7 @@
         "required": [
           "brandColour",
           "name",
+          "profile",
           "slug",
           "timeZone"
         ],
@@ -1941,6 +1953,332 @@
           "page",
           "size",
           "total"
+        ],
+        "type": "object"
+      },
+      "SalonProfile": {
+        "description": "A salon's business profile. Every field is optional: null when it is not set.",
+        "properties": {
+          "branches": {
+            "description": "Each branch's contact details, the default branch first. In R1 this holds exactly the default branch; a client must not assume it holds one.",
+            "items": {
+              "$ref": "#/components/schemas/SalonProfileBranch"
+            },
+            "type": "array"
+          },
+          "description": {
+            "description": "The salon's description.",
+            "example": "A friendly neighbourhood salon for hair, beauty and bridal.",
+            "maxLength": 500,
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "links": {
+            "$ref": "#/components/schemas/SalonProfileLinks"
+          }
+        },
+        "required": [
+          "branches",
+          "description",
+          "links"
+        ],
+        "type": "object"
+      },
+      "SalonProfileBranch": {
+        "properties": {
+          "address": {
+            "example": "No. 24, Flower Road, Colombo 07",
+            "maxLength": 200,
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "description": "The branch.",
+            "format": "uuid",
+            "type": "string"
+          },
+          "isDefault": {
+            "description": "Whether it is the salon's default branch.",
+            "type": "boolean"
+          },
+          "location": {
+            "description": "The branch's map position, or null when it is not set.",
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/SalonProfileLocation"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "phone": {
+            "description": "The branch's phone number in E.164; screens show it in the national format.",
+            "example": "+94112504417",
+            "pattern": "^\\+[1-9][0-9]{6,14}$",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "whatsapp": {
+            "description": "The salon's own WhatsApp number, a mobile number in E.164.",
+            "example": "+94774123300",
+            "pattern": "^\\+[1-9][0-9]{6,14}$",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "address",
+          "id",
+          "isDefault",
+          "location",
+          "phone",
+          "whatsapp"
+        ],
+        "type": "object"
+      },
+      "SalonProfileBranchInput": {
+        "additionalProperties": false,
+        "properties": {
+          "address": {
+            "description": "Up to 200 characters.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "description": "One of the salon's branches.",
+            "format": "uuid",
+            "type": "string"
+          },
+          "isDefault": {
+            "description": "Ignored: which branch is the default is not changed here. Accepted so that a profile the API answered can be sent back as it is.",
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "location": {
+            "description": "Both coordinates, or null for none.",
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/SalonProfileLocationInput"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "phone": {
+            "description": "A phone number of the configured region in any common form, such as `011 250 4417` or `+94112504417`.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "whatsapp": {
+            "description": "A mobile number of the configured region in any common form, such as `077 412 3300`.",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "SalonProfileDraft": {
+        "properties": {
+          "hasUnpublishedChanges": {
+            "description": "Whether the draft holds something customers do not see yet: a difference from the published profile, or, before the first publication, anything set at all.",
+            "type": "boolean"
+          },
+          "profile": {
+            "$ref": "#/components/schemas/SalonProfile"
+          },
+          "publishedAt": {
+            "description": "When the profile was last published; null before the first publication.",
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "publishedBy": {
+            "description": "The staff account that last published it; null before the first publication.",
+            "format": "uuid",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "version": {
+            "description": "The draft's version. The next save, publication or discard must send it; an older one is refused with `conflict`.",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "hasUnpublishedChanges",
+          "profile",
+          "publishedAt",
+          "publishedBy",
+          "version"
+        ],
+        "type": "object"
+      },
+      "SalonProfileInput": {
+        "additionalProperties": false,
+        "properties": {
+          "branches": {
+            "description": "The branches whose details are set; a branch not listed keeps its draft. A branch id that is not the salon's is a field error.",
+            "items": {
+              "$ref": "#/components/schemas/SalonProfileBranchInput"
+            },
+            "type": "array"
+          },
+          "description": {
+            "description": "Up to 500 characters.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "links": {
+            "$ref": "#/components/schemas/SalonProfileLinksInput"
+          }
+        },
+        "required": [
+          "branches",
+          "links"
+        ],
+        "type": "object"
+      },
+      "SalonProfileLinks": {
+        "properties": {
+          "facebook": {
+            "maxLength": 200,
+            "pattern": "^https://\\S+$",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "instagram": {
+            "example": "https://instagram.com/yoursalon",
+            "maxLength": 200,
+            "pattern": "^https://\\S+$",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "website": {
+            "maxLength": 200,
+            "pattern": "^https://\\S+$",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "facebook",
+          "instagram",
+          "website"
+        ],
+        "type": "object"
+      },
+      "SalonProfileLinksInput": {
+        "additionalProperties": false,
+        "properties": {
+          "facebook": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "instagram": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "website": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "SalonProfileLocation": {
+        "properties": {
+          "latitude": {
+            "example": 6.9061,
+            "format": "double",
+            "maximum": 90,
+            "minimum": -90,
+            "type": "number"
+          },
+          "longitude": {
+            "example": 79.8611,
+            "format": "double",
+            "maximum": 180,
+            "minimum": -180,
+            "type": "number"
+          }
+        },
+        "required": [
+          "latitude",
+          "longitude"
+        ],
+        "type": "object"
+      },
+      "SalonProfileLocationInput": {
+        "additionalProperties": false,
+        "properties": {
+          "latitude": {
+            "maximum": 90,
+            "minimum": -90,
+            "type": "number"
+          },
+          "longitude": {
+            "maximum": 180,
+            "minimum": -180,
+            "type": "number"
+          }
+        },
+        "required": [
+          "latitude",
+          "longitude"
+        ],
+        "type": "object"
+      },
+      "SalonProfileVersion": {
+        "additionalProperties": false,
+        "properties": {
+          "version": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "version"
         ],
         "type": "object"
       },
@@ -2184,6 +2522,24 @@
           "page",
           "size",
           "total"
+        ],
+        "type": "object"
+      },
+      "SaveSalonProfileDraft": {
+        "additionalProperties": false,
+        "properties": {
+          "profile": {
+            "$ref": "#/components/schemas/SalonProfileInput"
+          },
+          "version": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "profile",
+          "version"
         ],
         "type": "object"
       },
@@ -5215,7 +5571,7 @@
             "description": "Any error: problem details with a stable `code`."
           }
         },
-        "summary": "The public brand of the salon the request's hostname names.",
+        "summary": "The public brand and published business profile of the salon the request's hostname names.",
         "tags": [
           "branding"
         ]
@@ -5342,6 +5698,377 @@
         },
         "tags": [
           "platform"
+        ]
+      }
+    },
+    "/api/v1/salon/profile/draft": {
+      "delete": {
+        "operationId": "discardSalonProfileDraft",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SalonProfileVersion"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SalonProfileDraft"
+                }
+              }
+            },
+            "description": "The draft, discarded."
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The body is not the documented shape: `bad_request`."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No valid session for this salon: `invalid_session`."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Without `settings.manage`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The hostname names no salon: `not_found`."
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The draft changed since `version`: `conflict`. Nothing changes."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The database is down or not answering: `service_unavailable`."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "summary": "Returns the draft to the published profile, or to empty before the first publication. `settings.manage`.",
+        "tags": [
+          "branding"
+        ]
+      },
+      "get": {
+        "operationId": "getSalonProfileDraft",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SalonProfileDraft"
+                }
+              }
+            },
+            "description": "The draft."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No valid session for this salon: `invalid_session`."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Without `settings.read`: `permission_denied`. A suspended salon: `salon_suspended`."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The hostname names no salon: `not_found`."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The database is down or not answering: `service_unavailable`."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "summary": "The salon's profile draft, with whether it has unpublished changes. `settings.read`.",
+        "tags": [
+          "branding"
+        ]
+      },
+      "put": {
+        "description": "Text is trimmed and empty means not set. The address is up to 200 characters, the description up to 500 and each link an `https://` address of up to 200. Phone numbers must belong to the configured region (`LK` by default) and are stored in E.164; the WhatsApp number must be a mobile number. A map position needs both coordinates, latitude -90 to 90 and longitude -180 to 180, and is rounded to six decimal places.",
+        "operationId": "saveSalonProfileDraft",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveSalonProfileDraft"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SalonProfileDraft"
+                }
+              }
+            },
+            "description": "The draft as saved."
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "A field broke a rule, or the body is not the documented shape: `bad_request`, with `errors` naming each field (`profile.branches[0].phone`). Nothing is saved."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No valid session for this salon: `invalid_session`."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Without `settings.manage`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The hostname names no salon: `not_found`."
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The draft changed since `version`: `conflict`. Nothing is saved."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The database is down or not answering: `service_unavailable`."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "summary": "Saves the profile as the salon's draft, which only settings staff see. `settings.manage`.",
+        "tags": [
+          "branding"
+        ]
+      }
+    },
+    "/api/v1/salon/profile/publication": {
+      "post": {
+        "operationId": "publishSalonProfile",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SalonProfileVersion"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SalonProfileDraft"
+                }
+              }
+            },
+            "description": "The draft, now published."
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The body is not the documented shape: `bad_request`."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No valid session for this salon: `invalid_session`."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Without `settings.manage`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The hostname names no salon: `not_found`."
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The draft changed since `version`: `conflict`. Nothing to publish: `invalid_state`. Either way nothing changes."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The database is down or not answering: `service_unavailable`."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "summary": "Makes the draft the published profile, in one step. `settings.manage`.",
+        "tags": [
+          "branding"
         ]
       }
     },
@@ -5507,7 +6234,7 @@
       "name": "identity"
     },
     {
-      "description": "The salon's brand and its published presentation.",
+      "description": "The salon's brand and its published presentation, its business profile and its branches.",
       "name": "branding"
     },
     {

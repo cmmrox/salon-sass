@@ -19,7 +19,7 @@ export type NavigationItem = {
   href: string;
   label: string;
   testId: string;
-  icon: 'home' | 'account' | 'staff' | 'audit' | 'salons' | 'plans' | 'billing' | 'support';
+  icon: 'home' | 'account' | 'staff' | 'audit' | 'salons' | 'plans' | 'billing' | 'support' | 'settings';
   current?: boolean;
   alias?: string;
 };
@@ -39,6 +39,8 @@ function NavigationIcon({ icon }: { icon: NavigationItem['icon'] }) {
     billing: 'M6 6h12a3 3 0 0 1 3 3v7a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V9a3 3 0 0 1 3-3ZM3 11h18',
     // The prototype's clock glyph, for time-limited support sessions (F03-S04).
     support: 'M3 12a9 9 0 1 0 18 0a9 9 0 1 0-18 0ZM12 7v5l3 2',
+    // The prototype's sliders glyph (its Settings item), its two circles written as arcs (F04-S01).
+    settings: 'M4 7h9M17 7h3M4 17h3M11 17h9M13 7a2 2 0 1 0 4 0a2 2 0 1 0-4 0M7 17a2 2 0 1 0 4 0a2 2 0 1 0-4 0',
   };
   return (
     <svg

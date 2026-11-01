@@ -8,6 +8,7 @@ import { NextRequest } from 'next/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createIdentityWeb } from './identity-web';
 import type { SalonAccount, SalonAccountFor } from './salon-account';
+import type { SalonSettings, SalonSettingsFor } from './salon-settings';
 import { contextFromTraceparent, runInRequest } from '@/lib/observability/request-context';
 import { createServerApiClient, requestSignal } from '@/lib/api-core/client';
 
@@ -16,7 +17,12 @@ const unreached: SalonAccountFor = () =>
   new Proxy({} as SalonAccount, {
     get: () => () => Promise.reject(new Error('the platform module is not reached here')),
   });
-const handleIdentity = createIdentityWeb(unreached);
+/** Nor the branding module's settings paths (F04-S01). */
+const unreachedSettings: SalonSettingsFor = () =>
+  new Proxy({} as SalonSettings, {
+    get: () => () => Promise.reject(new Error('the branding module is not reached here')),
+  });
+const handleIdentity = createIdentityWeb(unreached, unreachedSettings);
 
 /**
  * BUG-F02-012: every server call to the API ends within the request's shared budget, whatever

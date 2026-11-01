@@ -101,6 +101,8 @@ Customer code limits use `SALON_IDENTITY_CODE_NUMBER_LIMIT`, `SALON_IDENTITY_COD
 and 1000. Focused local tests may override them explicitly, then must restore the defaults. Local
 SMS/WhatsApp adapters capture encrypted outbox delivery only; a nonlocal deployment has no real
 sender configured and returns `provider_unavailable` rather than claiming that a code was sent.
+The region phone numbers are checked against is `SALON_BRANDING_PHONE_REGION`, `LK` by default
+(decision 084); it is not a secret and every environment may leave it unset.
 
 F03 operator console (F03-S01). The console is `http://console.localhost:3100/console` locally
 (the stack serves `console.stack.localhost`). The API connects for platform work as a separate

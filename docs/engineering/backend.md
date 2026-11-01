@@ -41,7 +41,7 @@ One deployable, divided into modules by business area. The module list follows t
 | `notification` | Templates, channels, delivery log, preferences |
 | `customer` | Customer records, notes, consents |
 | `reporting` | Read models and reports |
-| `branding` | Brand settings and published salon presentation, web addresses, app registry; canonical provisioning/contact profile remains in `platform` (decision 042) |
+| `branding` | Brand settings and published salon presentation (business profile, draft and published), branches and their public contact details, web addresses, app registry; canonical provisioning/contact profile remains in `platform` (decision 042, 083) |
 
 The base Java package is the placeholder in `docs/architecture/tech-stack.md`.
 
@@ -412,7 +412,11 @@ change, and a stage leaves the code it touches meeting them.
   their references, refunds, and deposits held as an amount owed to the customer. No module keeps a
   separate balance; occasion balances and gift cards are entries in the same record (decision 076).
 - From F04, every salon-operations table carries `branch_id` beside `tenant_id`. R1 has one default
-  branch per salon (decision 073).
+  branch per salon (decision 073). Branches are `branding`'s; another module holds the id and checks
+  it through `SalonBranches` (decision 083, `docs/architecture/multi-tenancy.md`, "Adding a table").
+- Phone numbers are stored in E.164 and checked with libphonenumber against the region in
+  configuration (`salon.branding.phone-region`, `LK` by default); screens show the national format
+  (decision 084, NFR-13). A WhatsApp number must be a mobile number of that region.
 
 ## Health and service metadata
 
@@ -572,7 +576,7 @@ test uses them is in `docs/qa/test-plan.md`.
 | Concurrency | Anything that must happen once: holds, bookings, payment notifications | Fire simultaneous requests and assert exactly one succeeds |
 | Architecture | Module boundaries (Spring Modulith `verify()`), provided-interface rules, table and path ownership, no entity setter for id, tenant or version, mappers on the shared configuration | Fails the build. Each rule has a fixture proving it fails on a violation: package fixtures under `src/test/java/<base>/architecture/fixture/`, and sources that must fail to compile (denied Lombok, unmapped MapStruct targets) or that Spring would otherwise scan (fixture entities and repositories) under `src/test/compile-fixtures/`, compiled by a test through `javax.tools` |
 | Conventions | Formatting and warnings | `./mvnw verify` runs `spotless:check` and compiles with `-Xlint:all,-processing -Werror` |
-| Contract | The OpenAPI document and generated client are current, and every response matches it | Fails the build. `pnpm contracts:check` regenerates the document from the controllers, so it needs the JDK and Docker. From F04 on, each new or changed endpoint also gets an integration test that validates its real responses against the committed schema, including which fields may be null and every documented status code: three of F01 to F03's major bugs were nullability or status mismatches QA found late (decision 068). The first stage that needs it adds the validator |
+| Contract | The OpenAPI document and generated client are current, and every response matches it | Fails the build. `pnpm contracts:check` regenerates the document from the controllers, so it needs the JDK and Docker. From F04 on, each new or changed endpoint also gets an integration test that validates its real responses against the committed schema, including which fields may be null and every documented status code: three of F01 to F03's major bugs were nullability or status mismatches QA found late (decision 068). F04-S01 added the validator: `testing.OpenApiContract` (JSON Schema 2020-12 against `docs/api/openapi.json`), proved by `contract.OpenApiShapeTest` |
 
 Integration tests are named `*IntegrationTest` and run in the same Maven phase as unit tests. One
 PostgreSQL container serves the whole run, with `max_connections` raised to 200 because every cached

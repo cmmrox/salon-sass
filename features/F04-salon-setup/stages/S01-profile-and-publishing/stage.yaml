@@ -3,7 +3,7 @@ feature: F04
 title: "Settings, salon profile and publishing"
 sequence: 1
 surfaces: [api, web]
-status: outlined
+status: complete
 qa_status: not-run
 blocked_reason: null
 released_in: null
@@ -12,11 +12,170 @@ depends_on: []
 requirements: [BRD-02, BRD-04]
 nfr_focus: [NFR-13]
 handoff:
-  run: null
-  data: null
-  notes: null
+  run: |
+    Local, from the repository root, in a plain (non-login) shell. Use a fresh database so the owner's
+    default `salon` database keeps its manual-test data: `infra/scripts/local-service.sh start postgres`,
+    then `docker exec salon-postgres psql -U salon -d postgres -c "CREATE DATABASE <name> OWNER salon"`,
+    then `SALON_DB_NAME=<name> infra/scripts/local-service.sh start api` and `... start web`. Migrations
+    V1 to V18 and the local seed run at API start. Screens: http://alpha.localhost:3100/workspace/settings
+    (redirects to /workspace/settings/profile). API: http://alpha.localhost:8090/api/v1/salon/profile/draft
+    (GET; PUT; DELETE with {version}), /api/v1/salon/profile/publication (POST {version}), and the public
+    GET /api/v1/salon, which now has `profile` (null before the first publication). New setting:
+    `salon.branding.phone-region`, environment variable SALON_BRANDING_PHONE_REGION, default LK; startup is
+    refused for a region libphonenumber does not support. No new local hook. Stop with `local-service.sh
+    stop web|api|postgres` and drop the database.
+  data: |
+    The local seed (db/local/afterMigrate.sql) and infra/scripts/stack-seed.sh now give alpha, beta and
+    gamma, and any salon `stack-seed.sh add` creates, a default branch and empty profile drafts through
+    branding's `branding_add_default_branch` function, which leaves a salon that already has them unchanged.
+    An existing database (the owner's included) gets one default branch per non-deleted salon from V18 at
+    the next API start; the branch is named after the published name, else the registry name, else the
+    slug. Staff of every role come from the existing POST /local/identity/seed hook (synthetic salons
+    only; credentials from ignored files, never committed), operators and support sessions from the
+    existing /local/operator hooks. Walk-through accounts were random and are not kept.
+  notes: |
+    Built against every acceptance criterion and checked on the running product, from outside, on a
+    fresh database built from the committed source (API from 6640150, unchanged since; web from ba401ac),
+    with two synthetic salons (alpha, beta), all five roles, an operator support session, and an operator
+    provisioning a new salon. Outside-in API checks 49/49, browser checks 47/47. Logs and screenshots:
+    /Users/cmmrox/Personal/Projects/salon-sass/apps/api/target/f04-s01-evidence/ (walk-api.txt,
+    walk-browser.txt, screens/). The scripts were not committed: walk-throughs are not product code.
+    AC-1 checked: each seeded salon has exactly one default branch. A salon the operator creates has its
+    branch and an empty draft (version 0) from the creating transaction (SQL after POST /operator/salons).
+    The draft names the default branch. Integration tests cover SalonBranches (own branch true; another
+    salon's or an unknown id false), rollback of every bootstrap step, and the V18 backfill on a database
+    whose migration role is an ordinary owner under forced RLS (that test caught a real defect, now fixed:
+    the backfill could not see salon_brand and named branches after the slug), plus idempotence and the
+    partial unique index.
+    AC-2 checked: Receptionist, Professional and Accountant see no Settings entry; opening
+    /workspace/settings or /workspace/settings/profile shows the "no access" state; all four endpoints
+    answer 403 permission_denied and change nothing. The Owner and Manager see Settings (last in the
+    navigation) and reach the Profile tab. /workspace/settings answers a real 307 from the proxy for
+    settings staff; the walk-through caught it streaming a client redirect, fixed in 94bd3b6.
+    AC-3 checked (Owner and Manager): the saved draft survives a reload; the publish bar says there are
+    unpublished changes; GET /api/v1/salon still answers profile null.
+    AC-4 checked: publishing serves exactly the saved values on the next GET /api/v1/salon; the bar says
+    "Everything is published" and Publish is disabled; publishing again is 409 invalid_state and changes
+    nothing. Publish to everyone saves unsaved edits first.
+    AC-5 checked: discarding returns the draft to the published profile (confirmed in an Alert Dialog) and
+    leaves the published profile unchanged; before the first publication it empties the draft.
+    AC-6 checked: 077 123 4567, +94771234567, 0771234567 and 0112504417 are stored once in E.164 and shown
+    in the national format. An invalid number, a landline as WhatsApp, latitude 91, longitude 181, an
+    address of 201 characters, a description of 501, an http link and a link of over 200 characters are
+    each a 400 field error on that field, with nothing saved. The screen shows the message beside the
+    field, tied by aria-describedby. Coordinates sent as text are refused too.
+    AC-7 checked: stale save, publish and discard are each 409 conflict and change nothing. Of 8
+    simultaneous publishes of one version, exactly 1 succeeded and 7 were conflicts. Two browsers: the
+    second save shows "Someone else changed the profile", and Reload shows the other person's changes.
+    AC-8 checked: beta's Manager on alpha's hostname gets 404 not_found on all four endpoints; alpha's
+    branch named in beta's save is the same 400 as an unknown id; a tenant named in a header or in the body
+    is ignored or refused; beta's public salon serves no alpha data; as the application role with no tenant
+    set, the five new tables return 0 rows. Integration tests prove both isolation layers alone for the new
+    tables.
+    AC-9 checked: a support session reads the draft (API and Profile tab, read-only alert, every control
+    disabled) and gets 403 support_read_only on save, publish and discard. A suspended salon answers 403
+    salon_suspended on all four endpoints. A read-only salon reads the draft and refuses writes with 403
+    salon_read_only.
+    AC-10 checked: save, publish and discard write audit entries (branding.profile_draft_saved,
+    branding.profile_published, branding.profile_draft_discarded; subject salon_profile) with the staff
+    actor, the time, the action and `changedFields` (names such as branches[<id>].whatsapp) and the version.
+    No field value appears in the audit, the API log or error responses. These entries are not shown on
+    the workspace Activity log, whose query lists identity and support actions only; widening it is
+    outside this stage (lead's call).
+    AC-11 checked: leaving with unsaved edits asks (in-app links: the page's Alert Dialog; reload or close:
+    the browser's prompt). Loading, saved (toast), field-error, conflict, unavailable, published and
+    read-only states. No horizontal scrolling at 360, 390, 768, 1024, 1280 and 1440, with the preview below
+    the form under 900px and beside it from 900px. Keyboard alone reaches and saves the form, and focus is
+    visible. The accessibility check reports no WCAG 2.2 AA violation. What customers see updates as the
+    person types.
+    Visual comparison with the prototype (Salon web, Settings, Profile) at 360 and 1280:
+    screens/prototype-profile-*.png beside screens/profile-*.png. Confirmed differences fixed in ba401ac.
+    Remaining differences, all deliberate: the form is in a Card, there is a Save draft button, and the
+    preview is below the form on phones, all because the spec says so. The "Open today" row is left for
+    F04-S03. The intro is small ink text, not muted (muted fails 4.5:1 on the canvas). The tab bar shows
+    only Profile.
+    Different from the prototype or docs, for the lead: (1) the spec's "messages in en, si and ta" was
+    corrected by the lead to English per decision 072; the new messages are in en.json only. (2) Spec over
+    prototype, confirmed by the lead: description up to 500 (prototype 300), https links only, every field
+    optional (the prototype required a phone), and "Check on map" (a Google Maps link, no key) instead of
+    "Choose on map"; the map position is one typed value. (3) libphonenumber's national format for a
+    Colombo landline is "0112 504 417", not the prototype's "011 250 4417" (the Java and JS libraries
+    agree); mobiles match, 077 123 4567. (4) Contract choices accepted by the lead: publishedBy is the
+    publishing staff account id (uuid, null before the first publication); before the first publication
+    hasUnpublishedChanges means "anything set", so publishing an empty profile is 409 invalid_state.
+    (5) Choices where the documents were silent: a save names only the branches it changes (others keep
+    their draft); a branch's isDefault in a request is accepted and ignored; coordinates are rounded to six
+    decimal places and served as JSON numbers; a canonical branch uuid is accepted in either case; discard
+    always moves the version on and is audited even when nothing changed. (6) The draft's version is a plain
+    column moved on by each change under a SELECT ... FOR UPDATE row lock, not JPA @Version. @Version moves
+    only when its own row is dirty, so it would miss branch-only changes and publications, and forcing it
+    double-counts a dirty row. The reason is written on ProfileDraft. (7) The map position uses an Input
+    with an outline "Check on map" button beside it, as the prototype draws it, instead of the spec's Input
+    Group (an addon inside the field crushed the value at 360px). (8) The settings tab bar is shadcn/ui
+    Tabs styled as the prototype's chips; changing tab navigates with router.push (only Profile exists, so
+    the unsaved-edits guard does not yet apply to tab changes). (9) Sonner inserts its own runtime style
+    element, as input-otp does (web.md, rule 4). (10) The `test` script now runs Vitest's `unit` project;
+    `test:a11y` runs the `a11y` project in Vitest browser mode (Playwright Chromium, headless) with the
+    compiled Tailwind theme. axe-core runs directly in the page because vitest-axe's own runner is
+    Node-only; vitest-axe's matcher is used. Browser-mode test files are type-checked by
+    tsconfig.a11y.json, because its matcher types replace jest-dom's. The check's own fixtures prove it
+    fails on a contrast defect (muted text on the canvas) and on an unlabelled field. It caught two real
+    defects, both fixed: the Check on map accessible name, and an aria-label without a role on the
+    skeleton. (11) New theme tokens: --size-settings-preview (25rem) and --size-settings-preview-compact
+    (21.25rem). (12) Workspace BFF actions: GET /identity-web/{staff|support}/profile-draft; POST
+    /identity-web/staff/profile-save, profile-publish, profile-discard. A settings port (SalonSettings) is
+    wired in the identity-web route, as SalonAccount is. (13) The Account page gained labels for
+    settings.read and settings.manage (the walk-through found the missing labels).
+    New dependencies (the stack and decision 084 imply them): API libphonenumber 9.0.42, and test-scope
+    com.networknt json-schema-validator 3.0.8 (JSON Schema 2020-12, the contract validator
+    testing/OpenApiContract, with its own negative tests). @salon/format: libphonenumber-js 1.13.15. Web:
+    sonner 2.0.8; dev: @vitest/browser-playwright 5.0.3, playwright 1.64.0, vitest-axe 0.1.0, axe-core
+    4.14.0. shadcn/ui tabs and sonner were added with the CLI and adapted to the theme.
+    New test ids for QA: workspace-settings, settings-tabs, settings-tab-profile, settings-panel-profile,
+    profile-tab, profile-loading, profile-form, profile-phone, profile-whatsapp, profile-address,
+    profile-location, profile-check-map, profile-description, profile-description-count,
+    profile-instagram, profile-facebook, profile-website, profile-<field>-error, profile-save,
+    profile-preview, profile-preview-name, profile-preview-description, profile-preview-address,
+    profile-preview-phone, profile-preview-whatsapp, profile-preview-chat, publish-bar,
+    publish-bar-status, profile-publish, profile-discard, profile-discard-dialog, profile-discard-confirm,
+    profile-discard-cancel, profile-leave-dialog, profile-leave-stay, profile-leave-confirm,
+    profile-conflict, profile-conflict-reload, profile-unavailable, profile-retry, profile-fix,
+    profile-refused, profile-read-only.
+    Nothing unfinished. Time: about 5 hours of building, testing and the walk-through; gate and test waits
+    are inside that (logs above), and nothing was blocked waiting on others.
+    Also for the lead: identity-web.ts, already long, grew by about 40 lines for the settings actions (now 510).
+    GET /api/v1/salon, which the proxy calls on every salon request, now also reads the published profile:
+    one more query before a salon publishes, and four after.
+    Developer gates. Each row names the commit it ran on; each later commit changed only files outside that
+    row's scope. a614f0b changed one API integration test and the api-contracts client test fixture; the
+    final commit 258fb70 changed only the formatting of one API DTO. The first
+    full run on ba401ac failed API verify on a flaky assertion of mine (Map.of key order) and typecheck on
+    the api-contracts fixture, which lacked `profile`; both were fixed in a614f0b and the affected gates
+    re-ran. The API rerun then failed spotless:check only, with 1096 tests and 0 failures, fixed by the final
+    commit. Logs in /Users/cmmrox/Personal/Projects/salon-sass/apps/api/target/f04-s01-evidence/gates/
+    (keep this checkout until the stage is closed):
+    | Command | Tested commit | Exit | Log |
+    | --- | --- | --- | --- |
+    | `cd apps/api && ./mvnw -q verify` | 258fb70 | 0 | gates/final/1-api-verify.log |
+    | `pnpm -r lint` | a614f0b | 0 | gates/rerun/2-lint.log |
+    | `pnpm -r typecheck` | a614f0b | 0 | gates/rerun/3-typecheck.log |
+    | `pnpm -r test` | a614f0b | 0 | gates/rerun/4-test.log |
+    | `pnpm --filter @salon/web test:a11y` | ba401ac | 0 | gates/5-a11y.log |
+    | `pnpm --filter @salon/web build` | ba401ac | 0 | gates/6-build.log |
+    | `pnpm contracts:check` | 258fb70 | 0 | gates/final/7-contracts.log |
+    Counts: API 1096 tests, 0 failures (unit, integration, architecture, contract; Spotless and -Werror
+    clean). Web unit 755 in 69 files; @salon/format 7; @salon/api-contracts 25. Accessibility check 31 in 2
+    files (all 6 widths, a dark and a light brand, every state, and the check's own failing fixtures).
+    Production build passed with the artifact secret scan clean. Contract document and client current.
 verification:
-  commands: []
+  commands:
+  - cd apps/api && ./mvnw -q verify
+  - pnpm -r lint
+  - pnpm -r typecheck
+  - pnpm -r test
+  - pnpm --filter @salon/web test:a11y
+  - pnpm --filter @salon/web build
+  - pnpm contracts:check
   automation: []
   manual: []
   deferred: []

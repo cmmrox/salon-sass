@@ -139,7 +139,9 @@
       "financial_read": "View financial reports",
       "entitlement_read": "Read the salon's plan and limits",
       "invoice_read": "Read the salon's invoices",
-      "support_manage": "See and revoke support access"
+      "support_manage": "See and revoke support access",
+      "settings_read": "Read the salon's settings",
+      "settings_manage": "Change and publish the salon's settings"
     },
     "billing": "Plan and billing",
     "readOnlyReason": "This salon is read-only because an invoice is overdue, so staff changes are paused. They work again as soon as the overdue invoices are paid.",
@@ -160,7 +162,8 @@
       "admin": "revoked by a platform administrator",
       "owner": "revoked by the Owner",
       "expiry": "expired"
-    }
+    },
+    "settings": "Settings"
   },
   "console": {
     "title": "Operator console",
@@ -568,6 +571,104 @@
       "invalid_state": "This session has already ended.",
       "not_found": "This session no longer exists.",
       "browser_unsupported": "This browser cannot make this change safely. Use a current browser."
+    }
+  },
+  "settings": {
+    "intro": "Changes are saved as a draft that only staff who manage settings can see. Publish to show them to your customers.",
+    "tabsLabel": "Settings section",
+    "tabs": {
+      "profile": "Profile"
+    },
+    "profile": {
+      "loading": "Loading the salon profile",
+      "contact": "Contact",
+      "phone": "Phone",
+      "phoneHint": "shown with a Call button",
+      "phonePlaceholder": "011 234 5678",
+      "whatsapp": "WhatsApp number",
+      "whatsappHint": "your salon’s own number",
+      "whatsappPlaceholder": "077 123 4567",
+      "location": "Location",
+      "address": "Address",
+      "addressPlaceholder": "Street, town",
+      "mapPosition": "Map position",
+      "mapPlaceholder": "6.9061, 79.8611",
+      "mapPositionHelp": "Latitude and longitude, separated by a comma. Customers get directions to this point.",
+      "checkOnMap": "Check on map",
+      "checkOnMapLabel": "Check on map (opens Google Maps in a new tab)",
+      "about": "About",
+      "description": "Description",
+      "descriptionHint": "up to 500 characters",
+      "descriptionCount": "{count} of {limit} characters",
+      "links": "Social links",
+      "instagram": "Instagram",
+      "facebook": "Facebook",
+      "website": "Website",
+      "optional": "optional",
+      "linkPlaceholder": "https://…",
+      "save": "Save draft",
+      "saving": "Saving…",
+      "saved": "Draft saved",
+      "published": "Published. Customers now see your profile.",
+      "discarded": "Changes discarded",
+      "whatCustomersSee": "What customers see",
+      "previewDescriptionEmpty": "Add a short description",
+      "previewAddress": "Address",
+      "previewPhone": "Phone",
+      "previewWhatsapp": "WhatsApp",
+      "previewNotSet": "Not set",
+      "previewActions": "Buttons customers see",
+      "previewCall": "Call",
+      "previewChat": "Chat on WhatsApp",
+      "previewDirections": "Directions",
+      "previewNote": "The “Chat on WhatsApp” button uses your own number and is on every plan.",
+      "readOnlySupport": "A support session can read the profile but cannot change it.",
+      "readOnlySalon": "This salon is read-only until its overdue invoices are paid. You can read the profile but not change it.",
+      "conflictTitle": "Someone else changed the profile",
+      "conflictBody": "Reload to see their changes. Edits you have not saved will be lost.",
+      "reload": "Reload",
+      "unavailableTitle": "The profile could not be reached",
+      "unavailableBody": "Check your connection and try again.",
+      "unavailableKept": "Nothing was saved. What you typed is still here: try again in a moment.",
+      "retry": "Try again",
+      "fixFields": "Some details need fixing. Check the fields marked below.",
+      "refused": {
+        "permission_denied": "Your account cannot change the salon’s settings.",
+        "support_read_only": "A support session can read the profile but cannot change it.",
+        "salon_read_only": "This salon is read-only until its overdue invoices are paid.",
+        "salon_suspended": "This salon is not available at the moment.",
+        "invalid_state": "There is nothing new to publish."
+      },
+      "errors": {
+        "phone": "Enter a valid phone number, like 011 234 5678.",
+        "whatsapp": "Enter a mobile number, like 077 123 4567.",
+        "address": "Use up to 200 characters.",
+        "location": "Enter latitude (-90 to 90) and longitude (-180 to 180), like 6.9061, 79.8611.",
+        "description": "Use up to 500 characters.",
+        "instagram": "Enter a web address that starts with https://, up to 200 characters.",
+        "facebook": "Enter a web address that starts with https://, up to 200 characters.",
+        "website": "Enter a web address that starts with https://, up to 200 characters."
+      },
+      "hint": "({hint})"
+    },
+    "publishBar": {
+      "unpublished": "Unpublished changes",
+      "unpublishedHelp": "Only staff who manage settings can see them until you publish.",
+      "published": "Everything is published",
+      "publishedHelp": "Customers see your current profile.",
+      "publish": "Publish to everyone",
+      "publishing": "Publishing…",
+      "publishedAction": "Published",
+      "discard": "Discard changes",
+      "discardTitle": "Discard your changes?",
+      "discardBody": "The profile goes back to what customers see now. This cannot be undone.",
+      "keepEditing": "Keep editing"
+    },
+    "leave": {
+      "title": "Leave without saving?",
+      "body": "You have edits that are not saved. If you leave now, they are lost.",
+      "stay": "Stay on this page",
+      "leave": "Leave without saving"
     }
   }
 }

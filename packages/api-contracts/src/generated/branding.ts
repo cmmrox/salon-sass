@@ -13,16 +13,33 @@ export type { ApiClientOptions };
 
 export type paths = Pick<contractPaths,
     | "/api/v1/salon"
+    | "/api/v1/salon/profile/draft"
+    | "/api/v1/salon/profile/publication"
 >;
 
 export type operations = Pick<contractOperations,
+    | "discardSalonProfileDraft"
     | "getSalon"
+    | "getSalonProfileDraft"
+    | "publishSalonProfile"
+    | "saveSalonProfileDraft"
 >;
 
 export interface components {
     schemas: Pick<contract["schemas"],
         | "Problem"
         | "Salon"
+        | "SalonProfile"
+        | "SalonProfileBranch"
+        | "SalonProfileBranchInput"
+        | "SalonProfileDraft"
+        | "SalonProfileInput"
+        | "SalonProfileLinks"
+        | "SalonProfileLinksInput"
+        | "SalonProfileLocation"
+        | "SalonProfileLocationInput"
+        | "SalonProfileVersion"
+        | "SaveSalonProfileDraft"
     >;
 }
 

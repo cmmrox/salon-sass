@@ -60,6 +60,8 @@
         <dependency><groupId>org.springframework.security</groupId><artifactId>spring-security-crypto</artifactId></dependency>
         <dependency><groupId>org.springframework.security</groupId><artifactId>spring-security-oauth2-jose</artifactId></dependency>
         <dependency><groupId>com.eatthepath</groupId><artifactId>java-otp</artifactId><version>1.0.0</version></dependency>
+        <!-- Phone numbers checked against the configured region and stored in E.164 (decision 084, NFR-13). -->
+        <dependency><groupId>com.googlecode.libphonenumber</groupId><artifactId>libphonenumber</artifactId><version>9.0.42</version></dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-webmvc</artifactId>
@@ -190,6 +192,16 @@
         <dependency>
             <groupId>org.springframework.modulith</groupId>
             <artifactId>spring-modulith-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!--
+          JSON Schema 2020-12, the schema language of OpenAPI 3.1: the contract tests validate real responses
+          against the committed document (docs/engineering/backend.md, "Tests", Contract; decision 068).
+        -->
+        <dependency>
+            <groupId>com.networknt</groupId>
+            <artifactId>json-schema-validator</artifactId>
+            <version>3.0.8</version>
             <scope>test</scope>
         </dependency>
         <!--

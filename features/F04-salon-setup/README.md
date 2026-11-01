@@ -84,3 +84,15 @@ why the feature is divided the way it is.
   is set on a service, so its field is built in F05; F04's rule model must allow it.
 - **Holiday dates in the prototype are sample data.** Real dates come only from the operator's
   published calendar.
+- **Settings changes in the Activity log (open, owner to decide).** F04-S01 writes every save,
+  publish and discard to the salon's audit trail. The workspace Activity log (F02) lists only
+  sign-in, staff and support actions, so these entries are recorded but not shown there. Showing
+  them changes a delivered screen and would go through a change request.
+- **Cost of the public salon call.** The proxy calls `GET /api/v1/salon` on every salon request.
+  Since F04-S01 that call also reads the published profile: up to four more queries once a salon
+  has published. That is acceptable at R1 volumes; a cache is a later refactor if measurement
+  shows a need.
+- **Recorded at F04-S01 close.** `publishedBy` is the publishing staff account's id. Before the
+  first publication, "unpublished changes" means anything set, so publishing an empty profile is
+  409 `invalid_state`. Phone numbers display in libphonenumber's national format, for example
+  `0112 504 417` for a Colombo landline; the prototype now shows the same.

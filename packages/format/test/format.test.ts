@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { formatCount, formatMoney, minorUnitsText, parseMinorUnits, todayInZone } from '../src/index';
+import {
+  formatCount,
+  formatMoney,
+  formatPhoneNational,
+  minorUnitsText,
+  parseMinorUnits,
+  todayInZone,
+} from '../src/index';
 
 describe('money formatting', () => {
   it('writes rupees with cents only when they are not zero', () => {
@@ -33,5 +40,18 @@ describe('counts and dates', () => {
     const evening = new Date('2026-10-29T20:00:00Z');
     expect(todayInZone('Asia/Colombo', evening)).toBe('2026-10-30');
     expect(todayInZone('Europe/London', evening)).toBe('2026-10-29');
+  });
+});
+
+describe('phone numbers', () => {
+  it('shows an E.164 number in its national format', () => {
+    expect(formatPhoneNational('+94771234567')).toBe('077 123 4567');
+    // libphonenumber's own national pattern for a Colombo landline (the API's library agrees).
+    expect(formatPhoneNational('+94112504417')).toBe('0112 504 417');
+    expect(formatPhoneNational('+442079460958')).toBe('020 7946 0958');
+  });
+  it('leaves anything that is not a valid E.164 number as it is', () => {
+    expect(formatPhoneNational('077 123')).toBe('077 123');
+    expect(formatPhoneNational('')).toBe('');
   });
 });

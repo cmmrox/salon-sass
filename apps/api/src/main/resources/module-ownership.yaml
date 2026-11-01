@@ -23,8 +23,13 @@ modules:
       - salon.identity
 
   branding:
-    description: The salon's brand and its published presentation.
+    description: The salon's brand and its published presentation, its business profile and its branches.
     tables:
+      - branding_branch
+      - branding_branch_contact_draft
+      - branding_branch_contact_published
+      - branding_profile_draft
+      - branding_profile_published
       - salon_brand
     paths:
       - /api/v1/salon

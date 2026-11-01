@@ -25,7 +25,9 @@ class SalonController {
     }
 
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(operationId = "getSalon", summary = "The public brand of the salon the request's hostname names.")
+    @Operation(
+            operationId = "getSalon",
+            summary = "The public brand and published business profile of the salon the request's hostname names.")
     @ApiResponse(responseCode = "200", description = "The salon's public brand.")
     @ApiResponse(
             responseCode = "403",

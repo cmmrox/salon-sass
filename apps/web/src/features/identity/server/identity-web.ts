@@ -10,6 +10,7 @@ import { strictInstant } from '@/lib/http/network';
 import { readBoundedJson } from '@/lib/http/bounded-json';
 import type { Kind, Principal } from '../types';
 import type { SalonAccount, SalonAccountFor, SupportCredential } from './salon-account';
+import type { SalonSettings, SalonSettingsFor } from './salon-settings';
 
 type Tokens = components['schemas']['Tokens'];
 /** A client for the identity module's paths, for calls made for the salon with this hostname. */
@@ -40,7 +41,7 @@ export function supportCsrf(request: NextRequest): boolean {
 /** The support credential's host-only HttpOnly cookies on the salon's host (F03-S04). */
 const SUPPORT_COOKIES = ['access', 'session'] as const;
 /** Support reads: what the Owner can read; support-access and own-account reads are refused by the API. */
-const SUPPORT_READS = ['principal', 'staff', 'audit', 'entitlements', 'invoices'];
+const SUPPORT_READS = ['principal', 'staff', 'audit', 'entitlements', 'invoices', 'profile-draft'];
 export function proxyKey(): Buffer {
   const value = process.env.SALON_IDENTITY_PROXY_KEY;
   if (!value || !/^[a-fA-F0-9]{64}$/.test(value)) throw new Error('Configure SALON_IDENTITY_PROXY_KEY');
@@ -137,6 +138,7 @@ async function handleSupport(
   action: string,
   host: { hostname: string },
   salonAccountFor: SalonAccountFor,
+  salonSettingsFor: SalonSettingsFor,
 ) {
   if (request.method === 'GET' && !SUPPORT_READS.includes(action))
     return action === 'sessions' || action === 'support-sessions'
@@ -148,7 +150,8 @@ async function handleSupport(
     return problem('support_read_only', 403);
   const client = identityClient(host.hostname);
   const account = salonAccountFor(host.hostname);
-  if (!client || !account) return problem('service_unavailable', 503);
+  const settings = salonSettingsFor(host.hostname);
+  if (!client || !account || !settings) return problem('service_unavailable', 503);
   const access = request.cookies.get(cookieName('support', 'access'))?.value;
   const options = { headers: access ? { Authorization: `Bearer ${access}` } : {}, signal: requestSignal() };
   if (action === 'clear') {
@@ -193,6 +196,7 @@ async function handleSupport(
     invoices: 'invoice.read',
     staff: 'staff.list',
     audit: 'audit.list',
+    'profile-draft': 'settings.read',
   };
   if (permission[action] && !principal.permissions.includes(permission[action]!))
     return problem('permission_denied', 403);
@@ -206,7 +210,9 @@ async function handleSupport(
         ? await client.GET('/api/v1/identity/audit', { ...options, params: { query } })
         : action === 'entitlements'
           ? await account.entitlements(options)
-          : await account.invoices(options, query);
+          : action === 'profile-draft'
+            ? await settings.profileDraft(options)
+            : await account.invoices(options, query);
   if (result.response.status === 401) {
     const response = problem('invalid_session', 401, { renewable: false });
     endSupportView(response);
@@ -232,25 +238,42 @@ function issue(response: NextResponse, kind: Kind, tokens: Tokens) {
 }
 
 /**
- * The workspace BFF (`/identity-web/{kind}/{action}`), with the platform module's salon account
- * calls handed in by the route that serves it.
+ * The workspace BFF (`/identity-web/{kind}/{action}`), with the platform module's salon account calls
+ * and the branding module's settings calls (F04-S01) handed in by the route that serves it.
  */
-export function createIdentityWeb(salonAccountFor: SalonAccountFor) {
-  return (request: NextRequest, kind: Kind, action: string) => handleIdentity(request, kind, action, salonAccountFor);
+export function createIdentityWeb(salonAccountFor: SalonAccountFor, salonSettingsFor: SalonSettingsFor) {
+  return (request: NextRequest, kind: Kind, action: string) =>
+    handleIdentity(request, kind, action, salonAccountFor, salonSettingsFor);
 }
 
 /** Allowlisted account operations only; neither a URL nor a tenant selector comes from input. */
-async function handleIdentity(request: NextRequest, kind: Kind, action: string, salonAccountFor: SalonAccountFor) {
+async function handleIdentity(
+  request: NextRequest,
+  kind: Kind,
+  action: string,
+  salonAccountFor: SalonAccountFor,
+  salonSettingsFor: SalonSettingsFor,
+) {
   try {
     const host = requestHost(request.headers.get('host'));
     if (!host) return problem('not_found', 404);
-    if (kind === 'support') return await handleSupport(request, action, host, salonAccountFor);
-    const reads = ['principal', 'sessions', 'staff', 'audit', 'entitlements', 'invoices', 'support-sessions'];
+    if (kind === 'support') return await handleSupport(request, action, host, salonAccountFor, salonSettingsFor);
+    const reads = [
+      'principal',
+      'sessions',
+      'staff',
+      'audit',
+      'entitlements',
+      'invoices',
+      'support-sessions',
+      'profile-draft',
+    ];
     if (request.method === 'GET' && !reads.includes(action)) return problem('method_not_allowed', 405);
     if (request.method !== 'GET' && !csrf(request)) return problem('request_rejected', 403);
     const client = identityClient(host.hostname);
     const account: SalonAccount | null = salonAccountFor(host.hostname);
-    if (!client || !account) return problem('service_unavailable', 503);
+    const settings: SalonSettings | null = salonSettingsFor(host.hostname);
+    if (!client || !account || !settings) return problem('service_unavailable', 503);
     const access = request.cookies.get(cookieName(kind, 'access'))?.value;
     const refresh = request.cookies.get(cookieName(kind, 'refresh'))?.value;
     const headers: Record<string, string> = access ? { Authorization: `Bearer ${access}` } : {};
@@ -310,6 +333,10 @@ async function handleIdentity(request: NextRequest, kind: Kind, action: string, 
       'mfa-start': 'mfa.enroll',
       'support-sessions': 'support.manage',
       'support-revoke': 'support.manage',
+      'profile-draft': 'settings.read',
+      'profile-save': 'settings.manage',
+      'profile-publish': 'settings.manage',
+      'profile-discard': 'settings.manage',
     };
     if (principal && permission[action] && !principal.permissions.includes(permission[action]!))
       return problem('permission_denied', 403);
@@ -334,7 +361,9 @@ async function handleIdentity(request: NextRequest, kind: Kind, action: string, 
                   ? await account.invoices(options, { page, size: 10 })
                   : action === 'support-sessions'
                     ? await account.supportSessions(options, query)
-                    : null;
+                    : action === 'profile-draft'
+                      ? await settings.profileDraft(options)
+                      : null;
       if (!result) return problem('not_found', 404);
       return result.data
         ? output(result.data)
@@ -449,6 +478,18 @@ async function handleIdentity(request: NextRequest, kind: Kind, action: string, 
       case 'support-revoke': {
         const r = await account.revokeSupportSession(options, text('id'));
         return r.response.ok ? output({ ok: true }) : failure(r);
+      }
+      case 'profile-save':
+      case 'profile-publish':
+      case 'profile-discard': {
+        // The draft the API answers is allowlisted by its contract; the request is rebuilt by branding.
+        const r =
+          action === 'profile-save'
+            ? await settings.saveProfileDraft(options, body.version, body.profile)
+            : action === 'profile-publish'
+              ? await settings.publishProfile(options, body.version)
+              : await settings.discardProfileDraft(options, body.version);
+        return r.data ? output(r.data) : failure(r);
       }
       default:
         return problem('not_found', 404);

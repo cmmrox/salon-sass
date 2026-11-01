@@ -251,7 +251,8 @@ because the owner set one standard for all Next.js work in this product.
    carries the theme's field size and addon padding; a caller may drop `FieldError`'s role where a
    surrounding Alert already announces the refusal.
 4. No CSS Modules, no new style sheet, no `<style>` element other than `BrandStyle` (the `input-otp`
-   library inserts its own runtime `<style>` for Input OTP; that one is the library's), and no `style`
+   library inserts its own runtime `<style>` for Input OTP, and Sonner one for its toasts; those are
+   the libraries'), and no `style`
    prop for a visual value. The only exception is a value that exists only at run time and that no
    utility can name.
 5. No raw value in a component. A colour, radius, font, shadow or prototype-specific size comes
@@ -376,8 +377,11 @@ shows the hostname-resolved salon name/initial and a shared decorative interior 
 - Give every interactive element a `data-testid`, named as `docs/design/ui-ux-standards.md` says.
   QA's browser tests depend on them, and QA cannot add them.
 - Every screen a stage adds or changes ships with an automated accessibility check run by the
-  developer: `@axe-core/playwright` (or `vitest-axe` on the rendered component) with no violation at
-  WCAG 2.2 AA, colour contrast included. Three of F01 to F03's major bugs were contrast defects QA
+  developer, with no violation at WCAG 2.2 AA, colour contrast included. Since F04-S01 it is
+  `pnpm --filter @salon/web test:a11y`: Vitest's `a11y` project in browser mode (real Chromium, the
+  compiled Tailwind theme), axe-core run directly with `vitest-axe`'s matcher, at every documented
+  width with a dark and a light brand. Helpers are under `apps/web/test/` (`a11y.ts`, `viewport.ts`,
+  `theme.ts`); a new screen adds its own `*.a11y.test.tsx`. Three of F01 to F03's major bugs were contrast defects QA
   found late (decision 068). A stage planned from now on lists it in `verification.commands`; adding
   the tool to the workspace is part of the first stage that needs it.
 - The gates are lint, type check, unit tests, the accessibility check and a production build, as

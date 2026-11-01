@@ -507,7 +507,7 @@ const ME='velora';
 const TLN={velora:{hair:1,beauty:1,bridal:1},lotus:{hair:0,beauty:1,bridal:0},ceylon:{hair:1,beauty:1,bridal:1}};
 const PROF={serves:{w:1,m:1,k:1},forms:{hair:1,beauty:1},ptMonths:6};
 /* ===== F04 salon setup (CR-023): profile, hours, holidays, closures, booking rules ===== */
-const SU={contact:{addr:'No. 24, Flower Road, Colombo 07',pin:'6.9061, 79.8611',phone:'011 250 4417',wa:'077 412 3300',ig:'instagram.com/yoursalon',fb:'',web:'',about:'A friendly neighbourhood salon for hair, beauty and bridal.'},
+const SU={contact:{addr:'No. 24, Flower Road, Colombo 07',pin:'6.9061, 79.8611',phone:'0112 504 417',wa:'077 412 3300',ig:'https://instagram.com/yoursalon',fb:'',web:'',about:'A friendly neighbourhood salon for hair, beauty and bridal.'},
  week:[['Mon',1,540,1080],['Tue',1,540,1080],['Wed',1,540,1080],['Thu',1,540,1080],['Fri',1,540,1080],['Sat',1,540,1140],['Sun',0,540,1080]].map(([d,o,f,t])=>({d,o,f,t})),
  hol:{year:2026,pub:'1 Oct 2026',acc:0,list:[{dt:'Sun 25 Oct',n:'Vap Full Moon Poya Day',k:'Poya',c:'closed'},{dt:'Sun 8 Nov',n:'Deepavali Festival Day',k:'Public',c:'closed'},{dt:'Tue 24 Nov',n:'Il Full Moon Poya Day',k:'Poya',c:'closed'},{dt:'Wed 23 Dec',n:'Unduvap Full Moon Poya Day',k:'Poya',c:'closed'},{dt:'Fri 25 Dec',n:'Christmas Day',k:'Public',c:'closed'}]},
  clo:[],
@@ -2953,13 +2953,12 @@ function setProf(){const c=SU.contact,e=SU.err;
  +'<div class="r w" style="gap:6px;margin-top:10px"><span class="btn o sm">Call</span>'+(c.wa?'<span class="btn o sm">Chat on WhatsApp</span>':'')+'<span class="btn o sm">Directions</span></div></div>'
  +'<p class="s m" style="margin-top:10px">The “Chat on WhatsApp” button uses your own number and is on every plan. Automated WhatsApp messages are a plan feature.</p></div>'
  +'<div class="setf"><h2>Contact</h2>'+fld('phone','Phone','shown with a Call button','011 234 5678')+fld('wa','WhatsApp number','your salon’s own number','077 123 4567')
- +'<h2>Location</h2>'+fld('addr','Address','','Street, town',120)+'<label for="sp_pin">Map position</label><div class="r" style="gap:8px"><input id="sp_pin" value="'+bx(c.pin)+'" readonly><button class="btn o sm" onclick="toast(\'Drop the pin on the map, then Save. Customers get directions to this point.\')">Choose on map</button></div>'
- +'<h2>About</h2><label for="sp_about">Description <span class="m">(up to 300 characters)</span></label><textarea id="sp_about" maxlength="300" rows="3" oninput="SU.contact.about=this.value">'+bx(c.about)+'</textarea>'
- +'<h2>Social links</h2>'+fld('ig','Instagram','optional','instagram.com/…')+fld('fb','Facebook','optional','facebook.com/…')+fld('web','Website','optional','https://…')+'</div></div>'}
+ +'<h2>Location</h2>'+fld('addr','Address','','Street, town',200)+'<label for="sp_pin">Map position</label><div class="r" style="gap:8px"><input id="sp_pin" value="'+bx(c.pin)+'" placeholder="6.9061, 79.8611" oninput="SU.contact.pin=this.value"><a class="btn o sm" href="https://www.google.com/maps?q='+encodeURIComponent(c.pin)+'" target="_blank" rel="noopener noreferrer" aria-label="Check on map (opens Google Maps in a new tab)">Check on map</a></div><p class="s m" style="margin:4px 0 0">Latitude and longitude, separated by a comma. Customers get directions to this point.</p>'
+ +'<h2>About</h2><label for="sp_about">Description <span class="m">(up to 500 characters)</span></label><textarea id="sp_about" maxlength="500" rows="3" oninput="SU.contact.about=this.value">'+bx(c.about)+'</textarea>'
+ +'<h2>Social links</h2>'+fld('ig','Instagram','optional','https://…')+fld('fb','Facebook','optional','https://…')+fld('web','Website','optional','https://…')+'</div></div>'}
 function spChk(k){const v=SU.contact[k].trim(),e=SU.err;delete e[k];
  if((k=='phone'||k=='wa')&&v&&!phOk(v))e[k]='Enter a 10-digit Sri Lankan number starting with 0, like 077 123 4567.';
- if(k=='phone'&&!v)e[k]='A phone number is required so customers can reach you.';
- if(['ig','fb','web'].includes(k)&&v&&!/^(https?:\/\/)?[\w.-]+\.[a-z]{2,}(\/\S*)?$/i.test(v))e[k]='Enter a web address, like instagram.com/yoursalon.';
+ if(['ig','fb','web'].includes(k)&&v&&!/^https:\/\/[\w.-]+\.[a-z]{2,}(\/\S*)?$/i.test(v))e[k]='Enter a web address that starts with https://, up to 200 characters.';
  render()}
 function sHrs(dayIdx){const w=DAYS[dayIdx]?DAYS[dayIdx].w:'Tue',r=SU.week.find(x=>x.d==w);if(DAYS[dayIdx]&&DAYS[dayIdx].closed)return 'Closed';return r&&r.o?hm(r.f)+' – '+hm(r.t):'Closed'}
 function outside(){return A.filter(a=>live(a)&&a.status!='completed'&&DAYS[a.d]&&(()=>{const r=SU.week.find(x=>x.d==DAYS[a.d].w);return !r||!r.o||a.s<r.f||a.s+a.du>r.t})())}
