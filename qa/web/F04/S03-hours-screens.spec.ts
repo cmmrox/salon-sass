@@ -301,14 +301,15 @@ test('TC-F04-S03-032 AC-4, AC-5: with two published years still to come the tab 
     expect((await hours.year(salon, owner.tokens, year)).days.filter(d => !d.past).map(d => d.choice), `${year} unchanged`).toEqual(['open', 'closed']);
   });
   await test.step('once the earlier year\'s days have all passed, only the later year is shown', async () => {
+    // 26 days on, the Owner's session has ended (the sign-in screen shows), so a Manager of the salon signs in then.
+    await context.close();
     const after = colombo(`${year}-02-05`);
     await clock.set(after);
-    await context.clock.setSystemTime(new Date(after));
-    await page.reload();
-    await ready(page);
-    await expect(page.locator(`[data-year="${year}"]`), `no card for ${year}`).toHaveCount(0);
-    await expect(id(page, 'holidays-card'), 'the later year is now the first card').toHaveAttribute('data-year', String(next));
-    await expect(id(page, 'holidays-status')).toHaveText(message('settings.holidays.reviewed'));
+    const manager = await accounts.identity.staff(salon, 'MANAGER');
+    const { page: later } = await openHours(accounts, manager, { at: after });
+    await expect(later.locator(`[data-year="${year}"]`), `no card for ${year}`).toHaveCount(0);
+    await expect(id(later, 'holidays-card'), 'the later year is now the first card').toHaveAttribute('data-year', String(next));
+    await expect(id(later, 'holidays-status')).toHaveText(message('settings.holidays.reviewed'));
   });
 });
 
