@@ -223,6 +223,7 @@ describe('the states (F06-S02 AC-16)', () => {
       page(brand);
       await open();
       answers['team-week-save'] = () => Response.json({ code: 'conflict' }, { status: 409 });
+      fireEvent.click(screen.getByTestId('schedule-wednesday-working'));
       fireEvent.click(screen.getByTestId('schedule-save'));
       expect(await screen.findByTestId('schedule-conflict')).toBeVisible();
       await noViolations();
@@ -234,6 +235,7 @@ describe('the states (F06-S02 AC-16)', () => {
       await noViolations();
 
       answers['team-week-save'] = () => Response.json({ code: 'permission_denied' }, { status: 403 });
+      fireEvent.click(screen.getByTestId('schedule-thursday-working'));
       fireEvent.click(screen.getByTestId('schedule-save'));
       expect(await screen.findByTestId('schedule-refused')).toBeVisible();
       await noViolations();

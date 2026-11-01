@@ -211,11 +211,11 @@ describe('the warning about the salon’s hours (AC-5)', () => {
     ]);
   });
 
-  it('says nothing for days inside the hours or not worked, and treats a salon with no hours as closed', () => {
+  it('says nothing for days inside the hours or not worked, or day by day for a salon with no hours', () => {
     const inside = weekFormOf([workday('monday', '09:00', '18:00')]);
     expect(outsideOpening(inside, salon)).toEqual([]);
     expect(outsideOpening(weekFormOf([]), salon)).toEqual([]);
-    expect(outsideOpening(inside, null)).toEqual([{ day: 'monday', opens: null, closes: null }]);
+    expect(outsideOpening(inside, null)).toEqual([]);
   });
 });
 

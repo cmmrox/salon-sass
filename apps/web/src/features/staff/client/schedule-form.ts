@@ -152,14 +152,15 @@ export function salonHoursOn(week: WorkdayForm[], salon: Weekday[]): WorkdayForm
 export type OutsideOpening = { day: WeekdayName; opens: string | null; closes: string | null };
 
 /**
- * The working days outside the salon's opening hours (AC-5), which the sheet warns about without refusing. A salon that
- * has never saved hours is closed, as `OpeningSchedule` answers.
+ * The working days outside the salon's opening hours (AC-5), Monday first, which the sheet warns about without refusing.
+ * A salon that has never saved hours has one warning of its own instead, so none here.
  */
 export function outsideOpening(week: WorkdayForm[], salon: Weekday[] | null): OutsideOpening[] {
+  if (!salon) return [];
   return week
     .filter((day) => day.working)
     .flatMap((day): OutsideOpening[] => {
-      const open = salon?.find((each) => each.day === day.day);
+      const open = salon.find((each) => each.day === day.day);
       if (!open?.open || !open.opens || !open.closes) return [{ day: day.day, opens: null, closes: null }];
       return minutes(day.starts) < minutes(open.opens) || minutes(day.finishes) > minutes(open.closes)
         ? [{ day: day.day, opens: open.opens, closes: open.closes }]

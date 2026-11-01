@@ -57,6 +57,23 @@ class TeamScheduleClockIntegrationTest extends TwoSalonTeam {
         fieldErrors(api.call(alpha, "POST", dateChanges(member), notWorking("2087-06-15", null), salonOwner), "date");
     }
 
+    /** The other direction: west of UTC, 23:30 in the salon is already tomorrow in UTC, the date the spec's example meant. */
+    @Test
+    void westOfUtcAt2330TodayIsTheSalonsThoughItIsAlreadyTomorrowInUtc() {
+        owner.update("UPDATE tenant SET time_zone = 'America/New_York' WHERE id = ?", alpha.id());
+        CLOCK.set(Instant.parse("2086-09-15T03:30:00Z")); // 23:30 on the 14th in New York, the 15th in UTC.
+        salonOwner = settings.signedIn(alpha, com.salonplatform.identity.domain.StaffRole.OWNER)
+                .token();
+        Object member = added("Clock Person").get("id");
+
+        Http.Exchange read = api.call(alpha, "GET", schedule(member), null, salonOwner);
+        assertThat(api.body(read).get("today")).isEqualTo("2086-09-14");
+        status(api.call(alpha, "POST", dateChanges(member), notWorking("2086-09-14", null), salonOwner), 201);
+        fieldErrors(api.call(alpha, "POST", dateChanges(member), notWorking("2086-09-13", null), salonOwner), "date");
+        status(api.call(alpha, "POST", dateChanges(member), notWorking("2087-09-14", null), salonOwner), 201);
+        fieldErrors(api.call(alpha, "POST", dateChanges(member), notWorking("2087-09-15", null), salonOwner), "date");
+    }
+
     @Test
     void afterMidnightInTheSalonTodayIsAlreadyTomorrowHoweverUtcReadsIt() {
         CLOCK.set(Instant.parse("2086-07-14T19:00:00Z")); // 00:30 on the 15th in the salon, still the 14th in UTC.

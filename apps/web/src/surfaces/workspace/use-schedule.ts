@@ -77,6 +77,7 @@ export function useSchedule(
   const [changeRefusal, setChangeRefusal] = useState<ChangeRefusal>(null);
   const [changeApiProblems, setChangeApiProblems] = useState<HoursProblem[]>([]);
   const [affected, setAffected] = useState<TeamAffectedBooking[]>([]);
+  const [affectedOnDate, setAffectedOnDate] = useState(false);
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<ScheduleNotice>(null);
@@ -165,6 +166,7 @@ export function useSchedule(
       setLoaded({ ...loaded, version: answer.version, saved });
       setWeek(saved);
       setAffected(answer.affected);
+      setAffectedOnDate(false);
       notify('hoursSaved');
       onSaved();
       if (answer.affected.length === 0) setOpen(false);
@@ -199,6 +201,7 @@ export function useSchedule(
       setLoaded({ ...loaded, changes: withChange(loaded.changes, answer.change) });
       setChange(null);
       setAffected(answer.affected);
+      setAffectedOnDate(true);
       notify('dateSaved');
     } catch (error) {
       if (opening.current !== started) return;
@@ -262,6 +265,8 @@ export function useSchedule(
     changeRefusal,
     changeApiProblems,
     affected,
+    affectedOnDate,
+    weekEdited,
     loading,
     busy,
     notice,

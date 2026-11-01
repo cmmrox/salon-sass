@@ -143,6 +143,7 @@ export function TeamScreen({ kind, canManage, canSeeAccounts, readOnly }: Props)
                 week={schedule.week}
                 salonWeek={schedule.salonWeek}
                 problems={schedule.problems}
+                edited={schedule.weekEdited}
                 canChange={schedule.may}
                 saving={schedule.busy}
                 onDay={schedule.changeDay}
@@ -257,7 +258,7 @@ function ScheduleNotices({
           {t('unchanged')}
         </Alert>
       )}
-      <AffectedBookings bookings={schedule.affected} />
+      <AffectedBookings bookings={schedule.affected} onDate={schedule.affectedOnDate} />
     </>
   );
 }

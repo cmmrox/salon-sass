@@ -17,6 +17,8 @@ type Props = {
   week: WorkdayForm[];
   salonWeek: Weekday[] | null;
   problems: WeekProblem[];
+  /** Whether the form differs from what is saved: **Save hours** is disabled until it does. */
+  edited: boolean;
   canChange: boolean;
   saving: boolean;
   onDay: (day: WeekdayName, change: Partial<WorkdayForm>) => void;
@@ -53,6 +55,11 @@ export function WeeklyHoursTab(props: Props) {
               ))}
             </ul>
           </AlertDescription>
+        </Alert>
+      )}
+      {noSalonHours && (
+        <Alert variant="caution" data-testid="schedule-salon-hours-unset">
+          <AlertDescription>{t('salonHoursUnset')}</AlertDescription>
         </Alert>
       )}
       {outside.length > 0 && (
@@ -178,7 +185,7 @@ export function WeeklyHoursTab(props: Props) {
           <Button
             type="button"
             className="w-full"
-            disabled={problems.length > 0 || saving}
+            disabled={problems.length > 0 || saving || !props.edited}
             onClick={props.onSave}
             data-testid="schedule-save"
           >

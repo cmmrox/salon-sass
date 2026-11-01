@@ -383,6 +383,17 @@ describe('the shortcuts (AC-4)', () => {
 });
 
 describe('the warning about the salon’s hours (AC-5)', () => {
+  it('a salon with no saved hours has one warning, and none day by day', async () => {
+    answers['team-opening-hours'] = () => Response.json(closedSalon);
+    render();
+    await open();
+
+    expect(screen.getByTestId('schedule-salon-hours-unset')).toHaveTextContent(
+      'The salon hasn’t set its opening hours yet, so nobody can be booked.',
+    );
+    expect(screen.queryByTestId('schedule-outside')).toBeNull();
+  });
+
   it('names each day, and does not stop the save', async () => {
     answers['team-schedule'] = () =>
       Response.json(
@@ -394,7 +405,9 @@ describe('the warning about the salon’s hours (AC-5)', () => {
     expect(screen.getByTestId('schedule-outside')).toHaveTextContent(
       'Outside opening hours. Mon: the salon is open 09:00 – 18:00. Sun: the salon is closed. Bookings still follow the salon’s hours.',
     );
+    fireEvent.click(screen.getByTestId('schedule-wednesday-working'));
     expect(screen.getByTestId('schedule-save')).toBeEnabled();
+    expect(screen.queryByTestId('schedule-salon-hours-unset')).toBeNull();
   });
 
   it('says nothing inside the salon’s hours', async () => {
@@ -426,10 +439,45 @@ describe('conflicts and leaving (AC-6)', () => {
     await waitFor(() => expect(sent('team-week-save').at(-1)).toMatchObject({ version: 9 }));
   });
 
-  it('says a save that changes nothing', async () => {
+  it('Save hours is disabled while nothing has changed, and again once an edit is undone', async () => {
+    render();
+    await open();
+    expect(screen.getByTestId('schedule-save')).toBeDisabled();
+
+    fireEvent.click(screen.getByTestId('schedule-wednesday-working'));
+    expect(screen.getByTestId('schedule-save')).toBeEnabled();
+
+    fireEvent.click(screen.getByTestId('schedule-wednesday-working'));
+    expect(screen.getByTestId('schedule-save')).toBeDisabled();
+  });
+
+  it('moving between the tabs keeps unsaved edits with no prompt', async () => {
+    render();
+    await open();
+    await chooseOption(screen.getByTestId('schedule-monday-starts'), '10:00');
+    const changes = screen.getByTestId('schedule-tab-changes');
+    fireEvent.mouseDown(changes, { button: 0 });
+    fireEvent.focus(changes);
+    fireEvent.click(await screen.findByTestId('change-add'));
+    fireEvent.change(await screen.findByTestId('change-note'), { target: { value: 'Half day' } });
+    expect(screen.queryByTestId('team-leave-dialog')).toBeNull();
+
+    const hours = screen.getByTestId('schedule-tab-week');
+    fireEvent.mouseDown(hours, { button: 0 });
+    fireEvent.focus(hours);
+
+    expect(await screen.findByTestId('schedule-monday-starts')).toHaveTextContent('10:00');
+    expect(screen.queryByTestId('team-leave-dialog')).toBeNull();
+    fireEvent.mouseDown(changes, { button: 0 });
+    fireEvent.focus(changes);
+    expect(await screen.findByTestId('change-note')).toHaveValue('Half day');
+  });
+
+  it('says it when the API answers that a save changes nothing', async () => {
     render();
     await open();
     answers['team-week-save'] = problem('invalid_state', 409);
+    fireEvent.click(screen.getByTestId('schedule-wednesday-working'));
 
     fireEvent.click(screen.getByTestId('schedule-save'));
 
@@ -670,6 +718,7 @@ describe('bookings left outside (AC-11)', () => {
     await open();
     answers['team-week-save'] = () =>
       Response.json({ version: 4, weekly: schedule().weekly, affected: [booking, { ...booking, time: '11:30' }] });
+    fireEvent.click(screen.getByTestId('schedule-wednesday-working'));
 
     fireEvent.click(screen.getByTestId('schedule-save'));
 
@@ -681,7 +730,23 @@ describe('bookings left outside (AC-11)', () => {
     expect(screen.getByTestId('schedule-sheet')).toBeVisible();
   });
 
-  it('says one booking in the singular, for a date change too', async () => {
+  it('says one booking of a saved week in the singular', async () => {
+    render();
+    await open();
+    answers['team-week-save'] = () => Response.json({ version: 4, weekly: schedule().weekly, affected: [booking] });
+    fireEvent.click(screen.getByTestId('schedule-wednesday-working'));
+
+    fireEvent.click(screen.getByTestId('schedule-save'));
+
+    expect(await screen.findByTestId('schedule-affected')).toHaveTextContent(
+      '1 upcoming booking falls outside these hours. It is kept.',
+    );
+  });
+
+  it.each([
+    [1, '1 upcoming booking on this date is affected. It is kept.'],
+    [2, '2 upcoming bookings on this date are affected. They are kept.'],
+  ])('a date change says %i in its own words', async (count, words) => {
     render();
     await openChanges();
     fireEvent.click(screen.getByTestId('change-add'));
@@ -690,13 +755,14 @@ describe('bookings left outside (AC-11)', () => {
     const calendar = await screen.findByTestId('change-calendar');
     fireEvent.click(within(calendar).getByRole('button', { name: /November 5/ }));
     answers['team-date-change-add'] = () =>
-      Response.json({ change: change('2026-11-05'), affected: [booking] }, { status: 201 });
+      Response.json(
+        { change: change('2026-11-05'), affected: Array.from({ length: count }, () => booking) },
+        { status: 201 },
+      );
 
     fireEvent.click(await screen.findByTestId('change-save'));
 
-    expect(await screen.findByTestId('schedule-affected')).toHaveTextContent(
-      '1 upcoming booking falls outside these hours. It is kept.',
-    );
+    expect(await screen.findByTestId('schedule-affected')).toHaveTextContent(words);
   });
 });
 

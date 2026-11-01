@@ -1155,6 +1155,7 @@
         "breaksFillDay": "{day}: breaks can’t fill the whole day. Set it as not working.",
         "tooManyBreaks": "{day}: a day can have up to 5 breaks."
       },
+      "salonHoursUnset": "The salon hasn’t set its opening hours yet, so nobody can be booked.",
       "outsideTitle": "Outside opening hours.",
       "outsideClosed": "{day}: the salon is closed.",
       "outsideOpen": "{day}: the salon is open {opens} – {closes}.",
@@ -1165,6 +1166,7 @@
       "save": "Save hours",
       "saving": "Saving…",
       "affected": "{count, plural, one {# upcoming booking falls outside these hours. It is kept.} other {# upcoming bookings fall outside these hours. They are kept.}}",
+      "affectedOnDate": "{count, plural, one {# upcoming booking on this date is affected. It is kept.} other {# upcoming bookings on this date are affected. They are kept.}}",
       "affectedAt": "{date}, {time}: {customer}",
       "change": {
         "add": "+ Change a date",
