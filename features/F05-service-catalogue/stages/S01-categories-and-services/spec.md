@@ -305,3 +305,9 @@ given to the developer during the build, in answer to QA's preparation:
   setting the online value a service already has is 409 `invalid_state`.
 - **Design.** The banners use the prototype's information colours (Alert `info`). A hidden card and
   the sheet's hint text are ink rather than muted, for contrast; "Bookable online" is a Switch.
+
+**After the PR #19 review** (merged on the feature branch): `GET /api/v1/catalogue/services` also
+returns a required `currency`, the salon's currency, so a salon's first service is priced in it. A
+photo, removal or save result applies only to the sheet opening that sent it; Save and Delete are
+disabled during an upload and Close stays enabled. A duplicate's name is cut between characters, in
+code points.

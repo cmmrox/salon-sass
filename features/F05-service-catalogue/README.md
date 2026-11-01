@@ -117,3 +117,6 @@ why the feature is divided the way it is.
   manual, two deferred to F07 (TC-F05-S01-020, TC-F05-S02-015); no bug open. The review's two
   "should" suggestions are CR-025, approved by the owner to be built after this feature's merge; its
   idea is in `features/BACKLOG.md`. The competitor comparison was not refreshed in this review.
+- **Recorded after the PR #19 review.** Three findings of the automated review and one flaky F01 test
+  were fixed on `charithm/bugfix/F05-pr19-review` (no bug files, as for F04's PR #18). The photo-upload
+  hardening the push review raised is built with CR-025.

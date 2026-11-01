@@ -224,3 +224,6 @@ developer when the build started, in answer to QA's preparation:
    VAT.
 9. **Fix to F05-S01 made in this stage** (d3d04ed): the service cards' Hide or Show online and
    Duplicate keep keyboard focus while their change runs.
+
+**After the PR #19 review** (merged on the feature branch): `GET /api/v1/catalogue/products` also
+returns a required `currency`, the salon's currency, so a salon's first product is priced in it.
