@@ -38,6 +38,7 @@ asked for. A case is a test titled with its id and criteria, or a manual or defe
 | F05-S02 | complete | - | CAT-03, CAT-06 | 11 | 21 | 20 | 0 | 1 |
 | F05-S03 | complete | - | CAT-05, INV-01 | 15 | 27 | 27 | 0 | 0 |
 | F06-S01 | complete | - | STF-01 | 16 | 55 | 52 | 0 | 3 |
+| F06-S02 | planned | - | STF-02 | 16 | 0 | 0 | 0 | 0 |
 
 ## Deferred cases
 
@@ -101,7 +102,7 @@ Cases waiting for something else. `feature-verify` and `release-prepare` go thro
 | CAT-13 | R2 | should | F17 | F17-S01 (outlined), F17-S03 (outlined) |
 | CAT-14 | R2 | should | F17 | F17-S01 (outlined), F17-S03 (outlined) |
 | STF-01 | R1 | must | F06 | F06-S01 (complete) |
-| STF-02 | R1 | must | F06 | F06-S02 (outlined) |
+| STF-02 | R1 | must | F06 | F06-S02 (planned) |
 | STF-03 | R1 | must | F06 | F06-S03 (outlined) |
 | STF-04 | R1 | must | F04 | F04-S03 (complete) |
 | STF-05 | R1 | must | F06 | F06-S03 (outlined) |
