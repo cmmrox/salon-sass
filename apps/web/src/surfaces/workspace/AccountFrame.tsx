@@ -60,9 +60,11 @@ export function AccountFrame({
                       ? t('supportAccess')
                       : view === 'settings'
                         ? t('settings')
-                        : support
-                          ? t('supportView')
-                          : t('account')}
+                        : view === 'services'
+                          ? t('services')
+                          : support
+                            ? t('supportView')
+                            : t('account')}
           </h1>
           {children}
         </div>

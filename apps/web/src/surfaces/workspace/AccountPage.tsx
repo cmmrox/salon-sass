@@ -11,12 +11,13 @@ import { BookingRulesSettingsScreen } from './BookingRulesSettingsScreen';
 import { BrandingSettingsScreen } from './BrandingSettingsScreen';
 import { HoursSettingsScreen } from './HoursSettingsScreen';
 import { ProfileSettingsScreen } from './ProfileSettingsScreen';
+import { ServicesScreen, type ServicesTab } from './ServicesScreen';
 import { SettingsScreen, type SettingsTab } from './SettingsScreen';
 import { SupportAccessScreen } from './SupportAccessScreen';
 import { SupportBanner } from './SupportBanner';
 
-type View = 'account' | 'staff' | 'audit' | 'billing' | 'support-access' | 'settings';
-type PageProps = { kind: Kind; view?: View; signIn?: boolean; tab?: SettingsTab };
+type View = 'account' | 'staff' | 'audit' | 'billing' | 'support-access' | 'settings' | 'services';
+type PageProps = { kind: Kind; view?: View; signIn?: boolean; tab?: SettingsTab; servicesTab?: ServicesTab };
 
 const REQUIRED: Record<View, string> = {
   account: 'session.manage',
@@ -25,6 +26,8 @@ const REQUIRED: Record<View, string> = {
   billing: 'invoice.read',
   'support-access': 'support.manage',
   settings: 'settings.read',
+  // The Services & pricing page (F05-S01): every role and a support session read it (decision 093).
+  services: 'catalogue.read',
 };
 
 /**
@@ -33,7 +36,7 @@ const REQUIRED: Record<View, string> = {
  * otherwise the first frame is the salon's own workspace, with the billing banner the API decides
  * (F03-S02) and, in a read-only salon, its mutating actions disabled with the reason.
  */
-export async function AccountPage({ kind: requested, view, signIn, tab }: PageProps) {
+export async function AccountPage({ kind: requested, view, signIn, tab, servicesTab }: PageProps) {
   const h = await headers();
   const salon = decodeSalon(h.get(SALON_HEADER));
   const host = requestHost(h.get('host'));
@@ -101,6 +104,13 @@ export async function AccountPage({ kind: requested, view, signIn, tab }: PagePr
         <BillingScreen kind={kind} timeZone={salon.timeZone} />
       ) : view === 'support-access' ? (
         <SupportAccessScreen timeZone={salon.timeZone} />
+      ) : view === 'services' ? (
+        <ServicesScreen
+          kind={kind}
+          tab={servicesTab ?? 'services'}
+          canChange={Boolean(principal?.permissions.includes('catalogue.price.change')) && !readOnly}
+          readOnly={support ? 'support' : readOnly ? 'salon' : null}
+        />
       ) : view === 'settings' ? (
         <SettingsScreen tab={tab ?? 'profile'}>
           {tab === 'branding' ? (

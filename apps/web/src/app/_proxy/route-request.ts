@@ -60,6 +60,9 @@ const PROTECTED = new Set([
   '/workspace/settings/hours',
   '/workspace/settings/rules',
   '/workspace/settings/branding',
+  // The Services & pricing page and its Categories tab (F05-S01).
+  '/workspace/services',
+  '/workspace/services/categories',
 ]);
 
 /** Settings, and the first of its tabs (F04-S01): Profile, the only one delivered so far. */
