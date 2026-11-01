@@ -2254,12 +2254,12 @@
           "latitude": {
             "maximum": 90,
             "minimum": -90,
-            "type": "string"
+            "type": "number"
           },
           "longitude": {
             "maximum": 180,
             "minimum": -180,
-            "type": "string"
+            "type": "number"
           }
         },
         "required": [

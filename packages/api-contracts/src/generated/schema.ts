@@ -1569,8 +1569,8 @@ export interface components {
             longitude: number;
         };
         SalonProfileLocationInput: {
-            latitude: string;
-            longitude: string;
+            latitude: number;
+            longitude: number;
         };
         SalonProfileVersion: {
             /** Format: int64 */
