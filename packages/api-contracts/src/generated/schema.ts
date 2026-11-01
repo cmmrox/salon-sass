@@ -1902,6 +1902,8 @@ export interface components {
             percent?: number;
         };
         CatalogueServiceList: {
+            /** @description The salon's currency, ISO 4217: what a created or saved service's amounts are entered and kept in, also before its first service. */
+            currency: string;
             items: components["schemas"]["CatalogueService"][];
         };
         CatalogueServiceOnline: {

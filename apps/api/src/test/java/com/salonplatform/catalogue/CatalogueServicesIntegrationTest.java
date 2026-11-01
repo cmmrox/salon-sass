@@ -468,6 +468,20 @@ class CatalogueServicesIntegrationTest extends IntegrationTest {
     }
 
     @Test
+    void theListGivesTheSalonsCurrencyBeforeItsFirstServiceAndCreatesInIt() {
+        assertThat(api.body(api.call(alpha, "GET", SERVICES, null, manager)))
+                .containsEntry("currency", "LKR")
+                .containsEntry("items", List.of());
+        owner.update("UPDATE tenant SET currency = 'USD' WHERE id = ?", alpha.id());
+
+        assertThat(api.body(api.call(alpha, "GET", SERVICES, null, manager)))
+                .containsEntry("currency", "USD")
+                .containsEntry("items", List.of());
+        assertThat(terms(created("Root touch-up"))).containsEntry("currency", "USD");
+        assertThat(api.body(api.call(alpha, "GET", SERVICES, null, manager))).containsEntry("currency", "USD");
+    }
+
+    @Test
     void aPriceChangeIsAuditedNamingTheTermsVersionItCreated() {
         Map<String, Object> service = created("Root touch-up");
         Map<String, Object> repriced = api.body(saved(service, "priceMinor", 300_000));

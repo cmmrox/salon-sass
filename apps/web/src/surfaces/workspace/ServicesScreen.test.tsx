@@ -316,7 +316,7 @@ describe('the card actions (AC-7, AC-8, AC-9)', () => {
       online: false,
     });
     answers['catalogue-services'] = () =>
-      Response.json({ items: [...SERVICES.items.slice(0, 2), { ...changed, version: 1 }] });
+      Response.json({ ...SERVICES, items: [...SERVICES.items.slice(0, 2), { ...changed, version: 1 }] });
     fireEvent.click(within(conflict).getByTestId('services-conflict-reload'));
 
     await waitFor(() => expect(screen.getByTestId('service-sheet-price')).toHaveValue('2600'));
@@ -492,7 +492,7 @@ const EVEN = withVariants(service('11111111-0000-4000-8000-000000000010', 'Kids 
 const withServices =
   (...extra: CatalogueService[]) =>
   () =>
-    Response.json({ items: [...SERVICES.items, ...extra] });
+    Response.json({ ...SERVICES, items: [...SERVICES.items, ...extra] });
 
 describe('variants on the card and in the sheet (F05-S02 AC-1, AC-3)', () => {
   it('shows a "From" price, a range of times, the set with its first four names and the badges', async () => {
@@ -755,6 +755,30 @@ describe('a service’s deposit (F05-S02 AC-7)', () => {
   });
 });
 
+describe('the salon’s currency (F05-S01 AC-3, F05-S02 AC-7; NFR-13)', () => {
+  it('prices the first service of an empty catalogue, and its fixed deposit, in the salon’s currency', async () => {
+    answers['catalogue-services'] = () => Response.json({ currency: 'USD', items: [] });
+    render();
+    fireEvent.click(await screen.findByTestId('services-new'));
+    expect(await screen.findByLabelText('Price (USD)')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('service-sheet-more'));
+    fireEvent.click(await screen.findByTestId('service-deposit-custom'));
+    fireEvent.click(screen.getByTestId('service-deposit-type'));
+    fireEvent.click(await screen.findByRole('option', { name: 'Fixed amount' }));
+    const amount = await screen.findByLabelText('Deposit amount');
+    expect(amount.closest('[data-slot="input-group"]')).toHaveTextContent('USD');
+    expect(screen.queryByText('Rs.')).toBeNull();
+  });
+
+  it('prices every sheet in the salon’s currency, not in the first service’s', async () => {
+    answers['catalogue-services'] = () => Response.json({ ...SERVICES, currency: 'USD' });
+    render();
+    await screen.findAllByTestId('service-card');
+    fireEvent.click(screen.getByTestId('services-new'));
+    expect(await screen.findByLabelText('Price (USD)')).toBeInTheDocument();
+  });
+});
+
 describe('a service’s photo, and a change answered after its sheet closed (AC-3, AC-10)', () => {
   const BALAYAGE = SERVICES.items[1]!;
   const GEL = SERVICES.items[2]!;
@@ -860,7 +884,7 @@ describe('a service’s photo, and a change answered after its sheet closed (AC-
   it('saves the service whose sheet is open when an earlier photo removal finishes after it opened', async () => {
     const removal = later();
     answers['catalogue-services'] = () =>
-      Response.json({ items: [SERVICES.items[0], { ...BALAYAGE, photoId: 'photo-1' }, GEL] });
+      Response.json({ ...SERVICES, items: [SERVICES.items[0], { ...BALAYAGE, photoId: 'photo-1' }, GEL] });
     answers['catalogue-photo-remove'] = () => removal.pending as unknown as Response;
     answers['catalogue-service-save'] = (body) => Response.json({ ...GEL, ...(body as object), version: 1 });
     render();

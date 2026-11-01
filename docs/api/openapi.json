@@ -692,6 +692,11 @@
       "CatalogueServiceList": {
         "additionalProperties": false,
         "properties": {
+          "currency": {
+            "description": "The salon's currency, ISO 4217: what a created or saved service's amounts are entered and kept in, also before its first service.",
+            "pattern": "^[A-Z]{3}$",
+            "type": "string"
+          },
           "items": {
             "items": {
               "$ref": "#/components/schemas/CatalogueService"
@@ -701,6 +706,7 @@
           }
         },
         "required": [
+          "currency",
           "items"
         ],
         "type": "object"

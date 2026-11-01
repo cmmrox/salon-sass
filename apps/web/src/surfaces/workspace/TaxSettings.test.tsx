@@ -255,6 +255,7 @@ describe('What customers pay (AC-4, AC-5)', () => {
   it('prices the first service bookable online and the first product sold, with each part as the form changes', async () => {
     answers['catalogue-services'] = () =>
       Response.json({
+        ...SERVICES,
         items: [
           ...SERVICES.items,
           service('11111111-0000-4000-8000-000000000009', 'Acrylics', NAILS, { priceMinor: 250_000 }),
@@ -284,7 +285,7 @@ describe('What customers pay (AC-4, AC-5)', () => {
   });
 
   it('uses the prototype’s examples when there is no service or product, with the cents of every part', async () => {
-    answers['catalogue-services'] = () => Response.json({ items: [] });
+    answers['catalogue-services'] = () => Response.json({ currency: 'LKR', items: [] });
     answers['catalogue-products'] = () => Response.json({ items: [] });
     render();
     fireEvent.click(await screen.findByTestId('tax-vat-registered'));

@@ -5,6 +5,7 @@ import type {
   PopularSetting,
   Product,
   PublicTax,
+  ServiceList,
   TaxSettings,
 } from '@/features/catalogue';
 
@@ -65,7 +66,8 @@ export function service(
   };
 }
 
-export const SERVICES = {
+export const SERVICES: ServiceList = {
+  currency: 'LKR',
   items: [
     service('11111111-0000-4000-8000-000000000001', 'zebra highlights', COLOUR, {
       priceMinor: 900_000,

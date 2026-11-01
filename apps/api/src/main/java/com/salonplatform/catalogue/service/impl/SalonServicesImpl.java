@@ -110,9 +110,10 @@ class SalonServicesImpl implements SalonServices {
     }
 
     @Override
-    public List<ServiceView> list() {
+    public ServiceList list() {
         Scope at = scope.of(CatalogueScope.READ);
-        return reading.execute(status -> views.of(services.live(at.branch())));
+        String salonCurrency = currency.current();
+        return new ServiceList(salonCurrency, reading.execute(status -> views.of(services.live(at.branch()))));
     }
 
     @Override

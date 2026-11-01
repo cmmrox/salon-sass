@@ -41,6 +41,7 @@ beforeEach(() => {
       }),
     'catalogue-services': () =>
       Response.json({
+        ...SERVICES,
         items: [
           ...SERVICES.items,
           { ...SERVICES.items[1]!, id: 'long-service', name: LONG, categoryId: 'long', description: 'd'.repeat(90) },
