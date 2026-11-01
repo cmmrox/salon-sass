@@ -18,7 +18,7 @@ import type { Locator, Page } from '@playwright/test';
 import { DESIGN_WIDTHS } from '../../shared/design-reference';
 import { newSalon as newCatalogueSalon, serviceInput } from '../../shared/catalogue';
 import {
-  PENDING_F05_S03, TaxCatalogue, moneyText, productInput, split, taxInput, taxRow, type Product,
+  PENDING_F05_S03, TaxCatalogue, moneyText, productInput, split, taxInput, taxRow, type Product, type TaxInput,
 } from '../../shared/catalogue-tax';
 import { test as browserTest, expect, type AccountBrowser } from '../../shared/identity-browser';
 import type { Actor, Role } from '../../shared/identity';
@@ -52,7 +52,7 @@ const T3 = {
   readOnly: 'tax-read-only', refused: 'tax-refused',
   leaveDialog: 'tax-leave-dialog', leaveStay: 'tax-leave-stay', leaveConfirm: 'tax-leave-confirm',
   preview: 'tax-preview', previewLine: 'tax-preview-line', previewNote: 'tax-preview-note',
-  servicesLoading: 'services-loading', productsLoading: 'products-loading', tabProducts: 'services-tab-products', taxBanner: 'tax-banner',
+  servicesLoading: 'services-loading', productsLoading: 'products-loading', tabProducts: 'services-tab-products', taxBanner: 'tax-banner', servicesBanner: 'services-banner',
   productsSummary: 'services-summary', productsBanner: 'products-banner', productsNew: 'products-new', productsEmpty: 'products-empty',
   productsUnavailable: 'products-unavailable', productsRetry: 'products-retry', productsReadOnly: 'products-read-only',
   productsTable: 'product-table', productCards: 'product-cards', productRow: 'product-row',
@@ -66,7 +66,7 @@ const T3 = {
 const TEXT = {
   intro: 'Turn these on only if your salon is registered for them. Names and rates come from the platform for your country. Changes apply to new bookings and sales only.',
   note: 'Prices are always shown with tax and service charge included',
-  // The spec's "A service at Rs. 2,500": the build writes the example's name and its price in the row's two columns, as the prototype does.
+  // AC-15: the two-column example row, the example's name and its amount.
   defaultService: ['A service', 'Rs. 2,500'], defaultProduct: ['A product', 'Rs. 3,200'],
   rateChanged: (rate: number) => `The VAT rate is now ${rate}%. Save to apply it to new bookings and sales.`,
   productsBanner: 'Products you sell at the front desk, added to a sale at checkout. Stock isn’t tracked.',
@@ -77,6 +77,12 @@ const TEXT = {
   bannerBoth: 'Prices you enter include service charge (10%) and VAT (18%). Customers see the same price.',
   bannerOff: 'Tax and service charge are off. Turn them on in Settings if your salon is registered.',
   bannerVat: 'Prices you enter include VAT (18%). Customers see the same price.',
+  bannerServiceCharge: 'Prices you enter include service charge (10%). Customers see the same price.',
+  // AC-14: the Products banner's second sentence.
+  productsBoth: 'Prices include service charge (10%) and VAT (18%) where it applies.',
+  productsVat: 'Prices include VAT (18%) where it applies.',
+  productsServiceCharge: 'Prices include service charge (10%).',
+  productsNone: 'No tax or service charge applies to products.',
 };
 
 const id = (page: Page | Locator, name: string) => page.getByTestId(name).filter({ visible: true });
@@ -175,7 +181,7 @@ test('TC-F05-S03-016 AC-1, AC-2: the Owner finds Tax & charges between Booking r
 
 // ---------------------------------------------------------------- AC-4, AC-5 What customers pay
 
-test('TC-F05-S03-017 AC-4, AC-5: "What customers pay" shows the prototype\'s examples while there are no services or products, then the salon\'s first online service and first product sold, each part as the rule gives it, following the form before saving, rounding half to even', async ({ accounts, operator, tax }) => {
+test('TC-F05-S03-017 AC-4, AC-5, AC-15: "What customers pay" shows the prototype\'s examples while there are no services or products, then the salon\'s first online service and first product sold, each part as the rule gives it, following the form before saving, rounding half to even', async ({ accounts, operator, tax }) => {
   const { salon, owner } = await newSalon(operator, accounts);
   const { page } = await open(accounts, owner, TAX_ROUTE);
     await expect(id(page, T3.previewNote)).toContainText(TEXT.note);
@@ -276,8 +282,7 @@ test('TC-F05-S03-020 AC-7, AC-8: the Products tab starts empty with the prototyp
   await expect(id(page, T3.productsEmpty)).toContainText(TEXT.empty);
   await expect(id(page, T3.productsEmpty)).toContainText(TEXT.emptyHint);
   await expect(id(page, T3.productsSummary)).toHaveText(TEXT.summary(0, 0));
-  await expect(id(page, T3.productsBanner)).toContainText(TEXT.productsBanner);
-  await expect(id(page, T3.productsBanner), 'VAT is off').toContainText('VAT is off for your salon.');
+  await expect.poll(async () => say(await id(page, T3.productsBanner).innerText()), 'both off').toBe(`${TEXT.productsBanner} ${TEXT.bannerOff}`);
   await id(page, T3.productsNew).click();
   await expect(id(page, T3.sheetVat), 'Charge VAT is not shown while VAT is off').toHaveCount(0);
   await expect(id(page, T3.sheetSold)).toHaveAttribute('data-state', 'checked');
@@ -343,19 +348,33 @@ test('TC-F05-S03-020 AC-7, AC-8: the Products tab starts empty with the prototyp
 
 // ---------------------------------------------------------------- AC-10 the tax banner
 
-test('TC-F05-S03-021 AC-10: the Services and Products tabs say which taxes prices include, only the parts that are on, or that both are off', async ({ accounts, operator, tax }) => {
+test('TC-F05-S03-021 AC-10, AC-14: the Services tab states the taxes prices include, and the Products tab one banner naming only what applies to products, in each state of the tax settings', async ({ accounts, operator, tax }) => {
   const { salon, owner } = await newSalon(operator, accounts);
   const { page } = await open(accounts, owner, SERVICES_ROUTE);
-  const banner = async (route: string) => {
+  const banner = async (route: string, testId: string) => {
     await page.goto(route);
     await expect(id(page, T3.servicesLoading)).toHaveCount(0);
-    return say(await id(page, T3.taxBanner).innerText());
+    await expect(id(page, T3.productsLoading)).toHaveCount(0);
+    return say(await id(page, testId).innerText());
   };
-  for (const route of [SERVICES_ROUTE, PRODUCTS_ROUTE]) expect(await banner(route), `${route}: off`).toBe(TEXT.bannerOff);
-  await tax.save(salon, owner.tokens, taxInput({ vat: 'LK-1', sc: 10 }), 0);
-  for (const route of [SERVICES_ROUTE, PRODUCTS_ROUTE]) expect(await banner(route), `${route}: both`).toBe(TEXT.bannerBoth);
-  await tax.save(salon, owner.tokens, taxInput({ vat: 'LK-1' }), 1);
-  for (const route of [SERVICES_ROUTE, PRODUCTS_ROUTE]) expect(await banner(route), `${route}: VAT only`).toBe(TEXT.bannerVat);
+  const rows: { label: string; input: TaxInput | null; services: string; products: string }[] = [
+    { label: 'never saved', input: null, services: TEXT.bannerOff, products: TEXT.bannerOff },
+    { label: 'VAT, a service charge on products too', input: taxInput({ vat: 'LK-1', sc: 10, onProducts: true }), services: TEXT.bannerBoth, products: TEXT.productsBoth },
+    { label: 'VAT, a service charge not on products', input: taxInput({ vat: 'LK-1', sc: 10 }), services: TEXT.bannerBoth, products: TEXT.productsVat },
+    { label: 'VAT only', input: taxInput({ vat: 'LK-1' }), services: TEXT.bannerVat, products: TEXT.productsVat },
+    { label: 'a service charge on products only', input: taxInput({ sc: 10, onProducts: true }), services: TEXT.bannerServiceCharge, products: TEXT.productsServiceCharge },
+    { label: 'a service charge not on products, VAT off', input: taxInput({ sc: 10 }), services: TEXT.bannerServiceCharge, products: TEXT.productsNone },
+    { label: 'both off', input: taxInput(), services: TEXT.bannerOff, products: TEXT.bannerOff },
+  ];
+  for (const row of rows) {
+    await test.step(row.label, async () => {
+      if (row.input) await tax.save(salon, owner.tokens, row.input);
+      expect(await banner(SERVICES_ROUTE, T3.servicesBanner), `${row.label}: Services`).toContain(row.services);
+      expect(await banner(PRODUCTS_ROUTE, T3.productsBanner), `${row.label}: Products, its sentence then the one that applies`).toBe(`${TEXT.productsBanner} ${row.products}`);
+      await expect(page.locator('[role="alert"][data-variant="info"]').filter({ visible: true }), `${row.label}: one information banner`).toHaveCount(1);
+      await expect(page.getByTestId(T3.taxBanner), `${row.label}: no second banner`).toHaveCount(0);
+    });
+  }
 });
 
 // ---------------------------------------------------------------- AC-11 roles
@@ -560,4 +579,36 @@ test('TC-F05-S03-026 AC-8: an empty salon in another currency (NFR-13) is asked 
   const shown = productRow(page, product, true).getByTestId(T3.productPrice);
   await expect(shown).toContainText('24');
   await expect(shown, 'not rupees').not.toContainText('Rs.');
+});
+
+// ---------------------------------------------------------------- CR-025 (decision 098)
+
+test('TC-F05-S03-027 AC-15: an empty salon in another currency sees "What customers pay" in that currency: the example rows and the parts they include, and a real product beside an example service', async ({ accounts, operator, tax }) => {
+  const { salon, owner } = await newCatalogueSalon(operator, accounts.identity, { currency: 'USD' });
+  const { context, page } = await open(accounts, owner, TAX_ROUTE);
+  // Through formatMoney, in the browser's locale data: "$2,500" or "US$2,500".
+  const usd = (text: string) => new RegExp(`(US)?\\$${text.replace(/\./g, '\\.')}(?!\\d)`);
+  await test.step('no service or product', async () => {
+    await expect.poll(async () => (await itemLines(page, 'service')).item).toContain('A service');
+    expect((await itemLines(page, 'service')).item, 'the example amount in USD').toMatch(usd('2,500'));
+    expect((await itemLines(page, 'product')).item).toContain('A product');
+    expect((await itemLines(page, 'product')).item, 'the example amount in USD').toMatch(usd('3,200'));
+  });
+  await test.step('the parts as the form changes', async () => {
+    await id(page, T3.vatOn).click();
+    await id(page, T3.vatNumber).fill('US-1');
+    await expect.poll(async () => (await itemLines(page, 'service')).parts.length).toBe(1);
+    expect((await itemLines(page, 'service')).parts[0], 'VAT on the example service').toMatch(usd('381.36'));
+    expect((await itemLines(page, 'product')).parts[0], 'VAT on the example product').toMatch(usd('488.14'));
+    expect(JSON.stringify(await previewLines(page)), 'no rupees anywhere in the preview').not.toContain('Rs.');
+  });
+  await test.step('a real product beside an example service', async () => {
+    await tax.addProduct(salon, owner.tokens, productInput({ name: 'Argan oil', priceMinor: 2400 }));
+    // A new page: the form above has unsaved edits, and nothing was saved.
+    const fresh = await accounts.open(context, TAX_ROUTE);
+    await readyTax(fresh);
+    await expect.poll(async () => (await itemLines(fresh, 'product')).item).toContain('Argan oil');
+    expect((await itemLines(fresh, 'product')).item).toMatch(usd('24'));
+    expect((await itemLines(fresh, 'service')).item, 'still the example, in USD').toMatch(usd('2,500'));
+  });
 });
