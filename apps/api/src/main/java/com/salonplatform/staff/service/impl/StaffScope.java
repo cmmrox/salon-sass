@@ -28,6 +28,15 @@ class StaffScope {
     static final String READ = "settings.read";
     static final String MANAGE = "settings.manage";
 
+    /** Reading the team (decision 100): every role but the Accountant, and a support session. */
+    static final String TEAM_READ = "team.read";
+
+    /** Every change to the team (decision 100): the Owner and the Manager. */
+    static final String TEAM_MANAGE = "team.manage";
+
+    /** Seeing the salon's sign-in accounts and who is linked to which (decision 100). */
+    static final String STAFF_LIST = "staff.list";
+
     /** The salon a use case acts for, its default branch, its today, and who acts (null when public). */
     record Scope(CurrentTenant salon, Principal actor, UUID branch, LocalDate today) {}
 

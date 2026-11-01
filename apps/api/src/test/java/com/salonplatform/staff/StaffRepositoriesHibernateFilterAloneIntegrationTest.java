@@ -6,10 +6,18 @@ import com.salonplatform.shared.tenancy.TenantContext;
 import com.salonplatform.staff.entity.Closure;
 import com.salonplatform.staff.entity.HolidayChoice;
 import com.salonplatform.staff.entity.HolidayReview;
+import com.salonplatform.staff.entity.Member;
+import com.salonplatform.staff.entity.MemberCategory;
+import com.salonplatform.staff.entity.MemberPhoto;
+import com.salonplatform.staff.entity.MemberSingleService;
 import com.salonplatform.staff.entity.OpeningHours;
 import com.salonplatform.staff.repository.ClosureRepository;
 import com.salonplatform.staff.repository.HolidayChoiceRepository;
 import com.salonplatform.staff.repository.HolidayReviewRepository;
+import com.salonplatform.staff.repository.MemberCategoryRepository;
+import com.salonplatform.staff.repository.MemberPhotoRepository;
+import com.salonplatform.staff.repository.MemberRepository;
+import com.salonplatform.staff.repository.MemberSingleServiceRepository;
 import com.salonplatform.staff.repository.OpeningHoursRepository;
 import com.salonplatform.testing.StartedApplication;
 import com.salonplatform.testing.TestDatabase;
@@ -91,6 +99,25 @@ class StaffRepositoriesHibernateFilterAloneIntegrationTest {
                                     .bean(ClosureRepository.class)
                                     .persist(Closure.of(
                                             branch, LocalDate.of(2090, 2, 1), "Training", UUID.randomUUID(), now()));
+                            // F06-S01: a team member with a photo, a whole category and a single service.
+                            MemberPhoto photo = application
+                                    .bean(MemberPhotoRepository.class)
+                                    .persist(MemberPhoto.uploaded(
+                                            branch, "image/jpeg", 320, 320, new byte[] {1}, now()));
+                            Member member = application
+                                    .bean(MemberRepository.class)
+                                    .saveAndFlush(Member.added(
+                                            branch,
+                                            new Member.Profile("Filter Person", null, null, null, true),
+                                            null,
+                                            now()));
+                            member.changePhoto(photo.getId(), now());
+                            application
+                                    .bean(MemberCategoryRepository.class)
+                                    .persist(MemberCategory.of(branch, member.getId(), UUID.randomUUID(), now()));
+                            application
+                                    .bean(MemberSingleServiceRepository.class)
+                                    .persist(MemberSingleService.of(branch, member.getId(), UUID.randomUUID(), now()));
                             return null;
                         }));
             } catch (Exception ex) {
@@ -155,6 +182,63 @@ class StaffRepositoriesHibernateFilterAloneIntegrationTest {
     }
 
     @Test
+    void alphaReadsNoneOfBetasTeam() throws Exception {
+        JdbcTemplate owner = database.asOwner();
+        UUID betasMember =
+                owner.queryForObject("SELECT id FROM staff_team_member WHERE tenant_id = ?", UUID.class, beta.id());
+        UUID betasPhoto =
+                owner.queryForObject("SELECT id FROM staff_member_photo WHERE tenant_id = ?", UUID.class, beta.id());
+        UUID betasBranch = salons.defaultBranch(beta);
+        as(
+                alpha,
+                () -> inTransaction(() -> {
+                    assertThat(application.bean(MemberRepository.class).findAll())
+                            .extracting(Member::getTenantId)
+                            .containsExactly(alpha.id());
+                    assertThat(application.bean(MemberRepository.class).findAny(betasMember))
+                            .isEmpty();
+                    assertThat(application.bean(MemberRepository.class).findActive(betasMember, betasBranch))
+                            .isEmpty();
+                    assertThat(application.bean(MemberRepository.class).active(betasBranch))
+                            .isEmpty();
+                    assertThat(application.bean(MemberPhotoRepository.class).findPhoto(betasPhoto))
+                            .isEmpty();
+                    assertThat(application.bean(MemberCategoryRepository.class).ofMembers(List.of(betasMember)))
+                            .isEmpty();
+                    assertThat(application
+                                    .bean(MemberSingleServiceRepository.class)
+                                    .ofMembers(List.of(betasMember)))
+                            .isEmpty();
+                    assertThat(application.bean(MemberRepository.class).countActive())
+                            .isEqualTo(1);
+                    assertThat(application.bean(MemberRepository.class).countActiveWithoutAccount())
+                            .isEqualTo(1);
+                    return null;
+                }));
+    }
+
+    @Test
+    void alphaCannotRemoveBetasTeamRows() throws Exception {
+        JdbcTemplate owner = database.asOwner();
+        UUID betasMember =
+                owner.queryForObject("SELECT id FROM staff_team_member WHERE tenant_id = ?", UUID.class, beta.id());
+        as(
+                alpha,
+                () -> inTransaction(() -> {
+                    assertThat(application.bean(MemberCategoryRepository.class).removeOf(betasMember))
+                            .isZero();
+                    assertThat(application
+                                    .bean(MemberSingleServiceRepository.class)
+                                    .removeOf(betasMember))
+                            .isZero();
+                    return null;
+                }));
+        assertThat(owner.queryForObject(
+                        "SELECT count(*) FROM staff_member_category WHERE tenant_id = ?", Long.class, beta.id()))
+                .isEqualTo(1);
+    }
+
+    @Test
     void alphaCannotUpdateOrDeleteBetasRows() throws Exception {
         as(
                 alpha,
@@ -201,6 +285,17 @@ class StaffRepositoriesHibernateFilterAloneIntegrationTest {
                         () -> application.bean(HolidayChoiceRepository.class).findAll()))
                 .isEmpty();
         assertThat(inTransaction(() -> application.bean(ClosureRepository.class).findAll()))
+                .isEmpty();
+        assertThat(inTransaction(() -> application.bean(MemberRepository.class).findAll()))
+                .isEmpty();
+        assertThat(inTransaction(
+                        () -> application.bean(MemberPhotoRepository.class).findAll()))
+                .isEmpty();
+        assertThat(inTransaction(
+                        () -> application.bean(MemberCategoryRepository.class).findAll()))
+                .isEmpty();
+        assertThat(inTransaction(() ->
+                        application.bean(MemberSingleServiceRepository.class).findAll()))
                 .isEmpty();
     }
 

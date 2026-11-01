@@ -69,7 +69,11 @@ class ModuleBoundariesTest {
      * Every module states the modules it may use, so that module verification refuses anything else; and
      * only platform may use an in-process-only contract, which can never become a remote call, besides catalogue,
      * which implements platform's own {@code SalonBootstrapStep} (F05-S01, the lead's decision while building it):
-     * platform calls it in the transaction that creates a salon, and it never becomes a remote call either.
+     * platform calls it in the transaction that creates a salon, and it never becomes a remote call either. And
+     * besides staff (decision 100(e)), which uses {@code identity.inprocess} for the seat check under the salon's lock
+     * and for clearing a link when an account is removed, and {@code platform.inprocess} for the seat count: a seat's
+     * count and the write that takes it must commit together under one lock. The list stays exact, so any other module
+     * still fails here.
      */
     @Test
     void everyModuleDeclaresWhatItMayUse() {
@@ -86,7 +90,7 @@ class ModuleBoundariesTest {
                                 .anyMatch(dependency -> dependency.endsWith(":: inprocess")))
                         .map(Map.Entry::getKey))
                 .as("the modules that may use an inprocess contract")
-                .containsExactlyInAnyOrder("platform", "catalogue");
+                .containsExactlyInAnyOrder("platform", "catalogue", "staff");
     }
 
     @Test

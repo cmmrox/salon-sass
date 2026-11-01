@@ -1,7 +1,6 @@
 package com.salonplatform.platform.service.impl;
 
 import com.salonplatform.identity.Principals;
-import com.salonplatform.identity.inprocess.IdentityProvisioning;
 import com.salonplatform.platform.domain.Paging;
 import com.salonplatform.platform.dto.Entitlements;
 import com.salonplatform.platform.dto.Features;
@@ -43,7 +42,7 @@ class SalonBillingServiceImpl implements SalonBillingService {
     private final SubscriptionStates states;
     private final InvoiceViews invoices;
     private final Principals principals;
-    private final IdentityProvisioning provisioning;
+    private final StaffSeatUsage seatUsage;
     private final Clock clock;
 
     SalonBillingServiceImpl(
@@ -53,7 +52,7 @@ class SalonBillingServiceImpl implements SalonBillingService {
             SubscriptionStates states,
             InvoiceViews invoices,
             Principals principals,
-            IdentityProvisioning provisioning,
+            StaffSeatUsage seatUsage,
             Clock clock) {
         this.database = database;
         this.ledger = ledger;
@@ -61,7 +60,7 @@ class SalonBillingServiceImpl implements SalonBillingService {
         this.states = states;
         this.invoices = invoices;
         this.principals = principals;
-        this.provisioning = provisioning;
+        this.seatUsage = seatUsage;
         this.clock = clock;
     }
 
@@ -88,11 +87,7 @@ class SalonBillingServiceImpl implements SalonBillingService {
                             notice(subscription.state().value(), subscription.trialEndsAt(), now)))
                     .orElse(null);
             return new Entitlements(
-                    limits.plan(),
-                    limits.limits(),
-                    limits.features(),
-                    new Usage(provisioning.activeStaffCount(salonId)),
-                    state);
+                    limits.plan(), limits.limits(), limits.features(), new Usage(seatUsage.used(salonId)), state);
         });
     }
 

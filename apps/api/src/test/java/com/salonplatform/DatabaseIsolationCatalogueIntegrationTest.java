@@ -81,6 +81,11 @@ class DatabaseIsolationCatalogueIntegrationTest {
                         "staff_holiday_review",
                         "staff_holiday_choice",
                         "staff_closure",
+                        // F06-S01: team members, their photos, whole categories and single services.
+                        "staff_team_member",
+                        "staff_member_photo",
+                        "staff_member_category",
+                        "staff_member_service",
                         // F04-S04: the booking rules' versions.
                         "booking_rules_version",
                         // F05-S01: the catalogue's category lists, categories, photos, services and terms versions.
@@ -261,6 +266,11 @@ class DatabaseIsolationCatalogueIntegrationTest {
                         org.assertj.core.api.Assertions.tuple("staff_holiday_review", "INSERT,SELECT,UPDATE"),
                         org.assertj.core.api.Assertions.tuple("staff_holiday_choice", "INSERT,SELECT,UPDATE"),
                         org.assertj.core.api.Assertions.tuple("staff_closure", "DELETE,INSERT,SELECT"),
+                        // F06-S01: a member is never deleted, a photo never changed, and a save replaces the rows.
+                        org.assertj.core.api.Assertions.tuple("staff_team_member", "INSERT,SELECT,UPDATE"),
+                        org.assertj.core.api.Assertions.tuple("staff_member_photo", "DELETE,INSERT,SELECT"),
+                        org.assertj.core.api.Assertions.tuple("staff_member_category", "DELETE,INSERT,SELECT"),
+                        org.assertj.core.api.Assertions.tuple("staff_member_service", "DELETE,INSERT,SELECT"),
                         // F04-S04: a booking rules version is written once and read, never changed or removed.
                         org.assertj.core.api.Assertions.tuple("booking_rules_version", "INSERT,SELECT"),
                         // F05-S01: the category list exists from a salon's creation and is only changed;
@@ -331,6 +341,8 @@ class DatabaseIsolationCatalogueIntegrationTest {
                 "outbox_erase_salon_rows",
                 // F04-S03: staff's guarded eraser.
                 "staff_erase_salon_rows",
+                // F06-S01: the count of active members with no linked account, for usage and the plan move.
+                "staff_active_unlinked_member_count",
                 // F04-S04: booking's guarded eraser.
                 "booking_erase_salon_rows",
                 // F05-S01: a new salon's default categories, in the platform transaction that creates it, and

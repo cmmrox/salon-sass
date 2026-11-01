@@ -1,6 +1,5 @@
 package com.salonplatform.platform.service.impl;
 
-import com.salonplatform.identity.inprocess.IdentityProvisioning;
 import com.salonplatform.platform.domain.BillingTerms;
 import com.salonplatform.platform.domain.IdempotencyKey;
 import com.salonplatform.platform.domain.OperatorPermission;
@@ -44,7 +43,7 @@ class SubscriptionBillingServiceImpl implements SubscriptionBillingService {
     private final InvoiceStore invoices;
     private final SubscriptionStates states;
     private final SalonDirectoryService salons;
-    private final IdentityProvisioning identity;
+    private final StaffSeatUsage seatUsage;
     private final PlatformAudit audit;
     private final JsonMapper json;
     private final Clock clock;
@@ -58,7 +57,7 @@ class SubscriptionBillingServiceImpl implements SubscriptionBillingService {
             InvoiceStore invoices,
             SubscriptionStates states,
             SalonDirectoryService salons,
-            IdentityProvisioning identity,
+            StaffSeatUsage seatUsage,
             PlatformAudit audit,
             JsonMapper json,
             Clock clock) {
@@ -70,7 +69,7 @@ class SubscriptionBillingServiceImpl implements SubscriptionBillingService {
         this.invoices = invoices;
         this.states = states;
         this.salons = salons;
-        this.identity = identity;
+        this.seatUsage = seatUsage;
         this.audit = audit;
         this.json = json;
         this.clock = clock;
@@ -249,7 +248,7 @@ class SubscriptionBillingServiceImpl implements SubscriptionBillingService {
             if (input.planId().equals(salon.planId())) {
                 return null;
             }
-            long used = identity.activeStaffCount(salonId);
+            long used = seatUsage.used(salonId);
             if (used > seats) {
                 throw SalonEntitlements.exceeded(SalonEntitlements.STAFF_SEATS, seats);
             }

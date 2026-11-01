@@ -260,6 +260,15 @@ salon.branding:
     # Uploads decoded at once per instance; one more waits up to two seconds, then is refused 503.
     concurrent-decodes: ${SALON_BRANDING_IMAGE_CONCURRENT_DECODES:2}
 
+# Team member photos (F06-S01): the same checks as service photos, with staff's own limits. A larger file within the
+# request limit (spring.servlet.multipart, 10 MB) is a field error; beyond it, 413.
+salon.staff:
+  images:
+    max-bytes: ${SALON_STAFF_IMAGE_MAX_BYTES:5MB}
+    max-pixels: ${SALON_STAFF_IMAGE_MAX_PIXELS:50000000}
+    # Photos decoded at once per instance; one more waits up to two seconds, then is refused 503.
+    concurrent-decodes: ${SALON_STAFF_IMAGE_CONCURRENT_DECODES:2}
+
 # Service photos (F05-S01, decision 093): the same checks as brand images, with the catalogue's own limits. A
 # larger file within the request limit (spring.servlet.multipart, 10 MB) is a field error; beyond it, 413.
 salon.catalogue:

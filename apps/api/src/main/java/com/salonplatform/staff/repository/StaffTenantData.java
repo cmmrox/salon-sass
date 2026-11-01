@@ -13,13 +13,18 @@ import org.springframework.stereotype.Component;
 
 /**
  * Staff's exporter and eraser for a closed salon (PLT-06): its opening hours, holiday reviews and choices, and
- * special closures. A closure's reason is the salon's own note and is exported with it; nothing is secret.
+ * special closures, and from F06-S01 its team members, the services each performs and their photos. A closure's
+ * reason is the salon's own note and is exported with it; nothing is secret.
  */
 @Component
 class StaffTenantData implements TenantDataModule {
 
     /** In the order they are erased: each table before any table it references (choices before reviews). */
     private static final List<Table> TABLES = List.of(
+            new Table("staff_member_category", "id", Map.of()),
+            new Table("staff_member_service", "id", Map.of()),
+            new Table("staff_team_member", "id", Map.of()),
+            new Table("staff_member_photo", "id", Map.of()),
             new Table("staff_holiday_choice", "id", Map.of()),
             new Table("staff_holiday_review", "id", Map.of()),
             new Table("staff_closure", "id", Map.of()),

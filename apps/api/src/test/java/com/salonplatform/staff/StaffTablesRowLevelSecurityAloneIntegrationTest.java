@@ -40,7 +40,11 @@ class StaffTablesRowLevelSecurityAloneIntegrationTest {
             "staff_opening_hours", "id",
             "staff_holiday_review", "id",
             "staff_holiday_choice", "id",
-            "staff_closure", "id"));
+            "staff_closure", "id",
+            "staff_member_photo", "id",
+            "staff_team_member", "id",
+            "staff_member_category", "id",
+            "staff_member_service", "id"));
 
     static final List<String> TABLES = List.copyOf(KEYS.keySet());
 
@@ -91,6 +95,38 @@ class StaffTablesRowLevelSecurityAloneIntegrationTest {
                     salon.id(),
                     UUID.randomUUID(),
                     branch,
+                    UUID.randomUUID());
+            // F06-S01: a team member with a photo, a whole category and a single service.
+            UUID photo = UUID.randomUUID();
+            UUID member = UUID.randomUUID();
+            owner.update(
+                    "INSERT INTO staff_member_photo (tenant_id, id, branch_id, media_type, width, height, bytes,"
+                            + " created_at, updated_at) VALUES (?, ?, ?, 'image/jpeg', 320, 320, '\\x01', now(), now())",
+                    salon.id(),
+                    photo,
+                    branch);
+            owner.update(
+                    "INSERT INTO staff_team_member (tenant_id, id, branch_id, name, shown_online, photo_id, version,"
+                            + " created_at, updated_at) VALUES (?, ?, ?, 'Policy Person', true, ?, 0, now(), now())",
+                    salon.id(),
+                    member,
+                    branch,
+                    photo);
+            owner.update(
+                    "INSERT INTO staff_member_category (tenant_id, id, branch_id, member_id, category_id, created_at,"
+                            + " updated_at) VALUES (?, ?, ?, ?, ?, now(), now())",
+                    salon.id(),
+                    UUID.randomUUID(),
+                    branch,
+                    member,
+                    UUID.randomUUID());
+            owner.update(
+                    "INSERT INTO staff_member_service (tenant_id, id, branch_id, member_id, service_id, created_at,"
+                            + " updated_at) VALUES (?, ?, ?, ?, ?, now(), now())",
+                    salon.id(),
+                    UUID.randomUUID(),
+                    branch,
+                    member,
                     UUID.randomUUID());
         }
     }
