@@ -16,6 +16,8 @@ import { Card } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
 
 type Props = {
+  /** What the bar publishes: the business profile (F04-S01) or the brand (F04-S02), each with its own bar. */
+  subject: 'profile' | 'brand';
   unpublished: boolean;
   busy: 'publishing' | 'discarding' | null;
   disabled: boolean;
@@ -24,18 +26,18 @@ type Props = {
 };
 
 /**
- * The publish bar below the Profile tab (F04-S01): whether there are unpublished changes, Publish to
- * everyone (which saves unsaved edits first) and Discard changes, confirmed in an Alert Dialog. With
- * everything published, Publish is disabled.
+ * The publish bar below a settings tab (F04-S01, reused by F04-S02 for the brand): whether there are
+ * unpublished changes, Publish to everyone (which saves unsaved edits first) and Discard changes, confirmed
+ * in an Alert Dialog. With everything published, Publish is disabled.
  */
-export function PublishBar({ unpublished, busy, disabled, onPublish, onDiscard }: Props) {
+export function PublishBar({ subject, unpublished, busy, disabled, onPublish, onDiscard }: Props) {
   const t = useTranslations('settings.publishBar');
   return (
     <Card className="flex-row flex-wrap items-center justify-between gap-3" data-testid="publish-bar">
       <div className="flex min-w-0 flex-col gap-0.5" role="status" data-testid="publish-bar-status">
         <span className="font-semibold">{unpublished ? t('unpublished') : t('published')}</span>
         <span className="text-small text-muted-foreground">
-          {unpublished ? t('unpublishedHelp') : t('publishedHelp')}
+          {unpublished ? t('unpublishedHelp') : t(subject === 'brand' ? 'publishedHelpBrand' : 'publishedHelp')}
         </span>
       </div>
       <div className="flex flex-wrap gap-2">
@@ -54,7 +56,9 @@ export function PublishBar({ unpublished, busy, disabled, onPublish, onDiscard }
           <AlertDialogContent data-testid="profile-discard-dialog">
             <AlertDialogHeader>
               <AlertDialogTitle>{t('discardTitle')}</AlertDialogTitle>
-              <AlertDialogDescription>{t('discardBody')}</AlertDialogDescription>
+              <AlertDialogDescription>
+                {t(subject === 'brand' ? 'discardBodyBrand' : 'discardBody')}
+              </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel data-testid="profile-discard-cancel">{t('keepEditing')}</AlertDialogCancel>

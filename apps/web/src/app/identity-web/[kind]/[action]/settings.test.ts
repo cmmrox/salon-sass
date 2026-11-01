@@ -7,9 +7,10 @@ import { contextFromTraceparent, runInRequest } from '@/lib/observability/reques
 import { salonSettingsFor } from '@/features/branding/server';
 import { createIdentityWeb } from '@/features/identity/server';
 import { salonAccountFor } from '@/features/platform/server';
+import { salonHoursFor } from '@/features/staff/server';
 
 /** The settings actions of the workspace BFF (F04-S01), as the route wires them, against a fake API on loopback. */
-const handleIdentity = createIdentityWeb(salonAccountFor, salonSettingsFor);
+const handleIdentity = createIdentityWeb(salonAccountFor, salonSettingsFor, salonHoursFor);
 let server: Server;
 let calls: { method: string; path: string; host?: string; authorization?: string; body: string }[];
 let answer: (method: string, path: string) => { status: number; data: unknown };
@@ -74,6 +75,21 @@ afterEach(async () => {
 });
 
 function request(method: string, kind: 'staff' | 'support', action: string, body?: unknown) {
+  if (body instanceof FormData) {
+    return new NextRequest(`http://alpha.localhost:3100/identity-web/${kind}/${action}`, {
+      method,
+      headers: {
+        Host: 'alpha.localhost:3100',
+        Origin: 'http://alpha.localhost:3100',
+        'Sec-Fetch-Site': 'same-origin',
+        Cookie:
+          kind === 'staff'
+            ? 'salon_staff_access=private-access; salon_staff_session=s'
+            : 'salon_support_access=private-support; salon_support_session=s',
+      },
+      body,
+    });
+  }
   return new NextRequest(`http://alpha.localhost:3100/identity-web/${kind}/${action}`, {
     method,
     headers: {
@@ -222,6 +238,297 @@ describe('a support session and the profile', () => {
     'is refused %s as read-only, with no API call',
     async (action) => {
       const response = await run('POST', 'support', action, { version: 3 });
+
+      expect(response.status).toBe(403);
+      expect(await response.json()).toMatchObject({ code: 'support_read_only' });
+      expect(calls).toEqual([]);
+    },
+  );
+});
+
+describe('the settings user’s brand actions (F04-S02)', () => {
+  const BRAND_ACTIONS = [
+    ['brand-reset', 'POST', '/api/v1/salon/brand/draft/reset'],
+    ['brand-publish', 'POST', '/api/v1/salon/brand/publication'],
+    ['brand-discard', 'DELETE', '/api/v1/salon/brand/draft'],
+  ];
+
+  it('reads the brand draft for the salon’s hostname', async () => {
+    const response = await run('GET', 'staff', 'brand-draft');
+
+    expect(response.status).toBe(200);
+    expect(apiCalls()).toEqual([
+      expect.objectContaining({ method: 'GET', path: '/api/v1/salon/brand/draft', host: 'alpha.localhost' }),
+    ]);
+  });
+
+  it('sends a brand save rebuilt from the contract’s fields only', async () => {
+    await run('POST', 'staff', 'brand-save', {
+      version: 2,
+      tenantId: 'beta',
+      brand: { name: 'Alpha', tagline: null, colour: '#D6086A', logo: 7, cover: null, extra: 'x' },
+    });
+
+    expect(JSON.parse(apiCalls()[0]!.body)).toEqual({
+      version: 2,
+      brand: { name: 'Alpha', tagline: null, colour: '#D6086A', logo: null, cover: null },
+    });
+  });
+
+  it.each(BRAND_ACTIONS)('%s sends only the version', async (action, method, path) => {
+    const response = await run('POST', 'staff', action!, { version: 2, brand: { name: 'x' } });
+
+    expect(response.status).toBe(200);
+    expect(apiCalls()).toEqual([expect.objectContaining({ method, path, body: JSON.stringify({ version: 2 }) })]);
+  });
+
+  it('passes an upload on as a new form of its kind and file only', async () => {
+    answer = (_method, path) =>
+      path === '/api/v1/identity/me'
+        ? { status: 200, data: { kind: 'staff', permissions, staffId: 's' } }
+        : { status: 201, data: { id: '0b6f9f43-5a1d-4c5e-9a2b-3f3f6e1d2c10', kind: 'logo', width: 512, height: 512 } };
+    const form = new FormData();
+    form.append('kind', 'logo');
+    form.append('file', new Blob([new Uint8Array([0x89, 0x50, 0x4e, 0x47])], { type: 'image/png' }), 'secret-name.png');
+    form.append('tenantId', 'beta');
+
+    const response = await run('POST', 'staff', 'brand-image', form);
+
+    expect(response.status).toBe(201);
+    const [upload] = apiCalls();
+    expect(upload).toMatchObject({
+      method: 'POST',
+      path: '/api/v1/salon/brand/images',
+      authorization: 'Bearer private-access',
+    });
+    expect(upload!.body).toContain('name="kind"');
+    expect(upload!.body).toContain('name="file"');
+    expect(upload!.body).not.toContain('tenantId');
+    expect(upload!.body).not.toContain('secret-name.png');
+  });
+
+  it('refuses an upload without a file, and one declared over the request limit, before any API call', async () => {
+    const empty = new FormData();
+    empty.append('kind', 'logo');
+    const missing = await run('POST', 'staff', 'brand-image', empty);
+    expect(missing.status).toBe(400);
+    expect(await missing.json()).toMatchObject({ code: 'bad_request', errors: [{ field: 'file' }] });
+
+    const large = new NextRequest('http://alpha.localhost:3100/identity-web/staff/brand-image', {
+      method: 'POST',
+      headers: {
+        Host: 'alpha.localhost:3100',
+        Origin: 'http://alpha.localhost:3100',
+        'Sec-Fetch-Site': 'same-origin',
+        Cookie: 'salon_staff_access=private-access',
+        'Content-Type': 'multipart/form-data; boundary=x',
+        'Content-Length': String(11 * 1024 * 1024),
+      },
+      body: '--x--',
+    });
+    const context = {
+      ...contextFromTraceparent(undefined),
+      clientAddress: '127.0.0.2',
+      deadline: performance.now() + 3000,
+    };
+    const tooLarge = await runInRequest(context, () => handleIdentity(large, 'staff', 'brand-image'));
+    expect(tooLarge.status).toBe(413);
+    expect(apiCalls()).toEqual([]);
+  });
+
+  it('refuses a chunked upload, which declares no length, as soon as it passes the limit, reading no more', async () => {
+    let sent = 0;
+    let pulls = 0;
+    const chunk = new Uint8Array(1024 * 1024);
+    const body = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        pulls++;
+        if (sent >= 64 * 1024 * 1024) return controller.close();
+        sent += chunk.byteLength;
+        controller.enqueue(chunk);
+      },
+    });
+    const chunked = new NextRequest('http://alpha.localhost:3100/identity-web/staff/brand-image', {
+      method: 'POST',
+      headers: {
+        Host: 'alpha.localhost:3100',
+        Origin: 'http://alpha.localhost:3100',
+        'Sec-Fetch-Site': 'same-origin',
+        Cookie: 'salon_staff_access=private-access',
+        'Content-Type': 'multipart/form-data; boundary=x',
+      },
+      body,
+      duplex: 'half',
+    } as ConstructorParameters<typeof NextRequest>[1]);
+    expect(chunked.headers.get('content-length')).toBeNull();
+    const context = {
+      ...contextFromTraceparent(undefined),
+      clientAddress: '127.0.0.2',
+      deadline: performance.now() + 3000,
+    };
+
+    const response = await runInRequest(context, () => handleIdentity(chunked, 'staff', 'brand-image'));
+
+    expect(response.status).toBe(413);
+    expect(await response.json()).toMatchObject({ code: 'request_rejected' });
+    expect(sent).toBeLessThanOrEqual(12 * 1024 * 1024);
+    expect(pulls).toBeLessThan(16);
+    expect(apiCalls()).toEqual([]);
+  });
+
+  it.each(['brand-save', 'brand-reset', 'brand-publish', 'brand-discard', 'brand-image'])(
+    'refuses %s to a user without settings.manage before any API call',
+    async (action) => {
+      permissions = ['session.manage', 'settings.read'];
+      const response = await run('POST', 'staff', action, { version: 2 });
+      expect(response.status).toBe(403);
+      expect(apiCalls()).toEqual([]);
+    },
+  );
+});
+
+describe('a support session and the brand', () => {
+  beforeEach(() => {
+    permissions = ['staff.list', 'audit.list', 'entitlement.read', 'invoice.read', 'settings.read'];
+    const base = answer;
+    answer = (method, path) =>
+      path === '/api/v1/identity/me'
+        ? { status: 200, data: { kind: 'support', permissions, staffId: null } }
+        : base(method, path);
+  });
+
+  it('reads the brand draft', async () => {
+    expect((await run('GET', 'support', 'brand-draft')).status).toBe(200);
+  });
+
+  it.each(['brand-save', 'brand-reset', 'brand-publish', 'brand-discard', 'brand-image'])(
+    'is refused %s as read-only, with no API call',
+    async (action) => {
+      const response = await run('POST', 'support', action, { version: 2 });
+      expect(response.status).toBe(403);
+      expect(await response.json()).toMatchObject({ code: 'support_read_only' });
+      expect(calls).toEqual([]);
+    },
+  );
+});
+
+describe('the settings user’s hours, holidays and closures actions (F04-S03)', () => {
+  const hours = { version: 1, weekly: null, outsideHours: [] };
+
+  it('reads the hours, holidays and closures for the salon’s hostname with the user’s credential', async () => {
+    answer = (_method, path) =>
+      path === '/api/v1/identity/me'
+        ? {
+            status: 200,
+            data: {
+              id: 's',
+              kind: 'staff',
+              role: 'MANAGER',
+              permissions,
+              scope: 'salon',
+              staffId: 's',
+              mfaEnabled: false,
+            },
+          }
+        : { status: 200, data: path.endsWith('/closures') ? [] : hours };
+    for (const action of ['hours', 'holidays', 'closures'])
+      expect((await run('GET', 'staff', action)).status).toBe(200);
+
+    expect(apiCalls().map((call) => [call.method, call.path, call.host, call.authorization])).toEqual([
+      ['GET', '/api/v1/salon/opening-hours/settings', 'alpha.localhost', 'Bearer private-access'],
+      ['GET', '/api/v1/salon/holidays', 'alpha.localhost', 'Bearer private-access'],
+      ['GET', '/api/v1/salon/closures', 'alpha.localhost', 'Bearer private-access'],
+    ]);
+  });
+
+  it('asks the bookings on a date with the date from its query only', async () => {
+    const context = {
+      ...contextFromTraceparent(undefined),
+      clientAddress: '127.0.0.2',
+      deadline: performance.now() + 3000,
+    };
+    const withQuery = new NextRequest('http://alpha.localhost:3100/identity-web/staff/closure-impact?date=2026-11-05', {
+      method: 'GET',
+      headers: { Host: 'alpha.localhost:3100', Cookie: 'salon_staff_access=private-access; salon_staff_session=s' },
+    });
+    const response = await runInRequest(context, () => handleIdentity(withQuery, 'staff', 'closure-impact'));
+
+    expect(response.status).toBe(200);
+    expect(calls.find((call) => call.path === '/api/v1/salon/closures/impact')).toBeDefined();
+  });
+
+  it('sends an hours save and an acceptance rebuilt from the contract’s fields, and nothing else', async () => {
+    await run('POST', 'staff', 'hours-save', {
+      version: 1,
+      tenantId: 'other-salon',
+      weekly: [{ day: 'monday', open: true, opens: '09:00', closes: '18:00', extra: 'dropped' }],
+    });
+    await run('POST', 'staff', 'holidays-accept', {
+      year: 2026,
+      version: 0,
+      choices: [{ date: '2026-12-25', choice: 'closed', opens: null, closes: null, salon: 'x' }],
+    });
+
+    const [save, accept] = apiCalls();
+    expect(save).toMatchObject({ method: 'PUT', path: '/api/v1/salon/opening-hours/settings' });
+    expect(JSON.parse(save!.body)).toEqual({
+      version: 1,
+      weekly: [{ day: 'monday', open: true, opens: '09:00', closes: '18:00' }],
+    });
+    expect(accept).toMatchObject({ method: 'POST', path: '/api/v1/salon/holidays/2026/acceptance' });
+    expect(JSON.parse(accept!.body)).toEqual({
+      version: 0,
+      choices: [{ date: '2026-12-25', choice: 'closed', opens: null, closes: null }],
+    });
+  });
+
+  it('keeps anything but a year, a date or an id out of the paths', async () => {
+    await run('POST', 'staff', 'holiday-choose', { year: '../x', date: '2026-12-25', choice: 'open' });
+    await run('POST', 'staff', 'closure-reopen', { id: '../../identity/staff' });
+
+    expect(apiCalls().map((call) => call.path)).toEqual([
+      '/api/v1/salon/holidays/0/days/2026-12-25',
+      '/api/v1/salon/closures/0',
+    ]);
+  });
+
+  it('answers ok when a closure is reopened, which the API answers with no content', async () => {
+    answer = (_method, path) =>
+      path === '/api/v1/identity/me'
+        ? {
+            status: 200,
+            data: {
+              id: 's',
+              kind: 'staff',
+              role: 'MANAGER',
+              permissions,
+              scope: 'salon',
+              staffId: 's',
+              mfaEnabled: false,
+            },
+          }
+        : { status: 204, data: null };
+    const response = await run('POST', 'staff', 'closure-reopen', { id: BRANCH });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ ok: true });
+  });
+
+  it.each(['hours', 'holidays', 'closures'])(
+    'refuses %s to a role without settings.read, before any upstream call',
+    async (action) => {
+      permissions = ['session.manage'];
+      const response = await run('GET', 'staff', action);
+
+      expect(response.status).toBe(403);
+      expect(apiCalls()).toEqual([]);
+    },
+  );
+
+  it.each(['hours-save', 'holidays-accept', 'holiday-choose', 'closure-add', 'closure-reopen'])(
+    'refuses %s to a support session, with no upstream call',
+    async (action) => {
+      const response = await run('POST', 'support', action, { version: 1 });
 
       expect(response.status).toBe(403);
       expect(await response.json()).toMatchObject({ code: 'support_read_only' });

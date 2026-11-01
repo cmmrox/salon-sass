@@ -19,7 +19,7 @@ export type NavigationItem = {
   href: string;
   label: string;
   testId: string;
-  icon: 'home' | 'account' | 'staff' | 'audit' | 'salons' | 'plans' | 'billing' | 'support' | 'settings';
+  icon: 'home' | 'account' | 'staff' | 'audit' | 'salons' | 'plans' | 'billing' | 'support' | 'settings' | 'holidays';
   current?: boolean;
   alias?: string;
 };
@@ -41,6 +41,9 @@ function NavigationIcon({ icon }: { icon: NavigationItem['icon'] }) {
     support: 'M3 12a9 9 0 1 0 18 0a9 9 0 1 0-18 0ZM12 7v5l3 2',
     // The prototype's sliders glyph (its Settings item), its two circles written as arcs (F04-S01).
     settings: 'M4 7h9M17 7h3M4 17h3M11 17h9M13 7a2 2 0 1 0 4 0a2 2 0 1 0-4 0M7 17a2 2 0 1 0 4 0a2 2 0 1 0-4 0',
+    // The prototype's calendar glyph, its rounded box written as a path, for the holiday calendar (F04-S03).
+    holidays:
+      'M6 5h12a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V8a3 3 0 0 1 3-3ZM3 10h18M8 3v4M16 3v4M12 13v5M9.5 15.5h5',
   };
   return (
     <svg

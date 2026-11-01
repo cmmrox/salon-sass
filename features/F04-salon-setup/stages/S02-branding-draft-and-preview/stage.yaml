@@ -3,21 +3,219 @@ feature: F04
 title: "Branding draft, live preview and publish"
 sequence: 2
 surfaces: [api, web]
-status: outlined
+status: complete
 qa_status: not-run
 blocked_reason: null
 released_in: null
 reopened_by: null
 depends_on: [F04-S01]
-requirements: [BRD-01]
+requirements: [BRD-01, BRD-04]
 nfr_focus: []
 handoff:
-  run: null
-  data: null
-  notes: null
+  run: |
+    Local, from the repository root, in a plain (non-login) shell. Use a fresh database so the owner's
+    default `salon` database keeps its manual-test data: `infra/scripts/local-service.sh start postgres`,
+    then `docker exec salon-postgres psql -U salon -d postgres -c "CREATE DATABASE <name> OWNER salon"`,
+    then `SALON_DB_NAME=<name> infra/scripts/local-service.sh start api` and `... start web` (the walk-through
+    used SALON_DB_NAME=f04s02_walk, SALON_API_PORT=8290 and SALON_WEB_PORT=3290 beside QA's stack). Migrations
+    V1 to V19 and the local seed run at API start. Screen: http://alpha.localhost:3100/workspace/settings/branding.
+    API (settings.read to read, settings.manage to change): GET, PUT {version, brand} and DELETE {version}
+    /api/v1/salon/brand/draft; POST /api/v1/salon/brand/draft/reset {version}; POST
+    /api/v1/salon/brand/publication {version}; POST /api/v1/salon/brand/images (multipart: kind logo|cover,
+    file) -> 201 {id, kind, width, height}; GET /api/v1/salon/brand/images/{id} (the image bytes). The web
+    serves images at /brand-images/{id} on the salon hostname, and the public GET /api/v1/salon now has
+    tagline, logo and cover. New settings, all with defaults: salon.branding.images.max-bytes
+    (SALON_BRANDING_IMAGE_MAX_BYTES, 5MB, the file limit), salon.branding.images.max-pixels
+    (SALON_BRANDING_IMAGE_MAX_PIXELS, 50000000, read from the image header before decoding),
+    salon.branding.images.concurrent-decodes (SALON_BRANDING_IMAGE_CONCURRENT_DECODES, 2); and
+    spring.servlet.multipart max-file-size and max-request-size 10MB (a request over 10 MB is 413). The
+    cleanup job `branding-image-cleanup` runs hourly. No new local hook: the walk-through moved time with the
+    existing PUT/DELETE /local/clock. Stop with `local-service.sh stop web|api` and drop the database.
+  data: |
+    V19 gives every existing non-deleted salon (the owner's database included, at the next API start) a
+    brand draft equal to its published brand, through branding's `branding_add_brand_draft` function, which
+    leaves a salon that already has one unchanged. The local seed (db/local/afterMigrate.sql),
+    infra/scripts/stack-seed.sh and the operator's salon creation (the bootstrap function) call it too, so
+    alpha, beta, gamma and any new salon start with a draft of version 0, no tagline, logo or cover, and
+    their current colour. Images are uploaded through the screen or the API; there is no image seed. Staff of
+    every role come from the existing POST /local/identity/seed hook (synthetic salons only; credentials from
+    ignored files, never committed), support sessions from the existing /local/operator hooks. The
+    walk-through's accounts were random, kept only in the scratchpad and deleted; its database was dropped.
+  notes: |
+    Built against every acceptance criterion and checked on the running product, from outside, on a
+    fresh database built from the committed source (API from 88b3cfb, unchanged since; web from d76604c),
+    with two synthetic salons (alpha, beta), all five roles and an operator support session. Outside-in API
+    checks 61/61, browser checks (Playwright Chromium) 54/54. Logs and screenshots:
+    /Users/cmmrox/Personal/Projects/salon-sass/apps/api/target/f04-s02-evidence/ (walk-api.txt,
+    walk-browser.txt, screens/). The scripts were not committed: walk-throughs are not product code.
+    AC-1 checked: the Owner and the Manager open Settings -> Branding; the tab bar shows Profile and
+    Branding with Branding selected; the form shows the draft; the preview shows the neutral cover, the
+    initial in the logo circle, the name, the tagline and "Book an appointment" in the draft colour.
+    Receptionist, Professional and Accountant see the "no access" state at /workspace/settings/branding and
+    get 403 permission_denied on all six endpoints (the upload and image read included), changing nothing.
+    AC-2 checked: the preview follows the name and tagline as they are typed and a swatch chosen with the
+    keyboard (arrow keys on the Toggle Group), before saving. The `#RRGGBB` Field + Input (no native colour
+    input) takes a typed colour. The preview button text follows the web.md contrast rule from the shared
+    brand function in src/styles/brand.ts: 5.32:1 on #808080 (black text), 5.12:1 on #D6086A, 14.24:1 on
+    #FDE68A, 16.52:1 on #FFFF00 and 18.43:1 on #141413. The draft colour stays inside the preview: the
+    workspace accent does not change while editing.
+    AC-3 checked: a saved draft survives a reload and the bar says there are unpublished changes, while the
+    workspace accent, GET /api/v1/salon and the sign-in page still show the published brand. Publishing
+    moves name, tagline, colour, logo and cover in one step: at the next page load the workspace uses the
+    new colour, the header shows the new name with the logo before it, and the sign-in page shows the new
+    name and the logo in place of the initial; GET /api/v1/salon returns them. Publishing again is 409
+    invalid_state. Discard (confirmed in an Alert Dialog) returns the draft to the published brand.
+    AC-4 checked through the API and the screen: a 700x600 PNG logo is kept as a 512x512 PNG of its centre
+    square; a 2000x800 JPEG cover is kept as a 1600x640 JPEG; WebP logos and covers are accepted and kept
+    as PNG and JPEG; the re-encoded JPEG of an upload carrying Exif camera and GPS data and a comment keeps
+    none of them. A text file named .png, a 6 MB file, a 100x100 logo, a 100x100 cover, a truncated PNG and a
+    cover taller than it is wide are each a 400 field error on `file`, and nothing is stored; the screen
+    shows the message beside that image's field. A request over 10 MB is 413 request_rejected (lead's
+    decision 3, below). Unit tests cover each refusal, a PNG declaring 60000x60000 pixels refused from its
+    header alone, and the decode budget.
+    AC-5 checked: "Use default logo" and "Use default cover" clear that image in the draft only; the preview
+    shows the initial and the neutral cover (public/brand/neutral-cover.svg). "Reset to default branding"
+    (confirmed in an Alert Dialog) sets #D6086A, clears logo, cover and tagline, keeps the name, and is a
+    draft: the published brand is unchanged until publishing. With no logo, the header shows the name alone
+    and the sign-in page shows the initial, as before (lead's decision 2).
+    AC-6 checked: an empty or 61-character name (after trimming), an 81-character tagline, a colour that is
+    not #RRGGBB (two forms), and an unknown logo or cover id are each a 400 field error on that field, with
+    nothing saved; a saved name and tagline are trimmed and the colour stored in upper case.
+    AC-7 checked: a published image is served to anyone on its salon's hostname; a draft-only image is 404
+    without a session and to the Receptionist, and 200 to settings staff and a support session; alpha's
+    image on beta's hostname is 404 with the same body and headers as an id that does not exist. Every image
+    answer, 404s included, carries `Cache-Control: private, no-cache, no-store, max-age=0, must-revalidate`
+    and `X-Content-Type-Options: nosniff` (BrandImageHeadersFilter); the web route passes them on.
+    AC-8 checked: beta's Manager on alpha's hostname gets 404 not_found on every brand endpoint, the upload
+    included; alpha's image id in beta's draft is the same 400 as an unknown id (composite foreign keys keep
+    it impossible in the database too); as the application role with no tenant set, branding_brand_draft and
+    branding_image return no rows. Integration tests prove both isolation layers alone for the new tables.
+    AC-9 checked: stale save, reset, publish and discard are each 409 conflict and change nothing. Of 8
+    simultaneous publishes of one version exactly 1 succeeded and 7 were conflicts. Two browsers: the second
+    save says someone else changed the branding, and Reload shows the other person's changes. A support
+    session reads the Branding tab (read-only alert, every control disabled) and a draft image, and gets 403
+    support_read_only on every change and the upload. A suspended salon answers 403 salon_suspended; a
+    read-only salon reads and refuses writes and uploads with 403 salon_read_only.
+    AC-10 checked with the local clock on the running API: an unused image survived 23 hours and was removed
+    after 25; every image the draft or the published brand uses was kept. The 24 hours count from when an
+    image stopped being used, or from upload if it was never used (lead's decision 1). That the job touches
+    no other salon's images is proved by BrandImageCleanupJobIntegrationTest with the test clock (the
+    walk-through's own check of that is weak and not relied on).
+    AC-11 checked: save, reset, discard, publish and upload write branding.brand_draft_saved,
+    branding.brand_draft_reset, branding.brand_draft_discarded, branding.brand_published and
+    branding.brand_image_uploaded for the staff actor with the time and `changedFields` (names only; the
+    upload records the kind and the image id). No value, file name or bytes appear in the audit,
+    the API log or error responses.
+    AC-12 checked: loading, saved (toast), field-error, conflict, unavailable (an outage keeps what was
+    typed), published, read-only, uploading and refused states. Leaving with an uploaded image not yet saved
+    asks first. No horizontal scrolling at 360, 390, 768, 1024, 1280 and 1440, with the preview above the form
+    under 900px and beside it from 900px, as the prototype places it. Keyboard alone reaches every control,
+    the swatches are named by colour, and focus is visible. The accessibility check (Vitest browser mode, 63
+    cases) reports no WCAG 2.2 AA violation at every width with a dark and a light draft colour, and fails
+    if the tab scrolls sideways.
+    Visual comparison with the prototype (Salon web, Settings, Branding) at 360 and 1280:
+    screens/prototype-branding-*.png beside screens/brand-published-*.png. One confirmed difference fixed in
+    d76604c (the preview came after the form on phones). Remaining differences, all deliberate: the form is
+    in a Card with a Save draft button, as on the Profile tab; images use a Button that opens a visually
+    hidden file input, with the chosen image and "Use default ..." beside it, and the colour uses swatches
+    plus a `#RRGGBB` Field + Input, per the web.md component map (the prototype draws native file and colour
+    inputs); the preview shows the tagline where the prototype shows a business type (spec); the tab bar
+    shows only Profile and Branding.
+    Lead's decisions recorded: (1) the cleanup's 24 hours count from when an image stopped being used, or
+    from upload if it was never used (column branding_image.unused_since, set when no draft or published
+    brand names the image). (2) The header shows a small Avatar logo before the name when there is one and
+    nothing extra when there is not; on sign-in the logo replaces the initial. (3) A file of 5 to 10 MB is a
+    400 field error on `file`; only a request over 10 MB is 413.
+    Security review fixes (lead's findings): (a) decoding is bounded: images are size-checked from their
+    header (50 million pixels at most), then decoded with subsampling so no decode exceeds a budget of 16
+    million pixels whatever the shape; a cover that would be kept taller than 1600 pixels is a 400 field
+    error on `file` from its header; at most 2 decodes run at once, and an upload that waits more than 2
+    seconds for one is 503 service_unavailable (DecodePermits). Tests cover a tall narrow cover, a wide short
+    logo and every shape under the limit. (b) The workspace BFF reads an upload through a byte count that
+    stops past 10 MB whether or not the request declares its length, so a chunked upload is refused with 413
+    request_rejected without being buffered (boundedBody in identity-web.ts; a chunked route test fails
+    without it). Next.js 16's `experimental.proxyClientMaxBodySize` (10 MB by default) truncates the body
+    rather than refusing it (node_modules/next/dist/docs/01-app/03-api-reference/05-config/01-next-config-js/
+    proxyClientMaxBodySize.md), so it is not relied on. (c) The shadcn CLI tried to add the `cn` package
+    when adding Toggle and Toggle Group; it was refused and removed, and `grep -n '"cn"'
+    apps/web/package.json pnpm-lock.yaml` returns nothing.
+    Image handling: TwelveMonkeys imageio-webp 3.15.3 reads WebP; PNG and JPEG are read and every image is
+    written by the JDK's ImageIO. Content decides the type (PNG, JPEG or WebP signatures), never the name or
+    declared type. Limits: 5 MB file, 10 MB request, 50 million declared pixels, a 16 million pixel decode
+    budget, logo at least 128x128 kept as its centre square in a PNG of at most 512x512, cover at least
+    800x300 and no taller than wide, kept as a JPEG at most 1600 wide and at most 1600 high, 2 concurrent
+    decodes. Images live in PostgreSQL (branding_image, bytea, decision 086).
+    Different from the docs or chosen where they were silent, for the lead: (1) a cover taller than it is
+    wide is refused (the help text says so), which also keeps a kept cover within 1600x1600. (2) An image is
+    served to a support session and to settings staff while only the draft uses it; the API answers images
+    with no-store whatever the hostname policy, so a published logo is not cached by browsers either. (3)
+    The draft's version follows the F04-S01 pattern (a plain column moved on under a row lock); reset moves
+    it on and is audited even when nothing changed, as discard does. (4) The publish bar takes a `subject`
+    (profile or brand) for its messages, and the Profile tab's settings hook became a generic
+    useSettingsDraft that both tabs use; SettingsNotices is shared too. The publish bar and the leave dialog
+    keep their F04-S01 test ids on both tabs (profile-publish, profile-discard, profile-discard-dialog,
+    profile-discard-confirm, profile-discard-cancel, profile-leave-dialog, profile-leave-stay,
+    profile-leave-confirm). (5) Toggle Group is the shadcn/ui component with a `swatch` variant; the
+    `#RRGGBB` field shows a sample circle beside it. (6) Workspace BFF actions: GET
+    /identity-web/{staff|support}/brand-draft; POST /identity-web/staff/brand-save, brand-reset,
+    brand-publish, brand-discard and brand-image (multipart). The web's /brand-images/[id] route forwards
+    the session when there is one, so draft images show to settings staff. (7) identity-web.ts grew by about
+    90 lines (now 601). (8) Messages are in en.json only (decision 072).
+    New dependencies: API com.twelvemonkeys.imageio:imageio-webp 3.15.3 (exact pin). Web: none; shadcn/ui
+    toggle and toggle-group were added with the CLI and adapted to the theme.
+    New test ids for QA: brand-tab, brand-loading, brand-form, brand-name, brand-tagline, brand-colour,
+    brand-<field>-error, brand-colour-sample, brand-swatches, brand-swatch, brand-logo-choose,
+    brand-logo-default, brand-logo-file, brand-logo-error, brand-logo-chosen, brand-cover-choose,
+    brand-cover-default, brand-cover-file, brand-cover-error, brand-cover-chosen, brand-reset,
+    brand-reset-dialog, brand-reset-confirm, brand-reset-cancel, brand-save, brand-preview,
+    brand-preview-cover, brand-preview-logo, brand-preview-name, brand-preview-tagline, brand-preview-book,
+    brand-preview-note, brand-read-only, brand-conflict, brand-conflict-reload, brand-unavailable,
+    brand-retry, brand-fix, brand-refused, settings-tab-branding, workspace-logo, staff-sign-in-logo; plus
+    the publish bar and leave dialog ids above.
+    Nothing unfinished. Time: about 6 hours of building, testing and the walk-through; gate and test waits
+    are inside that, and nothing was blocked waiting on others.
+    Developer gates. Each row names the commit it ran on; each later commit changed only files outside that
+    row's scope. e25fba3 changed only the api-contracts client test fixture (typecheck found it lacking the
+    new Salon fields); the final commit changes only this file. The first API verify, started on d76604c,
+    failed BuildSourceMetadataTest only (1019 unit tests, 1 failure) because I committed e25fba3 while it ran,
+    so the build's stamped commit no longer matched HEAD; it was re-run on e25fba3 with nothing committed
+    meanwhile (log gates/1-api-verify-first-run-head-moved.log kept). Logs in
+    /Users/cmmrox/Personal/Projects/salon-sass/apps/api/target/f04-s02-evidence/gates/ (keep this checkout
+    until the stage is closed):
+    | Command | Tested commit | Exit | Log |
+    | --- | --- | --- | --- |
+    | `cd apps/api && ./mvnw -q verify` | e25fba3 | 0 | gates/1-api-verify.log |
+    | `pnpm -r lint` | e25fba3 | 0 | gates/2-lint.log |
+    | `pnpm -r typecheck` | e25fba3 | 0 | gates/3-typecheck.log |
+    | `pnpm -r test` | e25fba3 | 0 | gates/4-test.log |
+    | `pnpm --filter @salon/web test:a11y` | d76604c | 0 | gates/5-a11y.log |
+    | `pnpm --filter @salon/web build` | d76604c | 0 | gates/6-build.log |
+    | `pnpm contracts:check` | d76604c | 0 | gates/7-contracts.log |
 verification:
-  commands: []
-  automation: []
+  commands:
+  - cd apps/api && ./mvnw -q verify
+  - pnpm -r lint
+  - pnpm -r typecheck
+  - pnpm -r test
+  - pnpm --filter @salon/web test:a11y
+  - pnpm --filter @salon/web build
+  - pnpm contracts:check
+  # Prepared during the build (dry run); suite membership is decided at feature-verify.
+  automation:
+  - id: brand-api
+    tool: playwright
+    file: qa/api/F04/S02-brand.spec.ts
+    project: api
+    suites: []
+  - id: brand-screens
+    tool: playwright
+    file: qa/web/F04/S02-brand-screens.spec.ts
+    project: web
+    suites: []
+  - id: brand-backfill
+    tool: script
+    file: qa/checks/F04/S02-brand-backfill.sh
+    suites: []
   manual: []
   deferred: []
 evidence:

@@ -14,10 +14,12 @@ export const supportsLocks = () => typeof navigator !== 'undefined' && Boolean(n
 export async function identityRequest<T>(kind: Kind, action: string, body?: unknown): Promise<T> {
   let response: Response;
   try {
+    // A form (a brand image upload) goes as multipart, with the browser's own boundary; anything else as JSON.
+    const form = body instanceof FormData;
     response = await fetch(`/identity-web/${kind}/${action}`, {
       method: body === undefined ? 'GET' : 'POST',
-      headers: body === undefined ? {} : { 'Content-Type': 'application/json' },
-      body: body === undefined ? undefined : JSON.stringify(body),
+      headers: body === undefined || form ? {} : { 'Content-Type': 'application/json' },
+      body: body === undefined ? undefined : form ? body : JSON.stringify(body),
       cache: 'no-store',
     });
   } catch {

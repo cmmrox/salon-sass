@@ -78,6 +78,16 @@ class BrandingRepositoriesHibernateFilterAloneIntegrationTest {
     @Test
     void alphaReadsOnlyItsOwnRowsAndBetasAreNotFound() throws Exception {
         UUID betasBranch = salons.defaultBranch(beta);
+        UUID betasImage = UUID.randomUUID();
+        for (UUID[] row : new UUID[][] {{alpha.id(), UUID.randomUUID()}, {beta.id(), betasImage}}) {
+            database.asOwner()
+                    .update(
+                            "INSERT INTO branding_image (tenant_id, id, kind, media_type, width, height, bytes,"
+                                    + " created_at, updated_at) VALUES (?, ?, 'logo', 'image/png', 10, 10,"
+                                    + " '\\x89504e47', now(), now())",
+                            row[0],
+                            row[1]);
+        }
         as(
                 alpha,
                 () -> inTransaction(() -> {

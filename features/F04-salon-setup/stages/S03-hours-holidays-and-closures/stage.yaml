@@ -3,7 +3,7 @@ feature: F04
 title: "Opening hours, holidays and closures"
 sequence: 3
 surfaces: [api, web]
-status: outlined
+status: complete
 qa_status: not-run
 blocked_reason: null
 released_in: null
@@ -12,11 +12,244 @@ depends_on: [F04-S01]
 requirements: [STF-04]
 nfr_focus: [NFR-13]
 handoff:
-  run: null
-  data: null
-  notes: null
+  run: |
+    Local, from the repository root, in a plain (non-login) shell. Use a fresh database so the owner's
+    default `salon` database keeps its manual-test data: `infra/scripts/local-service.sh start postgres`,
+    then `docker exec salon-postgres psql -U salon -d postgres -c "CREATE DATABASE <name> OWNER salon"`,
+    then `SALON_DB_NAME=<name> infra/scripts/local-service.sh start api` and `... start web` (the walk-through
+    used SALON_DB_NAME=f04s03_walk, SALON_API_PORT=8290 and SALON_WEB_PORT=3290). Migrations V1 to V21 and the
+    local seed run at API start. Screens: http://alpha.localhost:3100/workspace/settings/hours (Settings, Hours
+    & closures) and http://console.localhost:3100/console/holidays (operator console, Holiday calendar, then a
+    year at /console/holidays/<year>). API, salon host: GET /api/v1/salon/opening-hours (public); GET and PUT
+    /api/v1/salon/opening-hours/settings; GET /api/v1/salon/holidays; POST
+    /api/v1/salon/holidays/{year}/acceptance; PUT /api/v1/salon/holidays/{year}/days/{date}; GET and POST
+    /api/v1/salon/closures; GET /api/v1/salon/closures/impact?date=; DELETE /api/v1/salon/closures/{id}.
+    API, console host only: /api/v1/operator/holiday-calendars (GET), /{year} (GET), /{year}/import (POST
+    multipart `file`), /{year}/days (POST), /{year}/days/{date} (PUT, DELETE), /{year}/publication (POST
+    {version}). No new setting. No new local hook: the walk-through moved time with the existing
+    PUT/DELETE /local/clock, and seeded operators and staff with the existing /local/operator/seed and
+    /local/identity/seed. Stop with `local-service.sh stop web|api` and drop the database.
+  data: |
+    Nothing is seeded for this stage. A salon has no weekly hours until its first save (the form shows the
+    suggested week, which is not stored), no holiday review until it accepts a published year, and no
+    closures. The holiday calendar starts empty: an Admin opens a year in the console and imports a CSV
+    (`date,name,kind`, kind poya, public, bank or mercantile) or adds days, then publishes. The walk-through
+    used the prototype's sample days for 2026 (25 October, 8 and 24 November, 23 and 25 December); real dates
+    come only from the gazette. The calendar is platform data shared by every salon: on a shared database, a
+    year one person publishes is seen by every salon there. Staff of every role, operators (Admin, Support)
+    and support sessions come from the existing local hooks; the walk-through's accounts were random, kept
+    only in the scratchpad and deleted, and its database was dropped.
+  notes: |
+    Built against every acceptance criterion and checked on the running product, from outside, on fresh
+    databases built from the final source (1e2251f), with two synthetic salons (alpha, beta), all five roles,
+    an operator Admin and Support, a support session and the test clock. Outside-in API checks 48/48, browser
+    checks (Playwright Chromium) 46/46. Logs and screenshots:
+    /Users/cmmrox/Personal/Projects/salon-sass/apps/api/target/f04-s03-evidence/ (walk-api.txt,
+    walk-browser.txt, screens/). The scripts were not committed: walk-throughs are not product code.
+    AC-1 checked: Settings shows Profile, Hours & closures, Branding in that order. Before the first save the
+    form shows the suggested week (Mon-Fri 09:00-18:00, Sat 09:00-19:00, Sun closed) marked "Not saved yet",
+    the API answers version 0 and weekly null, and the public information has no weekly hours. Each weekday
+    has a Toggle and two quarter-hour time Selects; Save hours saves at once (version 1) and the public
+    information shows the week on the next request; a reload shows it saved. A closing time at or before the
+    opening time is refused beside that day in the browser, and by the API as 400 on `weekly[1].closes`,
+    with nothing saved.
+    AC-2 checked: GET /api/v1/salon/opening-hours is public on the salon host: weekly hours, then the
+    exceptions from the salon's today to 180 days ahead (closed days and holidays with special hours, each
+    with date, kind, times where open and the holiday's name). A closure's reason never appears in it. A save
+    shows on the next request; beta's information never shows alpha's hours. The 180-day edge is held by an
+    integration test (a closure on day 180 is listed, day 181 is not).
+    AC-3 checked: an Admin imports a CSV as the year's draft in the console. A file with bad lines (a date
+    outside the year, a repeated date, an unknown kind, an empty name, a malformed row) is refused whole: the
+    console lists each line's number and reason, and nothing is kept. A valid file replaces the draft. The
+    Admin adds a day (date from a Popover with Calendar), changes and removes days. Support reads the years
+    and a year and is refused every change (403 `permission_denied`); its console pages show no control to
+    change anything. Every import, edit and publication is in the platform audit (holiday_calendar.imported,
+    .day_added, .day_changed, .day_removed, .published), with counts or the date, never a name.
+    AC-4 checked: Publish asks in the prototype's words ("Publish the 2026 holidays?", "Every salon is asked
+    to review them. Nothing changes for a salon until it chooses what it does on each day.") and makes
+    revision 1. A stale version is 409 `conflict`; publishing again with nothing changed is 409
+    `invalid_state`. Each salon's Public holidays 2026 card shows "To review", the publication date and the
+    days not yet past with their kind and name (a past day is left out). Until the salon accepts, nothing
+    changes: no public exception, and OpeningSchedule answers the weekly hours (integration test).
+    AC-5 checked: the salon chooses Closed, Open as usual or Special hours (two time Selects) per day and
+    presses Accept these choices: the card shows "Reviewed" and closed days and special hours are in the
+    public information and OpeningSchedule at once. Afterwards one day's change saves at once; before
+    acceptance it is 409 `invalid_state`. An acceptance that leaves a day to review without a choice is 400
+    on `choices`. Beta's choices and public information are unaffected.
+    AC-6 checked: the Admin changes one day's name, removes one and adds one; before publishing the console
+    says "adds 1, changes 1, withdraws 1" and marks each day New or Changed and lists the withdrawn day.
+    After publishing (revision 2), each salon sees only the added and changed days as to review again (the
+    year shows "To review", each such day "Changed: review"); its choices for unchanged days still apply; the
+    withdrawn day disappears and its choice no longer applies (the choice row is kept for the audit).
+    AC-7 checked: + Add closure opens the sheet (bottom sheet under 900px, right drawer from 900px). The date
+    comes from a Popover with Calendar: days before today and after a year ahead are disabled. Once a date is
+    picked the sheet shows the bookings on it through BookingsOnDate, "No bookings on this day" in this stage.
+    The reason is optional, up to 60 characters, and only the team sees it. Close the salon this day saves it:
+    the date is closed in the public information and in OpeningSchedule even when it is a holiday with
+    special hours. Reopen removes it. A past date or one beyond a year is 400 on `date`; a second closure on
+    the same date is 409 `conflict`, shown beside the date in the sheet; of 8 sent at once exactly one is kept.
+    AC-8 checked: OpeningSchedule's priority (closure over accepted holiday choice over weekly hours) is
+    proved by HolidaysAndScheduleIntegrationTest for an ordinary day, a closed weekday, an accepted closed
+    holiday, accepted special hours, a holiday still to review (weekly hours apply), a closure on a holiday,
+    a branch with no weekly hours, another salon's branch (not found) and an over-long range. With a test
+    BookingsOnDate the impact endpoint, the closure list and the hours settings carry the affected bookings
+    ("N upcoming bookings fall outside these hours") and every booking is kept; the screens' display of them
+    is held by the component tests. Not shown on the running product: no booking exists until F07, and I
+    added no test hook for one.
+    AC-9 checked with the local clock: at 23:30 in Asia/Colombo (18:00 UTC) on 1 December, today's closure is
+    201 and yesterday's 400; a holiday is not past at 23:30 on its date and is past, out of the review list
+    and refused in an acceptance, at 00:01 the next day (18:31 UTC). Integration tests hold the same with the
+    test clock, including Reopen refused (409 `invalid_state`) once the date has passed.
+    AC-10 checked: Receptionist, Professional and Accountant see no Hours & closures tab (the no-access state)
+    and get 403 `permission_denied` on every read and change; the public endpoint answers them. Beta's
+    manager on alpha's host gets 404 on reads and changes; alpha's closure id on beta's host is 404 exactly as
+    an unknown id. With no tenant context the four new tables return no rows (application role); the
+    isolation tests prove RLS alone and the Hibernate filter alone for each. A support session reads the tab
+    (read-only alert, every control disabled) and gets 403 `support_read_only` on every change. Suspended and
+    read-only salons answer 403 `salon_suspended` and `salon_read_only` as the other settings endpoints do.
+    Operator calendar routes answer 404 on a salon host.
+    AC-11 checked: a stale version on saving hours or accepting is 409 `conflict` and changes nothing. Hours
+    saves (staff.opening_hours_saved, with changedDays and the version), acceptances
+    (staff.holidays_accepted, with the year, the dates and the version), one day's choice
+    (staff.holiday_choice_changed, with the date), closures (staff.closure_added) and reopenings
+    (staff.closure_reopened, with the date) are in the salon's audit trail with the staff actor and the time.
+    No closure reason appears in the audit, the API log or the public API.
+    AC-12 checked: loading, saved (toasts), field-error, conflict, unavailable, empty ("No closures planned",
+    no year published) and read-only states on the tab; the console's refusal Alert with the line list; no
+    horizontal scrolling at 360, 390, 768, 1024, 1280 and 1440 on the tab and the console year page.
+    Keyboard alone: Space toggles a weekday, a time Select opens with Enter and chooses with the arrows,
+    the sheet takes focus and returns it to + Add closure on close. Each weekday toggle is named by its day
+    ("Monday", visible "Mon"; pressed means open), each time Select by day and edge ("Monday opens"), each
+    holiday Select by the holiday. The accessibility check (Vitest browser mode) has 36 new cases with no
+    WCAG 2.2 AA violation: the tab at every width with a dark and a light brand, its states, the sheet with
+    its calendar and bookings at 360 and 1280, and the console's years, year, refused import and publication
+    dialog at every width.
+    Visual comparison with the prototype (Salon web, Settings, Hours & closures; the Add a closure sheet;
+    the console's Holiday calendar card) at 360 and 1280: screens/prototype-*.png beside screens/hours-*.png,
+    closure-sheet-*.png and console-*.png. One confirmed difference fixed in 1e2251f: the Settings intro told
+    staff that changes are drafts to publish, false for this tab; it now says hours and closures save at
+    once. Remaining differences, all deliberate: dates and times follow the configured locale (24-hour
+    "09:00", "Sun, Nov 8, 2026") rather than the prototype's "9:00 AM", "Sun 25 Oct" (NFR-13); times are in
+    15-minute steps over the whole day (the prototype offers 30-minute steps from 06:00 to 22:00; the spec
+    says 15); the review list leaves out past days (the spec); under 900px a weekday's time Selects sit below
+    its chip (the prototype's one row overflows at 360px); the Add a closure sheet picks a date from a
+    Popover with Calendar instead of a list of the coming week, and closes with Escape or the backdrop as the
+    console sheets do, with no Close button; the console's Holiday calendar is its own page (years, then a
+    year) rather than the overview card, which the spec asks for.
+    Decision recorded: the tenant role reads the published calendar only through
+    `holiday_calendar_published(first_year, last_year)`, a SECURITY DEFINER function (search path pinned,
+    not executable by PUBLIC, executable by the application role only) that returns published years and
+    days, never a draft or who published. The application role has no grant on platform_holiday_year,
+    platform_holiday_draft_day or platform_holiday_published_day; the platform role keeps them.
+    HolidayCalendar (platform's root) reads through it in one statement on its own pooled connection;
+    staff calls it before opening its transaction. A database catalogue test and an integration test prove
+    both the absent grants and the function.
+    Different from the docs, or chosen where they were silent, for the lead: (1) The CSV refusal's
+    per-line errors are the shared problem shape's `errors` items with `field: "file"`, the reason in
+    `detail` and a new optional integer `line` (FieldProblem gained it; absent everywhere else), rather than
+    a new item shape with `reason`. (2) staff's allowedDependencies are branding, identity, platform and
+    shared's audit, lifecycle, persistence, tenancy and web: identity is needed for Principals, as branding
+    uses it; the spec listed shared, branding and platform. (3) BookingsOnDate's record carries the
+    booking's date as well as time, customer and service (the API's booking shape is the spec's
+    {time, customerName, serviceName}); F07 replaces staff's NoBookingsOnDate by registering its own
+    implementation as @Primary. (4) OpeningSchedule.between answers at most 400 days per call; a branch with
+    no weekly hours is closed (reason NO_WEEKLY_HOURS). (5) Weekly hours are one row per branch with a
+    pair of time columns per weekday (staff_opening_hours); a review row per branch and year holds the
+    acceptance version (0 before the first acceptance, when no row exists); choices record the published
+    day's revision. Four tenant tables in all. (6) In requests, a closed weekday and a non-special choice
+    must send null times (400 otherwise). Years outside 2000-2100, an unpublished year, or a date that is
+    not one of the year's holidays are 404 on the salon paths; on the console a malformed or out-of-range
+    year is 404 and a single-day add into an unstarted year starts it. (7) The operator year list is not
+    paginated (at most 101 years) and the closures list is not paginated (at most a year ahead); both are
+    said in their operation descriptions. (8) Choices never decided show Closed in the form (the prototype's
+    default); special hours default to 09:00-13:00. (9) The holidays card shows the current year when
+    published, else the first published year from it. (10) Toggle gained a `chip` variant (the prototype's
+    `.chip`); the time Select is a shadcn Select with 96 quarter-hour options. Calendar day buttons are named
+    "Saturday, January 31, 2026" through a small helper (lib/dates/calendar-labels.ts), because
+    react-day-picker's own labels ("31st") fail axe's label-in-name rule. (11) The operator console's
+    permissions gained operator.holiday.read (Admin and Support) and operator.holiday.manage (Admin). (12)
+    @salon/format gained formatClock and formatDay. readBoundedJson now reads through a shared
+    readBoundedBytes, which the console's import uses with a 128 KB limit (the API's file limit is 64 KB).
+    (13) BFF actions: workspace GET hours, holidays, closures, closure-impact (?date=); POST hours-save,
+    holidays-accept, holiday-choose, closure-add, closure-reopen, through a new SalonHours port (staff's
+    salonHoursFor), support reads included; console GET holiday-years, holiday-year (?year=); POST
+    holiday-import (multipart), holiday-day-add, holiday-day-change, holiday-day-remove, holiday-publish.
+    identity-web.ts grew by about 40 lines (now about 640) with the dispatch kept in salon-hours.ts.
+    (14) No unsaved-edits guard on this tab: everything saves at once, and the prototype shows none; edits
+    to the weekly form not yet saved are lost on leaving. (15) Messages are in en.json only (decision 072).
+    New dependencies: web react-day-picker 10.0.2 (exact pin; the Calendar the component map names; its own
+    dependencies date-fns and @date-fns/tz come with it). The shadcn CLI, adding Popover, Calendar and Table,
+    again added the stray `cn` package and caret ranges for date-fns and react-day-picker, and rewrote the
+    components' cn import to it: refused, the imports pointed at @/lib/utils, the lockfile rebuilt with
+    pnpm 12.11.2 (it also normalised two vitest peer entries), and `grep -n '"cn"' apps/web/package.json
+    pnpm-lock.yaml` returns nothing. No API dependency.
+    New test ids for QA: workspace: settings-tab-hours, settings-intro, hours-tab, hours-loading,
+    hours-card, hours-not-saved, hours-week, hours-day-<day>, hours-<day>-open, hours-<day>-opens,
+    hours-<day>-closes, hours-<day>-closed, hours-<day>-error, hours-<day>-opens-option-<HHMM> (and closes),
+    hours-outside, hours-save, hours-read-only, hours-conflict, hours-conflict-reload, hours-unavailable,
+    hours-retry, hours-fix, hours-refused, holidays-card, holidays-none, holidays-status, holidays-days,
+    holidays-all-past, holiday-<date>, holiday-<date>-choice, holiday-<date>-choice-<closed|open|special>,
+    holiday-<date>-opens, holiday-<date>-closes, holiday-<date>-to-review, holidays-accept, closures-card,
+    closures-empty, closures-list, closure-row (data-date), closure-reopen, closure-add, closure-sheet,
+    closure-date, closure-calendar, closure-date-error, closure-reason, closure-reason-error,
+    closure-impact, closure-no-bookings, closure-bookings, closure-booking, closure-confirm. Console:
+    console-nav-holidays, console-holidays, console-holidays-title, console-holiday-start,
+    console-holiday-start-year, console-holiday-open, console-holidays-empty, console-holiday-years,
+    console-holiday-year-row (data-year), console-holiday-state (data-state), console-holiday-year,
+    console-holiday-back, console-holiday-year-title, console-holiday-done, console-holiday-import,
+    console-holiday-file, console-holiday-choose-file, console-holiday-add, console-holiday-add-sheet,
+    console-holiday-change-sheet, console-holiday-day-date, console-holiday-day-calendar,
+    console-holiday-day-name, console-holiday-day-kind(-<kind>), console-holiday-day-save,
+    console-holiday-day-error, console-holiday-import-refused, console-holiday-bad-lines,
+    console-holiday-bad-line (data-line), console-holiday-year-empty, console-holiday-days-card,
+    console-holiday-days, console-holiday-day (data-date), console-holiday-day-change,
+    console-holiday-day-edit, console-holiday-day-remove, console-holiday-withdrawn,
+    console-holiday-publication, console-holiday-counts, console-holiday-publish,
+    console-holiday-publish-dialog, console-holiday-publish-confirm, console-holiday-publish-cancel.
+    Defects the walk-through found, fixed: the holiday year the tab sends as a number became 0 in the BFF's
+    path check, so acceptance and a day's choice answered 404 (de782c9, with a BFF test that sends a number);
+    the Settings intro (1e2251f).
+    Nothing unfinished. Time: about 7 hours of building, testing and the walk-through; gate and test waits
+    are inside that, and nothing was blocked waiting on others.
+    F04-S02 fix (lead's request from QA's dry run). (a) a9a1937: a chunked brand image upload over 10 MB
+    through the workspace BFF answered 400 "file is required" instead of 413. Cause: Next.js 16's proxy
+    buffers a request body only up to `experimental.proxyClientMaxBodySize` (10 MB by default) and passes it
+    on silently truncated (node_modules/next/dist/docs/01-app/03-api-reference/05-config/01-next-config-js/
+    proxyClientMaxBodySize.md), so the route saw exactly 10 MB, the byte count never passed the limit, and
+    the cut multipart form had no file. Fix: the proxy limit is set 64 KB above the upload limit, both from
+    one constant (src/lib/http/upload-limits.ts), so a body over 10 MB still arrives too long and is refused
+    413 `request_rejected`. Checked through the running web server, proxy included, before and after: chunked
+    11 MB and 10 MB + 10 KB were 400 and are now 413; a declared 11 MB stays 413; chunked 6 MB and
+    10 MB less 1 KB are still read whole (400 on `file`, "must be at most 5 MB")
+    (apps/api/target/f04-s03-evidence/s02-fix/chunked-through-web.txt). A unit test holds the config to the
+    limit and fails without it. Gates re-run then on that commit: web lint, typecheck, unit tests (803) and
+    build, all exit 0 (s02-fix/*.log); all gates re-ran on the final S03 source below. (b) a478fc6: the cover
+    help said "no taller than it is wide"; it now says "A PNG, JPEG or WebP image of up to 5 MB, at least
+    800 × 300 pixels. A wide photo works best." A unit test holds the rule at QA's sizes: 900x1200 and
+    1000x1600 kept, 1000x1601, 1000x2000 and 2000x2100 refused.
+    Developer gates, all on the final commit 1e2251f with nothing committed during the run; the final
+    commit after it changes only this file. Logs in
+    /Users/cmmrox/Personal/Projects/salon-sass/apps/api/target/f04-s03-evidence/gates/ (keep this checkout
+    until the stage is closed):
+    | Command | Tested commit | Exit | Log |
+    | --- | --- | --- | --- |
+    | `cd apps/api && ./mvnw -q verify` | 1e2251f | 0 | gates/1-api-verify.log |
+    | `pnpm -r lint` | 1e2251f | 0 | gates/2-lint.log |
+    | `pnpm -r typecheck` | 1e2251f | 0 | gates/3-typecheck.log |
+    | `pnpm -r test` | 1e2251f | 0 | gates/4-test.log (web 845, api-contracts 25, format 9) |
+    | `pnpm --filter @salon/web test:a11y` | 1e2251f | 0 | gates/5-a11y.log (99) |
+    | `pnpm --filter @salon/web build` | 1e2251f | 0 | gates/6-build.log |
+    | `pnpm contracts:check` | 1e2251f | 0 | gates/7-contracts.log |
+    knip (part of the repository's checks) also exits 0 (gates/knip.log).
 verification:
-  commands: []
+  commands:
+  - cd apps/api && ./mvnw -q verify
+  - pnpm -r lint
+  - pnpm -r typecheck
+  - pnpm -r test
+  - pnpm --filter @salon/web test:a11y
+  - pnpm --filter @salon/web build
+  - pnpm contracts:check
   automation: []
   manual: []
   deferred: []

@@ -54,6 +54,7 @@ export async function findSalon(
               name: data.name,
               brandColour: isHexColour(data.brandColour) ? data.brandColour : DEFAULT_BRAND_COLOUR,
               timeZone: data.timeZone,
+              ...(data.logo ? { logo: data.logo.id } : {}),
             },
           }
         : unavailable(slug, 'the API answered with something that is not this salon');

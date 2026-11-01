@@ -7,6 +7,7 @@ import { contextFromTraceparent, runInRequest } from '@/lib/observability/reques
 import { assertion, cookieName, createIdentityWeb, csrf, requestHost } from './identity-web';
 import type { SalonAccount, SalonAccountFor } from './salon-account';
 import type { SalonSettings, SalonSettingsFor } from './salon-settings';
+import type { SalonHours, SalonHoursFor } from './salon-hours';
 import { normalizeIp, strictInstant } from '@/lib/http/network';
 import { formatInstant } from '@salon/format';
 
@@ -20,7 +21,12 @@ const unreachedSettings: SalonSettingsFor = () =>
   new Proxy({} as SalonSettings, {
     get: () => () => Promise.reject(new Error('the branding module is not reached here')),
   });
-const handleIdentity = createIdentityWeb(unreached, unreachedSettings);
+/** Nor the staff module's hours paths (F04-S03). */
+const unreachedHours: SalonHoursFor = () =>
+  new Proxy({} as SalonHours, {
+    get: () => () => Promise.reject(new Error('the staff module is not reached here')),
+  });
+const handleIdentity = createIdentityWeb(unreached, unreachedSettings, unreachedHours);
 let server: Server;
 let calls: { path: string; host?: string; proof?: string }[];
 let answer: (path: string) => { status: number; data: unknown };

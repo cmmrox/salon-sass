@@ -232,6 +232,11 @@ because the owner set one standard for all Next.js work in this product.
    | One-time secret shown for copying (authenticator setup key and URI) | No shadcn/ui component: a labelled `<output>` inside a Field, styled with Tailwind (CR-017) |
    | Hint on hover or focus | Tooltip |
    | Sections switched in place | Tabs |
+   | One choice from a few visible options (brand colour swatches) | Toggle Group, `type="single"` (F04-S02) |
+   | Brand colour typed as `#RRGGBB` | Field around Input, with a swatch of the value beside it; no native colour input (F04-S02) |
+   | Choosing a file (logo, cover) | No shadcn/ui component: a Button that opens a visually hidden `<input type="file">` inside a Field, whose label, description and error belong to it, with the chosen image previewed (F04-S02) |
+   | Choosing a date | Popover with Calendar, opened from a Button showing the chosen date (F04-S03) |
+   | A pressed or unpressed choice in a row (a weekday open or closed) | Toggle, `chip` variant for the prototype's `.chip` (F04-S03). Calendar day buttons carry full date names (`lib/dates/calendar-labels.ts`), because react-day-picker's own labels fail axe's label-in-name rule |
 
    A job the table and the catalogue do not cover is raised with the lead before it is built.
 2. Product components in `src/features/<module>/components/` (or `src/components/shared/`) compose `ui/` components with Tailwind utilities.

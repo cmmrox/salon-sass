@@ -4,9 +4,12 @@ import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-/** The Settings tabs delivered so far (F04-S01): Profile. Later stages add theirs here. */
-export type SettingsTab = 'profile';
-const TABS: SettingsTab[] = ['profile'];
+/**
+ * The Settings tabs delivered so far, in the prototype's order (F04-S01 Profile, F04-S03 Hours & closures,
+ * F04-S02 Branding).
+ */
+export type SettingsTab = 'profile' | 'hours' | 'branding';
+const TABS: SettingsTab[] = ['profile', 'hours', 'branding'];
 
 /**
  * The Settings page (F04-S01): the prototype's intro and its section tabs, showing only the tabs that
@@ -19,7 +22,10 @@ export function SettingsScreen({ tab, children }: { tab: SettingsTab; children: 
   return (
     <div className="flex min-w-0 flex-col gap-4">
       {/* Ink, not muted: small muted text on the warm canvas is under 4.5:1 (ui-ux-standards.md). */}
-      <p className="-mt-5 mb-1 text-small text-foreground">{t('intro')}</p>
+      {/* Hours, holidays and closures save at once (F04-S03); only Profile and Branding are drafts. */}
+      <p className="-mt-5 mb-1 text-small text-foreground" data-testid="settings-intro">
+        {t(tab === 'hours' ? 'introHours' : 'intro')}
+      </p>
       <Tabs
         value={tab}
         onValueChange={(next) => {

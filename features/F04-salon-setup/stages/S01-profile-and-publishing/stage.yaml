@@ -176,7 +176,22 @@ verification:
   - pnpm --filter @salon/web test:a11y
   - pnpm --filter @salon/web build
   - pnpm contracts:check
-  automation: []
+  # Prepared during the build (dry run); suite membership is decided at feature-verify.
+  automation:
+  - id: profile-api
+    tool: playwright
+    file: qa/api/F04/S01-profile.spec.ts
+    project: api
+    suites: []
+  - id: profile-screens
+    tool: playwright
+    file: qa/web/F04/S01-profile-screens.spec.ts
+    project: web
+    suites: []
+  - id: branch-backfill
+    tool: script
+    file: qa/checks/F04/S01-branch-backfill.sh
+    suites: []
   manual: []
   deferred: []
 evidence:

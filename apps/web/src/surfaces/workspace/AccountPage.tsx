@@ -7,6 +7,8 @@ import { BillingBanner } from '@/features/platform';
 import { readEntitlements } from '@/features/platform/server';
 import { AccountFrame } from './AccountFrame';
 import { BillingScreen } from './BillingScreen';
+import { BrandingSettingsScreen } from './BrandingSettingsScreen';
+import { HoursSettingsScreen } from './HoursSettingsScreen';
 import { ProfileSettingsScreen } from './ProfileSettingsScreen';
 import { SettingsScreen, type SettingsTab } from './SettingsScreen';
 import { SupportAccessScreen } from './SupportAccessScreen';
@@ -100,11 +102,21 @@ export async function AccountPage({ kind: requested, view, signIn, tab }: PagePr
         <SupportAccessScreen timeZone={salon.timeZone} />
       ) : view === 'settings' ? (
         <SettingsScreen tab={tab ?? 'profile'}>
-          <ProfileSettingsScreen
-            kind={kind}
-            salonName={salon.name}
-            readOnly={support ? 'support' : readOnly ? 'salon' : null}
-          />
+          {tab === 'branding' ? (
+            <BrandingSettingsScreen kind={kind} readOnly={support ? 'support' : readOnly ? 'salon' : null} />
+          ) : tab === 'hours' ? (
+            <HoursSettingsScreen
+              kind={kind}
+              timeZone={salon.timeZone}
+              readOnly={support ? 'support' : readOnly ? 'salon' : null}
+            />
+          ) : (
+            <ProfileSettingsScreen
+              kind={kind}
+              salonName={salon.name}
+              readOnly={support ? 'support' : readOnly ? 'salon' : null}
+            />
+          )}
         </SettingsScreen>
       ) : (
         <AccountScreen

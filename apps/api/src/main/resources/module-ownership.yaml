@@ -25,9 +25,11 @@ modules:
   branding:
     description: The salon's brand and its published presentation, its business profile and its branches.
     tables:
+      - branding_brand_draft
       - branding_branch
       - branding_branch_contact_draft
       - branding_branch_contact_published
+      - branding_image
       - branding_profile_draft
       - branding_profile_published
       - salon_brand
@@ -52,6 +54,9 @@ modules:
       - operator_user
       - plan
       - platform_audit_entry
+      - platform_holiday_draft_day
+      - platform_holiday_published_day
+      - platform_holiday_year
       - provider_event
       - provisioning_receipt
       - salon_export
@@ -78,6 +83,20 @@ modules:
       - salon.export
       - salon.support
       - salon.retention
+
+  staff:
+    description: Each branch's opening hours, its choices for the published holidays and its special closures.
+    tables:
+      - staff_closure
+      - staff_holiday_choice
+      - staff_holiday_review
+      - staff_opening_hours
+    paths:
+      - /api/v1/salon/opening-hours
+      - /api/v1/salon/holidays
+      - /api/v1/salon/closures
+    settings:
+      - salon.staff
 
   shared:
     description: Technical capabilities every module runs on, and the service's own metadata.

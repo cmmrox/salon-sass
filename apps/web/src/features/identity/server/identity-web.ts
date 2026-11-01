@@ -11,6 +11,15 @@ import { readBoundedJson } from '@/lib/http/bounded-json';
 import type { Kind, Principal } from '../types';
 import type { SalonAccount, SalonAccountFor, SupportCredential } from './salon-account';
 import type { SalonSettings, SalonSettingsFor } from './salon-settings';
+import {
+  changeHours,
+  HOURS_PERMISSIONS,
+  HOURS_READS,
+  HOURS_WRITES,
+  readHours,
+  type SalonHoursFor,
+} from './salon-hours';
+import { UPLOAD_LIMIT_BYTES } from '@/lib/http/upload-limits';
 
 type Tokens = components['schemas']['Tokens'];
 /** A client for the identity module's paths, for calls made for the salon with this hostname. */
@@ -41,7 +50,16 @@ export function supportCsrf(request: NextRequest): boolean {
 /** The support credential's host-only HttpOnly cookies on the salon's host (F03-S04). */
 const SUPPORT_COOKIES = ['access', 'session'] as const;
 /** Support reads: what the Owner can read; support-access and own-account reads are refused by the API. */
-const SUPPORT_READS = ['principal', 'staff', 'audit', 'entitlements', 'invoices', 'profile-draft'];
+const SUPPORT_READS = [
+  'principal',
+  'staff',
+  'audit',
+  'entitlements',
+  'invoices',
+  'profile-draft',
+  'brand-draft',
+  ...HOURS_READS,
+];
 export function proxyKey(): Buffer {
   const value = process.env.SALON_IDENTITY_PROXY_KEY;
   if (!value || !/^[a-fA-F0-9]{64}$/.test(value)) throw new Error('Configure SALON_IDENTITY_PROXY_KEY');
@@ -139,6 +157,7 @@ async function handleSupport(
   host: { hostname: string },
   salonAccountFor: SalonAccountFor,
   salonSettingsFor: SalonSettingsFor,
+  salonHoursFor: SalonHoursFor,
 ) {
   if (request.method === 'GET' && !SUPPORT_READS.includes(action))
     return action === 'sessions' || action === 'support-sessions'
@@ -151,7 +170,8 @@ async function handleSupport(
   const client = identityClient(host.hostname);
   const account = salonAccountFor(host.hostname);
   const settings = salonSettingsFor(host.hostname);
-  if (!client || !account || !settings) return problem('service_unavailable', 503);
+  const hours = salonHoursFor(host.hostname);
+  if (!client || !account || !settings || !hours) return problem('service_unavailable', 503);
   const access = request.cookies.get(cookieName('support', 'access'))?.value;
   const options = { headers: access ? { Authorization: `Bearer ${access}` } : {}, signal: requestSignal() };
   if (action === 'clear') {
@@ -197,14 +217,17 @@ async function handleSupport(
     staff: 'staff.list',
     audit: 'audit.list',
     'profile-draft': 'settings.read',
+    'brand-draft': 'settings.read',
+    ...HOURS_PERMISSIONS,
   };
   if (permission[action] && !principal.permissions.includes(permission[action]!))
     return problem('permission_denied', 403);
   if (action === 'principal') return output(principal);
   const page = Number(request.nextUrl.searchParams.get('page') ?? 0);
   const query = { page, size: 10 };
-  const result =
-    action === 'staff'
+  const result = HOURS_READS.includes(action)
+    ? await readHours(hours, action, options, request.nextUrl.searchParams)
+    : action === 'staff'
       ? await client.GET('/api/v1/identity/staff', { ...options, params: { query } })
       : action === 'audit'
         ? await client.GET('/api/v1/identity/audit', { ...options, params: { query } })
@@ -212,7 +235,9 @@ async function handleSupport(
           ? await account.entitlements(options)
           : action === 'profile-draft'
             ? await settings.profileDraft(options)
-            : await account.invoices(options, query);
+            : action === 'brand-draft'
+              ? await settings.brandDraft(options)
+              : await account.invoices(options, query);
   if (result.response.status === 401) {
     const response = problem('invalid_session', 401, { renewable: false });
     endSupportView(response);
@@ -241,9 +266,13 @@ function issue(response: NextResponse, kind: Kind, tokens: Tokens) {
  * The workspace BFF (`/identity-web/{kind}/{action}`), with the platform module's salon account calls
  * and the branding module's settings calls (F04-S01) handed in by the route that serves it.
  */
-export function createIdentityWeb(salonAccountFor: SalonAccountFor, salonSettingsFor: SalonSettingsFor) {
+export function createIdentityWeb(
+  salonAccountFor: SalonAccountFor,
+  salonSettingsFor: SalonSettingsFor,
+  salonHoursFor: SalonHoursFor,
+) {
   return (request: NextRequest, kind: Kind, action: string) =>
-    handleIdentity(request, kind, action, salonAccountFor, salonSettingsFor);
+    handleIdentity(request, kind, action, salonAccountFor, salonSettingsFor, salonHoursFor);
 }
 
 /** Allowlisted account operations only; neither a URL nor a tenant selector comes from input. */
@@ -253,11 +282,13 @@ async function handleIdentity(
   action: string,
   salonAccountFor: SalonAccountFor,
   salonSettingsFor: SalonSettingsFor,
+  salonHoursFor: SalonHoursFor,
 ) {
   try {
     const host = requestHost(request.headers.get('host'));
     if (!host) return problem('not_found', 404);
-    if (kind === 'support') return await handleSupport(request, action, host, salonAccountFor, salonSettingsFor);
+    if (kind === 'support')
+      return await handleSupport(request, action, host, salonAccountFor, salonSettingsFor, salonHoursFor);
     const reads = [
       'principal',
       'sessions',
@@ -267,18 +298,25 @@ async function handleIdentity(
       'invoices',
       'support-sessions',
       'profile-draft',
+      'brand-draft',
+      ...HOURS_READS,
     ];
     if (request.method === 'GET' && !reads.includes(action)) return problem('method_not_allowed', 405);
     if (request.method !== 'GET' && !csrf(request)) return problem('request_rejected', 403);
     const client = identityClient(host.hostname);
     const account: SalonAccount | null = salonAccountFor(host.hostname);
     const settings: SalonSettings | null = salonSettingsFor(host.hostname);
-    if (!client || !account || !settings) return problem('service_unavailable', 503);
+    const hours = salonHoursFor(host.hostname);
+    if (!client || !account || !settings || !hours) return problem('service_unavailable', 503);
     const access = request.cookies.get(cookieName(kind, 'access'))?.value;
     const refresh = request.cookies.get(cookieName(kind, 'refresh'))?.value;
     const headers: Record<string, string> = access ? { Authorization: `Bearer ${access}` } : {};
     const signal = requestSignal();
-    const read = request.method === 'GET' ? { ok: true as const, value: {} } : await readBoundedJson(request, 16384);
+    // A brand image upload is the one multipart action; its form is read after the session check below.
+    const read =
+      request.method === 'GET' || action === 'brand-image'
+        ? { ok: true as const, value: {} }
+        : await readBoundedJson(request, 16384);
     if (!read.ok) return problem('bad_request', 400);
     const body: Record<string, unknown> = read.value;
     // Input values are forwarded only through each generated contract's explicit fields.
@@ -337,6 +375,13 @@ async function handleIdentity(
       'profile-save': 'settings.manage',
       'profile-publish': 'settings.manage',
       'profile-discard': 'settings.manage',
+      'brand-draft': 'settings.read',
+      'brand-save': 'settings.manage',
+      'brand-reset': 'settings.manage',
+      'brand-publish': 'settings.manage',
+      'brand-discard': 'settings.manage',
+      'brand-image': 'settings.manage',
+      ...HOURS_PERMISSIONS,
     };
     if (principal && permission[action] && !principal.permissions.includes(permission[action]!))
       return problem('permission_denied', 403);
@@ -348,8 +393,9 @@ async function handleIdentity(
       return response;
     }
     if (request.method === 'GET') {
-      const result =
-        action === 'sessions'
+      const result = HOURS_READS.includes(action)
+        ? await readHours(hours, action, options, request.nextUrl.searchParams)
+        : action === 'sessions'
           ? await client.GET('/api/v1/identity/sessions', { ...options, params: { query } })
           : action === 'staff'
             ? await client.GET('/api/v1/identity/staff', { ...options, params: { query } })
@@ -363,7 +409,9 @@ async function handleIdentity(
                     ? await account.supportSessions(options, query)
                     : action === 'profile-draft'
                       ? await settings.profileDraft(options)
-                      : null;
+                      : action === 'brand-draft'
+                        ? await settings.brandDraft(options)
+                        : null;
       if (!result) return problem('not_found', 404);
       return result.data
         ? output(result.data)
@@ -491,8 +539,34 @@ async function handleIdentity(
               : await settings.discardProfileDraft(options, body.version);
         return r.data ? output(r.data) : failure(r);
       }
-      default:
-        return problem('not_found', 404);
+      case 'brand-save':
+      case 'brand-reset':
+      case 'brand-publish':
+      case 'brand-discard': {
+        const r =
+          action === 'brand-save'
+            ? await settings.saveBrandDraft(options, body.version, body.brand)
+            : action === 'brand-reset'
+              ? await settings.resetBrandDraft(options, body.version)
+              : action === 'brand-publish'
+                ? await settings.publishBrand(options, body.version)
+                : await settings.discardBrandDraft(options, body.version);
+        return r.data ? output(r.data) : failure(r);
+      }
+      case 'brand-image': {
+        const upload = await brandImageForm(request);
+        if ('refused' in upload) return problem(upload.refused, upload.status, { errors: upload.errors });
+        const r = await settings.uploadBrandImage(options, upload.kind, upload.file);
+        return r.data ? output(r.data, 201) : failure(r);
+      }
+      default: {
+        if (!HOURS_WRITES.includes(action)) return problem('not_found', 404);
+        // Hours, holidays and closures (F04-S03): the answer is allowlisted by its contract, the request
+        // rebuilt by staff. Reopening a closure answers no content.
+        const r = await changeHours(hours, action, options, body);
+        if (r.data) return output(r.data, r.response.status === 201 ? 201 : 200);
+        return r.response.ok ? output({ ok: true }) : failure(r);
+      }
     }
   } catch {
     const response = problem('service_unavailable', 503);
@@ -500,6 +574,62 @@ async function handleIdentity(
     if (action === 'refresh') clearCookies(response, kind);
     return response;
   }
+}
+/** The browser's request over its declared size is refused before its form is read (the API's 10 MB limit). */
+const UPLOAD_LIMIT = UPLOAD_LIMIT_BYTES;
+
+/**
+ * The request's body, read through a byte count that stops past `limit`: null when it is larger. The whole
+ * body is never buffered beyond the limit, whether or not the request declared its length (a chunked request
+ * declares none). Next.js's own proxy buffer (`experimental.proxyClientMaxBodySize`) truncates rather than
+ * refuses, so it is set above this limit (`PROXY_BODY_LIMIT_BYTES`, next.config.ts): a body over the limit
+ * still arrives longer than the limit, and is refused here.
+ */
+async function boundedBody(request: NextRequest, limit: number): Promise<Uint8Array<ArrayBuffer> | null> {
+  const reader = request.body?.getReader();
+  if (!reader) return new Uint8Array(new ArrayBuffer(0));
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > limit) {
+      await reader.cancel();
+      return null;
+    }
+    chunks.push(value);
+  }
+  const body = new Uint8Array(new ArrayBuffer(total));
+  let at = 0;
+  for (const chunk of chunks) {
+    body.set(chunk, at);
+    at += chunk.byteLength;
+  }
+  return body;
+}
+
+/** A brand image upload's two fields, `kind` and `file`, read from the browser's multipart form. */
+async function brandImageForm(
+  request: NextRequest,
+): Promise<{ kind: string; file: Blob } | { refused: string; status: number; errors?: unknown }> {
+  const declared = request.headers.get('content-length');
+  if (declared !== null && Number(declared) > UPLOAD_LIMIT) return { refused: 'request_rejected', status: 413 };
+  const body = await boundedBody(request, UPLOAD_LIMIT);
+  if (body === null) return { refused: 'request_rejected', status: 413 };
+  let form: FormData;
+  try {
+    form = await new Response(body, {
+      headers: { 'Content-Type': request.headers.get('content-type') ?? '' },
+    }).formData();
+  } catch {
+    return { refused: 'bad_request', status: 400, errors: [{ field: 'file', detail: 'is required' }] };
+  }
+  const kind = form.get('kind');
+  const file = form.get('file');
+  if (!(file instanceof Blob))
+    return { refused: 'bad_request', status: 400, errors: [{ field: 'file', detail: 'is required' }] };
+  return { kind: typeof kind === 'string' ? kind : '', file };
 }
 function failure(r: { error?: { code?: string; errors?: unknown }; response: Response }) {
   const retry = r.response.headers.get('retry-after');

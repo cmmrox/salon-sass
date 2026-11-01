@@ -30,5 +30,10 @@ public final class OperatorPermission {
     /** Revoke any active support session (F03-S04). */
     public static final String SUPPORT_REVOKE = "operator.support.revoke";
 
+    /** Read the holiday calendar: every year, its draft and what a publication would change (F04-S03). */
+    public static final String HOLIDAY_READ = "operator.holiday.read";
+    /** Import, edit and publish the holiday calendar (F04-S03). */
+    public static final String HOLIDAY_MANAGE = "operator.holiday.manage";
+
     private OperatorPermission() {}
 }

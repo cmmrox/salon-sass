@@ -72,7 +72,15 @@ class DatabaseIsolationCatalogueIntegrationTest {
                         "branding_branch_contact_draft",
                         "branding_branch_contact_published",
                         "branding_profile_draft",
-                        "branding_profile_published");
+                        "branding_profile_published",
+                        // F04-S02: the brand draft and the brand's images.
+                        "branding_brand_draft",
+                        "branding_image",
+                        // F04-S03: each branch's opening hours, holiday reviews and choices, and closures.
+                        "staff_opening_hours",
+                        "staff_holiday_review",
+                        "staff_holiday_choice",
+                        "staff_closure");
         assertThat(tables)
                 .allSatisfy(table -> assertThat(table)
                         .as("%s", table.get("name"))
@@ -206,7 +214,8 @@ class DatabaseIsolationCatalogueIntegrationTest {
         assertThat(grants)
                 .extracting(grant -> grant.get("name"), grant -> grant.get("privileges"))
                 .containsExactlyInAnyOrder(
-                        org.assertj.core.api.Assertions.tuple("salon_brand", "SELECT"),
+                        // F04-S02: publishing the brand draft changes the published brand.
+                        org.assertj.core.api.Assertions.tuple("salon_brand", "SELECT,UPDATE"),
                         org.assertj.core.api.Assertions.tuple("audit_entry", "INSERT,SELECT"),
                         org.assertj.core.api.Assertions.tuple("outbox_message", "DELETE,INSERT,SELECT,UPDATE"),
                         org.assertj.core.api.Assertions.tuple("identity_staff", "DELETE,INSERT,SELECT,UPDATE"),
@@ -228,7 +237,16 @@ class DatabaseIsolationCatalogueIntegrationTest {
                         org.assertj.core.api.Assertions.tuple(
                                 "branding_branch_contact_published", "INSERT,SELECT,UPDATE"),
                         org.assertj.core.api.Assertions.tuple("branding_profile_draft", "SELECT,UPDATE"),
-                        org.assertj.core.api.Assertions.tuple("branding_profile_published", "INSERT,SELECT,UPDATE"));
+                        org.assertj.core.api.Assertions.tuple("branding_profile_published", "INSERT,SELECT,UPDATE"),
+                        // F04-S02: the brand draft is only changed; images are uploaded, marked and cleaned up.
+                        org.assertj.core.api.Assertions.tuple("branding_brand_draft", "SELECT,UPDATE"),
+                        org.assertj.core.api.Assertions.tuple("branding_image", "DELETE,INSERT,SELECT,UPDATE"),
+                        // F04-S03: hours, reviews and choices are written and changed, never removed; reopening
+                        // a day removes its closure. Nothing on the holiday calendar's platform tables.
+                        org.assertj.core.api.Assertions.tuple("staff_opening_hours", "INSERT,SELECT,UPDATE"),
+                        org.assertj.core.api.Assertions.tuple("staff_holiday_review", "INSERT,SELECT,UPDATE"),
+                        org.assertj.core.api.Assertions.tuple("staff_holiday_choice", "INSERT,SELECT,UPDATE"),
+                        org.assertj.core.api.Assertions.tuple("staff_closure", "DELETE,INSERT,SELECT"));
     }
 
     /**
@@ -261,7 +279,9 @@ class DatabaseIsolationCatalogueIntegrationTest {
                 "salon_entitlements",
                 "suspended_tenant_ids",
                 // F23-S05: the due events of the types the asking instance knows.
-                "outbox_due_events");
+                "outbox_due_events",
+                // F04-S03: the published holiday calendar, the tenant role's only path to its tables.
+                "holiday_calendar_published");
         // F03-S01: the module-owned bootstrap functions belong to the platform role alone, as do F03-S02's
         // staff-seat usage count and billing's outbox write.
         // F03-S03: closure's session revocation and message cancellation, and each module's guarded eraser,
@@ -277,6 +297,8 @@ class DatabaseIsolationCatalogueIntegrationTest {
                 "branding_erase_salon_rows",
                 "audit_erase_salon_rows",
                 "outbox_erase_salon_rows",
+                // F04-S03: staff's guarded eraser.
+                "staff_erase_salon_rows",
                 // F03-S04: a support session's entries in the salon's audit trail, from the platform connection.
                 "audit_record_support");
         assertThat(functions)
@@ -332,7 +354,13 @@ class DatabaseIsolationCatalogueIntegrationTest {
                         org.assertj.core.api.Assertions.tuple("salon_export_part", "DELETE,INSERT,SELECT"),
                         // F03-S04: support sessions and entry codes; only their end and consumption are updated.
                         org.assertj.core.api.Assertions.tuple("support_session", "INSERT,SELECT"),
-                        org.assertj.core.api.Assertions.tuple("support_entry_code", "INSERT,SELECT"));
+                        org.assertj.core.api.Assertions.tuple("support_entry_code", "INSERT,SELECT"),
+                        // F04-S03: the holiday calendar's year, draft and published days.
+                        org.assertj.core.api.Assertions.tuple("platform_holiday_year", "INSERT,SELECT,UPDATE"),
+                        org.assertj.core.api.Assertions.tuple(
+                                "platform_holiday_draft_day", "DELETE,INSERT,SELECT,UPDATE"),
+                        org.assertj.core.api.Assertions.tuple(
+                                "platform_holiday_published_day", "DELETE,INSERT,SELECT,UPDATE"));
         // F03-S02: on the registry it may update only the plan, the access state, the version and the time;
         // F03-S03 adds the lifecycle status and the closure and deletion instants.
         List<String> tenantColumns = owner.queryForList("""
@@ -369,7 +397,7 @@ class DatabaseIsolationCatalogueIntegrationTest {
     @ValueSource(
             strings = {
                 "INSERT INTO salon_brand (tenant_id, display_name, brand_colour) VALUES (gen_random_uuid(), 'x', '#000000')",
-                "UPDATE salon_brand SET display_name = 'x'",
+                // F04-S02 grants UPDATE on salon_brand (publishing the brand); it still adds and removes none.
                 "DELETE FROM salon_brand",
                 "INSERT INTO tenant (id, slug) VALUES (gen_random_uuid(), 'sneaky')",
                 "UPDATE tenant SET status = 'suspended'",

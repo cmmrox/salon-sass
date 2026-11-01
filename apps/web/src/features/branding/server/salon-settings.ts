@@ -7,6 +7,7 @@ import { createServerApiClient } from '@/lib/api-core/client';
 type Call = { headers: Record<string, string | undefined>; signal: AbortSignal };
 type ProfileInput = components['schemas']['SalonProfileInput'];
 type BranchInput = components['schemas']['SalonProfileBranchInput'];
+type BrandInput = components['schemas']['SalonBrandInput'];
 
 const text = (value: unknown): string | null => (typeof value === 'string' ? value : null);
 const record = (value: unknown): Record<string, unknown> =>
@@ -41,9 +42,21 @@ function profileInput(value: unknown): ProfileInput {
   };
 }
 
+/** A brand from the browser, rebuilt from the contract's own fields only, as the profile is. */
+function brandInput(value: unknown): BrandInput {
+  const brand = record(value);
+  return {
+    name: text(brand.name) ?? '',
+    tagline: text(brand.tagline),
+    colour: text(brand.colour) ?? '',
+    logo: text(brand.logo),
+    cover: text(brand.cover),
+  };
+}
+
 /**
- * The branding paths the workspace BFF reaches for a settings user (F04-S01), under the salon's
- * hostname: the profile draft, and saving, publishing and discarding it. The BFF checks the session and
+ * The branding paths the workspace BFF reaches for a settings user, under the salon's hostname: the profile
+ * draft (F04-S01) and the brand draft with its images (F04-S02). The BFF checks the session and
  * the permission before any of them. Null when the API is not configured.
  */
 export function salonSettingsFor(hostname: string) {
@@ -60,5 +73,28 @@ export function salonSettingsFor(hostname: string) {
       client.POST('/api/v1/salon/profile/publication', { ...call, body: { version: version as number } }),
     discardProfileDraft: (call: Call, version: unknown) =>
       client.DELETE('/api/v1/salon/profile/draft', { ...call, body: { version: version as number } }),
+    brandDraft: (call: Call) => client.GET('/api/v1/salon/brand/draft', call),
+    saveBrandDraft: (call: Call, version: unknown, brand: unknown) =>
+      client.PUT('/api/v1/salon/brand/draft', {
+        ...call,
+        body: { version: version as number, brand: brandInput(brand) },
+      }),
+    resetBrandDraft: (call: Call, version: unknown) =>
+      client.POST('/api/v1/salon/brand/draft/reset', { ...call, body: { version: version as number } }),
+    publishBrand: (call: Call, version: unknown) =>
+      client.POST('/api/v1/salon/brand/publication', { ...call, body: { version: version as number } }),
+    discardBrandDraft: (call: Call, version: unknown) =>
+      client.DELETE('/api/v1/salon/brand/draft', { ...call, body: { version: version as number } }),
+    uploadBrandImage: (call: Call, kind: string, file: Blob) => {
+      // The form is built here from the two fields the contract names; nothing else of the browser's goes on.
+      const form = new FormData();
+      form.append('kind', kind);
+      form.append('file', file, 'upload');
+      return client.POST('/api/v1/salon/brand/images', {
+        ...call,
+        body: form as unknown as { kind: 'logo' | 'cover'; file: string },
+        bodySerializer: (body) => body as unknown as FormData,
+      });
+    },
   };
 }

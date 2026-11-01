@@ -38,6 +38,27 @@ public record SalonResponse(
         String timeZone,
 
         @Schema(
+                types = {"string", "null"},
+                maxLength = 80,
+                description = "The salon's published tagline; null when it has none.",
+                requiredMode = RequiredMode.REQUIRED)
+        String tagline,
+
+        @Schema(
+                types = {"object", "null"},
+                implementation = SalonBrandImageResponse.class,
+                requiredMode = RequiredMode.REQUIRED,
+                description = "The published logo, served at `/api/v1/salon/brand/images/{id}`; null for none.")
+        SalonBrandImageResponse logo,
+
+        @Schema(
+                types = {"object", "null"},
+                implementation = SalonBrandImageResponse.class,
+                requiredMode = RequiredMode.REQUIRED,
+                description = "The published cover, served at `/api/v1/salon/brand/images/{id}`; null for none.")
+        SalonBrandImageResponse cover,
+
+        @Schema(
                 types = {"object", "null"},
                 implementation = SalonProfileResponse.class,
                 requiredMode = RequiredMode.REQUIRED,
@@ -51,6 +72,9 @@ public record SalonResponse(
                 brand.name(),
                 brand.brandColour(),
                 brand.timeZone(),
+                brand.tagline().orElse(null),
+                brand.logo().map(SalonBrandImageResponse::from).orElse(null),
+                brand.cover().map(SalonBrandImageResponse::from).orElse(null),
                 brand.profile().map(SalonProfileResponse::from).orElse(null));
     }
 }

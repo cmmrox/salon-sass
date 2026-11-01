@@ -9,6 +9,7 @@ import { currentRequest } from '@/lib/observability/request-context';
 import { consoleRequestHost } from '@/lib/tenancy/console-host';
 import { readBoundedJson } from '@/lib/http/bounded-json';
 import { platformClient } from './client';
+import { handleHoliday, HOLIDAY_MUTATIONS, HOLIDAY_READS } from './holiday-web';
 
 type Tokens = components['schemas']['OperatorTokens'];
 
@@ -144,6 +145,7 @@ const READS = new Set([
   'export',
   'export-archive',
   'support-sessions',
+  ...HOLIDAY_READS,
 ]);
 const PUBLIC = new Set(['sign-in', 'mfa-enroll', 'mfa-verify']);
 const MUTATIONS = new Set([
@@ -165,6 +167,7 @@ const MUTATIONS = new Set([
   'support-start',
   'support-entry-code',
   'support-end',
+  ...HOLIDAY_MUTATIONS,
 ]);
 
 /** One allowlisted console operation; neither an upstream URL nor a tenant selector comes from input. */
@@ -182,7 +185,11 @@ export async function handleOperator(request: NextRequest, action: string): Prom
     const credentials = credentialsOf(request);
     const headers: Record<string, string> = credentials.access ? { Authorization: `Bearer ${credentials.access}` } : {};
     const options = { headers, signal: requestSignal() };
-    const read = request.method === 'GET' ? { ok: true as const, value: {} } : await readBoundedJson(request, 16384);
+    // A holiday calendar import is the one multipart action; its form is read after the session check below.
+    const read =
+      request.method === 'GET' || action === 'holiday-import'
+        ? { ok: true as const, value: {} }
+        : await readBoundedJson(request, 16384);
     if (!read.ok) return problem('bad_request', 400);
     const body: Record<string, unknown> = read.value;
     const text = (name: string) => (typeof body[name] === 'string' ? (body[name] as string) : '');
@@ -564,7 +571,9 @@ export async function handleOperator(request: NextRequest, action: string): Prom
           : failure(r);
       }
       default:
-        return problem('not_found', 404);
+        return HOLIDAY_READS.includes(action) || HOLIDAY_MUTATIONS.includes(action)
+          ? await handleHoliday(request, action, client, options, body, problem, output)
+          : problem('not_found', 404);
     }
   } catch {
     const response = problem('service_unavailable', 503);

@@ -13,6 +13,7 @@
         allowedDependencies = {
             "identity",
             "shared :: audit",
+            "shared :: jobs",
             "shared :: lifecycle",
             "shared :: persistence",
             "shared :: tenancy",

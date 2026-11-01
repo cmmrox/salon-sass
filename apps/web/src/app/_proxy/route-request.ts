@@ -57,6 +57,8 @@ const PROTECTED = new Set([
   '/workspace/support-access',
   '/workspace/settings',
   '/workspace/settings/profile',
+  '/workspace/settings/hours',
+  '/workspace/settings/branding',
 ]);
 
 /** Settings, and the first of its tabs (F04-S01): Profile, the only one delivered so far. */
@@ -70,7 +72,7 @@ const SUPPORT_ENTRY = '/workspace/support';
 const CONSOLE_SIGN_IN = '/console/sign-in';
 const CONSOLE_HOME = '/console/salons';
 /** The protected console pages: the directories and their detail pages. */
-const CONSOLE_PROTECTED = ['/console/salons', '/console/plans', '/console/support'];
+const CONSOLE_PROTECTED = ['/console/salons', '/console/plans', '/console/support', '/console/holidays'];
 
 /** How entry to a protected console page is decided: the request's operator session, checked with the API. */
 export type DecideConsoleEntry = (request: NextRequest) => Promise<OperatorEntry>;
