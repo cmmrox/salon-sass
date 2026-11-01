@@ -34,7 +34,7 @@ asked for. A case is a test titled with its id and criteria, or a manual or defe
 | F04-S02 | complete | - | BRD-01, BRD-04 | 12 | 34 | 34 | 0 | 0 |
 | F04-S03 | complete | - | STF-04, NFR-13 | 12 | 32 | 31 | 0 | 1 |
 | F04-S04 | complete | - | BKG-02, BKG-09 | 10 | 26 | 26 | 0 | 0 |
-| F05-S01 | complete | - | CAT-01, CAT-02, CAT-04 | 18 | 47 | 45 | 0 | 2 |
+| F05-S01 | complete | - | CAT-01, CAT-02, CAT-04 | 20 | 47 | 45 | 0 | 2 |
 | F05-S02 | complete | - | CAT-03, CAT-06 | 11 | 21 | 20 | 0 | 1 |
 | F05-S03 | complete | - | CAT-05, INV-01 | 15 | 26 | 26 | 0 | 0 |
 

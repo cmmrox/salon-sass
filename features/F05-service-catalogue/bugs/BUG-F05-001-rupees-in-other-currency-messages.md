@@ -2,12 +2,12 @@
 id: BUG-F05-001
 title: A salon in another currency is told its price limits in rupees
 severity: minor
-status: open
+status: fixed
 found_by: exploratory
 breaks: NFR-13
 found_on: 2026-11-02
-fixed_in: null
-fix_note: null
+fixed_in: b6937a3
+fix_note: The four sheet messages take their limits through formatMoney in the lists' currency; LKR wording unchanged.
 developer_note: null
 verified_on: null
 approved_by: null
