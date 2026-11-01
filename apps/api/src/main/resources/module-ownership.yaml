@@ -25,9 +25,11 @@ modules:
   branding:
     description: The salon's brand and its published presentation, its business profile and its branches.
     tables:
+      - branding_brand_draft
       - branding_branch
       - branding_branch_contact_draft
       - branding_branch_contact_published
+      - branding_image
       - branding_profile_draft
       - branding_profile_published
       - salon_brand

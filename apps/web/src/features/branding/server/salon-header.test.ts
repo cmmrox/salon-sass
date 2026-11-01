@@ -52,3 +52,18 @@ describe('the salon header', () => {
     expect(decodeSalon(value)).toBeNull();
   });
 });
+
+describe('the published logo in the header (F04-S02)', () => {
+  const salon = { slug: 'alpha', name: 'Alpha Studio', brandColour: '#D6086A', timeZone: 'Asia/Colombo' };
+
+  it('travels with the salon when it has one', () => {
+    const logo = '0b6f9f43-5a1d-4c5e-9a2b-3f3f6e1d2c10';
+    expect(decodeSalon(encodeSalon({ ...salon, logo }))).toEqual({ ...salon, logo });
+    expect(decodeSalon(encodeSalon(salon))).toEqual(salon);
+  });
+
+  it('is dropped when it is not an image id, and the salon keeps its initial', () => {
+    const forged = encodeURIComponent(JSON.stringify({ ...salon, logo: '../../etc/passwd' }));
+    expect(decodeSalon(forged)).toEqual(salon);
+  });
+});

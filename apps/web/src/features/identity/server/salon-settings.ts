@@ -11,8 +11,9 @@ type Answer = {
 type Call = { headers: Record<string, string | undefined>; signal: AbortSignal };
 
 /**
- * The branding module's settings paths the workspace BFF reaches for a settings user (F04-S01): the
- * salon's profile draft, and saving, publishing and discarding it. Identity checks the session and the
+ * The branding module's settings paths the workspace BFF reaches for a settings user: the salon's profile
+ * draft (F04-S01) and brand draft (F04-S02), saving, publishing and discarding each, resetting the brand and
+ * uploading its images. Identity checks the session and the
  * permission first; branding makes the calls and builds each request from the contract's own fields,
  * and the route serving the BFF hands its implementation in, so that neither module imports the other.
  */
@@ -21,6 +22,13 @@ export interface SalonSettings {
   saveProfileDraft(call: Call, version: unknown, profile: unknown): Promise<Answer>;
   publishProfile(call: Call, version: unknown): Promise<Answer>;
   discardProfileDraft(call: Call, version: unknown): Promise<Answer>;
+  /** The brand (F04-S02), on the same pattern, with its reset and its image upload. */
+  brandDraft(call: Call): Promise<Answer>;
+  saveBrandDraft(call: Call, version: unknown, brand: unknown): Promise<Answer>;
+  resetBrandDraft(call: Call, version: unknown): Promise<Answer>;
+  publishBrand(call: Call, version: unknown): Promise<Answer>;
+  discardBrandDraft(call: Call, version: unknown): Promise<Answer>;
+  uploadBrandImage(call: Call, kind: string, file: Blob): Promise<Answer>;
 }
 
 /** The settings calls for one salon's hostname; null when the API is not configured. */

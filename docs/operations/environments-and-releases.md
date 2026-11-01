@@ -102,7 +102,9 @@ and 1000. Focused local tests may override them explicitly, then must restore th
 SMS/WhatsApp adapters capture encrypted outbox delivery only; a nonlocal deployment has no real
 sender configured and returns `provider_unavailable` rather than claiming that a code was sent.
 The region phone numbers are checked against is `SALON_BRANDING_PHONE_REGION`, `LK` by default
-(decision 084); it is not a secret and every environment may leave it unset.
+(decision 084); it is not a secret and every environment may leave it unset. Brand image limits
+are `SALON_BRANDING_IMAGE_MAX_BYTES` (5 MB per file), `SALON_BRANDING_IMAGE_MAX_PIXELS` (50M declared)
+and `SALON_BRANDING_IMAGE_CONCURRENT_DECODES` (2); the request limit for uploads is 10 MB.
 
 F03 operator console (F03-S01). The console is `http://console.localhost:3100/console` locally
 (the stack serves `console.stack.localhost`). The API connects for platform work as a separate

@@ -20,7 +20,8 @@ this table in step when a major version changes.
 | Web import boundaries | `eslint-plugin-boundaries` 7.4.0, and `server-only` 0.0.1 on server code (CR-021) |
 | Formatting and dead-code checks | API: Spotless Maven plugin 3.10.4 with `palantir-java-format` 2.102.0 (its default; identical output under JDK 21 and 25), and `-Xlint:all,-processing -Werror`. Web: Prettier 3.9.10 with `prettier-plugin-tailwindcss` 0.8.1 (print width 120, single quotes, sorting classes in `cn` and `cva`), and `knip` 6.43.0 for unused files, exports and dependencies (CR-021). Prettier skips `src/styles/theme.css` (inlined byte for byte into the plain pages) and `src/components/ui` (shadcn/ui as generated); `knip` exempts only the generated contract and shadcn/ui's unused parts |
 | Background work | Database-backed job scheduler and transactional outbox, which also carries versioned events between modules. No message broker |
-| Files | S3-compatible object storage, one prefix per tenant |
+| Files | Brand images (F04-S02) are stored in PostgreSQL, in `branding`'s tenant tables, re-encoded and size-limited, and served through the API (decision 086). S3-compatible object storage with one prefix per tenant arrives with the first feature whose files outgrow that (catalogue and staff photos); its provider is chosen with the owner then |
+| Images and phone numbers (API) | TwelveMonkeys `imageio-webp` 3.15.3 for reading WebP; the JDK's ImageIO writes PNG and JPEG (F04-S02). libphonenumber 9.0.42; libphonenumber-js 1.13.15 in `@salon/format` (F04-S01, decision 084) |
 | Developer tests | JUnit and Testcontainers, in the versions Spring Boot manages (API); Vitest with Testing Library (web); Jest (customer app) |
 | QA tools | Playwright (browser and API), Maestro (customer app), k6 (load and concurrency) |
 | Source hosting | GitHub. `main` is the trunk |

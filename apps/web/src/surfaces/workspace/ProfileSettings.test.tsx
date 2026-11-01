@@ -264,14 +264,14 @@ describe('the Profile tab', () => {
 });
 
 describe('the Settings page', () => {
-  it('shows only the delivered tabs, with Profile selected', () => {
+  it('shows only the delivered tabs, in the prototype order, with Profile selected', () => {
     renderWithMessages(
       <SettingsScreen tab="profile">
         <p>content</p>
       </SettingsScreen>,
     );
     const tabs = within(screen.getByTestId('settings-tabs')).getAllByRole('tab');
-    expect(tabs.map((tab) => tab.textContent)).toEqual(['Profile']);
+    expect(tabs.map((tab) => tab.textContent)).toEqual(['Profile', 'Branding']);
     expect(screen.getByTestId('settings-tab-profile')).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('tabpanel')).toHaveTextContent('content');
   });

@@ -96,3 +96,6 @@ why the feature is divided the way it is.
   first publication, "unpublished changes" means anything set, so publishing an empty profile is
   409 `invalid_state`. Phone numbers display in libphonenumber's national format, for example
   `0112 504 417` for a Colombo landline; the prototype now shows the same.
+- **Recorded at F04-S02 close.** The brand and the profile share one draft component. The publish
+  bar and leave dialog keep their F04-S01 test ids (`profile-publish` and the rest) on both tabs,
+  so QA's existing tests keep working. QA should scope those ids by tab.

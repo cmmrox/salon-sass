@@ -72,7 +72,10 @@ class DatabaseIsolationCatalogueIntegrationTest {
                         "branding_branch_contact_draft",
                         "branding_branch_contact_published",
                         "branding_profile_draft",
-                        "branding_profile_published");
+                        "branding_profile_published",
+                        // F04-S02: the brand draft and the brand's images.
+                        "branding_brand_draft",
+                        "branding_image");
         assertThat(tables)
                 .allSatisfy(table -> assertThat(table)
                         .as("%s", table.get("name"))
@@ -206,7 +209,8 @@ class DatabaseIsolationCatalogueIntegrationTest {
         assertThat(grants)
                 .extracting(grant -> grant.get("name"), grant -> grant.get("privileges"))
                 .containsExactlyInAnyOrder(
-                        org.assertj.core.api.Assertions.tuple("salon_brand", "SELECT"),
+                        // F04-S02: publishing the brand draft changes the published brand.
+                        org.assertj.core.api.Assertions.tuple("salon_brand", "SELECT,UPDATE"),
                         org.assertj.core.api.Assertions.tuple("audit_entry", "INSERT,SELECT"),
                         org.assertj.core.api.Assertions.tuple("outbox_message", "DELETE,INSERT,SELECT,UPDATE"),
                         org.assertj.core.api.Assertions.tuple("identity_staff", "DELETE,INSERT,SELECT,UPDATE"),
@@ -228,7 +232,10 @@ class DatabaseIsolationCatalogueIntegrationTest {
                         org.assertj.core.api.Assertions.tuple(
                                 "branding_branch_contact_published", "INSERT,SELECT,UPDATE"),
                         org.assertj.core.api.Assertions.tuple("branding_profile_draft", "SELECT,UPDATE"),
-                        org.assertj.core.api.Assertions.tuple("branding_profile_published", "INSERT,SELECT,UPDATE"));
+                        org.assertj.core.api.Assertions.tuple("branding_profile_published", "INSERT,SELECT,UPDATE"),
+                        // F04-S02: the brand draft is only changed; images are uploaded, marked and cleaned up.
+                        org.assertj.core.api.Assertions.tuple("branding_brand_draft", "SELECT,UPDATE"),
+                        org.assertj.core.api.Assertions.tuple("branding_image", "DELETE,INSERT,SELECT,UPDATE"));
     }
 
     /**
@@ -369,7 +376,7 @@ class DatabaseIsolationCatalogueIntegrationTest {
     @ValueSource(
             strings = {
                 "INSERT INTO salon_brand (tenant_id, display_name, brand_colour) VALUES (gen_random_uuid(), 'x', '#000000')",
-                "UPDATE salon_brand SET display_name = 'x'",
+                // F04-S02 grants UPDATE on salon_brand (publishing the brand); it still adds and removes none.
                 "DELETE FROM salon_brand",
                 "INSERT INTO tenant (id, slug) VALUES (gen_random_uuid(), 'sneaky')",
                 "UPDATE tenant SET status = 'suspended'",

@@ -197,7 +197,8 @@ processed for that salon, and can read nothing of another salon.
 
 - A cache key starts with the tenant id. So does anything cached at the edge.
 - An object-storage path starts with the tenant's prefix. A signed URL is issued only after the
-  tenant check.
+  tenant check. Until object storage exists, brand images are rows of a tenant table under the same
+  row-level security as any other (decision 086).
 - Every log line, trace and error report carries the tenant id (NFR-16) as `tenant.id`, whenever a
   salon is bound. No personal data, one-time code, token or payment detail is logged. How the API
   does it is in `docs/engineering/backend.md`, "Logs, traces and meters".

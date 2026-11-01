@@ -56,6 +56,9 @@ describe('createApiClient', () => {
       name: 'Alpha Studio',
       brandColour: '#D6086A',
       timeZone: 'Asia/Colombo',
+      tagline: null,
+      logo: null,
+      cover: null,
       profile: null,
     };
     const { fetch, requests } = respondingWith(200, salon, 'application/json');

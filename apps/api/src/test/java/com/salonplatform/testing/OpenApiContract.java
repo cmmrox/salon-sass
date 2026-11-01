@@ -81,6 +81,14 @@ public final class OpenApiContract {
      * @param path the operation's path template as the document names it ({@code /api/v1/salon/profile/draft})
      * @param response what the API answered
      */
+    public void assertMatches(String method, String path, Http.BinaryExchange response) {
+        String body =
+                response.contentType().contains("json") ? response.asText().body() : "binary";
+        assertThat(violations(method, path, response.status(), response.contentType(), body))
+                .as("%s %s answered %d %s", method, path, response.status(), response.contentType())
+                .isEmpty();
+    }
+
     public void assertMatches(String method, String path, Http.Exchange response) {
         assertThat(violations(method, path, response.status(), response.contentType(), response.body()))
                 .as("%s %s answered %d %s", method, path, response.status(), response.body())
@@ -107,6 +115,10 @@ public final class OpenApiContract {
         String mediaType = contentType == null ? "" : contentType.split(";")[0].trim();
         if (content.path(mediaType).isMissingNode()) {
             return List.of("content type '" + mediaType + "' is not documented for status " + status);
+        }
+        if (!mediaType.endsWith("json")) {
+            // A binary answer (an image): its status and media type are documented, and it has a body.
+            return body == null || body.isEmpty() ? List.of("status " + status + " answered no body") : List.of();
         }
         String pointer = "#/paths/" + escape(path) + "/" + verb + "/responses/" + status + "/content/"
                 + escape(mediaType) + "/schema";
