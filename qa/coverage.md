@@ -30,7 +30,7 @@ asked for. A case is a test titled with its id and criteria, or a manual or defe
 | F03-S02 | complete | - | PLT-04, PLT-05 | 16 | 28 | 28 | 0 | 0 |
 | F03-S03 | complete | - | PLT-06 | 12 | 17 | 17 | 0 | 0 |
 | F03-S04 | complete | - | PLT-07, NFR-20 | 10 | 17 | 17 | 0 | 0 |
-| F04-S01 | complete | - | BRD-02, BRD-04, NFR-13 | 11 | 0 | 0 | 0 | 0 |
+| F04-S01 | complete | - | BRD-02, BRD-04, NFR-13 | 11 | 28 | 28 | 0 | 0 |
 
 ## Deferred cases
 
