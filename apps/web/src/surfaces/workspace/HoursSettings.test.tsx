@@ -14,6 +14,13 @@ const WEEK = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'
   opens: day === 'sunday' ? null : '09:00',
   closes: day === 'sunday' ? null : '18:00',
 }));
+/**
+ * A saved week with every day closed. The holiday and closure tests serve it because the opening hours play
+ * no part in them: a closed day has no time Selects, and Radix keeps all 96 options of every closed time
+ * Select mounted (to show the chosen one), so the open week alone adds about 1,150 options to every render,
+ * which in jsdom made these tests run past the 5 s timeout on the CI runner.
+ */
+const CLOSED_WEEK = WEEK.map((day) => ({ ...day, open: false, opens: null, closes: null }));
 const saved = (overrides: Partial<HoursSettings> = {}): HoursSettings => ({
   version: 1,
   weekly: WEEK as HoursSettings['weekly'],
@@ -95,7 +102,12 @@ const changes = () => calls.filter((call) => call.body !== null);
 const render = (readOnly: 'support' | 'salon' | null = null) =>
   renderWithMessages(<HoursSettingsScreen kind="staff" timeZone="Asia/Colombo" readOnly={readOnly} />);
 
-describe('the Hours & closures tab: opening hours (AC-1)', () => {
+/**
+ * These tests need the whole open week: twelve time Selects, each keeping its 96 options mounted, so every
+ * change re-renders about 1,150 options. A save journey takes under a second on a developer machine but up
+ * to 5 s in jsdom on the CI runner, so this block allows 15 s rather than the default 5 s.
+ */
+describe('the Hours & closures tab: opening hours (AC-1)', { timeout: 15_000 }, () => {
   it('says above the tabs that these settings save at once, not as a draft', () => {
     renderWithMessages(
       <SettingsScreen tab="hours">
@@ -161,7 +173,7 @@ describe('the Hours & closures tab: opening hours (AC-1)', () => {
     answers.hours = () => Response.json(saved());
     answers['hours-save'] = () => Response.json({ code: 'conflict' }, { status: 409 });
     render();
-    await chooseOption(await screen.findByTestId('hours-monday-opens'), '10:00');
+    fireEvent.click(await screen.findByTestId('hours-monday-open'));
     fireEvent.click(screen.getByTestId('hours-save'));
 
     expect(await screen.findByTestId('hours-conflict')).toHaveTextContent(
@@ -187,6 +199,23 @@ describe('the Hours & closures tab: opening hours (AC-1)', () => {
 });
 
 describe('the Hours & closures tab: public holidays (AC-4, AC-5)', () => {
+  beforeEach(() => {
+    answers.hours = () => Response.json(saved({ weekly: CLOSED_WEEK as HoursSettings['weekly'] }));
+  });
+  /** The year as the API answers once the salon accepted Closed for Deepavali and 10:00 to 13:00 for Christmas. */
+  const reviewed = (version: number) =>
+    yearOf({
+      reviewed: true,
+      version,
+      days: yearOf().days.map((day) => ({
+        ...day,
+        toReview: false,
+        choice: day.date === '2026-12-25' ? 'special' : 'closed',
+        opens: day.date === '2026-12-25' ? '10:00' : null,
+        closes: day.date === '2026-12-25' ? '13:00' : null,
+      })),
+    });
+
   it('lists the year’s coming days To review with their kind, each Closed until the salon chooses', async () => {
     render();
     expect(await screen.findByTestId('holidays-status')).toHaveTextContent('To review');
@@ -198,22 +227,8 @@ describe('the Hours & closures tab: public holidays (AC-4, AC-5)', () => {
     expect(screen.queryByTestId('holiday-2026-10-25')).not.toBeInTheDocument();
   });
 
-  it('accepts the choices, special hours with their times, and then saves one day at once', async () => {
-    answers['holidays-accept'] = () =>
-      Response.json(
-        yearOf({
-          reviewed: true,
-          version: 1,
-          days: yearOf().days.map((day) => ({
-            ...day,
-            toReview: false,
-            choice: day.date === '2026-12-25' ? 'special' : 'closed',
-            opens: day.date === '2026-12-25' ? '10:00' : null,
-            closes: day.date === '2026-12-25' ? '13:00' : null,
-          })),
-        }),
-      );
-    answers['holiday-choose'] = () => Response.json(yearOf({ reviewed: true, version: 2 }));
+  it('accepts the choices, special hours with their times', async () => {
+    answers['holidays-accept'] = () => Response.json(reviewed(1));
     render();
     await chooseOption(await screen.findByTestId('holiday-2026-12-25-choice'), 'Special hours');
     await chooseOption(screen.getByTestId('holiday-2026-12-25-opens'), '10:00');
@@ -232,6 +247,14 @@ describe('the Hours & closures tab: public holidays (AC-4, AC-5)', () => {
       ],
     });
     expect(screen.getByTestId('holidays-status')).toHaveTextContent('Reviewed');
+    expect(screen.queryByTestId('holidays-accept')).not.toBeInTheDocument();
+  });
+
+  it('after the review, saves a changed day at once', async () => {
+    answers.holidays = () => Response.json({ years: [reviewed(1)] });
+    answers['holiday-choose'] = () => Response.json(yearOf({ reviewed: true, version: 2 }));
+    render();
+    expect(await screen.findByTestId('holidays-status')).toHaveTextContent('Reviewed');
     expect(screen.queryByTestId('holidays-accept')).not.toBeInTheDocument();
 
     await chooseOption(screen.getByTestId('holiday-2026-11-08-choice'), 'Open as usual');
@@ -253,6 +276,9 @@ describe('the Hours & closures tab: public holidays (AC-4, AC-5)', () => {
 });
 
 describe('the Hours & closures tab: special closures (AC-7)', () => {
+  beforeEach(() => {
+    answers.hours = () => Response.json(saved({ weekly: CLOSED_WEEK as HoursSettings['weekly'] }));
+  });
   const closure: Closure = {
     id: '2b0c4ad4-8f0d-4d3a-9d1f-1a0b9c8e7f61',
     date: '2026-11-05',
