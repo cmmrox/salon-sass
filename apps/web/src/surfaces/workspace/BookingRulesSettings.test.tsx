@@ -1,6 +1,8 @@
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BookingRulesHistory, BookingRulesSettings } from '@/features/booking';
+
+type RuleName = BookingRulesHistory['items'][number]['changedFields'][number];
 import { renderWithMessages } from '@test/render';
 import { chooseOption } from '@test/select';
 import { BookingRulesSettingsScreen } from './BookingRulesSettingsScreen';
@@ -28,7 +30,7 @@ const entry = (version: number, createdBy: string, createdByLabel: string | null
   createdAt: '2026-11-01T04:30:00Z',
   createdBy,
   createdByLabel,
-  changedFields: version === 1 ? (['slotIntervalMinutes', 'deposit'] as const) : (['noShow'] as const),
+  changedFields: (version === 1 ? ['slotIntervalMinutes', 'deposit'] : ['noShow']) as RuleName[],
 });
 
 type Call = { url: string; body: unknown };
