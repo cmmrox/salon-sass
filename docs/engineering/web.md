@@ -224,7 +224,7 @@ because the owner set one standard for all Next.js work in this product.
    | Status word, role, tag | Badge |
    | Nothing to show | Empty |
    | Page through a list | Pagination |
-   | Message, refusal, warning, success | Alert, or Sonner for a passing notice |
+   | Message, refusal, warning, success | Alert, or Sonner for a passing notice; the prototype's information banner (`.bn.in`) is Alert `variant="info"` on the theme's `--info-surface` (F05-S01) |
    | Pending data, busy action | Skeleton, Spinner |
    | Divider | Separator |
    | Confirmation, side panel | Sheet (bottom sheet on phones, right drawer from 900px), Dialog or Alert Dialog |
@@ -232,7 +232,7 @@ because the owner set one standard for all Next.js work in this product.
    | One-time secret shown for copying (authenticator setup key and URI) | No shadcn/ui component: a labelled `<output>` inside a Field, styled with Tailwind (CR-017) |
    | Hint on hover or focus | Tooltip |
    | Sections switched in place | Tabs |
-   | One choice from a few visible options (brand colour swatches) | Toggle Group, `type="single"` (F04-S02) |
+   | One choice from a few visible options (brand colour swatches) | Toggle Group, `type="single"` (F04-S02); the prototype's segmented control (`.seg2`) is its `segment` variant (F05-S02) |
    | Brand colour typed as `#RRGGBB` | Field around Input, with a swatch of the value beside it; no native colour input (F04-S02) |
    | Choosing a file (logo, cover) | No shadcn/ui component: a Button that opens a visually hidden `<input type="file">` inside a Field, whose label, description and error belong to it, with the chosen image previewed (F04-S02) |
    | Choosing a date | Popover with Calendar, opened from a Button showing the chosen date (F04-S03) |
@@ -387,7 +387,8 @@ shows the hostname-resolved salon name/initial and a shared decorative interior 
   `pnpm --filter @salon/web test:a11y`: Vitest's `a11y` project in browser mode (real Chromium, the
   compiled Tailwind theme), axe-core run directly with `vitest-axe`'s matcher, at every documented
   width with a dark and a light brand. Helpers are under `apps/web/test/` (`a11y.ts`, `viewport.ts`,
-  `theme.ts`); a new screen adds its own `*.a11y.test.tsx`. Three of F01 to F03's major bugs were contrast defects QA
+  `theme.ts`); a new screen adds its own `*.a11y.test.tsx`. The files run one at a time, since nine sharing one
+  browser made upload cases time out (decision 097). Three of F01 to F03's major bugs were contrast defects QA
   found late (decision 068). A stage planned from now on lists it in `verification.commands`; adding
   the tool to the workspace is part of the first stage that needs it.
 - The gates are lint, type check, unit tests, the accessibility check and a production build, as

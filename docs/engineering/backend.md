@@ -32,11 +32,11 @@ One deployable, divided into modules by business area. The module list follows t
 | Module | Owns |
 | --- | --- |
 | `platform` | Tenants and their provisioning/contact profile, plans, entitlements, subscriptions, operator users. No `tenant_id` |
-| `shared` | Tenant context, errors, time, money, audit trail, outbox, jobs. No business rules |
+| `shared` | Tenant context, errors, time, money, audit trail, outbox, jobs, image checks (decision 093). No business rules |
 | `identity` | Staff accounts, roles, sessions, customer one-time-code sign-in |
-| `catalogue` | Services, categories, variants, tax settings |
+| `catalogue` | Services, categories, variants, popular services, tax settings, products; provides `ServiceTerms`, `TaxSettings` and `Products`, and declares `UpcomingServiceBookings` and `ServiceBookingCounts` for `booking` to implement (decisions 093 to 095) |
 | `staff` | Professionals, working hours, leave, blocked time; the salon's opening hours, special closures and holiday choices per branch, `OpeningSchedule` and the declared `BookingsOnDate` (decision 087) |
-| `booking` | Availability, holds, bookings, waitlist, policies; the booking rules as immutable versions and the provided `BookingPolicies` (current, by version, `depositFor` with an optional service rule) that F07, F08 and F09 read (decision 089) |
+| `booking` | Availability, holds, bookings, waitlist, policies; the booking rules as immutable versions and the provided `BookingPolicies` (current, by version, `depositFor` with an optional service rule) that F07, F08 and F09 read (decision 089); depends on `catalogue`, mapping a service's deposit in `domain.ServiceDeposits` (decision 096) |
 | `payment` | Gateway accounts, payments, refunds, receipts, checkout |
 | `notification` | Templates, channels, delivery log, preferences |
 | `customer` | Customer records, notes, consents |
@@ -172,7 +172,9 @@ signature:
 - An implementation opens its own transaction and does not join the caller's. A contract that
   genuinely must join the caller's transaction (it writes in the same unit of work, or holds a lock
   until the caller commits) is declared **in-process only**: it sits in a named interface called
-  `inprocess`, its Javadoc says why, and it is never exposed remotely. If its module is ever
+  `inprocess`, its Javadoc says why, and it is never exposed remotely. A module may declare an
+  in-process hook for others to implement, as `platform.inprocess.SalonBootstrapStep` is called in
+  the transaction that provisions a salon so each module seeds its defaults (decision 094). If its module is ever
   extracted, the contract becomes an event with a compensating action, not a remote call.
 - A state change that another module reacts to is an event (next section), not a call into that
   module.
@@ -266,7 +268,9 @@ signature:
   is the `trace.id` of that request's log lines. Only `Problems` puts a property on a problem body,
   and its `code` always comes from `ErrorCode` (a test holds both).
 - A missing record and another salon's record both return 404 with the same body.
-- Lists are paginated, always. Sorting and filtering are explicit parameters.
+- Lists are paginated, always. Sorting and filtering are explicit parameters. The one exception is a
+  list whose length a business limit caps, which is returned whole: the catalogue's categories (50)
+  and services (300), decision 094.
 - A request that creates a booking, a payment or a refund carries an `Idempotency-Key`. Repeating it
   returns the first result and never a second side effect.
 - Request records are validated at the edge. A validation failure answers 400 `bad_request` with
@@ -574,6 +578,9 @@ test uses them is in `docs/qa/test-plan.md`.
   `salon.branding.images.concurrent-decodes` (2) at once, then 503; re-encoded, so no metadata is
   kept. The web BFF counts the bytes it reads and stops past its limit even without a
   `Content-Length`, because Next.js's own proxy limit truncates rather than refuses.
+  From F05-S01 the decoding, limits and re-encoding are `shared` code (no business rules), used by
+  `branding` and `catalogue`; each module keeps its own image table and sets its own limits under
+  its settings prefix (`salon.catalogue.images.*`), decision 093.
 
 ## Tests
 

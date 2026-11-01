@@ -1,5 +1,6 @@
 import { createApiClient, type components } from '@salon/api-contracts/shared';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { abortTimeoutsOnTheFakeClock } from '@test/abort-timeout';
 
 import { createServerApiClient } from './client';
 import { getMeta } from './meta';
@@ -71,6 +72,7 @@ describe('getMeta', () => {
 
   it('gives up when the API does not answer in time', async () => {
     vi.useFakeTimers();
+    abortTimeoutsOnTheFakeClock();
     try {
       const client = clientAnswering(
         (input) =>

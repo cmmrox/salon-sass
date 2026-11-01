@@ -10,8 +10,13 @@ public enum StaffRole {
     ACCOUNTANT;
 
     public Set<String> permissions(boolean grant) {
-        java.util.HashSet<String> p =
-                new java.util.HashSet<>(Set.of("session.manage", "password.change", "mfa.enroll", "entitlement.read"));
+        java.util.HashSet<String> p = new java.util.HashSet<>(Set.of(
+                "session.manage",
+                "password.change",
+                "mfa.enroll",
+                "entitlement.read",
+                // The service catalogue in the workspace (F05, decision 093): every role reads it.
+                "catalogue.read"));
         if (this == OWNER || this == MANAGER)
             p.addAll(Set.of(
                     "staff.list",
@@ -44,7 +49,9 @@ public enum StaffRole {
             "customer.read",
             "financial.read",
             // F04 (decision 085): a support session reads salon settings and never changes them.
-            "settings.read");
+            "settings.read",
+            // F05 (decision 093): and the service catalogue.
+            "catalogue.read");
 
     public String scope(boolean grant) {
         return this == PROFESSIONAL && !grant ? "own" : "salon";

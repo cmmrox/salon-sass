@@ -62,9 +62,10 @@ spring:
   mvc:
     problemdetails:
       enabled: true
-  # The one multipart request, a brand image upload (F04-S02): the request as a whole may be up to 10 MB, so
-  # that a file over the image limit (salon.branding.images.max-bytes, 5 MB) is still read and answered as a
-  # field error naming it; beyond this, the request is refused unread, 413.
+  # The multipart requests, a brand image upload (F04-S02) and a service photo (F05-S01): the request as a whole
+  # may be up to 10 MB, so that a file over the image limit (salon.branding.images.max-bytes and
+  # salon.catalogue.images.max-bytes, 5 MB) is still read and answered as a field error naming it; beyond this,
+  # the request is refused unread, 413.
   servlet:
     multipart:
       max-file-size: 10MB
@@ -258,3 +259,25 @@ salon.branding:
     max-pixels: ${SALON_BRANDING_IMAGE_MAX_PIXELS:50000000}
     # Uploads decoded at once per instance; one more waits up to two seconds, then is refused 503.
     concurrent-decodes: ${SALON_BRANDING_IMAGE_CONCURRENT_DECODES:2}
+
+# Service photos (F05-S01, decision 093): the same checks as brand images, with the catalogue's own limits. A
+# larger file within the request limit (spring.servlet.multipart, 10 MB) is a field error; beyond it, 413.
+salon.catalogue:
+  images:
+    max-bytes: ${SALON_CATALOGUE_IMAGE_MAX_BYTES:5MB}
+    max-pixels: ${SALON_CATALOGUE_IMAGE_MAX_PIXELS:50000000}
+    # Photos decoded at once per instance; one more waits up to two seconds, then is refused 503.
+    concurrent-decodes: ${SALON_CATALOGUE_IMAGE_CONCURRENT_DECODES:2}
+  # Tax names and rates for the salon's country (F05-S03, CAT-05, decision 095): Sri Lanka's by default. Each save
+  # of a salon's tax settings copies the VAT name and rate and the service charge's name into its version, so a
+  # change here applies only to saves made afterwards. Startup is refused for a rate outside 0 to 100 or an empty
+  # name. Whole percentages.
+  tax:
+    vat:
+      name: ${SALON_CATALOGUE_TAX_VAT_NAME:VAT}
+      rate-percent: ${SALON_CATALOGUE_TAX_VAT_RATE_PERCENT:18}
+      registration-label: ${SALON_CATALOGUE_TAX_VAT_REGISTRATION_LABEL:VAT registration number}
+    service-charge:
+      name: ${SALON_CATALOGUE_TAX_SERVICE_CHARGE_NAME:Service charge}
+      # The highest rate a salon may charge; the lowest is 1%.
+      max-percent: ${SALON_CATALOGUE_TAX_SERVICE_CHARGE_MAX_PERCENT:20}

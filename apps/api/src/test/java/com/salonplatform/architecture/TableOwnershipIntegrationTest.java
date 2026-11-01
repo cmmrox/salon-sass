@@ -140,19 +140,20 @@ class TableOwnershipIntegrationTest {
 
     @Test
     void aNewTableWithoutItsModulesPrefixIsFound() throws SQLException {
-        ModuleOwnership withCatalogue =
+        // A module with no tables yet (catalogue has its own since F05-S01).
+        ModuleOwnership withPayment =
                 ModuleOwnership.read(new ByteArrayInputStream("""
                 modules:
-                  catalogue:
-                    tables: [catalogue_service, service_variant]
+                  payment:
+                    tables: [payment_refund, refund_line]
                 """.getBytes(StandardCharsets.UTF_8)));
 
         List<String> breaches = withFault(
-                "CREATE TABLE catalogue_service (id uuid PRIMARY KEY); CREATE TABLE service_variant (id uuid PRIMARY KEY)",
+                "CREATE TABLE payment_refund (id uuid PRIMARY KEY); CREATE TABLE refund_line (id uuid PRIMARY KEY)",
                 connection -> DatabaseOwnership.newTablesWithoutTheirModulesPrefix(
-                        withCatalogue, DatabaseOwnership.tables(connection), namedBeforePrefixes));
+                        withPayment, DatabaseOwnership.tables(connection), namedBeforePrefixes));
 
-        assertThat(breaches).containsExactly("table service_variant is new but does not start with catalogue_");
+        assertThat(breaches).containsExactly("table refund_line is new but does not start with payment_");
     }
 
     private static void migrate(MigrationVersion target) {

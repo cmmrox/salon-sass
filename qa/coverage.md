@@ -6,7 +6,7 @@
 
 | Release | Requirements | Owned by a feature | Assigned to a stage | Passed QA |
 | --- | --- | --- | --- | --- |
-| R1 | 97 | 97 | 23 | 23 |
+| R1 | 97 | 97 | 30 | 30 |
 | R2 | 74 | 48 | 44 | 0 |
 | R3 | 21 | 8 | 8 | 0 |
 
@@ -34,6 +34,9 @@ asked for. A case is a test titled with its id and criteria, or a manual or defe
 | F04-S02 | complete | - | BRD-01, BRD-04 | 12 | 34 | 34 | 0 | 0 |
 | F04-S03 | complete | - | STF-04, NFR-13 | 12 | 32 | 31 | 0 | 1 |
 | F04-S04 | complete | - | BKG-02, BKG-09 | 10 | 26 | 26 | 0 | 0 |
+| F05-S01 | complete | - | CAT-01, CAT-02, CAT-04 | 16 | 47 | 45 | 0 | 2 |
+| F05-S02 | complete | - | CAT-03, CAT-06 | 11 | 21 | 20 | 0 | 1 |
+| F05-S03 | complete | - | CAT-05, INV-01 | 13 | 26 | 26 | 0 | 0 |
 
 ## Deferred cases
 
@@ -43,6 +46,9 @@ Cases waiting for something else. `feature-verify` and `release-prepare` go thro
 | --- | --- | --- | --- |
 | F01 | TC-F01-002 | First real-host deployment is outside local F01 proof, explicitly deferred by decision 018 and CR-005; public certificate, remote delivery and provider-dependent monitoring are not certified. | Owner decides D-08 hosting and D-02 platform domain, configures the DNS challenge module and credentials, provides host access, and explicitly requests staging deployment. |
 | F04-S03 | TC-F04-S03-031 | The closure sheet and the hours card listing real bookings a change affects ("N upcoming bookings fall outside these hours", the bookings on a closed day) cannot be shown on the running product, because no booking exists before F07 and the stage adds no hook to make one (spec, "Requirements covered" and "Out of scope"). From outside, TC-F04-S03-009 and TC-F04-S03-011 show the empty BookingsOnDate answers (no bookings, 0 affected, no outside-hours bookings) and the priority; the developer's integration and component tests hold the rest. | F07, when bookings exist and replace the empty BookingsOnDate. |
+| F05-S01 | TC-F05-S01-020 | A delete refused with 409 in_use, and the screen's "This service has upcoming bookings. Hide it from online booking instead.", need an upcoming booking that uses the service. No booking exists before F07, and until booking implements UpcomingServiceBookings the catalogue's own implementation answers "none" (decision 093). The spec has the developer's integration test, with an implementation that reports a booking, prove the refusal. From outside, TC-F05-S01-019 and TC-F05-S01-035 show delete when no booking uses the service. | F07, when booking implements UpcomingServiceBookings and a booking can use a service. |
+| F05-S01 | TC-F05-S01-047 | A salon in another currency is told its price limits in rupees (BUG-F05-001, minor, the wording only; amounts are stored and shown correctly). The check is written when the bug is fixed, as what the message should say in another currency is not yet decided. | BUG-F05-001 |
+| F05-S02 | TC-F05-S02-015 | "Most booked" ranks up to six services by the booking counts of the last 90 days, most first, leaving out hidden and deleted services. No booking exists before F07, and until booking implements ServiceBookingCounts the catalogue's own implementation reports none (decision 095), so the ranking, its 90-day window and what it leaves out cannot be shown on the running product. The spec has an integration test with an implementation that reports counts prove them. From outside, TC-F05-S02-009 and TC-F05-S02-018 show the setting, its fallback to the chosen services and the sheet while "Most booked" is on. | F07, when booking implements ServiceBookingCounts and bookings exist to count. |
 
 ## Requirements
 
@@ -77,12 +83,12 @@ Cases waiting for something else. `feature-verify` and `release-prepare` go thro
 | IAM-12 | R2 | should | unowned | - |
 | IAM-13 | R3 | could | unowned | - |
 | IAM-14 | R1 | should | F10 | - |
-| CAT-01 | R1 | must | F05 | - |
-| CAT-02 | R1 | must | F05 | - |
-| CAT-03 | R1 | should | F05 | - |
-| CAT-04 | R1 | must | F05 | - |
-| CAT-05 | R1 | must | F05 | - |
-| CAT-06 | R1 | should | F05 | - |
+| CAT-01 | R1 | must | F05 | F05-S01 (complete) |
+| CAT-02 | R1 | must | F05 | F05-S01 (complete) |
+| CAT-03 | R1 | should | F05 | F05-S02 (complete) |
+| CAT-04 | R1 | must | F05 | F05-S01 (complete) |
+| CAT-05 | R1 | must | F05 | F05-S03 (complete) |
+| CAT-06 | R1 | should | F05 | F05-S02 (complete) |
 | CAT-07 | R2 | should | F17 | F17-S01 (outlined), F17-S03 (outlined) |
 | CAT-08 | R2 | should | F17 | F17-S01 (outlined) |
 | CAT-09 | R2 | should | F17 | F17-S02 (outlined) |
@@ -213,7 +219,7 @@ Cases waiting for something else. `feature-verify` and `release-prepare` go thro
 | BRD-11 | R2 | should | unowned | - |
 | BRD-12 | R2 | should | unowned | - |
 | BRD-13 | R2 | should | unowned | - |
-| INV-01 | R1 | could | F05 | - |
+| INV-01 | R1 | could | F05 | F05-S03 (complete) |
 | INV-02 | R3 | could | unowned | - |
 | INV-03 | R3 | could | unowned | - |
 | OCC-01 | R2 | must | F19 | F19-S01 (outlined) |

@@ -1,21 +1,34 @@
 id: F04
-title: "Salon setup: profile, branding, hours and policies"
-summary: "A salon owner sets the business profile, brand, opening hours, holidays and closures (with the bookings a closure affects), tax and booking policies in tabbed settings, and customers see the published brand without an app release. Every new table carries the branch scope with one default branch (CR-023)."
+title: 'Salon setup: profile, branding, hours and policies'
+summary: A salon owner sets the business profile, brand, opening hours, holidays and
+  closures (with the bookings a closure affects), tax and booking policies in tabbed
+  settings, and customers see the published brand without an app release. Every new
+  table carries the branch scope with one default branch (CR-023).
 release: R1
 milestone: M1-web
 status: complete
 qa_status: pass
 released_in: null
-depends_on: [F02]
+depends_on:
+- F02
 integration:
   branch: charithm/feature/F04-salon-setup
   pull_request: https://github.com/cmmrox/salon-sass/pull/18
   qa_revision: ac68e66054289ac3681348bf71251a0813b24676
-  merged_commit: null
-  merged_at: null
-surfaces: [api, web]
-requirements: [BRD-01, BRD-02, BRD-04, STF-04, BKG-02, BKG-09]
-nfr_focus: [NFR-13]
+  merged_commit: b978c1352342c1f25dfd9ea90bb20445edb8c3ac
+  merged_at: '2026-11-01T12:16:23Z'
+surfaces:
+- api
+- web
+requirements:
+- BRD-01
+- BRD-02
+- BRD-04
+- STF-04
+- BKG-02
+- BKG-09
+nfr_focus:
+- NFR-13
 cases: []
 verification:
   automation:
@@ -23,7 +36,9 @@ verification:
     tool: playwright
     file: qa/api/F04/F04-journeys.spec.ts
     project: api
-    suites: [smoke, regression]
+    suites:
+    - smoke
+    - regression
   manual: []
   deferred: []
 evidence:
@@ -33,33 +48,35 @@ evidence:
   reverification:
   - revision: 93821ab9f045b4d6663caf36ecc75beb2627bccf
     date: 2026-11-01
-    changed: apps/web/src/surfaces/workspace/HoursSettings.test.tsx only (commit 3ba611c, merged as
-      7c28918), a developer Vitest unit test that no application file imports; no application code,
-      contract, QA automation or spec changed since the full pass.
-    scope: No QA case re-run. Every F04 case runs against the built product, which is unchanged, so
-      none depends on the changed file (decision 069). The changed test was run once at this revision
-      as a sanity check, 14 of 14 passed; that is the developer's gate, not a QA result.
+    changed: apps/web/src/surfaces/workspace/HoursSettings.test.tsx only (commit 3ba611c,
+      merged as 7c28918), a developer Vitest unit test that no application file imports;
+      no application code, contract, QA automation or spec changed since the full
+      pass.
+    scope: No QA case re-run. Every F04 case runs against the built product, which
+      is unchanged, so none depends on the changed file (decision 069). The changed
+      test was run once at this revision as a sanity check, 14 of 14 passed; that
+      is the developer's gate, not a QA result.
     run: none
   - revision: ac68e66054289ac3681348bf71251a0813b24676
     date: 2026-11-01
-    changed: >-
-      The PR #18 review fixes in apps/web only (cbdc7da, 7a76e38, 54dc397, merged as
-      4c060be), that is the Hours tab's weekday, holiday and booking rows as Items with a new
-      `divided` variant, a Public holidays card for every published year with days to come, and the
-      Add a closure sheet opening empty after a closure is added; and the S03 spec's "Corrections at
-      close" bullet on several years. No API, contract or console change.
-    scope: >-
-      The S03 browser cases on the Hours tab and the closure sheet, TC-F04-S03-022 to 025 and
-      027 to 030, and the new TC-F04-S03-032 (two published years accepted independently).
-      TC-F04-S03-025 now also checks the sheet opens empty after a closure is added. Not re-run,
-      because their code did not change (decision 069), are the S03 API cases (the API is unchanged
-      and serves every year from the salon's current year as before), TC-F04-S03-026 (console
-      only; the Item change adds a variant only the Hours tab uses), the F04 journeys (API only)
-      and S01, S02, S04.
-    run: >-
-      Playwright --grep on qa/web/F04/S03-hours-screens.spec.ts (sdlc run selects only whole
-      entries), fresh database f04qa_reverify2, API 8390 and web 3390 built from 4c060be. Run 1
-      qa/reports/20261101-153618-F04-S03-reverify-b755d2b, 8 of 9 passed; TC-F04-S03-032 failed in
-      its last step on a test defect (the Owner's session had ended after the clock moved 26 days),
-      repaired in ac68e66. Run 2 qa/reports/20261101-153732-F04-S03-reverify-ac68e66, the failed
-      case alone, 1 of 1 passed. Result pass.
+    changed: 'The PR #18 review fixes in apps/web only (cbdc7da, 7a76e38, 54dc397,
+      merged as 4c060be), that is the Hours tab''s weekday, holiday and booking rows
+      as Items with a new `divided` variant, a Public holidays card for every published
+      year with days to come, and the Add a closure sheet opening empty after a closure
+      is added; and the S03 spec''s "Corrections at close" bullet on several years.
+      No API, contract or console change.'
+    scope: The S03 browser cases on the Hours tab and the closure sheet, TC-F04-S03-022
+      to 025 and 027 to 030, and the new TC-F04-S03-032 (two published years accepted
+      independently). TC-F04-S03-025 now also checks the sheet opens empty after a
+      closure is added. Not re-run, because their code did not change (decision 069),
+      are the S03 API cases (the API is unchanged and serves every year from the salon's
+      current year as before), TC-F04-S03-026 (console only; the Item change adds
+      a variant only the Hours tab uses), the F04 journeys (API only) and S01, S02,
+      S04.
+    run: Playwright --grep on qa/web/F04/S03-hours-screens.spec.ts (sdlc run selects
+      only whole entries), fresh database f04qa_reverify2, API 8390 and web 3390 built
+      from 4c060be. Run 1 qa/reports/20261101-153618-F04-S03-reverify-b755d2b, 8 of
+      9 passed; TC-F04-S03-032 failed in its last step on a test defect (the Owner's
+      session had ended after the clock moved 26 days), repaired in ac68e66. Run 2
+      qa/reports/20261101-153732-F04-S03-reverify-ac68e66, the failed case alone,
+      1 of 1 passed. Result pass.

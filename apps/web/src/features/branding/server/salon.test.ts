@@ -1,5 +1,6 @@
 import { createApiClient, type components } from '@salon/api-contracts/branding';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { abortTimeoutsOnTheFakeClock } from '@test/abort-timeout';
 
 import type { Salon } from '../types';
 import { findSalon } from './salon';
@@ -130,6 +131,7 @@ describe('findSalon', () => {
 
   it('gives up when the API does not answer in time', async () => {
     vi.useFakeTimers();
+    abortTimeoutsOnTheFakeClock();
     try {
       const client = createApiClient({
         baseUrl: 'http://api.test',

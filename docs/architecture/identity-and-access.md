@@ -114,12 +114,16 @@ salon-wide calendar/customer/figures access (IAM-08), not arbitrary role customi
 | List and revoke the salon's support sessions (`support.manage`, F03-S04) | yes | no | no | no | no |
 | Read salon settings (`settings.read`, F04) | yes | yes | no | no | no |
 | Change salon settings and publish them (`settings.manage`, F04) | yes | yes | no | no | no |
+| Read the service catalogue in the workspace (`catalogue.read`, F05) | yes | yes | yes | yes | yes |
+| Change the service catalogue: categories, services, prices, photos (`catalogue.price.change`, F05) | yes | yes | no | no | no |
 
 The API permission keys for these rows are `session.manage`, `password.change`, `mfa.enroll`,
 `staff.list`, `staff.manage`, `audit.list`, `payment.refund`, `catalogue.price.change`,
 `policy.change`, `customer.export`, `calendar.read`, `customer.read`, `financial.read`,
-`settings.read` and `settings.manage` (decision 085). A support session may read settings
-(`settings.read` joins its read set) and never change them.
+`settings.read`, `settings.manage` (decision 085) and `catalogue.read` (decision 093). A support
+session may read settings and the catalogue (`settings.read` and `catalogue.read` join its read set)
+and never change them. `catalogue.price.change` guards every change to the catalogue, not only
+prices (decision 093).
 All staff receive the first three own-account permissions; the table determines the rest.
 The customer principal has kind `customer`, null role/staff id, own scope, MFA false and
 `session.manage`; the customer privacy stage adds its own-profile/data-rights permissions.

@@ -70,6 +70,10 @@ export default defineConfig({
           name: 'a11y',
           include: ['src/**/*.a11y.test.{ts,tsx}'],
           setupFiles: ['./test/a11y-setup.ts'],
+          // One file at a time (F05-S03): with nine files in parallel the Branding tab's upload and save cases
+          // timed out in the full run though they pass alone and beside any other file, as the frames running at
+          // once share one browser. The run takes as long either way (about 25 s).
+          fileParallelism: false,
           browser: {
             enabled: true,
             headless: true,

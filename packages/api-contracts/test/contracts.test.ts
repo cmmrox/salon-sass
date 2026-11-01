@@ -121,6 +121,9 @@ describe('the committed contract', () => {
       'salon_read_only',
       'entitlement_exceeded',
       'invalid_state',
+      // F05-S01: a category or service still in use, and the catalogue's limits.
+      'in_use',
+      'limit_reached',
       'support_read_only',
       'support_session_active',
       'bad_request',

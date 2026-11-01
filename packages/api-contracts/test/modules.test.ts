@@ -86,7 +86,7 @@ describe('the committed module entries', () => {
     .map((file) => file.replace(/\.ts$/, ''));
 
   it('are one for each module the API tags, and each is exported as @salon/api-contracts/<module>', () => {
-    expect(modules.sort()).toEqual(['booking', 'branding', 'identity', 'platform', 'shared', 'staff']);
+    expect(modules.sort()).toEqual(['booking', 'branding', 'catalogue', 'identity', 'platform', 'shared', 'staff']);
     expect(modules.sort()).toEqual([...pathsByModule(committed).keys()]);
     for (const module of modules) {
       expect(exported[`./${module}`]).toBe(`./src/generated/${module}.ts`);

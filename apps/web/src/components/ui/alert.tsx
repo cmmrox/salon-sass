@@ -14,6 +14,8 @@ const alertVariants = cva(
         caution: "bg-caution-surface *:data-[slot=alert-title]:text-caution",
         positive: "bg-positive-surface",
         destructive: "bg-negative-surface",
+        // Information in the flow of a page (the prototype's `.bn.in`, F05-S01): ink on the info surface.
+        info: "block bg-info-surface wrap-anywhere *:data-[slot=alert-title]:text-info",
         // A message in the flow of a form or list: caution text on its surface, or a confirmation
         // in ink on the positive surface. Its content flows inline (a retry beside a link).
         notice: "block bg-caution-surface text-caution wrap-anywhere",
@@ -34,6 +36,7 @@ function Alert({
   return (
     <div
       data-slot="alert"
+      data-variant={variant ?? "default"}
       role="alert"
       className={cn(alertVariants({ variant }), className)}
       {...props}
