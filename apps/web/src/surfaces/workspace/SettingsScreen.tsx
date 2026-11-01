@@ -4,9 +4,12 @@ import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-/** The Settings tabs delivered so far, in the prototype's order (F04-S01 Profile, F04-S02 Branding). */
-export type SettingsTab = 'profile' | 'branding';
-const TABS: SettingsTab[] = ['profile', 'branding'];
+/**
+ * The Settings tabs delivered so far, in the prototype's order (F04-S01 Profile, F04-S03 Hours & closures,
+ * F04-S02 Branding).
+ */
+export type SettingsTab = 'profile' | 'hours' | 'branding';
+const TABS: SettingsTab[] = ['profile', 'hours', 'branding'];
 
 /**
  * The Settings page (F04-S01): the prototype's intro and its section tabs, showing only the tabs that

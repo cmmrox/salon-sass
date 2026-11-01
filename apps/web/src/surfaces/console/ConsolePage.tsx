@@ -1,6 +1,13 @@
 import { cookies, headers } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
-import { ConsoleDenied, PlanDetail, PlanDirectory, InvoiceList } from '@/features/platform';
+import {
+  ConsoleDenied,
+  HolidayYearScreen,
+  HolidayYears,
+  PlanDetail,
+  PlanDirectory,
+  InvoiceList,
+} from '@/features/platform';
 import { operatorEntry, operatorCookie } from '@/features/platform/server';
 import { consoleRequestHost } from '@/lib/tenancy/console-host';
 import { platformDomainOf } from '@/lib/tenancy/hostname';
@@ -55,7 +62,9 @@ export async function ConsolePage({
         ? ['operator.salon.read']
         : view === 'support'
           ? ['operator.support.start', 'operator.support.read']
-          : ['operator.plan.read'];
+          : view === 'holidays'
+            ? ['operator.holiday.read']
+            : ['operator.plan.read'];
   if (!required.some((permission) => permissions.includes(permission)))
     return (
       <ConsoleShell permissions={permissions}>
@@ -65,7 +74,13 @@ export async function ConsolePage({
   const platformDomain = platformDomainOf(process.env.SALON_PLATFORM_DOMAIN);
   return (
     <ConsoleShell permissions={permissions} view={view}>
-      {view === 'support' ? (
+      {view === 'holidays' ? (
+        id && /^\d{4}$/.test(id) ? (
+          <HolidayYearScreen year={Number(id)} canManage={permissions.includes('operator.holiday.manage')} />
+        ) : (
+          <HolidayYears canManage={permissions.includes('operator.holiday.manage')} />
+        )
+      ) : view === 'support' ? (
         <SupportSessionList admin={permissions.includes('operator.support.read')} />
       ) : view === 'salons' ? (
         id ? (

@@ -7,9 +7,10 @@ import { contextFromTraceparent, runInRequest } from '@/lib/observability/reques
 import { salonSettingsFor } from '@/features/branding/server';
 import { createIdentityWeb } from '@/features/identity/server';
 import { salonAccountFor } from '@/features/platform/server';
+import { salonHoursFor } from '@/features/staff/server';
 
 /** The settings actions of the workspace BFF (F04-S01), as the route wires them, against a fake API on loopback. */
-const handleIdentity = createIdentityWeb(salonAccountFor, salonSettingsFor);
+const handleIdentity = createIdentityWeb(salonAccountFor, salonSettingsFor, salonHoursFor);
 let server: Server;
 let calls: { method: string; path: string; host?: string; authorization?: string; body: string }[];
 let answer: (method: string, path: string) => { status: number; data: unknown };
@@ -404,6 +405,131 @@ describe('a support session and the brand', () => {
     'is refused %s as read-only, with no API call',
     async (action) => {
       const response = await run('POST', 'support', action, { version: 2 });
+      expect(response.status).toBe(403);
+      expect(await response.json()).toMatchObject({ code: 'support_read_only' });
+      expect(calls).toEqual([]);
+    },
+  );
+});
+
+describe('the settings user’s hours, holidays and closures actions (F04-S03)', () => {
+  const hours = { version: 1, weekly: null, outsideHours: [] };
+
+  it('reads the hours, holidays and closures for the salon’s hostname with the user’s credential', async () => {
+    answer = (_method, path) =>
+      path === '/api/v1/identity/me'
+        ? {
+            status: 200,
+            data: {
+              id: 's',
+              kind: 'staff',
+              role: 'MANAGER',
+              permissions,
+              scope: 'salon',
+              staffId: 's',
+              mfaEnabled: false,
+            },
+          }
+        : { status: 200, data: path.endsWith('/closures') ? [] : hours };
+    for (const action of ['hours', 'holidays', 'closures'])
+      expect((await run('GET', 'staff', action)).status).toBe(200);
+
+    expect(apiCalls().map((call) => [call.method, call.path, call.host, call.authorization])).toEqual([
+      ['GET', '/api/v1/salon/opening-hours/settings', 'alpha.localhost', 'Bearer private-access'],
+      ['GET', '/api/v1/salon/holidays', 'alpha.localhost', 'Bearer private-access'],
+      ['GET', '/api/v1/salon/closures', 'alpha.localhost', 'Bearer private-access'],
+    ]);
+  });
+
+  it('asks the bookings on a date with the date from its query only', async () => {
+    const context = {
+      ...contextFromTraceparent(undefined),
+      clientAddress: '127.0.0.2',
+      deadline: performance.now() + 3000,
+    };
+    const withQuery = new NextRequest('http://alpha.localhost:3100/identity-web/staff/closure-impact?date=2026-11-05', {
+      method: 'GET',
+      headers: { Host: 'alpha.localhost:3100', Cookie: 'salon_staff_access=private-access; salon_staff_session=s' },
+    });
+    const response = await runInRequest(context, () => handleIdentity(withQuery, 'staff', 'closure-impact'));
+
+    expect(response.status).toBe(200);
+    expect(calls.find((call) => call.path === '/api/v1/salon/closures/impact')).toBeDefined();
+  });
+
+  it('sends an hours save and an acceptance rebuilt from the contract’s fields, and nothing else', async () => {
+    await run('POST', 'staff', 'hours-save', {
+      version: 1,
+      tenantId: 'other-salon',
+      weekly: [{ day: 'monday', open: true, opens: '09:00', closes: '18:00', extra: 'dropped' }],
+    });
+    await run('POST', 'staff', 'holidays-accept', {
+      year: '2026',
+      version: 0,
+      choices: [{ date: '2026-12-25', choice: 'closed', opens: null, closes: null, salon: 'x' }],
+    });
+
+    const [save, accept] = apiCalls();
+    expect(save).toMatchObject({ method: 'PUT', path: '/api/v1/salon/opening-hours/settings' });
+    expect(JSON.parse(save!.body)).toEqual({
+      version: 1,
+      weekly: [{ day: 'monday', open: true, opens: '09:00', closes: '18:00' }],
+    });
+    expect(accept).toMatchObject({ method: 'POST', path: '/api/v1/salon/holidays/2026/acceptance' });
+    expect(JSON.parse(accept!.body)).toEqual({
+      version: 0,
+      choices: [{ date: '2026-12-25', choice: 'closed', opens: null, closes: null }],
+    });
+  });
+
+  it('keeps anything but a year, a date or an id out of the paths', async () => {
+    await run('POST', 'staff', 'holiday-choose', { year: '../x', date: '2026-12-25', choice: 'open' });
+    await run('POST', 'staff', 'closure-reopen', { id: '../../identity/staff' });
+
+    expect(apiCalls().map((call) => call.path)).toEqual([
+      '/api/v1/salon/holidays/0/days/2026-12-25',
+      '/api/v1/salon/closures/0',
+    ]);
+  });
+
+  it('answers ok when a closure is reopened, which the API answers with no content', async () => {
+    answer = (_method, path) =>
+      path === '/api/v1/identity/me'
+        ? {
+            status: 200,
+            data: {
+              id: 's',
+              kind: 'staff',
+              role: 'MANAGER',
+              permissions,
+              scope: 'salon',
+              staffId: 's',
+              mfaEnabled: false,
+            },
+          }
+        : { status: 204, data: null };
+    const response = await run('POST', 'staff', 'closure-reopen', { id: BRANCH });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ ok: true });
+  });
+
+  it.each(['hours', 'holidays', 'closures'])(
+    'refuses %s to a role without settings.read, before any upstream call',
+    async (action) => {
+      permissions = ['session.manage'];
+      const response = await run('GET', 'staff', action);
+
+      expect(response.status).toBe(403);
+      expect(apiCalls()).toEqual([]);
+    },
+  );
+
+  it.each(['hours-save', 'holidays-accept', 'holiday-choose', 'closure-add', 'closure-reopen'])(
+    'refuses %s to a support session, with no upstream call',
+    async (action) => {
+      const response = await run('POST', 'support', action, { version: 1 });
+
       expect(response.status).toBe(403);
       expect(await response.json()).toMatchObject({ code: 'support_read_only' });
       expect(calls).toEqual([]);

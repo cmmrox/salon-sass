@@ -9,10 +9,14 @@
  */
 export type BoundedJson = { ok: true; value: Record<string, unknown> } | { ok: false };
 
-export async function readBoundedJson(request: Request, limit: number): Promise<BoundedJson> {
+/**
+ * The body's bytes, read the same way: null when it is over the limit, declared or counted, or cannot be
+ * read. Used as it is for a file a BFF passes on (the console's holiday calendar CSV, F04-S03).
+ */
+export async function readBoundedBytes(request: Request, limit: number): Promise<Uint8Array<ArrayBuffer> | null> {
   const declared = request.headers.get('content-length');
-  if (declared !== null && (!/^\d+$/.test(declared.trim()) || Number(declared) > limit)) return { ok: false };
-  if (!request.body) return { ok: true, value: {} };
+  if (declared !== null && (!/^\d+$/.test(declared.trim()) || Number(declared) > limit)) return null;
+  if (!request.body) return new Uint8Array(new ArrayBuffer(0));
   const reader = request.body.getReader();
   const chunks: Uint8Array[] = [];
   let size = 0;
@@ -23,19 +27,26 @@ export async function readBoundedJson(request: Request, limit: number): Promise<
       size += value.byteLength;
       if (size > limit) {
         await reader.cancel().catch(() => undefined);
-        return { ok: false };
+        return null;
       }
       chunks.push(value);
     }
   } catch {
-    return { ok: false };
+    return null;
   }
-  const bytes = new Uint8Array(size);
+  const bytes = new Uint8Array(new ArrayBuffer(size));
   let offset = 0;
   for (const chunk of chunks) {
     bytes.set(chunk, offset);
     offset += chunk.byteLength;
   }
+  return bytes;
+}
+
+export async function readBoundedJson(request: Request, limit: number): Promise<BoundedJson> {
+  const bytes = await readBoundedBytes(request, limit);
+  if (bytes === null) return { ok: false };
+  if (bytes.byteLength === 0) return { ok: true, value: {} };
   try {
     const parsed: unknown = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
     return {

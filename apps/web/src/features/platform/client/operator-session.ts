@@ -9,6 +9,8 @@ export class OperatorFailure extends Error {
     public retryAfter = 0,
     public renewable = false,
     public status = 0,
+    /** For a refused file read line by line (a holiday calendar CSV, F04-S03): each bad line and why. */
+    public lines: { line: number; detail: string }[] = [],
   ) {
     super(code);
   }
@@ -22,10 +24,12 @@ export const supportsLocks = () => typeof navigator !== 'undefined' && Boolean(n
 export async function operatorRequest<T>(action: string, body?: unknown): Promise<T> {
   let response: Response;
   try {
+    // A form (a holiday calendar import) goes as multipart, with the browser's own boundary; anything else as JSON.
+    const form = body instanceof FormData;
     response = await fetch(`/operator-web/${action}`, {
       method: body === undefined ? 'GET' : 'POST',
-      headers: body === undefined ? {} : { 'Content-Type': 'application/json' },
-      body: body === undefined ? undefined : JSON.stringify(body),
+      headers: body === undefined || form ? {} : { 'Content-Type': 'application/json' },
+      body: body === undefined ? undefined : form ? body : JSON.stringify(body),
       cache: 'no-store',
     });
   } catch {
@@ -39,6 +43,9 @@ export async function operatorRequest<T>(action: string, body?: unknown): Promis
       data.retryAfter ?? 0,
       data.renewable ?? false,
       response.status,
+      (data.errors ?? [])
+        .filter((e: { line?: unknown }) => typeof e.line === 'number')
+        .map((e: { line: number; detail?: string }) => ({ line: e.line, detail: e.detail ?? '' })),
     );
   return data as T;
 }

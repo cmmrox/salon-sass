@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createIdentityWeb } from './identity-web';
 import type { SalonAccount, SalonAccountFor } from './salon-account';
 import type { SalonSettings, SalonSettingsFor } from './salon-settings';
+import type { SalonHours, SalonHoursFor } from './salon-hours';
 import { contextFromTraceparent, runInRequest } from '@/lib/observability/request-context';
 import { createServerApiClient, requestSignal } from '@/lib/api-core/client';
 
@@ -22,7 +23,12 @@ const unreachedSettings: SalonSettingsFor = () =>
   new Proxy({} as SalonSettings, {
     get: () => () => Promise.reject(new Error('the branding module is not reached here')),
   });
-const handleIdentity = createIdentityWeb(unreached, unreachedSettings);
+/** Nor the staff module's hours paths (F04-S03). */
+const unreachedHours: SalonHoursFor = () =>
+  new Proxy({} as SalonHours, {
+    get: () => () => Promise.reject(new Error('the staff module is not reached here')),
+  });
+const handleIdentity = createIdentityWeb(unreached, unreachedSettings, unreachedHours);
 
 /**
  * BUG-F02-012: every server call to the API ends within the request's shared budget, whatever

@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
+  formatClock,
   formatCount,
+  formatDay,
   formatMoney,
   formatPhoneNational,
   minorUnitsText,
@@ -40,6 +42,20 @@ describe('counts and dates', () => {
     const evening = new Date('2026-10-29T20:00:00Z');
     expect(todayInZone('Asia/Colombo', evening)).toBe('2026-10-30');
     expect(todayInZone('Europe/London', evening)).toBe('2026-10-29');
+  });
+});
+
+describe("a salon's local times and dates (F04-S03)", () => {
+  it('writes a local time on the 24-hour clock, with no time zone applied', () => {
+    expect(formatClock('09:30')).toBe('09:30');
+    expect(formatClock('18:00')).toBe('18:00');
+  });
+  it('writes a local date with its weekday, the same in every time zone', () => {
+    const shown = formatDay('2026-10-25');
+    expect(shown).toContain('Sun');
+    expect(shown).toContain('25');
+    expect(shown).toContain('2026');
+    expect(formatDay('2026-12-31')).toContain('31');
   });
 });
 
