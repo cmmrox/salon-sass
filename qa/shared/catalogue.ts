@@ -5,9 +5,9 @@
  *
  * Routes, bodies, codes and limits come from the F05-S01 spec (acceptance criteria, "API and data
  * changes", "Design notes"), decisions 091 and 093, and the generated contract once it exists.
- * Written before the build: every name only the build can give (a table, an audit action, a
- * contract schema, a field of the menu, a BFF route) is in `PENDING_F05_S01` below, to be confirmed
- * against the stage's handoff at the dry run and changed only there.
+ * Written before the build; every name only the build gives (a table, an audit action, a contract
+ * schema, a field of the menu, a BFF route) is in `PENDING_F05_S01` below, confirmed against the
+ * F05-S01 handoff and "Corrections at close" at the dry run (34b26fa).
  *
  * A salon keeps its catalogue between runs, and alpha must never fill up to the limits (50
  * categories, 300 services), so a test that changes a catalogue uses a salon the operator creates
@@ -18,7 +18,6 @@ import { randomBytes } from 'node:crypto';
 
 import { request, type APIRequestContext, type APIResponse } from '@playwright/test';
 
-import { answerOf } from './answers';
 import { refused } from './booking-rules';
 import { apiUrl } from './env';
 import { expect, json, type Identity, type Tokens } from './identity';
@@ -28,20 +27,20 @@ import type { FileUpload } from './salon-brand';
 import type { Salon } from './tenants';
 
 /**
- * Names the spec leaves to the build. Each is the spec's wording or the established pattern
- * (F04's), and each must be checked against the F05-S01 handoff and the generated contract before
- * the first dry run. Nothing else in the F05 tests spells these out.
+ * Names the spec leaves to the build, as the F05-S01 handoff, V25__create_catalogue.sql and the
+ * generated contract give them (confirmed at the dry run, 34b26fa). Nothing else in the F05 tests
+ * spells these out.
  */
 export const PENDING_F05_S01 = {
-  /** The newest migration before this stage (V23__create_booking_rules.sql on the feature branch at 3252904). */
+  /** The newest migration before this stage: V23 (V24 adds branding_default_branch_id, V25 the catalogue). */
   migrationBefore: 23,
   /** The terms version table (one immutable row per version). Other catalogue tables are found by prefix. */
   termsTable: 'catalogue_terms_version',
   /** The category table, for the backfill check. */
   categoryTable: 'catalogue_category',
-  /** Every table this stage adds starts with this, and carries `tenant_id` (spec, "Branch scope"). */
+  /** Every table this stage adds (category list, category, photo, service, terms version) starts with this. */
   tablePrefix: 'catalogue_',
-  /** Audit actions of this stage (F04 used `booking.*` and `branding.brand*`). */
+  /** Audit actions of this stage: catalogue.category_added, ..., catalogue.service_photo_removed (handoff, AC-15). */
   auditPrefix: 'catalogue.',
   /** Contract schemas (docs/api/openapi.json, components.schemas). */
   schemas: {
@@ -49,18 +48,18 @@ export const PENDING_F05_S01 = {
     category: 'CatalogueCategory',
     serviceList: 'CatalogueServiceList',
     service: 'CatalogueService',
-    menu: 'CatalogueMenu',
+    menu: 'Menu',
   },
   /** `GET /services` returns `{items: [...]}`, as the category list does. */
   serviceListItems: 'items',
-  /** The multipart field of a photo upload (F04's brand upload used `file`). */
+  /** The multipart field of a photo upload. */
   photoField: 'file',
   /** A menu service's fields for price, the customer's time, the photo and the current terms version. */
   menuFields: { price: 'priceMinor', minutes: 'durationMinutes', photo: 'photoUrl', termsVersion: 'termsVersionId' },
-  /** The web's photo route on a salon hostname (spec AC-10, "through the BFF"; F04 used `/brand-images/{id}`). */
-  webPhotoPath: (photoId: string) => `/catalogue-photos/${photoId}`,
-  /** The browser's data calls for the Services page, for holding or failing them in the browser cases. */
-  bffMatch: (url: URL) => url.pathname.startsWith('/identity-web/') && /catalogue|service|categor/.test(url.pathname),
+  /** The web's photo route on a salon hostname (Corrections at close). */
+  webPhotoPath: (photoId: string) => `/service-photos/${photoId}`,
+  /** The browser's data calls for the Services page (`/identity-web/staff/catalogue-*`), for holding or failing them. */
+  bffMatch: (url: URL) => url.pathname.startsWith('/identity-web/') && url.pathname.includes('/catalogue-'),
 } as const;
 
 export const CATALOGUE = '/api/v1/catalogue';
@@ -261,14 +260,6 @@ export async function fieldRefusal(response: APIResponse, field: string, label: 
   const fields = (problem.errors ?? []).map(e => e.field ?? '');
   expect(fields.length, `${label}: names the field (${answer.body.slice(0, 300)})`).toBeGreaterThan(0);
   for (const f of fields) expect(f, `${label}: the error is on ${field}`).toMatch(new RegExp(`(^|\\.)${field}$`));
-}
-
-/** A refusal the spec allows as "a 400 field error or a 409" (AC-2): its status and code. */
-export async function refusal(response: APIResponse, label: string): Promise<{ status: number; code: string }> {
-  const answer = await answerOf(response);
-  expect([400, 409], `${label}: a 400 or a 409 (body ${answer.body.slice(0, 300)})`).toContain(answer.status);
-  const body = JSON.parse(answer.body) as { code: string };
-  return { status: answer.status, code: body.code };
 }
 
 /** A problem body without its per-request fields, for "the same answer as an unknown id". */

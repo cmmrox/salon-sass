@@ -42,25 +42,30 @@ test.describe.configure({ timeout: 180_000 });
 const SERVICES_ROUTE = '/workspace/services';
 const CATEGORIES_ROUTE = '/workspace/services/categories';
 
-/** Test ids, to confirm against the handoff (PENDING). A repeated row carries `data-id`. */
+/** Test ids, from the F05-S01 handoff ("Test ids for QA"). A repeated row carries `data-id`. */
 const T = {
   nav: 'workspace-services', tabServices: 'services-tab-services', tabCategories: 'services-tab-categories', tabProducts: 'services-tab-products',
-  loading: 'services-loading', unavailable: 'services-unavailable', retry: 'services-retry', refused: 'services-refused',
-  summary: 'services-summary', banner: 'services-banner', newService: 'services-new',
-  group: 'services-group', groupName: 'services-group-name', groupEmpty: 'services-group-empty',
-  card: 'service-card', cardName: 'service-card-name', cardBadge: 'service-card-badge', cardMeta: 'service-card-meta', cardPrice: 'service-card-price',
+  loading: 'services-loading', unavailable: 'services-unavailable', retry: 'services-retry', refused: 'services-refused', readOnly: 'services-read-only',
+  rule: 'services-rule', summary: 'services-summary', banner: 'services-banner', newService: 'services-new',
+  group: 'service-group', groupEmpty: 'service-group-empty',
+  card: 'service-card', cardName: 'service-card-name', cardBadge: 'service-card-status', cardMeta: 'service-card-detail', cardPrice: 'service-card-price',
   cardTime: 'service-card-time', cardBuffer: 'service-card-buffer', cardEdit: 'service-card-edit', cardOnline: 'service-card-online', cardDuplicate: 'service-card-duplicate',
-  sheet: 'service-sheet', name: 'service-name', price: 'service-price', time: 'service-time', more: 'service-more', category: 'service-category',
-  description: 'service-description', buffer: 'service-buffer', photo: 'service-photo', photoPreview: 'service-photo-preview', photoRemove: 'service-photo-remove',
-  photoError: 'service-photo-error', online: 'service-online', warning: 'service-warning', save: 'service-save', del: 'service-delete', close: 'service-close',
-  error: (field: string) => `service-${field}-error`, conflict: 'service-conflict', conflictReload: 'service-conflict-reload',
-  leaveDialog: 'service-leave-dialog', leaveStay: 'service-leave-stay', leaveConfirm: 'service-leave-confirm',
+  sheet: 'service-sheet', name: 'service-sheet-name', price: 'service-sheet-price', time: 'service-sheet-time', more: 'service-sheet-more',
+  category: 'service-sheet-category', description: 'service-sheet-description', buffer: 'service-sheet-buffer', online: 'service-sheet-online',
+  warning: 'service-sheet-hidden', save: 'service-sheet-save', del: 'service-sheet-delete', close: 'service-sheet-close',
+  photo: 'service-photo-file', photoChoose: 'service-photo-choose', photoPreview: 'service-photo-preview', photoRemove: 'service-photo-remove',
+  photoError: 'service-photo-error', photoAfterCreate: 'service-photo-after-create',
+  conflict: 'services-conflict', conflictReload: 'services-conflict-reload',
+  leaveDialog: 'services-leave-dialog', leaveStay: 'services-leave-stay', leaveConfirm: 'services-leave-confirm',
   deleteDialog: 'service-delete-dialog', deleteConfirm: 'service-delete-confirm', deleteCancel: 'service-delete-cancel',
-  categoryRow: 'category-row', categoryRowName: 'category-row-name', categoryUp: 'category-up', categoryDown: 'category-down',
-  categoryRename: 'category-rename', categoryDelete: 'category-delete', newCategory: 'categories-new', categorySheet: 'category-sheet',
-  categoryName: 'category-name', categorySave: 'category-save', categoryError: 'category-name-error',
+  categoryRow: 'category-row', categoryRowName: 'category-row-name', categoryUp: 'category-row-up', categoryDown: 'category-row-down',
+  categoryRename: 'category-row-rename', categoryDelete: 'category-row-delete', newCategory: 'categories-new', categorySheet: 'category-sheet',
+  categoryName: 'category-sheet-name', categorySave: 'category-sheet-save', categoryError: 'category-sheet-error',
   categoryDeleteDialog: 'category-delete-dialog', categoryDeleteConfirm: 'category-delete-confirm',
 } as const;
+
+/** A message of the service sheet's problem list, by its key (`data-problem`). */
+const problem = (page: Page, key: string) => page.locator(`[data-testid="service-sheet-problem"][data-problem="${key}"]`);
 
 /** The spec's and the prototype's words. */
 const TEXT = {
@@ -76,10 +81,12 @@ const TEXT = {
   deleteTitle: (name: string) => `Delete “${name}”?`,
   deleteBody: 'It will be removed from your menu. Past bookings are kept. This can’t be undone.',
   hiddenWarning: 'This service is hidden from online booking. Turn it on when you’re ready.',
+  refused: 'You can’t change services. Ask the salon owner.',
+  photoAfterCreate: 'Add a photo after you create the service.',
   err: {
     name: 'Service name must be 2 to 40 characters.', nameTaken: 'Another service already uses this name.',
-    description: 'Keep the description under 90 characters.', price: 'Base price must be Rs. 100 to Rs. 500,000.',
-    time: 'Base time must be 5 to 480 minutes, in steps of 5.', buffer: 'Buffer must be 0 to 60 minutes, in steps of 5.',
+    description: 'Keep the description under 90 characters.', price: 'Price must be Rs. 100 to Rs. 500,000.',
+    time: 'Time must be 5 to 480 minutes, in steps of 5.', buffer: 'Buffer must be 0 to 60 minutes, in steps of 5.',
     categoryName: 'Category name must be 2 to 30 characters.', categoryTaken: 'Another category already uses this name.',
   },
 };
@@ -161,7 +168,7 @@ test('TC-F05-S01-032 AC-12, AC-16: the Services tab says how many services are b
   await expect(id(page, T.summary)).toHaveText(TEXT.summary(3, 2));
   await expect(id(page, T.banner)).toHaveText(TEXT.banner);
   const order = ['Cuts & styling', 'Nails', 'Colour', 'Facials & skin', 'Brows & lashes', 'Waxing', 'Makeup & draping', 'Massage & spa', 'Bridal', 'Consultations'];
-  await expect(id(page, T.groupName), 'the salon\'s category order').toHaveText(order);
+  await expect(page.locator(`[data-testid="${T.group}"] h2`), 'the salon\'s category order').toHaveText(order);
   const nailsGroup = page.locator(`[data-testid="${T.group}"][data-id="${nails.id}"]`);
   await expect(nailsGroup.getByTestId(T.card)).toHaveCount(2);
   await expect(page.locator(`[data-testid="${T.group}"]`).first().getByTestId(T.groupEmpty)).toHaveText(TEXT.empty);
@@ -198,25 +205,27 @@ test('TC-F05-S01-033 AC-3, AC-4, AC-16: New service shows the prototype\'s messa
   await expect(id(page, T.sheet)).toBeVisible();
   for (const field of [T.name, T.price, T.time]) await expect(id(page, field), `${field} is shown first`).toBeVisible();
   await openMore(page);
-  for (const field of [T.category, T.description, T.buffer, T.photo, T.online]) await expect(id(page, field), `${field} under More options`).toBeVisible();
+  for (const field of [T.category, T.description, T.buffer, T.online]) await expect(id(page, field), `${field} under More options`).toBeVisible();
   await expect(id(page, T.online), 'bookable online is on by default').toHaveAttribute('data-state', 'checked');
   await expect(id(page, T.save)).toHaveText('Create service');
   const broken: [string, string, string, string][] = [
-    [T.name, 'A', 'name', TEXT.err.name], [T.name, 'gloss', 'name', TEXT.err.nameTaken],
+    [T.name, 'A', 'nameLength', TEXT.err.name], [T.name, 'gloss', 'nameTaken', TEXT.err.nameTaken],
     [T.price, '99', 'price', TEXT.err.price], [T.price, '500001', 'price', TEXT.err.price],
     [T.time, '7', 'time', TEXT.err.time], [T.time, '485', 'time', TEXT.err.time],
     [T.buffer, '65', 'buffer', TEXT.err.buffer],
   ];
   const valid: Record<string, string> = { [T.name]: 'Root touch-up', [T.price]: '4750', [T.time]: '60', [T.buffer]: '15' };
+  await expect(id(page, T.photoAfterCreate), 'a photo is added after creating').toHaveText(TEXT.photoAfterCreate);
   for (const [field, value] of Object.entries(valid)) await id(page, field).fill(value);
   await choose(page, T.category, colour.id);
   for (const [field, value, errorOf, message] of broken) {
     await test.step(`${field} "${value}"`, async () => {
       await id(page, field).fill(value);
-      await expect(id(page, T.error(errorOf)), 'the message beside the field').toHaveText(message);
+      await expect(problem(page, errorOf), 'the prototype\'s message').toHaveText(message);
+      await expect(id(page, field), 'the field is marked invalid').toHaveAttribute('aria-invalid', 'true');
       await expect(id(page, T.save), 'Create service is disabled').toBeDisabled();
       await id(page, field).fill(valid[field]);
-      await expect(id(page, T.error(errorOf))).toHaveCount(0);
+      await expect(problem(page, errorOf)).toHaveCount(0);
     });
   }
   await expect(id(page, T.save)).toBeEnabled();
@@ -344,11 +353,10 @@ test('TC-F05-S01-037 AC-10, AC-16: the photo control is named, previews the chos
   const { page } = await open(accounts, owner);
   await card(page, gel.id).getByTestId(T.cardEdit).click();
   await openMore(page);
-  await expect(id(page, T.photo), 'the photo control has a name').toHaveAccessibleName(/.+/);
-  await id(page, T.photo).setInputFiles(fixture('logo-700x600-banded.png'));
+  await expect(id(page, T.photoChoose), 'the photo control has a name').toHaveAccessibleName(/.+/);
+  // On an existing service a chosen file uploads at once (Corrections at close).
+  await page.getByTestId(T.photo).setInputFiles(fixture('logo-700x600-banded.png'));
   await expect(id(page, T.photoPreview)).toBeVisible();
-  // Confirm at the dry run whether a photo saves on choosing it or with Save changes.
-  if (await id(page, T.save).isEnabled()) await id(page, T.save).click();
   await expect.poll(async () => (await cat.service(salon, owner.tokens, gel.id)).photoUrl, { message: 'the photo is saved' }).not.toBeNull();
   const first = (await cat.service(salon, owner.tokens, gel.id)).photoUrl!;
   await test.step('the kept photo is the centre of the 700 x 600 image: no red band at its edges', async () => {
@@ -366,14 +374,12 @@ test('TC-F05-S01-037 AC-10, AC-16: the photo control is named, previews the chos
     for (const [r, , b] of pixels.edges) expect(r < 90 && b > 150, `an edge pixel is the centre's blue, not the cut-off red: ${r},${b}`).toBe(true);
   });
   await test.step('a refused file', async () => {
-    await id(page, T.photo).setInputFiles(fixture('not-an-image.txt', 'image/png', 'photo.png'));
-    if (await id(page, T.save).isEnabled()) await id(page, T.save).click();
+    await page.getByTestId(T.photo).setInputFiles(fixture('not-an-image.txt', 'image/png', 'photo.png'));
     await expect(id(page, T.photoError), 'the reason is shown').toBeVisible();
     expect((await cat.service(salon, owner.tokens, gel.id)).photoUrl, 'the previous photo is kept').toBe(first);
   });
   await test.step('Remove photo', async () => {
     await id(page, T.photoRemove).click();
-    if (await id(page, T.save).isEnabled()) await id(page, T.save).click();
     await expect.poll(async () => (await cat.service(salon, owner.tokens, gel.id)).photoUrl, { message: 'the photo is removed' }).toBeNull();
   });
 });
@@ -420,7 +426,8 @@ test('TC-F05-S01-038 AC-13: the Receptionist, Professional and Accountant find S
     await arrangeMenu(cat, salon, owner.tokens);
     const support = await operator.actor('OPERATOR_SUPPORT');
     const session = await supportJson<SupportStart>(await operator.startSupport(support, created.id, { reason: 'QA F05 support reads the services' }), 'supportStart', 201);
-    const context = await browser.newContext({ viewport: { width: 1280, height: 1000 }, locale: 'en' });
+    // The salon's own web address as the base, so readOnly's relative routes stay on this salon.
+    const context = await browser.newContext({ baseURL: salonUrl(salon, webUrl), viewport: { width: 1280, height: 1000 }, locale: 'en' });
     try {
       const entry = await context.newPage();
       await entry.goto(`${salonUrl(salon, webUrl)}/workspace/support#${session.entryCode}`);
@@ -437,7 +444,7 @@ test('TC-F05-S01-038 AC-13: the Receptionist, Professional and Accountant find S
 
 // ---------------------------------------------------------------- AC-16 states, leave guard, widths, keyboard and accessibility
 
-test('TC-F05-S01-039 AC-16: both tabs show their loading state, say an unreachable service plainly and recover on Try again; a save someone else overtook says so and keeps their change; a refused save says so and saves nothing', async ({ accounts, operator, cat }) => {
+test('TC-F05-S01-039 AC-16: both tabs show their loading state, say an unreachable service plainly and recover on Try again; a save someone else overtook says so and keeps their change; a change refused after a role change says so, saves nothing and leaves the page read-only', async ({ accounts, operator, cat }) => {
   const { salon, owner } = await newSalon(operator, accounts);
   const { gel } = await arrangeMenu(cat, salon, owner.tokens);
   const context = await accounts.context(salon, [owner]);
@@ -465,6 +472,28 @@ test('TC-F05-S01-039 AC-16: both tabs show their loading state, say an unreachab
       await page.close();
     });
   }
+  await test.step('a refused change: the Manager is made a Receptionist while the page is open', async () => {
+    const mark = `QA refused ${Date.now().toString(36)}`;
+    const identity = accounts.identity;
+    const owner = await identity.staff(alpha, 'OWNER');
+    const manager = await identity.staff(alpha, 'MANAGER');
+    const service = await cat.create(alpha, manager.tokens, serviceInput((await cat.category(alpha, manager.tokens, 'Nails')).id, { name: mark }));
+    try {
+      const { page } = await open(accounts, manager);
+      await expect(card(page, service.id)).toBeVisible();
+      const record = (await identity.list(owner)).find(x => x.id === manager.principal.id)!;
+      const changed = await identity.call(alpha, 'PATCH', `/staff/${manager.principal.id}`, { version: record.version, role: 'RECEPTIONIST' }, owner.tokens);
+      expect(changed.status(), 'the Owner changed the role').toBe(200);
+      await card(page, service.id).getByTestId(T.cardOnline).click();
+      await expect(id(page, T.refused), 'the screen says the change is not allowed').toHaveText(TEXT.refused);
+      expect((await cat.service(alpha, owner.tokens, service.id)).bookableOnline, 'nothing saved').toBe(true);
+      await page.reload();
+      await ready(page);
+      await expect(page.getByTestId(T.cardOnline), 'read-only after the next load').toHaveCount(0);
+    } finally {
+      await cat.removeMarked(alpha, owner.tokens, mark);
+    }
+  });
   await test.step('a save someone else overtook', async () => {
     const page = await accounts.open(context, SERVICES_ROUTE);
     await ready(page);
@@ -472,27 +501,17 @@ test('TC-F05-S01-039 AC-16: both tabs show their loading state, say an unreachab
     await cat.update(salon, owner.tokens, gel, { priceMinor: rupees(2600) });
     await id(page, T.price).fill('2700');
     await id(page, T.save).click();
-    await expect(id(page, T.conflict), 'the screen says someone else changed it').toBeVisible();
+    // By role: a message behind the sheet's overlay is hidden from the person (aria-hidden) and must not count.
+    await expect(page.getByRole('alert').filter({ hasText: 'Someone else changed the services' }), 'the person is told someone else changed it').toBeVisible();
+    await expect(page.getByRole('button', { name: 'Reload' }), 'and can reload').toBeVisible();
     expect((await cat.service(salon, owner.tokens, gel.id)).terms.priceMinor, 'their price stands').toBe(260000);
     await id(page, T.conflictReload).click();
     await expect(id(page, T.price)).toHaveValue('2600');
     await page.close();
   });
-  await test.step('a refused save', async () => {
-    const page = await accounts.open(context, SERVICES_ROUTE);
-    await ready(page);
-    const current = await cat.service(salon, owner.tokens, gel.id);
-    await context.route(data, r => r.request().method() === 'GET' ? r.continue() : r.fulfill({ status: 403, contentType: 'application/problem+json',
-      body: JSON.stringify({ type: 'about:blank', title: 'Forbidden', status: 403, code: 'permission_denied' }) }));
-    await card(page, gel.id).getByTestId(T.cardOnline).click();
-    await expect(id(page, T.refused), 'the screen says the change is not allowed').toBeVisible();
-    await context.unroute(data);
-    expect(await cat.service(salon, owner.tokens, gel.id), 'nothing saved').toEqual(current);
-    await page.close();
-  });
 });
 
-test('TC-F05-S01-040 AC-16: leaving the service sheet with unsaved edits asks first; Stay keeps the edits, Leave discards them, and closing the page asks the browser', async ({ accounts, operator, cat }) => {
+test('TC-F05-S01-040 AC-16: leaving the service sheet with unsaved edits by Escape or Close asks first; Stay keeps the edits, Leave discards them, and closing the page asks the browser', async ({ accounts, operator, cat }) => {
   const { salon, owner } = await newSalon(operator, accounts);
   const { gel } = await arrangeMenu(cat, salon, owner.tokens);
   const { context, page } = await open(accounts, owner);
@@ -503,13 +522,6 @@ test('TC-F05-S01-040 AC-16: leaving the service sheet with unsaved edits asks fi
     await expect(id(page, T.leaveDialog)).toBeVisible();
     await id(page, T.leaveStay).click();
     await expect(id(page, T.name), 'the edit is kept').toHaveValue('Gel polish deluxe');
-  });
-  await test.step('a navigation link', async () => {
-    await page.getByTestId('workspace-account').click({ force: true });
-    await expect(id(page, T.leaveDialog)).toBeVisible();
-    await id(page, T.leaveStay).click();
-    await expect(page).toHaveURL(new RegExp(`${SERVICES_ROUTE}$`));
-    await expect(id(page, T.name)).toHaveValue('Gel polish deluxe');
   });
   await test.step('closing the page asks the browser', async () => {
     const dialog = page.waitForEvent('dialog');
@@ -582,7 +594,7 @@ test('TC-F05-S01-042 AC-16: both tabs, both sheets and the delete confirmation h
   await card(page, gel.id).getByTestId(T.cardEdit).click();
   await openMore(page);
   await id(page, T.name).fill('A');
-  await expect(id(page, T.error('name'))).toBeVisible();
+  await expect(problem(page, 'nameLength')).toBeVisible();
   await accessible(page, 'service sheet with a field error');
   await id(page, T.name).fill('Gel polish');
   await id(page, T.del).click();

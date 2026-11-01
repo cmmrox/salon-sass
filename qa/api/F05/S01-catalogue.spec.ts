@@ -24,7 +24,7 @@ import { readOnlySalon } from '../../shared/billing';
 import { refused } from '../../shared/booking-rules';
 import {
   CATEGORIES, Catalogue, DEFAULT_CATEGORIES, LIMITS, PENDING_F05_S01, SERVICES, catalogueAudit, catalogueRows, catalogueSnapshot,
-  catalogueTables, categoryPath, comparable, fieldRefusal, marker, menuField, newSalon, photoIdOf, refusal, rowsMentioning, rupees,
+  catalogueTables, categoryPath, comparable, fieldRefusal, marker, menuField, newSalon, photoIdOf, rowsMentioning, rupees,
   segmentsOf, serviceInput, servicePath, termsRow, termsRows, updateOf, type Category, type Service,
 } from '../../shared/catalogue';
 import { webUrl } from '../../shared/env';
@@ -133,7 +133,7 @@ test('TC-F05-S01-004 AC-2: a category name of under 2 or over 30 characters afte
       expect(catalogueSnapshot(created.id), `rename ${label}: nothing changed`).toBe(before);
     });
   }
-  // AC-2 allows "a 400 field error or a 409" for this rule; a 400 must name the field.
+  // A duplicate name, in any case, is 400 on name (Corrections at close).
   for (const [label, send] of [
     ['add "COLOUR"', () => cat.addCategoryRaw(salon, owner.tokens, 'COLOUR')],
     ['add " colour " (trimmed)', () => cat.addCategoryRaw(salon, owner.tokens, ' colour ')],
@@ -141,16 +141,14 @@ test('TC-F05-S01-004 AC-2: a category name of under 2 or over 30 characters afte
   ] as const) {
     await test.step(label, async () => {
       const before = catalogueSnapshot(created.id);
-      const r = await send();
-      const { status } = await refusal(r, label);
-      if (status === 400) await fieldRefusal(r, 'name', label);
+      await fieldRefusal(await send(), 'name', label);
       expect(catalogueSnapshot(created.id), `${label}: nothing changed`).toBe(before);
     });
   }
   expect(names(await cat.categories(salon, owner.tokens)), 'still the ten').toEqual([...DEFAULT_CATEGORIES]);
 });
 
-test('TC-F05-S01-005 AC-2: moving a category up or down swaps it with its neighbour at once; a stale list version is 409 conflict, and moving the first up, the last down or in no direction is refused, each changing nothing', async ({ identity, operator }) => {
+test('TC-F05-S01-005 AC-2: moving a category up or down swaps it with its neighbour at once; a stale list version is 409 conflict, moving the first up or the last down is 409 invalid_state and no direction is 400, each changing nothing', async ({ identity, operator }) => {
   const cat = new Catalogue(identity);
   const { salon, owner, created } = await newSalon(operator, identity);
   const start = await cat.categories(salon, owner.tokens);
@@ -162,25 +160,24 @@ test('TC-F05-S01-005 AC-2: moving a category up or down swaps it with its neighb
   expect(names(await cat.categories(salon, owner.tokens)), 'saved at once').toEqual(swapped);
   const back = await cat.move(salon, owner.tokens, nails.id, 'down', up.listVersion);
   expect(names(back), 'and back down').toEqual([...DEFAULT_CATEGORIES]);
-  const refusals: [string, () => ReturnType<Catalogue['moveRaw']>, 'conflict' | 'any' | 'direction'][] = [
+  const refusals: [string, () => ReturnType<Catalogue['moveRaw']>, 'conflict' | 'invalid_state' | 'direction'][] = [
     ['a stale list version', () => cat.moveRaw(salon, owner.tokens, nails.id, 'up', start.listVersion), 'conflict'],
-    ['the first category up', () => cat.moveRaw(salon, owner.tokens, back.items[0].id, 'up', back.listVersion), 'any'],
-    ['the last category down', () => cat.moveRaw(salon, owner.tokens, back.items[9].id, 'down', back.listVersion), 'any'],
+    ['the first category up', () => cat.moveRaw(salon, owner.tokens, back.items[0].id, 'up', back.listVersion), 'invalid_state'],
+    ['the last category down', () => cat.moveRaw(salon, owner.tokens, back.items[9].id, 'down', back.listVersion), 'invalid_state'],
     ['direction "left"', () => cat.moveRaw(salon, owner.tokens, nails.id, 'left', back.listVersion), 'direction'],
   ];
   for (const [label, send, expected] of refusals) {
     await test.step(label, async () => {
       const before = catalogueSnapshot(created.id);
       const r = await send();
-      if (expected === 'conflict') await refused(r, 409, 'conflict', label);
-      else if (expected === 'direction') await fieldRefusal(r, 'direction', label);
-      else await refusal(r, label);
+      if (expected === 'direction') await fieldRefusal(r, 'direction', label);
+      else await refused(r, 409, expected, label);
       expect(catalogueSnapshot(created.id), `${label}: nothing changed`).toBe(before);
     });
   }
 });
 
-test('TC-F05-S01-006 AC-2: an empty category is deleted; one with services is 409 in_use, the last category is refused and a stale version is 409 conflict, each changing nothing', async ({ identity, operator }) => {
+test('TC-F05-S01-006 AC-2: an empty category is deleted; one with services is 409 in_use, the last category is 409 invalid_state and a stale version is 409 conflict, each changing nothing', async ({ identity, operator }) => {
   const cat = new Catalogue(identity);
   const { salon, owner, created } = await newSalon(operator, identity);
   await test.step('an empty category', async () => {
@@ -212,19 +209,19 @@ test('TC-F05-S01-006 AC-2: an empty category is deleted; one with services is 40
     const [last] = (await cat.categories(other.salon, other.owner.tokens)).items;
     expect(last.name).toBe(DEFAULT_CATEGORIES[0]);
     const before = catalogueSnapshot(other.created.id);
-    await refusal(await cat.deleteCategoryRaw(other.salon, other.owner.tokens, last.id, last.version), 'the last category');
+    await refused(await cat.deleteCategoryRaw(other.salon, other.owner.tokens, last.id, last.version), 409, 'invalid_state', 'the last category');
     expect(catalogueSnapshot(other.created.id), 'nothing changed').toBe(before);
     expect(names(await cat.categories(other.salon, other.owner.tokens))).toEqual([DEFAULT_CATEGORIES[0]]);
   });
 });
 
-test('TC-F05-S01-007 AC-2: a salon holds 50 categories and the 51st is refused, changing nothing', async ({ identity, operator }) => {
+test('TC-F05-S01-007 AC-2: a salon holds 50 categories and the 51st is 409 limit_reached, changing nothing', async ({ identity, operator }) => {
   const cat = new Catalogue(identity);
   const { salon, owner, created } = await newSalon(operator, identity);
   for (let n = 11; n <= LIMITS.categories; n++) await cat.addCategory(salon, owner.tokens, `Category ${n}`);
   expect((await cat.categories(salon, owner.tokens)).items).toHaveLength(LIMITS.categories);
   const before = catalogueSnapshot(created.id);
-  await refusal(await cat.addCategoryRaw(salon, owner.tokens, 'Category 51'), 'the 51st category');
+  await refused(await cat.addCategoryRaw(salon, owner.tokens, 'Category 51'), 409, 'limit_reached', 'the 51st category');
   expect(catalogueSnapshot(created.id), 'nothing changed').toBe(before);
   expect((await cat.categories(salon, owner.tokens)).items).toHaveLength(LIMITS.categories);
 });
@@ -335,7 +332,7 @@ test('TC-F05-S01-011 AC-3: a name, category, description, price, time, buffer or
   expect(wrong, 'every broken rule is a 400 on its field that saves nothing').toEqual([]);
 });
 
-test('TC-F05-S01-012 AC-3: a salon holds 300 services, and a 301st, by creating or by duplicating, is refused and saves nothing', async ({ identity, operator }) => {
+test('TC-F05-S01-012 AC-3: a salon holds 300 services, and a 301st, by creating or by duplicating, is 409 limit_reached and saves nothing', async ({ identity, operator }) => {
   test.setTimeout(300_000);
   const cat = new Catalogue(identity);
   const { salon, owner, created } = await newSalon(operator, identity);
@@ -346,13 +343,13 @@ test('TC-F05-S01-012 AC-3: a salon holds 300 services, and a 301st, by creating 
   const all = await cat.services(salon, owner.tokens);
   expect(all).toHaveLength(LIMITS.services);
   const before = catalogueSnapshot(created.id);
-  await refusal(await cat.createRaw(salon, owner.tokens, serviceInput(categoryId, { name: 'Service 301' })), 'a 301st service');
-  await refusal(await cat.duplicateRaw(salon, owner.tokens, all[0].id), 'a duplicate as the 301st');
+  await refused(await cat.createRaw(salon, owner.tokens, serviceInput(categoryId, { name: 'Service 301' })), 409, 'limit_reached', 'a 301st service');
+  await refused(await cat.duplicateRaw(salon, owner.tokens, all[0].id), 409, 'limit_reached', 'a duplicate as the 301st');
   expect(catalogueSnapshot(created.id), 'nothing saved').toBe(before);
   await test.step('deleting one makes room for one', async () => {
     await cat.remove(salon, owner.tokens, all[0]);
     await cat.create(salon, owner.tokens, serviceInput(categoryId, { name: 'Service 301' }));
-    await refusal(await cat.createRaw(salon, owner.tokens, serviceInput(categoryId, { name: 'Service 302' })), 'full again');
+    await refused(await cat.createRaw(salon, owner.tokens, serviceInput(categoryId, { name: 'Service 302' })), 409, 'limit_reached', 'full again');
   });
 });
 
@@ -474,12 +471,14 @@ test('TC-F05-S01-016 AC-5, AC-6, AC-4: a terms version keeps its stored values a
   await test.step('no request stores a processing segment', async () => {
     const { id: categoryId } = await cat.category(salon, owner.tokens, 'Colour');
     const extra = { segments: [{ kind: 'active', minutes: 30 }, { kind: 'processing', minutes: 20 }, { kind: 'active', minutes: 10 }], processingMinutes: 20 };
-    const r = await cat.createRaw(salon, owner.tokens, { ...serviceInput(categoryId, { name: 'Colour with processing', durationMinutes: 60 }), ...extra });
-    // Refusing the unknown fields (400) or ignoring them are both within the spec; storing a processing segment is not.
-    expect([201, 400], `create with processing: ${r.status()}`).toContain(r.status());
-    const made = r.status() === 201 ? (await r.json()) as Service : await cat.create(salon, owner.tokens, serviceInput(categoryId, { name: 'Colour with processing', durationMinutes: 60 }));
-    const u = await cat.updateRaw(salon, owner.tokens, made.id, { ...updateOf(made, { durationMinutes: 65 }), ...extra });
-    expect([200, 400], `edit with processing: ${u.status()}`).toContain(u.status());
+    // The request has no field for a processing segment, and an unknown field is a 400 (handoff, AC-3 and AC-5).
+    const before = catalogueSnapshot(created.id);
+    await refused(await cat.createRaw(salon, owner.tokens, { ...serviceInput(categoryId, { name: 'Colour with a long wait', durationMinutes: 60 }), ...extra }), 400, 'bad_request', 'create with processing');
+    expect(catalogueSnapshot(created.id), 'the refused create saved nothing').toBe(before);
+    const made = await cat.create(salon, owner.tokens, serviceInput(categoryId, { name: 'Colour with a long wait', durationMinutes: 60 }));
+    const after = catalogueSnapshot(created.id);
+    await refused(await cat.updateRaw(salon, owner.tokens, made.id, { ...updateOf(made, { durationMinutes: 65 }), ...extra }), 400, 'bad_request', 'edit with processing');
+    expect(catalogueSnapshot(created.id), 'the refused edit saved nothing').toBe(after);
     for (const svc of await cat.services(salon, owner.tokens)) {
       expect(svc.terms.segments.map(x => x.kind).every(k => k === 'active' || k === 'buffer'), `${svc.name}: active and buffer segments only`).toBe(true);
     }
@@ -520,7 +519,7 @@ test('TC-F05-S01-017 AC-7: Duplicate makes "<name> (copy)", then "(copy 2)" and 
   });
 });
 
-test('TC-F05-S01-018 AC-8: Hide online and Show online change only the online setting; a hidden service stays listed and leaves the public menu, and a stale version is 409 conflict', async ({ identity, operator }) => {
+test('TC-F05-S01-018 AC-8: Hide online and Show online change only the online setting; a hidden service stays listed and leaves the public menu; a stale version is 409 conflict and the value it already has 409 invalid_state', async ({ identity, operator }) => {
   const cat = new Catalogue(identity);
   const { salon, owner, created } = await newSalon(operator, identity);
   const s = await serviceIn(cat, salon, owner.tokens, 'Waxing', { name: 'Full leg wax' });
@@ -535,6 +534,7 @@ test('TC-F05-S01-018 AC-8: Hide online and Show online change only the online se
   const before = catalogueSnapshot(created.id);
   await refused(await cat.onlineRaw(salon, owner.tokens, s.id, true, s.version), 409, 'conflict', 'stale version');
   await fieldRefusal(await cat.onlineRaw(salon, owner.tokens, s.id, 'yes' as unknown as boolean, hidden.version), 'bookableOnline', 'not a boolean');
+  await refused(await cat.onlineRaw(salon, owner.tokens, s.id, false, hidden.version), 409, 'invalid_state', 'hiding a hidden service');
   expect(catalogueSnapshot(created.id), 'nothing changed').toBe(before);
   const shown = await cat.online(salon, owner.tokens, hidden, true);
   expect(shown.bookableOnline).toBe(true);
@@ -910,13 +910,13 @@ test('TC-F05-S01-029 AC-14: signed in to alpha, beta\'s categories, services and
     const alphaService = await cat.create(alpha, alphaManager.tokens, serviceInput(alphaCategory.id, { name: `QA alpha ${mark}` }));
     const betaBefore = catalogueSnapshot(beta.id);
     const alphaBefore = catalogueSnapshot(alpha.id);
-    const betaList = await cat.categories(beta, betaManager.tokens);
     const unknownService = { ...betaService, id: randomUUID() };
     const unknownCategory = { ...betaCategory, id: randomUUID() };
     await test.step('every route with beta\'s ids answers as with unknown ids', async () => {
       const routes = [
         { label: 'GET service', method: 'GET', path: servicePath(betaService.id), unknown: servicePath(unknownService.id), data: undefined },
-        ...changeRoutes(betaService, betaCategory, betaList.listVersion).filter(r => !['add category', 'create service'].includes(r.label)).map(r => ({
+        // Alpha's own list version, so that the only thing wrong with a move is the category id.
+        ...changeRoutes(betaService, betaCategory, (await cat.categories(alpha, alphaManager.tokens)).listVersion).filter(r => !['add category', 'create service'].includes(r.label)).map(r => ({
           ...r, unknown: r.path.replace(betaService.id, unknownService.id).replace(betaCategory.id, unknownCategory.id),
         })),
       ];
@@ -1040,7 +1040,8 @@ test('TC-F05-S01-031 AC-15: every change to a category or a service is audited w
   await audited('delete a category', () => cat.deleteCategory(salon, owner.tokens, empty), () => empty.id);
   await test.step('a refused change is not audited', async () => {
     await refused(await cat.updateRaw(salon, owner.tokens, s.id, { ...updateOf(s, { priceMinor: rupees(1800) }), version: s.version - 1 }), 409, 'conflict', 'stale');
-    await refused(await cat.deleteCategoryRaw(salon, owner.tokens, category.id, category.version), 409, 'in_use', 'in use');
+    const current = await cat.category(salon, owner.tokens, 'Kids cuts');
+    await refused(await cat.deleteCategoryRaw(salon, owner.tokens, current.id, current.version), 409, 'in_use', 'in use');
     expect(catalogueAudit(created.id, t0).length, 'nothing more audited').toBe(seen);
   });
   await cat.dispose();
