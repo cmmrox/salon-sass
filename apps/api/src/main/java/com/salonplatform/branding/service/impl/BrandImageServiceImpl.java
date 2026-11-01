@@ -17,6 +17,7 @@ import com.salonplatform.shared.web.ErrorCode;
 import com.salonplatform.shared.web.FieldProblem;
 import com.salonplatform.shared.web.NotFoundException;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
@@ -46,6 +47,8 @@ class BrandImageServiceImpl implements BrandImageService {
     private final TransactionTemplate writing;
     private final TransactionTemplate reading;
 
+    private final DecodePermits decoding;
+
     BrandImageServiceImpl(
             Principals principals,
             BrandImageRepository images,
@@ -60,6 +63,7 @@ class BrandImageServiceImpl implements BrandImageService {
         this.audit = audit;
         this.clock = clock;
         this.limits = settings.images();
+        this.decoding = new DecodePermits(limits.concurrentDecodes(), Duration.ofSeconds(2));
         this.writing = new TransactionTemplate(transactions);
         this.reading = new TransactionTemplate(transactions);
         this.reading.setReadOnly(true);
@@ -70,13 +74,12 @@ class BrandImageServiceImpl implements BrandImageService {
         CurrentTenant salon = TenantContext.require();
         Principal actor = principals.require(ProfileServiceImpl.MANAGE);
         BrandImages.Kind which = kindOf(kind);
-        BrandImages.Accepted accepted =
-                switch (BrandImages.check(content, which, limits.maxBytes().toBytes(), limits.maxPixels())) {
-                    case BrandImages.Accepted image -> image;
-                    case BrandImages.Refused refused ->
-                        throw new ApplicationProblemException(
-                                400, ErrorCode.BAD_REQUEST, List.of(new FieldProblem("file", refused.detail())));
-                };
+        BrandImages.Accepted accepted = switch (checked(content, which)) {
+            case BrandImages.Accepted image -> image;
+            case BrandImages.Refused refused ->
+                throw new ApplicationProblemException(
+                        400, ErrorCode.BAD_REQUEST, List.of(new FieldProblem("file", refused.detail())));
+        };
         return writing.execute(status -> {
             Instant now = clock.instant();
             BrandImage image = images.persist(BrandImage.uploaded(
@@ -111,6 +114,12 @@ class BrandImageServiceImpl implements BrandImageService {
             throw new NotFoundException();
         }
         return found.stored();
+    }
+
+    /** The upload checked and remade while holding one of the instance's decode permits. */
+    private BrandImages.Outcome checked(byte[] content, BrandImages.Kind kind) {
+        return decoding.run(
+                () -> BrandImages.check(content, kind, limits.maxBytes().toBytes(), limits.maxPixels()));
     }
 
     /** Whether the request is made by someone who may read the salon's settings; no session means no. */

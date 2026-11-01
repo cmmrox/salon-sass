@@ -29,11 +29,13 @@ public record BrandingSettings(String phoneRegion, Images images) {
      * @param maxBytes the largest file accepted (5 MB)
      * @param maxPixels the most pixels an image may declare in its header; a larger one is refused before
      *     it is decoded, so a decompression bomb cannot exhaust memory
+     * @param concurrentDecodes how many uploads an instance decodes at once; one more waits briefly and is
+     *     then refused 503, so simultaneous uploads cannot multiply the memory a decode takes
      */
-    public record Images(DataSize maxBytes, long maxPixels) {
+    public record Images(DataSize maxBytes, long maxPixels, int concurrentDecodes) {
 
         public Images {
-            if (maxBytes == null || maxBytes.toBytes() < 1 || maxPixels < 1) {
+            if (maxBytes == null || maxBytes.toBytes() < 1 || maxPixels < 1 || concurrentDecodes < 1) {
                 throw new IllegalArgumentException("salon.branding.images limits must be positive");
             }
         }

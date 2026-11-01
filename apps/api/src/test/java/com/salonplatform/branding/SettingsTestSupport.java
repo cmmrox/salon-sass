@@ -165,6 +165,45 @@ final class SettingsTestSupport {
                 request == null ? null : request instanceof String text ? text : json.writeValueAsString(request));
     }
 
+    /** A multipart upload of a brand image, sent as its bytes, with the file name and type the client gives. */
+    Http.BinaryExchange upload(
+            TestSalon salon, String kind, String fileName, String declaredType, byte[] content, String token) {
+        String boundary = "----salon" + UUID.randomUUID().toString().replace("-", "");
+        java.io.ByteArrayOutputStream body = new java.io.ByteArrayOutputStream();
+        java.nio.charset.Charset ascii = java.nio.charset.StandardCharsets.US_ASCII;
+        if (kind != null) {
+            body.writeBytes(
+                    ("--" + boundary + "\r\nContent-Disposition: form-data; name=\"kind\"\r\n\r\n" + kind + "\r\n")
+                            .getBytes(ascii));
+        }
+        if (content != null) {
+            body.writeBytes(("--" + boundary + "\r\nContent-Disposition: form-data; name=\"file\"; filename=\""
+                            + fileName + "\"\r\nContent-Type: " + declaredType + "\r\n\r\n")
+                    .getBytes(ascii));
+            body.writeBytes(content);
+            body.writeBytes("\r\n".getBytes(ascii));
+        }
+        body.writeBytes(("--" + boundary + "--\r\n").getBytes(ascii));
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Content-Type", "multipart/form-data; boundary=" + boundary);
+        headers.put("Accept", "application/json");
+        if (token != null) {
+            headers.put("Authorization", "Bearer " + token);
+        }
+        return http.sendBytesOnHost(
+                "POST", salon.host(port), "/api/v1/salon/brand/images", headers, body.toByteArray());
+    }
+
+    /** An image as served on a salon's hostname, as bytes. */
+    Http.BinaryExchange image(TestSalon salon, Object id, String token) {
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Accept", "image/png, image/jpeg, application/problem+json");
+        if (token != null) {
+            headers.put("Authorization", "Bearer " + token);
+        }
+        return http.sendBytesOnHost("GET", salon.host(port), "/api/v1/salon/brand/images/" + id, headers, null);
+    }
+
     // JSON is read as an untyped map (Map.class).
     @SuppressWarnings("unchecked")
     Map<String, Object> body(Http.Exchange exchange) {

@@ -776,7 +776,7 @@ export interface paths {
         put?: never;
         /**
          * Uploads a logo or cover image. It does not change the draft: save the draft with its id. `settings.manage`.
-         * @description A PNG, JPEG or WebP image of up to 5 MB, told by its content, not its name or declared type. A logo is at least 128 x 128 and is kept as its centre square, a PNG of at most 512 x 512; a cover is at least 800 x 300 and is kept as a JPEG at most 1600 wide. Both are re-encoded, so no metadata is kept. An image unused for 24 hours is removed.
+         * @description A PNG, JPEG or WebP image of up to 5 MB, told by its content, not its name or declared type. A logo is at least 128 x 128 and is kept as its centre square, a PNG of at most 512 x 512; a cover is at least 800 x 300 and is kept as a JPEG at most 1600 wide and 1600 high (a cover whose shape would keep it taller is refused). Both are re-encoded, so no metadata is kept. An image unused for 24 hours is removed.
          */
         post: operations["uploadSalonBrandImage"];
         delete?: never;
@@ -4173,7 +4173,7 @@ export interface operations {
                     "application/json": components["schemas"]["UploadedSalonBrandImage"];
                 };
             };
-            /** @description `kind` is not `logo` or `cover`, or the file is missing, not one of the three types, too large, too small or cannot be decoded: `bad_request`, with `errors` naming `kind` or `file`. Nothing is kept. */
+            /** @description `kind` is not `logo` or `cover`, or the file is missing, not one of the three types, too large, too small, a cover too tall for its width, or cannot be decoded: `bad_request`, with `errors` naming `kind` or `file`. Nothing is kept. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -4218,7 +4218,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description The database is down or not answering: `service_unavailable`. */
+            /** @description The database is down or not answering, or too many uploads are being decoded at once: `service_unavailable`. Try again. */
             503: {
                 headers: {
                     [name: string]: unknown;

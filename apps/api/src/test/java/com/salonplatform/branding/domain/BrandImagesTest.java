@@ -20,12 +20,12 @@ import org.junit.jupiter.api.Test;
  * F04-S02 AC-4: an upload is told by its content, size-checked from its header before decoding, and kept
  * re-encoded: a logo as its centre square, a PNG of at most 512 x 512; a cover as a JPEG at most 1600 wide.
  */
-class BrandImagesTest {
+public class BrandImagesTest {
 
     private static final long FIVE_MB = 5L * 1024 * 1024;
     private static final long MAX_PIXELS = 50_000_000L;
 
-    static byte[] image(int width, int height, String format) throws IOException {
+    public static byte[] image(int width, int height, String format) throws IOException {
         BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
         Graphics2D graphics = image.createGraphics();
         graphics.setColor(new Color(0x2F6B5E));
@@ -38,14 +38,14 @@ class BrandImagesTest {
         return out.toByteArray();
     }
 
-    static byte[] resource(String name) throws IOException {
+    public static byte[] resource(String name) throws IOException {
         try (InputStream in = BrandImagesTest.class.getResourceAsStream("/branding/" + name)) {
             return in.readAllBytes();
         }
     }
 
     /** A JPEG with an Exif segment naming a camera and GPS position, and a comment, right after its start. */
-    static byte[] jpegWithMetadata(int width, int height) throws IOException {
+    public static byte[] jpegWithMetadata(int width, int height) throws IOException {
         byte[] plain = image(width, height, "jpeg");
         byte[] exif = "Exif\0\0CameraMaker-Secret GPSLatitude-6.9061".getBytes(StandardCharsets.ISO_8859_1);
         byte[] comment = "comment-secret".getBytes(StandardCharsets.ISO_8859_1);
@@ -60,7 +60,7 @@ class BrandImagesTest {
     }
 
     /** A tiny PNG whose header declares a huge image: a decompression bomb. */
-    static byte[] pngDeclaring(int width, int height) throws IOException {
+    public static byte[] pngDeclaring(int width, int height) throws IOException {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         out.write(new byte[] {(byte) 0x89, 'P', 'N', 'G', '\r', '\n', 0x1A, '\n'});
         chunk(
@@ -202,5 +202,42 @@ class BrandImagesTest {
 
         assertThat(check(truncated, BrandImages.Kind.COVER))
                 .isEqualTo(new BrandImages.Refused("could not be read as an image"));
+    }
+
+    // --- the decode budget (security review, F04-S02) ------------------------------------------------------
+
+    @Test
+    void aTallNarrowCoverIsRefusedFromItsHeaderBecauseItWouldBeKeptTallerThan1600() throws IOException {
+        byte[] tall = pngDeclaring(1000, 40_000);
+
+        assertThat(check(tall, BrandImages.Kind.COVER))
+                .isEqualTo(new BrandImages.Refused("is too tall: a cover is kept at most 1600 pixels high"));
+        assertThat(check(pngDeclaring(1600, 1601), BrandImages.Kind.COVER))
+                .isEqualTo(new BrandImages.Refused("is too tall: a cover is kept at most 1600 pixels high"));
+        assertThat(BrandImages.keptHeight(3200, 3200)).isEqualTo(1600);
+    }
+
+    @Test
+    void aWideShortLogoIsDecodedWithinTheBudget() {
+        int factor = BrandImages.decodeFactor(40_000, 1000, BrandImages.Kind.LOGO);
+
+        assertThat(factor).isGreaterThan(1);
+        assertThat(BrandImages.decodedPixels(40_000, 1000, factor)).isLessThanOrEqualTo(BrandImages.DECODE_BUDGET);
+    }
+
+    @Test
+    void everyShapeUnderThePixelLimitIsDecodedWithinTheBudget() {
+        int[][] shapes = {
+            {1000, 40_000}, {40_000, 1000}, {7000, 7000}, {49_000, 1020}, {1020, 49_000}, {5000, 5000}, {1600, 1600}
+        };
+        for (int[] shape : shapes) {
+            for (BrandImages.Kind kind : BrandImages.Kind.values()) {
+                int factor = BrandImages.decodeFactor(shape[0], shape[1], kind);
+                assertThat(BrandImages.decodedPixels(shape[0], shape[1], factor))
+                        .as("%s %d x %d", kind, shape[0], shape[1])
+                        .isLessThanOrEqualTo(BrandImages.DECODE_BUDGET);
+            }
+        }
+        assertThat(BrandImages.decodeFactor(1600, 600, BrandImages.Kind.COVER)).isEqualTo(1);
     }
 }

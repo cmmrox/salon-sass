@@ -114,14 +114,35 @@ public final class Http {
         try (Socket socket = new Socket()) {
             socket.connect(new InetSocketAddress("127.0.0.1", port), 5_000);
             socket.setSoTimeout(30_000);
-            socket.getOutputStream().write(head.toString().getBytes(StandardCharsets.ISO_8859_1));
-            if (body != null) {
-                socket.getOutputStream().write(body);
+            // The body is written while the answer is read: a server may answer early (413) and close before
+            // reading it all, and an answer already read survives the reset that follows.
+            Thread writer = Thread.ofVirtual().start(() -> {
+                try {
+                    socket.getOutputStream().write(head.toString().getBytes(StandardCharsets.ISO_8859_1));
+                    if (body != null) {
+                        socket.getOutputStream().write(body);
+                    }
+                    socket.getOutputStream().flush();
+                } catch (IOException ex) {
+                    // The server stopped reading; its answer is read below.
+                }
+            });
+            ByteArrayOutputStream received = new ByteArrayOutputStream();
+            byte[] buffer = new byte[8192];
+            try {
+                for (int read; (read = socket.getInputStream().read(buffer)) != -1; ) {
+                    received.write(buffer, 0, read);
+                }
+            } catch (IOException ex) {
+                if (received.size() == 0) throw ex;
             }
-            socket.getOutputStream().flush();
-            return BinaryExchange.parse(socket.getInputStream().readAllBytes());
+            writer.join(5_000);
+            return BinaryExchange.parse(received.toByteArray());
         } catch (IOException ex) {
             throw new IllegalStateException(method + " " + path + " failed", ex);
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException(method + " " + path + " was interrupted", ex);
         }
     }
 

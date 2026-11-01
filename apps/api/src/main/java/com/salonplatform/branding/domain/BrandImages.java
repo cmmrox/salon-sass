@@ -27,7 +27,9 @@ import javax.imageio.stream.ImageOutputStream;
  * (camera, GPS), no embedded profile, no trailing data.
  *
  * <p>A logo is cropped to its centre square and kept as a PNG of at most 512 x 512, at least 128 x 128 as
- * uploaded. A cover is kept as a JPEG at most 1600 wide, at least 800 x 300 as uploaded.
+ * uploaded. A cover is kept as a JPEG at most 1600 wide and 1600 high, at least 800 x 300 as uploaded; a
+ * cover whose shape would keep it taller than 1600 is refused. However large or oddly shaped an image is,
+ * it is decoded into at most {@link #DECODE_BUDGET} pixels.
  */
 public final class BrandImages {
 
@@ -35,6 +37,15 @@ public final class BrandImages {
     private static final Set<String> ACCEPTED = Set.of("png", "jpeg", "webp");
 
     private static final float COVER_QUALITY = 0.85f;
+
+    /**
+     * The most pixels an image is decoded into, whatever its shape: about 64 MB as ARGB. The subsampling
+     * factor is chosen so that both sides together stay within it (security review, F04-S02).
+     */
+    static final long DECODE_BUDGET = 16_000_000L;
+
+    /** The tallest a cover is kept: a cover taller than wide at 1600 would exceed it and is refused. */
+    static final int COVER_MAX_HEIGHT = 1600;
 
     private BrandImages() {}
 
@@ -102,7 +113,15 @@ public final class BrandImages {
                 if (width < kind.minWidth || height < kind.minHeight) {
                     return new Refused("must be at least " + kind.minWidth + " x " + kind.minHeight + " pixels");
                 }
-                BufferedImage decoded = reader.read(0, subsampled(reader, width, height, kind));
+                if (kind == Kind.COVER && keptHeight(width, height) > COVER_MAX_HEIGHT) {
+                    return new Refused("is too tall: a cover is kept at most " + COVER_MAX_HEIGHT + " pixels high");
+                }
+                ImageReadParam param = reader.getDefaultReadParam();
+                int factor = decodeFactor(width, height, kind);
+                if (factor > 1) {
+                    param.setSourceSubsampling(factor, factor, 0, 0);
+                }
+                BufferedImage decoded = reader.read(0, param);
                 return remade(decoded, kind);
             } finally {
                 reader.dispose();
@@ -128,15 +147,28 @@ public final class BrandImages {
         return null;
     }
 
-    /** Decodes every n-th pixel when the image is at least twice as large as it will be kept, to bound memory. */
-    private static ImageReadParam subsampled(ImageReader reader, int width, int height, Kind kind) {
-        ImageReadParam param = reader.getDefaultReadParam();
+    /** The height a cover of this size is kept at: scaled to at most 1600 wide. */
+    static long keptHeight(int width, int height) {
+        return width <= Kind.COVER.maxWidth ? height : (long) height * Kind.COVER.maxWidth / width;
+    }
+
+    /**
+     * How many pixels apart the decoder samples: at least enough to bring the kept side near twice its kept
+     * size (no point decoding more), and at least enough that the decoded image, both sides together, fits
+     * {@link #DECODE_BUDGET}, so neither a tall nor a wide image escapes.
+     */
+    static int decodeFactor(int width, int height, Kind kind) {
         int kept = kind == Kind.LOGO ? Math.min(width, height) : width;
         int factor = Math.max(1, kept / (kind.maxWidth * 2));
-        if (factor > 1) {
-            param.setSourceSubsampling(factor, factor, 0, 0);
+        while (decodedPixels(width, height, factor) > DECODE_BUDGET) {
+            factor++;
         }
-        return param;
+        return factor;
+    }
+
+    /** The pixels a subsampled decode produces: every factor-th row and column, rounded up. */
+    static long decodedPixels(int width, int height, int factor) {
+        return (long) ((width + factor - 1) / factor) * ((height + factor - 1) / factor);
     }
 
     private static Outcome remade(BufferedImage decoded, Kind kind) throws IOException {

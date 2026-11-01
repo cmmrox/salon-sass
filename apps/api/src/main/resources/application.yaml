@@ -256,3 +256,5 @@ salon.branding:
   images:
     max-bytes: ${SALON_BRANDING_IMAGE_MAX_BYTES:5MB}
     max-pixels: ${SALON_BRANDING_IMAGE_MAX_PIXELS:50000000}
+    # Uploads decoded at once per instance; one more waits up to two seconds, then is refused 503.
+    concurrent-decodes: ${SALON_BRANDING_IMAGE_CONCURRENT_DECODES:2}
