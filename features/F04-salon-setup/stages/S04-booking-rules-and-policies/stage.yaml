@@ -3,7 +3,7 @@ feature: F04
 title: "Booking rules and policies"
 sequence: 4
 surfaces: [api, web]
-status: in-progress
+status: built
 qa_status: not-run
 blocked_reason: null
 released_in: null
@@ -12,9 +12,184 @@ depends_on: [F04-S01]
 requirements: [BKG-02, BKG-09]
 nfr_focus: []
 handoff:
-  run: null
-  data: null
-  notes: null
+  run: |
+    Local, from the repository root, in a plain (non-login) shell. Use a fresh database so the owner's
+    default `salon` database keeps its manual-test data: `infra/scripts/local-service.sh start postgres`,
+    then `docker exec salon-postgres psql -U salon -d postgres -c "CREATE DATABASE <name> OWNER salon"`,
+    then `SALON_DB_NAME=<name> infra/scripts/local-service.sh start api` and `... start web` (the walk-through
+    used SALON_DB_NAME=f04s04_walk, SALON_API_PORT=8290 and SALON_WEB_PORT=3290). Migrations V1 to V23 and the
+    local seed run at API start. Screen: http://alpha.localhost:3100/workspace/settings/rules (Settings, Booking
+    rules; History opens from the tab). API, salon host: GET /api/v1/salon/booking-rules (public; a JSON null
+    before the first save); GET and PUT /api/v1/salon/booking-rules/settings; GET
+    /api/v1/salon/booking-rules/history?page=&size= (size 1 to 100, default 20). No new setting and no new
+    local hook: the walk-through seeded staff with POST /local/identity/seed, an operator with
+    /local/operator/seed, suspended a salon with infra/scripts/local-salon.sh and set read-only in SQL. Stop with
+    `local-service.sh stop web|api` and drop the database.
+  data: |
+    Nothing is seeded for this stage. A salon has no booking rules until its first save: the tab shows the
+    prototype's suggested rules, marked "Not saved yet", and nothing is stored. Each save is one row of
+    booking_rules_version. The currency is the salon's (`tenant.currency`), LKR when the operator set none; the
+    seeded salons have none. Staff of every role, an operator Support account and a support session came from the
+    existing local hooks; the walk-through's accounts were random, kept only in the scratchpad and deleted, and
+    its database was dropped.
+  notes: |
+    Built against every acceptance criterion and checked on the running product, from outside, on a fresh
+    database built from 647b00b (the final product commit; this handoff commit changes only this file and the
+    generated documents), with three synthetic salons (alpha, beta and gamma, which never saved), all five roles,
+    an operator Support account and a support session. Outside-in API checks 59/59, browser checks (Playwright
+    Chromium) 42/42. Logs and screenshots: /Users/cmmrox/Personal/Projects/salon-sass/apps/api/target/f04-s04-evidence/
+    (walk-api.txt, walk-browser.txt, screens/). The scripts were not committed: walk-throughs are not product code.
+    AC-1 checked: Settings shows Profile, Hours & closures, Booking rules, Branding in that order. Before the first
+    save GET /api/v1/salon/booking-rules answers 200 with a JSON null, settings answer version 0, rules null,
+    currency LKR, and the tab shows the prototype's suggested rules (15 minutes, 1 hour ahead, 2 months ahead,
+    20% capped at Rs. 2,000, 24 hours, the deposit kept on a late cancellation and a no-show, twice up to 12
+    hours before) marked "Not saved yet". Save booking rules saves them as they are (version 1).
+    AC-2 checked: each list offers exactly the prototype's choices (component test reads every option list; the
+    API stores 14, 30, 60, 90 and 180 days). Any other interval, notice or horizon is a 400 field error on that
+    field, with nothing saved.
+    AC-3 checked: percent 0 and 101, cap Rs. 499, cap not whole rupees, cap above 2^53-1, amount Rs. 99 and Rs.
+    100,001, a field of another deposit kind, free cancellation 72 hours, a share of 0% or 101%, a no-show keeping
+    nothing, rescheduling 3 times, up to 48 hours, a time when not online, and a number sent as text are each a
+    400 on that field, with nothing saved; 1, 100, Rs. 500, Rs. 100, Rs. 100,000 are accepted (integration tests
+    hold every value and boundary). Rs. 2,000 is stored as 200000 minor units with the currency LKR. The screen
+    shows the prototype's message beside the field ("Enter 1 to 100.", "Enter at least Rs. 500, or choose a
+    fixed amount.", "Enter Rs. 100 to Rs. 100,000."), tied by aria-describedby, and Save is disabled while one is
+    shown. Amounts are typed in whole rupees and shown through formatMoney. An integration test proves the limits
+    for another currency: the same whole units scaled by its fraction digits (JPY 0, KWD 3).
+    AC-4 checked: "What customers see before paying" follows every change as it is made (deposit kind, amounts,
+    share kept, rescheduling), including "nothing is kept" when there is no deposit and "To reschedule, contact
+    the salon." when not online. A typed value that breaks its rule leaves the summary on the last valid value.
+    RulesSummary.test.tsx proves the sentences for every option with the real messages.
+    AC-5 checked: a save creates the next version and the next public GET returns it; version 1 is byte-for-byte
+    unchanged in the database after four later saves; an update of a version is refused even for the owning role
+    (trigger) and the application role holds only INSERT and SELECT. Saving the current values again is 409
+    invalid_state with no version; a stale version is 409 conflict; of 8 saves of one version sent at once
+    exactly 1 succeeded and 7 were 409 conflict. Two browsers: the second save shows "Someone else changed the
+    booking rules", and Reload shows the other person's rules.
+    AC-6 checked by integration tests (BookingPolicies has no outside route): current() is empty before the
+    first save and then the newest version of the caller's salon's default branch; version(id) after three later
+    saves equals the original record exactly; another salon's version id and an unknown id are both empty;
+    depositFor returns the service's own rule when given, otherwise the salon's. The Javadoc of BookingPolicies,
+    BookingRules, BookingTerms, DepositRule, Retention and Rescheduling is the contract F07, F08 and F09 use.
+    AC-7 checked: History opens a Sheet (bottom sheet under 900px, right drawer from 900px) listing versions
+    newest first: number, time, author ("You" for the viewer's own; otherwise the author's email or mobile as the
+    staff list shows it; "A team member" when unknown), the rules it changed, "Current" on the newest, paged by 10.
+    The API pages by page and size (size over 100 is 400 on `page`). Receptionist, Professional and Accountant
+    see no Settings entry and no tab, get 403 permission_denied on settings, history and save, and read the
+    public rules (200).
+    AC-8 checked: beta's manager on alpha's hostname gets 404 not_found on all three settings endpoints; beta
+    reads and saves only its own rules and alpha's are unchanged; with no tenant set the application role sees 0
+    rows, with alpha set only alpha's. The RLS-alone and Hibernate-filter-alone integration tests prove each layer
+    for the new table. A support session reads the tab (read-only alert, every control disabled) and the history,
+    and saving is 403 support_read_only from the API and from the workspace BFF. A suspended salon answers 403
+    salon_suspended on all four endpoints; a read-only salon reads and refuses saving with 403 salon_read_only.
+    AC-9 checked: every save is in the salon's audit trail as booking.rules_saved with the staff actor, the time,
+    subject booking_rules_version and the version's id, and the version number with the changed rule names in
+    its values; no rule value appears.
+    AC-10 checked: loading (skeleton), saved (toast), field-error, conflict, unavailable (the BFF answering 503:
+    "Nothing was saved", edits kept), "Not saved yet" and read-only states. Leaving with unsaved edits asks first
+    by a navigation link and by another Settings tab (Stay keeps the edits, Leave goes), and the browser prompts
+    on reload or close. Keyboard alone: a Select opens with Enter and chooses with the arrows, the deposit kind
+    moves with the arrows, focus is visible, Enter saves. Every Select is named by its label, the deposit choice
+    by the Deposit heading, the two "Share kept" fields by "Share kept after a late cancellation" / "... after a
+    no-show". No horizontal scrolling at 360, 390, 768, 1024, 1280 and 1440; the summary is above the form under
+    900px and beside it, on the right, from 900px. The accessibility check (BookingRules.a11y.test.tsx, 27 cases:
+    every width with a dark and a light brand, every state, the open history sheet with focus kept inside and
+    returned to History, an open Select's options) reports no WCAG 2.2 AA violation.
+    Visual comparison with the prototype (Salon web, Settings, Booking rules, `setRules`) at 360 and 1280:
+    screens/prototype-rules-*.png beside screens/rules-*.png. They match in layout, labels, chips, fields and the
+    summary card. Deliberate differences: a History button beside Save (the spec); the intro is this stage's
+    "save at once" text, not the prototype's publish text; Save is disabled until something changes once rules
+    are saved (an identical save is refused anyway); the Selects are shadcn Selects, not native.
+    Decisions the lead made during the build, for the decision log: (1) the history's author is `createdBy` (the
+    staff account id) plus `createdByLabel`, through a new identity provided interface StaffLabels (email, else
+    mobile, as the F02 staff list shows it; another salon's id never resolves, integration-tested); the sheet says
+    "You" for the viewer's own versions and "A team member" when the label is null. (2) An amount that is not
+    whole rupees is 400 on its field; the limits are in LKR and scaled by fraction digits for another currency.
+    (3) The cap has no business maximum, only the safe-integer bound (2^53-1 minor units), 400 beyond it and
+    `maximum` in the OpenAPI schema. (4) The public GET answers {versionId, currency, rules}, or a JSON null (200)
+    before the first save; both are contract-validated. (5) The currency comes from platform's new SalonCurrency
+    over `salon_currency()` (V22: SECURITY DEFINER, search path pinned, not executable by PUBLIC, executable by
+    the application role only, scoped to app.tenant_id, null read as LKR); the booking table is V23.
+    Different from the docs, or chosen where they were silent, for the lead: (1) The history answers {items, page,
+    size, total} and takes `size` beside `page`, as the other paged lists do (the spec named {items, page}). (2)
+    Each version stores the rules it changed (changed_fields) and its currency; the identical-save check compares
+    the currency too. Updated rows are refused by a trigger as well as by the absent grant; booking_erase_salon_rows
+    (platform role only) and BookingTenantData register the table for export and erasure. (3) The root API is
+    BookingPolicies (current, version, depositFor(rules, Optional serviceRule)) with the records BookingRules,
+    BookingTerms and the sealed DepositRule, Retention (nothing, deposit, share) and Rescheduling (not online,
+    limited, unlimited). booking's allowedDependencies are branding, identity, platform and shared's audit,
+    lifecycle, persistence, tenancy and web (the spec named branding and platform; identity is needed for
+    Principals and StaffLabels, as staff uses it). (4) The JSON null of the public read is written as a literal
+    null and documented as oneOf [PublicBookingRules, NoBookingRules (type null)]. Integer choices are listed in
+    the field descriptions, not as enums, because springdoc writes allowableValues as strings, which an integer
+    fails. (5) In a save, an unknown field is 400 naming it, and a deposit or retention field of another kind is
+    400; a missing reschedule `limit` reads as null (any number of times), since Java cannot tell absent from null
+    there. (6) The web converts whole rupees to minor units with 100 per unit, as formatMoney does; the API scales
+    by the currency. @salon/format gained currencyMark (`Rs.` for LKR, else the code). (7) "What customers see"
+    is first in reading order and above the form on phones, as in the prototype (Profile puts its preview below).
+    (8) A save that changes nothing (409 invalid_state) shows "Nothing changed: these are already your booking
+    rules." (rules-unchanged), not the shared "nothing to publish". (9) A Settings tab is a Tabs trigger, not a
+    link, so the unsaved-edits guard could not see a tab change: settings-leave.tsx lets the tab on screen hold a
+    tab change, useLeaveGuard gained `hold`, and LeaveDialog takes `area` (`rules-leave-*` ids on this tab,
+    `profile-leave-*` unchanged elsewhere). (10) Next.js 16 keeps the previous route's DOM hidden after a
+    client-side tab change, so a page can hold two `settings-intro` or other ids, one hidden: QA's locators
+    should filter to visible elements. (11) The accessibility check of an open Select checks its option list
+    only: while it is open Radix hides the rest of the page with aria-hidden, which axe reports as
+    aria-hidden-focus on the hidden page. (12) Messages are in en.json only (decision 072). (13) BFF actions:
+    workspace GET booking-rules, booking-rules-history (?page=); POST booking-rules-save, through a new
+    SalonBookingRules port wired in the identity-web route; support reads included, support save refused before
+    any upstream call.
+    New dependencies: none.
+    New test ids for QA: settings-tab-rules, rules-tab, rules-loading, rules-not-saved, rules-summary,
+    rules-summary-sentence (data-sentence), rules-summary-note, rules-form, rules-interval, rules-notice,
+    rules-horizon, rules-free, rules-late, rules-noshow, rules-reschedule, rules-until (each Select's options
+    <id>-option-<value>), rules-deposit, rules-deposit-none, rules-deposit-percentage, rules-deposit-amount,
+    rules-percent, rules-cap, rules-amount, rules-late-percent, rules-noshow-percent (each with <id>-error),
+    rules-service-deposit, rules-save, rules-history, rules-history-sheet, rules-history-loading,
+    rules-history-unavailable, rules-history-empty, rules-history-list, rules-history-row (data-version),
+    rules-history-current, rules-history-by, rules-history-changed, rules-history-pagination, rules-history-newer,
+    rules-history-older, rules-history-page, rules-read-only, rules-conflict, rules-conflict-reload,
+    rules-unavailable, rules-retry, rules-fix, rules-refused, rules-unchanged, rules-leave-dialog,
+    rules-leave-stay, rules-leave-confirm. Console (F04-S03 fix): console-holiday-day-name.
+    F04-S03 fixes (QA's dry run; TC-F04-S03-029 and 030 are the regression checks). Each test failed first.
+    (a) 9d52eed, f95ea1d: the console year page's days were a 505px table at 360px. Below 900px each day is now an
+    Item row (date and change, name and kind, Edit and Remove); from 900px the Table stays with its actions
+    wrapping. Only one is rendered, so ids stay unique; names wrap between words (console-holiday-day-name). The
+    new accessibility case measures every element of the list at the six widths: it failed at 360px (511px)
+    before. (b) 09181ae: the Calendar popover in the Add a closure sheet and the console day sheet is named
+    "Choose a date". axe's aria-dialog-name is a best-practice rule outside our WCAG tags, so the cases ask for
+    the name directly; they failed before. (c) b8632f9: the Calendar's today was the ghost button's muted text on
+    the brand tint (3.73:1 measured with the dark brand). Days are now ink, today the accent's readable
+    foreground, other months' days muted on the white popover (4.83:1); the selected day keeps the brand fill
+    and its computed foreground; disabled days stay at half opacity, which WCAG 1.4.3 exempts as inactive.
+    axe reports text on a translucent fill as incomplete, so test/contrast.ts measures the drawn contrast of
+    today, the chosen day and other months' days in both sheets; the workspace case failed before, the console
+    case measured above 4.5:1 even before (it now guards).
+    F04-S01 fix. 293cfe5: Profile and Branding now hold a Settings tab change with unsaved edits through the same
+    settings-leave.tsx: the leave dialog opens with its profile-leave-* ids, Stay keeps the edits, Leave goes to
+    the tab. Component tests for a dirty Profile and a dirty brand draft failed before.
+    Nothing unfinished. Time: about 7 hours of building, testing and the walk-through; a long pause while the
+    session's usage limit reset is not counted. Nothing was blocked waiting on others.
+    Developer gates, all on 647b00b with nothing committed during the runs; the handoff commit after it changes
+    only this file and the generated documents. Logs in
+    /Users/cmmrox/Personal/Projects/salon-sass/apps/api/target/f04-s04-evidence/gates/ (keep this checkout until
+    the stage is closed):
+    | Command | Tested commit | Exit | Log |
+    | --- | --- | --- | --- |
+    | `cd apps/api && ./mvnw -q verify` | 647b00b | 0 | gates/1-api-verify.log (1297 tests, 0 failures) |
+    | `pnpm -r lint` | 647b00b | 0 | gates/2-lint.log |
+    | `pnpm -r typecheck` | 647b00b | 0 | gates/3-typecheck.log |
+    | `pnpm -r test` | 647b00b | 0 | gates/4-test.log (web 886, api-contracts 25, format 10) |
+    | `pnpm --filter @salon/web test:a11y` | 647b00b | 0 | gates/5-a11y.log (135) |
+    | `pnpm --filter @salon/web build` | 647b00b | 0 | gates/6-build.log |
+    | `pnpm contracts:check` | 647b00b | 0 | gates/7-contracts.log |
+    knip also exits 0 (gates/knip.log). Earlier runs kept for the record: 4-test-contended.log (3 unit tests timed
+    out at 5 s while Maven verify ran alongside; the file passes alone in 8 s) and 4-test-stalled.log (a run that
+    spanned the machine's pause, 6010 s, with a vitest worker that never started); the gate run alone took 24 s
+    and passed. 5-a11y-first-run.log: the first accessibility run had 8 BrandingSettings save-flow cases not
+    finding their result in time; three later full runs passed 135/135 with no change, so this looks like a
+    cold-start timing flake in that F04-S02 file, worth QA's eye.
 verification:
   commands:
   - cd apps/api && ./mvnw -q verify

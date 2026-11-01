@@ -33,7 +33,7 @@ asked for. A case is a test titled with its id and criteria, or a manual or defe
 | F04-S01 | complete | - | BRD-02, BRD-04, NFR-13 | 11 | 28 | 28 | 0 | 0 |
 | F04-S02 | complete | - | BRD-01, BRD-04 | 12 | 34 | 34 | 0 | 0 |
 | F04-S03 | complete | - | STF-04, NFR-13 | 12 | 0 | 0 | 0 | 0 |
-| F04-S04 | in-progress | - | BKG-02, BKG-09 | 10 | 0 | 0 | 0 | 0 |
+| F04-S04 | built | - | BKG-02, BKG-09 | 10 | 0 | 0 | 0 | 0 |
 
 ## Deferred cases
 
@@ -100,14 +100,14 @@ Cases waiting for something else. `feature-verify` and `release-prepare` go thro
 | STF-08 | R2 | should | unowned | - |
 | STF-09 | R3 | could | unowned | - |
 | BKG-01 | R1 | must | F07 | - |
-| BKG-02 | R1 | must | F04 | F04-S04 (in-progress) |
+| BKG-02 | R1 | must | F04 | F04-S04 (built) |
 | BKG-03 | R1 | must | F07 | - |
 | BKG-04 | R1 | must | F07 | - |
 | BKG-05 | R1 | must | F07 | - |
 | BKG-06 | R1 | must | F07 | - |
 | BKG-07 | R1 | must | F09 | - |
 | BKG-08 | R1 | must | F09 | - |
-| BKG-09 | R1 | must | F04 | F04-S04 (in-progress) |
+| BKG-09 | R1 | must | F04 | F04-S04 (built) |
 | BKG-10 | R1 | must | F10 | - |
 | BKG-11 | R1 | must | F10 | - |
 | BKG-12 | R1 | must | F10 | - |
