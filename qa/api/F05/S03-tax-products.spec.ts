@@ -23,7 +23,7 @@ import {
   CONFIGURED, PENDING_F05_S03, PRODUCTS, TAX, TAX_HISTORY, TAX_SETTINGS, TaxCatalogue, auditOf, distinctTax, productInput, productPath,
   productSnapshot, split, taxInput, taxRow, taxRows, taxSnapshot, type Product, type TaxInput,
 } from '../../shared/catalogue-tax';
-import type { Role, Tokens } from '../../shared/identity';
+import { json, type Role, type Tokens } from '../../shared/identity';
 import { identitySql } from '../../shared/identity-storage';
 import { test, expect, alpha, operatorJson, sqlLiteral, supportJson, type SupportStart } from '../../shared/operator';
 
@@ -450,4 +450,21 @@ test('TC-F05-S03-015 AC-12: every tax save and every product change is audited w
   await audited('delete it', () => tax.deleteProductRaw(salon, owner.tokens, p.id, p.version));
   await refused(await tax.saveRaw(salon, owner.tokens, 1, distinctTax()), 409, 'conflict', 'stale save');
   expect(count(), 'the refusal is not audited').toBe(seen);
+});
+
+// ---------------------------------------------------------------- after the PR #19 review
+
+test('TC-F05-S03-025 AC-7: the products list gives the salon\'s currency also before its first product, in a salon of each currency', async ({ identity, operator }) => {
+  const tax = new TaxCatalogue(identity);
+  for (const currency of ['USD', 'LKR']) {
+    await test.step(currency, async () => {
+      const { salon, owner } = await newSalon(operator, identity, { currency });
+      const list = await json<{ currency: string; items: Product[] }>(await tax.call(salon, 'GET', PRODUCTS, owner.tokens), PENDING_F05_S03.schemas.productList);
+      expect(list, 'an empty list, with the currency').toEqual({ currency, items: [] });
+      const p = await tax.addProduct(salon, owner.tokens, productInput());
+      expect(p.currency).toBe(currency);
+      const after = await json<{ currency: string; items: Product[] }>(await tax.call(salon, 'GET', PRODUCTS, owner.tokens), PENDING_F05_S03.schemas.productList);
+      expect(after.currency).toBe(currency);
+    });
+  }
 });

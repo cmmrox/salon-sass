@@ -641,3 +641,122 @@ test('TC-F05-S01-042 AC-16: both tabs, both sheets and the delete confirmation h
     await accessible(other.page, 'Categories tab, Receptionist');
   });
 });
+
+// ---------------------------------------------------------------- after the PR #19 review
+
+test('TC-F05-S01-045 AC-3: an empty salon in another currency (NFR-13) is asked for and prices its first service in that currency, not rupees', async ({ accounts, operator, cat }) => {
+  const { salon, owner } = await newCatalogueSalon(operator, accounts.identity, { currency: 'USD' });
+  const { page } = await open(accounts, owner);
+  await id(page, T.newService).click();
+  await expect(page.locator('label[for="service-price"]'), 'the price field names the salon\'s currency').toHaveText('Price (USD)');
+  await id(page, T.name).fill('First service');
+  await id(page, T.price).fill('150');
+  await id(page, T.time).fill('30');
+  await id(page, T.save).click();
+  await expect(id(page, T.sheet)).toHaveCount(0);
+  const [service] = await cat.services(salon, owner.tokens);
+  expect(service.terms, 'kept in the salon\'s currency').toMatchObject({ priceMinor: 15000, currency: 'USD' });
+  const shown = card(page, service.id).getByTestId(T.cardPrice);
+  await expect(shown).toContainText('150');
+  await expect(shown, 'not rupees').not.toContainText('Rs.');
+});
+
+test('TC-F05-S01-046 AC-10, AC-16: a photo or save result applies only to the sheet opening that sent it: Save and Delete wait for an upload and Close does not; a sheet opened meanwhile keeps its own state, and a later Save of a reopened service says it changed, with Reload', async ({ accounts, operator, cat }) => {
+  const { salon, owner } = await newSalon(operator, accounts);
+  const { gel, art, root } = await arrangeMenu(cat, salon, owner.tokens);
+  const { context, page } = await open(accounts, owner);
+  const PHOTO = () => fixture('logo-700x600-banded.png');
+  /** Holds the browser's calls to one BFF action until the returned function is called. */
+  const hold = async (action: string) => {
+    let release!: () => void;
+    const held = new Promise<void>(resolve => { release = resolve; });
+    const match = (url: URL) => url.pathname.endsWith(`/${action}`);
+    let handled: Promise<void> | undefined;
+    await context.route(match, route => { handled = held.then(() => route.continue()); return handled; });
+    return async () => { release(); await handled; await context.unroute(match); };
+  };
+  const edit = async (serviceId: string) => {
+    await card(page, serviceId).getByTestId(T.cardEdit).click();
+    await expect(id(page, T.sheet)).toBeVisible();
+    await openMore(page);
+  };
+  const photoOf = async (serviceId: string) => (await cat.service(salon, owner.tokens, serviceId)).photoUrl;
+
+  await test.step('during an upload Save and Delete wait, and Close does not', async () => {
+    await edit(gel.id);
+    await id(page, T.name).fill('Gel polish two');
+    await expect(id(page, T.save), 'an edit can be saved').toBeEnabled();
+    const release = await hold('catalogue-photo');
+    await page.getByTestId(T.photo).setInputFiles(PHOTO());
+    await expect(id(page, T.save), 'Save waits for the upload').toBeDisabled();
+    await expect(id(page, T.del), 'Delete waits for the upload').toBeDisabled();
+    await expect(id(page, T.close), 'Close stays enabled').toBeEnabled();
+    await release();
+    await expect(id(page, T.photoPreview), 'the same opening shows its photo').toBeVisible();
+    await expect(id(page, T.save), 'Save is back').toBeEnabled();
+    await id(page, T.save).click();
+    await expect(id(page, T.sheet)).toHaveCount(0);
+    const saved = await cat.service(salon, owner.tokens, gel.id);
+    expect(saved.name, 'the edit saved').toBe('Gel polish two');
+    expect(saved.photoUrl, 'and the photo kept').toBeTruthy();
+  });
+
+  await test.step('the same service reopened during its upload: the result stays out, and a later Save says it changed, with Reload', async () => {
+    await edit(root.id);
+    const release = await hold('catalogue-photo');
+    await page.getByTestId(T.photo).setInputFiles(PHOTO());
+    await expect(id(page, T.save)).toBeDisabled();
+    await id(page, T.close).click();
+    await expect(id(page, T.sheet)).toHaveCount(0);
+    await edit(root.id);
+    await expect(id(page, T.photoPreview), 'no photo yet in this opening').toHaveCount(0);
+    await release();
+    await expect.poll(() => photoOf(root.id), { message: 'the upload itself is saved' }).toBeTruthy();
+    await page.waitForTimeout(300); // what would apply the old opening's result has had its turn
+    await expect(id(page, T.photoPreview), 'the result stays out of this opening').toHaveCount(0);
+    await id(page, T.name).fill('Root touch-up two');
+    await id(page, T.save).click();
+    await expect(page.getByRole('alert').filter({ hasText: 'Someone else changed the services' }), 'told it changed').toBeVisible();
+    expect((await cat.service(salon, owner.tokens, root.id)).name, 'nothing saved').toBe('Root touch-up');
+    await page.getByRole('button', { name: 'Reload' }).click();
+    await expect(id(page, T.name), 'Reload shows what is saved').toHaveValue('Root touch-up');
+    await expect(id(page, T.photoPreview), 'with its photo').toBeVisible();
+    await id(page, T.close).click();
+  });
+
+  await test.step('another service opened during an upload keeps its own photo and state', async () => {
+    const own = photoIdOf((await cat.service(salon, owner.tokens, gel.id)).photoUrl!);
+    await edit(art.id);
+    const release = await hold('catalogue-photo');
+    await page.getByTestId(T.photo).setInputFiles(PHOTO());
+    await expect(id(page, T.save)).toBeDisabled();
+    await id(page, T.close).click();
+    await edit(gel.id);
+    await expect(id(page, T.photoPreview)).toHaveAttribute('src', new RegExp(own));
+    await release();
+    await expect.poll(() => photoOf(art.id), { message: 'the other service\'s upload is saved' }).toBeTruthy();
+    await page.waitForTimeout(300);
+    await expect(id(page, T.photoPreview), 'still this service\'s own photo').toHaveAttribute('src', new RegExp(own));
+    await id(page, T.close).click();
+  });
+
+  await test.step('a save refused after its sheet was left says nothing in the sheet opened since', async () => {
+    const current = await cat.service(salon, owner.tokens, art.id);
+    await edit(art.id);
+    await id(page, T.name).fill('Taken in the meantime');
+    const nails = await cat.category(salon, owner.tokens, 'Nails');
+    await cat.create(salon, owner.tokens, serviceInput(nails.id, { name: 'Taken in the meantime' }));
+    const release = await hold('catalogue-service-save');
+    await id(page, T.save).click();
+    await id(page, T.close).click();
+    await id(page, T.leaveConfirm).click();
+    await expect(id(page, T.sheet)).toHaveCount(0);
+    await edit(gel.id);
+    await release();
+    await page.waitForTimeout(500);
+    await expect(id(page, T.name), 'this opening is untouched').toHaveValue('Gel polish two');
+    await expect(page.getByTestId('service-sheet-problem'), 'no message of the other save').toHaveCount(0);
+    await expect(page.getByTestId(T.rule), 'no refused rule').toHaveCount(0);
+    expect((await cat.service(salon, owner.tokens, art.id)).name, 'the refused save changed nothing').toBe(current.name);
+  });
+});

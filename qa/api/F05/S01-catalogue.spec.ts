@@ -28,7 +28,7 @@ import {
   segmentsOf, serviceInput, servicePath, termsRow, termsRows, updateOf, type Category, type Service,
 } from '../../shared/catalogue';
 import { webUrl } from '../../shared/env';
-import type { Role, Tokens } from '../../shared/identity';
+import { json, type Role, type Tokens } from '../../shared/identity';
 import { identitySql } from '../../shared/identity-storage';
 import { fixture, grayPng, pngUpload, readJpeg, type FileUpload } from '../../shared/salon-brand';
 import { test, expect, alpha, beta, operatorJson, sqlLiteral, supportJson, type SupportStart } from '../../shared/operator';
@@ -1048,4 +1048,46 @@ test('TC-F05-S01-031 AC-15: every change to a category or a service is audited w
     expect(catalogueAudit(created.id, t0).length, 'nothing more audited').toBe(seen);
   });
   await cat.dispose();
+});
+
+// ---------------------------------------------------------------- after the PR #19 review
+
+test('TC-F05-S01-043 AC-7: a duplicate\'s name is cut between characters: a 40-character name with an emoji at the cut keeps the emoji whole or leaves it out, on the first duplicate and on the ones after it', async ({ identity, operator }) => {
+  const cat = new Catalogue(identity);
+  const { salon, owner } = await newSalon(operator, identity);
+  const emoji = '😀'; // one character, two UTF-16 units
+  const rows: { label: string; name: string; expected: string[] }[] = [
+    { label: 'the emoji survives both cuts', name: `${'A'.repeat(30)}${emoji}${'B'.repeat(9)}`,
+      expected: [`${'A'.repeat(30)}${emoji}BB (copy)`, `${'A'.repeat(30)}${emoji} (copy 2)`, `${'A'.repeat(30)}${emoji} (copy 3)`] },
+    { label: 'the emoji is at the first cut and left out at the next', name: `${'C'.repeat(32)}${emoji}${'D'.repeat(7)}`,
+      expected: [`${'C'.repeat(32)}${emoji} (copy)`, `${'C'.repeat(31)} (copy 2)`, `${'C'.repeat(31)} (copy 3)`] },
+  ];
+  for (const row of rows) {
+    await test.step(row.label, async () => {
+      expect([...row.name].length, 'the name is 40 characters').toBe(40);
+      const original = await serviceIn(cat, salon, owner.tokens, 'Nails', { name: row.name });
+      expect(original.name, 'kept as sent').toBe(row.name);
+      for (const name of row.expected) {
+        const copy = await cat.duplicate(salon, owner.tokens, original.id);
+        expect(copy.name, 'cut between characters').toBe(name);
+        expect([...copy.name].length, `${name}: fits 40 characters`).toBeLessThanOrEqual(40);
+        expect((await cat.service(salon, owner.tokens, copy.id)).name, 'read back the same').toBe(name);
+      }
+    });
+  }
+});
+
+test('TC-F05-S01-044 AC-3: the services list gives the salon\'s currency also before its first service, in a salon of each currency', async ({ identity, operator }) => {
+  const cat = new Catalogue(identity);
+  for (const currency of ['USD', 'LKR']) {
+    await test.step(currency, async () => {
+      const { salon, owner } = await newSalon(operator, identity, { currency });
+      const list = await json<{ currency: string; items: Service[] }>(await cat.call(salon, 'GET', SERVICES, owner.tokens), PENDING_F05_S01.schemas.serviceList);
+      expect(list, 'an empty list, with the currency').toEqual({ currency, items: [] });
+      await serviceIn(cat, salon, owner.tokens, 'Nails');
+      const after = await json<{ currency: string; items: Service[] }>(await cat.call(salon, 'GET', SERVICES, owner.tokens), PENDING_F05_S01.schemas.serviceList);
+      expect(after.currency).toBe(currency);
+      expect(after.items.map(s => s.terms.currency), 'its service in the same currency').toEqual([currency]);
+    });
+  }
 });

@@ -543,3 +543,21 @@ test('TC-F05-S03-024 AC-13: at every width the tab, the Products tab and the pro
     expect((await tax.products(salon, owner.tokens)).some(p => p.name === 'Keyboard comb' && p.priceMinor === 45000)).toBe(true);
   });
 });
+
+// ---------------------------------------------------------------- after the PR #19 review
+
+test('TC-F05-S03-026 AC-8: an empty salon in another currency (NFR-13) is asked for and prices its first product in that currency, not rupees', async ({ accounts, operator, tax }) => {
+  const { salon, owner } = await newCatalogueSalon(operator, accounts.identity, { currency: 'USD' });
+  const { page } = await open(accounts, owner, PRODUCTS_ROUTE);
+  await id(page, T3.productsNew).click();
+  await expect(page.locator('label[for="product-price"]'), 'the price field names the salon\'s currency').toHaveText('Price (USD)');
+  await id(page, T3.sheetName).fill('First product');
+  await id(page, T3.sheetPrice).fill('24');
+  await id(page, T3.sheetSave).click();
+  await expect(id(page, T3.sheet)).toHaveCount(0);
+  const [product] = await tax.products(salon, owner.tokens);
+  expect(product, 'kept in the salon\'s currency').toMatchObject({ priceMinor: 2400, currency: 'USD' });
+  const shown = productRow(page, product, true).getByTestId(T3.productPrice);
+  await expect(shown).toContainText('24');
+  await expect(shown, 'not rupees').not.toContainText('Rs.');
+});
