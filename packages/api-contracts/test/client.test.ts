@@ -51,7 +51,13 @@ describe('createApiClient', () => {
   });
 
   it('requests the salon of the hostname it was given, with no parameter naming one', async () => {
-    const salon: Salon = { slug: 'alpha', name: 'Alpha Studio', brandColour: '#D6086A', timeZone: 'Asia/Colombo' };
+    const salon: Salon = {
+      slug: 'alpha',
+      name: 'Alpha Studio',
+      brandColour: '#D6086A',
+      timeZone: 'Asia/Colombo',
+      profile: null,
+    };
     const { fetch, requests } = respondingWith(200, salon, 'application/json');
     const client = createApiClient({ baseUrl: 'http://alpha.localhost:8090', fetch });
 

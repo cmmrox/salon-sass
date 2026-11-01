@@ -372,7 +372,10 @@ class SalonProfileIntegrationTest extends IntegrationTest {
         refused(call("PUT", DRAFT, save(0, profile), token), 400, "bad_request");
         refused(call("POST", PUBLICATION, Map.of("version", "0"), token), 400, "bad_request");
         Map<String, Object> textCoordinates = new LinkedHashMap<>(contact());
-        textCoordinates.put("location", Map.of("latitude", "6.9061", "longitude", "79.8611"));
+        Map<String, Object> textLocation = new LinkedHashMap<>();
+        textLocation.put("latitude", "6.9061");
+        textLocation.put("longitude", "79.8611");
+        textCoordinates.put("location", textLocation);
         Http.Exchange coerced = call("PUT", DRAFT, save(0, profile(branch, textCoordinates, null)), token);
         refused(coerced, 400, "bad_request");
         assertThat(coerced.body()).contains("profile.branches[0].location.latitude");
