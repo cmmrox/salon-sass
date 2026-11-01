@@ -3,20 +3,27 @@ feature: F04
 title: "Branding draft, live preview and publish"
 sequence: 2
 surfaces: [api, web]
-status: outlined
+status: planned
 qa_status: not-run
 blocked_reason: null
 released_in: null
 reopened_by: null
 depends_on: [F04-S01]
-requirements: [BRD-01]
+requirements: [BRD-01, BRD-04]
 nfr_focus: []
 handoff:
   run: null
   data: null
   notes: null
 verification:
-  commands: []
+  commands:
+  - cd apps/api && ./mvnw -q verify
+  - pnpm -r lint
+  - pnpm -r typecheck
+  - pnpm -r test
+  - pnpm --filter @salon/web test:a11y
+  - pnpm --filter @salon/web build
+  - pnpm contracts:check
   automation: []
   manual: []
   deferred: []
