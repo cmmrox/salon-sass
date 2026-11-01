@@ -1118,7 +1118,8 @@
         "off": "Tax and service charge are off. Turn them on in Settings if your salon is registered."
       }
     },
-    "noServices": "No services yet.",
+    "emptyTitle": "No services yet",
+    "noServicesIn": "No services yet in: {names}.",
     "popular": {
       "title": "Popular on your home screen",
       "description": "Customers see these first in the app. Up to 6.",

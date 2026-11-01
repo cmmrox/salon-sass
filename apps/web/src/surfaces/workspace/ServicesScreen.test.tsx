@@ -10,7 +10,6 @@ import {
   SERVICES,
   service,
   TAX_PUBLIC,
-  WAXING,
   withVariants,
 } from './catalogue-fixtures';
 import type { CatalogueService } from '@/features/catalogue';
@@ -76,13 +75,13 @@ describe('the Services tab (F05-S01 AC-12)', () => {
     // The prototype's information banner (`.bn.in`), not a plain card.
     expect(screen.getByTestId('services-banner')).toHaveAttribute('data-variant', 'info');
     const groups = screen.getAllByTestId('service-group');
-    expect(groups.map((group) => group.getAttribute('data-id'))).toEqual([COLOUR, NAILS, WAXING]);
+    expect(groups.map((group) => group.getAttribute('data-id'))).toEqual([COLOUR, NAILS]);
     expect(
       within(groups[0]!)
         .getAllByTestId('service-card-name')
         .map((name) => name.textContent),
     ).toEqual(['Balayage', 'zebra highlights']);
-    expect(within(groups[2]!).getByTestId('service-group-empty')).toHaveTextContent('No services yet.');
+    expect(screen.getByTestId('services-empty-categories')).toHaveTextContent('No services yet in: Waxing.');
   });
 
   it('shows on each card its status, category and description, price, time and buffer', async () => {
@@ -114,6 +113,66 @@ describe('the Services tab (F05-S01 AC-12)', () => {
     expect(await screen.findByTestId('services-read-only')).toHaveTextContent(
       'A support session can read the services but cannot change them.',
     );
+  });
+});
+
+describe('categories with no services (F05-S01 AC-18, CR-025)', () => {
+  const categories = (...names: string[]) => ({
+    listVersion: 1,
+    items: names.map((name, index) => ({ id: name, name, position: index + 1, serviceCount: 0, version: 0 })),
+  });
+
+  it('folds them into one line after the listed ones, in the salon’s order', async () => {
+    answers['catalogue-categories'] = () => Response.json(categories('Spa', 'Nails', 'Cuts', 'Waxing'));
+    answers['catalogue-services'] = () =>
+      Response.json({ ...SERVICES, items: [service('s1', 'Gel polish', 'Nails'), service('s2', 'Trim', 'Cuts')] });
+    render();
+    await screen.findAllByTestId('service-card');
+
+    expect(screen.getAllByTestId('service-group').map((group) => group.getAttribute('data-id'))).toEqual([
+      'Nails',
+      'Cuts',
+    ]);
+    const folded = screen.getByTestId('services-empty-categories');
+    expect(folded).toHaveTextContent('No services yet in: Spa, Waxing.');
+    // After the listed categories.
+    const last = screen.getAllByTestId('service-group').at(-1)!;
+    expect(last.compareDocumentPosition(folded) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'Spa' })).toBeNull();
+  });
+
+  it('says nothing folded when every category has a service', async () => {
+    answers['catalogue-categories'] = () => Response.json(categories('Nails'));
+    answers['catalogue-services'] = () => Response.json({ ...SERVICES, items: [service('s1', 'Gel polish', 'Nails')] });
+    render();
+    await screen.findAllByTestId('service-card');
+    expect(screen.queryByTestId('services-empty-categories')).toBeNull();
+  });
+
+  it('shows a salon with no services the Empty state and no folded line, with + New service for who may', async () => {
+    answers['catalogue-services'] = () => Response.json({ ...SERVICES, items: [] });
+    render();
+    const empty = await screen.findByTestId('services-empty');
+    expect(empty).toHaveTextContent('No services yet');
+    expect(screen.queryByTestId('services-empty-categories')).toBeNull();
+    expect(screen.queryByTestId('service-group')).toBeNull();
+
+    fireEvent.click(within(empty).getByTestId('services-empty-new'));
+    expect(await screen.findByRole('heading', { name: 'New service' })).toBeInTheDocument();
+  });
+
+  it('gives a reader the Empty state without + New service', async () => {
+    answers['catalogue-services'] = () => Response.json({ ...SERVICES, items: [] });
+    render('services', false);
+    const empty = await screen.findByTestId('services-empty');
+    expect(within(empty).queryByTestId('services-empty-new')).toBeNull();
+  });
+
+  it('keeps every category on the Categories tab', async () => {
+    answers['catalogue-services'] = () => Response.json({ ...SERVICES, items: [] });
+    render('categories');
+    expect(await screen.findAllByTestId('category-row')).toHaveLength(3);
+    expect(screen.queryByTestId('services-empty')).toBeNull();
   });
 });
 

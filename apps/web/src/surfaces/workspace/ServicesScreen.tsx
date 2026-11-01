@@ -149,6 +149,8 @@ function ServicesAndCategories({ kind, tab, canChange, readOnly }: Props) {
               services={services}
               canChange={may}
               busy={catalogue.busy}
+              canAdd={categories.length > 0}
+              onNew={() => remember(catalogue.newService)(undefined)}
               onEdit={remember(catalogue.editService)}
               onToggleOnline={(service) => void catalogue.toggleOnline(service)}
               onDuplicate={remember((service) => void catalogue.duplicate(service))}

@@ -163,9 +163,7 @@ describe('the Products tab’s one banner (F05-S03 AC-14, CR-025)', () => {
     render();
     await screen.findByTestId('tax-banner');
 
-    expect(screen.getByTestId('products-banner').textContent?.replace(/\s+/g, ' ').trim()).toBe(
-      `${FIRST} ${sentence}`,
-    );
+    expect(screen.getByTestId('products-banner').textContent?.replace(/\s+/g, ' ').trim()).toBe(`${FIRST} ${sentence}`);
     expect(screen.getByTestId('products-banner')).toHaveAttribute('data-variant', 'info');
     expect(document.querySelectorAll('[data-slot="alert"][data-variant="info"]')).toHaveLength(1);
   });
