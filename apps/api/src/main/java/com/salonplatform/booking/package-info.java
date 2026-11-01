@@ -7,7 +7,9 @@
  * through. Branches are {@code branding}'s, checked through {@link com.salonplatform.branding.SalonBranches};
  * the salon's currency is {@code platform}'s {@link com.salonplatform.platform.SalonCurrency}; who acts is
  * {@code identity}'s {@link com.salonplatform.identity.Principals}, and how an author is named its
- * {@link com.salonplatform.identity.StaffLabels}. Nothing depends on {@code booking}.
+ * {@link com.salonplatform.identity.StaffLabels}. From F05-S02 it reads the catalogue's
+ * {@link com.salonplatform.catalogue.ServiceDeposit} to turn a service's own deposit into its {@link DepositRule}
+ * ({@code domain.ServiceDeposits}). Nothing depends on {@code booking}.
  *
  * <p>What it owns, the layout inside it and the rules between modules are in
  * {@code docs/engineering/backend.md}.
@@ -15,6 +17,7 @@
 @ApplicationModule(
         allowedDependencies = {
             "branding",
+            "catalogue",
             "identity",
             "platform",
             "shared :: audit",

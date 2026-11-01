@@ -22,6 +22,7 @@ final class CatalogueFixture {
     static final String SERVICES = "/api/v1/catalogue/services";
     static final String MENU = "/api/v1/catalogue/menu";
     static final String PHOTOS = "/api/v1/catalogue/photos/";
+    static final String POPULAR_SETTING = "/api/v1/catalogue/popular-setting";
 
     /** The prototype's ten categories, in order (decision 092). */
     static final List<String> DEFAULT_CATEGORIES = List.of(
@@ -99,22 +100,88 @@ final class CatalogueFixture {
         return body;
     }
 
-    /** A save of a service as read, with one field replaced. */
+    /**
+     * A save of a service as read, with one field replaced: its own price and time, or its variants with their ids
+     * (F05-S02), and its deposit, as they are.
+     */
     static Map<String, Object> save(Map<String, Object> service, String field, Object value) {
         Map<?, ?> terms = (Map<?, ?>) service.get("terms");
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("name", service.get("name"));
         body.put("categoryId", service.get("categoryId"));
         body.put("description", service.get("description"));
-        body.put("priceMinor", terms.get("priceMinor"));
-        body.put("durationMinutes", terms.get("durationMinutes"));
+        List<?> variants = (List<?>) terms.get("variants");
+        if (variants == null || variants.isEmpty()) {
+            body.put("priceMinor", terms.get("priceMinor"));
+            body.put("durationMinutes", terms.get("durationMinutes"));
+        } else {
+            body.put("variants", Map.of("name", terms.get("variantSetName"), "items", variantsOf(service)));
+        }
         body.put("bufferMinutes", terms.get("bufferMinutes"));
         body.put("bookableOnline", service.get("bookableOnline"));
+        if (service.get("deposit") != null) {
+            body.put("deposit", service.get("deposit"));
+        }
         body.put("version", service.get("version"));
         if (field != null) {
             body.put(field, value);
         }
         return body;
+    }
+
+    /** One variant as a request sends it: Rs. {@code rupees}, {@code minutes} long; {@code id} null for a new one. */
+    static Map<String, Object> variant(Object id, String name, long rupees, int minutes) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        if (id != null) {
+            body.put("id", id.toString());
+        }
+        body.put("name", name);
+        body.put("priceMinor", rupees * 100);
+        body.put("durationMinutes", minutes);
+        return body;
+    }
+
+    /** A service's body (to create or save) with this set of variants instead of its own price and time. */
+    @SafeVarargs
+    static Map<String, Object> withVariants(Map<String, Object> service, String setName, Map<String, Object>... items) {
+        return withVariantList(service, setName, listOf(items));
+    }
+
+    /** The items as a list, copied one by one so that the varargs array never escapes. */
+    @SafeVarargs
+    private static List<Map<String, Object>> listOf(Map<String, Object>... items) {
+        List<Map<String, Object>> list = new java.util.ArrayList<>();
+        for (Map<String, Object> item : items) {
+            list.add(item);
+        }
+        return List.copyOf(list);
+    }
+
+    static Map<String, Object> withVariantList(
+            Map<String, Object> service, String setName, List<Map<String, Object>> items) {
+        Map<String, Object> body = new LinkedHashMap<>(service);
+        body.remove("priceMinor");
+        body.remove("durationMinutes");
+        body.put("variants", Map.of("name", setName, "items", items));
+        return body;
+    }
+
+    /** A save of a service as read, with this set of variants. */
+    @SafeVarargs
+    static Map<String, Object> saveWithVariants(
+            Map<String, Object> service, String setName, Map<String, Object>... items) {
+        return withVariantList(save(service, null, null), setName, listOf(items));
+    }
+
+    /** A service's variants as read, each as a request would send it back with its id. */
+    static List<Map<String, Object>> variantsOf(Map<String, Object> service) {
+        return maps(map(service.get("terms")).get("variants")).stream()
+                .map(each -> variant(
+                        each.get("id"),
+                        (String) each.get("name"),
+                        ((Number) each.get("priceMinor")).longValue() / 100,
+                        ((Number) each.get("durationMinutes")).intValue()))
+                .toList();
     }
 
     /** A multipart upload of a service photo, with the file name and type the client gives. */

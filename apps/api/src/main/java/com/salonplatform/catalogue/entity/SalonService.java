@@ -49,6 +49,10 @@ public class SalonService {
     @Column(name = "photo_id")
     private UUID photoId;
 
+    /** Chosen by the salon for Popular (CAT-06); not part of its terms. */
+    @Column(name = "popular", nullable = false)
+    private boolean popular;
+
     @Column(name = "current_terms_id", nullable = false)
     private UUID currentTermsId;
 
@@ -122,9 +126,19 @@ public class SalonService {
         updatedAt = at;
     }
 
-    /** Makes the service a tombstone: out of every list, its name free, no category, no photo, not online. */
+    /** Chooses it for Popular, or no longer; makes no terms version. */
+    public void choosePopular(boolean chosen, Instant at) {
+        popular = chosen;
+        updatedAt = at;
+    }
+
+    /**
+     * Makes the service a tombstone: out of every list, its name free, no category, no photo, not online, not
+     * chosen for Popular.
+     */
     public void delete(Instant at) {
         deletedAt = at;
+        popular = false;
         categoryId = null;
         photoId = null;
         bookableOnline = false;

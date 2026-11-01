@@ -35,6 +35,10 @@ public interface SalonServiceRepository extends JpaRepository<SalonService, UUID
     @Query("select s from SalonService s where s.id in :ids")
     List<SalonService> findAllOf(@Param("ids") List<UUID> ids);
 
+    /** How many of the branch's live services are chosen for Popular, hidden ones included. */
+    @Query("select count(s) from SalonService s where s.branchId = :branch and s.deletedAt is null and s.popular")
+    long countPopular(@Param("branch") UUID branchId);
+
     @Query("select count(s) from SalonService s where s.branchId = :branch and s.deletedAt is null")
     long countLive(@Param("branch") UUID branchId);
 

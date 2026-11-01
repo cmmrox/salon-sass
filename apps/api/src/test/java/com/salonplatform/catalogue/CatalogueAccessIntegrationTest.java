@@ -2,6 +2,7 @@ package com.salonplatform.catalogue;
 
 import static com.salonplatform.catalogue.CatalogueFixture.CATEGORIES;
 import static com.salonplatform.catalogue.CatalogueFixture.MENU;
+import static com.salonplatform.catalogue.CatalogueFixture.POPULAR_SETTING;
 import static com.salonplatform.catalogue.CatalogueFixture.SERVICES;
 import static com.salonplatform.catalogue.CatalogueFixture.service;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -168,6 +169,33 @@ class CatalogueAccessIntegrationTest extends IntegrationTest {
         refused(api.call(salon, "DELETE", one + "?version=" + service.get("version"), null, token), status, code);
         refused(api.upload(salon, serviceId, "photo.png", photo(), token), status, code);
         refused(api.call(salon, "DELETE", one + "/photo", null, token), status, code);
+        // F05-S02: Popular and its setting; variants and deposits travel in the service save above.
+        refused(
+                api.call(
+                        salon,
+                        "PUT",
+                        one + "/popular",
+                        Map.of("popular", true, "version", service.get("version")),
+                        token),
+                status,
+                code);
+        refused(
+                api.call(salon, "PUT", POPULAR_SETTING, Map.of("mode", "most_booked", "version", 0), token),
+                status,
+                code);
+        refused(
+                api.call(
+                        salon,
+                        "POST",
+                        SERVICES,
+                        CatalogueFixture.withVariants(
+                                CatalogueFixture.service(category, "Variant one", 2500, 45, 0),
+                                "Hair length",
+                                CatalogueFixture.variant(null, "Short", 2500, 45),
+                                CatalogueFixture.variant(null, "Long", 4000, 75)),
+                        token),
+                status,
+                code);
     }
 
     private void bothListsRead(TestSalon salon, String token) {
@@ -175,6 +203,8 @@ class CatalogueAccessIntegrationTest extends IntegrationTest {
         assertThat(api.call(salon, "GET", SERVICES, null, token).status()).isEqualTo(200);
         assertThat(api.call(salon, "GET", SERVICES + "/" + service.get("id"), null, token)
                         .status())
+                .isEqualTo(200);
+        assertThat(api.call(salon, "GET", POPULAR_SETTING, null, token).status())
                 .isEqualTo(200);
     }
 
@@ -217,6 +247,7 @@ class CatalogueAccessIntegrationTest extends IntegrationTest {
     void withoutASessionTheWorkspaceListsAndChangesAreRefused() {
         refused(api.call(alpha, "GET", CATEGORIES, null, null), 401, "invalid_session");
         refused(api.call(alpha, "GET", SERVICES, null, null), 401, "invalid_session");
+        refused(api.call(alpha, "GET", POPULAR_SETTING, null, null), 401, "invalid_session");
         refused(api.call(alpha, "POST", CATEGORIES, Map.of("name", "Kids"), null), 401, "invalid_session");
     }
 
@@ -256,6 +287,7 @@ class CatalogueAccessIntegrationTest extends IntegrationTest {
         // Beta's session on alpha's hostname is a session of another salon.
         refused(api.call(alpha, "GET", CATEGORIES, null, betasOwner), 404, "not_found");
         refused(api.call(alpha, "GET", SERVICES, null, betasOwner), 404, "not_found");
+        refused(api.call(alpha, "GET", POPULAR_SETTING, null, betasOwner), 404, "not_found");
         everyChangeRefused(alpha, betasOwner, colour, service.get("id"), 404, "not_found");
 
         assertThat(everything(alpha)).isEqualTo(before);
@@ -314,6 +346,22 @@ class CatalogueAccessIntegrationTest extends IntegrationTest {
                 404,
                 "not_found");
         refused(api.photo(beta, service.get("photoUrl")), 404, "not_found");
+        refused(
+                api.call(
+                        beta,
+                        "PUT",
+                        SERVICES + "/" + alphasService + "/popular",
+                        Map.of("popular", true, "version", 0),
+                        betasOwner),
+                404,
+                "not_found");
+        // Each salon's Popular setting is its own: beta's switch leaves alpha's as it was.
+        assertThat(api.call(beta, "PUT", POPULAR_SETTING, Map.of("mode", "most_booked", "version", 0), betasOwner)
+                        .status())
+                .isEqualTo(200);
+        assertThat(api.body(api.call(alpha, "GET", POPULAR_SETTING, null, alphasOwner)))
+                .containsEntry("mode", "chosen")
+                .containsEntry("version", 0);
         // A service of beta's cannot be put in alpha's category: the field error of a category that is not beta's.
         Http.Exchange foreign =
                 api.call(beta, "POST", SERVICES, CatalogueFixture.service(colour, "Stolen", 2500, 45, 0), betasOwner);
@@ -330,5 +378,37 @@ class CatalogueAccessIntegrationTest extends IntegrationTest {
                         api.body(api.call(beta, "GET", MENU, null, null)).get("categories")))
                 .isEmpty();
         assertThat(everything(alpha)).isEqualTo(before);
+    }
+
+    @Test
+    void anotherSalonsVariantIdIsNotOneOfThisServicesVariants() {
+        String betasOwner = settings.signedIn(beta, StaffRole.OWNER).token();
+        UUID betasColour = api.category(beta, betasOwner, "Colour");
+        Map<String, Object> betas = api.created(
+                beta,
+                betasOwner,
+                CatalogueFixture.withVariants(
+                        CatalogueFixture.service(betasColour, "Cut", 2500, 45, 0),
+                        "Hair length",
+                        CatalogueFixture.variant(null, "Short", 2500, 45),
+                        CatalogueFixture.variant(null, "Long", 4000, 75)));
+        Object betasVariant = CatalogueFixture.maps(
+                        CatalogueFixture.map(betas.get("terms")).get("variants"))
+                .getFirst()
+                .get("id");
+
+        Http.Exchange stolen = api.call(
+                alpha,
+                "PUT",
+                SERVICES + "/" + service.get("id"),
+                CatalogueFixture.saveWithVariants(
+                        service,
+                        "Hair length",
+                        CatalogueFixture.variant(betasVariant, "Short", 2500, 45),
+                        CatalogueFixture.variant(null, "Long", 4000, 75)),
+                alphasOwner);
+
+        refused(stolen, 400, "bad_request");
+        assertThat(api.body(stolen).get("errors").toString()).contains("field=variants.items[0].id");
     }
 }

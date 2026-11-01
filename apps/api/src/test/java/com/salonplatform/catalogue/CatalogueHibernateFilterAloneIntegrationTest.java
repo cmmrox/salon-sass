@@ -3,13 +3,17 @@ package com.salonplatform.catalogue;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.salonplatform.catalogue.entity.Category;
+import com.salonplatform.catalogue.entity.PopularSetting;
 import com.salonplatform.catalogue.entity.SalonService;
 import com.salonplatform.catalogue.entity.ServicePhoto;
+import com.salonplatform.catalogue.entity.TermsVariant;
 import com.salonplatform.catalogue.entity.TermsVersion;
 import com.salonplatform.catalogue.repository.CategoryListRepository;
 import com.salonplatform.catalogue.repository.CategoryRepository;
+import com.salonplatform.catalogue.repository.PopularSettingRepository;
 import com.salonplatform.catalogue.repository.SalonServiceRepository;
 import com.salonplatform.catalogue.repository.ServicePhotoRepository;
+import com.salonplatform.catalogue.repository.TermsVariantRepository;
 import com.salonplatform.catalogue.repository.TermsVersionRepository;
 import com.salonplatform.shared.tenancy.TenantContext;
 import com.salonplatform.testing.StartedApplication;
@@ -32,7 +36,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * The first layer on its own for F05-S01's tables: Hibernate's tenant filter ({@code @TenantId}), with row-level
+ * The first layer on its own for F05-S01's and F05-S02's tables: Hibernate's tenant filter ({@code @TenantId}), with row-level
  * security disabled on them and every write granted in this database, so that Hibernate and nothing else stands
  * between one salon and another. The cases of docs/architecture/multi-tenancy.md, "Tests you must write", hold.
  */
@@ -111,6 +115,16 @@ class CatalogueHibernateFilterAloneIntegrationTest {
                             .isEmpty();
                     assertThat(bean(ServicePhotoRepository.class).findPhoto(betasPhoto))
                             .isEmpty();
+                    assertThat(bean(TermsVariantRepository.class).findOfVersions(List.of(betasTerms)))
+                            .isEmpty();
+                    assertThat(bean(TermsVariantRepository.class).findAll())
+                            .extracting(TermsVariant::getTenantId)
+                            .containsOnly(alpha.id());
+                    assertThat(bean(PopularSettingRepository.class).findOfBranch(betasBranch))
+                            .isEmpty();
+                    assertThat(bean(PopularSettingRepository.class).findAll())
+                            .extracting(PopularSetting::getTenantId)
+                            .containsOnly(alpha.id());
                     assertThat(bean(SalonServiceRepository.class).findAll())
                             .extracting(SalonService::getTenantId)
                             .containsOnly(alpha.id());
@@ -123,7 +137,8 @@ class CatalogueHibernateFilterAloneIntegrationTest {
         as(
                 alpha,
                 () -> inTransaction(() -> {
-                    for (String entity : List.of("Category", "SalonService", "ServicePhoto")) {
+                    for (String entity :
+                            List.of("Category", "SalonService", "ServicePhoto", "TermsVariant", "PopularSetting")) {
                         assertThat(entityManager
                                         .createQuery("delete from " + entity + " e where e.tenantId = :beta")
                                         .setParameter("beta", beta.id())
@@ -133,6 +148,12 @@ class CatalogueHibernateFilterAloneIntegrationTest {
                     }
                     assertThat(entityManager
                                     .createQuery("update SalonService s set s.name = 'Taken' where s.tenantId = :beta")
+                                    .setParameter("beta", beta.id())
+                                    .executeUpdate())
+                            .isZero();
+                    assertThat(entityManager
+                                    .createQuery(
+                                            "update PopularSetting p set p.mode = 'most_booked' where p.tenantId = :beta")
                                     .setParameter("beta", beta.id())
                                     .executeUpdate())
                             .isZero();
@@ -160,7 +181,13 @@ class CatalogueHibernateFilterAloneIntegrationTest {
                             branch,
                             service,
                             1,
-                            new TermsVersion.Terms(100_00, "LKR", List.of(new ServiceSegment(SegmentKind.ACTIVE, 30))),
+                            new TermsVersion.Terms(
+                                    100_00,
+                                    "LKR",
+                                    List.of(new ServiceSegment(SegmentKind.ACTIVE, 30)),
+                                    null,
+                                    List.of(),
+                                    new ServiceDeposit.SalonRule()),
                             UUID.randomUUID(),
                             now);
                     bean(SalonServiceRepository.class)
@@ -172,8 +199,17 @@ class CatalogueHibernateFilterAloneIntegrationTest {
                                     photo.getId(),
                                     now));
                     bean(TermsVersionRepository.class).persist(terms);
+                    TermsVariant variant = bean(TermsVariantRepository.class)
+                            .persist(TermsVariant.of(
+                                    terms,
+                                    1,
+                                    new ServiceVariant(
+                                            UUID.randomUUID(),
+                                            "Short",
+                                            100_00,
+                                            List.of(new ServiceSegment(SegmentKind.ACTIVE, 30)))));
                     entityManager.flush();
-                    return new UUID[] {category.getId(), service, terms.getId(), photo.getId()};
+                    return new UUID[] {category.getId(), service, terms.getId(), photo.getId(), variant.getId()};
                 }));
         JdbcTemplate owner = database.asOwner();
         assertThat(owner.queryForObject("SELECT tenant_id FROM catalogue_category WHERE id = ?", UUID.class, ids[0]))
@@ -185,6 +221,9 @@ class CatalogueHibernateFilterAloneIntegrationTest {
                 .isEqualTo(alpha.id());
         assertThat(owner.queryForObject("SELECT tenant_id FROM catalogue_photo WHERE id = ?", UUID.class, ids[3]))
                 .isEqualTo(alpha.id());
+        assertThat(owner.queryForObject(
+                        "SELECT tenant_id FROM catalogue_terms_variant WHERE id = ?", UUID.class, ids[4]))
+                .isEqualTo(alpha.id());
         as(
                 beta,
                 () -> inTransaction(() -> {
@@ -193,6 +232,8 @@ class CatalogueHibernateFilterAloneIntegrationTest {
                     assertThat(bean(TermsVersionRepository.class).findVersion(ids[2]))
                             .isEmpty();
                     assertThat(bean(ServicePhotoRepository.class).findPhoto(ids[3]))
+                            .isEmpty();
+                    assertThat(bean(TermsVariantRepository.class).findOfVersions(List.of(ids[2])))
                             .isEmpty();
                     return null;
                 }));
@@ -209,6 +250,10 @@ class CatalogueHibernateFilterAloneIntegrationTest {
         assertThat(inTransaction(() -> bean(ServicePhotoRepository.class).findAll()))
                 .isEmpty();
         assertThat(inTransaction(() -> bean(CategoryListRepository.class).findAll()))
+                .isEmpty();
+        assertThat(inTransaction(() -> bean(TermsVariantRepository.class).findAll()))
+                .isEmpty();
+        assertThat(inTransaction(() -> bean(PopularSettingRepository.class).findAll()))
                 .isEmpty();
     }
 

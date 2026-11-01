@@ -45,7 +45,9 @@ class CatalogueMenuController {
             operationId = "getCatalogueMenu",
             summary = "The salon's bookable menu. Public.",
             description = "Its categories in its order, each with its services that are bookable online, by name. A"
-                    + " category without such services is left out. Amounts are minor units of `currency`.")
+                    + " category without such services is left out. Amounts are minor units of `currency`. A service"
+                    + " with variants gives each with its price and time, and its lowest and highest values; `popular`"
+                    + " lists the Popular services.")
     @ApiResponse(responseCode = "200", description = "The menu.")
     @ApiResponse(
             responseCode = "403",

@@ -85,7 +85,7 @@ export interface paths {
         };
         /**
          * The salon's bookable menu. Public.
-         * @description Its categories in its order, each with its services that are bookable online, by name. A category without such services is left out. Amounts are minor units of `currency`.
+         * @description Its categories in its order, each with its services that are bookable online, by name. A category without such services is left out. Amounts are minor units of `currency`. A service with variants gives each with its price and time, and its lowest and highest values; `popular` lists the Popular services.
          */
         get: operations["getCatalogueMenu"];
         put?: never;
@@ -113,6 +113,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/catalogue/popular-setting": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** How the Popular list is made, and the list now. `catalogue.read`. */
+        get: operations["getCataloguePopularSetting"];
+        /** Switches how the Popular list is made, saved at once. `catalogue.price.change`. */
+        put: operations["setCataloguePopularSetting"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/catalogue/services": {
         parameters: {
             query?: never;
@@ -123,7 +141,10 @@ export interface paths {
         /** Every service of the salon with its current terms, by name. `catalogue.read`. */
         get: operations["listCatalogueServices"];
         put?: never;
-        /** Creates a service with its first terms version. `catalogue.price.change`. */
+        /**
+         * Creates a service with its first terms version. `catalogue.price.change`.
+         * @description With a price and time, or with one set of 2 to 10 variants that each have their own; with its deposit, the salon's rule when none is sent. Not chosen for Popular.
+         */
         post: operations["createCatalogueService"];
         delete?: never;
         options?: never;
@@ -142,7 +163,7 @@ export interface paths {
         get: operations["getCatalogueService"];
         /**
          * Saves every field of a service. `catalogue.price.change`.
-         * @description A change of price, time or buffer creates a new terms version and makes it current; new bookings use it and existing bookings keep theirs. Any other change creates none.
+         * @description A change of price, time, buffer, variants (added, removed, renamed, reordered, or their price or time) or deposit creates a new terms version and makes it current; new bookings use it and existing bookings keep theirs. Any other change creates none. A variant sent with its id keeps it; one without an id is new.
          */
         put: operations["saveCatalogueService"];
         post?: never;
@@ -209,6 +230,26 @@ export interface paths {
         post?: never;
         /** Removes the service's photo. `catalogue.price.change`. */
         delete: operations["removeCatalogueServicePhoto"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalogue/services/{id}/popular": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Chooses a service for Popular, or no longer. `catalogue.price.change`.
+         * @description At most six services are chosen. Makes no terms version.
+         */
+        put: operations["setCatalogueServicePopular"];
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -1658,10 +1699,35 @@ export interface components {
              */
             listVersion: number;
         };
+        CataloguePopularSetting: {
+            /**
+             * @description `chosen`: the services the salon chose. `most_booked`: the most booked of the last 90 days, the chosen ones until bookings exist.
+             * @enum {string}
+             */
+            mode: "chosen" | "most_booked";
+            /** @description The Popular services' ids in order, among those bookable online. */
+            popular: string[];
+            /**
+             * Format: int64
+             * @description Its version, which a change is made from; 0 before the first change.
+             */
+            version: number;
+        };
+        CataloguePopularSettingInput: {
+            /** @enum {string} */
+            mode: "chosen" | "most_booked";
+            /**
+             * Format: int64
+             * @description The setting's version, as read; 0 before its first change.
+             */
+            version: number;
+        };
         CatalogueService: {
             bookableOnline: boolean;
             /** Format: uuid */
             categoryId: string;
+            /** @description Its deposit, from its current terms. */
+            deposit: components["schemas"]["CatalogueServiceDeposit"];
             /** @description Null when it has none. */
             description: string | null;
             /** Format: uuid */
@@ -1674,12 +1740,42 @@ export interface components {
             photoId: string | null;
             /** @description Where its photo is served on the salon's hostname; null when it has none. */
             photoUrl: string | null;
+            /** @description Whether the salon chose it for Popular. */
+            popular: boolean;
             terms: components["schemas"]["CatalogueServiceTerms"];
             /**
              * Format: int64
              * @description Its version, which a change is made from.
              */
             version: number;
+        };
+        CatalogueServiceDeposit: {
+            /**
+             * Format: int64
+             * @description With `amount`: minor units of the service's currency.
+             */
+            amountMinor?: number;
+            /** @enum {string} */
+            kind: "salon_rule" | "none" | "percentage" | "amount";
+            /**
+             * Format: int32
+             * @description With `percentage`: the share of the price booked.
+             */
+            percent?: number;
+        };
+        CatalogueServiceDepositInput: {
+            /**
+             * Format: int64
+             * @description With `amount`: minor units, a whole number of units: Rs. 100 to Rs. 100,000 and not more than the service's lowest price.
+             */
+            amountMinor?: number;
+            /** @enum {string} */
+            kind: "salon_rule" | "none" | "percentage" | "amount";
+            /**
+             * Format: int32
+             * @description With `percentage`: the share of the price booked.
+             */
+            percent?: number;
         };
         CatalogueServiceList: {
             items: components["schemas"]["CatalogueService"][];
@@ -1698,6 +1794,14 @@ export interface components {
              * @description The image file: PNG, JPEG or WebP, up to 5 MB.
              */
             file: string;
+        };
+        CatalogueServicePopular: {
+            popular: boolean;
+            /**
+             * Format: int64
+             * @description The service's version, as read.
+             */
+            version: number;
         };
         CatalogueServiceSegment: {
             /**
@@ -1718,7 +1822,17 @@ export interface components {
             currency: string;
             /**
              * Format: int32
-             * @description The service's time: every segment but the buffer.
+             * @description The longest time.
+             */
+            durationMaxMinutes: number;
+            /**
+             * Format: int32
+             * @description The shortest time.
+             */
+            durationMinMinutes: number;
+            /**
+             * Format: int32
+             * @description The service's time: every segment but the buffer; with variants, the shortest.
              */
             durationMinutes: number;
             /**
@@ -1728,15 +1842,72 @@ export interface components {
             number: number;
             /**
              * Format: int64
-             * @description The price in minor units of `currency`.
+             * @description The highest price.
+             */
+            priceMaxMinor: number;
+            /**
+             * Format: int64
+             * @description The lowest price.
+             */
+            priceMinMinor: number;
+            /**
+             * Format: int64
+             * @description The price in minor units of `currency`; with variants, the lowest.
              */
             priceMinor: number;
             segments: components["schemas"]["CatalogueServiceSegment"][];
+            /** @description The name of the set of variants, such as "Hair length"; null without variants. */
+            variantSetName: string | null;
+            /** @description The variants in order; empty without variants. */
+            variants: components["schemas"]["CatalogueServiceVariant"][];
             /**
              * Format: uuid
              * @description The terms version; a booking made now keeps it.
              */
             versionId: string;
+        };
+        CatalogueServiceVariant: {
+            /**
+             * Format: int32
+             * @description Its time: every segment but the buffer.
+             */
+            durationMinutes: number;
+            /**
+             * Format: uuid
+             * @description The variant's stable id, the same in every version while it exists.
+             */
+            id: string;
+            name: string;
+            /**
+             * Format: int64
+             * @description Its price in minor units of the terms' currency.
+             */
+            priceMinor: number;
+            segments: components["schemas"]["CatalogueServiceSegment"][];
+        };
+        CatalogueVariantInput: {
+            /**
+             * Format: int32
+             * @description 5 to 480 minutes, in steps of 5.
+             */
+            durationMinutes: number;
+            /**
+             * Format: uuid
+             * @description Absent or null for a new variant; otherwise one of the current terms version's variants, which keeps its id.
+             */
+            id?: string | null;
+            /** @description Up to 30 characters after trimming, unique in the set regardless of case. */
+            name: string;
+            /**
+             * Format: int64
+             * @description Minor units of the salon's currency, a whole number of units: Rs. 100 to Rs. 500,000.
+             */
+            priceMinor: number;
+        };
+        CatalogueVariantsInput: {
+            items: components["schemas"]["CatalogueVariantInput"][];
+            /** @description 2 to 30 characters after trimming, such as "Hair length". */
+            name: string;
         };
         Challenge: {
             /** Format: uuid */
@@ -2103,6 +2274,8 @@ export interface components {
             categories: components["schemas"]["MenuCategory"][];
             /** @description The salon's currency, ISO 4217. */
             currency: string;
+            /** @description The Popular services' ids in order, each one of the menu's: the salon's choice, or the most booked of the last 90 days. */
+            popular: string[];
         };
         MenuCategory: {
             /** Format: uuid */
@@ -2112,11 +2285,23 @@ export interface components {
         };
         MenuService: {
             currency: string;
+            /** @description Its deposit; `salon_rule` means the salon's booking rules decide. */
+            deposit: components["schemas"]["CatalogueServiceDeposit"];
             /** @description Null when it has none. */
             description: string | null;
             /**
              * Format: int32
-             * @description The customer's time in minutes; the buffer after it is not included.
+             * @description The longest customer's time.
+             */
+            durationMaxMinutes: number;
+            /**
+             * Format: int32
+             * @description The shortest customer's time.
+             */
+            durationMinMinutes: number;
+            /**
+             * Format: int32
+             * @description The customer's time in minutes, the buffer after it not included; with variants, the shortest.
              */
             durationMinutes: number;
             /** Format: uuid */
@@ -2126,7 +2311,17 @@ export interface components {
             photoUrl: string | null;
             /**
              * Format: int64
-             * @description The price in minor units of `currency`, tax included.
+             * @description The highest price.
+             */
+            priceMaxMinor: number;
+            /**
+             * Format: int64
+             * @description The lowest price: show "From" when it is below the highest.
+             */
+            priceMinMinor: number;
+            /**
+             * Format: int64
+             * @description The price in minor units of `currency`, tax included; with variants, the lowest.
              */
             priceMinor: number;
             /**
@@ -2134,6 +2329,28 @@ export interface components {
              * @description The current terms version; a booking made now keeps it.
              */
             termsVersionId: string;
+            /** @description The name of the set of variants customers choose from; null without variants. */
+            variantSetName: string | null;
+            /** @description The variants in order; empty without variants. */
+            variants: components["schemas"]["MenuServiceVariant"][];
+        };
+        MenuServiceVariant: {
+            /**
+             * Format: int32
+             * @description The customer's time in minutes; the buffer after it is not included.
+             */
+            durationMinutes: number;
+            /**
+             * Format: uuid
+             * @description The variant's stable id; a booking names it.
+             */
+            id: string;
+            name: string;
+            /**
+             * Format: int64
+             * @description Its price in minor units of the service's currency, tax included.
+             */
+            priceMinor: number;
         };
         /** @description What the running service says about itself. */
         Meta: {
@@ -2191,20 +2408,24 @@ export interface components {
              * @description One of the salon's categories.
              */
             categoryId: string;
+            /** @description The service's deposit; the salon's booking rule when absent. */
+            deposit?: components["schemas"]["CatalogueServiceDepositInput"];
             /** @description Up to 90 characters; empty or null for none. */
             description?: string | null;
             /**
              * Format: int32
-             * @description 5 to 480 minutes, in steps of 5.
+             * @description 5 to 480 minutes, in steps of 5. Required without variants; absent or null with them.
              */
-            durationMinutes: number;
+            durationMinutes?: number | null;
             /** @description 2 to 40 characters after trimming, unique in the salon regardless of case. */
             name: string;
             /**
              * Format: int64
-             * @description Minor units of the salon's currency, a whole number of units: Rs. 100 to Rs. 500,000 (10000 to 50000000), scaled for other currencies.
+             * @description Minor units of the salon's currency, a whole number of units: Rs. 100 to Rs. 500,000 (10000 to 50000000), scaled for other currencies. Required without variants; absent or null with them.
              */
-            priceMinor: number;
+            priceMinor?: number | null;
+            /** @description The service's one set of variants (2 to 10), or absent or null for none. With variants the service has no price or time of its own. */
+            variants?: components["schemas"]["CatalogueVariantsInput"] | null;
         };
         /** @description No rules saved yet. */
         NoBookingRules: null;
@@ -3001,20 +3222,24 @@ export interface components {
              * @description One of the salon's categories.
              */
             categoryId: string;
+            /** @description The service's deposit; the salon's booking rule when absent. */
+            deposit?: components["schemas"]["CatalogueServiceDepositInput"];
             /** @description Up to 90 characters; empty or null for none. */
             description?: string | null;
             /**
              * Format: int32
-             * @description 5 to 480 minutes, in steps of 5.
+             * @description 5 to 480 minutes, in steps of 5. Required without variants; absent or null with them.
              */
-            durationMinutes: number;
+            durationMinutes?: number | null;
             /** @description 2 to 40 characters after trimming, unique in the salon regardless of case. */
             name: string;
             /**
              * Format: int64
-             * @description Minor units of the salon's currency, a whole number of units.
+             * @description Minor units of the salon's currency, a whole number of units: Rs. 100 to Rs. 500,000 (10000 to 50000000), scaled for other currencies. Required without variants; absent or null with them.
              */
-            priceMinor: number;
+            priceMinor?: number | null;
+            /** @description The service's one set of variants (2 to 10), or absent or null for none. With variants the service has no price or time of its own. */
+            variants?: components["schemas"]["CatalogueVariantsInput"] | null;
             /**
              * Format: int64
              * @description The service's version, as read.
@@ -3786,6 +4011,158 @@ export interface operations {
             };
         };
     };
+    getCataloguePopularSetting: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The setting; `chosen` at version 0 before its first change. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CataloguePopularSetting"];
+                };
+            };
+            /** @description No valid session for this salon: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Without `catalogue.read`: `permission_denied`. A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The hostname names no salon: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The database is down or not answering: `service_unavailable`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    setCataloguePopularSetting: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CataloguePopularSettingInput"];
+            };
+        };
+        responses: {
+            /** @description The setting as saved, and the list it makes. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CataloguePopularSetting"];
+                };
+            };
+            /** @description `mode` is not `chosen` or `most_booked`, or `version` is missing: `bad_request`, with `errors` naming it. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No valid session for this salon: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Without `catalogue.price.change`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The hostname names no salon: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `version` is not the setting's: `conflict`. It is already so: `invalid_state`. Nothing changes. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The database is down or not answering: `service_unavailable`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     listCatalogueServices: {
         parameters: {
             query?: never;
@@ -4029,7 +4406,7 @@ export interface operations {
                     "application/json": components["schemas"]["CatalogueService"];
                 };
             };
-            /** @description A field broke a rule (a category that is not the salon's included), or another service has the name regardless of case: `bad_request`, with `errors` naming each field. Nothing is saved. */
+            /** @description A field broke a rule (a category that is not the salon's included, a variant id the current version does not have), or another service has the name regardless of case: `bad_request`, with `errors` naming each field. Nothing is saved. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -4481,6 +4858,95 @@ export interface operations {
                 };
             };
             /** @description The service has no photo: `invalid_state`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The database is down or not answering: `service_unavailable`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    setCatalogueServicePopular: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CatalogueServicePopular"];
+            };
+        };
+        responses: {
+            /** @description The service. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogueService"];
+                };
+            };
+            /** @description `popular` or `version` is missing: `bad_request`, with `errors` naming it. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No valid session for this salon: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Without `catalogue.price.change`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No such service of the hostname's salon, or the hostname names no salon: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Six services are already chosen: `limit_reached`. `version` is not the service's: `conflict`. It is already so: `invalid_state`. Nothing changes. */
             409: {
                 headers: {
                     [name: string]: unknown;

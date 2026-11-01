@@ -2,10 +2,10 @@ package com.salonplatform.catalogue.service.impl;
 
 import com.salonplatform.catalogue.ServiceTerms;
 import com.salonplatform.catalogue.ServiceTermsVersion;
+import com.salonplatform.catalogue.domain.Ranges;
 import com.salonplatform.catalogue.entity.SalonService;
 import com.salonplatform.catalogue.entity.TermsVersion;
 import com.salonplatform.catalogue.repository.SalonServiceRepository;
-import com.salonplatform.catalogue.repository.TermsVersionRepository;
 import com.salonplatform.shared.tenancy.TenantContext;
 import java.util.Optional;
 import java.util.UUID;
@@ -21,11 +21,10 @@ import org.springframework.transaction.support.TransactionTemplate;
 class ServiceTermsImpl implements ServiceTerms {
 
     private final SalonServiceRepository services;
-    private final TermsVersionRepository versions;
+    private final TermsRows versions;
     private final TransactionTemplate reading;
 
-    ServiceTermsImpl(
-            SalonServiceRepository services, TermsVersionRepository versions, PlatformTransactionManager transactions) {
+    ServiceTermsImpl(SalonServiceRepository services, TermsRows versions, PlatformTransactionManager transactions) {
         this.services = services;
         this.versions = versions;
         this.reading = new TransactionTemplate(transactions);
@@ -41,8 +40,7 @@ class ServiceTermsImpl implements ServiceTerms {
         }
         return reading.execute(status -> services.findAny(serviceId)
                 .filter(service -> !service.isDeleted())
-                .flatMap(service ->
-                        versions.findVersion(service.getCurrentTermsId()).map(terms -> of(service, terms))));
+                .flatMap(service -> versions.find(service.getCurrentTermsId()).map(terms -> of(service, terms))));
     }
 
     @Override
@@ -51,19 +49,29 @@ class ServiceTermsImpl implements ServiceTerms {
         if (versionId == null) {
             return Optional.empty();
         }
-        return reading.execute(status -> versions.findVersion(versionId)
-                .flatMap(terms -> services.findAny(terms.getServiceId()).map(service -> of(service, terms))));
+        return reading.execute(status -> versions.find(versionId)
+                .flatMap(terms -> services.findAny(terms.row().getServiceId()).map(service -> of(service, terms))));
     }
 
-    private static ServiceTermsVersion of(SalonService service, TermsVersion terms) {
+    private static ServiceTermsVersion of(SalonService service, TermsRows.Read read) {
+        TermsVersion row = read.row();
+        TermsVersion.Terms terms = read.terms();
+        Ranges ranges = Ranges.of(terms.priceMinor(), terms.segments(), terms.variants());
         return new ServiceTermsVersion(
                 service.getId(),
-                terms.getId(),
-                terms.getNumber(),
+                row.getId(),
+                row.getNumber(),
                 service.getName(),
-                terms.getPriceMinor(),
-                terms.getCurrency(),
+                terms.priceMinor(),
+                terms.currency(),
                 terms.segments(),
-                service.isBookableOnline() && !service.isDeleted());
+                service.isBookableOnline() && !service.isDeleted(),
+                terms.variantSetName(),
+                terms.variants(),
+                ranges.priceMinMinor(),
+                ranges.priceMaxMinor(),
+                ranges.durationMinMinutes(),
+                ranges.durationMaxMinutes(),
+                terms.deposit());
     }
 }

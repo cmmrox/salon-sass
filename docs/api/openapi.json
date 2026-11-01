@@ -430,6 +430,63 @@
         ],
         "type": "object"
       },
+      "CataloguePopularSetting": {
+        "additionalProperties": false,
+        "properties": {
+          "mode": {
+            "description": "`chosen`: the services the salon chose. `most_booked`: the most booked of the last 90 days, the chosen ones until bookings exist.",
+            "enum": [
+              "chosen",
+              "most_booked"
+            ],
+            "type": "string"
+          },
+          "popular": {
+            "description": "The Popular services' ids in order, among those bookable online.",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 6,
+            "type": "array"
+          },
+          "version": {
+            "description": "Its version, which a change is made from; 0 before the first change.",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "mode",
+          "popular",
+          "version"
+        ],
+        "type": "object"
+      },
+      "CataloguePopularSettingInput": {
+        "additionalProperties": false,
+        "properties": {
+          "mode": {
+            "enum": [
+              "chosen",
+              "most_booked"
+            ],
+            "type": "string"
+          },
+          "version": {
+            "description": "The setting's version, as read; 0 before its first change.",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "mode",
+          "version"
+        ],
+        "type": "object"
+      },
       "CatalogueService": {
         "additionalProperties": false,
         "properties": {
@@ -439,6 +496,10 @@
           "categoryId": {
             "format": "uuid",
             "type": "string"
+          },
+          "deposit": {
+            "$ref": "#/components/schemas/CatalogueServiceDeposit",
+            "description": "Its deposit, from its current terms."
           },
           "description": {
             "description": "Null when it has none.",
@@ -472,6 +533,10 @@
               "null"
             ]
           },
+          "popular": {
+            "description": "Whether the salon chose it for Popular.",
+            "type": "boolean"
+          },
           "terms": {
             "$ref": "#/components/schemas/CatalogueServiceTerms"
           },
@@ -485,13 +550,77 @@
         "required": [
           "bookableOnline",
           "categoryId",
+          "deposit",
           "description",
           "id",
           "name",
           "photoId",
           "photoUrl",
+          "popular",
           "terms",
           "version"
+        ],
+        "type": "object"
+      },
+      "CatalogueServiceDeposit": {
+        "additionalProperties": false,
+        "properties": {
+          "amountMinor": {
+            "description": "With `amount`: minor units of the service's currency.",
+            "format": "int64",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "kind": {
+            "enum": [
+              "salon_rule",
+              "none",
+              "percentage",
+              "amount"
+            ],
+            "type": "string"
+          },
+          "percent": {
+            "description": "With `percentage`: the share of the price booked.",
+            "format": "int32",
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "type": "object"
+      },
+      "CatalogueServiceDepositInput": {
+        "additionalProperties": false,
+        "properties": {
+          "amountMinor": {
+            "description": "With `amount`: minor units, a whole number of units: Rs. 100 to Rs. 100,000 and not more than the service's lowest price.",
+            "format": "int64",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "kind": {
+            "enum": [
+              "salon_rule",
+              "none",
+              "percentage",
+              "amount"
+            ],
+            "type": "string"
+          },
+          "percent": {
+            "description": "With `percentage`: the share of the price booked.",
+            "format": "int32",
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "kind"
         ],
         "type": "object"
       },
@@ -543,6 +672,25 @@
         ],
         "type": "object"
       },
+      "CatalogueServicePopular": {
+        "additionalProperties": false,
+        "properties": {
+          "popular": {
+            "type": "boolean"
+          },
+          "version": {
+            "description": "The service's version, as read.",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "popular",
+          "version"
+        ],
+        "type": "object"
+      },
       "CatalogueServiceSegment": {
         "additionalProperties": false,
         "properties": {
@@ -581,8 +729,20 @@
             "pattern": "^[A-Z]{3}$",
             "type": "string"
           },
+          "durationMaxMinutes": {
+            "description": "The longest time.",
+            "format": "int32",
+            "minimum": 5,
+            "type": "integer"
+          },
+          "durationMinMinutes": {
+            "description": "The shortest time.",
+            "format": "int32",
+            "minimum": 5,
+            "type": "integer"
+          },
           "durationMinutes": {
-            "description": "The service's time: every segment but the buffer.",
+            "description": "The service's time: every segment but the buffer; with variants, the shortest.",
             "format": "int32",
             "minimum": 5,
             "type": "integer"
@@ -593,8 +753,20 @@
             "minimum": 1,
             "type": "integer"
           },
+          "priceMaxMinor": {
+            "description": "The highest price.",
+            "format": "int64",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "priceMinMinor": {
+            "description": "The lowest price.",
+            "format": "int64",
+            "minimum": 1,
+            "type": "integer"
+          },
           "priceMinor": {
-            "description": "The price in minor units of `currency`.",
+            "description": "The price in minor units of `currency`; with variants, the lowest.",
             "format": "int64",
             "minimum": 1,
             "type": "integer"
@@ -606,6 +778,23 @@
             "minItems": 1,
             "type": "array"
           },
+          "variantSetName": {
+            "description": "The name of the set of variants, such as \"Hair length\"; null without variants.",
+            "maxLength": 30,
+            "minLength": 2,
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "variants": {
+            "description": "The variants in order; empty without variants.",
+            "items": {
+              "$ref": "#/components/schemas/CatalogueServiceVariant"
+            },
+            "maxItems": 10,
+            "type": "array"
+          },
           "versionId": {
             "description": "The terms version; a booking made now keeps it.",
             "format": "uuid",
@@ -615,11 +804,114 @@
         "required": [
           "bufferMinutes",
           "currency",
+          "durationMaxMinutes",
+          "durationMinMinutes",
           "durationMinutes",
           "number",
+          "priceMaxMinor",
+          "priceMinMinor",
           "priceMinor",
           "segments",
+          "variantSetName",
+          "variants",
           "versionId"
+        ],
+        "type": "object"
+      },
+      "CatalogueServiceVariant": {
+        "additionalProperties": false,
+        "properties": {
+          "durationMinutes": {
+            "description": "Its time: every segment but the buffer.",
+            "format": "int32",
+            "minimum": 5,
+            "type": "integer"
+          },
+          "id": {
+            "description": "The variant's stable id, the same in every version while it exists.",
+            "format": "uuid",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 30,
+            "minLength": 1,
+            "type": "string"
+          },
+          "priceMinor": {
+            "description": "Its price in minor units of the terms' currency.",
+            "format": "int64",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "segments": {
+            "items": {
+              "$ref": "#/components/schemas/CatalogueServiceSegment"
+            },
+            "minItems": 1,
+            "type": "array"
+          }
+        },
+        "required": [
+          "durationMinutes",
+          "id",
+          "name",
+          "priceMinor",
+          "segments"
+        ],
+        "type": "object"
+      },
+      "CatalogueVariantInput": {
+        "additionalProperties": false,
+        "properties": {
+          "durationMinutes": {
+            "description": "5 to 480 minutes, in steps of 5.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "id": {
+            "description": "Absent or null for a new variant; otherwise one of the current terms version's variants, which keeps its id.",
+            "format": "uuid",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name": {
+            "description": "Up to 30 characters after trimming, unique in the set regardless of case.",
+            "type": "string"
+          },
+          "priceMinor": {
+            "description": "Minor units of the salon's currency, a whole number of units: Rs. 100 to Rs. 500,000.",
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "durationMinutes",
+          "name",
+          "priceMinor"
+        ],
+        "type": "object"
+      },
+      "CatalogueVariantsInput": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CatalogueVariantInput"
+            },
+            "maxItems": 10,
+            "minItems": 2,
+            "type": "array"
+          },
+          "name": {
+            "description": "2 to 30 characters after trimming, such as \"Hair length\".",
+            "type": "string"
+          }
+        },
+        "required": [
+          "items",
+          "name"
         ],
         "type": "object"
       },
@@ -1779,11 +2071,21 @@
             "description": "The salon's currency, ISO 4217.",
             "pattern": "^[A-Z]{3}$",
             "type": "string"
+          },
+          "popular": {
+            "description": "The Popular services' ids in order, each one of the menu's: the salon's choice, or the most booked of the last 90 days.",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 6,
+            "type": "array"
           }
         },
         "required": [
           "categories",
-          "currency"
+          "currency",
+          "popular"
         ],
         "type": "object"
       },
@@ -1819,6 +2121,10 @@
             "pattern": "^[A-Z]{3}$",
             "type": "string"
           },
+          "deposit": {
+            "$ref": "#/components/schemas/CatalogueServiceDeposit",
+            "description": "Its deposit; `salon_rule` means the salon's booking rules decide."
+          },
           "description": {
             "description": "Null when it has none.",
             "type": [
@@ -1826,8 +2132,20 @@
               "null"
             ]
           },
+          "durationMaxMinutes": {
+            "description": "The longest customer's time.",
+            "format": "int32",
+            "minimum": 5,
+            "type": "integer"
+          },
+          "durationMinMinutes": {
+            "description": "The shortest customer's time.",
+            "format": "int32",
+            "minimum": 5,
+            "type": "integer"
+          },
           "durationMinutes": {
-            "description": "The customer's time in minutes; the buffer after it is not included.",
+            "description": "The customer's time in minutes, the buffer after it not included; with variants, the shortest.",
             "format": "int32",
             "minimum": 5,
             "type": "integer"
@@ -1846,8 +2164,20 @@
               "null"
             ]
           },
+          "priceMaxMinor": {
+            "description": "The highest price.",
+            "format": "int64",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "priceMinMinor": {
+            "description": "The lowest price: show \"From\" when it is below the highest.",
+            "format": "int64",
+            "minimum": 1,
+            "type": "integer"
+          },
           "priceMinor": {
-            "description": "The price in minor units of `currency`, tax included.",
+            "description": "The price in minor units of `currency`, tax included; with variants, the lowest.",
             "format": "int64",
             "minimum": 1,
             "type": "integer"
@@ -1856,17 +2186,71 @@
             "description": "The current terms version; a booking made now keeps it.",
             "format": "uuid",
             "type": "string"
+          },
+          "variantSetName": {
+            "description": "The name of the set of variants customers choose from; null without variants.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "variants": {
+            "description": "The variants in order; empty without variants.",
+            "items": {
+              "$ref": "#/components/schemas/MenuServiceVariant"
+            },
+            "maxItems": 10,
+            "type": "array"
           }
         },
         "required": [
           "currency",
+          "deposit",
           "description",
+          "durationMaxMinutes",
+          "durationMinMinutes",
           "durationMinutes",
           "id",
           "name",
           "photoUrl",
+          "priceMaxMinor",
+          "priceMinMinor",
           "priceMinor",
-          "termsVersionId"
+          "termsVersionId",
+          "variantSetName",
+          "variants"
+        ],
+        "type": "object"
+      },
+      "MenuServiceVariant": {
+        "additionalProperties": false,
+        "properties": {
+          "durationMinutes": {
+            "description": "The customer's time in minutes; the buffer after it is not included.",
+            "format": "int32",
+            "minimum": 5,
+            "type": "integer"
+          },
+          "id": {
+            "description": "The variant's stable id; a booking names it.",
+            "format": "uuid",
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "priceMinor": {
+            "description": "Its price in minor units of the service's currency, tax included.",
+            "format": "int64",
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "durationMinutes",
+          "id",
+          "name",
+          "priceMinor"
         ],
         "type": "object"
       },
@@ -1975,6 +2359,10 @@
             "format": "uuid",
             "type": "string"
           },
+          "deposit": {
+            "$ref": "#/components/schemas/CatalogueServiceDepositInput",
+            "description": "The service's deposit; the salon's booking rule when absent."
+          },
           "description": {
             "description": "Up to 90 characters; empty or null for none.",
             "type": [
@@ -1983,26 +2371,41 @@
             ]
           },
           "durationMinutes": {
-            "description": "5 to 480 minutes, in steps of 5.",
+            "description": "5 to 480 minutes, in steps of 5. Required without variants; absent or null with them.",
             "format": "int32",
-            "type": "integer"
+            "type": [
+              "integer",
+              "null"
+            ]
           },
           "name": {
             "description": "2 to 40 characters after trimming, unique in the salon regardless of case.",
             "type": "string"
           },
           "priceMinor": {
-            "description": "Minor units of the salon's currency, a whole number of units: Rs. 100 to Rs. 500,000 (10000 to 50000000), scaled for other currencies.",
+            "description": "Minor units of the salon's currency, a whole number of units: Rs. 100 to Rs. 500,000 (10000 to 50000000), scaled for other currencies. Required without variants; absent or null with them.",
             "format": "int64",
-            "type": "integer"
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "variants": {
+            "description": "The service's one set of variants (2 to 10), or absent or null for none. With variants the service has no price or time of its own.",
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/CatalogueVariantsInput"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
           "bufferMinutes",
           "categoryId",
-          "durationMinutes",
-          "name",
-          "priceMinor"
+          "name"
         ],
         "type": "object"
       },
@@ -4486,6 +4889,10 @@
             "format": "uuid",
             "type": "string"
           },
+          "deposit": {
+            "$ref": "#/components/schemas/CatalogueServiceDepositInput",
+            "description": "The service's deposit; the salon's booking rule when absent."
+          },
           "description": {
             "description": "Up to 90 characters; empty or null for none.",
             "type": [
@@ -4494,18 +4901,35 @@
             ]
           },
           "durationMinutes": {
-            "description": "5 to 480 minutes, in steps of 5.",
+            "description": "5 to 480 minutes, in steps of 5. Required without variants; absent or null with them.",
             "format": "int32",
-            "type": "integer"
+            "type": [
+              "integer",
+              "null"
+            ]
           },
           "name": {
             "description": "2 to 40 characters after trimming, unique in the salon regardless of case.",
             "type": "string"
           },
           "priceMinor": {
-            "description": "Minor units of the salon's currency, a whole number of units.",
+            "description": "Minor units of the salon's currency, a whole number of units: Rs. 100 to Rs. 500,000 (10000 to 50000000), scaled for other currencies. Required without variants; absent or null with them.",
             "format": "int64",
-            "type": "integer"
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "variants": {
+            "description": "The service's one set of variants (2 to 10), or absent or null for none. With variants the service has no price or time of its own.",
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/CatalogueVariantsInput"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "version": {
             "description": "The service's version, as read.",
@@ -4518,9 +4942,7 @@
           "bookableOnline",
           "bufferMinutes",
           "categoryId",
-          "durationMinutes",
           "name",
-          "priceMinor",
           "version"
         ],
         "type": "object"
@@ -5746,7 +6168,7 @@
     },
     "/api/v1/catalogue/menu": {
       "get": {
-        "description": "Its categories in its order, each with its services that are bookable online, by name. A category without such services is left out. Amounts are minor units of `currency`.",
+        "description": "Its categories in its order, each with its services that are bookable online, by name. A category without such services is left out. Amounts are minor units of `currency`. A service with variants gives each with its price and time, and its lowest and highest values; `popular` lists the Popular services.",
         "operationId": "getCatalogueMenu",
         "responses": {
           "200": {
@@ -5878,6 +6300,176 @@
         ]
       }
     },
+    "/api/v1/catalogue/popular-setting": {
+      "get": {
+        "operationId": "getCataloguePopularSetting",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CataloguePopularSetting"
+                }
+              }
+            },
+            "description": "The setting; `chosen` at version 0 before its first change."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No valid session for this salon: `invalid_session`."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Without `catalogue.read`: `permission_denied`. A suspended salon: `salon_suspended`."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The hostname names no salon: `not_found`."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The database is down or not answering: `service_unavailable`."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "summary": "How the Popular list is made, and the list now. `catalogue.read`.",
+        "tags": [
+          "catalogue"
+        ]
+      },
+      "put": {
+        "operationId": "setCataloguePopularSetting",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CataloguePopularSettingInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CataloguePopularSetting"
+                }
+              }
+            },
+            "description": "The setting as saved, and the list it makes."
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`mode` is not `chosen` or `most_booked`, or `version` is missing: `bad_request`, with `errors` naming it."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No valid session for this salon: `invalid_session`."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Without `catalogue.price.change`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The hostname names no salon: `not_found`."
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`version` is not the setting's: `conflict`. It is already so: `invalid_state`. Nothing changes."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The database is down or not answering: `service_unavailable`."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "summary": "Switches how the Popular list is made, saved at once. `catalogue.price.change`.",
+        "tags": [
+          "catalogue"
+        ]
+      }
+    },
     "/api/v1/catalogue/services": {
       "get": {
         "operationId": "listCatalogueServices",
@@ -5949,6 +6541,7 @@
         ]
       },
       "post": {
+        "description": "With a price and time, or with one set of 2 to 10 variants that each have their own; with its deposit, the salon's rule when none is sent. Not chosen for Popular.",
         "operationId": "createCatalogueService",
         "requestBody": {
           "content": {
@@ -6231,7 +6824,7 @@
         ]
       },
       "put": {
-        "description": "A change of price, time or buffer creates a new terms version and makes it current; new bookings use it and existing bookings keep theirs. Any other change creates none.",
+        "description": "A change of price, time, buffer, variants (added, removed, renamed, reordered, or their price or time) or deposit creates a new terms version and makes it current; new bookings use it and existing bookings keep theirs. Any other change creates none. A variant sent with its id keeps it; one without an id is new.",
         "operationId": "saveCatalogueService",
         "parameters": [
           {
@@ -6272,7 +6865,7 @@
                 }
               }
             },
-            "description": "A field broke a rule (a category that is not the salon's included), or another service has the name regardless of case: `bad_request`, with `errors` naming each field. Nothing is saved."
+            "description": "A field broke a rule (a category that is not the salon's included, a variant id the current version does not have), or another service has the name regardless of case: `bad_request`, with `errors` naming each field. Nothing is saved."
           },
           "401": {
             "content": {
@@ -6740,6 +7333,118 @@
           }
         },
         "summary": "Sets the service's photo, replacing any earlier one. `catalogue.price.change`.",
+        "tags": [
+          "catalogue"
+        ]
+      }
+    },
+    "/api/v1/catalogue/services/{id}/popular": {
+      "put": {
+        "description": "At most six services are chosen. Makes no terms version.",
+        "operationId": "setCatalogueServicePopular",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CatalogueServicePopular"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogueService"
+                }
+              }
+            },
+            "description": "The service."
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`popular` or `version` is missing: `bad_request`, with `errors` naming it."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No valid session for this salon: `invalid_session`."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Without `catalogue.price.change`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No such service of the hostname's salon, or the hostname names no salon: `not_found`."
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Six services are already chosen: `limit_reached`. `version` is not the service's: `conflict`. It is already so: `invalid_state`. Nothing changes."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The database is down or not answering: `service_unavailable`."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "summary": "Chooses a service for Popular, or no longer. `catalogue.price.change`.",
         "tags": [
           "catalogue"
         ]
@@ -12284,7 +12989,7 @@
       "name": "booking"
     },
     {
-      "description": "The salon's categories and services, each change of price or time an immutable terms version.",
+      "description": "The salon's categories and services, each change of price, time, variants or deposit an immutable terms version, and its Popular services.",
       "name": "catalogue"
     },
     {

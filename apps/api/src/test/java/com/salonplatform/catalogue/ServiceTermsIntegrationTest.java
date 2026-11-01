@@ -131,7 +131,14 @@ class ServiceTermsIntegrationTest extends IntegrationTest {
                         450_000,
                         "LKR",
                         List.of(new ServiceSegment(SegmentKind.ACTIVE, 60), new ServiceSegment(SegmentKind.BUFFER, 15)),
-                        true));
+                        true,
+                        null,
+                        List.of(),
+                        450_000,
+                        450_000,
+                        60,
+                        60,
+                        new ServiceDeposit.SalonRule()));
         assertThat(as(alpha, () -> serviceTerms.current(serviceId)).orElseThrow())
                 .satisfies(current -> {
                     assertThat(current.versionId())
