@@ -2,8 +2,12 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 import type { Salon } from '@/features/branding';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { SidebarInset } from '@/components/ui/sidebar';
 import { Navigation, NavigationProvider, NavigationTrigger, type NavigationItem } from '@/components/shared/Navigation';
+
+/** An image beside the salon's name, which says nothing the name does not: no text alternative. */
+const DECORATIVE = '';
 
 /**
  * The prototype's Salon workspace frame: a sticky header with the salon's name, the shadcn/ui
@@ -91,6 +95,15 @@ export function WorkspaceShell({
       data-testid="workspace-header"
     >
       <NavigationTrigger label={t('menu')} />
+      {/* The published logo before the name when the salon has one (F04-S02); nothing extra otherwise. */}
+      {salon.logo && (
+        <Avatar className="size-8 shrink-0 border border-border" aria-hidden="true" data-testid="workspace-logo">
+          <AvatarImage src={`/brand-images/${salon.logo}`} alt={DECORATIVE} />
+          <AvatarFallback className="bg-secondary text-small font-semibold text-foreground">
+            {Array.from(salon.name.trim())[0]}
+          </AvatarFallback>
+        </Avatar>
+      )}
       <Link
         className="block min-h-touch min-w-0 truncate leading-(--size-touch-target) font-semibold text-foreground no-underline"
         href="/"

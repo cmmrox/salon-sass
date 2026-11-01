@@ -2,13 +2,13 @@
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Toaster } from '@/components/ui/sonner';
 import { Spinner } from '@/components/ui/spinner';
 import { LeaveDialog, ProfileForm, ProfilePreview, PublishBar, useLeaveGuard } from '@/features/branding';
 import type { Kind } from '@/features/identity';
+import { SettingsNotices } from './SettingsNotices';
 import { useProfileDraft } from './use-profile-draft';
 
 type ReadOnly = 'support' | 'salon' | null;
@@ -51,57 +51,14 @@ export function ProfileSettingsScreen({
     );
 
   const notices = (
-    <>
-      {readOnly && (
-        <Alert variant="notice" data-testid="profile-read-only">
-          {readOnly === 'support' ? t('readOnlySupport') : t('readOnlySalon')}
-        </Alert>
-      )}
-      {profile.notice === 'conflict' && (
-        <Alert variant="caution" data-testid="profile-conflict">
-          <AlertTitle>{t('conflictTitle')}</AlertTitle>
-          <AlertDescription>{t('conflictBody')}</AlertDescription>
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-fit"
-            onClick={() => void profile.reload()}
-            data-testid="profile-conflict-reload"
-          >
-            {t('reload')}
-          </Button>
-        </Alert>
-      )}
-      {profile.notice === 'unavailable' && (
-        <Alert variant="caution" data-testid="profile-unavailable">
-          <AlertTitle>{t('unavailableTitle')}</AlertTitle>
-          <AlertDescription>{profile.draft ? t('unavailableKept') : t('unavailableBody')}</AlertDescription>
-          {!profile.draft && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-fit"
-              onClick={() => void profile.reload()}
-              data-testid="profile-retry"
-            >
-              {t('retry')}
-            </Button>
-          )}
-        </Alert>
-      )}
-      {profile.notice === 'fix' && (
-        <Alert variant="notice" data-testid="profile-fix">
-          {t('fixFields')}
-        </Alert>
-      )}
-      {profile.notice === 'refused' && (
-        <Alert variant="notice" data-testid="profile-refused">
-          {t.has(`refused.${profile.refusal}` as 'refused.permission_denied')
-            ? t(`refused.${profile.refusal}` as 'refused.permission_denied')
-            : t('refused.permission_denied')}
-        </Alert>
-      )}
-    </>
+    <SettingsNotices
+      subject="profile"
+      readOnly={readOnly}
+      notice={profile.notice}
+      refusal={profile.refusal}
+      hasDraft={profile.draft !== null}
+      onReload={() => void profile.reload()}
+    />
   );
 
   if (!profile.draft || !profile.form) return <div className="flex flex-col gap-4">{notices}</div>;
@@ -127,6 +84,7 @@ export function ProfileSettingsScreen({
         </div>
       </div>
       <PublishBar
+        subject="profile"
         unpublished={profile.unpublished}
         busy={profile.busy === 'publishing' || profile.busy === 'discarding' ? profile.busy : null}
         disabled={readOnly !== null || profile.busy !== null}

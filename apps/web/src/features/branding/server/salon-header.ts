@@ -15,7 +15,13 @@ export const SALON_HEADER = 'x-salon-resolved';
 /** The salon, as the header carries it: URI-encoded JSON, so that any name fits in a header. */
 export function encodeSalon(salon: Salon): string {
   return encodeURIComponent(
-    JSON.stringify({ slug: salon.slug, name: salon.name, brandColour: salon.brandColour, timeZone: salon.timeZone }),
+    JSON.stringify({
+      slug: salon.slug,
+      name: salon.name,
+      brandColour: salon.brandColour,
+      timeZone: salon.timeZone,
+      ...(salon.logo ? { logo: salon.logo } : {}),
+    }),
   );
 }
 
@@ -33,7 +39,7 @@ export function decodeSalon(value: string | null | undefined): Salon | null {
   if (typeof parsed !== 'object' || parsed === null) {
     return null;
   }
-  const { slug, name, brandColour, timeZone } = parsed as Record<string, unknown>;
+  const { slug, name, brandColour, timeZone, logo } = parsed as Record<string, unknown>;
   if (
     typeof slug !== 'string' ||
     typeof name !== 'string' ||
@@ -43,5 +49,8 @@ export function decodeSalon(value: string | null | undefined): Salon | null {
   ) {
     return null;
   }
-  return { slug, name, brandColour, timeZone };
+  // The logo is an image id the API gave; anything else is dropped, and the salon shows its initial.
+  return { slug, name, brandColour, timeZone, ...(typeof logo === 'string' && UUID.test(logo) ? { logo } : {}) };
 }
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
