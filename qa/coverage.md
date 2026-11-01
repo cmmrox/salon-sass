@@ -32,7 +32,7 @@ asked for. A case is a test titled with its id and criteria, or a manual or defe
 | F03-S04 | complete | - | PLT-07, NFR-20 | 10 | 17 | 17 | 0 | 0 |
 | F04-S01 | complete | - | BRD-02, BRD-04, NFR-13 | 11 | 28 | 28 | 0 | 0 |
 | F04-S02 | complete | - | BRD-01, BRD-04 | 12 | 0 | 0 | 0 | 0 |
-| F04-S03 | in-progress | - | STF-04, NFR-13 | 12 | 0 | 0 | 0 | 0 |
+| F04-S03 | built | - | STF-04, NFR-13 | 12 | 0 | 0 | 0 | 0 |
 
 ## Deferred cases
 
@@ -92,7 +92,7 @@ Cases waiting for something else. `feature-verify` and `release-prepare` go thro
 | STF-01 | R1 | must | F06 | - |
 | STF-02 | R1 | must | F06 | - |
 | STF-03 | R1 | must | F06 | - |
-| STF-04 | R1 | must | F04 | F04-S03 (in-progress) |
+| STF-04 | R1 | must | F04 | F04-S03 (built) |
 | STF-05 | R1 | must | F06 | - |
 | STF-06 | R1 | should | F10 | - |
 | STF-07 | R2 | should | unowned | - |
