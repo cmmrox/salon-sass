@@ -10,7 +10,7 @@ depends_on: [F02]
 integration:
   branch: charithm/feature/F04-salon-setup
   pull_request: https://github.com/cmmrox/salon-sass/pull/18
-  qa_revision: 70d452a008fb6034b45a9a35a9cb5bc8e3035e96
+  qa_revision: 93821ab9f045b4d6663caf36ecc75beb2627bccf
   merged_commit: null
   merged_at: null
 surfaces: [api, web]
@@ -29,3 +29,14 @@ verification:
 evidence:
   last_run: qa/reports/20261101-143156-F04-fd710b8c3130
   last_result: pass
+  full_pass_revision: 70d452a008fb6034b45a9a35a9cb5bc8e3035e96
+  reverification:
+  - revision: 93821ab9f045b4d6663caf36ecc75beb2627bccf
+    date: 2026-11-01
+    changed: apps/web/src/surfaces/workspace/HoursSettings.test.tsx only (commit 3ba611c, merged as
+      7c28918), a developer Vitest unit test that no application file imports; no application code,
+      contract, QA automation or spec changed since the full pass.
+    scope: No QA case re-run. Every F04 case runs against the built product, which is unchanged, so
+      none depends on the changed file (decision 069). The changed test was run once at this revision
+      as a sanity check, 14 of 14 passed; that is the developer's gate, not a QA result.
+    run: none

@@ -203,7 +203,30 @@ All runs were on a fresh database (`f04qa_verify`) against product build 28e086d
 - Targeted reruns of the repaired cases used Playwright `--grep`, because `sdlc run` selects only
   whole entries. They are not recorded runs.
 
+### Re-verification after the full pass (2026-11-01, revision 93821ab)
+
+PR #18 CI failed on head 1469dbb because a developer unit test,
+`apps/web/src/surfaces/workspace/HoursSettings.test.tsx`, ran past Vitest's 5 s timeout. The fix
+(3ba611c, merged as 7c28918) changes only that file. `git diff 70d452a 93821ab` over the certified
+product paths lists nothing else: no application code, contract, QA automation or spec. No
+application file imports the test, so the built product the F04 cases run against is unchanged.
+The S03 Hours screen cases exercise the Hours screen component, which did not change. Under decision 069 no QA case
+re-runs, and none was run. The changed test was run once at 93821ab as a sanity check (14 of 14
+passed, 4.3 s). That is the developer's gate and records no QA result. Reading the diff, the
+developer's assertions are kept. The holiday and closure tests now serve an all-closed week, the
+open-week block allows 15 s, the accept-then-save test is split in two, and the conflict test makes
+its change by toggling Monday instead of picking a time. Run 3 above stays the recorded full pass
+(`evidence.last_run`, `evidence.full_pass_revision`), and `integration.qa_revision` moves to 93821ab
+so `pr-check` accepts the unchanged product.
+
 ## Notes for the lead (documents)
+
+- `docs/operations/git-delivery.md` ("never in place of its `integration.qa_revision`") and
+  `feature-verify` in `salon-sdlc` lifecycle.md ("A targeted run never replaces the full pass's
+  recorded revision") conflict with `pr-check`. `pr-check` compares only `integration.qa_revision`
+  with HEAD, so a targeted re-verification can only clear it by moving that field. At the lead's
+  instruction it was moved, and the full pass's revision is kept in `evidence.full_pass_revision`.
+  The documents or the tool should say which field holds which revision.
 
 - The F04-S04 handoff lists the new test ids but no case ids. The cases are TC-F04-S04-001 to 026
   in `qa/api/F04/S04-rules.spec.ts` and `qa/web/F04/S04-rules-screens.spec.ts`.
