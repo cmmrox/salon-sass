@@ -6,7 +6,7 @@
 
 | Release | Requirements | Owned by a feature | Assigned to a stage | Passed QA |
 | --- | --- | --- | --- | --- |
-| R1 | 97 | 97 | 30 | 30 |
+| R1 | 97 | 97 | 34 | 30 |
 | R2 | 74 | 48 | 44 | 0 |
 | R3 | 21 | 8 | 8 | 0 |
 
@@ -96,11 +96,11 @@ Cases waiting for something else. `feature-verify` and `release-prepare` go thro
 | CAT-12 | R2 | should | F17 | F17-S02 (outlined) |
 | CAT-13 | R2 | should | F17 | F17-S01 (outlined), F17-S03 (outlined) |
 | CAT-14 | R2 | should | F17 | F17-S01 (outlined), F17-S03 (outlined) |
-| STF-01 | R1 | must | F06 | - |
-| STF-02 | R1 | must | F06 | - |
-| STF-03 | R1 | must | F06 | - |
+| STF-01 | R1 | must | F06 | F06-S01 (outlined) |
+| STF-02 | R1 | must | F06 | F06-S02 (outlined) |
+| STF-03 | R1 | must | F06 | F06-S03 (outlined) |
 | STF-04 | R1 | must | F04 | F04-S03 (complete) |
-| STF-05 | R1 | must | F06 | - |
+| STF-05 | R1 | must | F06 | F06-S03 (outlined) |
 | STF-06 | R1 | should | F10 | - |
 | STF-07 | R2 | should | unowned | - |
 | STF-08 | R2 | should | unowned | - |
