@@ -702,7 +702,7 @@
         "useDefault": "Use default cover",
         "chosen": "The chosen cover photo",
         "neutral": "The default cover",
-        "rules": "A PNG, JPEG or WebP image of up to 5 MB, at least 800 × 300 pixels and no taller than it is wide."
+        "rules": "A PNG, JPEG or WebP image of up to 5 MB, at least 800 × 300 pixels. A wide photo works best."
       },
       "uploading": "Uploading…",
       "imageErrors": {
