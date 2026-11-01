@@ -24,7 +24,17 @@ verification:
   - pnpm --filter @salon/web test:a11y
   - pnpm --filter @salon/web build
   - pnpm contracts:check
-  automation: []
+  automation:
+  - id: tax-products-api
+    tool: playwright
+    file: qa/api/F05/S03-tax-products.spec.ts
+    project: api
+    suites: [regression]
+  - id: tax-products-screens
+    tool: playwright
+    file: qa/web/F05/S03-tax-products-screens.spec.ts
+    project: web
+    suites: [regression]
   manual: []
   deferred: []
 evidence:
