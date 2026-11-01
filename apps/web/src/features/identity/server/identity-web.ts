@@ -268,7 +268,7 @@ async function handleSupport(
       : CATALOGUE_READS.includes(action)
         ? await readCatalogue(catalogue, action, options, request.nextUrl.searchParams)
         : TEAM_READS.includes(action)
-          ? await readTeam(team, action, options)
+          ? await readTeam(team, action, options, request.nextUrl.searchParams)
           : action === 'staff'
           ? await client.GET('/api/v1/identity/staff', { ...options, params: { query } })
           : action === 'audit'
@@ -479,7 +479,7 @@ async function handleIdentity(request: NextRequest, kind: Kind, action: string, 
           : CATALOGUE_READS.includes(action)
             ? await readCatalogue(catalogue, action, options, request.nextUrl.searchParams)
             : TEAM_READS.includes(action)
-              ? await readTeam(team, action, options)
+              ? await readTeam(team, action, options, request.nextUrl.searchParams)
             : action === 'sessions'
               ? await client.GET('/api/v1/identity/sessions', { ...options, params: { query } })
               : action === 'staff'

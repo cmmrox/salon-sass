@@ -113,7 +113,7 @@ function request(kind: 'staff' | 'support', action: string, body?: unknown) {
 const send = (action: string, body?: unknown, kind: 'staff' | 'support' = 'staff') =>
   runInRequest(
     { ...contextFromTraceparent(undefined), clientAddress: '127.0.0.2', deadline: performance.now() + 3000 },
-    () => handleIdentity(request(kind, action, body), kind, action),
+    () => handleIdentity(request(kind, action, body), kind, action.split('?')[0]!),
   );
 
 describe('the team actions of the BFF (F06-S01)', () => {
@@ -163,6 +163,89 @@ describe('the team actions of the BFF (F06-S01)', () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ ok: true });
     expect(`${calls[0]?.method} ${calls[0]?.path}`).toBe(`DELETE /api/v1/team/members/${MEMBER}?version=4`);
+  });
+
+  it('reads a person’s schedule and the salon’s week with team.read alone', async () => {
+    permissions = ['team.read'];
+    answer = () => ({ status: 200, data: { version: 1 } });
+
+    expect((await send(`team-schedule?memberId=${MEMBER}`)).status).toBe(200);
+    expect((await send('team-opening-hours')).status).toBe(200);
+
+    expect(calls.map((call) => `${call.method} ${call.path}`)).toEqual([
+      `GET /api/v1/team/members/${MEMBER}/schedule`,
+      'GET /api/v1/salon/opening-hours',
+    ]);
+  });
+
+  it('refuses the schedule without team.read, and its changes without team.manage, before any call', async () => {
+    permissions = [];
+    expect((await send(`team-schedule?memberId=${MEMBER}`)).status).toBe(403);
+    permissions = ['team.read'];
+    expect((await send('team-week-save', { id: MEMBER, version: 1, weekly: [] })).status).toBe(403);
+    expect((await send('team-date-change-add', { id: MEMBER })).status).toBe(403);
+    expect((await send('team-date-change-remove', { id: MEMBER, changeId: MEMBER })).status).toBe(403);
+    expect(calls).toEqual([]);
+  });
+
+  it('rebuilds a saved week from the contract’s fields', async () => {
+    const monday = {
+      day: 'monday',
+      working: true,
+      starts: '09:00',
+      finishes: '18:00',
+      breaks: [{ starts: '13:00', finishes: '14:00' }],
+    };
+
+    await send('team-week-save', {
+      id: MEMBER,
+      version: 3,
+      tenantId: 'x',
+      weekly: [{ ...monday, extra: 1, breaks: [{ ...monday.breaks[0], extra: 1 }] }],
+    });
+
+    expect(`${calls[0]?.method} ${calls[0]?.path}`).toBe(`PUT /api/v1/team/members/${MEMBER}/schedule/weekly`);
+    expect(JSON.parse(calls[0]!.body)).toEqual({ version: 3, weekly: [monday] });
+  });
+
+  it('rebuilds a date change from the contract’s fields, and answers 201', async () => {
+    answer = () => ({ status: 201, data: { change: {}, affected: [] } });
+    const change = {
+      date: '2026-11-05',
+      working: true,
+      starts: '09:00',
+      finishes: '14:00',
+      breaks: [],
+      note: 'Half day',
+    };
+
+    const response = await send('team-date-change-add', { id: MEMBER, ...change, tenantId: 'x' });
+
+    expect(response.status).toBe(201);
+    expect(`${calls[0]?.method} ${calls[0]?.path}`).toBe(`POST /api/v1/team/members/${MEMBER}/schedule/date-changes`);
+    expect(JSON.parse(calls[0]!.body)).toEqual(change);
+  });
+
+  it('removes a date change, answers no content as ok, and lets only ids reach the path', async () => {
+    answer = () => ({ status: 204, data: null });
+
+    const response = await send('team-date-change-remove', { id: MEMBER, changeId: MEMBER });
+
+    expect(await response.json()).toEqual({ ok: true });
+    expect(`${calls[0]?.method} ${calls[0]?.path}`).toBe(
+      `DELETE /api/v1/team/members/${MEMBER}/schedule/date-changes/${MEMBER}`,
+    );
+
+    await send('team-date-change-remove', { id: '../..', changeId: '../../identity' });
+    expect(calls[1]?.path).toBe('/api/v1/team/members/0/schedule/date-changes/0');
+  });
+
+  it('a support session reads a schedule', async () => {
+    principalKind = 'support';
+    permissions = ['team.read'];
+    answer = () => ({ status: 200, data: { version: 1 } });
+
+    expect((await send(`team-schedule?memberId=${MEMBER}`, undefined, 'support')).status).toBe(200);
   });
 
   it('never lets anything but an id reach the path', async () => {

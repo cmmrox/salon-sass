@@ -15,6 +15,7 @@ export function TimeSelect({
   disabled,
   invalid,
   describedBy,
+  narrow,
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -23,12 +24,14 @@ export function TimeSelect({
   disabled?: boolean;
   invalid?: boolean;
   describedBy?: string;
+  /** The schedule sheet's narrower control (the prototype's `tselS`), so that two fit beside a weekday on a phone. */
+  narrow?: boolean;
 }) {
   return (
     <Select value={value} onValueChange={onChange} disabled={disabled}>
       <SelectTrigger
         size="sm"
-        className="w-auto min-w-28"
+        className={narrow ? 'w-auto min-w-22' : 'w-auto min-w-28'}
         aria-label={label}
         aria-invalid={invalid || undefined}
         aria-describedby={describedBy}

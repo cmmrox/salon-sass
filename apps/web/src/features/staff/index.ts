@@ -12,6 +12,37 @@ export type {
   TeamSignInAccount,
   TeamSignInAccountList,
 } from './types';
+export type {
+  AddedDateChange,
+  MemberDateChange,
+  MemberSchedule,
+  SalonOpeningWeek,
+  SavedMemberWeek,
+  TeamAffectedBooking,
+  Weekday,
+} from './types';
+export { AffectedBookings } from './components/AffectedBookings';
+export { DateChangesTab, type ChangeRefusal } from './components/DateChangesTab';
+export { ScheduleSheet, type ScheduleTab } from './components/ScheduleSheet';
+export { WeeklyHoursTab } from './components/WeeklyHoursTab';
+export {
+  changeIsEdited,
+  changeSaveOf,
+  copyMonday,
+  newChange,
+  problemOfField,
+  problemsOfWeekFields,
+  salonHoursOn,
+  sameWeek as sameWorkWeek,
+  weekFormOf as workWeekFormOf,
+  weekProblems,
+  weekSaveOf as workWeekSaveOf,
+  withChange,
+  type ChangeForm,
+  type HoursProblem,
+  type WeekProblem,
+  type WorkdayForm,
+} from './client/schedule-form';
 export { ConfirmRemoveMember } from './components/ConfirmRemoveMember';
 export type { MemberPhotoUpload } from './components/MemberPhotoField';
 export { MemberSheet } from './components/MemberSheet';
