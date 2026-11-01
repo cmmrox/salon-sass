@@ -2,7 +2,7 @@
 id: BUG-F05-001
 title: A salon in another currency is told its price limits in rupees
 severity: minor
-status: fixed
+status: verified
 found_by: exploratory
 breaks: NFR-13
 found_on: 2026-11-02
