@@ -526,7 +526,9 @@
       "publishBody": "Every salon is asked to review them. Nothing changes for a salon until it chooses what it does on each day.",
       "publishConfirm": "Publish to salons",
       "cancel": "Cancel",
-      "withdrawnDay": "{date} · {name}"
+      "withdrawnDay": "{date} · {name}",
+      "calendarLabel": "Choose a date",
+      "kindAfterName": " · {kind}"
     }
   },
   "billing": {
@@ -650,6 +652,7 @@
     "tabs": {
       "profile": "Profile",
       "hours": "Hours & closures",
+      "rules": "Booking rules",
       "branding": "Branding"
     },
     "profile": {
@@ -729,19 +732,19 @@
       "leave": "Leave without saving"
     },
     "notices": {
-      "readOnlySupport": "A support session can read the {subject, select, brand {branding} hours {hours and closures} other {profile}} but cannot change it.",
-      "readOnlySalon": "This salon is read-only until its overdue invoices are paid. You can read the {subject, select, brand {branding} hours {hours and closures} other {profile}} but not change it.",
-      "conflictTitle": "Someone else changed the {subject, select, brand {branding} hours {hours and closures} other {profile}}",
+      "readOnlySupport": "A support session can read the {subject, select, brand {branding} hours {hours and closures} rules {booking rules} other {profile}} but cannot change it.",
+      "readOnlySalon": "This salon is read-only until its overdue invoices are paid. You can read the {subject, select, brand {branding} hours {hours and closures} rules {booking rules} other {profile}} but not change it.",
+      "conflictTitle": "Someone else changed the {subject, select, brand {branding} hours {hours and closures} rules {booking rules} other {profile}}",
       "conflictBody": "Reload to see their changes. Edits you have not saved will be lost.",
       "reload": "Reload",
-      "unavailableTitle": "The {subject, select, brand {branding} hours {hours and closures} other {profile}} could not be reached",
+      "unavailableTitle": "The {subject, select, brand {branding} hours {hours and closures} rules {booking rules} other {profile}} could not be reached",
       "unavailableBody": "Check your connection and try again.",
       "unavailableKept": "Nothing was saved. What you typed is still here: try again in a moment.",
       "retry": "Try again",
       "fixFields": "Some details need fixing. Check the fields marked below.",
       "refused": {
         "permission_denied": "Your account cannot change the salon’s settings.",
-        "support_read_only": "A support session can read the {subject, select, brand {branding} hours {hours and closures} other {profile}} but cannot change it.",
+        "support_read_only": "A support session can read the {subject, select, brand {branding} hours {hours and closures} rules {booking rules} other {profile}} but cannot change it.",
         "salon_read_only": "This salon is read-only until its overdue invoices are paid.",
         "salon_suspended": "This salon is not available at the moment.",
         "invalid_state": "There is nothing new to publish."
@@ -888,7 +891,8 @@
       "bookingsTitle": "{count, plural, one {# booking on this day.} other {# bookings on this day.}}",
       "bookingsBody": "They are kept: move or cancel each one yourself.",
       "confirm": "Close the salon this day",
-      "bookingAt": "{time} · {name}"
+      "bookingAt": "{time} · {name}",
+      "calendarLabel": "Choose a date"
     },
     "hoursTab": {
       "loading": "Loading hours and closures",
@@ -898,6 +902,125 @@
         "holidaySaved": "Holiday choice saved.",
         "closed": "Closed. Customers can’t book this day.",
         "reopened": "Reopened. Customers can book this day again."
+      }
+    },
+    "introRules": "Booking rules save at once and apply to new bookings. Existing bookings keep the rules they were made under.",
+    "rules": {
+      "loading": "Loading the booking rules",
+      "notSaved": "Not saved yet",
+      "notSavedHelp": "These are suggested rules. Save them, or change them first.",
+      "summaryTitle": "What customers see before paying",
+      "summaryNote": "Changes apply to new bookings. Existing bookings keep the policy they were made under.",
+      "summary": {
+        "depositNone": "<b>No deposit.</b> You pay at the salon.",
+        "depositPercentage": "<b>Deposit: {percent}% of the price</b>, up to {cap}, taken when you book.",
+        "depositAmount": "<b>Deposit: {amount}</b>, taken when you book.",
+        "freeCancellation": "<b>Free cancellation</b> until {hours} hours before your appointment.",
+        "afterThat": "After that, {late}. If you don’t come, {noShow}.",
+        "keep": {
+          "nothing": "nothing is kept",
+          "deposit": "the deposit is kept",
+          "share": "{percent}% of the price is kept"
+        },
+        "reschedule": "You can reschedule {times, select, once {once} twice {twice} other {as often as you need}}, up to {hours} hours before.",
+        "rescheduleContact": "To reschedule, contact the salon."
+      },
+      "times": "Booking times",
+      "interval": "Show start times every",
+      "intervalOption": "{minutes} minutes",
+      "notice": "Customers must book at least",
+      "noticeOption": {
+        "0": "Any time before",
+        "30": "30 minutes ahead",
+        "60": "1 hour ahead",
+        "120": "2 hours ahead",
+        "240": "4 hours ahead",
+        "1440": "1 day ahead"
+      },
+      "horizon": "Customers can book up to",
+      "horizonOption": {
+        "14": "2 weeks ahead",
+        "30": "1 month ahead",
+        "60": "2 months ahead",
+        "90": "3 months ahead",
+        "180": "6 months ahead"
+      },
+      "deposit": "Deposit",
+      "depositKind": {
+        "none": "No deposit",
+        "percentage": "Percentage",
+        "amount": "Fixed amount"
+      },
+      "depositPercent": "Deposit",
+      "percentOfPrice": "% of the price",
+      "cap": "Never more than",
+      "amount": "Deposit",
+      "perBooking": "{mark} per booking",
+      "serviceDeposit": "A service can ask for a different deposit, set on the service.",
+      "cancelling": "Cancelling and no-shows",
+      "free": "Free cancellation until",
+      "hoursBefore": "{hours} hours before",
+      "late": "A later cancellation keeps",
+      "lateOption": {
+        "nothing": "Nothing",
+        "deposit": "The deposit",
+        "share": "A share of the price"
+      },
+      "noShow": "A no-show keeps",
+      "noShowOption": {
+        "deposit": "The deposit",
+        "share": "A share of the price"
+      },
+      "shareKept": "Share kept",
+      "shareKeptLate": "after a late cancellation",
+      "shareKeptNoShow": "after a no-show",
+      "rescheduling": "Rescheduling",
+      "reschedule": "Customers can reschedule",
+      "rescheduleOption": {
+        "0": "Not online",
+        "1": "Once",
+        "2": "Twice",
+        "any": "Any number of times"
+      },
+      "until": "Up to",
+      "errors": {
+        "percentRange": "Enter 1 to 100.",
+        "capMinimum": "Enter at least {min}, or choose a fixed amount.",
+        "capMaximum": "Enter at most {max}.",
+        "amountRange": "Enter {min} to {max}."
+      },
+      "save": "Save booking rules",
+      "saving": "Saving…",
+      "saved": "Booking rules saved. They apply to new bookings.",
+      "unchanged": "Nothing changed: these are already your booking rules.",
+      "history": "History",
+      "historyTitle": "Booking rules history",
+      "historyDescription": "Each save is a version. Bookings keep the version they were made under.",
+      "historyLoading": "Loading the history",
+      "historyEmpty": "No versions yet",
+      "historyEmptyHelp": "The first save of the booking rules is version 1.",
+      "historyFailed": "The history could not be loaded. Try again in a moment.",
+      "historyVersion": "Version {version}",
+      "historyBy": "{time} · {author}",
+      "historyYou": "You",
+      "historyTeamMember": "A team member",
+      "historyChanged": "Changed: {fields}",
+      "historyCurrent": "Current",
+      "ruleNames": {
+        "slotIntervalMinutes": "start times",
+        "minimumNoticeMinutes": "notice",
+        "bookingHorizonDays": "how far ahead",
+        "deposit": "deposit",
+        "freeCancellationHours": "free cancellation",
+        "lateCancellation": "late cancellation",
+        "noShow": "no-show",
+        "reschedule": "rescheduling"
+      },
+      "pagination": {
+        "label": "History pages",
+        "previous": "Newer",
+        "next": "Older",
+        "page": "Page {page} of {pages}"
       }
     }
   }

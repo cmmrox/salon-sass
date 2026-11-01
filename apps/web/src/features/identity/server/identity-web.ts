@@ -19,6 +19,13 @@ import {
   readHours,
   type SalonHoursFor,
 } from './salon-hours';
+import {
+  changeRules,
+  readRules,
+  RULES_PERMISSIONS,
+  RULES_READS,
+  type SalonBookingRulesFor,
+} from './salon-booking-rules';
 import { UPLOAD_LIMIT_BYTES } from '@/lib/http/upload-limits';
 
 type Tokens = components['schemas']['Tokens'];
@@ -59,6 +66,7 @@ const SUPPORT_READS = [
   'profile-draft',
   'brand-draft',
   ...HOURS_READS,
+  ...RULES_READS,
 ];
 export function proxyKey(): Buffer {
   const value = process.env.SALON_IDENTITY_PROXY_KEY;
@@ -158,6 +166,7 @@ async function handleSupport(
   salonAccountFor: SalonAccountFor,
   salonSettingsFor: SalonSettingsFor,
   salonHoursFor: SalonHoursFor,
+  salonBookingRulesFor: SalonBookingRulesFor,
 ) {
   if (request.method === 'GET' && !SUPPORT_READS.includes(action))
     return action === 'sessions' || action === 'support-sessions'
@@ -171,7 +180,8 @@ async function handleSupport(
   const account = salonAccountFor(host.hostname);
   const settings = salonSettingsFor(host.hostname);
   const hours = salonHoursFor(host.hostname);
-  if (!client || !account || !settings || !hours) return problem('service_unavailable', 503);
+  const bookingRules = salonBookingRulesFor(host.hostname);
+  if (!client || !account || !settings || !hours || !bookingRules) return problem('service_unavailable', 503);
   const access = request.cookies.get(cookieName('support', 'access'))?.value;
   const options = { headers: access ? { Authorization: `Bearer ${access}` } : {}, signal: requestSignal() };
   if (action === 'clear') {
@@ -219,6 +229,7 @@ async function handleSupport(
     'profile-draft': 'settings.read',
     'brand-draft': 'settings.read',
     ...HOURS_PERMISSIONS,
+    ...RULES_PERMISSIONS,
   };
   if (permission[action] && !principal.permissions.includes(permission[action]!))
     return problem('permission_denied', 403);
@@ -227,17 +238,19 @@ async function handleSupport(
   const query = { page, size: 10 };
   const result = HOURS_READS.includes(action)
     ? await readHours(hours, action, options, request.nextUrl.searchParams)
-    : action === 'staff'
-      ? await client.GET('/api/v1/identity/staff', { ...options, params: { query } })
-      : action === 'audit'
-        ? await client.GET('/api/v1/identity/audit', { ...options, params: { query } })
-        : action === 'entitlements'
-          ? await account.entitlements(options)
-          : action === 'profile-draft'
-            ? await settings.profileDraft(options)
-            : action === 'brand-draft'
-              ? await settings.brandDraft(options)
-              : await account.invoices(options, query);
+    : RULES_READS.includes(action)
+      ? await readRules(bookingRules, action, options, request.nextUrl.searchParams)
+      : action === 'staff'
+        ? await client.GET('/api/v1/identity/staff', { ...options, params: { query } })
+        : action === 'audit'
+          ? await client.GET('/api/v1/identity/audit', { ...options, params: { query } })
+          : action === 'entitlements'
+            ? await account.entitlements(options)
+            : action === 'profile-draft'
+              ? await settings.profileDraft(options)
+              : action === 'brand-draft'
+                ? await settings.brandDraft(options)
+                : await account.invoices(options, query);
   if (result.response.status === 401) {
     const response = problem('invalid_session', 401, { renewable: false });
     endSupportView(response);
@@ -270,9 +283,10 @@ export function createIdentityWeb(
   salonAccountFor: SalonAccountFor,
   salonSettingsFor: SalonSettingsFor,
   salonHoursFor: SalonHoursFor,
+  salonBookingRulesFor: SalonBookingRulesFor,
 ) {
   return (request: NextRequest, kind: Kind, action: string) =>
-    handleIdentity(request, kind, action, salonAccountFor, salonSettingsFor, salonHoursFor);
+    handleIdentity(request, kind, action, salonAccountFor, salonSettingsFor, salonHoursFor, salonBookingRulesFor);
 }
 
 /** Allowlisted account operations only; neither a URL nor a tenant selector comes from input. */
@@ -283,12 +297,21 @@ async function handleIdentity(
   salonAccountFor: SalonAccountFor,
   salonSettingsFor: SalonSettingsFor,
   salonHoursFor: SalonHoursFor,
+  salonBookingRulesFor: SalonBookingRulesFor,
 ) {
   try {
     const host = requestHost(request.headers.get('host'));
     if (!host) return problem('not_found', 404);
     if (kind === 'support')
-      return await handleSupport(request, action, host, salonAccountFor, salonSettingsFor, salonHoursFor);
+      return await handleSupport(
+        request,
+        action,
+        host,
+        salonAccountFor,
+        salonSettingsFor,
+        salonHoursFor,
+        salonBookingRulesFor,
+      );
     const reads = [
       'principal',
       'sessions',
@@ -300,6 +323,7 @@ async function handleIdentity(
       'profile-draft',
       'brand-draft',
       ...HOURS_READS,
+      ...RULES_READS,
     ];
     if (request.method === 'GET' && !reads.includes(action)) return problem('method_not_allowed', 405);
     if (request.method !== 'GET' && !csrf(request)) return problem('request_rejected', 403);
@@ -307,7 +331,8 @@ async function handleIdentity(
     const account: SalonAccount | null = salonAccountFor(host.hostname);
     const settings: SalonSettings | null = salonSettingsFor(host.hostname);
     const hours = salonHoursFor(host.hostname);
-    if (!client || !account || !settings || !hours) return problem('service_unavailable', 503);
+    const bookingRules = salonBookingRulesFor(host.hostname);
+    if (!client || !account || !settings || !hours || !bookingRules) return problem('service_unavailable', 503);
     const access = request.cookies.get(cookieName(kind, 'access'))?.value;
     const refresh = request.cookies.get(cookieName(kind, 'refresh'))?.value;
     const headers: Record<string, string> = access ? { Authorization: `Bearer ${access}` } : {};
@@ -382,6 +407,7 @@ async function handleIdentity(
       'brand-discard': 'settings.manage',
       'brand-image': 'settings.manage',
       ...HOURS_PERMISSIONS,
+      ...RULES_PERMISSIONS,
     };
     if (principal && permission[action] && !principal.permissions.includes(permission[action]!))
       return problem('permission_denied', 403);
@@ -395,23 +421,25 @@ async function handleIdentity(
     if (request.method === 'GET') {
       const result = HOURS_READS.includes(action)
         ? await readHours(hours, action, options, request.nextUrl.searchParams)
-        : action === 'sessions'
-          ? await client.GET('/api/v1/identity/sessions', { ...options, params: { query } })
-          : action === 'staff'
-            ? await client.GET('/api/v1/identity/staff', { ...options, params: { query } })
-            : action === 'audit'
-              ? await client.GET('/api/v1/identity/audit', { ...options, params: { query } })
-              : action === 'entitlements'
-                ? await account.entitlements(options)
-                : action === 'invoices'
-                  ? await account.invoices(options, { page, size: 10 })
-                  : action === 'support-sessions'
-                    ? await account.supportSessions(options, query)
-                    : action === 'profile-draft'
-                      ? await settings.profileDraft(options)
-                      : action === 'brand-draft'
-                        ? await settings.brandDraft(options)
-                        : null;
+        : RULES_READS.includes(action)
+          ? await readRules(bookingRules, action, options, request.nextUrl.searchParams)
+          : action === 'sessions'
+            ? await client.GET('/api/v1/identity/sessions', { ...options, params: { query } })
+            : action === 'staff'
+              ? await client.GET('/api/v1/identity/staff', { ...options, params: { query } })
+              : action === 'audit'
+                ? await client.GET('/api/v1/identity/audit', { ...options, params: { query } })
+                : action === 'entitlements'
+                  ? await account.entitlements(options)
+                  : action === 'invoices'
+                    ? await account.invoices(options, { page, size: 10 })
+                    : action === 'support-sessions'
+                      ? await account.supportSessions(options, query)
+                      : action === 'profile-draft'
+                        ? await settings.profileDraft(options)
+                        : action === 'brand-draft'
+                          ? await settings.brandDraft(options)
+                          : null;
       if (!result) return problem('not_found', 404);
       return result.data
         ? output(result.data)
@@ -558,6 +586,11 @@ async function handleIdentity(
         if ('refused' in upload) return problem(upload.refused, upload.status, { errors: upload.errors });
         const r = await settings.uploadBrandImage(options, upload.kind, upload.file);
         return r.data ? output(r.data, 201) : failure(r);
+      }
+      case 'booking-rules-save': {
+        // Booking rules (F04-S04): the answer is allowlisted by its contract, the request rebuilt by booking.
+        const r = await changeRules(bookingRules, options, body);
+        return r.data ? output(r.data) : failure(r);
       }
       default: {
         if (!HOURS_WRITES.includes(action)) return problem('not_found', 404);

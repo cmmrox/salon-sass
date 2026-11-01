@@ -91,7 +91,10 @@ browser session is issued.
 
 Check permission values in use cases. Later modules read the signed-in principal through identity's
 provided interface `identity.Principals` (`current()`, `require(permission)`), whose `Principal`
-record is separate from the API's principal response (CR-021). The current
+record is separate from the API's principal response (CR-021). `identity.StaffLabels` gives the
+label the staff list shows for a staff account of the current salon (email, else mobile), for
+author columns such as the booking rules history; another salon's account never resolves
+(decision 091). The current
 principal response exposes permissions and a data scope (`salon` or `own`) and the staff id for
 Professional filtering. Later calendar/revenue/customer modules must enforce that scope; F02 does
 not fabricate their data or endpoints. The Owner's Professional grant is a specific boolean for

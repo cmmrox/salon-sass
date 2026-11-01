@@ -108,6 +108,14 @@ export function minorUnitsText(minor: number): string {
   return cents ? `${whole}.${String(cents).padStart(2, '0')}` : String(whole);
 }
 
+/**
+ * How an amount field marks its currency beside the typed whole units (F04-S04): `Rs.` for rupees, as
+ * `formatMoney` writes them, and the ISO code for any other currency.
+ */
+export function currencyMark(currency: string): string {
+  return currency === 'LKR' ? 'Rs.' : currency;
+}
+
 /** A file size the API gave in bytes, in the locale's units (B, kB, MB), for an export archive. */
 export function formatBytes(bytes: number, locale = 'en-LK'): string {
   const units = ['byte', 'kilobyte', 'megabyte', 'gigabyte'] as const;

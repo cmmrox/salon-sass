@@ -115,7 +115,12 @@ export function AddClosureSheet({
                 <CalendarIcon aria-hidden="true" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start" data-testid="closure-calendar">
+            <PopoverContent
+              className="w-auto p-0"
+              align="start"
+              aria-label={t('calendarLabel')}
+              data-testid="closure-calendar"
+            >
               <Calendar
                 labels={{ labelDayButton: dayButtonLabel }}
                 mode="single"

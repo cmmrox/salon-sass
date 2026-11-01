@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  currencyMark,
   formatClock,
   formatCount,
   formatDay,
@@ -30,6 +31,13 @@ describe('money formatting', () => {
     expect(parseMinorUnits('abc')).toBe('abc');
     expect(minorUnitsText(250050)).toBe('2500.50');
     expect(minorUnitsText(250000)).toBe('2500');
+  });
+});
+
+describe('currency marks (F04-S04)', () => {
+  it('marks rupees as formatMoney writes them and any other currency by its code', () => {
+    expect(currencyMark('LKR')).toBe('Rs.');
+    expect(currencyMark('USD')).toBe('USD');
   });
 });
 

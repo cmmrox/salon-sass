@@ -245,6 +245,30 @@ describe('the Profile tab', () => {
     expect(unload.defaultPrevented).toBe(true);
   });
 
+  // Found while building F04-S04: a Settings tab is a button, not a link, so changing tab skipped the guard and
+  // lost the edits. A dirty Profile now asks first; Stay keeps the edits, Leave goes to the tab.
+  it('asks before changing Settings tab with unsaved edits, and stays or leaves as chosen', async () => {
+    renderWithMessages(
+      <SettingsScreen tab="profile">
+        <ProfileSettingsScreen kind="staff" salonName="Alpha Studio" readOnly={null} />
+      </SettingsScreen>,
+    );
+    fireEvent.change(await screen.findByTestId('profile-address'), { target: { value: 'Unsaved' } });
+
+    fireEvent.mouseDown(screen.getByTestId('settings-tab-rules'));
+    const dialog = await screen.findByTestId('profile-leave-dialog');
+    expect(push).not.toHaveBeenCalled();
+    fireEvent.click(within(dialog).getByTestId('profile-leave-stay'));
+    await waitFor(() => expect(screen.queryByTestId('profile-leave-dialog')).toBeNull());
+    expect(screen.getByTestId('profile-address')).toHaveValue('Unsaved');
+    expect(screen.getByTestId('settings-tab-profile')).toHaveAttribute('aria-selected', 'true');
+    expect(push).not.toHaveBeenCalled();
+
+    fireEvent.mouseDown(screen.getByTestId('settings-tab-hours'));
+    fireEvent.click(within(await screen.findByTestId('profile-leave-dialog')).getByTestId('profile-leave-confirm'));
+    expect(push).toHaveBeenCalledWith('/workspace/settings/hours');
+  });
+
   it('lets a support view read the draft and change nothing', async () => {
     render('support');
 
@@ -271,7 +295,7 @@ describe('the Settings page', () => {
       </SettingsScreen>,
     );
     const tabs = within(screen.getByTestId('settings-tabs')).getAllByRole('tab');
-    expect(tabs.map((tab) => tab.textContent)).toEqual(['Profile', 'Hours & closures', 'Branding']);
+    expect(tabs.map((tab) => tab.textContent)).toEqual(['Profile', 'Hours & closures', 'Booking rules', 'Branding']);
     expect(screen.getByTestId('settings-tab-profile')).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('tabpanel')).toHaveTextContent('content');
   });

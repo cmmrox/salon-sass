@@ -30,7 +30,6 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
 import { dayButtonLabel } from '@/lib/dates/calendar-labels';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
   operatorRead,
   operatorRequest,
@@ -40,6 +39,7 @@ import {
 } from '../client/operator-session';
 import { ConsoleFailure, ConsoleLoading } from './ConsoleControls';
 import { ConsoleSheet } from './ConsoleSheet';
+import { HolidayDays } from './HolidayDays';
 
 type YearList = components['schemas']['HolidayYearList'];
 type YearDetail = components['schemas']['HolidayYearDetail'];
@@ -210,7 +210,12 @@ function YearDatePicker({ year, value, onChange }: { year: number; value: string
             <CalendarIcon aria-hidden="true" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="start" data-testid="console-holiday-day-calendar">
+        <PopoverContent
+          className="w-auto p-0"
+          align="start"
+          aria-label={t('calendarLabel')}
+          data-testid="console-holiday-day-calendar"
+        >
           <Calendar
             labels={{ labelDayButton: dayButtonLabel }}
             mode="single"
@@ -543,31 +548,12 @@ export function HolidayYearScreen({ year, canManage }: { year: number; canManage
           {detail.days.length === 0 ? (
             <CardDescription>{t('noDays')}</CardDescription>
           ) : (
-            <Table data-testid="console-holiday-days">
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t('date')}</TableHead>
-                  <TableHead>{t('name')}</TableHead>
-                  <TableHead>{t('kind')}</TableHead>
-                  <TableHead>{t('change')}</TableHead>
-                  {canManage && <TableHead className="sr-only">{t('actions')}</TableHead>}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {detail.days.map((day) => (
-                  <TableRow key={day.date} data-testid="console-holiday-day" data-date={day.date}>
-                    <TableCell className="whitespace-nowrap">{formatDay(day.date)}</TableCell>
-                    <TableCell className="wrap-anywhere whitespace-normal">{day.name}</TableCell>
-                    <TableCell>{t(`kinds.${day.kind}`)}</TableCell>
-                    <TableCell>
-                      {day.change !== 'unchanged' && (
-                        <Badge variant="secondary" data-testid="console-holiday-day-change">
-                          {t(`changes.${day.change}`)}
-                        </Badge>
-                      )}
-                    </TableCell>
-                    {canManage && (
-                      <TableCell className="text-right whitespace-nowrap">
+            <HolidayDays
+              days={detail.days}
+              actions={
+                canManage
+                  ? (day) => (
+                      <>
                         <DaySheet
                           year={year}
                           day={day}
@@ -583,7 +569,7 @@ export function HolidayYearScreen({ year, canManage }: { year: number; canManage
                             </Button>
                           }
                           onSaved={(next) => show(next, t('saved'))}
-                        />{' '}
+                        />
                         <Button
                           variant="outline"
                           size="sm"
@@ -594,12 +580,11 @@ export function HolidayYearScreen({ year, canManage }: { year: number; canManage
                         >
                           {t('remove')}
                         </Button>
-                      </TableCell>
-                    )}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                      </>
+                    )
+                  : null
+              }
+            />
           )}
           {detail.withdrawn.length > 0 && (
             <div className="flex flex-col gap-1" data-testid="console-holiday-withdrawn">

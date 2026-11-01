@@ -3,8 +3,9 @@ import { salonSettingsFor } from '@/features/branding/server';
 import { createIdentityWeb } from '@/features/identity/server';
 import { salonAccountFor } from '@/features/platform/server';
 import { salonHoursFor } from '@/features/staff/server';
+import { salonBookingRulesFor } from '@/features/booking/server';
 
-const handleIdentity = createIdentityWeb(salonAccountFor, salonSettingsFor, salonHoursFor);
+const handleIdentity = createIdentityWeb(salonAccountFor, salonSettingsFor, salonHoursFor, salonBookingRulesFor);
 
 export async function GET(request: NextRequest, context: { params: Promise<{ kind: string; action: string }> }) {
   const { kind, action } = await context.params;

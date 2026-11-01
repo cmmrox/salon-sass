@@ -98,6 +98,15 @@ modules:
     settings:
       - salon.staff
 
+  booking:
+    description: The salon's booking rules and policies, each save an immutable version.
+    tables:
+      - booking_rules_version
+    paths:
+      - /api/v1/salon/booking-rules
+    settings:
+      - salon.booking
+
   shared:
     description: Technical capabilities every module runs on, and the service's own metadata.
     tables:

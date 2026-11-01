@@ -104,3 +104,9 @@ why the feature is divided the way it is.
   be shown on the running product until F07 registers its `BookingsOnDate`; until then they are
   proved by integration and component tests. The holiday calendar is platform data shared by every
   salon on a database: a year published locally is seen by every local salon.
+- **Recorded at F04-S04 close.** Fixes made in this stage for earlier stages: the console's
+  holiday days fit a phone, the date picker's today is readable and its popover is named, and
+  Profile and Branding ask before a Settings tab change with unsaved edits. After a client-side
+  tab change Next.js keeps the previous tab's markup hidden, so a test id can appear twice; tests
+  should look at visible elements. The first accessibility run once failed in the existing
+  Branding save flows and passed on three reruns with no change; QA to watch for that flake.

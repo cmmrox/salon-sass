@@ -10,6 +10,7 @@ import { createIdentityWeb } from './identity-web';
 import type { SalonAccount, SalonAccountFor } from './salon-account';
 import type { SalonSettings, SalonSettingsFor } from './salon-settings';
 import type { SalonHours, SalonHoursFor } from './salon-hours';
+import type { SalonBookingRules, SalonBookingRulesFor } from './salon-booking-rules';
 import { contextFromTraceparent, runInRequest } from '@/lib/observability/request-context';
 import { createServerApiClient, requestSignal } from '@/lib/api-core/client';
 
@@ -28,7 +29,12 @@ const unreachedHours: SalonHoursFor = () =>
   new Proxy({} as SalonHours, {
     get: () => () => Promise.reject(new Error('the staff module is not reached here')),
   });
-const handleIdentity = createIdentityWeb(unreached, unreachedSettings, unreachedHours);
+/** Nor the booking module's rules paths (F04-S04). */
+const unreachedRules: SalonBookingRulesFor = () =>
+  new Proxy({} as SalonBookingRules, {
+    get: () => () => Promise.reject(new Error('the booking module is not reached here')),
+  });
+const handleIdentity = createIdentityWeb(unreached, unreachedSettings, unreachedHours, unreachedRules);
 
 /**
  * BUG-F02-012: every server call to the API ends within the request's shared budget, whatever

@@ -8,6 +8,7 @@ import { Toaster } from '@/components/ui/sonner';
 import { Spinner } from '@/components/ui/spinner';
 import { BrandForm, BrandPreview, LeaveDialog, PublishBar, typedColour, useLeaveGuard } from '@/features/branding';
 import type { Kind } from '@/features/identity';
+import { useSettingsLeaveHold } from './settings-leave';
 import { SettingsNotices } from './SettingsNotices';
 import { useBrandDraft } from './use-brand-draft';
 
@@ -35,6 +36,8 @@ export function BrandingSettingsScreen({ kind, readOnly }: { kind: Kind; readOnl
   );
   const uploading = brand.uploads.logo.state === 'uploading' || brand.uploads.cover.state === 'uploading';
   const guard = useLeaveGuard(brand.dirty || uploading, (href) => router.push(href));
+  // A Settings tab is not a link: the Settings page asks this tab before changing to another (F04-S04).
+  useSettingsLeaveHold(brand.dirty || uploading, guard.hold);
   const locked = readOnly !== null || brand.busy !== null;
 
   if (brand.loading && !brand.draft)

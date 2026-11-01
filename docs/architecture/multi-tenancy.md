@@ -140,7 +140,8 @@ Three consequences of how the framework works, which every later stage follows:
   return ids and counts and nothing of a message, and the scheduler only through `job_claim` and
   `job_finish`. The published holiday calendar is read only through
   `holiday_calendar_published(first_year, last_year)`, which returns published years and days and
-  never a draft or who published (decision 090).
+  never a draft or who published (decision 090). The salon's currency is read only through
+  `salon_currency()`, behind `platform.SalonCurrency`, LKR when unset (decision 091).
 - **Row-level security is forced, so it holds for the owning role too**, which is not a superuser
   outside a developer's machine. A `SECURITY DEFINER` function that must see several salons' rows
   (`outbox_due`, `outbox_due_events`, `outbox_backlog`) sets each active salon in turn inside the function, and puts the

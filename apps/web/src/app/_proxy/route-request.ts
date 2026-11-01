@@ -58,6 +58,7 @@ const PROTECTED = new Set([
   '/workspace/settings',
   '/workspace/settings/profile',
   '/workspace/settings/hours',
+  '/workspace/settings/rules',
   '/workspace/settings/branding',
 ]);
 

@@ -272,4 +272,5 @@ Recorded by the lead when the stage closed. No requirement changed:
 - **Prototype differences kept:** 24-hour times and dates from the configured locale (NFR-13);
   15-minute steps over the whole day; past holidays left out of the review list; the closure sheet
   picks its date from a Popover with Calendar and closes with Escape or the backdrop; the console's
-  Holiday calendar is its own page; under 900 px a weekday's times sit below its toggle.
+  Holiday calendar is its own page; on narrow phones a weekday's times sit below its toggle (at
+  768 px they stay beside it; corrected at F04-S04 close).
