@@ -464,7 +464,7 @@ describe('the settings user’s hours, holidays and closures actions (F04-S03)',
       weekly: [{ day: 'monday', open: true, opens: '09:00', closes: '18:00', extra: 'dropped' }],
     });
     await run('POST', 'staff', 'holidays-accept', {
-      year: '2026',
+      year: 2026,
       version: 0,
       choices: [{ date: '2026-12-25', choice: 'closed', opens: null, closes: null, salon: 'x' }],
     });

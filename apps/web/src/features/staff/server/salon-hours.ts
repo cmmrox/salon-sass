@@ -12,8 +12,14 @@ const text = (value: unknown): string | null => (typeof value === 'string' ? val
 const record = (value: unknown): Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
 const list = (value: unknown): unknown[] => (Array.isArray(value) ? value : []);
-/** A path segment checked for its form, so nothing else reaches the path; the API decides the rest. */
-const segment = (value: unknown, pattern: RegExp) => (typeof value === 'string' && pattern.test(value) ? value : '0');
+/**
+ * A path segment checked for its form, so nothing else reaches the path; the API decides the rest. A year may
+ * come as a number (the tab sends the year the API answered).
+ */
+const segment = (value: unknown, pattern: RegExp) => {
+  const text = typeof value === 'number' && Number.isInteger(value) ? String(value) : value;
+  return typeof text === 'string' && pattern.test(text) ? text : '0';
+};
 
 const YEAR = /^\d{4}$/;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
