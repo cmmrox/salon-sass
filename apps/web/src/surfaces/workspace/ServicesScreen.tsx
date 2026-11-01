@@ -16,7 +16,7 @@ import {
   PopularCard,
   ServiceGroups,
   ServiceSheet,
-  TaxBanner,
+  TaxSentence,
   type CatalogueService,
   type Category,
 } from '@/features/catalogue';
@@ -48,7 +48,7 @@ export function ServicesScreen(props: Props) {
  * The Services and Categories tabs (F05-S01): the summary and New service or New category, the tabs, and the sheets
  * and confirmations they open. Loading, empty, field-error, conflict, refused and unavailable states; leaving the
  * service sheet with unsaved edits asks first. Those who may not change the catalogue read both tabs. The Services
- * tab shows the tax banner (F05-S03 AC-10).
+ * tab's one banner carries the tax sentence (F05-S01 AC-17).
  */
 function ServicesAndCategories({ kind, tab, canChange, readOnly }: Props) {
   const t = useTranslations('services');
@@ -110,9 +110,14 @@ function ServicesAndCategories({ kind, tab, canChange, readOnly }: Props) {
       >
         {!inSheet && notices}
         <Alert variant="info" className="text-small" data-testid="services-banner">
-          {tab === 'services' ? t('banner') : t('categoriesBanner')}
+          {tab === 'services' ? (
+            <>
+              {t('banner')} <TaxSentence tax={catalogue.tax} />
+            </>
+          ) : (
+            t('categoriesBanner')
+          )}
         </Alert>
-        {tab === 'services' && <TaxBanner tax={catalogue.tax} />}
         {loading ? (
           <div
             className="flex flex-col gap-3"

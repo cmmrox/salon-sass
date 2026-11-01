@@ -9,6 +9,7 @@ import {
   RULES,
   SERVICES,
   service,
+  TAX_PUBLIC,
   WAXING,
   withVariants,
 } from './catalogue-fixtures';
@@ -113,6 +114,44 @@ describe('the Services tab (F05-S01 AC-12)', () => {
     expect(await screen.findByTestId('services-read-only')).toHaveTextContent(
       'A support session can read the services but cannot change them.',
     );
+  });
+});
+
+describe('the Services tab’s one banner (F05-S01 AC-17, CR-025)', () => {
+  const FIRST = 'List your services with their price and time. Changes apply to new bookings only.';
+  const infoAlerts = () => document.querySelectorAll('[data-slot="alert"][data-variant="info"]');
+
+  it.each([
+    ['both', TAX_PUBLIC, 'Prices you enter include service charge (10%) and VAT (18%). Customers see the same price.'],
+    [
+      'VAT only',
+      { ...TAX_PUBLIC, serviceCharge: null },
+      'Prices you enter include VAT (18%). Customers see the same price.',
+    ],
+    [
+      'service charge only',
+      { ...TAX_PUBLIC, vat: null },
+      'Prices you enter include service charge (10%). Customers see the same price.',
+    ],
+    ['neither', null, 'Tax and service charge are off. Turn them on in Settings if your salon is registered.'],
+  ])('carries both sentences in one Alert: %s', async (_name, current, sentence) => {
+    answers['catalogue-tax-public'] = () => Response.json({ current });
+    render();
+    await screen.findByTestId('tax-banner');
+
+    expect(screen.getByTestId('services-banner')).toHaveTextContent(`${FIRST} ${sentence}`, {
+      normalizeWhitespace: true,
+    });
+    expect(screen.getByTestId('services-banner')).toHaveAttribute('data-variant', 'info');
+    expect(infoAlerts()).toHaveLength(1);
+  });
+
+  it('says only its own sentence while the salon’s tax cannot be read', async () => {
+    render();
+    await screen.findAllByTestId('service-card');
+    expect(screen.getByTestId('services-banner').textContent?.trim()).toBe(FIRST);
+    expect(screen.queryByTestId('tax-banner')).toBeNull();
+    expect(infoAlerts()).toHaveLength(1);
   });
 });
 

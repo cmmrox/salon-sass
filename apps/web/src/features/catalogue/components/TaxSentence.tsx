@@ -1,14 +1,13 @@
 'use client';
 import { useTranslations } from 'next-intl';
-import { Alert } from '@/components/ui/alert';
 import type { PublicTax } from '../types';
 
 /**
- * The tax banner of the Services and Products tabs (F05-S03 AC-10, the F05 block's `taxNote`): which parts the
- * prices include, at the current version's rates, or that tax and service charge are off. Not drawn while the salon's
- * tax could not be read.
+ * The sentence about tax in the Services tab's one banner (F05-S01 AC-17, F05-S03 AC-10; the F05 block's `taxNote`):
+ * which parts the prices include, at the current version's rates, or that tax and service charge are off. Nothing is
+ * said while the salon's tax could not be read.
  */
-export function TaxBanner({ tax }: { tax: PublicTax | null | undefined }) {
+export function TaxSentence({ tax }: { tax: PublicTax | null | undefined }) {
   const t = useTranslations('services.taxBanner');
   if (tax === undefined) return null;
   const vat = tax?.vat ?? null;
@@ -22,8 +21,8 @@ export function TaxBanner({ tax }: { tax: PublicTax | null | undefined }) {
   };
   const key = vat && charge ? 'both' : vat ? 'vat' : charge ? 'serviceCharge' : 'off';
   return (
-    <Alert variant="info" className="text-small" data-testid="tax-banner" data-tax={key}>
+    <span data-testid="tax-banner" data-tax={key}>
       {t(key, values)}
-    </Alert>
+    </span>
   );
 }
