@@ -17,8 +17,66 @@ nfr_focus: []               # non-functional requirements of the feature that th
 handoff:
   run: null                 # commands that start the product and reach what this stage built
   data: null                # the accounts and seed data that exist
-  notes: null               # criterion-to-result/evidence; gate commands, tested source, log paths,
+  notes: |                  # criterion-to-result/evidence; gate commands, tested source, log paths,
                             # results and relevant conditions; gaps and differences from docs/
+    CHECKPOINT, paused by the lead (the owner's usage limit), 2026-11-02. NOT handed over; status stays in-progress.
+    No acceptance criterion has been checked on the running product, and no verification gate has been run.
+
+    Last product commit: e38138b (web), on 7d4d078 (API, migration V28, contracts). Branch
+    charithm/feature/F06-S01-team-members-and-profiles, not pushed.
+
+    What passed: focused runs only, none of them a gate.
+    - API: TeamSeats, StaffSeatsImpl, PlanMoveCountsTeamMembers, SalonBilling, SubscriptionBilling, TeamMembers,
+      TeamAccessAndPublic, UpcomingMemberBookings, TeamMembersContract, TeamPhotos, TeamPhotoUploadOrder,
+      PerformedServices, ModuleBoundaries, CodeOwnership, the staff RLS-alone and Hibernate-filter-alone tests,
+      DatabaseIsolationCatalogue, table and API ownership.
+    - Web: typecheck and lint pass. The whole unit project last ran at 1119 of 1120; its one failure was a test of mine,
+      fixed, and that file passes on its own, but the whole project has not run again since. Team.a11y 42 of 42. The
+      other a11y files have not been run. `pnpm --filter @salon/web build` passed.
+    - Race check: with the lock removed from StaffSeatsImpl.hold() the mixed last-seat race failed at once with
+      [201, 201] and the two-unlink race failed too; the lock was restored. The many-requests race still passed without
+      the lock, so it only checks the final count and is no proof of serialisation.
+
+    What remains, in order:
+    1. Apply the lead's rulings: "Bio must be 140 characters or fewer." and "Highlights must be 60 characters or fewer."
+       in messages/en.json.
+    2. Strengthen tests I know are thin:
+       - TeamScreen.test "offers only accounts no other person is linked to" does not open the Select or assert the offer.
+       - The photo-with-a-card case asserts only the initial.
+       - The Accountant case covers GET and POST but not PUT, DELETE or photo.
+       - AccountScreen's "No team profile" line and the Sign-in accounts tab have no test yet.
+    3. Walk through every criterion with two salons, each role and a support session, and compare with the prototype at
+       each width. Nothing of this has started. The database f06s01_walk was dropped: create it again. Start the API
+       first and the web only once the API is healthy: the first web start died with "Cannot read retained local
+       operator proxy key; start the API once first" because both started together. Run the jar and serve.mjs directly
+       (environment in the session scratchpad's walk/env.sh, API 8291, web 3291). Do not use local-service.sh: it runs
+       ensure_application_role against the shared cluster's roles, which could disturb the owner's API.
+    4. Run all seven verification.commands on the final commit, then write the full handoff (run, data, per-criterion
+       notes, gate table) and set status built.
+
+    To carry into the final handoff:
+    - Lead's rulings to write into the spec at close: 201st member is 409 limit_reached with "A salon can have up to 200
+      team members. Remove someone first."; 409 in_use carries {field:"upcomingBookings",detail:"<N>"} on removal and one
+      {field:"services",detail:"<service name>"} per service on a save; a removed person's photo URL answers 404; singulars
+      ("1 service, and any added later", "1 person · 1 shown for online booking"); name order ignores case; title message
+      "Title must be 40 characters or fewer."; maxLength left off Name, Title, Highlights and Bio, which F05's sheets do use.
+    - ModuleBoundariesTest.everyModuleDeclaresWhatItMayUse now allows "staff", by the lead's ruling under decision 100(e).
+    - F02 contract gap, left alone by the lead's ruling: POST /api/v1/identity/staff documents only 201 and default, so
+      its 409 entitlement_exceeded is not a declared status and that one test call skips the contract validator.
+    - Changes to delivered F02 and F03 behaviour so far: test id workspace-staff is now workspace-team; the entry's label
+      goes from "Staff access" to "Staff"; it now shows for Receptionist and Professional too, and needs team.read rather
+      than staff.list; the page title on /workspace/staff goes from "Staff access" to "Team", with a tab bar and an info
+      banner above F02's screen; each account there names its team profile; usage.staffSeats and the plan move now count
+      members with no linked account; creating an account refuses when members fill the seats.
+    - Other choices to record: a photo change raises the member's version, as a service photo does; DELETE
+      /local/identity clears members' links; a support session receives signInAccountId and signInLabel because it holds
+      staff.list; IdentityFailure gained `problems`; the theme gained avatar colour tokens.
+    - Written through the shell before the lead fixed the edit hook, not rewritten: the 41 paths in the session
+      scratchpad's files-written-through-shell.txt, all in 7d4d078 except this file's first status edit. They are
+      V28, the identity and platform in-process contracts and their implementations, CatalogueListing(s) and its
+      implementation, StaffRole, StaffAccountServiceImpl, the staff entities and repositories, SalonSeatUsageImpl,
+      TeamAudit, TeamMemberSeatsImpl, UpcomingMemberBookingsImpl, TeamMember(s), UpcomingMemberBookings, staff and
+      identity package-info, StaffTenantData, application.yaml and module-ownership.yaml. Guard --diff passed on them.
 
 # Written by QA. A case is the test that proves it, titled with its id and the criteria it
 # covers before a colon: test('TC-F00-S01-001 AC-1, AC-2: a free slot is listed', ...), or a
