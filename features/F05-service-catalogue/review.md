@@ -70,9 +70,9 @@ Ranked, most valuable first.
 
 | Id | Class | Suggestion | Disposition |
 | --- | --- | --- | --- |
-| SUG-F05-01 | should | Merge the stacked information banners at the top of the Services and Products tabs into one | |
-| SUG-F05-02 | should | Fold empty categories on the Services tab into one line instead of a heading and "No services yet." each | |
-| SUG-F05-03 | idea | Write the preview's example rows as the spec words them ("A service at Rs. 2,500"), or update the spec to the two-column row | |
+| SUG-F05-01 | should | Merge the stacked information banners at the top of the Services and Products tabs into one | CR-025 |
+| SUG-F05-02 | should | Fold empty categories on the Services tab into one line instead of a heading and "No services yet." each | CR-025 |
+| SUG-F05-03 | idea | Write the preview's example rows as the spec words them ("A service at Rs. 2,500"), or update the spec to the two-column row | backlog |
 
 ### SUG-F05-01 One information banner at the top of each tab
 

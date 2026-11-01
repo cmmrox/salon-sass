@@ -113,3 +113,7 @@ why the feature is divided the way it is.
   next. The tax arithmetic's case table is shared by the API's and the web's tests. QA's
   TC-F05-S03-019 restarts its own API with `SALON_CATALOGUE_TAX_VAT_RATE_PERCENT` and must never run
   against the owner's instance.
+- **Recorded at F05 close.** QA passed the feature at d8985b8: 88 automated cases in one run, none
+  manual, two deferred to F07 (TC-F05-S01-020, TC-F05-S02-015); no bug open. The review's two
+  "should" suggestions are CR-025, approved by the owner to be built after this feature's merge; its
+  idea is in `features/BACKLOG.md`. The competitor comparison was not refreshed in this review.
