@@ -41,7 +41,7 @@ One deployable, divided into modules by business area. The module list follows t
 | `notification` | Templates, channels, delivery log, preferences |
 | `customer` | Customer records, notes, consents |
 | `reporting` | Read models and reports |
-| `branding` | Brand settings and published salon presentation, web addresses, app registry; canonical provisioning/contact profile remains in `platform` (decision 042) |
+| `branding` | Brand settings and published salon presentation (business profile, draft and published), branches and their public contact details, web addresses, app registry; canonical provisioning/contact profile remains in `platform` (decision 042, 083) |
 
 The base Java package is the placeholder in `docs/architecture/tech-stack.md`.
 
@@ -412,7 +412,11 @@ change, and a stage leaves the code it touches meeting them.
   their references, refunds, and deposits held as an amount owed to the customer. No module keeps a
   separate balance; occasion balances and gift cards are entries in the same record (decision 076).
 - From F04, every salon-operations table carries `branch_id` beside `tenant_id`. R1 has one default
-  branch per salon (decision 073).
+  branch per salon (decision 073). Branches are `branding`'s; another module holds the id and checks
+  it through `SalonBranches` (decision 083, `docs/architecture/multi-tenancy.md`, "Adding a table").
+- Phone numbers are stored in E.164 and checked with libphonenumber against the region in
+  configuration (`salon.branding.phone-region`, `LK` by default); screens show the national format
+  (decision 084, NFR-13). A WhatsApp number must be a mobile number of that region.
 
 ## Health and service metadata
 

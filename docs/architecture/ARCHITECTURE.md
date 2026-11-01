@@ -80,7 +80,9 @@ state machine (decision 075).
 ## Salon operations model (CR-023)
 
 - **Branch scope from the start.** From F04, salon-operations data carries a branch scope. Each
-  salon has one default branch in R1, and F18 adds more (decision 073).
+  salon has one default branch in R1, and F18 adds more (decision 073). Branches are owned by
+  `branding`, which also holds each branch's public contact details; other modules keep the branch
+  as an id and check it through `branding`'s `SalonBranches` (decision 083).
 - **One payment record.** A booking or sale has one append-only record of charges, payments by
   tender, refunds and deposits held. Checkout, the day-end close, reports, occasion balances (F19)
   and gift cards (F21) all use it (decision 076).
