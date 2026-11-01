@@ -335,6 +335,46 @@ describe('the settings user’s brand actions (F04-S02)', () => {
     expect(apiCalls()).toEqual([]);
   });
 
+  it('refuses a chunked upload, which declares no length, as soon as it passes the limit, reading no more', async () => {
+    let sent = 0;
+    let pulls = 0;
+    const chunk = new Uint8Array(1024 * 1024);
+    const body = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        pulls++;
+        if (sent >= 64 * 1024 * 1024) return controller.close();
+        sent += chunk.byteLength;
+        controller.enqueue(chunk);
+      },
+    });
+    const chunked = new NextRequest('http://alpha.localhost:3100/identity-web/staff/brand-image', {
+      method: 'POST',
+      headers: {
+        Host: 'alpha.localhost:3100',
+        Origin: 'http://alpha.localhost:3100',
+        'Sec-Fetch-Site': 'same-origin',
+        Cookie: 'salon_staff_access=private-access',
+        'Content-Type': 'multipart/form-data; boundary=x',
+      },
+      body,
+      duplex: 'half',
+    } as ConstructorParameters<typeof NextRequest>[1]);
+    expect(chunked.headers.get('content-length')).toBeNull();
+    const context = {
+      ...contextFromTraceparent(undefined),
+      clientAddress: '127.0.0.2',
+      deadline: performance.now() + 3000,
+    };
+
+    const response = await runInRequest(context, () => handleIdentity(chunked, 'staff', 'brand-image'));
+
+    expect(response.status).toBe(413);
+    expect(await response.json()).toMatchObject({ code: 'request_rejected' });
+    expect(sent).toBeLessThanOrEqual(12 * 1024 * 1024);
+    expect(pulls).toBeLessThan(16);
+    expect(apiCalls()).toEqual([]);
+  });
+
   it.each(['brand-save', 'brand-reset', 'brand-publish', 'brand-discard', 'brand-image'])(
     'refuses %s to a user without settings.manage before any API call',
     async (action) => {

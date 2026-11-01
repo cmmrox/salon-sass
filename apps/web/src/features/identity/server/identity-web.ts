@@ -540,15 +540,49 @@ async function handleIdentity(
 /** The browser's request over its declared size is refused before its form is read (the API's 10 MB limit). */
 const UPLOAD_LIMIT = 10 * 1024 * 1024;
 
+/**
+ * The request's body, read through a byte count that stops past `limit`: null when it is larger. The whole
+ * body is never buffered beyond the limit, whether or not the request declared its length (a chunked request
+ * declares none). Next.js's own proxy buffer (`experimental.proxyClientMaxBodySize`, 10 MB) truncates rather
+ * than refuses, so it is not relied on.
+ */
+async function boundedBody(request: NextRequest, limit: number): Promise<Uint8Array<ArrayBuffer> | null> {
+  const reader = request.body?.getReader();
+  if (!reader) return new Uint8Array(new ArrayBuffer(0));
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > limit) {
+      await reader.cancel();
+      return null;
+    }
+    chunks.push(value);
+  }
+  const body = new Uint8Array(new ArrayBuffer(total));
+  let at = 0;
+  for (const chunk of chunks) {
+    body.set(chunk, at);
+    at += chunk.byteLength;
+  }
+  return body;
+}
+
 /** A brand image upload's two fields, `kind` and `file`, read from the browser's multipart form. */
 async function brandImageForm(
   request: NextRequest,
 ): Promise<{ kind: string; file: Blob } | { refused: string; status: number; errors?: unknown }> {
   const declared = request.headers.get('content-length');
   if (declared !== null && Number(declared) > UPLOAD_LIMIT) return { refused: 'request_rejected', status: 413 };
+  const body = await boundedBody(request, UPLOAD_LIMIT);
+  if (body === null) return { refused: 'request_rejected', status: 413 };
   let form: FormData;
   try {
-    form = await request.formData();
+    form = await new Response(body, {
+      headers: { 'Content-Type': request.headers.get('content-type') ?? '' },
+    }).formData();
   } catch {
     return { refused: 'bad_request', status: 400, errors: [{ field: 'file', detail: 'is required' }] };
   }
@@ -556,8 +590,6 @@ async function brandImageForm(
   const file = form.get('file');
   if (!(file instanceof Blob))
     return { refused: 'bad_request', status: 400, errors: [{ field: 'file', detail: 'is required' }] };
-  // A request that declared no length is held to the same limit by what it carried.
-  if (file.size > UPLOAD_LIMIT) return { refused: 'request_rejected', status: 413 };
   return { kind: typeof kind === 'string' ? kind : '', file };
 }
 function failure(r: { error?: { code?: string; errors?: unknown }; response: Response }) {
