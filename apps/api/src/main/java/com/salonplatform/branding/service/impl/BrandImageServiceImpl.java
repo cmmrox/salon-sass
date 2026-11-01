@@ -10,12 +10,15 @@ import com.salonplatform.branding.service.BrandImageService;
 import com.salonplatform.branding.service.BrandImageView;
 import com.salonplatform.identity.Principal;
 import com.salonplatform.identity.Principals;
+import com.salonplatform.shared.images.ImageUpload;
+import com.salonplatform.shared.images.UploadedImages;
 import com.salonplatform.shared.tenancy.CurrentTenant;
 import com.salonplatform.shared.tenancy.TenantContext;
 import com.salonplatform.shared.web.ApplicationProblemException;
 import com.salonplatform.shared.web.ErrorCode;
 import com.salonplatform.shared.web.FieldProblem;
 import com.salonplatform.shared.web.NotFoundException;
+import java.io.IOException;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -70,15 +73,17 @@ class BrandImageServiceImpl implements BrandImageService {
     }
 
     @Override
-    public BrandImageView upload(String kind, byte[] content) {
+    public BrandImageView upload(String kind, ImageUpload upload) throws IOException {
         CurrentTenant salon = TenantContext.require();
         Principal actor = principals.require(ProfileServiceImpl.MANAGE);
         BrandImages.Kind which = kindOf(kind);
-        BrandImages.Accepted accepted = switch (checked(content, which)) {
+        long maxBytes = limits.maxBytes().toBytes();
+        if (upload.declaresOver(maxBytes)) {
+            throw refused(UploadedImages.tooLarge(maxBytes).detail());
+        }
+        BrandImages.Accepted accepted = switch (checked(upload.read(), which)) {
             case BrandImages.Accepted image -> image;
-            case BrandImages.Refused refused ->
-                throw new ApplicationProblemException(
-                        400, ErrorCode.BAD_REQUEST, List.of(new FieldProblem("file", refused.detail())));
+            case BrandImages.Refused refused -> throw refused(refused.detail());
         };
         return writing.execute(status -> {
             Instant now = clock.instant();
@@ -114,6 +119,10 @@ class BrandImageServiceImpl implements BrandImageService {
             throw new NotFoundException();
         }
         return found.stored();
+    }
+
+    private static ApplicationProblemException refused(String detail) {
+        return new ApplicationProblemException(400, ErrorCode.BAD_REQUEST, List.of(new FieldProblem("file", detail)));
     }
 
     /** The upload checked and remade while holding one of the instance's decode permits. */

@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Toaster } from '@/components/ui/sonner';
 import { LeaveDialog, useLeaveGuard } from '@/features/branding';
-import { ConfirmDelete, ProductList, ProductSheet, TaxBanner } from '@/features/catalogue';
+import { ConfirmDelete, ProductList, ProductSheet, TaxSentence } from '@/features/catalogue';
 import type { Kind } from '@/features/identity';
 import { ServicesFrame } from './ServicesFrame';
 import { useProducts, type ProductsToast } from './use-products';
@@ -65,9 +65,8 @@ export function ProductsScreen({ kind, canChange, readOnly }: Props) {
       >
         {!products.sheetOpen && notices}
         <Alert variant="info" className="text-small" data-testid="products-banner">
-          {t('productsBanner', { vatOn: String(vat !== null), vat: vat?.name ?? '' })}
+          {t('productsBanner')} <TaxSentence tax={products.tax} of="products" />
         </Alert>
-        <TaxBanner tax={products.tax} />
         {loading ? (
           <div
             className="flex flex-col gap-3"

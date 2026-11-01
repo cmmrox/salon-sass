@@ -1104,14 +1104,22 @@
     "newProduct": "+ New product",
     "banner": "List your services with their price and time. Changes apply to new bookings only.",
     "categoriesBanner": "Customers see categories in this order. A category with nothing bookable online is hidden from them.",
-    "productsBanner": "Products you sell at the front desk, added to a sale at checkout. Stock isn’t tracked. {vatOn, select, true {Prices include {vat} where it applies.} other {VAT is off for your salon.}}",
+    "productsBanner": "Products you sell at the front desk, added to a sale at checkout. Stock isn’t tracked.",
     "taxBanner": {
       "both": "Prices you enter include {serviceCharge} ({serviceChargePercent}%) and {vat} ({vatPercent}%). Customers see the same price.",
       "serviceCharge": "Prices you enter include {serviceCharge} ({serviceChargePercent}%). Customers see the same price.",
       "vat": "Prices you enter include {vat} ({vatPercent}%). Customers see the same price.",
-      "off": "Tax and service charge are off. Turn them on in Settings if your salon is registered."
+      "off": "Tax and service charge are off. Turn them on in Settings if your salon is registered.",
+      "products": {
+        "both": "Prices include {serviceCharge} ({serviceChargePercent}%) and {vat} ({vatPercent}%) where it applies.",
+        "vat": "Prices include {vat} ({vatPercent}%) where it applies.",
+        "serviceCharge": "Prices include {serviceCharge} ({serviceChargePercent}%).",
+        "none": "No tax or service charge applies to products.",
+        "off": "Tax and service charge are off. Turn them on in Settings if your salon is registered."
+      }
     },
-    "noServices": "No services yet.",
+    "emptyTitle": "No services yet",
+    "noServicesIn": "No services yet in: {names}.",
     "popular": {
       "title": "Popular on your home screen",
       "description": "Customers see these first in the app. Up to 6.",
@@ -1196,16 +1204,16 @@
         "category": "Choose one of your categories.",
         "description": "Keep the description under 90 characters.",
         "buffer": "Buffer must be 0 to 60 minutes, in steps of 5.",
-        "price": "Price must be Rs. 100 to Rs. 500,000.",
+        "price": "Price must be {priceMin} to {priceMax}.",
         "time": "Time must be 5 to 480 minutes, in steps of 5.",
         "variantCount": "Use 2 to 10 variants.",
         "setName": "Name the variants, 2 to 30 characters.",
         "variantName": "Each variant needs a name up to 30 characters.",
         "variantTwice": "“{name}” appears twice.",
-        "variantPrice": "Price for “{name}” must be Rs. 100 to Rs. 500,000.",
+        "variantPrice": "Price for “{name}” must be {priceMin} to {priceMax}.",
         "variantTime": "Time for “{name}” must be 5 to 480 minutes, in steps of 5.",
         "depositPercent": "A percentage deposit must be 1 to 100%.",
-        "depositAmount": "A fixed deposit must be Rs. 100 to Rs. 100,000.",
+        "depositAmount": "A fixed deposit must be {depositMin} to {depositMax}.",
         "depositAboveLowest": "The deposit can’t be more than the service’s lowest price."
       },
       "hiddenWarning": "This service is hidden from online booking. Turn it on when you’re ready.",
@@ -1370,7 +1378,7 @@
       "problems": {
         "name": "Product name must be 2 to 40 characters.",
         "taken": "Another product already uses this name.",
-        "price": "Price must be Rs. 1 to Rs. 500,000."
+        "price": "Price must be {min} to {max}."
       }
     },
     "deleteProduct": {

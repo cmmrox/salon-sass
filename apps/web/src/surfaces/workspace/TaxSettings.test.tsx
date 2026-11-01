@@ -5,6 +5,7 @@ import {
   CATEGORIES,
   NAILS,
   PRODUCTS,
+  product,
   SERVICES,
   service,
   TAX_PUBLIC,
@@ -281,6 +282,36 @@ describe('What customers pay (AC-4, AC-5)', () => {
     expect(lines().at(-2)).toEqual(['serviceCharge', 'Includes service charge 10%Rs. 246.53']);
     expect(screen.getByTestId('tax-preview-note')).toHaveTextContent(
       'Prices are always shown with tax and service charge included, so the price on your menu is the price customers pay.',
+    );
+  });
+
+  it('prices the prototype’s examples in the salon’s currency when there is no service or product (AC-15)', async () => {
+    answers['catalogue-services'] = () => Response.json({ currency: 'USD', items: [] });
+    answers['catalogue-products'] = () => Response.json({ currency: 'USD', items: [] });
+    render();
+    await screen.findByTestId('tax-tab');
+    await waitFor(() =>
+      expect(lines()).toEqual([
+        ['service', 'A service$2,500'],
+        ['product', 'A product$3,200'],
+      ]),
+    );
+  });
+
+  it('prices the example row in the salon’s currency beside a real product (AC-15)', async () => {
+    answers['catalogue-services'] = () => Response.json({ currency: 'USD', items: [] });
+    answers['catalogue-products'] = () =>
+      Response.json({
+        currency: 'USD',
+        items: [product('44444444-0000-4000-8000-000000000001', 'Hair oil', { currency: 'USD', priceMinor: 1_000 })],
+      });
+    render();
+    await screen.findByTestId('tax-tab');
+    await waitFor(() =>
+      expect(lines()).toEqual([
+        ['service', 'A service$2,500'],
+        ['product', 'Hair oil$10'],
+      ]),
     );
   });
 

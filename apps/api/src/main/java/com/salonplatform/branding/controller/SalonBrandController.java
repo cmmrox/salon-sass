@@ -8,6 +8,7 @@ import com.salonplatform.branding.dto.SaveSalonBrandDraftRequest;
 import com.salonplatform.branding.dto.UploadedSalonBrandImageResponse;
 import com.salonplatform.branding.service.BrandImageService;
 import com.salonplatform.branding.service.BrandService;
+import com.salonplatform.shared.images.ImageUpload;
 import com.salonplatform.shared.web.ApiPaths;
 import com.salonplatform.shared.web.ApplicationProblemException;
 import com.salonplatform.shared.web.ErrorCode;
@@ -301,7 +302,8 @@ class SalonBrandController {
         }
         return ResponseEntity.status(HttpStatus.CREATED)
                 .header(HttpHeaders.CACHE_CONTROL, NOT_STORED)
-                .body(UploadedSalonBrandImageResponse.from(images.upload(kind, file.getBytes())));
+                .body(UploadedSalonBrandImageResponse.from(
+                        images.upload(kind, new ImageUpload(file.getSize(), file::getBytes))));
     }
 
     @GetMapping(
