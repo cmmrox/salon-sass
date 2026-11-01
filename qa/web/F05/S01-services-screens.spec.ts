@@ -49,8 +49,8 @@ const T = {
   loading: 'services-loading', unavailable: 'services-unavailable', retry: 'services-retry', refused: 'services-refused', readOnly: 'services-read-only',
   rule: 'services-rule', summary: 'services-summary', banner: 'services-banner', newService: 'services-new',
   group: 'service-group',
-  // CR-025 (AC-18): guesses in the build's naming, to confirm against its handoff.
-  folded: 'service-groups-folded', empty: 'services-empty', emptyNew: 'services-empty-new',
+  // CR-025 (AC-18), from the build.
+  folded: 'services-empty-categories', empty: 'services-empty', emptyNew: 'services-empty-new',
   card: 'service-card', cardName: 'service-card-name', cardBadge: 'service-card-status', cardMeta: 'service-card-detail', cardPrice: 'service-card-price',
   cardTime: 'service-card-time', cardBuffer: 'service-card-buffer', cardEdit: 'service-card-edit', cardOnline: 'service-card-online', cardDuplicate: 'service-card-duplicate',
   sheet: 'service-sheet', name: 'service-sheet-name', price: 'service-sheet-price', time: 'service-sheet-time', more: 'service-sheet-more',
@@ -761,7 +761,7 @@ test('TC-F05-S01-046 AC-10, AC-16: a photo or save result applies only to the sh
   });
 });
 
-// ---------------------------------------------------------------- CR-025 (decision 098): test ids here are to confirm against the build
+// ---------------------------------------------------------------- CR-025 (decision 098)
 
 const say = (text: string) => text.replace(/\s+/g, ' ').trim();
 const infoBanners = (page: Page) => page.locator('[role="alert"][data-variant="info"]').filter({ visible: true });
@@ -829,8 +829,7 @@ test('TC-F05-S01-049 AC-17: the Services tab shows one information banner holdin
     await test.step(label, async () => {
       if (arrange) { await arrange(); await page.reload(); await ready(page); }
       await expect.poll(async () => say(await id(page, T.banner).innerText()), `${label}: both sentences in the one banner`).toBe(`${TEXT.banner} ${sentence}`);
-      await expect(infoBanners(page), `${label}: one information banner`).toHaveCount(1);
-      await expect(page.getByTestId('tax-banner'), `${label}: no second banner`).toHaveCount(0);
+      await expect(infoBanners(page), `${label}: one information banner, no second`).toHaveCount(1);
     });
   }
 });

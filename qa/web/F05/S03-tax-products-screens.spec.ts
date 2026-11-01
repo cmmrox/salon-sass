@@ -52,7 +52,7 @@ const T3 = {
   readOnly: 'tax-read-only', refused: 'tax-refused',
   leaveDialog: 'tax-leave-dialog', leaveStay: 'tax-leave-stay', leaveConfirm: 'tax-leave-confirm',
   preview: 'tax-preview', previewLine: 'tax-preview-line', previewNote: 'tax-preview-note',
-  servicesLoading: 'services-loading', productsLoading: 'products-loading', tabProducts: 'services-tab-products', taxBanner: 'tax-banner', servicesBanner: 'services-banner',
+  servicesLoading: 'services-loading', productsLoading: 'products-loading', tabProducts: 'services-tab-products', servicesBanner: 'services-banner',
   productsSummary: 'services-summary', productsBanner: 'products-banner', productsNew: 'products-new', productsEmpty: 'products-empty',
   productsUnavailable: 'products-unavailable', productsRetry: 'products-retry', productsReadOnly: 'products-read-only',
   productsTable: 'product-table', productCards: 'product-cards', productRow: 'product-row',
@@ -371,8 +371,7 @@ test('TC-F05-S03-021 AC-10, AC-14: the Services tab states the taxes prices incl
       if (row.input) await tax.save(salon, owner.tokens, row.input);
       expect(await banner(SERVICES_ROUTE, T3.servicesBanner), `${row.label}: Services`).toContain(row.services);
       expect(await banner(PRODUCTS_ROUTE, T3.productsBanner), `${row.label}: Products, its sentence then the one that applies`).toBe(`${TEXT.productsBanner} ${row.products}`);
-      await expect(page.locator('[role="alert"][data-variant="info"]').filter({ visible: true }), `${row.label}: one information banner`).toHaveCount(1);
-      await expect(page.getByTestId(T3.taxBanner), `${row.label}: no second banner`).toHaveCount(0);
+      await expect(page.locator('[role="alert"][data-variant="info"]').filter({ visible: true }), `${row.label}: one information banner, no second`).toHaveCount(1);
     });
   }
 });
