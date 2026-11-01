@@ -1,5 +1,5 @@
 // The booking module's client-safe entry: the Booking rules tab's parts (F04-S04).
-export type { BookingRulesHistory, BookingRulesSettings } from './types';
+export type { BookingRulesHistory, BookingRulesSettings, PublicBookingRules } from './types';
 export { BookingRulesForm } from './components/BookingRulesForm';
 export { RulesHistorySheet, type HistoryState } from './components/RulesHistorySheet';
 export { RulesSummary } from './components/RulesSummary';

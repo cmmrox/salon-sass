@@ -11,7 +11,8 @@ type Answer = {
 type Call = { headers: Record<string, string | undefined>; signal: AbortSignal };
 
 /**
- * The catalogue paths the workspace BFF reaches (F05-S01): its two lists, every change, and a service's photo.
+ * The catalogue paths the workspace BFF reaches (F05-S01, F05-S02): its two lists and the Popular setting, every
+ * change, and a service's photo.
  * Identity checks the session and the permission first; the catalogue makes the calls and builds each request from
  * the contract's own fields, and the route serving the BFF hands its implementation in, so that neither module
  * imports the other.
@@ -19,6 +20,7 @@ type Call = { headers: Record<string, string | undefined>; signal: AbortSignal }
 export interface SalonCatalogue {
   categories(call: Call): Promise<Answer>;
   services(call: Call): Promise<Answer>;
+  popularSetting(call: Call): Promise<Answer>;
   change(call: Call, action: string, body: unknown): Promise<Answer>;
   uploadPhoto(call: Call, serviceId: string, file: Blob): Promise<Answer>;
 }
@@ -27,7 +29,7 @@ export interface SalonCatalogue {
 export type SalonCatalogueFor = (hostname: string) => SalonCatalogue | null;
 
 /** The BFF's reads of the catalogue, each `catalogue.read`: every role and a support session (decision 093). */
-export const CATALOGUE_READS = ['catalogue-categories', 'catalogue-services'];
+export const CATALOGUE_READS = ['catalogue-categories', 'catalogue-services', 'catalogue-popular-setting'];
 
 /** Its changes, each `catalogue.price.change`; the photo upload is the one multipart action. */
 export const CATALOGUE_WRITES = [
@@ -41,6 +43,8 @@ export const CATALOGUE_WRITES = [
   'catalogue-service-online',
   'catalogue-service-delete',
   'catalogue-photo-remove',
+  'catalogue-service-popular',
+  'catalogue-popular-mode',
 ];
 export const CATALOGUE_PHOTO = 'catalogue-photo';
 
@@ -52,5 +56,6 @@ export const CATALOGUE_PERMISSIONS: Record<string, string> = Object.fromEntries(
 
 /** One read. */
 export function readCatalogue(catalogue: SalonCatalogue, action: string, call: Call) {
-  return action === 'catalogue-categories' ? catalogue.categories(call) : catalogue.services(call);
+  if (action === 'catalogue-categories') return catalogue.categories(call);
+  return action === 'catalogue-services' ? catalogue.services(call) : catalogue.popularSetting(call);
 }

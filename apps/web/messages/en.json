@@ -1041,6 +1041,17 @@
     "banner": "List your services with their price and time. Changes apply to new bookings only.",
     "categoriesBanner": "Customers see categories in this order. A category with nothing bookable online is hidden from them.",
     "noServices": "No services yet.",
+    "popular": {
+      "title": "Popular on your home screen",
+      "description": "Customers see these first in the app. Up to 6.",
+      "modesLabel": "How popular services are chosen",
+      "chosen": "Chosen by you",
+      "most_booked": "Most booked",
+      "chosenSome": "<b>{count} chosen:</b> {names}. Change this in each service under “More options”.",
+      "chosenNone": "None chosen yet. Choose up to 6 under “More options” in a service.",
+      "mostBookedNow": "<b>Now:</b> {names}. The 6 services booked most in the last 90 days, among those bookable online. Until you have bookings, your chosen services are shown.",
+      "nobody": "—"
+    },
     "card": {
       "online": "Online",
       "hidden": "Hidden online",
@@ -1056,7 +1067,12 @@
       "showLabel": "Show online: {name}",
       "duplicate": "Duplicate",
       "duplicateLabel": "Duplicate {name}",
-      "photo": "Photo of {name}"
+      "photo": "Photo of {name}",
+      "from": "From {price}",
+      "minutesRange": "{min} to {max} min",
+      "moreOptions": "+{count}",
+      "fromBadge": "From price",
+      "optionsBadge": "{count} options"
     },
     "categories": {
       "count": "{count, plural, =0 {No services} one {# service} other {# services}}",
@@ -1089,7 +1105,7 @@
       "price": "Price ({mark})",
       "time": "Time (min)",
       "more": "More options",
-      "moreHint": "category, description, buffer, photo, visibility",
+      "moreHint": "category, description, buffer, photo, visibility, Popular, deposit",
       "category": "Category",
       "categoryPlaceholder": "Choose a category",
       "description": "Short description",
@@ -1110,9 +1126,67 @@
         "description": "Keep the description under 90 characters.",
         "buffer": "Buffer must be 0 to 60 minutes, in steps of 5.",
         "price": "Price must be Rs. 100 to Rs. 500,000.",
-        "time": "Time must be 5 to 480 minutes, in steps of 5."
+        "time": "Time must be 5 to 480 minutes, in steps of 5.",
+        "variantCount": "Use 2 to 10 variants.",
+        "setName": "Name the variants, 2 to 30 characters.",
+        "variantName": "Each variant needs a name up to 30 characters.",
+        "variantTwice": "“{name}” appears twice.",
+        "variantPrice": "Price for “{name}” must be Rs. 100 to Rs. 500,000.",
+        "variantTime": "Time for “{name}” must be 5 to 480 minutes, in steps of 5.",
+        "depositPercent": "A percentage deposit must be 1 to 100%.",
+        "depositAmount": "A fixed deposit must be Rs. 100 to Rs. 100,000.",
+        "depositAboveLowest": "The deposit can’t be more than the service’s lowest price."
       },
-      "hiddenWarning": "This service is hidden from online booking. Turn it on when you’re ready."
+      "hiddenWarning": "This service is hidden from online booking. Turn it on when you’re ready.",
+      "fromPrice": "From {price}",
+      "variantPrice": "Prices come from the variants below ({price}).",
+      "variantPriceUnknown": "Prices come from the variants below.",
+      "variants": {
+        "toggle": "This service has variants",
+        "toggleHelp": "For example by hair length, each with its own price and time",
+        "setName": "Name of the variants",
+        "setNamePlaceholder": "e.g. Hair length",
+        "listLabel": "Variants",
+        "name": "Variant",
+        "price": "Price ({mark})",
+        "minutes": "Min",
+        "nameLabel": "Variant {n} name",
+        "priceLabel": "Variant {n} price",
+        "minutesLabel": "Variant {n} time",
+        "remove": "Remove variant {n}",
+        "add": "+ Add variant",
+        "option": "Option {n}",
+        "preview": "Price list preview",
+        "previewBlocked": "Fix the issues above to see the price list.",
+        "previewTime": "· {minutes} min"
+      },
+      "popular": {
+        "label": "Show in Popular",
+        "help": "On your home screen in the app",
+        "mostBooked": "Popular is set to “Most booked”",
+        "full": "{count} already chosen. Remove one first."
+      },
+      "deposit": {
+        "label": "Deposit",
+        "salon_rule": "Salon rule",
+        "custom": "Custom",
+        "none": "No deposit",
+        "type": "Deposit type",
+        "percentage": "Percentage",
+        "amount": "Fixed amount",
+        "percentLabel": "Deposit percentage",
+        "amountLabel": "Deposit amount",
+        "ruleSays": "Uses your booking rules: {rule}.",
+        "ruleUnknown": "Uses your booking rules.",
+        "noneSays": "Customers book this service without paying a deposit.",
+        "rule": {
+          "none": "no deposit",
+          "percentage": "{percent}%, up to {cap}",
+          "amount": "{amount}",
+          "unset": "not set yet"
+        },
+        "percentSuffix": "%"
+      }
     },
     "photo": {
       "label": "Photo",
@@ -1173,7 +1247,8 @@
       "lastCategory": "Keep at least one category.",
       "categoryLimit": "Your salon has 50 categories, the most it can have.",
       "serviceLimit": "Your salon has 300 services, the most it can have.",
-      "unchanged": "Nothing has changed, so there is nothing to save."
+      "unchanged": "Nothing has changed, so there is nothing to save.",
+      "popularLimit": "6 already chosen. Remove one first."
     }
   }
 }

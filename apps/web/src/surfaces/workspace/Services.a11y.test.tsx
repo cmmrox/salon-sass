@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { atWidth, axe, BRANDS, WIDTHS } from '@test/a11y';
 import { renderWithMessages } from '@test/render';
 import { AccountFrame } from './AccountFrame';
-import { CATEGORIES, SERVICES } from './catalogue-fixtures';
+import { CATEGORIES, COLOUR, POPULAR, RULES, SERVICES, service, withVariants } from './catalogue-fixtures';
 import { ServicesScreen, type ServicesTab } from './ServicesScreen';
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }) }));
@@ -16,8 +16,15 @@ vi.mock('next/link', () => ({
  * F05-S01 AC-16: both tabs of Services & pricing, both sheets and their states have no WCAG 2.2 AA violation,
  * colour contrast included, at every width and with a dark and a light brand, rendered in real Chromium in the
  * workspace frame, with no horizontal scrolling. A long service name and a long category name wrap. The service
- * sheet keeps focus inside and returns it to the card's Edit when it closes.
+ * sheet keeps focus inside and returns it to the card's Edit when it closes. F05-S02 AC-11: a card with ten
+ * variants, the Popular card in both modes, the sheet's Variants section with ten rows and its errors, Show in
+ * Popular and the Deposit control, the same way.
  */
+const TEN = withVariants(
+  { ...service('11111111-0000-4000-8000-000000000099', 'Haircut', COLOUR), popular: true },
+  'Hair length',
+  Array.from({ length: 10 }, (_, i) => [`Length ${i + 1}`, 2500 + i * 100, 30 + i * 5] as [string, number, number]),
+);
 const LONG = 'Extra long hair treatment with argan oil';
 let answers: Record<string, () => Response | Promise<Response>>;
 beforeEach(() => {
@@ -37,8 +44,11 @@ beforeEach(() => {
         items: [
           ...SERVICES.items,
           { ...SERVICES.items[1]!, id: 'long-service', name: LONG, categoryId: 'long', description: 'd'.repeat(90) },
+          TEN,
         ],
       }),
+    'catalogue-popular-setting': () => Response.json(POPULAR),
+    'booking-rules-public': () => Response.json({ current: RULES }),
   };
   vi.stubGlobal('fetch', async (url: string) => {
     const action = url.split('/').pop()!.split('?')[0]!;
@@ -193,6 +203,48 @@ describe('the service sheet', () => {
     await screen.findByTestId('service-delete-dialog');
     await noViolations();
   });
+});
+
+describe('variants, Popular and the deposit (F05-S02 AC-11)', () => {
+  it.each(BRANDS.flatMap((brand) => [360, 768, 1280].map((width) => [brand, width] as const)))(
+    'the sheet with ten variants, a broken one, Show in Popular and a custom deposit, brand %s at %ipx',
+    async (brand, width) => {
+      await atWidth(width);
+      page(brand);
+      await screen.findAllByTestId('service-card');
+      const haircut = screen
+        .getAllByTestId('service-card')
+        .find((card) => within(card).getByTestId('service-card-name').textContent === 'Haircut')!;
+      fireEvent.click(within(haircut).getByTestId('service-card-edit'));
+      const sheet = await screen.findByTestId('service-sheet');
+      expect(within(sheet).getAllByTestId('service-variant-row')).toHaveLength(10);
+      await within(sheet).findByTestId('service-sheet-popular');
+      await noViolations();
+      fireEvent.change(screen.getByLabelText('Variant 3 price'), { target: { value: '99' } });
+      fireEvent.click(screen.getByTestId('service-deposit-custom'));
+      await screen.findByLabelText('Deposit percentage');
+      await screen.findByTestId('service-sheet-problems');
+      await noViolations();
+      noHorizontalScroll();
+    },
+  );
+
+  it.each(BRANDS)(
+    'the Popular card set to Most booked, and a new service turning variants on, brand %s',
+    async (brand) => {
+      answers['catalogue-popular-setting'] = () =>
+        Response.json({ ...POPULAR, mode: 'most_booked', popular: [TEN.id] });
+      page(brand);
+      await screen.findByText(/^Now:/);
+      await noViolations();
+      fireEvent.click(await screen.findByTestId('services-new'));
+      fireEvent.click(await screen.findByTestId('service-variants-toggle'));
+      await screen.findByTestId('service-sheet-variant-price');
+      fireEvent.click(screen.getByTestId('service-sheet-more'));
+      await screen.findByTestId('service-sheet-popular');
+      await noViolations();
+    },
+  );
 });
 
 describe('the Categories tab and its sheet', () => {

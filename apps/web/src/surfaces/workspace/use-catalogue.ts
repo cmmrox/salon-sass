@@ -8,18 +8,22 @@ import {
   problemsOf,
   problemsOfFields,
   requestOf,
-  sameService,
+  sameValues,
   shownProblems,
   valuesOf,
+  variantIdRefused,
   type CatalogueService,
   type Category,
   type CategoryList,
   type CategoryProblem,
   type PhotoUpload,
+  type PopularMode,
+  type PopularSetting,
   type ServiceList,
   type ServiceProblem,
   type ServiceValues,
 } from '@/features/catalogue';
+import type { PublicBookingRules } from '@/features/booking';
 import {
   IdentityFailure,
   identityRequest,
@@ -35,7 +39,7 @@ export type CatalogueNotice = 'conflict' | 'unavailable' | 'refused' | null;
 
 /** Why a change was not made, said in an Alert: a rule of the catalogue rather than a broken field. */
 export type CatalogueRefusal =
-  | { reason: 'inUseService' | 'lastCategory' | 'categoryLimit' | 'serviceLimit' | 'unchanged' }
+  | { reason: 'inUseService' | 'lastCategory' | 'categoryLimit' | 'serviceLimit' | 'unchanged' | 'popularLimit' }
   | { reason: 'inUseCategory'; count: number }
   | null;
 
@@ -68,6 +72,9 @@ export function useCatalogue(kind: Kind, notify: (toast: CatalogueToast) => void
   const router = useRouter();
   const [categories, setCategories] = useState<CategoryList | null>(null);
   const [services, setServices] = useState<ServiceList | null>(null);
+  const [popular, setPopular] = useState<PopularSetting | null>(null);
+  // The salon's booking rules as customers see them: null before the first save, undefined while unknown.
+  const [rules, setRules] = useState<PublicBookingRules | null | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState<CatalogueNotice>(null);
   const [refusal, setRefusal] = useState<CatalogueRefusal>(null);
@@ -107,12 +114,20 @@ export function useCatalogue(kind: Kind, notify: (toast: CatalogueToast) => void
   async function load(): Promise<{ categories: CategoryList; services: ServiceList } | null> {
     setLoading(true);
     try {
-      const [nextCategories, nextServices] = await Promise.all([
+      const [nextCategories, nextServices, nextPopular, nextRules] = await Promise.all([
         identityRequest<CategoryList>(kind, 'catalogue-categories'),
         identityRequest<ServiceList>(kind, 'catalogue-services'),
+        identityRequest<PopularSetting>(kind, 'catalogue-popular-setting'),
+        // Only the words of a "Salon rule" deposit depend on it: the page works without it.
+        identityRequest<{ current: PublicBookingRules | null }>(kind, 'booking-rules-public').then(
+          (answer) => answer.current,
+          () => undefined,
+        ),
       ]);
       setCategories(nextCategories);
       setServices(nextServices);
+      setPopular(nextPopular);
+      setRules(nextRules);
       setNotice((current) => (current === 'refused' ? current : null));
       return { categories: nextCategories, services: nextServices };
     } catch (error) {
@@ -189,35 +204,73 @@ export function useCatalogue(kind: Kind, notify: (toast: CatalogueToast) => void
   const sheetDirty = Boolean(
     sheetOpen &&
     sheet &&
-    !sameService(sheet.values, sheet.service ? valuesOf(sheet.service) : newService(categories?.items[0]?.id ?? '')),
+    !sameValues(sheet.values, sheet.service ? valuesOf(sheet.service) : newService(categories?.items[0]?.id ?? '')),
   );
 
+  /**
+   * Saves the sheet: the service when anything of it changed, then its Popular choice when that changed, which is
+   * its own call (it is not one of the service's terms, F05-S02 AC-5). A choice refused after the service saved keeps
+   * the sheet open on the saved service and says why.
+   */
   async function saveService() {
     if (!sheet || sheetProblems.length > 0) return;
     const editing = sheet.service;
+    const values = sheet.values;
+    const popularChanged = values.popular !== (editing?.popular ?? false);
+    const serviceChanged =
+      !editing || !sameValues({ ...values, popular: false }, { ...valuesOf(editing), popular: false });
     setBusy(true);
     setRefusal(null);
+    let saved: CatalogueService | null = editing;
     try {
-      const saved = editing
-        ? await change<CatalogueService>('catalogue-service-save', {
-            id: editing.id,
-            ...requestOf(sheet.values),
-            version: editing.version,
-          })
-        : await change<CatalogueService>('catalogue-service-create', requestOf(sheet.values));
+      if (serviceChanged || !popularChanged)
+        saved = editing
+          ? await change<CatalogueService>('catalogue-service-save', {
+              id: editing.id,
+              ...requestOf(values),
+              version: editing.version,
+            })
+          : await change<CatalogueService>('catalogue-service-create', requestOf(values));
+      if (popularChanged && saved)
+        saved = await change<CatalogueService>('catalogue-service-popular', {
+          id: saved.id,
+          popular: values.popular,
+          version: saved.version,
+        });
       setSheetOpen(false);
-      notify(!editing ? 'created' : saved.terms.versionId !== editing.terms.versionId ? 'savedTerms' : 'saved');
+      notify(
+        !editing ? 'created' : saved && saved.terms.versionId !== editing.terms.versionId ? 'savedTerms' : 'saved',
+      );
       await load();
     } catch (error) {
+      if (saved && saved !== editing) {
+        // The service saved and its Popular choice did not: the sheet stays on the saved service.
+        const kept = saved;
+        setSheet((current) => (current ? { ...current, service: kept } : current));
+        void load();
+      }
       const left = failed(error);
-      if (left?.code === 'bad_request')
+      if (left?.code === 'bad_request' && variantIdRefused(left.fields)) setNotice('conflict');
+      else if (left?.code === 'bad_request')
         setSheet((current) =>
           current ? { ...current, apiProblems: problemsOfFields(left.fields, current.values) } : current,
         );
       else if (left?.code === 'invalid_state') setRefusal({ reason: 'unchanged' });
-      else if (left?.code === 'limit_reached') setRefusal({ reason: 'serviceLimit' });
+      else if (left?.code === 'limit_reached')
+        setRefusal({ reason: saved && popularChanged ? 'popularLimit' : 'serviceLimit' });
     }
     setBusy(false);
+  }
+
+  async function switchPopular(mode: PopularMode) {
+    if (!popular) return;
+    await quietly(
+      async () => {
+        setPopular(await change<PopularSetting>('catalogue-popular-mode', { mode, version: popular.version }));
+        notify('saved');
+      },
+      () => ({ reason: 'unchanged' }),
+    );
   }
 
   async function uploadPhoto(file: File) {
@@ -307,9 +360,17 @@ export function useCatalogue(kind: Kind, notify: (toast: CatalogueToast) => void
     setBusy(false);
   }
 
+  const chosenElsewhere = (services?.items ?? []).filter(
+    (service) => service.popular && service.id !== sheet?.service?.id,
+  ).length;
+
   return {
     categories,
     services,
+    popular,
+    rules,
+    switchPopular,
+    chosenElsewhere,
     loading,
     notice,
     refusal,
@@ -330,6 +391,8 @@ export function useCatalogue(kind: Kind, notify: (toast: CatalogueToast) => void
       setSheet((current) =>
         current ? { ...current, values: { ...current.values, [field]: value }, apiProblems: [] } : current,
       ),
+    changeServiceValues: (change: (values: ServiceValues) => ServiceValues) =>
+      setSheet((current) => (current ? { ...current, values: change(current.values), apiProblems: [] } : current)),
     closeSheet: () => setSheetOpen(false),
     saveService,
     uploadPhoto,

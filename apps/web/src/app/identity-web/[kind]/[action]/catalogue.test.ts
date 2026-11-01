@@ -11,7 +11,10 @@ import { salonHoursFor } from '@/features/staff/server';
 import { salonBookingRulesFor } from '@/features/booking/server';
 import { salonCatalogueFor } from '@/features/catalogue/server';
 
-/** The catalogue actions of the workspace BFF (F05-S01), as the route wires them, against a fake API on loopback. */
+/**
+ * The catalogue actions of the workspace BFF (F05-S01, F05-S02), as the route wires them, against a fake API on
+ * loopback.
+ */
 const handleIdentity = createIdentityWeb(
   salonAccountFor,
   salonSettingsFor,
@@ -259,5 +262,96 @@ describe('the catalogue actions (F05-S01)', () => {
     expect(refused.status).toBe(403);
     expect(await refused.json()).toMatchObject({ code: 'support_read_only' });
     expect(apiCalls().map((call) => call.path)).toEqual(['/api/v1/catalogue/services']);
+  });
+
+  it('reads the Popular setting with catalogue.read, and the booking rules customers see with no permission', async () => {
+    permissions = ['session.manage', 'catalogue.read'];
+    answer = (_method, path) =>
+      path === '/api/v1/identity/me'
+        ? {
+            status: 200,
+            data: {
+              id: 's',
+              kind: 'staff',
+              role: 'RECEPTIONIST',
+              permissions,
+              scope: 'salon',
+              staffId: 's',
+              mfaEnabled: false,
+              expiresAt: null,
+            },
+          }
+        : path === '/api/v1/salon/booking-rules'
+          ? { status: 200, data: null }
+          : { status: 200, data: { mode: 'chosen', version: 0, popular: [] } };
+
+    expect(await (await run('GET', 'staff', 'catalogue-popular-setting')).json()).toEqual({
+      mode: 'chosen',
+      version: 0,
+      popular: [],
+    });
+    // JSON null before the rules are first saved is an answer, not a failure.
+    expect(await (await run('GET', 'staff', 'booking-rules-public')).json()).toEqual({ current: null });
+    expect(apiCalls().map((call) => [call.method, call.path])).toEqual([
+      ['GET', '/api/v1/catalogue/popular-setting'],
+      ['GET', '/api/v1/salon/booking-rules'],
+    ]);
+    permissions = ['session.manage'];
+    expect((await run('GET', 'staff', 'catalogue-popular-setting')).status).toBe(403);
+  });
+
+  it('rebuilds variants and a deposit from the contract’s own fields, and sends no price with variants', async () => {
+    await run('POST', 'staff', 'catalogue-service-create', {
+      name: 'Haircut',
+      categoryId: COLOUR,
+      description: null,
+      bufferMinutes: 0,
+      bookableOnline: true,
+      variants: {
+        name: 'Hair length',
+        items: [
+          { id: 'v1', name: 'Short', priceMinor: 250_000, durationMinutes: 30, colour: 'red' },
+          { name: 'Long', priceMinor: 400_000, durationMinutes: 60 },
+        ],
+        extra: true,
+      },
+      deposit: { kind: 'percentage', percent: 25, capMinor: 1 },
+    });
+
+    expect(JSON.parse(apiCalls()[0]!.body)).toEqual({
+      name: 'Haircut',
+      categoryId: COLOUR,
+      description: null,
+      bufferMinutes: 0,
+      bookableOnline: true,
+      variants: {
+        name: 'Hair length',
+        items: [
+          { id: 'v1', name: 'Short', priceMinor: 250_000, durationMinutes: 30 },
+          { name: 'Long', priceMinor: 400_000, durationMinutes: 60 },
+        ],
+      },
+      deposit: { kind: 'percentage', percent: 25 },
+    });
+  });
+
+  it('chooses a service for Popular and switches the setting with their versions, and refuses a reader both', async () => {
+    expect(
+      (await run('POST', 'staff', 'catalogue-service-popular', { id: SERVICE, popular: true, version: 2, x: 1 }))
+        .status,
+    ).toBe(200);
+    expect((await run('POST', 'staff', 'catalogue-popular-mode', { mode: 'most_booked', version: 0 })).status).toBe(
+      200,
+    );
+    expect(apiCalls().map((call) => [call.method, call.path, call.body])).toEqual([
+      ['PUT', `/api/v1/catalogue/services/${SERVICE}/popular`, JSON.stringify({ popular: true, version: 2 })],
+      ['PUT', '/api/v1/catalogue/popular-setting', JSON.stringify({ mode: 'most_booked', version: 0 })],
+    ]);
+    permissions = ['session.manage', 'catalogue.read'];
+    expect(
+      (await run('POST', 'staff', 'catalogue-service-popular', { id: SERVICE, popular: true, version: 2 })).status,
+    ).toBe(403);
+    expect((await run('POST', 'staff', 'catalogue-popular-mode', { mode: 'chosen', version: 1 })).status).toBe(403);
+    expect(apiCalls()).toHaveLength(2);
   });
 });
