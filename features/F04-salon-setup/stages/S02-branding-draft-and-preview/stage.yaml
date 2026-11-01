@@ -200,22 +200,21 @@ verification:
   - pnpm --filter @salon/web test:a11y
   - pnpm --filter @salon/web build
   - pnpm contracts:check
-  # Prepared during the build (dry run); suite membership is decided at feature-verify.
   automation:
   - id: brand-api
     tool: playwright
     file: qa/api/F04/S02-brand.spec.ts
     project: api
-    suites: []
+    suites: [regression]
   - id: brand-screens
     tool: playwright
     file: qa/web/F04/S02-brand-screens.spec.ts
     project: web
-    suites: []
+    suites: [regression]
   - id: brand-backfill
     tool: script
     file: qa/checks/F04/S02-brand-backfill.sh
-    suites: []
+    suites: [regression]
   manual: []
   deferred: []
 evidence:

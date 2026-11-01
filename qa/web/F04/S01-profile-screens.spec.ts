@@ -231,7 +231,7 @@ test('TC-F04-S01-023 AC-9: a support session sees the Profile tab and the draft 
   }
 });
 
-test('TC-F04-S01-024 AC-11: leaving the Profile tab with unsaved edits asks first; staying keeps the edits and leaving goes', async ({ accounts }) => {
+test('TC-F04-S01-024 AC-11: leaving the Profile tab with unsaved edits, by a link or another Settings tab, asks first; staying keeps the edits and leaving goes', async ({ accounts }) => {
   const manager = await staffOf(accounts, 'MANAGER');
   const { context, page } = await openProfile(accounts, manager);
   const unsaved = unique('Unsaved address');
@@ -244,6 +244,28 @@ test('TC-F04-S01-024 AC-11: leaving the Profile tab with unsaved edits asks firs
   await id(page, 'workspace-account').click();
   await id(page, 'profile-leave-confirm').click();
   await expect(page).toHaveURL(/\/workspace\/account$/);
+  await test.step('changing to another Settings tab with unsaved edits asks first', async () => {
+    // After a client-side tab change the previous tab's markup stays, hidden: look among the visible elements.
+    const shown = (p: Page, name: string) => p.getByTestId(name).filter({ visible: true });
+    const tabbed = await accounts.open(context, PROFILE);
+    await ready(tabbed);
+    const draftBefore = await accounts.identity.api.send('GET', '/api/v1/salon/profile/draft', { headers: { Host: alpha.hostname, Authorization: `Bearer ${manager.tokens.accessToken}` } }).then(r => r.text());
+    const typed = unique('Unsaved before a tab change');
+    await field(tabbed, 'address').fill(typed);
+    await shown(tabbed, 'settings-tab-hours').click();
+    await expect(shown(tabbed, 'profile-leave-dialog')).toBeVisible();
+    await shown(tabbed, 'profile-leave-stay').click();
+    await expect(tabbed).toHaveURL(new RegExp(`${PROFILE}$`));
+    await expect(shown(tabbed, 'settings-tab-profile')).toHaveAttribute('aria-selected', 'true');
+    await expect(shown(tabbed, 'profile-address'), 'Stay keeps the edit').toHaveValue(typed);
+    await shown(tabbed, 'settings-tab-hours').click();
+    await shown(tabbed, 'profile-leave-confirm').click();
+    await expect(tabbed).toHaveURL(/\/workspace\/settings\/hours$/);
+    await expect(shown(tabbed, 'hours-tab')).toBeVisible();
+    const draftAfter = await accounts.identity.api.send('GET', '/api/v1/salon/profile/draft', { headers: { Host: alpha.hostname, Authorization: `Bearer ${manager.tokens.accessToken}` } }).then(r => r.text());
+    expect(draftAfter, 'leaving saved nothing').toBe(draftBefore);
+    await tabbed.close();
+  });
   await test.step('closing the tab with unsaved edits asks the browser to confirm', async () => {
     const again = await accounts.open(context, PROFILE);
     await ready(again);
@@ -309,8 +331,9 @@ test('TC-F04-S01-026 AC-11: at every width of the matrix the Profile tab and pub
       const fits = await fit(page);
       expect(fits.counted, 'elements were measured').toBeGreaterThan(0);
       expect(fits.pageScrolls, 'no sideways scrolling').toBe(false);
-      expect(fits.outside, 'nothing outside the viewport').toEqual([]);
-      for (const control of [...FIELDS.map(f => `profile-${f}`), 'profile-check-map', 'profile-save', 'profile-publish', 'profile-discard', 'publish-bar', 'profile-preview']) {
+      // The Settings tab rail scrolls sideways on phones, as the prototype's does (.brtabs): a tab past its edge is scrolled to, not outside the page; each tab is proved reachable below.
+      expect(fits.outside.filter(c => !c.startsWith('settings-tab-')), 'nothing outside the viewport').toEqual([]);
+      for (const control of ['settings-tab-profile', 'settings-tab-hours', 'settings-tab-rules', 'settings-tab-branding', ...FIELDS.map(f => `profile-${f}`), 'profile-check-map', 'profile-save', 'profile-publish', 'profile-discard', 'publish-bar', 'profile-preview']) {
         const element = id(page, control);
         await element.scrollIntoViewIfNeeded();
         await expect(element, `${control} at ${viewport.width}`).toBeVisible();
@@ -329,7 +352,7 @@ test('TC-F04-S01-026 AC-11: at every width of the matrix the Profile tab and pub
     await expect(id(page, 'profile-fix')).toBeVisible();
     const fits = await fit(page);
     expect(fits.pageScrolls, 'no sideways scrolling with errors shown').toBe(false);
-    expect(fits.outside).toEqual([]);
+    expect(fits.outside.filter(c => !c.startsWith('settings-tab-'))).toEqual([]);
   });
 });
 

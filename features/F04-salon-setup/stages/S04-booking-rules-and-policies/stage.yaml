@@ -199,7 +199,17 @@ verification:
   - pnpm --filter @salon/web test:a11y
   - pnpm --filter @salon/web build
   - pnpm contracts:check
-  automation: []
+  automation:
+  - id: rules-api
+    tool: playwright
+    file: qa/api/F04/S04-rules.spec.ts
+    project: api
+    suites: [regression]
+  - id: rules-screens
+    tool: playwright
+    file: qa/web/F04/S04-rules-screens.spec.ts
+    project: web
+    suites: [regression]
   manual: []
   deferred: []
 evidence:

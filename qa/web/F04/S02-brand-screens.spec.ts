@@ -195,7 +195,7 @@ test('TC-F04-S02-026 AC-3: a saved brand draft survives a reload without changin
   });
 });
 
-test('TC-F04-S02-027 AC-4, AC-12: choosing a logo or cover shows uploading, then the image; a file that cannot be used shows its message beside the image; an unsaved upload is guarded on leaving', async ({ accounts, operator, brands }) => {
+test('TC-F04-S02-027 AC-4, AC-12: choosing a logo or cover shows uploading, then the image; a file that cannot be used shows its message beside the image; an unsaved upload is guarded on leaving by a link or another Settings tab', async ({ accounts, operator, brands }) => {
   const { salon, owner } = await newSalon(operator, accounts);
   const { page, context } = await openBranding(accounts, owner, salon);
   await test.step('a logo: uploading, then chosen and in the preview', async () => {
@@ -228,6 +228,21 @@ test('TC-F04-S02-027 AC-4, AC-12: choosing a logo or cover shows uploading, then
     await expect(page).toHaveURL(new RegExp(`${BRANDING}$`));
     await expect(id(page, 'brand-cover-chosen')).toBeVisible();
     expect((await brands.draft(salon, owner.tokens)).brand.logo, 'nothing saved into the draft yet').toBeNull();
+  });
+  await test.step('changing to another Settings tab with the images not yet saved asks first', async () => {
+    // After a client-side tab change the previous tab's markup stays, hidden: look among the visible elements.
+    const shown = (name: string) => page.getByTestId(name).filter({ visible: true });
+    await shown('settings-tab-rules').click();
+    await expect(shown('profile-leave-dialog')).toBeVisible();
+    await shown('profile-leave-stay').click();
+    await expect(page).toHaveURL(new RegExp(`${BRANDING}$`));
+    await expect(shown('settings-tab-branding')).toHaveAttribute('aria-selected', 'true');
+    await expect(shown('brand-cover-chosen'), 'Stay keeps the upload').toBeVisible();
+    await shown('settings-tab-rules').click();
+    await shown('profile-leave-confirm').click();
+    await expect(page).toHaveURL(/\/workspace\/settings\/rules$/);
+    await expect(shown('rules-tab')).toBeVisible();
+    expect((await brands.draft(salon, owner.tokens)).brand.cover, 'leaving saved nothing into the draft').toBeNull();
   });
 });
 
@@ -387,8 +402,9 @@ test('TC-F04-S02-033 AC-12: at every width of the matrix the Branding tab and it
       const fits = await fit(page);
       expect(fits.counted).toBeGreaterThan(0);
       expect(fits.pageScrolls, 'no sideways scrolling').toBe(false);
-      expect(fits.outside, 'nothing outside the viewport').toEqual([]);
-      for (const control of ['brand-name', 'brand-tagline', 'brand-colour', 'brand-swatches', 'brand-logo-choose', 'brand-logo-default', 'brand-cover-choose', 'brand-cover-default', 'brand-reset', 'brand-save', 'brand-preview']) {
+      // The Settings tab rail scrolls sideways on phones, as the prototype's does (.brtabs): a tab past its edge is scrolled to, not outside the page; each tab is proved reachable below.
+      expect(fits.outside.filter(c => !c.startsWith('settings-tab-')), 'nothing outside the viewport').toEqual([]);
+      for (const control of ['settings-tab-profile', 'settings-tab-hours', 'settings-tab-rules', 'settings-tab-branding', 'brand-name', 'brand-tagline', 'brand-colour', 'brand-swatches', 'brand-logo-choose', 'brand-logo-default', 'brand-cover-choose', 'brand-cover-default', 'brand-reset', 'brand-save', 'brand-preview']) {
         await id(page, control).scrollIntoViewIfNeeded();
         await expect(id(page, control), `${control} at ${viewport.width}`).toBeVisible();
       }

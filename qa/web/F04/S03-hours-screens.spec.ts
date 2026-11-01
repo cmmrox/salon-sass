@@ -21,12 +21,12 @@ import { webUrl } from '../../shared/env';
 import { test as browserTest, expect, type AccountBrowser } from '../../shared/identity-browser';
 import type { Actor, Role } from '../../shared/identity';
 import { Operator, TestClock, ownerSession, supportJson, type SupportStart } from '../../shared/operator';
-import { fit, seriousViolations } from '../../shared/page-checks';
+import { drawnContrast, fit, seriousViolations } from '../../shared/page-checks';
 import {
   Calendar, DAYS, Hours, SHARED, UNPUBLISHED_YEAR, csv, hoursSnapshot, plusDays, stored, unique, week, type Day,
 } from '../../shared/salon-hours';
 import { message } from '../../shared/strings';
-import { alpha, salonUrl, type Salon } from '../../shared/tenants';
+import { alpha, beta, salonUrl, type Salon } from '../../shared/tenants';
 
 const test = browserTest.extend<{ operator: Operator; clock: TestClock; hours: Hours; calendar: Calendar }>({
   operator: async ({ identity }, use) => {
@@ -459,13 +459,14 @@ test('TC-F04-S03-029 AC-12: at every width of the matrix the tab, the closure sh
     await test.step(`the tab at ${viewport.width}`, async () => {
       await page.setViewportSize(viewport);
       await settled(page);
-      // The Settings tab rail scrolls sideways on phones, as the prototype's does (.brtabs): the page must not.
+      // The Settings tab rail scrolls sideways on phones, as the prototype's does (.brtabs): the page must not. A tab past
+      // the rail's edge is scrolled to, not outside the page; each tab is proved reachable below.
       const result = await fit(page);
       expect(result.counted).toBeGreaterThan(0);
       expect(result.pageScrolls, `tab ${viewport.width}: no sideways scroll`).toBe(false);
-      expect(result.outside, `tab ${viewport.width}: nothing outside the viewport`).toEqual([]);
+      expect(result.outside.filter(c => !c.startsWith('settings-tab-')), `tab ${viewport.width}: nothing outside the viewport`).toEqual([]);
       expect(result.clipped.filter(c => !c.startsWith('settings-tabs ')), `tab ${viewport.width}: nothing clipped`).toEqual([]);
-      for (const control of ['settings-tab-profile', 'settings-tab-hours', 'settings-tab-branding', 'hours-monday-open', 'hours-monday-opens', 'hours-monday-closes', 'hours-save', `holiday-${days[0].date}-choice`,
+      for (const control of ['settings-tab-profile', 'settings-tab-hours', 'settings-tab-rules', 'settings-tab-branding', 'hours-monday-open', 'hours-monday-opens', 'hours-monday-closes', 'hours-save', `holiday-${days[0].date}-choice`,
         `holiday-${days[0].date}-opens`, 'holidays-accept', 'closure-add', 'closure-reopen']) {
         const element = id(page, control);
         await element.scrollIntoViewIfNeeded();
@@ -481,7 +482,7 @@ test('TC-F04-S03-029 AC-12: at every width of the matrix the tab, the closure sh
       const result = await fit(page);
       expect(result.counted).toBeGreaterThan(0);
       expect(result.pageScrolls, `sheet ${viewport.width}: no sideways scroll`).toBe(false);
-      expect(result.outside, `sheet ${viewport.width}: nothing outside the viewport`).toEqual([]);
+      expect(result.outside.filter(c => !c.startsWith('settings-tab-')), `sheet ${viewport.width}: nothing outside the viewport`).toEqual([]);
       await page.keyboard.press('Escape');
       await expect(id(page, 'closure-calendar')).toHaveCount(0);
       await settled(page);
@@ -503,8 +504,9 @@ test('TC-F04-S03-029 AC-12: at every width of the matrix the tab, the closure sh
       await consolePage.setViewportSize(viewport);
       await expectFits(consolePage, `console ${viewport.width}`);
       for (const control of ['console-holiday-choose-file', 'console-holiday-add', 'console-holiday-day-edit', 'console-holiday-day-remove', 'console-holiday-publication', 'console-holiday-import-refused']) {
-        await id(consolePage, control).scrollIntoViewIfNeeded();
-        await expect(id(consolePage, control), `${control} at ${viewport.width}`).toBeVisible();
+        // Each day has its own Edit and Remove: the first day's stand for them.
+        await id(consolePage, control).first().scrollIntoViewIfNeeded();
+        await expect(id(consolePage, control).first(), `${control} at ${viewport.width}`).toBeVisible();
       }
     });
   }
@@ -517,8 +519,8 @@ test('TC-F04-S03-029 AC-12: at every width of the matrix the tab, the closure sh
   await context.close();
 });
 
-test('TC-F04-S03-030 AC-12: the tab, the sheets and the console pages have no serious accessibility violation, every day toggle and time select has its name, and the week is saved and the sheet used by keyboard alone', async ({ accounts, operator, calendar, clock, hours, browser }) => {
-  const { at, days, owner } = await fullTab(accounts, operator, calendar, clock, hours);
+test('TC-F04-S03-030 AC-12: the tab, the sheets and the console pages have no serious accessibility violation, every day toggle and time select has its name, the date popover is named and its days readable, and the week is saved and the sheet used by keyboard alone', async ({ accounts, operator, calendar, clock, hours, browser }) => {
+  const { at, today, days, owner } = await fullTab(accounts, operator, calendar, clock, hours);
   const { page } = await openHours(accounts, owner, { at });
   await test.step('names: each weekday toggle by its day, each time select by day and edge, each holiday select by the holiday', async () => {
     for (const day of DAYS) {
@@ -570,6 +572,32 @@ test('TC-F04-S03-030 AC-12: the tab, the sheets and the console pages have no se
   await test.step('the sheet keeps focus inside and returns it to + Add closure on Escape', async () => {
     await expectSheetFocus(page, id(page, 'closure-add'), id(page, 'closure-sheet'), 8);
   });
+  await test.step('the date popover is named "Choose a date", and today and the chosen day are readable on the default and a dark brand', async () => {
+    // axe counts text on a translucent tint as "incomplete", so the drawn contrast is measured (WCAG 1.4.3, 4.5:1).
+    const darkManager = await accounts.identity.staff(beta, 'MANAGER');
+    for (const [label, opened] of [['default brand', page], ['beta\'s dark brand', (await openHours(accounts, darkManager, { at })).page]] as const) {
+      await opened.reload();
+      await ready(opened);
+      await id(opened, 'closure-add').click();
+      await id(opened, 'closure-date').click();
+      await expect(id(opened, 'closure-calendar')).toBeVisible();
+      await expect(opened.getByRole('dialog', { name: 'Choose a date', exact: true }), `${label}: the popover is named`).toBeVisible();
+      await settled(opened);
+      const todayDay = calendarDay(id(opened, 'closure-calendar'), today);
+      expect(await drawnContrast(todayDay), `${label}: today is readable`).toBeGreaterThanOrEqual(4.5);
+      const chosen = plusDays(today, 4);
+      await calendarDay(id(opened, 'closure-calendar'), chosen).click();
+      await id(opened, 'closure-date').click();
+      await expect(id(opened, 'closure-calendar')).toBeVisible();
+      await settled(opened);
+      expect(await drawnContrast(calendarDay(id(opened, 'closure-calendar'), chosen)), `${label}: the chosen day is readable`).toBeGreaterThanOrEqual(4.5);
+      await opened.keyboard.press('Escape');
+      await expect(id(opened, 'closure-calendar')).toHaveCount(0);
+      await settled(opened);
+      await opened.keyboard.press('Escape');
+      await expect(id(opened, 'closure-sheet')).toBeHidden();
+    }
+  });
   await test.step('the console: years, a refused import and the publication dialog', async () => {
     const admin = await operator.actor();
     const year = await calendar.freshYear(admin);
@@ -588,6 +616,7 @@ test('TC-F04-S03-030 AC-12: the tab, the sheets and the console pages have no se
     await expect(id(consolePage, 'console-holiday-day-calendar')).toBeVisible();
     await settled(consolePage);
     await accessible(consolePage, 'console add-day sheet with its calendar');
+    await expect(consolePage.getByRole('dialog', { name: 'Choose a date', exact: true }), 'the console popover is named').toBeVisible();
     await consolePage.keyboard.press('Escape');
     await expect(id(consolePage, 'console-holiday-day-calendar')).toHaveCount(0);
     await settled(consolePage);

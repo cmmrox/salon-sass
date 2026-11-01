@@ -66,7 +66,8 @@ export async function fit(page: Page): Promise<Overflow> {
     for (const element of elements) {
       const box = element.getBoundingClientRect();
       const id = element.getAttribute('data-testid') ?? '?';
-      if (box.width === 0 || box.height === 0) {
+      // Nothing is drawn, or the element is visually hidden for assistive technology only (`sr-only`, 1 × 1 px).
+      if (box.width === 0 || box.height === 0 || (box.width <= 1 && box.height <= 1)) {
         continue;
       }
       if (box.left < -0.5 || box.right > viewport + 0.5) {
@@ -141,3 +142,42 @@ export async function focusIndicator(locator: Locator): Promise<{ focused: boole
 
 /** A test id is named for what the element is, in kebab-case: `<area>-<thing>` (docs/design/ui-ux-standards.md). */
 export const TEST_ID_NAME = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)+$/;
+
+/**
+ * The contrast of an element's text against what is drawn behind it, as the eye sees it: every
+ * background from the page down to the element is painted onto a canvas in order (so translucent
+ * fills and tints are blended, which axe reports only as "incomplete"), then the text colour over
+ * that. Colours in any CSS form (oklch included) are converted by the canvas. Opacity on the element
+ * or its ancestors is applied to the text. Returns the WCAG contrast ratio.
+ */
+export async function drawnContrast(locator: Locator): Promise<number> {
+  return locator.evaluate((element) => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1;
+    canvas.height = 1;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
+    const chain: Element[] = [];
+    for (let node: Element | null = element; node; node = node.parentElement) chain.unshift(node);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, 1, 1);
+    let opacity = 1;
+    for (const node of chain) {
+      const style = getComputedStyle(node);
+      opacity *= Number(style.opacity);
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = style.backgroundColor;
+      ctx.fillRect(0, 0, 1, 1);
+    }
+    const back = Array.from(ctx.getImageData(0, 0, 1, 1).data.slice(0, 3));
+    ctx.globalAlpha = opacity;
+    ctx.fillStyle = getComputedStyle(element).color;
+    ctx.fillRect(0, 0, 1, 1);
+    const fore = Array.from(ctx.getImageData(0, 0, 1, 1).data.slice(0, 3));
+    const luminance = (rgb: number[]) => {
+      const [r, g, b] = rgb.map((v) => { const c = v / 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; });
+      return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    };
+    const [l1, l2] = [luminance(fore), luminance(back)].sort((a, b) => b - a);
+    return (l1 + 0.05) / (l2 + 0.05);
+  });
+}
