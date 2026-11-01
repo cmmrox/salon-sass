@@ -250,9 +250,29 @@ verification:
   - pnpm --filter @salon/web test:a11y
   - pnpm --filter @salon/web build
   - pnpm contracts:check
-  automation: []
+  # Prepared during the build (dry run); suite membership is decided at feature-verify.
+  automation:
+  - id: hours-api
+    tool: playwright
+    file: qa/api/F04/S03-hours.spec.ts
+    project: api
+    suites: []
+  - id: hours-screens
+    tool: playwright
+    file: qa/web/F04/S03-hours-screens.spec.ts
+    project: web
+    suites: []
   manual: []
-  deferred: []
+  deferred:
+  - case: TC-F04-S03-031
+    covers: [AC-8]
+    reason: The closure sheet and the hours card listing real bookings a change affects ("N upcoming
+      bookings fall outside these hours", the bookings on a closed day) cannot be shown on the running
+      product, because no booking exists before F07 and the stage adds no hook to make one (spec,
+      "Requirements covered" and "Out of scope"). From outside, TC-F04-S03-009 and TC-F04-S03-011 show
+      the empty BookingsOnDate answers (no bookings, 0 affected, no outside-hours bookings) and the
+      priority; the developer's integration and component tests hold the rest.
+    unblocked_by: F07, when bookings exist and replace the empty BookingsOnDate.
 evidence:
   last_run: null
   last_result: null
