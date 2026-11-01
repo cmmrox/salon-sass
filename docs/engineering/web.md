@@ -219,7 +219,7 @@ because the owner set one standard for all Next.js work in this product.
    | Check box or switch with its label | Field `orientation="horizontal"` with Checkbox or Switch |
    | Workspace navigation and any menu | Sidebar (rail from 900px, its sheet below 900px); Dropdown Menu or Navigation Menu for other menus |
    | Container | Card |
-   | Row of a list (device, staff member, audit entry, any record) | Item (`ItemGroup`, `Item`, `ItemContent`, `ItemTitle`, `ItemDescription`, `ItemActions`) |
+   | Row of a list (device, staff member, audit entry, any record) | Item (`ItemGroup`, `Item`, `ItemContent`, `ItemTitle`, `ItemDescription`, `ItemActions`); the `divided` variant rules a line under each row, as the prototype's settings lists do (F04) |
    | Tabular data meant to be compared across columns | Table |
    | Status word, role, tag | Badge |
    | Nothing to show | Empty |
@@ -232,6 +232,12 @@ because the owner set one standard for all Next.js work in this product.
    | One-time secret shown for copying (authenticator setup key and URI) | No shadcn/ui component: a labelled `<output>` inside a Field, styled with Tailwind (CR-017) |
    | Hint on hover or focus | Tooltip |
    | Sections switched in place | Tabs |
+   | One choice from a few visible options (brand colour swatches) | Toggle Group, `type="single"` (F04-S02) |
+   | Brand colour typed as `#RRGGBB` | Field around Input, with a swatch of the value beside it; no native colour input (F04-S02) |
+   | Choosing a file (logo, cover) | No shadcn/ui component: a Button that opens a visually hidden `<input type="file">` inside a Field, whose label, description and error belong to it, with the chosen image previewed (F04-S02) |
+   | Choosing a date | Popover with Calendar, opened from a Button showing the chosen date (F04-S03) |
+   | Leaving a Settings tab with unsaved edits (a tab change as well as a link) | `settings-leave.tsx` holds the tab change and opens the shared leave dialog, whose `area` prop sets its test ids (F04-S04) |
+| A pressed or unpressed choice in a row (a weekday open or closed) | Toggle, `chip` variant for the prototype's `.chip` (F04-S03). Calendar day buttons carry full date names (`lib/dates/calendar-labels.ts`), because react-day-picker's own labels fail axe's label-in-name rule |
 
    A job the table and the catalogue do not cover is raised with the lead before it is built.
 2. Product components in `src/features/<module>/components/` (or `src/components/shared/`) compose `ui/` components with Tailwind utilities.
@@ -251,7 +257,8 @@ because the owner set one standard for all Next.js work in this product.
    carries the theme's field size and addon padding; a caller may drop `FieldError`'s role where a
    surrounding Alert already announces the refusal.
 4. No CSS Modules, no new style sheet, no `<style>` element other than `BrandStyle` (the `input-otp`
-   library inserts its own runtime `<style>` for Input OTP; that one is the library's), and no `style`
+   library inserts its own runtime `<style>` for Input OTP, and Sonner one for its toasts; those are
+   the libraries'), and no `style`
    prop for a visual value. The only exception is a value that exists only at run time and that no
    utility can name.
 5. No raw value in a component. A colour, radius, font, shadow or prototype-specific size comes
@@ -376,8 +383,11 @@ shows the hostname-resolved salon name/initial and a shared decorative interior 
 - Give every interactive element a `data-testid`, named as `docs/design/ui-ux-standards.md` says.
   QA's browser tests depend on them, and QA cannot add them.
 - Every screen a stage adds or changes ships with an automated accessibility check run by the
-  developer: `@axe-core/playwright` (or `vitest-axe` on the rendered component) with no violation at
-  WCAG 2.2 AA, colour contrast included. Three of F01 to F03's major bugs were contrast defects QA
+  developer, with no violation at WCAG 2.2 AA, colour contrast included. Since F04-S01 it is
+  `pnpm --filter @salon/web test:a11y`: Vitest's `a11y` project in browser mode (real Chromium, the
+  compiled Tailwind theme), axe-core run directly with `vitest-axe`'s matcher, at every documented
+  width with a dark and a light brand. Helpers are under `apps/web/test/` (`a11y.ts`, `viewport.ts`,
+  `theme.ts`); a new screen adds its own `*.a11y.test.tsx`. Three of F01 to F03's major bugs were contrast defects QA
   found late (decision 068). A stage planned from now on lists it in `verification.commands`; adding
   the tool to the workspace is part of the first stage that needs it.
 - The gates are lint, type check, unit tests, the accessibility check and a production build, as

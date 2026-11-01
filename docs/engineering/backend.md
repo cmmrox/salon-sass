@@ -35,13 +35,13 @@ One deployable, divided into modules by business area. The module list follows t
 | `shared` | Tenant context, errors, time, money, audit trail, outbox, jobs. No business rules |
 | `identity` | Staff accounts, roles, sessions, customer one-time-code sign-in |
 | `catalogue` | Services, categories, variants, tax settings |
-| `staff` | Professionals, working hours, leave, blocked time |
-| `booking` | Availability, holds, bookings, waitlist, policies |
+| `staff` | Professionals, working hours, leave, blocked time; the salon's opening hours, special closures and holiday choices per branch, `OpeningSchedule` and the declared `BookingsOnDate` (decision 087) |
+| `booking` | Availability, holds, bookings, waitlist, policies; the booking rules as immutable versions and the provided `BookingPolicies` (current, by version, `depositFor` with an optional service rule) that F07, F08 and F09 read (decision 089) |
 | `payment` | Gateway accounts, payments, refunds, receipts, checkout |
 | `notification` | Templates, channels, delivery log, preferences |
 | `customer` | Customer records, notes, consents |
 | `reporting` | Read models and reports |
-| `branding` | Brand settings and published salon presentation, web addresses, app registry; canonical provisioning/contact profile remains in `platform` (decision 042) |
+| `branding` | Brand settings and published salon presentation (business profile, draft and published), branches and their public contact details, web addresses, app registry; canonical provisioning/contact profile remains in `platform` (decision 042, 083) |
 
 The base Java package is the placeholder in `docs/architecture/tech-stack.md`.
 
@@ -270,7 +270,9 @@ signature:
 - A request that creates a booking, a payment or a refund carries an `Idempotency-Key`. Repeating it
   returns the first result and never a second side effect.
 - Request records are validated at the edge. A validation failure answers 400 `bad_request` with
-  `errors: [{ field, detail }]`, one entry per failing field.
+  `errors: [{ field, detail }]`, one entry per failing field. An uploaded file refused for its
+  lines (the holiday CSV) uses the same items with `field: "file"`, the reason in `detail` and an
+  optional `line` number; `line` is absent everywhere else (F04-S03).
 - Request bodies are read strictly: no coercion between JSON types (`"5"` is not 5, `1.5` is not 1,
   `1` is not `true`). Each such value is a validation failure naming its field.
 - The OpenAPI document is generated from the controllers and committed. A drift check fails the
@@ -412,7 +414,11 @@ change, and a stage leaves the code it touches meeting them.
   their references, refunds, and deposits held as an amount owed to the customer. No module keeps a
   separate balance; occasion balances and gift cards are entries in the same record (decision 076).
 - From F04, every salon-operations table carries `branch_id` beside `tenant_id`. R1 has one default
-  branch per salon (decision 073).
+  branch per salon (decision 073). Branches are `branding`'s; another module holds the id and checks
+  it through `SalonBranches` (decision 083, `docs/architecture/multi-tenancy.md`, "Adding a table").
+- Phone numbers are stored in E.164 and checked with libphonenumber against the region in
+  configuration (`salon.branding.phone-region`, `LK` by default); screens show the national format
+  (decision 084, NFR-13). A WhatsApp number must be a mobile number of that region.
 
 ## Health and service metadata
 
@@ -562,6 +568,12 @@ test uses them is in `docs/qa/test-plan.md`.
   sign-ins, support sessions) write an audit entry with actor, time, tenant, and before and after.
 - Gateway credentials are encrypted at rest and never returned by any endpoint.
 - Never log a password, one-time code, token, card detail or full phone number.
+- Uploads (F04-S02): content checked by decoding, never by name or declared type; the header's
+  declared pixels limited before decoding (`salon.branding.images.max-pixels`, 50M); decoding
+  subsampled to a fixed budget (16M pixels) whatever the shape; at most
+  `salon.branding.images.concurrent-decodes` (2) at once, then 503; re-encoded, so no metadata is
+  kept. The web BFF counts the bytes it reads and stops past its limit even without a
+  `Content-Length`, because Next.js's own proxy limit truncates rather than refuses.
 
 ## Tests
 
@@ -572,7 +584,7 @@ test uses them is in `docs/qa/test-plan.md`.
 | Concurrency | Anything that must happen once: holds, bookings, payment notifications | Fire simultaneous requests and assert exactly one succeeds |
 | Architecture | Module boundaries (Spring Modulith `verify()`), provided-interface rules, table and path ownership, no entity setter for id, tenant or version, mappers on the shared configuration | Fails the build. Each rule has a fixture proving it fails on a violation: package fixtures under `src/test/java/<base>/architecture/fixture/`, and sources that must fail to compile (denied Lombok, unmapped MapStruct targets) or that Spring would otherwise scan (fixture entities and repositories) under `src/test/compile-fixtures/`, compiled by a test through `javax.tools` |
 | Conventions | Formatting and warnings | `./mvnw verify` runs `spotless:check` and compiles with `-Xlint:all,-processing -Werror` |
-| Contract | The OpenAPI document and generated client are current, and every response matches it | Fails the build. `pnpm contracts:check` regenerates the document from the controllers, so it needs the JDK and Docker. From F04 on, each new or changed endpoint also gets an integration test that validates its real responses against the committed schema, including which fields may be null and every documented status code: three of F01 to F03's major bugs were nullability or status mismatches QA found late (decision 068). The first stage that needs it adds the validator |
+| Contract | The OpenAPI document and generated client are current, and every response matches it | Fails the build. `pnpm contracts:check` regenerates the document from the controllers, so it needs the JDK and Docker. From F04 on, each new or changed endpoint also gets an integration test that validates its real responses against the committed schema, including which fields may be null and every documented status code: three of F01 to F03's major bugs were nullability or status mismatches QA found late (decision 068). F04-S01 added the validator: `testing.OpenApiContract` (JSON Schema 2020-12 against `docs/api/openapi.json`), proved by `contract.OpenApiShapeTest` |
 
 Integration tests are named `*IntegrationTest` and run in the same Maven phase as unit tests. One
 PostgreSQL container serves the whole run, with `max_connections` raised to 200 because every cached

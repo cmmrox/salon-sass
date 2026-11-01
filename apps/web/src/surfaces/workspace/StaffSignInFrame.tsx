@@ -1,6 +1,9 @@
 import type { ReactNode } from 'react';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import type { Salon } from '@/features/branding';
+
+/** An image beside the salon's name, which says nothing the name does not: no text alternative. */
+const DECORATIVE = '';
 
 /** Public staff entry (CR-012) uses only the salon identity resolved from this request's Host. */
 export function StaffSignInFrame({ salon, children }: { salon: Salon; children: ReactNode }) {
@@ -19,6 +22,10 @@ export function StaffSignInFrame({ salon, children }: { salon: Salon; children: 
             aria-hidden="true"
             data-testid="staff-sign-in-initial"
           >
+            {/* The published logo when there is one (F04-S02), the initial otherwise and while it loads. */}
+            {salon.logo && (
+              <AvatarImage src={`/brand-images/${salon.logo}`} alt={DECORATIVE} data-testid="staff-sign-in-logo" />
+            )}
             <AvatarFallback className="bg-transparent text-login-initial leading-none font-normal text-foreground">
               {Array.from(salon.name.trim())[0]}
             </AvatarFallback>

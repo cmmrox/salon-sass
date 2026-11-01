@@ -55,7 +55,15 @@ class SalonEndpointIntegrationTest extends IntegrationTest {
             assertThat(response.status()).as(salon.slug()).isEqualTo(200);
             assertThat(response.contentType()).startsWith("application/json");
             Map<String, Object> body = JsonPath.parse(response.body()).read("$");
-            assertThat(body).containsOnlyKeys("slug", "name", "brandColour", "timeZone");
+            assertThat(body)
+                    .containsOnlyKeys("slug", "name", "brandColour", "timeZone", "tagline", "logo", "cover", "profile");
+            // F04-S02: nothing beyond the provisioned name and colour is published yet.
+            assertThat(body)
+                    .containsEntry("tagline", null)
+                    .containsEntry("logo", null)
+                    .containsEntry("cover", null);
+            // F04-S01: nothing is published yet, so there is no profile to serve.
+            assertThat(body).containsEntry("profile", null);
             assertThat(body)
                     .containsEntry("slug", salon.slug())
                     .containsEntry("name", salon.name())

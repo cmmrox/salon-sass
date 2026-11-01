@@ -9,7 +9,9 @@
 -- Asia/Colombo, which is the default; gamma is in Europe/London (decision 029).
 --
 -- Each salon's brand row is written with that salon set for the statement, so the seed passes
--- row-level security like any other writer, whichever role runs the migrations.
+-- row-level security like any other writer, whichever role runs the migrations. Each salon also has
+-- its default branch and empty profile drafts (F04-S01) and its brand draft (F04-S02), added by
+-- branding's own functions, which leave a salon that already has them unchanged.
 DO $$
 DECLARE
     salon record;
@@ -30,6 +32,8 @@ BEGIN
         INSERT INTO salon_brand (tenant_id, display_name, brand_colour)
             VALUES (salon.id, salon.display_name, salon.brand_colour)
             ON CONFLICT DO NOTHING;
+        PERFORM branding_add_default_branch(salon.id, salon.display_name, now());
+        PERFORM branding_add_brand_draft(salon.id, now());
     END LOOP;
     PERFORM set_config('app.tenant_id', '', true);
 END

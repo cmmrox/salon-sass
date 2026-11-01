@@ -138,7 +138,10 @@ Three consequences of how the framework works, which every later stage follows:
   time zone; `tenant_by_id` the same for an id; `active_tenant_ids` the ids of active salons, for
   jobs. The outbox reaches across salons only through `outbox_due`, `outbox_due_events` and `outbox_backlog`, which
   return ids and counts and nothing of a message, and the scheduler only through `job_claim` and
-  `job_finish`.
+  `job_finish`. The published holiday calendar is read only through
+  `holiday_calendar_published(first_year, last_year)`, which returns published years and days and
+  never a draft or who published (decision 090). The salon's currency is read only through
+  `salon_currency()`, behind `platform.SalonCurrency`, LKR when unset (decision 091).
 - **Row-level security is forced, so it holds for the owning role too**, which is not a superuser
   outside a developer's machine. A `SECURITY DEFINER` function that must see several salons' rows
   (`outbox_due`, `outbox_due_events`, `outbox_backlog`) sets each active salon in turn inside the function, and puts the
@@ -162,8 +165,12 @@ Three consequences of how the framework works, which every later stage follows:
       no migration creates a role).
 - [ ] An isolation test covers the table (see below).
 - [ ] From F04, a salon-operations table (catalogue, staff, booking, payment, customer activity) also
-      carries `branch_id`, with a composite foreign key `(tenant_id, branch_id)`. Each salon has one
-      default branch in R1; a query never assumes there is only one (decision 073).
+      carries `branch_id uuid NOT NULL`. Branches belong to `branding` (`branding_branch`), so only
+      `branding`'s own tables have the composite foreign key `(tenant_id, branch_id)`; every other
+      module holds the branch as an id, with no cross-module key, and checks it through `branding`'s
+      provided interface `SalonBranches` when it is written. An index a query filters by branch
+      leads with `(tenant_id, branch_id)`. Each salon has one default branch in R1; a query never
+      assumes there is only one (decisions 073 and 083).
 
 ## Adding an endpoint
 
@@ -193,7 +200,8 @@ processed for that salon, and can read nothing of another salon.
 
 - A cache key starts with the tenant id. So does anything cached at the edge.
 - An object-storage path starts with the tenant's prefix. A signed URL is issued only after the
-  tenant check.
+  tenant check. Until object storage exists, brand images are rows of a tenant table under the same
+  row-level security as any other (decision 086).
 - Every log line, trace and error report carries the tenant id (NFR-16) as `tenant.id`, whenever a
   salon is bound. No personal data, one-time code, token or payment detail is logged. How the API
   does it is in `docs/engineering/backend.md`, "Logs, traces and meters".
@@ -211,6 +219,8 @@ Initial creation does not grant an operator ongoing access to tenant records or 
 
 The yearly Sri Lankan holiday and Poya calendar is platform reference data with no `tenant_id`,
 published by the operator. A salon's accepted or edited copy of it is tenant data (STF-04, decision 078).
+The application role has no grant on the calendar's tables and reads published days only through
+`holiday_calendar_published` (decision 090).
 
 ## Tests you must write
 

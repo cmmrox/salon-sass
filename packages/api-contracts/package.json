@@ -6,10 +6,12 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./booking": "./src/generated/booking.ts",
     "./branding": "./src/generated/branding.ts",
     "./identity": "./src/generated/identity.ts",
     "./platform": "./src/generated/platform.ts",
-    "./shared": "./src/generated/shared.ts"
+    "./shared": "./src/generated/shared.ts",
+    "./staff": "./src/generated/staff.ts"
   },
   "scripts": {
     "lint": "eslint --max-warnings 0",

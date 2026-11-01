@@ -11,11 +11,24 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
 
-/** Branding's exporter and eraser for a closed salon (PLT-06): its published name and colour. */
+/**
+ * Branding's exporter and eraser for a closed salon (PLT-06): its published name and colour, its branches,
+ * its business profile and brand drafts, and its brand images. Nothing in them is secret, so no column is left out.
+ */
 @Component
 class BrandTenantData implements TenantDataModule {
 
-    private static final Table BRAND = new Table("salon_brand", "tenant_id", Map.of());
+    /** In the order they are erased: each table before any table it references (contacts before branches). */
+    private static final List<Table> TABLES = List.of(
+            new Table("branding_branch_contact_published", "branch_id", Map.of()),
+            new Table("branding_branch_contact_draft", "branch_id", Map.of()),
+            new Table("branding_profile_published", "tenant_id", Map.of()),
+            new Table("branding_profile_draft", "tenant_id", Map.of()),
+            new Table("branding_branch", "id", Map.of()),
+            new Table("branding_brand_draft", "tenant_id", Map.of()),
+            new Table("salon_brand", "tenant_id", Map.of()),
+            // Last: the drafts and the published brand refer to their images.
+            new Table("branding_image", "id", Map.of()));
 
     private final JdbcClient jdbc;
     private final ObjectProvider<PlatformDatabase> platform;
@@ -32,7 +45,7 @@ class BrandTenantData implements TenantDataModule {
 
     @Override
     public List<Table> tables() {
-        return List.of(BRAND);
+        return TABLES;
     }
 
     @Override
@@ -52,9 +65,9 @@ class BrandTenantData implements TenantDataModule {
     }
 
     private static Table checked(String table) {
-        if (!BRAND.name().equals(table)) {
-            throw new IllegalArgumentException("not a branding table: " + table);
-        }
-        return BRAND;
+        return TABLES.stream()
+                .filter(known -> known.name().equals(table))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("not a branding table: " + table));
     }
 }

@@ -55,7 +55,16 @@ const PROTECTED = new Set([
   '/workspace/audit',
   '/workspace/billing',
   '/workspace/support-access',
+  '/workspace/settings',
+  '/workspace/settings/profile',
+  '/workspace/settings/hours',
+  '/workspace/settings/rules',
+  '/workspace/settings/branding',
 ]);
+
+/** Settings, and the first of its tabs (F04-S01): Profile, the only one delivered so far. */
+const SETTINGS = '/workspace/settings';
+const SETTINGS_FIRST_TAB = '/workspace/settings/profile';
 
 /** The support entry page (F03-S04), where a support view starts and where it lands when it ends. */
 const SUPPORT_ENTRY = '/workspace/support';
@@ -64,7 +73,7 @@ const SUPPORT_ENTRY = '/workspace/support';
 const CONSOLE_SIGN_IN = '/console/sign-in';
 const CONSOLE_HOME = '/console/salons';
 /** The protected console pages: the directories and their detail pages. */
-const CONSOLE_PROTECTED = ['/console/salons', '/console/plans', '/console/support'];
+const CONSOLE_PROTECTED = ['/console/salons', '/console/plans', '/console/support', '/console/holidays'];
 
 /** How entry to a protected console page is decided: the request's operator session, checked with the API. */
 export type DecideConsoleEntry = (request: NextRequest) => Promise<OperatorEntry>;
@@ -200,10 +209,12 @@ export async function routeRequest(
           return redirect(request, '/workspace/account');
         return ended ? redirect(request, SUPPORT_ENTRY, 'ended') : redirect(request, SIGN_IN);
       }
+      let entry: Entry | null = null;
       if (PROTECTED.has(path) && hasCredentials(support)) {
         // The support view (F03-S04): an ended, expired or revoked session leaves it for the entry
         // page, its cookies cleared host-only; a staff session in the same browser is left alone.
-        if ((await decide(request, support, 'support')).kind === 'signed-out') {
+        entry = await decide(request, support, 'support');
+        if (entry.kind === 'signed-out') {
           const response = redirect(request, SUPPORT_ENTRY, 'ended');
           endSupportView(response);
           return response;
@@ -212,7 +223,8 @@ export async function routeRequest(
         const credentials = credentialsOf(request);
         if (!hasCredentials(credentials))
           return ended ? redirect(request, SUPPORT_ENTRY, 'ended') : redirect(request, SIGN_IN);
-        if ((await decide(request, credentials)).kind === 'signed-out') {
+        entry = await decide(request, credentials);
+        if (entry.kind === 'signed-out') {
           // The same clearing the BFF does for a session that cannot renew (BUG-F02-011): the
           // revoked family's credentials leave the browser with the redirect, host-only.
           const response = redirect(request, SIGN_IN);
@@ -220,6 +232,10 @@ export async function routeRequest(
           return response;
         }
       }
+      // Settings open their first tab the person may see (F04-S01), with a real redirect; without
+      // settings.read the page itself answers the workspace's "no access" state.
+      if (path === SETTINGS && entry?.kind === 'signed-in' && entry.principal.permissions.includes('settings.read'))
+        return redirect(request, SETTINGS_FIRST_TAB);
       // Any other path on a salon's hostname is the application's, with the salon handed on.
       const response = NextResponse.next({ request: { headers } });
       response.headers.set('Cache-Control', NOT_STORED);

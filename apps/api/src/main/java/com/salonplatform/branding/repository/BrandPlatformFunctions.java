@@ -19,7 +19,10 @@ public class BrandPlatformFunctions {
 
     private final ObjectProvider<PlatformDatabase> platform;
 
-    /** Inserts the salon's first brand through {@code branding_bootstrap_brand}, which refuses a second one. */
+    /**
+     * Inserts the salon's first brand, its default branch and its empty profile drafts through
+     * {@code branding_bootstrap_brand}, which refuses a second bootstrap.
+     */
     public void bootstrapBrand(UUID salonId, String displayName, String colour, Instant at) {
         platform.getObject()
                 .jdbc()

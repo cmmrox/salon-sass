@@ -44,6 +44,10 @@ INSERT INTO tenant (id, slug, status) VALUES (gen_random_uuid(), :'slug', 'activ
 SELECT set_config('app.tenant_id', id::text, true) FROM tenant WHERE slug = :'slug' \gset
 INSERT INTO salon_brand (tenant_id, display_name, brand_colour)
   SELECT id, :'name', :'colour' FROM tenant WHERE slug = :'slug';
+-- Its default branch and empty profile drafts (F04-S01), through branding's own function.
+SELECT branding_add_default_branch(id, left(:'name', 120), now()) FROM tenant WHERE slug = :'slug' \gset
+-- Its brand draft, equal to the brand just written (F04-S02).
+SELECT branding_add_brand_draft(id, now()) FROM tenant WHERE slug = :'slug' \gset
 COMMIT;
 SQL
     say "salon: ${slug} ($(stack_public_url "${slug}.${SALON_PLATFORM_DOMAIN}"))"

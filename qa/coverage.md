@@ -6,7 +6,7 @@
 
 | Release | Requirements | Owned by a feature | Assigned to a stage | Passed QA |
 | --- | --- | --- | --- | --- |
-| R1 | 97 | 97 | 17 | 17 |
+| R1 | 97 | 97 | 23 | 23 |
 | R2 | 74 | 48 | 44 | 0 |
 | R3 | 21 | 8 | 8 | 0 |
 
@@ -30,6 +30,10 @@ asked for. A case is a test titled with its id and criteria, or a manual or defe
 | F03-S02 | complete | - | PLT-04, PLT-05 | 16 | 28 | 28 | 0 | 0 |
 | F03-S03 | complete | - | PLT-06 | 12 | 17 | 17 | 0 | 0 |
 | F03-S04 | complete | - | PLT-07, NFR-20 | 10 | 17 | 17 | 0 | 0 |
+| F04-S01 | complete | - | BRD-02, BRD-04, NFR-13 | 11 | 28 | 28 | 0 | 0 |
+| F04-S02 | complete | - | BRD-01, BRD-04 | 12 | 34 | 34 | 0 | 0 |
+| F04-S03 | complete | - | STF-04, NFR-13 | 12 | 32 | 31 | 0 | 1 |
+| F04-S04 | complete | - | BKG-02, BKG-09 | 10 | 26 | 26 | 0 | 0 |
 
 ## Deferred cases
 
@@ -38,6 +42,7 @@ Cases waiting for something else. `feature-verify` and `release-prepare` go thro
 | Scope | Case | Reason | Unblocked by |
 | --- | --- | --- | --- |
 | F01 | TC-F01-002 | First real-host deployment is outside local F01 proof, explicitly deferred by decision 018 and CR-005; public certificate, remote delivery and provider-dependent monitoring are not certified. | Owner decides D-08 hosting and D-02 platform domain, configures the DNS challenge module and credentials, provides host access, and explicitly requests staging deployment. |
+| F04-S03 | TC-F04-S03-031 | The closure sheet and the hours card listing real bookings a change affects ("N upcoming bookings fall outside these hours", the bookings on a closed day) cannot be shown on the running product, because no booking exists before F07 and the stage adds no hook to make one (spec, "Requirements covered" and "Out of scope"). From outside, TC-F04-S03-009 and TC-F04-S03-011 show the empty BookingsOnDate answers (no bookings, 0 affected, no outside-hours bookings) and the priority; the developer's integration and component tests hold the rest. | F07, when bookings exist and replace the empty BookingsOnDate. |
 
 ## Requirements
 
@@ -89,21 +94,21 @@ Cases waiting for something else. `feature-verify` and `release-prepare` go thro
 | STF-01 | R1 | must | F06 | - |
 | STF-02 | R1 | must | F06 | - |
 | STF-03 | R1 | must | F06 | - |
-| STF-04 | R1 | must | F04 | - |
+| STF-04 | R1 | must | F04 | F04-S03 (complete) |
 | STF-05 | R1 | must | F06 | - |
 | STF-06 | R1 | should | F10 | - |
 | STF-07 | R2 | should | unowned | - |
 | STF-08 | R2 | should | unowned | - |
 | STF-09 | R3 | could | unowned | - |
 | BKG-01 | R1 | must | F07 | - |
-| BKG-02 | R1 | must | F04 | - |
+| BKG-02 | R1 | must | F04 | F04-S04 (complete) |
 | BKG-03 | R1 | must | F07 | - |
 | BKG-04 | R1 | must | F07 | - |
 | BKG-05 | R1 | must | F07 | - |
 | BKG-06 | R1 | must | F07 | - |
 | BKG-07 | R1 | must | F09 | - |
 | BKG-08 | R1 | must | F09 | - |
-| BKG-09 | R1 | must | F04 | - |
+| BKG-09 | R1 | must | F04 | F04-S04 (complete) |
 | BKG-10 | R1 | must | F10 | - |
 | BKG-11 | R1 | must | F10 | - |
 | BKG-12 | R1 | must | F10 | - |
@@ -195,10 +200,10 @@ Cases waiting for something else. `feature-verify` and `release-prepare` go thro
 | REP-08 | R3 | should | unowned | - |
 | REP-09 | R3 | could | unowned | - |
 | REP-10 | R1 | must | F13 | - |
-| BRD-01 | R1 | must | F04 | - |
-| BRD-02 | R1 | must | F04 | - |
+| BRD-01 | R1 | must | F04 | F04-S02 (complete) |
+| BRD-02 | R1 | must | F04 | F04-S01 (complete) |
 | BRD-03 | R1 | must | F01 | F01-S03 (complete), F01-S05 (complete) |
-| BRD-04 | R1 | must | F04 | - |
+| BRD-04 | R1 | must | F04 | F04-S01 (complete), F04-S02 (complete) |
 | BRD-05 | R2 | must | F16 | - |
 | BRD-06 | R2 | must | F16 | - |
 | BRD-07 | R2 | must | F16 | - |

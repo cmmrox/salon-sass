@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { formatCount, formatMoney, minorUnitsText, parseMinorUnits, todayInZone } from '../src/index';
+import {
+  currencyMark,
+  formatClock,
+  formatCount,
+  formatDay,
+  formatMoney,
+  formatPhoneNational,
+  minorUnitsText,
+  parseMinorUnits,
+  todayInZone,
+} from '../src/index';
 
 describe('money formatting', () => {
   it('writes rupees with cents only when they are not zero', () => {
@@ -24,6 +34,13 @@ describe('money formatting', () => {
   });
 });
 
+describe('currency marks (F04-S04)', () => {
+  it('marks rupees as formatMoney writes them and any other currency by its code', () => {
+    expect(currencyMark('LKR')).toBe('Rs.');
+    expect(currencyMark('USD')).toBe('USD');
+  });
+});
+
 describe('counts and dates', () => {
   it('groups a count for the locale', () => {
     expect(formatCount(1000)).toBe('1,000');
@@ -33,5 +50,32 @@ describe('counts and dates', () => {
     const evening = new Date('2026-10-29T20:00:00Z');
     expect(todayInZone('Asia/Colombo', evening)).toBe('2026-10-30');
     expect(todayInZone('Europe/London', evening)).toBe('2026-10-29');
+  });
+});
+
+describe("a salon's local times and dates (F04-S03)", () => {
+  it('writes a local time on the 24-hour clock, with no time zone applied', () => {
+    expect(formatClock('09:30')).toBe('09:30');
+    expect(formatClock('18:00')).toBe('18:00');
+  });
+  it('writes a local date with its weekday, the same in every time zone', () => {
+    const shown = formatDay('2026-10-25');
+    expect(shown).toContain('Sun');
+    expect(shown).toContain('25');
+    expect(shown).toContain('2026');
+    expect(formatDay('2026-12-31')).toContain('31');
+  });
+});
+
+describe('phone numbers', () => {
+  it('shows an E.164 number in its national format', () => {
+    expect(formatPhoneNational('+94771234567')).toBe('077 123 4567');
+    // libphonenumber's own national pattern for a Colombo landline (the API's library agrees).
+    expect(formatPhoneNational('+94112504417')).toBe('0112 504 417');
+    expect(formatPhoneNational('+442079460958')).toBe('020 7946 0958');
+  });
+  it('leaves anything that is not a valid E.164 number as it is', () => {
+    expect(formatPhoneNational('077 123')).toBe('077 123');
+    expect(formatPhoneNational('')).toBe('');
   });
 });

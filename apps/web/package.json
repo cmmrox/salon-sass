@@ -8,8 +8,9 @@
     "build": "next build && node scripts/scan-artifacts.mjs",
     "start": "next start",
     "lint": "eslint --max-warnings 0",
-    "typecheck": "next typegen && tsc --noEmit",
-    "test": "vitest run",
+    "typecheck": "next typegen && tsc --noEmit && tsc --noEmit -p tsconfig.a11y.json",
+    "test": "vitest run --project unit",
+    "test:a11y": "vitest run --project a11y",
     "plain-page:css": "node scripts/plain-page-css.mjs"
   },
   "dependencies": {
@@ -23,8 +24,10 @@
     "next-intl": "4.14.9",
     "radix-ui": "1.8.1",
     "react": "19.3.0",
+    "react-day-picker": "10.0.2",
     "react-dom": "19.3.0",
     "server-only": "0.0.1",
+    "sonner": "2.0.8",
     "tailwind-merge": "3.7.0"
   },
   "devDependencies": {
@@ -36,14 +39,18 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^6.1.2",
+    "@vitest/browser-playwright": "5.0.3",
+    "axe-core": "4.14.0",
     "eslint": "^9.39.5",
     "eslint-config-next": "16.4.1",
     "eslint-plugin-boundaries": "7.4.0",
     "jsdom": "^30.1.2",
+    "playwright": "1.64.0",
     "postcss": "8.5.30",
     "tailwindcss": "4.3.3",
     "tw-animate-css": "1.4.0",
     "typescript": "5.9.3",
-    "vitest": "^5.0.3"
+    "vitest": "^5.0.3",
+    "vitest-axe": "0.1.0"
   }
 }

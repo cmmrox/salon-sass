@@ -1,3 +1,5 @@
+import { parsePhoneNumberFromString } from 'libphonenumber-js/min';
+
 /** Launch-market formatting, centralized so screens share configuration. */
 export function formatInstant(value: string, timeZone: string, locale = 'en-LK'): string {
   return new Intl.DateTimeFormat(locale, { timeZone, dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
@@ -11,6 +13,42 @@ export function formatTime(value: string, timeZone: string, locale = 'en-LK'): s
   return new Intl.DateTimeFormat(locale, { timeZone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(
     new Date(value),
   );
+}
+/**
+ * A salon's local time of day, as the API writes it (`09:30`), on the configured clock: a weekday's opening
+ * time (F04-S03). No time zone applies: it is already the salon's own.
+ */
+export function formatClock(value: string, locale = 'en-LK'): string {
+  const [hours, minutes] = value.split(':').map(Number);
+  return new Intl.DateTimeFormat(locale, {
+    timeZone: 'UTC',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).format(new Date(Date.UTC(2000, 0, 1, hours, minutes)));
+}
+/**
+ * A salon's local date, as the API writes it (`2026-10-25`), with its weekday: a holiday or a closure
+ * (F04-S03). No time zone applies: it is already the salon's own date.
+ */
+export function formatDay(value: string, locale = 'en-LK'): string {
+  return new Intl.DateTimeFormat(locale, {
+    timeZone: 'UTC',
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  }).format(new Date(`${value}T00:00:00Z`));
+}
+/**
+ * A phone number the API stored in E.164, in its own country's national format (decision 084):
+ * `+94771234567` is `077 123 4567`, `+94112504417` is `0112 504 417`. The country comes from the
+ * number itself, so no region is configured here. Anything that is not a valid E.164 number is
+ * returned unchanged.
+ */
+export function formatPhoneNational(e164: string): string {
+  const number = parsePhoneNumberFromString(e164);
+  return number && number.isValid() ? number.formatNational() : e164;
 }
 export function formatPhone(value: string): string {
   return value.replace(/^\+94(7\d)(\d{3})(\d{4})$/, '+94 $1 $2 $3');
@@ -68,6 +106,14 @@ export function minorUnitsText(minor: number): string {
   const whole = Math.floor(minor / 100);
   const cents = minor % 100;
   return cents ? `${whole}.${String(cents).padStart(2, '0')}` : String(whole);
+}
+
+/**
+ * How an amount field marks its currency beside the typed whole units (F04-S04): `Rs.` for rupees, as
+ * `formatMoney` writes them, and the ISO code for any other currency.
+ */
+export function currencyMark(currency: string): string {
+  return currency === 'LKR' ? 'Rs.' : currency;
 }
 
 /** A file size the API gave in bytes, in the locale's units (B, kB, MB), for an export archive. */

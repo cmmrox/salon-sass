@@ -506,6 +506,13 @@ const ME='velora';
 /* what each salon offers (salon admin sets its own; the operator can set it during onboarding or support) */
 const TLN={velora:{hair:1,beauty:1,bridal:1},lotus:{hair:0,beauty:1,bridal:0},ceylon:{hair:1,beauty:1,bridal:1}};
 const PROF={serves:{w:1,m:1,k:1},forms:{hair:1,beauty:1},ptMonths:6};
+/* ===== F04 salon setup (CR-023): profile, hours, holidays, closures, booking rules ===== */
+const SU={contact:{addr:'No. 24, Flower Road, Colombo 07',pin:'6.9061, 79.8611',phone:'0112 504 417',wa:'077 412 3300',ig:'https://instagram.com/yoursalon',fb:'',web:'',about:'A friendly neighbourhood salon for hair, beauty and bridal.'},
+ week:[['Mon',1,540,1080],['Tue',1,540,1080],['Wed',1,540,1080],['Thu',1,540,1080],['Fri',1,540,1080],['Sat',1,540,1140],['Sun',0,540,1080]].map(([d,o,f,t])=>({d,o,f,t})),
+ hol:{year:2026,pub:'1 Oct 2026',acc:0,list:[{dt:'Sun 25 Oct',n:'Vap Full Moon Poya Day',k:'Poya',c:'closed'},{dt:'Sun 8 Nov',n:'Deepavali Festival Day',k:'Public',c:'closed'},{dt:'Tue 24 Nov',n:'Il Full Moon Poya Day',k:'Poya',c:'closed'},{dt:'Wed 23 Dec',n:'Unduvap Full Moon Poya Day',k:'Poya',c:'closed'},{dt:'Fri 25 Dec',n:'Christmas Day',k:'Public',c:'closed'}]},
+ clo:[],
+ rules:{iv:15,notice:60,ahead:60,dep:'pct',pct:20,amt:1000,cap:2000,free:24,late:'dep',latePct:50,noshow:'dep',nsPct:100,resN:2,resH:12},
+ err:{}};
 let BRS=[{id:'b1',n:'Colombo 03',addr:'Galle Road, Colombo 03',phone:'+94 77 123 4567',wa:'+94 77 123 4567',lines:{hair:1,beauty:1,bridal:1},rooms:2,on:1},
  {id:'b2',n:'Rajagiriya',addr:'Parliament Road, Rajagiriya',phone:'+94 77 765 4321',wa:'+94 77 765 4321',lines:{hair:1,beauty:1,bridal:0},rooms:1,on:1}];
 const brOf=id=>BRS.find(b=>b.id==id)||null,brAct=()=>BRS.filter(b=>b.on),multiBr=()=>brAct().length>1;
@@ -542,9 +549,9 @@ const pxRow=a=>a.gap?[['Processing',T(a.s+a.gap[0])+' – '+T(a.s+a.gap[0]+a.gap
 function fmMiss(a){if(!live(a)||a.status=='completed')return '';const L=['hair','beauty'].filter(l=>PROF.forms[l]&&lineOn(l)&&(a.items||[]).some(x=>{const s=svb(x.sid);return s&&FORMS[l].when(s)})&&!(a.form&&a.form[l]));return L.length?'<div class="bn wn s"><b>'+L.map(l=>FORMS[l].t).join(' and ')+' not answered.</b> Ask at check-in.</div>':''}
 /* published profile (saved with the branding) */
 const phClean=v=>String(v||'').replace(/[^\d+ ]/g,'').slice(0,20);
-const profPub=()=>({lines:Object.assign({},TLN[ME]),serves:Object.assign({},PROF.serves),forms:Object.assign({},PROF.forms),ptMonths:PROF.ptMonths,branches:BRS.map(b=>({id:b.id,n:b.n,addr:b.addr,phone:b.phone,wa:b.wa,lines:Object.assign({},b.lines),rooms:b.rooms,on:b.on?1:0}))});
+const profPub=()=>({contact:Object.assign({},SU.contact),lines:Object.assign({},TLN[ME]),serves:Object.assign({},PROF.serves),forms:Object.assign({},PROF.forms),ptMonths:PROF.ptMonths,branches:BRS.map(b=>({id:b.id,n:b.n,addr:b.addr,phone:b.phone,wa:b.wa,lines:Object.assign({},b.lines),rooms:b.rooms,on:b.on?1:0}))});
 const profSig=()=>JSON.stringify(profPub());let PUBPROF=profSig();
-function profApply(p){if(!p||typeof p!='object')return;
+function profApply(p){if(!p||typeof p!='object')return;if(p.contact&&typeof p.contact=='object')Object.keys(SU.contact).forEach(k=>{if(typeof p.contact[k]=='string')SU.contact[k]=p.contact[k]});
  if(p.lines){['hair','beauty','bridal'].forEach(k=>{if(k in p.lines)TLN[ME][k]=p.lines[k]?1:0});if(!LINES.some(l=>TLN[ME][l[0]]))TLN[ME].hair=1}
  if(p.serves){['w','m','k'].forEach(k=>{if(k in p.serves)PROF.serves[k]=p.serves[k]?1:0});if(!['w','m','k'].some(k=>PROF.serves[k]))PROF.serves.w=1}
  if(p.forms)['hair','beauty'].forEach(k=>{if(k in p.forms)PROF.forms[k]=p.forms[k]?1:0});
@@ -1505,7 +1512,7 @@ function setBrand(){const D=dft(),col=D.col||'#D6086A',dr=dirty(),isDef=k=>D[k]=
  +'<label for="bbn">Cover photo <span class="m">(wide, about 1200×500)</span></label><input id="bbn" type="file" accept="image/*" onchange="up(this,\'banner\')">'+(isDef('banner')?'':'<button class="btn o sm" style="margin-top:8px" onclick="setD(\'banner\',DEF.banner)">Use default cover</button>')
  +'<h2>Brand colour</h2><div class="r"><input id="bcol" type="color" aria-label="Brand colour" value="'+col+'" oninput="setD(\'col\',this.value)" style="width:64px;min-height:52px;padding:4px"><b id="hx" style="font-weight:500">'+col.toUpperCase()+'</b></div><div class="r w" style="margin-top:10px">'+['#D6086A','#141413','#CC5500','#8A4B6B','#2F6B5E','#2F4B8A'].map(c=>'<button class="av" aria-label="Use colour '+c+'" style="background:'+c+';border:0;width:44px;height:44px" onclick="setD(\'col\',\''+c+'\')"></button>').join('')+'</div>'
  +'<button class="btn o bl" style="margin-top:10px" onclick="resetBrand()">Reset to default branding</button></div></div>'}
-function aSet(){const t=S.stab||'biz';return '<div class="ph"><div><h1>Settings</h1><div class="m s">Changes preview instantly for you. Publish to show them to everyone with your link.</div></div><div class="seg2" role="group" aria-label="Settings section">'+[['biz','Business'],['br','Branches'],['brand','Branding']].map(x=>'<button aria-pressed="'+(t==x[0])+'" onclick="S.stab=\''+x[0]+'\';render()">'+x[1]+'</button>').join('')+'</div></div>'+(t=='biz'?setBiz():t=='br'?setBrTab():setBrand())+pubBar()}
+function aSet(){const t=S.stab||'biz';return '<div class="ph"><div><h1>Settings</h1><div class="m s">Changes preview instantly for you. Publish to show them to everyone with your link.</div></div></div><div class="chips brtabs" role="group" aria-label="Settings section">'+[['biz','Business'],['prof','Profile'],['hours','Hours & closures'],['rules','Booking rules'],['br','Branches'],['brand','Branding']].map(x=>'<button class="chip" aria-pressed="'+(t==x[0])+'" onclick="S.stab=\''+x[0]+'\';render()">'+x[1]+'</button>').join('')+'</div>'+(t=='biz'?setBiz():t=='prof'?setProf():t=='hours'?setHours():t=='rules'?setRules():t=='br'?setBrTab():setBrand())+(t=='hours'||t=='rules'?'':pubBar())}
 function pubBar(){const d=dirty();return '<div class="card" style="margin-top:24px"><div class="r sb w" style="gap:10px"><div><b style="font-weight:600">'+(d?'Unpublished changes':'Everything is published')+'</b><div class="s m">'+(d?'Only you can see them until you publish.':'Customers see your current settings.')+'</div></div><button class="btn sm" '+(d&&!PUBBING?'':'disabled')+' onclick="publishBrand()">'+(PUBBING?'Publishing…':d?'Publish to everyone':'Published')+'</button></div></div>'}
 function setBiz(){const L=TLN[ME],sv=PROF.serves,wk=entHas(ME,'bridal');
  return '<div class="gc2"><section class="card"><h3>Service lines</h3><p class="s m" style="margin:4px 0 10px">Choose what your salon offers. Booking, staff skills, offers, reports and the assistant follow this.</p><div class="entm">'+LINES.map(([l,n,d,icn])=>{const on=!!L[l],c=SV.filter(s=>CATL[s.c]==l).length;return '<button class="entc'+(on?' on':'')+'" aria-pressed="'+on+'" onclick="lnAsk(\''+l+'\')"><span class="ti">'+ic(icn)+'</span><span class="g">'+n+'<em>'+(on?'Offered':'Not offered')+' · '+c+' service'+(c==1?'':'s')+'</em></span><i class="entk" aria-hidden="true"></i></button>'}).join('')+'</div>'
@@ -1852,7 +1859,7 @@ function vPlat(){const STN={off:'Not added',trial:'Free trial',active:'Active',c
  const mrr=aiBill()+(AI.cust.st=='comp'||AI.sal.st=='comp'?0:0);
  return '<div class="shell pl-shell"><div class="main"><div class="mx">'+hdr('Platform console','The operator only · salons, service lines, branch limits, modules, add-on pricing and bot naming','')
  +'<div class="bn in s">This is the vendor back office. Salons never see this page. Changes apply to the next purchase. Existing subscribers keep their current price until renewal.</div>'
- +entPlat()+'<div class="gc2"><div class="card"><h3>Pricing (Rs. per month)</h3>'+[['cust','Customer booking chat'],['sal','Team scheduling assistant'],['bundle','Bundle of both'],['trial','Free trial length (days)']].map(([k,l])=>'<label class="s" for="pp_'+k+'">'+l+'</label><input id="pp_'+k+'" inputmode="numeric" value="'+AI.price[k]+'" onchange="plPrice(\''+k+'\',this.value)">').join('')+'<div id="ppe"></div></div>'
+ +entPlat()+holPlat()+'<div class="gc2"><div class="card"><h3>Pricing (Rs. per month)</h3>'+[['cust','Customer booking chat'],['sal','Team scheduling assistant'],['bundle','Bundle of both'],['trial','Free trial length (days)']].map(([k,l])=>'<label class="s" for="pp_'+k+'">'+l+'</label><input id="pp_'+k+'" inputmode="numeric" value="'+AI.price[k]+'" onchange="plPrice(\''+k+'\',this.value)">').join('')+'<div id="ppe"></div></div>'
  +'<div class="card"><h3>Bot identity and limits</h3><label class="s" for="pn">Default assistant name</label><input id="pn" maxlength="20" value="'+bx(AI.name)+'" onchange="plName(this.value)">'
  +'<button class="row" aria-pressed="'+AI.canRename+'" onclick="AI.canRename=!AI.canRename;render()"><span class="ck">'+(AI.canRename?'✓':'')+'</span><span class="g"><b style="font-weight:500">Salon may rename the assistant</b><br><span class="s m">Off locks the name for this salon</span></span></button>'
  +'<label class="s" for="pl">Customer chats per month</label><input id="pl" inputmode="numeric" value="'+AI.limit+'" onchange="plLimit(this.value)"><div id="ple"></div></div></div>'
@@ -2933,7 +2940,83 @@ function demoReset(){try{history.replaceState(null,'',location.pathname+location
 
 try{fetch('brand.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(j=>{if(j&&typeof j=='object'){applyBrand(j);render()}}).catch(()=>{})}catch(e){}
 render();setInterval(()=>{if(S.m=='a'&&S.hold)document.querySelectorAll('.tm').forEach(e=>e.textContent=left())},1000);
-</script></body></html>
+</script>
+<script>
+/* ===== F04 salon setup screens (CR-023). Drawn in the prototype's grammar for owner confirmation. ===== */
+const hm=m=>T(m),TIMES=[];for(let m=360;m<=1320;m+=30)TIMES.push(m);
+const phOk=v=>/^0\d{9}$/.test(String(v).replace(/\s/g,''));
+const tsel=(id,v,fn,lab)=>'<select id="'+id+'" aria-label="'+lab+'" style="width:auto;min-width:120px" onchange="'+fn+'">'+TIMES.map(m=>'<option value="'+m+'"'+(m==v?' selected':'')+'>'+hm(m)+'</option>').join('')+'</select>';
+function setProf(){const c=SU.contact,e=SU.err;
+ const fld=(k,l,hint,ph,max)=>'<label for="sp_'+k+'">'+l+(hint?' <span class="m">('+hint+')</span>':'')+'</label><input id="sp_'+k+'" value="'+bx(c[k])+'" placeholder="'+(ph||'')+'"'+(max?' maxlength="'+max+'"':'')+' oninput="SU.contact.'+k+'=this.value" onblur="spChk(\''+k+'\')">'+(e[k]?'<p class="s" style="color:var(--er);margin:4px 0 0" role="alert">'+e[k]+'</p>':'');
+ return '<div class="setg"><div class="setp"><h2>What customers see</h2><div class="card"><b style="font-weight:600">'+bx(BRAND.name)+'</b><div class="s m" style="margin:2px 0 10px">'+bx(c.about||'Add a short description')+'</div>'
+ +[['Address',bx(c.addr||'—')],['Phone',bx(c.phone||'—')],['WhatsApp',bx(c.wa||'—')],['Open today',sHrs(1)]].map(x=>'<div class="kv s"><span class="m">'+x[0]+'</span><b>'+x[1]+'</b></div>').join('')
+ +'<div class="r w" style="gap:6px;margin-top:10px"><span class="btn o sm">Call</span>'+(c.wa?'<span class="btn o sm">Chat on WhatsApp</span>':'')+'<span class="btn o sm">Directions</span></div></div>'
+ +'<p class="s m" style="margin-top:10px">The “Chat on WhatsApp” button uses your own number and is on every plan. Automated WhatsApp messages are a plan feature.</p></div>'
+ +'<div class="setf"><h2>Contact</h2>'+fld('phone','Phone','shown with a Call button','011 234 5678')+fld('wa','WhatsApp number','your salon’s own number','077 123 4567')
+ +'<h2>Location</h2>'+fld('addr','Address','','Street, town',200)+'<label for="sp_pin">Map position</label><div class="r" style="gap:8px"><input id="sp_pin" value="'+bx(c.pin)+'" placeholder="6.9061, 79.8611" oninput="SU.contact.pin=this.value"><a class="btn o sm" href="https://www.google.com/maps?q='+encodeURIComponent(c.pin)+'" target="_blank" rel="noopener noreferrer" aria-label="Check on map (opens Google Maps in a new tab)">Check on map</a></div><p class="s m" style="margin:4px 0 0">Latitude and longitude, separated by a comma. Customers get directions to this point.</p>'
+ +'<h2>About</h2><label for="sp_about">Description <span class="m">(up to 500 characters)</span></label><textarea id="sp_about" maxlength="500" rows="3" oninput="SU.contact.about=this.value">'+bx(c.about)+'</textarea>'
+ +'<h2>Social links</h2>'+fld('ig','Instagram','optional','https://…')+fld('fb','Facebook','optional','https://…')+fld('web','Website','optional','https://…')+'</div></div>'}
+function spChk(k){const v=SU.contact[k].trim(),e=SU.err;delete e[k];
+ if((k=='phone'||k=='wa')&&v&&!phOk(v))e[k]='Enter a 10-digit Sri Lankan number starting with 0, like 077 123 4567.';
+ if(['ig','fb','web'].includes(k)&&v&&!/^https:\/\/[\w.-]+\.[a-z]{2,}(\/\S*)?$/i.test(v))e[k]='Enter a web address that starts with https://, up to 200 characters.';
+ render()}
+function sHrs(dayIdx){const w=DAYS[dayIdx]?DAYS[dayIdx].w:'Tue',r=SU.week.find(x=>x.d==w);if(DAYS[dayIdx]&&DAYS[dayIdx].closed)return 'Closed';return r&&r.o?hm(r.f)+' – '+hm(r.t):'Closed'}
+function outside(){return A.filter(a=>live(a)&&a.status!='completed'&&DAYS[a.d]&&(()=>{const r=SU.week.find(x=>x.d==DAYS[a.d].w);return !r||!r.o||a.s<r.f||a.s+a.du>r.t})())}
+function setHours(){const h=SU.hol,out=outside();
+ let s='<div class="gc2"><section class="card"><h3>Opening hours</h3><p class="s m" style="margin:4px 0 10px">Customers can book inside these hours. Each professional’s own hours and breaks are under Team.</p>'
+ +SU.week.map((r,i)=>'<div class="kv" style="align-items:center"><button class="chip" aria-pressed="'+!!r.o+'" style="min-width:76px" onclick="SU.week['+i+'].o=SU.week['+i+'].o?0:1;render()">'+r.d+'</button>'+(r.o?'<span class="r" style="gap:6px">'+tsel('wf'+i,r.f,'wkSet('+i+',\'f\',this.value)',r.d+' opens')+'<span class="m">to</span>'+tsel('wt'+i,r.t,'wkSet('+i+',\'t\',this.value)',r.d+' closes')+'</span>':'<span class="m s">Closed</span>')+'</div>').join('')
+ +(out.length?'<div class="bn wn s"><b>'+out.length+' upcoming booking'+(out.length>1?'s fall':' falls')+' outside these hours.</b> They are kept. Move or contact them from Today.</div>':'')
+ +'<button class="btn bl" style="margin-top:12px" onclick="toast(\'Opening hours saved. New bookings follow them.\')">Save hours</button></section>'
+ +'<section class="card"><div class="r sb"><h3>Public holidays '+h.year+'</h3><span class="pl '+(h.acc?'ok':'wn')+'">'+(h.acc?'Reviewed':'To review')+'</span></div><p class="s m" style="margin:4px 0 10px">Published by the operator on '+h.pub+' from the government calendar. Choose what your salon does on each day.</p>'
+ +h.list.map((x,i)=>'<div class="kv" style="align-items:center"><span><b style="font-weight:500">'+x.dt+'</b> <span class="pl ne">'+x.k+'</span><br><span class="s m">'+bx(x.n)+'</span></span><select aria-label="'+bx(x.n)+'" style="width:auto;min-width:140px" onchange="SU.hol.list['+i+'].c=this.value;SU.hol.acc=1;render()">'+[['closed','Closed'],['open','Open as usual'],['short','Special hours']].map(o=>'<option value="'+o[0]+'"'+(x.c==o[0]?' selected':'')+'>'+o[1]+'</option>').join('')+'</select></div>').join('')
+ +(h.acc?'':'<button class="btn o bl" style="margin-top:12px" onclick="SU.hol.acc=1;toast(\'Holidays accepted. Customers can’t book on the days you close.\');render()">Accept these choices</button>')+'</section>'
+ +'<section class="card"><div class="r sb"><h3>Special closures</h3><button class="btn sm" onclick="cloOpen()">+ Add closure</button></div><p class="s m" style="margin:4px 0 10px">Close for a day for training, a family event or repairs. Bookings on that day are never cancelled for you.</p>'
+ +(SU.clo.length?SU.clo.map((c,i)=>'<div class="kv" style="align-items:center"><span><b style="font-weight:500">'+DL[c.d]+'</b><br><span class="s m">'+bx(c.why)+(c.n?' · '+c.n+' booking'+(c.n>1?'s':'')+' to resolve':'')+'</span></span><button class="btn o sm" onclick="cloDel('+i+')">Reopen</button></div>').join(''):'<p class="m s">No closures planned.</p>')+'</section></div>';
+ return s}
+function wkSet(i,k,v){const r=SU.week[i],n=+v,f=k=='f'?n:r.f,t=k=='t'?n:r.t;if(t<=f){toast('Closing time must be after opening time.');render();return}r[k]=n;render()}
+let CL={d:null,why:''};
+function cloOpen(){CL={d:null,why:''};cloPaint()}
+function cloPaint(){const opts=DAYS.map((x,i)=>[x,i]).filter(([x])=>!x.closed);
+ $('#sh').innerHTML='<div class="sheet" onclick="if(event.target==this)closeS()"><div role="dialog" aria-label="Add a closure"><div class="r sb"><h1>Add a closure</h1><button class="btn o sm" onclick="closeS()">Close</button></div>'
+ +'<label for="cl_d">Day</label><select id="cl_d" onchange="CL.d=this.value===\'\'?null:+this.value;cloUpd()"><option value="">Choose a day</option>'+opts.map(([x,i])=>'<option value="'+i+'"'+(CL.d===i?' selected':'')+'>'+DL[i]+'</option>').join('')+'</select>'
+ +'<label for="cl_w">Reason <span class="m">(only your team sees it)</span></label><input id="cl_w" maxlength="60" value="'+bx(CL.why)+'" placeholder="Staff training" oninput="CL.why=this.value">'
+ +'<div id="cl_imp" aria-live="polite">'+(CL.d!==null?cloImpact(CL.d):'')+'</div>'
+ +'<button id="cl_go" class="btn bl" style="margin-top:16px" '+(CL.d===null?'disabled':'')+' onclick="cloGo()">Close the salon this day</button></div></div>'}
+function cloUpd(){$('#cl_imp').innerHTML=CL.d!==null?cloImpact(CL.d):'';$('#cl_go').disabled=CL.d===null}
+function cloImpact(d){const L=A.filter(a=>a.d==d&&live(a)&&a.status!='completed');
+ return L.length?'<div class="bn wn s"><b>'+L.length+' booking'+(L.length>1?'s':'')+' on this day.</b> They are kept and listed under Needs attention until you move or cancel each one.<div style="margin-top:8px">'+L.map(a=>'<div class="kv s"><span>'+T(a.s)+' · '+bx(a.cu)+'</span><b>'+bx(a.sv)+'</b></div>').join('')+'</div></div>':'<div class="bn ok s">No bookings on this day.</div>'}
+function cloGo(){const d=CL.d;if(d===null)return;const n=A.filter(a=>a.d==d&&live(a)&&a.status!='completed').length;DAYS[d].closed=1;SU.clo.push({d,why:CL.why.trim()||'Closed',n});closeS();toast(n?'Closed. '+n+' booking'+(n>1?'s are':' is')+' listed under Needs attention on Today.':'Closed. Customers can’t book this day.');render()}
+function cloDel(i){const c=SU.clo[i];DAYS[c.d].closed=0;SU.clo.splice(i,1);toast('Reopened. Customers can book this day again.');render()}
+function setRules(){const r=SU.rules,e=SU.err,sel=(id,lab,v,opts,fn)=>'<label for="'+id+'">'+lab+'</label><select id="'+id+'" onchange="'+fn+'">'+opts.map(o=>'<option value="'+o[0]+'"'+(String(v)==String(o[0])?' selected':'')+'>'+o[1]+'</option>').join('')+'</select>';
+ const num=(k,lab,suf)=>'<label for="ru_'+k+'">'+lab+'</label><div class="r" style="gap:8px"><input id="ru_'+k+'" inputmode="numeric" style="max-width:140px" value="'+r[k]+'" onchange="ruNum(\''+k+'\',this.value)"><span class="m">'+suf+'</span></div>'+(e[k]?'<p class="s" style="color:var(--er);margin:4px 0 0" role="alert">'+e[k]+'</p>':'');
+ return '<div class="setg"><div class="setp"><h2>What customers see before paying</h2><div class="card s">'+ruText().map(x=>'<p style="margin:0 0 8px">'+x+'</p>').join('')+'</div><p class="s m" style="margin-top:10px">Changes apply to new bookings. Existing bookings keep the policy they were made under.</p></div>'
+ +'<div class="setf"><h2>Booking times</h2>'+sel('ru_iv','Show start times every',r.iv,[[10,'10 minutes'],[15,'15 minutes'],[20,'20 minutes'],[30,'30 minutes']],'SU.rules.iv=+this.value;render()')
+ +sel('ru_no','Customers must book at least',r.notice,[[0,'Any time before'],[30,'30 minutes ahead'],[60,'1 hour ahead'],[120,'2 hours ahead'],[240,'4 hours ahead'],[1440,'1 day ahead']],'SU.rules.notice=+this.value;render()')
+ +sel('ru_ah','Customers can book up to',r.ahead,[[14,'2 weeks ahead'],[30,'1 month ahead'],[60,'2 months ahead'],[90,'3 months ahead'],[180,'6 months ahead']],'SU.rules.ahead=+this.value;render()')
+ +'<h2>Deposit</h2><div class="chips" role="group" aria-label="Deposit">'+[['none','No deposit'],['pct','Percentage'],['amt','Fixed amount']].map(o=>'<button class="chip" aria-pressed="'+(r.dep==o[0])+'" onclick="SU.rules.dep=\''+o[0]+'\';render()">'+o[1]+'</button>').join('')+'</div>'
+ +(r.dep=='pct'?num('pct','Deposit','% of the price')+num('cap','Never more than','Rs.'):r.dep=='amt'?num('amt','Deposit','Rs. per booking'):'')
+ +(r.dep!='none'?'<p class="s m" style="margin:6px 0 0">A service can ask for a different deposit, set on the service.</p>':'')
+ +'<h2>Cancelling and no-shows</h2>'+sel('ru_fr','Free cancellation until',r.free,[[2,'2 hours before'],[6,'6 hours before'],[12,'12 hours before'],[24,'24 hours before'],[48,'48 hours before']],'SU.rules.free=+this.value;render()')
+ +sel('ru_la','A later cancellation keeps',r.late,[['none','Nothing'],['dep','The deposit'],['pct','A share of the price']],'SU.rules.late=this.value;render()')+(r.late=='pct'?num('latePct','Share kept','% of the price'):'')
+ +sel('ru_ns','A no-show keeps',r.noshow,[['dep','The deposit'],['pct','A share of the price']],'SU.rules.noshow=this.value;render()')+(r.noshow=='pct'?num('nsPct','Share kept','% of the price'):'')
+ +'<h2>Rescheduling</h2>'+sel('ru_rn','Customers can reschedule',r.resN,[[0,'Not online'],[1,'Once'],[2,'Twice'],[9,'Any number of times']],'SU.rules.resN=+this.value;render()')
+ +(r.resN?sel('ru_rh','Up to',r.resH,[[2,'2 hours before'],[6,'6 hours before'],[12,'12 hours before'],[24,'24 hours before']],'SU.rules.resH=+this.value;render()'):'')
+ +'<button class="btn bl" style="margin-top:16px" '+(Object.keys(e).some(k=>['pct','cap','amt','latePct','nsPct'].includes(k))?'disabled':'')+' onclick="toast(\'Booking rules saved. They apply to new bookings.\')">Save booking rules</button></div></div>'}
+function ruNum(k,v){const n=+String(v).replace(/[^\d]/g,''),r=SU.rules,e=SU.err;delete e[k];
+ if(['pct','latePct','nsPct'].includes(k)&&(n<1||n>100))e[k]='Enter 1 to 100.';
+ else if(k=='cap'&&n<500)e[k]='Enter at least Rs. 500, or choose a fixed amount.';
+ else if(k=='amt'&&(n<100||n>100000))e[k]='Enter Rs. 100 to Rs. 100,000.';
+ else r[k]=n;render()}
+function ruText(){const r=SU.rules,o=[];
+ o.push(r.dep=='none'?'<b>No deposit.</b> You pay at the salon.':r.dep=='pct'?'<b>Deposit: '+r.pct+'% of the price</b>, up to '+fm(r.cap)+', taken when you book.':'<b>Deposit: '+fm(r.amt)+'</b>, taken when you book.');
+ o.push('<b>Free cancellation</b> until '+r.free+' hours before your appointment.');
+ const keep=(m,p)=>m=='none'?'nothing is kept':m=='dep'?(r.dep=='none'?'nothing is kept':'the deposit is kept'):p+'% of the price is kept';
+ o.push('After that, '+keep(r.late,r.latePct)+'. If you don’t come, '+keep(r.noshow,r.nsPct)+'.');
+ o.push(r.resN?'You can reschedule '+(r.resN==9?'as often as you need':r.resN==1?'once':'twice')+', up to '+r.resH+' hours before.':'To reschedule, contact the salon.');
+ return o}
+function holPlat(){return '<h2>Holiday calendar</h2><div class="card"><div class="r sb w" style="gap:8px"><span><b style="font-weight:600">2026</b> <span class="pl ok">Published 1 Oct 2026</span><br><span class="s m">26 days from the government calendar · 13 Poya days</span></span><span class="r w" style="gap:6px"><button class="btn o sm" onclick="toast(\'2027 imported from the government calendar: 25 days. Check each date before publishing.\')">Import 2027</button><button class="btn sm" onclick="openConf(\'Publish the 2027 holidays?\',\'Every salon is asked to review them. Nothing changes for a salon until it chooses what it does on each day.\',\'Publish to salons\',\'closeS();toast(\\\'Published. Salons see “To review” under Settings.\\\')\')">Publish 2027</button></span></div><p class="s m" style="margin:10px 0 0">Dates change by gazette every year, so the calendar is published here, never built into the app.</p></div>'}
+</script>
+</body></html>
 
 
 </body></html>

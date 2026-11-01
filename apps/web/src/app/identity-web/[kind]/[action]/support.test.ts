@@ -5,10 +5,13 @@ import { NextRequest } from 'next/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { contextFromTraceparent, runInRequest } from '@/lib/observability/request-context';
 import { createIdentityWeb, supportCsrf } from '@/features/identity/server';
+import { salonSettingsFor } from '@/features/branding/server';
 import { salonAccountFor } from '@/features/platform/server';
+import { salonHoursFor } from '@/features/staff/server';
+import { salonBookingRulesFor } from '@/features/booking/server';
 
 /** The support session's BFF (F03-S04), as the route wires it, against a fake API on loopback. */
-const handleIdentity = createIdentityWeb(salonAccountFor);
+const handleIdentity = createIdentityWeb(salonAccountFor, salonSettingsFor, salonHoursFor, salonBookingRulesFor);
 let server: Server;
 let calls: { method: string; path: string; host?: string; authorization?: string; body: string }[];
 let answer: (method: string, path: string) => { status: number; data: unknown };

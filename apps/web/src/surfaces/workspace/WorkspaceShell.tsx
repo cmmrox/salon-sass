@@ -2,15 +2,19 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 import type { Salon } from '@/features/branding';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { SidebarInset } from '@/components/ui/sidebar';
 import { Navigation, NavigationProvider, NavigationTrigger, type NavigationItem } from '@/components/shared/Navigation';
+
+/** An image beside the salon's name, which says nothing the name does not: no text alternative. */
+const DECORATIVE = '';
 
 /**
  * The prototype's Salon workspace frame: a sticky header with the salon's name, the shadcn/ui
  * Sidebar (a 200px rail from 900px and 236px from 1200px; below 900px its sheet, opened from the
  * header's menu button) and the main area (CR-017).
  */
-export type WorkspaceView = 'account' | 'staff' | 'audit' | 'billing' | 'support-access';
+export type WorkspaceView = 'account' | 'staff' | 'audit' | 'billing' | 'support-access' | 'settings';
 
 /**
  * In the support view (F03-S04) the support banner opens the main area and sticks just under the
@@ -76,12 +80,30 @@ export function WorkspaceShell({
       testId: 'workspace-support-access',
       current: view === 'support-access',
     });
+  // Last, as in the prototype's navigation (F04-S01).
+  if (permissions.includes('settings.read'))
+    items.push({
+      href: '/workspace/settings',
+      label: t('settings'),
+      icon: 'settings',
+      testId: 'workspace-settings',
+      current: view === 'settings',
+    });
   const header = (
     <header
       className="sticky top-0 z-40 flex min-h-header items-center gap-2 bg-background px-4 py-2 rail:border-b rail:border-border rail:bg-card rail:px-7 rail:py-0"
       data-testid="workspace-header"
     >
       <NavigationTrigger label={t('menu')} />
+      {/* The published logo before the name when the salon has one (F04-S02); nothing extra otherwise. */}
+      {salon.logo && (
+        <Avatar className="size-8 shrink-0 border border-border" aria-hidden="true" data-testid="workspace-logo">
+          <AvatarImage src={`/brand-images/${salon.logo}`} alt={DECORATIVE} />
+          <AvatarFallback className="bg-secondary text-small font-semibold text-foreground">
+            {Array.from(salon.name.trim())[0]}
+          </AvatarFallback>
+        </Avatar>
+      )}
       <Link
         className="block min-h-touch min-w-0 truncate leading-(--size-touch-target) font-semibold text-foreground no-underline"
         href="/"

@@ -116,6 +116,9 @@
   --size-customer: 26.875rem;
   --size-form: 35rem;
   --size-drawer: 28.75rem;
+  /* The Settings tabs' "What customers see" column: 340px at 900-1199px, 400px from 1200px. */
+  --size-settings-preview: 25rem;
+  --size-settings-preview-compact: 21.25rem;
   --size-sheet-handle: 2.5rem;
   /* The phone confirmation sheet's tallest extent. */
   --size-sheet-max-height: 90vh;

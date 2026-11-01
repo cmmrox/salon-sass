@@ -84,6 +84,16 @@ class OpenApiConfiguration {
     }
 
     @Bean
+    GroupedOpenApi staffDocument(ModuleOwnership ownership) {
+        return moduleDocument(ownership, "staff");
+    }
+
+    @Bean
+    GroupedOpenApi bookingDocument(ModuleOwnership ownership) {
+        return moduleDocument(ownership, "booking");
+    }
+
+    @Bean
     GroupedOpenApi sharedDocument(ModuleOwnership ownership) {
         return moduleDocument(ownership, "shared");
     }
@@ -233,6 +243,12 @@ class OpenApiConfiguration {
                 "field",
                 new StringSchema().description("The field, as the request names it; a dotted path when nested."));
         fieldProblem.addProperty("detail", new StringSchema().description("What is wrong with it, for a person."));
+        fieldProblem.addProperty(
+                "line",
+                new IntegerSchema()
+                        .minimum(java.math.BigDecimal.ONE)
+                        .description("For an uploaded file read line by line (a holiday calendar CSV): the line"
+                                + " that failed, counted from 1. Absent otherwise."));
         fieldProblem.required(List.of("field", "detail"));
 
         ArraySchema fieldProblems = new ArraySchema();

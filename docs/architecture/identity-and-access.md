@@ -91,7 +91,10 @@ browser session is issued.
 
 Check permission values in use cases. Later modules read the signed-in principal through identity's
 provided interface `identity.Principals` (`current()`, `require(permission)`), whose `Principal`
-record is separate from the API's principal response (CR-021). The current
+record is separate from the API's principal response (CR-021). `identity.StaffLabels` gives the
+label the staff list shows for a staff account of the current salon (email, else mobile), for
+author columns such as the booking rules history; another salon's account never resolves
+(decision 091). The current
 principal response exposes permissions and a data scope (`salon` or `own`) and the staff id for
 Professional filtering. Later calendar/revenue/customer modules must enforce that scope; F02 does
 not fabricate their data or endpoints. The Owner's Professional grant is a specific boolean for
@@ -109,10 +112,14 @@ salon-wide calendar/customer/figures access (IAM-08), not arbitrary role customi
 | Plan, limits and subscription state (`entitlement.read`, F03-S02) | yes | yes | yes | yes | yes |
 | Salon subscription invoices (`invoice.read`, F03-S02) | yes | no | no | no | no |
 | List and revoke the salon's support sessions (`support.manage`, F03-S04) | yes | no | no | no | no |
+| Read salon settings (`settings.read`, F04) | yes | yes | no | no | no |
+| Change salon settings and publish them (`settings.manage`, F04) | yes | yes | no | no | no |
 
 The API permission keys for these rows are `session.manage`, `password.change`, `mfa.enroll`,
 `staff.list`, `staff.manage`, `audit.list`, `payment.refund`, `catalogue.price.change`,
-`policy.change`, `customer.export`, `calendar.read`, `customer.read` and `financial.read`.
+`policy.change`, `customer.export`, `calendar.read`, `customer.read`, `financial.read`,
+`settings.read` and `settings.manage` (decision 085). A support session may read settings
+(`settings.read` joins its read set) and never change them.
 All staff receive the first three own-account permissions; the table determines the rest.
 The customer principal has kind `customer`, null role/staff id, own scope, MFA false and
 `session.manage`; the customer privacy stage adds its own-profile/data-rights permissions.

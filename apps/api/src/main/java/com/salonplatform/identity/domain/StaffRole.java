@@ -19,7 +19,10 @@ public enum StaffRole {
                     "payment.refund",
                     "catalogue.price.change",
                     "policy.change",
-                    "customer.export"));
+                    "customer.export",
+                    // Salon settings (F04, decision 085): reading them, and changing and publishing them.
+                    "settings.read",
+                    "settings.manage"));
         if (this == OWNER) p.addAll(Set.of("staff.manage", "invoice.read", "support.manage"));
         if (this == OWNER || this == MANAGER || this == RECEPTIONIST || this == PROFESSIONAL)
             p.addAll(Set.of("calendar.read", "customer.read"));
@@ -39,7 +42,9 @@ public enum StaffRole {
             "invoice.read",
             "calendar.read",
             "customer.read",
-            "financial.read");
+            "financial.read",
+            // F04 (decision 085): a support session reads salon settings and never changes them.
+            "settings.read");
 
     public String scope(boolean grant) {
         return this == PROFESSIONAL && !grant ? "own" : "salon";

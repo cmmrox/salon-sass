@@ -16,6 +16,7 @@ export {
 export { ConsoleSheet } from './components/ConsoleSheet';
 export { DirectoryPager, DirectorySearch } from './components/DirectoryControls';
 export { ExportDownload } from './components/ExportDownload';
+export { HolidayYears, HolidayYearScreen } from './components/HolidayScreens';
 export { PlanPicker } from './components/PlanPicker';
 export { PlanDetail, PlanDirectory, useIdempotencyKey, type Plan } from './components/PlanScreens';
 export { PAGE_SIZE, useDirectory } from './hooks/use-directory';

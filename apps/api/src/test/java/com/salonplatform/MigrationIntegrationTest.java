@@ -43,7 +43,13 @@ class MigrationIntegrationTest {
                         tuple("14", "create subscription billing"),
                         tuple("15", "create salon lifecycle"),
                         tuple("16", "create support sessions"),
-                        tuple("17", "add outbox events"));
+                        tuple("17", "add outbox events"),
+                        tuple("18", "create branding branches and profile"),
+                        tuple("19", "create branding brand draft and images"),
+                        tuple("20", "create platform holiday calendar"),
+                        tuple("21", "create staff opening hours holidays and closures"),
+                        tuple("22", "add platform salon currency"),
+                        tuple("23", "create booking rules"));
         assertThat(afterFirstStart).allSatisfy(row -> assertThat(row).containsEntry("success", true));
 
         try (StartedApplication application = database.start()) {

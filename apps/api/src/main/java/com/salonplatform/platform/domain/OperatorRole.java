@@ -22,11 +22,19 @@ public enum OperatorRole {
             OperatorPermission.SALON_CLOSE,
             OperatorPermission.EXPORT_READ,
             OperatorPermission.SUPPORT_READ,
-            OperatorPermission.SUPPORT_REVOKE)),
+            OperatorPermission.SUPPORT_REVOKE,
+            OperatorPermission.HOLIDAY_READ,
+            OperatorPermission.HOLIDAY_MANAGE)),
 
-    /** From F03-S04 Support finds salons and starts its own audited, expiring support sessions. */
-    OPERATOR_SUPPORT(
-            Set.of(OperatorPermission.SESSION_MANAGE, OperatorPermission.SALON_READ, OperatorPermission.SUPPORT_START));
+    /**
+     * From F03-S04 Support finds salons and starts its own audited, expiring support sessions; from F04-S03 it
+     * reads the holiday calendar, and never changes it.
+     */
+    OPERATOR_SUPPORT(Set.of(
+            OperatorPermission.SESSION_MANAGE,
+            OperatorPermission.SALON_READ,
+            OperatorPermission.SUPPORT_START,
+            OperatorPermission.HOLIDAY_READ));
 
     private final Set<String> permissions;
 

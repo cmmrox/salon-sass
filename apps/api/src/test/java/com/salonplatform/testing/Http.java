@@ -93,6 +93,106 @@ public final class Http {
         return Exchange.parse(raw("127.0.0.1", head + new String(content, StandardCharsets.ISO_8859_1)));
     }
 
+    /**
+     * Any request with this {@code Host} header, these other headers and these body bytes as they are (a
+     * multipart upload), answered as bytes, so a binary body (an image) arrives intact.
+     */
+    public BinaryExchange sendBytesOnHost(
+            String method, String host, String path, Map<String, String> headers, byte[] body) {
+        StringBuilder head = new StringBuilder(method)
+                .append(' ')
+                .append(path)
+                .append(" HTTP/1.1\r\nHost: ")
+                .append(host)
+                .append("\r\n");
+        headers.forEach(
+                (name, value) -> head.append(name).append(": ").append(value).append("\r\n"));
+        if (body != null) {
+            head.append("Content-Length: ").append(body.length).append("\r\n");
+        }
+        head.append("Connection: close\r\n\r\n");
+        try (Socket socket = new Socket()) {
+            socket.connect(new InetSocketAddress("127.0.0.1", port), 5_000);
+            socket.setSoTimeout(30_000);
+            // The body is written while the answer is read: a server may answer early (413) and close before
+            // reading it all, and an answer already read survives the reset that follows.
+            Thread writer = Thread.ofVirtual().start(() -> {
+                try {
+                    socket.getOutputStream().write(head.toString().getBytes(StandardCharsets.ISO_8859_1));
+                    if (body != null) {
+                        socket.getOutputStream().write(body);
+                    }
+                    socket.getOutputStream().flush();
+                } catch (IOException ex) {
+                    // The server stopped reading; its answer is read below.
+                }
+            });
+            ByteArrayOutputStream received = new ByteArrayOutputStream();
+            byte[] buffer = new byte[8192];
+            try {
+                for (int read; (read = socket.getInputStream().read(buffer)) != -1; ) {
+                    received.write(buffer, 0, read);
+                }
+            } catch (IOException ex) {
+                if (received.size() == 0) throw ex;
+            }
+            writer.join(5_000);
+            return BinaryExchange.parse(received.toByteArray());
+        } catch (IOException ex) {
+            throw new IllegalStateException(method + " " + path + " failed", ex);
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException(method + " " + path + " was interrupted", ex);
+        }
+    }
+
+    /** A response read off the wire as bytes: status, headers (names in lower case) and the raw body. */
+    public record BinaryExchange(int status, Map<String, String> headers, byte[] body) {
+
+        static BinaryExchange parse(byte[] response) {
+            int headerEnd = -1;
+            for (int i = 0; i + 3 < response.length; i++) {
+                if (response[i] == '\r'
+                        && response[i + 1] == '\n'
+                        && response[i + 2] == '\r'
+                        && response[i + 3] == '\n') {
+                    headerEnd = i;
+                    break;
+                }
+            }
+            if (headerEnd < 0) {
+                throw new IllegalStateException("not an HTTP response");
+            }
+            Exchange head = Exchange.parse(new String(response, 0, headerEnd + 4, StandardCharsets.ISO_8859_1));
+            byte[] body = java.util.Arrays.copyOfRange(response, headerEnd + 4, response.length);
+            if ("chunked".equalsIgnoreCase(head.headers().get("transfer-encoding"))) {
+                ByteArrayOutputStream out = new ByteArrayOutputStream();
+                int at = 0;
+                while (at < body.length) {
+                    int lineEnd = Exchange.indexOf(body, at);
+                    int size = Integer.parseInt(
+                            new String(body, at, lineEnd - at, StandardCharsets.US_ASCII).split(";")[0].trim(), 16);
+                    if (size == 0) {
+                        break;
+                    }
+                    out.write(body, lineEnd + 2, size);
+                    at = lineEnd + 2 + size + 2;
+                }
+                body = out.toByteArray();
+            }
+            return new BinaryExchange(head.status(), head.headers(), body);
+        }
+
+        /** The same response with its body read as UTF-8 text (a JSON or problem answer). */
+        public Exchange asText() {
+            return new Exchange(status, headers, new String(body, StandardCharsets.UTF_8));
+        }
+
+        public String contentType() {
+            return headers.getOrDefault("content-type", "");
+        }
+    }
+
     /** {@code POST} of a JSON body on a hostname. */
     public Exchange postJsonOnHost(String host, String path, String json) {
         return sendOnHost("POST", host, path, Map.of("Content-Type", "application/json"), json);
@@ -163,7 +263,7 @@ public final class Http {
             return out.toString(StandardCharsets.UTF_8);
         }
 
-        private static int indexOf(byte[] bytes, int from) {
+        static int indexOf(byte[] bytes, int from) {
             for (int i = from; i < bytes.length - 1; i++) {
                 if (bytes[i] == '\r' && bytes[i + 1] == '\n') {
                     return i;
