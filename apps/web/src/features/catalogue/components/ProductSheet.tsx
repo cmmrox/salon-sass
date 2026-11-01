@@ -10,7 +10,7 @@ import { Sheet, SheetClose, SheetContent, SheetTitle } from '@/components/ui/she
 import { Spinner } from '@/components/ui/spinner';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
-import type { ProductProblem, ProductValues } from '../client/product-form';
+import { productPriceLimits, type ProductProblem, type ProductValues } from '../client/product-form';
 import type { PublicTax } from '../types';
 import { SHEET_CLASSES } from './sheet-classes';
 
@@ -85,7 +85,7 @@ export function ProductSheet(props: Props) {
                 <ul className="flex flex-col gap-1">
                   {problems.map((problem) => (
                     <li key={problem} data-testid="product-sheet-problem" data-problem={problem}>
-                      {t(`problems.${problem}`)}
+                      {t(`problems.${problem}`, productPriceLimits(currency))}
                     </li>
                   ))}
                 </ul>

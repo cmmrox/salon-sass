@@ -1,3 +1,4 @@
+import { formatMoney } from '@salon/format';
 import type { CatalogueService } from '../types';
 
 /**
@@ -102,9 +103,27 @@ export function whole(text: string): number | null {
 }
 
 const length = (text: string) => Array.from(text).length;
-const priceOk = (price: number | null): price is number => price !== null && price >= 100 && price <= 500_000;
+const PRICE_MIN = 100;
+const PRICE_MAX = 500_000;
+const DEPOSIT_MIN = 100;
+const DEPOSIT_MAX = 100_000;
+const priceOk = (price: number | null): price is number => price !== null && price >= PRICE_MIN && price <= PRICE_MAX;
 const minutesOk = (minutes: number | null): minutes is number =>
   minutes !== null && minutes >= 5 && minutes <= 480 && minutes % STEP === 0;
+
+/**
+ * The sheet's money limits as its messages say them, in the salon's currency (F05-S01 AC-19): the same whole units in
+ * every currency, as the API applies them (decision 091).
+ */
+export function moneyLimits(currency: string) {
+  const money = (units: number) => formatMoney(units * MINOR_PER_RUPEE, currency);
+  return {
+    priceMin: money(PRICE_MIN),
+    priceMax: money(PRICE_MAX),
+    depositMin: money(DEPOSIT_MIN),
+    depositMax: money(DEPOSIT_MAX),
+  };
+}
 
 /** The prototype's suggestion for a custom deposit: 20%, or Rs. 1,000. */
 const DEPOSIT: DepositValues = { choice: 'salon_rule', customKind: 'percentage', percent: '20', amount: '1000' };
@@ -243,7 +262,7 @@ function depositProblems(values: ServiceValues): ServiceProblem[] {
     return percent === null || percent < 1 || percent > 100 ? ['depositPercent'] : [];
   }
   const amount = whole(deposit.amount);
-  if (amount === null || amount < 100 || amount > 100_000) return ['depositAmount'];
+  if (amount === null || amount < DEPOSIT_MIN || amount > DEPOSIT_MAX) return ['depositAmount'];
   const lowest = lowestPrice(values);
   return lowest !== null && amount > lowest ? ['depositAboveLowest'] : [];
 }
@@ -277,7 +296,9 @@ export function problemsOfFields(fields: string[], values: ServiceValues): Servi
     }
     if (field === 'deposit.amountMinor') {
       const amount = whole(values.deposit.amount);
-      return [amount !== null && amount >= 100 && amount <= 100_000 ? 'depositAboveLowest' : 'depositAmount'];
+      return [
+        amount !== null && amount >= DEPOSIT_MIN && amount <= DEPOSIT_MAX ? 'depositAboveLowest' : 'depositAmount',
+      ];
     }
     const variant = VARIANT_FIELD.exec(field);
     if (variant) {

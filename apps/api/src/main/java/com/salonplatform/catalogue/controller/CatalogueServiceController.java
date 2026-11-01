@@ -9,6 +9,7 @@ import com.salonplatform.catalogue.dto.ServiceResponse;
 import com.salonplatform.catalogue.dto.UpdateServiceRequest;
 import com.salonplatform.catalogue.service.SalonServices;
 import com.salonplatform.catalogue.service.ServicePhotos;
+import com.salonplatform.shared.images.ImageUpload;
 import com.salonplatform.shared.web.ApiPaths;
 import com.salonplatform.shared.web.ApplicationProblemException;
 import com.salonplatform.shared.web.ErrorCode;
@@ -389,7 +390,7 @@ class CatalogueServiceController {
             throw new ApplicationProblemException(
                     400, ErrorCode.BAD_REQUEST, List.of(new FieldProblem("file", "is required")));
         }
-        return answer(photos.upload(PathIds.of(id), file.getBytes()));
+        return answer(photos.upload(PathIds.of(id), new ImageUpload(file.getSize(), file::getBytes)));
     }
 
     @DeleteMapping("/{id}/photo")

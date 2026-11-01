@@ -30,7 +30,7 @@ import {
 import { webUrl } from '../../shared/env';
 import { json, type Role, type Tokens } from '../../shared/identity';
 import { identitySql } from '../../shared/identity-storage';
-import { fixture, grayPng, pngUpload, readJpeg, type FileUpload } from '../../shared/salon-brand';
+import { Brands, brandSnapshot, fixture, grayPng, pngUpload, readJpeg, type FileUpload } from '../../shared/salon-brand';
 import { test, expect, alpha, beta, operatorJson, sqlLiteral, supportJson, type SupportStart } from '../../shared/operator';
 import { salonUrl, type Salon } from '../../shared/tenants';
 
@@ -1089,5 +1089,66 @@ test('TC-F05-S01-044 AC-3: the services list gives the salon\'s currency also be
       expect(after.currency).toBe(currency);
       expect(after.items.map(s => s.terms.currency), 'its service in the same currency').toEqual([currency]);
     });
+  }
+});
+
+// ---------------------------------------------------------------- CR-025 (decision 098)
+
+test('TC-F05-S01-048 AC-20: a caller without permission or a wrong target gets the same answer for an oversized file as for a small one, and a file over the limit is refused on file storing nothing, for a service photo and a brand image; the developer\'s tests prove the order inside', async ({ identity, operator }) => {
+  test.setTimeout(180_000);
+  const cat = new Catalogue(identity);
+  const brands = new Brands(identity);
+  const mark = marker();
+  const big = () => pngUpload(grayPng(400, 400, { padding: 6 * 1024 * 1024 }), 'big.png');
+  expect(big().buffer.length, 'over the 5 MB limit and under the request limit').toBeGreaterThan(LIMITS.photoBytes);
+  const manager = await identity.staff(alpha, 'MANAGER');
+  const receptionist = await identity.staff(alpha, 'RECEPTIONIST');
+  const { created, salon, owner } = await newSalon(operator, identity);
+  const other = await newSalon(operator, identity);
+  try {
+    const service = await cat.create(alpha, manager.tokens, serviceInput((await cat.category(alpha, manager.tokens, 'Nails')).id, { name: `QA upload ${mark}` }));
+    const salonService = await serviceIn(cat, salon, owner.tokens, 'Nails');
+    const foreign = await serviceIn(cat, other.salon, other.owner.tokens, 'Nails');
+    const support = await operator.actor('OPERATOR_SUPPORT');
+    const session = await supportJson<SupportStart>(await operator.startSupport(support, created.id, { reason: 'QA CR-025 support cannot upload' }), 'supportStart', 201);
+    const supportTokens: Tokens = await operator.supportCredential(await operator.exchange(session.entryCode, salon.hostname));
+    /** The refusal with a big file is the refusal with a small one: same status, same code, same body. */
+    const sameAnswer = async (label: string, status: number, code: string, send: (file: FileUpload) => Promise<import('@playwright/test').APIResponse>, snapshot: () => string) => {
+      const before = snapshot();
+      const small = await send(SMALL_PHOTO());
+      const large = await send(big());
+      const answer = await refused(small, status, code, `${label}: a small file`);
+      await refused(large, status, code, `${label}: an oversized file`);
+      expect(comparable(await large.text()), `${label}: the same answer`).toBe(comparable(answer.answer.body));
+      expect(snapshot(), `${label}: nothing stored`).toBe(before);
+    };
+    await test.step('a service photo', async () => {
+      const onAlpha = () => catalogueSnapshot(alpha.id), onSalon = () => catalogueSnapshot(created.id);
+      await sameAnswer('signed out', 401, 'invalid_session', f => cat.uploadRaw(alpha, undefined, service.id, f), onAlpha);
+      await sameAnswer('a Receptionist', 403, 'permission_denied', f => cat.uploadRaw(alpha, receptionist.tokens, service.id, f), onAlpha);
+      await sameAnswer('a support session', 403, 'support_read_only', f => cat.uploadRaw(salon, supportTokens, salonService.id, f), onSalon);
+      await sameAnswer('an unknown service', 404, 'not_found', f => cat.uploadRaw(salon, owner.tokens, randomUUID(), f), onSalon);
+      await sameAnswer('another salon\'s service', 404, 'not_found', f => cat.uploadRaw(salon, owner.tokens, foreign.id, f), onSalon);
+      const kept = await cat.upload(salon, owner.tokens, salonService.id, SMALL_PHOTO());
+      const before = onSalon();
+      await fieldRefusal(await cat.uploadRaw(salon, owner.tokens, salonService.id, big()), PENDING_F05_S01.photoField, 'over the limit, with permission');
+      expect(onSalon(), 'nothing stored').toBe(before);
+      expect((await cat.service(salon, owner.tokens, salonService.id)).photoUrl, 'the previous photo is kept').toBe(kept.photoUrl);
+    });
+    await test.step('a brand image', async () => {
+      const onAlpha = () => brandSnapshot(alpha.id), onSalon = () => brandSnapshot(created.id);
+      await sameAnswer('signed out', 401, 'invalid_session', f => brands.uploadRaw(alpha, undefined, 'logo', f), onAlpha);
+      await sameAnswer('a Receptionist', 403, 'permission_denied', f => brands.uploadRaw(alpha, receptionist.tokens, 'logo', f), onAlpha);
+      await sameAnswer('a support session', 403, 'support_read_only', f => brands.uploadRaw(salon, supportTokens, 'logo', f), onSalon);
+      const before = onSalon();
+      await fieldRefusal(await brands.uploadRaw(salon, owner.tokens, 'logo', big()), 'file', 'over the limit, with permission');
+      expect(onSalon(), 'nothing stored').toBe(before);
+      expect((await brands.uploadRaw(salon, owner.tokens, 'logo', SMALL_PHOTO())).status(), 'a file within the limit is still taken').toBe(201);
+    });
+    expect((await identity.api.health()).status(), 'the API is healthy').toBe(200);
+  } finally {
+    await cat.removeMarked(alpha, manager.tokens, mark);
+    await cat.dispose();
+    await brands.dispose();
   }
 });

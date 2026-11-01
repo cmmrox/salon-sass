@@ -15,7 +15,7 @@ export type {
 } from './types';
 export { ProductList } from './components/ProductList';
 export { ProductSheet } from './components/ProductSheet';
-export { TaxBanner } from './components/TaxBanner';
+export { TaxSentence } from './components/TaxSentence';
 export { TaxHistorySheet, type TaxHistoryState } from './components/TaxHistorySheet';
 export { TaxPreview } from './components/TaxPreview';
 export { TaxSettingsForm } from './components/TaxSettingsForm';

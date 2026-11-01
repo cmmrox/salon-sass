@@ -49,5 +49,9 @@ Approve both. They make the page shorter for every salon, change no data, and co
 
 Approved by the owner on 2026-11-01 ("Approve, build after PR"): both changes are approved and
 built after F05's pull request merges, as a small follow-up on its own branch, re-checked by QA on
-the changed cases. F05 closes and is submitted as QA passed it; F05-S01 and F05-S03 are reopened by
-this change request only when that follow-up starts.
+the changed cases. F05 closes and is submitted as QA passed it.
+
+Started on 2026-11-02, after F05's merge (3e60834). A merged feature keeps its status and merge record
+(decision 098), so no stage is reopened. The same follow-up also carries, by the lead's
+decision, BUG-F05-001, SUG-F05-03's wording and the upload hardening the push security review raised.
+The hardening reaches F04's brand image upload, so QA re-runs F04's brand image cases with it.

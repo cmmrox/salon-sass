@@ -12,12 +12,14 @@ import com.salonplatform.shared.images.DecodePermits;
 import com.salonplatform.shared.images.ImageCheck;
 import com.salonplatform.shared.images.ImageFormat;
 import com.salonplatform.shared.images.ImageShape;
+import com.salonplatform.shared.images.ImageUpload;
 import com.salonplatform.shared.images.UploadedImages;
 import com.salonplatform.shared.tenancy.TenantContext;
 import com.salonplatform.shared.web.ApplicationProblemException;
 import com.salonplatform.shared.web.ErrorCode;
 import com.salonplatform.shared.web.FieldProblem;
 import com.salonplatform.shared.web.NotFoundException;
+import java.io.IOException;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -80,17 +82,20 @@ class ServicePhotosImpl implements ServicePhotos {
     }
 
     @Override
-    public ServiceView upload(UUID serviceId, byte[] content) {
+    public ServiceView upload(UUID serviceId, ImageUpload upload) throws IOException {
         Scope at = scope.of(CatalogueScope.CHANGE);
-        // An unknown service is not found before anything is decoded.
+        // An unknown service is not found before anything is read.
         reading.execute(status -> live(serviceId, at));
-        ImageCheck.Accepted accepted = switch (decoding.run(
-                () -> UploadedImages.check(content, PHOTO, limits.maxBytes().toBytes(), limits.maxPixels()))) {
-            case ImageCheck.Accepted image -> image;
-            case ImageCheck.Refused refused ->
-                throw new ApplicationProblemException(
-                        400, ErrorCode.BAD_REQUEST, List.of(new FieldProblem("file", refused.detail())));
-        };
+        long maxBytes = limits.maxBytes().toBytes();
+        if (upload.declaresOver(maxBytes)) {
+            throw refused(UploadedImages.tooLarge(maxBytes));
+        }
+        byte[] content = upload.read();
+        ImageCheck.Accepted accepted =
+                switch (decoding.run(() -> UploadedImages.check(content, PHOTO, maxBytes, limits.maxPixels()))) {
+                    case ImageCheck.Accepted image -> image;
+                    case ImageCheck.Refused refused -> throw refused(refused);
+                };
         return CategoryServiceImpl.changing(() -> writing.execute(status -> {
             SalonService service = live(serviceId, at);
             UUID previous = service.getPhotoId();
@@ -149,6 +154,11 @@ class ServicePhotosImpl implements ServicePhotos {
             throw new NotFoundException();
         }
         return stored;
+    }
+
+    private static ApplicationProblemException refused(ImageCheck.Refused refused) {
+        return new ApplicationProblemException(
+                400, ErrorCode.BAD_REQUEST, List.of(new FieldProblem("file", refused.detail())));
     }
 
     private SalonService live(UUID id, Scope at) {

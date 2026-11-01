@@ -311,3 +311,26 @@ returns a required `currency`, the salon's currency, so a salon's first service 
 photo, removal or save result applies only to the sheet opening that sent it; Save and Delete are
 disabled during an upload and Close stays enabled. A duplicate's name is cut between characters, in
 code points.
+
+## CR-025 (follow-up after the merge of PR #19)
+
+These replace AC-12's banner and empty-category rules, and are built and verified in one
+follow-up PR after F05's (decision 098). Read `docs/changes/CR-025-services-page-refinements.md`.
+
+- AC-17: The Services tab shows one information banner, an Alert `info`: "List your services with
+  their price and time. Changes apply to new bookings only." followed by the tax sentence of
+  F05-S03's AC-10. There is no second banner. (CAT-01, CAT-05, CR-025)
+- AC-18: The Services tab lists only categories that have services, in the salon's order. Categories
+  without services are folded into one line after them: "No services yet in: Nails, Waxing." A salon
+  with no services at all sees the Empty state ("No services yet" and, with
+  `catalogue.price.change`, **+ New service**) and no folded line. The Categories tab still lists
+  every category. (CAT-01, CAT-02, CR-025)
+- AC-19: The sheets (BUG-F05-001) state money limits in the salon's currency through `formatMoney`:
+  the service price, the variant price, the fixed deposit and the product price. An LKR salon keeps
+  today's wording ("Price must be Rs. 100 to Rs. 500,000."); a USD salon reads the same limits in
+  USD, as the API applies them (decision 091). (NFR-13)
+- AC-20: As the push security review of PR #19 asked, a service photo upload and a
+  brand image upload check the caller's permission and the target first, then the file's declared
+  size, and only then read its bytes. A caller without permission, or a file over the limit, is
+  refused with the same answers as today, without the file being read into the application. Each is
+  proved by a test that fails if the bytes are read first. (CAT-01, BRD-01)

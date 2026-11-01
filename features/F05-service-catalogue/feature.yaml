@@ -1,20 +1,33 @@
 id: F05
-title: "Service catalogue"
-summary: "A salon creates, edits, duplicates, hides and safely deletes its services, categories, variants, prices and tax settings, keeps a simple product list to sell at checkout, and customers browse the menu. Service time is stored as active, processing and buffer segments (CR-023)."
+title: Service catalogue
+summary: A salon creates, edits, duplicates, hides and safely deletes its services,
+  categories, variants, prices and tax settings, keeps a simple product list to sell
+  at checkout, and customers browse the menu. Service time is stored as active, processing
+  and buffer segments (CR-023).
 release: R1
 milestone: M1-web
 status: complete
 qa_status: pass
 released_in: null
-depends_on: [F04]
+depends_on:
+- F04
 integration:
   branch: charithm/feature/F05-service-catalogue
   pull_request: https://github.com/cmmrox/salon-sass/pull/19
   qa_revision: 866669b9e761d10030dbb4a199dc97a80c7df208
-  merged_commit: null
-  merged_at: null
-surfaces: [api, web]
-requirements: [CAT-01, CAT-02, CAT-03, CAT-04, CAT-05, CAT-06, INV-01]
+  merged_commit: 3e60834a5bd2484b716aff11c68527ab962cd499
+  merged_at: '2026-11-01T19:27:51Z'
+surfaces:
+- api
+- web
+requirements:
+- CAT-01
+- CAT-02
+- CAT-03
+- CAT-04
+- CAT-05
+- CAT-06
+- INV-01
 nfr_focus: []
 cases: []
 verification:
@@ -23,7 +36,9 @@ verification:
     tool: playwright
     file: qa/api/F05/F05-journeys.spec.ts
     project: api
-    suites: [smoke, regression]
+    suites:
+    - smoke
+    - regression
   manual: []
   deferred: []
 evidence:
@@ -37,24 +52,51 @@ evidence:
       name in code points; the services and products lists gain a required currency
       (dto, service, openapi.json, the generated schema); use-catalogue, ServiceSheet,
       ServicesScreen and ProductsScreen apply a photo, removal or save result only
-      to the opening that sent it, disable Save and Delete during an upload, and
-      label both sheets with the list''s currency. Test-only: meta.test.ts and salon.test.ts
+      to the opening that sent it, disable Save and Delete during an upload, and label
+      both sheets with the list''s currency. Test-only: meta.test.ts and salon.test.ts
       (fake clock, F01 units no QA case runs). No migration.'
-    scope: 'Re-run, as what those files reach. API: TC-F05-S01-001, 009, 012, 016 to 019,
-      026 to 029, 031 (they read the services list), 017 and TC-F05-S02-011 (duplicate),
-      TC-F05-S01-021 to 023 (photos), TC-F05-S02-008 and 012, TC-F05-S03-009, 011
-      to 014 (the products list), journeys TC-F05-002 and 003. Browser: every S01
-      and S02 case, as both tabs and the sheet use use-catalogue (TC-F05-S01-032 to
-      042, TC-F05-S02-016 to 021), and TC-F05-S03-020. Added: TC-F05-S01-043 (emoji
+    scope: 'Re-run, as what those files reach. API: TC-F05-S01-001, 009, 012, 016
+      to 019, 026 to 029, 031 (they read the services list), 017 and TC-F05-S02-011
+      (duplicate), TC-F05-S01-021 to 023 (photos), TC-F05-S02-008 and 012, TC-F05-S03-009,
+      011 to 014 (the products list), journeys TC-F05-002 and 003. Browser: every
+      S01 and S02 case, as both tabs and the sheet use use-catalogue (TC-F05-S01-032
+      to 042, TC-F05-S02-016 to 021), and TC-F05-S03-020. Added: TC-F05-S01-043 (emoji
       duplicate), 044 and TC-F05-S03-025 (the lists'' currency), TC-F05-S01-045 and
       TC-F05-S03-026 (an empty USD salon), TC-F05-S01-046 (the upload and save race).
       Not re-run, because their code did not change (decision 069): the category-only
       API cases, the S01 service API cases that do not read a list (TC-F05-S01-010,
-      011, 013 to 015, 024, 025, 030), the backfill check (no migration), the Popular, deposit and variant
-      API cases that do not read a list, TC-F05-S03-001 to 008, 010 and 015 (tax and
-      product writes), TC-F05-S03-016 to 019, 021 to 024 (the tax tab; the Products
-      tab''s one-line change is covered by 020 and 026), and journey TC-F05-001.'
+      011, 013 to 015, 024, 025, 030), the backfill check (no migration), the Popular,
+      deposit and variant API cases that do not read a list, TC-F05-S03-001 to 008,
+      010 and 015 (tax and product writes), TC-F05-S03-016 to 019, 021 to 024 (the
+      tax tab; the Products tab''s one-line change is covered by 020 and 026), and
+      journey TC-F05-001.'
     run: Playwright --grep (sdlc run selects only whole entries), fresh database f05qa_rev,
       API 8291 and web 3291 built from 8ddb623, tests 866669b. qa/reports/20261102-F05-reverify-866669b,
-      49 of 49 passed in 6 min 05 s. Result pass. One minor bug filed from checking the
-      USD labels, BUG-F05-001, open.
+      49 of 49 passed in 6 min 05 s. Result pass. One minor bug filed from checking
+      the USD labels, BUG-F05-001, open.
+  - revision: 7000ac950830005741811022cde53a730a97692e
+    date: 2026-11-02
+    changed: 'CR-025 and the upload hardening (merge 25b1381, decision 098). Web: one information
+      banner on the Services and Products tabs (TaxSentence), empty categories folded
+      into one line, the Empty state, the sheets'' money limits in the salon''s currency
+      (BUG-F05-001), the tax preview''s example rows in it. API: a service photo and
+      a brand image upload check the caller, the target and the declared size before
+      reading the bytes (ServicePhotos, BrandImageService, shared ImageUpload). No migration
+      or contract change.'
+    scope: 'Written or changed for CR-025: TC-F05-S01-032, 047 to 050; TC-F05-S03-017,
+      020, 021, 027. Re-run, as what the changed files reach: TC-F05-S01-021 to 023,
+      026 to 029, 031 (they upload a photo); every browser case on the Services and
+      Products tabs and their sheets (TC-F05-S01-033 to 042, 045, 046; TC-F05-S02-016
+      to 021; TC-F05-S03-022 to 024, 026); and F04''s TC-F04-S02-008, 009, 010 (the
+      brand image upload). Then the smoke suite once. Not re-run, because their code
+      did not change (decision 069): the other F05 API cases (only the uploads changed),
+      the backfill check, the tax tab''s form cases TC-F05-S03-016, 018, 019 (one line
+      of use-tax-settings, the preview''s currency, is covered by 017 and 027), and
+      the rest of F04. The order inside an upload is the developer''s integration tests''
+      to prove; TC-F05-S01-048 proves from outside that the answers do not depend on
+      the file''s size.'
+    run: Playwright --grep (sdlc run selects only whole entries), fresh database f05qa_cr025,
+      API 8291 and web 3291 built from 25b1381, tests 7000ac9. qa/reports/20261102-F05-reverify-7000ac9,
+      42 of 42 passed in 4 min 19 s (39 F05, 3 F04). Smoke, qa/scripts/sdlc run --suite
+      smoke at 7000ac9, qa/reports/20261102-013017-smoke-60a0b44ed0bb, 9 of 9 entries,
+      25 of 25 cases, 2 min 31 s. Result pass. BUG-F05-001 verified.

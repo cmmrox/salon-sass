@@ -45,7 +45,7 @@ type Examples = {
 
 /**
  * The first service bookable online in the Services tab's order (category order, then name) and the first product
- * sold at checkout by name, or the prototype's examples when there are none (F05-S03 AC-5, lead's clarification 2).
+ * sold at checkout by name, or the prototype's examples when there are none (F05-S03 AC-5, AC-15).
  */
 function examplesOf(categories: CategoryList | null, services: ServiceList | null, products: ProductListAnswer | null) {
   const position = new Map((categories?.items ?? []).map((category) => [category.id, category.position]));
@@ -61,7 +61,8 @@ function examplesOf(categories: CategoryList | null, services: ServiceList | nul
     product: product
       ? { name: product.name, priceMinor: product.priceMinor, chargesVat: product.chargesVat }
       : EXAMPLE_PRODUCT,
-    currency: service?.terms.currency ?? product?.currency ?? 'LKR',
+    // A real row's own currency, or the salon's for an example row (AC-15).
+    currency: service?.terms.currency ?? product?.currency ?? services?.currency ?? products?.currency ?? 'LKR',
   } satisfies Examples;
 }
 

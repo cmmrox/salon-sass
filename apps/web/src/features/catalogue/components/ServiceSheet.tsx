@@ -17,6 +17,7 @@ import {
   FIELD_OF,
   highestPrice,
   lowestPrice,
+  moneyLimits,
   problemParts,
   type ServiceProblem,
   type ServiceValues,
@@ -150,7 +151,7 @@ export function ServiceSheet(props: Props) {
                         data-problem={key}
                         data-index={index ?? undefined}
                       >
-                        {t(`problems.${key}`, { name })}
+                        {t(`problems.${key}`, { name, ...moneyLimits(currency) })}
                       </li>
                     );
                   })}

@@ -9,7 +9,7 @@ import {
   RULES,
   SERVICES,
   service,
-  WAXING,
+  TAX_PUBLIC,
   withVariants,
 } from './catalogue-fixtures';
 import type { CatalogueService } from '@/features/catalogue';
@@ -75,13 +75,13 @@ describe('the Services tab (F05-S01 AC-12)', () => {
     // The prototype's information banner (`.bn.in`), not a plain card.
     expect(screen.getByTestId('services-banner')).toHaveAttribute('data-variant', 'info');
     const groups = screen.getAllByTestId('service-group');
-    expect(groups.map((group) => group.getAttribute('data-id'))).toEqual([COLOUR, NAILS, WAXING]);
+    expect(groups.map((group) => group.getAttribute('data-id'))).toEqual([COLOUR, NAILS]);
     expect(
       within(groups[0]!)
         .getAllByTestId('service-card-name')
         .map((name) => name.textContent),
     ).toEqual(['Balayage', 'zebra highlights']);
-    expect(within(groups[2]!).getByTestId('service-group-empty')).toHaveTextContent('No services yet.');
+    expect(screen.getByTestId('services-empty-categories')).toHaveTextContent('No services yet in: Waxing.');
   });
 
   it('shows on each card its status, category and description, price, time and buffer', async () => {
@@ -113,6 +113,104 @@ describe('the Services tab (F05-S01 AC-12)', () => {
     expect(await screen.findByTestId('services-read-only')).toHaveTextContent(
       'A support session can read the services but cannot change them.',
     );
+  });
+});
+
+describe('categories with no services (F05-S01 AC-18, CR-025)', () => {
+  const categories = (...names: string[]) => ({
+    listVersion: 1,
+    items: names.map((name, index) => ({ id: name, name, position: index + 1, serviceCount: 0, version: 0 })),
+  });
+
+  it('folds them into one line after the listed ones, in the salon’s order', async () => {
+    answers['catalogue-categories'] = () => Response.json(categories('Spa', 'Nails', 'Cuts', 'Waxing'));
+    answers['catalogue-services'] = () =>
+      Response.json({ ...SERVICES, items: [service('s1', 'Gel polish', 'Nails'), service('s2', 'Trim', 'Cuts')] });
+    render();
+    await screen.findAllByTestId('service-card');
+
+    expect(screen.getAllByTestId('service-group').map((group) => group.getAttribute('data-id'))).toEqual([
+      'Nails',
+      'Cuts',
+    ]);
+    const folded = screen.getByTestId('services-empty-categories');
+    expect(folded).toHaveTextContent('No services yet in: Spa, Waxing.');
+    // After the listed categories.
+    const last = screen.getAllByTestId('service-group').at(-1)!;
+    expect(last.compareDocumentPosition(folded) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'Spa' })).toBeNull();
+  });
+
+  it('says nothing folded when every category has a service', async () => {
+    answers['catalogue-categories'] = () => Response.json(categories('Nails'));
+    answers['catalogue-services'] = () => Response.json({ ...SERVICES, items: [service('s1', 'Gel polish', 'Nails')] });
+    render();
+    await screen.findAllByTestId('service-card');
+    expect(screen.queryByTestId('services-empty-categories')).toBeNull();
+  });
+
+  it('shows a salon with no services the Empty state and no folded line, with + New service for who may', async () => {
+    answers['catalogue-services'] = () => Response.json({ ...SERVICES, items: [] });
+    render();
+    const empty = await screen.findByTestId('services-empty');
+    expect(empty).toHaveTextContent('No services yet');
+    expect(screen.queryByTestId('services-empty-categories')).toBeNull();
+    expect(screen.queryByTestId('service-group')).toBeNull();
+
+    fireEvent.click(within(empty).getByTestId('services-empty-new'));
+    expect(await screen.findByRole('heading', { name: 'New service' })).toBeInTheDocument();
+  });
+
+  it('gives a reader the Empty state without + New service', async () => {
+    answers['catalogue-services'] = () => Response.json({ ...SERVICES, items: [] });
+    render('services', false);
+    const empty = await screen.findByTestId('services-empty');
+    expect(within(empty).queryByTestId('services-empty-new')).toBeNull();
+  });
+
+  it('keeps every category on the Categories tab', async () => {
+    answers['catalogue-services'] = () => Response.json({ ...SERVICES, items: [] });
+    render('categories');
+    expect(await screen.findAllByTestId('category-row')).toHaveLength(3);
+    expect(screen.queryByTestId('services-empty')).toBeNull();
+  });
+});
+
+describe('the Services tab’s one banner (F05-S01 AC-17, CR-025)', () => {
+  const FIRST = 'List your services with their price and time. Changes apply to new bookings only.';
+  const infoAlerts = () => document.querySelectorAll('[data-slot="alert"][data-variant="info"]');
+
+  it.each([
+    ['both', TAX_PUBLIC, 'Prices you enter include service charge (10%) and VAT (18%). Customers see the same price.'],
+    [
+      'VAT only',
+      { ...TAX_PUBLIC, serviceCharge: null },
+      'Prices you enter include VAT (18%). Customers see the same price.',
+    ],
+    [
+      'service charge only',
+      { ...TAX_PUBLIC, vat: null },
+      'Prices you enter include service charge (10%). Customers see the same price.',
+    ],
+    ['neither', null, 'Tax and service charge are off. Turn them on in Settings if your salon is registered.'],
+  ])('carries both sentences in one Alert: %s', async (_name, current, sentence) => {
+    answers['catalogue-tax-public'] = () => Response.json({ current });
+    render();
+    await screen.findByTestId('tax-banner');
+
+    expect(screen.getByTestId('services-banner')).toHaveTextContent(`${FIRST} ${sentence}`, {
+      normalizeWhitespace: true,
+    });
+    expect(screen.getByTestId('services-banner')).toHaveAttribute('data-variant', 'info');
+    expect(infoAlerts()).toHaveLength(1);
+  });
+
+  it('says only its own sentence while the salon’s tax cannot be read', async () => {
+    render();
+    await screen.findAllByTestId('service-card');
+    expect(screen.getByTestId('services-banner').textContent?.trim()).toBe(FIRST);
+    expect(screen.queryByTestId('tax-banner')).toBeNull();
+    expect(infoAlerts()).toHaveLength(1);
   });
 });
 
@@ -776,6 +874,46 @@ describe('the salon’s currency (F05-S01 AC-3, F05-S02 AC-7; NFR-13)', () => {
     await screen.findAllByTestId('service-card');
     fireEvent.click(screen.getByTestId('services-new'));
     expect(await screen.findByLabelText('Price (USD)')).toBeInTheDocument();
+  });
+});
+
+describe('money limits in the salon’s currency (F05-S01 AC-19, BUG-F05-001)', () => {
+  const problems = () => screen.getAllByTestId('service-sheet-problem').map((each) => each.textContent);
+  /** Opens a new service with a price below the limit, two variants with one below it, and a fixed deposit of 1. */
+  const breakEveryMoneyRule = async () => {
+    fireEvent.click(await screen.findByTestId('services-new'));
+    fireEvent.change(await screen.findByTestId('service-sheet-name'), { target: { value: 'Haircut' } });
+    fireEvent.change(screen.getByTestId('service-sheet-price'), { target: { value: '99' } });
+    const single = problems();
+    fireEvent.change(screen.getByTestId('service-sheet-price'), { target: { value: '500' } });
+    fireEvent.click(screen.getByTestId('service-sheet-more'));
+    fireEvent.click(await screen.findByTestId('service-deposit-custom'));
+    fireEvent.click(screen.getByTestId('service-deposit-type'));
+    fireEvent.click(await screen.findByRole('option', { name: 'Fixed amount' }));
+    fireEvent.change(await screen.findByLabelText('Deposit amount'), { target: { value: '1' } });
+    const deposit = problems();
+    fireEvent.click(screen.getByTestId('service-variants-toggle'));
+    fireEvent.change(screen.getByTestId('service-variant-set'), { target: { value: 'Hair length' } });
+    fireEvent.change(screen.getByLabelText('Variant 1 name'), { target: { value: 'Short' } });
+    fireEvent.change(screen.getByLabelText('Variant 1 price'), { target: { value: '99' } });
+    return { single, deposit, variant: problems() };
+  };
+
+  it('keeps an LKR salon’s wording exactly', async () => {
+    render();
+    const { single, deposit, variant } = await breakEveryMoneyRule();
+    expect(single).toEqual(['Price must be Rs. 100 to Rs. 500,000.']);
+    expect(deposit).toEqual(['A fixed deposit must be Rs. 100 to Rs. 100,000.']);
+    expect(variant).toContain('Price for “Short” must be Rs. 100 to Rs. 500,000.');
+  });
+
+  it('states the same limits in USD for a USD salon', async () => {
+    answers['catalogue-services'] = () => Response.json({ ...SERVICES, currency: 'USD' });
+    render();
+    const { single, deposit, variant } = await breakEveryMoneyRule();
+    expect(single).toEqual(['Price must be $100 to $500,000.']);
+    expect(deposit).toEqual(['A fixed deposit must be $100 to $100,000.']);
+    expect(variant).toContain('Price for “Short” must be $100 to $500,000.');
   });
 });
 
