@@ -881,6 +881,25 @@ describe('a service’s photo, and a change answered after its sheet closed (AC-
     expect(screen.getByTestId('service-sheet-name')).toHaveValue('Gel polish');
   });
 
+  it('keeps a rule an earlier save was refused for off another service’s sheet', async () => {
+    const save = later();
+    answers['catalogue-service-save'] = () => save.pending as unknown as Response;
+    render();
+    await screen.findAllByTestId('service-card');
+    await edit('Balayage');
+    fireEvent.change(screen.getByTestId('service-sheet-name'), { target: { value: 'Balayage and tone' } });
+    fireEvent.click(screen.getByTestId('service-sheet-save'));
+    fireEvent.click(screen.getByTestId('service-sheet-close'));
+    fireEvent.click(await screen.findByTestId('services-leave-confirm'));
+    await waitFor(() => expect(screen.queryByTestId('service-sheet')).toBeNull());
+
+    await edit('Gel polish');
+    save.answer(Response.json({ code: 'invalid_state' }, { status: 409 }));
+    await waitFor(() => expect(screen.getByTestId('service-sheet-save')).not.toHaveTextContent('Saving'));
+    expect(screen.queryByTestId('services-rule')).toBeNull();
+    expect(screen.getByTestId('service-sheet-name')).toHaveValue('Gel polish');
+  });
+
   it('saves the service whose sheet is open when an earlier photo removal finishes after it opened', async () => {
     const removal = later();
     answers['catalogue-services'] = () =>

@@ -266,7 +266,9 @@ export function useCatalogue(kind: Kind, notify: (toast: CatalogueToast) => void
       }
       const left = failed(error);
       if (left?.code === 'bad_request' && variantIdRefused(left.fields)) setNotice('conflict');
-      else if (left?.code === 'bad_request' && stillOpen())
+      else if (!stillOpen()) {
+        // The person left this sheet and opened another: what was wrong with this save is not about that one.
+      } else if (left?.code === 'bad_request')
         setSheet((current) =>
           current ? { ...current, apiProblems: problemsOfFields(left.fields, current.values) } : current,
         );
