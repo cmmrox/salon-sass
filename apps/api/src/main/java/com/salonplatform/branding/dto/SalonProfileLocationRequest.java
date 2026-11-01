@@ -10,10 +10,16 @@ import java.math.BigDecimal;
         additionalProperties = Schema.AdditionalPropertiesValue.FALSE,
         requiredProperties = {"latitude", "longitude"})
 public record SalonProfileLocationRequest(
-        @Schema(types = {"number"}, minimum = "-90", maximum = "90")
+        @Schema(
+                types = {"number"},
+                minimum = "-90",
+                maximum = "90")
         BigDecimal latitude,
 
-        @Schema(types = {"number"}, minimum = "-180", maximum = "180")
+        @Schema(
+                types = {"number"},
+                minimum = "-180",
+                maximum = "180")
         BigDecimal longitude) {
 
     @JsonAnySetter
