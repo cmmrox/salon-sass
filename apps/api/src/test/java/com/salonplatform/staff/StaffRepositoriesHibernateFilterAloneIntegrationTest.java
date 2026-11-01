@@ -8,16 +8,26 @@ import com.salonplatform.staff.entity.HolidayChoice;
 import com.salonplatform.staff.entity.HolidayReview;
 import com.salonplatform.staff.entity.Member;
 import com.salonplatform.staff.entity.MemberCategory;
+import com.salonplatform.staff.entity.MemberDateChange;
+import com.salonplatform.staff.entity.MemberDateChangeBreak;
 import com.salonplatform.staff.entity.MemberPhoto;
+import com.salonplatform.staff.entity.MemberSchedule;
 import com.salonplatform.staff.entity.MemberSingleService;
+import com.salonplatform.staff.entity.MemberWeekday;
+import com.salonplatform.staff.entity.MemberWeekdayBreak;
 import com.salonplatform.staff.entity.OpeningHours;
 import com.salonplatform.staff.repository.ClosureRepository;
 import com.salonplatform.staff.repository.HolidayChoiceRepository;
 import com.salonplatform.staff.repository.HolidayReviewRepository;
 import com.salonplatform.staff.repository.MemberCategoryRepository;
+import com.salonplatform.staff.repository.MemberDateChangeBreakRepository;
+import com.salonplatform.staff.repository.MemberDateChangeRepository;
 import com.salonplatform.staff.repository.MemberPhotoRepository;
 import com.salonplatform.staff.repository.MemberRepository;
+import com.salonplatform.staff.repository.MemberScheduleRepository;
 import com.salonplatform.staff.repository.MemberSingleServiceRepository;
+import com.salonplatform.staff.repository.MemberWeekdayBreakRepository;
+import com.salonplatform.staff.repository.MemberWeekdayRepository;
 import com.salonplatform.staff.repository.OpeningHoursRepository;
 import com.salonplatform.testing.StartedApplication;
 import com.salonplatform.testing.TestDatabase;
@@ -118,6 +128,50 @@ class StaffRepositoriesHibernateFilterAloneIntegrationTest {
                             application
                                     .bean(MemberSingleServiceRepository.class)
                                     .persist(MemberSingleService.of(branch, member.getId(), UUID.randomUUID(), now()));
+                            // F06-S02: their schedule's version, a weekday with a break, a date change with a break.
+                            application
+                                    .bean(MemberScheduleRepository.class)
+                                    .persist(MemberSchedule.first(branch, member.getId(), now()));
+                            MemberWeekday weekday = application
+                                    .bean(MemberWeekdayRepository.class)
+                                    .persist(MemberWeekday.of(
+                                            branch,
+                                            member.getId(),
+                                            DayOfWeek.MONDAY,
+                                            LocalTime.of(9, 0),
+                                            LocalTime.of(18, 0),
+                                            now()));
+                            application.bean(MemberWeekdayRepository.class).flush();
+                            application
+                                    .bean(MemberWeekdayBreakRepository.class)
+                                    .persist(MemberWeekdayBreak.of(
+                                            branch,
+                                            member.getId(),
+                                            weekday.getId(),
+                                            LocalTime.of(13, 0),
+                                            LocalTime.of(14, 0),
+                                            now()));
+                            MemberDateChange change = application
+                                    .bean(MemberDateChangeRepository.class)
+                                    .persist(MemberDateChange.of(
+                                            branch,
+                                            member.getId(),
+                                            LocalDate.of(2090, 3, 1),
+                                            LocalTime.of(9, 0),
+                                            LocalTime.of(13, 0),
+                                            "Half day",
+                                            UUID.randomUUID(),
+                                            now()));
+                            application.bean(MemberDateChangeRepository.class).flush();
+                            application
+                                    .bean(MemberDateChangeBreakRepository.class)
+                                    .persist(MemberDateChangeBreak.of(
+                                            branch,
+                                            member.getId(),
+                                            change.getId(),
+                                            LocalTime.of(10, 0),
+                                            LocalTime.of(10, 15),
+                                            now()));
                             return null;
                         }));
             } catch (Exception ex) {
@@ -215,6 +269,83 @@ class StaffRepositoriesHibernateFilterAloneIntegrationTest {
                             .isEqualTo(1);
                     return null;
                 }));
+    }
+
+    @Test
+    void alphaReadsNoneOfBetasSchedules() throws Exception {
+        JdbcTemplate owner = database.asOwner();
+        UUID betasMember =
+                owner.queryForObject("SELECT id FROM staff_team_member WHERE tenant_id = ?", UUID.class, beta.id());
+        UUID betasChange = owner.queryForObject(
+                "SELECT id FROM staff_member_date_change WHERE tenant_id = ?", UUID.class, beta.id());
+        UUID betasBranch = salons.defaultBranch(beta);
+        as(
+                alpha,
+                () -> inTransaction(() -> {
+                    assertThat(application.bean(MemberRepository.class).lockActive(betasMember, betasBranch))
+                            .isEmpty();
+                    assertThat(application.bean(MemberScheduleRepository.class).findOf(betasMember))
+                            .isEmpty();
+                    assertThat(application.bean(MemberWeekdayRepository.class).ofMembers(List.of(betasMember)))
+                            .isEmpty();
+                    assertThat(application
+                                    .bean(MemberWeekdayBreakRepository.class)
+                                    .ofMembers(List.of(betasMember)))
+                            .isEmpty();
+                    MemberDateChangeRepository changes = application.bean(MemberDateChangeRepository.class);
+                    assertThat(changes.upcoming(betasMember, LocalDate.of(2000, 1, 1)))
+                            .isEmpty();
+                    assertThat(changes.between(betasMember, LocalDate.of(2090, 1, 1), LocalDate.of(2090, 12, 31)))
+                            .isEmpty();
+                    assertThat(changes.countUpcoming(betasMember, LocalDate.of(2000, 1, 1)))
+                            .isZero();
+                    assertThat(changes.existsOn(betasMember, LocalDate.of(2090, 3, 1)))
+                            .isFalse();
+                    assertThat(changes.findOf(betasChange, betasMember)).isEmpty();
+                    assertThat(application
+                                    .bean(MemberDateChangeBreakRepository.class)
+                                    .ofChanges(List.of(betasChange)))
+                            .isEmpty();
+                    return null;
+                }));
+    }
+
+    @Test
+    void alphaCannotRemoveBetasScheduleRows() throws Exception {
+        JdbcTemplate owner = database.asOwner();
+        UUID betasMember =
+                owner.queryForObject("SELECT id FROM staff_team_member WHERE tenant_id = ?", UUID.class, beta.id());
+        UUID betasChange = owner.queryForObject(
+                "SELECT id FROM staff_member_date_change WHERE tenant_id = ?", UUID.class, beta.id());
+        as(
+                alpha,
+                () -> inTransaction(() -> {
+                    assertThat(application
+                                    .bean(MemberWeekdayBreakRepository.class)
+                                    .removeOf(betasMember))
+                            .isZero();
+                    assertThat(application.bean(MemberWeekdayRepository.class).removeOf(betasMember))
+                            .isZero();
+                    assertThat(application
+                                    .bean(MemberDateChangeBreakRepository.class)
+                                    .removeOf(betasChange))
+                            .isZero();
+                    assertThat(application
+                                    .bean(MemberDateChangeRepository.class)
+                                    .removeById(betasChange))
+                            .isZero();
+                    return null;
+                }));
+        for (String table : List.of(
+                "staff_member_weekday",
+                "staff_member_weekday_break",
+                "staff_member_date_change",
+                "staff_member_date_change_break")) {
+            assertThat(owner.queryForObject(
+                            "SELECT count(*) FROM " + table + " WHERE tenant_id = ?", Long.class, beta.id()))
+                    .as(table)
+                    .isEqualTo(1);
+        }
     }
 
     @Test

@@ -4,8 +4,11 @@ import com.salonplatform.branding.SettingsTestSupport;
 import com.salonplatform.testing.Http;
 import com.salonplatform.testing.OpenApiContract;
 import com.salonplatform.testing.TestSalons.TestSalon;
+import java.time.DayOfWeek;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
@@ -78,13 +81,107 @@ final class TeamFixture {
         return account;
     }
 
+    /** Where a member's schedule is. */
+    static String schedule(Object memberId) {
+        return MEMBERS + "/" + memberId + "/schedule";
+    }
+
+    static String weekly(Object memberId) {
+        return schedule(memberId) + "/weekly";
+    }
+
+    static String dateChanges(Object memberId) {
+        return schedule(memberId) + "/date-changes";
+    }
+
+    static Map<String, Object> pause(String starts, String finishes) {
+        Map<String, Object> pause = new LinkedHashMap<>();
+        pause.put("starts", starts);
+        pause.put("finishes", finishes);
+        return pause;
+    }
+
+    /** A working weekday as a save sends it. The array is only read. */
+    @SafeVarargs
+    @SuppressWarnings("varargs")
+    static Map<String, Object> workday(String day, String starts, String finishes, Map<String, Object>... breaks) {
+        Map<String, Object> workday = new LinkedHashMap<>();
+        workday.put("day", day);
+        workday.put("working", true);
+        workday.put("starts", starts);
+        workday.put("finishes", finishes);
+        workday.put("breaks", Arrays.stream(breaks).toList());
+        return workday;
+    }
+
+    /** The seven weekdays as a save sends them: not working, but for the days given. The array is only read. */
+    @SafeVarargs
+    @SuppressWarnings("varargs")
+    static List<Map<String, Object>> week(Map<String, Object>... working) {
+        return Arrays.stream(DayOfWeek.values())
+                .map(day -> day.name().toLowerCase(Locale.ROOT))
+                .map(name -> Arrays.stream(working)
+                        .filter(each -> name.equals(each.get("day")))
+                        .findFirst()
+                        .orElseGet(() -> offDay(name)))
+                .toList();
+    }
+
+    static Map<String, Object> offDay(String day) {
+        Map<String, Object> off = new LinkedHashMap<>();
+        off.put("day", day);
+        off.put("working", false);
+        off.put("starts", null);
+        off.put("finishes", null);
+        off.put("breaks", List.of());
+        return off;
+    }
+
+    /** A save of a week from the version read. */
+    static Map<String, Object> weekSave(long version, List<Map<String, Object>> week) {
+        Map<String, Object> save = new LinkedHashMap<>();
+        save.put("version", version);
+        save.put("weekly", week);
+        return save;
+    }
+
+    /** A date with different hours, as a request sends it. The array is only read. */
+    @SafeVarargs
+    @SuppressWarnings("varargs")
+    static Map<String, Object> differentHours(
+            Object date, String starts, String finishes, String note, Map<String, Object>... breaks) {
+        Map<String, Object> change = new LinkedHashMap<>();
+        change.put("date", date.toString());
+        change.put("working", true);
+        change.put("starts", starts);
+        change.put("finishes", finishes);
+        change.put("breaks", Arrays.stream(breaks).toList());
+        change.put("note", note);
+        return change;
+    }
+
+    /** A date not worked, as a request sends it. */
+    static Map<String, Object> notWorking(Object date, String note) {
+        Map<String, Object> change = new LinkedHashMap<>();
+        change.put("date", date.toString());
+        change.put("working", false);
+        change.put("note", note);
+        return change;
+    }
+
     static String email(String prefix) {
         return prefix + "-" + UUID.randomUUID().toString().substring(0, 8) + "@example.test";
     }
 
     private static String template(String path) {
         String bare = path.replaceFirst("\\?.*$", "");
-        return bare.replaceAll("/team/members/[^/]+/photo$", "/team/members/{id}/photo")
+        return bare.replaceAll(
+                        "/team/members/[^/]+/schedule/date-changes/[^/]+$",
+                        "/team/members/{id}/schedule/date-changes/{changeId}")
+                .replaceAll("/team/members/[^/]+/schedule/date-changes$", "/team/members/{id}/schedule/date-changes")
+                .replaceAll("/team/members/[^/]+/schedule/weekly$", "/team/members/{id}/schedule/weekly")
+                .replaceAll("/team/members/[^/]+/schedule$", "/team/members/{id}/schedule")
+                .replaceAll("/team/members/[^/]+/photo$", "/team/members/{id}/photo")
                 .replaceAll("/team/members/[^/]+$", "/team/members/{id}")
                 .replaceAll("/team/photos/[^/]+$", "/team/photos/{id}")
                 .replaceAll("/identity/staff/[^/]+$", "/identity/staff/{id}");

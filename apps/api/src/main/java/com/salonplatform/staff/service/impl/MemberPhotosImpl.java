@@ -53,6 +53,7 @@ class MemberPhotosImpl implements MemberPhotos {
     private final MemberRepository members;
     private final MemberPhotoRepository photos;
     private final TeamRows rows;
+    private final ScheduleRows scheduleRows;
     private final TeamViews views;
     private final TeamAudit audit;
     private final CatalogueListings catalogue;
@@ -67,6 +68,7 @@ class MemberPhotosImpl implements MemberPhotos {
             MemberRepository members,
             MemberPhotoRepository photos,
             TeamRows rows,
+            ScheduleRows scheduleRows,
             TeamViews views,
             TeamAudit audit,
             CatalogueListings catalogue,
@@ -77,6 +79,7 @@ class MemberPhotosImpl implements MemberPhotos {
         this.members = members;
         this.photos = photos;
         this.rows = rows;
+        this.scheduleRows = scheduleRows;
         this.views = views;
         this.audit = audit;
         this.catalogue = catalogue;
@@ -122,7 +125,7 @@ class MemberPhotosImpl implements MemberPhotos {
                     photoValue(previous),
                     photoValue(photo.getId()),
                     now);
-            return Row.of(member, rows.choices(List.of(memberId), listing).get(memberId));
+            return Row.of(member, rows.choices(List.of(memberId), listing).get(memberId), scheduleRows.week(memberId));
         }));
         return views.of(changed, listing, at.actor());
     }
@@ -142,7 +145,7 @@ class MemberPhotosImpl implements MemberPhotos {
             members.flush();
             photos.remove(previous);
             audit.record(at.actor(), TeamAudit.PHOTO_REMOVED, memberId, photoValue(previous), photoValue(null), now);
-            return Row.of(member, rows.choices(List.of(memberId), listing).get(memberId));
+            return Row.of(member, rows.choices(List.of(memberId), listing).get(memberId), scheduleRows.week(memberId));
         }));
         return views.of(changed, listing, at.actor());
     }

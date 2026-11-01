@@ -3,7 +3,7 @@ feature: F06
 title: "Working hours and date changes"
 sequence: 2
 surfaces: [api, web]
-status: planned             # outlined | planned | in-progress | built | complete | released
+status: in-progress           # outlined | planned | in-progress | built | complete | released
 qa_status: not-run          # stays not-run: QA passes the feature. Set only by a stage pass the owner asked for
 blocked_reason: null        # QA: what stops a stage pass, when qa_status is blocked
 released_in: null

@@ -23,6 +23,9 @@ class TeamAudit {
     static final String PHOTO_CHANGED = "staff.team_member_photo_changed";
     static final String PHOTO_REMOVED = "staff.team_member_photo_removed";
     static final String LINK_CLEARED = "staff.team_member_link_cleared";
+    static final String HOURS_SAVED = "staff.team_member_hours_saved";
+    static final String DATE_CHANGE_ADDED = "staff.team_member_date_change_added";
+    static final String DATE_CHANGE_REMOVED = "staff.team_member_date_change_removed";
 
     private static final String MEMBER = "staff_team_member";
 

@@ -86,6 +86,12 @@ class DatabaseIsolationCatalogueIntegrationTest {
                         "staff_member_photo",
                         "staff_member_category",
                         "staff_member_service",
+                        // F06-S02: each member's week, its breaks, and their date changes with theirs.
+                        "staff_member_schedule",
+                        "staff_member_weekday",
+                        "staff_member_weekday_break",
+                        "staff_member_date_change",
+                        "staff_member_date_change_break",
                         // F04-S04: the booking rules' versions.
                         "booking_rules_version",
                         // F05-S01: the catalogue's category lists, categories, photos, services and terms versions.
@@ -271,6 +277,13 @@ class DatabaseIsolationCatalogueIntegrationTest {
                         org.assertj.core.api.Assertions.tuple("staff_member_photo", "DELETE,INSERT,SELECT"),
                         org.assertj.core.api.Assertions.tuple("staff_member_category", "DELETE,INSERT,SELECT"),
                         org.assertj.core.api.Assertions.tuple("staff_member_service", "DELETE,INSERT,SELECT"),
+                        // F06-S02: a save moves the version on and replaces the week's rows; a date change is added
+                        // or removed, never changed.
+                        org.assertj.core.api.Assertions.tuple("staff_member_schedule", "INSERT,SELECT,UPDATE"),
+                        org.assertj.core.api.Assertions.tuple("staff_member_weekday", "DELETE,INSERT,SELECT"),
+                        org.assertj.core.api.Assertions.tuple("staff_member_weekday_break", "DELETE,INSERT,SELECT"),
+                        org.assertj.core.api.Assertions.tuple("staff_member_date_change", "DELETE,INSERT,SELECT"),
+                        org.assertj.core.api.Assertions.tuple("staff_member_date_change_break", "DELETE,INSERT,SELECT"),
                         // F04-S04: a booking rules version is written once and read, never changed or removed.
                         org.assertj.core.api.Assertions.tuple("booking_rules_version", "INSERT,SELECT"),
                         // F05-S01: the category list exists from a salon's creation and is only changed;

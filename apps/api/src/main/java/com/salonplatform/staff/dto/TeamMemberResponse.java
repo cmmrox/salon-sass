@@ -2,7 +2,9 @@ package com.salonplatform.staff.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.salonplatform.staff.service.TeamMemberService.MemberView;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Schema;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -23,6 +25,7 @@ import java.util.UUID;
             "photoId",
             "photoUrl",
             "services",
+            "weekly",
             "version"
         })
 public record TeamMemberResponse(
@@ -72,6 +75,12 @@ public record TeamMemberResponse(
                 description = "That account's email, else its mobile. Only for a caller with `staff.list`.")
         Optional<String> signInLabel,
 
+        @ArraySchema(
+                arraySchema = @Schema(description = "Their week: each of the seven weekdays, Monday first."),
+                minItems = 7,
+                maxItems = 7)
+        List<TeamWorkdayResponse> weekly,
+
         @Schema(description = "Its version, which a save or removal is made from.", minimum = "0")
         long version) {
 
@@ -88,6 +97,7 @@ public record TeamMemberResponse(
                 new TeamMemberServicesResponse(view.categoryIds(), view.serviceIds()),
                 view.signInVisible() ? Optional.ofNullable(view.signInAccountId()) : null,
                 view.signInVisible() ? Optional.ofNullable(view.signInLabel()) : null,
+                view.weekly().stream().map(TeamWorkdayResponse::from).toList(),
                 view.version());
     }
 }

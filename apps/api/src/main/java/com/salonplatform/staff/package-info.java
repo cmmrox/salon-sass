@@ -19,6 +19,10 @@
  * {@code staff} answers {@link com.salonplatform.identity.inprocess.TeamMemberSeats} and platform's
  * {@link com.salonplatform.platform.inprocess.SalonSeatUsage}.
  *
+ * <p>From F06-S02: each team member's weekly hours with breaks and their changes for single dates. It provides
+ * {@link com.salonplatform.staff.TeamSchedule}, which F07's availability uses, and declares
+ * {@link com.salonplatform.staff.MemberBookingsAffected}, which {@code booking} implements in F07 (decision 102).
+ *
  * <p>What it owns, the layout inside it and the rules between modules are in
  * {@code docs/engineering/backend.md}.
  */
