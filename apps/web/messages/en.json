@@ -142,7 +142,9 @@
       "support_manage": "See and revoke support access",
       "settings_read": "Read the salon's settings",
       "settings_manage": "Change and publish the salon's settings",
-      "catalogue_read": "Read the service catalogue"
+      "catalogue_read": "Read the service catalogue",
+      "team_read": "Read the team",
+      "team_manage": "Change the team"
     },
     "billing": "Plan and billing",
     "readOnlyReason": "This salon is read-only because an invoice is overdue, so staff changes are paused. They work again as soon as the overdue invoices are paid.",
@@ -166,7 +168,10 @@
     },
     "settings": "Settings",
     "services": "Services & pricing",
-    "servicesNav": "Services"
+    "servicesNav": "Services",
+    "team": "Team",
+    "teamNav": "Staff",
+    "noTeamProfile": "No team profile"
   },
   "console": {
     "title": "Operator console",
@@ -1086,6 +1091,122 @@
         "next": "Older",
         "page": "Page {page} of {pages}"
       }
+    }
+  },
+  "team": {
+    "tabsLabel": "Team section",
+    "tabs": { "team": "Team", "accounts": "Sign-in accounts" },
+    "loading": "Loading the team",
+    "summary": "{people, plural, one {# person} other {# people}} · {shown} shown for online booking",
+    "summaryEmpty": "No team members yet",
+    "accountsSummary": "Who can sign in to this workspace",
+    "accountsBanner": "Sign-in accounts are for people who use this workspace. Someone can take bookings without one.",
+    "add": "+ Add team member",
+    "emptyTitle": "Add your first team member",
+    "emptyBody": "Add the people who perform your services. They don’t need a sign-in to take bookings.",
+    "card": {
+      "services": "Services",
+      "noServices": "None yet",
+      "online": "Online booking",
+      "shown": "Shown",
+      "hidden": "Hidden",
+      "signIn": "Sign-in",
+      "noSignIn": "None",
+      "edit": "Edit profile",
+      "editLabel": "Edit profile of {name}"
+    },
+    "sheet": {
+      "new": "Add team member",
+      "edit": "Edit profile",
+      "close": "Close",
+      "problemsTitle": "What to fix",
+      "problems": {
+        "name": "Name must be 2 to 40 characters.",
+        "title": "Title must be 40 characters or fewer.",
+        "highlights": "Keep the highlights under 60 characters.",
+        "bio": "Keep the bio under 140 characters.",
+        "services": "Those services have changed. Close this and open it again.",
+        "signInAccountId": "That account can’t be linked. Choose another."
+      },
+      "name": "Name",
+      "title": "Title",
+      "titlePlaceholder": "Colour Specialist",
+      "highlights": "Highlights",
+      "highlightsHelp": "(shown on their card in the app)",
+      "highlightsPlaceholder": "Balayage • Highlights",
+      "bio": "Short bio",
+      "bioCount": "{count}/{max}",
+      "services": "Services they perform",
+      "servicesHelp": "Tick a category for everything in it, or choose single services.",
+      "picker": {
+        "none": "Add services to your categories first.",
+        "notPerformed": "Not performed",
+        "whole": "{count, plural, one {# service, and any added later} other {All # services, and any added later}}",
+        "some": "{chosen} of {count} services",
+        "choose": "Choose",
+        "hide": "Hide",
+        "chooseLabel": "Choose services in {category}",
+        "hideLabel": "Hide services in {category}",
+        "servicesLabel": "Services in {category}"
+      },
+      "online": "Online booking",
+      "onlineLabel": "Show for online booking",
+      "onlineHelp": "Customers can see and choose them in the app. Off: only your team can book them.",
+      "signIn": "Sign-in",
+      "signInLabel": "Sign-in account",
+      "noSignIn": "No sign-in. They can still take bookings",
+      "signInHelp": "Link an account so this person sees their own calendar. Add accounts under Sign-in accounts.",
+      "addToTeam": "Add to team",
+      "save": "Save changes",
+      "remove": "Remove from team",
+      "photo": {
+        "label": "Photo",
+        "thisPerson": "this person",
+        "rules": "PNG, JPEG or WebP, up to 5 MB and at least 320 × 320 pixels. Square photos look best.",
+        "upload": "Upload photo",
+        "change": "Change photo",
+        "remove": "Remove",
+        "uploadLabel": "Upload photo of {name}",
+        "changeLabel": "Change photo of {name}",
+        "removeLabel": "Remove photo of {name}",
+        "uploading": "Uploading…",
+        "afterAdd": "Add a photo after you add this person.",
+        "errors": {
+          "bad_request": "This file can’t be used. {rules}",
+          "request_rejected": "This file is too large. Choose one of up to 5 MB.",
+          "service_unavailable": "The photo could not be uploaded. Try again in a moment."
+        }
+      }
+    },
+    "removal": {
+      "title": "Remove {name}?",
+      "body": "They will no longer be available for booking. Past bookings keep their name. Their sign-in account, if any, stays until you remove it.",
+      "confirm": "Remove",
+      "cancel": "Cancel"
+    },
+    "toasts": {
+      "added": "Added to the team.",
+      "saved": "Profile saved.",
+      "removed": "Removed from the team.",
+      "photoSaved": "Photo saved.",
+      "photoRemoved": "Photo removed."
+    },
+    "notices": {
+      "readOnlySupport": "A support session can read the team but cannot change it.",
+      "readOnlySalon": "This salon is read-only until its overdue invoices are paid. You can read the team but not change it.",
+      "conflictTitle": "Someone else changed the team",
+      "conflictBody": "Reload to see their changes. Edits you have not saved will be lost.",
+      "reload": "Reload",
+      "unavailableTitle": "The team could not be reached",
+      "unavailableBody": "Check your connection and try again.",
+      "unavailableKept": "Nothing was saved. What you typed is still here: try again in a moment.",
+      "retry": "Try again",
+      "refused": "You can’t change the team. Ask the salon owner.",
+      "memberLimit": "A salon can have up to 200 team members. Remove someone first.",
+      "unchanged": "Nothing has changed, so there is nothing to save.",
+      "noPhoto": "This person has no photo to remove.",
+      "inUseRemoval": "{name} has {count, plural, one {# upcoming booking} other {# upcoming bookings}}. Move or cancel them first.",
+      "inUseServices": "This person has upcoming bookings for {services}. Move them first."
     }
   },
   "services": {

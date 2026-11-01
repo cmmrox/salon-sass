@@ -6,6 +6,8 @@ export class IdentityFailure extends Error {
     public fields: string[] = [],
     public retryAfter = 0,
     public renewable = false,
+    /** The API's `errors` items whole, for a refusal whose detail the screen says (F06-S01: `in_use`). */
+    public problems: { field: string; detail?: string }[] = [],
   ) {
     super(code);
   }
@@ -32,6 +34,7 @@ export async function identityRequest<T>(kind: Kind, action: string, body?: unkn
       (data.errors ?? []).map((e: { field: string }) => e.field),
       data.retryAfter ?? 0,
       data.renewable ?? false,
+      data.errors ?? [],
     );
   return data as T;
 }

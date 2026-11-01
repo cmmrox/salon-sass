@@ -65,6 +65,14 @@
      surface, as the prototype draws it (15.5:1); the blue reaches 5.1:1 on it, for a title. */
   --info: #1D5FD0;
   --info-surface: #E8F0FD;
+  /* The prototype's six colours for a person's initial (`stOpen`, F06-S01), each at least 4.5:1 under white. */
+  --avatar-1: #3E5C8A;
+  --avatar-2: #8A4B6B;
+  --avatar-3: #3E6B7A;
+  --avatar-4: #6B6B3E;
+  --avatar-5: #2F6B5E;
+  --avatar-6: #7A4A00;
+  --avatar-ink: #FFFFFF;
   --backdrop: rgb(20 20 19 / 28%);
   --opacity-disabled: 0.55;
   /* Text drawn in the salon's colour (links, the recovery control): the brand when it reaches

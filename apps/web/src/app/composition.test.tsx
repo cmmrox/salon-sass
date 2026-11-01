@@ -94,7 +94,7 @@ describe('the shell, status and notice screens render the shadcn/ui components o
   it('workspace frame from 900px: SidebarProvider, Sidebar rail with SidebarMenu buttons, SidebarTrigger and SidebarInset', () => {
     setViewportWidth(1280);
     renderWithMessages(
-      <WorkspaceShell salon={salon} permissions={['staff.list', 'audit.list']} view="staff">
+      <WorkspaceShell salon={salon} permissions={['team.read', 'staff.list', 'audit.list']} view="staff">
         <p />
       </WorkspaceShell>,
     );
@@ -106,14 +106,14 @@ describe('the shell, status and notice screens render the shadcn/ui components o
     expect(navigation.closest('[data-slot="sidebar-content"]')).not.toBeNull();
     expect(navigation.querySelectorAll('[data-slot="sidebar-menu"]')).toHaveLength(1);
     expect(navigation.querySelectorAll('[data-slot="sidebar-menu-item"]')).toHaveLength(3);
-    for (const id of ['workspace-account', 'workspace-staff', 'workspace-audit'])
+    for (const id of ['workspace-account', 'workspace-team', 'workspace-audit'])
       expect(slot(id)).toBe('sidebar-menu-button');
   });
 
   it('workspace frame below 900px: the Sidebar is its Sheet, opened by the SidebarTrigger', () => {
     setViewportWidth(360);
     renderWithMessages(
-      <WorkspaceShell salon={salon} permissions={['staff.list']}>
+      <WorkspaceShell salon={salon} permissions={['team.read']}>
         <p />
       </WorkspaceShell>,
     );
