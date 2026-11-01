@@ -39,4 +39,4 @@ requirement detail is in `qa/coverage.md`.
 | --- | --- | --- | --- | --- | --- | --- |
 | F05-S01 | Categories and services | api, web | complete | - | 0 | - |
 | F05-S02 | Variants, popular services and service deposits | api, web | complete | - | 0 | - |
-| F05-S03 | Tax, service charge and products | api, web | planned | - | 0 | **developer**: `stage-build F05-S03` |
+| F05-S03 | Tax, service charge and products | api, web | in-progress | - | 0 | **developer**: `stage-build F05-S03` |
