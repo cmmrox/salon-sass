@@ -104,10 +104,15 @@ export function choiceSaveOf(date: string, form: ChoiceForm) {
   };
 }
 
-/** The year an acceptance should show: the current year when published, else the first published year. */
-export function shownYear(years: HolidayYear[], today: string): HolidayYear | null {
-  const current = Number(today.slice(0, 4));
-  return years.find((year) => year.year === current) ?? years[0] ?? null;
+/**
+ * The years the tab shows, oldest first: every published year (the API sends them from the salon's current
+ * year on) that still has a day to come, so next year can be reviewed as soon as it is published, before
+ * January. When no year has one, the first, whose card says its days have all passed.
+ */
+export function shownYears(years: HolidayYear[]): HolidayYear[] {
+  const sorted = [...years].sort((a, b) => a.year - b.year);
+  const coming = sorted.filter((year) => comingDays(year).length > 0);
+  return coming.length > 0 ? coming : sorted.slice(0, 1);
 }
 
 /** The latest date a closure may have: a year from today (`today` is the salon's `YYYY-MM-DD`). */

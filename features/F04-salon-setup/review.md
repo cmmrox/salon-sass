@@ -75,7 +75,7 @@ the owner, not requirements: nothing is built from them until the owner approves
 | SUG-F04-03 | should | When there is no deposit, stop offering "The deposit" as what a late cancellation or a no-show keeps | CR-024 |
 | SUG-F04-04 | should | Make "Free cancellation until N hours" read sensibly when a late cancellation keeps nothing | CR-024 |
 | SUG-F04-05 | idea | Let the arrow keys choose the deposit kind, as a radio group's arrows do | backlog |
-| SUG-F04-06 | idea | Clear the Add a closure sheet's date after a closure is saved | backlog |
+| SUG-F04-06 | idea | Clear the Add a closure sheet's date after a closure is saved | fixed in 54dc397 (PR #18 review) |
 | SUG-F04-07 | idea | Show times in the History sheet on the 24-hour clock, as the Hours tab does | backlog |
 
 ### SUG-F04-01 Show each version's values, not only the rule names

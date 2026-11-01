@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardDescription, CardTitle } from '@/components/ui/card';
 import { FieldError } from '@/components/ui/field';
+import { Item, ItemActions, ItemContent, ItemDescription, ItemGroup } from '@/components/ui/item';
 import { Spinner } from '@/components/ui/spinner';
 import { Toggle } from '@/components/ui/toggle';
 import type { DayForm, WeekdayName } from '../client/hours-form';
@@ -41,29 +42,27 @@ export function OpeningHoursCard({ week, saved, bad, outside, disabled, saving, 
         )}
       </div>
       <CardDescription>{t('help')}</CardDescription>
-      <ul className="m-0 flex list-none flex-col p-0" data-testid="hours-week">
+      <ItemGroup data-testid="hours-week">
         {week.map((day) => {
           const name = t(`days.${day.day}`);
           const error = bad.includes(day.day);
           return (
-            <li
-              key={day.day}
-              className="flex flex-wrap items-center justify-between gap-2 border-b border-border py-2.5 last:border-b-0"
-              data-testid={`hours-day-${day.day}`}
-            >
-              <Toggle
-                variant="chip"
-                pressed={day.open}
-                onPressedChange={(open) => onChange(day.day, { open })}
-                disabled={disabled}
-                data-testid={`hours-${day.day}-open`}
-              >
-                {/* Named by its content, so the visible "Mon" is part of its name; pressed means open. */}
-                <span aria-hidden="true">{t(`short.${day.day}`)}</span>
-                <span className="sr-only">{name}</span>
-              </Toggle>
+            <Item variant="divided" key={day.day} className="justify-between" data-testid={`hours-day-${day.day}`}>
+              <ItemContent className="flex-none">
+                <Toggle
+                  variant="chip"
+                  pressed={day.open}
+                  onPressedChange={(open) => onChange(day.day, { open })}
+                  disabled={disabled}
+                  data-testid={`hours-${day.day}-open`}
+                >
+                  {/* Named by its content, so the visible "Mon" is part of its name; pressed means open. */}
+                  <span aria-hidden="true">{t(`short.${day.day}`)}</span>
+                  <span className="sr-only">{name}</span>
+                </Toggle>
+              </ItemContent>
               {day.open ? (
-                <span className="flex flex-wrap items-center gap-1.5">
+                <ItemActions className="gap-1.5">
                   <TimeSelect
                     value={day.opens}
                     onChange={(opens) => onChange(day.day, { opens })}
@@ -90,16 +89,14 @@ export function OpeningHoursCard({ week, saved, bad, outside, disabled, saving, 
                       {t('closesAfterOpens')}
                     </FieldError>
                   )}
-                </span>
+                </ItemActions>
               ) : (
-                <span className="text-small text-muted-foreground" data-testid={`hours-${day.day}-closed`}>
-                  {t('closed')}
-                </span>
+                <ItemDescription data-testid={`hours-${day.day}-closed`}>{t('closed')}</ItemDescription>
               )}
-            </li>
+            </Item>
           );
         })}
-      </ul>
+      </ItemGroup>
       {outside.length > 0 && (
         <Alert variant="caution" data-testid="hours-outside">
           <AlertTitle>{t('outsideTitle', { count: outside.length })}</AlertTitle>

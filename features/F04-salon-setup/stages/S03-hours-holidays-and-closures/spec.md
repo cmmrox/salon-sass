@@ -274,3 +274,8 @@ Recorded by the lead when the stage closed. No requirement changed:
   picks its date from a Popover with Calendar and closes with Escape or the backdrop; the console's
   Holiday calendar is its own page; on narrow phones a weekday's times sit below its toggle (at
   768 px they stay beside it; corrected at F04-S04 close).
+- **One holidays card per published year (corrected after the PR #18 review).** The tab shows a
+  **Public holidays <year>** card for every published year that still has days to come, in year
+  order, each with its own status, choices, version and **Accept these choices**. A salon can
+  therefore review next year's calendar as soon as the operator publishes it. The rows of the
+  Hours tab are shadcn/ui Items, and the Add a closure sheet opens empty after a closure is added.

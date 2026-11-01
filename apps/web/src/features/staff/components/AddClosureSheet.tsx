@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Field, FieldDescription, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { Item, ItemContent, ItemDescription, ItemGroup, ItemTitle } from '@/components/ui/item';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Sheet, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -65,14 +66,20 @@ export function AddClosureSheet({
   const [date, setDate] = useState<string | null>(null);
   const [reason, setReason] = useState('');
   const [picking, setPicking] = useState(false);
+  const [wasOpen, setWasOpen] = useState(open);
   const last = lastClosableDate(today);
+
+  // The sheet starts empty each time it opens or closes, however `open` changed: through the sheet, or by
+  // the caller after a closure is added (which bypasses `change`).
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    setDate(null);
+    setReason('');
+    setPicking(false);
+  }
 
   function change(next: boolean) {
     if (busy && !next) return;
-    if (!next) {
-      setDate(null);
-      setReason('');
-    }
     onOpenChange(next);
   }
 
@@ -184,18 +191,24 @@ export function AddClosureSheet({
                 <AlertTitle>{t('bookingsTitle', { count: impact.bookings.length })}</AlertTitle>
                 <AlertDescription>
                   <p className="m-0">{t('bookingsBody')}</p>
-                  <ul className="m-0 mt-2 flex list-none flex-col gap-1 p-0">
+                  <ItemGroup className="mt-2 gap-1">
                     {impact.bookings.map((booking) => (
-                      <li
+                      <Item
                         key={`${booking.time}-${booking.customerName}`}
-                        className="flex justify-between gap-2"
+                        className="justify-between gap-2 rounded-none p-0"
                         data-testid="closure-booking"
                       >
-                        <span>{t('bookingAt', { time: formatClock(booking.time), name: booking.customerName })}</span>
-                        <span className="font-medium">{booking.serviceName}</span>
-                      </li>
+                        <ItemContent>
+                          <ItemDescription className="text-body text-foreground">
+                            {t('bookingAt', { time: formatClock(booking.time), name: booking.customerName })}
+                          </ItemDescription>
+                        </ItemContent>
+                        <ItemContent className="flex-none">
+                          <ItemTitle>{booking.serviceName}</ItemTitle>
+                        </ItemContent>
+                      </Item>
                     ))}
-                  </ul>
+                  </ItemGroup>
                 </AlertDescription>
               </Alert>
             ))}

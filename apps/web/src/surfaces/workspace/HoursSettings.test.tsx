@@ -129,6 +129,9 @@ describe('the Hours & closures tab: opening hours (AC-1)', { timeout: 15_000 }, 
     expect(screen.getByTestId('hours-monday-opens')).toHaveAccessibleName('Monday opens');
     expect(screen.getByTestId('hours-monday-open')).toHaveAccessibleName('Monday');
     expect(screen.getByTestId('hours-save')).toBeEnabled();
+    // Each weekday is an Item row of the week's ItemGroup (docs/engineering/web.md, "Styling").
+    expect(screen.getByTestId('hours-week')).toHaveAttribute('data-slot', 'item-group');
+    expect(screen.getByTestId('hours-day-monday')).toHaveAttribute('data-slot', 'item');
   });
 
   it('refuses a closing time at or before the opening time beside that day, sending nothing', async () => {
@@ -225,6 +228,9 @@ describe('the Hours & closures tab: public holidays (AC-4, AC-5)', () => {
     expect(days[0]).toHaveTextContent('Public');
     expect(screen.getByTestId('holiday-2026-11-08-choice')).toHaveTextContent('Closed');
     expect(screen.queryByTestId('holiday-2026-10-25')).not.toBeInTheDocument();
+    // Each day is an Item row of the year's ItemGroup (docs/engineering/web.md, "Styling").
+    expect(screen.getByTestId('holidays-days')).toHaveAttribute('data-slot', 'item-group');
+    expect(screen.getByTestId('holiday-2026-11-08')).toHaveAttribute('data-slot', 'item');
   });
 
   it('accepts the choices, special hours with their times', async () => {
@@ -266,6 +272,89 @@ describe('the Hours & closures tab: public holidays (AC-4, AC-5)', () => {
       opens: null,
       closes: null,
     });
+  });
+
+  /** Next year, published before January with two days of its own. */
+  const nextYear = (overrides: Partial<HolidayYear> = {}): HolidayYear =>
+    yearOf({
+      year: 2027,
+      revision: 1,
+      publishedAt: '2026-10-20T04:30:00Z',
+      version: 0,
+      days: [
+        { ...yearOf().days[1]!, date: '2027-01-14', name: 'Tamil Thai Pongal Day' },
+        { ...yearOf().days[1]!, date: '2027-02-04', name: 'Independence Day', kind: 'bank' },
+      ],
+      ...overrides,
+    });
+
+  it('shows a card for each published year with days to come, in year order, each with its own status', async () => {
+    answers.holidays = () => Response.json({ years: [reviewed(1), nextYear()] });
+    render();
+    const current = await screen.findByTestId('holidays-card');
+    const next = screen.getByTestId('holidays-card-2027');
+    expect(current).toHaveAttribute('data-year', '2026');
+    expect(current).toHaveTextContent('Public holidays 2026');
+    expect(next).toHaveTextContent('Public holidays 2027');
+    expect(current.compareDocumentPosition(next) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByTestId('holidays-status')).toHaveTextContent('Reviewed');
+    expect(screen.getByTestId('holidays-status-2027')).toHaveTextContent('To review');
+    expect(within(screen.getByTestId('holidays-days-2027')).getAllByRole('listitem')).toHaveLength(2);
+    expect(screen.queryByTestId('holidays-accept')).not.toBeInTheDocument();
+    expect(screen.getByTestId('holidays-accept-2027')).toBeEnabled();
+  });
+
+  it('accepts next year with its own version and choices, leaving this year as it was', async () => {
+    // Next year was accepted once (version 2) and the operator has since revised a day, so it is to review
+    // again; this year has not been accepted, so its choices are a proposal.
+    const revised = nextYear({
+      version: 2,
+      days: nextYear().days.map((day) =>
+        day.kind === 'bank' ? { ...day, choice: 'open', toReview: false } : { ...day, choice: 'closed' },
+      ),
+    });
+    answers.holidays = () => Response.json({ years: [yearOf(), revised] });
+    answers['holidays-accept'] = () =>
+      Response.json({
+        ...revised,
+        reviewed: true,
+        version: 3,
+        days: revised.days.map((day) => ({ ...day, toReview: false })),
+      });
+    render();
+    await chooseOption(await screen.findByTestId('holiday-2026-12-25-choice'), 'Special hours');
+    expect(changes(), 'a choice in a year not yet accepted is only a proposal').toEqual([]);
+    expect(screen.getByTestId('holiday-2027-02-04-choice')).toHaveTextContent('Open as usual');
+    fireEvent.click(screen.getByTestId('holidays-accept-2027'));
+
+    expect(await screen.findByTestId('holidays-status-2027')).toHaveTextContent('Reviewed');
+    expect(changes()).toEqual([
+      {
+        url: expect.stringMatching(/\/holidays-accept$/),
+        body: {
+          year: 2027,
+          version: 2,
+          choices: [
+            { date: '2027-01-14', choice: 'closed', opens: null, closes: null },
+            { date: '2027-02-04', choice: 'open', opens: null, closes: null },
+          ],
+        },
+      },
+    ]);
+    expect(screen.queryByTestId('holidays-accept-2027')).not.toBeInTheDocument();
+    expect(screen.getByTestId('holidays-status')).toHaveTextContent('To review');
+    expect(screen.getByTestId('holiday-2026-12-25-choice'), 'this year keeps its unsaved proposal').toHaveTextContent(
+      'Special hours',
+    );
+    expect(screen.getByTestId('holidays-accept')).toBeEnabled();
+  });
+
+  it('leaves out a year whose days have all passed when a later year has days to come', async () => {
+    answers.holidays = () =>
+      Response.json({ years: [yearOf({ days: yearOf().days.map((day) => ({ ...day, past: true })) }), nextYear()] });
+    render();
+    expect(await screen.findByTestId('holidays-card')).toHaveAttribute('data-year', '2027');
+    expect(screen.queryByText('Public holidays 2026')).not.toBeInTheDocument();
   });
 
   it('says the operator has not published this year’s holidays yet', async () => {
@@ -329,8 +418,30 @@ describe('the Hours & closures tab: special closures (AC-7)', () => {
 
     expect(await within(sheet).findByTestId('closure-bookings')).toHaveTextContent('1 booking on this day.');
     expect(within(sheet).getByTestId('closure-booking')).toHaveTextContent('10:30 · Nimali Perera');
+    expect(within(sheet).getByTestId('closure-booking')).toHaveAttribute('data-slot', 'item');
     fireEvent.click(within(sheet).getByTestId('closure-confirm'));
     expect(await within(sheet).findByTestId('closure-date-error')).toHaveTextContent('This day is already closed.');
+  });
+
+  it('opens the sheet empty again after a closure is added', async () => {
+    answers['closure-impact'] = () => Response.json({ date: '2026-11-05', bookings: [] });
+    answers['closure-add'] = () => Response.json(closure, { status: 201 });
+    render();
+    fireEvent.click(await screen.findByTestId('closure-add'));
+    let sheet = await screen.findByTestId('closure-sheet');
+    fireEvent.click(within(sheet).getByTestId('closure-date'));
+    fireEvent.click(within(await screen.findByTestId('closure-calendar')).getByRole('button', { name: /November 5/ }));
+    await within(sheet).findByTestId('closure-no-bookings');
+    fireEvent.change(within(sheet).getByTestId('closure-reason'), { target: { value: 'Staff training' } });
+    fireEvent.click(within(sheet).getByTestId('closure-confirm'));
+    await screen.findByTestId('closure-row');
+    await waitFor(() => expect(screen.queryByTestId('closure-sheet')).not.toBeInTheDocument());
+
+    fireEvent.click(screen.getByTestId('closure-add'));
+    sheet = await screen.findByTestId('closure-sheet');
+    expect(within(sheet).getByTestId('closure-date')).toHaveTextContent('Choose a day');
+    expect(within(sheet).getByTestId('closure-reason')).toHaveValue('');
+    expect(within(sheet).getByTestId('closure-confirm')).toBeDisabled();
   });
 
   it('reopens a closure', async () => {

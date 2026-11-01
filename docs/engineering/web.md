@@ -219,7 +219,7 @@ because the owner set one standard for all Next.js work in this product.
    | Check box or switch with its label | Field `orientation="horizontal"` with Checkbox or Switch |
    | Workspace navigation and any menu | Sidebar (rail from 900px, its sheet below 900px); Dropdown Menu or Navigation Menu for other menus |
    | Container | Card |
-   | Row of a list (device, staff member, audit entry, any record) | Item (`ItemGroup`, `Item`, `ItemContent`, `ItemTitle`, `ItemDescription`, `ItemActions`) |
+   | Row of a list (device, staff member, audit entry, any record) | Item (`ItemGroup`, `Item`, `ItemContent`, `ItemTitle`, `ItemDescription`, `ItemActions`); the `divided` variant rules a line under each row, as the prototype's settings lists do (F04) |
    | Tabular data meant to be compared across columns | Table |
    | Status word, role, tag | Badge |
    | Nothing to show | Empty |

@@ -7,6 +7,8 @@ import { Separator } from "@/components/ui/separator"
 
 // A row of a list (a device, a staff member, an audit entry): the prototype's rounded row with the
 // line colour inside a white card (`outline`), its content and its actions wrapping on phones.
+// `divided` is the prototype's ruled row (`.hrow`, the Hours tab's weekdays and holidays): no box,
+// a line under each row but the last, flush with the card's padding.
 
 function ItemGroup({ className, ...props }: React.ComponentProps<"div">) {
   return (
@@ -41,12 +43,14 @@ const itemVariants = cva(
         default: "bg-transparent",
         outline: "border-border",
         muted: "bg-muted",
+        divided: "rounded-none border-0 border-b border-border last:border-b-0",
       },
       size: {
         default: "gap-4 p-4",
         sm: "gap-2.5 px-4 py-3",
       },
     },
+    compoundVariants: [{ variant: "divided", class: "gap-2 px-0 py-2.5" }],
     defaultVariants: {
       variant: "default",
       size: "default",
