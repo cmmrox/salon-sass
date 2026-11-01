@@ -41,13 +41,16 @@ export function TaxPreview({
       <h2 id="tax-preview-title" className="m-0 text-large font-semibold">
         {t('previewTitle')}
       </h2>
-      <Card className="gap-1.5 text-small" data-testid="tax-preview">
+      <Card className="gap-0 py-2 text-small" data-testid="tax-preview">
         {lines.map((line, index) => {
           const item = 'priceMinor' in line;
           return (
             <p
               key={`${line.kind}-${index}`}
-              className={cn('m-0 flex justify-between gap-3', item && index > 0 && 'mt-2')}
+              className={cn(
+                'm-0 flex justify-between gap-3 border-b border-border py-2.5 last:border-b-0',
+                item && index > 0 && 'mt-2',
+              )}
               data-testid="tax-preview-line"
               data-kind={line.kind}
             >

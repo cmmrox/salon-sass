@@ -7,7 +7,12 @@ import { Card } from '@/components/ui/card';
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/ui/empty';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/utils';
 import type { Product, PublicTax } from '../types';
+
+/** The prototype's table (`.tbl`): small muted headings on white, roomier cells, rows ruled in the line colour. */
+const HEAD = 'h-12 px-4 text-small font-medium text-muted-foreground';
+const CELL = 'px-4 py-3 text-body';
 
 type Props = {
   products: Product[];
@@ -97,24 +102,28 @@ export function ProductList({ products, tax, canChange, onNew, onEdit }: Props) 
     <Card className="p-0" data-testid="product-table">
       <Table aria-label={t('table')}>
         <TableHeader>
-          <TableRow>
-            <TableHead>{t('product')}</TableHead>
-            <TableHead>{t('price')}</TableHead>
-            <TableHead>{t('tax')}</TableHead>
-            <TableHead>{t('atCheckout')}</TableHead>
-            {canChange && <TableHead className="text-right">{t('actions')}</TableHead>}
+          <TableRow className="border-border hover:bg-transparent">
+            <TableHead className={HEAD}>{t('product')}</TableHead>
+            <TableHead className={HEAD}>{t('price')}</TableHead>
+            <TableHead className={HEAD}>{t('tax')}</TableHead>
+            <TableHead className={HEAD}>{t('atCheckout')}</TableHead>
+            {canChange && <TableHead className="sr-only">{t('actions')}</TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
           {products.map((product) => (
-            <TableRow key={product.id} data-testid="product-row" data-id={product.id}>
-              <TableCell className="font-medium wrap-anywhere whitespace-normal" data-testid="product-name">
+            <TableRow key={product.id} className="border-border" data-testid="product-row" data-id={product.id}>
+              <TableCell className={cn(CELL, 'font-medium wrap-anywhere whitespace-normal')} data-testid="product-name">
                 {product.name}
               </TableCell>
-              <TableCell data-testid="product-price">{formatMoney(product.priceMinor, product.currency)}</TableCell>
-              <TableCell data-testid="product-tax">{taxOf(product)}</TableCell>
-              <TableCell>{sold(product)}</TableCell>
-              {canChange && <TableCell className="text-right">{edit(product)}</TableCell>}
+              <TableCell className={CELL} data-testid="product-price">
+                {formatMoney(product.priceMinor, product.currency)}
+              </TableCell>
+              <TableCell className={CELL} data-testid="product-tax">
+                {taxOf(product)}
+              </TableCell>
+              <TableCell className={CELL}>{sold(product)}</TableCell>
+              {canChange && <TableCell className={cn(CELL, 'text-right')}>{edit(product)}</TableCell>}
             </TableRow>
           ))}
         </TableBody>
