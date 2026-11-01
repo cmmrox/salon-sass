@@ -574,6 +574,9 @@ test uses them is in `docs/qa/test-plan.md`.
   `salon.branding.images.concurrent-decodes` (2) at once, then 503; re-encoded, so no metadata is
   kept. The web BFF counts the bytes it reads and stops past its limit even without a
   `Content-Length`, because Next.js's own proxy limit truncates rather than refuses.
+  From F05-S01 the decoding, limits and re-encoding are `shared` code (no business rules), used by
+  `branding` and `catalogue`; each module keeps its own image table and sets its own limits under
+  its settings prefix (`salon.catalogue.images.*`), decision 093.
 
 ## Tests
 
