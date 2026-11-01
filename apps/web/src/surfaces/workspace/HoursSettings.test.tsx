@@ -423,6 +423,27 @@ describe('the Hours & closures tab: special closures (AC-7)', () => {
     expect(await within(sheet).findByTestId('closure-date-error')).toHaveTextContent('This day is already closed.');
   });
 
+  it('opens the sheet empty again after a closure is added', async () => {
+    answers['closure-impact'] = () => Response.json({ date: '2026-11-05', bookings: [] });
+    answers['closure-add'] = () => Response.json(closure, { status: 201 });
+    render();
+    fireEvent.click(await screen.findByTestId('closure-add'));
+    let sheet = await screen.findByTestId('closure-sheet');
+    fireEvent.click(within(sheet).getByTestId('closure-date'));
+    fireEvent.click(within(await screen.findByTestId('closure-calendar')).getByRole('button', { name: /November 5/ }));
+    await within(sheet).findByTestId('closure-no-bookings');
+    fireEvent.change(within(sheet).getByTestId('closure-reason'), { target: { value: 'Staff training' } });
+    fireEvent.click(within(sheet).getByTestId('closure-confirm'));
+    await screen.findByTestId('closure-row');
+    await waitFor(() => expect(screen.queryByTestId('closure-sheet')).not.toBeInTheDocument());
+
+    fireEvent.click(screen.getByTestId('closure-add'));
+    sheet = await screen.findByTestId('closure-sheet');
+    expect(within(sheet).getByTestId('closure-date')).toHaveTextContent('Choose a day');
+    expect(within(sheet).getByTestId('closure-reason')).toHaveValue('');
+    expect(within(sheet).getByTestId('closure-confirm')).toBeDisabled();
+  });
+
   it('reopens a closure', async () => {
     answers.closures = () => Response.json([closure]);
     answers['closure-reopen'] = () => Response.json({ ok: true });

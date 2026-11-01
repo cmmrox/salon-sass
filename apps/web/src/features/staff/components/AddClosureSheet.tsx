@@ -66,14 +66,20 @@ export function AddClosureSheet({
   const [date, setDate] = useState<string | null>(null);
   const [reason, setReason] = useState('');
   const [picking, setPicking] = useState(false);
+  const [wasOpen, setWasOpen] = useState(open);
   const last = lastClosableDate(today);
+
+  // The sheet starts empty each time it opens or closes, however `open` changed: through the sheet, or by
+  // the caller after a closure is added (which bypasses `change`).
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    setDate(null);
+    setReason('');
+    setPicking(false);
+  }
 
   function change(next: boolean) {
     if (busy && !next) return;
-    if (!next) {
-      setDate(null);
-      setReason('');
-    }
     onOpenChange(next);
   }
 
