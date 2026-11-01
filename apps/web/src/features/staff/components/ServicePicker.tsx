@@ -5,8 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Field, FieldContent, FieldDescription, FieldLabel } from '@/components/ui/field';
 import { Toggle } from '@/components/ui/toggle';
+import { cn } from '@/lib/utils';
 import { categoryRows, toggleCategory, toggleService, type MemberValues } from '../client/team-form';
 import type { TeamCategory, TeamService } from '../types';
+
+/** The prototype's `.row`: a white rounded row, ringed in the brand colour when it is on. */
+export const ROW_CLASSES = 'rounded-card bg-card p-4';
+export const ROW_ON_CLASSES = 'ring-2 ring-primary ring-inset';
 
 type Props = {
   values: MemberValues;
@@ -38,8 +43,8 @@ export function ServicePicker({ values, categories, services, disabled, onChange
         const opened = ticked && open.includes(row.category.id);
         return (
           <div key={row.category.id} className="flex flex-col gap-2" data-testid="team-picker-row" data-id={row.category.id}>
-            <div className="flex items-start justify-between gap-3">
-              <Field orientation="horizontal" className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <Field orientation="horizontal" className={cn(ROW_CLASSES, 'min-w-0 flex-1', ticked && ROW_ON_CLASSES)}>
                 <Checkbox
                   id={id}
                   checked={ticked}

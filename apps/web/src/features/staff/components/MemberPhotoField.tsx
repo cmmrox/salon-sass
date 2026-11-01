@@ -42,15 +42,18 @@ export function MemberPhotoField({ memberId, name, photoId, isNew, upload, disab
   const person = name.trim() || t('thisPerson');
   return (
     <Field data-invalid={reason !== null || undefined}>
-      <FieldLabel htmlFor={isNew ? undefined : id}>{t('label')}</FieldLabel>
-      <div className="flex flex-wrap items-center gap-3">
-        <MemberAvatar id={memberId} name={name || '?'} photoId={photoId} className="size-21" />
+      {/* The prototype shows no heading here: the avatar and its button say what this is. */}
+      <FieldLabel htmlFor={isNew ? undefined : id} className="sr-only">
+        {t('label')}
+      </FieldLabel>
+      <div className="flex items-center gap-4">
+        <MemberAvatar id={memberId} name={name || '?'} photoId={photoId} large />
         {isNew ? (
           <FieldDescription id={`${id}-description`} className="min-w-0 flex-1" data-testid="team-photo-after-add">
             {t('afterAdd')}
           </FieldDescription>
         ) : (
-          <>
+          <div className="flex min-w-0 flex-1 flex-col gap-2">
             <Input
               ref={input}
               id={id}
@@ -68,36 +71,38 @@ export function MemberPhotoField({ memberId, name, photoId, isNew, upload, disab
               }}
               data-testid="team-photo-file"
             />
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={busy}
-              aria-describedby={describedBy}
-              aria-label={photoId ? t('changeLabel', { name: person }) : t('uploadLabel', { name: person })}
-              onClick={() => input.current?.click()}
-              data-testid="team-photo-choose"
-            >
-              {upload.state === 'uploading' && <Spinner />}
-              {upload.state === 'uploading' ? t('uploading') : photoId ? t('change') : t('upload')}
-            </Button>
-            {photoId && (
+            <div className="flex flex-wrap gap-2">
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 disabled={busy}
-                aria-label={t('removeLabel', { name: person })}
-                onClick={onRemove}
-                data-testid="team-photo-remove"
+                aria-describedby={describedBy}
+                aria-label={photoId ? t('changeLabel', { name: person }) : t('uploadLabel', { name: person })}
+                onClick={() => input.current?.click()}
+                data-testid="team-photo-choose"
               >
-                {t('remove')}
+                {upload.state === 'uploading' && <Spinner />}
+                {upload.state === 'uploading' ? t('uploading') : photoId ? t('change') : t('upload')}
               </Button>
-            )}
-          </>
+              {photoId && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={busy}
+                  aria-label={t('removeLabel', { name: person })}
+                  onClick={onRemove}
+                  data-testid="team-photo-remove"
+                >
+                  {t('remove')}
+                </Button>
+              )}
+            </div>
+            <FieldDescription id={`${id}-description`}>{t('rules')}</FieldDescription>
+          </div>
         )}
       </div>
-      {!isNew && <FieldDescription id={`${id}-description`}>{t('rules')}</FieldDescription>}
       {upload.state === 'uploading' && (
         <p className="sr-only" role="status">
           {t('uploading')}

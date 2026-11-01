@@ -20,18 +20,23 @@ export function MemberAvatar({
   id,
   name,
   photoId,
-  className,
+  large = false,
 }: {
   id: string;
   name: string;
   photoId: string | null;
-  className?: string;
+  /** The sheet's 84px, not the card's 52px, each with its initial in proportion as the prototype's `avH` draws it. */
+  large?: boolean;
 }) {
   return (
-    <Avatar className={cn('size-13', className)} data-testid="team-member-avatar">
+    <Avatar className={large ? 'size-21' : 'size-13'} data-testid="team-member-avatar">
       {photoId && <AvatarImage src={teamPhotoSource(photoId)} alt={DECORATIVE} data-testid="team-member-photo" />}
       <AvatarFallback
-        className={cn('font-semibold text-avatar-ink', id ? toneOf(id) : 'bg-avatar-1')}
+        className={cn(
+          'font-semibold text-avatar-ink',
+          large ? 'text-4xl' : 'text-xl',
+          id ? toneOf(id) : 'bg-avatar-1',
+        )}
         data-testid="team-member-initial"
       >
         {initialOf(name)}
@@ -74,7 +79,8 @@ export function TeamCards({ members, categories, services, canManage, canSeeAcco
       </Empty>
     );
   return (
-    <div className="grid gap-3 wide:grid-cols-2" data-testid="team-list">
+    // The prototype's `.gc3`: one column on a phone, two from 900px and three from 1200px.
+    <div className="grid gap-3 rail:grid-cols-2 wide:grid-cols-3" data-testid="team-list">
       {members.map((member) => {
         const names = performedCategoryNames(member, categories, services);
         return (
@@ -86,26 +92,27 @@ export function TeamCards({ members, categories, services, canManage, canSeeAcco
                   {member.name}
                 </h2>
                 {member.title && (
-                  <p className="text-small text-foreground wrap-anywhere" data-testid="team-card-title">
+                  <p className="text-small text-muted-foreground wrap-anywhere" data-testid="team-card-title">
                     {member.title}
                   </p>
                 )}
               </div>
             </div>
             {member.bio && (
-              <p className="text-small text-foreground wrap-anywhere" data-testid="team-card-bio">
+              <p className="text-small text-muted-foreground wrap-anywhere" data-testid="team-card-bio">
                 {member.bio}
               </p>
             )}
-            <dl className="flex flex-col gap-2 text-small">
-              <div className="flex items-start justify-between gap-3">
-                <dt className="shrink-0 text-foreground">{t('card.services')}</dt>
+            {/* The prototype's `.kv`: a line under each row but the last, muted labels on the white card. */}
+            <dl className="flex flex-col divide-y divide-border text-small">
+              <div className="flex items-start justify-between gap-4 py-2">
+                <dt className="shrink-0 text-muted-foreground">{t('card.services')}</dt>
                 <dd className="text-right font-medium wrap-anywhere" data-testid="team-card-services">
                   {names.length > 0 ? names.join(', ') : t('card.noServices')}
                 </dd>
               </div>
-              <div className="flex items-center justify-between gap-3">
-                <dt className="shrink-0 text-foreground">{t('card.online')}</dt>
+              <div className="flex items-center justify-between gap-4 py-2">
+                <dt className="shrink-0 text-muted-foreground">{t('card.online')}</dt>
                 <dd>
                   <Badge variant={member.shownOnline ? 'positive' : 'outline'} data-testid="team-card-online">
                     {member.shownOnline ? t('card.shown') : t('card.hidden')}
@@ -113,8 +120,8 @@ export function TeamCards({ members, categories, services, canManage, canSeeAcco
                 </dd>
               </div>
               {canSeeAccounts && (
-                <div className="flex items-start justify-between gap-3">
-                  <dt className="shrink-0 text-foreground">{t('card.signIn')}</dt>
+                <div className="flex items-start justify-between gap-4 py-2">
+                  <dt className="shrink-0 text-muted-foreground">{t('card.signIn')}</dt>
                   <dd className="text-right font-medium wrap-anywhere" data-testid="team-card-sign-in">
                     {member.signInLabel ?? t('card.noSignIn')}
                   </dd>

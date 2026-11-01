@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils';
 import { BIO_MAX, lengthOf, type MemberProblem, type MemberValues } from '../client/team-form';
 import type { TeamCategory, TeamService, TeamSignInAccount } from '../types';
 import { MemberPhotoField, type MemberPhotoUpload } from './MemberPhotoField';
-import { ServicePicker } from './ServicePicker';
+import { ROW_CLASSES, ROW_ON_CLASSES, ServicePicker } from './ServicePicker';
 
 /**
  * The prototype's sheet (CR-017, web.md "Styling" rule 11): a bottom sheet on phones capped in height, and from 900px a
@@ -189,7 +189,7 @@ export function MemberSheet(props: Props) {
             <h2 id="team-online-heading" className="font-semibold">
               {t('online')}
             </h2>
-            <Field orientation="horizontal">
+            <Field orientation="horizontal" className={cn(ROW_CLASSES, values.shownOnline && ROW_ON_CLASSES)}>
               <Switch
                 id="team-online"
                 checked={values.shownOnline}
