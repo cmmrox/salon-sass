@@ -1,0 +1,25 @@
+id: F05-S02
+feature: F05
+title: "Variants, popular services and service deposits"
+sequence: 2
+surfaces: [api, web]
+status: outlined
+qa_status: not-run
+blocked_reason: null
+released_in: null
+reopened_by: null
+depends_on: [F05-S01]
+requirements: [CAT-03, CAT-06]
+nfr_focus: []
+handoff:
+  run: null
+  data: null
+  notes: null
+verification:
+  commands: []
+  automation: []
+  manual: []
+  deferred: []
+evidence:
+  last_run: null
+  last_result: null

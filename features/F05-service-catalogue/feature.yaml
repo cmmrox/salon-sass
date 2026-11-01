@@ -3,10 +3,16 @@ title: "Service catalogue"
 summary: "A salon creates, edits, duplicates, hides and safely deletes its services, categories, variants, prices and tax settings, keeps a simple product list to sell at checkout, and customers browse the menu. Service time is stored as active, processing and buffer segments (CR-023)."
 release: R1
 milestone: M1-web
-status: backlog
+status: planned
 qa_status: not-run
 released_in: null
 depends_on: [F04]
+integration:
+  branch: charithm/feature/F05-service-catalogue
+  pull_request: null
+  qa_revision: null
+  merged_commit: null
+  merged_at: null
 surfaces: [api, web]
 requirements: [CAT-01, CAT-02, CAT-03, CAT-04, CAT-05, CAT-06, INV-01]
 nfr_focus: []

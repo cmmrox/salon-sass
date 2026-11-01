@@ -1,0 +1,25 @@
+id: F05-S03
+feature: F05
+title: "Tax, service charge and products"
+sequence: 3
+surfaces: [api, web]
+status: outlined
+qa_status: not-run
+blocked_reason: null
+released_in: null
+reopened_by: null
+depends_on: [F05-S01]
+requirements: [CAT-05, INV-01]
+nfr_focus: []
+handoff:
+  run: null
+  data: null
+  notes: null
+verification:
+  commands: []
+  automation: []
+  manual: []
+  deferred: []
+evidence:
+  last_run: null
+  last_result: null

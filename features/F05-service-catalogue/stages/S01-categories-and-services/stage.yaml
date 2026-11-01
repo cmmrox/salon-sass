@@ -1,0 +1,25 @@
+id: F05-S01
+feature: F05
+title: "Categories and services"
+sequence: 1
+surfaces: [api, web]
+status: outlined
+qa_status: not-run
+blocked_reason: null
+released_in: null
+reopened_by: null
+depends_on: []
+requirements: [CAT-01, CAT-02, CAT-04]
+nfr_focus: []
+handoff:
+  run: null
+  data: null
+  notes: null
+verification:
+  commands: []
+  automation: []
+  manual: []
+  deferred: []
+evidence:
+  last_run: null
+  last_result: null

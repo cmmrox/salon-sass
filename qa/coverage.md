@@ -6,7 +6,7 @@
 
 | Release | Requirements | Owned by a feature | Assigned to a stage | Passed QA |
 | --- | --- | --- | --- | --- |
-| R1 | 97 | 97 | 23 | 23 |
+| R1 | 97 | 97 | 30 | 23 |
 | R2 | 74 | 48 | 44 | 0 |
 | R3 | 21 | 8 | 8 | 0 |
 
@@ -77,12 +77,12 @@ Cases waiting for something else. `feature-verify` and `release-prepare` go thro
 | IAM-12 | R2 | should | unowned | - |
 | IAM-13 | R3 | could | unowned | - |
 | IAM-14 | R1 | should | F10 | - |
-| CAT-01 | R1 | must | F05 | - |
-| CAT-02 | R1 | must | F05 | - |
-| CAT-03 | R1 | should | F05 | - |
-| CAT-04 | R1 | must | F05 | - |
-| CAT-05 | R1 | must | F05 | - |
-| CAT-06 | R1 | should | F05 | - |
+| CAT-01 | R1 | must | F05 | F05-S01 (outlined) |
+| CAT-02 | R1 | must | F05 | F05-S01 (outlined) |
+| CAT-03 | R1 | should | F05 | F05-S02 (outlined) |
+| CAT-04 | R1 | must | F05 | F05-S01 (outlined) |
+| CAT-05 | R1 | must | F05 | F05-S03 (outlined) |
+| CAT-06 | R1 | should | F05 | F05-S02 (outlined) |
 | CAT-07 | R2 | should | F17 | F17-S01 (outlined), F17-S03 (outlined) |
 | CAT-08 | R2 | should | F17 | F17-S01 (outlined) |
 | CAT-09 | R2 | should | F17 | F17-S02 (outlined) |
@@ -213,7 +213,7 @@ Cases waiting for something else. `feature-verify` and `release-prepare` go thro
 | BRD-11 | R2 | should | unowned | - |
 | BRD-12 | R2 | should | unowned | - |
 | BRD-13 | R2 | should | unowned | - |
-| INV-01 | R1 | could | F05 | - |
+| INV-01 | R1 | could | F05 | F05-S03 (outlined) |
 | INV-02 | R3 | could | unowned | - |
 | INV-03 | R3 | could | unowned | - |
 | OCC-01 | R2 | must | F19 | F19-S01 (outlined) |
