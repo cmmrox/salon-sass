@@ -113,3 +113,20 @@ const NEUTRAL_ACCENT = { brand: '#111827', onBrand: '#ffffff', soft: '#EAE5DC', 
 export function neutralRootRule(): string {
   return `:root{--color-brand:${NEUTRAL_ACCENT.brand};--color-on-brand:${NEUTRAL_ACCENT.onBrand};--color-brand-soft:${NEUTRAL_ACCENT.soft};--color-brand-text:${NEUTRAL_ACCENT.text}}`;
 }
+
+/** The prototype's six brand colour swatches (Settings, Branding), in its order (F04-S02). */
+export const BRAND_SWATCHES = ['#D6086A', '#141413', '#CC5500', '#8A4B6B', '#2F6B5E', '#2F4B8A'] as const;
+
+/**
+ * The theme's primary colour and the text on it for one element only: the Branding tab's preview, which shows
+ * an unpublished colour without the rest of the workspace taking it (F04-S02). The text colour is this
+ * module's own rule, never a copy. A run-time value, so a style prop is its one way in (web.md, rule 4).
+ *
+ * @throws Error when the colour is not `#RRGGBB`
+ */
+export function brandPreviewStyle(brandColour: string): Record<'--primary' | '--primary-foreground', string> {
+  if (!isHexColour(brandColour)) {
+    throw new Error(`not a #RRGGBB colour: '${brandColour}'`);
+  }
+  return { '--primary': brandColour, '--primary-foreground': contrastColour(brandColour) };
+}

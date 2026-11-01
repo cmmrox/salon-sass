@@ -12,8 +12,8 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
 
 /**
- * Branding's exporter and eraser for a closed salon (PLT-06): its published name and colour, its branches
- * and its business profile, draft and published. Nothing in them is secret, so no column is left out.
+ * Branding's exporter and eraser for a closed salon (PLT-06): its published name and colour, its branches,
+ * its business profile and brand drafts, and its brand images. Nothing in them is secret, so no column is left out.
  */
 @Component
 class BrandTenantData implements TenantDataModule {
@@ -25,7 +25,10 @@ class BrandTenantData implements TenantDataModule {
             new Table("branding_profile_published", "tenant_id", Map.of()),
             new Table("branding_profile_draft", "tenant_id", Map.of()),
             new Table("branding_branch", "id", Map.of()),
-            new Table("salon_brand", "tenant_id", Map.of()));
+            new Table("branding_brand_draft", "tenant_id", Map.of()),
+            new Table("salon_brand", "tenant_id", Map.of()),
+            // Last: the drafts and the published brand refer to their images.
+            new Table("branding_image", "id", Map.of()));
 
     private final JdbcClient jdbc;
     private final ObjectProvider<PlatformDatabase> platform;

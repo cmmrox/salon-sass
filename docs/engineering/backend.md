@@ -566,6 +566,12 @@ test uses them is in `docs/qa/test-plan.md`.
   sign-ins, support sessions) write an audit entry with actor, time, tenant, and before and after.
 - Gateway credentials are encrypted at rest and never returned by any endpoint.
 - Never log a password, one-time code, token, card detail or full phone number.
+- Uploads (F04-S02): content checked by decoding, never by name or declared type; the header's
+  declared pixels limited before decoding (`salon.branding.images.max-pixels`, 50M); decoding
+  subsampled to a fixed budget (16M pixels) whatever the shape; at most
+  `salon.branding.images.concurrent-decodes` (2) at once, then 503; re-encoded, so no metadata is
+  kept. The web BFF counts the bytes it reads and stops past its limit even without a
+  `Content-Length`, because Next.js's own proxy limit truncates rather than refuses.
 
 ## Tests
 

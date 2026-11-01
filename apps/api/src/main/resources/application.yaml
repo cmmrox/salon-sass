@@ -62,6 +62,13 @@ spring:
   mvc:
     problemdetails:
       enabled: true
+  # The one multipart request, a brand image upload (F04-S02): the request as a whole may be up to 10 MB, so
+  # that a file over the image limit (salon.branding.images.max-bytes, 5 MB) is still read and answered as a
+  # field error naming it; beyond this, the request is refused unread, 413.
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
   # A request body is read strictly: a value of another JSON type is never turned into the declared
   # one. A number in quotes is not a number, a decimal is not a whole number, and 1 is not true; each
   # is a validation failure that names the field (400 bad_request), as the contract's types say.
@@ -243,3 +250,11 @@ salon.support:
 # two-letter code, stored in E.164 and shown in its national format (decision 084, NFR-13).
 salon.branding:
   phone-region: ${SALON_BRANDING_PHONE_REGION:LK}
+  # Brand images (F04-S02, decision 086): the largest file accepted, and the most pixels an image may
+  # declare before it is decoded (a decompression bomb is refused from its header). A larger file within
+  # the request limit below is a field error; beyond it, 413.
+  images:
+    max-bytes: ${SALON_BRANDING_IMAGE_MAX_BYTES:5MB}
+    max-pixels: ${SALON_BRANDING_IMAGE_MAX_PIXELS:50000000}
+    # Uploads decoded at once per instance; one more waits up to two seconds, then is refused 503.
+    concurrent-decodes: ${SALON_BRANDING_IMAGE_CONCURRENT_DECODES:2}

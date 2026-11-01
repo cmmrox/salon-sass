@@ -47,12 +47,14 @@ class OpenApiShapeTest extends IntegrationTest {
                     .isEqualTo("#/components/schemas/Problem");
         }
         assertThat(document.<List<String>>read("$.components.schemas.Salon.required"))
-                .containsExactlyInAnyOrder("slug", "name", "brandColour", "timeZone", "profile");
+                .containsExactlyInAnyOrder(
+                        "slug", "name", "brandColour", "timeZone", "tagline", "logo", "cover", "profile");
         assertThat(document.<Map<String, Object>>read("$.components.schemas.Salon.properties")
                         .keySet())
                 .as("nothing identifies the salon beyond what its customers see: its brand and published profile"
                         + " (F04-S01)")
-                .containsExactlyInAnyOrder("slug", "name", "brandColour", "timeZone", "profile");
+                .containsExactlyInAnyOrder(
+                        "slug", "name", "brandColour", "timeZone", "tagline", "logo", "cover", "profile");
         assertThat(document.<Map<String, Object>>read(salon))
                 .as("the salon comes from the hostname, never from a parameter")
                 .doesNotContainKey("parameters");

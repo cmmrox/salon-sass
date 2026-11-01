@@ -24,7 +24,7 @@ import org.junit.jupiter.params.provider.FieldSource;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 /**
- * The second layer on its own for F04-S01's tables: row-level security, with Hibernate nowhere in the path.
+ * The second layer on its own for F04-S01's and F04-S02's tables: row-level security, with Hibernate nowhere in the path.
  * Plain SQL as the application's role, which in this database may also select, insert, update and delete every
  * one of them, so that the policy and nothing else stands between one salon and another. With two salons' rows
  * in every table: with no salon set nothing is seen or written; alpha sees only its own rows, even asking for
@@ -37,6 +37,8 @@ class BrandingTablesRowLevelSecurityAloneIntegrationTest {
 
     /** Each table and the column that tells one of a salon's rows from another. */
     static final Map<String, String> KEYS = new LinkedHashMap<>(Map.of(
+            "branding_brand_draft", "tenant_id",
+            "branding_image", "id",
             "branding_branch", "id",
             "branding_branch_contact_draft", "branch_id",
             "branding_branch_contact_published", "branch_id",
@@ -69,6 +71,11 @@ class BrandingTablesRowLevelSecurityAloneIntegrationTest {
                             + " created_at, updated_at) VALUES (?, ?, now(), ?, now(), now())",
                     salon.id(),
                     salon.name(),
+                    UUID.randomUUID());
+            owner.update(
+                    "INSERT INTO branding_image (tenant_id, id, kind, media_type, width, height, bytes, created_at,"
+                            + " updated_at) VALUES (?, ?, 'logo', 'image/png', 10, 10, '\\x89504e47', now(), now())",
+                    salon.id(),
                     UUID.randomUUID());
             owner.update(
                     "INSERT INTO branding_branch_contact_published (tenant_id, branch_id, phone, created_at, updated_at)"
@@ -166,9 +173,20 @@ class BrandingTablesRowLevelSecurityAloneIntegrationTest {
                         salon.id());
     }
 
+    /** A salon's rows of a table, with any bytes written as hex so that two reads compare by value. */
     private static List<Map<String, Object>> rowsOf(String table, TestSalon salon) {
-        return database.asOwner()
-                .queryForList("SELECT * FROM " + table + " WHERE tenant_id = ? ORDER BY 1, 2", salon.id());
+        return database
+                .asOwner()
+                .queryForList("SELECT * FROM " + table + " WHERE tenant_id = ? ORDER BY 1, 2", salon.id())
+                .stream()
+                .map(row -> {
+                    Map<String, Object> copy = new LinkedHashMap<>(row);
+                    copy.replaceAll((column, value) -> value instanceof byte[] bytes
+                            ? java.util.HexFormat.of().formatHex(bytes)
+                            : value);
+                    return copy;
+                })
+                .toList();
     }
 
     /** A copy of one of alpha's rows with the given salon and a new key: only the policy can refuse it. */

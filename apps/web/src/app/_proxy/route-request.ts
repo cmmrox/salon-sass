@@ -57,6 +57,7 @@ const PROTECTED = new Set([
   '/workspace/support-access',
   '/workspace/settings',
   '/workspace/settings/profile',
+  '/workspace/settings/branding',
 ]);
 
 /** Settings, and the first of its tabs (F04-S01): Profile, the only one delivered so far. */

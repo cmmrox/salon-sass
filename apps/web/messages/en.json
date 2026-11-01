@@ -577,7 +577,8 @@
     "intro": "Changes are saved as a draft that only staff who manage settings can see. Publish to show them to your customers.",
     "tabsLabel": "Settings section",
     "tabs": {
-      "profile": "Profile"
+      "profile": "Profile",
+      "branding": "Branding"
     },
     "profile": {
       "loading": "Loading the salon profile",
@@ -622,23 +623,6 @@
       "previewChat": "Chat on WhatsApp",
       "previewDirections": "Directions",
       "previewNote": "The “Chat on WhatsApp” button uses your own number and is on every plan.",
-      "readOnlySupport": "A support session can read the profile but cannot change it.",
-      "readOnlySalon": "This salon is read-only until its overdue invoices are paid. You can read the profile but not change it.",
-      "conflictTitle": "Someone else changed the profile",
-      "conflictBody": "Reload to see their changes. Edits you have not saved will be lost.",
-      "reload": "Reload",
-      "unavailableTitle": "The profile could not be reached",
-      "unavailableBody": "Check your connection and try again.",
-      "unavailableKept": "Nothing was saved. What you typed is still here: try again in a moment.",
-      "retry": "Try again",
-      "fixFields": "Some details need fixing. Check the fields marked below.",
-      "refused": {
-        "permission_denied": "Your account cannot change the salon’s settings.",
-        "support_read_only": "A support session can read the profile but cannot change it.",
-        "salon_read_only": "This salon is read-only until its overdue invoices are paid.",
-        "salon_suspended": "This salon is not available at the moment.",
-        "invalid_state": "There is nothing new to publish."
-      },
       "errors": {
         "phone": "Enter a valid phone number, like 011 234 5678.",
         "whatsapp": "Enter a mobile number, like 077 123 4567.",
@@ -662,13 +646,92 @@
       "discard": "Discard changes",
       "discardTitle": "Discard your changes?",
       "discardBody": "The profile goes back to what customers see now. This cannot be undone.",
-      "keepEditing": "Keep editing"
+      "keepEditing": "Keep editing",
+      "publishedHelpBrand": "Customers see your current branding.",
+      "discardBodyBrand": "The branding goes back to what customers see now. This cannot be undone."
     },
     "leave": {
       "title": "Leave without saving?",
       "body": "You have edits that are not saved. If you leave now, they are lost.",
       "stay": "Stay on this page",
       "leave": "Leave without saving"
+    },
+    "notices": {
+      "readOnlySupport": "A support session can read the {subject, select, brand {branding} other {profile}} but cannot change it.",
+      "readOnlySalon": "This salon is read-only until its overdue invoices are paid. You can read the {subject, select, brand {branding} other {profile}} but not change it.",
+      "conflictTitle": "Someone else changed the {subject, select, brand {branding} other {profile}}",
+      "conflictBody": "Reload to see their changes. Edits you have not saved will be lost.",
+      "reload": "Reload",
+      "unavailableTitle": "The {subject, select, brand {branding} other {profile}} could not be reached",
+      "unavailableBody": "Check your connection and try again.",
+      "unavailableKept": "Nothing was saved. What you typed is still here: try again in a moment.",
+      "retry": "Try again",
+      "fixFields": "Some details need fixing. Check the fields marked below.",
+      "refused": {
+        "permission_denied": "Your account cannot change the salon’s settings.",
+        "support_read_only": "A support session can read the {subject, select, brand {branding} other {profile}} but cannot change it.",
+        "salon_read_only": "This salon is read-only until its overdue invoices are paid.",
+        "salon_suspended": "This salon is not available at the moment.",
+        "invalid_state": "There is nothing new to publish."
+      }
+    },
+    "brand": {
+      "loading": "Loading the salon branding",
+      "previewHeading": "Preview",
+      "previewBook": "Book an appointment",
+      "previewDraftNote": "Only staff who manage settings can see these changes until you publish them.",
+      "previewPublishedNote": "Your customers see this branding.",
+      "namePlaceholder": "Salon name",
+      "details": "Salon details",
+      "name": "Salon name",
+      "tagline": "Tagline",
+      "images": "Images",
+      "hint": "({hint})",
+      "logo": {
+        "label": "Logo",
+        "hint": "square, shown as a circle",
+        "choose": "Choose a logo",
+        "useDefault": "Use default logo",
+        "chosen": "The chosen logo",
+        "rules": "A PNG, JPEG or WebP image of up to 5 MB, at least 128 × 128 pixels. Its centre square is kept."
+      },
+      "cover": {
+        "label": "Cover photo",
+        "hint": "wide, about 1200 × 500",
+        "choose": "Choose a cover",
+        "useDefault": "Use default cover",
+        "chosen": "The chosen cover photo",
+        "neutral": "The default cover",
+        "rules": "A PNG, JPEG or WebP image of up to 5 MB, at least 800 × 300 pixels and no taller than it is wide."
+      },
+      "uploading": "Uploading…",
+      "imageErrors": {
+        "bad_request": "That file can’t be used. {rules}",
+        "request_rejected": "That file is too large. {rules}",
+        "service_unavailable": "The image could not be uploaded just now. Try again in a moment."
+      },
+      "colour": "Brand colour",
+      "swatches": "Brand colour swatches",
+      "useColour": "Use colour {colour}",
+      "colourCode": "Colour code",
+      "colourHelp": "Six hexadecimal digits after #, like #D6086A. Text on it is made readable automatically.",
+      "reset": "Reset to default branding",
+      "resetTitle": "Reset to the default branding?",
+      "resetBody": "The colour goes back to the default and the logo, cover photo and tagline are removed. The name stays. Nothing changes for customers until you publish.",
+      "keep": "Keep my branding",
+      "save": "Save draft",
+      "saving": "Saving…",
+      "saved": "Draft saved",
+      "published": "Published. Customers now see your branding.",
+      "discarded": "Changes discarded",
+      "resetDone": "Default branding set. Publish to show it to customers.",
+      "errors": {
+        "name": "Enter a name of up to 60 characters.",
+        "tagline": "Use up to 80 characters.",
+        "colour": "Enter a colour as # and six hexadecimal digits, like #D6086A.",
+        "logo": "Choose the logo again.",
+        "cover": "Choose the cover photo again."
+      }
     }
   }
 }

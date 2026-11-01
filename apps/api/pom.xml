@@ -62,6 +62,8 @@
         <dependency><groupId>com.eatthepath</groupId><artifactId>java-otp</artifactId><version>1.0.0</version></dependency>
         <!-- Phone numbers checked against the configured region and stored in E.164 (decision 084, NFR-13). -->
         <dependency><groupId>com.googlecode.libphonenumber</groupId><artifactId>libphonenumber</artifactId><version>9.0.42</version></dependency>
+        <!-- WebP reading for ImageIO: brand images are checked by decoding and re-encoded (decision 086, F04-S02). -->
+        <dependency><groupId>com.twelvemonkeys.imageio</groupId><artifactId>imageio-webp</artifactId><version>3.15.3</version></dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-webmvc</artifactId>
