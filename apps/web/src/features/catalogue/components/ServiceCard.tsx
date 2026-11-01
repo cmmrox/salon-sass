@@ -11,6 +11,12 @@ import { photoSource } from './photo-source';
 /** The prototype lists the first four variants, then how many more. */
 const SHOWN_OPTIONS = 4;
 
+/**
+ * While a change runs, Hide or Show online and Duplicate look disabled and ignore a press, but are not disabled: a
+ * disabled button drops keyboard focus to the page, as the Popular choice did (F05-S02).
+ */
+const BUSY = 'aria-disabled:cursor-not-allowed aria-disabled:opacity-(--opacity-disabled)';
+
 type Props = {
   service: CatalogueService;
   categoryName: string;
@@ -129,8 +135,9 @@ export function ServiceCard({ service, categoryName, canChange, busy, onEdit, on
           <Button
             variant="outline"
             size="sm"
-            disabled={busy}
-            onClick={onToggleOnline}
+            className={BUSY}
+            aria-disabled={busy || undefined}
+            onClick={() => !busy && onToggleOnline()}
             aria-label={online ? t('hideLabel', { name: service.name }) : t('showLabel', { name: service.name })}
             data-testid="service-card-online"
           >
@@ -139,8 +146,9 @@ export function ServiceCard({ service, categoryName, canChange, busy, onEdit, on
           <Button
             variant="outline"
             size="sm"
-            disabled={busy}
-            onClick={onDuplicate}
+            className={BUSY}
+            aria-disabled={busy || undefined}
+            onClick={() => !busy && onDuplicate()}
             aria-label={t('duplicateLabel', { name: service.name })}
             data-testid="service-card-duplicate"
           >
