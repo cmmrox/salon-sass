@@ -4,6 +4,7 @@ import type {
   CategoryList,
   PopularSetting,
   Product,
+  ProductListAnswer,
   PublicTax,
   ServiceList,
   TaxSettings,
@@ -174,7 +175,8 @@ export function product(id: string, name: string, options: Partial<Product> = {}
 }
 
 /** Three products, by name: one without VAT and one not sold. */
-export const PRODUCTS = {
+export const PRODUCTS: ProductListAnswer = {
+  currency: 'LKR',
   items: [
     product('44444444-0000-4000-8000-000000000001', 'Argan oil shampoo 250 ml'),
     product('44444444-0000-4000-8000-000000000002', 'Keratin hair mask 200 ml', {

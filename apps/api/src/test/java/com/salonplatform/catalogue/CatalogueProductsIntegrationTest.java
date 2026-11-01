@@ -123,6 +123,19 @@ class CatalogueProductsIntegrationTest extends TwoSalonCatalogue {
     }
 
     @Test
+    void theListGivesTheSalonsCurrencyBeforeItsFirstProductAndAddsInIt() {
+        assertThat(api.body(api.call(alpha, "GET", PRODUCTS, null, manager)))
+                .containsEntry("currency", "LKR")
+                .containsEntry("items", List.of());
+        owner.update("UPDATE tenant SET currency = 'USD' WHERE id = ?", alpha.id());
+
+        assertThat(api.body(api.call(alpha, "GET", PRODUCTS, null, manager)))
+                .containsEntry("currency", "USD")
+                .containsEntry("items", List.of());
+        assertThat(added(product("Argan oil shampoo 250 ml", 32, false, true))).containsEntry("currency", "USD");
+    }
+
+    @Test
     void everyBrokenRuleIsAFieldErrorOnAnAddAndASaveAndNothingIsSaved() {
         Map<String, Object> oil = added(product("Hair oil", 1500, true, true));
         List<Map<String, Object>> before = rows();

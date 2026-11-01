@@ -27,8 +27,16 @@ public interface ProductService {
             boolean soldAtCheckout,
             long version) {}
 
-    /** Every product of the salon, by name regardless of case: at most 300. */
-    List<ProductView> list();
+    /**
+     * Every product of the salon, by name regardless of case (at most 300), with the salon's currency.
+     *
+     * @param currency the salon's ISO 4217 currency now: what an added or saved product's price is kept in, also
+     *     before its first product
+     */
+    record ProductList(String currency, List<ProductView> items) {}
+
+    /** Every product of the salon, by name regardless of case: at most 300, with the salon's currency. */
+    ProductList list();
 
     /**
      * Adds a product. 400 on {@code name} when it is not 2 to 40 characters after trimming or another product has it

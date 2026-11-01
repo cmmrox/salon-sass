@@ -65,11 +65,14 @@ class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public List<ProductView> list() {
+    public ProductList list() {
         Scope at = scope.of(CatalogueScope.READ);
-        return reading.execute(status -> products.byName(at.branch()).stream()
-                .map(ProductServiceImpl::view)
-                .toList());
+        String salonCurrency = currency.current();
+        return new ProductList(
+                salonCurrency,
+                reading.execute(status -> products.byName(at.branch()).stream()
+                        .map(ProductServiceImpl::view)
+                        .toList()));
     }
 
     @Override

@@ -100,13 +100,20 @@ describe('the Products tab (F05-S03 AC-7)', () => {
   });
 
   it('says there are no products yet and offers New product', async () => {
-    answers['catalogue-products'] = () => Response.json({ items: [] });
+    answers['catalogue-products'] = () => Response.json({ currency: 'LKR', items: [] });
     render();
     expect(await screen.findByTestId('products-empty')).toHaveTextContent(
       'No products yetAdd what you sell at the desk, like shampoo or hair oil.',
     );
     fireEvent.click(screen.getByTestId('products-empty-new'));
     expect(await screen.findByTestId('product-sheet')).toBeInTheDocument();
+  });
+
+  it('prices the first product of an empty list in the salon’s currency', async () => {
+    answers['catalogue-products'] = () => Response.json({ currency: 'USD', items: [] });
+    render();
+    fireEvent.click(await screen.findByTestId('products-empty-new'));
+    expect(await screen.findByLabelText('Price (USD)')).toBeInTheDocument();
   });
 
   it('gives a reader the list with no change controls', async () => {

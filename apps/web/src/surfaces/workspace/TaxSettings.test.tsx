@@ -286,7 +286,7 @@ describe('What customers pay (AC-4, AC-5)', () => {
 
   it('uses the prototype’s examples when there is no service or product, with the cents of every part', async () => {
     answers['catalogue-services'] = () => Response.json({ currency: 'LKR', items: [] });
-    answers['catalogue-products'] = () => Response.json({ items: [] });
+    answers['catalogue-products'] = () => Response.json({ currency: 'LKR', items: [] });
     render();
     fireEvent.click(await screen.findByTestId('tax-vat-registered'));
     fireEvent.click(screen.getByTestId('tax-charge-on'));

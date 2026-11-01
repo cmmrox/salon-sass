@@ -1844,6 +1844,8 @@ export interface components {
             version: number;
         };
         CatalogueProductList: {
+            /** @description The salon's currency, ISO 4217: what an added or saved product's price is entered and kept in, also before its first product. */
+            currency: string;
             items: components["schemas"]["CatalogueProduct"][];
         };
         CatalogueService: {

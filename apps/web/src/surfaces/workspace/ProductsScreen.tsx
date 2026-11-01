@@ -98,7 +98,8 @@ export function ProductsScreen({ kind, canChange, readOnly }: Props) {
           problems={products.sheetProblems}
           canSave={products.sheetCanSave}
           saving={products.busy}
-          currency={products.sheet.product?.currency ?? items[0]?.currency ?? 'LKR'}
+          // The salon's currency, which the list gives also before its first product: what a save keeps it in.
+          currency={products.products?.currency ?? 'LKR'}
           vat={vat}
           onChange={products.changeProduct}
           onSave={() => void products.save()}
