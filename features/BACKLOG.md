@@ -42,6 +42,7 @@ Added by the lead at `stage-close` and `feature-close`, from suggestions classed
 | Tell a browser that runs no scripts something other than "checking the service" for ever | SUG-F01-S01-04 | Decide the no-script policy before the branded shell (F01-S03) |
 | Web money entry for currencies without two fraction digits | F05-S01 handoff | The web counts 100 minor units per unit; only two-digit currencies can be provisioned today (F04 close). Fix before such a currency is offered |
 | Silence the dev-only Next.js "uncached data" error on workspace routes | F05-S01 handoff | Predates F05; seen in development only |
+| Make the names in the Services tab's folded line links that open New service in that category | SUG-F05-04 | Follows CR-025 |
 | Let name inputs reach their limit with emoji (`maxLength` counts UTF-16 units, so a 40-character emoji name keeps 39) | PR #19 fixes | Nothing is corrupted; changing it touches every name input |
 | Measure lengths in code points in `HolidayDays`, `ClosureServiceImpl`, `SalonProvisioningServiceImpl`, and cut `OutboxStore`'s error text between characters | PR #19 fixes | Same mistake as `CopyNames`, outside F05 |
 | Do not call a request the server refuses to understand (501, 505) an `internal_error` | SUG-F01-S01-05 | It will be noise in error-rate alerting; fits F01-S04 |

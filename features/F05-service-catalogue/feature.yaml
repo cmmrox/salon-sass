@@ -14,7 +14,7 @@ depends_on:
 integration:
   branch: charithm/feature/F05-service-catalogue
   pull_request: https://github.com/cmmrox/salon-sass/pull/19
-  qa_revision: 7000ac950830005741811022cde53a730a97692e
+  qa_revision: 866669b9e761d10030dbb4a199dc97a80c7df208
   merged_commit: 3e60834a5bd2484b716aff11c68527ab962cd499
   merged_at: '2026-11-01T19:27:51Z'
 surfaces:
