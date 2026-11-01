@@ -34,7 +34,7 @@ asked for. A case is a test titled with its id and criteria, or a manual or defe
 | F04-S02 | complete | - | BRD-01, BRD-04 | 12 | 34 | 34 | 0 | 0 |
 | F04-S03 | complete | - | STF-04, NFR-13 | 12 | 32 | 31 | 0 | 1 |
 | F04-S04 | complete | - | BKG-02, BKG-09 | 10 | 26 | 26 | 0 | 0 |
-| F05-S01 | planned | - | CAT-01, CAT-02, CAT-04 | 16 | 0 | 0 | 0 | 0 |
+| F05-S01 | in-progress | - | CAT-01, CAT-02, CAT-04 | 16 | 0 | 0 | 0 | 0 |
 
 ## Deferred cases
 
@@ -78,10 +78,10 @@ Cases waiting for something else. `feature-verify` and `release-prepare` go thro
 | IAM-12 | R2 | should | unowned | - |
 | IAM-13 | R3 | could | unowned | - |
 | IAM-14 | R1 | should | F10 | - |
-| CAT-01 | R1 | must | F05 | F05-S01 (planned) |
-| CAT-02 | R1 | must | F05 | F05-S01 (planned) |
+| CAT-01 | R1 | must | F05 | F05-S01 (in-progress) |
+| CAT-02 | R1 | must | F05 | F05-S01 (in-progress) |
 | CAT-03 | R1 | should | F05 | F05-S02 (outlined) |
-| CAT-04 | R1 | must | F05 | F05-S01 (planned) |
+| CAT-04 | R1 | must | F05 | F05-S01 (in-progress) |
 | CAT-05 | R1 | must | F05 | F05-S03 (outlined) |
 | CAT-06 | R1 | should | F05 | F05-S02 (outlined) |
 | CAT-07 | R2 | should | F17 | F17-S01 (outlined), F17-S03 (outlined) |

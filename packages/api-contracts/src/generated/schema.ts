@@ -20,6 +20,200 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/catalogue/categories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The categories in the salon's order. `catalogue.read`. */
+        get: operations["listCatalogueCategories"];
+        put?: never;
+        /** Adds a category at the end of the list. `catalogue.price.change`. */
+        post: operations["addCatalogueCategory"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalogue/categories/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Renames a category. `catalogue.price.change`. */
+        put: operations["renameCatalogueCategory"];
+        post?: never;
+        /** Deletes a category that has no services. `catalogue.price.change`. */
+        delete: operations["deleteCatalogueCategory"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalogue/categories/{id}/move": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Moves a category one place up or down, at once. `catalogue.price.change`.
+         * @description Customers see the new order straight away.
+         */
+        post: operations["moveCatalogueCategory"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalogue/menu": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The salon's bookable menu. Public.
+         * @description Its categories in its order, each with its services that are bookable online, by name. A category without such services is left out. Amounts are minor units of `currency`.
+         */
+        get: operations["getCatalogueMenu"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalogue/photos/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A service photo of the salon. Public. */
+        get: operations["getCatalogueServicePhoto"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalogue/services": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Every service of the salon with its current terms, by name. `catalogue.read`. */
+        get: operations["listCatalogueServices"];
+        put?: never;
+        /** Creates a service with its first terms version. `catalogue.price.change`. */
+        post: operations["createCatalogueService"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalogue/services/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One service with its current terms. `catalogue.read`. */
+        get: operations["getCatalogueService"];
+        /**
+         * Saves every field of a service. `catalogue.price.change`.
+         * @description A change of price, time or buffer creates a new terms version and makes it current; new bookings use it and existing bookings keep theirs. Any other change creates none.
+         */
+        put: operations["saveCatalogueService"];
+        post?: never;
+        /**
+         * Deletes a service no upcoming booking uses. `catalogue.price.change`.
+         * @description It leaves the workspace and the menu and frees its name. Its terms versions are kept for the bookings that use them.
+         */
+        delete: operations["deleteCatalogueService"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalogue/services/{id}/duplicate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Copies a service, hidden online. `catalogue.price.change`.
+         * @description Named `<name> (copy)`, or `(copy 2)` and upward when taken, shortened to fit 40 characters, with its own first terms version and its own copy of the photo.
+         */
+        post: operations["duplicateCatalogueService"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalogue/services/{id}/online": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Shows a service online or hides it. Nothing else changes. `catalogue.price.change`. */
+        put: operations["setCatalogueServiceOnline"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalogue/services/{id}/photo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Sets the service's photo, replacing any earlier one. `catalogue.price.change`.
+         * @description A PNG, JPEG or WebP image of up to 5 MB and at least 320 x 320, told by its content, not its name or declared type. It is cropped to its centre square and kept as a JPEG of at most 800 x 800, re-encoded, so no metadata is kept. The replaced photo is no longer served.
+         */
+        put: operations["uploadCatalogueServicePhoto"];
+        post?: never;
+        /** Removes the service's photo. `catalogue.price.change`. */
+        delete: operations["removeCatalogueServicePhoto"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/exports/{token}": {
         parameters: {
             query?: never;
@@ -1436,6 +1630,114 @@ export interface components {
              */
             version: number;
         };
+        CatalogueCategory: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /**
+             * Format: int32
+             * @description Its place in the salon's order: a lower position comes first.
+             */
+            position: number;
+            /**
+             * Format: int64
+             * @description How many services it has.
+             */
+            serviceCount: number;
+            /**
+             * Format: int64
+             * @description Its version, which a rename or delete is made from.
+             */
+            version: number;
+        };
+        CatalogueCategoryList: {
+            items: components["schemas"]["CatalogueCategory"][];
+            /**
+             * Format: int64
+             * @description The list's version, which a move is made from; raised by every add, delete and move.
+             */
+            listVersion: number;
+        };
+        CatalogueService: {
+            bookableOnline: boolean;
+            /** Format: uuid */
+            categoryId: string;
+            /** @description Null when it has none. */
+            description: string | null;
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /**
+             * Format: uuid
+             * @description Its photo; null when it has none.
+             */
+            photoId: string | null;
+            /** @description Where its photo is served on the salon's hostname; null when it has none. */
+            photoUrl: string | null;
+            terms: components["schemas"]["CatalogueServiceTerms"];
+            /**
+             * Format: int64
+             * @description Its version, which a change is made from.
+             */
+            version: number;
+        };
+        CatalogueServiceList: {
+            items: components["schemas"]["CatalogueService"][];
+        };
+        CatalogueServiceOnline: {
+            bookableOnline: boolean;
+            /**
+             * Format: int64
+             * @description The service's version, as read.
+             */
+            version: number;
+        };
+        CatalogueServicePhotoUpload: {
+            /**
+             * Format: binary
+             * @description The image file: PNG, JPEG or WebP, up to 5 MB.
+             */
+            file: string;
+        };
+        CatalogueServiceSegment: {
+            /**
+             * @description `active` occupies the professional; `buffer` follows the service and is not shown to customers. R1 makes no `processing` segment.
+             * @enum {string}
+             */
+            kind: "active" | "processing" | "buffer";
+            /** Format: int32 */
+            minutes: number;
+        };
+        CatalogueServiceTerms: {
+            /**
+             * Format: int32
+             * @description The buffer after it: 0 for none.
+             */
+            bufferMinutes: number;
+            /** @description ISO 4217. */
+            currency: string;
+            /**
+             * Format: int32
+             * @description The service's time: every segment but the buffer.
+             */
+            durationMinutes: number;
+            /**
+             * Format: int64
+             * @description The version's number for this service, from 1.
+             */
+            number: number;
+            /**
+             * Format: int64
+             * @description The price in minor units of `currency`.
+             */
+            priceMinor: number;
+            segments: components["schemas"]["CatalogueServiceSegment"][];
+            /**
+             * Format: uuid
+             * @description The terms version; a booking made now keeps it.
+             */
+            versionId: string;
+        };
         Challenge: {
             /** Format: uuid */
             challengeId: string;
@@ -1796,6 +2098,43 @@ export interface components {
             /** Format: int64 */
             sizeBytes: number;
         };
+        Menu: {
+            /** @description A category with nothing bookable online is left out. */
+            categories: components["schemas"]["MenuCategory"][];
+            /** @description The salon's currency, ISO 4217. */
+            currency: string;
+        };
+        MenuCategory: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            services: components["schemas"]["MenuService"][];
+        };
+        MenuService: {
+            currency: string;
+            /** @description Null when it has none. */
+            description: string | null;
+            /**
+             * Format: int32
+             * @description The customer's time in minutes; the buffer after it is not included.
+             */
+            durationMinutes: number;
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** @description Where its photo is served; null when it has none. */
+            photoUrl: string | null;
+            /**
+             * Format: int64
+             * @description The price in minor units of `currency`, tax included.
+             */
+            priceMinor: number;
+            /**
+             * Format: uuid
+             * @description The current terms version; a booking made now keeps it.
+             */
+            termsVersionId: string;
+        };
         /** @description What the running service says about itself. */
         Meta: {
             /**
@@ -1820,11 +2159,52 @@ export interface components {
              */
             version: string;
         };
+        MoveCatalogueCategory: {
+            /** @enum {string} */
+            direction: "up" | "down";
+            /**
+             * Format: int64
+             * @description The category list's version, as read.
+             */
+            listVersion: number;
+        };
         MovePlanRequest: {
             /** Format: uuid */
             planId: string;
             /** Format: int64 */
             version: number;
+        };
+        NewCatalogueCategory: {
+            /** @description 2 to 30 characters after trimming, unique in the salon regardless of case. */
+            name: string;
+        };
+        NewCatalogueService: {
+            /** @description Whether customers can book it online; on when absent. */
+            bookableOnline?: boolean;
+            /**
+             * Format: int32
+             * @description 0 to 60 minutes after the service, in steps of 5.
+             */
+            bufferMinutes: number;
+            /**
+             * Format: uuid
+             * @description One of the salon's categories.
+             */
+            categoryId: string;
+            /** @description Up to 90 characters; empty or null for none. */
+            description?: string | null;
+            /**
+             * Format: int32
+             * @description 5 to 480 minutes, in steps of 5.
+             */
+            durationMinutes: number;
+            /** @description 2 to 40 characters after trimming, unique in the salon regardless of case. */
+            name: string;
+            /**
+             * Format: int64
+             * @description Minor units of the salon's currency, a whole number of units: Rs. 100 to Rs. 500,000 (10000 to 50000000), scaled for other currencies.
+             */
+            priceMinor: number;
         };
         /** @description No rules saved yet. */
         NoBookingRules: null;
@@ -2068,7 +2448,7 @@ export interface components {
              * @description The stable reason. Branch on this.
              * @enum {string}
              */
-            code: "invalid_client_assertion" | "confirmation_required" | "invalid_code" | "code_expired" | "provider_unavailable" | "invalid_credentials" | "invalid_session" | "permission_denied" | "conflict" | "rate_limited" | "slug_taken" | "plan_key_taken" | "idempotency_conflict" | "salon_read_only" | "entitlement_exceeded" | "invalid_state" | "support_read_only" | "support_session_active" | "bad_request" | "not_found" | "method_not_allowed" | "not_acceptable" | "unsupported_media_type" | "request_rejected" | "service_unavailable" | "salon_suspended" | "internal_error";
+            code: "invalid_client_assertion" | "confirmation_required" | "invalid_code" | "code_expired" | "provider_unavailable" | "invalid_credentials" | "invalid_session" | "permission_denied" | "conflict" | "rate_limited" | "slug_taken" | "plan_key_taken" | "idempotency_conflict" | "salon_read_only" | "entitlement_exceeded" | "invalid_state" | "in_use" | "limit_reached" | "support_read_only" | "support_session_active" | "bad_request" | "not_found" | "method_not_allowed" | "not_acceptable" | "unsupported_media_type" | "request_rejected" | "service_unavailable" | "salon_suspended" | "internal_error";
             /** @description A sentence for a person. Do not branch on it. */
             detail?: string;
             /** @description For a request body that failed validation (`bad_request`): each field that failed, when the failure has a field. Never the value that was refused. */
@@ -2133,6 +2513,15 @@ export interface components {
         };
         RefreshRequest: {
             refreshToken: string;
+        };
+        RenameCatalogueCategory: {
+            /** @description 2 to 30 characters after trimming, unique in the salon regardless of case. */
+            name: string;
+            /**
+             * Format: int64
+             * @description The category's version, as read.
+             */
+            version: number;
         };
         RescheduleInput: {
             /**
@@ -2600,6 +2989,38 @@ export interface components {
              */
             version: number;
         };
+        SaveCatalogueService: {
+            bookableOnline: boolean;
+            /**
+             * Format: int32
+             * @description 0 to 60 minutes after the service, in steps of 5.
+             */
+            bufferMinutes: number;
+            /**
+             * Format: uuid
+             * @description One of the salon's categories.
+             */
+            categoryId: string;
+            /** @description Up to 90 characters; empty or null for none. */
+            description?: string | null;
+            /**
+             * Format: int32
+             * @description 5 to 480 minutes, in steps of 5.
+             */
+            durationMinutes: number;
+            /** @description 2 to 40 characters after trimming, unique in the salon regardless of case. */
+            name: string;
+            /**
+             * Format: int64
+             * @description Minor units of the salon's currency, a whole number of units.
+             */
+            priceMinor: number;
+            /**
+             * Format: int64
+             * @description The service's version, as read.
+             */
+            version: number;
+        };
         SaveOpeningHours: {
             /** Format: int64 */
             version: number;
@@ -2823,6 +3244,1258 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Acknowledged"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listCatalogueCategories: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The categories, at most 50. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogueCategoryList"];
+                };
+            };
+            /** @description No valid session for this salon: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Without `catalogue.read`: `permission_denied`. A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The hostname names no salon: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The database is down or not answering: `service_unavailable`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    addCatalogueCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewCatalogueCategory"];
+            };
+        };
+        responses: {
+            /** @description The category. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogueCategory"];
+                };
+            };
+            /** @description The name is not 2 to 30 characters, or another category has it regardless of case: `bad_request`, with `errors` naming `name`. Nothing is saved. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No valid session for this salon: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Without `catalogue.price.change`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The hostname names no salon: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The salon has 50 categories: `limit_reached`. A change made at the same moment won: `conflict`. Nothing is saved. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The database is down or not answering: `service_unavailable`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    renameCatalogueCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RenameCatalogueCategory"];
+            };
+        };
+        responses: {
+            /** @description The category, renamed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogueCategory"];
+                };
+            };
+            /** @description The name is not 2 to 30 characters, or another category has it regardless of case, or `version` is missing: `bad_request`, with `errors` naming the field. Nothing is saved. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No valid session for this salon: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Without `catalogue.price.change`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No such category of the hostname's salon, or the hostname names no salon: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `version` is not the category's: `conflict`. The name is unchanged: `invalid_state`. Nothing is saved. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The database is down or not answering: `service_unavailable`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    deleteCatalogueCategory: {
+        parameters: {
+            query?: {
+                version?: number;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `version` is missing or below 0: `bad_request`, with `errors` naming it. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No valid session for this salon: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Without `catalogue.price.change`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No such category of the hostname's salon, or the hostname names no salon: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description It has services: `in_use`. It is the last category: `invalid_state`. `version` is not the category's: `conflict`. Nothing is deleted. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The database is down or not answering: `service_unavailable`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    moveCatalogueCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MoveCatalogueCategory"];
+            };
+        };
+        responses: {
+            /** @description The categories in their new order. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogueCategoryList"];
+                };
+            };
+            /** @description `direction` is not `up` or `down`, or `listVersion` is missing: `bad_request`, with `errors` naming the field. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No valid session for this salon: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Without `catalogue.price.change`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No such category of the hostname's salon, or the hostname names no salon: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `listVersion` is not the list's: `conflict`. The first category moved up or the last down: `invalid_state`. Nothing is saved. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The database is down or not answering: `service_unavailable`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getCatalogueMenu: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The menu. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Menu"];
+                };
+            };
+            /** @description A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The hostname names no salon: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The database is down or not answering: `service_unavailable`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getCatalogueServicePhoto: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The photo: a JPEG, never stored by a cache, with `nosniff`. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/jpeg": string;
+                };
+            };
+            /** @description A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No such photo of the hostname's salon (a replaced or removed one included), or the hostname names no salon: `not_found`, the same answer each time. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The database is down or not answering: `service_unavailable`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listCatalogueServices: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The services, at most 300. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogueServiceList"];
+                };
+            };
+            /** @description No valid session for this salon: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Without `catalogue.read`: `permission_denied`. A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The hostname names no salon: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The database is down or not answering: `service_unavailable`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    createCatalogueService: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewCatalogueService"];
+            };
+        };
+        responses: {
+            /** @description The service. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogueService"];
+                };
+            };
+            /** @description A field broke a rule (a category that is not the salon's included), or another service has the name regardless of case: `bad_request`, with `errors` naming each field. Nothing is saved. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No valid session for this salon: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Without `catalogue.price.change`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The hostname names no salon: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The salon has 300 services: `limit_reached`. A change made at the same moment won: `conflict`. Nothing is saved. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The database is down or not answering: `service_unavailable`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getCatalogueService: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The service. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogueService"];
+                };
+            };
+            /** @description No valid session for this salon: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Without `catalogue.read`: `permission_denied`. A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No such service of the hostname's salon, or the hostname names no salon: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The database is down or not answering: `service_unavailable`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    saveCatalogueService: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveCatalogueService"];
+            };
+        };
+        responses: {
+            /** @description The service as saved. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogueService"];
+                };
+            };
+            /** @description A field broke a rule (a category that is not the salon's included), or another service has the name regardless of case: `bad_request`, with `errors` naming each field. Nothing is saved. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No valid session for this salon: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Without `catalogue.price.change`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No such service of the hostname's salon, or the hostname names no salon: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `version` is not the service's: `conflict`. Nothing changed: `invalid_state`. Nothing is saved. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The database is down or not answering: `service_unavailable`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    deleteCatalogueService: {
+        parameters: {
+            query?: {
+                version?: number;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `version` is missing or below 0: `bad_request`, with `errors` naming it. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No valid session for this salon: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Without `catalogue.price.change`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No such service of the hostname's salon, or the hostname names no salon: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Upcoming bookings use it: `in_use`; hide it from online booking instead. `version` is not the service's: `conflict`. Nothing is deleted. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The database is down or not answering: `service_unavailable`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    duplicateCatalogueService: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The copy. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogueService"];
+                };
+            };
+            /** @description No valid session for this salon: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Without `catalogue.price.change`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No such service of the hostname's salon, or the hostname names no salon: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The salon has 300 services: `limit_reached`. Nothing is saved. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The database is down or not answering: `service_unavailable`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    setCatalogueServiceOnline: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CatalogueServiceOnline"];
+            };
+        };
+        responses: {
+            /** @description The service. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogueService"];
+                };
+            };
+            /** @description `bookableOnline` or `version` is missing: `bad_request`, with `errors` naming it. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No valid session for this salon: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Without `catalogue.price.change`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No such service of the hostname's salon, or the hostname names no salon: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `version` is not the service's: `conflict`. It is already so: `invalid_state`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The database is down or not answering: `service_unavailable`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    uploadCatalogueServicePhoto: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["CatalogueServicePhotoUpload"];
+            };
+        };
+        responses: {
+            /** @description The service with its new photo. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogueService"];
+                };
+            };
+            /** @description The file is missing, not one of the three types, too large, too small, or cannot be decoded: `bad_request`, with `errors` naming `file`. The service keeps its previous photo. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No valid session for this salon: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Without `catalogue.price.change`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No such service of the hostname's salon, or the hostname names no salon: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The request is over the 10 MB request limit: `request_rejected`. Nothing is kept. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The database is down or not answering, or too many uploads are being decoded at once: `service_unavailable`. Try again. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    removeCatalogueServicePhoto: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The service without a photo. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogueService"];
+                };
+            };
+            /** @description No valid session for this salon: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Without `catalogue.price.change`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No such service of the hostname's salon, or the hostname names no salon: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The service has no photo: `invalid_state`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The database is down or not answering: `service_unavailable`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             /** @description Any error: problem details with a stable `code`. */

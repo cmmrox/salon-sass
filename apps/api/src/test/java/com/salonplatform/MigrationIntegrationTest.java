@@ -49,7 +49,9 @@ class MigrationIntegrationTest {
                         tuple("20", "create platform holiday calendar"),
                         tuple("21", "create staff opening hours holidays and closures"),
                         tuple("22", "add platform salon currency"),
-                        tuple("23", "create booking rules"));
+                        tuple("23", "create booking rules"),
+                        tuple("24", "add branding default branch id"),
+                        tuple("25", "create catalogue"));
         assertThat(afterFirstStart).allSatisfy(row -> assertThat(row).containsEntry("success", true));
 
         try (StartedApplication application = database.start()) {

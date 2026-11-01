@@ -62,9 +62,10 @@ spring:
   mvc:
     problemdetails:
       enabled: true
-  # The one multipart request, a brand image upload (F04-S02): the request as a whole may be up to 10 MB, so
-  # that a file over the image limit (salon.branding.images.max-bytes, 5 MB) is still read and answered as a
-  # field error naming it; beyond this, the request is refused unread, 413.
+  # The multipart requests, a brand image upload (F04-S02) and a service photo (F05-S01): the request as a whole
+  # may be up to 10 MB, so that a file over the image limit (salon.branding.images.max-bytes and
+  # salon.catalogue.images.max-bytes, 5 MB) is still read and answered as a field error naming it; beyond this,
+  # the request is refused unread, 413.
   servlet:
     multipart:
       max-file-size: 10MB
@@ -258,3 +259,12 @@ salon.branding:
     max-pixels: ${SALON_BRANDING_IMAGE_MAX_PIXELS:50000000}
     # Uploads decoded at once per instance; one more waits up to two seconds, then is refused 503.
     concurrent-decodes: ${SALON_BRANDING_IMAGE_CONCURRENT_DECODES:2}
+
+# Service photos (F05-S01, decision 093): the same checks as brand images, with the catalogue's own limits. A
+# larger file within the request limit (spring.servlet.multipart, 10 MB) is a field error; beyond it, 413.
+salon.catalogue:
+  images:
+    max-bytes: ${SALON_CATALOGUE_IMAGE_MAX_BYTES:5MB}
+    max-pixels: ${SALON_CATALOGUE_IMAGE_MAX_PIXELS:50000000}
+    # Photos decoded at once per instance; one more waits up to two seconds, then is refused 503.
+    concurrent-decodes: ${SALON_CATALOGUE_IMAGE_CONCURRENT_DECODES:2}

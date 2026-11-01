@@ -9,6 +9,7 @@ import com.salonplatform.platform.domain.PlainText;
 import com.salonplatform.platform.domain.ProvisioningRegions;
 import com.salonplatform.platform.domain.Slugs;
 import com.salonplatform.platform.dto.SalonCreated;
+import com.salonplatform.platform.inprocess.SalonBootstrapStep;
 import com.salonplatform.platform.repository.BillingLedger;
 import com.salonplatform.platform.repository.PlanStore;
 import com.salonplatform.platform.repository.PlatformAudit;
@@ -28,6 +29,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
@@ -45,6 +47,7 @@ class SalonProvisioningServiceImpl implements SalonProvisioningService {
     private final PlatformAudit audit;
     private final IdentityProvisioning identity;
     private final BrandProvisioning branding;
+    private final ObjectProvider<SalonBootstrapStep> steps;
     private final BootstrapFaults faults;
     private final BillingLedger ledger;
     private final SubscriptionStates states;
@@ -60,6 +63,7 @@ class SalonProvisioningServiceImpl implements SalonProvisioningService {
             PlatformAudit audit,
             IdentityProvisioning identity,
             BrandProvisioning branding,
+            ObjectProvider<SalonBootstrapStep> steps,
             BootstrapFaults faults,
             BillingLedger ledger,
             SubscriptionStates states,
@@ -73,6 +77,7 @@ class SalonProvisioningServiceImpl implements SalonProvisioningService {
         this.audit = audit;
         this.identity = identity;
         this.branding = branding;
+        this.steps = steps;
         this.faults = faults;
         this.ledger = ledger;
         this.states = states;
@@ -149,6 +154,8 @@ class SalonProvisioningServiceImpl implements SalonProvisioningService {
                 identity.bootstrapOwner(id, prepared, now);
                 faults.reached(BootstrapFaults.Step.OWNER);
                 branding.bootstrapBrand(id, (String) profile.get("name"), now);
+                // What other modules give every salon (the catalogue's default categories), in this transaction.
+                steps.orderedStream().forEach(step -> step.bootstrap(id, now));
                 faults.reached(BootstrapFaults.Step.BRAND);
                 states.start(
                         ledger.salon(id, false).orElseThrow(),

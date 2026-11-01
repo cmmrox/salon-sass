@@ -58,7 +58,8 @@ class ApiOwnershipIntegrationTest extends IntegrationTest {
 
     @Test
     void aModuleWithoutADocumentIsNotFound() {
-        HttpResponse<String> response = http().get("/v3/api-docs/catalogue");
+        // A module with no paths yet (catalogue has its own since F05-S01).
+        HttpResponse<String> response = http().get("/v3/api-docs/payment");
 
         assertThat(response.statusCode()).isEqualTo(404);
         assertThat(JSON.readTree(response.body()).get("code").asString()).isEqualTo("not_found");

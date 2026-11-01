@@ -37,6 +37,6 @@ requirement detail is in `qa/coverage.md`.
 
 | Stage | Title | Surfaces | Status | Stage QA | Blocking bugs | Next |
 | --- | --- | --- | --- | --- | --- | --- |
-| F05-S01 | Categories and services | api, web | planned | - | 0 | **developer**: `stage-build F05-S01` |
+| F05-S01 | Categories and services | api, web | in-progress | - | 0 | **developer**: `stage-build F05-S01` |
 | F05-S02 | Variants, popular services and service deposits | api, web | outlined | - | 0 | **lead**: `stage-plan F05-S02` |
 | F05-S03 | Tax, service charge and products | api, web | outlined | - | 0 | **lead**: `stage-plan F05-S03` |

@@ -13,6 +13,7 @@ import com.salonplatform.platform.dto.ProviderOutcomeRequest;
 import com.salonplatform.platform.dto.ProviderOutcomeState;
 import com.salonplatform.platform.dto.UnbilledRequest;
 import com.salonplatform.platform.dto.UnbilledSalon;
+import com.salonplatform.platform.inprocess.SalonBootstrapStep;
 import com.salonplatform.platform.repository.OperatorUserStore;
 import com.salonplatform.platform.repository.SalonStore;
 import com.salonplatform.platform.service.BillingFaults;
@@ -31,6 +32,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.dao.DuplicateKeyException;
@@ -70,6 +72,7 @@ class LocalBillingController {
     private final SalonStore salons;
     private final OperatorUserStore users;
     private final BrandProvisioning branding;
+    private final ObjectProvider<SalonBootstrapStep> steps;
     private final Clock clock;
     private final String platformDomain;
 
@@ -83,6 +86,7 @@ class LocalBillingController {
             SalonStore salons,
             OperatorUserStore users,
             BrandProvisioning branding,
+            ObjectProvider<SalonBootstrapStep> steps,
             Clock clock,
             @Value("${salon.platform-domain}") String platformDomain) {
         this.provider = provider;
@@ -94,6 +98,7 @@ class LocalBillingController {
         this.salons = salons;
         this.users = users;
         this.branding = branding;
+        this.steps = steps;
         this.clock = clock;
         this.platformDomain = platformDomain.strip().toLowerCase(Locale.ROOT);
     }
@@ -206,6 +211,8 @@ class LocalBillingController {
             database.inTransaction(status -> {
                 salons.createUnbilled(id, slug, now);
                 branding.bootstrapBrand(id, "Legacy fixture " + slug, now);
+                // As every salon has since its module's migration: the default categories (F05-S01).
+                steps.orderedStream().forEach(step -> step.bootstrap(id, now));
                 return null;
             });
         } catch (DuplicateKeyException ex) {

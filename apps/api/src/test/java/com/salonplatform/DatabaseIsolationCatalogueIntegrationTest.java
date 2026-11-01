@@ -82,7 +82,13 @@ class DatabaseIsolationCatalogueIntegrationTest {
                         "staff_holiday_choice",
                         "staff_closure",
                         // F04-S04: the booking rules' versions.
-                        "booking_rules_version");
+                        "booking_rules_version",
+                        // F05-S01: the catalogue's category lists, categories, photos, services and terms versions.
+                        "catalogue_category_list",
+                        "catalogue_category",
+                        "catalogue_photo",
+                        "catalogue_service",
+                        "catalogue_terms_version");
         assertThat(tables)
                 .allSatisfy(table -> assertThat(table)
                         .as("%s", table.get("name"))
@@ -250,7 +256,15 @@ class DatabaseIsolationCatalogueIntegrationTest {
                         org.assertj.core.api.Assertions.tuple("staff_holiday_choice", "INSERT,SELECT,UPDATE"),
                         org.assertj.core.api.Assertions.tuple("staff_closure", "DELETE,INSERT,SELECT"),
                         // F04-S04: a booking rules version is written once and read, never changed or removed.
-                        org.assertj.core.api.Assertions.tuple("booking_rules_version", "INSERT,SELECT"));
+                        org.assertj.core.api.Assertions.tuple("booking_rules_version", "INSERT,SELECT"),
+                        // F05-S01: the category list exists from a salon's creation and is only changed;
+                        // categories are added, changed and removed; a photo is replaced, never changed; a service
+                        // is never removed (deleting it makes a tombstone); a terms version is written once.
+                        org.assertj.core.api.Assertions.tuple("catalogue_category_list", "SELECT,UPDATE"),
+                        org.assertj.core.api.Assertions.tuple("catalogue_category", "DELETE,INSERT,SELECT,UPDATE"),
+                        org.assertj.core.api.Assertions.tuple("catalogue_photo", "DELETE,INSERT,SELECT"),
+                        org.assertj.core.api.Assertions.tuple("catalogue_service", "INSERT,SELECT,UPDATE"),
+                        org.assertj.core.api.Assertions.tuple("catalogue_terms_version", "INSERT,SELECT"));
     }
 
     /**
@@ -307,6 +321,10 @@ class DatabaseIsolationCatalogueIntegrationTest {
                 "staff_erase_salon_rows",
                 // F04-S04: booking's guarded eraser.
                 "booking_erase_salon_rows",
+                // F05-S01: a new salon's default categories, in the platform transaction that creates it, and
+                // catalogue's guarded eraser.
+                "catalogue_add_default_categories",
+                "catalogue_erase_salon_rows",
                 // F03-S04: a support session's entries in the salon's audit trail, from the platform connection.
                 "audit_record_support");
         assertThat(functions)

@@ -67,7 +67,9 @@ class ModuleBoundariesTest {
 
     /**
      * Every module states the modules it may use, so that module verification refuses anything else; and
-     * only platform may use an in-process-only contract, which can never become a remote call.
+     * only platform may use an in-process-only contract, which can never become a remote call, besides catalogue,
+     * which implements platform's own {@code SalonBootstrapStep} (F05-S01, the lead's decision while building it):
+     * platform calls it in the transaction that creates a salon, and it never becomes a remote call either.
      */
     @Test
     void everyModuleDeclaresWhatItMayUse() {
@@ -84,7 +86,7 @@ class ModuleBoundariesTest {
                                 .anyMatch(dependency -> dependency.endsWith(":: inprocess")))
                         .map(Map.Entry::getKey))
                 .as("the modules that may use an inprocess contract")
-                .containsExactly("platform");
+                .containsExactlyInAnyOrder("platform", "catalogue");
     }
 
     @Test
@@ -175,6 +177,10 @@ class ModuleBoundariesTest {
                         "servicewithoutinterface",
                         rule(ModuleRules::servicesAreImplementationsOfTheirModulesInterfaces),
                         "SlotFinder"),
+                arguments(
+                        "serviceforothermodule",
+                        rule(ModuleRules::servicesAreImplementationsOfTheirModulesInterfaces),
+                        "PaymentGatewayImpl"),
                 arguments(
                         "sharedservice",
                         rule(ModuleRules::servicesAreImplementationsOfTheirModulesInterfaces),

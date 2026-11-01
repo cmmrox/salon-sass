@@ -21,7 +21,8 @@ public final class TestSalons {
 
     /**
      * An active salon with a published brand and, as every salon has from its creation (F04-S01), its default
-     * branch, empty profile drafts and a brand draft equal to its brand, through branding's own functions.
+     * branch, empty profile drafts and a brand draft equal to its brand, through branding's own functions, and
+     * the default categories (F05-S01), through catalogue's.
      */
     public TestSalon create(String name, String brandColour) {
         TestSalon salon = createWithoutBrand("active");
@@ -35,6 +36,7 @@ public final class TestSalons {
                 "SELECT branding_add_default_branch(?, ?, now())::text",
                 salon.id(),
                 name.substring(0, Math.min(120, name.length())));
+        owner.queryForList("SELECT catalogue_add_default_categories(?, now())::text", salon.id());
         return new TestSalon(salon.id(), salon.slug(), name, brandColour);
     }
 

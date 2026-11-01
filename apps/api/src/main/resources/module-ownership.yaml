@@ -107,6 +107,19 @@ modules:
     settings:
       - salon.booking
 
+  catalogue:
+    description: The salon's categories and services, each change of price or time an immutable terms version.
+    tables:
+      - catalogue_category
+      - catalogue_category_list
+      - catalogue_photo
+      - catalogue_service
+      - catalogue_terms_version
+    paths:
+      - /api/v1/catalogue
+    settings:
+      - salon.catalogue
+
   shared:
     description: Technical capabilities every module runs on, and the service's own metadata.
     tables:

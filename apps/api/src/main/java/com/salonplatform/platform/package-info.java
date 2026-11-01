@@ -5,7 +5,9 @@
  * {@code shared}'s {@link com.salonplatform.shared.tenancy.TenantDirectory}); the operator console's
  * services use the separately configured platform runtime role
  * ({@link com.salonplatform.shared.persistence.PlatformDatabase}), and create a salon's first Owner
- * and brand only through identity's and branding's in-process-only provisioning contracts.
+ * and brand only through identity's and branding's in-process-only provisioning contracts. Other modules give a
+ * new salon its first data through the steps they implement of its own
+ * {@link com.salonplatform.platform.inprocess.SalonBootstrapStep}, run in the same transaction.
  *
  * <p>What it owns, the layout inside it and the rules between modules are in
  * {@code docs/engineering/backend.md}; the console's policies in
