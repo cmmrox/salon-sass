@@ -13,22 +13,40 @@ export type { ApiClientOptions };
 
 export type paths = Pick<contractPaths,
     | "/api/v1/salon"
+    | "/api/v1/salon/brand/draft"
+    | "/api/v1/salon/brand/draft/reset"
+    | "/api/v1/salon/brand/images"
+    | "/api/v1/salon/brand/images/{id}"
+    | "/api/v1/salon/brand/publication"
     | "/api/v1/salon/profile/draft"
     | "/api/v1/salon/profile/publication"
 >;
 
 export type operations = Pick<contractOperations,
+    | "discardSalonBrandDraft"
     | "discardSalonProfileDraft"
     | "getSalon"
+    | "getSalonBrandDraft"
+    | "getSalonBrandImage"
     | "getSalonProfileDraft"
+    | "publishSalonBrand"
     | "publishSalonProfile"
+    | "resetSalonBrandDraft"
+    | "saveSalonBrandDraft"
     | "saveSalonProfileDraft"
+    | "uploadSalonBrandImage"
 >;
 
 export interface components {
     schemas: Pick<contract["schemas"],
         | "Problem"
         | "Salon"
+        | "SalonBrand"
+        | "SalonBrandDraft"
+        | "SalonBrandImage"
+        | "SalonBrandImageUpload"
+        | "SalonBrandInput"
+        | "SalonBrandVersion"
         | "SalonProfile"
         | "SalonProfileBranch"
         | "SalonProfileBranchInput"
@@ -39,7 +57,9 @@ export interface components {
         | "SalonProfileLocation"
         | "SalonProfileLocationInput"
         | "SalonProfileVersion"
+        | "SaveSalonBrandDraft"
         | "SaveSalonProfileDraft"
+        | "UploadedSalonBrandImage"
     >;
 }
 

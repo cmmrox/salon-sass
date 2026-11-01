@@ -31,7 +31,7 @@ asked for. A case is a test titled with its id and criteria, or a manual or defe
 | F03-S03 | complete | - | PLT-06 | 12 | 17 | 17 | 0 | 0 |
 | F03-S04 | complete | - | PLT-07, NFR-20 | 10 | 17 | 17 | 0 | 0 |
 | F04-S01 | complete | - | BRD-02, BRD-04, NFR-13 | 11 | 0 | 0 | 0 | 0 |
-| F04-S02 | planned | - | BRD-01, BRD-04 | 12 | 0 | 0 | 0 | 0 |
+| F04-S02 | in-progress | - | BRD-01, BRD-04 | 12 | 0 | 0 | 0 | 0 |
 
 ## Deferred cases
 
@@ -197,10 +197,10 @@ Cases waiting for something else. `feature-verify` and `release-prepare` go thro
 | REP-08 | R3 | should | unowned | - |
 | REP-09 | R3 | could | unowned | - |
 | REP-10 | R1 | must | F13 | - |
-| BRD-01 | R1 | must | F04 | F04-S02 (planned) |
+| BRD-01 | R1 | must | F04 | F04-S02 (in-progress) |
 | BRD-02 | R1 | must | F04 | F04-S01 (complete) |
 | BRD-03 | R1 | must | F01 | F01-S03 (complete), F01-S05 (complete) |
-| BRD-04 | R1 | must | F04 | F04-S01 (complete), F04-S02 (planned) |
+| BRD-04 | R1 | must | F04 | F04-S01 (complete), F04-S02 (in-progress) |
 | BRD-05 | R2 | must | F16 | - |
 | BRD-06 | R2 | must | F16 | - |
 | BRD-07 | R2 | must | F16 | - |

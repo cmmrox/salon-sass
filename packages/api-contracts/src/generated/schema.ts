@@ -726,6 +726,99 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/salon/brand/draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The salon's brand draft, with whether it has unpublished changes. `settings.read`. */
+        get: operations["getSalonBrandDraft"];
+        /**
+         * Saves the brand as the salon's draft, which only settings staff see. `settings.manage`.
+         * @description The name is required, 1 to 60 characters after trimming; the tagline up to 80, empty for none; the colour `#RRGGBB`, kept in upper case; the logo and the cover each the id of an image of this salon of that kind, uploaded first, or null for none.
+         */
+        put: operations["saveSalonBrandDraft"];
+        post?: never;
+        /** Returns the draft to the published brand. `settings.manage`. */
+        delete: operations["discardSalonBrandDraft"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/salon/brand/draft/reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Sets the draft to the default branding: colour `#D6086A`, no tagline, logo or cover; the name kept. A draft change, until published. `settings.manage`. */
+        post: operations["resetSalonBrandDraft"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/salon/brand/images": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Uploads a logo or cover image. It does not change the draft: save the draft with its id. `settings.manage`.
+         * @description A PNG, JPEG or WebP image of up to 5 MB, told by its content, not its name or declared type. A logo is at least 128 x 128 and is kept as its centre square, a PNG of at most 512 x 512; a cover is at least 800 x 300 and is kept as a JPEG at most 1600 wide. Both are re-encoded, so no metadata is kept. An image unused for 24 hours is removed.
+         */
+        post: operations["uploadSalonBrandImage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/salon/brand/images/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A brand image of the salon: to anyone when the published brand uses it, otherwise only with `settings.read`. */
+        get: operations["getSalonBrandImage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/salon/brand/publication": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Makes the draft the published brand, in one step. `settings.manage`. */
+        post: operations["publishSalonBrand"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/salon/entitlements": {
         parameters: {
             query?: never;
@@ -1384,6 +1477,10 @@ export interface components {
              * @example #D6086A
              */
             brandColour: string;
+            /** @description The published cover, served at `/api/v1/salon/brand/images/{id}`; null for none. */
+            cover: components["schemas"]["SalonBrandImage"] | null;
+            /** @description The published logo, served at `/api/v1/salon/brand/images/{id}`; null for none. */
+            logo: components["schemas"]["SalonBrandImage"] | null;
             /**
              * @description The salon's published display name.
              * @example Alpha Studio
@@ -1396,11 +1493,90 @@ export interface components {
              * @example alpha
              */
             slug: string;
+            /** @description The salon's published tagline; null when it has none. */
+            tagline: string | null;
             /**
              * @description The salon's time zone, an IANA name. The salon's times are shown in it.
              * @example Asia/Colombo
              */
             timeZone: string;
+        };
+        SalonBrand: {
+            /** @example #D6086A */
+            colour: string;
+            /** @description The cover, a JPEG at most 1600 wide, or null for none (the neutral cover). */
+            cover: components["schemas"]["SalonBrandImage"] | null;
+            /** @description The logo, a square PNG of at most 512 x 512, or null for none (the salon's initial). */
+            logo: components["schemas"]["SalonBrandImage"] | null;
+            /** @example Alpha Studio */
+            name: string;
+            /** @example Simple booking. Better salon days. */
+            tagline: string | null;
+        };
+        SalonBrandDraft: {
+            brand: components["schemas"]["SalonBrand"];
+            /** @description Whether the draft differs from the published brand. */
+            hasUnpublishedChanges: boolean;
+            /**
+             * Format: date-time
+             * @description When the brand was last published from a draft; null when it never was.
+             */
+            publishedAt: string | null;
+            /**
+             * Format: uuid
+             * @description The staff account that last published it; null when it never was.
+             */
+            publishedBy: string | null;
+            /**
+             * Format: int64
+             * @description The draft's version; the next change must send it, an older one is refused with `conflict`.
+             */
+            version: number;
+        };
+        SalonBrandImage: {
+            /**
+             * Format: int32
+             * @description Its height in pixels, as kept.
+             */
+            height: number;
+            /** Format: uuid */
+            id: string;
+            /**
+             * Format: int32
+             * @description Its width in pixels, as kept.
+             */
+            width: number;
+        };
+        SalonBrandImageUpload: {
+            /**
+             * Format: binary
+             * @description The image file: PNG, JPEG or WebP, up to 5 MB.
+             */
+            file: string;
+            /** @enum {string} */
+            kind: "logo" | "cover";
+        };
+        SalonBrandInput: {
+            /** @description `#RRGGBB`, in either case; kept in upper case. */
+            colour: string;
+            /**
+             * Format: uuid
+             * @description A cover image of this salon, or null for none.
+             */
+            cover?: string | null;
+            /**
+             * Format: uuid
+             * @description A logo image of this salon, or null for none.
+             */
+            logo?: string | null;
+            /** @description 1 to 60 characters after trimming. */
+            name: string;
+            /** @description Up to 80 characters; empty or null for none. */
+            tagline?: string | null;
+        };
+        SalonBrandVersion: {
+            /** Format: int64 */
+            version: number;
         };
         SalonCreated: {
             /** Format: date-time */
@@ -1635,6 +1811,11 @@ export interface components {
             /** Format: int64 */
             total: number;
         };
+        SaveSalonBrandDraft: {
+            brand: components["schemas"]["SalonBrandInput"];
+            /** Format: int64 */
+            version: number;
+        };
         SaveSalonProfileDraft: {
             profile: components["schemas"]["SalonProfileInput"];
             /** Format: int64 */
@@ -1795,6 +1976,16 @@ export interface components {
             /** Format: uuid */
             sessionId: string;
             state: string;
+        };
+        UploadedSalonBrandImage: {
+            /** Format: int32 */
+            height: number;
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            kind: "logo" | "cover";
+            /** Format: int32 */
+            width: number;
         };
         Usage: {
             /** Format: int64 */
@@ -3607,6 +3798,565 @@ export interface operations {
             };
             /** @description The hostname names no salon: `not_found`. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The database is down or not answering: `service_unavailable`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getSalonBrandDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The draft. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalonBrandDraft"];
+                };
+            };
+            /** @description No valid session for this salon: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Without `settings.read`: `permission_denied`. A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The hostname names no salon: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The database is down or not answering: `service_unavailable`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    saveSalonBrandDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveSalonBrandDraft"];
+            };
+        };
+        responses: {
+            /** @description The draft as saved. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalonBrandDraft"];
+                };
+            };
+            /** @description A field broke a rule, or the body is not the documented shape: `bad_request`, with `errors` naming each field (`brand.colour`). Nothing is saved. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No valid session for this salon: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Without `settings.manage`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The hostname names no salon: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The draft changed since `version`: `conflict`. Nothing changes. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The database is down or not answering: `service_unavailable`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    discardSalonBrandDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SalonBrandVersion"];
+            };
+        };
+        responses: {
+            /** @description The draft, discarded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalonBrandDraft"];
+                };
+            };
+            /** @description The body is not the documented shape: `bad_request`. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No valid session for this salon: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Without `settings.manage`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The hostname names no salon: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The draft changed since `version`: `conflict`. Nothing changes. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The database is down or not answering: `service_unavailable`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    resetSalonBrandDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SalonBrandVersion"];
+            };
+        };
+        responses: {
+            /** @description The draft with the defaults. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalonBrandDraft"];
+                };
+            };
+            /** @description The body is not the documented shape: `bad_request`. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No valid session for this salon: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Without `settings.manage`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The hostname names no salon: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The draft changed since `version`: `conflict`. Nothing changes. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The database is down or not answering: `service_unavailable`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    uploadSalonBrandImage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["SalonBrandImageUpload"];
+            };
+        };
+        responses: {
+            /** @description The image, kept. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UploadedSalonBrandImage"];
+                };
+            };
+            /** @description `kind` is not `logo` or `cover`, or the file is missing, not one of the three types, too large, too small or cannot be decoded: `bad_request`, with `errors` naming `kind` or `file`. Nothing is kept. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No valid session for this salon: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Without `settings.manage`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The hostname names no salon: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The request is over the 10 MB request limit: `request_rejected`. Nothing is kept. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The database is down or not answering: `service_unavailable`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getSalonBrandImage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The image: a PNG logo or a JPEG cover, never stored by a cache, with `nosniff`. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/jpeg": string;
+                    "image/png": string;
+                };
+            };
+            /** @description A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No such image of the hostname's salon, or one the caller may not see (a draft image without `settings.read`), or the hostname names no salon: `not_found`, the same answer each time. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The database is down or not answering: `service_unavailable`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    publishSalonBrand: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SalonBrandVersion"];
+            };
+        };
+        responses: {
+            /** @description The draft, now published. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalonBrandDraft"];
+                };
+            };
+            /** @description The body is not the documented shape: `bad_request`. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No valid session for this salon: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Without `settings.manage`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The hostname names no salon: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The draft changed since `version`: `conflict`. Nothing to publish: `invalid_state`. Either way nothing changes. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

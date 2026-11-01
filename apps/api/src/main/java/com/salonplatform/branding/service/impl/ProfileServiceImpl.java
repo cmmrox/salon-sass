@@ -17,10 +17,6 @@ import com.salonplatform.branding.service.ProfileService;
 import com.salonplatform.branding.service.ProfileView;
 import com.salonplatform.identity.Principal;
 import com.salonplatform.identity.Principals;
-import com.salonplatform.shared.audit.Actor;
-import com.salonplatform.shared.audit.ActorKind;
-import com.salonplatform.shared.audit.AuditAction;
-import com.salonplatform.shared.audit.AuditTrail;
 import com.salonplatform.shared.tenancy.CurrentTenant;
 import com.salonplatform.shared.tenancy.TenantContext;
 import com.salonplatform.shared.tenancy.TenantNotFoundException;
@@ -29,7 +25,6 @@ import com.salonplatform.shared.web.ErrorCode;
 import com.salonplatform.shared.web.FieldProblem;
 import java.time.Clock;
 import java.time.Instant;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -56,7 +51,7 @@ class ProfileServiceImpl implements ProfileService {
     private final PublishedProfileRepository publishedProfiles;
     private final PublishedBranchContactRepository publishedContacts;
     private final ProfileRecords records;
-    private final AuditTrail audit;
+    private final SettingsAudit audit;
     private final Clock clock;
     private final String phoneRegion;
     private final TransactionTemplate writing;
@@ -68,7 +63,7 @@ class ProfileServiceImpl implements ProfileService {
             PublishedProfileRepository publishedProfiles,
             PublishedBranchContactRepository publishedContacts,
             ProfileRecords records,
-            AuditTrail audit,
+            SettingsAudit audit,
             Clock clock,
             BrandingSettings settings,
             PlatformTransactionManager transactions) {
@@ -226,18 +221,6 @@ class ProfileServiceImpl implements ProfileService {
 
     private void record(
             CurrentTenant salon, Principal actor, String action, List<String> fields, long version, Instant at) {
-        Map<String, Object> after = new LinkedHashMap<>();
-        after.put("changedFields", fields);
-        after.put("version", version);
-        audit.record(
-                new AuditAction(
-                        new Actor(ActorKind.STAFF, actor.staffId().toString()),
-                        action,
-                        SUBJECT,
-                        salon.id().toString(),
-                        null,
-                        null,
-                        after),
-                at);
+        audit.record(salon, actor, action, SUBJECT, SettingsAudit.changed(fields, version), at);
     }
 }
