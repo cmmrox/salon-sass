@@ -108,13 +108,15 @@ modules:
       - salon.booking
 
   catalogue:
-    description: The salon's categories and services, each change of price, time, variants or deposit an immutable terms version, and its Popular services.
+    description: The salon's categories and services, each change of price, time, variants or deposit an immutable terms version, its Popular services, its tax settings as immutable versions, and its products.
     tables:
       - catalogue_category
       - catalogue_category_list
       - catalogue_photo
       - catalogue_popular_setting
+      - catalogue_product
       - catalogue_service
+      - catalogue_tax_version
       - catalogue_terms_variant
       - catalogue_terms_version
     paths:

@@ -67,20 +67,33 @@ export function viewerTimeZone(): string {
 }
 
 /**
+ * Whether an amount shows its cents only when they are not zero (`Rs. 2,500`, the default), or always (`Rs.
+ * 381.00`), as the parts a tax-inclusive price includes are shown (F05-S03).
+ */
+export type MoneyCents = 'when-not-zero' | 'always';
+
+/**
  * An amount the API gave in minor units, in its currency: `Rs. 2,500` for whole rupees and the cents
  * only when they are not zero (docs/design/ui-ux-standards.md), other currencies by the locale's own
- * currency format with the same rule. Digits are split from the integer, never through floating point.
+ * currency format with the same rule; with `cents: 'always'`, the cents even when they are zero. Digits are
+ * split from the integer, never through floating point.
  */
-export function formatMoney(minor: number, currency: string, locale = 'en-LK'): string {
+export function formatMoney(
+  minor: number,
+  currency: string,
+  locale = 'en-LK',
+  { cents: shown = 'when-not-zero' }: { cents?: MoneyCents } = {},
+): string {
   const negative = minor < 0;
   const units = Math.abs(Math.trunc(minor));
   const whole = Math.floor(units / 100);
   const cents = units % 100;
+  const withCents = cents !== 0 || shown === 'always';
   if (currency === 'LKR') {
     const grouped = new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(whole);
-    return `${negative ? '-' : ''}Rs. ${grouped}${cents ? `.${String(cents).padStart(2, '0')}` : ''}`;
+    return `${negative ? '-' : ''}Rs. ${grouped}${withCents ? `.${String(cents).padStart(2, '0')}` : ''}`;
   }
-  const digits = cents ? 2 : 0;
+  const digits = withCents ? 2 : 0;
   return new Intl.NumberFormat(locale, {
     style: 'currency',
     currency,

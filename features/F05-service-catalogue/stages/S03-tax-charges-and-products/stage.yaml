@@ -3,7 +3,7 @@ feature: F05
 title: "Tax, service charge and products"
 sequence: 3
 surfaces: [api, web]
-status: planned
+status: complete
 qa_status: not-run
 blocked_reason: null
 released_in: null
@@ -12,9 +12,191 @@ depends_on: [F05-S01]
 requirements: [CAT-05, INV-01]
 nfr_focus: []
 handoff:
-  run: null
-  data: null
-  notes: null
+  run: |
+    Local, from the repository root, in a plain (non-login) shell, on a fresh database so the owner's `salon` database
+    keeps its data: `docker exec salon-postgres psql -U salon -d postgres -c "CREATE DATABASE <name> OWNER salon"`, then
+    `SALON_DB_NAME=<name> infra/scripts/local-service.sh start api` and `... start web`. Migrations V1 to V27 and the local
+    seed run at API start. As in F05-S01 and F05-S02 the walk-through could not use local-service.sh, because the owner's API
+    (8090) and web (3100) run from this checkout: it ran the API from the compiled classes of the gates worktree (`java -cp
+    <classes>:<runtime classpath> com.salonplatform.SalonApiApplication`, environment from infra/scripts/lib/common.sh
+    `load_settings` with SALON_DB_NAME=f05s03_walk, SALON_API_PORT=8293) and the web as that worktree's production build
+    (`node apps/web/scripts/serve.mjs --port 3293`). Screens: http://alpha.localhost:3100/workspace/settings/tax (Settings →
+    Tax & charges, between Booking rules and Branding) and /workspace/services/products (the Products tab); the Services tab
+    gains the tax banner. API, salon host: /api/v1/catalogue/tax (GET, public), tax/settings (GET, PUT), tax/history (GET
+    ?page&size), products (GET, POST), products/{id} (PUT, DELETE ?version=). New BFF actions: catalogue-tax-settings,
+    catalogue-tax-history (settings.read), catalogue-tax-save (settings.manage), catalogue-tax-public (no permission, answered
+    as {current}), catalogue-products (catalogue.read), catalogue-product-add/-save/-delete (catalogue.price.change).
+    New settings (salon.catalogue.tax.*), each with its environment variable: vat.name SALON_CATALOGUE_TAX_VAT_NAME (VAT),
+    vat.rate-percent SALON_CATALOGUE_TAX_VAT_RATE_PERCENT (18), vat.registration-label
+    SALON_CATALOGUE_TAX_VAT_REGISTRATION_LABEL (VAT registration number), service-charge.name
+    SALON_CATALOGUE_TAX_SERVICE_CHARGE_NAME (Service charge), service-charge.max-percent
+    SALON_CATALOGUE_TAX_SERVICE_CHARGE_MAX_PERCENT (20); documented in .env.example. For TC-F05-S03-019, start the API with
+    SALON_CATALOGUE_TAX_VAT_RATE_PERCENT=<rate> in its environment: local-service.sh needs no change, as it starts the jar
+    with the caller's exported environment and exports every key of .env (load_env_file). The API refuses to start with a
+    rate outside 0 to 100, a maximum outside 1 to 100 or an empty name. No new local hook. Stop the services and drop the
+    database afterwards.
+  data: |
+    No tax settings and no product are seeded: a salon has no tax version (the public read is JSON null, the settings
+    version 0) and no products until it saves or adds one. The walk-through's staff (every role in alpha and beta, through
+    POST /local/identity/seed), its operator Support account (/local/operator/seed), its support session, its four services
+    and its products were synthetic and random, kept only in the scratchpad; its database f05s03_walk was dropped at 21:51.
+  notes: |
+    Built against every acceptance criterion and checked on the running product from outside, on a fresh database
+    (f05s03_walk) with two synthetic salons (alpha, beta), all five roles, an operator Support account and a support session:
+    API checks 58/58 (api_walk_result.json), suspended and read-only 2/2 (states_walk_result.json), browser checks on Tax &
+    charges 28/28 then 27/28 on a rerun whose history check expected the first run's state (browser_walk_result_tax.json; the
+    second run's newest version changed only "Service charge on products", which is right), Products and the Services tab
+    34/34 (browser_walk_result_products.json), Playwright Chromium at 360, 390, 768, 1024, 1280 and 1440, the API from the
+    classes of 28c8940 (apps/api main source is the same to 450c35f) and the web as the production build of 0c0b966. Evidence,
+    scripts and screens: /private/tmp/claude-501/-Users-cmmrox-Personal-Projects-salon-sass/715cfef9-1213-4c28-9082-71b8eb4e4e54/scratchpad/walk3/ (api_walk.py, browser.cjs, proto.cjs, screens/). The scripts are not product code
+    and were not committed.
+    AC-1 checked: the tab sits between Booking rules and Branding at every width; before the first save the public read is
+    the JSON literal null with no sign-in and the settings say version 0, settings null and the configured names and rates;
+    the tab shows both off and the prototype's banner sentence; the Settings intro says tax saves at once.
+    AC-2 checked: VAT without a number, numbers of 0 and 21 characters, a space and an accented letter are 400 on
+    vat.registrationNumber; rates 0, 21, 10.5, "10" and none are 400 on serviceCharge.percent; nothing saved by any refusal;
+    a 1-character number with 1% and a 20-character number with 20% on products are kept. A number or rate sent for a part
+    that is off, or onProducts true with the charge off, is 400 "is not allowed while it is off" (lead's answer): the screen
+    keeps what was typed when a part is turned off and on and the request leaves it out (component test and walk). The
+    screen says each broken rule beside its field ("Enter the VAT registration number: 1 to 20 letters, digits and
+    hyphens.", "The rate must be a whole number from 1 to 20%.") and keeps Save disabled.
+    AC-3 checked: each save made the next version and made it current; version 1's row was unchanged and holds VAT 18; an
+    identical save is 409 invalid_state, a stale one 409 conflict; eight saves of one version at once gave exactly one 200
+    and seven 409 conflict with one version added; the history is newest first, paged (?size=101 is 400), with "You", the
+    label or "A team member" and the changed settings in words; an UPDATE by the owner role is refused by the trigger. A
+    configuration change (integration test with the rate at 15): the earlier version still says 18, the settings'
+    configured rate is 15, the tab says "The VAT rate is now 15%. Save to apply it to new bookings and sales." (component
+    and a11y tests), and a save with the same choices is version 2 at 15 whose history names only "VAT rate".
+    AC-4 checked by TaxPartsTest: every price from Rs. 1 to Rs. 10,000 in Rs. 1 steps for every service charge 0 to 20%, with
+    VAT 18% and without (420,000 cases), against a BigDecimal oracle; the prototype's Rs. 2,500 -> Rs. 192.60 and Rs. 381.36
+    and Rs. 3,200 -> Rs. 488.14; ties rounded half to even. The shared table apps/api/src/test/resources/catalogue/
+    tax-parts-cases.json (114 cases) holds both the API's TaxParts and the web preview's taxParts (tax-parts.test.ts).
+    AC-5 checked: the preview priced alpha's first service bookable online in the Services tab's order (Balayage, Colour,
+    before Root touch-up; the hidden Ash toner skipped) and its first product sold by name, with each part in the currency's
+    cents ("Rs. 1,830.51", "Rs. 0.15"), updating as the form changed (Also on products added the product's service charge);
+    the examples "A service" Rs. 2,500 and "A product" Rs. 3,200 when there are none (component test); the prototype's note.
+    AC-6 checked: the public read carries the version id, VAT name and rate and the service charge with onProducts, and never
+    the registration number or the word "registration"; beta's is its own (null). TaxSettings (integration tests): current,
+    a version by id unchanged after three later saves, another salon's id and an unknown id empty, servicePrice and
+    productPrice with the product's VAT choice and the charge on products.
+    AC-7 checked: a table from 900px and cards below at every width, "N products · M sold at checkout", "VAT 18%", "No VAT",
+    "—" while VAT is off (component test), Sold / Not sold badges, the empty state with + New product, the banner with "Prices
+    include VAT where it applies." or "VAT is off for your salon.", no horizontal scrolling, a 40-character name wraps.
+    AC-8 checked: names of 1, 41 and another product's in any case, prices 0, Rs. 500,001 and part of a rupee, VAT as text
+    and sold missing are 400 on that field with nothing saved; 2 and 40 characters and Rs. 1 and Rs. 500,000 are kept; the
+    sheet starts Charge VAT and Sell at checkout on, shows the prototype's messages, saves Rs. 1,500 as 150000; a stale save
+    is 409 conflict (shown in the sheet with Reload); delete asks with the prototype's words, answers 204 and frees the name;
+    the 300th product is kept and the 301st is 409 limit_reached (also eight at once from 295 keep exactly five, integration
+    test). Charge VAT is hidden while VAT is off and the product's choice is kept and sent.
+    AC-9 checked by integration tests: Products.product(id) for the caller's salon only (another salon's id empty), a
+    deleted product gone, soldAtCheckout() by name regardless of case, not sold left out.
+    AC-10 checked: the Services and Products tabs show "Prices you enter include service charge (12%) and VAT (18%).
+    Customers see the same price."; the VAT-only and charge-only sentences and the "off" sentence are component tests.
+    AC-11 checked: Receptionist, Professional and Accountant are 403 permission_denied on settings, history, save and every
+    product change, read products and the public tax; a Receptionist sees no Tax & charges tab (Denied); a Professional reads
+    the Products tab with no controls; the support session reads settings, history and products and is 403
+    support_read_only on every change (API and BFF), its tab read-only; signed out is 401; a suspended salon is 403
+    salon_suspended on every tax and product endpoint, the public read included; a read-only salon reads and is 403
+    salon_read_only on every change.
+    AC-12 checked: beta's Owner on alpha's hostname gets 404 on every read and change; on beta's hostname alpha's product id
+    answers exactly as an unknown id (404 not_found); beta's list holds none of alpha's; the application role with no tenant
+    set sees no rows in either table; the RLS-alone and Hibernate-filter-alone tests cover both tables. Audit:
+    catalogue.tax_saved (subject catalogue_tax_version: before and after values, the version and its changed fields; walk:
+    "20>10"), catalogue.product_added, _updated, _deleted (subject catalogue_product: name, price, currency, VAT, sold);
+    refusals are not audited.
+    AC-13 checked: loading, empty, saved, field-error, conflict (Reload), refused, unavailable and read-only states on the tab,
+    the Products tab and the sheet; leaving the tab for another Settings tab, or closing the sheet, with unsaved edits asks
+    first; the switches work from the keyboard and focus returns to History when its sheet closes; no horizontal scrolling
+    at any width. TaxSettings.a11y.test.tsx (21 cases) and Products.a11y.test.tsx (20 cases), at every width with a dark and
+    a light brand, and Services.a11y.test.tsx with the tax banner, report no WCAG 2.2 AA violation.
+    Visual comparison with the prototype (Salon web, Settings `setTax`, Services & pricing `prodTab`, `pePaint`),
+    screens/proto-*.png beside tax-*.png, products-*.png and product-*.png: the same two-column tab with "What customers
+    pay" beside the form from 900px and above it on phones, the ruled preview rows, the VAT and Service charge sections, the
+    products table with small muted headings and ruled rows, the cards below 900px, the sheet's fields and buttons. Fixed in
+    one batch after the first comparison (0c0b966): the table's headings, cells and rule colour, the preview's rule lines,
+    and the actions heading (screen-reader only, as the prototype draws none). Deliberate differences: switches rather than the
+    prototype's tick rows (component map, as F05-S01's Bookable online); the info banners are ink on the information surface
+    (F05-S01's Alert info); the Products tab also shows the tax banner (AC-10), which the prototype does not draw there.
+    Fixes to earlier stages: d3d04ed fix(F05-S01), lead's clarification 8: a service card's Hide or Show online and
+    Duplicate were disabled while a change ran, which dropped keyboard focus to the page. They now carry aria-disabled, are
+    drawn as disabled and ignore a press until the change ends. The component test (ServicesScreen.test.tsx, "keeps keyboard
+    focus on Hide online and Duplicate ...") failed first on the disabled button; on the running product focus stayed on the
+    button during and after its change.
+    Different from the spec or docs, or chosen where they were silent, for the lead:
+    (1) Shapes: the settings read is {version, settings, configured} where settings mirrors the save's body ({vat:
+    {registered, registrationNumber}, serviceCharge: {on, percent, onProducts}}, number and percent null while off); the
+    version's copied VAT rate is read from the public read, so the "rate is now" notice appears only while the current
+    version charges VAT. Schemas: CatalogueTax, NoCatalogueTax, CatalogueTaxVat, CatalogueTaxServiceCharge,
+    CatalogueTaxSettings, CatalogueTaxValues, CatalogueTaxVatValues, CatalogueTaxServiceChargeValues, CatalogueTaxConfigured,
+    SaveCatalogueTax, CatalogueTaxVatInput, CatalogueTaxServiceChargeInput, CatalogueTaxHistory, CatalogueTaxHistoryEntry,
+    NewCatalogueProduct, SaveCatalogueProduct, CatalogueProduct, CatalogueProductList.
+    (2) History changedFields are the API's names: vat.registered, vat.registrationNumber, vat.ratePercent, vat.name,
+    serviceCharge.on, serviceCharge.percent, serviceCharge.onProducts, serviceCharge.name; the screen says them as the lead's
+    names plus "VAT rate" (lead), "VAT name" and "Service charge name" (mine, for a configuration rename). A save is identical
+    only when the choices and the copied names and rate are all the same.
+    (3) Data: catalogue_tax_version (immutable, trigger catalogue_tax_version_refuse_update, SELECT and INSERT for the
+    application role; it stores the configured VAT name and rate and the service charge's name, not the registration label
+    or the maximum) and catalogue_product (current only, SELECT/INSERT/UPDATE/DELETE, unique lower(name) per branch, a
+    delete removes the row). The eraser and CatalogueTenantData cover both; module-ownership.yaml lists them; the settings
+    prefix salon.catalogue already covered salon.catalogue.tax, so it is unchanged.
+    (4) Rates are whole percentages in configuration and in versions (Sri Lanka's 18 needs no fraction).
+    (5) The 300-product limit takes the branch's category-list lock (as a new service does) without raising its list
+    version; a lost race on the unique name answers 409 conflict.
+    (6) An unchanged product save is 409 invalid_state, as for services and categories; the sheet keeps Save disabled until
+    something changes. A product keeps the currency it was last saved in (the salon's then).
+    (7) Contracts: TaxSettings (current, version, servicePrice, productPrice), TaxSettingsVersion with Vat and ServiceCharge,
+    PriceParts, Products (product, soldAtCheckout) and Product in catalogue's root package, with Javadoc. The breakdown with
+    no saved version is the caller's: the whole price is net. Arithmetic in domain.TaxParts.
+    (8) Audit actions catalogue.tax_saved, catalogue.product_added, catalogue.product_updated, catalogue.product_deleted.
+    (9) Web: formatMoney gains an option { cents: 'always' } (packages/format, tested) for the preview's parts (lead's
+    clarification 1). The preview's arithmetic is in the browser, as the spec allows, held to the API by the shared case
+    table, which the web test imports from apps/api/src/test/resources (one file read by both apps). TaxHistorySheet follows
+    booking's RulesHistorySheet line for line (a feature cannot import another); a shared settings history sheet in
+    components/shared would remove the copy. ServicesScreen now draws its tabs through a small ServicesFrame shared with the
+    new ProductsScreen; LeaveDialog gains areas tax and products; ConfirmDelete gains product-delete; the proxy's protected
+    pages gain /workspace/settings/tax and /workspace/services/products; the Settings intro for the tab is new wording ("Tax
+    and charges save at once and apply to new bookings and sales. Existing bookings and sales keep the tax they were made
+    under."), as are the field messages in AC-2 and "Nothing changed: these are already your tax settings.".
+    (10) The products banner's "VAT is off for your salon." and the sheet's "VAT is off for your salon, so no tax is charged
+    on products." say "VAT" literally: the public read carries no VAT name while VAT is off, and the Products tab's readers
+    lack settings.read.
+    (11) Test infrastructure: apps/web/vitest.config.mts runs the accessibility files one at a time (fileParallelism false,
+    450c35f). With nine files at once, BrandingSettings.a11y's upload and save cases timed out in three full runs in a row
+    though they pass alone, beside any other single file, and in any run of seven workspace files; F05-S02's commit passes
+    its seven-file run. One at a time takes the same 25 seconds. (12) MigrationIntegrationTest lists V27 (391801e).
+    New test ids for QA: tax-tab, tax-loading, tax-banner-settings, tax-new-rate, tax-vat, tax-vat-registered, tax-vat-number,
+    tax-vat-number-error, tax-service-charge, tax-charge-on, tax-charge-percent, tax-charge-percent-error, tax-charge-products,
+    tax-save, tax-unchanged, tax-read-only, tax-conflict(-reload), tax-unavailable, tax-retry, tax-fix, tax-refused,
+    tax-preview, tax-preview-line (data-kind service|product|serviceCharge|vat), tax-preview-note, tax-history,
+    tax-history-sheet, -loading, -unavailable, -empty, -list, -row (data-version), -current, -by, -changed, -pagination, -newer, -older,
+    -page, tax-leave-dialog/-stay/-confirm, settings-tab-tax, settings-panel-tax; services-tab-products,
+    services-panel-products, products-new, products-banner, tax-banner (data-tax both|vat|serviceCharge|off), products-loading,
+    product-table, product-cards, product-row (data-id) with product-name/-price/-tax/-sold/-edit, products-empty,
+    products-empty-new, product-sheet with -close/-name/-price/-vat/-vat-off/-sold/-save/-delete/-problems/-problem
+    (data-problem name|taken|price), product-delete-dialog/-cancel/-confirm, products-leave-dialog/-stay/-confirm,
+    products-read-only, products-conflict(-reload), products-unavailable, products-retry, products-refused, products-rule
+    (data-reason productLimit|productUnchanged). QA's PENDING_F05_S03 names are the built ones: catalogue_tax_version,
+    catalogue_product, the five schema names, SALON_CATALOGUE_TAX_VAT_RATE_PERCENT, catalogue.tax and catalogue.product.
+    Nothing is left unfinished. Time from the machine's clock and commits: 21:00 to 21:58, about 58 minutes: reading to 21:04,
+    the API and its tests to 21:18 (0fecaf3), the F05-S01 fix to 21:18 (d3d04ed), the web and its tests to 21:32 (28c8940),
+    gates and the walk-through 21:32 to 21:42 with two fixes (391801e, 0c0b966), the a11y diagnosis and 450c35f to 21:56, the
+    last gates to 21:58. About 12 minutes went on the accessibility run's cross-file timing.
+    Gates, run from the root of a detached worktree of the tested commit, so that the running 8090/3100 instances' jar and
+    .next were not rebuilt; logs stay there until the stage closes: /private/tmp/claude-501/-Users-cmmrox-Personal-Projects-salon-sass/715cfef9-1213-4c28-9082-71b8eb4e4e54/scratchpad/gates3/.gate-logs/
+    | Command | Tested commit | Result | Log |
+    | --- | --- | --- | --- |
+    | cd apps/api && ./mvnw -q verify | 0c0b966 | exit 0 (1401 tests, 7 m 02 s) | 1-api-verify.log |
+    | pnpm -r lint | 450c35f | exit 0 | 2-lint.log |
+    | pnpm -r typecheck | 450c35f | exit 0 | 3-typecheck.log |
+    | pnpm -r test | 450c35f | exit 0 (format 11, api-contracts 25, web 1018) | 4-test.log |
+    | pnpm --filter @salon/web test:a11y | 450c35f | exit 0 (240 cases, 9 files) | 5-a11y.log |
+    | pnpm --filter @salon/web build | 450c35f | exit 0 | 6-web-build.log |
+    | pnpm contracts:check | 0c0b966 | exit 0 (document and client current) | 7-contracts.log |
+    apps/api and docs/api are identical from 0c0b966 to 450c35f (450c35f changes only apps/web/vitest.config.mts), so the API
+    gate and the contract check stand on 0c0b966. Earlier runs, kept beside them: on 28c8940 (first-28c8940/) the API gate
+    failed only MigrationIntegrationTest, which did not list V27 (fixed in 391801e), and the five web gates passed; on 0c0b966
+    (0c0b966/) the accessibility check failed three times on BrandingSettings.a11y as (11) says, fixed in 450c35f. The handoff
+    commit changes only this file and the generated documents.
 verification:
   commands:
   - cd apps/api && ./mvnw -q verify

@@ -270,6 +270,32 @@ describe('the card actions (AC-7, AC-8, AC-9)', () => {
     ]);
   });
 
+  it('keeps keyboard focus on Hide online and Duplicate while their change runs, and ignores a second press', async () => {
+    let release: (answer: Response) => void = () => {};
+    answers['catalogue-service-online'] = () =>
+      new Promise<Response>((resolve) => (release = resolve)) as unknown as Response;
+    render();
+    await screen.findAllByTestId('service-card');
+    const hide = within(card('Balayage')).getByTestId('service-card-online');
+    const duplicate = within(card('Balayage')).getByTestId('service-card-duplicate');
+    hide.focus();
+    fireEvent.click(hide);
+    await waitFor(() => expect(sent('catalogue-service-online')).toHaveLength(1));
+    // While the change runs the buttons say they are busy but stay focusable, so focus is not dropped to the page.
+    expect(hide).not.toBeDisabled();
+    expect(hide).toHaveAttribute('aria-disabled', 'true');
+    expect(hide).toHaveFocus();
+    fireEvent.click(hide);
+    fireEvent.click(duplicate);
+    expect(sent('catalogue-service-online')).toHaveLength(1);
+    expect(sent('catalogue-service-duplicate')).toHaveLength(0);
+    release(Response.json({ ...SERVICES.items[1]!, bookableOnline: false }));
+    expect(
+      await screen.findByText('Hidden from online booking. Existing bookings are not affected.'),
+    ).toBeInTheDocument();
+    expect(within(card('Balayage')).getByTestId('service-card-online')).toHaveFocus();
+  });
+
   it('shows a save another change overtook inside the sheet, and Reload refreshes the sheet and the list (AC-16 conflict)', async () => {
     answers['catalogue-service-save'] = () => Response.json({ code: 'conflict' }, { status: 409 });
     render();

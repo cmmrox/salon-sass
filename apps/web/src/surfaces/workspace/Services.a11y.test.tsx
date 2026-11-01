@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { atWidth, axe, BRANDS, WIDTHS } from '@test/a11y';
 import { renderWithMessages } from '@test/render';
 import { AccountFrame } from './AccountFrame';
-import { CATEGORIES, COLOUR, POPULAR, RULES, SERVICES, service, withVariants } from './catalogue-fixtures';
+import { CATEGORIES, COLOUR, POPULAR, RULES, SERVICES, service, TAX_PUBLIC, withVariants } from './catalogue-fixtures';
 import { ServicesScreen, type ServicesTab } from './ServicesScreen';
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }) }));
@@ -49,6 +49,8 @@ beforeEach(() => {
       }),
     'catalogue-popular-setting': () => Response.json(POPULAR),
     'booking-rules-public': () => Response.json({ current: RULES }),
+    // The tax banner (F05-S03 AC-10).
+    'catalogue-tax-public': () => Response.json({ current: TAX_PUBLIC }),
   };
   vi.stubGlobal('fetch', async (url: string) => {
     const action = url.split('/').pop()!.split('?')[0]!;

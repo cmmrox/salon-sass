@@ -11,7 +11,8 @@ final class CatalogueRows {
 
     /**
      * A service of the salon's first category with a photo and its first terms version: Rs. 2,500, 45 minutes and
-     * a 10-minute buffer, with one variant (F05-S02); and the salon's Popular setting. Its id.
+     * a 10-minute buffer, with one variant (F05-S02); the salon's Popular setting; a tax settings version and a
+     * product (F05-S03). Its id.
      */
     static UUID serviceWithPhoto(JdbcTemplate owner, TestSalon salon, UUID branch, String name) {
         UUID photo = UUID.randomUUID();
@@ -42,6 +43,18 @@ final class CatalogueRows {
                 statement.execute("INSERT INTO catalogue_popular_setting (tenant_id, id, branch_id, mode, version,"
                         + " created_at, updated_at) VALUES ('" + salon.id() + "', '" + UUID.randomUUID() + "', '"
                         + branch + "', 'chosen', 0, now(), now()) ON CONFLICT (tenant_id, branch_id) DO NOTHING");
+                statement.execute("INSERT INTO catalogue_tax_version (tenant_id, id, branch_id, version, vat_name,"
+                        + " vat_rate_percent, vat_registered, vat_registration_number, service_charge_name,"
+                        + " service_charge_on, service_charge_percent, service_charge_on_products, changed_fields,"
+                        + " created_by, created_at, updated_at) SELECT '" + salon.id() + "', '" + UUID.randomUUID()
+                        + "', '" + branch + "', coalesce(max(version), 0) + 1, 'VAT', 18, true, 'LK-1', 'Service"
+                        + " charge', true, 10, false, '{vat.registered}', '" + UUID.randomUUID() + "',"
+                        + " '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z' FROM catalogue_tax_version"
+                        + " WHERE tenant_id = '" + salon.id() + "'");
+                statement.execute("INSERT INTO catalogue_product (tenant_id, id, branch_id, name, price_minor,"
+                        + " currency, charges_vat, sold_at_checkout, version, created_at, updated_at) VALUES ('"
+                        + salon.id() + "', '" + UUID.randomUUID() + "', '" + branch + "', '" + name + " oil', 150000,"
+                        + " 'LKR', true, true, 0, now(), now())");
                 statement.execute("COMMIT");
             }
             return null;

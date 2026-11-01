@@ -8,7 +8,6 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Toaster } from '@/components/ui/sonner';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LeaveDialog, useLeaveGuard } from '@/features/branding';
 import {
   CategoryRows,
@@ -17,19 +16,17 @@ import {
   PopularCard,
   ServiceGroups,
   ServiceSheet,
+  TaxBanner,
   type CatalogueService,
   type Category,
 } from '@/features/catalogue';
 import type { PublicBookingRules } from '@/features/booking';
 import type { Kind } from '@/features/identity';
+import { ProductsScreen } from './ProductsScreen';
+import { ServicesFrame, type ServicesTab } from './ServicesFrame';
 import { useCatalogue, type CatalogueToast } from './use-catalogue';
 
-export type ServicesTab = 'services' | 'categories';
-const TABS: ServicesTab[] = ['services', 'categories'];
-const PATHS: Record<ServicesTab, string> = {
-  services: '/workspace/services',
-  categories: '/workspace/services/categories',
-};
+export type { ServicesTab } from './ServicesFrame';
 
 type Props = {
   kind: Kind;
@@ -40,12 +37,20 @@ type Props = {
 };
 
 /**
- * The Services & pricing page (F05-S01, the prototype's `aSvc` with the F05 block's `svTabs`): its summary and New
- * service or New category, the Services and Categories tabs, and the sheets and confirmations they open. Loading,
- * empty, field-error, conflict, refused and unavailable states; leaving the service sheet with unsaved edits asks
- * first. Those who may not change the catalogue read both tabs.
+ * The Services & pricing page (F05-S01, the prototype's `aSvc` with the F05 block's `svTabs`): the Services and
+ * Categories tabs, and from F05-S03 the Products tab, which keeps its own state.
  */
-export function ServicesScreen({ kind, tab, canChange, readOnly }: Props) {
+export function ServicesScreen(props: Props) {
+  return props.tab === 'products' ? <ProductsScreen {...props} /> : <ServicesAndCategories {...props} />;
+}
+
+/**
+ * The Services and Categories tabs (F05-S01): the summary and New service or New category, the tabs, and the sheets
+ * and confirmations they open. Loading, empty, field-error, conflict, refused and unavailable states; leaving the
+ * service sheet with unsaved edits asks first. Those who may not change the catalogue read both tabs. The Services
+ * tab shows the tax banner (F05-S03 AC-10).
+ */
+function ServicesAndCategories({ kind, tab, canChange, readOnly }: Props) {
   const t = useTranslations('services');
   const router = useRouter();
   const catalogue = useCatalogue(kind, (key: CatalogueToast) => toast.success(t(`toasts.${key}`)));
@@ -69,30 +74,22 @@ export function ServicesScreen({ kind, tab, canChange, readOnly }: Props) {
   const salonRule = useSalonRuleWords(catalogue.rules);
   const popularMode = catalogue.popular?.mode ?? 'chosen';
 
-  const header = (
-    <div className="-mt-3 flex flex-wrap items-center justify-between gap-3">
-      <p className="text-small text-foreground" data-testid="services-summary">
-        {tab === 'services'
-          ? t('summary', { services: services.length, online })
-          : t('categoriesSummary', { count: categories.length })}
-      </p>
-      {may &&
-        (tab === 'services' ? (
-          <Button
-            size="sm"
-            onClick={remember(catalogue.newService)}
-            disabled={categories.length === 0}
-            data-testid="services-new"
-          >
-            {t('newService')}
-          </Button>
-        ) : (
-          <Button size="sm" onClick={remember(catalogue.newCategory)} data-testid="categories-new">
-            {t('newCategory')}
-          </Button>
-        ))}
-    </div>
-  );
+  const action =
+    may &&
+    (tab === 'services' ? (
+      <Button
+        size="sm"
+        onClick={remember(catalogue.newService)}
+        disabled={categories.length === 0}
+        data-testid="services-new"
+      >
+        {t('newService')}
+      </Button>
+    ) : (
+      <Button size="sm" onClick={remember(catalogue.newCategory)} data-testid="categories-new">
+        {t('newCategory')}
+      </Button>
+    ));
 
   const loading = catalogue.loading && !catalogue.categories;
   // While a sheet is open the page behind its overlay is hidden from view and from assistive technology, so the
@@ -101,68 +98,67 @@ export function ServicesScreen({ kind, tab, canChange, readOnly }: Props) {
   const notices = <Notices catalogue={catalogue} readOnly={readOnly} />;
   return (
     <div className="flex min-w-0 flex-col gap-4" data-testid="services-page">
-      {header}
-      <Tabs value={tab} onValueChange={(next) => next !== tab && router.push(PATHS[next as ServicesTab])}>
-        <TabsList aria-label={t('tabsLabel')} data-testid="services-tabs">
-          {TABS.map((each) => (
-            <TabsTrigger key={each} value={each} data-testid={`services-tab-${each}`}>
-              {t(`tabs.${each}`)}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-        <TabsContent value={tab} className="flex flex-col gap-4" data-testid={`services-panel-${tab}`}>
-          {!inSheet && notices}
-          <Alert variant="info" className="text-small" data-testid="services-banner">
-            {tab === 'services' ? t('banner') : t('categoriesBanner')}
-          </Alert>
-          {loading ? (
-            <div
-              className="flex flex-col gap-3"
-              role="status"
-              aria-busy="true"
-              aria-label={t('loading')}
-              data-testid="services-loading"
-            >
-              <Skeleton className="h-7 w-40" />
-              <div className="grid gap-3 wide:grid-cols-2">
-                <Skeleton className="h-40 w-full rounded-card" />
-                <Skeleton className="h-40 w-full rounded-card" />
-              </div>
+      <ServicesFrame
+        tab={tab}
+        summary={
+          tab === 'services'
+            ? t('summary', { services: services.length, online })
+            : t('categoriesSummary', { count: categories.length })
+        }
+        action={action}
+      >
+        {!inSheet && notices}
+        <Alert variant="info" className="text-small" data-testid="services-banner">
+          {tab === 'services' ? t('banner') : t('categoriesBanner')}
+        </Alert>
+        {tab === 'services' && <TaxBanner tax={catalogue.tax} />}
+        {loading ? (
+          <div
+            className="flex flex-col gap-3"
+            role="status"
+            aria-busy="true"
+            aria-label={t('loading')}
+            data-testid="services-loading"
+          >
+            <Skeleton className="h-7 w-40" />
+            <div className="grid gap-3 wide:grid-cols-2">
+              <Skeleton className="h-40 w-full rounded-card" />
+              <Skeleton className="h-40 w-full rounded-card" />
             </div>
-          ) : catalogue.categories && tab === 'services' ? (
-            <>
-              <PopularCard
-                mode={popularMode}
-                chosen={chosenNames(categories, services)}
-                now={(catalogue.popular?.popular ?? []).map(
-                  (id) => services.find((service) => service.id === id)?.name ?? '',
-                )}
-                canChange={may}
-                busy={catalogue.busy}
-                onMode={(mode) => void catalogue.switchPopular(mode)}
-              />
-              <ServiceGroups
-                categories={categories}
-                services={services}
-                canChange={may}
-                busy={catalogue.busy}
-                onEdit={remember(catalogue.editService)}
-                onToggleOnline={(service) => void catalogue.toggleOnline(service)}
-                onDuplicate={remember((service) => void catalogue.duplicate(service))}
-              />
-            </>
-          ) : catalogue.categories ? (
-            <CategoryRows
-              categories={categories}
+          </div>
+        ) : catalogue.categories && tab === 'services' ? (
+          <>
+            <PopularCard
+              mode={popularMode}
+              chosen={chosenNames(categories, services)}
+              now={(catalogue.popular?.popular ?? []).map(
+                (id) => services.find((service) => service.id === id)?.name ?? '',
+              )}
               canChange={may}
               busy={catalogue.busy}
-              onMove={(category, direction) => void catalogue.move(category, direction)}
-              onRename={remember(catalogue.renameCategory)}
-              onDelete={catalogue.askDeleteCategory}
+              onMode={(mode) => void catalogue.switchPopular(mode)}
             />
-          ) : null}
-        </TabsContent>
-      </Tabs>
+            <ServiceGroups
+              categories={categories}
+              services={services}
+              canChange={may}
+              busy={catalogue.busy}
+              onEdit={remember(catalogue.editService)}
+              onToggleOnline={(service) => void catalogue.toggleOnline(service)}
+              onDuplicate={remember((service) => void catalogue.duplicate(service))}
+            />
+          </>
+        ) : catalogue.categories ? (
+          <CategoryRows
+            categories={categories}
+            canChange={may}
+            busy={catalogue.busy}
+            onMove={(category, direction) => void catalogue.move(category, direction)}
+            onRename={remember(catalogue.renameCategory)}
+            onDelete={catalogue.askDeleteCategory}
+          />
+        ) : null}
+      </ServicesFrame>
       {catalogue.sheet && (
         <ServiceSheet
           key={catalogue.opened}

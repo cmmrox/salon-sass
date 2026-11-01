@@ -11,8 +11,8 @@ import java.util.UUID;
 import org.springframework.stereotype.Component;
 
 /**
- * How a change to the catalogue is written to the salon's audit trail (F05-S01 AC-15): the staff actor, the time,
- * the category or service as the subject, and the values before and after. A change of a service's terms also
+ * How a change to the catalogue is written to the salon's audit trail (F05-S01 AC-15, F05-S03 AC-12): the staff actor,
+ * the time, the category, service, tax settings version or product as the subject, and the values before and after. A change of a service's terms also
  * names the terms version it created. Joins the caller's transaction, which sets the salon.
  */
 @Component
@@ -21,6 +21,8 @@ class CatalogueAudit {
     static final String CATEGORY = "catalogue_category";
     static final String SERVICE = "catalogue_service";
     static final String POPULAR_SETTING = "catalogue_popular_setting";
+    static final String TAX_VERSION = "catalogue_tax_version";
+    static final String PRODUCT = "catalogue_product";
 
     private final AuditTrail audit;
 

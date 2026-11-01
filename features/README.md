@@ -12,7 +12,7 @@ requirement detail is in `qa/coverage.md`.
 | F02 | [Sign-in, accounts and roles](F02-sign-in-accounts-and-roles/) | M1-web | complete | merged | 4/4 | 10 | - |
 | F03 | [Operator console: salons, plans and billing](F03-operator-console/) | M1-web | complete | merged | 4/4 | 5 | - |
 | F04 | [Salon setup: profile, branding, hours and policies](F04-salon-setup/) | M1-web | complete | merged | 4/4 | 6 | - |
-| F05 | [Service catalogue](F05-service-catalogue/) | M1-web | in-progress | - | 2/3 | 7 | **developer**: `stage-build F05-S03` |
+| F05 | [Service catalogue](F05-service-catalogue/) | M1-web | in-progress | - | 3/3 | 7 | **qa**: `feature-verify F05` |
 | F06 | [Staff, schedules and leave](F06-staff-schedules-and-leave/) | M1-web | backlog | - | - | 4 | after F05 |
 | F07 | [Booking engine and staff booking foundations](F07-online-booking/) | M1-web | backlog | - | - | 7 | after F05, F06 |
 | F08 | [Payments, deposits and refunds](F08-payments-deposits-and-refunds/) | M1-web | backlog | - | - | 8 | after F07 |
@@ -39,4 +39,4 @@ requirement detail is in `qa/coverage.md`.
 | --- | --- | --- | --- | --- | --- | --- |
 | F05-S01 | Categories and services | api, web | complete | - | 0 | - |
 | F05-S02 | Variants, popular services and service deposits | api, web | complete | - | 0 | - |
-| F05-S03 | Tax, service charge and products | api, web | planned | - | 0 | **developer**: `stage-build F05-S03` |
+| F05-S03 | Tax, service charge and products | api, web | complete | - | 0 | - |

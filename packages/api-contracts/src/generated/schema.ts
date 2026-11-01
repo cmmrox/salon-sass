@@ -131,6 +131,48 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/catalogue/products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The products, by name. `catalogue.read`. */
+        get: operations["listCatalogueProducts"];
+        put?: never;
+        /** Adds a product. `catalogue.price.change`. */
+        post: operations["addCatalogueProduct"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalogue/products/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Saves a product's name, price and settings. `catalogue.price.change`.
+         * @description Past sales keep what they copied; new sales use the new price.
+         */
+        put: operations["saveCatalogueProduct"];
+        post?: never;
+        /**
+         * Deletes a product: it leaves checkout and its name is free. `catalogue.price.change`.
+         * @description Past sales keep what they copied.
+         */
+        delete: operations["deleteCatalogueProduct"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/catalogue/services": {
         parameters: {
             query?: never;
@@ -248,6 +290,64 @@ export interface paths {
          * @description At most six services are chosen. Makes no terms version.
          */
         put: operations["setCatalogueServicePopular"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalogue/tax": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The salon's current tax: which parts its prices include, at what rates. Public.
+         * @description JSON `null` before the salon first saves its tax settings: nothing is charged. Never the VAT registration number. A booking or a sale made now keeps `versionId`.
+         */
+        get: operations["getCatalogueTax"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalogue/tax/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The tax settings' versions, newest first, paginated. `settings.read`. */
+        get: operations["getCatalogueTaxHistory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalogue/tax/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The tax settings as settings staff keep them, and what configuration offers. `settings.read`. */
+        get: operations["getCatalogueTaxSettings"];
+        /**
+         * Saves the tax settings as a new version, current at once for new bookings and sales. `settings.manage`.
+         * @description The version copies the VAT name and rate and the service charge's name configuration gives now. Existing bookings and sales keep the version they were made under; earlier versions are never changed.
+         */
+        put: operations["saveCatalogueTaxSettings"];
         post?: never;
         delete?: never;
         options?: never;
@@ -1722,6 +1822,30 @@ export interface components {
              */
             version: number;
         };
+        CatalogueProduct: {
+            /** @description Whether VAT applies to it while the salon is registered for VAT; kept while VAT is off. */
+            chargesVat: boolean;
+            /** @description The ISO 4217 currency of its price. */
+            currency: string;
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /**
+             * Format: int64
+             * @description Tax-inclusive, in minor units of `currency`.
+             */
+            priceMinor: number;
+            /** @description Whether the desk offers it at checkout. */
+            soldAtCheckout: boolean;
+            /**
+             * Format: int64
+             * @description Its version, which a save or delete is made from.
+             */
+            version: number;
+        };
+        CatalogueProductList: {
+            items: components["schemas"]["CatalogueProduct"][];
+        };
         CatalogueService: {
             bookableOnline: boolean;
             /** Format: uuid */
@@ -1884,6 +2008,128 @@ export interface components {
              */
             priceMinor: number;
             segments: components["schemas"]["CatalogueServiceSegment"][];
+        };
+        CatalogueTax: {
+            /** @description The service charge, which service prices include; null while the salon charges none. */
+            serviceCharge: components["schemas"]["CatalogueTaxServiceCharge"] | null;
+            /** @description VAT, which prices include; null while the salon is not registered for it. */
+            vat: components["schemas"]["CatalogueTaxVat"] | null;
+            /**
+             * Format: uuid
+             * @description The current version, which a booking or a sale made now keeps.
+             */
+            versionId: string;
+        };
+        CatalogueTaxConfigured: {
+            /** @description Such as "VAT registration number". */
+            registrationLabel: string;
+            /**
+             * Format: int32
+             * @description The highest service charge; the lowest is 1.
+             */
+            serviceChargeMaxPercent: number;
+            /** @description Such as "Service charge". */
+            serviceChargeName: string;
+            /** @description Such as "VAT". */
+            vatName: string;
+            /** Format: int32 */
+            vatRatePercent: number;
+        };
+        CatalogueTaxHistory: {
+            items: components["schemas"]["CatalogueTaxHistoryEntry"][];
+            /**
+             * Format: int32
+             * @description The page, from 0.
+             */
+            page: number;
+            /** Format: int32 */
+            size: number;
+            /**
+             * Format: int64
+             * @description How many versions there are.
+             */
+            total: number;
+        };
+        CatalogueTaxHistoryEntry: {
+            /** @description The settings it changed from the version before it, every one for the first version. `vat.ratePercent`, `vat.name` and `serviceCharge.name` change when configuration did. */
+            changedFields: ("vat.registered" | "vat.registrationNumber" | "vat.ratePercent" | "vat.name" | "serviceCharge.on" | "serviceCharge.percent" | "serviceCharge.onProducts" | "serviceCharge.name")[];
+            /** Format: date-time */
+            createdAt: string;
+            /**
+             * Format: uuid
+             * @description The staff account that saved it.
+             */
+            createdBy: string;
+            /** @description The author's email, else mobile number, as the staff list shows the account; null when it is not known. */
+            createdByLabel: string | null;
+            /** Format: int64 */
+            version: number;
+            /** Format: uuid */
+            versionId: string;
+        };
+        CatalogueTaxServiceCharge: {
+            /** @description What it is called, such as "Service charge". */
+            name: string;
+            /** @description Whether product prices include it too. */
+            onProducts: boolean;
+            /**
+             * Format: int32
+             * @description Its rate, a whole percentage.
+             */
+            percent: number;
+        };
+        CatalogueTaxServiceChargeInput: {
+            on: boolean;
+            /** @description Whether products carry it too; must be false while it is off. */
+            onProducts: boolean;
+            /**
+             * Format: int32
+             * @description Required while on: a whole percentage from 1 to the configured maximum (20). Absent or null otherwise.
+             */
+            percent?: number | null;
+        };
+        CatalogueTaxServiceChargeValues: {
+            on: boolean;
+            /** @description Whether products carry it too; false while it is off. */
+            onProducts: boolean;
+            /**
+             * Format: int32
+             * @description A whole percentage from 1 to the configured maximum while on; null otherwise.
+             */
+            percent: number | null;
+        };
+        CatalogueTaxSettings: {
+            configured: components["schemas"]["CatalogueTaxConfigured"];
+            /** @description The current version's settings, as a save sends them; null before the first save. */
+            settings: components["schemas"]["CatalogueTaxValues"] | null;
+            /**
+             * Format: int64
+             * @description The current version's number, which a save is made from: 0 before the first save.
+             */
+            version: number;
+        };
+        CatalogueTaxValues: {
+            serviceCharge: components["schemas"]["CatalogueTaxServiceChargeValues"];
+            vat: components["schemas"]["CatalogueTaxVatValues"];
+        };
+        CatalogueTaxVat: {
+            /** @description What it is called, such as "VAT". */
+            name: string;
+            /**
+             * Format: int32
+             * @description Its rate, a whole percentage.
+             */
+            ratePercent: number;
+        };
+        CatalogueTaxVatInput: {
+            registered: boolean;
+            /** @description Required while registered: 1 to 20 letters, digits and hyphens. Absent or null otherwise. */
+            registrationNumber?: string | null;
+        };
+        CatalogueTaxVatValues: {
+            registered: boolean;
+            /** @description 1 to 20 letters, digits and hyphens while registered; null otherwise. */
+            registrationNumber: string | null;
         };
         CatalogueVariantInput: {
             /**
@@ -2395,6 +2641,19 @@ export interface components {
             /** @description 2 to 30 characters after trimming, unique in the salon regardless of case. */
             name: string;
         };
+        NewCatalogueProduct: {
+            /** @description Whether VAT applies to it while the salon is registered for VAT. */
+            chargesVat: boolean;
+            /** @description 2 to 40 characters after trimming, unique in the salon regardless of case. */
+            name: string;
+            /**
+             * Format: int64
+             * @description Tax-inclusive, in minor units of the salon's currency, a whole number of units: Rs. 1 to Rs. 500,000 (100 to 50000000), scaled for other currencies.
+             */
+            priceMinor: number;
+            /** @description Whether the desk offers it at checkout. */
+            soldAtCheckout: boolean;
+        };
         NewCatalogueService: {
             /** @description Whether customers can book it online; on when absent. */
             bookableOnline?: boolean;
@@ -2429,6 +2688,8 @@ export interface components {
         };
         /** @description No rules saved yet. */
         NoBookingRules: null;
+        /** @description No tax settings saved yet: nothing is charged. */
+        NoCatalogueTax: null;
         NoShowInput: {
             /** @enum {string} */
             kind: "deposit" | "share";
@@ -3210,6 +3471,24 @@ export interface components {
              */
             version: number;
         };
+        SaveCatalogueProduct: {
+            /** @description Whether VAT applies to it while the salon is registered for VAT. */
+            chargesVat: boolean;
+            /** @description 2 to 40 characters after trimming, unique in the salon regardless of case. */
+            name: string;
+            /**
+             * Format: int64
+             * @description Tax-inclusive, in minor units of the salon's currency, a whole number of units: Rs. 1 to Rs. 500,000 (100 to 50000000), scaled for other currencies.
+             */
+            priceMinor: number;
+            /** @description Whether the desk offers it at checkout. */
+            soldAtCheckout: boolean;
+            /**
+             * Format: int64
+             * @description The product's version, as read.
+             */
+            version: number;
+        };
         SaveCatalogueService: {
             bookableOnline: boolean;
             /**
@@ -3243,6 +3522,15 @@ export interface components {
             /**
              * Format: int64
              * @description The service's version, as read.
+             */
+            version: number;
+        };
+        SaveCatalogueTax: {
+            serviceCharge: components["schemas"]["CatalogueTaxServiceChargeInput"];
+            vat: components["schemas"]["CatalogueTaxVatInput"];
+            /**
+             * Format: int64
+             * @description The current version's number, as read: 0 before the first save.
              */
             version: number;
         };
@@ -4163,6 +4451,332 @@ export interface operations {
             };
         };
     };
+    listCatalogueProducts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The products, at most 300. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogueProductList"];
+                };
+            };
+            /** @description No valid session for this salon: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Without `catalogue.read`: `permission_denied`. A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The hostname names no salon: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The database is down or not answering: `service_unavailable`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    addCatalogueProduct: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewCatalogueProduct"];
+            };
+        };
+        responses: {
+            /** @description The product. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogueProduct"];
+                };
+            };
+            /** @description The name is not 2 to 40 characters or another product has it regardless of case, the price is not a whole Rs. 1 to Rs. 500,000, or a setting is missing or not true or false: `bad_request`, with `errors` naming each field. Nothing is saved. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No valid session for this salon: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Without `catalogue.price.change`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The hostname names no salon: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The salon has 300 products: `limit_reached`. A change made at the same moment won: `conflict`. Nothing is saved. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The database is down or not answering: `service_unavailable`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    saveCatalogueProduct: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveCatalogueProduct"];
+            };
+        };
+        responses: {
+            /** @description The product, saved. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogueProduct"];
+                };
+            };
+            /** @description A field broke a rule, as for an added product, or `version` is missing: `bad_request`, with `errors` naming each field. Nothing is saved. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No valid session for this salon: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Without `catalogue.price.change`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No such product of the hostname's salon, or the hostname names no salon: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `version` is not the product's: `conflict`. Nothing changes: `invalid_state`. Nothing is saved. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The database is down or not answering: `service_unavailable`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    deleteCatalogueProduct: {
+        parameters: {
+            query?: {
+                version?: number;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `version` is missing or below 0: `bad_request`, with `errors` naming it. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No valid session for this salon: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Without `catalogue.price.change`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No such product of the hostname's salon, or the hostname names no salon: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `version` is not the product's: `conflict`. Nothing is deleted. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The database is down or not answering: `service_unavailable`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     listCatalogueServices: {
         parameters: {
             query?: never;
@@ -4947,6 +5561,291 @@ export interface operations {
                 };
             };
             /** @description Six services are already chosen: `limit_reached`. `version` is not the service's: `conflict`. It is already so: `invalid_state`. Nothing changes. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The database is down or not answering: `service_unavailable`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getCatalogueTax: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The current tax, or `null`. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogueTax"] | components["schemas"]["NoCatalogueTax"];
+                };
+            };
+            /** @description A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The hostname names no salon: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The database is down or not answering: `service_unavailable`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getCatalogueTaxHistory: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A page of versions. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogueTaxHistory"];
+                };
+            };
+            /** @description `page` below 0 or above 100000, or `size` outside 1 to 100: `bad_request`. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No valid session for this salon: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Without `settings.read`: `permission_denied`. A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The hostname names no salon: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The database is down or not answering: `service_unavailable`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getCatalogueTaxSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The settings. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogueTaxSettings"];
+                };
+            };
+            /** @description No valid session for this salon: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Without `settings.read`: `permission_denied`. A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The hostname names no salon: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The database is down or not answering: `service_unavailable`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    saveCatalogueTaxSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveCatalogueTax"];
+            };
+        };
+        responses: {
+            /** @description The settings as saved, with the new version's number. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogueTaxSettings"];
+                };
+            };
+            /** @description A field broke a rule, or the body is not the documented shape: `bad_request`, with `errors` naming each field (`vat.registrationNumber`, `serviceCharge.percent`). Nothing is saved. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No valid session for this salon: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Without `settings.manage`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The hostname names no salon: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `version` is not the current version: `conflict`. The new version would be the current one, with the same configured names and rate: `invalid_state`. Nothing is saved. */
             409: {
                 headers: {
                     [name: string]: unknown;

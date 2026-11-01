@@ -4,15 +4,19 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.salonplatform.catalogue.entity.Category;
 import com.salonplatform.catalogue.entity.PopularSetting;
+import com.salonplatform.catalogue.entity.SalonProduct;
 import com.salonplatform.catalogue.entity.SalonService;
 import com.salonplatform.catalogue.entity.ServicePhoto;
+import com.salonplatform.catalogue.entity.TaxVersion;
 import com.salonplatform.catalogue.entity.TermsVariant;
 import com.salonplatform.catalogue.entity.TermsVersion;
 import com.salonplatform.catalogue.repository.CategoryListRepository;
 import com.salonplatform.catalogue.repository.CategoryRepository;
 import com.salonplatform.catalogue.repository.PopularSettingRepository;
+import com.salonplatform.catalogue.repository.SalonProductRepository;
 import com.salonplatform.catalogue.repository.SalonServiceRepository;
 import com.salonplatform.catalogue.repository.ServicePhotoRepository;
+import com.salonplatform.catalogue.repository.TaxVersionRepository;
 import com.salonplatform.catalogue.repository.TermsVariantRepository;
 import com.salonplatform.catalogue.repository.TermsVersionRepository;
 import com.salonplatform.shared.tenancy.TenantContext;
@@ -36,7 +40,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * The first layer on its own for F05-S01's and F05-S02's tables: Hibernate's tenant filter ({@code @TenantId}), with row-level
+ * The first layer on its own for F05-S01's, F05-S02's and F05-S03's tables: Hibernate's tenant filter ({@code @TenantId}), with row-level
  * security disabled on them and every write granted in this database, so that Hibernate and nothing else stands
  * between one salon and another. The cases of docs/architecture/multi-tenancy.md, "Tests you must write", hold.
  */
@@ -95,6 +99,10 @@ class CatalogueHibernateFilterAloneIntegrationTest {
                 "SELECT id FROM catalogue_terms_version WHERE tenant_id = ?", UUID.class, beta.id());
         UUID betasPhoto =
                 owner.queryForObject("SELECT id FROM catalogue_photo WHERE tenant_id = ?", UUID.class, beta.id());
+        UUID betasTax =
+                owner.queryForObject("SELECT id FROM catalogue_tax_version WHERE tenant_id = ?", UUID.class, beta.id());
+        UUID betasProduct =
+                owner.queryForObject("SELECT id FROM catalogue_product WHERE tenant_id = ?", UUID.class, beta.id());
         as(
                 alpha,
                 () -> inTransaction(() -> {
@@ -128,6 +136,20 @@ class CatalogueHibernateFilterAloneIntegrationTest {
                     assertThat(bean(SalonServiceRepository.class).findAll())
                             .extracting(SalonService::getTenantId)
                             .containsOnly(alpha.id());
+                    assertThat(bean(TaxVersionRepository.class).findVersion(betasTax))
+                            .isEmpty();
+                    assertThat(bean(TaxVersionRepository.class).findFirstByBranchIdOrderByVersionDesc(betasBranch))
+                            .isEmpty();
+                    assertThat(bean(TaxVersionRepository.class).findAll())
+                            .extracting(TaxVersion::getTenantId)
+                            .containsOnly(alpha.id());
+                    assertThat(bean(SalonProductRepository.class).findInBranch(betasProduct, betasBranch))
+                            .isEmpty();
+                    assertThat(bean(SalonProductRepository.class).byName(betasBranch))
+                            .isEmpty();
+                    assertThat(bean(SalonProductRepository.class).findAll())
+                            .extracting(SalonProduct::getTenantId)
+                            .containsOnly(alpha.id());
                     return null;
                 }));
     }
@@ -137,8 +159,13 @@ class CatalogueHibernateFilterAloneIntegrationTest {
         as(
                 alpha,
                 () -> inTransaction(() -> {
-                    for (String entity :
-                            List.of("Category", "SalonService", "ServicePhoto", "TermsVariant", "PopularSetting")) {
+                    for (String entity : List.of(
+                            "Category",
+                            "SalonService",
+                            "ServicePhoto",
+                            "TermsVariant",
+                            "PopularSetting",
+                            "SalonProduct")) {
                         assertThat(entityManager
                                         .createQuery("delete from " + entity + " e where e.tenantId = :beta")
                                         .setParameter("beta", beta.id())
@@ -148,6 +175,11 @@ class CatalogueHibernateFilterAloneIntegrationTest {
                     }
                     assertThat(entityManager
                                     .createQuery("update SalonService s set s.name = 'Taken' where s.tenantId = :beta")
+                                    .setParameter("beta", beta.id())
+                                    .executeUpdate())
+                            .isZero();
+                    assertThat(entityManager
+                                    .createQuery("update SalonProduct p set p.name = 'Taken' where p.tenantId = :beta")
                                     .setParameter("beta", beta.id())
                                     .executeUpdate())
                             .isZero();
@@ -208,8 +240,28 @@ class CatalogueHibernateFilterAloneIntegrationTest {
                                             "Short",
                                             100_00,
                                             List.of(new ServiceSegment(SegmentKind.ACTIVE, 30)))));
+                    TaxVersion tax = bean(TaxVersionRepository.class)
+                            .persist(TaxVersion.saved(
+                                    branch,
+                                    90,
+                                    new TaxSettingsVersion.Vat("VAT", 18, false, null),
+                                    new TaxSettingsVersion.ServiceCharge("Service charge", false, 0, false),
+                                    List.of("vat.registered"),
+                                    UUID.randomUUID(),
+                                    now));
+                    SalonProduct product = bean(SalonProductRepository.class)
+                            .saveAndFlush(SalonProduct.added(
+                                    branch, new SalonProduct.Details("Filter written", 100, "LKR", true, true), now));
                     entityManager.flush();
-                    return new UUID[] {category.getId(), service, terms.getId(), photo.getId(), variant.getId()};
+                    return new UUID[] {
+                        category.getId(),
+                        service,
+                        terms.getId(),
+                        photo.getId(),
+                        variant.getId(),
+                        tax.getId(),
+                        product.getId()
+                    };
                 }));
         JdbcTemplate owner = database.asOwner();
         assertThat(owner.queryForObject("SELECT tenant_id FROM catalogue_category WHERE id = ?", UUID.class, ids[0]))
@@ -224,6 +276,10 @@ class CatalogueHibernateFilterAloneIntegrationTest {
         assertThat(owner.queryForObject(
                         "SELECT tenant_id FROM catalogue_terms_variant WHERE id = ?", UUID.class, ids[4]))
                 .isEqualTo(alpha.id());
+        assertThat(owner.queryForObject("SELECT tenant_id FROM catalogue_tax_version WHERE id = ?", UUID.class, ids[5]))
+                .isEqualTo(alpha.id());
+        assertThat(owner.queryForObject("SELECT tenant_id FROM catalogue_product WHERE id = ?", UUID.class, ids[6]))
+                .isEqualTo(alpha.id());
         as(
                 beta,
                 () -> inTransaction(() -> {
@@ -234,6 +290,10 @@ class CatalogueHibernateFilterAloneIntegrationTest {
                     assertThat(bean(ServicePhotoRepository.class).findPhoto(ids[3]))
                             .isEmpty();
                     assertThat(bean(TermsVariantRepository.class).findOfVersions(List.of(ids[2])))
+                            .isEmpty();
+                    assertThat(bean(TaxVersionRepository.class).findVersion(ids[5]))
+                            .isEmpty();
+                    assertThat(bean(SalonProductRepository.class).findInBranch(ids[6], branch))
                             .isEmpty();
                     return null;
                 }));
@@ -254,6 +314,10 @@ class CatalogueHibernateFilterAloneIntegrationTest {
         assertThat(inTransaction(() -> bean(TermsVariantRepository.class).findAll()))
                 .isEmpty();
         assertThat(inTransaction(() -> bean(PopularSettingRepository.class).findAll()))
+                .isEmpty();
+        assertThat(inTransaction(() -> bean(TaxVersionRepository.class).findAll()))
+                .isEmpty();
+        assertThat(inTransaction(() -> bean(SalonProductRepository.class).findAll()))
                 .isEmpty();
     }
 

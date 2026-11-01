@@ -23,6 +23,10 @@ final class CatalogueFixture {
     static final String MENU = "/api/v1/catalogue/menu";
     static final String PHOTOS = "/api/v1/catalogue/photos/";
     static final String POPULAR_SETTING = "/api/v1/catalogue/popular-setting";
+    static final String TAX = "/api/v1/catalogue/tax";
+    static final String TAX_SETTINGS = "/api/v1/catalogue/tax/settings";
+    static final String TAX_HISTORY = "/api/v1/catalogue/tax/history";
+    static final String PRODUCTS = "/api/v1/catalogue/products";
 
     /** The prototype's ten categories, in order (decision 092). */
     static final List<String> DEFAULT_CATEGORIES = List.of(
@@ -76,6 +80,35 @@ final class CatalogueFixture {
                 .map(category -> UUID.fromString((String) category.get("id")))
                 .findFirst()
                 .orElseThrow();
+    }
+
+    /**
+     * A save of the tax settings from {@code version}: VAT with this registration number, or off for null; a service
+     * charge of {@code percent}, or off for null, on products too when {@code onProducts} (F05-S03).
+     */
+    static Map<String, Object> tax(long version, String vatNumber, Integer percent, boolean onProducts) {
+        Map<String, Object> vat = new LinkedHashMap<>();
+        vat.put("registered", vatNumber != null);
+        vat.put("registrationNumber", vatNumber);
+        Map<String, Object> charge = new LinkedHashMap<>();
+        charge.put("on", percent != null);
+        charge.put("percent", percent);
+        charge.put("onProducts", onProducts);
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("version", version);
+        body.put("vat", vat);
+        body.put("serviceCharge", charge);
+        return body;
+    }
+
+    /** A product's body to add: Rs. {@code rupees}, with its VAT choice and sold at checkout (F05-S03). */
+    static Map<String, Object> product(String name, long rupees, boolean chargesVat, boolean soldAtCheckout) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("name", name);
+        body.put("priceMinor", rupees * 100);
+        body.put("chargesVat", chargesVat);
+        body.put("soldAtCheckout", soldAtCheckout);
+        return body;
     }
 
     /** Creates a service and answers its body; fails the test unless it was created. */

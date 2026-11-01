@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 
 /**
  * What every catalogue use case settles before it opens its transaction (docs/architecture/multi-tenancy.md): the
- * salon, who acts and with which permission (decision 093), and the salon's default branch, checked through
+ * salon, who acts and with which permission (decisions 085 and 093), and the salon's default branch, checked through
  * branding's {@link SalonBranches}. The catalogue is salon-wide in R1, under the default branch.
  */
 @Component
@@ -21,6 +21,12 @@ class CatalogueScope {
 
     /** Every change to the catalogue, not only prices: the Owner and the Manager. */
     static final String CHANGE = "catalogue.price.change";
+
+    /** Reading the tax settings, a salon setting (F05-S03, decision 085): the Owner, the Manager and support. */
+    static final String SETTINGS_READ = "settings.read";
+
+    /** Saving the tax settings (decision 085): the Owner and the Manager. */
+    static final String SETTINGS_MANAGE = "settings.manage";
 
     /** The salon a use case acts for, its default branch, and who acts (null when public). */
     record Scope(CurrentTenant salon, Principal actor, UUID branch) {}

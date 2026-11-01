@@ -8,6 +8,8 @@ type Call = { headers: Record<string, string | undefined>; signal: AbortSignal }
 type NewService = components['schemas']['NewCatalogueService'];
 type Variants = components['schemas']['CatalogueVariantsInput'];
 type Deposit = components['schemas']['CatalogueServiceDepositInput'];
+type Product = components['schemas']['NewCatalogueProduct'];
+type Tax = components['schemas']['SaveCatalogueTax'];
 
 const record = (value: unknown): Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
@@ -70,9 +72,39 @@ function serviceOf(body: Record<string, unknown>): NewService {
   return service;
 }
 
+/** A product's fields, rebuilt from the contract's own names (F05-S03). */
+function productOf(body: Record<string, unknown>): Product {
+  return {
+    name: text(body.name),
+    priceMinor: as<number>(body.priceMinor),
+    chargesVat: as<boolean>(body.chargesVat),
+    soldAtCheckout: as<boolean>(body.soldAtCheckout),
+  };
+}
+
+/** The tax settings' save, rebuilt from the contract's own names (F05-S03); a part's number or rate only when sent. */
+function taxOf(body: Record<string, unknown>): Tax {
+  const vat = record(body.vat);
+  const charge = record(body.serviceCharge);
+  const registrationNumber = sent<string | null>(vat.registrationNumber);
+  const percent = sent<number | null>(charge.percent);
+  return {
+    version: as<number>(body.version),
+    vat: {
+      registered: as<boolean>(vat.registered),
+      ...(registrationNumber === undefined ? {} : { registrationNumber }),
+    },
+    serviceCharge: {
+      on: as<boolean>(charge.on),
+      ...(percent === undefined ? {} : { percent }),
+      onProducts: as<boolean>(charge.onProducts),
+    },
+  };
+}
+
 /**
- * The catalogue paths the workspace BFF reaches (F05-S01, F05-S02): the categories and services and the Popular
- * setting, every change to them, and a service's photo. Every request is rebuilt from the contract's own fields; the BFF checks the session and the
+ * The catalogue paths the workspace BFF reaches (F05-S01 to F05-S03): the categories and services, the Popular
+ * setting, the products and the tax settings, every change to them, and a service's photo. Every request is rebuilt from the contract's own fields; the BFF checks the session and the
  * permission before any of them. Null when the API is not configured.
  */
 export function salonCatalogueFor(hostname: string) {
@@ -83,6 +115,11 @@ export function salonCatalogueFor(hostname: string) {
     categories: (call: Call) => client.GET('/api/v1/catalogue/categories', call),
     services: (call: Call) => client.GET('/api/v1/catalogue/services', call),
     popularSetting: (call: Call) => client.GET('/api/v1/catalogue/popular-setting', call),
+    products: (call: Call) => client.GET('/api/v1/catalogue/products', call),
+    taxSettings: (call: Call) => client.GET('/api/v1/catalogue/tax/settings', call),
+    taxHistory: (call: Call, page: number) =>
+      client.GET('/api/v1/catalogue/tax/history', { ...call, params: { query: { page, size: 10 } } }),
+    taxPublic: (call: Call) => client.GET('/api/v1/catalogue/tax', call),
     change: (call: Call, action: string, value: unknown) => {
       const body = record(value);
       switch (action) {
@@ -136,6 +173,21 @@ export function salonCatalogueFor(hostname: string) {
             ...call,
             body: { mode: as<'chosen' | 'most_booked'>(body.mode), version: as<number>(body.version) },
           });
+        case 'catalogue-product-add':
+          return client.POST('/api/v1/catalogue/products', { ...call, body: productOf(body) });
+        case 'catalogue-product-save':
+          return client.PUT('/api/v1/catalogue/products/{id}', {
+            ...call,
+            params: id(body),
+            body: { ...productOf(body), version: as<number>(body.version) },
+          });
+        case 'catalogue-product-delete':
+          return client.DELETE('/api/v1/catalogue/products/{id}', {
+            ...call,
+            params: { ...id(body), query: { version: as<number>(body.version) } },
+          });
+        case 'catalogue-tax-save':
+          return client.PUT('/api/v1/catalogue/tax/settings', { ...call, body: taxOf(body) });
         case 'catalogue-service-delete':
           return client.DELETE('/api/v1/catalogue/services/{id}', {
             ...call,

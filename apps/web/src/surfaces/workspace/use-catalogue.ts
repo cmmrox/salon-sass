@@ -19,6 +19,7 @@ import {
   type PhotoUpload,
   type PopularMode,
   type PopularSetting,
+  type PublicTax,
   type ServiceList,
   type ServiceProblem,
   type ServiceValues,
@@ -75,6 +76,9 @@ export function useCatalogue(kind: Kind, notify: (toast: CatalogueToast) => void
   const [popular, setPopular] = useState<PopularSetting | null>(null);
   // The salon's booking rules as customers see them: null before the first save, undefined while unknown.
   const [rules, setRules] = useState<PublicBookingRules | null | undefined>(undefined);
+  // The salon's current tax, for the Services tab's banner (F05-S03): null before the first save, undefined while
+  // unknown.
+  const [tax, setTax] = useState<PublicTax | null | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState<CatalogueNotice>(null);
   const [refusal, setRefusal] = useState<CatalogueRefusal>(null);
@@ -114,7 +118,7 @@ export function useCatalogue(kind: Kind, notify: (toast: CatalogueToast) => void
   async function load(): Promise<{ categories: CategoryList; services: ServiceList } | null> {
     setLoading(true);
     try {
-      const [nextCategories, nextServices, nextPopular, nextRules] = await Promise.all([
+      const [nextCategories, nextServices, nextPopular, nextRules, nextTax] = await Promise.all([
         identityRequest<CategoryList>(kind, 'catalogue-categories'),
         identityRequest<ServiceList>(kind, 'catalogue-services'),
         identityRequest<PopularSetting>(kind, 'catalogue-popular-setting'),
@@ -123,11 +127,17 @@ export function useCatalogue(kind: Kind, notify: (toast: CatalogueToast) => void
           (answer) => answer.current,
           () => undefined,
         ),
+        // Only the tax banner depends on it: the page works without it.
+        identityRequest<{ current: PublicTax | null }>(kind, 'catalogue-tax-public').then(
+          (answer) => answer.current,
+          () => undefined,
+        ),
       ]);
       setCategories(nextCategories);
       setServices(nextServices);
       setPopular(nextPopular);
       setRules(nextRules);
+      setTax(nextTax);
       setNotice((current) => (current === 'refused' ? current : null));
       return { categories: nextCategories, services: nextServices };
     } catch (error) {
@@ -376,6 +386,7 @@ export function useCatalogue(kind: Kind, notify: (toast: CatalogueToast) => void
     refusal,
     locked,
     busy,
+    tax,
     reload,
     // The service sheet: its content, whether it is open, and which opening this is (each starts afresh).
     sheet,

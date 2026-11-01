@@ -197,3 +197,30 @@ pnpm contracts:check
   salons, each role and a support session, and recorded it in the handoff.
 - The verification commands are green.
 - `TaxSettings` and `Products` are documented in their Javadoc as the contracts F07, F08 and F10 use.
+
+## Corrections at close
+
+Recorded by the lead when the stage closed. No requirement changed. Items 1 to 7 were given to the
+developer when the build started, in answer to QA's preparation:
+
+1. **Preview amounts** are shown with `formatMoney` in the currency's fraction digits ("Rs. 381.36",
+   "Rs. 381.00").
+2. **"First"** service is the first bookable-online service in the Services tab's order (category
+   order, then name); "first" product is the first sold product by name.
+3. **The tax banner with one part on:** "Prices you enter include VAT (18%). Customers see the same
+   price." or "Prices you enter include service charge (10%). Customers see the same price."
+4. **The Products banner's VAT sentence:** "Prices include VAT where it applies." when VAT is on;
+   "VAT is off for your salon." when it is off.
+5. **History field names:** "VAT registration", "VAT registration number", "VAT rate", "VAT name",
+   "Service charge", "Service charge name", "Service charge rate", "Service charge on products".
+6. **Product requests** must send `chargesVat` and `soldAtCheckout`; the sheet defaults both on.
+7. **The VAT rate's setting** is `SALON_CATALOGUE_TAX_VAT_RATE_PERCENT` (with `_VAT_NAME`,
+   `_VAT_REGISTRATION_LABEL`, `_SERVICE_CHARGE_NAME`, `_SERVICE_CHARGE_MAX_PERCENT`), documented in
+   `.env.example`.
+8. **As built (decision 097):** the settings read's shape and what a version copies; whole-percent
+   rates; a number or rate sent for a part that is off is a 400; `TaxSettings`, `TaxSettingsVersion`,
+   `PriceParts`, `Products`, `Product`; deleted products removed; the shared arithmetic case table;
+   the audit actions. The "VAT rate is now X%" notice shows only while the current version charges
+   VAT.
+9. **Fix to F05-S01 made in this stage** (d3d04ed): the service cards' Hide or Show online and
+   Duplicate keep keyboard focus while their change runs.

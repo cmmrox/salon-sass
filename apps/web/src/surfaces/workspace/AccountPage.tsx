@@ -15,6 +15,7 @@ import { ServicesScreen, type ServicesTab } from './ServicesScreen';
 import { SettingsScreen, type SettingsTab } from './SettingsScreen';
 import { SupportAccessScreen } from './SupportAccessScreen';
 import { SupportBanner } from './SupportBanner';
+import { TaxSettingsScreen } from './TaxSettingsScreen';
 
 type View = 'account' | 'staff' | 'audit' | 'billing' | 'support-access' | 'settings' | 'services';
 type PageProps = { kind: Kind; view?: View; signIn?: boolean; tab?: SettingsTab; servicesTab?: ServicesTab };
@@ -117,6 +118,12 @@ export async function AccountPage({ kind: requested, view, signIn, tab, services
             <BrandingSettingsScreen kind={kind} readOnly={support ? 'support' : readOnly ? 'salon' : null} />
           ) : tab === 'rules' ? (
             <BookingRulesSettingsScreen
+              kind={kind}
+              timeZone={salon.timeZone}
+              readOnly={support ? 'support' : readOnly ? 'salon' : null}
+            />
+          ) : tab === 'tax' ? (
+            <TaxSettingsScreen
               kind={kind}
               timeZone={salon.timeZone}
               readOnly={support ? 'support' : readOnly ? 'salon' : null}

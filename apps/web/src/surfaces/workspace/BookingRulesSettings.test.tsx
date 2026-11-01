@@ -62,7 +62,7 @@ const render = (readOnly: 'support' | 'salon' | null = null, kind: 'staff' | 'su
   renderWithMessages(<BookingRulesSettingsScreen kind={kind} timeZone="Asia/Colombo" readOnly={readOnly} />);
 
 describe('the Settings page with Booking rules (F04-S04)', () => {
-  it('shows Profile, Hours & closures, Booking rules and Branding in that order, and says rules save at once', () => {
+  it('shows Profile, Hours & closures, Booking rules, Tax & charges and Branding in that order, and says rules save at once', () => {
     renderWithMessages(
       <SettingsScreen tab="rules">
         <p>content</p>
@@ -72,7 +72,7 @@ describe('the Settings page with Booking rules (F04-S04)', () => {
       within(screen.getByTestId('settings-tabs'))
         .getAllByRole('tab')
         .map((tab) => tab.textContent),
-    ).toEqual(['Profile', 'Hours & closures', 'Booking rules', 'Branding']);
+    ).toEqual(['Profile', 'Hours & closures', 'Booking rules', 'Tax & charges', 'Branding']);
     expect(screen.getByTestId('settings-tab-rules')).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByTestId('settings-intro')).toHaveTextContent('Booking rules save at once');
   });

@@ -109,3 +109,7 @@ why the feature is divided the way it is.
   open sheet) is fixed in 0d5f9ac; TC-F05-S01-039 proves it at the next dry run. F05-S01's card
   buttons still lose keyboard focus while a change runs; F05-S03, which changes the same page, fixes
   it. "Most booked" is proved by integration tests until F07 implements `ServiceBookingCounts`.
+- **Recorded at F05-S03 close (decision 097).** Every stage is complete; `feature-verify F05` is
+  next. The tax arithmetic's case table is shared by the API's and the web's tests. QA's
+  TC-F05-S03-019 restarts its own API with `SALON_CATALOGUE_TAX_VAT_RATE_PERCENT` and must never run
+  against the owner's instance.
