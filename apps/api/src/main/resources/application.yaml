@@ -238,3 +238,8 @@ salon.support:
   signing-key: ${SALON_SUPPORT_SIGNING_KEY:}
   # Where the console's workspace entry link points: the salon's hostname is put in place of %s.
   link-origin: ${SALON_SUPPORT_LINK_ORIGIN:https://%s}
+
+# The business profile (F04-S01): phone and WhatsApp numbers are checked for this region, an ISO 3166-1
+# two-letter code, stored in E.164 and shown in its national format (decision 084, NFR-13).
+salon.branding:
+  phone-region: ${SALON_BRANDING_PHONE_REGION:LK}

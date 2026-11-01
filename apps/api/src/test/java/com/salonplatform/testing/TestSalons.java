@@ -19,7 +19,10 @@ public final class TestSalons {
         this.owner = owner;
     }
 
-    /** An active salon with a published brand. */
+    /**
+     * An active salon with a published brand and, as every salon has from its creation (F04-S01), its default
+     * branch and empty profile drafts, through branding's own function.
+     */
     public TestSalon create(String name, String brandColour) {
         TestSalon salon = createWithoutBrand("active");
         owner.update(
@@ -27,7 +30,17 @@ public final class TestSalons {
                 salon.id(),
                 name,
                 brandColour);
+        owner.queryForList(
+                "SELECT branding_add_default_branch(?, ?, now())::text",
+                salon.id(),
+                name.substring(0, Math.min(120, name.length())));
         return new TestSalon(salon.id(), salon.slug(), name, brandColour);
+    }
+
+    /** The salon's default branch. */
+    public UUID defaultBranch(TestSalon salon) {
+        return owner.queryForObject(
+                "SELECT id FROM branding_branch WHERE tenant_id = ? AND is_default", UUID.class, salon.id());
     }
 
     /** An active salon with a published brand, in this time zone. */
