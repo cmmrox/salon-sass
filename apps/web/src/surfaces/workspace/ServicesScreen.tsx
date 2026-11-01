@@ -95,7 +95,7 @@ export function ServicesScreen({ kind, tab, canChange, readOnly }: Props) {
         </TabsList>
         <TabsContent value={tab} className="flex flex-col gap-4" data-testid={`services-panel-${tab}`}>
           <Notices catalogue={catalogue} readOnly={readOnly} />
-          <Alert variant="default" className="text-small" data-testid="services-banner">
+          <Alert variant="info" className="text-small" data-testid="services-banner">
             {tab === 'services' ? t('banner') : t('categoriesBanner')}
           </Alert>
           {loading ? (

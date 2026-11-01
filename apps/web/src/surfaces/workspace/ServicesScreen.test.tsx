@@ -59,6 +59,8 @@ describe('the Services tab (F05-S01 AC-12)', () => {
     expect(screen.getByTestId('services-banner')).toHaveTextContent(
       'List your services with their price and time. Changes apply to new bookings only.',
     );
+    // The prototype's information banner (`.bn.in`), not a plain card.
+    expect(screen.getByTestId('services-banner')).toHaveAttribute('data-variant', 'info');
     const groups = screen.getAllByTestId('service-group');
     expect(groups.map((group) => group.getAttribute('data-id'))).toEqual([COLOUR, NAILS, WAXING]);
     expect(
@@ -298,6 +300,7 @@ describe('the Categories tab (AC-2)', () => {
     expect(screen.getByTestId('services-banner')).toHaveTextContent(
       'Customers see categories in this order. A category with nothing bookable online is hidden from them.',
     );
+    expect(screen.getByTestId('services-banner')).toHaveAttribute('data-variant', 'info');
     expect(rows.map((row) => within(row).getByTestId('category-row-count').textContent)).toEqual([
       '2 services',
       '1 service',
