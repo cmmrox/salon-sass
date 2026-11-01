@@ -1,6 +1,7 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { atWidth, axe, BRANDS, WIDTHS } from '@test/a11y';
+import { drawnContrast } from '@test/contrast';
 import { renderWithMessages } from '@test/render';
 import { AccountFrame } from './AccountFrame';
 import { HoursSettingsScreen } from './HoursSettingsScreen';
@@ -182,16 +183,32 @@ describe('the Hours & closures tab', () => {
     },
   );
 
-  // QA's F04-S03 dry run (TC-F04-S03-030): the calendar's popover was a dialog with no name (axe's
-  // aria-dialog-name, a best practice outside the WCAG tags above, so asked here directly).
-  it.each(BRANDS)('the closure calendar: named, brand %s', async (brand) => {
-    page(brand);
-    fireEvent.click(await screen.findByTestId('closure-add'));
-    const sheet = await screen.findByTestId('closure-sheet');
-    fireEvent.click(within(sheet).getByTestId('closure-date'));
-    let calendar = await screen.findByTestId('closure-calendar');
-    expect(calendar).toHaveAttribute('role', 'dialog');
-    expect(calendar).toHaveAccessibleName('Choose a date');
-    await noViolations();
-  });
+  // QA's F04-S03 dry run (TC-F04-S03-030): the calendar's today was 3.65:1, and its popover a dialog with no
+  // name (axe's aria-dialog-name, a best practice outside the WCAG tags above, so asked here directly).
+  it.each(BRANDS)(
+    'the closure calendar: named, and today, a chosen day and next month’s days readable, brand %s',
+    async (brand) => {
+      page(brand);
+      fireEvent.click(await screen.findByTestId('closure-add'));
+      const sheet = await screen.findByTestId('closure-sheet');
+      fireEvent.click(within(sheet).getByTestId('closure-date'));
+      let calendar = await screen.findByTestId('closure-calendar');
+      expect(calendar).toHaveAttribute('role', 'dialog');
+      expect(calendar).toHaveAccessibleName('Choose a date');
+      await noViolations();
+      const today = calendar.querySelector('[data-today="true"] button')!;
+      expect(today).not.toBeNull();
+      expect(drawnContrast(today)).toBeGreaterThanOrEqual(4.5);
+      for (const outside of calendar.querySelectorAll('[data-outside="true"]:not([data-disabled="true"]) button')) {
+        expect(drawnContrast(outside), outside.getAttribute('aria-label') ?? '').toBeGreaterThanOrEqual(4.5);
+      }
+      fireEvent.click(today);
+      await within(sheet).findByTestId('closure-bookings');
+      fireEvent.click(within(sheet).getByTestId('closure-date'));
+      calendar = await screen.findByTestId('closure-calendar');
+      await waitFor(() => expect(document.getAnimations().filter((a) => a.playState === 'running')).toHaveLength(0));
+      const chosen = calendar.querySelector('[data-selected="true"] button')!;
+      expect(drawnContrast(chosen)).toBeGreaterThanOrEqual(4.5);
+    },
+  );
 });

@@ -2,6 +2,7 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { HolidayYears, HolidayYearScreen } from '@/features/platform';
 import { atWidth, axe, WIDTHS } from '@test/a11y';
+import { drawnContrast } from '@test/contrast';
 import { renderWithMessages } from '@test/render';
 import { ConsoleShell } from './ConsoleShell';
 
@@ -137,8 +138,9 @@ describe('the console Holiday calendar', () => {
     await noViolations();
   });
 
-  // QA's F04-S03 dry run (TC-F04-S03-030): in the console's day sheet too, the calendar popover had no name.
-  it('the day calendar: named', async () => {
+  // QA's F04-S03 dry run (TC-F04-S03-030): in the console's day sheet too, today was 3.65:1 and the calendar
+  // popover had no name.
+  it('the day calendar: named, and today, a chosen day and other months’ days readable', async () => {
     const now = new Date();
     answers['holiday-year'] = () => Response.json({ ...DETAIL, year: now.getFullYear() });
     renderWithMessages(
@@ -159,5 +161,15 @@ describe('the console Holiday calendar', () => {
     expect(calendar).toHaveAttribute('role', 'dialog');
     expect(calendar).toHaveAccessibleName('Choose a date');
     await noViolations();
+    const today = calendar.querySelector('[data-today="true"] button')!;
+    expect(today).not.toBeNull();
+    expect(drawnContrast(today)).toBeGreaterThanOrEqual(4.5);
+    for (const outside of calendar.querySelectorAll('[data-outside="true"]:not([data-disabled="true"]) button')) {
+      expect(drawnContrast(outside), outside.getAttribute('aria-label') ?? '').toBeGreaterThanOrEqual(4.5);
+    }
+    fireEvent.click(today);
+    calendar = await open();
+    await waitFor(() => expect(document.getAnimations().filter((a) => a.playState === 'running')).toHaveLength(0));
+    expect(drawnContrast(calendar.querySelector('[data-selected="true"] button')!)).toBeGreaterThanOrEqual(4.5);
   });
 });
