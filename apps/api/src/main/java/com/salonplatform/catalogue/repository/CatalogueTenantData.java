@@ -13,8 +13,9 @@ import org.springframework.stereotype.Component;
 
 /**
  * Catalogue's exporter and eraser for a closed salon (PLT-06), in erasure order: variants before their terms versions,
- * terms versions before their services, services before the categories and photos they hold, then the category list
- * and the Popular setting. Nothing is secret.
+ * terms versions before their services, services before the categories and photos they hold, then the category list,
+ * the Popular setting, the tax settings versions and the products. Nothing is secret: a VAT registration number is
+ * printed on receipts.
  */
 @Component
 class CatalogueTenantData implements TenantDataModule {
@@ -26,7 +27,9 @@ class CatalogueTenantData implements TenantDataModule {
             new Table("catalogue_photo", "id", Map.of()),
             new Table("catalogue_category", "id", Map.of()),
             new Table("catalogue_category_list", "id", Map.of()),
-            new Table("catalogue_popular_setting", "id", Map.of()));
+            new Table("catalogue_popular_setting", "id", Map.of()),
+            new Table("catalogue_tax_version", "id", Map.of()),
+            new Table("catalogue_product", "id", Map.of()));
 
     private final JdbcClient jdbc;
     private final ObjectProvider<PlatformDatabase> platform;

@@ -487,6 +487,71 @@
         ],
         "type": "object"
       },
+      "CatalogueProduct": {
+        "additionalProperties": false,
+        "properties": {
+          "chargesVat": {
+            "description": "Whether VAT applies to it while the salon is registered for VAT; kept while VAT is off.",
+            "type": "boolean"
+          },
+          "currency": {
+            "description": "The ISO 4217 currency of its price.",
+            "pattern": "^[A-Z]{3}$",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 40,
+            "minLength": 2,
+            "type": "string"
+          },
+          "priceMinor": {
+            "description": "Tax-inclusive, in minor units of `currency`.",
+            "format": "int64",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "soldAtCheckout": {
+            "description": "Whether the desk offers it at checkout.",
+            "type": "boolean"
+          },
+          "version": {
+            "description": "Its version, which a save or delete is made from.",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "chargesVat",
+          "currency",
+          "id",
+          "name",
+          "priceMinor",
+          "soldAtCheckout",
+          "version"
+        ],
+        "type": "object"
+      },
+      "CatalogueProductList": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CatalogueProduct"
+            },
+            "maxItems": 300,
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "type": "object"
+      },
       "CatalogueService": {
         "additionalProperties": false,
         "properties": {
@@ -857,6 +922,361 @@
           "name",
           "priceMinor",
           "segments"
+        ],
+        "type": "object"
+      },
+      "CatalogueTax": {
+        "additionalProperties": false,
+        "properties": {
+          "serviceCharge": {
+            "description": "The service charge, which service prices include; null while the salon charges none.",
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/CatalogueTaxServiceCharge"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "vat": {
+            "description": "VAT, which prices include; null while the salon is not registered for it.",
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/CatalogueTaxVat"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "versionId": {
+            "description": "The current version, which a booking or a sale made now keeps.",
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "serviceCharge",
+          "vat",
+          "versionId"
+        ],
+        "type": "object"
+      },
+      "CatalogueTaxConfigured": {
+        "additionalProperties": false,
+        "properties": {
+          "registrationLabel": {
+            "description": "Such as \"VAT registration number\".",
+            "type": "string"
+          },
+          "serviceChargeMaxPercent": {
+            "description": "The highest service charge; the lowest is 1.",
+            "format": "int32",
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "serviceChargeName": {
+            "description": "Such as \"Service charge\".",
+            "type": "string"
+          },
+          "vatName": {
+            "description": "Such as \"VAT\".",
+            "type": "string"
+          },
+          "vatRatePercent": {
+            "format": "int32",
+            "maximum": 100,
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "registrationLabel",
+          "serviceChargeMaxPercent",
+          "serviceChargeName",
+          "vatName",
+          "vatRatePercent"
+        ],
+        "type": "object"
+      },
+      "CatalogueTaxHistory": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CatalogueTaxHistoryEntry"
+            },
+            "type": "array"
+          },
+          "page": {
+            "description": "The page, from 0.",
+            "format": "int32",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "size": {
+            "format": "int32",
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "total": {
+            "description": "How many versions there are.",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "page",
+          "size",
+          "total"
+        ],
+        "type": "object"
+      },
+      "CatalogueTaxHistoryEntry": {
+        "additionalProperties": false,
+        "properties": {
+          "changedFields": {
+            "description": "The settings it changed from the version before it, every one for the first version. `vat.ratePercent`, `vat.name` and `serviceCharge.name` change when configuration did.",
+            "items": {
+              "enum": [
+                "vat.registered",
+                "vat.registrationNumber",
+                "vat.ratePercent",
+                "vat.name",
+                "serviceCharge.on",
+                "serviceCharge.percent",
+                "serviceCharge.onProducts",
+                "serviceCharge.name"
+              ],
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "createdBy": {
+            "description": "The staff account that saved it.",
+            "format": "uuid",
+            "type": "string"
+          },
+          "createdByLabel": {
+            "description": "The author's email, else mobile number, as the staff list shows the account; null when it is not known.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "version": {
+            "format": "int64",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "versionId": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "changedFields",
+          "createdAt",
+          "createdBy",
+          "createdByLabel",
+          "version",
+          "versionId"
+        ],
+        "type": "object"
+      },
+      "CatalogueTaxServiceCharge": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "description": "What it is called, such as \"Service charge\".",
+            "type": "string"
+          },
+          "onProducts": {
+            "description": "Whether product prices include it too.",
+            "type": "boolean"
+          },
+          "percent": {
+            "description": "Its rate, a whole percentage.",
+            "format": "int32",
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "onProducts",
+          "percent"
+        ],
+        "type": "object"
+      },
+      "CatalogueTaxServiceChargeInput": {
+        "additionalProperties": false,
+        "properties": {
+          "on": {
+            "type": "boolean"
+          },
+          "onProducts": {
+            "description": "Whether products carry it too; must be false while it is off.",
+            "type": "boolean"
+          },
+          "percent": {
+            "description": "Required while on: a whole percentage from 1 to the configured maximum (20). Absent or null otherwise.",
+            "format": "int32",
+            "type": [
+              "integer",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "on",
+          "onProducts"
+        ],
+        "type": "object"
+      },
+      "CatalogueTaxServiceChargeValues": {
+        "additionalProperties": false,
+        "properties": {
+          "on": {
+            "type": "boolean"
+          },
+          "onProducts": {
+            "description": "Whether products carry it too; false while it is off.",
+            "type": "boolean"
+          },
+          "percent": {
+            "description": "A whole percentage from 1 to the configured maximum while on; null otherwise.",
+            "format": "int32",
+            "maximum": 100,
+            "minimum": 1,
+            "type": [
+              "integer",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "on",
+          "onProducts",
+          "percent"
+        ],
+        "type": "object"
+      },
+      "CatalogueTaxSettings": {
+        "additionalProperties": false,
+        "properties": {
+          "configured": {
+            "$ref": "#/components/schemas/CatalogueTaxConfigured"
+          },
+          "settings": {
+            "description": "The current version's settings, as a save sends them; null before the first save.",
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/CatalogueTaxValues"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "version": {
+            "description": "The current version's number, which a save is made from: 0 before the first save.",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "configured",
+          "settings",
+          "version"
+        ],
+        "type": "object"
+      },
+      "CatalogueTaxValues": {
+        "additionalProperties": false,
+        "properties": {
+          "serviceCharge": {
+            "$ref": "#/components/schemas/CatalogueTaxServiceChargeValues"
+          },
+          "vat": {
+            "$ref": "#/components/schemas/CatalogueTaxVatValues"
+          }
+        },
+        "required": [
+          "serviceCharge",
+          "vat"
+        ],
+        "type": "object"
+      },
+      "CatalogueTaxVat": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "description": "What it is called, such as \"VAT\".",
+            "type": "string"
+          },
+          "ratePercent": {
+            "description": "Its rate, a whole percentage.",
+            "format": "int32",
+            "maximum": 100,
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "ratePercent"
+        ],
+        "type": "object"
+      },
+      "CatalogueTaxVatInput": {
+        "additionalProperties": false,
+        "properties": {
+          "registered": {
+            "type": "boolean"
+          },
+          "registrationNumber": {
+            "description": "Required while registered: 1 to 20 letters, digits and hyphens. Absent or null otherwise.",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "registered"
+        ],
+        "type": "object"
+      },
+      "CatalogueTaxVatValues": {
+        "additionalProperties": false,
+        "properties": {
+          "registered": {
+            "type": "boolean"
+          },
+          "registrationNumber": {
+            "description": "1 to 20 letters, digits and hyphens while registered; null otherwise.",
+            "pattern": "^[A-Za-z0-9-]{1,20}$",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "registered",
+          "registrationNumber"
         ],
         "type": "object"
       },
@@ -2342,6 +2762,35 @@
         ],
         "type": "object"
       },
+      "NewCatalogueProduct": {
+        "additionalProperties": false,
+        "properties": {
+          "chargesVat": {
+            "description": "Whether VAT applies to it while the salon is registered for VAT.",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "2 to 40 characters after trimming, unique in the salon regardless of case.",
+            "type": "string"
+          },
+          "priceMinor": {
+            "description": "Tax-inclusive, in minor units of the salon's currency, a whole number of units: Rs. 1 to Rs. 500,000 (100 to 50000000), scaled for other currencies.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "soldAtCheckout": {
+            "description": "Whether the desk offers it at checkout.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "chargesVat",
+          "name",
+          "priceMinor",
+          "soldAtCheckout"
+        ],
+        "type": "object"
+      },
       "NewCatalogueService": {
         "additionalProperties": false,
         "properties": {
@@ -2411,6 +2860,10 @@
       },
       "NoBookingRules": {
         "description": "No rules saved yet.",
+        "type": "null"
+      },
+      "NoCatalogueTax": {
+        "description": "No tax settings saved yet: nothing is charged.",
         "type": "null"
       },
       "NoShowInput": {
@@ -4873,6 +5326,42 @@
         ],
         "type": "object"
       },
+      "SaveCatalogueProduct": {
+        "additionalProperties": false,
+        "properties": {
+          "chargesVat": {
+            "description": "Whether VAT applies to it while the salon is registered for VAT.",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "2 to 40 characters after trimming, unique in the salon regardless of case.",
+            "type": "string"
+          },
+          "priceMinor": {
+            "description": "Tax-inclusive, in minor units of the salon's currency, a whole number of units: Rs. 1 to Rs. 500,000 (100 to 50000000), scaled for other currencies.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "soldAtCheckout": {
+            "description": "Whether the desk offers it at checkout.",
+            "type": "boolean"
+          },
+          "version": {
+            "description": "The product's version, as read.",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "chargesVat",
+          "name",
+          "priceMinor",
+          "soldAtCheckout",
+          "version"
+        ],
+        "type": "object"
+      },
       "SaveCatalogueService": {
         "additionalProperties": false,
         "properties": {
@@ -4943,6 +5432,29 @@
           "bufferMinutes",
           "categoryId",
           "name",
+          "version"
+        ],
+        "type": "object"
+      },
+      "SaveCatalogueTax": {
+        "additionalProperties": false,
+        "properties": {
+          "serviceCharge": {
+            "$ref": "#/components/schemas/CatalogueTaxServiceChargeInput"
+          },
+          "vat": {
+            "$ref": "#/components/schemas/CatalogueTaxVatInput"
+          },
+          "version": {
+            "description": "The current version's number, as read: 0 before the first save.",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "serviceCharge",
+          "vat",
           "version"
         ],
         "type": "object"
@@ -6470,6 +6982,390 @@
         ]
       }
     },
+    "/api/v1/catalogue/products": {
+      "get": {
+        "operationId": "listCatalogueProducts",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogueProductList"
+                }
+              }
+            },
+            "description": "The products, at most 300."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No valid session for this salon: `invalid_session`."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Without `catalogue.read`: `permission_denied`. A suspended salon: `salon_suspended`."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The hostname names no salon: `not_found`."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The database is down or not answering: `service_unavailable`."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "summary": "The products, by name. `catalogue.read`.",
+        "tags": [
+          "catalogue"
+        ]
+      },
+      "post": {
+        "operationId": "addCatalogueProduct",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewCatalogueProduct"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogueProduct"
+                }
+              }
+            },
+            "description": "The product."
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The name is not 2 to 40 characters or another product has it regardless of case, the price is not a whole Rs. 1 to Rs. 500,000, or a setting is missing or not true or false: `bad_request`, with `errors` naming each field. Nothing is saved."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No valid session for this salon: `invalid_session`."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Without `catalogue.price.change`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The hostname names no salon: `not_found`."
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The salon has 300 products: `limit_reached`. A change made at the same moment won: `conflict`. Nothing is saved."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The database is down or not answering: `service_unavailable`."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "summary": "Adds a product. `catalogue.price.change`.",
+        "tags": [
+          "catalogue"
+        ]
+      }
+    },
+    "/api/v1/catalogue/products/{id}": {
+      "delete": {
+        "description": "Past sales keep what they copied.",
+        "operationId": "deleteCatalogueProduct",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "version",
+            "required": false,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted."
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`version` is missing or below 0: `bad_request`, with `errors` naming it."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No valid session for this salon: `invalid_session`."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Without `catalogue.price.change`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No such product of the hostname's salon, or the hostname names no salon: `not_found`."
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`version` is not the product's: `conflict`. Nothing is deleted."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The database is down or not answering: `service_unavailable`."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "summary": "Deletes a product: it leaves checkout and its name is free. `catalogue.price.change`.",
+        "tags": [
+          "catalogue"
+        ]
+      },
+      "put": {
+        "description": "Past sales keep what they copied; new sales use the new price.",
+        "operationId": "saveCatalogueProduct",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveCatalogueProduct"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogueProduct"
+                }
+              }
+            },
+            "description": "The product, saved."
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "A field broke a rule, as for an added product, or `version` is missing: `bad_request`, with `errors` naming each field. Nothing is saved."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No valid session for this salon: `invalid_session`."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Without `catalogue.price.change`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No such product of the hostname's salon, or the hostname names no salon: `not_found`."
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`version` is not the product's: `conflict`. Nothing changes: `invalid_state`. Nothing is saved."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The database is down or not answering: `service_unavailable`."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "summary": "Saves a product's name, price and settings. `catalogue.price.change`.",
+        "tags": [
+          "catalogue"
+        ]
+      }
+    },
     "/api/v1/catalogue/services": {
       "get": {
         "operationId": "listCatalogueServices",
@@ -7445,6 +8341,350 @@
           }
         },
         "summary": "Chooses a service for Popular, or no longer. `catalogue.price.change`.",
+        "tags": [
+          "catalogue"
+        ]
+      }
+    },
+    "/api/v1/catalogue/tax": {
+      "get": {
+        "description": "JSON `null` before the salon first saves its tax settings: nothing is charged. Never the VAT registration number. A booking or a sale made now keeps `versionId`.",
+        "operationId": "getCatalogueTax",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "The current tax; null before the first save.",
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/CatalogueTax"
+                    },
+                    {
+                      "$ref": "#/components/schemas/NoCatalogueTax"
+                    }
+                  ]
+                }
+              }
+            },
+            "description": "The current tax, or `null`."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "A suspended salon: `salon_suspended`."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The hostname names no salon: `not_found`."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The database is down or not answering: `service_unavailable`."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "summary": "The salon's current tax: which parts its prices include, at what rates. Public.",
+        "tags": [
+          "catalogue"
+        ]
+      }
+    },
+    "/api/v1/catalogue/tax/history": {
+      "get": {
+        "operationId": "getCatalogueTaxHistory",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "format": "int32",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogueTaxHistory"
+                }
+              }
+            },
+            "description": "A page of versions."
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`page` below 0 or above 100000, or `size` outside 1 to 100: `bad_request`."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No valid session for this salon: `invalid_session`."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Without `settings.read`: `permission_denied`. A suspended salon: `salon_suspended`."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The hostname names no salon: `not_found`."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The database is down or not answering: `service_unavailable`."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "summary": "The tax settings' versions, newest first, paginated. `settings.read`.",
+        "tags": [
+          "catalogue"
+        ]
+      }
+    },
+    "/api/v1/catalogue/tax/settings": {
+      "get": {
+        "operationId": "getCatalogueTaxSettings",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogueTaxSettings"
+                }
+              }
+            },
+            "description": "The settings."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No valid session for this salon: `invalid_session`."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Without `settings.read`: `permission_denied`. A suspended salon: `salon_suspended`."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The hostname names no salon: `not_found`."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The database is down or not answering: `service_unavailable`."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "summary": "The tax settings as settings staff keep them, and what configuration offers. `settings.read`.",
+        "tags": [
+          "catalogue"
+        ]
+      },
+      "put": {
+        "description": "The version copies the VAT name and rate and the service charge's name configuration gives now. Existing bookings and sales keep the version they were made under; earlier versions are never changed.",
+        "operationId": "saveCatalogueTaxSettings",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveCatalogueTax"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogueTaxSettings"
+                }
+              }
+            },
+            "description": "The settings as saved, with the new version's number."
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "A field broke a rule, or the body is not the documented shape: `bad_request`, with `errors` naming each field (`vat.registrationNumber`, `serviceCharge.percent`). Nothing is saved."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No valid session for this salon: `invalid_session`."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Without `settings.manage`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The hostname names no salon: `not_found`."
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`version` is not the current version: `conflict`. The new version would be the current one, with the same configured names and rate: `invalid_state`. Nothing is saved."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The database is down or not answering: `service_unavailable`."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "summary": "Saves the tax settings as a new version, current at once for new bookings and sales. `settings.manage`.",
         "tags": [
           "catalogue"
         ]
@@ -12989,7 +14229,7 @@
       "name": "booking"
     },
     {
-      "description": "The salon's categories and services, each change of price, time, variants or deposit an immutable terms version, and its Popular services.",
+      "description": "The salon's categories and services, each change of price, time, variants or deposit an immutable terms version, its Popular services, its tax settings as immutable versions, and its products.",
       "name": "catalogue"
     },
     {

@@ -268,3 +268,16 @@ salon.catalogue:
     max-pixels: ${SALON_CATALOGUE_IMAGE_MAX_PIXELS:50000000}
     # Photos decoded at once per instance; one more waits up to two seconds, then is refused 503.
     concurrent-decodes: ${SALON_CATALOGUE_IMAGE_CONCURRENT_DECODES:2}
+  # Tax names and rates for the salon's country (F05-S03, CAT-05, decision 095): Sri Lanka's by default. Each save
+  # of a salon's tax settings copies the VAT name and rate and the service charge's name into its version, so a
+  # change here applies only to saves made afterwards. Startup is refused for a rate outside 0 to 100 or an empty
+  # name. Whole percentages.
+  tax:
+    vat:
+      name: ${SALON_CATALOGUE_TAX_VAT_NAME:VAT}
+      rate-percent: ${SALON_CATALOGUE_TAX_VAT_RATE_PERCENT:18}
+      registration-label: ${SALON_CATALOGUE_TAX_VAT_REGISTRATION_LABEL:VAT registration number}
+    service-charge:
+      name: ${SALON_CATALOGUE_TAX_SERVICE_CHARGE_NAME:Service charge}
+      # The highest rate a salon may charge; the lowest is 1%.
+      max-percent: ${SALON_CATALOGUE_TAX_SERVICE_CHARGE_MAX_PERCENT:20}

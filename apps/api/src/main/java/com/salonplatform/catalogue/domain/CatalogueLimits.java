@@ -2,7 +2,8 @@ package com.salonplatform.catalogue.domain;
 
 /**
  * The prototype's limits on categories, services, variants, deposits and Popular (F05-S01 AC-2, AC-3; F05-S02 AC-1,
- * AC-5, AC-7; the prototype's {@code seErr} and {@code ceSave}). Prices are whole units of the salon's currency, the rupee limits scaled by its fraction digits.
+ * AC-5, AC-7; the prototype's {@code seErr} and {@code ceSave}), and on tax settings and products (F05-S03 AC-2,
+ * AC-8; {@code setTax} and {@code peErr}). Prices are whole units of the salon's currency, the rupee limits scaled by its fraction digits.
  */
 public final class CatalogueLimits {
 
@@ -43,6 +44,22 @@ public final class CatalogueLimits {
 
     /** "Most booked" counts the last 90 days of bookings (decision 092). */
     public static final int MOST_BOOKED_DAYS = 90;
+
+    /** A product (F05-S03 AC-8, the prototype's {@code peErr}): its name, its price of Rs. 1 to Rs. 500,000. */
+    public static final int PRODUCT_NAME_MIN = 2;
+
+    public static final int PRODUCT_NAME_MAX = 40;
+    public static final long PRODUCT_PRICE_MIN_UNITS = 1;
+    public static final long PRODUCT_PRICE_MAX_UNITS = 500_000;
+
+    /** At most 300 products per salon (decision 095). */
+    public static final int MAX_PRODUCTS = 300;
+
+    /** A VAT registration number (F05-S03 AC-2): 1 to 20 letters, digits and hyphens. */
+    public static final String VAT_REGISTRATION_NUMBER = "[A-Za-z0-9-]{1,20}";
+
+    /** The lowest service charge a salon may charge; the highest is configured. */
+    public static final int SERVICE_CHARGE_MIN = 1;
 
     private CatalogueLimits() {}
 }
