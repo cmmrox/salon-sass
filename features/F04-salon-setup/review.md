@@ -70,13 +70,13 @@ the owner, not requirements: nothing is built from them until the owner approves
 
 | Id | Class | Suggestion | Disposition |
 | --- | --- | --- | --- |
-| SUG-F04-01 | should | Show each booking-rules version's values (before and after), not only the names of the rules it changed | |
-| SUG-F04-02 | should | Keep the selected Settings tab in view on phones, and show that the tab rail scrolls | |
-| SUG-F04-03 | should | When there is no deposit, stop offering "The deposit" as what a late cancellation or a no-show keeps | |
-| SUG-F04-04 | should | Make "Free cancellation until N hours" read sensibly when a late cancellation keeps nothing | |
-| SUG-F04-05 | idea | Let the arrow keys choose the deposit kind, as a radio group's arrows do | |
-| SUG-F04-06 | idea | Clear the Add a closure sheet's date after a closure is saved | |
-| SUG-F04-07 | idea | Show times in the History sheet on the 24-hour clock, as the Hours tab does | |
+| SUG-F04-01 | should | Show each booking-rules version's values (before and after), not only the names of the rules it changed | CR-024 |
+| SUG-F04-02 | should | Keep the selected Settings tab in view on phones, and show that the tab rail scrolls | CR-024 |
+| SUG-F04-03 | should | When there is no deposit, stop offering "The deposit" as what a late cancellation or a no-show keeps | CR-024 |
+| SUG-F04-04 | should | Make "Free cancellation until N hours" read sensibly when a late cancellation keeps nothing | CR-024 |
+| SUG-F04-05 | idea | Let the arrow keys choose the deposit kind, as a radio group's arrows do | backlog |
+| SUG-F04-06 | idea | Clear the Add a closure sheet's date after a closure is saved | backlog |
+| SUG-F04-07 | idea | Show times in the History sheet on the 24-hour clock, as the Hours tab does | backlog |
 
 ### SUG-F04-01 Show each version's values, not only the rule names
 

@@ -110,3 +110,7 @@ why the feature is divided the way it is.
   tab change Next.js keeps the previous tab's markup hidden, so a test id can appear twice; tests
   should look at visible elements. The first accessibility run once failed in the existing
   Branding save flows and passed on three reruns with no change; QA to watch for that flake.
+- **Recorded at F04 close.** Only currencies with two fraction digits can be provisioned today, so
+  decision 091's scaling of money limits by fraction digits is proved by integration tests and, on
+  the running product, with LKR and USD. QA's suggestions: four "should" items are CR-024 for the
+  owner; three ideas are in `features/BACKLOG.md`.
