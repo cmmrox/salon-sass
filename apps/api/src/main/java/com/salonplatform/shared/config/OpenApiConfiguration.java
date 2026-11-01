@@ -89,6 +89,11 @@ class OpenApiConfiguration {
     }
 
     @Bean
+    GroupedOpenApi bookingDocument(ModuleOwnership ownership) {
+        return moduleDocument(ownership, "booking");
+    }
+
+    @Bean
     GroupedOpenApi sharedDocument(ModuleOwnership ownership) {
         return moduleDocument(ownership, "shared");
     }

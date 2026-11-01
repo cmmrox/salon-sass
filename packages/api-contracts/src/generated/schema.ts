@@ -835,6 +835,64 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/salon/booking-rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The salon's current booking rules, as customers see them before paying. Public.
+         * @description JSON `null` before the salon first saves its rules. Amounts are minor units of `currency`. A booking made now keeps `versionId`.
+         */
+        get: operations["getSalonBookingRules"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/salon/booking-rules/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The booking rules' versions, newest first, paginated. `settings.read`. */
+        get: operations["getSalonBookingRulesHistory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/salon/booking-rules/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The booking rules as settings staff keep them. `settings.read`. */
+        get: operations["getSalonBookingRulesSettings"];
+        /**
+         * Saves the booking rules as a new version, current at once for new bookings. `settings.manage`.
+         * @description Every rule, each one of the salon's choices. Existing bookings keep the version they were made under; earlier versions are never changed.
+         */
+        put: operations["saveSalonBookingRules"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/salon/brand/draft": {
         parameters: {
             query?: never;
@@ -1282,6 +1340,102 @@ export interface components {
             subjectId?: string;
             subjectKind?: string;
         };
+        BookingRules: {
+            /**
+             * Format: int32
+             * @description How far ahead customers can book: 14, 30, 60, 90 or 180 days.
+             */
+            bookingHorizonDays: number;
+            deposit: components["schemas"]["DepositRule"];
+            /**
+             * Format: int32
+             * @description Until how many hours before the appointment cancelling keeps nothing: 2, 6, 12, 24 or 48.
+             */
+            freeCancellationHours: number;
+            lateCancellation: components["schemas"]["RetentionRule"];
+            /**
+             * Format: int32
+             * @description How long before an appointment it must be booked: 0 (any time before), 30, 60, 120, 240 or 1440 minutes.
+             */
+            minimumNoticeMinutes: number;
+            /** @description `deposit` or `share`, never `nothing`. */
+            noShow: components["schemas"]["RetentionRule"];
+            reschedule: components["schemas"]["RescheduleRule"];
+            /**
+             * Format: int32
+             * @description How often start times are offered: 10, 15, 20 or 30 minutes.
+             */
+            slotIntervalMinutes: number;
+        };
+        BookingRulesHistory: {
+            items: components["schemas"]["BookingRulesHistoryEntry"][];
+            /**
+             * Format: int32
+             * @description The page, from 0.
+             */
+            page: number;
+            /** Format: int32 */
+            size: number;
+            /**
+             * Format: int64
+             * @description How many versions there are.
+             */
+            total: number;
+        };
+        BookingRulesHistoryEntry: {
+            /** @description The rules it changed from the version before it; every rule for the first version. */
+            changedFields: ("slotIntervalMinutes" | "minimumNoticeMinutes" | "bookingHorizonDays" | "deposit" | "freeCancellationHours" | "lateCancellation" | "noShow" | "reschedule")[];
+            /** Format: date-time */
+            createdAt: string;
+            /**
+             * Format: uuid
+             * @description The staff account that saved it.
+             */
+            createdBy: string;
+            /** @description The author's email, else mobile number, as the staff list shows the account; null when it is not known. */
+            createdByLabel: string | null;
+            /** Format: int64 */
+            version: number;
+            /** Format: uuid */
+            versionId: string;
+        };
+        BookingRulesInput: {
+            /**
+             * Format: int32
+             * @description How far ahead customers can book: 14, 30, 60, 90 or 180 days (2 weeks, or 1, 2, 3 or 6 months).
+             */
+            bookingHorizonDays: number;
+            deposit: components["schemas"]["DepositRuleInput"];
+            /**
+             * Format: int32
+             * @description Until how many hours before the appointment cancelling keeps nothing: 2, 6, 12, 24 or 48.
+             */
+            freeCancellationHours: number;
+            lateCancellation: components["schemas"]["LateCancellationInput"];
+            /**
+             * Format: int32
+             * @description How long before an appointment it must be booked: 0 (any time before), 30, 60, 120, 240 or 1440 minutes.
+             */
+            minimumNoticeMinutes: number;
+            noShow: components["schemas"]["NoShowInput"];
+            reschedule: components["schemas"]["RescheduleInput"];
+            /**
+             * Format: int32
+             * @description How often start times are offered: 10, 15, 20 or 30 minutes.
+             */
+            slotIntervalMinutes: number;
+        };
+        BookingRulesSettings: {
+            /** @description The ISO 4217 currency amounts are in: the current version's, or the salon's before the first save (LKR when it has none). */
+            currency: string;
+            /** @description The current rules; null before the first save. */
+            rules: components["schemas"]["BookingRules"] | null;
+            /**
+             * Format: int64
+             * @description The current version's number, which a save is made from: 0 before the first save.
+             */
+            version: number;
+        };
         Challenge: {
             /** Format: uuid */
             challengeId: string;
@@ -1347,6 +1501,44 @@ export interface components {
             preferredLanguage: string;
             /** Format: int64 */
             version: number;
+        };
+        DepositRule: {
+            /**
+             * Format: int64
+             * @description With `amount`: the deposit, in minor units.
+             */
+            amountMinor?: number;
+            /**
+             * Format: int64
+             * @description With `percentage`: the most the deposit can be, in minor units.
+             */
+            capMinor?: number;
+            /** @enum {string} */
+            kind: "none" | "percentage" | "amount";
+            /**
+             * Format: int32
+             * @description With `percentage`.
+             */
+            percent?: number;
+        };
+        DepositRuleInput: {
+            /**
+             * Format: int64
+             * @description With `amount`: the deposit, in minor units; Rs. 100 to Rs. 100,000 (10000 to 10000000 for LKR), in whole rupees.
+             */
+            amountMinor?: number;
+            /**
+             * Format: int64
+             * @description With `percentage`: the most the deposit can be, in minor units; at least Rs. 500 (50000 for LKR), in whole rupees.
+             */
+            capMinor?: number;
+            /** @enum {string} */
+            kind: "none" | "percentage" | "amount";
+            /**
+             * Format: int32
+             * @description With `percentage`: the share of the price.
+             */
+            percent?: number;
         };
         Enrollment: {
             /** Format: uuid */
@@ -1554,6 +1746,15 @@ export interface components {
             /** @enum {string} */
             status: "open" | "paid";
         };
+        LateCancellationInput: {
+            /** @enum {string} */
+            kind: "nothing" | "deposit" | "share";
+            /**
+             * Format: int32
+             * @description With `share`: the share of the price kept.
+             */
+            percent?: number;
+        };
         LifecycleEvent: {
             actor: components["schemas"]["EventActor"];
             /** Format: date-time */
@@ -1624,6 +1825,17 @@ export interface components {
             planId: string;
             /** Format: int64 */
             version: number;
+        };
+        /** @description No rules saved yet. */
+        NoBookingRules: null;
+        NoShowInput: {
+            /** @enum {string} */
+            kind: "deposit" | "share";
+            /**
+             * Format: int32
+             * @description With `share`: the share of the price kept.
+             */
+            percent?: number;
         };
         NotificationPreferencesRequest: {
             email: boolean;
@@ -1902,6 +2114,16 @@ export interface components {
             /** Format: int64 */
             version: number;
         };
+        PublicBookingRules: {
+            /** @description The ISO 4217 currency of the amounts. */
+            currency: string;
+            rules: components["schemas"]["BookingRules"];
+            /**
+             * Format: uuid
+             * @description The current version, which a booking made now keeps.
+             */
+            versionId: string;
+        };
         RecordTransferRequest: {
             /** Format: int64 */
             amount: number;
@@ -1911,6 +2133,39 @@ export interface components {
         };
         RefreshRequest: {
             refreshToken: string;
+        };
+        RescheduleInput: {
+            /**
+             * Format: int32
+             * @description 0 is not online, 1 once, 2 twice; null is any number of times.
+             */
+            limit: number | null;
+            /**
+             * Format: int32
+             * @description Up to how many hours before the appointment: 2, 6, 12 or 24; null when not online.
+             */
+            untilHours: number | null;
+        };
+        RescheduleRule: {
+            /**
+             * Format: int32
+             * @description 0 is not online, 1 once, 2 twice; null is any number of times.
+             */
+            limit: number | null;
+            /**
+             * Format: int32
+             * @description Up to how many hours before the appointment: 2, 6, 12 or 24; null when not online.
+             */
+            untilHours: number | null;
+        };
+        RetentionRule: {
+            /** @enum {string} */
+            kind: "nothing" | "deposit" | "share";
+            /**
+             * Format: int32
+             * @description With `share`: the share of the price kept.
+             */
+            percent?: number;
         };
         /** @description The public brand and published profile of the salon the request's hostname names. */
         Salon: {
@@ -2336,6 +2591,14 @@ export interface components {
             size: number;
             /** Format: int64 */
             total: number;
+        };
+        SaveBookingRules: {
+            rules: components["schemas"]["BookingRulesInput"];
+            /**
+             * Format: int64
+             * @description The current version's number, as read: 0 before the first save.
+             */
+            version: number;
         };
         SaveOpeningHours: {
             /** Format: int64 */
@@ -4797,6 +5060,291 @@ export interface operations {
             };
             /** @description The hostname names no salon: `not_found`. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The database is down or not answering: `service_unavailable`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getSalonBookingRules: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The current rules, or `null`. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicBookingRules"] | components["schemas"]["NoBookingRules"];
+                };
+            };
+            /** @description A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The hostname names no salon: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The database is down or not answering: `service_unavailable`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getSalonBookingRulesHistory: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A page of versions. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingRulesHistory"];
+                };
+            };
+            /** @description `page` below 0 or above 100000, or `size` outside 1 to 100: `bad_request`. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No valid session for this salon: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Without `settings.read`: `permission_denied`. A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The hostname names no salon: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The database is down or not answering: `service_unavailable`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getSalonBookingRulesSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The rules. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingRulesSettings"];
+                };
+            };
+            /** @description No valid session for this salon: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Without `settings.read`: `permission_denied`. A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The hostname names no salon: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The database is down or not answering: `service_unavailable`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    saveSalonBookingRules: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveBookingRules"];
+            };
+        };
+        responses: {
+            /** @description The rules as saved, with the new version's number. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingRulesSettings"];
+                };
+            };
+            /** @description A field broke a rule, or the body is not the documented shape: `bad_request`, with `errors` naming each field (`rules.deposit.capMinor`). Nothing is saved. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No valid session for this salon: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Without `settings.manage`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The hostname names no salon: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `version` is not the current version: `conflict`. The rules are the current version's already: `invalid_state`. Nothing is saved. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

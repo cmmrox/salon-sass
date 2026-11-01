@@ -80,7 +80,9 @@ class DatabaseIsolationCatalogueIntegrationTest {
                         "staff_opening_hours",
                         "staff_holiday_review",
                         "staff_holiday_choice",
-                        "staff_closure");
+                        "staff_closure",
+                        // F04-S04: the booking rules' versions.
+                        "booking_rules_version");
         assertThat(tables)
                 .allSatisfy(table -> assertThat(table)
                         .as("%s", table.get("name"))
@@ -246,7 +248,9 @@ class DatabaseIsolationCatalogueIntegrationTest {
                         org.assertj.core.api.Assertions.tuple("staff_opening_hours", "INSERT,SELECT,UPDATE"),
                         org.assertj.core.api.Assertions.tuple("staff_holiday_review", "INSERT,SELECT,UPDATE"),
                         org.assertj.core.api.Assertions.tuple("staff_holiday_choice", "INSERT,SELECT,UPDATE"),
-                        org.assertj.core.api.Assertions.tuple("staff_closure", "DELETE,INSERT,SELECT"));
+                        org.assertj.core.api.Assertions.tuple("staff_closure", "DELETE,INSERT,SELECT"),
+                        // F04-S04: a booking rules version is written once and read, never changed or removed.
+                        org.assertj.core.api.Assertions.tuple("booking_rules_version", "INSERT,SELECT"));
     }
 
     /**
@@ -281,7 +285,9 @@ class DatabaseIsolationCatalogueIntegrationTest {
                 // F23-S05: the due events of the types the asking instance knows.
                 "outbox_due_events",
                 // F04-S03: the published holiday calendar, the tenant role's only path to its tables.
-                "holiday_calendar_published");
+                "holiday_calendar_published",
+                // F04-S04: the current salon's currency, the tenant role's only path to that registry column.
+                "salon_currency");
         // F03-S01: the module-owned bootstrap functions belong to the platform role alone, as do F03-S02's
         // staff-seat usage count and billing's outbox write.
         // F03-S03: closure's session revocation and message cancellation, and each module's guarded eraser,
@@ -299,6 +305,8 @@ class DatabaseIsolationCatalogueIntegrationTest {
                 "outbox_erase_salon_rows",
                 // F04-S03: staff's guarded eraser.
                 "staff_erase_salon_rows",
+                // F04-S04: booking's guarded eraser.
+                "booking_erase_salon_rows",
                 // F03-S04: a support session's entries in the salon's audit trail, from the platform connection.
                 "audit_record_support");
         assertThat(functions)
