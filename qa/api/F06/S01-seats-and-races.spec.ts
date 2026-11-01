@@ -7,10 +7,14 @@
  * staff's rows, two saves linking one account, an account removed while it is being linked, and two
  * saves of one version.
  *
- * Expected results are the F06-S01 spec's (AC-2, AC-5, AC-6, "Risks and test focus") and decisions
- * 099 and 100. Every race fires its requests in the same tick, asserts the invariant rather than the
- * responses one by one, and reads the end state back row by row. Prepared before the build; the names
- * only the build gives are in `PENDING_F06_S01` (qa/shared/team.ts) and are confirmed at the dry run.
+ * Expected results are the F06-S01 spec's (AC-2, AC-5, AC-6, "Corrections at close", "Risks and test
+ * focus") and decisions 099 to 101. Every race asserts the invariant rather than the responses one by
+ * one, and reads the end state back row by row.
+ *
+ * Sent in the same tick, the request with the shorter path to the lock always wins: at the dry run an
+ * account beat a person 16 times in 16, and an account's removal beat a link every time, so one order was
+ * never fought and a defect in it could not have shown. So a race between two different requests sweeps a
+ * small gap between them (`GAPS`) in both orders, and asserts that each side won at least once.
  */
 import type { APIResponse } from '@playwright/test';
 
@@ -23,6 +27,13 @@ test.describe.configure({ timeout: 180_000 });
 
 const status = (r: APIResponse) => r.status();
 const worked = (r: APIResponse) => r.status() >= 200 && r.status() < 300;
+
+/** The gaps, in milliseconds, a race sweeps between its requests, from the same tick to one that lets the first finish. */
+const GAPS = [0, 1, 2, 3, 5, 8, 13, 21, 34, 55];
+/** Sends each request `gap` milliseconds after the one before it, without waiting for any answer. */
+const fire = <T>(sends: (() => Promise<T>)[], gap: number) => Promise.all(sends.map((send, n) => (n === 0 || gap === 0
+  ? send()
+  : new Promise<void>(resolve => { setTimeout(resolve, n * gap); }).then(send))));
 
 /** Who is not on the team or not active any more, for reading a race's end state. */
 async function activeAccountIds(identity: Identity, owner: SignedStaff) {
@@ -159,10 +170,10 @@ test('TC-F06-S01-030 AC-6: a salon without a plan is not limited: people and acc
 
 /**
  * One round of the last-seat race: asserts exactly one winner, every loser told why and the seat count,
- * then frees the seat for the next round. `requests` fire in the order given, in one tick.
+ * then frees the seat for the next round. `requests` fire in the order given, `gap` milliseconds apart.
  */
-async function lastSeatRound(team: Team, owner: SignedStaff, requests: { kind: 'member' | 'account'; send: () => Promise<APIResponse> }[], used: number, label: string) {
-  const responses = await Promise.all(requests.map(r => r.send()));
+async function lastSeatRound(team: Team, owner: SignedStaff, requests: { kind: 'member' | 'account'; send: () => Promise<APIResponse> }[], gap: number, used: number, label: string) {
+  const responses = await fire(requests.map(r => r.send), gap);
   const winners = responses.map((r, n) => ({ r, kind: requests[n].kind })).filter(x => worked(x.r));
   expect(winners.length, `${label}: exactly one request takes the last seat (answers ${responses.map(status).join(', ')})`).toBe(1);
   for (const loser of responses.filter(r => !worked(r))) await noSeat(loser, `${label}: a loser`);
@@ -179,7 +190,7 @@ async function lastSeatRound(team: Team, owner: SignedStaff, requests: { kind: '
   return winner.kind;
 }
 
-test('TC-F06-S01-031 AC-6: of two requests for the last seat sent at once, adding a person and creating an account, in both orders, exactly one succeeds every time', async ({ identity, operator }, testInfo) => {
+test('TC-F06-S01-031 AC-6: of two requests for the last seat, adding a person and creating an account, in both orders and at every small gap, exactly one succeeds every time and each side wins', async ({ identity, operator }, testInfo) => {
   const team = new Team(identity);
   const { salon, owner } = await teamSalon(operator, identity, 3);
   await team.add(salon, owner.tokens);
@@ -187,14 +198,15 @@ test('TC-F06-S01-031 AC-6: of two requests for the last seat sent at once, addin
   const member = { kind: 'member' as const, send: () => team.addRaw(salon, owner.tokens, memberInput()) };
   const account = { kind: 'account' as const, send: () => team.createAccountRaw(salon, owner.tokens) };
   const tally = { member: 0, account: 0 };
-  for (let round = 1; round <= 8; round++) {
-    tally[await lastSeatRound(team, owner, [member, account], 3, `person first, round ${round}`)]++;
+  for (const gap of GAPS) {
+    tally[await lastSeatRound(team, owner, [member, account], gap, 3, `person first by ${gap} ms`)]++;
     await team.expectSeats(owner, 2, 'the seat is free again');
-    tally[await lastSeatRound(team, owner, [account, member], 3, `account first, round ${round}`)]++;
+    tally[await lastSeatRound(team, owner, [account, member], gap, 3, `account first by ${gap} ms`)]++;
     await team.expectSeats(owner, 2, 'the seat is free again');
   }
-  // Which won is the server's business; the tally shows the race was fought both ways.
   await testInfo.attach('winners', { body: JSON.stringify(tally), contentType: 'application/json' });
+  expect(tally.member, `a person won the seat at some gap, so that order was fought (${JSON.stringify(tally)})`).toBeGreaterThan(0);
+  expect(tally.account, `an account won the seat at some gap, so that order was fought (${JSON.stringify(tally)})`).toBeGreaterThan(0);
   await team.dispose();
 });
 
@@ -217,22 +229,24 @@ test('TC-F06-S01-032 AC-6: of sixteen requests for the last seat sent at once, h
   await team.dispose();
 });
 
-test('TC-F06-S01-033 AC-6: unlinking also fights for the last seat: of an unlink, a new person and a new account sent at once exactly one succeeds, and a person added linked to a free account succeeds beside them because it needs no seat', async ({ identity, operator }) => {
+test('TC-F06-S01-033 AC-6: unlinking also fights for the last seat: of an unlink, a new person and a new account, each led by the others in turn, exactly one succeeds and an unlink can win; a person added linked to a free account succeeds beside them because it needs no seat', async ({ identity, operator }) => {
   const team = new Team(identity);
   const { salon, owner } = await teamSalon(operator, identity, 3);
   const account = await team.createAccount(salon, owner.tokens);
   await team.expectSeats(owner, 2, 'one seat left');
-  for (let round = 1; round <= 6; round++) {
-    await test.step(`round ${round}`, async () => {
+  let unlinksWon = 0;
+  for (const gap of GAPS) {
+    await test.step(`the unlink first by ${gap} ms`, async () => {
       let person = await team.add(salon, owner.tokens, memberInput({ signInAccountId: account.id }));
       await team.expectSeats(owner, 2, 'the pair counts once');
-      const [unlink, added, createdAccount, linkedOwner] = await Promise.all([
-        team.saveRaw(salon, owner.tokens, person.id, updateOf(person, {}, null)),
-        team.addRaw(salon, owner.tokens, memberInput()),
-        team.createAccountRaw(salon, owner.tokens),
-        team.addRaw(salon, owner.tokens, memberInput({ signInAccountId: owner.principal.id })),
-      ]);
+      const [unlink, added, createdAccount, linkedOwner] = await fire([
+        () => team.saveRaw(salon, owner.tokens, person.id, updateOf(person, {}, null)),
+        () => team.addRaw(salon, owner.tokens, memberInput()),
+        () => team.createAccountRaw(salon, owner.tokens),
+        () => team.addRaw(salon, owner.tokens, memberInput({ signInAccountId: owner.principal.id })),
+      ], gap);
       const seatTakers = [unlink, added, createdAccount];
+      if (worked(unlink)) unlinksWon++;
       expect(seatTakers.filter(worked).length, `exactly one takes the seat (answers ${seatTakers.map(status).join(', ')})`).toBe(1);
       for (const loser of seatTakers.filter(r => !worked(r))) await noSeat(loser, 'a loser');
       expect(status(linkedOwner), 'adding someone linked to a free account needs no seat').toBe(201);
@@ -246,34 +260,42 @@ test('TC-F06-S01-033 AC-6: unlinking also fights for the last seat: of an unlink
       await team.expectSeats(owner, 2, 'one seat left again');
     });
   }
+  expect(unlinksWon, 'an unlink won the seat at some gap, so that order was fought').toBeGreaterThan(0);
   await team.dispose();
 });
 
-test('TC-F06-S01-034 AC-6: the operator\'s move to a plan of exactly the seats used, sent at once with a new person and a new account, never leaves the salon using more seats than its plan allows', async ({ identity, operator }) => {
+test('TC-F06-S01-034 AC-6: the operator\'s move to a plan of exactly the seats used, raced by a new person, by a new account and by both, at every small gap, never leaves the salon using more seats than its plan allows', async ({ identity, operator }) => {
   const team = new Team(identity);
   const { admin, salon, owner, created, plan } = await teamSalon(operator, identity, 6);
   const small = await operator.plan(admin, { staffSeats: 2 });
   await team.add(salon, owner.tokens);
   await team.expectSeats(owner, 2, 'exactly what the small plan allows');
-  for (let round = 1; round <= 8; round++) {
-    await test.step(`round ${round}`, async () => {
-      const version = await operator.version(admin, created.id);
-      const [move, person, account] = await Promise.all([
-        operator.movePlan(admin, created.id, version, small.id),
-        team.addRaw(salon, owner.tokens, memberInput()),
-        team.createAccountRaw(salon, owner.tokens),
-      ]);
-      const entitlements = await team.entitlements(salon, owner.tokens);
-      expect(entitlements.usage.staffSeats, `seats used fit the plan the salon ended on (move ${status(move)}, person ${status(person)}, account ${status(account)})`)
-        .toBeLessThanOrEqual(entitlements.limits!.staffSeats!);
-      if (!worked(move)) await operatorProblem(move, 409, 'entitlement_exceeded');
-      for (const r of [person, account]) if (!worked(r)) await noSeat(r, 'a refused seat');
-      // Back to the arrangement: the large plan, and one person with no sign-in.
-      if (worked(person)) await team.remove(salon, owner.tokens, await person.json() as TeamMember);
-      if (worked(account)) await team.removeAccount(salon, owner.tokens, (await account.json() as { id: string }).id);
-      if (worked(move)) await operatorJson(await operator.movePlan(admin, created.id, await operator.version(admin, created.id), plan.id), 'salon');
-      await team.expectSeats(owner, 2, 'back to the arrangement');
-    });
+  const rows: [string, boolean, boolean][] = [['a new person', true, false], ['a new account', false, true], ['both', true, true]];
+  for (const [label, withPerson, withAccount] of rows) {
+    for (const gap of GAPS) {
+      await test.step(`${label}, ${gap} ms after the move`, async () => {
+        const version = await operator.version(admin, created.id);
+        const seatRequests = [
+          ...(withPerson ? [{ kind: 'person', send: () => team.addRaw(salon, owner.tokens, memberInput()) }] : []),
+          ...(withAccount ? [{ kind: 'account', send: () => team.createAccountRaw(salon, owner.tokens) }] : []),
+        ];
+        const [move, ...answers] = await fire([() => operator.movePlan(admin, created.id, version, small.id), ...seatRequests.map(r => r.send)], gap);
+        const said = `move ${status(move)}, ${seatRequests.map((r, n) => `${r.kind} ${status(answers[n])}`).join(', ')}`;
+        const entitlements = await team.entitlements(salon, owner.tokens);
+        expect(entitlements.usage.staffSeats, `${label}, ${gap} ms: seats used fit the plan the salon ended on (${said})`)
+          .toBeLessThanOrEqual(entitlements.limits!.staffSeats!);
+        if (!worked(move)) await operatorProblem(move, 409, 'entitlement_exceeded');
+        for (const r of answers) if (!worked(r)) await noSeat(r, 'a refused seat');
+        // Back to the arrangement: the large plan, and one person with no sign-in.
+        for (const [n, r] of answers.entries()) {
+          if (!worked(r)) continue;
+          if (seatRequests[n].kind === 'person') await team.remove(salon, owner.tokens, await r.json() as TeamMember);
+          else await team.removeAccount(salon, owner.tokens, (await r.json() as { id: string }).id);
+        }
+        if (worked(move)) await operatorJson(await operator.movePlan(admin, created.id, await operator.version(admin, created.id), plan.id), 'salon');
+        await team.expectSeats(owner, 2, 'back to the arrangement');
+      });
+    }
   }
   await team.dispose();
 });
@@ -360,23 +382,28 @@ test('TC-F06-S01-036 AC-5: two saves linking one account at once leave it linked
 test('TC-F06-S01-037 AC-5, AC-6: an account removed while a person is being linked to it never leaves a link to a removed account, whichever arrives first, and the seats are right', async ({ identity, operator }) => {
   const team = new Team(identity);
   const { salon, owner } = await teamSalon(operator, identity, 6);
-  for (let round = 1; round <= 10; round++) {
-    await test.step(`round ${round}`, async () => {
+  const tally = { linked: 0, refused: 0 };
+  const rounds = GAPS.flatMap(gap => [{ gap, linkFirst: true }, { gap, linkFirst: false }]);
+  for (const { gap, linkFirst } of rounds) {
+    await test.step(`${linkFirst ? 'the link' : 'the removal'} first by ${gap} ms`, async () => {
       const account = await team.createAccount(salon, owner.tokens);
       const person = await team.add(salon, owner.tokens);
       await team.expectSeats(owner, 3, 'the Owner, an account nobody is linked to, and the person');
       const link = () => team.saveRaw(salon, owner.tokens, person.id, updateOf(person, {}, account.id));
       const remove = () => team.removeAccountRaw(salon, owner.tokens, account.id);
-      const answers = await Promise.all(round % 2 ? [link(), remove()] : [remove(), link()]);
-      const [linkAnswer, removeAnswer] = round % 2 ? answers : [answers[1], answers[0]];
+      const answers = await fire(linkFirst ? [link, remove] : [remove, link], gap);
+      const [linkAnswer, removeAnswer] = linkFirst ? answers : [answers[1], answers[0]];
       expect(status(removeAnswer), 'the account is removed').toBe(204);
-      if (!worked(linkAnswer)) await refusedOn(linkAnswer, 'signInAccountId', 'a link that lost');
+      if (worked(linkAnswer)) tally.linked++;
+      else { tally.refused++; await refusedOn(linkAnswer, 'signInAccountId', 'a link that lost'); }
       const after = await team.get(salon, owner.tokens, person.id);
       expect(after.signInAccountId ?? null, `the person has no sign-in (link ${status(linkAnswer)})`).toBeNull();
       await team.expectSeats(owner, 2, 'the Owner and the person with no sign-in');
       await team.remove(salon, owner.tokens, after);
     });
   }
+  expect(tally.linked, `a link was saved before the removal at some gap, so that order was fought (${JSON.stringify(tally)})`).toBeGreaterThan(0);
+  expect(tally.refused, `a removal beat the link at some gap, so that order was fought (${JSON.stringify(tally)})`).toBeGreaterThan(0);
   await team.dispose();
 });
 

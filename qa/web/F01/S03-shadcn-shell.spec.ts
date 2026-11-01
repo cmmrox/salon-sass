@@ -81,7 +81,9 @@ test('TC-F01-S03-015 the rebuilt shell, navigation and foundation pages keep the
   const missing=await page.goto(`${salonUrl(alpha,webUrl)}/salon-site`);expect(missing!.status()).toBe(404);
   for(const id of ['not-found','not-found-title','not-found-body','not-found-home'])await expect(page.getByTestId(id),`not-found at ${viewport.width}: ${id}`).toBeVisible();
   await referenceTypeAndPalette(page);await expect(page.locator('body')).toHaveCSS('background-color','rgb(243, 240, 235)');
-  for(const other of salons)expect(await page.content(),`not-found shows no salon`).not.toContain(other.brandColour);
+  // The page's message catalogue carries Settings' help text, "like #D6086A" (F04-S02), which is an example and no salon's colour.
+  const shown=(await page.content()).replace(/like #D6086A/g,'');
+  for(const other of salons)expect(shown,`not-found shows no salon`).not.toContain(other.brandColour);
   inspected=await fit(page);expect(inspected.counted).toBeGreaterThan(0);expect(inspected.pageScrolls).toBe(false);expect(inspected.outside).toEqual([]);expect(inspected.clipped).toEqual([]);
   await tabTo(page,page.getByTestId('not-found-home'),`not-found at ${viewport.width}`);await expectKeyboardFocus(page,`not-found at ${viewport.width}`);
   await designScreenshot(page,`CR016-F01-app-not-found-${viewport.width}`);

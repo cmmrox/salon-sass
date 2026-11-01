@@ -13,9 +13,9 @@
  * boundary, every role on every endpoint) are not proved again: each case checks what the person sees,
  * and persistence once through the API.
  *
- * Prepared before the build. The test ids in `T` follow docs/design/ui-ux-standards.md ("Test ids")
- * and the F05 screens, and must be confirmed against the F06-S01 handoff at the dry run; nothing else
- * here spells one. Only `workspace-team` is the spec's own.
+ * The test ids in `T` are the build's, confirmed against the F06-S01 handoff at the dry run (c9b2d57);
+ * nothing else here spells one. `cacheComponents` keeps a route it has left in the document, hidden, so
+ * a check that follows a tab move targets the visible element.
  */
 import type { BrowserContext, Locator, Page } from '@playwright/test';
 
@@ -44,21 +44,21 @@ test.describe.configure({ timeout: 180_000 });
 const TEAM_ROUTE = routes.team;
 const ACCOUNTS_ROUTE = routes.staffList;
 
-/** Test ids, confirmed against the F06-S01 handoff at the dry run. A repeated row carries `data-id`. */
+/** Test ids, from the F06-S01 handoff and the build. A repeated row carries `data-id`. */
 const T = {
   nav: 'workspace-team', tabTeam: 'team-tab-team', tabAccounts: 'team-tab-accounts',
-  loading: 'team-loading', unavailable: 'team-unavailable', retry: 'team-retry', refused: 'team-refused',
-  summary: 'team-summary', newMember: 'team-new', empty: 'team-empty', emptyNew: 'team-empty-new',
+  loading: 'team-loading', unavailable: 'team-unavailable', retry: 'team-retry', refused: 'team-refused', readOnly: 'team-read-only',
+  summary: 'team-summary', newMember: 'team-add', empty: 'team-empty', emptyNew: 'team-empty-add', rule: 'team-rule',
   card: 'team-card', cardName: 'team-card-name', cardTitle: 'team-card-title', cardBio: 'team-card-bio', cardServices: 'team-card-services',
-  cardOnline: 'team-card-online', cardSignIn: 'team-card-sign-in', cardEdit: 'team-card-edit', cardAvatar: 'team-card-avatar',
-  sheet: 'team-sheet', name: 'team-sheet-name', title: 'team-sheet-title', highlights: 'team-sheet-highlights', bio: 'team-sheet-bio', bioCount: 'team-sheet-bio-count',
-  online: 'team-sheet-online', signIn: 'team-sheet-sign-in', save: 'team-sheet-save', remove: 'team-sheet-remove', close: 'team-sheet-close', problem: 'team-sheet-problem',
-  category: 'team-category', categoryToggle: 'team-category-toggle', categorySummary: 'team-category-summary', categoryChoose: 'team-category-choose', serviceChip: 'team-service-chip',
-  photo: 'team-photo-file', photoChoose: 'team-photo-choose', photoPreview: 'team-photo-preview', photoRemove: 'team-photo-remove', photoError: 'team-photo-error', photoAfterCreate: 'team-photo-after-create',
+  cardOnline: 'team-card-online', cardSignIn: 'team-card-sign-in', cardEdit: 'team-card-edit', cardAvatar: 'team-member-avatar', cardInitial: 'team-member-initial',
+  sheet: 'team-sheet', name: 'team-name', title: 'team-title', highlights: 'team-highlights', bio: 'team-bio', bioCount: 'team-bio-count',
+  online: 'team-online', signIn: 'team-sign-in', save: 'team-sheet-save', remove: 'team-sheet-remove', close: 'team-sheet-close', problem: 'team-sheet-problem', problems: 'team-sheet-problems',
+  category: 'team-picker-row', categoryToggle: 'team-picker-category', categorySummary: 'team-picker-summary', categoryChoose: 'team-picker-choose', serviceChip: 'team-picker-service',
+  photo: 'team-photo-file', photoChoose: 'team-photo-choose', photoPreview: 'team-member-photo', photoRemove: 'team-photo-remove', photoError: 'team-photo-error', photoAfterCreate: 'team-photo-after-add',
   conflict: 'team-conflict', conflictReload: 'team-conflict-reload',
   leaveDialog: 'team-leave-dialog', leaveStay: 'team-leave-stay', leaveConfirm: 'team-leave-confirm',
   removeDialog: 'team-remove-dialog', removeConfirm: 'team-remove-confirm', removeCancel: 'team-remove-cancel',
-  staffRow: 'account-staff-row', billingSeats: 'billing-staff-seats',
+  staffRow: 'account-staff-row', staffProfile: 'account-staff-team-profile', billingSeats: 'billing-staff-seats',
 } as const;
 
 /** The spec's and the prototype's words. */
@@ -66,12 +66,12 @@ const TEXT = {
   entry: 'Staff',
   emptyTitle: 'Add your first team member',
   addButton: '+ Add team member',
-  summary: (n: number, m: number) => `${n} people · ${m} shown for online booking`,
+  summary: (n: number, m: number) => `${n} ${n === 1 ? 'person' : 'people'} · ${m} shown for online booking`,
   added: 'Added to the team.', saved: 'Profile saved.', removed: 'Removed from the team.',
   noServices: 'None yet', noSignIn: 'None', shown: 'Shown', hidden: 'Hidden',
   noProfile: 'No team profile',
   notPerformed: 'Not performed',
-  allOf: (n: number) => `All ${n} services, and any added later`,
+  allOf: (n: number) => (n === 1 ? '1 service, and any added later' : `All ${n} services, and any added later`),
   someOf: (m: number, n: number) => `${m} of ${n} services`,
   noSignInOption: 'No sign-in. They can still take bookings',
   photoAfterCreate: 'Add a photo after you add this person.',
@@ -79,7 +79,11 @@ const TEXT = {
   removeBody: 'They will no longer be available for booking. Past bookings keep their name. Their sign-in account, if any, stays until you remove it.',
   // The message F02's staff screen already shows (spec, AC-6: "the existing message").
   noSeat: 'The salon\'s plan has no free staff seat. Remove a staff member or ask the platform to move the salon to a larger plan.',
-  err: { name: 'Name must be 2 to 40 characters.' },
+  memberLimit: 'A salon can have up to 200 team members. Remove someone first.',
+  err: {
+    name: 'Name must be 2 to 40 characters.', title: 'Title must be 40 characters or fewer.',
+    highlights: 'Highlights must be 60 characters or fewer.', bio: 'Bio must be 140 characters or fewer.',
+  },
 };
 
 /** The prototype's six avatar colours (`stOpen`), as the browser reports them. */
@@ -89,8 +93,8 @@ const AVATAR_COLOURS = ['#3E5C8A', '#8A4B6B', '#3E6B7A', '#6B6B3E', '#2F6B5E', '
 });
 
 const id = (page: Page | Locator, name: string) => page.getByTestId(name).filter({ visible: true });
-const card = (page: Page, memberId: string) => page.locator(`[data-testid="${T.card}"][data-id="${memberId}"]`);
-const categoryRow = (page: Page, categoryId: string) => page.locator(`[data-testid="${T.category}"][data-id="${categoryId}"]`);
+const card = (page: Page, memberId: string) => page.locator(`[data-testid="${T.card}"][data-id="${memberId}"]`).filter({ visible: true });
+const categoryRow = (page: Page, categoryId: string) => page.locator(`[data-testid="${T.category}"][data-id="${categoryId}"]`).filter({ visible: true });
 
 /** Loading has finished and the Team tab shows its header or its Empty state. */
 async function ready(page: Page) {
@@ -121,11 +125,11 @@ async function tabTo(page: Page, target: Locator, limit = 120) {
   await expect(target, 'reached by Tab').toBeFocused();
 }
 
-/** Chooses an option of a shadcn Select by the trigger's test id and the option's value (web.md: never `selectOption`). */
-async function choose(page: Page, trigger: string, value: string) {
+/** Chooses an option of a shadcn Select by the trigger's test id and the option's words (web.md: never `selectOption`). */
+async function choose(page: Page, trigger: string, words: string) {
   await id(page, trigger).click();
-  await id(page, `${trigger}-option-${value}`).click();
-  await expect(page.getByTestId(`${trigger}-option-${value}`)).toHaveCount(0);
+  await page.getByRole('option', { name: words }).click();
+  await expect(page.getByRole('listbox')).toHaveCount(0);
 }
 
 /** A small menu: Colour with three services, Nails with one, and the other eight categories empty. */
@@ -210,8 +214,8 @@ test('TC-F06-S01-040 AC-11: Sign-in accounts is the existing staff screen under 
   });
   await test.step('the profile each account is linked to', async () => {
     const row = (accountId: string) => page.locator(`[data-testid="${T.staffRow}"][data-id="${accountId}"]`);
-    await expect(row(linkedAccount.id)).toContainText(person.name);
-    await expect(row(owner.principal.id)).toContainText(TEXT.noProfile);
+    await expect(row(linkedAccount.id).getByTestId(T.staffProfile)).toHaveText(person.name);
+    await expect(row(owner.principal.id).getByTestId(T.staffProfile)).toHaveText(TEXT.noProfile);
   });
   await test.step('the tab goes back, and the page loads directly on either', async () => {
     await id(page, T.tabTeam).click();
@@ -231,11 +235,11 @@ test('TC-F06-S01-041 AC-12: the Team tab has a card per person in name order wit
   const { colour, nails, gel } = await arrangeMenu(cat, salon, owner.tokens);
   const account = await team.createAccount(salon, owner.tokens);
   const chamara = await team.add(salon, owner.tokens, memberInput({ name: 'Chamara', title: 'Director', bio: 'Colour for twenty years.', shownOnline: false, services: { categoryIds: [colour.id], serviceIds: [gel.id] }, signInAccountId: account.id }));
-  const amal = await team.add(salon, owner.tokens, memberInput({ name: 'Amal', title: 'Stylist', bio: null, services: { categoryIds: [], serviceIds: [] } }));
+  const amal = await team.add(salon, owner.tokens, memberInput({ name: 'amal', title: 'Stylist', bio: null, services: { categoryIds: [], serviceIds: [] } }));
   const bimal = await team.add(salon, owner.tokens, memberInput({ name: 'Bimal', title: null, bio: null, services: { categoryIds: [nails.id], serviceIds: [] } }));
   const { page } = await open(accounts, owner);
   await expect(id(page, T.summary)).toHaveText(TEXT.summary(3, 2));
-  await expect(page.getByTestId(T.cardName), 'name order').toHaveText(['Amal', 'Bimal', 'Chamara']);
+  await expect(page.getByTestId(T.cardName), 'name order, ignoring case').toHaveText(['amal', 'Bimal', 'Chamara']);
   const expectations: [TeamMember, string, string][] = [
     [amal, TEXT.noServices, TEXT.shown],
     [bimal, 'Nails', TEXT.shown],
@@ -279,6 +283,7 @@ test('TC-F06-S01-042 AC-13: the Receptionist and Professional read the cards wit
     await page.goto(`${salonUrl(salon, webUrl)}${TEAM_ROUTE}`);
     await ready(page);
     await noChange(page, 'support');
+    await expect(id(page, T.readOnly), 'says it cannot change the team').toBeVisible();
     await expect(card(page, person.id).getByTestId(T.cardSignIn), 'support has staff.list').toContainText(account.email);
     await context.close();
   });
@@ -324,6 +329,18 @@ test('TC-F06-S01-044 AC-1: + Add team member opens the sheet in the prototype\'s
     await expect(page.getByTestId(T.problem)).toHaveCount(0);
     await expect(id(page, T.save)).toBeEnabled();
   });
+  await test.step('each other limit says what it is, and disables Add to team while it lasts', async () => {
+    const rows: [string, number, string][] = [[T.title, 41, TEXT.err.title], [T.highlights, 61, TEXT.err.highlights], [T.bio, 141, TEXT.err.bio]];
+    for (const [field, length, message] of rows) {
+      await id(page, field).fill('x'.repeat(length));
+      await expect(id(page, T.problem).filter({ hasText: message }), message).toBeVisible();
+      await expect(id(page, T.save)).toBeDisabled();
+      if (field === T.bio) await expect(id(page, T.bioCount), 'the count passes the limit').toHaveText('141/140');
+      await id(page, field).fill('x'.repeat(length - 1));
+      await expect(id(page, T.problem).filter({ hasText: message })).toHaveCount(0);
+      await expect(id(page, T.save)).toBeEnabled();
+    }
+  });
   await test.step('the live count', async () => {
     await id(page, T.bio).fill('x'.repeat(65));
     await expect(id(page, T.bioCount)).toHaveText('65/140');
@@ -336,9 +353,10 @@ test('TC-F06-S01-044 AC-1: + Add team member opens the sheet in the prototype\'s
   const [saved] = await team.list(salon, owner.tokens);
   expect(saved).toMatchObject({ name: 'Nimal Perera', title: 'Colour Specialist', highlights: 'Balayage • Highlights', bio: 'x'.repeat(65), shownOnline: true });
   await expect(card(page, saved.id).getByTestId(T.cardName), 'its card').toHaveText('Nimal Perera');
+  await expect(id(page, T.summary), 'the header in the singular').toHaveText(TEXT.summary(1, 1));
 });
 
-test('TC-F06-S01-055 AC-1: at 200 people the sheet shows a message for the limit, keeps the person\'s details open, and adds nobody', async ({ accounts, operator, team }) => {
+test('TC-F06-S01-055 AC-1: at 200 people the sheet says "A salon can have up to 200 team members. Remove someone first.", keeps the person\'s details open, and adds nobody', async ({ accounts, operator, team }) => {
   test.setTimeout(240_000);
   const { salon, owner } = await teamSalon(operator, accounts.identity, 250);
   for (let n = 1; n <= 200; n++) await team.add(salon, owner.tokens, { name: `Person ${String(n).padStart(3, '0')}` });
@@ -347,7 +365,7 @@ test('TC-F06-S01-055 AC-1: at 200 people the sheet shows a message for the limit
   await id(page, T.name).fill('Number 201');
   await id(page, T.save).click();
   // By role: a message behind the sheet's overlay is hidden from the person and must not count.
-  await expect(page.getByRole('alert').filter({ hasText: /\S/ }).first(), 'the person is told').toBeVisible();
+  await expect(page.getByRole('alert').filter({ hasText: TEXT.memberLimit }), 'the person is told').toBeVisible();
   await expect(id(page, T.name), 'what they typed is kept').toHaveValue('Number 201');
   expect((await team.list(salon, owner.tokens)).length, 'nobody added').toBe(200);
 });
@@ -400,7 +418,7 @@ test('TC-F06-S01-046 AC-3: the picker lists the categories with services in the 
   });
   await test.step('tick Nails whole; narrow Colour to two of three', async () => {
     await nailsRow.getByTestId(T.categoryToggle).click();
-    await expect(nailsRow.getByTestId(T.categorySummary)).toHaveText('All 1 services, and any added later');
+    await expect(nailsRow.getByTestId(T.categorySummary), 'the singular').toHaveText(TEXT.allOf(1));
     await colourRow.getByTestId(T.categoryToggle).click();
     await expect(colourRow.getByTestId(T.categorySummary)).toHaveText(TEXT.allOf(3));
     await colourRow.getByTestId(T.categoryChoose).click();
@@ -443,7 +461,7 @@ test('TC-F06-S01-047 AC-5: Sign-in offers "No sign-in" and each active account n
   await expect(options.filter({ hasText: taken.email }), 'not one linked to someone else').toHaveCount(0);
   await expect(options.filter({ hasText: removed.email }), 'not a removed one').toHaveCount(0);
   await page.keyboard.press('Escape');
-  await choose(page, T.signIn, free.id);
+  await choose(page, T.signIn, free.email);
   await id(page, T.save).click();
   await expect(page.getByText(TEXT.saved)).toBeVisible();
   expect((await team.get(salon, owner.tokens, person.id)).signInAccountId, 'saved').toBe(free.id);
@@ -519,9 +537,9 @@ test('TC-F06-S01-050 AC-9, AC-16: with no photo a card shows the person\'s initi
   }
   const person = people[0];
   const { page } = await open(accounts, owner);
-  const colourOf = (memberId: string) => card(page, memberId).getByTestId(T.cardAvatar).evaluate(el => getComputedStyle(el.querySelector('[data-slot="avatar-fallback"]') ?? el).backgroundColor);
+  const colourOf = (memberId: string) => card(page, memberId).getByTestId(T.cardInitial).evaluate(el => getComputedStyle(el).backgroundColor);
   await test.step('the initial on a colour', async () => {
-    await expect(card(page, person.id).getByTestId(T.cardAvatar)).toContainText('A');
+    await expect(card(page, person.id).getByTestId(T.cardInitial)).toHaveText('A');
     const colours = await Promise.all(people.map(p => colourOf(p.id)));
     for (const colour of colours) expect(AVATAR_COLOURS, 'one of the prototype\'s six').toContain(colour);
     expect(new Set(colours).size, 'chosen by id, so twelve people do not all share one').toBeGreaterThan(1);
@@ -531,12 +549,14 @@ test('TC-F06-S01-050 AC-9, AC-16: with no photo a card shows the person\'s initi
     expect(await colourOf(person.id), 'the same colour on the next visit').toBe(before);
   });
   await card(page, person.id).getByTestId(T.cardEdit).click();
+  // The sheet's own avatar: the card behind it shows the same photo.
+  const preview = id(page, T.sheet).getByTestId(T.photoPreview);
   await expect(id(page, T.photoChoose), 'the photo control has a name').toHaveAccessibleName(/photo/i);
   await page.getByTestId(T.photo).setInputFiles(fixture('logo-700x600-banded.png'));
-  await expect(id(page, T.photoPreview)).toBeVisible();
+  await expect(preview).toBeVisible();
   await expect.poll(async () => (await team.get(salon, owner.tokens, person.id)).photoId, { message: 'the photo is saved' }).not.toBeNull();
   const saved = (await team.get(salon, owner.tokens, person.id)).photoId!;
-  await expect(id(page, T.photoPreview), 'served through the salon\'s own address').toHaveAttribute('src', new RegExp(saved));
+  await expect(preview, 'served through the salon\'s own address').toHaveAttribute('src', new RegExp(saved));
   await test.step('a refused file', async () => {
     await page.getByTestId(T.photo).setInputFiles(fixture('not-an-image.txt', 'image/png', 'photo.png'));
     await expect(id(page, T.photoError), 'the reason is shown').toBeVisible();
@@ -545,7 +565,7 @@ test('TC-F06-S01-050 AC-9, AC-16: with no photo a card shows the person\'s initi
   await test.step('Remove', async () => {
     await id(page, T.photoRemove).click();
     await expect.poll(async () => (await team.get(salon, owner.tokens, person.id)).photoId, { message: 'the photo is removed' }).toBeNull();
-    await expect(id(page, T.photoPreview)).toHaveCount(0);
+    await expect(preview).toHaveCount(0);
   });
 });
 
@@ -685,7 +705,7 @@ test('TC-F06-S01-054 AC-16: the Team tab, the sheet with a field error and the r
   await test.step('accessible names', async () => {
     await expect(id(page, T.photoChoose), 'the photo control').toHaveAccessibleName(/photo/i);
     await expect(categoryRow(page, colour.id).getByTestId(T.categoryChoose), 'Choose names its category').toHaveAccessibleName(/Colour/);
-    await expect(id(page, T.problem).first().locator('xpath=ancestor-or-self::*[@role="alert"]').first(), 'the error is announced').toBeVisible();
+    await expect(id(page, T.problems), 'the error is announced').toHaveAttribute('role', 'alert');
   });
   await id(page, T.name).fill('Accessible Person');
   await id(page, T.remove).click();

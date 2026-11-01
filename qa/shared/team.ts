@@ -3,9 +3,9 @@
  * seats, how seats are counted row by row, and read-only database observations of the stage's tables.
  *
  * Routes, bodies, codes and limits come from the F06-S01 spec (acceptance criteria, "API and data
- * changes", "Design notes") and decisions 099 and 100. Written before the build; every name only
- * the build gives (a table, a contract schema, the web's photo route, a BFF route) is in
- * `PENDING_F06_S01`, confirmed against the F06-S01 handoff at the dry run.
+ * changes", "Design notes", "Corrections at close") and decisions 099 to 101. Every name the build
+ * gives (a table, a contract schema, the web's photo route, a BFF route) is in `PENDING_F06_S01`,
+ * confirmed against the F06-S01 handoff and the migration at the dry run (c9b2d57).
  *
  * A salon keeps its team between runs, and a fixed salon's staff are reset around every test, which
  * would leave a link to an account that no longer exists. So a test that changes a team uses a salon
@@ -26,16 +26,16 @@ import type { Salon } from './tenants';
 /** Names the spec leaves to the build. Nothing else in the F06 tests spells these out. */
 export const PENDING_F06_S01 = {
   /** The table of team members (the other team tables are found by `tableMatch`). */
-  memberTable: 'team_member',
+  memberTable: 'staff_team_member',
   /** Every table this stage adds (members, whole categories, single services, photos) has this in its name. */
-  tableMatch: 'member',
+  tableMatch: 'staff_%member',
   /** The count function the spec names; the platform role alone may execute it. */
   countFunction: 'staff_active_unlinked_member_count',
   /** Contract schemas (docs/api/openapi.json, components.schemas). */
   schemas: {
     member: 'TeamMember',
     memberList: 'TeamMemberList',
-    publicList: 'PublicTeamList',
+    publicList: 'PublicTeam',
     accountList: 'TeamSignInAccountList',
   },
   /** The multipart field of a photo upload (spec, API table). */

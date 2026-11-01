@@ -6,10 +6,9 @@
  * the API and at the database, and the audit trail.
  *
  * Expected results are the F06-S01 spec's (acceptance criteria, "API and data changes", "Design
- * notes"), decisions 099 and 100, and the lead's correction during the build: the 201st member is
- * 409 `limit_reached`. Seats and everything sent at once are in S01-seats-and-races.spec.ts. Prepared
- * before the build; the names only the build gives are in `PENDING_F06_S01` (qa/shared/team.ts) and
- * are confirmed at the dry run.
+ * notes", "Corrections at close") and decisions 099 to 101. Seats and everything sent at once are in
+ * S01-seats-and-races.spec.ts. The names the build gives are in `PENDING_F06_S01` (qa/shared/team.ts),
+ * confirmed at the dry run (c9b2d57).
  *
  * Not automated here (`verification.deferred` of the stage):
  * - cases 011 and 012, AC-7's and AC-8's refusals while an upcoming booking needs the person. No
@@ -327,14 +326,17 @@ test('TC-F06-S01-008 AC-5: removing a person leaves their account active and fre
 
 // ---------------------------------------------------------------- AC-4, AC-7, AC-8 removal
 
-test('TC-F06-S01-009 AC-4, AC-7: a removed person leaves the list, the public list and every endpoint, while their id and name stay stored for past bookings; a stale version is 409 conflict', async ({ identity, operator }) => {
+test('TC-F06-S01-009 AC-4, AC-7: a removed person leaves the list, the public list and every endpoint, and their photo\'s URL answers 404 at once, while their id and name stay stored for past bookings; a stale version is 409 conflict', async ({ identity, operator }) => {
   const team = new Team(identity);
   const cat = new Catalogue(identity);
   const { salon, owner, created } = await teamSalon(operator, identity);
   const { colour } = await arrangeServices(cat, salon, owner.tokens);
   const person = await team.add(salon, owner.tokens, memberInput({ name: 'Leaving Soon', ...servicesOf([colour.id]) }));
   expect((await team.publicList(salon)).map(m => m.id), 'public before').toEqual([person.id]);
-  const edited = await team.save(salon, owner.tokens, person, { title: 'Now edited' });
+  const edited = await team.upload(salon, owner.tokens, (await team.save(salon, owner.tokens, person, { title: 'Now edited' })).id, SMALL_PHOTO());
+  const onWeb = () => identity.api.send('GET', `${salonUrl(salon, webUrl)}${PENDING_F06_S01.webPhotoPath(edited.photoId!)}`);
+  expect((await team.photo(salon.hostname, edited.photoId!)).status(), 'the photo is served before').toBe(200);
+  expect((await onWeb()).status(), 'also through the web').toBe(200);
   await test.step('a stale version changes nothing', async () => {
     const before = teamSnapshot(created.id);
     await refused(await team.removeRaw(salon, owner.tokens, person.id, person.version), 409, 'conflict', 'a stale removal');
@@ -343,6 +345,9 @@ test('TC-F06-S01-009 AC-4, AC-7: a removed person leaves the list, the public li
   await team.remove(salon, owner.tokens, edited);
   expect(await team.list(salon, owner.tokens), 'not listed').toEqual([]);
   expect(await team.publicList(salon), 'not public').toEqual([]);
+  expect((await team.photo(salon.hostname, edited.photoId!)).status(), 'their photo answers 404 at once').toBe(404);
+  expect((await onWeb()).status(), 'also through the web').toBe(404);
+  expect(teamRows(created.id).staff_member_photo, 'and its bytes are gone').toBe(0);
   await refused(await team.getRaw(salon, owner.tokens, person.id), 404, 'not_found', 'reading them');
   await refused(await team.saveRaw(salon, owner.tokens, person.id, updateOf(edited, { title: 'After removal' })), 404, 'not_found', 'editing them');
   await refused(await team.removeRaw(salon, owner.tokens, person.id, edited.version), 404, 'not_found', 'removing them again');
@@ -535,18 +540,18 @@ test('TC-F06-S01-018 AC-10: the public list needs no sign-in and gives, in name 
   const onlyHidden = await cat.create(salon, owner.tokens, serviceInput(waxing.id, { name: 'Only hidden', bookableOnline: false }));
   // Added out of order: the list must sort them itself.
   const chamara = await team.add(salon, owner.tokens, memberInput({ name: 'Chamara', title: 'Director', highlights: 'Bridal', bio: 'Bridal colour.', ...servicesOf([colour.id]) }));
-  const amal = await team.add(salon, owner.tokens, memberInput({ name: 'Amal', title: null, highlights: null, bio: null, ...servicesOf([], [n1.id]) }));
+  const amal = await team.add(salon, owner.tokens, memberInput({ name: 'amal', title: null, highlights: null, bio: null, ...servicesOf([], [n1.id]) }));
   const bimal = await team.upload(salon, owner.tokens, (await team.add(salon, owner.tokens, memberInput({ name: 'Bimal', ...servicesOf([nails.id], [s1.id]) }))).id, SMALL_PHOTO());
   await team.add(salon, owner.tokens, memberInput({ name: 'Dilan, hidden', shownOnline: false, ...servicesOf([colour.id]) }));
   await team.add(salon, owner.tokens, memberInput({ name: 'Eranga, no services' }));
   await team.add(salon, owner.tokens, memberInput({ name: 'Farah, hidden service only', ...servicesOf([waxing.id]) }));
   const list = await team.publicList(salon);
-  expect(list.map(m => m.name), 'name order, those who qualify and no others').toEqual(['Amal', 'Bimal', 'Chamara']);
+  expect(list.map(m => m.name), 'name order ignoring case, those who qualify and no others').toEqual(['amal', 'Bimal', 'Chamara']);
   for (const item of list) expect(Object.keys(item).sort(), `${item.name}: exactly the public fields`).toEqual(publicKeys);
   const by = (name: string) => list.find(m => m.name === name)!;
-  expect(by('Amal').id).toBe(amal.id);
-  expect(by('Amal').photoUrl, 'no photo is null').toBeNull();
-  expect(sorted(by('Amal').serviceIds)).toEqual([n1.id]);
+  expect(by('amal').id).toBe(amal.id);
+  expect(by('amal').photoUrl, 'no photo is null').toBeNull();
+  expect(sorted(by('amal').serviceIds)).toEqual([n1.id]);
   expect(by('Bimal').id).toBe(bimal.id);
   expect(by('Bimal').photoUrl, 'a photo has its URL').toContain(bimal.photoId!);
   expect(sorted(by('Bimal').serviceIds)).toEqual(sorted([n1.id, s1.id]));
