@@ -134,6 +134,10 @@ class PlanMoveCountsTeamMembersIntegrationTest extends IntegrationTest {
         BillingTestSupport.status(move(salon.id(), versionOf(salon.id()), billing.plan(3)), 200);
     }
 
+    /**
+     * A check of the final count only, and no proof of the order they ran in: it passed with V29's defect present. The
+     * proof holds a lock open, in {@link PlanMoveAndSeatOrderIntegrationTest}.
+     */
     @Test
     void aMoveAndARequestForASeatAtOnceNeverLeaveTheSalonOverItsPlan() throws Exception {
         for (int round = 0; round < 10; round++) {
