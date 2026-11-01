@@ -72,6 +72,8 @@ function calendarDay(scope: Locator, date: string): Locator {
 
 /** Every scan of a case is reported, not only the first that fails (each is a separate screen state). */
 async function accessible(page: Page, label: string) {
+  // Scan the settled screen, not a frame of a transition (a toast fading in measures as low contrast).
+  await page.waitForFunction(() => document.getAnimations().every(a => a.playState !== 'running'));
   expect.soft(await seriousViolations(page), `${label}: no serious or critical violation`).toEqual([]);
 }
 

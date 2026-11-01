@@ -427,6 +427,8 @@ test('TC-F04-S02-034 AC-12: the Branding tab has no serious accessibility violat
     for (const colour of ['#141413', '#FDE68A']) {
       await test.step(`draft colour ${colour}`, async () => {
         await typeColour(page, colour);
+        // Scan the settled screen, not a frame of a transition (a toast fading in measures as low contrast).
+        await page.waitForFunction(() => document.getAnimations().every(a => a.playState !== 'running'));
         expect(await seriousViolations(page)).toEqual([]);
       });
     }
@@ -444,7 +446,11 @@ test('TC-F04-S02-034 AC-12: the Branding tab has no serious accessibility violat
       while (!(await isSwatch()) && steps++ < 80) await page.keyboard.press('Tab');
       expect(await isSwatch(), 'a swatch is reached by Tab').toBe(true);
       const before = (await bookColours(page)).background;
+      const focusedSwatch = () => page.evaluate(() => Array.from(document.querySelectorAll('[data-testid="brand-swatch"]')).indexOf(document.activeElement as Element));
+      const from = await focusedSwatch();
       await page.keyboard.press('ArrowRight');
+      // The roving focus moves after the key press (Radix moves it on the next task): wait for it before choosing.
+      await expect.poll(focusedSwatch, 'the arrow moves to the next swatch').not.toBe(from);
       await page.keyboard.press('Space');
       await expect.poll(async () => (await bookColours(page)).background, 'the arrow keys choose another swatch').not.toBe(before);
       steps = 0;
@@ -459,7 +465,9 @@ test('TC-F04-S02-034 AC-12: the Branding tab has no serious accessibility violat
       await id(page, 'brand-name').fill('');
       await id(page, 'brand-save').click();
       await expect(id(page, 'brand-name-error')).toBeVisible();
-      expect(await seriousViolations(page)).toEqual([]);
+      // Scan the settled screen, not a frame of a transition (a toast fading in measures as low contrast).
+        await page.waitForFunction(() => document.getAnimations().every(a => a.playState !== 'running'));
+        expect(await seriousViolations(page)).toEqual([]);
     });
   } finally {
     await brands.discard(alpha, manager.tokens, (await brands.draft(alpha, manager.tokens)).version);

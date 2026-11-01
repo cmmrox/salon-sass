@@ -359,7 +359,7 @@ test('TC-F04-S01-026 AC-11: at every width of the matrix the Profile tab and pub
 test('TC-F04-S01-027 AC-11: the Profile tab has no serious accessibility violation in its loaded, field-error and conflict states and can be saved by keyboard alone', async ({ accounts }) => {
   const manager = await staffOf(accounts, 'MANAGER');
   const { page } = await openProfile(accounts, manager);
-  await test.step('loaded', async () => expect(await seriousViolations(page)).toEqual([]));
+  await test.step('loaded', async () => { await page.waitForFunction(() => document.getAnimations().every(a => a.playState !== 'running')); expect(await seriousViolations(page)).toEqual([]); });
   await test.step('keyboard alone: reach the address, type, reach Save draft and press it', async () => {
     await page.reload();
     await ready(page);
@@ -382,6 +382,8 @@ test('TC-F04-S01-027 AC-11: the Profile tab has no serious accessibility violati
     await field(page, 'phone').fill('12345');
     await id(page, 'profile-save').click();
     await expect(id(page, 'profile-phone-error')).toBeVisible();
+    // Scan the settled screen, not a frame of a transition.
+    await page.waitForFunction(() => document.getAnimations().every(a => a.playState !== 'running'));
     expect(await seriousViolations(page)).toEqual([]);
   });
   await test.step('conflict', async () => {
@@ -394,6 +396,8 @@ test('TC-F04-S01-027 AC-11: the Profile tab has no serious accessibility violati
     await field(page, 'description').fill(unique('Stale edit'));
     await id(page, 'profile-save').click();
     await expect(id(page, 'profile-conflict')).toBeVisible();
+    // Scan the settled screen, not a frame of a transition.
+    await page.waitForFunction(() => document.getAnimations().every(a => a.playState !== 'running'));
     expect(await seriousViolations(page)).toEqual([]);
   });
 });
