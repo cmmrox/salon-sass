@@ -312,8 +312,8 @@ export function catalogueAudit(salonId: string, after: string): AuditRow[] {
 // ================================================================ F05-S02: variants, Popular and a service's deposit
 
 /**
- * Names the F05-S02 spec leaves to the build, from its "API and data changes" and the patterns of
- * F05-S01. Confirm each against the F05-S02 handoff and the generated contract at the dry run.
+ * Names the F05-S02 spec leaves to the build, as its handoff, "Corrections at close" (decision 096)
+ * and V26__add_catalogue_variants_popular_and_deposits.sql give them (confirmed at the dry run, a65ba0e).
  */
 export const PENDING_F05_S02 = {
   /** The child table of a terms version holding its variants (spec, "Design notes"). */
@@ -359,6 +359,9 @@ export const variantInput = (categoryId: string, items: VariantInput[] = [
   return base;
 };
 
+/** A deposit without the fields its kind leaves empty (the response may carry them as null). */
+export const depositOf = (d: unknown) => Object.fromEntries(Object.entries((d ?? {}) as Record<string, unknown>).filter(([, v]) => v !== null && v !== undefined));
+
 /** What a client sends back to save an S02 service: its current values, variants (with ids) and deposit, with changes applied. */
 export function saveOf(service: ServiceS02, change: Record<string, unknown> = {}) {
   const t = service.terms;
@@ -367,7 +370,7 @@ export function saveOf(service: ServiceS02, change: Record<string, unknown> = {}
     : null;
   return {
     name: service.name, categoryId: service.categoryId, description: service.description, bookableOnline: service.bookableOnline,
-    bufferMinutes: t.bufferMinutes, deposit: service.deposit, variants,
+    bufferMinutes: t.bufferMinutes, deposit: depositOf(service.deposit), variants,
     ...(variants ? {} : { priceMinor: t.priceMinor, durationMinutes: t.durationMinutes }),
     ...change, version: service.version,
   };
@@ -403,7 +406,7 @@ export class CatalogueS02 extends Catalogue {
   async menuS02(salon: Salon): Promise<MenuS02> { return (await this.menu(salon)) as MenuS02; }
 }
 
-/** Every stored row of a salon's catalogue that names a terms version: the version and its variants. */
-export const versionWithVariants = (salonId: string, versionId: string) => catalogueTables().map(t => identitySql(
+/** The stored rows of a terms version and its variants (the service row, which names only its current version, is left out). */
+export const versionWithVariants = (salonId: string, versionId: string) => [PENDING_F05_S01.termsTable, PENDING_F05_S02.variantTable].map(t => identitySql(
   `SELECT coalesce(string_agg(row_to_json(x)::text, '|' ORDER BY row_to_json(x)::text), '') FROM ${t} x
    WHERE tenant_id = ${sqlLiteral(salonId)} AND row_to_json(x)::text LIKE ${sqlLiteral(`%${versionId}%`)}`)).filter(Boolean).join('\n');

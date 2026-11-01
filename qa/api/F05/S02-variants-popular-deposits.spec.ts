@@ -21,7 +21,7 @@ import { randomUUID } from 'node:crypto';
 import { refused } from '../../shared/booking-rules';
 import {
   CatalogueS02, PENDING_F05_S02, POPULAR_SETTING, popularPath, servicePath, catalogueAudit, catalogueSnapshot, catalogueTables, comparable, fieldRefusal,
-  marker, menuField, newSalon, rupees, saveOf, serviceInput, termsRows, variantInput, variantSegments, versionWithVariants,
+  depositOf, marker, menuField, newSalon, rupees, saveOf, serviceInput, termsRows, variantInput, variantSegments, versionWithVariants,
   type ServiceS02, type VariantInput,
 } from '../../shared/catalogue';
 import type { Role, Tokens } from '../../shared/identity';
@@ -305,7 +305,7 @@ test('TC-F05-S02-010 AC-7, AC-8: a service keeps the salon\'s rule, no deposit, 
   const { salon, owner, created } = await newSalon(operator, identity);
   const { id: categoryId } = await cat.category(salon, owner.tokens, 'Colour');
   const made = await cat.createS02(salon, owner.tokens, { ...serviceInput(categoryId), priceMinor: rupees(2500) });
-  expect(made.deposit, 'without one: the salon\'s rule').toEqual(PENDING_F05_S02.defaultDeposit);
+  expect(depositOf(made.deposit), 'without one: the salon\'s rule').toEqual(PENDING_F05_S02.defaultDeposit);
   let s = made;
   const accepted = [{ kind: 'none' }, { kind: 'percentage', percent: 1 }, { kind: 'percentage', percent: 100 }, { kind: 'amount', amountMinor: rupees(100) },
     { kind: 'amount', amountMinor: rupees(2500) }, { kind: 'salon_rule' }];
@@ -313,15 +313,15 @@ test('TC-F05-S02-010 AC-7, AC-8: a service keeps the salon\'s rule, no deposit, 
     await test.step(`accepted: ${JSON.stringify(deposit)}`, async () => {
       const prior = s;
       s = await cat.saveS02(salon, owner.tokens, s, { deposit });
-      expect(s.deposit).toEqual(deposit);
+      expect(depositOf(s.deposit)).toEqual(deposit);
       expect(s.terms.number, 'a new terms version').toBe(prior.terms.number + 1);
       const m = menuServices(await cat.menuS02(salon)).find(x => x.id === s.id)!;
-      expect(m.deposit, 'the menu carries it').toEqual(deposit);
+      expect(depositOf(m.deposit), 'the menu carries it').toEqual(deposit);
     });
   }
   const big = await cat.createS02(salon, owner.tokens, { ...serviceInput(categoryId), priceMinor: rupees(200_000) });
   await test.step('Rs. 100,000 on a service of Rs. 200,000', async () => {
-    expect((await cat.saveS02(salon, owner.tokens, big, { deposit: { kind: 'amount', amountMinor: rupees(100_000) } })).deposit).toEqual({ kind: 'amount', amountMinor: rupees(100_000) });
+    expect(depositOf((await cat.saveS02(salon, owner.tokens, big, { deposit: { kind: 'amount', amountMinor: rupees(100_000) } })).deposit)).toEqual({ kind: 'amount', amountMinor: rupees(100_000) });
   });
   const varied = await cat.createS02(salon, owner.tokens, variantInput(categoryId, undefined, { name: 'Balayage' }));
   const refusedRows: [string, ServiceS02, unknown][] = [
@@ -347,7 +347,7 @@ test('TC-F05-S02-010 AC-7, AC-8: a service keeps the salon\'s rule, no deposit, 
   expect(wrong, 'every broken deposit rule is a 400 on deposit that saves nothing').toEqual([]);
   await test.step('lowering a price below a fixed deposit is refused', async () => {
     const fixed = await cat.saveS02(salon, owner.tokens, s, { deposit: { kind: 'amount', amountMinor: rupees(2000) } });
-    await fieldRefusal(await cat.updateRaw(salon, owner.tokens, fixed.id, saveOf(fixed, { priceMinor: rupees(1500) })), '(deposit.*|priceMinor)', 'price under the deposit');
+    await fieldRefusal(await cat.updateRaw(salon, owner.tokens, fixed.id, saveOf(fixed, { priceMinor: rupees(1500) })), 'deposit\\.amountMinor', 'price under the deposit (Corrections at close, 5)');
   });
 });
 
@@ -358,7 +358,7 @@ test('TC-F05-S02-011 AC-9: Duplicate copies the variants with new ids and the de
   s = await cat.choose(salon, owner.tokens, s);
   const copy = (await cat.duplicate(salon, owner.tokens, s.id)) as unknown as ServiceS02;
   expect(copy.popular, 'not chosen').toBe(false);
-  expect(copy.deposit).toEqual({ kind: 'percentage', percent: 30 });
+  expect(depositOf(copy.deposit)).toEqual({ kind: 'percentage', percent: 30 });
   expect(copy.terms.variantSetName).toBe('Hair length');
   expect(copy.terms.variants.map(v => [v.name, v.priceMinor, v.durationMinutes, v.segments])).toEqual(s.terms.variants.map(v => [v.name, v.priceMinor, v.durationMinutes, v.segments]));
   const ids = new Set(s.terms.variants.map(v => v.id));

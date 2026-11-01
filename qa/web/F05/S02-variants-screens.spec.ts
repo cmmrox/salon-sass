@@ -14,7 +14,7 @@
 import type { Locator, Page } from '@playwright/test';
 
 import { BookingRules, SUGGESTED } from '../../shared/booking-rules';
-import { CatalogueS02, newSalon as newCatalogueSalon, rupees, serviceInput, variantInput, type ServiceS02, type VariantInput } from '../../shared/catalogue';
+import { CatalogueS02, depositOf, newSalon as newCatalogueSalon, rupees, serviceInput, variantInput, type ServiceS02, type VariantInput } from '../../shared/catalogue';
 import { DESIGN_WIDTHS } from '../../shared/design-reference';
 import { test as browserTest, expect, type AccountBrowser } from '../../shared/identity-browser';
 import type { Actor } from '../../shared/identity';
@@ -40,15 +40,16 @@ const T = {
   sheet: 'service-sheet', name: 'service-sheet-name', price: 'service-sheet-price', time: 'service-sheet-time', more: 'service-sheet-more',
   buffer: 'service-sheet-buffer', save: 'service-sheet-save', close: 'service-sheet-close',
 } as const;
+/** F05-S02's test ids, from its handoff ("New test ids for QA"). */
 const T2 = {
-  variantsSwitch: 'service-sheet-variants', setName: 'service-sheet-variant-set', variantRow: 'service-variant-row',
+  variantsSwitch: 'service-variants-toggle', setName: 'service-variant-set', variantRow: 'service-variant-row',
   variantName: 'service-variant-name', variantPrice: 'service-variant-price', variantTime: 'service-variant-time', variantRemove: 'service-variant-remove',
-  addVariant: 'service-variants-add', fromNote: 'service-variants-from', previewRow: 'service-price-list-row',
-  cardOptions: 'service-card-options', cardFrom: 'service-card-from-price', cardCount: 'service-card-options-count',
-  popularSwitch: 'service-sheet-popular', popularHint: 'service-sheet-popular-hint',
-  popularCard: 'services-popular', popularChosen: 'services-popular-chosen', popularMost: 'services-popular-most-booked', popularSummary: 'services-popular-summary',
-  depositSalon: 'service-sheet-deposit-salon-rule', depositCustom: 'service-sheet-deposit-custom', depositNone: 'service-sheet-deposit-none',
-  depositKind: 'service-sheet-deposit-kind', depositValue: 'service-sheet-deposit-value', depositHelp: 'service-sheet-deposit-help',
+  addVariant: 'service-variants-add', fromNote: 'service-sheet-variant-price', previewRow: 'service-variant-preview-row',
+  cardOptions: 'service-card-options', cardFrom: 'service-card-from-badge', cardCount: 'service-card-options-badge',
+  popularSwitch: 'service-sheet-popular', popularHint: 'service-sheet-popular-help',
+  popularCard: 'popular-card', popularMode: 'popular-mode', popularChosen: 'popular-mode-chosen', popularMost: 'popular-mode-most_booked', popularSummary: 'popular-summary',
+  depositSalon: 'service-deposit-salon_rule', depositCustom: 'service-deposit-custom', depositNone: 'service-deposit-none',
+  depositKind: 'service-deposit-type', depositPercent: 'service-deposit-percent', depositAmount: 'service-deposit-amount', depositHelp: 'service-deposit-says',
   problem: 'service-sheet-problem',
 } as const;
 
@@ -57,6 +58,12 @@ const TEXT = {
   sixChosen: '6 already chosen. Remove one first.',
   mostBookedHint: 'Popular is set to “Most booked”',
   salonRule: 'Uses your booking rules: 20%, up to Rs. 2,000.',
+  notSetYet: 'Uses your booking rules: not set yet.',
+  variantPrice: (name: string) => `Price for “${name}” must be Rs. 100 to Rs. 500,000.`,
+  variantTime: (name: string) => `Time for “${name}” must be 5 to 480 minutes, in steps of 5.`,
+  variantName: 'Each variant needs a name up to 30 characters.',
+  twice: (name: string) => `“${name}” appears twice.`,
+  count: 'Use 2 to 10 variants.',
   noDeposit: 'Customers book this service without paying a deposit.',
   chosen: (n: number, names: string[]) => `${n} chosen: ${names.join(', ')}. Change this in each service under “More options”.`,
   noneChosen: 'None chosen yet. Choose up to 6 under “More options” in a service.',
@@ -150,6 +157,7 @@ test('TC-F05-S02-016 AC-1, AC-3: turning on Variants hides the service\'s own pr
     await expect(card(page, same.id).getByTestId(T.cardPrice)).toHaveText('Rs. 2,000');
     await expect(card(page, same.id).getByTestId(T.cardTime)).toHaveText('30 min');
     await expect(card(page, same.id).getByTestId(T2.cardCount)).toHaveText('2 options');
+    await expect(card(page, same.id).getByTestId(T2.cardFrom), 'no "From price" when the prices are equal').toHaveCount(0);
   });
 });
 
@@ -159,16 +167,16 @@ test('TC-F05-S02-017 AC-1: a variant that breaks a rule is marked on its own fie
   const { page } = await open(accounts, owner);
   await card(page, s.id).getByTestId(T.cardEdit).click();
   const field = (n: number, testId: string) => rows(page).nth(n).getByTestId(testId);
-  const broken: [string, number, string, string][] = [
-    ['a price of Rs. 99', 1, T2.variantPrice, '99'], ['7 minutes', 2, T2.variantTime, '7'], ['an empty name', 0, T2.variantName, ''],
-    ['a repeated name', 2, T2.variantName, 'short'],
+  const broken: [string, number, string, string, string][] = [
+    ['a price of Rs. 99', 1, T2.variantPrice, '99', TEXT.variantPrice('Medium')], ['7 minutes', 2, T2.variantTime, '7', TEXT.variantTime('Long')],
+    ['an empty name', 0, T2.variantName, '', TEXT.variantName], ['a repeated name', 2, T2.variantName, 'short', TEXT.twice('short')],
   ];
-  for (const [label, n, testId, value] of broken) {
+  for (const [label, n, testId, value, message] of broken) {
     await test.step(label, async () => {
       const before = await field(n, testId).inputValue();
       await field(n, testId).fill(value);
       await expect(field(n, testId), `${label}: marked invalid`).toHaveAttribute('aria-invalid', 'true');
-      await expect(id(page, T2.problem).first(), `${label}: a message`).toBeVisible();
+      await expect(page.getByTestId(T2.problem).filter({ hasText: message }), `${label}: the R1 message`).toBeVisible();
       await expect(id(page, T.save), `${label}: Save disabled`).toBeDisabled();
       await field(n, testId).fill(before);
       await expect(field(n, testId)).not.toHaveAttribute('aria-invalid', 'true');
@@ -178,6 +186,7 @@ test('TC-F05-S02-017 AC-1: a variant that breaks a rule is marked on its own fie
     await rows(page).nth(2).getByTestId(T2.variantRemove).click();
     await rows(page).nth(1).getByTestId(T2.variantRemove).click();
     await expect(id(page, T.save), 'a set of one is not saved').toBeDisabled();
+    await expect(page.getByTestId(T2.problem).filter({ hasText: TEXT.count })).toBeVisible();
   });
   expect(await cat.serviceS02(salon, owner.tokens, s.id), 'nothing saved').toEqual(s);
 });
@@ -201,12 +210,10 @@ test('TC-F05-S02-018 AC-5, AC-6: Show in Popular chooses a service, a seventh sa
   await test.step('a seventh', async () => {
     await card(page, made[6].id).getByTestId(T.cardEdit).click();
     await openMore(page);
-    await id(page, T2.popularSwitch).click();
-    await expect(page.getByText(TEXT.sixChosen)).toBeVisible();
+    await expect(id(page, T2.popularSwitch), 'a seventh cannot be chosen').toBeDisabled();
+    await expect(id(page, T2.popularHint)).toContainText(TEXT.sixChosen);
     expect((await cat.serviceS02(salon, owner.tokens, made[6].id)).popular, 'not chosen').toBe(false);
     await id(page, T.close).click();
-    const leave = page.getByTestId('services-leave-confirm');
-    if (await leave.isVisible()) await leave.click();
   });
   await test.step('Most booked, saved at once', async () => {
     await id(page, T2.popularMost).click();
@@ -234,7 +241,7 @@ test('TC-F05-S02-019 AC-7: the Deposit control says the salon\'s rule in words (
   const sheet = async () => { await card(page, s.id).getByTestId(T.cardEdit).click(); await openMore(page); };
   await sheet();
   await expect(id(page, T2.depositSalon)).toHaveAttribute('data-state', 'on');
-  await expect(id(page, T2.depositHelp), 'before the salon saves booking rules').toContainText('Not set yet');
+  await expect(id(page, T2.depositHelp), 'before the salon saves booking rules').toHaveText(TEXT.notSetYet);
   await id(page, T.close).click();
   await new BookingRules(accounts.identity).save(salon, owner.tokens, SUGGESTED, 0);
   await page.reload();
@@ -244,18 +251,19 @@ test('TC-F05-S02-019 AC-7: the Deposit control says the salon\'s rule in words (
   await test.step('Custom, a fixed amount above the price', async () => {
     await id(page, T2.depositCustom).click();
     await id(page, T2.depositKind).click();
-    await id(page, `${T2.depositKind}-option-amount`).click();
-    await id(page, T2.depositValue).fill('5000');
-    await expect(id(page, T2.depositValue)).toHaveAttribute('aria-invalid', 'true');
+    await id(page, `${T2.depositKind}-amount`).click();
+    await id(page, T2.depositAmount).fill('5000');
+    await expect(id(page, T2.depositAmount)).toHaveAttribute('aria-invalid', 'true');
+    await expect(page.getByText('The deposit can’t be more than the service’s lowest price.')).toBeVisible();
     await expect(id(page, T.save)).toBeDisabled();
   });
   await test.step('Custom, 30%', async () => {
     await id(page, T2.depositKind).click();
-    await id(page, `${T2.depositKind}-option-percentage`).click();
-    await id(page, T2.depositValue).fill('30');
+    await id(page, `${T2.depositKind}-percentage`).click();
+    await id(page, T2.depositPercent).fill('30');
     await id(page, T.save).click();
     await expect(id(page, T.sheet)).toHaveCount(0);
-    expect((await cat.serviceS02(salon, owner.tokens, s.id)).deposit).toEqual({ kind: 'percentage', percent: 30 });
+    expect(depositOf((await cat.serviceS02(salon, owner.tokens, s.id)).deposit)).toEqual({ kind: 'percentage', percent: 30 });
   });
   await test.step('No deposit', async () => {
     await sheet();
@@ -263,7 +271,7 @@ test('TC-F05-S02-019 AC-7: the Deposit control says the salon\'s rule in words (
     await expect(id(page, T2.depositHelp)).toHaveText(TEXT.noDeposit);
     await id(page, T.save).click();
     await expect(id(page, T.sheet)).toHaveCount(0);
-    expect((await cat.serviceS02(salon, owner.tokens, s.id)).deposit).toEqual({ kind: 'none' });
+    expect(depositOf((await cat.serviceS02(salon, owner.tokens, s.id)).deposit)).toEqual({ kind: 'none' });
   });
 });
 
@@ -308,12 +316,15 @@ test('TC-F05-S02-021 AC-11: the Variants section, Deposit control and Popular ca
   const s = await cat.createS02(salon, owner.tokens, variantInput((await cat.category(salon, owner.tokens, 'Colour')).id, undefined, { name: 'Balayage' }));
   const { page } = await open(accounts, owner);
   await accessible(page, 'Services tab with the Popular card');
-  await expect(page.getByRole('group', { name: /popular/i }).or(page.getByRole('radiogroup', { name: /popular/i })), 'the Popular setting is named').toBeVisible();
+  await expect(id(page, T2.popularMode), 'the Popular setting is named').toHaveAccessibleName(/.+/);
   await test.step('the mode by keyboard', async () => {
-    await tabTo(page, id(page, T2.popularMost));
+    // A roving-focus group (handoff: arrow keys and Space): Tab reaches the selected choice, the arrow moves to the other.
+    await tabTo(page, id(page, T2.popularChosen));
+    await page.keyboard.press('ArrowRight');
+    await expect(id(page, T2.popularMost)).toBeFocused();
     const focus = await focusIndicator(id(page, T2.popularMost));
     expect(focus.focusVisible && focus.outlineWidth > 0, `a visible focus: ${JSON.stringify(focus)}`).toBe(true);
-    await page.keyboard.press('Enter');
+    await page.keyboard.press('Space');
     await expect.poll(async () => (await cat.setting(salon, owner.tokens)).mode).toBe('most_booked');
   });
   await card(page, s.id).getByTestId(T.cardEdit).click();
@@ -321,7 +332,7 @@ test('TC-F05-S02-021 AC-11: the Variants section, Deposit control and Popular ca
   await expect(rows(page).nth(1).getByTestId(T2.variantPrice)).toHaveAccessibleName('Variant 2 price');
   await expect(rows(page).nth(1).getByTestId(T2.variantName)).toHaveAccessibleName(/Variant 2/);
   await expect(rows(page).nth(1).getByTestId(T2.variantTime)).toHaveAccessibleName(/Variant 2/);
-  await expect(rows(page).nth(1).getByTestId(T2.variantRemove), 'the remove button names its variant').toHaveAccessibleName(/2|Medium/);
+  await expect(rows(page).nth(1).getByTestId(T2.variantRemove), 'the remove button names its variant').toHaveAccessibleName('Remove variant 2');
   await id(page, T2.depositCustom).click();
   await accessible(page, 'sheet with variants and a custom deposit');
   await id(page, T2.depositSalon).click();
