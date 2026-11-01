@@ -25,9 +25,10 @@ import { webUrl } from '../../shared/env';
 import { test as browserTest, expect, type AccountBrowser } from '../../shared/identity-browser';
 import type { Actor, Role } from '../../shared/identity';
 import { Operator, supportJson, type SupportStart } from '../../shared/operator';
+import { TaxCatalogue, taxInput } from '../../shared/catalogue-tax';
 import { fit, focusIndicator, seriousViolations } from '../../shared/page-checks';
 import { fixture } from '../../shared/salon-brand';
-import { alpha, salonUrl, type Salon } from '../../shared/tenants';
+import { alpha, gamma, salonUrl, type Salon } from '../../shared/tenants';
 
 const test = browserTest.extend<{ operator: Operator; cat: Catalogue }>({
   operator: async ({ identity }, use) => {
@@ -47,7 +48,9 @@ const T = {
   nav: 'workspace-services', tabServices: 'services-tab-services', tabCategories: 'services-tab-categories', tabProducts: 'services-tab-products',
   loading: 'services-loading', unavailable: 'services-unavailable', retry: 'services-retry', refused: 'services-refused', readOnly: 'services-read-only',
   rule: 'services-rule', summary: 'services-summary', banner: 'services-banner', newService: 'services-new',
-  group: 'service-group', groupEmpty: 'service-group-empty',
+  group: 'service-group',
+  // CR-025 (AC-18): guesses in the build's naming, to confirm against its handoff.
+  folded: 'service-groups-folded', empty: 'services-empty', emptyNew: 'services-empty-new',
   card: 'service-card', cardName: 'service-card-name', cardBadge: 'service-card-status', cardMeta: 'service-card-detail', cardPrice: 'service-card-price',
   cardTime: 'service-card-time', cardBuffer: 'service-card-buffer', cardEdit: 'service-card-edit', cardOnline: 'service-card-online', cardDuplicate: 'service-card-duplicate',
   sheet: 'service-sheet', name: 'service-sheet-name', price: 'service-sheet-price', time: 'service-sheet-time', more: 'service-sheet-more',
@@ -70,8 +73,16 @@ const problem = (page: Page, key: string) => page.locator(`[data-testid="service
 /** The spec's and the prototype's words. */
 const TEXT = {
   banner: 'List your services with their price and time. Changes apply to new bookings only.',
+  /** F05-S03's AC-10, which AC-17 puts in the same banner. */
+  tax: {
+    off: 'Tax and service charge are off. Turn them on in Settings if your salon is registered.',
+    both: 'Prices you enter include service charge (10%) and VAT (18%). Customers see the same price.',
+    vat: 'Prices you enter include VAT (18%). Customers see the same price.',
+    serviceCharge: 'Prices you enter include service charge (10%). Customers see the same price.',
+  },
+  folded: (names: string[]) => `No services yet in: ${names.join(', ')}.`,
   summary: (n: number, m: number) => `${n} services · ${m} bookable online`,
-  empty: 'No services yet.',
+  empty: 'No services yet',
   orderSaved: 'Order saved. Customers see it straight away.',
   moveFirst: (n: number) => `Move its ${n} service${n === 1 ? '' : 's'} to another category first.`,
   termsSaved: 'Saved. New bookings use the new prices.',
@@ -150,27 +161,16 @@ async function arrangeMenu(cat: Catalogue, salon: Salon, tokens: Actor['tokens']
 
 // ---------------------------------------------------------------- AC-12 the Services tab
 
-test('TC-F05-S01-032 AC-12, AC-16: the Services tab says how many services are bookable online, groups the cards under the categories in the salon\'s order and shows each card\'s badge, category, description, price, time and buffer; an empty category says "No services yet."', async ({ accounts, operator, cat }) => {
+test('TC-F05-S01-032 AC-12: the Services tab says how many services are bookable online, groups the cards under the categories that have services in the salon\'s order and shows each card\'s badge, category, description, price, time and buffer', async ({ accounts, operator, cat }) => {
   const { salon, owner } = await newSalon(operator, accounts);
-  await test.step('a salon with no services yet', async () => {
-    const { page } = await open(accounts, owner);
-    await expect(id(page, T.summary)).toHaveText(TEXT.summary(0, 0));
-    await expect(id(page, T.banner)).toHaveText(TEXT.banner);
-    await expect(id(page, T.groupEmpty), 'every category says so').toHaveCount(DEFAULT_CATEGORIES.length);
-    await expect(id(page, T.groupEmpty).first()).toHaveText(TEXT.empty);
-    await page.close();
-  });
   const { nails, gel, art, root } = await arrangeMenu(cat, salon, owner.tokens);
   await cat.move(salon, owner.tokens, nails.id, 'up');
   await cat.move(salon, owner.tokens, nails.id, 'up');
   const { page } = await open(accounts, owner);
   await expect(id(page, T.summary)).toHaveText(TEXT.summary(3, 2));
-  await expect(id(page, T.banner)).toHaveText(TEXT.banner);
-  const order = ['Cuts & styling', 'Nails', 'Colour', 'Facials & skin', 'Brows & lashes', 'Waxing', 'Makeup & draping', 'Massage & spa', 'Bridal', 'Consultations'];
-  await expect(page.locator(`[data-testid="${T.group}"] h2`), 'the salon\'s category order').toHaveText(order);
+  await expect(page.locator(`[data-testid="${T.group}"] h2`), 'the salon\'s category order').toHaveText(['Nails', 'Colour']);
   const nailsGroup = page.locator(`[data-testid="${T.group}"][data-id="${nails.id}"]`);
   await expect(nailsGroup.getByTestId(T.card)).toHaveCount(2);
-  await expect(page.locator(`[data-testid="${T.group}"]`).first().getByTestId(T.groupEmpty)).toHaveText(TEXT.empty);
   const expectations: [Service, string, string, string, string, string | null, string][] = [
     [gel, 'Gel polish', 'Online', 'Nails · Long-lasting shine.', 'Rs. 2,500', '+10 min buffer', 'Hide online'],
     [art, 'Nail art', 'Hidden online', 'Nails · Per nail.', 'Rs. 300', null, 'Show online'],
@@ -758,5 +758,125 @@ test('TC-F05-S01-046 AC-10, AC-16: a photo or save result applies only to the sh
     await expect(page.getByTestId('service-sheet-problem'), 'no message of the other save').toHaveCount(0);
     await expect(page.getByTestId(T.rule), 'no refused rule').toHaveCount(0);
     expect((await cat.service(salon, owner.tokens, art.id)).name, 'the refused save changed nothing').toBe(current.name);
+  });
+});
+
+// ---------------------------------------------------------------- CR-025 (decision 098): test ids here are to confirm against the build
+
+const say = (text: string) => text.replace(/\s+/g, ' ').trim();
+const infoBanners = (page: Page) => page.locator('[role="alert"][data-variant="info"]').filter({ visible: true });
+
+test('TC-F05-S01-047 AC-19: the sheets state money limits in the salon\'s currency: an LKR salon keeps its wording and a USD salon reads the same limits in USD, for the service price, a variant\'s price, a fixed deposit and a product\'s price', async ({ accounts, operator }) => {
+  const rows: { currency: string; amount: (n: string) => string }[] = [
+    { currency: 'LKR', amount: n => `Rs\\. ${n}` },
+    // Through formatMoney, in the browser's locale data: "$500,000" or "US$500,000".
+    { currency: 'USD', amount: n => `(US)?\\$${n}` },
+  ];
+  for (const { currency, amount } of rows) {
+    await test.step(currency, async () => {
+      const { owner } = await newCatalogueSalon(operator, accounts.identity, { currency });
+      const { page } = await open(accounts, owner);
+      const said = (locator: string, text: string) => page.getByTestId(locator).filter({ hasText: new RegExp(`^${text}$`) });
+      const servicePrice = `Price must be ${amount('100')} to ${amount('500,000')}\\.`;
+      const variantPrice = `Price for “Short” must be ${amount('100')} to ${amount('500,000')}\\.`;
+      const deposit = `A fixed deposit must be ${amount('100')} to ${amount('100,000')}\\.`;
+      const productPrice = `Price must be ${amount('1')} to ${amount('500,000')}\\.`;
+      await id(page, T.newService).click();
+      await id(page, T.name).fill('Limits');
+      await id(page, T.price).fill('99');
+      await expect(said('service-sheet-problem', servicePrice), 'the service price').toBeVisible();
+      await id(page, T.price).fill('100');
+      await expect(said('service-sheet-problem', servicePrice), 'the same limit passes').toHaveCount(0);
+      await id(page, T.price).fill('5000');
+      await openMore(page);
+      await id(page, 'service-deposit-custom').click();
+      await id(page, 'service-deposit-type').click();
+      await id(page, 'service-deposit-type-amount').click();
+      await id(page, 'service-deposit-amount').fill('99');
+      await expect(said('service-sheet-problem', deposit), 'a fixed deposit').toBeVisible();
+      await id(page, 'service-deposit-amount').fill('100');
+      await expect(said('service-sheet-problem', deposit)).toHaveCount(0);
+      await id(page, 'service-variants-toggle').click();
+      const row = id(page, 'service-variant-row').first();
+      await row.getByTestId('service-variant-name').fill('Short');
+      await row.getByTestId('service-variant-price').fill('99');
+      await expect(said('service-sheet-problem', variantPrice), 'a variant\'s price').toBeVisible();
+      await id(page, T.close).click();
+      await id(page, T.leaveConfirm).click();
+      await page.goto('/workspace/services/products');
+      await id(page, 'products-new').click();
+      await id(page, 'product-sheet-name').fill('Limits');
+      await id(page, 'product-sheet-price').fill('0');
+      await expect(said('product-sheet-problem', productPrice), 'a product\'s price').toBeVisible();
+      await id(page, 'product-sheet-price').fill('1');
+      await expect(said('product-sheet-problem', productPrice)).toHaveCount(0);
+    });
+  }
+});
+
+test('TC-F05-S01-049 AC-17: the Services tab shows one information banner holding its sentence and the tax sentence, for each state of the tax settings, and no second banner', async ({ accounts, operator }) => {
+  const { salon, owner } = await newSalon(operator, accounts);
+  const tax = new TaxCatalogue(accounts.identity);
+  const { page } = await open(accounts, owner);
+  const states: [string, string, (() => Promise<unknown>) | null][] = [
+    ['never saved', TEXT.tax.off, null],
+    ['VAT and a service charge', TEXT.tax.both, () => tax.save(salon, owner.tokens, taxInput({ vat: 'LK-1', sc: 10 }), 0)],
+    ['VAT only', TEXT.tax.vat, () => tax.save(salon, owner.tokens, taxInput({ vat: 'LK-1' }), 1)],
+    ['a service charge only', TEXT.tax.serviceCharge, () => tax.save(salon, owner.tokens, taxInput({ sc: 10 }), 2)],
+    ['both off', TEXT.tax.off, () => tax.save(salon, owner.tokens, taxInput(), 3)],
+  ];
+  for (const [label, sentence, arrange] of states) {
+    await test.step(label, async () => {
+      if (arrange) { await arrange(); await page.reload(); await ready(page); }
+      await expect.poll(async () => say(await id(page, T.banner).innerText()), `${label}: both sentences in the one banner`).toBe(`${TEXT.banner} ${sentence}`);
+      await expect(infoBanners(page), `${label}: one information banner`).toHaveCount(1);
+      await expect(page.getByTestId('tax-banner'), `${label}: no second banner`).toHaveCount(0);
+    });
+  }
+});
+
+test('TC-F05-S01-050 AC-18: the Services tab lists only categories with services and folds the others into one line in the salon\'s order; a salon with no services sees the Empty state and no folded line, with + New service only for who may use it; the Categories tab still lists every category', async ({ accounts, operator, cat }) => {
+  const { salon, owner } = await newSalon(operator, accounts);
+  const { page } = await open(accounts, owner);
+  const groupNames = page.locator(`[data-testid="${T.group}"] h2`);
+  await test.step('no services at all', async () => {
+    await expect(id(page, T.summary)).toHaveText(TEXT.summary(0, 0));
+    await expect(id(page, T.empty)).toContainText(TEXT.empty);
+    await expect(id(page, T.emptyNew), 'for the Owner').toBeVisible();
+    await expect(page.getByTestId(T.folded), 'no folded line').toHaveCount(0);
+    await expect(groupNames, 'no group').toHaveCount(0);
+  });
+  await test.step('some categories with services, in the salon\'s order', async () => {
+    const { nails } = await arrangeMenu(cat, salon, owner.tokens); // Nails and Colour
+    await cat.move(salon, owner.tokens, nails.id, 'up');
+    await cat.move(salon, owner.tokens, nails.id, 'up');
+    await page.reload();
+    await ready(page);
+    await expect(groupNames).toHaveText(['Nails', 'Colour']);
+    await expect(id(page, T.empty), 'no Empty state').toHaveCount(0);
+    await expect(id(page, T.folded)).toHaveText(TEXT.folded(['Cuts & styling', 'Facials & skin', 'Brows & lashes', 'Waxing', 'Makeup & draping', 'Massage & spa', 'Bridal', 'Consultations']));
+  });
+  await test.step('the Categories tab still lists all ten', async () => {
+    await id(page, T.tabCategories).click();
+    await ready(page);
+    await expect(id(page, T.categoryRow)).toHaveCount(DEFAULT_CATEGORIES.length);
+    await id(page, T.tabServices).click();
+    await ready(page);
+  });
+  await test.step('every category with a service: no folded line', async () => {
+    for (const c of (await cat.categories(salon, owner.tokens)).items.filter(x => x.serviceCount === 0)) {
+      await cat.create(salon, owner.tokens, serviceInput(c.id));
+    }
+    await page.reload();
+    await ready(page);
+    await expect(groupNames).toHaveCount(DEFAULT_CATEGORIES.length);
+    await expect(page.getByTestId(T.folded)).toHaveCount(0);
+  });
+  await test.step('a role that cannot add a service: the Empty state without the button', async () => {
+    const receptionist = await accounts.identity.staff(gamma, 'RECEPTIONIST');
+    expect(await cat.services(gamma, receptionist.tokens), 'gamma has no services').toEqual([]);
+    const other = await open(accounts, receptionist);
+    await expect(id(other.page, T.empty)).toContainText(TEXT.empty);
+    await expect(other.page.getByTestId(T.emptyNew)).toHaveCount(0);
   });
 });
