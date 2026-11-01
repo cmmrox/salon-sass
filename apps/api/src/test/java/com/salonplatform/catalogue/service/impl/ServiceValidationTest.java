@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 import com.salonplatform.catalogue.domain.MinorUnits;
+import com.salonplatform.catalogue.service.SalonServices;
 import com.salonplatform.catalogue.service.SalonServices.ServiceInput;
 import com.salonplatform.shared.web.ApplicationProblemException;
 import com.salonplatform.shared.web.FieldProblem;
@@ -19,7 +20,7 @@ class ServiceValidationTest {
     private static final UUID CATEGORY = UUID.randomUUID();
 
     private static ServiceInput input(String name, Long price, Integer minutes, Integer buffer, String description) {
-        return new ServiceInput(name, CATEGORY, description, price, minutes, buffer, null);
+        return new ServiceInput(name, CATEGORY, description, price, minutes, buffer, null, null, null);
     }
 
     private static String refusedField(ServiceInput input) {
@@ -71,7 +72,7 @@ class ServiceValidationTest {
 
     @Test
     void missingValuesAreEachNamedAndOnlineIsRequiredOnlyOnASave() {
-        ServiceInput empty = new ServiceInput(null, null, null, null, null, null, null);
+        ServiceInput empty = new ServiceInput(null, null, null, null, null, null, null, null, null);
         assertThat(refusedField(empty)).isEqualTo("name,categoryId,priceMinor,durationMinutes,bufferMinutes");
         assertThat(ServiceValidation.valid(input("Ok", 250_000L, 45, 0, null), RUPEES, false)
                         .bookableOnline())
@@ -91,5 +92,56 @@ class ServiceValidationTest {
                 .isEqualTo(100);
         assertThatExceptionOfType(ApplicationProblemException.class)
                 .isThrownBy(() -> ServiceValidation.valid(input("Ok", 99L, 45, 0, null), yen, false));
+    }
+
+    private static ServiceInput withVariants(SalonServices.VariantsInput variants, SalonServices.DepositInput deposit) {
+        return new ServiceInput("Cut", CATEGORY, null, null, null, 10, null, variants, deposit);
+    }
+
+    private static SalonServices.VariantInput item(String name, long price, int minutes) {
+        return new SalonServices.VariantInput(null, name, price, minutes);
+    }
+
+    @Test
+    void variantsTakeThePlaceOfThePriceAndTimeAndKeepTheirOrder() {
+        ServiceValidation.Valid valid = ServiceValidation.valid(
+                withVariants(
+                        new SalonServices.VariantsInput(
+                                "  Hair length ",
+                                java.util.List.of(item(" Long ", 400_000, 60), item("Short", 250_000, 30))),
+                        null),
+                RUPEES,
+                false);
+
+        assertThat(valid.priceMinor()).isNull();
+        assertThat(valid.durationMinutes()).isNull();
+        assertThat(valid.variants().name()).isEqualTo("Hair length");
+        assertThat(valid.variants().items())
+                .extracting(ServiceValidation.ValidVariant::name)
+                .containsExactly("Long", "Short");
+        assertThat(valid.deposit()).isEqualTo(new com.salonplatform.catalogue.ServiceDeposit.SalonRule());
+    }
+
+    @Test
+    void aVariantNameIsUniqueInItsSetRegardlessOfCase() {
+        assertThat(refusedField(withVariants(
+                        new SalonServices.VariantsInput(
+                                "Size", java.util.List.of(item("Short", 250_000, 30), item("SHORT ", 260_000, 30))),
+                        null)))
+                .isEqualTo("variants.items[1].name");
+    }
+
+    @Test
+    void anAmountDepositIsAtMostTheLowestVariantPrice() {
+        SalonServices.VariantsInput variants = new SalonServices.VariantsInput(
+                "Size", java.util.List.of(item("S", 150_000, 30), item("L", 400_000, 60)));
+        assertThat(refusedField(withVariants(variants, new SalonServices.DepositInput("amount", null, 150_100L))))
+                .isEqualTo("deposit.amountMinor");
+        assertThat(ServiceValidation.valid(
+                                withVariants(variants, new SalonServices.DepositInput("amount", null, 150_000L)),
+                                RUPEES,
+                                false)
+                        .deposit())
+                .isEqualTo(new com.salonplatform.catalogue.ServiceDeposit.Amount(150_000));
     }
 }

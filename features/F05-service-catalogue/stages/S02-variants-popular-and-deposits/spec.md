@@ -202,3 +202,31 @@ pnpm contracts:check
 - The verification commands are green.
 - `ServiceTerms`, `ServiceBookingCounts` and the deposit mapping are documented in their Javadoc
   as the contracts F07 and F08 use.
+
+## Corrections at close
+
+Recorded by the lead when the stage closed. No requirement changed. Items 1 to 6 were given to the
+developer during the build, in answer to QA's preparation:
+
+1. **Defaults and replacement.** A service saved without `deposit` has "salon rule"; a salon starts
+   in "Chosen by you". PUT replaces the service: an omitted `variants` means none, an omitted
+   `deposit` means "salon rule".
+2. **Variant messages** are R1's: "Use 2 to 10 variants.", "Name the variants, 2 to 30
+   characters.", "Each variant needs a name up to 30 characters.", "“<name>” appears twice.",
+   "Price for “<name>” must be Rs. 100 to Rs. 500,000.", "Time for “<name>” must be 5 to 480
+   minutes, in steps of 5."
+3. **Badges.** "From price" only when the variants' prices differ; "N options" whenever there are
+   variants.
+4. **Salon rule in words** when the rule is no deposit: "Uses your booking rules: no deposit."; before
+   the rules are first saved: "Uses your booking rules: not set yet."
+5. **A fixed deposit above the lowest price,** also after a price or variant change, is a 400 on
+   `deposit.amountMinor`: "The deposit can’t be more than the service’s lowest price."
+6. **Unchanged saves** of a Popular choice or the Popular setting are 409 `invalid_state`.
+7. **As built (decision 096).** `booking` maps the deposit (`domain.ServiceDeposits`); the tables
+   `catalogue_terms_variant` and `catalogue_popular_setting`; `priceMinor` and `durationMinutes`
+   required only without variants; the menu's `variantSetName`; a public BFF read of the booking
+   rules; new variant rows named "Option N"; Show in Popular saved with Save; ink for unselected
+   segments; the audit actions `catalogue.service_popular_changed` and
+   `catalogue.popular_setting_changed`.
+8. **Fix to F05-S01 made in this stage** (0d5f9ac): conflict, refusal and unavailable notices show
+   inside the open service or category sheet, and Reload refreshes it without saving.

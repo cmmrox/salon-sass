@@ -51,7 +51,8 @@ class MigrationIntegrationTest {
                         tuple("22", "add platform salon currency"),
                         tuple("23", "create booking rules"),
                         tuple("24", "add branding default branch id"),
-                        tuple("25", "create catalogue"));
+                        tuple("25", "create catalogue"),
+                        tuple("26", "add catalogue variants popular and deposits"));
         assertThat(afterFirstStart).allSatisfy(row -> assertThat(row).containsEntry("success", true));
 
         try (StartedApplication application = database.start()) {

@@ -164,7 +164,23 @@ class CatalogueMenuIntegrationTest extends IntegrationTest {
                         "currency",
                         "durationMinutes",
                         "photoUrl",
-                        "termsVersionId");
+                        "termsVersionId",
+                        // F05-S02: without variants, an empty list and the service's own values as the range.
+                        "variantSetName",
+                        "variants",
+                        "priceMinMinor",
+                        "priceMaxMinor",
+                        "durationMinMinutes",
+                        "durationMaxMinutes",
+                        "deposit");
+        assertThat(zebraItem)
+                .containsEntry("variantSetName", null)
+                .containsEntry("variants", List.of())
+                .containsEntry("priceMinMinor", 900_000)
+                .containsEntry("priceMaxMinor", 900_000)
+                .containsEntry("durationMinMinutes", 120)
+                .containsEntry("durationMaxMinutes", 120)
+                .containsEntry("deposit", Map.of("kind", "salon_rule"));
         Map<String, Object> waxItem =
                 CatalogueFixture.maps(menu.getFirst().get("services")).getFirst();
         assertThat(waxItem)

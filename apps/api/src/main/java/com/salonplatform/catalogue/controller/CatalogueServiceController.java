@@ -3,6 +3,7 @@ package com.salonplatform.catalogue.controller;
 import com.salonplatform.catalogue.dto.ServiceListResponse;
 import com.salonplatform.catalogue.dto.ServiceOnlineRequest;
 import com.salonplatform.catalogue.dto.ServicePhotoUploadForm;
+import com.salonplatform.catalogue.dto.ServicePopularRequest;
 import com.salonplatform.catalogue.dto.ServiceRequest;
 import com.salonplatform.catalogue.dto.ServiceResponse;
 import com.salonplatform.catalogue.dto.UpdateServiceRequest;
@@ -106,7 +107,9 @@ class CatalogueServiceController {
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     @Operation(
             operationId = "createCatalogueService",
-            summary = "Creates a service with its first terms version. `catalogue.price.change`.")
+            summary = "Creates a service with its first terms version. `catalogue.price.change`.",
+            description = "With a price and time, or with one set of 2 to 10 variants that each have their own; with"
+                    + " its deposit, the salon's rule when none is sent. Not chosen for Popular.")
     @ApiResponse(responseCode = "201", description = "The service.")
     @ApiResponse(
             responseCode = "400",
@@ -148,14 +151,16 @@ class CatalogueServiceController {
     @Operation(
             operationId = "saveCatalogueService",
             summary = "Saves every field of a service. `catalogue.price.change`.",
-            description = "A change of price, time or buffer creates a new terms version and makes it current; new"
-                    + " bookings use it and existing bookings keep theirs. Any other change creates none.")
+            description = "A change of price, time, buffer, variants (added, removed, renamed, reordered, or their"
+                    + " price or time) or deposit creates a new terms version and makes it current; new bookings use"
+                    + " it and existing bookings keep theirs. Any other change creates none. A variant sent with its"
+                    + " id keeps it; one without an id is new.")
     @ApiResponse(responseCode = "200", description = "The service as saved.")
     @ApiResponse(
             responseCode = "400",
-            description =
-                    "A field broke a rule (a category that is not the salon's included), or another service has the"
-                            + " name regardless of case: `bad_request`, with `errors` naming each field. Nothing is saved.",
+            description = "A field broke a rule (a category that is not the salon's included, a variant id the current"
+                    + " version does not have), or another service has the name regardless of case:"
+                    + " `bad_request`, with `errors` naming each field. Nothing is saved.",
             content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(ref = PROBLEM)))
     @ApiResponse(
             responseCode = "401",
@@ -217,6 +222,43 @@ class CatalogueServiceController {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .cacheControl(CacheControl.noStore())
                 .body(ServiceResponse.from(services.duplicate(PathIds.of(id))));
+    }
+
+    @PutMapping(path = "/{id}/popular", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(
+            operationId = "setCatalogueServicePopular",
+            summary = "Chooses a service for Popular, or no longer. `catalogue.price.change`.",
+            description = "At most six services are chosen. Makes no terms version.")
+    @ApiResponse(responseCode = "200", description = "The service.")
+    @ApiResponse(
+            responseCode = "400",
+            description = "`popular` or `version` is missing: `bad_request`, with `errors` naming it.",
+            content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(ref = PROBLEM)))
+    @ApiResponse(
+            responseCode = "401",
+            description = "No valid session for this salon: `invalid_session`.",
+            content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(ref = PROBLEM)))
+    @ApiResponse(
+            responseCode = "403",
+            description = "Without `catalogue.price.change`: `permission_denied`. A support session:"
+                    + " `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon:"
+                    + " `salon_suspended`.",
+            content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(ref = PROBLEM)))
+    @ApiResponse(
+            responseCode = "404",
+            description = "No such service of the hostname's salon, or the hostname names no salon: `not_found`.",
+            content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(ref = PROBLEM)))
+    @ApiResponse(
+            responseCode = "409",
+            description = "Six services are already chosen: `limit_reached`. `version` is not the service's:"
+                    + " `conflict`. It is already so: `invalid_state`. Nothing changes.",
+            content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(ref = PROBLEM)))
+    @ApiResponse(
+            responseCode = "503",
+            description = "The database is down or not answering: `service_unavailable`.",
+            content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(ref = PROBLEM)))
+    ResponseEntity<ServiceResponse> popular(@PathVariable String id, @RequestBody ServicePopularRequest request) {
+        return answer(services.choosePopular(PathIds.of(id), request.popular(), request.version()));
     }
 
     @PutMapping(path = "/{id}/online", consumes = MediaType.APPLICATION_JSON_VALUE)

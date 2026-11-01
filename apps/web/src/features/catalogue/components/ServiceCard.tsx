@@ -8,6 +8,9 @@ import { cn } from '@/lib/utils';
 import type { CatalogueService } from '../types';
 import { photoSource } from './photo-source';
 
+/** The prototype lists the first four variants, then how many more. */
+const SHOWN_OPTIONS = 4;
+
 type Props = {
   service: CatalogueService;
   categoryName: string;
@@ -21,13 +24,17 @@ type Props = {
 /**
  * One service as the prototype's Services & pricing card shows it (`aSvc`, F05-S01 AC-12): its name with "Online"
  * or "Hidden online", its category and description, its price, time and buffer, and Edit, Hide or Show online and
- * Duplicate for those who may change the catalogue. A hidden service's card takes the prototype's secondary
+ * Duplicate for those who may change the catalogue. With variants (F05-S02 AC-3) the price is "From Rs. X" when they
+ * differ, the time a range, and the set's name and its variants' names (the first four, then "+N") come with the
+ * "From price" and "N options" badges. A hidden service's card takes the prototype's secondary
  * background (`.svc.off`) without its 0.7 opacity, and its small text is ink rather than muted, which would fall
  * under 4.5:1 there (docs/design/ui-ux-standards.md).
  */
 export function ServiceCard({ service, categoryName, canChange, busy, onEdit, onToggleOnline, onDuplicate }: Props) {
   const t = useTranslations('services.card');
   const online = service.bookableOnline;
+  const terms = service.terms;
+  const variesInPrice = terms.priceMinMinor < terms.priceMaxMinor;
   const small = cn('text-small', online ? 'text-muted-foreground' : 'text-foreground');
   return (
     <Card
@@ -63,10 +70,14 @@ export function ServiceCard({ service, categoryName, canChange, busy, onEdit, on
       </p>
       <div className="flex flex-wrap items-baseline gap-x-3.5 gap-y-1.5">
         <span className="font-semibold" data-testid="service-card-price">
-          {formatMoney(service.terms.priceMinor, service.terms.currency)}
+          {variesInPrice
+            ? t('from', { price: formatMoney(terms.priceMinMinor, terms.currency) })
+            : formatMoney(terms.priceMinMinor, terms.currency)}
         </span>
         <span className={small} data-testid="service-card-time">
-          {t('minutes', { minutes: service.terms.durationMinutes })}
+          {terms.durationMinMinutes < terms.durationMaxMinutes
+            ? t('minutesRange', { min: terms.durationMinMinutes, max: terms.durationMaxMinutes })
+            : t('minutes', { minutes: terms.durationMinMinutes })}
         </span>
         {service.terms.bufferMinutes > 0 && (
           <span className={small} data-testid="service-card-buffer">
@@ -74,6 +85,36 @@ export function ServiceCard({ service, categoryName, canChange, busy, onEdit, on
           </span>
         )}
       </div>
+      {terms.variants.length > 0 && (
+        <>
+          <p className="my-2.5 flex justify-between gap-3 text-small" data-testid="service-card-options">
+            <span className={online ? 'text-muted-foreground' : 'text-foreground'}>{terms.variantSetName}</span>
+            <span className="text-right wrap-anywhere">
+              {[
+                terms.variants
+                  .slice(0, SHOWN_OPTIONS)
+                  .map((variant) => variant.name)
+                  .join(', '),
+                terms.variants.length > SHOWN_OPTIONS
+                  ? t('moreOptions', { count: terms.variants.length - SHOWN_OPTIONS })
+                  : '',
+              ]
+                .filter(Boolean)
+                .join(' ')}
+            </span>
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {variesInPrice && (
+              <Badge variant="info" data-testid="service-card-from-badge">
+                {t('fromBadge')}
+              </Badge>
+            )}
+            <Badge variant="secondary" data-testid="service-card-options-badge">
+              {t('optionsBadge', { count: terms.variants.length })}
+            </Badge>
+          </div>
+        </>
+      )}
       {canChange && (
         <div className="mt-3 flex flex-wrap gap-1.5">
           <Button

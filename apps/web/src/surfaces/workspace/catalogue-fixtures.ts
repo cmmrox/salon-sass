@@ -1,4 +1,5 @@
-import type { CatalogueService, CategoryList } from '@/features/catalogue';
+import type { PublicBookingRules } from '@/features/booking';
+import type { CatalogueService, CategoryList, PopularSetting } from '@/features/catalogue';
 
 /** Catalogue answers for the Services & pricing page's tests: three categories and three services. */
 export const COLOUR = '6b0a3c1e-9a4e-4b8e-9d1f-2a3b4c5d6e70';
@@ -36,6 +37,8 @@ export function service(
     bookableOnline: options.online ?? true,
     photoId: null,
     photoUrl: null,
+    popular: false,
+    deposit: { kind: 'salon_rule' },
     version: 0,
     terms: {
       versionId: `${id}-v1`,
@@ -45,6 +48,12 @@ export function service(
       segments: [{ kind: 'active', minutes }, ...(buffer > 0 ? [{ kind: 'buffer' as const, minutes: buffer }] : [])],
       durationMinutes: minutes,
       bufferMinutes: buffer,
+      variantSetName: null,
+      variants: [],
+      priceMinMinor: options.priceMinor ?? 450_000,
+      priceMaxMinor: options.priceMinor ?? 450_000,
+      durationMinMinutes: minutes,
+      durationMaxMinutes: minutes,
     },
   };
 }
@@ -65,3 +74,52 @@ export const SERVICES = {
     }),
   ],
 };
+
+/** "Chosen by you" before its first change, and nothing chosen. */
+export const POPULAR: PopularSetting = { mode: 'chosen', version: 0, popular: [] };
+
+/** The salon's booking rules as customers see them: 20% up to Rs. 2,000. */
+export const RULES: PublicBookingRules = {
+  versionId: '22222222-0000-4000-8000-000000000001',
+  currency: 'LKR',
+  rules: {
+    slotIntervalMinutes: 15,
+    minimumNoticeMinutes: 120,
+    bookingHorizonDays: 60,
+    deposit: { kind: 'percentage', percent: 20, capMinor: 200_000 },
+    freeCancellationHours: 24,
+    lateCancellation: { kind: 'deposit' },
+    noShow: { kind: 'deposit' },
+    reschedule: { limit: 2, untilHours: 24 },
+  },
+};
+
+/** A service with a set of variants: each name with its price in rupees and its time; the lowest and highest. */
+export function withVariants(
+  base: CatalogueService,
+  setName: string,
+  variants: [name: string, rupees: number, minutes: number][],
+): CatalogueService {
+  const prices = variants.map(([, rupees]) => rupees * 100);
+  const times = variants.map(([, , minutes]) => minutes);
+  return {
+    ...base,
+    terms: {
+      ...base.terms,
+      priceMinor: Math.min(...prices),
+      durationMinutes: Math.min(...times),
+      variantSetName: setName,
+      variants: variants.map(([name, rupees, minutes], index) => ({
+        id: `${base.id}-variant-${index}`,
+        name,
+        priceMinor: rupees * 100,
+        segments: [{ kind: 'active', minutes }],
+        durationMinutes: minutes,
+      })),
+      priceMinMinor: Math.min(...prices),
+      priceMaxMinor: Math.max(...prices),
+      durationMinMinutes: Math.min(...times),
+      durationMaxMinutes: Math.max(...times),
+    },
+  };
+}

@@ -1,5 +1,6 @@
 'use client';
 import { useTranslations } from 'next-intl';
+import type { ReactNode } from 'react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Field, FieldDescription, FieldLabel } from '@/components/ui/field';
@@ -22,13 +23,20 @@ type Props = {
   onClose: () => void;
   /** Where focus goes when the sheet has closed: what opened it, as it has no trigger of its own. */
   onClosed: () => void;
+  /**
+   * What the page says while the sheet is open (a conflict with its Reload, a refused rule, an unreachable API),
+   * drawn inside the sheet: the page behind its overlay can be neither seen nor used.
+   */
+  notices?: ReactNode;
 };
 
 /**
  * The prototype's category sheet (`ceOpen`, F05-S01 AC-2): "New category" or "Rename category", the name of 2 to 30
- * characters, and Add category or Save. A broken rule is said above the field when the person saves.
+ * characters, and Add category or Save. A broken rule is said above the field when the person saves, and the page's
+ * notices are shown in the sheet while it is open.
  */
-export function CategorySheet({ open, renaming, name, problem, saving, onName, onSave, onClose, onClosed }: Props) {
+export function CategorySheet(props: Props) {
+  const { open, renaming, name, problem, saving, onName, onSave, onClose, onClosed, notices } = props;
   const t = useTranslations('services.categorySheet');
   return (
     <Sheet open={open} onOpenChange={(next) => !next && onClose()}>
@@ -50,6 +58,7 @@ export function CategorySheet({ open, renaming, name, problem, saving, onName, o
             </Button>
           </SheetClose>
         </div>
+        {notices}
         <form
           className="flex flex-col gap-4"
           onSubmit={(event) => {

@@ -1,4 +1,5 @@
 'use client';
+import { formatMoney } from '@salon/format';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useRef, useState } from 'react';
@@ -9,7 +10,17 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Toaster } from '@/components/ui/sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LeaveDialog, useLeaveGuard } from '@/features/branding';
-import { CategoryRows, CategorySheet, ConfirmDelete, ServiceGroups, ServiceSheet } from '@/features/catalogue';
+import {
+  CategoryRows,
+  CategorySheet,
+  ConfirmDelete,
+  PopularCard,
+  ServiceGroups,
+  ServiceSheet,
+  type CatalogueService,
+  type Category,
+} from '@/features/catalogue';
+import type { PublicBookingRules } from '@/features/booking';
 import type { Kind } from '@/features/identity';
 import { useCatalogue, type CatalogueToast } from './use-catalogue';
 
@@ -55,6 +66,8 @@ export function ServicesScreen({ kind, tab, canChange, readOnly }: Props) {
   const services = catalogue.services?.items ?? [];
   const online = services.filter((service) => service.bookableOnline).length;
   const currency = services[0]?.terms.currency ?? 'LKR';
+  const salonRule = useSalonRuleWords(catalogue.rules);
+  const popularMode = catalogue.popular?.mode ?? 'chosen';
 
   const header = (
     <div className="-mt-3 flex flex-wrap items-center justify-between gap-3">
@@ -82,6 +95,10 @@ export function ServicesScreen({ kind, tab, canChange, readOnly }: Props) {
   );
 
   const loading = catalogue.loading && !catalogue.categories;
+  // While a sheet is open the page behind its overlay is hidden from view and from assistive technology, so the
+  // page's notices are drawn in the sheet instead (BUG found in F05-S01's dry run: a conflict on save said nothing).
+  const inSheet = catalogue.sheetOpen || catalogue.categoryOpen;
+  const notices = <Notices catalogue={catalogue} readOnly={readOnly} />;
   return (
     <div className="flex min-w-0 flex-col gap-4" data-testid="services-page">
       {header}
@@ -94,7 +111,7 @@ export function ServicesScreen({ kind, tab, canChange, readOnly }: Props) {
           ))}
         </TabsList>
         <TabsContent value={tab} className="flex flex-col gap-4" data-testid={`services-panel-${tab}`}>
-          <Notices catalogue={catalogue} readOnly={readOnly} />
+          {!inSheet && notices}
           <Alert variant="info" className="text-small" data-testid="services-banner">
             {tab === 'services' ? t('banner') : t('categoriesBanner')}
           </Alert>
@@ -113,15 +130,27 @@ export function ServicesScreen({ kind, tab, canChange, readOnly }: Props) {
               </div>
             </div>
           ) : catalogue.categories && tab === 'services' ? (
-            <ServiceGroups
-              categories={categories}
-              services={services}
-              canChange={may}
-              busy={catalogue.busy}
-              onEdit={remember(catalogue.editService)}
-              onToggleOnline={(service) => void catalogue.toggleOnline(service)}
-              onDuplicate={remember((service) => void catalogue.duplicate(service))}
-            />
+            <>
+              <PopularCard
+                mode={popularMode}
+                chosen={chosenNames(categories, services)}
+                now={(catalogue.popular?.popular ?? []).map(
+                  (id) => services.find((service) => service.id === id)?.name ?? '',
+                )}
+                canChange={may}
+                busy={catalogue.busy}
+                onMode={(mode) => void catalogue.switchPopular(mode)}
+              />
+              <ServiceGroups
+                categories={categories}
+                services={services}
+                canChange={may}
+                busy={catalogue.busy}
+                onEdit={remember(catalogue.editService)}
+                onToggleOnline={(service) => void catalogue.toggleOnline(service)}
+                onDuplicate={remember((service) => void catalogue.duplicate(service))}
+              />
+            </>
           ) : catalogue.categories ? (
             <CategoryRows
               categories={categories}
@@ -148,12 +177,17 @@ export function ServicesScreen({ kind, tab, canChange, readOnly }: Props) {
           photoId={catalogue.sheet.service?.photoId ?? null}
           photoUpload={catalogue.photoUpload}
           onChange={catalogue.changeService}
+          onValues={catalogue.changeServiceValues}
+          popularMode={popularMode}
+          chosenElsewhere={catalogue.chosenElsewhere}
+          salonRule={salonRule}
           onSave={() => void catalogue.saveService()}
           onClose={() => (catalogue.sheetDirty ? setClosing(true) : catalogue.closeSheet())}
           onDelete={() => catalogue.sheet?.service && catalogue.askDeleteService(catalogue.sheet.service)}
           onPhoto={(file) => void catalogue.uploadPhoto(file)}
           onRemovePhoto={() => void catalogue.removePhoto()}
           onClosed={giveFocusBack}
+          notices={catalogue.sheetOpen ? notices : null}
         />
       )}
       {catalogue.categorySheet && (
@@ -167,6 +201,7 @@ export function ServicesScreen({ kind, tab, canChange, readOnly }: Props) {
           onSave={() => void catalogue.saveCategory()}
           onClose={catalogue.closeCategorySheet}
           onClosed={giveFocusBack}
+          notices={catalogue.categoryOpen ? notices : null}
         />
       )}
       <ConfirmDelete
@@ -213,6 +248,33 @@ export function ServicesScreen({ kind, tab, canChange, readOnly }: Props) {
 
 type Catalogue = ReturnType<typeof useCatalogue>;
 
+/** The salon's chosen Popular services' names, in category then name order, as the menu lists them. */
+function chosenNames(categories: Category[], services: CatalogueService[]): string[] {
+  const byName = (a: CatalogueService, b: CatalogueService) =>
+    a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+  return categories.flatMap((category) =>
+    services
+      .filter((service) => service.popular && service.categoryId === category.id)
+      .sort(byName)
+      .map((service) => service.name),
+  );
+}
+
+/**
+ * The salon's own deposit rule in words, for a service's "Salon rule" (F05-S02 AC-7): "20%, up to Rs. 2,000", "Rs.
+ * 1,000", "no deposit", or "not set yet" before the rules are first saved; null when they could not be read.
+ */
+function useSalonRuleWords(rules: PublicBookingRules | null | undefined): string | null {
+  const t = useTranslations('services.sheet.deposit.rule');
+  if (rules === undefined) return null;
+  if (rules === null) return t('unset');
+  const deposit = rules.rules.deposit;
+  if (deposit.kind === 'percentage')
+    return t('percentage', { percent: deposit.percent ?? 0, cap: formatMoney(deposit.capMinor ?? 0, rules.currency) });
+  if (deposit.kind === 'amount') return t('amount', { amount: formatMoney(deposit.amountMinor ?? 0, rules.currency) });
+  return t('none');
+}
+
 /** What the page says above its lists: read-only views, a conflict, an unreachable API, a refusal or a rule. */
 function Notices({ catalogue, readOnly }: { catalogue: Catalogue; readOnly: 'support' | 'salon' | null }) {
   const t = useTranslations('services.notices');
@@ -229,6 +291,7 @@ function Notices({ catalogue, readOnly }: { catalogue: Catalogue; readOnly: 'sup
           <AlertTitle>{t('conflictTitle')}</AlertTitle>
           <AlertDescription>{t('conflictBody')}</AlertDescription>
           <Button
+            type="button"
             variant="outline"
             size="sm"
             className="w-fit"

@@ -1,8 +1,8 @@
 'use client';
-import { currencyMark } from '@salon/format';
+import { currencyMark, formatMoney } from '@salon/format';
 import { ChevronDown } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -13,10 +13,20 @@ import { Sheet, SheetClose, SheetContent, SheetTitle } from '@/components/ui/she
 import { Spinner } from '@/components/ui/spinner';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
-import { FIELD_OF, type ServiceProblem, type ServiceValues } from '../client/service-form';
+import {
+  FIELD_OF,
+  highestPrice,
+  lowestPrice,
+  problemParts,
+  type ServiceProblem,
+  type ServiceValues,
+} from '../client/service-form';
 import type { Category } from '../types';
+import { DepositField } from './DepositField';
 import { PhotoField, type PhotoUpload } from './PhotoField';
+import { PopularField } from './PopularField';
 import { SHEET_CLASSES } from './sheet-classes';
+import { VariantsSection } from './VariantsSection';
 
 type Props = {
   open: boolean;
@@ -31,6 +41,13 @@ type Props = {
   photoId: string | null;
   photoUpload: PhotoUpload;
   onChange: <K extends keyof ServiceValues>(field: K, value: ServiceValues[K]) => void;
+  /** A change of several values at once: the variants and the deposit. */
+  onValues: (change: (values: ServiceValues) => ServiceValues) => void;
+  /** How the salon's Popular list is made, and how many other services are chosen (F05-S02). */
+  popularMode: 'chosen' | 'most_booked';
+  chosenElsewhere: number;
+  /** The salon's own deposit rule in words, for "Salon rule"; null while it cannot be read. */
+  salonRule: string | null;
   onSave: () => void;
   onClose: () => void;
   /** Where focus goes when the sheet has closed: what opened it, as it has no trigger of its own. */
@@ -38,24 +55,44 @@ type Props = {
   onDelete: () => void;
   onPhoto: (file: File) => void;
   onRemovePhoto: () => void;
+  /**
+   * What the page says while the sheet is open (a conflict with its Reload, a refused rule, an unreachable API),
+   * drawn inside the sheet: the page behind its overlay can be neither seen nor used.
+   */
+  notices?: ReactNode;
 };
 
 const PROBLEMS_ID = 'service-problems';
 const SHOWN = 4;
+const MINOR_PER_RUPEE = 100;
 
 /**
  * The prototype's service sheet (`sePaint`, F05-S01 AC-3): name, price and time; under "More options" the category,
  * short description, buffer, photo and Bookable online. The broken rules are listed above the fields as the person
  * types and **Create service** or **Save changes** stays disabled while they last; **Delete service** for an existing
- * one. The prototype's pricing kinds, option groups, processing time, patch test, price list preview, Popular and
- * Deposit are later stages' and not shown.
+ * one. The page's notices (a conflict and its Reload, a refused rule) are shown in the sheet while it is open. From
+ * F05-S02 a service can have one set of variants instead of its own price and time, and More options ends with
+ * Show in Popular and its Deposit. The prototype's pricing kinds, further option groups, processing time and patch
+ * test are F17's and not shown.
  */
 export function ServiceSheet(props: Props) {
   const { open, isNew, values, problems, canSave, saving, categories, currency, onChange } = props;
   const t = useTranslations('services.sheet');
   // The prototype opens "More options" for an existing service with something set there.
   const [more, setMore] = useState(!isNew);
-  const invalid = (field: keyof ServiceValues) => problems.some((problem) => FIELD_OF[problem] === field);
+  const invalid = (field: keyof ServiceValues) =>
+    problems.some((problem) => {
+      const { key, index } = problemParts(problem);
+      return index === null && FIELD_OF[key as keyof typeof FIELD_OF] === field;
+    });
+  const lowest = lowestPrice(values);
+  const highest = highestPrice(values);
+  const fromPrice =
+    lowest === null || highest === null
+      ? null
+      : lowest < highest
+        ? t('fromPrice', { price: formatMoney(lowest * MINOR_PER_RUPEE, currency) })
+        : formatMoney(lowest * MINOR_PER_RUPEE, currency);
   const aria = (field: keyof ServiceValues, help?: string) => ({
     'aria-invalid': invalid(field) || undefined,
     'aria-describedby': [help, invalid(field) ? PROBLEMS_ID : undefined].filter(Boolean).join(' ') || undefined,
@@ -85,6 +122,7 @@ export function ServiceSheet(props: Props) {
             </Button>
           </SheetClose>
         </div>
+        {props.notices}
         <form
           className="flex flex-col gap-4"
           onSubmit={(event) => {
@@ -97,11 +135,23 @@ export function ServiceSheet(props: Props) {
               <AlertTitle className="sr-only">{t('problemsTitle')}</AlertTitle>
               <AlertDescription>
                 <ul className="flex flex-col gap-1">
-                  {problems.slice(0, SHOWN).map((problem) => (
-                    <li key={problem} data-testid="service-sheet-problem" data-problem={problem}>
-                      {t(`problems.${problem}`)}
-                    </li>
-                  ))}
+                  {problems.slice(0, SHOWN).map((problem) => {
+                    const { key, index } = problemParts(problem);
+                    const name =
+                      index === null
+                        ? ''
+                        : values.variants[index]?.name.trim() || t('variants.option', { n: index + 1 });
+                    return (
+                      <li
+                        key={problem}
+                        data-testid="service-sheet-problem"
+                        data-problem={key}
+                        data-index={index ?? undefined}
+                      >
+                        {t(`problems.${key}`, { name })}
+                      </li>
+                    );
+                  })}
                   {problems.length > SHOWN && <li>{t('more_problems', { count: problems.length - SHOWN })}</li>}
                 </ul>
               </AlertDescription>
@@ -124,21 +174,34 @@ export function ServiceSheet(props: Props) {
               data-testid="service-sheet-name"
             />
           </Field>
-          <div className="grid grid-cols-2 gap-3">
-            <Field>
-              <FieldLabel htmlFor="service-price">{t('price', { mark: currencyMark(currency) })}</FieldLabel>
-              <Input id="service-price" {...number('price')} {...aria('price')} data-testid="service-sheet-price" />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="service-minutes">{t('time')}</FieldLabel>
-              <Input
-                id="service-minutes"
-                {...number('minutes')}
-                {...aria('minutes')}
-                data-testid="service-sheet-time"
-              />
-            </Field>
-          </div>
+          {values.hasVariants ? (
+            <Alert variant="info" className="text-small" data-testid="service-sheet-variant-price">
+              {fromPrice ? t('variantPrice', { price: fromPrice }) : t('variantPriceUnknown')}
+            </Alert>
+          ) : (
+            <div className="grid grid-cols-2 gap-3">
+              <Field>
+                <FieldLabel htmlFor="service-price">{t('price', { mark: currencyMark(currency) })}</FieldLabel>
+                <Input id="service-price" {...number('price')} {...aria('price')} data-testid="service-sheet-price" />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="service-minutes">{t('time')}</FieldLabel>
+                <Input
+                  id="service-minutes"
+                  {...number('minutes')}
+                  {...aria('minutes')}
+                  data-testid="service-sheet-time"
+                />
+              </Field>
+            </div>
+          )}
+          <VariantsSection
+            values={values}
+            problems={problems}
+            currency={currency}
+            problemsId={PROBLEMS_ID}
+            onValues={props.onValues}
+          />
           <Collapsible open={more} onOpenChange={setMore} className="rounded-card border border-border">
             <CollapsibleTrigger asChild>
               <Button
@@ -222,6 +285,20 @@ export function ServiceSheet(props: Props) {
                   <FieldDescription id="service-online-help">{t('onlineHelp')}</FieldDescription>
                 </FieldContent>
               </Field>
+              <PopularField
+                popular={values.popular}
+                mode={props.popularMode}
+                chosenElsewhere={props.chosenElsewhere}
+                onChange={(popular) => onChange('popular', popular)}
+              />
+              <DepositField
+                deposit={values.deposit}
+                currency={currency}
+                salonRule={props.salonRule}
+                invalid={invalid('deposit')}
+                problemsId={PROBLEMS_ID}
+                onValues={props.onValues}
+              />
             </CollapsibleContent>
           </Collapsible>
           <Button type="submit" className="w-full" disabled={!canSave || saving} data-testid="service-sheet-save">

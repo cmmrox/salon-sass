@@ -1,7 +1,18 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderWithMessages } from '@test/render';
-import { CATEGORIES, COLOUR, NAILS, SERVICES, service, WAXING } from './catalogue-fixtures';
+import {
+  CATEGORIES,
+  COLOUR,
+  NAILS,
+  POPULAR,
+  RULES,
+  SERVICES,
+  service,
+  WAXING,
+  withVariants,
+} from './catalogue-fixtures';
+import type { CatalogueService } from '@/features/catalogue';
 import { ServicesScreen, type ServicesTab } from './ServicesScreen';
 
 const push = vi.fn();
@@ -18,6 +29,8 @@ beforeEach(() => {
       Response.json({ kind: 'staff', staffId: 'me', permissions: ['catalogue.read', 'catalogue.price.change'] }),
     'catalogue-categories': () => Response.json(CATEGORIES),
     'catalogue-services': () => Response.json(SERVICES),
+    'catalogue-popular-setting': () => Response.json(POPULAR),
+    'booking-rules-public': () => Response.json({ current: RULES }),
   };
   vi.stubGlobal('navigator', { locks: { request: (_name: string, work: () => Promise<unknown>) => work() } });
   vi.stubGlobal('BroadcastChannel', undefined);
@@ -154,8 +167,10 @@ describe('the service sheet (AC-3, AC-4, AC-16)', () => {
         durationMinutes: 60,
         bufferMinutes: 0,
         bookableOnline: true,
+        deposit: { kind: 'salon_rule' },
       },
     ]);
+    expect(sent('catalogue-service-popular')).toEqual([]);
     expect(await screen.findByText('Service created.')).toBeInTheDocument();
   });
 
@@ -197,7 +212,9 @@ describe('the service sheet (AC-3, AC-4, AC-16)', () => {
     answers['catalogue-service-save'] = () => Response.json({ code: 'conflict' }, { status: 409 });
     fireEvent.change(screen.getByTestId('service-sheet-name'), { target: { value: 'Ombre balayage' } });
     fireEvent.click(screen.getByTestId('service-sheet-save'));
-    expect(await screen.findByTestId('services-conflict')).toHaveTextContent('Someone else changed the services');
+    expect(await within(screen.getByTestId('service-sheet')).findByTestId('services-conflict')).toHaveTextContent(
+      'Someone else changed the services',
+    );
   });
 
   it('asks before closing with unsaved edits, and keeps them on Stay', async () => {
@@ -251,6 +268,55 @@ describe('the card actions (AC-7, AC-8, AC-9)', () => {
       { id: SERVICES.items[1]!.id, bookableOnline: false, version: 0 },
       { id: SERVICES.items[2]!.id, bookableOnline: true, version: 0 },
     ]);
+  });
+
+  it('shows a save another change overtook inside the sheet, and Reload refreshes the sheet and the list (AC-16 conflict)', async () => {
+    answers['catalogue-service-save'] = () => Response.json({ code: 'conflict' }, { status: 409 });
+    render();
+    await screen.findAllByTestId('service-card');
+    fireEvent.click(within(card('Gel polish')).getByTestId('service-card-edit'));
+    fireEvent.change(await screen.findByTestId('service-sheet-price'), { target: { value: '2700' } });
+    fireEvent.click(screen.getByTestId('service-sheet-save'));
+
+    const sheet = screen.getByTestId('service-sheet');
+    const conflict = await within(sheet).findByTestId('services-conflict');
+    expect(conflict).toHaveTextContent('Someone else changed the services');
+    expect(screen.getAllByTestId('services-conflict')).toHaveLength(1);
+
+    // Someone else set Rs. 2,600 meanwhile.
+    const changed = service('11111111-0000-4000-8000-000000000003', 'Gel polish', NAILS, {
+      priceMinor: 260_000,
+      minutes: 45,
+      online: false,
+    });
+    answers['catalogue-services'] = () =>
+      Response.json({ items: [...SERVICES.items.slice(0, 2), { ...changed, version: 1 }] });
+    fireEvent.click(within(conflict).getByTestId('services-conflict-reload'));
+
+    await waitFor(() => expect(screen.getByTestId('service-sheet-price')).toHaveValue('2600'));
+    expect(screen.queryByTestId('services-conflict')).toBeNull();
+    expect(within(card('Gel polish')).getByTestId('service-card-price')).toHaveTextContent('Rs. 2,600');
+    expect(sent('catalogue-service-save')).toHaveLength(1);
+    // The next save is made from the version read again.
+    fireEvent.change(screen.getByTestId('service-sheet-price'), { target: { value: '2700' } });
+    answers['catalogue-service-save'] = () => Response.json({ ...changed, version: 2 }, { status: 200 });
+    fireEvent.click(screen.getByTestId('service-sheet-save'));
+    await waitFor(() => expect(sent('catalogue-service-save')).toHaveLength(2));
+    expect(sent('catalogue-service-save')[1]).toMatchObject({ version: 1, priceMinor: 270_000 });
+  });
+
+  it('shows a rule the API refuses while the sheet is open inside the sheet', async () => {
+    answers['catalogue-service-delete'] = () => Response.json({ code: 'in_use' }, { status: 409 });
+    render();
+    await screen.findAllByTestId('service-card');
+    fireEvent.click(within(card('Balayage')).getByTestId('service-card-edit'));
+    fireEvent.click(await screen.findByTestId('service-sheet-delete'));
+    fireEvent.click(await screen.findByTestId('service-delete-confirm'));
+
+    const sheet = screen.getByTestId('service-sheet');
+    expect(await within(sheet).findByTestId('services-rule')).toHaveTextContent(
+      'This service has upcoming bookings. Hide it from online booking instead.',
+    );
   });
 
   it('asks before deleting, and says to hide a service upcoming bookings use', async () => {
@@ -359,5 +425,306 @@ describe('the Categories tab (AC-2)', () => {
     fireEvent.click(screen.getByTestId('category-sheet-save'));
     expect(await screen.findByText('Category added.')).toBeInTheDocument();
     expect(sent('catalogue-category-add')).toEqual([{ name: 'Kids' }]);
+  });
+
+  it('shows a rename another change overtook inside the category sheet, and Reload refreshes it', async () => {
+    answers['catalogue-category-rename'] = () => Response.json({ code: 'conflict' }, { status: 409 });
+    render('categories');
+    const rows = await screen.findAllByTestId('category-row');
+    fireEvent.click(within(rows[1]!).getByTestId('category-row-rename'));
+    fireEvent.change(await screen.findByTestId('category-sheet-name'), { target: { value: 'Nail art' } });
+    fireEvent.click(screen.getByTestId('category-sheet-save'));
+
+    const sheet = screen.getByTestId('category-sheet');
+    const conflict = await within(sheet).findByTestId('services-conflict');
+    answers['catalogue-categories'] = () =>
+      Response.json({
+        ...CATEGORIES,
+        items: CATEGORIES.items.map((each) =>
+          each.id === NAILS ? { ...each, name: 'Nails & hands', version: 1 } : each,
+        ),
+      });
+    fireEvent.click(within(conflict).getByTestId('services-conflict-reload'));
+
+    await waitFor(() => expect(screen.getByTestId('category-sheet-name')).toHaveValue('Nails & hands'));
+    expect(screen.queryByTestId('services-conflict')).toBeNull();
+    expect(sent('catalogue-category-rename')).toHaveLength(1);
+  });
+});
+
+const CUT = withVariants(service('11111111-0000-4000-8000-000000000009', 'Haircut', COLOUR), 'Hair length', [
+  ['Short (to the chin)', 2500, 30],
+  ['Medium', 3200, 45],
+  ['Long', 4000, 60],
+  ['Extra long', 4500, 75],
+  ['Very long', 5000, 90],
+]);
+const EVEN = withVariants(service('11111111-0000-4000-8000-000000000010', 'Kids cut', COLOUR), 'Who is it for?', [
+  ['Boys', 1500, 30],
+  ['Girls', 1500, 30],
+]);
+const withServices =
+  (...extra: CatalogueService[]) =>
+  () =>
+    Response.json({ items: [...SERVICES.items, ...extra] });
+
+describe('variants on the card and in the sheet (F05-S02 AC-1, AC-3)', () => {
+  it('shows a "From" price, a range of times, the set with its first four names and the badges', async () => {
+    answers['catalogue-services'] = withServices(CUT, EVEN);
+    render();
+    await screen.findAllByTestId('service-card');
+    const cut = card('Haircut');
+    expect(within(cut).getByTestId('service-card-price')).toHaveTextContent('From Rs. 2,500');
+    expect(within(cut).getByTestId('service-card-time')).toHaveTextContent('30 to 90 min');
+    expect(within(cut).getByTestId('service-card-options')).toHaveTextContent(
+      'Hair lengthShort (to the chin), Medium, Long, Extra long +1',
+    );
+    expect(within(cut).getByTestId('service-card-from-badge')).toHaveTextContent('From price');
+    expect(within(cut).getByTestId('service-card-options-badge')).toHaveTextContent('5 options');
+    const even = card('Kids cut');
+    expect(within(even).getByTestId('service-card-price')).toHaveTextContent(/^Rs\. 1,500$/);
+    expect(within(even).getByTestId('service-card-time')).toHaveTextContent(/^30 min$/);
+    expect(within(even).queryByTestId('service-card-from-badge')).toBeNull();
+    expect(within(even).getByTestId('service-card-options-badge')).toHaveTextContent('2 options');
+    expect(within(card('Balayage')).queryByTestId('service-card-options')).toBeNull();
+  });
+
+  it('turns variants on, names each field, previews the price list and sends them without a price of its own', async () => {
+    answers['catalogue-service-create'] = () => Response.json(CUT, { status: 201 });
+    render();
+    fireEvent.click(await screen.findByTestId('services-new'));
+    fireEvent.change(await screen.findByTestId('service-sheet-name'), { target: { value: 'Haircut' } });
+    fireEvent.click(screen.getByTestId('service-variants-toggle'));
+
+    expect(screen.queryByTestId('service-sheet-price')).toBeNull();
+    expect(screen.getByLabelText('Variant 2 price')).toHaveValue('2500');
+    expect(screen.getByRole('button', { name: 'Remove variant 2' })).toBeInTheDocument();
+    expect(screen.getByTestId('service-sheet-problem')).toHaveTextContent('Name the variants, 2 to 30 characters.');
+    fireEvent.change(screen.getByTestId('service-variant-set'), { target: { value: 'Hair length' } });
+    fireEvent.change(screen.getByLabelText('Variant 1 name'), { target: { value: 'Short' } });
+    fireEvent.change(screen.getByLabelText('Variant 2 name'), { target: { value: 'Long' } });
+    fireEvent.change(screen.getByLabelText('Variant 2 price'), { target: { value: '4000' } });
+    fireEvent.change(screen.getByLabelText('Variant 2 time'), { target: { value: '75' } });
+    expect(screen.getByTestId('service-sheet-variant-price')).toHaveTextContent(
+      'Prices come from the variants below (From Rs. 2,500).',
+    );
+    expect(screen.getAllByTestId('service-variant-preview-row').map((row) => row.textContent)).toEqual([
+      'ShortRs. 2,500· 60 min',
+      'LongRs. 4,000· 75 min',
+    ]);
+    fireEvent.click(screen.getByTestId('service-sheet-save'));
+
+    await waitFor(() => expect(sent('catalogue-service-create')).toHaveLength(1));
+    const body = sent('catalogue-service-create')[0] as Record<string, unknown>;
+    expect(body).not.toHaveProperty('priceMinor');
+    expect(body.variants).toEqual({
+      name: 'Hair length',
+      items: [
+        { name: 'Short', priceMinor: 250_000, durationMinutes: 60 },
+        { name: 'Long', priceMinor: 400_000, durationMinutes: 75 },
+      ],
+    });
+  });
+
+  it('says each broken variant rule by the variant’s name and marks its field', async () => {
+    render();
+    fireEvent.click(await screen.findByTestId('services-new'));
+    fireEvent.change(await screen.findByTestId('service-sheet-name'), { target: { value: 'Haircut' } });
+    fireEvent.click(screen.getByTestId('service-variants-toggle'));
+    fireEvent.change(screen.getByTestId('service-variant-set'), { target: { value: 'Hair length' } });
+    fireEvent.change(screen.getByLabelText('Variant 2 name'), { target: { value: 'option 1' } });
+    fireEvent.change(screen.getByLabelText('Variant 1 price'), { target: { value: '99' } });
+    fireEvent.change(screen.getByLabelText('Variant 1 time'), { target: { value: '7' } });
+
+    expect(screen.getAllByTestId('service-sheet-problem').map((problem) => problem.textContent)).toEqual([
+      'Price for “Option 1” must be Rs. 100 to Rs. 500,000.',
+      'Time for “Option 1” must be 5 to 480 minutes, in steps of 5.',
+      '“option 1” appears twice.',
+    ]);
+    expect(screen.getByLabelText('Variant 1 price')).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByLabelText('Variant 2 name')).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByTestId('service-variant-preview-empty')).toHaveTextContent(
+      'Fix the issues above to see the price list.',
+    );
+    expect(screen.getByTestId('service-sheet-save')).toBeDisabled();
+  });
+
+  it('adds up to ten variants, removes one, and keeps each variant’s id when it saves', async () => {
+    answers['catalogue-services'] = withServices(CUT);
+    answers['catalogue-service-save'] = () => Response.json({ ...CUT, version: 1 });
+    render();
+    await screen.findAllByTestId('service-card');
+    fireEvent.click(within(card('Haircut')).getByTestId('service-card-edit'));
+    const add = await screen.findByTestId('service-variants-add');
+    for (let i = 0; i < 5; i++) fireEvent.click(add);
+    expect(screen.getAllByTestId('service-variant-row')).toHaveLength(10);
+    expect(add).toBeDisabled();
+    for (let i = 0; i < 5; i++) fireEvent.click(screen.getByRole('button', { name: 'Remove variant 6' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Remove variant 2' }));
+    fireEvent.click(screen.getByTestId('service-sheet-save'));
+
+    await waitFor(() => expect(sent('catalogue-service-save')).toHaveLength(1));
+    expect(
+      (sent('catalogue-service-save')[0] as { variants: { items: { id: string }[] } }).variants.items.map(
+        (each) => each.id,
+      ),
+    ).toEqual([
+      CUT.terms.variants[0]!.id,
+      CUT.terms.variants[2]!.id,
+      CUT.terms.variants[3]!.id,
+      CUT.terms.variants[4]!.id,
+    ]);
+  });
+
+  it('treats a variant another change removed as a conflict, shown in the sheet', async () => {
+    answers['catalogue-services'] = withServices(CUT);
+    answers['catalogue-service-save'] = () =>
+      Response.json(
+        {
+          code: 'bad_request',
+          errors: [{ field: 'variants.items[1].id', detail: 'is not a variant of this service' }],
+        },
+        { status: 400 },
+      );
+    render();
+    await screen.findAllByTestId('service-card');
+    fireEvent.click(within(card('Haircut')).getByTestId('service-card-edit'));
+    fireEvent.change(await screen.findByLabelText('Variant 1 price'), { target: { value: '2600' } });
+    fireEvent.click(screen.getByTestId('service-sheet-save'));
+    expect(await within(screen.getByTestId('service-sheet')).findByTestId('services-conflict')).toBeInTheDocument();
+  });
+});
+
+describe('Show in Popular and the Popular card (F05-S02 AC-5, AC-6)', () => {
+  const chosen = (name: string, id: string, category = COLOUR) => ({ ...service(id, name, category), popular: true });
+
+  it('lists the chosen services in category then name order, and switches to Most booked at once', async () => {
+    answers['catalogue-services'] = withServices(
+      chosen('acrylic set', '11111111-0000-4000-8000-000000000020', NAILS),
+      chosen('Ombre', '11111111-0000-4000-8000-000000000021'),
+    );
+    answers['catalogue-popular-mode'] = () =>
+      Response.json({ mode: 'most_booked', version: 1, popular: ['11111111-0000-4000-8000-000000000021'] });
+    render();
+    const summary = await screen.findByTestId('popular-summary');
+    expect(summary).toHaveTextContent(
+      '2 chosen: Ombre, acrylic set. Change this in each service under “More options”.',
+    );
+    fireEvent.click(screen.getByTestId('popular-mode-most_booked'));
+
+    await waitFor(() => expect(sent('catalogue-popular-mode')).toEqual([{ mode: 'most_booked', version: 0 }]));
+    expect(await screen.findByText(/^Now:/)).toBeInTheDocument();
+    expect(screen.getByTestId('popular-summary')).toHaveTextContent(
+      'Now: Ombre. The 6 services booked most in the last 90 days, among those bookable online. Until you have bookings, your chosen services are shown.',
+    );
+  });
+
+  it('says none are chosen yet, and gives a reader the setting without changing it', async () => {
+    render('services', false);
+    expect(await screen.findByTestId('popular-summary')).toHaveTextContent(
+      'None chosen yet. Choose up to 6 under “More options” in a service.',
+    );
+    expect(screen.getByTestId('popular-mode-chosen')).toBeDisabled();
+  });
+
+  it('chooses a service with its own call and no save of the service', async () => {
+    answers['catalogue-service-popular'] = () => Response.json({ ...SERVICES.items[1], popular: true, version: 1 });
+    render();
+    await screen.findAllByTestId('service-card');
+    fireEvent.click(within(card('Balayage')).getByTestId('service-card-edit'));
+    const popular = await screen.findByTestId('service-sheet-popular');
+    expect(screen.getByTestId('service-sheet-popular-help')).toHaveTextContent('On your home screen in the app');
+    fireEvent.click(popular);
+    fireEvent.click(screen.getByTestId('service-sheet-save'));
+
+    await waitFor(() =>
+      expect(sent('catalogue-service-popular')).toEqual([{ id: SERVICES.items[1]!.id, popular: true, version: 0 }]),
+    );
+    expect(sent('catalogue-service-save')).toEqual([]);
+  });
+
+  it('is disabled while Most booked is on, and when six others are chosen', async () => {
+    answers['catalogue-popular-setting'] = () => Response.json({ ...POPULAR, mode: 'most_booked' });
+    render();
+    await screen.findAllByTestId('service-card');
+    fireEvent.click(within(card('Balayage')).getByTestId('service-card-edit'));
+    expect(await screen.findByTestId('service-sheet-popular')).toBeDisabled();
+    expect(screen.getByTestId('service-sheet-popular-help')).toHaveTextContent('Popular is set to “Most booked”');
+  });
+
+  it('says six are already chosen, in the sheet and when the API refuses a seventh', async () => {
+    const six = Array.from({ length: 6 }, (_, i) => chosen(`Chosen ${i}`, `11111111-0000-4000-8000-00000000003${i}`));
+    answers['catalogue-services'] = withServices(...six);
+    render();
+    await screen.findAllByTestId('service-card');
+    fireEvent.click(within(card('Balayage')).getByTestId('service-card-edit'));
+    expect(await screen.findByTestId('service-sheet-popular')).toBeDisabled();
+    expect(screen.getByTestId('service-sheet-popular-help')).toHaveTextContent('6 already chosen. Remove one first.');
+  });
+
+  it('says so in the sheet when another choice took the sixth place first', async () => {
+    answers['catalogue-service-popular'] = () => Response.json({ code: 'limit_reached' }, { status: 409 });
+    render();
+    await screen.findAllByTestId('service-card');
+    fireEvent.click(within(card('Balayage')).getByTestId('service-card-edit'));
+    fireEvent.click(await screen.findByTestId('service-sheet-popular'));
+    fireEvent.click(screen.getByTestId('service-sheet-save'));
+    expect(await within(screen.getByTestId('service-sheet')).findByTestId('services-rule')).toHaveTextContent(
+      '6 already chosen. Remove one first.',
+    );
+  });
+});
+
+describe('a service’s deposit (F05-S02 AC-7)', () => {
+  const openMore = async () => {
+    await screen.findAllByTestId('service-card');
+    fireEvent.click(within(card('Balayage')).getByTestId('service-card-edit'));
+    return screen.findByTestId('service-deposit');
+  };
+
+  it.each([
+    [{ current: RULES }, 'Uses your booking rules: 20%, up to Rs. 2,000.'],
+    [
+      { current: { ...RULES, rules: { ...RULES.rules, deposit: { kind: 'none' } } } },
+      'Uses your booking rules: no deposit.',
+    ],
+    [
+      { current: { ...RULES, rules: { ...RULES.rules, deposit: { kind: 'amount', amountMinor: 100_000 } } } },
+      'Uses your booking rules: Rs. 1,000.',
+    ],
+    [{ current: null }, 'Uses your booking rules: not set yet.'],
+  ])('says the salon’s rule in words: %o', async (answer, words) => {
+    answers['booking-rules-public'] = () => Response.json(answer);
+    render();
+    await openMore();
+    expect(screen.getByTestId('service-deposit-says')).toHaveTextContent(words);
+  });
+
+  it('says No deposit, and sends a custom percentage', async () => {
+    answers['catalogue-service-save'] = () => Response.json({ ...SERVICES.items[1], version: 1 });
+    render();
+    await openMore();
+    fireEvent.click(screen.getByTestId('service-deposit-none'));
+    expect(screen.getByTestId('service-deposit-says')).toHaveTextContent(
+      'Customers book this service without paying a deposit.',
+    );
+    fireEvent.click(screen.getByTestId('service-deposit-custom'));
+    fireEvent.change(screen.getByLabelText('Deposit percentage'), { target: { value: '25' } });
+    fireEvent.click(screen.getByTestId('service-sheet-save'));
+    await waitFor(() => expect(sent('catalogue-service-save')).toHaveLength(1));
+    expect(sent('catalogue-service-save')[0]).toMatchObject({ deposit: { kind: 'percentage', percent: 25 } });
+  });
+
+  it('refuses a fixed amount above the lowest price', async () => {
+    render();
+    await openMore();
+    fireEvent.click(screen.getByTestId('service-deposit-custom'));
+    fireEvent.click(screen.getByTestId('service-deposit-type'));
+    fireEvent.click(await screen.findByRole('option', { name: 'Fixed amount' }));
+    fireEvent.change(await screen.findByLabelText('Deposit amount'), { target: { value: '12001' } });
+    expect(screen.getAllByTestId('service-sheet-problem').map((each) => each.textContent)).toContain(
+      'The deposit can’t be more than the service’s lowest price.',
+    );
+    expect(screen.getByLabelText('Deposit amount')).toHaveAttribute('aria-invalid', 'true');
   });
 });

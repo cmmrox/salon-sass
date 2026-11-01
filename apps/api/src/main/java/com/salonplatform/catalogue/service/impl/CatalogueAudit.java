@@ -20,6 +20,7 @@ class CatalogueAudit {
 
     static final String CATEGORY = "catalogue_category";
     static final String SERVICE = "catalogue_service";
+    static final String POPULAR_SETTING = "catalogue_popular_setting";
 
     private final AuditTrail audit;
 

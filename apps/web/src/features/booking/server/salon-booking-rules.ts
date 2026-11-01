@@ -66,5 +66,7 @@ export function salonBookingRulesFor(hostname: string) {
       }),
     history: (call: Call, page: number) =>
       client.GET('/api/v1/salon/booking-rules/history', { ...call, params: { query: { page, size: 10 } } }),
+    // The rules as customers see them, for the Services page's "Salon rule" deposit (F05-S02).
+    publicRules: (call: Call) => client.GET('/api/v1/salon/booking-rules', call),
   };
 }

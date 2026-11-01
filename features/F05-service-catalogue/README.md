@@ -105,3 +105,7 @@ why the feature is divided the way it is.
   transaction, so F07 must close that window when `booking` implements it. QA's TC-F05-S01-020
   (delete refused while a booking uses the service) is deferred until then. The image checks moved
   into `shared`; QA re-runs F04's brand-image cases in the dry run.
+- **Recorded at F05-S02 close (decision 096).** QA's dry-run defect in F05-S01 (notices behind the
+  open sheet) is fixed in 0d5f9ac; TC-F05-S01-039 proves it at the next dry run. F05-S01's card
+  buttons still lose keyboard focus while a change runs; F05-S03, which changes the same page, fixes
+  it. "Most booked" is proved by integration tests until F07 implements `ServiceBookingCounts`.

@@ -3,7 +3,7 @@ feature: F05
 title: "Variants, popular services and service deposits"
 sequence: 2
 surfaces: [api, web]
-status: planned
+status: complete
 qa_status: not-run
 blocked_reason: null
 released_in: null
@@ -12,9 +12,163 @@ depends_on: [F05-S01]
 requirements: [CAT-03, CAT-06]
 nfr_focus: []
 handoff:
-  run: null
-  data: null
-  notes: null
+  run: |
+    Local, from the repository root, in a plain (non-login) shell, on a fresh database so the owner's `salon` database
+    keeps its data: `docker exec salon-postgres psql -U salon -d postgres -c "CREATE DATABASE <name> OWNER salon"`, then
+    `SALON_DB_NAME=<name> infra/scripts/local-service.sh start api` and `... start web`. Migrations V1 to V26 and the
+    local seed run at API start. As in F05-S01, the walk-through could not use local-service.sh because the owner's API
+    (8090) and web (3100) run from this checkout: it ran the API from a copy of target/classes (`java -cp <classes>:<runtime
+    classpath> com.salonplatform.SalonApiApplication`, environment from infra/scripts/lib/common.sh `load_settings` with
+    SALON_DB_NAME=f05s02_walk, SALON_API_PORT=8292) and the web as the production build of the gates worktree
+    (`node apps/web/scripts/serve.mjs --port 3292`). Screens: http://alpha.localhost:3100/workspace/services (the Popular
+    card above the groups; the service sheet's Variants card, and under More options Show in Popular and Deposit). API,
+    salon host, under /api/v1/catalogue: services (POST, PUT now take `variants` and `deposit`), services/{id}/popular
+    (PUT), popular-setting (GET, PUT), menu (gains variants, ranges, deposit and `popular`). New BFF actions:
+    catalogue-popular-setting (read), catalogue-service-popular and catalogue-popular-mode (changes), booking-rules-public
+    (read, no permission). No new setting and no new local hook.
+  data: |
+    No service and no Popular setting is seeded; a salon reads "Chosen by you" at version 0 until its first switch, and
+    a service is "salon rule", not popular, with no variants unless saved otherwise. The walk-through's staff (every role
+    in alpha and beta, through POST /local/identity/seed), its operator Support account (/local/operator/seed) and its
+    support session were random and kept only in the scratchpad; its database f05s02_walk was dropped.
+  notes: |
+    Built against every acceptance criterion and checked on the running product from outside, on a fresh database
+    (f05s02_walk) with two synthetic salons (alpha, beta), all five roles, an operator Support account and a support
+    session: API checks 61/61 (api_walk_result.json) and browser checks 55/55 (browser_walk_result.json, Playwright Chromium
+    at 360, 390, 768 and 1280 against the production build of 4456dec, the API from 12db1d7's classes; apps/api is the same
+    at 4456dec). Evidence, scripts and screens: /private/tmp/claude-501/-Users-cmmrox-Personal-Projects-salon-sass/715cfef9-1213-4c28-9082-71b8eb4e4e54/scratchpad/walk2/ (api_walk.py, browser.cjs, kbd.cjs, screens/). The scripts are
+    not product code and were not committed.
+    AC-1 checked: 1 and 11 variants are 400 on variants.items; set names of 1 and 31 characters on variants.name; a
+    variant name of 31 characters, and a duplicate in any case (" SHORT" after "Short"), on variants.items[i].name; prices
+    Rs. 99 and 500,001 and times 7 and 485 on that variant's priceMinor/durationMinutes; a price and time of the service's
+    own sent with variants on priceMinor and durationMinutes; nothing saved by any refusal (counts). 2 and 10 variants, a
+    30-character name, Rs. 100 / 500,000 and 5 / 480 minutes are kept, in the order given. In the sheet: the service's own
+    price and time give way to "Prices come from the variants below (From Rs. 100).", each broken rule is said with the
+    lead's R1 messages by the variant's name ("Price for “V0” must be Rs. 100 to Rs. 500,000.", "“V2” appears twice."), the
+    field is aria-invalid and Save stays disabled; + Add variant stops at ten.
+    AC-2 checked: a rename and reprice, then a reorder with one removed and one added, each made a new terms version;
+    kept variants kept their ids and the new one got a new id; an unchanged save is 409 invalid_state; a variant id the
+    current version does not have is 400 on variants.items[i].id (and another salon's id the same); version 1 and its
+    variant rows are unchanged in the database; each variant's segments are its active time then the service's buffer
+    (60 + 10); turning variants off without a price and time is 400 on both, with them a new version with variants [].
+    AC-3 checked: GET service and the menu give priceMin/MaxMinor and durationMin/MaxMinutes, priceMinor and
+    durationMinutes being the lowest and shortest. Card (360, 768, 1280): "From Rs. 100", "5 to 480 min", the set name and
+    the first four names then "+6", "From price" and "10 options" badges; equal prices show "Rs. 1,500" and no From badge
+    (lead's clarification 3). The sheet's Price list preview lists each variant with its price and time.
+    AC-4 checked: the menu gives each variant's id, name, price and the customer's time (60, not 70 with the buffer) in
+    order; a service without variants has variants [], variantSetName null and its F05-S01 values; ServiceTerms returns
+    each version's variants with their segments (integration tests).
+    AC-5 checked: six chosen; a seventh is 409 limit_reached; choosing a chosen one is 409 invalid_state; choosing made no
+    terms version; two choices of the sixth sent at once gave exactly one 200 and one 409 (also an integration test); a
+    duplicate is not chosen. The sheet's Show in Popular is disabled with "6 already chosen. Remove one first." when six
+    others are chosen, and a seventh refused by the API is said in the sheet.
+    AC-6 checked: the setting starts "chosen" at version 0; a switch is saved at once (version 1); a stale one is 409
+    conflict, an unchanged one 409 invalid_state, an unknown mode 400 on mode; the menu's popular is the chosen services
+    bookable online in category then name order and a hidden one leaves it; "Most booked" with no bookings shows the chosen
+    ones. The card states the list with the prototype's sentences in both modes, and the sheet's Show in Popular is
+    disabled with "Popular is set to “Most booked”". The ranking by counts, the 90-day window asked for, and hidden and
+    deleted services left out are proved by CataloguePopularIntegrationTest with an implementation that reports counts:
+    nothing books before F07, so it cannot be shown from outside.
+    AC-7 checked: a service starts with the salon rule; percentages 0 and 101, amounts Rs. 99 and 100,001, an amount above
+    the service's lowest price (including after its price is lowered, lead's clarification 5) and an unknown kind are 400
+    on deposit.percent / deposit.amountMinor / deposit.kind; an amount equal to the lowest price, 100% and none are kept.
+    In the sheet Salon rule says "Uses your booking rules: not set yet." before alpha's rules are saved (the words for
+    "20%, up to Rs. 2,000", "Rs. 1,000" and "no deposit" are component tests); No deposit says its sentence; Custom offers
+    Percentage and Fixed amount with the % or Rs. suffix, and an amount above the lowest price is said and marked.
+    AC-8 checked: each deposit change made a new terms version and each version keeps its own deposit (database). The
+    mapping is booking.domain.ServiceDeposits.override (unit test): salon rule none, none None, a percentage Percentage
+    with the cap 2^53-1, an amount Amount.
+    AC-9 checked: a duplicate copies the variants with new ids and the deposit, and is not chosen.
+    AC-10 checked: Receptionist, Professional and Accountant read the setting and are refused choosing, switching, a
+    service with variants and a deposit change with 403 permission_denied; a support session reads (API and BFF) and is
+    refused with 403 support_read_only (API and BFF); beta's staff get 404 for alpha's setting and services on either
+    hostname, beta's setting is its own and beta's menu holds none of alpha's services; Popular choices, the setting and
+    variant and deposit changes are in the audit trail with before and after values.
+    AC-11 checked: no horizontal scrolling at any width, the sheet does not scroll sideways with ten variants at 360; each
+    variant field and remove button is named ("Variant 2 price", "Remove variant 10"); the Popular choice works with the
+    arrow keys and Space and keeps focus (kbd_result.txt); a stale Popular switch shows the conflict with Reload;
+    leaving the sheet with unsaved variant edits asks first; Services.a11y.test.tsx (58 cases: a card with ten variants,
+    the Popular card in both modes, the sheet with ten variants and their errors, Show in Popular and a custom deposit, at
+    360/768/1280 with a dark and a light brand) reports no WCAG 2.2 AA violation.
+    Visual comparison with the prototype (Salon web, Services & pricing `aSvc`, `popCard`, `sePaint` with an option group
+    and the F05 additions), screens/proto-*.png beside screens/services-*.png and sheet-*.png: same card lines and badges,
+    Popular card and its segmented choice, the option group as a secondary-surface card with name/price/min rows and a
+    remove button, "Prices come from …" as the information banner, Show in Popular and the segmented Deposit at the end of
+    More options. Deliberate differences: the unpressed segments are ink rather than the prototype's muted grey, which is
+    under 4.5:1 on the canvas; the remove buttons are 44px, not 40, for the touch target; the prototype's "Price varies" /
+    "Fixed price" badges and its pricing-kind selector are not shown (the spec names only "From price" and "N options").
+    Fixes to earlier stages: 0d5f9ac fix(F05-S01), QA's dry-run defect (major): a save another change had overtaken said
+    nothing, because the conflict alert and its Reload, a refused rule and the unavailable notice were drawn on the page
+    behind the open sheet's overlay. They are now drawn inside the open service or category sheet, above its form; Reload
+    reads both lists and refreshes the open service or category, edits dropped, so the next save is made from the version
+    just read, and nothing is saved until then. Four component tests failed on the defect first (the conflict on save, a
+    category rename conflict, an in_use refusal on delete from the sheet, and the existing conflict test asserted inside
+    the sheet), plus a second fault they caught: Reload inside the form submitted the save again. An a11y case covers the
+    conflict in the sheet. QA's TC-F05-S01-039 covers it from outside.
+    Different from the spec or docs, or chosen where they were silent, for the lead:
+    (1) The web did not read the public booking rules before (F04-S04 reads /booking-rules/settings for settings users).
+    A BFF read `booking-rules-public` was added to booking's BFF port, needing no permission because the data is public; it
+    answers {current} (null before the first save) so that a JSON null is not taken for a failure. When it cannot be read
+    the sheet says "Uses your booking rules." Before the first save: "Uses your booking rules: not set yet."
+    (2) The menu also gives `variantSetName`, so the app can label the choice; the spec's table did not list it.
+    (3) Requests: priceMinor and durationMinutes are optional and nullable in both service schemas; sent with variants they
+    are 400 "is not allowed here". Field names: variants.name, variants.items, variants.items[i].name|priceMinor|
+    durationMinutes|id, deposit.kind|percent|amountMinor; an unknown nested field is named variants.items.<field>,
+    variants.<field> or deposit.<field>. An absent deposit is the salon rule and an absent variants none (lead's
+    clarification 1).
+    (4) Data: catalogue_terms_variant (one row per variant of a version, written once, the update trigger shared with
+    terms versions) and catalogue_popular_setting (one row per branch, created on the first switch or choice with INSERT ...
+    ON CONFLICT DO NOTHING, the per-salon lock-row exception of backend.md; a choice locks it so the limit of six holds);
+    catalogue_terms_version gains variant_set_name and deposit_kind/_percent/_amount_minor (defaults, so existing versions
+    read "no variants, salon rule" without being rewritten); catalogue_service gains popular. The eraser and
+    CatalogueTenantData cover both tables; module-ownership.yaml lists them.
+    (5) Contracts: ServiceTermsVersion gains variantSetName (null without), variants, the four lowest and highest values and
+    deposit; ServiceVariant and ServiceDeposit are new root records; ServiceBookingCounts.countsSince(Instant) is declared
+    with an implementation answering none, to be replaced by booking in F07 (decision 087's pattern, the same window as
+    UpcomingServiceBookings: it is asked after the menu's transaction). booking now depends on catalogue (allowedDependencies)
+    for domain.ServiceDeposits; backend.md's module text and the booking package description say it.
+    (6) Audit: catalogue.service_popular_changed (subject the service) and catalogue.popular_setting_changed (subject
+    catalogue_popular_setting); a service's audited values gain popular, variantSetName, variants and deposit.
+    (7) Web choices: turning variants on starts two rows "Option 1" and "Option 2" from the service's price and time, and +
+    Add variant copies the last row's price and time as "Option N"; the price list preview sits inside the Variants card
+    (the spec's Card with Item rows) rather than at the end of More options; Show in Popular is saved with Save as its own
+    call after the service (only that call when nothing else changed; a choice refused after the service saved keeps the
+    sheet open on the saved service); the switch of the setting toasts "Saved."; a variant id the API no longer knows is
+    shown as the conflict; deposit messages where the prototype has none: "A percentage deposit must be 1 to 100%." and "A
+    fixed deposit must be Rs. 100 to Rs. 100,000."; More options' hint now ends "…, Popular, deposit".
+    (8) Components: Toggle gains a `segment` variant (the prototype's `.seg2`) and Badge an `info` variant (`.pl.in`),
+    both through cva; no new package and no shadcn add.
+    (9) The web development server (serve.mjs --dev) did not hydrate any workspace page in headless Chromium on this
+    machine (the Staff page stayed on its skeleton too, and no client request was made), so the browser walk-through ran
+    on the production build; F05-S01's walk-through used the development server.
+    (10) F05-S01's card buttons are still disabled while a change runs, which drops keyboard focus as the Popular choice
+    did; left as it is (outside this stage).
+    New test ids for QA: service-variants, service-variants-toggle, service-variant-set, service-variant-row (data-index)
+    with service-variant-name/-price/-time/-remove, service-variants-add, service-variant-preview, -preview-row,
+    -preview-empty, service-sheet-variant-price, service-sheet-popular, service-sheet-popular-help, service-deposit,
+    service-deposit-choice, service-deposit-salon_rule/-custom/-none, service-deposit-type (options
+    service-deposit-type-percentage/-amount), service-deposit-percent, service-deposit-amount, service-deposit-says,
+    service-card-options, service-card-from-badge, service-card-options-badge, popular-card, popular-mode,
+    popular-mode-chosen, popular-mode-most_booked, popular-summary (data-mode). service-sheet-problem's data-problem is the
+    message key (variantPrice and so on) with data-index for a variant's.
+    Nothing is left unfinished. Time from the machine's clock and commits: 19:58 to 20:59, about 1h 01m: reading to about
+    20:04, the API and its tests to 20:19 (12db1d7), the F05-S01 fix to 20:21 (0d5f9ac), the web and its tests to 20:31
+    (a233960), the walk-through with its fixes to 20:47 (4456dec; about 10 minutes went on the development server that
+    would not hydrate and on the walk scripts), gates 20:39 to 20:52, a sign-in rate limit on the walk-through's address
+    waited out to about 20:58.
+    Gates, run from the root of a detached worktree of the tested commit, so that the running 8090/3100 instances' jar and
+    .next were not rebuilt; logs stay there until the stage closes: /private/tmp/claude-501/-Users-cmmrox-Personal-Projects-salon-sass/715cfef9-1213-4c28-9082-71b8eb4e4e54/scratchpad/gates2/.gate-logs/
+    | Command | Tested commit | Result | Log |
+    | --- | --- | --- | --- |
+    | cd apps/api && ./mvnw -q verify | a233960 | exit 0 (6 m 25 s) | 1-api-verify.log |
+    | pnpm -r lint | 4456dec | exit 0 | 2-lint-4456dec.log |
+    | pnpm -r typecheck | 4456dec | exit 0 | 3-typecheck-4456dec.log |
+    | pnpm -r test | 4456dec | exit 0 (format 10, api-contracts 25, web 979) | 4-test-4456dec.log |
+    | pnpm --filter @salon/web test:a11y | 4456dec | exit 0 (193 cases, 7 files) | 5-a11y-4456dec.log |
+    | pnpm --filter @salon/web build | 4456dec | exit 0 | 6-web-build-4456dec.log |
+    | pnpm contracts:check | 4456dec | exit 0 (document and client current) | 7-contracts-4456dec.log |
+    4456dec changes only apps/web, so the API gate stands on a233960 (apps/api identical from 12db1d7 to 4456dec). The
+    handoff commit changes only this file and the generated documents.
 verification:
   commands:
   - cd apps/api && ./mvnw -q verify

@@ -88,7 +88,10 @@ class DatabaseIsolationCatalogueIntegrationTest {
                         "catalogue_category",
                         "catalogue_photo",
                         "catalogue_service",
-                        "catalogue_terms_version");
+                        "catalogue_terms_version",
+                        // F05-S02: a terms version's variants and the Popular setting.
+                        "catalogue_terms_variant",
+                        "catalogue_popular_setting");
         assertThat(tables)
                 .allSatisfy(table -> assertThat(table)
                         .as("%s", table.get("name"))
@@ -264,7 +267,9 @@ class DatabaseIsolationCatalogueIntegrationTest {
                         org.assertj.core.api.Assertions.tuple("catalogue_category", "DELETE,INSERT,SELECT,UPDATE"),
                         org.assertj.core.api.Assertions.tuple("catalogue_photo", "DELETE,INSERT,SELECT"),
                         org.assertj.core.api.Assertions.tuple("catalogue_service", "INSERT,SELECT,UPDATE"),
-                        org.assertj.core.api.Assertions.tuple("catalogue_terms_version", "INSERT,SELECT"));
+                        org.assertj.core.api.Assertions.tuple("catalogue_terms_version", "INSERT,SELECT"),
+                        org.assertj.core.api.Assertions.tuple("catalogue_terms_variant", "INSERT,SELECT"),
+                        org.assertj.core.api.Assertions.tuple("catalogue_popular_setting", "INSERT,SELECT,UPDATE"));
     }
 
     /**

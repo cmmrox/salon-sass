@@ -24,9 +24,9 @@ import org.junit.jupiter.params.provider.FieldSource;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 /**
- * The second layer on its own for F05-S01's tables: row-level security, with Hibernate nowhere in the path. Plain
+ * The second layer on its own for F05-S01's and F05-S02's tables: row-level security, with Hibernate nowhere in the path. Plain
  * SQL as the application's role, which in this database may also insert, update and delete every table, and with
- * the trigger that refuses every update of a terms version dropped, so that the policy and nothing else stands
+ * the triggers that refuse every update of a terms version and of a variant dropped, so that the policy and nothing else stands
  * between one salon and another. With both salons' rows present: with no salon set nothing is seen or written;
  * alpha sees only its own, even asking for beta's; alpha cannot change or remove beta's; and a row for beta, or one
  * of alpha's moved to beta, is refused. {@link CatalogueHibernateFilterAloneIntegrationTest} is the other layer
@@ -45,6 +45,8 @@ class CatalogueRowLevelSecurityAloneIntegrationTest {
         KEYS.put("catalogue_photo", "id");
         KEYS.put("catalogue_service", "id");
         KEYS.put("catalogue_terms_version", "id");
+        KEYS.put("catalogue_terms_variant", "id");
+        KEYS.put("catalogue_popular_setting", "id");
     }
 
     static final List<String> TABLES = List.copyOf(KEYS.keySet());
@@ -64,6 +66,7 @@ class CatalogueRowLevelSecurityAloneIntegrationTest {
             owner.execute("GRANT SELECT, INSERT, UPDATE, DELETE ON " + table + " TO " + TestPostgres.APP_USER);
         }
         owner.execute("DROP TRIGGER catalogue_terms_version_immutable ON catalogue_terms_version");
+        owner.execute("DROP TRIGGER catalogue_terms_variant_immutable ON catalogue_terms_variant");
         TestSalons salons = new TestSalons(owner);
         alpha = salons.create("Catalogue Alpha", "#111111");
         beta = salons.create("Catalogue Beta", "#222222");

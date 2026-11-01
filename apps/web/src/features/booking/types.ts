@@ -11,3 +11,6 @@ export type BookingRulesInput = components['schemas']['BookingRulesInput'];
 
 /** A page of the rules' versions, newest first. */
 export type BookingRulesHistory = components['schemas']['BookingRulesHistory'];
+
+/** The salon's current rules as customers see them: the Services page says a "Salon rule" deposit from them (F05-S02). */
+export type PublicBookingRules = components['schemas']['PublicBookingRules'];
