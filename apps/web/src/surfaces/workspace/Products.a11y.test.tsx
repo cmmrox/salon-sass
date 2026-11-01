@@ -26,6 +26,7 @@ beforeEach(() => {
       Response.json({ kind: 'staff', staffId: 'me', permissions: ['catalogue.read', 'catalogue.price.change'] }),
     'catalogue-products': () =>
       Response.json({
+        ...PRODUCTS,
         items: [...PRODUCTS.items, product('44444444-0000-4000-8000-000000000009', LONG, { priceMinor: 50_000_000 })],
       }),
     'catalogue-tax-public': () => Response.json({ current: TAX_PUBLIC }),
@@ -77,7 +78,7 @@ describe('the Products tab', () => {
     'empty, with VAT off, brand %s at %ipx',
     async (brand, width) => {
       await atWidth(width);
-      answers['catalogue-products'] = () => Response.json({ items: [] });
+      answers['catalogue-products'] = () => Response.json({ currency: 'LKR', items: [] });
       answers['catalogue-tax-public'] = () => Response.json({ current: null });
       page(brand);
       await screen.findByTestId('products-empty');

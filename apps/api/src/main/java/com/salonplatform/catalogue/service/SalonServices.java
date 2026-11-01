@@ -89,8 +89,16 @@ public interface SalonServices {
             long version,
             TermsView terms) {}
 
-    /** Every live service of the salon, by name. */
-    List<ServiceView> list();
+    /**
+     * Every live service of the salon, by name, with the salon's currency.
+     *
+     * @param currency the salon's ISO 4217 currency now: what a created or saved service's amounts are kept in, also
+     *     before its first service
+     */
+    record ServiceList(String currency, List<ServiceView> items) {}
+
+    /** Every live service of the salon, by name, with the salon's currency. */
+    ServiceList list();
 
     /** 404 for an id that is not one of the salon's live services. */
     ServiceView get(UUID id);

@@ -363,6 +363,26 @@ class CatalogueServicesIntegrationTest extends IntegrationTest {
     }
 
     @Test
+    void aDuplicatesBaseIsCutBetweenCharactersSoTheNextCopyIsCopyTwo() {
+        // 32 letters and spaces, an emoji (two UTF-16 units), then 7 more: 40 characters.
+        String name = "Keratin smoothing with blow dry \uD83D\uDC87 deluxe";
+        Map<String, Object> service = created(name);
+
+        Map<String, Object> copy =
+                api.body(api.call(alpha, "POST", SERVICES + "/" + service.get("id") + "/duplicate", null, manager));
+        Map<String, Object> copy2 =
+                api.body(api.call(alpha, "POST", SERVICES + "/" + service.get("id") + "/duplicate", null, manager));
+
+        assertThat((String) copy.get("name")).isEqualTo("Keratin smoothing with blow dry \uD83D\uDC87 (copy)");
+        assertThat((String) copy2.get("name")).isEqualTo("Keratin smoothing with blow dry (copy 2)");
+        assertThat(owner.queryForList(
+                        "SELECT name FROM catalogue_service WHERE tenant_id = ? AND deleted_at IS NULL ORDER BY name",
+                        String.class,
+                        alpha.id()))
+                .containsExactlyInAnyOrder(name, (String) copy.get("name"), (String) copy2.get("name"));
+    }
+
+    @Test
     void hidingAndShowingOnlineChangeOnlyTheOnlineSetting() {
         Map<String, Object> service = created("Root touch-up");
         Map<String, Object> hide = Map.of("bookableOnline", false, "version", 0);
@@ -445,6 +465,20 @@ class CatalogueServicesIntegrationTest extends IntegrationTest {
                         .get("items")))
                 .extracting(item -> item.get("name"))
                 .containsExactly("Apple facial", "mango wax", "zebra cut");
+    }
+
+    @Test
+    void theListGivesTheSalonsCurrencyBeforeItsFirstServiceAndCreatesInIt() {
+        assertThat(api.body(api.call(alpha, "GET", SERVICES, null, manager)))
+                .containsEntry("currency", "LKR")
+                .containsEntry("items", List.of());
+        owner.update("UPDATE tenant SET currency = 'USD' WHERE id = ?", alpha.id());
+
+        assertThat(api.body(api.call(alpha, "GET", SERVICES, null, manager)))
+                .containsEntry("currency", "USD")
+                .containsEntry("items", List.of());
+        assertThat(terms(created("Root touch-up"))).containsEntry("currency", "USD");
+        assertThat(api.body(api.call(alpha, "GET", SERVICES, null, manager))).containsEntry("currency", "USD");
     }
 
     @Test

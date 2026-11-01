@@ -1,6 +1,6 @@
 'use client';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   categoryProblem,
   categoryProblemOfField,
@@ -88,6 +88,9 @@ export function useCatalogue(kind: Kind, notify: (toast: CatalogueToast) => void
   const [sheet, setSheet] = useState<ServiceSheetState | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [opened, setOpened] = useState(0);
+  // The same count, read when a change made from a sheet answers: its result belongs to the opening that sent it, and
+  // a sheet closed and another opened meanwhile (or the same service opened again) is left as it is.
+  const opening = useRef(0);
   const [photoUpload, setPhotoUpload] = useState<PhotoUpload>({ state: 'idle' });
   const [categorySheet, setCategorySheet] = useState<CategorySheetState | null>(null);
   const [categoryOpen, setCategoryOpen] = useState(false);
@@ -226,6 +229,8 @@ export function useCatalogue(kind: Kind, notify: (toast: CatalogueToast) => void
     if (!sheet || sheetProblems.length > 0) return;
     const editing = sheet.service;
     const values = sheet.values;
+    const started = opening.current;
+    const stillOpen = () => opening.current === started;
     const popularChanged = values.popular !== (editing?.popular ?? false);
     const serviceChanged =
       !editing || !sameValues({ ...values, popular: false }, { ...valuesOf(editing), popular: false });
@@ -247,7 +252,7 @@ export function useCatalogue(kind: Kind, notify: (toast: CatalogueToast) => void
           popular: values.popular,
           version: saved.version,
         });
-      setSheetOpen(false);
+      if (stillOpen()) setSheetOpen(false);
       notify(
         !editing ? 'created' : saved && saved.terms.versionId !== editing.terms.versionId ? 'savedTerms' : 'saved',
       );
@@ -256,12 +261,14 @@ export function useCatalogue(kind: Kind, notify: (toast: CatalogueToast) => void
       if (saved && saved !== editing) {
         // The service saved and its Popular choice did not: the sheet stays on the saved service.
         const kept = saved;
-        setSheet((current) => (current ? { ...current, service: kept } : current));
+        if (stillOpen()) setSheet((current) => (current ? { ...current, service: kept } : current));
         void load();
       }
       const left = failed(error);
       if (left?.code === 'bad_request' && variantIdRefused(left.fields)) setNotice('conflict');
-      else if (left?.code === 'bad_request')
+      else if (!stillOpen()) {
+        // The person left this sheet and opened another: what was wrong with this save is not about that one.
+      } else if (left?.code === 'bad_request')
         setSheet((current) =>
           current ? { ...current, apiProblems: problemsOfFields(left.fields, current.values) } : current,
         );
@@ -283,25 +290,36 @@ export function useCatalogue(kind: Kind, notify: (toast: CatalogueToast) => void
     );
   }
 
+  /**
+   * A photo change's result for the sheet that sent it: applied only while that opening lasts and its service is
+   * the one changed. The change itself is saved either way, and the toast and the lists say so.
+   */
+  function photoChanged(started: number, saved: CatalogueService) {
+    if (opening.current !== started) return;
+    setSheet((current) => (current?.service?.id === saved.id ? { ...current, service: saved } : current));
+  }
+
   async function uploadPhoto(file: File) {
     const service = sheet?.service;
     if (!service) return;
+    const started = opening.current;
+    const stillOpen = () => opening.current === started;
     setPhotoUpload({ state: 'uploading' });
     const form = new FormData();
     form.append('serviceId', service.id);
     form.append('file', file);
     try {
       const saved = await change<CatalogueService>('catalogue-photo', form);
-      setSheet((current) => (current ? { ...current, service: saved } : current));
-      setPhotoUpload({ state: 'idle' });
+      photoChanged(started, saved);
+      if (stillOpen()) setPhotoUpload({ state: 'idle' });
       notify('photoSaved');
       await load();
     } catch (error) {
       const failure = error instanceof IdentityFailure ? error : new IdentityFailure('service_unavailable');
-      if (['bad_request', 'request_rejected', 'service_unavailable'].includes(failure.code))
-        setPhotoUpload({ state: 'refused', reason: failure.code });
-      else {
-        setPhotoUpload({ state: 'idle' });
+      if (['bad_request', 'request_rejected', 'service_unavailable'].includes(failure.code)) {
+        if (stillOpen()) setPhotoUpload({ state: 'refused', reason: failure.code });
+      } else {
+        if (stillOpen()) setPhotoUpload({ state: 'idle' });
         failed(error);
       }
     }
@@ -310,10 +328,11 @@ export function useCatalogue(kind: Kind, notify: (toast: CatalogueToast) => void
   async function removePhoto() {
     const service = sheet?.service;
     if (!service) return;
+    const started = opening.current;
     await quietly(
       async () => {
         const saved = await change<CatalogueService>('catalogue-photo-remove', { id: service.id });
-        setSheet((current) => (current ? { ...current, service: saved } : current));
+        photoChanged(started, saved);
         notify('photoRemoved');
         await load();
       },
@@ -325,7 +344,8 @@ export function useCatalogue(kind: Kind, notify: (toast: CatalogueToast) => void
     setRefusal(null);
     setPhotoUpload({ state: 'idle' });
     setSheet(next);
-    setOpened((count) => count + 1);
+    opening.current += 1;
+    setOpened(opening.current);
     setSheetOpen(true);
   }
 

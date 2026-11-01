@@ -4,7 +4,9 @@ import type {
   CategoryList,
   PopularSetting,
   Product,
+  ProductListAnswer,
   PublicTax,
+  ServiceList,
   TaxSettings,
 } from '@/features/catalogue';
 
@@ -65,7 +67,8 @@ export function service(
   };
 }
 
-export const SERVICES = {
+export const SERVICES: ServiceList = {
+  currency: 'LKR',
   items: [
     service('11111111-0000-4000-8000-000000000001', 'zebra highlights', COLOUR, {
       priceMinor: 900_000,
@@ -172,7 +175,8 @@ export function product(id: string, name: string, options: Partial<Product> = {}
 }
 
 /** Three products, by name: one without VAT and one not sold. */
-export const PRODUCTS = {
+export const PRODUCTS: ProductListAnswer = {
+  currency: 'LKR',
   items: [
     product('44444444-0000-4000-8000-000000000001', 'Argan oil shampoo 250 ml'),
     product('44444444-0000-4000-8000-000000000002', 'Keratin hair mask 200 ml', {

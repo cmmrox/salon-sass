@@ -70,7 +70,8 @@ function ServicesAndCategories({ kind, tab, canChange, readOnly }: Props) {
   const categories = catalogue.categories?.items ?? [];
   const services = catalogue.services?.items ?? [];
   const online = services.filter((service) => service.bookableOnline).length;
-  const currency = services[0]?.terms.currency ?? 'LKR';
+  // The salon's currency, which the list gives also before its first service: what a save keeps amounts in.
+  const currency = catalogue.services?.currency ?? 'LKR';
   const salonRule = useSalonRuleWords(catalogue.rules);
   const popularMode = catalogue.popular?.mode ?? 'chosen';
 
