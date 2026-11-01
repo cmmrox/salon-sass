@@ -39,5 +39,5 @@ requirement detail is in `qa/coverage.md`.
 | --- | --- | --- | --- | --- | --- | --- |
 | F04-S01 | Settings, salon profile and publishing | api, web | complete | - | 0 | - |
 | F04-S02 | Branding draft, live preview and publish | api, web | complete | - | 0 | - |
-| F04-S03 | Opening hours, holidays and closures | api, web | planned | - | 0 | **developer**: `stage-build F04-S03` |
+| F04-S03 | Opening hours, holidays and closures | api, web | in-progress | - | 0 | **developer**: `stage-build F04-S03` |
 | F04-S04 | Booking rules and policies | api, web | outlined | - | 0 | **lead**: `stage-plan F04-S04` |

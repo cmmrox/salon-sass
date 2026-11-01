@@ -325,6 +325,115 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/operator/holiday-calendars": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Every year started, newest first. Admin and Support. */
+        get: operations["listHolidayCalendars"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/operator/holiday-calendars/{year}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A year's draft against what salons have, and what a publication would add, change and withdraw. Admin and Support. */
+        get: operations["getHolidayCalendar"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/operator/holiday-calendars/{year}/days": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Adds a day to the year's draft, starting the year when needed. Admin. */
+        post: operations["addHolidayCalendarDay"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/operator/holiday-calendars/{year}/days/{date}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Changes a draft day's name and kind. Admin. */
+        put: operations["changeHolidayCalendarDay"];
+        post?: never;
+        /** Removes a day from the year's draft. Admin. */
+        delete: operations["removeHolidayCalendarDay"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/operator/holiday-calendars/{year}/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Replaces the year's draft with a CSV file's days, starting the year when needed. Admin.
+         * @description UTF-8, up to 64 KB and 400 days: one day per line as `date,name,kind`, the date `YYYY-MM-DD` inside the year, the name 1 to 120 characters, the kind `poya`, `public`, `bank` or `mercantile`. An optional first line names the columns; a field holding a comma is quoted. All or nothing: any bad line refuses the whole file.
+         */
+        post: operations["importHolidayCalendar"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/operator/holiday-calendars/{year}/publication": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Publishes the year's draft to every salon as its next revision. Admin.
+         * @description Salons see the days the revision adds or changes as "To review"; their choices for unchanged days still apply, and a withdrawn day's choice no longer does.
+         */
+        post: operations["publishHolidayCalendar"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/operator/invoices/{id}": {
         parameters: {
             query?: never;
@@ -819,6 +928,64 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/salon/closures": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The closures from the salon's today on, in date order. `settings.read`.
+         * @description Not paginated: a closure is at most a year ahead, so the list is short.
+         */
+        get: operations["listSalonClosures"];
+        put?: never;
+        /**
+         * Closes the salon all day on a date; it applies at once. `settings.manage`.
+         * @description The date is the salon's local date, today to a year ahead. Bookings on it are kept and listed. The reason is for the team only and is never public.
+         */
+        post: operations["addSalonClosure"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/salon/closures/impact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The bookings on a date that closing it would affect. `settings.read`. */
+        get: operations["getSalonClosureImpact"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/salon/closures/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Reopens a closed date that has not passed. `settings.manage`. */
+        delete: operations["reopenSalonClosure"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/salon/entitlements": {
         parameters: {
             query?: never;
@@ -828,6 +995,60 @@ export interface paths {
         };
         get: operations["entitlements"];
         put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/salon/holidays": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The published holiday years from the salon's current year on, with its choices. `settings.read`. */
+        get: operations["getSalonHolidays"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/salon/holidays/{year}/acceptance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Accepts the salon's choices for a published year; they apply at once. `settings.manage`.
+         * @description A choice for every day still to come that is to review, and optionally for other days still to come: `closed`, `open` (as usual) or `special` with times on a quarter hour.
+         */
+        post: operations["acceptSalonHolidays"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/salon/holidays/{year}/days/{date}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Changes one holiday's choice after the year's acceptance; it applies at once. `settings.manage`. */
+        put: operations["chooseSalonHoliday"];
         post?: never;
         delete?: never;
         options?: never;
@@ -860,6 +1081,47 @@ export interface paths {
         };
         get: operations["invoice"];
         put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/salon/opening-hours": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The salon's opening information: its weekly hours and the coming exceptions. Public.
+         * @description The exceptions run from the salon's today to 180 days ahead in its time zone: closed days (special closures and holidays the salon closes) and holidays with special hours. A closure's reason is never included.
+         */
+        get: operations["getSalonOpeningHours"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/salon/opening-hours/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The weekly hours as settings staff keep them, with the bookings they leave outside. `settings.read`. */
+        get: operations["getSalonOpeningHoursSettings"];
+        /**
+         * Saves the weekly hours; they apply at once. `settings.manage`.
+         * @description Each of the seven weekdays once: open with an opening and a closing time on a quarter hour (`HH:MM`), closing after opening, or closed with no times. Bookings the new hours leave outside are kept and listed.
+         */
+        put: operations["saveSalonOpeningHours"];
         post?: never;
         delete?: never;
         options?: never;
@@ -974,6 +1236,12 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        AcceptSalonHolidays: {
+            /** @description One for every day still to come that is to review; others may be included. */
+            choices: components["schemas"]["SalonHolidayChoiceInput"][];
+            /** Format: int64 */
+            version: number;
+        };
         AccountDeletionRequest: {
             confirm: boolean;
         };
@@ -981,6 +1249,21 @@ export interface components {
             eventId: string;
             /** @enum {string} */
             result: "paid" | "failed" | "already_paid" | "unknown" | "duplicate";
+        };
+        AddSalonClosure: {
+            /**
+             * Format: date
+             * @description The salon's local date: today to a year ahead.
+             */
+            date: string;
+            /** @description Only the team sees it; up to 60 characters, empty or null for none. */
+            reason?: string | null;
+        };
+        AffectedBooking: {
+            customerName: string;
+            serviceName: string;
+            /** @description When it starts, local `HH:MM`. */
+            time: string;
         };
         AuditView: {
             action?: string;
@@ -1023,6 +1306,11 @@ export interface components {
             paymentMethod?: "card" | "bank_transfer";
             /** Format: int64 */
             version: number;
+        };
+        ClosureImpact: {
+            bookings: components["schemas"]["AffectedBooking"][];
+            /** Format: date */
+            date: string;
         };
         ClosureRequest: {
             /** @description The salon's slug, typed exactly, to confirm an irreversible closure */
@@ -1106,6 +1394,111 @@ export interface components {
         Features: {
             customDomain: boolean;
             dedicatedApp: boolean;
+        };
+        HolidayCalendarImport: {
+            /**
+             * Format: binary
+             * @description A UTF-8 CSV file of up to 64 KB: one day per line as `date,name,kind`, with an optional first line naming those columns.
+             */
+            file: string;
+        };
+        HolidayDayChangeRequest: {
+            /** @enum {string} */
+            kind: "poya" | "public" | "bank" | "mercantile";
+            /** @description 1 to 120 characters after trimming. */
+            name: string;
+        };
+        HolidayDayRequest: {
+            /**
+             * Format: date
+             * @description `YYYY-MM-DD`, inside the year, not already in the draft.
+             */
+            date: string;
+            /** @enum {string} */
+            kind: "poya" | "public" | "bank" | "mercantile";
+            /** @description 1 to 120 characters after trimming. */
+            name: string;
+        };
+        HolidayDayView: {
+            /** Format: date */
+            date: string;
+            /** @enum {string} */
+            kind: "poya" | "public" | "bank" | "mercantile";
+            name: string;
+        };
+        HolidayDraftDayView: {
+            /**
+             * @description Against the published year: a day salons do not have yet, one whose name or kind differs from what they have, or one they have as it is.
+             * @enum {string}
+             */
+            change: "added" | "changed" | "unchanged";
+            /** Format: date */
+            date: string;
+            /** @enum {string} */
+            kind: "poya" | "public" | "bank" | "mercantile";
+            name: string;
+        };
+        HolidayPublicationRequest: {
+            /** Format: int64 */
+            version: number;
+        };
+        HolidayRevisionCounts: {
+            /** Format: int32 */
+            added: number;
+            /** Format: int32 */
+            changed: number;
+            /** Format: int32 */
+            withdrawn: number;
+        };
+        HolidayYearDetail: {
+            changes: components["schemas"]["HolidayRevisionCounts"];
+            /** @description The draft's days, in date order. */
+            days: components["schemas"]["HolidayDraftDayView"][];
+            /** Format: date-time */
+            publishedAt: string | null;
+            /**
+             * Format: int32
+             * @description How many times the year has been published; 0 before the first publication.
+             */
+            revision: number;
+            /** @enum {string} */
+            state: "draft" | "published" | "changed";
+            /**
+             * Format: int64
+             * @description Moves on with every change to the draft and every publication; publishing names it.
+             */
+            version: number;
+            /** @description Published days the draft no longer has, in date order. */
+            withdrawn: components["schemas"]["HolidayDayView"][];
+            /** Format: int32 */
+            year: number;
+        };
+        HolidayYearList: {
+            items: components["schemas"]["HolidayYearSummary"][];
+        };
+        HolidayYearSummary: {
+            /**
+             * Format: int32
+             * @description How many days the draft has.
+             */
+            dayCount: number;
+            /**
+             * Format: date-time
+             * @description The latest publication.
+             */
+            publishedAt: string | null;
+            /**
+             * Format: int32
+             * @description How many times the year has been published; 0 before the first publication.
+             */
+            revision: number;
+            /**
+             * @description `draft`: never published. `published`: salons see the draft as it is. `changed`: published, with draft changes not yet published.
+             * @enum {string}
+             */
+            state: "draft" | "published" | "changed";
+            /** Format: int32 */
+            year: number;
         };
         InvoiceDetail: {
             /** Format: int64 */
@@ -1236,6 +1629,50 @@ export interface components {
             email: boolean;
             sms: boolean;
             whatsapp: boolean;
+        };
+        OpeningException: {
+            /** @description Special hours' local closing time; null when closed. */
+            closes: string | null;
+            /**
+             * Format: date
+             * @description The salon's local date.
+             */
+            date: string;
+            /** @description The public holiday on the date, or null. */
+            holidayName: string | null;
+            /** @enum {string} */
+            kind: "closed" | "special";
+            /** @description Special hours' local opening time; null when closed. */
+            opens: string | null;
+        };
+        OpeningHoursSettings: {
+            /** @description Upcoming bookings these hours leave outside opening time. They are kept. */
+            outsideHours: components["schemas"]["AffectedBooking"][];
+            /**
+             * Format: int64
+             * @description The version a save is made from: 0 before the first save.
+             */
+            version: number;
+            /** @description Monday to Sunday; null before the first save. */
+            weekly: components["schemas"]["OpeningWeekday"][] | null;
+        };
+        OpeningWeekday: {
+            /** @description The local closing time, after `opens`; null when closed. */
+            closes: string | null;
+            /** @enum {string} */
+            day: "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" | "sunday";
+            open: boolean;
+            /** @description The local opening time, `HH:MM`; null when closed. */
+            opens: string | null;
+        };
+        OpeningWeekdayInput: {
+            /** @description `HH:MM` on a quarter hour after `opens`; null when closed. */
+            closes?: string | null;
+            /** @enum {string} */
+            day: "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" | "sunday";
+            open: boolean;
+            /** @description `HH:MM` on a quarter hour when open; null when closed. */
+            opens?: string | null;
         };
         OperatorChallengeRequest: {
             /** Format: uuid */
@@ -1428,6 +1865,11 @@ export interface components {
                 detail: string;
                 /** @description The field, as the request names it; a dotted path when nested. */
                 field: string;
+                /**
+                 * Format: int32
+                 * @description For an uploaded file read line by line (a holiday calendar CSV): the line that failed, counted from 1. Absent otherwise.
+                 */
+                line?: number;
             }[];
             /** @description The path that was requested. */
             instance?: string;
@@ -1578,6 +2020,22 @@ export interface components {
             /** Format: int64 */
             version: number;
         };
+        SalonClosure: {
+            /**
+             * Format: int32
+             * @description How many bookings are on the date. They are kept.
+             */
+            affectedBookings: number;
+            /**
+             * Format: date
+             * @description The salon's local date, closed all day.
+             */
+            date: string;
+            /** Format: uuid */
+            id: string;
+            /** @description The team's note; never public. */
+            reason: string | null;
+        };
         SalonCreated: {
             /** Format: date-time */
             createdAt: string;
@@ -1626,6 +2084,74 @@ export interface components {
             updatedAt: string;
             /** Format: int64 */
             version: number;
+        };
+        SalonHolidayChoiceInput: {
+            /** @enum {string} */
+            choice: "closed" | "open" | "special";
+            /** @description `HH:MM` after `opens` for special hours; else null. */
+            closes?: string | null;
+            /** Format: date */
+            date: string;
+            /** @description `HH:MM` on a quarter hour for special hours; else null. */
+            opens?: string | null;
+        };
+        SalonHolidayDay: {
+            /**
+             * @description The salon's latest choice; null when it has made none. Not applied while `toReview`.
+             * @enum {string|null}
+             */
+            choice: "closed" | "open" | "special" | null;
+            /** @description Special hours' closing time, `HH:MM`. */
+            closes: string | null;
+            /** Format: date */
+            date: string;
+            /** @enum {string} */
+            kind: "poya" | "public" | "bank" | "mercantile";
+            name: string;
+            /** @description Special hours' opening time, `HH:MM`. */
+            opens: string | null;
+            /** @description The day is before the salon's today. */
+            past: boolean;
+            /** @description No choice applies to the day as it is published now. */
+            toReview: boolean;
+        };
+        SalonHolidayDayChoice: {
+            /** @enum {string} */
+            choice: "closed" | "open" | "special";
+            /** @description `HH:MM` after `opens` for special hours; else null. */
+            closes?: string | null;
+            /** @description `HH:MM` on a quarter hour for special hours; else null. */
+            opens?: string | null;
+        };
+        SalonHolidayYear: {
+            /** @description Every published day of the year, in date order. */
+            days: components["schemas"]["SalonHolidayDay"][];
+            /** Format: date-time */
+            publishedAt: string;
+            /** @description The salon accepted its choices, and no day still to come is to review. */
+            reviewed: boolean;
+            /**
+             * Format: int32
+             * @description The operator's latest revision of the year.
+             */
+            revision: number;
+            /**
+             * Format: int64
+             * @description The version an acceptance is made from: 0 before the first.
+             */
+            version: number;
+            /** Format: int32 */
+            year: number;
+        };
+        SalonHolidays: {
+            /** @description Oldest first; empty when the operator has published none. */
+            years: components["schemas"]["SalonHolidayYear"][];
+        };
+        SalonOpeningHours: {
+            /** @description From the salon's today to 180 days ahead, in date order. */
+            exceptions: components["schemas"]["OpeningException"][];
+            /** @description Monday to Sunday; null before the salon first saves its hours. */
+            weekly: components["schemas"]["OpeningWeekday"][] | null;
         };
         SalonOwnerRequest: {
             /** Format: email */
@@ -1810,6 +2336,12 @@ export interface components {
             size: number;
             /** Format: int64 */
             total: number;
+        };
+        SaveOpeningHours: {
+            /** Format: int64 */
+            version: number;
+            /** @description Each of the seven weekdays once. */
+            weekly: components["schemas"]["OpeningWeekdayInput"][];
         };
         SaveSalonBrandDraft: {
             brand: components["schemas"]["SalonBrandInput"];
@@ -2797,6 +3329,473 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Meta"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listHolidayCalendars: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The years. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HolidayYearList"];
+                };
+            };
+            /** @description No valid operator session: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Without the permission: `permission_denied`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getHolidayCalendar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                year: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The year. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HolidayYearDetail"];
+                };
+            };
+            /** @description No valid operator session: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Without the permission: `permission_denied`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The year has not been started, or is outside 2000 to 2100: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    addHolidayCalendarDay: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                year: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HolidayDayRequest"];
+            };
+        };
+        responses: {
+            /** @description The year, with the day. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HolidayYearDetail"];
+                };
+            };
+            /** @description A field broke a rule: `bad_request`, with `errors` naming `date`, `name` or `kind`. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No valid operator session: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not an Admin: `permission_denied`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The year is outside 2000 to 2100: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The draft has that date already: `conflict`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    changeHolidayCalendarDay: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                year: string;
+                date: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HolidayDayChangeRequest"];
+            };
+        };
+        responses: {
+            /** @description The year, with the day changed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HolidayYearDetail"];
+                };
+            };
+            /** @description A field broke a rule: `bad_request`, with `errors` naming `name` or `kind`. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No valid operator session: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not an Admin: `permission_denied`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No such year, or the draft has no such date: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    removeHolidayCalendarDay: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                year: string;
+                date: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The year, without the day. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HolidayYearDetail"];
+                };
+            };
+            /** @description No valid operator session: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not an Admin: `permission_denied`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No such year, or the draft has no such date: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    importHolidayCalendar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                year: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["HolidayCalendarImport"];
+            };
+        };
+        responses: {
+            /** @description The year, its draft replaced. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HolidayYearDetail"];
+                };
+            };
+            /** @description The file is missing, or has bad lines: `bad_request`, with one error per bad line (`field` `file`, its `line` and the reason as `detail`). Nothing changes. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No valid operator session: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not an Admin: `permission_denied`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The year is outside 2000 to 2100: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    publishHolidayCalendar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                year: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HolidayPublicationRequest"];
+            };
+        };
+        responses: {
+            /** @description The year, published. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HolidayYearDetail"];
+                };
+            };
+            /** @description The body is not the documented shape: `bad_request`. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No valid operator session: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Not an Admin: `permission_denied`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The year has not been started: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The year changed since `version`: `conflict`. The draft adds, changes and withdraws nothing: `invalid_state`. Nothing is published. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             /** @description Any error: problem details with a stable `code`. */
@@ -4384,6 +5383,299 @@ export interface operations {
             };
         };
     };
+    listSalonClosures: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The closures. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalonClosure"][];
+                };
+            };
+            /** @description No valid session for this salon: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Without `settings.read`: `permission_denied`. A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The hostname names no salon: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The database is down or not answering: `service_unavailable`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    addSalonClosure: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddSalonClosure"];
+            };
+        };
+        responses: {
+            /** @description The closure. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalonClosure"];
+                };
+            };
+            /** @description The date is not today to a year ahead, the reason is over 60 characters, or the body is not the documented shape: `bad_request`, with `errors` naming `date` or `reason`. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No valid session for this salon: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Without `settings.manage`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The hostname names no salon: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The date is closed already: `conflict`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The database is down or not answering: `service_unavailable`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getSalonClosureImpact: {
+        parameters: {
+            query: {
+                date: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The bookings; empty when there are none. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClosureImpact"];
+                };
+            };
+            /** @description The date is missing, not `YYYY-MM-DD`, past or more than a year ahead: `bad_request`, with `errors` naming `date`. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No valid session for this salon: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Without `settings.read`: `permission_denied`. A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The hostname names no salon: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    reopenSalonClosure: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Reopened. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No valid session for this salon: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Without `settings.manage`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No such closure of this salon (another salon's answers the same): `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The date has passed: `invalid_state`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The database is down or not answering: `service_unavailable`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     entitlements: {
         parameters: {
             query?: never;
@@ -4400,6 +5692,250 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Entitlements"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getSalonHolidays: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The years; empty when the operator has published none. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalonHolidays"];
+                };
+            };
+            /** @description No valid session for this salon: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Without `settings.read`: `permission_denied`. A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The hostname names no salon: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The database is down or not answering: `service_unavailable`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    acceptSalonHolidays: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                year: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AcceptSalonHolidays"];
+            };
+        };
+        responses: {
+            /** @description The year, reviewed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalonHolidayYear"];
+                };
+            };
+            /** @description A choice broke a rule, a day to review has no choice, or the body is not the documented shape: `bad_request`, with `errors` naming each field (`choices[0].closes`). Nothing is saved. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No valid session for this salon: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Without `settings.manage`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The year is not published, or the hostname names no salon: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The review changed since `version`: `conflict`. Nothing is saved. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The database is down or not answering: `service_unavailable`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    chooseSalonHoliday: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                year: string;
+                date: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SalonHolidayDayChoice"];
+            };
+        };
+        responses: {
+            /** @description The year, with the choice. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalonHolidayYear"];
+                };
+            };
+            /** @description The choice broke a rule: `bad_request`, with `errors` naming `choice`, `opens` or `closes`. Nothing is saved. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No valid session for this salon: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Without `settings.manage`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The year is not published, or the date is not one of its holidays: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The year has not been accepted yet, or the day has passed: `invalid_state`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The database is down or not answering: `service_unavailable`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             /** @description Any error: problem details with a stable `code`. */
@@ -4463,6 +5999,214 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["InvoiceDetail"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getSalonOpeningHours: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The opening information. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalonOpeningHours"];
+                };
+            };
+            /** @description A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The hostname names no salon: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The database is down or not answering: `service_unavailable`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getSalonOpeningHoursSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The hours. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OpeningHoursSettings"];
+                };
+            };
+            /** @description No valid session for this salon: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Without `settings.read`: `permission_denied`. A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The hostname names no salon: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The database is down or not answering: `service_unavailable`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    saveSalonOpeningHours: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveOpeningHours"];
+            };
+        };
+        responses: {
+            /** @description The hours as saved. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OpeningHoursSettings"];
+                };
+            };
+            /** @description A field broke a rule, or the body is not the documented shape: `bad_request`, with `errors` naming each field (`weekly[0].closes`). Nothing is saved. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No valid session for this salon: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Without `settings.manage`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The hostname names no salon: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The hours changed since `version`: `conflict`. Nothing is saved. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The database is down or not answering: `service_unavailable`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             /** @description Any error: problem details with a stable `code`. */
