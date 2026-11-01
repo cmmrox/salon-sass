@@ -974,7 +974,10 @@ test('TC-F05-S01-030 AC-14: with no tenant context every catalogue table returns
     }
     const alphaRows = catalogueRows(alpha.id);
     const betaRows = catalogueRows(beta.id);
-    for (const table of catalogueTables()) {
+    // This stage's five tables; F05-S02 and F05-S03 prove their own (TC-F05-S02-013, TC-F05-S03-008).
+    const own = ['catalogue_category_list', 'catalogue_category', 'catalogue_photo', 'catalogue_service', PENDING_F05_S01.termsTable];
+    expect(catalogueTables(), 'each is a catalogue table with tenant_id').toEqual(expect.arrayContaining(own));
+    for (const table of own) {
       expect(alphaRows[table], `${table}: alpha has rows`).toBeGreaterThan(0);
       expect(betaRows[table], `${table}: beta has rows`).toBeGreaterThan(0);
       expect(identitySql(`SELECT count(*) FROM ${table}`, null), `${table}: no tenant, no rows`).toBe('0');

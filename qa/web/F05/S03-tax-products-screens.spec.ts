@@ -249,7 +249,9 @@ test('TC-F05-S03-019 AC-3: when the configured VAT rate changes, the tab says so
     process.env[variable] = '15';
     await startApi();
     await accounts.identity.api.reconnect();
-    const now = await accounts.identity.login(salon, owner.account);
+    // The session lives in the database and outlives the restart; signing in again within the same
+    // authenticator step would be a refused replay of the code.
+    const now = owner;
     expect((await tax.settings(salon, now.tokens)).configured.vatRatePercent, 'the configuration says 15').toBe(15);
     expect((await tax.published(salon))!.vat!.ratePercent, 'the current version still says 18').toBe(18);
     const { page } = await open(accounts, now, TAX_ROUTE);

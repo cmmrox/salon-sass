@@ -158,7 +158,6 @@ test('TC-F05-S01-032 AC-12, AC-16: the Services tab says how many services are b
     await expect(id(page, T.banner)).toHaveText(TEXT.banner);
     await expect(id(page, T.groupEmpty), 'every category says so').toHaveCount(DEFAULT_CATEGORIES.length);
     await expect(id(page, T.groupEmpty).first()).toHaveText(TEXT.empty);
-    await expect(id(page, T.tabProducts), 'Products comes in S03').toHaveCount(0);
     await page.close();
   });
   const { nails, gel, art, root } = await arrangeMenu(cat, salon, owner.tokens);
