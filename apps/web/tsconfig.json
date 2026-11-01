@@ -25,5 +25,5 @@
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", ".next/dev/types/**/*.ts", "**/*.mts"],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "src/**/*.a11y.test.tsx", "test/a11y.ts", "test/a11y-setup.ts", "test/a11y-matchers.d.ts"]
 }

@@ -55,6 +55,8 @@ const PROTECTED = new Set([
   '/workspace/audit',
   '/workspace/billing',
   '/workspace/support-access',
+  '/workspace/settings',
+  '/workspace/settings/profile',
 ]);
 
 /** The support entry page (F03-S04), where a support view starts and where it lands when it ends. */

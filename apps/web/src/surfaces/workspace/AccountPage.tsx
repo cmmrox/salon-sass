@@ -7,11 +7,13 @@ import { BillingBanner } from '@/features/platform';
 import { readEntitlements } from '@/features/platform/server';
 import { AccountFrame } from './AccountFrame';
 import { BillingScreen } from './BillingScreen';
+import { ProfileSettingsScreen } from './ProfileSettingsScreen';
+import { SettingsScreen, type SettingsTab } from './SettingsScreen';
 import { SupportAccessScreen } from './SupportAccessScreen';
 import { SupportBanner } from './SupportBanner';
 
-type View = 'account' | 'staff' | 'audit' | 'billing' | 'support-access';
-type PageProps = { kind: Kind; view?: View; signIn?: boolean };
+type View = 'account' | 'staff' | 'audit' | 'billing' | 'support-access' | 'settings';
+type PageProps = { kind: Kind; view?: View; signIn?: boolean; tab?: SettingsTab };
 
 const REQUIRED: Record<View, string> = {
   account: 'session.manage',
@@ -19,6 +21,7 @@ const REQUIRED: Record<View, string> = {
   audit: 'audit.list',
   billing: 'invoice.read',
   'support-access': 'support.manage',
+  settings: 'settings.read',
 };
 
 /**
@@ -27,7 +30,7 @@ const REQUIRED: Record<View, string> = {
  * otherwise the first frame is the salon's own workspace, with the billing banner the API decides
  * (F03-S02) and, in a read-only salon, its mutating actions disabled with the reason.
  */
-export async function AccountPage({ kind: requested, view, signIn }: PageProps) {
+export async function AccountPage({ kind: requested, view, signIn, tab }: PageProps) {
   const h = await headers();
   const salon = decodeSalon(h.get(SALON_HEADER));
   const host = requestHost(h.get('host'));
@@ -79,6 +82,8 @@ export async function AccountPage({ kind: requested, view, signIn }: PageProps) 
       </AccountFrame>
     );
   }
+  // Settings open their first tab the person may see (F04-S01); only Profile is delivered.
+  if (principal && view === 'settings' && !tab) redirect('/workspace/settings/profile');
   const readOnly = support || entitlements?.subscription?.state === 'read_only';
   return (
     <AccountFrame
@@ -93,6 +98,14 @@ export async function AccountPage({ kind: requested, view, signIn }: PageProps) 
         <BillingScreen kind={kind} timeZone={salon.timeZone} />
       ) : view === 'support-access' ? (
         <SupportAccessScreen timeZone={salon.timeZone} />
+      ) : view === 'settings' ? (
+        <SettingsScreen tab={tab ?? 'profile'}>
+          <ProfileSettingsScreen
+            kind={kind}
+            salonName={salon.name}
+            readOnly={support ? 'support' : readOnly ? 'salon' : null}
+          />
+        </SettingsScreen>
       ) : (
         <AccountScreen
           kind={kind}

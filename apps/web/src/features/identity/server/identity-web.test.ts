@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { contextFromTraceparent, runInRequest } from '@/lib/observability/request-context';
 import { assertion, cookieName, createIdentityWeb, csrf, requestHost } from './identity-web';
 import type { SalonAccount, SalonAccountFor } from './salon-account';
+import type { SalonSettings, SalonSettingsFor } from './salon-settings';
 import { normalizeIp, strictInstant } from '@/lib/http/network';
 import { formatInstant } from '@salon/format';
 
@@ -14,7 +15,12 @@ const unreached: SalonAccountFor = () =>
   new Proxy({} as SalonAccount, {
     get: () => () => Promise.reject(new Error('the platform module is not reached here')),
   });
-const handleIdentity = createIdentityWeb(unreached);
+/** Nor the branding module's settings paths (F04-S01). */
+const unreachedSettings: SalonSettingsFor = () =>
+  new Proxy({} as SalonSettings, {
+    get: () => () => Promise.reject(new Error('the branding module is not reached here')),
+  });
+const handleIdentity = createIdentityWeb(unreached, unreachedSettings);
 let server: Server;
 let calls: { path: string; host?: string; proof?: string }[];
 let answer: (path: string) => { status: number; data: unknown };

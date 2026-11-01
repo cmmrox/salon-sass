@@ -12,3 +12,4 @@ export {
   supportsLocks,
   withIdentityLock,
 } from './client/session';
+export type { Kind } from './types';

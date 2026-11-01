@@ -1,3 +1,5 @@
+import { parsePhoneNumberFromString } from 'libphonenumber-js/min';
+
 /** Launch-market formatting, centralized so screens share configuration. */
 export function formatInstant(value: string, timeZone: string, locale = 'en-LK'): string {
   return new Intl.DateTimeFormat(locale, { timeZone, dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
@@ -11,6 +13,16 @@ export function formatTime(value: string, timeZone: string, locale = 'en-LK'): s
   return new Intl.DateTimeFormat(locale, { timeZone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(
     new Date(value),
   );
+}
+/**
+ * A phone number the API stored in E.164, in its own country's national format (decision 084):
+ * `+94771234567` is `077 123 4567`, `+94112504417` is `0112 504 417`. The country comes from the
+ * number itself, so no region is configured here. Anything that is not a valid E.164 number is
+ * returned unchanged.
+ */
+export function formatPhoneNational(e164: string): string {
+  const number = parsePhoneNumberFromString(e164);
+  return number && number.isValid() ? number.formatNational() : e164;
 }
 export function formatPhone(value: string): string {
   return value.replace(/^\+94(7\d)(\d{3})(\d{4})$/, '+94 $1 $2 $3');

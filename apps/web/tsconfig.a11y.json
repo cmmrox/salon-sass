@@ -1,0 +1,13 @@
+{
+  "//": "The accessibility check's files (F04-S01) run in Vitest's browser mode, whose matcher types replace jest-dom's for the whole program; they are type-checked here, apart from the rest.",
+  "extends": "./tsconfig.json",
+  "include": [
+    "next-env.d.ts",
+    "src/**/*.a11y.test.tsx",
+    "test/a11y.ts",
+    "test/a11y-setup.ts",
+    "test/a11y-matchers.d.ts",
+    "src/i18n/types.d.ts"
+  ],
+  "exclude": ["node_modules"]
+}

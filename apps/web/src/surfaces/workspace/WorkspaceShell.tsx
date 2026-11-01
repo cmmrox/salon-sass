@@ -10,7 +10,7 @@ import { Navigation, NavigationProvider, NavigationTrigger, type NavigationItem 
  * Sidebar (a 200px rail from 900px and 236px from 1200px; below 900px its sheet, opened from the
  * header's menu button) and the main area (CR-017).
  */
-export type WorkspaceView = 'account' | 'staff' | 'audit' | 'billing' | 'support-access';
+export type WorkspaceView = 'account' | 'staff' | 'audit' | 'billing' | 'support-access' | 'settings';
 
 /**
  * In the support view (F03-S04) the support banner opens the main area and sticks just under the
@@ -75,6 +75,15 @@ export function WorkspaceShell({
       icon: 'support',
       testId: 'workspace-support-access',
       current: view === 'support-access',
+    });
+  // Last, as in the prototype's navigation (F04-S01).
+  if (permissions.includes('settings.read'))
+    items.push({
+      href: '/workspace/settings',
+      label: t('settings'),
+      icon: 'settings',
+      testId: 'workspace-settings',
+      current: view === 'settings',
     });
   const header = (
     <header
