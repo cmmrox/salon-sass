@@ -35,8 +35,9 @@ export function PopularCard({ mode, chosen, now, canChange, busy, onMode }: Prop
         <ToggleGroup
           type="single"
           value={mode}
-          onValueChange={(value) => value && value !== mode && onMode(value as PopularMode)}
-          disabled={!canChange || busy}
+          // Ignored while a save runs rather than disabled, so that keyboard focus stays on the choice.
+          onValueChange={(value) => value && value !== mode && !busy && onMode(value as PopularMode)}
+          disabled={!canChange}
           aria-label={t('modesLabel')}
           className="flex-nowrap gap-0 rounded-action bg-secondary p-0.5"
           data-testid="popular-mode"

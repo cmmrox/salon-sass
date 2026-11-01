@@ -74,7 +74,7 @@ export function VariantsSection({ values, problems, currency, problemsId, onValu
   const preview = problems.some((problem) => problemParts(problem).key.startsWith('variant') || problem === 'setName');
 
   return (
-    <Card className="gap-4 p-4" data-testid="service-variants">
+    <Card className="gap-4 border-0 bg-secondary p-4" data-surface="canvas" data-testid="service-variants">
       <Field orientation="horizontal" className="min-h-touch">
         <Switch
           id="service-variants"
@@ -105,7 +105,7 @@ export function VariantsSection({ values, problems, currency, problemsId, onValu
           </Field>
           <div className="flex flex-col gap-2" role="group" aria-label={t('listLabel')}>
             <div
-              className="grid grid-cols-[minmax(0,1fr)_5.5rem_4.5rem_2.75rem] gap-1.5 text-small text-foreground"
+              className="grid grid-cols-[minmax(0,1fr)_5.25rem_3.75rem_2.75rem] gap-1.5 text-small text-foreground"
               aria-hidden="true"
             >
               <span>{t('name')}</span>
@@ -115,7 +115,7 @@ export function VariantsSection({ values, problems, currency, problemsId, onValu
             {values.variants.map((variant, index) => (
               <div
                 key={variant.key}
-                className="grid grid-cols-[minmax(0,1fr)_5.5rem_4.5rem_2.75rem] items-center gap-1.5"
+                className="grid grid-cols-[minmax(0,1fr)_5.25rem_3.75rem_2.75rem] items-center gap-1.5"
                 data-testid="service-variant-row"
                 data-index={index}
               >

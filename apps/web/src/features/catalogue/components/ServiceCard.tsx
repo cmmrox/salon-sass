@@ -109,7 +109,7 @@ export function ServiceCard({ service, categoryName, canChange, busy, onEdit, on
                 {t('fromBadge')}
               </Badge>
             )}
-            <Badge variant="outline" data-testid="service-card-options-badge">
+            <Badge variant="secondary" data-testid="service-card-options-badge">
               {t('optionsBadge', { count: terms.variants.length })}
             </Badge>
           </div>
