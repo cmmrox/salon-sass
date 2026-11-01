@@ -1104,12 +1104,19 @@
     "newProduct": "+ New product",
     "banner": "List your services with their price and time. Changes apply to new bookings only.",
     "categoriesBanner": "Customers see categories in this order. A category with nothing bookable online is hidden from them.",
-    "productsBanner": "Products you sell at the front desk, added to a sale at checkout. Stock isn’t tracked. {vatOn, select, true {Prices include {vat} where it applies.} other {VAT is off for your salon.}}",
+    "productsBanner": "Products you sell at the front desk, added to a sale at checkout. Stock isn’t tracked.",
     "taxBanner": {
       "both": "Prices you enter include {serviceCharge} ({serviceChargePercent}%) and {vat} ({vatPercent}%). Customers see the same price.",
       "serviceCharge": "Prices you enter include {serviceCharge} ({serviceChargePercent}%). Customers see the same price.",
       "vat": "Prices you enter include {vat} ({vatPercent}%). Customers see the same price.",
-      "off": "Tax and service charge are off. Turn them on in Settings if your salon is registered."
+      "off": "Tax and service charge are off. Turn them on in Settings if your salon is registered.",
+      "products": {
+        "both": "Prices include {serviceCharge} ({serviceChargePercent}%) and {vat} ({vatPercent}%) where it applies.",
+        "vat": "Prices include {vat} ({vatPercent}%) where it applies.",
+        "serviceCharge": "Prices include {serviceCharge} ({serviceChargePercent}%).",
+        "none": "No tax or service charge applies to products.",
+        "off": "Tax and service charge are off. Turn them on in Settings if your salon is registered."
+      }
     },
     "noServices": "No services yet.",
     "popular": {

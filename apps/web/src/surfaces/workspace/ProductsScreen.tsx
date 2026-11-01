@@ -65,13 +65,8 @@ export function ProductsScreen({ kind, canChange, readOnly }: Props) {
       >
         {!products.sheetOpen && notices}
         <Alert variant="info" className="text-small" data-testid="products-banner">
-          {t('productsBanner', { vatOn: String(vat !== null), vat: vat?.name ?? '' })}
+          {t('productsBanner')} <TaxSentence tax={products.tax} of="products" />
         </Alert>
-        {products.tax !== undefined && (
-          <Alert variant="info" className="text-small">
-            <TaxSentence tax={products.tax} />
-          </Alert>
-        )}
         {loading ? (
           <div
             className="flex flex-col gap-3"

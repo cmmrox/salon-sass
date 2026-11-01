@@ -66,10 +66,7 @@ describe('the Products tab (F05-S03 AC-7)', () => {
     expect(screen.getByTestId('services-summary')).toHaveTextContent('3 products · 2 sold at checkout');
     expect(screen.getByTestId('services-tab-products')).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByTestId('products-banner')).toHaveTextContent(
-      'Products you sell at the front desk, added to a sale at checkout. Stock isn’t tracked. Prices include VAT where it applies.',
-    );
-    expect(screen.getByTestId('tax-banner')).toHaveTextContent(
-      'Prices you enter include service charge (10%) and VAT (18%). Customers see the same price.',
+      'Products you sell at the front desk, added to a sale at checkout. Stock isn’t tracked. Prices include VAT (18%) where it applies.',
     );
     expect(screen.getAllByRole('columnheader').map((head) => head.textContent)).toEqual([
       'Product',
@@ -86,14 +83,13 @@ describe('the Products tab (F05-S03 AC-7)', () => {
     expect(within(row('Sunscreen SPF 50, 50 ml')).getByTestId('product-sold')).toHaveTextContent('Not sold');
   });
 
-  it('shows cards below 900px, and “—” for tax and the VAT-off sentence while VAT is off', async () => {
+  it('shows cards below 900px, and “—” for tax and the off sentence while VAT is off', async () => {
     narrow = true;
     answers['catalogue-tax-public'] = () => Response.json({ current: null });
     render();
     expect(await screen.findByTestId('product-cards')).toBeInTheDocument();
     expect(screen.queryByTestId('product-table')).toBeNull();
     expect(within(row('Argan oil shampoo 250 ml')).getByTestId('product-tax')).toHaveTextContent('—');
-    expect(screen.getByTestId('products-banner')).toHaveTextContent('VAT is off for your salon.');
     expect(screen.getByTestId('tax-banner')).toHaveTextContent(
       'Tax and service charge are off. Turn them on in Settings if your salon is registered.',
     );
@@ -130,6 +126,56 @@ describe('the Products tab (F05-S03 AC-7)', () => {
     expect(await screen.findByTestId('tax-banner')).toHaveTextContent(
       'Prices you enter include VAT (18%). Customers see the same price.',
     );
+  });
+});
+
+describe('the Products tab’s one banner (F05-S03 AC-14, CR-025)', () => {
+  const FIRST = 'Products you sell at the front desk, added to a sale at checkout. Stock isn’t tracked.';
+  const VAT = { name: 'VAT', ratePercent: 18 };
+  const onProducts = { name: 'Service charge', percent: 10, onProducts: true };
+  const notOnProducts = { ...onProducts, onProducts: false };
+
+  it.each([
+    [
+      'VAT and a service charge on products',
+      { ...TAX_PUBLIC, vat: VAT, serviceCharge: onProducts },
+      'Prices include service charge (10%) and VAT (18%) where it applies.',
+    ],
+    ['VAT only', { ...TAX_PUBLIC, vat: VAT, serviceCharge: null }, 'Prices include VAT (18%) where it applies.'],
+    [
+      'VAT, and a service charge not on products',
+      { ...TAX_PUBLIC, vat: VAT, serviceCharge: notOnProducts },
+      'Prices include VAT (18%) where it applies.',
+    ],
+    [
+      'a service charge on products only',
+      { ...TAX_PUBLIC, vat: null, serviceCharge: onProducts },
+      'Prices include service charge (10%).',
+    ],
+    [
+      'a service charge not on products, VAT off',
+      { ...TAX_PUBLIC, vat: null, serviceCharge: notOnProducts },
+      'No tax or service charge applies to products.',
+    ],
+    ['both off', null, 'Tax and service charge are off. Turn them on in Settings if your salon is registered.'],
+  ])('names only what applies to products: %s', async (_name, current, sentence) => {
+    answers['catalogue-tax-public'] = () => Response.json({ current });
+    render();
+    await screen.findByTestId('tax-banner');
+
+    expect(screen.getByTestId('products-banner').textContent?.replace(/\s+/g, ' ').trim()).toBe(
+      `${FIRST} ${sentence}`,
+    );
+    expect(screen.getByTestId('products-banner')).toHaveAttribute('data-variant', 'info');
+    expect(document.querySelectorAll('[data-slot="alert"][data-variant="info"]')).toHaveLength(1);
+  });
+
+  it('says only its own sentence while the salon’s tax cannot be read', async () => {
+    answers['catalogue-tax-public'] = () => Response.json({ code: 'service_unavailable' }, { status: 503 });
+    render();
+    await screen.findByTestId('product-table');
+    expect(screen.getByTestId('products-banner').textContent?.trim()).toBe(FIRST);
+    expect(screen.queryByTestId('tax-banner')).toBeNull();
   });
 });
 

@@ -112,7 +112,7 @@ function ServicesAndCategories({ kind, tab, canChange, readOnly }: Props) {
         <Alert variant="info" className="text-small" data-testid="services-banner">
           {tab === 'services' ? (
             <>
-              {t('banner')} <TaxSentence tax={catalogue.tax} />
+              {t('banner')} <TaxSentence tax={catalogue.tax} of="services" />
             </>
           ) : (
             t('categoriesBanner')
