@@ -527,7 +527,8 @@
       "publishConfirm": "Publish to salons",
       "cancel": "Cancel",
       "withdrawnDay": "{date} · {name}",
-      "calendarLabel": "Choose a date"
+      "calendarLabel": "Choose a date",
+      "kindAfterName": " · {kind}"
     }
   },
   "billing": {

@@ -46,8 +46,7 @@ export function HolidayDays({ days, actions }: { days: DraftDay[]; actions: ((da
                 <span className="break-words" data-testid="console-holiday-day-name">
                   {day.name}
                 </span>
-                {' · '}
-                {t(`kinds.${day.kind}`)}
+                {t('kindAfterName', { kind: t(`kinds.${day.kind}`) })}
               </ItemDescription>
             </ItemContent>
             {actions && <ItemActions className="flex-wrap">{actions(day)}</ItemActions>}
