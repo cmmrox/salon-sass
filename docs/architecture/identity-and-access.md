@@ -116,13 +116,17 @@ salon-wide calendar/customer/figures access (IAM-08), not arbitrary role customi
 | Change salon settings and publish them (`settings.manage`, F04) | yes | yes | no | no | no |
 | Read the service catalogue in the workspace (`catalogue.read`, F05) | yes | yes | yes | yes | yes |
 | Change the service catalogue: categories, services, prices, photos (`catalogue.price.change`, F05) | yes | yes | no | no | no |
+| Read the team and its hours (`team.read`, F06) | yes | yes | yes | yes | no |
+| Change the team, hours and leave, and read leave notes (`team.manage`, F06) | yes | yes | no | no | no |
+| Add and remove blocked time (`team.block`, F06-S03) | yes | yes | yes | no | no |
 
 The API permission keys for these rows are `session.manage`, `password.change`, `mfa.enroll`,
 `staff.list`, `staff.manage`, `audit.list`, `payment.refund`, `catalogue.price.change`,
 `policy.change`, `customer.export`, `calendar.read`, `customer.read`, `financial.read`,
-`settings.read`, `settings.manage` (decision 085) and `catalogue.read` (decision 093). A support
-session may read settings and the catalogue (`settings.read` and `catalogue.read` join its read set)
-and never change them. `catalogue.price.change` guards every change to the catalogue, not only
+`settings.read`, `settings.manage` (decision 085), `catalogue.read` (decision 093), and `team.read`,
+`team.manage` and `team.block` (decisions 099, 100). A support session may read settings, the catalogue
+and the team (`settings.read`, `catalogue.read` and `team.read` join its read set) and never change
+them. `catalogue.price.change` guards every change to the catalogue, not only
 prices (decision 093).
 All staff receive the first three own-account permissions; the table determines the rest.
 The customer principal has kind `customer`, null role/staff id, own scope, MFA false and

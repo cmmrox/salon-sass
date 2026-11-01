@@ -36,7 +36,7 @@ STF-04 (the salon's own hours and closures) is F04's. STF-06 ("my day") is not i
   replace it, decision 081), consultations (F17), the owner badge, ratings (STF-07), "Works at"
   branches (F18), and closing the salon from this page (F04's Settings owns closures).
 - **Module:** `staff` owns team members and their schedules (`docs/engineering/backend.md`). It
-  reads services and categories through `catalogue`'s provided interfaces, so `catalogue` joins its
+  reads services and categories through `catalogue`'s provided interface, so `catalogue` joins its
   allowed dependencies, and branches through `branding` as it does today.
 - **A team member is not a staff account.** A member belongs to `staff`, an account to `identity`.
   A member may link to at most one account of the same salon, and an account to at most one member.
@@ -83,22 +83,18 @@ why the feature is divided the way it is.
   when QA's deferred cases run).
 - **Boundaries:** a break outside the hours, overlapping breaks, a finish before a start, leave ending
   before it starts, overlapping leave or blocks, two changes on one date, simultaneous saves.
-- **Seats:** the plan limit holds, as decided below, including when an account is linked.
+- **Seats:** the plan limit holds for one person, linked or not, under simultaneous requests from
+  both the Team page and the staff accounts screen, and in a plan move.
 
 ## Decisions and open questions
 
-Waiting for the owner, with the lead's recommendation:
-
-1. **Do bookable people count as staff seats?** Seats count active sign-in accounts today (PLT plan
-   limits, `docs/architecture/operator-console.md`). A person without a sign-in would then be free, so
-   a salon on the smallest plan could list any number of them. Recommended: a seat is a sign-in
-   account or a team member, and a linked pair counts once.
-2. **Services a person performs: by category or by single service?** The prototype has category chips;
-   STF-01 says services. Recommended: as drawn, tick a category (which also covers services added to
-   it later) or narrow it to single services.
-3. **Who changes what?** Recommended: Owner and Manager change the team, hours, leave and blocked
-   time; Receptionist also adds and removes blocked time, as front desks do; Receptionist and
-   Professional read the team and hours; Accountant has none of it. Leave notes are for the Owner
-   and Manager only. Professionals asking for leave in the app is not in R1.
-4. **Blocked time over an existing booking:** recommended as leave, kept and flagged, rather than
-   refused, since the training or errand is happening regardless.
+- **Confirmed by the owner on 2026-11-02 (decision 099):** the drawn design, the outline, and:
+  - A staff seat is one person: seats used are active accounts plus members with no linked account.
+  - A person's services are chosen by whole category, which also covers services added to it later,
+    or by single services.
+  - Owner and Manager change the team, hours, leave and blocked time, and alone read leave notes. A
+    Receptionist also adds and removes blocked time. Receptionist and Professional read the team and
+    hours. An Accountant has none of it. Professionals cannot request leave in R1.
+  - Blocked time over an existing booking is allowed; the booking is kept and flagged, as for leave.
+- **Planning S01 (decision 100):** paths, permissions, the member-and-account link, how seats hold
+  across `identity` and `staff`, and what `catalogue` provides.

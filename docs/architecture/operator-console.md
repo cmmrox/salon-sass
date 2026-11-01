@@ -247,8 +247,10 @@ and customer privacy rights, and every read. Every other tenant mutation answers
 by billing and lifecycle transitions and read on every request; nothing caches it.
 
 **Entitlements.** Platform implements `shared.entitlements.SalonEntitlements` (decision 057), which other modules call inside
-their own transactions: the plan's limits and features, and the salon's current usage. Staff seats
-count active staff accounts, enforced by identity on staff creation (409 `entitlement_exceeded`
+their own transactions: the plan's limits and features, and the salon's current usage. A staff seat
+is one person: seats used are active staff accounts plus team members with no linked account, so a
+linked pair counts once (decisions 099, 100). Identity enforces it on staff creation and `staff` on
+adding or unlinking a team member, both under the salon's identity lock (409 `entitlement_exceeded`
 naming the limit); branches, message allowance, custom domain and dedicated app are enforced by
 the features that create those things (F04, F11, F16) through the same interface. Add-on modules
 an operator activates for one salon (F18, decision 077) extend the plan's features through the same
@@ -269,8 +271,8 @@ a salon without an Owner contact has its reminders recorded with recipient `none
 the salon's outbox in the same transaction as the invoice, so while a salon is suspended they wait
 with its other messages; invoices are still issued and bank transfers still recorded. Boundaries
 are exact 24-hour-day offsets from the due instant; a late job pass issues every missed period
-and sends each passed reminder once. Staff seats count active staff including the Owner, and a
-plan move checks staff seats only, since no other usage exists yet. Provider events carry
+and sends each passed reminder once. Staff seats count as "Entitlements" above says, including the
+Owner, and a plan move checks staff seats only, since no other usage exists yet. Provider events carry
 `X-Salon-Billing-Signature`, a lowercase hex HMAC-SHA256 of the body; a bad or missing signature is
 401 `invalid_credentials`, and a late success after a manual payment is recorded `already_paid`.
 
