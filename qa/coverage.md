@@ -36,7 +36,7 @@ asked for. A case is a test titled with its id and criteria, or a manual or defe
 | F04-S04 | complete | - | BKG-02, BKG-09 | 10 | 26 | 26 | 0 | 0 |
 | F05-S01 | complete | - | CAT-01, CAT-02, CAT-04 | 16 | 42 | 41 | 0 | 1 |
 | F05-S02 | complete | - | CAT-03, CAT-06 | 11 | 21 | 20 | 0 | 1 |
-| F05-S03 | in-progress | - | CAT-05, INV-01 | 13 | 24 | 24 | 0 | 0 |
+| F05-S03 | built | - | CAT-05, INV-01 | 13 | 24 | 24 | 0 | 0 |
 
 ## Deferred cases
 
@@ -86,7 +86,7 @@ Cases waiting for something else. `feature-verify` and `release-prepare` go thro
 | CAT-02 | R1 | must | F05 | F05-S01 (complete) |
 | CAT-03 | R1 | should | F05 | F05-S02 (complete) |
 | CAT-04 | R1 | must | F05 | F05-S01 (complete) |
-| CAT-05 | R1 | must | F05 | F05-S03 (in-progress) |
+| CAT-05 | R1 | must | F05 | F05-S03 (built) |
 | CAT-06 | R1 | should | F05 | F05-S02 (complete) |
 | CAT-07 | R2 | should | F17 | F17-S01 (outlined), F17-S03 (outlined) |
 | CAT-08 | R2 | should | F17 | F17-S01 (outlined) |
@@ -218,7 +218,7 @@ Cases waiting for something else. `feature-verify` and `release-prepare` go thro
 | BRD-11 | R2 | should | unowned | - |
 | BRD-12 | R2 | should | unowned | - |
 | BRD-13 | R2 | should | unowned | - |
-| INV-01 | R1 | could | F05 | F05-S03 (in-progress) |
+| INV-01 | R1 | could | F05 | F05-S03 (built) |
 | INV-02 | R3 | could | unowned | - |
 | INV-03 | R3 | could | unowned | - |
 | OCC-01 | R2 | must | F19 | F19-S01 (outlined) |
