@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 import com.salonplatform.catalogue.PriceParts;
+import java.io.IOException;
+import java.io.InputStream;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
@@ -11,12 +13,15 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * The inclusive arithmetic of F05-S03 AC-4 (decision 095), against an oracle written separately with
  * {@link BigDecimal}: over every price from Rs. 1 to Rs. 10,000 in Rs. 1 steps, for every service charge rate from 1
  * to 20% and with none, with VAT at 18% and without, the parts are the rule's and add up to the price exactly. And
- * the prototype's figures.
+ * the prototype's figures. The cases in {@code catalogue/tax-parts-cases.json} hold the web's live preview to the same
+ * rule (its {@code tax-parts.test.ts} reads them too).
  */
 class TaxPartsTest {
 
@@ -61,6 +66,27 @@ class TaxPartsTest {
         assertThat(TaxParts.of(320_000, VAT, 0)).isEqualTo(new PriceParts(320_000, 271_186, 0, 48_814));
         // Nothing applies: all of it is net.
         assertThat(TaxParts.of(250_000, 0, 0)).isEqualTo(new PriceParts(250_000, 250_000, 0, 0));
+    }
+
+    @Test
+    void theCasesTheWebsPreviewIsHeldToAreTheRules() throws IOException {
+        JsonNode cases;
+        try (InputStream in = getClass().getResourceAsStream("/catalogue/tax-parts-cases.json")) {
+            cases = JsonMapper.builder().build().readTree(in).get("cases");
+        }
+        assertThat(cases.size()).isGreaterThan(100);
+        for (JsonNode each : cases) {
+            assertThat(TaxParts.of(
+                            each.get("priceMinor").asLong(),
+                            each.get("vatPercent").asInt(),
+                            each.get("serviceChargePercent").asInt()))
+                    .as(each.toString())
+                    .isEqualTo(new PriceParts(
+                            each.get("priceMinor").asLong(),
+                            each.get("netMinor").asLong(),
+                            each.get("serviceChargeMinor").asLong(),
+                            each.get("vatMinor").asLong()));
+        }
     }
 
     @ParameterizedTest(name = "{0} / {1} rounds to {2}")

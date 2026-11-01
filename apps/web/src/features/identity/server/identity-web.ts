@@ -254,7 +254,7 @@ async function handleSupport(
     : RULES_READS.includes(action)
       ? await readRules(bookingRules, action, options, request.nextUrl.searchParams)
       : CATALOGUE_READS.includes(action)
-        ? await readCatalogue(catalogue, action, options)
+        ? await readCatalogue(catalogue, action, options, request.nextUrl.searchParams)
         : action === 'staff'
           ? await client.GET('/api/v1/identity/staff', { ...options, params: { query } })
           : action === 'audit'
@@ -454,7 +454,7 @@ async function handleIdentity(request: NextRequest, kind: Kind, action: string, 
         : RULES_READS.includes(action)
           ? await readRules(bookingRules, action, options, request.nextUrl.searchParams)
           : CATALOGUE_READS.includes(action)
-            ? await readCatalogue(catalogue, action, options)
+            ? await readCatalogue(catalogue, action, options, request.nextUrl.searchParams)
             : action === 'sessions'
               ? await client.GET('/api/v1/identity/sessions', { ...options, params: { query } })
               : action === 'staff'

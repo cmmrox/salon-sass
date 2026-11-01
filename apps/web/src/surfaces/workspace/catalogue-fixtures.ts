@@ -1,5 +1,12 @@
 import type { PublicBookingRules } from '@/features/booking';
-import type { CatalogueService, CategoryList, PopularSetting } from '@/features/catalogue';
+import type {
+  CatalogueService,
+  CategoryList,
+  PopularSetting,
+  Product,
+  PublicTax,
+  TaxSettings,
+} from '@/features/catalogue';
 
 /** Catalogue answers for the Services & pricing page's tests: three categories and three services. */
 export const COLOUR = '6b0a3c1e-9a4e-4b8e-9d1f-2a3b4c5d6e70';
@@ -123,3 +130,58 @@ export function withVariants(
     },
   };
 }
+
+/** Sri Lanka's configuration (F05-S03 AC-2). */
+const CONFIGURED: TaxSettings['configured'] = {
+  vatName: 'VAT',
+  vatRatePercent: 18,
+  registrationLabel: 'VAT registration number',
+  serviceChargeName: 'Service charge',
+  serviceChargeMaxPercent: 20,
+};
+
+/** The tax settings before the first save, and a saved version with VAT and a 10% service charge. */
+export const TAX_UNSAVED: TaxSettings = { version: 0, settings: null, configured: CONFIGURED };
+export const TAX_SAVED: TaxSettings = {
+  version: 1,
+  settings: {
+    vat: { registered: true, registrationNumber: 'LK-134-567' },
+    serviceCharge: { on: true, percent: 10, onProducts: false },
+  },
+  configured: CONFIGURED,
+};
+
+/** The salon's current tax as the public read gives it: VAT 18% and a 10% service charge, not on products. */
+export const TAX_PUBLIC: PublicTax = {
+  versionId: '33333333-0000-4000-8000-000000000001',
+  vat: { name: 'VAT', ratePercent: 18 },
+  serviceCharge: { name: 'Service charge', percent: 10, onProducts: false },
+};
+
+export function product(id: string, name: string, options: Partial<Product> = {}): Product {
+  return {
+    id,
+    name,
+    priceMinor: 320_000,
+    currency: 'LKR',
+    chargesVat: true,
+    soldAtCheckout: true,
+    version: 0,
+    ...options,
+  };
+}
+
+/** Three products, by name: one without VAT and one not sold. */
+export const PRODUCTS = {
+  items: [
+    product('44444444-0000-4000-8000-000000000001', 'Argan oil shampoo 250 ml'),
+    product('44444444-0000-4000-8000-000000000002', 'Keratin hair mask 200 ml', {
+      priceMinor: 450_000,
+      chargesVat: false,
+    }),
+    product('44444444-0000-4000-8000-000000000003', 'Sunscreen SPF 50, 50 ml', {
+      priceMinor: 280_000,
+      soldAtCheckout: false,
+    }),
+  ],
+};

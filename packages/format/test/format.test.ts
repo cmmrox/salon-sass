@@ -22,6 +22,13 @@ describe('money formatting', () => {
     expect(formatMoney(1999, 'USD', 'en-US')).toBe('$19.99');
     expect(formatMoney(2000, 'USD', 'en-US')).toBe('$20');
   });
+  it('writes the cents even when they are zero when asked to, as the parts of a price are shown', () => {
+    expect(formatMoney(38100, 'LKR', 'en-LK', { cents: 'always' })).toBe('Rs. 381.00');
+    expect(formatMoney(38136, 'LKR', 'en-LK', { cents: 'always' })).toBe('Rs. 381.36');
+    expect(formatMoney(19260000, 'LKR', 'en-LK', { cents: 'always' })).toBe('Rs. 192,600.00');
+    expect(formatMoney(2000, 'USD', 'en-US', { cents: 'always' })).toBe('$20.00');
+    expect(formatMoney(38100, 'LKR', 'en-LK', { cents: 'when-not-zero' })).toBe('Rs. 381');
+  });
   it('moves the decimal point of typed major units without floating point', () => {
     expect(parseMinorUnits('2500')).toBe(250000);
     expect(parseMinorUnits(' 2,500.5 ')).toBe(250050);

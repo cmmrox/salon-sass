@@ -16,8 +16,8 @@ type Props = {
   body: string;
   confirm: string;
   cancel: string;
-  /** The test ids' stem: `service-delete` or `category-delete`. */
-  area: 'service-delete' | 'category-delete';
+  /** The test ids' stem: `service-delete`, `category-delete` or `product-delete`. */
+  area: 'service-delete' | 'category-delete' | 'product-delete';
   onCancel: () => void;
   onConfirm: () => void;
 };

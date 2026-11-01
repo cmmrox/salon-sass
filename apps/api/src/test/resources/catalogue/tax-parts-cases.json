@@ -1,0 +1,1031 @@
+{
+  "rule": "F05-S03 AC-4, decision 095: beforeVat = round(P / (1 + v)), vat = P - beforeVat, net = round(beforeVat / (1 + s)), serviceCharge = beforeVat - net, half to even. The API's TaxParts and the web's live preview are both held to these cases.",
+  "cases": [
+    {
+      "note": "the prototype: Rs. 2,500 with a 10% service charge and 18% VAT",
+      "priceMinor": 250000,
+      "vatPercent": 18,
+      "serviceChargePercent": 10,
+      "netMinor": 192604,
+      "serviceChargeMinor": 19260,
+      "vatMinor": 38136
+    },
+    {
+      "note": "the prototype: Rs. 3,200 with VAT only",
+      "priceMinor": 320000,
+      "vatPercent": 18,
+      "serviceChargePercent": 0,
+      "netMinor": 271186,
+      "serviceChargeMinor": 0,
+      "vatMinor": 48814
+    },
+    {
+      "note": "a service charge only",
+      "priceMinor": 250000,
+      "vatPercent": 0,
+      "serviceChargePercent": 10,
+      "netMinor": 227273,
+      "serviceChargeMinor": 22727,
+      "vatMinor": 0
+    },
+    {
+      "note": "nothing applies",
+      "priceMinor": 250000,
+      "vatPercent": 0,
+      "serviceChargePercent": 0,
+      "netMinor": 250000,
+      "serviceChargeMinor": 0,
+      "vatMinor": 0
+    },
+    {
+      "note": "a tie, rounded half to even (down)",
+      "priceMinor": 3,
+      "vatPercent": 0,
+      "serviceChargePercent": 20,
+      "netMinor": 2,
+      "serviceChargeMinor": 1,
+      "vatMinor": 0
+    },
+    {
+      "note": "a tie, rounded half to even (up)",
+      "priceMinor": 9,
+      "vatPercent": 0,
+      "serviceChargePercent": 20,
+      "netMinor": 8,
+      "serviceChargeMinor": 1,
+      "vatMinor": 0
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 100,
+      "vatPercent": 18,
+      "serviceChargePercent": 0,
+      "netMinor": 85,
+      "serviceChargeMinor": 0,
+      "vatMinor": 15
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 100,
+      "vatPercent": 18,
+      "serviceChargePercent": 1,
+      "netMinor": 84,
+      "serviceChargeMinor": 1,
+      "vatMinor": 15
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 100,
+      "vatPercent": 18,
+      "serviceChargePercent": 10,
+      "netMinor": 77,
+      "serviceChargeMinor": 8,
+      "vatMinor": 15
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 100,
+      "vatPercent": 18,
+      "serviceChargePercent": 20,
+      "netMinor": 71,
+      "serviceChargeMinor": 14,
+      "vatMinor": 15
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 100,
+      "vatPercent": 0,
+      "serviceChargePercent": 15,
+      "netMinor": 87,
+      "serviceChargeMinor": 13,
+      "vatMinor": 0
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 100,
+      "vatPercent": 15,
+      "serviceChargePercent": 12,
+      "netMinor": 78,
+      "serviceChargeMinor": 9,
+      "vatMinor": 13
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 100,
+      "vatPercent": 7,
+      "serviceChargePercent": 5,
+      "netMinor": 89,
+      "serviceChargeMinor": 4,
+      "vatMinor": 7
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 200,
+      "vatPercent": 18,
+      "serviceChargePercent": 0,
+      "netMinor": 169,
+      "serviceChargeMinor": 0,
+      "vatMinor": 31
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 200,
+      "vatPercent": 18,
+      "serviceChargePercent": 1,
+      "netMinor": 167,
+      "serviceChargeMinor": 2,
+      "vatMinor": 31
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 200,
+      "vatPercent": 18,
+      "serviceChargePercent": 10,
+      "netMinor": 154,
+      "serviceChargeMinor": 15,
+      "vatMinor": 31
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 200,
+      "vatPercent": 18,
+      "serviceChargePercent": 20,
+      "netMinor": 141,
+      "serviceChargeMinor": 28,
+      "vatMinor": 31
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 200,
+      "vatPercent": 0,
+      "serviceChargePercent": 15,
+      "netMinor": 174,
+      "serviceChargeMinor": 26,
+      "vatMinor": 0
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 200,
+      "vatPercent": 15,
+      "serviceChargePercent": 12,
+      "netMinor": 155,
+      "serviceChargeMinor": 19,
+      "vatMinor": 26
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 200,
+      "vatPercent": 7,
+      "serviceChargePercent": 5,
+      "netMinor": 178,
+      "serviceChargeMinor": 9,
+      "vatMinor": 13
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 1000,
+      "vatPercent": 18,
+      "serviceChargePercent": 0,
+      "netMinor": 847,
+      "serviceChargeMinor": 0,
+      "vatMinor": 153
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 1000,
+      "vatPercent": 18,
+      "serviceChargePercent": 1,
+      "netMinor": 839,
+      "serviceChargeMinor": 8,
+      "vatMinor": 153
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 1000,
+      "vatPercent": 18,
+      "serviceChargePercent": 10,
+      "netMinor": 770,
+      "serviceChargeMinor": 77,
+      "vatMinor": 153
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 1000,
+      "vatPercent": 18,
+      "serviceChargePercent": 20,
+      "netMinor": 706,
+      "serviceChargeMinor": 141,
+      "vatMinor": 153
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 1000,
+      "vatPercent": 0,
+      "serviceChargePercent": 15,
+      "netMinor": 870,
+      "serviceChargeMinor": 130,
+      "vatMinor": 0
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 1000,
+      "vatPercent": 15,
+      "serviceChargePercent": 12,
+      "netMinor": 777,
+      "serviceChargeMinor": 93,
+      "vatMinor": 130
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 1000,
+      "vatPercent": 7,
+      "serviceChargePercent": 5,
+      "netMinor": 890,
+      "serviceChargeMinor": 45,
+      "vatMinor": 65
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 4500,
+      "vatPercent": 18,
+      "serviceChargePercent": 0,
+      "netMinor": 3814,
+      "serviceChargeMinor": 0,
+      "vatMinor": 686
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 4500,
+      "vatPercent": 18,
+      "serviceChargePercent": 1,
+      "netMinor": 3776,
+      "serviceChargeMinor": 38,
+      "vatMinor": 686
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 4500,
+      "vatPercent": 18,
+      "serviceChargePercent": 10,
+      "netMinor": 3467,
+      "serviceChargeMinor": 347,
+      "vatMinor": 686
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 4500,
+      "vatPercent": 18,
+      "serviceChargePercent": 20,
+      "netMinor": 3178,
+      "serviceChargeMinor": 636,
+      "vatMinor": 686
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 4500,
+      "vatPercent": 0,
+      "serviceChargePercent": 15,
+      "netMinor": 3913,
+      "serviceChargeMinor": 587,
+      "vatMinor": 0
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 4500,
+      "vatPercent": 15,
+      "serviceChargePercent": 12,
+      "netMinor": 3494,
+      "serviceChargeMinor": 419,
+      "vatMinor": 587
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 4500,
+      "vatPercent": 7,
+      "serviceChargePercent": 5,
+      "netMinor": 4006,
+      "serviceChargeMinor": 200,
+      "vatMinor": 294
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 9900,
+      "vatPercent": 18,
+      "serviceChargePercent": 0,
+      "netMinor": 8390,
+      "serviceChargeMinor": 0,
+      "vatMinor": 1510
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 9900,
+      "vatPercent": 18,
+      "serviceChargePercent": 1,
+      "netMinor": 8307,
+      "serviceChargeMinor": 83,
+      "vatMinor": 1510
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 9900,
+      "vatPercent": 18,
+      "serviceChargePercent": 10,
+      "netMinor": 7627,
+      "serviceChargeMinor": 763,
+      "vatMinor": 1510
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 9900,
+      "vatPercent": 18,
+      "serviceChargePercent": 20,
+      "netMinor": 6992,
+      "serviceChargeMinor": 1398,
+      "vatMinor": 1510
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 9900,
+      "vatPercent": 0,
+      "serviceChargePercent": 15,
+      "netMinor": 8609,
+      "serviceChargeMinor": 1291,
+      "vatMinor": 0
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 9900,
+      "vatPercent": 15,
+      "serviceChargePercent": 12,
+      "netMinor": 7687,
+      "serviceChargeMinor": 922,
+      "vatMinor": 1291
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 9900,
+      "vatPercent": 7,
+      "serviceChargePercent": 5,
+      "netMinor": 8811,
+      "serviceChargeMinor": 441,
+      "vatMinor": 648
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 10000,
+      "vatPercent": 18,
+      "serviceChargePercent": 0,
+      "netMinor": 8475,
+      "serviceChargeMinor": 0,
+      "vatMinor": 1525
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 10000,
+      "vatPercent": 18,
+      "serviceChargePercent": 1,
+      "netMinor": 8391,
+      "serviceChargeMinor": 84,
+      "vatMinor": 1525
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 10000,
+      "vatPercent": 18,
+      "serviceChargePercent": 10,
+      "netMinor": 7705,
+      "serviceChargeMinor": 770,
+      "vatMinor": 1525
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 10000,
+      "vatPercent": 18,
+      "serviceChargePercent": 20,
+      "netMinor": 7062,
+      "serviceChargeMinor": 1413,
+      "vatMinor": 1525
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 10000,
+      "vatPercent": 0,
+      "serviceChargePercent": 15,
+      "netMinor": 8696,
+      "serviceChargeMinor": 1304,
+      "vatMinor": 0
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 10000,
+      "vatPercent": 15,
+      "serviceChargePercent": 12,
+      "netMinor": 7764,
+      "serviceChargeMinor": 932,
+      "vatMinor": 1304
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 10000,
+      "vatPercent": 7,
+      "serviceChargePercent": 5,
+      "netMinor": 8901,
+      "serviceChargeMinor": 445,
+      "vatMinor": 654
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 12345,
+      "vatPercent": 18,
+      "serviceChargePercent": 0,
+      "netMinor": 10462,
+      "serviceChargeMinor": 0,
+      "vatMinor": 1883
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 12345,
+      "vatPercent": 18,
+      "serviceChargePercent": 1,
+      "netMinor": 10358,
+      "serviceChargeMinor": 104,
+      "vatMinor": 1883
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 12345,
+      "vatPercent": 18,
+      "serviceChargePercent": 10,
+      "netMinor": 9511,
+      "serviceChargeMinor": 951,
+      "vatMinor": 1883
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 12345,
+      "vatPercent": 18,
+      "serviceChargePercent": 20,
+      "netMinor": 8718,
+      "serviceChargeMinor": 1744,
+      "vatMinor": 1883
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 12345,
+      "vatPercent": 0,
+      "serviceChargePercent": 15,
+      "netMinor": 10735,
+      "serviceChargeMinor": 1610,
+      "vatMinor": 0
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 12345,
+      "vatPercent": 15,
+      "serviceChargePercent": 12,
+      "netMinor": 9585,
+      "serviceChargeMinor": 1150,
+      "vatMinor": 1610
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 12345,
+      "vatPercent": 7,
+      "serviceChargePercent": 5,
+      "netMinor": 10988,
+      "serviceChargeMinor": 549,
+      "vatMinor": 808
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 99999,
+      "vatPercent": 18,
+      "serviceChargePercent": 0,
+      "netMinor": 84745,
+      "serviceChargeMinor": 0,
+      "vatMinor": 15254
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 99999,
+      "vatPercent": 18,
+      "serviceChargePercent": 1,
+      "netMinor": 83906,
+      "serviceChargeMinor": 839,
+      "vatMinor": 15254
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 99999,
+      "vatPercent": 18,
+      "serviceChargePercent": 10,
+      "netMinor": 77041,
+      "serviceChargeMinor": 7704,
+      "vatMinor": 15254
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 99999,
+      "vatPercent": 18,
+      "serviceChargePercent": 20,
+      "netMinor": 70621,
+      "serviceChargeMinor": 14124,
+      "vatMinor": 15254
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 99999,
+      "vatPercent": 0,
+      "serviceChargePercent": 15,
+      "netMinor": 86956,
+      "serviceChargeMinor": 13043,
+      "vatMinor": 0
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 99999,
+      "vatPercent": 15,
+      "serviceChargePercent": 12,
+      "netMinor": 77639,
+      "serviceChargeMinor": 9317,
+      "vatMinor": 13043
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 99999,
+      "vatPercent": 7,
+      "serviceChargePercent": 5,
+      "netMinor": 89007,
+      "serviceChargeMinor": 4450,
+      "vatMinor": 6542
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 500000,
+      "vatPercent": 18,
+      "serviceChargePercent": 0,
+      "netMinor": 423729,
+      "serviceChargeMinor": 0,
+      "vatMinor": 76271
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 500000,
+      "vatPercent": 18,
+      "serviceChargePercent": 1,
+      "netMinor": 419534,
+      "serviceChargeMinor": 4195,
+      "vatMinor": 76271
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 500000,
+      "vatPercent": 18,
+      "serviceChargePercent": 10,
+      "netMinor": 385208,
+      "serviceChargeMinor": 38521,
+      "vatMinor": 76271
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 500000,
+      "vatPercent": 18,
+      "serviceChargePercent": 20,
+      "netMinor": 353108,
+      "serviceChargeMinor": 70621,
+      "vatMinor": 76271
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 500000,
+      "vatPercent": 0,
+      "serviceChargePercent": 15,
+      "netMinor": 434783,
+      "serviceChargeMinor": 65217,
+      "vatMinor": 0
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 500000,
+      "vatPercent": 15,
+      "serviceChargePercent": 12,
+      "netMinor": 388199,
+      "serviceChargeMinor": 46584,
+      "vatMinor": 65217
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 500000,
+      "vatPercent": 7,
+      "serviceChargePercent": 5,
+      "netMinor": 445038,
+      "serviceChargeMinor": 22252,
+      "vatMinor": 32710
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 2500050,
+      "vatPercent": 18,
+      "serviceChargePercent": 0,
+      "netMinor": 2118686,
+      "serviceChargeMinor": 0,
+      "vatMinor": 381364
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 2500050,
+      "vatPercent": 18,
+      "serviceChargePercent": 1,
+      "netMinor": 2097709,
+      "serviceChargeMinor": 20977,
+      "vatMinor": 381364
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 2500050,
+      "vatPercent": 18,
+      "serviceChargePercent": 10,
+      "netMinor": 1926078,
+      "serviceChargeMinor": 192608,
+      "vatMinor": 381364
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 2500050,
+      "vatPercent": 18,
+      "serviceChargePercent": 20,
+      "netMinor": 1765572,
+      "serviceChargeMinor": 353114,
+      "vatMinor": 381364
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 2500050,
+      "vatPercent": 0,
+      "serviceChargePercent": 15,
+      "netMinor": 2173957,
+      "serviceChargeMinor": 326093,
+      "vatMinor": 0
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 2500050,
+      "vatPercent": 15,
+      "serviceChargePercent": 12,
+      "netMinor": 1941033,
+      "serviceChargeMinor": 232924,
+      "vatMinor": 326093
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 2500050,
+      "vatPercent": 7,
+      "serviceChargePercent": 5,
+      "netMinor": 2225233,
+      "serviceChargeMinor": 111262,
+      "vatMinor": 163555
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 50000000,
+      "vatPercent": 18,
+      "serviceChargePercent": 0,
+      "netMinor": 42372881,
+      "serviceChargeMinor": 0,
+      "vatMinor": 7627119
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 50000000,
+      "vatPercent": 18,
+      "serviceChargePercent": 1,
+      "netMinor": 41953348,
+      "serviceChargeMinor": 419533,
+      "vatMinor": 7627119
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 50000000,
+      "vatPercent": 18,
+      "serviceChargePercent": 10,
+      "netMinor": 38520801,
+      "serviceChargeMinor": 3852080,
+      "vatMinor": 7627119
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 50000000,
+      "vatPercent": 18,
+      "serviceChargePercent": 20,
+      "netMinor": 35310734,
+      "serviceChargeMinor": 7062147,
+      "vatMinor": 7627119
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 50000000,
+      "vatPercent": 0,
+      "serviceChargePercent": 15,
+      "netMinor": 43478261,
+      "serviceChargeMinor": 6521739,
+      "vatMinor": 0
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 50000000,
+      "vatPercent": 15,
+      "serviceChargePercent": 12,
+      "netMinor": 38819876,
+      "serviceChargeMinor": 4658385,
+      "vatMinor": 6521739
+    },
+    {
+      "note": "a price of the menu's range",
+      "priceMinor": 50000000,
+      "vatPercent": 7,
+      "serviceChargePercent": 5,
+      "netMinor": 44503783,
+      "serviceChargeMinor": 2225189,
+      "vatMinor": 3271028
+    },
+    {
+      "note": "a tie on the service charge",
+      "priceMinor": 15,
+      "vatPercent": 0,
+      "serviceChargePercent": 20,
+      "netMinor": 12,
+      "serviceChargeMinor": 3,
+      "vatMinor": 0
+    },
+    {
+      "note": "a tie on the service charge",
+      "priceMinor": 21,
+      "vatPercent": 0,
+      "serviceChargePercent": 20,
+      "netMinor": 18,
+      "serviceChargeMinor": 3,
+      "vatMinor": 0
+    },
+    {
+      "note": "a tie on the service charge",
+      "priceMinor": 27,
+      "vatPercent": 0,
+      "serviceChargePercent": 20,
+      "netMinor": 22,
+      "serviceChargeMinor": 5,
+      "vatMinor": 0
+    },
+    {
+      "note": "a tie on the service charge",
+      "priceMinor": 33,
+      "vatPercent": 0,
+      "serviceChargePercent": 20,
+      "netMinor": 28,
+      "serviceChargeMinor": 5,
+      "vatMinor": 0
+    },
+    {
+      "note": "a tie on the service charge",
+      "priceMinor": 39,
+      "vatPercent": 0,
+      "serviceChargePercent": 20,
+      "netMinor": 32,
+      "serviceChargeMinor": 7,
+      "vatMinor": 0
+    },
+    {
+      "note": "a tie on the service charge",
+      "priceMinor": 45,
+      "vatPercent": 0,
+      "serviceChargePercent": 20,
+      "netMinor": 38,
+      "serviceChargeMinor": 7,
+      "vatMinor": 0
+    },
+    {
+      "note": "a tie on the service charge",
+      "priceMinor": 51,
+      "vatPercent": 0,
+      "serviceChargePercent": 20,
+      "netMinor": 42,
+      "serviceChargeMinor": 9,
+      "vatMinor": 0
+    },
+    {
+      "note": "a tie on the service charge",
+      "priceMinor": 57,
+      "vatPercent": 0,
+      "serviceChargePercent": 20,
+      "netMinor": 48,
+      "serviceChargeMinor": 9,
+      "vatMinor": 0
+    },
+    {
+      "note": "a tie on the service charge",
+      "priceMinor": 63,
+      "vatPercent": 0,
+      "serviceChargePercent": 20,
+      "netMinor": 52,
+      "serviceChargeMinor": 11,
+      "vatMinor": 0
+    },
+    {
+      "note": "a tie on the service charge",
+      "priceMinor": 69,
+      "vatPercent": 0,
+      "serviceChargePercent": 20,
+      "netMinor": 58,
+      "serviceChargeMinor": 11,
+      "vatMinor": 0
+    },
+    {
+      "note": "a tie on the service charge",
+      "priceMinor": 75,
+      "vatPercent": 0,
+      "serviceChargePercent": 20,
+      "netMinor": 62,
+      "serviceChargeMinor": 13,
+      "vatMinor": 0
+    },
+    {
+      "note": "a tie on the service charge",
+      "priceMinor": 81,
+      "vatPercent": 0,
+      "serviceChargePercent": 20,
+      "netMinor": 68,
+      "serviceChargeMinor": 13,
+      "vatMinor": 0
+    },
+    {
+      "note": "a tie on the service charge",
+      "priceMinor": 87,
+      "vatPercent": 0,
+      "serviceChargePercent": 20,
+      "netMinor": 72,
+      "serviceChargeMinor": 15,
+      "vatMinor": 0
+    },
+    {
+      "note": "a tie on the service charge",
+      "priceMinor": 93,
+      "vatPercent": 0,
+      "serviceChargePercent": 20,
+      "netMinor": 78,
+      "serviceChargeMinor": 15,
+      "vatMinor": 0
+    },
+    {
+      "note": "a tie on the service charge",
+      "priceMinor": 99,
+      "vatPercent": 0,
+      "serviceChargePercent": 20,
+      "netMinor": 82,
+      "serviceChargeMinor": 17,
+      "vatMinor": 0
+    },
+    {
+      "note": "a tie on the service charge",
+      "priceMinor": 105,
+      "vatPercent": 0,
+      "serviceChargePercent": 20,
+      "netMinor": 88,
+      "serviceChargeMinor": 17,
+      "vatMinor": 0
+    },
+    {
+      "note": "a tie on the service charge",
+      "priceMinor": 111,
+      "vatPercent": 0,
+      "serviceChargePercent": 20,
+      "netMinor": 92,
+      "serviceChargeMinor": 19,
+      "vatMinor": 0
+    },
+    {
+      "note": "a tie on the service charge",
+      "priceMinor": 117,
+      "vatPercent": 0,
+      "serviceChargePercent": 20,
+      "netMinor": 98,
+      "serviceChargeMinor": 19,
+      "vatMinor": 0
+    },
+    {
+      "note": "a tie on the service charge",
+      "priceMinor": 123,
+      "vatPercent": 0,
+      "serviceChargePercent": 20,
+      "netMinor": 102,
+      "serviceChargeMinor": 21,
+      "vatMinor": 0
+    },
+    {
+      "note": "a tie on the service charge",
+      "priceMinor": 129,
+      "vatPercent": 0,
+      "serviceChargePercent": 20,
+      "netMinor": 108,
+      "serviceChargeMinor": 21,
+      "vatMinor": 0
+    },
+    {
+      "note": "a tie on the service charge",
+      "priceMinor": 135,
+      "vatPercent": 0,
+      "serviceChargePercent": 20,
+      "netMinor": 112,
+      "serviceChargeMinor": 23,
+      "vatMinor": 0
+    },
+    {
+      "note": "a tie on the service charge",
+      "priceMinor": 141,
+      "vatPercent": 0,
+      "serviceChargePercent": 20,
+      "netMinor": 118,
+      "serviceChargeMinor": 23,
+      "vatMinor": 0
+    },
+    {
+      "note": "a tie on the service charge",
+      "priceMinor": 147,
+      "vatPercent": 0,
+      "serviceChargePercent": 20,
+      "netMinor": 122,
+      "serviceChargeMinor": 25,
+      "vatMinor": 0
+    },
+    {
+      "note": "a tie on the service charge",
+      "priceMinor": 153,
+      "vatPercent": 0,
+      "serviceChargePercent": 20,
+      "netMinor": 128,
+      "serviceChargeMinor": 25,
+      "vatMinor": 0
+    },
+    {
+      "note": "a tie on the service charge",
+      "priceMinor": 159,
+      "vatPercent": 0,
+      "serviceChargePercent": 20,
+      "netMinor": 132,
+      "serviceChargeMinor": 27,
+      "vatMinor": 0
+    },
+    {
+      "note": "a tie on the service charge",
+      "priceMinor": 165,
+      "vatPercent": 0,
+      "serviceChargePercent": 20,
+      "netMinor": 138,
+      "serviceChargeMinor": 27,
+      "vatMinor": 0
+    },
+    {
+      "note": "a tie on the service charge",
+      "priceMinor": 171,
+      "vatPercent": 0,
+      "serviceChargePercent": 20,
+      "netMinor": 142,
+      "serviceChargeMinor": 29,
+      "vatMinor": 0
+    },
+    {
+      "note": "a tie on the service charge",
+      "priceMinor": 177,
+      "vatPercent": 0,
+      "serviceChargePercent": 20,
+      "netMinor": 148,
+      "serviceChargeMinor": 29,
+      "vatMinor": 0
+    },
+    {
+      "note": "a tie on the service charge",
+      "priceMinor": 183,
+      "vatPercent": 0,
+      "serviceChargePercent": 20,
+      "netMinor": 152,
+      "serviceChargeMinor": 31,
+      "vatMinor": 0
+    },
+    {
+      "note": "a tie on the service charge",
+      "priceMinor": 189,
+      "vatPercent": 0,
+      "serviceChargePercent": 20,
+      "netMinor": 158,
+      "serviceChargeMinor": 31,
+      "vatMinor": 0
+    },
+    {
+      "note": "a tie on the service charge",
+      "priceMinor": 195,
+      "vatPercent": 0,
+      "serviceChargePercent": 20,
+      "netMinor": 162,
+      "serviceChargeMinor": 33,
+      "vatMinor": 0
+    }
+  ]
+}

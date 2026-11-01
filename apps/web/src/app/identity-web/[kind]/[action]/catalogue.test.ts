@@ -12,7 +12,7 @@ import { salonBookingRulesFor } from '@/features/booking/server';
 import { salonCatalogueFor } from '@/features/catalogue/server';
 
 /**
- * The catalogue actions of the workspace BFF (F05-S01, F05-S02), as the route wires them, against a fake API on
+ * The catalogue actions of the workspace BFF (F05-S01 to F05-S03), as the route wires them, against a fake API on
  * loopback.
  */
 const handleIdentity = createIdentityWeb(
@@ -353,5 +353,139 @@ describe('the catalogue actions (F05-S01)', () => {
     ).toBe(403);
     expect((await run('POST', 'staff', 'catalogue-popular-mode', { mode: 'chosen', version: 1 })).status).toBe(403);
     expect(apiCalls()).toHaveLength(2);
+  });
+});
+
+describe('the tax settings and products actions (F05-S03)', () => {
+  const PRODUCT = '44444444-0000-4000-8000-000000000001';
+
+  it('reads the tax settings and history with settings.read, and refuses a role without it', async () => {
+    permissions = ['session.manage', 'catalogue.read', 'settings.read'];
+    expect((await run('GET', 'staff', 'catalogue-tax-settings')).status).toBe(200);
+    expect((await run('GET', 'staff', 'catalogue-tax-history')).status).toBe(200);
+    permissions = ['session.manage', 'catalogue.read'];
+    expect((await run('GET', 'staff', 'catalogue-tax-settings')).status).toBe(403);
+    expect((await run('GET', 'staff', 'catalogue-tax-history')).status).toBe(403);
+    expect(apiCalls().map((call) => call.path)).toEqual([
+      '/api/v1/catalogue/tax/settings',
+      '/api/v1/catalogue/tax/history',
+    ]);
+  });
+
+  it('answers the public tax as {current} for any session, null before the first save', async () => {
+    permissions = ['session.manage'];
+    answer = (_method, path) =>
+      path === '/api/v1/identity/me'
+        ? {
+            status: 200,
+            data: {
+              id: 's',
+              kind: 'staff',
+              role: 'PROFESSIONAL',
+              permissions,
+              scope: 'salon',
+              staffId: 's',
+              mfaEnabled: false,
+              expiresAt: null,
+            },
+          }
+        : { status: 200, data: null };
+    const response = await run('GET', 'staff', 'catalogue-tax-public');
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ current: null });
+    expect(apiCalls().map((call) => call.path)).toEqual(['/api/v1/catalogue/tax']);
+  });
+
+  it('saves the tax settings with settings.manage from the contract’s own fields, a part’s number only when sent', async () => {
+    permissions = ['session.manage', 'settings.read', 'settings.manage'];
+    expect(
+      (
+        await run('POST', 'staff', 'catalogue-tax-save', {
+          version: 1,
+          vat: { registered: false, rate: 15 },
+          serviceCharge: { on: true, percent: 10, onProducts: true },
+          tenantId: 'someone-else',
+        })
+      ).status,
+    ).toBe(200);
+    expect(JSON.parse(apiCalls()[0]!.body)).toEqual({
+      version: 1,
+      vat: { registered: false },
+      serviceCharge: { on: true, percent: 10, onProducts: true },
+    });
+    permissions = ['session.manage', 'settings.read', 'catalogue.price.change'];
+    expect((await run('POST', 'staff', 'catalogue-tax-save', { version: 1 })).status).toBe(403);
+    expect(apiCalls()).toHaveLength(1);
+  });
+
+  it('reads products with catalogue.read and changes them with catalogue.price.change only', async () => {
+    expect((await run('GET', 'staff', 'catalogue-products')).status).toBe(200);
+    expect(
+      (
+        await run('POST', 'staff', 'catalogue-product-add', {
+          name: 'Comb',
+          priceMinor: 30_000,
+          chargesVat: true,
+          soldAtCheckout: false,
+          stock: 4,
+        })
+      ).status,
+    ).toBe(200);
+    expect(
+      (
+        await run('POST', 'staff', 'catalogue-product-save', {
+          id: PRODUCT,
+          name: 'Comb',
+          priceMinor: 40_000,
+          chargesVat: true,
+          soldAtCheckout: true,
+          version: 2,
+        })
+      ).status,
+    ).toBe(200);
+    expect((await run('POST', 'staff', 'catalogue-product-delete', { id: PRODUCT, version: 3 })).status).toBe(200);
+    expect(apiCalls().map((call) => [call.method, call.path, call.body])).toEqual([
+      ['GET', '/api/v1/catalogue/products', ''],
+      [
+        'POST',
+        '/api/v1/catalogue/products',
+        JSON.stringify({ name: 'Comb', priceMinor: 30_000, chargesVat: true, soldAtCheckout: false }),
+      ],
+      [
+        'PUT',
+        `/api/v1/catalogue/products/${PRODUCT}`,
+        JSON.stringify({ name: 'Comb', priceMinor: 40_000, chargesVat: true, soldAtCheckout: true, version: 2 }),
+      ],
+      ['DELETE', `/api/v1/catalogue/products/${PRODUCT}`, ''],
+    ]);
+    permissions = ['session.manage', 'catalogue.read'];
+    expect((await run('POST', 'staff', 'catalogue-product-add', { name: 'Comb' })).status).toBe(403);
+    expect(apiCalls()).toHaveLength(4);
+  });
+
+  it('lets a support session read products and tax settings and refuses every change', async () => {
+    permissions = ['catalogue.read', 'settings.read'];
+    answer = (_method, path) =>
+      path === '/api/v1/identity/me'
+        ? {
+            status: 200,
+            data: {
+              id: 's',
+              kind: 'support',
+              role: 'OWNER',
+              permissions,
+              scope: 'salon',
+              staffId: null,
+              mfaEnabled: false,
+              expiresAt: '2026-11-01T10:00:00Z',
+            },
+          }
+        : { status: 200, data: draft };
+    expect((await run('GET', 'support', 'catalogue-products')).status).toBe(200);
+    expect((await run('GET', 'support', 'catalogue-tax-settings')).status).toBe(200);
+    const refused = await run('POST', 'support', 'catalogue-tax-save', { version: 0 });
+    expect(refused.status).toBe(403);
+    expect(await refused.json()).toMatchObject({ code: 'support_read_only' });
+    expect((await run('POST', 'support', 'catalogue-product-add', { name: 'Comb' })).status).toBe(403);
   });
 });
