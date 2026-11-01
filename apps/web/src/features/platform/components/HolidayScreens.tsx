@@ -210,7 +210,12 @@ function YearDatePicker({ year, value, onChange }: { year: number; value: string
             <CalendarIcon aria-hidden="true" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="start" data-testid="console-holiday-day-calendar">
+        <PopoverContent
+          className="w-auto p-0"
+          align="start"
+          aria-label={t('calendarLabel')}
+          data-testid="console-holiday-day-calendar"
+        >
           <Calendar
             labels={{ labelDayButton: dayButtonLabel }}
             mode="single"

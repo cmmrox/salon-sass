@@ -181,4 +181,17 @@ describe('the Hours & closures tab', () => {
       await waitFor(() => expect(document.activeElement).toBe(screen.getByTestId('closure-add')));
     },
   );
+
+  // QA's F04-S03 dry run (TC-F04-S03-030): the calendar's popover was a dialog with no name (axe's
+  // aria-dialog-name, a best practice outside the WCAG tags above, so asked here directly).
+  it.each(BRANDS)('the closure calendar: named, brand %s', async (brand) => {
+    page(brand);
+    fireEvent.click(await screen.findByTestId('closure-add'));
+    const sheet = await screen.findByTestId('closure-sheet');
+    fireEvent.click(within(sheet).getByTestId('closure-date'));
+    let calendar = await screen.findByTestId('closure-calendar');
+    expect(calendar).toHaveAttribute('role', 'dialog');
+    expect(calendar).toHaveAccessibleName('Choose a date');
+    await noViolations();
+  });
 });

@@ -136,4 +136,28 @@ describe('the console Holiday calendar', () => {
     expect(within(days).getAllByTestId('console-holiday-day')).toHaveLength(4);
     await noViolations();
   });
+
+  // QA's F04-S03 dry run (TC-F04-S03-030): in the console's day sheet too, the calendar popover had no name.
+  it('the day calendar: named', async () => {
+    const now = new Date();
+    answers['holiday-year'] = () => Response.json({ ...DETAIL, year: now.getFullYear() });
+    renderWithMessages(
+      <ConsoleShell permissions={PERMISSIONS} view="holidays">
+        <HolidayYearScreen year={now.getFullYear()} canManage />
+      </ConsoleShell>,
+    );
+    fireEvent.click(await screen.findByTestId('console-holiday-add'));
+    const sheet = await screen.findByTestId('console-holiday-add-sheet');
+    const open = async () => {
+      fireEvent.click(within(sheet).getByTestId('console-holiday-day-date'));
+      return screen.findByTestId('console-holiday-day-calendar');
+    };
+    let calendar = await open();
+    // The sheet opens on January; today's month is reached with the calendar's own next-month button.
+    for (let month = 0; month < now.getMonth(); month++)
+      fireEvent.click(within(calendar).getByRole('button', { name: /next month/i }));
+    expect(calendar).toHaveAttribute('role', 'dialog');
+    expect(calendar).toHaveAccessibleName('Choose a date');
+    await noViolations();
+  });
 });

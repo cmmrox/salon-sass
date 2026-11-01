@@ -526,7 +526,8 @@
       "publishBody": "Every salon is asked to review them. Nothing changes for a salon until it chooses what it does on each day.",
       "publishConfirm": "Publish to salons",
       "cancel": "Cancel",
-      "withdrawnDay": "{date} · {name}"
+      "withdrawnDay": "{date} · {name}",
+      "calendarLabel": "Choose a date"
     }
   },
   "billing": {
@@ -889,7 +890,8 @@
       "bookingsTitle": "{count, plural, one {# booking on this day.} other {# bookings on this day.}}",
       "bookingsBody": "They are kept: move or cancel each one yourself.",
       "confirm": "Close the salon this day",
-      "bookingAt": "{time} · {name}"
+      "bookingAt": "{time} · {name}",
+      "calendarLabel": "Choose a date"
     },
     "hoursTab": {
       "loading": "Loading hours and closures",
