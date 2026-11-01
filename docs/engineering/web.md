@@ -232,6 +232,8 @@ because the owner set one standard for all Next.js work in this product.
    | One-time secret shown for copying (authenticator setup key and URI) | No shadcn/ui component: a labelled `<output>` inside a Field, styled with Tailwind (CR-017) |
    | Hint on hover or focus | Tooltip |
    | Sections switched in place | Tabs |
+   | Choosing a date | Popover with Calendar, opened from a Button showing the chosen date (F04-S03) |
+   | A pressed or unpressed choice in a row (a weekday open or closed) | Toggle (F04-S03) |
 
    A job the table and the catalogue do not cover is raised with the lead before it is built.
 2. Product components in `src/features/<module>/components/` (or `src/components/shared/`) compose `ui/` components with Tailwind utilities.

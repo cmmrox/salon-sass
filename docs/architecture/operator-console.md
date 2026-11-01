@@ -381,3 +381,24 @@ audit actions for operator security are prefixed `operator.` (`operator.signed_i
 `operator.refresh_replayed`).
 
 Reproducing what a customer sees in the customer app (NFR-20's customer half) waits for F15.
+
+## Holiday calendar (F04-S03)
+
+The Sri Lankan public, bank, mercantile and Poya holidays are platform reference data in
+`platform`, with no `tenant_id` (decision 078). They are kept per year, never in code.
+
+- **Draft.** An Admin starts a year as a draft, by importing a CSV file prepared from the official
+  gazette (`date,name,kind`, with `kind` one of `poya`, `public`, `bank` or `mercantile`), or by
+  adding days one at a time. Each date appears once per year and lies in that year. An import is
+  all or nothing: any bad line refuses the whole file, with each line's number and reason, and
+  changes nothing.
+- **Publication.** Publishing a year makes it visible to every salon, as "To review". A published
+  year is corrected by editing it and publishing again, as a new revision. A salon sees only the
+  days added or changed by that revision as "To review" again. A withdrawn day disappears, and a
+  salon's choice for it no longer applies. The console says how many days a revision adds,
+  changes and withdraws before it is published.
+- **Roles.** Admins import, edit and publish; Support operators read. Every import, edit and
+  publication is in the platform audit.
+- **What salons do with it** is tenant data in `staff`: each salon's choice per day (closed, open
+  as usual, or special hours). A published day changes nothing for a salon until that salon
+  accepts its choice (decision 087).
