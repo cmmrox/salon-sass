@@ -877,6 +877,46 @@ describe('the salon’s currency (F05-S01 AC-3, F05-S02 AC-7; NFR-13)', () => {
   });
 });
 
+describe('money limits in the salon’s currency (F05-S01 AC-19, BUG-F05-001)', () => {
+  const problems = () => screen.getAllByTestId('service-sheet-problem').map((each) => each.textContent);
+  /** Opens a new service with a price below the limit, two variants with one below it, and a fixed deposit of 1. */
+  const breakEveryMoneyRule = async () => {
+    fireEvent.click(await screen.findByTestId('services-new'));
+    fireEvent.change(await screen.findByTestId('service-sheet-name'), { target: { value: 'Haircut' } });
+    fireEvent.change(screen.getByTestId('service-sheet-price'), { target: { value: '99' } });
+    const single = problems();
+    fireEvent.change(screen.getByTestId('service-sheet-price'), { target: { value: '500' } });
+    fireEvent.click(screen.getByTestId('service-sheet-more'));
+    fireEvent.click(await screen.findByTestId('service-deposit-custom'));
+    fireEvent.click(screen.getByTestId('service-deposit-type'));
+    fireEvent.click(await screen.findByRole('option', { name: 'Fixed amount' }));
+    fireEvent.change(await screen.findByLabelText('Deposit amount'), { target: { value: '1' } });
+    const deposit = problems();
+    fireEvent.click(screen.getByTestId('service-variants-toggle'));
+    fireEvent.change(screen.getByTestId('service-variant-set'), { target: { value: 'Hair length' } });
+    fireEvent.change(screen.getByLabelText('Variant 1 name'), { target: { value: 'Short' } });
+    fireEvent.change(screen.getByLabelText('Variant 1 price'), { target: { value: '99' } });
+    return { single, deposit, variant: problems() };
+  };
+
+  it('keeps an LKR salon’s wording exactly', async () => {
+    render();
+    const { single, deposit, variant } = await breakEveryMoneyRule();
+    expect(single).toEqual(['Price must be Rs. 100 to Rs. 500,000.']);
+    expect(deposit).toEqual(['A fixed deposit must be Rs. 100 to Rs. 100,000.']);
+    expect(variant).toContain('Price for “Short” must be Rs. 100 to Rs. 500,000.');
+  });
+
+  it('states the same limits in USD for a USD salon', async () => {
+    answers['catalogue-services'] = () => Response.json({ ...SERVICES, currency: 'USD' });
+    render();
+    const { single, deposit, variant } = await breakEveryMoneyRule();
+    expect(single).toEqual(['Price must be $100 to $500,000.']);
+    expect(deposit).toEqual(['A fixed deposit must be $100 to $100,000.']);
+    expect(variant).toContain('Price for “Short” must be $100 to $500,000.');
+  });
+});
+
 describe('a service’s photo, and a change answered after its sheet closed (AC-3, AC-10)', () => {
   const BALAYAGE = SERVICES.items[1]!;
   const GEL = SERVICES.items[2]!;

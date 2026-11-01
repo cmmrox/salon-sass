@@ -1,3 +1,4 @@
+import { formatMoney } from '@salon/format';
 import type { Product } from '../types';
 import { whole } from './service-form';
 
@@ -11,6 +12,8 @@ export type ProductValues = { name: string; price: string; chargesVat: boolean; 
 export type ProductProblem = 'name' | 'taken' | 'price';
 
 const MINOR_PER_RUPEE = 100;
+const PRICE_MIN = 1;
+const PRICE_MAX = 500_000;
 const length = (text: string) => Array.from(text).length;
 
 /** A new product: no name or price yet, charging VAT and sold at checkout. */
@@ -37,8 +40,16 @@ export function productProblemsOf(values: ProductValues, otherNames: string[]): 
   if (length(name) < 2 || length(name) > 40) problems.push('name');
   else if (otherNames.some((other) => other.toLowerCase() === name.toLowerCase())) problems.push('taken');
   const price = whole(values.price);
-  if (price === null || price < 1 || price > 500_000) problems.push('price');
+  if (price === null || price < PRICE_MIN || price > PRICE_MAX) problems.push('price');
   return problems;
+}
+
+/** The sheet's price limit as its message says it, in the salon's currency (F05-S01 AC-19). */
+export function productPriceLimits(currency: string) {
+  return {
+    min: formatMoney(PRICE_MIN * MINOR_PER_RUPEE, currency),
+    max: formatMoney(PRICE_MAX * MINOR_PER_RUPEE, currency),
+  };
 }
 
 /** The request the sheet sends: the price in minor units, both settings always (the API has no default for them). */

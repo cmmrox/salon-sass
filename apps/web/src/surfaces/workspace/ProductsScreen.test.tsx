@@ -112,6 +112,15 @@ describe('the Products tab (F05-S03 AC-7)', () => {
     expect(await screen.findByLabelText('Price (USD)')).toBeInTheDocument();
   });
 
+  it('states the price limit in the salon’s currency (F05-S01 AC-19, BUG-F05-001)', async () => {
+    answers['catalogue-products'] = () => Response.json({ currency: 'USD', items: [] });
+    render();
+    fireEvent.click(await screen.findByTestId('products-empty-new'));
+    fireEvent.change(await screen.findByTestId('product-sheet-name'), { target: { value: 'Hair oil' } });
+    fireEvent.change(screen.getByTestId('product-sheet-price'), { target: { value: '0' } });
+    expect(screen.getByTestId('product-sheet-problem')).toHaveTextContent('Price must be $1 to $500,000.');
+  });
+
   it('gives a reader the list with no change controls', async () => {
     render(false);
     await screen.findByTestId('product-table');
