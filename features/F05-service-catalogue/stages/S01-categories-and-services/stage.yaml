@@ -265,6 +265,12 @@ verification:
       integration test, with an implementation that reports a booking, prove the refusal. From
       outside, TC-F05-S01-019 and TC-F05-S01-035 show delete when no booking uses the service.
     unblocked_by: F07, when booking implements UpcomingServiceBookings and a booking can use a service.
+  - case: TC-F05-S01-047
+    covers: [AC-3]
+    reason: A salon in another currency is told its price limits in rupees (BUG-F05-001, minor, the
+      wording only; amounts are stored and shown correctly). The check is written when the bug is
+      fixed, as what the message should say in another currency is not yet decided.
+    unblocked_by: BUG-F05-001
 evidence:
   last_run: null
   last_result: null

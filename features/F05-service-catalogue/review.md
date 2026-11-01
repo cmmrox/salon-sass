@@ -153,7 +153,34 @@ tests changed between runs.
 - TC-F05-S03-019 restarts only QA's own API with `SALON_CATALOGUE_TAX_VAT_RATE_PERCENT=15` and puts it
   back.
 
+### Re-verification after the PR #19 review fixes (2026-11-02, revision 866669b)
+
+The fixes (product merge ad901d0) change the catalogue's API and web. A duplicate's name is cut in code
+points. The services and products lists gain a required `currency`, which both sheets label amounts
+with. A photo, removal or save result applies only to the sheet opening that sent it, and Save and
+Delete wait for an upload while Close does not. `meta.test.ts` and `salon.test.ts` are developer tests only.
+
+Targeted, not a full pass (decision 069); `evidence.reverification` names the selection and what was
+left out and why. Six cases were added: TC-F05-S01-043 to 046, TC-F05-S03-025 and 026. On build
+8ddb623, tests 866669b, fresh database, `qa/reports/20261102-F05-reverify-866669b`: 49 of 49 passed
+in 6 min 05 s. While the new race case was written, its own hold helper unrouted a request still
+pending; that test defect was repaired before the commit. Reopening a service during its own upload
+keeps the result out of that sheet, and a later Save gets the conflict notice with Reload, as the fix says.
+
+Limits: the new cases were run on the fixed build only, not seen failing on the old one (the emoji
+duplicate's 409 on the old code is the lead's observation). A removal in flight when a sheet is
+reopened shares the code path of the upload and was not raced separately; the developer's
+`ServicesScreen.test.tsx` covers it.
+
+Checking the USD labels found BUG-F05-001 (minor, open): a salon in another currency is told its price
+limits in rupees. Wording only; amounts are right.
+
+The full pass of record stays `qa/reports/20261101-224201-F05-14614a3cc4de` at d8985b8
+(`evidence.full_pass_revision`); `integration.qa_revision` moved to 866669b, as F04's did for `pr-check`.
+
 ## Bugs filed from this review
 
-- None. The one product defect found in F05 (a conflict hidden behind the open sheet, F05-S01 dry
+- BUG-F05-001 (minor, open): a salon in another currency is told its price limits in rupees (found
+  re-verifying the PR #19 fixes; see above).
+- The one product defect found during the build (a conflict hidden behind the open sheet, F05-S01 dry
   run) was reported to the lead during the build, fixed in 0d5f9ac and confirmed by TC-F05-S01-039.
