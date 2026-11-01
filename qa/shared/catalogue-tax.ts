@@ -4,8 +4,8 @@
  * read-only database observations of the stage's tables.
  *
  * Routes, bodies, codes and limits come from the F05-S03 spec (acceptance criteria, "API and data
- * changes", "Design notes"), decisions 085, 091 and 095. Prepared before the build: names only the
- * build gives are in `PENDING_F05_S03`, confirmed against the F05-S03 handoff at the dry run.
+ * changes", "Design notes", "Corrections at close"), decisions 085, 091, 095 and 097. The names in
+ * `PENDING_F05_S03` are the built ones (F05-S03 handoff, V27, the generated contract; 12cdf8e).
  */
 import { CATALOGUE, Catalogue } from './catalogue';
 import { expect, json, type Tokens } from './identity';

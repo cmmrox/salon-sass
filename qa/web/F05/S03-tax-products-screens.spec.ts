@@ -42,30 +42,32 @@ const TAX_ROUTE = '/workspace/settings/tax';
 const PRODUCTS_ROUTE = '/workspace/services/products';
 const SERVICES_ROUTE = '/workspace/services';
 
-/** Test ids, to confirm against the F05-S03 handoff (F04's `rules-*` and `settings-tab-*` patterns, F05-S01's `services-*`). */
+/** Test ids, from the F05-S03 handoff ("New test ids for QA"). */
 const T3 = {
-  settingsTab: (t: string) => `settings-tab-${t}`, tab: 'tax-tab', loading: 'tax-loading', intro: 'tax-intro', form: 'tax-form',
+  settingsTab: (t: string) => `settings-tab-${t}`, tab: 'tax-tab', loading: 'tax-loading', intro: 'tax-banner-settings',
   vatOn: 'tax-vat-registered', vatNumber: 'tax-vat-number', vatNumberError: 'tax-vat-number-error',
-  scOn: 'tax-service-charge', scRate: 'tax-service-charge-rate', scRateError: 'tax-service-charge-rate-error', scProducts: 'tax-service-charge-products',
+  scOn: 'tax-charge-on', scRate: 'tax-charge-percent', scRateError: 'tax-charge-percent-error', scProducts: 'tax-charge-products',
   save: 'tax-save', history: 'tax-history', historySheet: 'tax-history-sheet', historyRow: 'tax-history-row',
-  conflict: 'tax-conflict', conflictReload: 'tax-conflict-reload', rateChanged: 'tax-rate-changed', unavailable: 'tax-unavailable', retry: 'tax-retry',
+  conflict: 'tax-conflict', conflictReload: 'tax-conflict-reload', rateChanged: 'tax-new-rate', unavailable: 'tax-unavailable', retry: 'tax-retry',
   readOnly: 'tax-read-only', refused: 'tax-refused',
   leaveDialog: 'tax-leave-dialog', leaveStay: 'tax-leave-stay', leaveConfirm: 'tax-leave-confirm',
-  previewService: 'tax-preview-service', previewProduct: 'tax-preview-product', previewPart: 'tax-preview-part', previewNote: 'tax-preview-note',
-  servicesLoading: 'services-loading', tabProducts: 'services-tab-products', taxBanner: 'services-tax-banner',
-  productsSummary: 'products-summary', productsBanner: 'products-banner', productsNew: 'products-new', productsEmpty: 'products-empty',
-  productsTable: 'products-table', productRow: 'product-row', productCard: 'product-card',
-  productName: 'product-name', productPrice: 'product-price', productTax: 'product-tax', productStatus: 'product-status', productEdit: 'product-edit',
+  preview: 'tax-preview', previewLine: 'tax-preview-line', previewNote: 'tax-preview-note',
+  servicesLoading: 'services-loading', productsLoading: 'products-loading', tabProducts: 'services-tab-products', taxBanner: 'tax-banner',
+  productsSummary: 'services-summary', productsBanner: 'products-banner', productsNew: 'products-new', productsEmpty: 'products-empty',
+  productsUnavailable: 'products-unavailable', productsRetry: 'products-retry', productsReadOnly: 'products-read-only',
+  productsTable: 'product-table', productCards: 'product-cards', productRow: 'product-row',
+  productName: 'product-name', productPrice: 'product-price', productTax: 'product-tax', productStatus: 'product-sold', productEdit: 'product-edit',
   sheet: 'product-sheet', sheetName: 'product-sheet-name', sheetPrice: 'product-sheet-price', sheetVat: 'product-sheet-vat', sheetVatOff: 'product-sheet-vat-off',
   sheetSold: 'product-sheet-sold', sheetSave: 'product-sheet-save', sheetDelete: 'product-sheet-delete', sheetClose: 'product-sheet-close', sheetProblem: 'product-sheet-problem',
   deleteDialog: 'product-delete-dialog', deleteConfirm: 'product-delete-confirm',
-  productLeaveDialog: 'products-leave-dialog', productLeaveStay: 'products-leave-stay',
+  productLeaveDialog: 'products-leave-dialog', productLeaveStay: 'products-leave-stay', productLeaveConfirm: 'products-leave-confirm',
 } as const;
 
 const TEXT = {
   intro: 'Turn these on only if your salon is registered for them. Names and rates come from the platform for your country. Changes apply to new bookings and sales only.',
   note: 'Prices are always shown with tax and service charge included',
-  defaultService: 'A service at Rs. 2,500', defaultProduct: 'A product at Rs. 3,200',
+  // The spec's "A service at Rs. 2,500": the build writes the example's name and its price in the row's two columns, as the prototype does.
+  defaultService: ['A service', 'Rs. 2,500'], defaultProduct: ['A product', 'Rs. 3,200'],
   rateChanged: (rate: number) => `The VAT rate is now ${rate}%. Save to apply it to new bookings and sales.`,
   productsBanner: 'Products you sell at the front desk, added to a sale at checkout. Stock isn’t tracked.',
   summary: (n: number, m: number) => `${n} product${n === 1 ? '' : 's'} · ${m} sold at checkout`,
@@ -74,6 +76,7 @@ const TEXT = {
   deleteBody: 'It will be removed from checkout. Past sales keep it. This can’t be undone.',
   bannerBoth: 'Prices you enter include service charge (10%) and VAT (18%). Customers see the same price.',
   bannerOff: 'Tax and service charge are off. Turn them on in Settings if your salon is registered.',
+  bannerVat: 'Prices you enter include VAT (18%). Customers see the same price.',
 };
 
 const id = (page: Page | Locator, name: string) => page.getByTestId(name).filter({ visible: true });
@@ -81,10 +84,11 @@ const say = (t: string) => t.replace(/\s+/g, ' ').trim();
 
 async function readyTax(page: Page) {
   await expect(id(page, T3.loading)).toHaveCount(0);
-  await expect(id(page, T3.form)).toBeVisible();
+  await expect(id(page, T3.tab)).toBeVisible();
+  await expect(id(page, T3.save)).toBeVisible();
 }
 async function readyProducts(page: Page) {
-  await expect(id(page, T3.servicesLoading)).toHaveCount(0);
+  await expect(id(page, T3.productsLoading)).toHaveCount(0);
   await expect(id(page, T3.tabProducts)).toHaveAttribute('aria-selected', 'true');
 }
 async function open(accounts: AccountBrowser, actor: Actor, route: string, width = 1280) {
@@ -104,15 +108,29 @@ async function tabTo(page: Page, target: Locator, limit = 120) {
   while (!(await target.evaluate(el => el === document.activeElement)) && steps++ < limit) await page.keyboard.press('Tab');
   await expect(target, 'reached by Tab').toBeFocused();
 }
-const productRow = (page: Page, p: Product, wide: boolean) => page.locator(`[data-testid="${wide ? T3.productRow : T3.productCard}"][data-id="${p.id}"]`);
+const productRow = (page: Page, p: Product, wide: boolean) =>
+  id(page, wide ? T3.productsTable : T3.productCards).locator(`[data-testid="${T3.productRow}"][data-id="${p.id}"]`);
 
-/** The parts a preview block shows, as text, in order. */
-const partsShown = async (block: Locator) => (await block.getByTestId(T3.previewPart).allInnerTexts()).map(say);
-/** Asserts a preview block names its item and price and shows exactly the expected parts, each from `split`. */
-async function expectPreview(block: Locator, label: string, priceText: string, parts: { name: string; minor: number }[]) {
-  await expect(block, `${label}: the item and its price`).toContainText(priceText);
-  await expect.poll(() => partsShown(block), `${label}: one line per part that applies`).toHaveLength(parts.length);
-  const shown = await partsShown(block);
+/** The preview's lines as shown: an item line (`service` or `product`) followed by the parts it includes. */
+async function previewLines(page: Page): Promise<{ kind: string; text: string }[]> {
+  const lines = id(page, T3.previewLine);
+  const out: { kind: string; text: string }[] = [];
+  for (let k = 0; k < await lines.count(); k++) out.push({ kind: (await lines.nth(k).getAttribute('data-kind')) ?? '', text: say(await lines.nth(k).innerText()) });
+  return out;
+}
+/** The lines of one item: its own line, then its parts up to the next item. */
+async function itemLines(page: Page, kind: 'service' | 'product') {
+  const all = await previewLines(page);
+  const start = all.findIndex(l => l.kind === kind);
+  if (start < 0) return { item: '', parts: [] as string[] };
+  const end = all.findIndex((l, k) => k > start && (l.kind === 'service' || l.kind === 'product'));
+  return { item: all[start].text, parts: all.slice(start + 1, end < 0 ? undefined : end).map(l => l.text) };
+}
+/** Asserts an item's preview names it and its price and shows exactly the expected parts, each amount from `split`. */
+async function expectPreview(page: Page, kind: 'service' | 'product', label: string, item: string | string[], parts: { name: string; minor: number }[]) {
+  for (const piece of [item].flat()) await expect.poll(async () => (await itemLines(page, kind)).item, `${label}: the item and its price`).toContain(piece);
+  await expect.poll(async () => (await itemLines(page, kind)).parts.length, `${label}: one line per part that applies`).toBe(parts.length);
+  const shown = (await itemLines(page, kind)).parts;
   parts.forEach((p, k) => {
     expect(shown[k], `${label}: ${p.name}`).toMatch(new RegExp(p.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'));
     expect(shown[k], `${label}: ${p.name} is ${p.minor} minor units`).toMatch(moneyText(p.minor));
@@ -133,16 +151,18 @@ test('TC-F05-S03-016 AC-1, AC-2: the Owner finds Tax & charges between Booking r
   await expect(id(page, T3.vatOn)).toHaveAccessibleName(/My salon is registered for VAT/);
   await id(page, T3.vatOn).click();
   await expect(id(page, T3.vatNumber), 'the configured registration label').toHaveAccessibleName('VAT registration number');
-  for (const bad of ['', 'AB 12', 'A'.repeat(21)]) {
+  await id(page, T3.vatNumber).fill('A'.repeat(21));
+  await expect(id(page, T3.vatNumber), 'the field holds 20 characters at most').toHaveValue('A'.repeat(20));
+  for (const bad of ['', 'AB 12', 'AB_12']) {
     await id(page, T3.vatNumber).fill(bad);
-    await id(page, T3.save).click();
+    if (await id(page, T3.save).isEnabled()) await id(page, T3.save).click();
     await expect(id(page, T3.vatNumberError), `"${bad}": beside the field`).toBeVisible();
   }
   await id(page, T3.vatNumber).fill('134-567-890-7000');
   await id(page, T3.scOn).click();
   for (const bad of ['0', '21']) {
     await id(page, T3.scRate).fill(bad);
-    await id(page, T3.save).click();
+    if (await id(page, T3.save).isEnabled()) await id(page, T3.save).click();
     await expect(id(page, T3.scRateError), `rate ${bad}: beside the field`).toBeVisible();
   }
   expect((await tax.settings(salon, owner.tokens)).version, 'nothing saved while a rule is broken').toBe(0);
@@ -158,11 +178,10 @@ test('TC-F05-S03-016 AC-1, AC-2: the Owner finds Tax & charges between Booking r
 test('TC-F05-S03-017 AC-4, AC-5: "What customers pay" shows the prototype\'s examples while there are no services or products, then the salon\'s first online service and first product sold, each part as the rule gives it, following the form before saving, rounding half to even', async ({ accounts, operator, tax }) => {
   const { salon, owner } = await newSalon(operator, accounts);
   const { page } = await open(accounts, owner, TAX_ROUTE);
-  const service = id(page, T3.previewService), product = id(page, T3.previewProduct);
-  await expect(id(page, T3.previewNote)).toContainText(TEXT.note);
+    await expect(id(page, T3.previewNote)).toContainText(TEXT.note);
   await test.step('both off: no parts', async () => {
-    await expectPreview(service, 'service', TEXT.defaultService, []);
-    await expectPreview(product, 'product', TEXT.defaultProduct, []);
+    await expectPreview(page, 'service', 'service', TEXT.defaultService, []);
+    await expectPreview(page, 'product', 'product', TEXT.defaultProduct, []);
   });
   await test.step('VAT and a 10% service charge, before saving: the prototype\'s figures', async () => {
     await id(page, T3.vatOn).click();
@@ -171,11 +190,11 @@ test('TC-F05-S03-017 AC-4, AC-5: "What customers pay" shows the prototype\'s exa
     await id(page, T3.scRate).fill('10');
     const a = split(250000, 18, 10), b = split(320000, 18, null);
     expect([a.serviceCharge, a.vat, b.vat], 'the oracle agrees with the prototype').toEqual([19260, 38136, 48814]);
-    await expectPreview(service, 'service', TEXT.defaultService, [{ name: 'Service charge 10%', minor: a.serviceCharge }, { name: 'VAT 18%', minor: a.vat }]);
-    await expectPreview(product, 'product, VAT only', TEXT.defaultProduct, [{ name: 'VAT 18%', minor: b.vat }]);
+    await expectPreview(page, 'service', 'service', TEXT.defaultService, [{ name: 'Includes service charge 10%', minor: a.serviceCharge }, { name: 'Includes VAT 18%', minor: a.vat }]);
+    await expectPreview(page, 'product', 'product, VAT only', TEXT.defaultProduct, [{ name: 'Includes VAT 18%', minor: b.vat }]);
     await id(page, T3.scProducts).click();
     const c = split(320000, 18, 10);
-    await expectPreview(product, 'product, also on products', TEXT.defaultProduct, [{ name: 'Service charge 10%', minor: c.serviceCharge }, { name: 'VAT 18%', minor: c.vat }]);
+    await expectPreview(page, 'product', 'product, also on products', TEXT.defaultProduct, [{ name: 'Includes service charge 10%', minor: c.serviceCharge }, { name: 'Includes VAT 18%', minor: c.vat }]);
     await id(page, T3.scProducts).click();
     await id(page, T3.save).click();
     await expect.poll(async () => (await tax.settings(salon, owner.tokens)).version).toBe(1);
@@ -190,9 +209,9 @@ test('TC-F05-S03-017 AC-4, AC-5: "What customers pay" shows the prototype\'s exa
     await id(page, T3.scProducts).click();
     const s = split(10000, 18, 20), p = split(100, 18, 20);
     expect(s, 'Rs. 100: VAT Rs. 15.25 and a service charge of Rs. 14.13 (half to even; half up would give Rs. 14.12)').toMatchObject({ vat: 1525, serviceCharge: 1413 });
-    await expectPreview(service, 'Fringe trim', 'Fringe trim', [{ name: 'Service charge 20%', minor: s.serviceCharge }, { name: 'VAT 18%', minor: s.vat }]);
-    await expect(service).toContainText('Rs. 100');
-    await expectPreview(product, 'Hair oil', 'Hair oil', [{ name: 'Service charge 20%', minor: p.serviceCharge }, { name: 'VAT 18%', minor: p.vat }]);
+    await expectPreview(page, 'service', 'Fringe trim', 'Fringe trim', [{ name: 'Includes service charge 20%', minor: s.serviceCharge }, { name: 'Includes VAT 18%', minor: s.vat }]);
+    expect((await itemLines(page, 'service')).item).toContain('Rs. 100');
+    await expectPreview(page, 'product', 'Hair oil', 'Hair oil', [{ name: 'Includes service charge 20%', minor: p.serviceCharge }, { name: 'Includes VAT 18%', minor: p.vat }]);
   });
 });
 
@@ -264,7 +283,7 @@ test('TC-F05-S03-020 AC-7, AC-8: the Products tab starts empty with the prototyp
     await id(page, T3.sheetName).fill('Hair oil');
     await id(page, T3.sheetPrice).fill('1500');
     await id(page, field).fill(value);
-    await id(page, T3.sheetSave).click();
+    if (await id(page, T3.sheetSave).isEnabled()) await id(page, T3.sheetSave).click();
     await expect(page.getByTestId(T3.sheetProblem).filter({ hasText: message }), `${field} "${value}"`).toBeVisible();
   }
   await id(page, T3.sheetName).fill('Hair oil');
@@ -289,11 +308,10 @@ test('TC-F05-S03-020 AC-7, AC-8: the Products tab starts empty with the prototyp
     await id(page, T3.productsNew).click();
     await id(page, T3.sheetName).fill('hair OIL');
     await id(page, T3.sheetPrice).fill('100');
-    await id(page, T3.sheetSave).click();
+    if (await id(page, T3.sheetSave).isEnabled()) await id(page, T3.sheetSave).click();
     await expect(page.getByTestId(T3.sheetProblem).filter({ hasText: TEXT.errTaken })).toBeVisible();
     await id(page, T3.sheetClose).click();
-    const leave = page.getByTestId('products-leave-confirm');
-    if (await leave.isVisible()) await leave.click();
+    await id(page, T3.productLeaveConfirm).click();
   });
   await test.step('cards below 900 px, with "—" while VAT is off', async () => {
     await tax.save(salon, owner.tokens, taxInput(), 1);
@@ -335,11 +353,7 @@ test('TC-F05-S03-021 AC-10: the Services and Products tabs say which taxes price
   await tax.save(salon, owner.tokens, taxInput({ vat: 'LK-1', sc: 10 }), 0);
   for (const route of [SERVICES_ROUTE, PRODUCTS_ROUTE]) expect(await banner(route), `${route}: both`).toBe(TEXT.bannerBoth);
   await tax.save(salon, owner.tokens, taxInput({ vat: 'LK-1' }), 1);
-  for (const route of [SERVICES_ROUTE, PRODUCTS_ROUTE]) {
-    const text = await banner(route);
-    expect(text, `${route}: VAT only`).toContain('VAT (18%)');
-    expect(text, `${route}: no service charge`).not.toMatch(/service charge/i);
-  }
+  for (const route of [SERVICES_ROUTE, PRODUCTS_ROUTE]) expect(await banner(route), `${route}: VAT only`).toBe(TEXT.bannerVat);
 });
 
 // ---------------------------------------------------------------- AC-11 roles
@@ -400,7 +414,7 @@ test('TC-F05-S03-023 AC-13: the tab and the Products tab show their loading stat
   const context = await accounts.context(salon, [owner]);
   const data = (url: URL) => url.pathname.startsWith('/identity-web/') && /tax|product/.test(url.pathname);
   for (const [route, loading, unavailable, retry, ready] of [
-    [TAX_ROUTE, T3.loading, T3.unavailable, T3.retry, readyTax], [PRODUCTS_ROUTE, T3.servicesLoading, 'services-unavailable', 'services-retry', readyProducts],
+    [TAX_ROUTE, T3.loading, T3.unavailable, T3.retry, readyTax], [PRODUCTS_ROUTE, T3.productsLoading, T3.productsUnavailable, T3.productsRetry, readyProducts],
   ] as const) {
     await test.step(`${route}: loading, unreachable, Try again`, async () => {
       let release!: () => void;
@@ -475,7 +489,13 @@ test('TC-F05-S03-024 AC-13: at every width the tab, the Products tab and the pro
         await settled(page);
         const f = await fit(page);
         expect(f.pageScrolls, `${width} ${label}: no sideways scrolling`).toBe(false);
-        expect(f.outside, `${width} ${label}: nothing outside the screen`).toEqual([]);
+        // The Settings and Services tab rails scroll sideways on phones, as the prototype's do (.brtabs): a tab past the
+        // rail's edge is scrolled to, not outside the page, and each is proved reachable below (F04-S04-025's rule).
+        expect(f.outside.filter(c => !/^(settings|services)-tab-/.test(c)), `${width} ${label}: nothing outside the screen`).toEqual([]);
+        for (const rail of await page.locator('[data-testid^="settings-tab-"], [data-testid^="services-tab-"]').filter({ visible: true }).all()) {
+          await rail.scrollIntoViewIfNeeded();
+          await expect(rail, `${width} ${label}: ${await rail.getAttribute('data-testid')} reachable`).toBeInViewport();
+        }
       };
       await check('Tax & charges');
       await id(page, T3.save).scrollIntoViewIfNeeded();

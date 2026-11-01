@@ -65,7 +65,8 @@ test('TC-F05-S03-002 AC-2, AC-6: VAT with registration numbers of 1 and 20 lette
   const tax = new TaxCatalogue(identity);
   const { salon, owner } = await newSalon(operator, identity);
   const rows: [string, TaxInput][] = [
-    ['VAT with a 1-character number', taxInput({ vat: '7' })],
+    // A letter no UUID holds, so finding it anywhere in the public read means the number leaked.
+    ['VAT with a 1-character number', taxInput({ vat: 'Q' })],
     ['VAT with a 20-character number', taxInput({ vat: 'AB-1234-5678-90-XYZ1' })],
     ['a service charge of 1%', taxInput({ sc: 1 })],
     ['a service charge of 20% on products too', taxInput({ sc: 20, onProducts: true })],
