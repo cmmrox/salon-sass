@@ -131,8 +131,7 @@ handoff:
     Visual comparison with the prototype (Salon web, Services & pricing, `aSvc`, `svTabs`, `catTab`, `ceOpen`,
     `sePaint`) at 360, 768 and 1280 (screens/): same header, tabs, banner, grouped card grid (two a row from 1200),
     card layout and buttons, ruled category rows with ↑ ↓ Rename Delete, and the sheet's fields and More options.
-    Deliberate differences: the banner is the default white Alert, because the prototype's info colour (--inb,
-    #E8F0FD) is not a theme token (adding one is the lead's call); a hidden card has the prototype's secondary
+    Deliberate differences: a hidden card has the prototype's secondary
     background without its 0.7 opacity and with ink small text, and small hint text in the sheets is ink, because
     muted text there is under 4.5:1; "Bookable online" is a Switch (component map) rather than the prototype's
     tick row; the order buttons draw lucide arrows.
@@ -182,6 +181,16 @@ handoff:
     reads "Change the service catalogue and its prices" (it was "Change prices"), after decision 093.
     (11) The navigation lists Services after Staff access, as the prototype does after Staff.
     (12) LeaveDialog gains area `services` (test ids services-leave-dialog/-stay/-confirm).
+    (8, corrected at the lead's review) The Services and Categories banners are the prototype's information
+    banner (`.bn.in`): theme.css gains the prototype's information pair, --info #1D5FD0 and --info-surface
+    #E8F0FD, mapped in @theme inline as --color-info and --color-info-surface beside the positive, caution and
+    negative pairs (cn() needs no entry: it lists sizes and radii only), and Alert gains an `info` variant
+    through cva, ink text on the info surface as the prototype draws it, with an Alert title in --info. Alert now
+    also carries data-variant, as Badge does, so a test can tell the variants apart. Contrast: ink #111827 on
+    #E8F0FD is 15.47:1 and #1D5FD0 on #E8F0FD is 5.09:1, both over 4.5:1; the accessibility check (axe,
+    colour contrast included) passes the banner at every width with both brands. No F04 screen draws an info
+    banner: the F04 prototype screens use only `.bn.ok` and `.bn.wn`, so no F04 screen is drawn white in its
+    place. The plain-page CSS was regenerated and is unchanged (it holds no theme variable).
     (13) shadcn/ui Switch and Collapsible were added with the pinned CLI; no new package (radix-ui already
     held them; the CLI's `cn` package was removed as web.md says). The Switch takes the Checkbox's colours.
     (14) The proxy's protected pages gain /workspace/services and /workspace/services/categories.
@@ -209,12 +218,14 @@ handoff:
     | Command | Tested commit | Result | Log |
     | --- | --- | --- | --- |
     | cd apps/api && ./mvnw -q verify | 0812c8e | exit 0 (359 s) | 1-api-verify.log |
-    | pnpm -r lint | 87e318a | exit 0 | 2-lint-rerun.log (2-lint.log: exit 0 on 0812c8e) |
-    | pnpm -r typecheck | 87e318a | exit 0 | 3-typecheck-rerun.log (3-typecheck.log: exit 0 on 0812c8e) |
-    | pnpm -r test | 87e318a | exit 0 (format 10, api-contracts 25, web 946) | 4-test-rerun.log |
-    | pnpm --filter @salon/web test:a11y | 0812c8e | exit 0 (183 cases, 7 files) | 5-a11y.log |
-    | pnpm --filter @salon/web build | 0812c8e | exit 0 | 6-web-build.log |
+    | pnpm -r lint | 1b495b5 | exit 0 | 2-lint-1b495b5.log |
+    | pnpm -r typecheck | 1b495b5 | exit 0 | 3-typecheck-1b495b5.log |
+    | pnpm -r test | 1b495b5 | exit 0 (format 10, api-contracts 25, web 946) | 4-test-1b495b5.log |
+    | pnpm --filter @salon/web test:a11y | 1b495b5 | exit 0 (183 cases, 7 files) | 5-a11y-1b495b5.log |
+    | pnpm --filter @salon/web build | 1b495b5 | exit 0 | 6-web-build-1b495b5.log |
     | pnpm contracts:check | 0812c8e | exit 0 (document and client current) | 7-contracts.log |
+    1b495b5 (the information banner) changes only the web app, so the API gate and the contract check stand on
+    0812c8e and the five web gates ran again on it.
     On 0812c8e `pnpm -r test` failed (4-test.log): packages/api-contracts' own tests listed the contract's
     modules and error codes without catalogue, in_use and limit_reached. 87e318a adds them (only
     packages/api-contracts/test changes), so the three gates that cover those files ran again on 87e318a; the
