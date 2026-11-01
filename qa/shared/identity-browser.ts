@@ -7,7 +7,8 @@ import { webUrl } from './env';
 import { salonUrl, type Salon } from './tenants';
 
 export type Kind='staff'|'customer';
-export const routes={staffSignIn:'/workspace/sign-in',staff:'/workspace/account',staffList:'/workspace/staff',audit:'/workspace/audit'};
+/** `staffList` is the Sign-in accounts tab since F06-S01; the navigation's Staff entry opens `team`. */
+export const routes={staffSignIn:'/workspace/sign-in',staff:'/workspace/account',team:'/workspace/team',staffList:'/workspace/staff',audit:'/workspace/audit'};
 export const bff=(kind:Kind,action:string)=>`/identity-web/${kind}/${action}`;
 export const cookie=(kind:Kind,name:string)=>`salon_${kind}_${name}`;
 const finalHandle=(name:string)=>({oldPassword:'old-password',newPassword:'new-password',marketingConsent:'marketing-consent'} as Record<string,string>)[name]??name;

@@ -96,13 +96,20 @@ test(`${c(11)} recoverable confirmation refusals keep feedback and recovery acce
 });
 
 test(`${c(4)} live self-demotion removes inaccessible workspace navigation without reload`,async({identity,accounts},testInfo)=>{
- const owner=await identity.staff(alpha,'OWNER');await identity.staff(alpha,'OWNER');
- const context=await accounts.context(alpha,[owner]),page=await accounts.open(context,routes.staffList);await accounts.ready(page);
- await expect(page.getByTestId('workspace-staff')).toBeVisible();await expect(page.getByTestId('workspace-audit')).toBeVisible();
- const ownRow=page.locator(`[data-testid="account-staff-row"][data-id="${owner.principal.id}"]`);await expect(ownRow).toBeVisible();
- await accounts.chooseRole(page,ownRow.getByTestId('account-staff-role'),'RECEPTIONIST');await expect(handle(page,'denied')).toBeVisible();
- const principal=await accounts.principal(context,alpha,'staff');expect(principal.role).toBe('RECEPTIONIST');expect(principal.permissions).not.toContain('staff.list');expect(principal.permissions).not.toContain('audit.list');
- expect((await accounts.action(context,alpha,'staff','staff')).status()).toBe(403);expect((await accounts.action(context,alpha,'staff','audit')).status()).toBe(403);
- await testInfo.attach('live-navigation',{body:JSON.stringify({role:principal.role,contentDenied:await handle(page,'denied').isVisible(),staffLinks:await page.getByTestId('workspace-staff').count(),auditLinks:await page.getByTestId('workspace-audit').count()}),contentType:'application/json'});
- await expect.soft(page.getByTestId('workspace-staff')).toHaveCount(0);await expect.soft(page.getByTestId('workspace-audit')).toHaveCount(0);
+ // F06-S01: the Staff entry now opens the Team page for anyone with team.read. A Receptionist keeps it and loses the rest;
+ // an Accountant has no team.read, so the entry itself goes, which is what this check always proved of an entry no longer permitted.
+ for(const [role,keepsTeam] of [['RECEPTIONIST',true],['ACCOUNTANT',false]] as const){
+  const owner=await identity.staff(alpha,'OWNER');await identity.staff(alpha,'OWNER');
+  const context=await accounts.context(alpha,[owner]),page=await accounts.open(context,routes.staffList);await accounts.ready(page);
+  await expect(page.getByTestId('workspace-team')).toHaveAttribute('href',routes.team);await expect(page.getByTestId('workspace-audit')).toBeVisible();
+  const ownRow=page.locator(`[data-testid="account-staff-row"][data-id="${owner.principal.id}"]`);await expect(ownRow).toBeVisible();
+  await accounts.chooseRole(page,ownRow.getByTestId('account-staff-role'),role);await expect(handle(page,'denied')).toBeVisible();
+  const principal=await accounts.principal(context,alpha,'staff');expect(principal.role).toBe(role);expect(principal.permissions).not.toContain('staff.list');expect(principal.permissions).not.toContain('audit.list');
+  if(keepsTeam)expect(principal.permissions).toContain('team.read');else expect(principal.permissions).not.toContain('team.read');
+  expect((await accounts.action(context,alpha,'staff','staff')).status()).toBe(403);expect((await accounts.action(context,alpha,'staff','audit')).status()).toBe(403);
+  await testInfo.attach(`live-navigation-${role}`,{body:JSON.stringify({role:principal.role,contentDenied:await handle(page,'denied').isVisible(),teamLinks:await page.getByTestId('workspace-team').count(),auditLinks:await page.getByTestId('workspace-audit').count()}),contentType:'application/json'});
+  await expect.soft(page.getByTestId('workspace-team')).toHaveCount(keepsTeam?1:0);await expect.soft(page.getByTestId('workspace-audit')).toHaveCount(0);
+  await expect.soft(page.locator(`a[href="${routes.staffList}"]`),'no route to the accounts screen').toHaveCount(0);
+  await context.close();
+ }
 });

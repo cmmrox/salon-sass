@@ -33,7 +33,22 @@ verification:
   - pnpm --filter @salon/web test:a11y
   - pnpm --filter @salon/web build
   - pnpm contracts:check
-  automation: []
+  automation:
+  - id: team-members-api
+    tool: playwright
+    file: qa/api/F06/S01-team-members.spec.ts
+    project: api
+    suites: [regression]
+  - id: team-seats-and-races
+    tool: playwright
+    file: qa/api/F06/S01-seats-and-races.spec.ts
+    project: api
+    suites: [regression]
+  - id: team-screens
+    tool: playwright
+    file: qa/web/F06/S01-team-screens.spec.ts
+    project: web
+    suites: [regression]
   #  - id: <short name>
   #    tool: playwright      # playwright | maestro | k6 | script
   #    file: <path under qa/, as laid out in docs/qa/test-plan.md>
@@ -44,7 +59,32 @@ verification:
   #    covers: [AC-4]
   #    reason: <why it cannot be automated, and how it was checked>
   #    performed_on: <YYYY-MM-DD>   # required: a manual case counts only once it was done
-  deferred: []
+  deferred:
+  - case: TC-F06-S01-011
+    covers: [AC-7]
+    reason: A removal refused with 409 in_use (its errors carrying {field upcomingBookings, detail N}), nothing
+      changed, and the sheet's "<name> has N upcoming bookings. Move or cancel them first.", need an upcoming
+      booking for the person. No booking exists before F07, and until booking implements
+      UpcomingMemberBookings staff's own implementation answers "none" (decision 100). The spec has the
+      developer's integration test, with an implementation that reports a booking, prove the refusal. From
+      outside, TC-F06-S01-010 and TC-F06-S01-049 show removal when no booking needs the person.
+    unblocked_by: F07
+  - case: TC-F06-S01-012
+    covers: [AC-8]
+    reason: A save that stops a person performing a service with an upcoming booking for them, refused with 409
+      in_use (its errors carrying one {field services, detail <service name>} per service), nothing changed, and
+      the sheet's "This person has upcoming bookings for <services>. Move them first.", needs such a booking. No
+      booking exists before F07, and the interface answers "none" until then (decision 100). The spec has the
+      developer's integration test prove the refusal. From outside, TC-F06-S01-010 shows the save when no booking
+      needs the service.
+    unblocked_by: F07
+  - case: TC-F06-S01-013
+    covers: [AC-4]
+    reason: TeamMembers is a Java interface with no route, whose first callers from outside are F07's bookings and
+      F10's calendar. The developer's integration tests call it for the caller's salon only. From outside until
+      then, TC-F06-S01-009 proves a removed person's id and name stay stored. With F07 a past booking must keep the
+      removed person's name, and another salon's person must not be bookable.
+    unblocked_by: F07
   #  - case: TC-F00-S01-010
   #    covers: [AC-5]
   #    reason: <why it cannot be run yet>

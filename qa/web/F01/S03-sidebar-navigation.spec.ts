@@ -60,21 +60,27 @@ test('TC-F01-S03-017 the Sidebar is a rail from 900px and a keyboard-operable sh
   const nav=page.getByRole('navigation',{name:'Staff workspace'});await expect(nav).toBeVisible();
   await page.locator('body').click({position:{x:1,y:1}});const order:string[]=[];
   for(let i=0;i<5;i++){await page.keyboard.press('Tab');order.push(await page.evaluate(()=>document.activeElement?.getAttribute('data-testid')??''));}
-  expect(order.slice(1,4),`${width}: the rail's routes in order after the salon name`).toEqual(['workspace-account','workspace-staff','workspace-audit']);
+  // A Manager's first routes. The Staff entry keeps its place and opens the Team page (F06-S01); Services joined with F05-S01.
+  expect(order.slice(1,5),`${width}: the rail's routes in order after the salon name`).toEqual(['workspace-account','workspace-team','workspace-services','workspace-audit']);
   for(const combo of ['Control+b','Meta+b']){await page.keyboard.press(combo);await expect(nav,`${width}: ${combo} leaves the rail`).toBeVisible();}
   await settled(page);// the rail's width transition after the resize
   const rail=await nav.evaluate(el=>el.closest('[data-slot="sidebar-container"]')!.getBoundingClientRect().width);expect(rail).toBe(width<1200?200:236);
   await page.close();
  }
- // Only permitted routes, in the rail and in the sheet: a Receptionist has the account page alone.
- const receptionist=await identity.staff(alpha,'RECEPTIONIST'),limited=await accounts.context(alpha,[receptionist]);
- for(const width of [390,1280]){
-  const page=await accounts.open(limited,routes.staff);await page.setViewportSize({width,height:900});await accounts.ready(page);
-  if(width<900){await page.getByTestId('workspace-menu').click();await expect(sheetOf(page)).toBeVisible();}
-  const nav=page.getByTestId('workspace-navigation');await expect(nav).toBeVisible();
-  await expect(nav.getByRole('link')).toHaveCount(1);await expect(nav.getByTestId('workspace-account')).toBeVisible();
-  await expect(page.getByTestId('workspace-staff')).toHaveCount(0);await expect(page.getByTestId('workspace-audit')).toHaveCount(0);
-  await page.close();
+ // Only permitted routes, in the rail and in the sheet, exactly: a Receptionist reads the team (F06-S01) and the services (F05-S01),
+ // an Accountant only the services. Neither has a route to the accounts screen or the audit log.
+ for(const [role,permitted] of [['RECEPTIONIST',[['workspace-account',routes.staff],['workspace-team',routes.team],['workspace-services','/workspace/services']]],['ACCOUNTANT',[['workspace-account',routes.staff],['workspace-services','/workspace/services']]]] as const){
+  const actor=await identity.staff(alpha,role),limited=await accounts.context(alpha,[actor]);
+  for(const width of [390,1280]){
+   const page=await accounts.open(limited,routes.staff);await page.setViewportSize({width,height:900});await accounts.ready(page);
+   if(width<900){await page.getByTestId('workspace-menu').click();await expect(sheetOf(page)).toBeVisible();}
+   const nav=page.getByTestId('workspace-navigation');await expect(nav).toBeVisible();
+   await expect(nav.getByRole('link'),`${role} ${width}: only the permitted routes`).toHaveCount(permitted.length);
+   for(const [testId,href] of permitted)await expect(nav.getByTestId(testId),`${role} ${width}: ${testId}`).toHaveAttribute('href',href);
+   await expect(page.locator(`a[href="${routes.staffList}"]`),`${role} ${width}: no route to the accounts screen`).toHaveCount(0);await expect(page.getByTestId('workspace-audit')).toHaveCount(0);
+   if(role==='ACCOUNTANT')await expect(page.getByTestId('workspace-team'),`${width}: an Accountant has no team entry`).toHaveCount(0);
+   await page.close();
+  }
  }
 });
 
