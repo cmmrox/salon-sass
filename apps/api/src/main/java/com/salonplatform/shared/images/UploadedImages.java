@@ -43,6 +43,11 @@ public final class UploadedImages {
 
     private UploadedImages() {}
 
+    /** The refusal of a file over the limit, for a file refused by its declared size as for one that was read. */
+    public static ImageCheck.Refused tooLarge(long maxBytes) {
+        return new ImageCheck.Refused("must be at most " + (maxBytes / (1024 * 1024)) + " MB");
+    }
+
     /**
      * @param content the uploaded file's bytes
      * @param shape what it must be and how it is kept
@@ -54,7 +59,7 @@ public final class UploadedImages {
             return new ImageCheck.Refused("must be a PNG, JPEG or WebP image");
         }
         if (content.length > maxBytes) {
-            return new ImageCheck.Refused("must be at most " + (maxBytes / (1024 * 1024)) + " MB");
+            return tooLarge(maxBytes);
         }
         try (ImageInputStream input = ImageIO.createImageInputStream(new ByteArrayInputStream(content))) {
             ImageReader reader = readerFor(input);
