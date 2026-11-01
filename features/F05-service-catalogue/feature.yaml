@@ -3,7 +3,7 @@ title: "Service catalogue"
 summary: "A salon creates, edits, duplicates, hides and safely deletes its services, categories, variants, prices and tax settings, keeps a simple product list to sell at checkout, and customers browse the menu. Service time is stored as active, processing and buffer segments (CR-023)."
 release: R1
 milestone: M1-web
-status: in-progress
+status: in-qa
 qa_status: not-run
 released_in: null
 depends_on: [F04]
@@ -18,7 +18,12 @@ requirements: [CAT-01, CAT-02, CAT-03, CAT-04, CAT-05, CAT-06, INV-01]
 nfr_focus: []
 cases: []
 verification:
-  automation: []
+  automation:
+  - id: journeys
+    tool: playwright
+    file: qa/api/F05/F05-journeys.spec.ts
+    project: api
+    suites: [smoke, regression]
   manual: []
   deferred: []
 evidence:
