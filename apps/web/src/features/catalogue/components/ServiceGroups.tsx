@@ -1,6 +1,6 @@
 'use client';
 import { useTranslations } from 'next-intl';
-import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/ui/empty';
+import { Empty, EmptyHeader, EmptyTitle } from '@/components/ui/empty';
 import type { CatalogueService, Category } from '../types';
 import { ServiceCard } from './ServiceCard';
 
@@ -38,10 +38,10 @@ export function ServiceGroups({ categories, services, canChange, busy, onEdit, o
               {category.name}
             </h2>
             {own.length === 0 ? (
-              <Empty className="items-start rounded-card bg-card p-5 text-left" data-testid="service-group-empty">
+              // The prototype's one quiet line ("No … services yet."), as the component map's Empty.
+              <Empty className="items-start border-0 p-0 text-left" data-testid="service-group-empty">
                 <EmptyHeader className="items-start text-left">
                   <EmptyTitle className="text-small font-normal">{t('noServices')}</EmptyTitle>
-                  {canChange && <EmptyDescription>{t('noServicesHelp')}</EmptyDescription>}
                 </EmptyHeader>
               </Empty>
             ) : (

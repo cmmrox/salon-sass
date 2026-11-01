@@ -60,7 +60,7 @@ export function WorkspaceShell({
   if (permissions.includes('catalogue.read'))
     items.push({
       href: '/workspace/services',
-      label: t('services'),
+      label: t('servicesNav'),
       icon: 'services',
       testId: 'workspace-services',
       current: view === 'services',

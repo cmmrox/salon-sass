@@ -131,7 +131,7 @@
       "staff_manage": "Manage staff access",
       "audit_list": "View the activity log",
       "payment_refund": "Refund payments",
-      "catalogue_price_change": "Change prices",
+      "catalogue_price_change": "Change the service catalogue and its prices",
       "policy_change": "Change salon policies",
       "customer_export": "Export customer records",
       "calendar_read": "View the calendar",
@@ -141,7 +141,8 @@
       "invoice_read": "Read the salon's invoices",
       "support_manage": "See and revoke support access",
       "settings_read": "Read the salon's settings",
-      "settings_manage": "Change and publish the salon's settings"
+      "settings_manage": "Change and publish the salon's settings",
+      "catalogue_read": "Read the service catalogue"
     },
     "billing": "Plan and billing",
     "readOnlyReason": "This salon is read-only because an invoice is overdue, so staff changes are paused. They work again as soon as the overdue invoices are paid.",
@@ -164,7 +165,8 @@
       "expiry": "expired"
     },
     "settings": "Settings",
-    "services": "Services & pricing"
+    "services": "Services & pricing",
+    "servicesNav": "Services"
   },
   "console": {
     "title": "Operator console",
@@ -1039,7 +1041,6 @@
     "banner": "List your services with their price and time. Changes apply to new bookings only.",
     "categoriesBanner": "Customers see categories in this order. A category with nothing bookable online is hidden from them.",
     "noServices": "No services yet.",
-    "noServicesHelp": "Add one with New service.",
     "card": {
       "online": "Online",
       "hidden": "Hidden online",
