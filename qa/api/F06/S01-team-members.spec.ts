@@ -30,7 +30,7 @@ import { fixture, grayPng, pngUpload, readJpeg, type FileUpload } from '../../sh
 import { test, expect, alpha, beta, gamma, afterNewestPlan, operatorJson, sqlLiteral, supportJson, type SupportStart } from '../../shared/operator';
 import {
   LIMITS, MEMBERS, PENDING_F06_S01, Team, auditOf, memberInput, memberPath, memberPhotoPath, memberRow, publicKeys, refusedOn, teamRows, teamSalon,
-  teamSnapshot, teamTables, updateOf, SIGN_IN_ACCOUNTS, type MemberInput, type TeamMember,
+  teamSnapshot, teamTables, updateOf, S01_TEAM_TABLES, SIGN_IN_ACCOUNTS, type MemberInput, type TeamMember,
 } from '../../shared/team';
 import { salonUrl, type Salon } from '../../shared/tenants';
 
@@ -815,8 +815,9 @@ test('TC-F06-S01-025 AC-14: with no tenant context every team table returns no r
   }
   const aRows = teamRows(a.created.id);
   const bRows = teamRows(b.created.id);
-  expect(teamTables(), 'each table this stage adds is found').toEqual(expect.arrayContaining([PENDING_F06_S01.memberTable]));
-  for (const table of teamTables()) {
+  expect(teamTables(), 'each table this stage adds is found').toEqual(expect.arrayContaining([...S01_TEAM_TABLES]));
+  // This stage's tables only: a later stage's table with `member` in its name has its own case, and may hold no row here.
+  for (const table of S01_TEAM_TABLES) {
     await test.step(table, async () => {
       expect(aRows[table], `${table}: the salon has rows`).toBeGreaterThan(0);
       expect(bRows[table], `${table}: the other salon has rows`).toBeGreaterThan(0);

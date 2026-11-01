@@ -21,19 +21,12 @@ import type { APIResponse } from '@playwright/test';
 import { refused } from '../../shared/booking-rules';
 import type { Identity, SignedStaff } from '../../shared/identity';
 import { test, expect, fieldsOf, operatorJson, operatorProblem } from '../../shared/operator';
-import { Team, deadlocks, memberInput, noSeat, refusedOn, teamSalon, teamSnapshot, updateOf, type TeamMember } from '../../shared/team';
+import { GAPS, Team, deadlocks, fire, memberInput, noSeat, refusedOn, teamSalon, teamSnapshot, updateOf, type TeamMember } from '../../shared/team';
 
 test.describe.configure({ timeout: 180_000 });
 
 const status = (r: APIResponse) => r.status();
 const worked = (r: APIResponse) => r.status() >= 200 && r.status() < 300;
-
-/** The gaps, in milliseconds, a race sweeps between its requests, from the same tick to one that lets the first finish. */
-const GAPS = [0, 1, 2, 3, 5, 8, 13, 21, 34, 55];
-/** Sends each request `gap` milliseconds after the one before it, without waiting for any answer. */
-const fire = <T>(sends: (() => Promise<T>)[], gap: number) => Promise.all(sends.map((send, n) => (n === 0 || gap === 0
-  ? send()
-  : new Promise<void>(resolve => { setTimeout(resolve, n * gap); }).then(send))));
 
 /** Who is not on the team or not active any more, for reading a race's end state. */
 async function activeAccountIds(identity: Identity, owner: SignedStaff) {

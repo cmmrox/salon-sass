@@ -21,6 +21,7 @@ import { expect, json, syntheticAccount, type Identity, type Role, type SignedSt
 import { identitySql } from './identity-storage';
 import { fieldsOf, onSalonHost, ownerSession, sqlLiteral, type Entitlements, type Operator, type SalonInput } from './operator';
 import type { FileUpload } from './salon-brand';
+import type { DayName } from './salon-hours';
 import type { Salon } from './tenants';
 
 /** Names the spec leaves to the build. Nothing else in the F06 tests spells these out. */
@@ -55,6 +56,28 @@ export const memberPhotoPath = (id: string) => `${memberPath(id)}/photo`;
 export const photoPath = (photoId: string) => `${TEAM}/photos/${photoId}`;
 export const ENTITLEMENTS = '/api/v1/salon/entitlements';
 
+/** The four tables F06-S01 adds. Later stages' tables may also have `member` in their name. */
+export const S01_TEAM_TABLES = ['staff_team_member', 'staff_member_category', 'staff_member_service', 'staff_member_photo'] as const;
+
+/** The gaps, in milliseconds, a race sweeps between its requests, from the same tick to one that lets the first finish. */
+export const GAPS = [0, 1, 2, 3, 5, 8, 13, 21, 34, 55];
+/** Sends each request `gap` milliseconds after the one before it, without waiting for any answer. */
+export const fire = <T>(sends: (() => Promise<T>)[], gap: number) => Promise.all(sends.map((send, n) => (n === 0 || gap === 0
+  ? send()
+  : new Promise<void>(resolve => { setTimeout(resolve, n * gap); }).then(send))));
+/** The same, and whether every request was sent before any had been answered: only then were they really at the same time. */
+export async function fireTogether<T>(sends: (() => Promise<T>)[], gap: number) {
+  let lastSent = 0;
+  let firstAnswered = Number.POSITIVE_INFINITY;
+  const answers = await fire(sends.map(send => async () => {
+    lastSent = Math.max(lastSent, Date.now());
+    const answer = await send();
+    firstAnswered = Math.min(firstAnswered, Date.now());
+    return answer;
+  }), gap);
+  return { answers, overlapped: lastSent < firstAnswered };
+}
+
 /** The spec's limits (AC-1, AC-9). */
 export const LIMITS = {
   name: [2, 40], title: 40, highlights: 60, bio: 140, members: 200, photoBytes: 5 * 1024 * 1024, photoMinSide: 320, photoMaxSide: 800,
@@ -63,9 +86,13 @@ export const LIMITS = {
 // ---- shapes, from the spec's "API and data changes" until the contract exists ----
 
 export type MemberServices = { categoryIds: string[]; serviceIds: string[] };
+/** One weekday of a person's week (F06-S02): the times null and `breaks` empty when not working. */
+export type BreakTime = { starts: string | null; finishes: string | null };
+export type WorkDay = { day: DayName; working: boolean; starts: string | null; finishes: string | null; breaks: BreakTime[] };
 export type TeamMember = {
   id: string; name: string; title: string | null; highlights: string | null; bio: string | null; shownOnline: boolean;
   photoId: string | null; photoUrl: string | null; services: MemberServices; signInAccountId?: string | null; signInLabel?: string | null; version: number;
+  weekly: WorkDay[];
 };
 export type MemberInput = {
   name?: unknown; title?: unknown; highlights?: unknown; bio?: unknown; shownOnline?: unknown;
@@ -251,10 +278,10 @@ export const deadlocks = () => Number(identitySql('SELECT deadlocks FROM pg_stat
 
 export type AuditRow = { action: string; actorId: string; subjectId: string; at: string; details: string };
 
-/** The salon's audit entries about one subject from `after` on, oldest first. */
-export function auditOf(salonId: string, subjectId: string, after: string): AuditRow[] {
+/** The salon's audit entries about one subject, or about anything when null, from `after` on, oldest first. */
+export function auditOf(salonId: string, subjectId: string | null, after: string): AuditRow[] {
   const out = identitySql(`SELECT json_build_object('action', action, 'actorId', actor_id, 'subjectId', subject_id, 'at', created_at, 'details', row_to_json(a)::text)
-    FROM audit_entry a WHERE tenant_id = ${sqlLiteral(salonId)} AND subject_id = ${sqlLiteral(subjectId)}
+    FROM audit_entry a WHERE tenant_id = ${sqlLiteral(salonId)} ${subjectId === null ? '' : `AND subject_id = ${sqlLiteral(subjectId)}`}
       AND created_at >= ${sqlLiteral(after)}::timestamptz ORDER BY created_at, id`);
   return out ? out.split('\n').map(line => JSON.parse(line) as AuditRow) : [];
 }
