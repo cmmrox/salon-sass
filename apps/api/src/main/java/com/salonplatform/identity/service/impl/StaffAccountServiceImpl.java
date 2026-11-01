@@ -7,6 +7,8 @@ import com.salonplatform.identity.dto.Page;
 import com.salonplatform.identity.dto.SeedAccount;
 import com.salonplatform.identity.dto.StaffView;
 import com.salonplatform.identity.entity.StaffAccount;
+import com.salonplatform.identity.inprocess.StaffSeats;
+import com.salonplatform.identity.inprocess.TeamMemberSeats;
 import com.salonplatform.identity.repository.StaffAccountRepository;
 import com.salonplatform.identity.repository.SyntheticIdentityReset;
 import com.salonplatform.identity.service.IdentityWork;
@@ -15,7 +17,6 @@ import com.salonplatform.shared.audit.Actor;
 import com.salonplatform.shared.audit.ActorKind;
 import com.salonplatform.shared.audit.AuditAction;
 import com.salonplatform.shared.audit.AuditTrail;
-import com.salonplatform.shared.entitlements.SalonEntitlements;
 import com.salonplatform.shared.tenancy.TenantContext;
 import com.salonplatform.shared.web.NotFoundException;
 import java.time.Clock;
@@ -24,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -38,7 +40,8 @@ class StaffAccountServiceImpl implements StaffAccountService {
     private final StaffAccountRepository accounts;
     private final SessionAccess sessions;
     private final StaffAuthority authority;
-    private final SalonEntitlements entitlements;
+    private final StaffSeats seats;
+    private final ObjectProvider<TeamMemberSeats> teamMembers;
     private final SyntheticIdentityReset syntheticReset;
     private final IdentityCrypto crypto;
     private final Clock clock;
@@ -102,6 +105,9 @@ class StaffAccountServiceImpl implements StaffAccountService {
             account.deactivate(clock.instant());
             sessions.revokeOwner(SessionKind.STAFF, account.getId(), null);
             record(actor.account(), "staff_removed", account, before, accessValues(account));
+            // The member stays on the team with no sign-in, in this transaction (F06-S01 AC-5, decision 100).
+            teamMembers.ifAvailable(
+                    team -> team.accountRemoved(account.getId(), actor.account().getId(), clock.instant()));
             return null;
         });
     }
@@ -140,6 +146,8 @@ class StaffAccountServiceImpl implements StaffAccountService {
     public void reset() {
         work.run(() -> {
             SyntheticSalons.requireCurrentIsSynthetic();
+            teamMembers.ifAvailable(team ->
+                    accounts.findAll().forEach(account -> team.accountRemoved(account.getId(), null, clock.instant())));
             syntheticReset.removeEveryRecord();
             return null;
         });
@@ -159,7 +167,9 @@ class StaffAccountServiceImpl implements StaffAccountService {
             throw IdentityProblems.conflict();
         }
         if (enforceSeats) {
-            requireStaffSeat();
+            // Inside the salon's identity transaction, which holds its lock: of two simultaneous requests for the
+            // last seat, whether creating an account or adding a team member, exactly one succeeds.
+            seats.requireFreeSeat();
         }
         return accounts.persist(StaffAccount.create(
                 email, mobile, crypto.encodePassword(input.password()), role, grant, clock.instant()));
@@ -179,19 +189,6 @@ class StaffAccountServiceImpl implements StaffAccountService {
         if (grant && role != StaffRole.PROFESSIONAL) {
             throw IdentityProblems.invalidField("professionalGrant", "applies only to a Professional");
         }
-    }
-
-    /**
-     * Staff seats (PLT-04): active staff accounts may not exceed the plan's limit. Called inside the salon's
-     * identity transaction, which holds the salon's identity lock, so of two simultaneous creations for the last
-     * seat exactly one succeeds; a salon without a plan is not limited.
-     */
-    private void requireStaffSeat() {
-        entitlements.forCurrentSalon().ifPresent(limits -> {
-            if (accounts.countByActiveTrue() >= limits.staffSeats()) {
-                throw SalonEntitlements.exceeded(SalonEntitlements.STAFF_SEATS, limits.staffSeats());
-            }
-        });
     }
 
     /** The salon always keeps one active Owner: the last one is neither demoted nor removed. */

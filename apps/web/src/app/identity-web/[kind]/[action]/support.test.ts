@@ -7,7 +7,7 @@ import { contextFromTraceparent, runInRequest } from '@/lib/observability/reques
 import { createIdentityWeb, supportCsrf } from '@/features/identity/server';
 import { salonSettingsFor } from '@/features/branding/server';
 import { salonAccountFor } from '@/features/platform/server';
-import { salonHoursFor } from '@/features/staff/server';
+import { salonHoursFor, salonTeamFor } from '@/features/staff/server';
 import { salonBookingRulesFor } from '@/features/booking/server';
 import { salonCatalogueFor } from '@/features/catalogue/server';
 
@@ -18,6 +18,7 @@ const handleIdentity = createIdentityWeb(
   salonHoursFor,
   salonBookingRulesFor,
   salonCatalogueFor,
+  salonTeamFor,
 );
 let server: Server;
 let calls: { method: string; path: string; host?: string; authorization?: string; body: string }[];

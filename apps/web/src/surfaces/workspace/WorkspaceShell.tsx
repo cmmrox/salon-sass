@@ -14,7 +14,15 @@ const DECORATIVE = '';
  * Sidebar (a 200px rail from 900px and 236px from 1200px; below 900px its sheet, opened from the
  * header's menu button) and the main area (CR-017).
  */
-export type WorkspaceView = 'account' | 'staff' | 'audit' | 'billing' | 'support-access' | 'settings' | 'services';
+export type WorkspaceView =
+  | 'account'
+  | 'team'
+  | 'staff'
+  | 'audit'
+  | 'billing'
+  | 'support-access'
+  | 'settings'
+  | 'services';
 
 /**
  * In the support view (F03-S04) the support banner opens the main area and sticks just under the
@@ -48,13 +56,14 @@ export function WorkspaceShell({
       current: signIn || view === 'account',
     },
   ];
-  if (permissions.includes('staff.list'))
+  // The Team page (F06-S01, decision 100), whose Sign-in accounts tab is F02's staff screen.
+  if (permissions.includes('team.read'))
     items.push({
-      href: '/workspace/staff',
-      label: t('staff'),
+      href: '/workspace/team',
+      label: t('teamNav'),
       icon: 'staff',
-      testId: 'workspace-staff',
-      current: view === 'staff',
+      testId: 'workspace-team',
+      current: view === 'team' || view === 'staff',
     });
   // After Staff, as in the prototype's navigation (F05-S01): every role reads the catalogue (decision 093).
   if (permissions.includes('catalogue.read'))

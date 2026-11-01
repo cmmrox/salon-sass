@@ -246,7 +246,7 @@ and customer privacy rights, and every read. Every other tenant mutation answers
 `salon_read_only` before any change. The tenant registry carries the access state, changed only
 by billing and lifecycle transitions and read on every request; nothing caches it.
 
-**Entitlements.** Platform implements `shared.entitlements.SalonEntitlements` (decision 057), which other modules call inside
+**Entitlements.** A request that waits behind a plan move is held to the plan the move committed: `salon_entitlements()` takes its lock and reads the plan in two statements (decision 101). Platform implements `shared.entitlements.SalonEntitlements` (decision 057), which other modules call inside
 their own transactions: the plan's limits and features, and the salon's current usage. A staff seat
 is one person: seats used are active staff accounts plus team members with no linked account, so a
 linked pair counts once (decisions 099, 100). Identity enforces it on staff creation and `staff` on

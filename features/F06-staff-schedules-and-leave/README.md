@@ -98,3 +98,8 @@ why the feature is divided the way it is.
   - Blocked time over an existing booking is allowed; the booking is kept and flagged, as for leave.
 - **Planning S01 (decision 100):** paths, permissions, the member-and-account link, how seats hold
   across `identity` and `staff`, and what `catalogue` provides.
+- **Recorded at F06-S01 close (decision 101).** The spec's "Corrections at close" hold the rulings given during the build. The
+  walk-through found that a seat request waiting behind a plan move was not limited, an F03 defect, fixed in V29; QA files
+  it against F03 and verifies it. "Consultations" stays in the picker as an ordinary category. Removal's refusal, AC-8 and
+  `TeamMembers` cannot be proved from outside until F07. Files written through the shell before the guard fix are listed in
+  the stage's handoff.

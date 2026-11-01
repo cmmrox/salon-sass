@@ -2870,6 +2870,56 @@
         ],
         "type": "object"
       },
+      "NewTeamMember": {
+        "additionalProperties": false,
+        "properties": {
+          "bio": {
+            "description": "Up to 140 characters; empty or null for none.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "highlights": {
+            "description": "Up to 60 characters; empty or null for none.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name": {
+            "description": "2 to 40 characters after trimming. Two people may share a name.",
+            "type": "string"
+          },
+          "services": {
+            "$ref": "#/components/schemas/TeamMemberServices",
+            "description": "What they perform; nothing when absent."
+          },
+          "shownOnline": {
+            "description": "Whether customers can see them for online booking; on when absent.",
+            "type": "boolean"
+          },
+          "signInAccountId": {
+            "description": "An active account of the salon not linked to another person; absent or null for no sign-in, which takes a staff seat.",
+            "format": "uuid",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "title": {
+            "description": "Up to 40 characters; empty or null for none.",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
       "NoBookingRules": {
         "description": "No rules saved yet.",
         "type": "null"
@@ -3862,6 +3912,81 @@
           "currency",
           "rules",
           "versionId"
+        ],
+        "type": "object"
+      },
+      "PublicTeam": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PublicTeamMember"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "type": "object"
+      },
+      "PublicTeamMember": {
+        "additionalProperties": false,
+        "properties": {
+          "bio": {
+            "maxLength": 140,
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "highlights": {
+            "maxLength": 60,
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 40,
+            "minLength": 2,
+            "type": "string"
+          },
+          "photoUrl": {
+            "description": "Where their photo is served on the salon's hostname; null when they have none.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "serviceIds": {
+            "description": "The services bookable online that they perform; at least one.",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "title": {
+            "maxLength": 40,
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "bio",
+          "highlights",
+          "id",
+          "name",
+          "photoUrl",
+          "serviceIds",
+          "title"
         ],
         "type": "object"
       },
@@ -5529,6 +5654,63 @@
         ],
         "type": "object"
       },
+      "SaveTeamMember": {
+        "additionalProperties": false,
+        "properties": {
+          "bio": {
+            "description": "Up to 140 characters; empty or null for none.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "highlights": {
+            "description": "Up to 60 characters; empty or null for none.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name": {
+            "description": "2 to 40 characters after trimming. Two people may share a name.",
+            "type": "string"
+          },
+          "services": {
+            "$ref": "#/components/schemas/TeamMemberServices",
+            "description": "What they perform; nothing when absent."
+          },
+          "shownOnline": {
+            "type": "boolean"
+          },
+          "signInAccountId": {
+            "description": "An active account of the salon not linked to another person; absent or null for no sign-in. Unlinking an account that stays takes a staff seat.",
+            "format": "uuid",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "title": {
+            "description": "Up to 40 characters; empty or null for none.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "version": {
+            "description": "The member's version, as read.",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "shownOnline",
+          "version"
+        ],
+        "type": "object"
+      },
       "SessionView": {
         "properties": {
           "createdAt": {
@@ -6015,6 +6197,217 @@
           "salon",
           "startedAt",
           "state"
+        ],
+        "type": "object"
+      },
+      "TeamMember": {
+        "additionalProperties": false,
+        "properties": {
+          "bio": {
+            "maxLength": 140,
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "highlights": {
+            "maxLength": 60,
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 40,
+            "minLength": 2,
+            "type": "string"
+          },
+          "photoId": {
+            "description": "Their photo; null when they have none.",
+            "format": "uuid",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "photoUrl": {
+            "description": "Where their photo is served on the salon's hostname; null when they have none.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "services": {
+            "$ref": "#/components/schemas/TeamMemberPerformedServices"
+          },
+          "shownOnline": {
+            "type": "boolean"
+          },
+          "signInAccountId": {
+            "description": "The linked account; null for no sign-in. Only for a caller with `staff.list`.",
+            "format": "uuid",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "signInLabel": {
+            "description": "That account's email, else its mobile. Only for a caller with `staff.list`.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "title": {
+            "maxLength": 40,
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "version": {
+            "description": "Its version, which a save or removal is made from.",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "bio",
+          "highlights",
+          "id",
+          "name",
+          "photoId",
+          "photoUrl",
+          "services",
+          "shownOnline",
+          "title",
+          "version"
+        ],
+        "type": "object"
+      },
+      "TeamMemberList": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/TeamMember"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "type": "object"
+      },
+      "TeamMemberPerformedServices": {
+        "additionalProperties": false,
+        "properties": {
+          "categoryIds": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "serviceIds": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "categoryIds",
+          "serviceIds"
+        ],
+        "type": "object"
+      },
+      "TeamMemberPhotoUpload": {
+        "properties": {
+          "file": {
+            "description": "The image file: PNG, JPEG or WebP, up to 5 MB.",
+            "format": "binary",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "type": "object"
+      },
+      "TeamMemberServices": {
+        "additionalProperties": false,
+        "properties": {
+          "categoryIds": {
+            "description": "Categories performed whole, with any service added later.",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "serviceIds": {
+            "description": "Single services, none inside a category also sent whole.",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "TeamSignInAccount": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "label": {
+            "description": "Its email, else its mobile.",
+            "type": "string"
+          },
+          "memberId": {
+            "description": "The team member linked to it; null for none.",
+            "format": "uuid",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "role": {
+            "description": "Its role, such as `MANAGER`.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "memberId",
+          "role"
+        ],
+        "type": "object"
+      },
+      "TeamSignInAccountList": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/TeamSignInAccount"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
         ],
         "type": "object"
       },
@@ -14212,6 +14605,888 @@
           "platform"
         ]
       }
+    },
+    "/api/v1/team/members": {
+      "get": {
+        "description": "Returned whole: a salon has at most 200. `signInAccountId` and `signInLabel` are present only for a caller with `staff.list`.",
+        "operationId": "listTeamMembers",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamMemberList"
+                }
+              }
+            },
+            "description": "The team."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No valid session for this salon: `invalid_session`."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Without `team.read`: `permission_denied`. A suspended salon: `salon_suspended`."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The hostname names no salon: `not_found`."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The database is down or not answering: `service_unavailable`."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "summary": "Everyone on the team, in name order. `team.read`.",
+        "tags": [
+          "staff"
+        ]
+      },
+      "post": {
+        "description": "A person with no sign-in takes a staff seat; one linked to a free account does not.",
+        "operationId": "addTeamMember",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewTeamMember"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamMember"
+                }
+              }
+            },
+            "description": "The person."
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "A broken rule: `bad_request`, with `errors` naming each field. Nothing is saved."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No valid session for this salon: `invalid_session`."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Without `team.manage`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The hostname names no salon: `not_found`."
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No free staff seat: `entitlement_exceeded`, with `errors` naming `staffSeats`. The salon already has 200 people: `limit_reached`. Nothing is saved."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The database is down or not answering: `service_unavailable`."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "summary": "Adds a person to the team. `team.manage`.",
+        "tags": [
+          "staff"
+        ]
+      }
+    },
+    "/api/v1/team/members/{id}": {
+      "delete": {
+        "description": "They leave the list, the public team and the seat count. Their name stays for past bookings, and their sign-in account stays active and free to link.",
+        "operationId": "removeTeamMember",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "The person's version, as read.",
+            "in": "query",
+            "name": "version",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Removed."
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`version` is missing or below 0: `bad_request`, with `errors` naming it."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No valid session for this salon: `invalid_session`."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Without `team.manage`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No such person on the hostname's salon's team, or the hostname names no salon: `not_found`."
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "They have upcoming bookings: `in_use`, with an `errors` item whose `field` is `upcomingBookings` and whose `detail` is how many. `version` is not the person's: `conflict`. Nothing changes."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The database is down or not answering: `service_unavailable`."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "summary": "Removes a person from the team. `team.manage`.",
+        "tags": [
+          "staff"
+        ]
+      },
+      "get": {
+        "operationId": "getTeamMember",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamMember"
+                }
+              }
+            },
+            "description": "The person."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No valid session for this salon: `invalid_session`."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Without `team.read`: `permission_denied`. A suspended salon: `salon_suspended`."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No such person on the hostname's salon's team, a removed one included, or the hostname names no salon: `not_found`."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The database is down or not answering: `service_unavailable`."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "summary": "A person on the team. `team.read`.",
+        "tags": [
+          "staff"
+        ]
+      },
+      "put": {
+        "description": "Unlinking an account that stays takes a staff seat; linking to a free account frees one.",
+        "operationId": "saveTeamMember",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveTeamMember"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamMember"
+                }
+              }
+            },
+            "description": "The person."
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "A broken rule: `bad_request`, with `errors` naming each field. Nothing is saved."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No valid session for this salon: `invalid_session`."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Without `team.manage`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No such person on the hostname's salon's team, or the hostname names no salon: `not_found`."
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`version` is not the person's: `conflict`. Nothing changes: `invalid_state`. No free staff seat: `entitlement_exceeded`, with `errors` naming `staffSeats`. It stops them performing a service with an upcoming booking: `in_use`, with one `errors` item per service, `field` `services` and the service's name in `detail`. Nothing is saved."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The database is down or not answering: `service_unavailable`."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "summary": "Saves every field of a person. `team.manage`.",
+        "tags": [
+          "staff"
+        ]
+      }
+    },
+    "/api/v1/team/members/{id}/photo": {
+      "delete": {
+        "operationId": "removeTeamMemberPhoto",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamMember"
+                }
+              }
+            },
+            "description": "The person without a photo."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No valid session for this salon: `invalid_session`."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Without `team.manage`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No such person on the hostname's salon's team, or the hostname names no salon: `not_found`."
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The person has no photo: `invalid_state`. They changed at the same moment: `conflict`."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The database is down or not answering: `service_unavailable`."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "summary": "Removes the person's photo. `team.manage`.",
+        "tags": [
+          "staff"
+        ]
+      },
+      "put": {
+        "description": "PNG, JPEG or WebP of up to 5 MB and at least 320 x 320 pixels, checked by decoding, cropped to its centre square and kept as a JPEG of at most 800 x 800, re-encoded, so no metadata is kept. The replaced photo is no longer served.",
+        "operationId": "uploadTeamMemberPhoto",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/TeamMemberPhotoUpload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamMember"
+                }
+              }
+            },
+            "description": "The person with their new photo."
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "A file that breaks a rule, or no file: `bad_request`, with `errors` naming `file`. The person keeps their previous photo."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No valid session for this salon: `invalid_session`."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Without `team.manage`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No such person on the hostname's salon's team, or the hostname names no salon: `not_found`."
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The person changed at the same moment: `conflict`."
+          },
+          "413": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The request is over the server's limit: `request_rejected`."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Too many photos are being decoded, or the database is not answering: `service_unavailable`."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "summary": "Sets the person's photo, replacing any earlier one. `team.manage`.",
+        "tags": [
+          "staff"
+        ]
+      }
+    },
+    "/api/v1/team/photos/{id}": {
+      "get": {
+        "operationId": "getTeamMemberPhoto",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "image/jpeg": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "The photo: a JPEG, never stored by a cache, with `nosniff`."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "A suspended salon: `salon_suspended`."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No such photo of the hostname's salon (a replaced or removed one included), or the hostname names no salon: `not_found`, the same answer each time."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The database is down or not answering: `service_unavailable`."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "summary": "A team member's photo. Public.",
+        "tags": [
+          "staff"
+        ]
+      }
+    },
+    "/api/v1/team/public": {
+      "get": {
+        "description": "Those shown for online booking who perform at least one service bookable online, in name order, with those services' ids. Never a hidden or removed person, an account or a version.",
+        "operationId": "getPublicTeam",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicTeam"
+                }
+              }
+            },
+            "description": "The team."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "A suspended salon: `salon_suspended`."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The hostname names no salon: `not_found`."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The database is down or not answering: `service_unavailable`."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "summary": "The people customers can see for online booking. Public.",
+        "tags": [
+          "staff"
+        ]
+      }
+    },
+    "/api/v1/team/sign-in-accounts": {
+      "get": {
+        "operationId": "listTeamSignInAccounts",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamSignInAccountList"
+                }
+              }
+            },
+            "description": "The accounts."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No valid session for this salon: `invalid_session`."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Without `team.manage` and `staff.list`: `permission_denied`. A suspended salon: `salon_suspended`."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The hostname names no salon: `not_found`."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The database is down or not answering: `service_unavailable`."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "summary": "The salon's active sign-in accounts, with who each is linked to. `team.manage` and `staff.list`.",
+        "tags": [
+          "staff"
+        ]
+      }
     }
   },
   "servers": [
@@ -14233,7 +15508,7 @@
       "name": "platform"
     },
     {
-      "description": "Each branch's opening hours, its choices for the published holidays and its special closures.",
+      "description": "The salon's team members and their profiles, and each branch's opening hours, its choices for the published holidays and its special closures.",
       "name": "staff"
     },
     {

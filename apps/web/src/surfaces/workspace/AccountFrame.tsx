@@ -50,8 +50,8 @@ export function AccountFrame({
           >
             {signIn
               ? t('staffTitle')
-              : view === 'staff'
-                ? t('staff')
+              : view === 'team' || view === 'staff'
+                ? t('team')
                 : view === 'audit'
                   ? t('audit')
                   : view === 'billing'

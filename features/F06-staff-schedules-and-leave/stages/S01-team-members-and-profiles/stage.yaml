@@ -3,7 +3,7 @@ feature: F06
 title: "Team members and profiles"
 sequence: 1
 surfaces: [api, web]
-status: planned             # outlined | planned | in-progress | built | complete | released
+status: complete              # outlined | planned | in-progress | built | complete | released
 qa_status: not-run          # stays not-run: QA passes the feature. Set only by a stage pass the owner asked for
 blocked_reason: null        # QA: what stops a stage pass, when qa_status is blocked
 released_in: null
@@ -15,10 +15,195 @@ nfr_focus: []               # non-functional requirements of the feature that th
 # Written by the developer at handoff. The stage is closed on it, and QA starts the feature pass
 # from it. Facts; not how the code works.
 handoff:
-  run: null                 # commands that start the product and reach what this stage built
-  data: null                # the accounts and seed data that exist
-  notes: null               # criterion-to-result/evidence; gate commands, tested source, log paths,
-                            # results and relevant conditions; gaps and differences from docs/
+  run: |
+    Local, from the repository root, in a plain (non-login) shell.
+    With no other instance running: `infra/scripts/local-service.sh start postgres`, `... start api`, `... start web`,
+    on the database you choose with SALON_DB_NAME. Migrations V1 to V29 and the local seed run at API start.
+    Beside the owner's instance (API 8090, web 3100, database `salon`), as this stage was walked through. Do not use
+    local-service.sh for this: it runs ensure_application_role against the shared cluster's roles, and the scripts run
+    the API and web from a build of their own. Instead:
+      docker exec salon-postgres psql -U salon -d postgres -c "CREATE DATABASE f06s01_walk OWNER salon"
+      In one environment: SALON_DB_NAME=f06s01_walk SALON_API_PORT=8291 SALON_WEB_PORT=3291, then source
+      infra/scripts/lib/common.sh and call load_settings, which fills in every other setting from its defaults, and set
+      JAVA_HOME to ~/.sdkman/candidates/java/25.0.1.0+8-amzn.
+      API: (cd apps/api && ./mvnw -q -DskipTests package && $JAVA_HOME/bin/java -jar target/salon-api.jar)
+      Web: pnpm --filter @salon/web build, then (cd apps/web && node scripts/serve.mjs --port 3291)
+    Start the web only once http://localhost:8291/actuator/health answers: it reads the operator proxy key the API writes
+    on its first start, and exits with "Cannot read retained local operator proxy key" otherwise.
+    Screens: http://alpha.localhost:3291/workspace/team (Team) and /workspace/staff (Sign-in accounts). The navigation
+    entry is "Staff", test id workspace-team. Photos on the web: /team-photos/{id}.
+    API, on the salon's host, under /api/v1/team: members (GET, POST), members/{id} (GET, PUT, DELETE ?version=),
+    members/{id}/photo (PUT multipart `file`, DELETE), sign-in-accounts (GET), public (GET, public), photos/{id} (GET,
+    public). BFF actions under /identity-web/{kind}/: team-members, team-sign-in-accounts, team-member-add,
+    team-member-save, team-member-remove, team-photo (multipart: memberId, file), team-photo-remove.
+    New settings: salon.staff.images.max-bytes (5MB), .max-pixels (50000000), .concurrent-decodes (2); environment
+    SALON_STAFF_IMAGE_MAX_BYTES, _MAX_PIXELS, _CONCURRENT_DECODES. No new local hook.
+    To stop: end both processes and DROP DATABASE f06s01_walk.
+  data: |
+    No salon gains a team member: every salon starts with none, the seed included. Staff accounts come from
+    POST /local/identity/seed as before. A person's services need services in the catalogue, and no service is seeded.
+    DELETE /local/identity now also clears the links of the salon's team members; the members stay.
+    The walk-through's accounts were random and were never kept outside the session's scratchpad; its database
+    f06s01_walk was dropped. Salons used: alpha and beta for the API walk (two salons, every role and a support session),
+    gamma for the browser walk and for the salon states.
+    API shapes as built (field names are the spec's):
+    member {id, name, title, highlights, bio, shownOnline, photoId, photoUrl, services: {categoryIds, serviceIds},
+    signInAccountId, signInLabel, version}: title, highlights, bio, photoId, photoUrl, signInAccountId and signInLabel may
+    be null; the two sign-in fields are absent without staff.list.
+    sign-in-accounts {items: [{id, label, role, memberId}]}, memberId nullable.
+    public {items: [{id, name, title, highlights, bio, photoUrl, serviceIds}]}.
+    400 errors name: name, title, highlights, bio, shownOnline (save only), services, signInAccountId, version, file.
+    409: limit_reached; conflict; invalid_state; entitlement_exceeded with errors naming staffSeats; in_use with
+    {field:"upcomingBookings",detail:"<N>"} on removal and one {field:"services",detail:"<service name>"} per service on a
+    save.
+  notes: |
+    Tested source: 0b0c05e. This commit changes only this file and the generated documents.
+
+    GATES, each once on 0b0c05e with a clean tree, in the checkout this stage was built in. Logs and summary.txt:
+    /Users/cmmrox/Personal/Projects/salon-sass/.claude/worktrees/F06-S01-dev/.local/logs/gates/
+    | Command | Result | Log |
+    | cd apps/api && ./mvnw -q verify | exit 0; 1530 tests, 0 failures, 0 errors, 0 skipped, 180 classes | 1-api-verify.log |
+    | pnpm -r lint | exit 0 | 2-lint.log |
+    | pnpm -r typecheck | exit 0 | 3-typecheck.log |
+    | pnpm -r test | exit 0; web 1132, api-contracts 25, format 11 | 4-test.log |
+    | pnpm --filter @salon/web test:a11y | exit 0; 282 tests in 10 files | 5-a11y.log |
+    | pnpm --filter @salon/web build | exit 0; artifact scan clean | 6-build.log |
+    | pnpm contracts:check | exit 0; document and client current | 7-contracts.log |
+    Time observed: the gates took 22 minutes, 21 of them the API's. Time building, diagnosing and walking: unknown.
+
+    WALK-THROUGH on a fresh database from outside: API 156 of 156 (on 144a47d; only four web components changed after it,
+    so it stands), browser 137 of 137 (real Chromium, on the source of 0b0c05e). Evidence, with the scripts and screenshots,
+    no credentials: /Users/cmmrox/Personal/Projects/salon-sass/.claude/worktrees/F06-S01-dev/.local/f06-s01-walk/
+    (api_walk_result.json, browser_walk_result.json, screens/). The scripts are not product code and were not committed.
+
+    AC-1 checked (API 20, browser 14): every boundary (name 1, 2, 40, 41; title 40, 41; highlights 60, 61; bio 140, 141),
+    trimming, shared names, online on by default, no services and no sign-in by default, an unknown field refused, nothing
+    saved on a broken rule, the 200-row list whole and the 201st 409 limit_reached. On the sheet: each message, Add to team
+    disabled while it lasts, the live count 65/140, "Added to the team.", no members at the start.
+    AC-2 checked (API 5, browser 5): "Profile saved.", unchanged 409 invalid_state, stale 409 conflict changing nothing,
+    8 rounds of two saves at once with exactly one winner, and the conflict and its Reload on the sheet.
+    AC-3 checked (API 12, browser 6): the words of each state including the singular; Choose narrowing to 2 of 3 and whole
+    again; another salon's or an unknown id and an overlap each 400 on services; a service added later is covered; a moved
+    service follows the rules at once; a deleted one disappears. Stored overlap after a move reads back without it and can
+    be saved as read.
+    AC-4 NOT reachable from outside, as it is a Java interface. Checked by TeamMembersContractIntegrationTest (5): by id
+    with a removed one's name, who performs a service, what a member performs, who holds an account, another salon's ids
+    absent. Javadoc names F07 and F10.
+    AC-5 checked (API 14, browser 3): the offer on the sheet, another salon's, a removed or a linked account 400 on
+    signInAccountId, 6 rounds of two saves linking one account leaving it linked once, a member with none listed and
+    public, removing a member leaving the account active and free, removing an account leaving the member with no
+    sign-in, audited, including back on the Team tab after removal on the accounts tab.
+    AC-6 checked (API 19, browser 1): every rule of the list; 10 rounds of a member and an account for the last seat, both
+    orders, exactly one winner, no 5xx; usage and the plan move agree; a move below the seats used refused and to exactly
+    them allowed; no plan is not limited; the seat message on the sheet. The defect found here is under "Changes to F03".
+    AC-7 checked in part (API 8, browser 3): the confirmation's words, "Removed from the team.", leaving the list, public
+    list and seat count, the name kept on the tombstone, stale and missing versions. The refusal CANNOT occur on the running
+    product until F07, because UpcomingMemberBookings answers none. Proved by UpcomingMemberBookingsIntegrationTest, and
+    the sheet's message by TeamScreen.test with the API's answer mocked.
+    AC-8 NOT checked on the running product, for the same reason. Proved the same way.
+    AC-9 checked (API 13, browser 7): a 1600 x 1000 PNG served as an 800 x 800 JPEG with no-store and nosniff, through the
+    BFF, 404 on another salon's host; refused files with the reason, the photo kept; replaced, removed and a removed
+    person's URLs 404, with the bytes gone; the initial on one of six colours. The upload order, metadata removal and JPEG
+    input are the integration tests' (TeamPhotoUploadOrder, TeamPhotos), not walked. WebP was not uploaded; it is the
+    shared check F05 proved.
+    AC-10 checked (API 10): no sign-in needed, hidden and non-bookable left out, name order ignoring case, exactly the
+    spec's fields, no account or version, only bookable services, not another salon's, 404 for no salon, salon_suspended.
+    AC-11 checked (browser 22): the entry for every role with team.read, label and address, both tabs with staff.list and
+    none without, F02's controls for the Owner, a Manager still unable to create, each account naming its member or "No
+    team profile", /workspace/staff denied to Receptionist and Professional.
+    AC-12 checked (browser 17): every field of the card, "None yet", Shown and Hidden, Sign-in with staff.list, name order
+    ignoring case, both headers, the Empty state with and without team.manage.
+    AC-13 checked (API 38, browser 13): every role at every endpoint including an Accountant's PUT, DELETE and photo; a
+    support session reading with support_read_only on every change; salon_read_only; salon_suspended.
+    AC-14 checked (API 12, plus the two isolation layers in the gates): another salon's member and photo not_found for every
+    method, another host's token reading nothing, no rows on any new table with no tenant context.
+    AC-15 checked (API 5): addition, change, removal, photo and a cleared link, with actor, time and values before and after.
+    AC-16 checked (browser 46, plus Team.a11y 42): every width with no sideways scrolling; loading, empty, field-error,
+    conflict, refused and unavailable; the leave guard from Close, Escape and a link; keyboard-only through the sheet with
+    focus kept inside and returned; named photo and Choose controls; no WCAG 2.2 AA violation. Unavailable and refused were
+    forced by answering the request in the browser. No screen reader was used.
+    Limits of the walk: the read-only and suspended states were set directly in the database on gamma, not by the
+    operator's billing; the browser walk's seat refusal used a plan written by SQL, the API walk's plans the operator's API.
+
+    SEAT RACE EVIDENCE. With the lock removed from StaffSeatsImpl.hold() the mixed race failed at once with [201, 201] and
+    the two-unlink race failed too; the log is seats-mutation-no-lock.log in the evidence folder. The many-requests race
+    passed without the lock: it only checks the final count, and is no proof of serialisation. Likewise the 10-round race in
+    PlanMoveCountsTeamMembersIntegrationTest passed with the defect below present: it is a final-count check only.
+
+    CHANGES TO DELIVERED F03 BEHAVIOUR.
+    - Fix 144a47d, migration V29, function salon_entitlements(). A request for a seat that waited behind a plan move read
+      "no plan" and was not limited, so the salon ended over its new plan: account creation since F03-S02, adding a member
+      now. Observed on the running product: over the limit in 7 of 12 rounds; a caller waiting behind a move got
+      plan_id=NULL. After the fix: 0 of 12 on both paths. The lock and the plan read are now two statements of a VOLATILE
+      function, with signature and grants unchanged. PlanMoveAndSeatOrderIntegrationTest holds a lock open for each order:
+      without V29 exactly the three cases that wait behind a move fail (plan-order-without-v29.log), with it all 10 pass,
+      including a plan with room, a salon with no plan, and the moves waiting behind an add, which count it. The lead has
+      QA filing this against F03 as found after merge; no bug file was written here.
+    - usage.staffSeats and the plan move now count active members with no linked account, as the spec asks.
+    CHANGES TO DELIVERED F02 BEHAVIOUR.
+    - Test id workspace-staff is now workspace-team. The entry's label is "Staff", no longer "Staff access"; it shows for
+      team.read, so Receptionist and Professional now have it, and goes to /workspace/team. QA's delivered checks asserting
+      that these roles have no such entry (qa/web/F01/S03-sidebar-navigation.spec.ts, qa/web/F02/S04-presentation.spec.ts,
+      qa/web/F02/S04-functional.spec.ts) need the role's expectation changed, not only the id.
+    - /workspace/staff: the page title is "Team", no longer "Staff access", with a summary line, a tab bar and an info banner
+      above F02's screen, each account names its team profile. The section heading "Staff access" and every control stay.
+    - Creating an account now refuses when members with no linked account fill the seats. Removing an account now clears
+      its member's link. DELETE /local/identity clears links too.
+    F02 contract gap, left alone by the lead's ruling: POST /api/v1/identity/staff documents only 201 and default, so its
+    409 entitlement_exceeded is not a declared status, and that one test call skips the contract validator.
+
+    FOR QA. cacheComponents keeps a route it has left in the document, hidden, so after a tab move team-tab-team and
+    team-tab-accounts each appear twice with one visible, and F05's tabs do the same. Browser checks must target the visible
+    element. The web test ids are team-page, team-add, team-card and its team-card-*, team-sheet and its fields, team-picker-*,
+    team-photo-*, team-rule (data-reason), team-conflict, team-unavailable, team-refused, team-read-only, team-remove-*,
+    team-leave-*, account-staff-team-profile.
+
+    LEAD'S RULINGS to write into the spec at close: 201st member 409 limit_reached with "A salon can have up to 200 team
+    members. Remove someone first."; the in_use items above; a removed person's photo URL answers 404 at once; singulars
+    ("1 service, and any added later", "1 person · 1 shown for online booking"); name order ignores case; messages "Title
+    must be 40 characters or fewer.", "Highlights must be 60 characters or fewer.", "Bio must be 140 characters or fewer.";
+    maxLength left off Name, Title, Highlights and Bio, so the sheet can say those messages and the count can read 141/140,
+    where F05's sheets do use it. ModuleBoundariesTest.everyModuleDeclaresWhatItMayUse allows "staff", by the ruling under
+    decision 100(e).
+
+    CHOICES THE DOCUMENTS LEAVE OPEN. A photo change raises the member's version, as a service photo does. A photo change
+    takes no identity lock, since it takes no seat and changes no link; every other change takes it first. A support session
+    receives signInAccountId and signInLabel, as it holds staff.list. A save with services absent means none, and with
+    signInAccountId absent means no sign-in. IdentityFailure gained `problems`, the API's errors whole, for the in_use words.
+    The theme gained avatar colour tokens. No new dependency.
+    For the lead to decide: AC-3 lists every category with services, so "Consultations" appears once it has services, where
+    the prototype's picker leaves it out, and consultations are F17's.
+
+    DESIGN COMPARISON with the prototype, by looking at both at 1280 (Team, sheet, accounts), 1440, 1024, 768, 390 and 360.
+    Six differences were fixed in 0b0c05e: columns (1, 2 from 900px, 3 from 1200px), a line under each card row, muted card
+    text, the initial's size, the photo controls beside the avatar, rows ringed when on. Differences kept:
+    - Hours, Schedule and the closing line about opening hours are F06-S02's; the owner badge, consultations and branches
+      are not built.
+    - The sheet is the warm canvas, not white, as F05's sheets are.
+    - Categories use Checkbox and online booking Switch, as the spec's component map says, not the prototype's round tick.
+    - The Sign-in accounts tab is F02's screen as the spec says: its narrow column, its Sign out and its form on the page,
+      with no "+ Add staff" in the header and no one-line rows. A long email wraps there.
+    - The prototype's sidebar lists modules not delivered.
+
+    DIFFERENCES FROM docs/, for the lead to correct.
+    - docs/architecture/identity-and-access.md "Implemented web boundary": add /workspace/team, the team BFF actions and
+      /team-photos.
+    - docs/engineering/backend.md: `identity` provides SignInAccounts, `catalogue` provides CatalogueListings, `staff` provides
+      TeamMembers and declares UpcomingMemberBookings; staff holds salon.staff.images in the uploads paragraph; identity.inprocess
+      is also used by staff, platform.inprocess also implemented by it (SalonSeatUsage).
+    - docs/architecture/operator-console.md "Entitlements": salon_entitlements() as V29 leaves it. The comment in V14 is now
+      out of date and V14 was not edited, as migrations are append-only.
+    - The spec's AC-1 sentence on the 200 limit, as ruled.
+
+    SHELL-WRITTEN FILES. Before the lead fixed the edit hook, 41 paths were written through the shell, listed in
+    .local/f06-s01-walk/files-written-through-shell.txt. All 41 are in 7d4d078, including this file's first status edit, and
+    none was rewritten. They are V28; StaffRole, StaffAccountServiceImpl, StaffAccountRepository, identity and its inprocess
+    package-info, SignInAccount, SignInAccounts and its Impl, StaffSeats, TeamMemberSeats, StaffSeatsImpl; platform's inprocess
+    package-info, SalonSeatUsage, StaffSeatUsage, SalonBillingServiceImpl, SubscriptionBillingServiceImpl; CatalogueListing,
+    CatalogueListings and its Impl; staff's package-info, StaffTenantData, TeamMember, TeamMembers, UpcomingMemberBookings and
+    its Impl, the four entities, the four repositories, StaffPlatformFunctions, SalonSeatUsageImpl, TeamAudit,
+    TeamMemberSeatsImpl; application.yaml and module-ownership.yaml. guard --diff passed on them. Everything since was
+    written with Write and Edit.
 
 # Written by QA. A case is the test that proves it, titled with its id and the criteria it
 # covers before a colon: test('TC-F00-S01-001 AC-1, AC-2: a free slot is listed', ...), or a

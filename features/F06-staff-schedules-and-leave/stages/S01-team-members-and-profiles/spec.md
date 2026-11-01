@@ -280,3 +280,32 @@ pnpm contracts:check
 - The verification commands are green.
 - `TeamMembers`, `UpcomingMemberBookings` and the seat contract are documented in their Javadoc as the contracts
   F07, F10 and `identity` use.
+
+## Corrections at close
+
+Recorded by the lead when the stage closed (decision 101). No requirement changed. These were given to the
+developer during the build and take precedence over the criteria above:
+
+- **The 201st member** is 409 `limit_reached`, not a 400 field error, as F05's limits are. The sheet says "A salon can
+  have up to 200 team members. Remove someone first."
+- **`in_use` details** are in the `errors` items: `{field:"upcomingBookings", detail:"<N>"}` on removal, and one
+  `{field:"services", detail:"<service name>"}` per service on a save.
+- **A removed person's photo** is deleted, and its URL answers 404 from the moment they are removed.
+- **Singulars.** A category with one service reads "1 service, and any added later"; the header reads "1 person · 1 shown
+  for online booking".
+- **Name order** ignores case, on the Team tab and in the public list.
+- **Messages** state the limit the rule applies: "Title must be 40 characters or fewer.", "Highlights must be 60
+  characters or fewer." and "Bio must be 140 characters or fewer." The prototype's "under" wording is not used.
+- **`maxLength` is left off** Name, Title, Highlights and Bio, so that the sheet can show those messages and the count can
+  read 141/140. F05's sheets differ.
+- **Consultations in the picker.** AC-3 stands: "Consultations" is an ordinary category of the salon, and appears once it
+  has services. Without it nobody could perform those services. What F17 owns is consultation pricing and the
+  prototype's "Takes consultations" chips, which are not built.
+- **Plan moves.** A seat request that waits behind a plan move is held to the plan the move committed. This corrects F03's
+  `salon_entitlements()` in V29, a change to delivered F03 behaviour.
+- **As built.** A photo change raises the member's version and takes no identity lock, as it takes no seat. A save with
+  `services` absent means none, and with `signInAccountId` absent means no sign-in. A support session receives the sign-in
+  fields, since it holds `staff.list`. `DELETE /local/identity` clears links. The navigation label is "Staff" and the
+  page title "Team", on `/workspace/staff` too, with F02's "Staff access" kept as that screen's section heading.
+- **Not proved on the running product until F07:** AC-4 (a Java interface), AC-8 and AC-7's refusal, which are proved by
+  integration tests with an implementation that reports a booking, and by screen tests with the answer mocked.

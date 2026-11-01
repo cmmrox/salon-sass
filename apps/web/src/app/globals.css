@@ -51,6 +51,13 @@
   --color-negative-surface: var(--negative-surface);
   --color-info: var(--info);
   --color-info-surface: var(--info-surface);
+  --color-avatar-1: var(--avatar-1);
+  --color-avatar-2: var(--avatar-2);
+  --color-avatar-3: var(--avatar-3);
+  --color-avatar-4: var(--avatar-4);
+  --color-avatar-5: var(--avatar-5);
+  --color-avatar-6: var(--avatar-6);
+  --color-avatar-ink: var(--avatar-ink);
   --color-backdrop: var(--backdrop);
   --color-surface-translucent: var(--surface-translucent);
   --color-link: var(--link);

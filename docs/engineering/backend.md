@@ -33,9 +33,9 @@ One deployable, divided into modules by business area. The module list follows t
 | --- | --- |
 | `platform` | Tenants and their provisioning/contact profile, plans, entitlements, subscriptions, operator users. No `tenant_id` |
 | `shared` | Tenant context, errors, time, money, audit trail, outbox, jobs, image checks (decision 093). No business rules |
-| `identity` | Staff accounts, roles, sessions, customer one-time-code sign-in |
-| `catalogue` | Services, categories, variants, popular services, tax settings, products; provides `ServiceTerms`, `TaxSettings` and `Products`, and declares `UpcomingServiceBookings` and `ServiceBookingCounts` for `booking` to implement (decisions 093 to 095) |
-| `staff` | Team members and their profiles, the services each performs, working hours, leave, blocked time; the salon's opening hours, special closures and holiday choices per branch, `OpeningSchedule` and the declared `BookingsOnDate` (decision 087). A team member is not a staff account, which is `identity`'s (decision 100) |
+| `identity` | Staff accounts, roles, sessions, customer one-time-code sign-in; provides `SignInAccounts`; `identity.inprocess` holds the seat check (`StaffSeats`) and the contract `staff` implements (`TeamMemberSeats`, decision 100) |
+| `catalogue` | Services, categories, variants, popular services, tax settings, products; provides `ServiceTerms`, `TaxSettings`, `Products` and `CatalogueListings`, and declares `UpcomingServiceBookings` and `ServiceBookingCounts` for `booking` to implement (decisions 093 to 095) |
+| `staff` | Team members and their profiles, the services each performs, working hours, leave, blocked time; the salon's opening hours, special closures and holiday choices per branch, `OpeningSchedule` and the declared `BookingsOnDate` (decision 087). Provides `TeamMembers` and declares `UpcomingMemberBookings` (decision 101). A team member is not a staff account, which is `identity`'s (decision 100) |
 | `booking` | Availability, holds, bookings, waitlist, policies; the booking rules as immutable versions and the provided `BookingPolicies` (current, by version, `depositFor` with an optional service rule) that F07, F08 and F09 read (decision 089); depends on `catalogue`, mapping a service's deposit in `domain.ServiceDeposits` (decision 096) |
 | `payment` | Gateway accounts, payments, refunds, receipts, checkout |
 | `notification` | Templates, channels, delivery log, preferences |
@@ -580,7 +580,7 @@ test uses them is in `docs/qa/test-plan.md`.
   `Content-Length`, because Next.js's own proxy limit truncates rather than refuses.
   From F05-S01 the decoding, limits and re-encoding are `shared` code (no business rules), used by
   `branding` and `catalogue`; each module keeps its own image table and sets its own limits under
-  its settings prefix (`salon.catalogue.images.*`), decision 093.
+  its settings prefix (`salon.catalogue.images.*`, decision 093; `salon.staff.images.*`, F06).
 
 ## Tests
 

@@ -14,7 +14,8 @@ import {
 /**
  * The confirmation before leaving a settings tab with unsaved edits (F04-S01 AC-11). Its test ids start with
  * `area`: `profile` on the Profile and Branding tabs (as since F04-S01), `rules` on Booking rules (F04-S04), `services`
- * on the service sheet (F05-S01), `tax` on Tax & charges and `products` on the product sheet (F05-S03).
+ * on the service sheet (F05-S01), `tax` on Tax & charges, `products` on the product sheet (F05-S03) and `team` on the
+ * profile sheet (F06-S01).
  */
 export function LeaveDialog({
   open,
@@ -25,7 +26,7 @@ export function LeaveDialog({
   open: boolean;
   onStay: () => void;
   onLeave: () => void;
-  area?: 'profile' | 'rules' | 'services' | 'tax' | 'products';
+  area?: 'profile' | 'rules' | 'services' | 'tax' | 'products' | 'team';
 }) {
   const t = useTranslations('settings.leave');
   return (

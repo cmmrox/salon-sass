@@ -303,8 +303,8 @@ the API uses its real servlet peer. The header confers no tenant or session auth
 
 ## Implemented web boundary
 
-Staff routes are `/workspace/sign-in`, `/workspace/account`, `/workspace/staff` and
-`/workspace/audit`. Tenant `/` enters `/workspace`; old `/sign-in` and `/account` redirect to
+Staff routes are `/workspace/sign-in`, `/workspace/account`, `/workspace/team` (F06), `/workspace/staff`
+(the Team page's Sign-in accounts tab) and `/workspace/audit`. Tenant `/` enters `/workspace`; old `/sign-in` and `/account` redirect to
 staff sign-in. No customer web navigation or public salon shell is delivered. Workspace is neutral.
 
 The web BFF accepts only `/identity-web/staff/{action}`, with existing permission, Origin,
