@@ -49,6 +49,7 @@ Added by the lead at `stage-close` and `feature-close`, from suggestions classed
 | Let the arrow keys choose the deposit kind, as a radio group's arrows do | SUG-F04-05 | Or expose the chips as toggle buttons with `aria-pressed`, as the prototype draws them |
 | Open the Add a closure sheet empty after a closure is saved | SUG-F04-06 | Today it keeps the last date, and saving it again is refused as a duplicate |
 | Show workspace times on one clock (History uses 12-hour, Hours uses 24-hour) | SUG-F04-07 | Decide in the design standards, then apply in the shared `formatInstant` |
+| Mount a time Select's 96 options only while its list is open | Developer, PR #18 CI fix | Every change on the Hours tab re-renders about 1,500 hidden options (about 110 ms per change in a development build). A refactor; check typing to jump to a time still works |
 | Put the time on the web app's log lines, and say what was left running when a start fails half way | SUG-F01-S01-08 | Local scripts |
 | Give an automation check a way to report an environment fault to the runner, which today records only a missing tool that way | QA of F01-S01 | Lifecycle tooling |
 | Agree client retry guidance for temporary 503 responses | SUG-F01-S02-01 | Consider with the public shell; requires owner approval before changing requirements |
