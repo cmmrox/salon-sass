@@ -68,7 +68,8 @@ export function ImageField({ kind, image, upload, error, disabled, initial, onCh
           id={id}
           type="file"
           accept="image/png,image/jpeg,image/webp"
-          className="sr-only"
+          // Input's own width and height would otherwise outlast sr-only and widen the page.
+          className="sr-only size-px min-h-0 min-w-0 p-0"
           tabIndex={-1}
           disabled={disabled || upload.state === 'uploading'}
           aria-describedby={`${id}-description${reason ? ` ${id}-error` : ''}`}

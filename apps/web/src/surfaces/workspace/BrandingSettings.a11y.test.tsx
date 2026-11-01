@@ -72,6 +72,8 @@ describe('the Branding tab', () => {
       page(brand);
       await screen.findByTestId('brand-tab');
       await noViolations();
+      // Nothing, the visually hidden file inputs included, widens the page past the viewport.
+      expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(document.documentElement.clientWidth);
     },
   );
 
