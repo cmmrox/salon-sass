@@ -119,7 +119,7 @@ Public help pages only; no account was created. The comparison was not refreshed
 
 ## Hands-on check and design comparison
 
-Walked as a new salon's Owner at 1280 and 360 on 2026-11-01, build 12cdf8e: the Services tab with a
+Walked as a new salon's Owner at 1280 and 360 on 2026-11-01, build 12cdf8e (product code identical to d8985b8): the Services tab with a
 service with five variants, a plain service chosen for Popular, a service with a 30% deposit and a
 hidden one; the Categories tab; the Products tab with a sold and an unsold product; the service sheet
 with More options; Settings → Tax & charges with VAT and a 10% service charge.
@@ -137,22 +137,21 @@ contrast. Screenshots are in the QA scratchpad (`f05-explore/`) and are not comm
 
 ## Runs
 
-All runs were on a fresh database (`f05qa_feat`) against product build 12cdf8e (the API's
-`/api/v1/meta` names it), on QA's own instance (8291/3291). The product code did not change between
-runs; only QA's tests did.
-- S03 tests before the feature pass (the S03 dry run it never had), `qa/reports/20261101-220216-F05-S03-b82b29df8450`
-  (the build's names filled in, not yet committed): 21 of 24; the three failures were test defects,
-  repaired and committed in f735ecb, and re-run 3 of 3 (`qa/reports/20261101-rerun-F05-S03`).
-- Feature pass, `qa/reports/20261101-220610-F05-cb818e8d1e03` (tests d3d70f3), 6 min 21 s: 85 of 88
-  automated cases; 5 of 8 entries passed, and three cases in the other three failed on test defects
-  (TC-F05-S01-030 counted later stages' tables, TC-F05-S01-032 still expected no Products tab,
-  TC-F05-S03-019 signed in again within one authenticator step after a fast restart).
-- Those three re-run after the repair (f11b829), `qa/reports/20261101-rerun-F05`: 3 of 3, 30 s.
-  Every other case passed in the feature pass on unchanged product code, so the result stands at
-  88 of 88 automated, 2 deferred (F07), 0 manual. A single uninterrupted full run on f11b829 was not
-  repeated, at the lead's request to wrap up.
+All runs were on fresh databases on QA's own instance (8291/3291), against product code unchanged since
+12cdf8e (no file under `apps`, `packages` or `infra` differs between 12cdf8e and d8985b8). Only QA's
+tests changed between runs.
+- S03 tests before the feature pass (the S03 dry run it never had), `qa/reports/20261101-220216-F05-S03-b82b29df8450`:
+  21 of 24; the three failures were test defects, repaired in f735ecb and re-run 3 of 3.
+- First feature pass, `qa/reports/20261101-220610-F05-cb818e8d1e03` (tests d3d70f3), 6 min 21 s: 85 of 88;
+  the three failures were test defects (TC-F05-S01-030 counted later stages' tables, TC-F05-S01-032 still
+  expected no Products tab, TC-F05-S03-019 signed in again within one authenticator step after a fast
+  restart), repaired in f11b829 and re-run 3 of 3.
+- **Recorded pass:** `qa/reports/20261101-224201-F05-14614a3cc4de`, one uninterrupted `qa/scripts/sdlc run
+  --feature F05` at d8985b8 (API build identity d8985b8, database `f05qa_final`), 6 min 03 s: all 8 entries
+  and all 88 automated cases passed (S01 API 29, S01 browser 11, backfill 1, S02 API 14, S02 browser 6,
+  S03 API 15, S03 browser 9, journeys 3). No manual case; two cases deferred to F07.
 - TC-F05-S03-019 restarts only QA's own API with `SALON_CATALOGUE_TAX_VAT_RATE_PERCENT=15` and puts it
-  back; the API was confirmed running without the override afterwards.
+  back.
 
 ## Bugs filed from this review
 

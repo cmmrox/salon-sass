@@ -10,7 +10,7 @@ depends_on: [F04]
 integration:
   branch: charithm/feature/F05-service-catalogue
   pull_request: null
-  qa_revision: f11b829926c0d017b3fff32e71d53aec1d9175b9
+  qa_revision: d8985b85d5bb2c046404cc3327db6d31d329863f
   merged_commit: null
   merged_at: null
 surfaces: [api, web]
@@ -27,5 +27,5 @@ verification:
   manual: []
   deferred: []
 evidence:
-  last_run: qa/reports/20261101-220610-F05-cb818e8d1e03
+  last_run: qa/reports/20261101-224201-F05-14614a3cc4de
   last_result: pass
