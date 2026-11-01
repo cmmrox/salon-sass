@@ -645,6 +645,7 @@
   },
   "settings": {
     "intro": "Changes are saved as a draft that only staff who manage settings can see. Publish to show them to your customers.",
+    "introHours": "Hours, holidays and closures save at once and apply to new bookings. Only your team sees closure reasons.",
     "tabsLabel": "Settings section",
     "tabs": {
       "profile": "Profile",

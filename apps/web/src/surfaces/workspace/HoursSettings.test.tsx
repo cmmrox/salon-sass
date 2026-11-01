@@ -4,6 +4,7 @@ import type { Closure, HolidayYear, HoursSettings } from '@/features/staff';
 import { renderWithMessages } from '@test/render';
 import { chooseOption } from '@test/select';
 import { HoursSettingsScreen } from './HoursSettingsScreen';
+import { SettingsScreen } from './SettingsScreen';
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }) }));
 
@@ -95,6 +96,15 @@ const render = (readOnly: 'support' | 'salon' | null = null) =>
   renderWithMessages(<HoursSettingsScreen kind="staff" timeZone="Asia/Colombo" readOnly={readOnly} />);
 
 describe('the Hours & closures tab: opening hours (AC-1)', () => {
+  it('says above the tabs that these settings save at once, not as a draft', () => {
+    renderWithMessages(
+      <SettingsScreen tab="hours">
+        <p>content</p>
+      </SettingsScreen>,
+    );
+    expect(screen.getByTestId('settings-intro')).toHaveTextContent('save at once');
+  });
+
   it('shows a loading state, then the suggested week marked Not saved yet', async () => {
     render();
     expect(screen.getByTestId('hours-loading')).toHaveAttribute('aria-busy', 'true');
