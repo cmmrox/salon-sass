@@ -381,6 +381,40 @@ describe('workspace entry decided before anything renders (CR-013)', () => {
     },
   );
 
+  describe('Settings (F04-S01)', () => {
+    const signedInWith = (permissions: string[]) =>
+      vi.fn(async () => ({ kind: 'signed-in' as const, principal: { kind: 'staff', permissions } as never }));
+
+    it('sends settings staff to the first tab with a real redirect', async () => {
+      const response = await routeRequest(
+        request('/workspace/settings', { cookie: 'salon_staff_access=private' }),
+        salonSite(),
+        signedInWith(['settings.read', 'settings.manage']),
+      );
+      expect(response.status).toBe(307);
+      expect(response.headers.get('location')).toBe('http://alpha.localhost:3100/workspace/settings/profile');
+    });
+
+    it('lets a member without settings.read reach the page, which shows its no-access state', async () => {
+      const response = await routeRequest(
+        request('/workspace/settings', { cookie: 'salon_staff_access=private' }),
+        salonSite(),
+        signedInWith(['calendar.read']),
+      );
+      expect(response.status).toBe(200);
+      expect(handedOn(response)).toEqual(alpha);
+    });
+
+    it.each(['/workspace/settings', '/workspace/settings/profile'])(
+      'protects %s like every other workspace page',
+      async (path) => {
+        const response = await routeRequest(request(path), salonSite(), deciding('signed-in'));
+        expect(response.status).toBe(307);
+        expect(response.headers.get('location')).toBe('http://alpha.localhost:3100/workspace/sign-in');
+      },
+    );
+  });
+
   it("never decides entry for sign-in itself or for other hostnames' answers", async () => {
     const decide = deciding('signed-out');
     expect((await routeRequest(request('/workspace/sign-in'), salonSite(), decide)).status).toBe(200);
