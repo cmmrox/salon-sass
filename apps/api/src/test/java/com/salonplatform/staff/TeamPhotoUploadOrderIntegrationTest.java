@@ -66,6 +66,13 @@ class TeamPhotoUploadOrderIntegrationTest extends TwoSalonTeam {
     }
 
     @Test
+    void anAccountantIsRefusedWithoutReadingTheFile() throws Exception {
+        TrackedUpload file = good();
+        String accountant = settings.signedIn(alpha, StaffRole.ACCOUNTANT).token();
+        refusedUnread(sent(added("Order Accountant").get("id"), file, accountant), file, 403, "permission_denied");
+    }
+
+    @Test
     void anUnknownMemberIsNotFoundWithoutReadingTheFile() throws Exception {
         TrackedUpload file = good();
         refusedUnread(sent(UUID.randomUUID(), file, salonOwner), file, 404, "not_found");

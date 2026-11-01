@@ -1,6 +1,7 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderWithMessages } from '@test/render';
+import { chooseOption } from '@test/select';
 import {
   ACCOUNTS,
   CATEGORIES,
@@ -123,14 +124,41 @@ describe('the Team tab (F06-S01 AC-12)', () => {
     expect(within(card('Kasun Silva')).getByTestId('team-card-services')).toHaveTextContent('None yet');
   });
 
-  it('shows the initial with no photo, and the photo through the web’s own route with one', async () => {
+  it('shows the initial on one of the six colours with no photo', async () => {
+    answers['team-members'] = () => Response.json({ items: [member(KASUN, 'Kasun Silva')] });
+    render();
+
+    await screen.findAllByTestId('team-card');
+
+    const initial = within(card('Kasun Silva')).getByTestId('team-member-initial');
+    expect(initial).toHaveTextContent('K');
+    expect(initial.className).toMatch(/bg-avatar-[1-6]/);
+    expect(within(card('Kasun Silva')).queryByTestId('team-member-photo')).toBeNull();
+  });
+
+  it('shows the photo through the web’s own route, never the API’s, once it has loaded', async () => {
+    // jsdom loads no images; Radix Avatar shows its image only once the browser says it has.
+    vi.stubGlobal(
+      'Image',
+      class {
+        complete = true;
+        naturalWidth = 320;
+        src = '';
+        referrerPolicy = '';
+        crossOrigin = '';
+        addEventListener() {}
+        removeEventListener() {}
+      },
+    );
     answers['team-members'] = () =>
       Response.json({ items: [member(KASUN, 'Kasun Silva', { photoId: 'p1', photoUrl: '/api/v1/team/photos/p1' })] });
     render();
 
     await screen.findAllByTestId('team-card');
 
-    expect(within(card('Kasun Silva')).getByTestId('team-member-initial')).toHaveTextContent('K');
+    const photo = await within(card('Kasun Silva')).findByTestId('team-member-photo');
+    expect(photo).toHaveAttribute('src', '/team-photos/p1');
+    expect(within(card('Kasun Silva')).queryByTestId('team-member-initial')).toBeNull();
   });
 
   it('shows the Empty state and the add action with team.manage', async () => {
@@ -201,6 +229,20 @@ describe('adding a person (F06-S01 AC-1)', () => {
 
     expect(screen.getByTestId('team-sheet-save')).toBeDisabled();
     expect(screen.getByTestId('team-sheet-problem')).toHaveTextContent('Title must be 40 characters or fewer.');
+  });
+
+  it.each([
+    ['team-highlights', 61, 'Highlights must be 60 characters or fewer.'],
+    ['team-bio', 141, 'Bio must be 140 characters or fewer.'],
+  ])('says %s is over its limit, in the words the lead ruled', async (field, length, message) => {
+    render();
+    await openNew();
+
+    fireEvent.change(screen.getByTestId('team-name'), { target: { value: 'Ka' } });
+    fireEvent.change(screen.getByTestId(field), { target: { value: 'x'.repeat(length) } });
+
+    expect(screen.getByTestId('team-sheet-problem')).toHaveTextContent(message);
+    expect(screen.getByTestId('team-sheet-save')).toBeDisabled();
   });
 
   it('keeps a live count of the bio', async () => {
@@ -397,13 +439,54 @@ describe('editing a person (F06-S01 AC-2, AC-5)', () => {
     expect(screen.queryByTestId('team-conflict')).toBeNull();
   });
 
-  it('offers only accounts no other person is linked to, and this person’s own', async () => {
+  const offered = async () => {
+    fireEvent.keyDown(screen.getByTestId('team-sign-in'), { key: 'Enter' });
+    return (await screen.findAllByRole('option')).map((option) => option.textContent);
+  };
+  /** The accounts as the API lists them, with one more that Kasun holds. */
+  const withKasunsAccount = () =>
+    Response.json({
+      items: [...ACCOUNTS.items, { id: 'kasuns', label: 'kasun@example.test', role: 'PROFESSIONAL', memberId: KASUN }],
+    });
+
+  it('offers no sign-in, this person’s own account and the free ones, never one another person holds', async () => {
+    answers['team-sign-in-accounts'] = withKasunsAccount;
     render();
     await editNimali();
 
-    // The offer is worked out from the list: Nimali's own account and the free one, as their ids show.
-    expect(ACCOUNTS.items.map((each) => each.id)).toContain(FREE_ACCOUNT);
     expect(screen.getByTestId('team-sign-in')).toHaveTextContent('nimali@example.test');
+    expect(await offered()).toEqual([
+      'No sign-in. They can still take bookings',
+      'nimali@example.test',
+      'free@example.test',
+    ]);
+  });
+
+  it('offers a new person only the free accounts, with no sign-in chosen', async () => {
+    answers['team-sign-in-accounts'] = withKasunsAccount;
+    render();
+    await openNew();
+
+    expect(screen.getByTestId('team-sign-in')).toHaveTextContent('No sign-in. They can still take bookings');
+    expect(await offered()).toEqual(['No sign-in. They can still take bookings', 'free@example.test']);
+  });
+
+  it('sends the account chosen, and null when the link is taken off', async () => {
+    answers['team-member-save'] = () => Response.json(TEAM.items[1]);
+    render();
+    await editNimali();
+
+    await chooseOption(screen.getByTestId('team-sign-in'), 'free@example.test');
+    fireEvent.click(screen.getByTestId('team-sheet-save'));
+    await waitFor(() => expect(sent('team-member-save')).toHaveLength(1));
+    expect(sent('team-member-save')[0]).toMatchObject({ signInAccountId: FREE_ACCOUNT });
+
+    await waitFor(() => expect(screen.queryByTestId('team-sheet')).toBeNull());
+    await editNimali();
+    await chooseOption(screen.getByTestId('team-sign-in'), 'No sign-in. They can still take bookings');
+    fireEvent.click(screen.getByTestId('team-sheet-save'));
+    await waitFor(() => expect(sent('team-member-save')).toHaveLength(2));
+    expect(sent('team-member-save')[1]).toMatchObject({ signInAccountId: null });
   });
 });
 

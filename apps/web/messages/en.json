@@ -1123,8 +1123,8 @@
       "problems": {
         "name": "Name must be 2 to 40 characters.",
         "title": "Title must be 40 characters or fewer.",
-        "highlights": "Keep the highlights under 60 characters.",
-        "bio": "Keep the bio under 140 characters.",
+        "highlights": "Highlights must be 60 characters or fewer.",
+        "bio": "Bio must be 140 characters or fewer.",
         "services": "Those services have changed. Close this and open it again.",
         "signInAccountId": "That account can’t be linked. Choose another."
       },

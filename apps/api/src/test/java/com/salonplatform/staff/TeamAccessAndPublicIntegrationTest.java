@@ -41,6 +41,10 @@ class TeamAccessAndPublicIntegrationTest extends TwoSalonTeam {
                 api.call(alpha, "POST", TeamFixture.MEMBERS, TeamFixture.person("No"), accountant),
                 403,
                 "permission_denied");
+        refused(api.call(alpha, "PUT", path, TeamFixture.saveOf(member), accountant), 403, "permission_denied");
+        refused(api.call(alpha, "DELETE", path + "?version=0", null, accountant), 403, "permission_denied");
+        refused(api.call(alpha, "DELETE", path + "/photo", null, accountant), 403, "permission_denied");
+        assertThat(read(member.get("id"))).containsEntry("name", "Unreachable").containsEntry("version", 0);
     }
 
     @Test
