@@ -4,13 +4,13 @@ summary: "A salon owner sets the business profile, brand, opening hours, holiday
 release: R1
 milestone: M1-web
 status: in-qa
-qa_status: not-run
+qa_status: pass
 released_in: null
 depends_on: [F02]
 integration:
   branch: charithm/feature/F04-salon-setup
   pull_request: null
-  qa_revision: null
+  qa_revision: 70d452a008fb6034b45a9a35a9cb5bc8e3035e96
   merged_commit: null
   merged_at: null
 surfaces: [api, web]
@@ -27,5 +27,5 @@ verification:
   manual: []
   deferred: []
 evidence:
-  last_run: null
-  last_result: null
+  last_run: qa/reports/20261101-143156-F04-fd710b8c3130
+  last_result: pass
