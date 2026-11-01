@@ -11,6 +11,7 @@ import { readBoundedJson } from '@/lib/http/bounded-json';
 import type { Kind, Principal } from '../types';
 import type { SalonAccount, SalonAccountFor, SupportCredential } from './salon-account';
 import type { SalonSettings, SalonSettingsFor } from './salon-settings';
+import { UPLOAD_LIMIT_BYTES } from '@/lib/http/upload-limits';
 
 type Tokens = components['schemas']['Tokens'];
 /** A client for the identity module's paths, for calls made for the salon with this hostname. */
@@ -538,13 +539,14 @@ async function handleIdentity(
   }
 }
 /** The browser's request over its declared size is refused before its form is read (the API's 10 MB limit). */
-const UPLOAD_LIMIT = 10 * 1024 * 1024;
+const UPLOAD_LIMIT = UPLOAD_LIMIT_BYTES;
 
 /**
  * The request's body, read through a byte count that stops past `limit`: null when it is larger. The whole
  * body is never buffered beyond the limit, whether or not the request declared its length (a chunked request
- * declares none). Next.js's own proxy buffer (`experimental.proxyClientMaxBodySize`, 10 MB) truncates rather
- * than refuses, so it is not relied on.
+ * declares none). Next.js's own proxy buffer (`experimental.proxyClientMaxBodySize`) truncates rather than
+ * refuses, so it is set above this limit (`PROXY_BODY_LIMIT_BYTES`, next.config.ts): a body over the limit
+ * still arrives longer than the limit, and is refused here.
  */
 async function boundedBody(request: NextRequest, limit: number): Promise<Uint8Array<ArrayBuffer> | null> {
   const reader = request.body?.getReader();
