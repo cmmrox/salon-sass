@@ -66,7 +66,13 @@ class DatabaseIsolationCatalogueIntegrationTest {
                         "identity_customer",
                         "identity_customer_challenge",
                         // F23-S05: which subscriber processed which event.
-                        "shared_processed_event");
+                        "shared_processed_event",
+                        // F04-S01: branches and the business profile, draft and published.
+                        "branding_branch",
+                        "branding_branch_contact_draft",
+                        "branding_branch_contact_published",
+                        "branding_profile_draft",
+                        "branding_profile_published");
         assertThat(tables)
                 .allSatisfy(table -> assertThat(table)
                         .as("%s", table.get("name"))
@@ -214,7 +220,15 @@ class DatabaseIsolationCatalogueIntegrationTest {
                         org.assertj.core.api.Assertions.tuple(
                                 "identity_customer_challenge", "DELETE,INSERT,SELECT,UPDATE"),
                         // F23-S05: a processed record is written and read, never changed.
-                        org.assertj.core.api.Assertions.tuple("shared_processed_event", "INSERT,SELECT"));
+                        org.assertj.core.api.Assertions.tuple("shared_processed_event", "INSERT,SELECT"),
+                        // F04-S01: branches are only read; drafts exist from a salon's creation and are only
+                        // changed; the published copy is written at the first publication and changed after.
+                        org.assertj.core.api.Assertions.tuple("branding_branch", "SELECT"),
+                        org.assertj.core.api.Assertions.tuple("branding_branch_contact_draft", "SELECT,UPDATE"),
+                        org.assertj.core.api.Assertions.tuple(
+                                "branding_branch_contact_published", "INSERT,SELECT,UPDATE"),
+                        org.assertj.core.api.Assertions.tuple("branding_profile_draft", "SELECT,UPDATE"),
+                        org.assertj.core.api.Assertions.tuple("branding_profile_published", "INSERT,SELECT,UPDATE"));
     }
 
     /**

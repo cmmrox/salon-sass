@@ -582,6 +582,9 @@ class OperatorProvisioningIntegrationTest extends IntegrationTest {
                 .isZero();
         assertThat(count("SELECT count(*) FROM salon_brand WHERE display_name = ?", "Synthetic Salon " + slug))
                 .isZero();
+        // F04-S01 AC-1: the default branch is created in the same transaction, so it is rolled back with it.
+        assertThat(count("SELECT count(*) FROM branding_branch WHERE name = ?", "Synthetic Salon " + slug))
+                .isZero();
         assertThat(count("SELECT count(*) FROM provisioning_receipt WHERE idempotency_key = ?", UUID.fromString(key)))
                 .isZero();
         assertThat(count(
@@ -594,6 +597,11 @@ class OperatorProvisioningIntegrationTest extends IntegrationTest {
         Http.Exchange retried = create("/salons", request, admin, key);
         status(retried, 201);
         assertThat(count("SELECT count(*) FROM tenant WHERE slug = ?", slug)).isEqualTo(1);
+        assertThat(count(
+                        "SELECT count(*) FROM branding_branch b JOIN tenant t ON t.id = b.tenant_id"
+                                + " WHERE t.slug = ? AND b.is_default",
+                        slug))
+                .isEqualTo(1);
         status(http().getOnHost(slug + ".localhost:" + port(), "/api/v1/salon"), 200);
     }
 

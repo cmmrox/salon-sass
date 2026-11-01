@@ -125,7 +125,9 @@ public final class ProfileRules {
         if (value == null) return null;
         try {
             UUID id = UUID.fromString(value);
-            return branches.contains(id) && id.toString().equals(value.toLowerCase(Locale.ROOT)) ? id : null;
+            // UUID.fromString also reads shortened forms (1-1-1-1-1); only the canonical one, in either case, names a
+            // branch.
+            return branches.contains(id) && id.toString().equalsIgnoreCase(value) ? id : null;
         } catch (IllegalArgumentException ex) {
             return null;
         }

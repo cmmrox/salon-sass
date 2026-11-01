@@ -204,21 +204,24 @@ REVOKE ALL ON FUNCTION branding_add_default_branch(uuid, text, timestamptz) FROM
 
 -- Every existing salon gets its default branch (decision 083). A deleted salon is a tombstone with no
 -- data, so it gets none. The branch is named after the published name, or the registry's name, or the
--- slug, in that order, whichever the salon has first.
+-- slug, in that order, whichever the salon has first. The published name is read with that salon set:
+-- row-level security is forced on salon_brand, and outside a developer's machine the migrations' role
+-- is no superuser, so with no salon set it would see no brand at all.
 DO $$
 DECLARE
-    salon record;
+    salon     record;
+    published text;
 BEGIN
-    FOR salon IN
-        SELECT t.id, coalesce(nullif(btrim(left(b.display_name, 120)), ''), nullif(btrim(left(t.name, 120)), ''),
-                              t.slug) AS branch_name
-          FROM tenant t
-          LEFT JOIN LATERAL (SELECT sb.display_name FROM salon_brand sb WHERE sb.tenant_id = t.id) b ON true
-         WHERE t.status <> 'deleted'
-         ORDER BY t.id
+    FOR salon IN SELECT t.id, t.name, t.slug FROM tenant t WHERE t.status <> 'deleted' ORDER BY t.id
     LOOP
-        PERFORM branding_add_default_branch(salon.id, salon.branch_name, now());
+        PERFORM set_config('app.tenant_id', salon.id::text, true);
+        SELECT sb.display_name INTO published FROM salon_brand sb WHERE sb.tenant_id = salon.id;
+        PERFORM branding_add_default_branch(
+            salon.id,
+            coalesce(nullif(btrim(left(published, 120)), ''), nullif(btrim(left(salon.name, 120)), ''), salon.slug),
+            now());
     END LOOP;
+    PERFORM set_config('app.tenant_id', '', true);
 END
 $$;
 
