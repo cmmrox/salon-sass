@@ -215,7 +215,104 @@ test('TC-F04-S03-024 AC-4, AC-5: a published year shows "To review" with its com
   expect((await hours.year(salon, owner.tokens, year)).days.find(d => d.date === open.date)!.choice, 'the later choice is saved').toBe('closed');
 });
 
-test('TC-F04-S03-025 AC-7: + Add closure opens the sheet with past days disabled and "No bookings on this day"; Close the salon this day lists the closure, a second closure on that day is refused beside the date, and Reopen removes it', async ({ accounts, operator, clock, hours }) => {
+/**
+ * Two consecutive years no earlier test has touched (2028-2098, as `freshYear`), each imported and published with its
+ * own days; the first also has a day that is past on `today` (10 January of the first year). The shared year (2099) is
+ * never one of them, so no other test's salon sees a change.
+ */
+async function twoPublishedYears(operator: Operator, calendar: Calendar) {
+  const admin = await operator.actor();
+  const taken = new Set((await calendar.list(admin)).items.map(y => y.year));
+  const year = Array.from({ length: 2097 - 2028 + 1 }, (_, n) => 2028 + n).find(y => !taken.has(y) && !taken.has(y + 1));
+  if (!year) throw new Error('ENVIRONMENT: no two consecutive holiday calendar years 2028-2098 are free in this database; run on a fresh database');
+  const next = year + 1;
+  const first: Day[] = [
+    { date: `${year}-01-05`, name: `QA ${year} past day`, kind: 'public' },
+    { date: `${year}-01-20`, name: `QA ${year} Duruthu Poya`, kind: 'poya' },
+    { date: `${year}-02-04`, name: `QA ${year} Independence Day`, kind: 'public' },
+  ];
+  const second: Day[] = [
+    { date: `${next}-01-09`, name: `QA ${next} Duruthu Poya`, kind: 'poya' },
+    { date: `${next}-02-04`, name: `QA ${next} Independence Day`, kind: 'bank' },
+  ];
+  for (const [y, days] of [[year, first], [next, second]] as const) {
+    await calendar.import(admin, y, days);
+    await calendar.publish(admin, y);
+  }
+  return { year, next, past: first[0], first: first.slice(1), second, today: `${year}-01-10` };
+}
+
+test('TC-F04-S03-032 AC-4, AC-5: with two published years still to come the tab shows a Public holidays card for each in year order; each is accepted on its own, leaving the other year\'s status and unsaved choices alone, and a year whose days have all passed is no longer shown', async ({ accounts, operator, calendar, clock, hours }) => {
+  const { year, next, past, first, second, today } = await twoPublishedYears(operator, calendar);
+  const at = colombo(today);
+  await clock.set(at);
+  const { salon, owner } = await newSalon(operator, accounts);
+  const { context, page } = await openHours(accounts, owner, { at });
+  const earlier = id(page, 'holidays-card');
+  const later = id(page, `holidays-card-${next}`);
+  const toast = (key: string) => page.getByText(message(`settings.hoursTab.toast.${key}`)).filter({ visible: true });
+  await test.step('one card per year, in year order, each with its own days and status', async () => {
+    await expect(earlier, 'the first card is the earlier year (plain test ids)').toHaveAttribute('data-year', String(year));
+    await expect(later, 'the later year has its own card').toHaveAttribute('data-year', String(next));
+    await expect(earlier).toContainText(words('settings.holidays.title', { year }));
+    await expect(later).toContainText(words('settings.holidays.title', { year: next }));
+    expect((await earlier.boundingBox())!.y < (await later.boundingBox())!.y, 'the earlier year comes first').toBe(true);
+    await expect(id(page, 'holidays-status')).toHaveText(message('settings.holidays.toReview'));
+    await expect(id(page, `holidays-status-${next}`)).toHaveText(message('settings.holidays.toReview'));
+    await expect(id(page, `holiday-${past.date}`), 'a past day is not listed').toHaveCount(0);
+    for (const day of first) await expect(id(page, 'holidays-days').getByTestId(`holiday-${day.date}`), `${day.date} in ${year}'s card`).toContainText(day.name);
+    for (const day of second) await expect(id(page, `holidays-days-${next}`).getByTestId(`holiday-${day.date}`), `${day.date} in ${next}'s card`).toContainText(day.name);
+    await expect(earlier.locator('[data-testid^="holiday-"][data-testid$="-choice"]'), `only ${year}'s days in its card`).toHaveCount(first.length);
+    await expect(later.locator('[data-testid^="holiday-"][data-testid$="-choice"]'), `only ${next}'s days in its card`).toHaveCount(second.length);
+  });
+  await test.step('accepting the later year leaves the earlier year to review, with its unsaved choice', async () => {
+    await choose(page, `holiday-${first[0].date}-choice`, `holiday-${first[0].date}-choice-open`);
+    await choose(page, `holiday-${second[0].date}-choice`, `holiday-${second[0].date}-choice-special`);
+    await choose(page, `holiday-${second[0].date}-opens`, `holiday-${second[0].date}-opens-option-1000`);
+    await choose(page, `holiday-${second[0].date}-closes`, `holiday-${second[0].date}-closes-option-1400`);
+    await id(page, `holidays-accept-${next}`).click();
+    await expect(toast('holidaysAccepted')).toBeVisible();
+    await expect(id(page, `holidays-status-${next}`)).toHaveText(message('settings.holidays.reviewed'));
+    await expect(id(page, 'holidays-status'), `${year} is still to review`).toHaveText(message('settings.holidays.toReview'));
+    await expect(id(page, 'holidays-accept'), `${year} can still be accepted`).toBeEnabled();
+    await expect(id(page, `holiday-${first[0].date}-choice`), `${year}'s unsaved choice is kept`).toHaveText(message('settings.holidays.choices.open'));
+    expect((await hours.year(salon, owner.tokens, year)).reviewed, `${year} not accepted`).toBe(false);
+    const accepted = await hours.year(salon, owner.tokens, next);
+    expect(accepted.reviewed).toBe(true);
+    expect(accepted.days.map(d => [d.date, d.choice, d.opens, d.closes]), `${next}'s choices`).toEqual([
+      [second[0].date, 'special', '10:00', '14:00'], [second[1].date, 'closed', null, null],
+    ]);
+  });
+  await test.step('accepting the earlier year saves its own choices and leaves the later year as accepted', async () => {
+    await toast('holidaysAccepted').waitFor({ state: 'hidden' });
+    await id(page, 'holidays-accept').click();
+    await expect(toast('holidaysAccepted')).toBeVisible();
+    await expect(id(page, 'holidays-status')).toHaveText(message('settings.holidays.reviewed'));
+    await expect(id(page, `holidays-status-${next}`)).toHaveText(message('settings.holidays.reviewed'));
+    const seen = await hours.year(salon, owner.tokens, year);
+    expect(seen.reviewed).toBe(true);
+    expect(seen.days.filter(d => !d.past).map(d => [d.date, d.choice]), `${year}'s choices`).toEqual([[first[0].date, 'open'], [first[1].date, 'closed']]);
+    expect((await hours.year(salon, owner.tokens, next)).days.map(d => [d.date, d.choice]), `${next} unchanged`).toEqual([[second[0].date, 'special'], [second[1].date, 'closed']]);
+  });
+  await test.step('a later choice in one year saves to that year only', async () => {
+    await choose(page, `holiday-${second[1].date}-choice`, `holiday-${second[1].date}-choice-open`);
+    await expect(toast('holidaySaved')).toBeVisible();
+    expect((await hours.year(salon, owner.tokens, next)).days.find(d => d.date === second[1].date)!.choice).toBe('open');
+    expect((await hours.year(salon, owner.tokens, year)).days.filter(d => !d.past).map(d => d.choice), `${year} unchanged`).toEqual(['open', 'closed']);
+  });
+  await test.step('once the earlier year\'s days have all passed, only the later year is shown', async () => {
+    const after = colombo(`${year}-02-05`);
+    await clock.set(after);
+    await context.clock.setSystemTime(new Date(after));
+    await page.reload();
+    await ready(page);
+    await expect(page.locator(`[data-year="${year}"]`), `no card for ${year}`).toHaveCount(0);
+    await expect(id(page, 'holidays-card'), 'the later year is now the first card').toHaveAttribute('data-year', String(next));
+    await expect(id(page, 'holidays-status')).toHaveText(message('settings.holidays.reviewed'));
+  });
+});
+
+test('TC-F04-S03-025 AC-7: + Add closure opens the sheet with past days disabled and "No bookings on this day"; Close the salon this day lists the closure, the sheet opens empty again, a second closure on that day is refused beside the date, and Reopen removes it', async ({ accounts, operator, clock, hours }) => {
   const today = '2027-04-10';
   await clock.set(colombo(today));
   const { salon, owner } = await newSalon(operator, accounts);
@@ -226,15 +323,23 @@ test('TC-F04-S03-025 AC-7: + Add closure opens the sheet with past days disabled
   const pick = async (d: string) => {
     await id(page, 'closure-date').click();
     await expect(id(page, 'closure-calendar')).toBeVisible();
-    const day = calendarDay(id(page, 'closure-calendar'), d);
-    // Choosing the day already chosen would clear it (the sheet keeps the last day it was given).
-    if (!/selected$/.test(await day.getAttribute('aria-label') ?? await day.innerText())) await day.click();
-    else await page.keyboard.press('Escape');
+    // The sheet opens empty (asserted below), so the day is never already chosen here.
+    await calendarDay(id(page, 'closure-calendar'), d).click();
+    await expect(id(page, 'closure-calendar')).toHaveCount(0);
+  };
+  /** The sheet as it opens: no day, no reason, no bookings shown and nothing to close (PR #18 review, SUG-F04-06). */
+  const opensEmpty = async (label: string) => {
+    // Only the open sheet's controls: a sheet still closing would otherwise make two of each.
+    const shown = (name: string) => id(page, name).filter({ visible: true });
+    await expect(shown('closure-sheet')).toBeVisible();
+    await expect(shown('closure-date'), `${label}: no day chosen`).toHaveText(message('settings.closures.chooseDay'));
+    await expect(shown('closure-reason'), `${label}: no reason`).toHaveValue('');
+    await expect(id(page, 'closure-no-bookings'), `${label}: no bookings shown for an earlier day`).toHaveCount(0);
+    await expect(shown('closure-confirm'), `${label}: nothing to close`).toBeDisabled();
   };
   await test.step('the sheet: past days disabled, the bookings on the day', async () => {
     await id(page, 'closure-add').click();
-    await expect(id(page, 'closure-sheet')).toBeVisible();
-    await expect(id(page, 'closure-confirm'), 'nothing to close before a day is chosen').toBeDisabled();
+    await opensEmpty('first opening');
     await id(page, 'closure-date').click();
     await expect(calendarDay(id(page, 'closure-calendar'), plusDays(today, -1)), 'yesterday is disabled').toBeDisabled();
     await expect(calendarDay(id(page, 'closure-calendar'), today), 'today can be chosen').toBeEnabled();
@@ -250,8 +355,9 @@ test('TC-F04-S03-025 AC-7: + Add closure opens the sheet with past days disabled
   await expect(row).toBeVisible();
   await expect(row, 'the team sees the reason').toContainText(reason);
   expect((await hours.closures(salon, owner.tokens)).map(c => [c.date, c.reason]), 'stored').toEqual([[date, reason]]);
-  await test.step('a second closure on the same day is refused beside the date', async () => {
+  await test.step('after a closure is added the sheet opens empty; a second closure on the same day is refused beside the date', async () => {
     await id(page, 'closure-add').click();
+    await opensEmpty('reopened after a closure was added');
     await pick(date);
     await id(page, 'closure-confirm').click();
     await expect(id(page, 'closure-date-error')).toHaveText(message('settings.closures.taken'));
