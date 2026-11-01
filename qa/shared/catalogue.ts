@@ -308,3 +308,102 @@ export function catalogueAudit(salonId: string, after: string): AuditRow[] {
       AND created_at >= ${sqlLiteral(after)}::timestamptz ORDER BY created_at, id`);
   return out ? out.split('\n').map(line => JSON.parse(line) as AuditRow) : [];
 }
+
+// ================================================================ F05-S02: variants, Popular and a service's deposit
+
+/**
+ * Names the F05-S02 spec leaves to the build, from its "API and data changes" and the patterns of
+ * F05-S01. Confirm each against the F05-S02 handoff and the generated contract at the dry run.
+ */
+export const PENDING_F05_S02 = {
+  /** The child table of a terms version holding its variants (spec, "Design notes"). */
+  variantTable: 'catalogue_terms_variant',
+  /** The salon's Popular setting row. */
+  popularTable: 'catalogue_popular_setting',
+  /** A 400's field path for a variant's field: `variants.items[1].priceMinor`. */
+  variantField: (index: number, field: string) => `variants\\.items\\[${index}\\]\\.${field}`,
+  /** The default Popular setting of a salon that never saved one. */
+  defaultMode: 'chosen',
+  /** The deposit of a service saved without one. */
+  defaultDeposit: { kind: 'salon_rule' },
+  /** A menu service's lowest and highest price and time. */
+  menuRange: { priceMin: 'priceMinMinor', priceMax: 'priceMaxMinor', durationMin: 'durationMinMinutes', durationMax: 'durationMaxMinutes' },
+  /** A menu variant's fields. */
+  menuVariant: { price: 'priceMinor', minutes: 'durationMinutes' },
+  /** The schema of the Popular setting. */
+  popularSettingSchema: 'CataloguePopularSetting',
+} as const;
+
+export const POPULAR_SETTING = `${CATALOGUE}/popular-setting`;
+export const popularPath = (id: string) => `${servicePath(id)}/popular`;
+
+export type VariantInput = { id?: string; name: string; priceMinor: number; durationMinutes: number };
+export type Variant = { id: string; name: string; priceMinor: number; durationMinutes: number; segments: Segment[] };
+export type Deposit = { kind: 'salon_rule' | 'none' } | { kind: 'percentage'; percent: number } | { kind: 'amount'; amountMinor: number };
+export type TermsS02 = Terms & {
+  variants: Variant[]; variantSetName: string | null; priceMinMinor: number; priceMaxMinor: number; durationMinMinutes: number; durationMaxMinutes: number;
+};
+export type ServiceS02 = Omit<Service, 'terms'> & { popular: boolean; deposit: Deposit; terms: TermsS02 };
+export type PopularSetting = { mode: 'chosen' | 'most_booked'; version: number; popular: string[] };
+export type MenuS02 = Menu & { popular: string[] };
+
+/** A service input with a set of variants (Short, Medium, Long hair by default). */
+export const variantInput = (categoryId: string, items: VariantInput[] = [
+  { name: 'Short', priceMinor: rupees(2500), durationMinutes: 30 },
+  { name: 'Medium', priceMinor: rupees(3000), durationMinutes: 45 },
+  { name: 'Long', priceMinor: rupees(3500), durationMinutes: 60 },
+], overrides: Record<string, unknown> = {}) => {
+  const base: Record<string, unknown> = { ...serviceInput(categoryId), variants: { name: 'Hair length', items }, ...overrides };
+  delete base.priceMinor;
+  delete base.durationMinutes;
+  return base;
+};
+
+/** What a client sends back to save an S02 service: its current values, variants (with ids) and deposit, with changes applied. */
+export function saveOf(service: ServiceS02, change: Record<string, unknown> = {}) {
+  const t = service.terms;
+  const variants = t.variants.length
+    ? { name: t.variantSetName, items: t.variants.map(v => ({ id: v.id, name: v.name, priceMinor: v.priceMinor, durationMinutes: v.durationMinutes })) }
+    : null;
+  return {
+    name: service.name, categoryId: service.categoryId, description: service.description, bookableOnline: service.bookableOnline,
+    bufferMinutes: t.bufferMinutes, deposit: service.deposit, variants,
+    ...(variants ? {} : { priceMinor: t.priceMinor, durationMinutes: t.durationMinutes }),
+    ...change, version: service.version,
+  };
+}
+
+/** AC-2: a variant's segments: its own time, then the service's buffer when above zero. */
+export const variantSegments = segmentsOf;
+
+export class CatalogueS02 extends Catalogue {
+  async serviceS02(salon: Salon, tokens: Tokens, id: string): Promise<ServiceS02> {
+    return (await this.service(salon, tokens, id)) as unknown as ServiceS02;
+  }
+  async createS02(salon: Salon, tokens: Tokens, input: Record<string, unknown>): Promise<ServiceS02> {
+    return json<ServiceS02>(await this.createRaw(salon, tokens, input), PENDING_F05_S01.schemas.service, 201);
+  }
+  async saveS02(salon: Salon, tokens: Tokens, service: ServiceS02, change: Record<string, unknown> = {}): Promise<ServiceS02> {
+    return json<ServiceS02>(await this.updateRaw(salon, tokens, service.id, saveOf(service, change)), PENDING_F05_S01.schemas.service);
+  }
+  popularRaw(salon: Salon, tokens: Tokens | undefined, id: string, popular: unknown, version: number) {
+    return this.call(salon, 'PUT', popularPath(id), tokens, { popular, version });
+  }
+  async choose(salon: Salon, tokens: Tokens, service: { id: string; version: number }, popular = true): Promise<ServiceS02> {
+    return json<ServiceS02>(await this.popularRaw(salon, tokens, service.id, popular, service.version), PENDING_F05_S01.schemas.service);
+  }
+  settingRaw(salon: Salon, tokens: Tokens | undefined, method = 'GET', data?: unknown) { return this.call(salon, method, POPULAR_SETTING, tokens, data); }
+  async setting(salon: Salon, tokens: Tokens): Promise<PopularSetting> {
+    return json<PopularSetting>(await this.settingRaw(salon, tokens), PENDING_F05_S02.popularSettingSchema);
+  }
+  async setMode(salon: Salon, tokens: Tokens, mode: PopularSetting['mode'], version?: number): Promise<PopularSetting> {
+    const from = version ?? (await this.setting(salon, tokens)).version;
+    return json<PopularSetting>(await this.settingRaw(salon, tokens, 'PUT', { mode, version: from }), PENDING_F05_S02.popularSettingSchema);
+  }
+  async menuS02(salon: Salon): Promise<MenuS02> { return (await this.menu(salon)) as MenuS02; }
+}
+
+/** Every stored row of a salon's catalogue that names a terms version: the version and its variants. */
+export const versionWithVariants = (salonId: string, versionId: string) => catalogueTables().map(t => identitySql(
+  `SELECT coalesce(string_agg(row_to_json(x)::text, '|' ORDER BY row_to_json(x)::text), '') FROM ${t} x
+   WHERE tenant_id = ${sqlLiteral(salonId)} AND row_to_json(x)::text LIKE ${sqlLiteral(`%${versionId}%`)}`)).filter(Boolean).join('\n');

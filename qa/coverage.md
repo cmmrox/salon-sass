@@ -35,7 +35,7 @@ asked for. A case is a test titled with its id and criteria, or a manual or defe
 | F04-S03 | complete | - | STF-04, NFR-13 | 12 | 32 | 31 | 0 | 1 |
 | F04-S04 | complete | - | BKG-02, BKG-09 | 10 | 26 | 26 | 0 | 0 |
 | F05-S01 | complete | - | CAT-01, CAT-02, CAT-04 | 16 | 42 | 41 | 0 | 1 |
-| F05-S02 | planned | - | CAT-03, CAT-06 | 11 | 0 | 0 | 0 | 0 |
+| F05-S02 | planned | - | CAT-03, CAT-06 | 11 | 21 | 20 | 0 | 1 |
 | F05-S03 | planned | - | CAT-05, INV-01 | 13 | 0 | 0 | 0 | 0 |
 
 ## Deferred cases
@@ -47,6 +47,7 @@ Cases waiting for something else. `feature-verify` and `release-prepare` go thro
 | F01 | TC-F01-002 | First real-host deployment is outside local F01 proof, explicitly deferred by decision 018 and CR-005; public certificate, remote delivery and provider-dependent monitoring are not certified. | Owner decides D-08 hosting and D-02 platform domain, configures the DNS challenge module and credentials, provides host access, and explicitly requests staging deployment. |
 | F04-S03 | TC-F04-S03-031 | The closure sheet and the hours card listing real bookings a change affects ("N upcoming bookings fall outside these hours", the bookings on a closed day) cannot be shown on the running product, because no booking exists before F07 and the stage adds no hook to make one (spec, "Requirements covered" and "Out of scope"). From outside, TC-F04-S03-009 and TC-F04-S03-011 show the empty BookingsOnDate answers (no bookings, 0 affected, no outside-hours bookings) and the priority; the developer's integration and component tests hold the rest. | F07, when bookings exist and replace the empty BookingsOnDate. |
 | F05-S01 | TC-F05-S01-020 | A delete refused with 409 in_use, and the screen's "This service has upcoming bookings. Hide it from online booking instead.", need an upcoming booking that uses the service. No booking exists before F07, and until booking implements UpcomingServiceBookings the catalogue's own implementation answers "none" (decision 093). The spec has the developer's integration test, with an implementation that reports a booking, prove the refusal. From outside, TC-F05-S01-019 and TC-F05-S01-035 show delete when no booking uses the service. | F07, when booking implements UpcomingServiceBookings and a booking can use a service. |
+| F05-S02 | TC-F05-S02-015 | "Most booked" ranks up to six services by the booking counts of the last 90 days, most first, leaving out hidden and deleted services. No booking exists before F07, and until booking implements ServiceBookingCounts the catalogue's own implementation reports none (decision 095), so the ranking, its 90-day window and what it leaves out cannot be shown on the running product. The spec has an integration test with an implementation that reports counts prove them. From outside, TC-F05-S02-009 and TC-F05-S02-018 show the setting, its fallback to the chosen services and the sheet while "Most booked" is on. | F07, when booking implements ServiceBookingCounts and bookings exist to count. |
 
 ## Requirements
 

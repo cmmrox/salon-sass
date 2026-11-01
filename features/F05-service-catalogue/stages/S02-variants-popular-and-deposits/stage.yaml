@@ -24,9 +24,29 @@ verification:
   - pnpm --filter @salon/web test:a11y
   - pnpm --filter @salon/web build
   - pnpm contracts:check
-  automation: []
+  automation:
+  - id: variants-popular-deposits-api
+    tool: playwright
+    file: qa/api/F05/S02-variants-popular-deposits.spec.ts
+    project: api
+    suites: [regression]
+  - id: variants-screens
+    tool: playwright
+    file: qa/web/F05/S02-variants-screens.spec.ts
+    project: web
+    suites: [regression]
   manual: []
-  deferred: []
+  deferred:
+  - case: TC-F05-S02-015
+    covers: [AC-6]
+    reason: '"Most booked" ranks up to six services by the booking counts of the last 90 days, most
+      first, leaving out hidden and deleted services. No booking exists before F07, and until booking
+      implements ServiceBookingCounts the catalogue''s own implementation reports none (decision 095),
+      so the ranking, its 90-day window and what it leaves out cannot be shown on the running product.
+      The spec has an integration test with an implementation that reports counts prove them. From
+      outside, TC-F05-S02-009 and TC-F05-S02-018 show the setting, its fallback to the chosen services
+      and the sheet while "Most booked" is on.'
+    unblocked_by: F07, when booking implements ServiceBookingCounts and bookings exist to count.
 evidence:
   last_run: null
   last_result: null
