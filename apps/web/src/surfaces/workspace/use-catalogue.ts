@@ -103,7 +103,8 @@ export function useCatalogue(kind: Kind, notify: (toast: CatalogueToast) => void
     return null;
   }
 
-  async function load() {
+  /** Reads both lists; null when they could not be read (the page says why). */
+  async function load(): Promise<{ categories: CategoryList; services: ServiceList } | null> {
     setLoading(true);
     try {
       const [nextCategories, nextServices] = await Promise.all([
@@ -113,10 +114,33 @@ export function useCatalogue(kind: Kind, notify: (toast: CatalogueToast) => void
       setCategories(nextCategories);
       setServices(nextServices);
       setNotice((current) => (current === 'refused' ? current : null));
+      return { categories: nextCategories, services: nextServices };
     } catch (error) {
       failed(error);
+      return null;
     } finally {
       setLoading(false);
+    }
+  }
+
+  /**
+   * Reads the lists again after a conflict, and an open sheet with them: its service or category as it is now,
+   * edits dropped, so that the next save is made from the version just read. Nothing is saved. A service or
+   * category that is gone closes its sheet, and the page says why.
+   */
+  async function reload() {
+    setRefusal(null);
+    const fresh = await load();
+    if (!fresh) return;
+    if (sheetOpen && sheet?.service) {
+      const now = fresh.services.items.find((each) => each.id === sheet.service?.id);
+      if (now) setSheet({ service: now, values: valuesOf(now), apiProblems: [] });
+      else setSheetOpen(false);
+    }
+    if (categoryOpen && categorySheet?.renaming) {
+      const now = fresh.categories.items.find((each) => each.id === categorySheet.renaming?.id);
+      if (now) setCategorySheet({ renaming: now, name: now.name, problem: null });
+      else setCategoryOpen(false);
     }
   }
 
@@ -291,7 +315,7 @@ export function useCatalogue(kind: Kind, notify: (toast: CatalogueToast) => void
     refusal,
     locked,
     busy,
-    reload: load,
+    reload,
     // The service sheet: its content, whether it is open, and which opening this is (each starts afresh).
     sheet,
     sheetOpen,

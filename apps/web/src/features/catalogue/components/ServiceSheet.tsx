@@ -2,7 +2,7 @@
 import { currencyMark } from '@salon/format';
 import { ChevronDown } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -38,6 +38,11 @@ type Props = {
   onDelete: () => void;
   onPhoto: (file: File) => void;
   onRemovePhoto: () => void;
+  /**
+   * What the page says while the sheet is open (a conflict with its Reload, a refused rule, an unreachable API),
+   * drawn inside the sheet: the page behind its overlay can be neither seen nor used.
+   */
+  notices?: ReactNode;
 };
 
 const PROBLEMS_ID = 'service-problems';
@@ -47,7 +52,8 @@ const SHOWN = 4;
  * The prototype's service sheet (`sePaint`, F05-S01 AC-3): name, price and time; under "More options" the category,
  * short description, buffer, photo and Bookable online. The broken rules are listed above the fields as the person
  * types and **Create service** or **Save changes** stays disabled while they last; **Delete service** for an existing
- * one. The prototype's pricing kinds, option groups, processing time, patch test, price list preview, Popular and
+ * one. The page's notices (a conflict and its Reload, a refused rule) are shown in the sheet while it is open. The
+ * prototype's pricing kinds, option groups, processing time, patch test, price list preview, Popular and
  * Deposit are later stages' and not shown.
  */
 export function ServiceSheet(props: Props) {
@@ -85,6 +91,7 @@ export function ServiceSheet(props: Props) {
             </Button>
           </SheetClose>
         </div>
+        {props.notices}
         <form
           className="flex flex-col gap-4"
           onSubmit={(event) => {

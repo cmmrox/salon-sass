@@ -157,6 +157,18 @@ describe('the service sheet', () => {
     await noViolations();
   });
 
+  it.each(BRANDS)('with a save another change overtook, its conflict and Reload inside it, brand %s', async (brand) => {
+    answers['catalogue-service-save'] = () => Response.json({ code: 'conflict' }, { status: 409 });
+    vi.stubGlobal('navigator', { locks: { request: (_name: string, work: () => Promise<unknown>) => work() } });
+    page(brand);
+    const cards = await screen.findAllByTestId('service-card');
+    fireEvent.click(within(cards[0]!).getByTestId('service-card-edit'));
+    fireEvent.change(await screen.findByTestId('service-sheet-price'), { target: { value: '2700' } });
+    fireEvent.click(screen.getByTestId('service-sheet-save'));
+    await within(screen.getByTestId('service-sheet')).findByTestId('services-conflict');
+    await noViolations();
+  });
+
   it('returns focus to Edit when it closes', async () => {
     page(BRANDS[0]);
     const cards = await screen.findAllByTestId('service-card');

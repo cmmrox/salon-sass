@@ -36,6 +36,8 @@ export function service(
     bookableOnline: options.online ?? true,
     photoId: null,
     photoUrl: null,
+    popular: false,
+    deposit: { kind: 'salon_rule' },
     version: 0,
     terms: {
       versionId: `${id}-v1`,
@@ -45,6 +47,12 @@ export function service(
       segments: [{ kind: 'active', minutes }, ...(buffer > 0 ? [{ kind: 'buffer' as const, minutes: buffer }] : [])],
       durationMinutes: minutes,
       bufferMinutes: buffer,
+      variantSetName: null,
+      variants: [],
+      priceMinMinor: options.priceMinor ?? 450_000,
+      priceMaxMinor: options.priceMinor ?? 450_000,
+      durationMinMinutes: minutes,
+      durationMaxMinutes: minutes,
     },
   };
 }

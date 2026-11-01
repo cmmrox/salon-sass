@@ -197,7 +197,9 @@ describe('the service sheet (AC-3, AC-4, AC-16)', () => {
     answers['catalogue-service-save'] = () => Response.json({ code: 'conflict' }, { status: 409 });
     fireEvent.change(screen.getByTestId('service-sheet-name'), { target: { value: 'Ombre balayage' } });
     fireEvent.click(screen.getByTestId('service-sheet-save'));
-    expect(await screen.findByTestId('services-conflict')).toHaveTextContent('Someone else changed the services');
+    expect(await within(screen.getByTestId('service-sheet')).findByTestId('services-conflict')).toHaveTextContent(
+      'Someone else changed the services',
+    );
   });
 
   it('asks before closing with unsaved edits, and keeps them on Stay', async () => {
@@ -251,6 +253,55 @@ describe('the card actions (AC-7, AC-8, AC-9)', () => {
       { id: SERVICES.items[1]!.id, bookableOnline: false, version: 0 },
       { id: SERVICES.items[2]!.id, bookableOnline: true, version: 0 },
     ]);
+  });
+
+  it('shows a save another change overtook inside the sheet, and Reload refreshes the sheet and the list (AC-16 conflict)', async () => {
+    answers['catalogue-service-save'] = () => Response.json({ code: 'conflict' }, { status: 409 });
+    render();
+    await screen.findAllByTestId('service-card');
+    fireEvent.click(within(card('Gel polish')).getByTestId('service-card-edit'));
+    fireEvent.change(await screen.findByTestId('service-sheet-price'), { target: { value: '2700' } });
+    fireEvent.click(screen.getByTestId('service-sheet-save'));
+
+    const sheet = screen.getByTestId('service-sheet');
+    const conflict = await within(sheet).findByTestId('services-conflict');
+    expect(conflict).toHaveTextContent('Someone else changed the services');
+    expect(screen.getAllByTestId('services-conflict')).toHaveLength(1);
+
+    // Someone else set Rs. 2,600 meanwhile.
+    const changed = service('11111111-0000-4000-8000-000000000003', 'Gel polish', NAILS, {
+      priceMinor: 260_000,
+      minutes: 45,
+      online: false,
+    });
+    answers['catalogue-services'] = () =>
+      Response.json({ items: [...SERVICES.items.slice(0, 2), { ...changed, version: 1 }] });
+    fireEvent.click(within(conflict).getByTestId('services-conflict-reload'));
+
+    await waitFor(() => expect(screen.getByTestId('service-sheet-price')).toHaveValue('2600'));
+    expect(screen.queryByTestId('services-conflict')).toBeNull();
+    expect(within(card('Gel polish')).getByTestId('service-card-price')).toHaveTextContent('Rs. 2,600');
+    expect(sent('catalogue-service-save')).toHaveLength(1);
+    // The next save is made from the version read again.
+    fireEvent.change(screen.getByTestId('service-sheet-price'), { target: { value: '2700' } });
+    answers['catalogue-service-save'] = () => Response.json({ ...changed, version: 2 }, { status: 200 });
+    fireEvent.click(screen.getByTestId('service-sheet-save'));
+    await waitFor(() => expect(sent('catalogue-service-save')).toHaveLength(2));
+    expect(sent('catalogue-service-save')[1]).toMatchObject({ version: 1, priceMinor: 270_000 });
+  });
+
+  it('shows a rule the API refuses while the sheet is open inside the sheet', async () => {
+    answers['catalogue-service-delete'] = () => Response.json({ code: 'in_use' }, { status: 409 });
+    render();
+    await screen.findAllByTestId('service-card');
+    fireEvent.click(within(card('Balayage')).getByTestId('service-card-edit'));
+    fireEvent.click(await screen.findByTestId('service-sheet-delete'));
+    fireEvent.click(await screen.findByTestId('service-delete-confirm'));
+
+    const sheet = screen.getByTestId('service-sheet');
+    expect(await within(sheet).findByTestId('services-rule')).toHaveTextContent(
+      'This service has upcoming bookings. Hide it from online booking instead.',
+    );
   });
 
   it('asks before deleting, and says to hide a service upcoming bookings use', async () => {
@@ -359,5 +410,27 @@ describe('the Categories tab (AC-2)', () => {
     fireEvent.click(screen.getByTestId('category-sheet-save'));
     expect(await screen.findByText('Category added.')).toBeInTheDocument();
     expect(sent('catalogue-category-add')).toEqual([{ name: 'Kids' }]);
+  });
+
+  it('shows a rename another change overtook inside the category sheet, and Reload refreshes it', async () => {
+    answers['catalogue-category-rename'] = () => Response.json({ code: 'conflict' }, { status: 409 });
+    render('categories');
+    const rows = await screen.findAllByTestId('category-row');
+    fireEvent.click(within(rows[1]!).getByTestId('category-row-rename'));
+    fireEvent.change(await screen.findByTestId('category-sheet-name'), { target: { value: 'Nail art' } });
+    fireEvent.click(screen.getByTestId('category-sheet-save'));
+
+    const sheet = screen.getByTestId('category-sheet');
+    const conflict = await within(sheet).findByTestId('services-conflict');
+    answers['catalogue-categories'] = () =>
+      Response.json({
+        ...CATEGORIES,
+        items: CATEGORIES.items.map((each) => (each.id === NAILS ? { ...each, name: 'Nails & hands', version: 1 } : each)),
+      });
+    fireEvent.click(within(conflict).getByTestId('services-conflict-reload'));
+
+    await waitFor(() => expect(screen.getByTestId('category-sheet-name')).toHaveValue('Nails & hands'));
+    expect(screen.queryByTestId('services-conflict')).toBeNull();
+    expect(sent('catalogue-category-rename')).toHaveLength(1);
   });
 });

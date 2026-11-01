@@ -82,6 +82,10 @@ export function ServicesScreen({ kind, tab, canChange, readOnly }: Props) {
   );
 
   const loading = catalogue.loading && !catalogue.categories;
+  // While a sheet is open the page behind its overlay is hidden from view and from assistive technology, so the
+  // page's notices are drawn in the sheet instead (BUG found in F05-S01's dry run: a conflict on save said nothing).
+  const inSheet = catalogue.sheetOpen || catalogue.categoryOpen;
+  const notices = <Notices catalogue={catalogue} readOnly={readOnly} />;
   return (
     <div className="flex min-w-0 flex-col gap-4" data-testid="services-page">
       {header}
@@ -94,7 +98,7 @@ export function ServicesScreen({ kind, tab, canChange, readOnly }: Props) {
           ))}
         </TabsList>
         <TabsContent value={tab} className="flex flex-col gap-4" data-testid={`services-panel-${tab}`}>
-          <Notices catalogue={catalogue} readOnly={readOnly} />
+          {!inSheet && notices}
           <Alert variant="info" className="text-small" data-testid="services-banner">
             {tab === 'services' ? t('banner') : t('categoriesBanner')}
           </Alert>
@@ -154,6 +158,7 @@ export function ServicesScreen({ kind, tab, canChange, readOnly }: Props) {
           onPhoto={(file) => void catalogue.uploadPhoto(file)}
           onRemovePhoto={() => void catalogue.removePhoto()}
           onClosed={giveFocusBack}
+          notices={catalogue.sheetOpen ? notices : null}
         />
       )}
       {catalogue.categorySheet && (
@@ -167,6 +172,7 @@ export function ServicesScreen({ kind, tab, canChange, readOnly }: Props) {
           onSave={() => void catalogue.saveCategory()}
           onClose={catalogue.closeCategorySheet}
           onClosed={giveFocusBack}
+          notices={catalogue.categoryOpen ? notices : null}
         />
       )}
       <ConfirmDelete
@@ -229,6 +235,7 @@ function Notices({ catalogue, readOnly }: { catalogue: Catalogue; readOnly: 'sup
           <AlertTitle>{t('conflictTitle')}</AlertTitle>
           <AlertDescription>{t('conflictBody')}</AlertDescription>
           <Button
+            type="button"
             variant="outline"
             size="sm"
             className="w-fit"

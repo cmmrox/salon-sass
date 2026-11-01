@@ -75,6 +75,8 @@ describe('what the sheet sends and reads', () => {
       bookableOnline: false,
       photoId: null,
       photoUrl: null,
+      popular: false,
+      deposit: { kind: 'salon_rule' },
       version: 2,
       terms: {
         versionId: 'v',
@@ -84,6 +86,12 @@ describe('what the sheet sends and reads', () => {
         segments: [],
         durationMinutes: 60,
         bufferMinutes: 15,
+        variantSetName: null,
+        variants: [],
+        priceMinMinor: 450_000,
+        priceMaxMinor: 450_000,
+        durationMinMinutes: 60,
+        durationMaxMinutes: 60,
       },
     } as CatalogueService;
     expect(valuesOf(service)).toEqual({
