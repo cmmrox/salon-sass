@@ -131,7 +131,7 @@
       "staff_manage": "Manage staff access",
       "audit_list": "View the activity log",
       "payment_refund": "Refund payments",
-      "catalogue_price_change": "Change prices",
+      "catalogue_price_change": "Change the service catalogue and its prices",
       "policy_change": "Change salon policies",
       "customer_export": "Export customer records",
       "calendar_read": "View the calendar",
@@ -141,7 +141,8 @@
       "invoice_read": "Read the salon's invoices",
       "support_manage": "See and revoke support access",
       "settings_read": "Read the salon's settings",
-      "settings_manage": "Change and publish the salon's settings"
+      "settings_manage": "Change and publish the salon's settings",
+      "catalogue_read": "Read the service catalogue"
     },
     "billing": "Plan and billing",
     "readOnlyReason": "This salon is read-only because an invoice is overdue, so staff changes are paused. They work again as soon as the overdue invoices are paid.",
@@ -163,7 +164,9 @@
       "owner": "revoked by the Owner",
       "expiry": "expired"
     },
-    "settings": "Settings"
+    "settings": "Settings",
+    "services": "Services & pricing",
+    "servicesNav": "Services"
   },
   "console": {
     "title": "Operator console",
@@ -1022,6 +1025,155 @@
         "next": "Older",
         "page": "Page {page} of {pages}"
       }
+    }
+  },
+  "services": {
+    "tabsLabel": "Services section",
+    "tabs": {
+      "services": "Services",
+      "categories": "Categories"
+    },
+    "loading": "Loading services",
+    "summary": "{services, plural, one {# service} other {# services}} · {online} bookable online",
+    "categoriesSummary": "{count, plural, one {# category} other {# categories}}",
+    "newService": "+ New service",
+    "newCategory": "+ New category",
+    "banner": "List your services with their price and time. Changes apply to new bookings only.",
+    "categoriesBanner": "Customers see categories in this order. A category with nothing bookable online is hidden from them.",
+    "noServices": "No services yet.",
+    "card": {
+      "online": "Online",
+      "hidden": "Hidden online",
+      "detail": "{category} · {description}",
+      "detailNone": "{category}",
+      "minutes": "{minutes} min",
+      "buffer": "+{minutes} min buffer",
+      "edit": "Edit",
+      "editLabel": "Edit {name}",
+      "hide": "Hide online",
+      "hideLabel": "Hide online: {name}",
+      "show": "Show online",
+      "showLabel": "Show online: {name}",
+      "duplicate": "Duplicate",
+      "duplicateLabel": "Duplicate {name}",
+      "photo": "Photo of {name}"
+    },
+    "categories": {
+      "count": "{count, plural, =0 {No services} one {# service} other {# services}}",
+      "up": "Move {name} up",
+      "down": "Move {name} down",
+      "rename": "Rename",
+      "renameLabel": "Rename {name}",
+      "delete": "Delete",
+      "deleteLabel": "Delete {name}"
+    },
+    "categorySheet": {
+      "new": "New category",
+      "rename": "Rename category",
+      "close": "Close",
+      "name": "Category name",
+      "placeholder": "e.g. Kids’ cuts",
+      "help": "2 to 30 characters. New categories go to the end of the list.",
+      "add": "Add category",
+      "save": "Save",
+      "saving": "Saving…",
+      "length": "Category name must be 2 to 30 characters.",
+      "taken": "Another category already uses this name."
+    },
+    "sheet": {
+      "new": "New service",
+      "edit": "Edit service",
+      "close": "Close",
+      "name": "Service name",
+      "namePlaceholder": "e.g. Ladies colouring",
+      "price": "Price ({mark})",
+      "time": "Time (min)",
+      "more": "More options",
+      "moreHint": "category, description, buffer, photo, visibility",
+      "category": "Category",
+      "categoryPlaceholder": "Choose a category",
+      "description": "Short description",
+      "buffer": "Buffer after (min)",
+      "bufferHelp": "Time after the service before the next booking. Customers do not see it.",
+      "online": "Bookable online",
+      "onlineHelp": "Turn off to hide it from customers",
+      "create": "Create service",
+      "save": "Save changes",
+      "saving": "Saving…",
+      "delete": "Delete service",
+      "problemsTitle": "Fix these to save",
+      "more_problems": "And {count} more.",
+      "problems": {
+        "nameLength": "Service name must be 2 to 40 characters.",
+        "nameTaken": "Another service already uses this name.",
+        "category": "Choose one of your categories.",
+        "description": "Keep the description under 90 characters.",
+        "buffer": "Buffer must be 0 to 60 minutes, in steps of 5.",
+        "price": "Price must be Rs. 100 to Rs. 500,000.",
+        "time": "Time must be 5 to 480 minutes, in steps of 5."
+      },
+      "hiddenWarning": "This service is hidden from online booking. Turn it on when you’re ready."
+    },
+    "photo": {
+      "label": "Photo",
+      "optional": "(optional)",
+      "rules": "PNG, JPEG or WebP, up to 5 MB and at least 320 × 320 pixels. Shown on the service in the app.",
+      "choose": "Choose photo",
+      "replace": "Replace photo",
+      "remove": "Remove photo",
+      "uploading": "Uploading…",
+      "afterCreate": "Add a photo after you create the service.",
+      "chosen": "Photo of the service",
+      "errors": {
+        "bad_request": "This file can’t be used. {rules}",
+        "request_rejected": "This file is too large. Choose one of up to 5 MB.",
+        "service_unavailable": "The photo could not be uploaded. Try again in a moment."
+      }
+    },
+    "deleteService": {
+      "title": "Delete “{name}”?",
+      "body": "It will be removed from your menu. Past bookings are kept. This can’t be undone.",
+      "confirm": "Delete service",
+      "cancel": "Cancel"
+    },
+    "deleteCategory": {
+      "title": "Delete “{name}”?",
+      "body": "It has no services. This can’t be undone.",
+      "confirm": "Delete category",
+      "cancel": "Cancel"
+    },
+    "toasts": {
+      "created": "Service created.",
+      "savedTerms": "Saved. New bookings use the new prices.",
+      "saved": "Saved.",
+      "duplicated": "Duplicated and hidden online. Review it, then show it.",
+      "hidden": "Hidden from online booking. Existing bookings are not affected.",
+      "shown": "Now bookable online.",
+      "deleted": "Service deleted.",
+      "photoSaved": "Photo saved.",
+      "photoRemoved": "Photo removed.",
+      "categoryAdded": "Category added.",
+      "categoryRenamed": "Category renamed.",
+      "categoryDeleted": "Category deleted.",
+      "ordered": "Order saved. Customers see it straight away."
+    },
+    "notices": {
+      "readOnlySupport": "A support session can read the services but cannot change them.",
+      "readOnlySalon": "This salon is read-only until its overdue invoices are paid. You can read the services but not change them.",
+      "conflictTitle": "Someone else changed the services",
+      "conflictBody": "Reload to see their changes. Edits you have not saved will be lost.",
+      "reload": "Reload",
+      "unavailableTitle": "The services could not be reached",
+      "unavailableBody": "Check your connection and try again.",
+      "unavailableKept": "Nothing was saved. What you typed is still here: try again in a moment.",
+      "retry": "Try again",
+      "refused": "You can’t change services. Ask the salon owner.",
+      "inUseService": "This service has upcoming bookings. Hide it from online booking instead.",
+      "inUseCategory": "Move its {count, plural, one {# service} other {# services}} to another category first.",
+      "lastCategory": "Keep at least one category.",
+      "categoryLimit": "Your salon has 50 categories, the most it can have.",
+      "serviceLimit": "Your salon has 300 services, the most it can have.",
+      "unchanged": "Nothing has changed, so there is nothing to save."
     }
   }
 }

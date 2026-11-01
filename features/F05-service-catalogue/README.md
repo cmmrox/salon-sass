@@ -100,3 +100,8 @@ why the feature is divided the way it is.
   or delete.
 - **Popular** holds up to six services; "Most booked" counts the last 90 days and falls back to the
   chosen services until bookings exist.
+- **Recorded at F05-S01 close (decision 094).** Default categories arrive through platform's
+  provisioning hook `SalonBootstrapStep`. Delete asks `UpcomingServiceBookings` before its
+  transaction, so F07 must close that window when `booking` implements it. QA's TC-F05-S01-020
+  (delete refused while a booking uses the service) is deferred until then. The image checks moved
+  into `shared`; QA re-runs F04's brand-image cases in the dry run.

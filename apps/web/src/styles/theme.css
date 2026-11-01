@@ -61,6 +61,10 @@
   --caution: #8F5A00;
   --caution-surface: #FFF4DC;
   --negative-surface: #FDE9E7;
+  /* The prototype's information pair (`--in` on `--inb`, its `.bn.in` banners, F05-S01): ink text on the
+     surface, as the prototype draws it (15.5:1); the blue reaches 5.1:1 on it, for a title. */
+  --info: #1D5FD0;
+  --info-surface: #E8F0FD;
   --backdrop: rgb(20 20 19 / 28%);
   --opacity-disabled: 0.55;
   /* Text drawn in the salon's colour (links, the recovery control): the brand when it reaches

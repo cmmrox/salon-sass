@@ -276,3 +276,32 @@ pnpm contracts:check
 - The verification commands are green.
 - `ServiceTerms` and `UpcomingServiceBookings` are documented in their Javadoc as the contracts
   F07 uses and implements.
+
+## Corrections at close
+
+Recorded by the lead when the stage closed. No requirement changed. The first seven items were
+given to the developer during the build, in answer to QA's preparation:
+
+- **Refusals.** A duplicate category or service name (any case) is 400 `bad_request` on `name`. The
+  51st category and the 301st service (Duplicate counts) are 409 `limit_reached`. Deleting the last
+  category, and moving the first up or the last down, are 409 `invalid_state`.
+- **No HTTP route reads a terms version by id.** `ServiceTerms` is the reader; AC-6 is proved by
+  integration tests.
+- **Sheet messages** use the R1 labels: "Price must be Rs. 100 to Rs. 500,000." and "Time must be 5
+  to 480 minutes, in steps of 5." The banner is the spec's text.
+- **Photos.** On an existing service a chosen file uploads at once, and Remove photo applies at
+  once; a new service says "Add a photo after you create the service." Duplicate copies the photo.
+  A replaced or removed photo's URL answers 404. Photos are served at `/service-photos/<id>` on
+  the salon's hostname.
+- **Order.** Cards within a category are in name order, case-insensitive, like the menu. The
+  Categories tab shows "1 service", "N services" or "No services".
+- **Default categories** reach every salon that is not deleted (active, suspended, read-only).
+- **Refused state.** A 403 on a change shows "You can’t change services. Ask the salon owner." and
+  the page is read-only after the next load.
+- **As built (decision 094).** Seeding through `platform.inprocess.SalonBootstrapStep` and
+  `branding_default_branch_id`. Both lists are returned whole (capped at 50 and 300). A service
+  carries `photoId` and `photoUrl`. The menu's time is every segment except the buffer. The category
+  list version rises on add, delete and move, not on rename; a photo change takes no version;
+  setting the online value a service already has is 409 `invalid_state`.
+- **Design.** The banners use the prototype's information colours (Alert `info`). A hidden card and
+  the sheet's hint text are ink rather than muted, for contrast; "Bookable online" is a Switch.

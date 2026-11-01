@@ -547,15 +547,18 @@ final class ModuleRules {
     }
 
     /**
-     * Its module's own interface, or a contract of {@code shared} that it answers for {@code shared}, such as
-     * {@code SalonEntitlements} (decision 057).
+     * Its module's own interface, a contract of {@code shared} that it answers for {@code shared}, such as
+     * {@code SalonEntitlements} (decision 057), or an in-process contract another module declares for it to
+     * implement, such as platform's {@code SalonBootstrapStep} (F05-S01): the dependency then points from the
+     * implementing module to the declaring one.
      */
     private boolean implementsAnInterfaceOfItsModule(JavaClass javaClass) {
         String module = moduleOf(javaClass);
         return javaClass.getAllRawInterfaces().stream()
                 .filter(type -> type.getPackageName().startsWith(base + "."))
-                .map(this::moduleOf)
-                .anyMatch(owner -> owner.equals(module) || owner.equals(SHARED));
+                .anyMatch(type -> moduleOf(type).equals(module)
+                        || moduleOf(type).equals(SHARED)
+                        || type.getPackageName().endsWith("." + IN_PROCESS));
     }
 
     private static ArchCondition<JavaClass> beAContract() {

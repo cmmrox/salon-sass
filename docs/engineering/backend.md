@@ -32,7 +32,7 @@ One deployable, divided into modules by business area. The module list follows t
 | Module | Owns |
 | --- | --- |
 | `platform` | Tenants and their provisioning/contact profile, plans, entitlements, subscriptions, operator users. No `tenant_id` |
-| `shared` | Tenant context, errors, time, money, audit trail, outbox, jobs. No business rules |
+| `shared` | Tenant context, errors, time, money, audit trail, outbox, jobs, image checks (decision 093). No business rules |
 | `identity` | Staff accounts, roles, sessions, customer one-time-code sign-in |
 | `catalogue` | Services, categories, variants, tax settings |
 | `staff` | Professionals, working hours, leave, blocked time; the salon's opening hours, special closures and holiday choices per branch, `OpeningSchedule` and the declared `BookingsOnDate` (decision 087) |
@@ -172,7 +172,9 @@ signature:
 - An implementation opens its own transaction and does not join the caller's. A contract that
   genuinely must join the caller's transaction (it writes in the same unit of work, or holds a lock
   until the caller commits) is declared **in-process only**: it sits in a named interface called
-  `inprocess`, its Javadoc says why, and it is never exposed remotely. If its module is ever
+  `inprocess`, its Javadoc says why, and it is never exposed remotely. A module may declare an
+  in-process hook for others to implement, as `platform.inprocess.SalonBootstrapStep` is called in
+  the transaction that provisions a salon so each module seeds its defaults (decision 094). If its module is ever
   extracted, the contract becomes an event with a compensating action, not a remote call.
 - A state change that another module reacts to is an event (next section), not a call into that
   module.
@@ -266,7 +268,9 @@ signature:
   is the `trace.id` of that request's log lines. Only `Problems` puts a property on a problem body,
   and its `code` always comes from `ErrorCode` (a test holds both).
 - A missing record and another salon's record both return 404 with the same body.
-- Lists are paginated, always. Sorting and filtering are explicit parameters.
+- Lists are paginated, always. Sorting and filtering are explicit parameters. The one exception is a
+  list whose length a business limit caps, which is returned whole: the catalogue's categories (50)
+  and services (300), decision 094.
 - A request that creates a booking, a payment or a refund carries an `Idempotency-Key`. Repeating it
   returns the first result and never a second side effect.
 - Request records are validated at the edge. A validation failure answers 400 `bad_request` with

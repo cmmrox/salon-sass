@@ -8,6 +8,7 @@
     ".": "./src/index.ts",
     "./booking": "./src/generated/booking.ts",
     "./branding": "./src/generated/branding.ts",
+    "./catalogue": "./src/generated/catalogue.ts",
     "./identity": "./src/generated/identity.ts",
     "./platform": "./src/generated/platform.ts",
     "./shared": "./src/generated/shared.ts",

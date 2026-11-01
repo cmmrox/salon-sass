@@ -34,6 +34,10 @@ public enum ErrorCode {
     ENTITLEMENT_EXCEEDED("entitlement_exceeded", "The salon's plan does not allow this."),
     /** The record is not in a state that allows this action (F03-S02). */
     INVALID_STATE("invalid_state", "This action is not possible in the record's current state."),
+    /** A category that still has services, or a service that upcoming bookings use, is not deleted (F05-S01). */
+    IN_USE("in_use", "This is still in use, so it cannot be deleted."),
+    /** The salon has as many categories (50) or services (300) as it may (F05-S01). */
+    LIMIT_REACHED("limit_reached", "The salon has reached the most it may have of these."),
     /** A support session is read-only: every mutation under its credential is refused (F03-S04). */
     SUPPORT_READ_ONLY("support_read_only", "A support session can read the workspace but cannot change anything."),
     /** The operator already has an open support session for this salon (F03-S04). */

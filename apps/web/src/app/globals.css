@@ -49,6 +49,8 @@
   --color-caution: var(--caution);
   --color-caution-surface: var(--caution-surface);
   --color-negative-surface: var(--negative-surface);
+  --color-info: var(--info);
+  --color-info-surface: var(--info-surface);
   --color-backdrop: var(--backdrop);
   --color-surface-translucent: var(--surface-translucent);
   --color-link: var(--link);

@@ -13,6 +13,7 @@
         allowedDependencies = {
             "identity",
             "shared :: audit",
+            "shared :: images",
             "shared :: jobs",
             "shared :: lifecycle",
             "shared :: persistence",

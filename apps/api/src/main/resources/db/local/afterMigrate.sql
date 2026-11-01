@@ -11,7 +11,8 @@
 -- Each salon's brand row is written with that salon set for the statement, so the seed passes
 -- row-level security like any other writer, whichever role runs the migrations. Each salon also has
 -- its default branch and empty profile drafts (F04-S01) and its brand draft (F04-S02), added by
--- branding's own functions, which leave a salon that already has them unchanged.
+-- branding's own functions, which leave a salon that already has them unchanged, and the default categories
+-- (F05-S01), added by catalogue's own function, which leaves a salon that already has them unchanged.
 DO $$
 DECLARE
     salon record;
@@ -34,6 +35,7 @@ BEGIN
             ON CONFLICT DO NOTHING;
         PERFORM branding_add_default_branch(salon.id, salon.display_name, now());
         PERFORM branding_add_brand_draft(salon.id, now());
+        PERFORM catalogue_add_default_categories(salon.id, now());
     END LOOP;
     PERFORM set_config('app.tenant_id', '', true);
 END

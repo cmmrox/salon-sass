@@ -9,9 +9,16 @@ import { createIdentityWeb } from '@/features/identity/server';
 import { salonAccountFor } from '@/features/platform/server';
 import { salonHoursFor } from '@/features/staff/server';
 import { salonBookingRulesFor } from '@/features/booking/server';
+import { salonCatalogueFor } from '@/features/catalogue/server';
 
 /** The settings actions of the workspace BFF (F04-S01), as the route wires them, against a fake API on loopback. */
-const handleIdentity = createIdentityWeb(salonAccountFor, salonSettingsFor, salonHoursFor, salonBookingRulesFor);
+const handleIdentity = createIdentityWeb(
+  salonAccountFor,
+  salonSettingsFor,
+  salonHoursFor,
+  salonBookingRulesFor,
+  salonCatalogueFor,
+);
 let server: Server;
 let calls: { method: string; path: string; host?: string; authorization?: string; body: string }[];
 let answer: (method: string, path: string) => { status: number; data: unknown };

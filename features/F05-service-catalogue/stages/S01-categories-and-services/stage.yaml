@@ -3,7 +3,7 @@ feature: F05
 title: "Categories and services"
 sequence: 1
 surfaces: [api, web]
-status: planned
+status: complete
 qa_status: not-run
 blocked_reason: null
 released_in: null
@@ -12,9 +12,224 @@ depends_on: []
 requirements: [CAT-01, CAT-02, CAT-04]
 nfr_focus: []
 handoff:
-  run: null
-  data: null
-  notes: null
+  run: |
+    Local, from the repository root, in a plain (non-login) shell, on a fresh database so the owner's default
+    `salon` database keeps its manual-test data: `infra/scripts/local-service.sh start postgres`, then
+    `docker exec salon-postgres psql -U salon -d postgres -c "CREATE DATABASE <name> OWNER salon"`, then
+    `SALON_DB_NAME=<name> infra/scripts/local-service.sh start api` and `... start web`. Migrations V1 to V25 and
+    the local seed run at API start. The walk-through could not use local-service.sh: an API (8090) and a web
+    (3100) from this checkout were already running on the default database, and the scripts refuse a second
+    instance. It ran the API from a copy of target/classes (`java -cp <classes>:<runtime classpath>
+    com.salonplatform.SalonApiApplication`, environment from infra/scripts/lib/common.sh `load_settings` with
+    SALON_DB_NAME=f05s01_walk, SALON_API_PORT=8291) and the web with `node scripts/serve.mjs --dev --port 3291`.
+    Screens: http://alpha.localhost:3100/workspace/services (Services) and /workspace/services/categories
+    (Categories); the navigation entry is "Services". API, salon host, under /api/v1/catalogue: categories
+    (GET, POST), categories/{id} (PUT, DELETE ?version=), categories/{id}/move (POST), services (GET, POST),
+    services/{id} (GET, PUT, DELETE ?version=), services/{id}/duplicate (POST), services/{id}/online (PUT),
+    services/{id}/photo (PUT multipart `file`, DELETE), menu (GET, public) and photos/{id} (GET, public). The web
+    serves a photo at /service-photos/{id}. New settings: salon.catalogue.images.max-bytes (5MB),
+    .max-pixels (50000000), .concurrent-decodes (2), environment SALON_CATALOGUE_IMAGE_MAX_BYTES,
+    _MAX_PIXELS, _CONCURRENT_DECODES. No new local hook. Stop with `local-service.sh stop web|api` and drop the
+    database.
+  data: |
+    Every salon has the prototype's ten categories (Cuts & styling, Colour, Facials & skin, Nails, Brows &
+    lashes, Waxing, Makeup & draping, Massage & spa, Bridal, Consultations) from its provisioning, from V25 for
+    salons that existed before (every salon not deleted), and from the local seed (alpha, beta, gamma). No service
+    is seeded. Prices are in the salon's currency (LKR when the operator set none; the seeded salons have none).
+    The walk-through's staff (every role in alpha and beta, through POST /local/identity/seed), its operator
+    Support account (/local/operator/seed) and its support session were random, kept only in the scratchpad, and
+    its database f05s01_walk was dropped.
+  notes: |
+    Built against every acceptance criterion and checked on the running product from outside, on a fresh
+    database (f05s01_walk) built from the product source of 0812c8e (87e318a changes only the contract package's
+    tests, and this handoff commit only this file and the generated documents), with two synthetic salons (alpha, beta; gamma for the seeded defaults), all five
+    roles, an operator Support account and a support session. API checks 43/43 plus photo, support, suspended,
+    read-only, concurrency and audit checks, all passing; browser checks (Playwright Chromium) at 360, 390, 768,
+    1024, 1280 and 1440. Evidence and screenshots:
+    /private/tmp/claude-501/-Users-cmmrox-Personal-Projects-salon-sass/715cfef9-1213-4c28-9082-71b8eb4e4e54/scratchpad/walk/
+    (api_walk_result.json, photo_walk_result.json, support_walk_result.json, states_walk_result.json, screens/).
+    The walk-through scripts are not product code and were not committed.
+    AC-1 checked: a new salon provisioned through the operator console has the ten in order on its default branch
+    (integration test through the real path; a failed provisioning leaves none). The V25 backfill gives every
+    salon that is not deleted (active, suspended, read-only) the ten once, a deleted one none, and running the
+    function again changes nothing a salon renamed, reordered or deleted (CatalogueDefaultCategoriesMigration-
+    and CatalogueCategoriesIntegrationTest). On the product: alpha's ten in order; seeded gamma's menu answers.
+    AC-2 checked: add trims and goes to the end (position 11); "K", 31 characters and "COLOUR" are 400 on `name`;
+    rename; a stale rename is 409 conflict and an unchanged name 409 invalid_state; a move swaps with its
+    neighbour at once ("Order saved. Customers see it straight away.") and a move from a stale list version is
+    409 conflict; the first up and the last down are 409 invalid_state; a category with services is 409 in_use
+    and the screen says "Move its 4 services to another category first."; an empty one is deleted after the
+    confirmation; the last category cannot be deleted (409 invalid_state, "Keep at least one category."); the
+    51st is 409 limit_reached; two moves from one list version at once keep exactly one (integration test).
+    AC-3 checked: every boundary (name 1, 2, 40, 41; price Rs. 99, 100, 500,000, 500,001 and not whole rupees;
+    time 0, 5, 7, 480, 485; buffer 0, 5, 60, 65, 3, -5; description 90, 91; another salon's or unknown category;
+    a number sent as text; an unknown field) is a 400 on that field with nothing saved (integration and unit
+    tests; the product refused each from outside). Names are unique regardless of case. The sheet shows the
+    prototype's `seErr` messages with the lead's R1 wording ("Price must be Rs. 100 to Rs. 500,000.", "Time must
+    be 5 to 480 minutes, in steps of 5.") above the fields, marks each field aria-invalid, and keeps Create
+    service / Save changes disabled while they last. Rs. 4,500 is stored as 450000 minor units with LKR and shown
+    through formatMoney. The 301st service, by creation or by duplicate, is 409 limit_reached.
+    AC-4 checked: creation makes terms version 1; a price, time or buffer change makes the next and points the
+    service at it, the earlier version's row unchanged; a change of only name, description, category, photo or
+    online setting makes none; an identical save is 409 invalid_state; a stale version is 409 conflict; two saves
+    of one version sent at once gave exactly one 200 and one 409 on the product. The screen says "Saved. New
+    bookings use the new prices." after a terms change and "Saved." otherwise.
+    AC-5 checked: versions store ordered segments (active, then buffer when above zero) as two arrays; the API
+    and ServiceTerms return them; nothing in R1 can make a processing segment (the request has no field for it).
+    AC-6 checked by integration tests (no HTTP route reads a version by id, the lead's clarification): current()
+    and version(id) for the caller's salon only; a version read after three later saves and after the service is
+    deleted keeps its original price and segments; another salon's ids and unknown ids are empty; the trigger and
+    the grants refuse any update. The Javadoc of ServiceTerms, ServiceTermsVersion, ServiceSegment, SegmentKind and
+    UpcomingServiceBookings is the contract F07 uses and implements.
+    AC-7 checked: Duplicate makes "<name> (copy)" then "(copy 2)", the base shortened so the result fits 40
+    (unit and integration tests at exactly 40 characters), hidden online, with its own first terms version and
+    its own stored copy of the photo; the sheet opens on the copy with "Duplicated and hidden online. Review it,
+    then show it." and the hidden warning.
+    AC-8 checked: Hide online / Show online change only the setting (terms and version id unchanged), with the
+    prototype's two messages; a hidden service keeps its card with "Hidden online" and is absent from the menu.
+    AC-9 checked: Delete service asks with the prototype's title and body; a delete with an upcoming booking
+    (integration test with an implementation that reports one) is 409 in_use with nothing changed, and the
+    screen says "This service has upcoming bookings. Hide it from online booking instead." (component test);
+    a deleted service leaves the list and the menu, its name is free again, its versions stay readable.
+    AC-10 checked: PNG, JPEG and WebP accepted; a 1200 x 700 upload is kept as a 700 x 700 JPEG and a 1600 x 1000
+    one as 800 x 800, with no Exif, GPS or comment kept; a renamed text file, a 6 MB file, a 300 x 300 and a
+    truncated image are each 400 on `file` with the reason, the service keeping its previous photo; a replaced
+    or removed photo's URL answers 404; served at /service-photos/<id> on the salon's hostname with no-store and
+    nosniff, and 404 on another salon's hostname. Through the sheet: choosing a file uploads at once with a
+    spinner ("Photo saved."), Remove photo applies at once, and a new service says "Add a photo after you create
+    the service."
+    AC-11 checked: the menu needs no sign-in; categories in the salon's order (a moved category moves in the
+    menu), services bookable online by name, the customer's time without the buffer, price with currency, the
+    photo URL or null and the current terms version id; categories without such services are left out; beta's
+    menu is its own; a suspended salon answers 403 salon_suspended, an unknown host 404.
+    AC-12 checked: services grouped under their categories in the salon's order and by name within each,
+    case-insensitively; each card shows name, Online / Hidden online, category and description, price, time,
+    "+N min buffer", Edit, Hide or Show online and Duplicate; "No services yet." for an empty category; the
+    header "4 services · 3 bookable online" and the spec's banner.
+    AC-13 checked: every role sees "Services" in the navigation and reads both tabs (API 200, screen with no
+    change controls for Receptionist, Professional and Accountant); their changes are 403 permission_denied from
+    the API and the BFF; a support session reads both tabs (the read-only Alert, no controls) and is refused
+    every change with 403 support_read_only from the API and the BFF; a suspended salon answers 403
+    salon_suspended on every endpoint, menu and photo included; a read-only salon reads and refuses every change
+    with 403 salon_read_only (integration test covers every change endpoint).
+    AC-14 checked: beta's staff on alpha's hostname get 404 on every read and change; on its own hostname beta
+    finds none of alpha's categories, services or photos (404) and cannot put a service in alpha's category (400
+    on categoryId); with no tenant set the new tables return no rows; the RLS-alone and Hibernate-filter-alone
+    integration tests prove each layer for all five tables.
+    AC-15 checked: every category and service change, order, online setting, photo and delete is in the audit
+    trail with the staff actor, the time and before and after values (catalogue.category_added, _renamed,
+    _moved, _deleted; catalogue.service_created, _updated, _duplicated, _online_changed, _deleted,
+    _photo_changed, _photo_removed); a price change names the terms version it created (termsVersionId) and its
+    number; no photo bytes are recorded.
+    AC-16 checked: loading (skeleton), empty, field-error, conflict (Reload), refused (an Owner changed a signed-in
+    Manager to Receptionist; the next change showed "You can’t change services. Ask the salon owner." and the
+    controls went), unavailable and read-only states; the leave-with-unsaved-edits guard on the service sheet
+    (Close and Escape ask; Stay keeps the edits); keyboard use with focus returned to the opener when a sheet
+    closes; order buttons named "Move <category> up/down"; the photo control is a labelled Field with its rules.
+    No horizontal scrolling at any width. Services.a11y.test.tsx (48 cases: both tabs at every width with a dark
+    and a light brand, both sheets, every state, the confirmations) reports no WCAG 2.2 AA violation.
+    Visual comparison with the prototype (Salon web, Services & pricing, `aSvc`, `svTabs`, `catTab`, `ceOpen`,
+    `sePaint`) at 360, 768 and 1280 (screens/): same header, tabs, banner, grouped card grid (two a row from 1200),
+    card layout and buttons, ruled category rows with ↑ ↓ Rename Delete, and the sheet's fields and More options.
+    Deliberate differences: a hidden card has the prototype's secondary
+    background without its 0.7 opacity and with ink small text, and small hint text in the sheets is ink, because
+    muted text there is under 4.5:1; "Bookable online" is a Switch (component map) rather than the prototype's
+    tick row; the order buttons draw lucide arrows.
+    Decisions the lead made during the build, for the decision log and backend.md / multi-tenancy.md:
+    (1) Option A for the default categories at provisioning: platform declares the in-process hook
+    `platform.inprocess.SalonBootstrapStep.bootstrap(tenantId, at)` (named interface `inprocess`); provisioning
+    and the local legacy-salon fixture run every implementation after the brand, in the same platform
+    transaction, ordered by @Order. Catalogue's SalonBootstrapStepImpl (@Order(100)) calls
+    `catalogue_add_default_categories(tenant, at)`: SECURITY DEFINER, search path pinned, not executable by
+    PUBLIC, EXECUTE granted to the platform role only, idempotent through the branch's category list row. It
+    finds the branch with branding's new `branding_default_branch_id(tenant)` (V24, branding-owned): SQL, STABLE,
+    not SECURITY DEFINER, not executable by PUBLIC, run only by the owning role (migrations, the seed and the
+    owner's definer functions), answering only for the salon set in app.tenant_id (null otherwise). The eraser
+    `catalogue_erase_salon_rows` is executable by the platform role only. (2) Two architecture rules widened for
+    this hook, each with a fixture: ModuleBoundariesTest now lets `catalogue` as well as `platform` use an
+    inprocess contract, and ModuleRules accepts a @Service implementing an in-process contract another module
+    declares (fixture `serviceforothermodule` proves one implementing another module's ordinary interface is
+    still refused). (3) Error codes in_use and limit_reached; duplicate names are 400 on `name`; first-up,
+    last-down and last-category are 409 invalid_state. (4) Photos upload at once on an existing service;
+    duplicate copies the photo; a replaced or removed photo is deleted and no longer served.
+    Different from the docs, or chosen where they were silent, for the lead:
+    (1) shared gains the named interface `images` (UploadedImages, ImageShape, ImageFormat, ImageCheck,
+    DecodePermits); backend.md's list of shared capabilities does not name it. branding's BrandImages and
+    DecodePermits stay as thin adapters so branding's tests are unchanged.
+    (2) The two lists are not paginated, against backend.md "Lists are paginated, always": the spec's shapes,
+    bounded at 50 categories and 300 services.
+    (3) Shapes: a service is {id, name, categoryId, description (null for none), bookableOnline, photoId,
+    photoUrl, version, terms: {versionId, number, priceMinor, currency, segments: [{kind, minutes}],
+    durationMinutes, bufferMinutes}}; photoUrl is the API's relative path /api/v1/catalogue/photos/{id} and the
+    web uses photoId for /service-photos/{id}. The list is {items}; the category list {listVersion, items: [{id,
+    name, position, serviceCount, version}]}; the menu {currency, categories: [{id, name, services: [{id, name,
+    description, priceMinor, currency, durationMinutes, photoUrl, termsVersionId}]}]}.
+    (4) The list version is raised by an add, a delete or a move, not a rename (a rename uses the category's own
+    version); the list row is locked for those changes and for a new service, which is how the limits hold.
+    (5) A save of a service needs bookableOnline; a creation without it is on. Setting the online value it
+    already has is 409 invalid_state. A photo upload takes no version.
+    (6) A service delete asks UpcomingServiceBookings before the version check, outside the transaction, so a
+    booking made between the two is F07's to guard.
+    (7) ServiceTermsVersion.name is the service's name now (a rename makes no version); bookableOnline is false
+    for a deleted service.
+    (8) The menu's durationMinutes is every segment but the buffer (active and, from F17, processing), as the
+    prototype says customers see the full time; the spec says "the active segments", the same in R1.
+    (9) catalogue.domain.MinorUnits repeats booking's 25-line rule because catalogue cannot use booking (F07 will
+    depend the other way); a shared money capability would hold one copy. The web, like F04-S04's, counts 100
+    minor units per unit, so a currency without cents would be shown and sent wrongly (NFR-13).
+    (10) The Account page labels catalogue.read "Read the service catalogue", and catalogue.price.change now
+    reads "Change the service catalogue and its prices" (it was "Change prices"), after decision 093.
+    (11) The navigation lists Services after Staff access, as the prototype does after Staff.
+    (12) LeaveDialog gains area `services` (test ids services-leave-dialog/-stay/-confirm).
+    (8, corrected at the lead's review) The Services and Categories banners are the prototype's information
+    banner (`.bn.in`): theme.css gains the prototype's information pair, --info #1D5FD0 and --info-surface
+    #E8F0FD, mapped in @theme inline as --color-info and --color-info-surface beside the positive, caution and
+    negative pairs (cn() needs no entry: it lists sizes and radii only), and Alert gains an `info` variant
+    through cva, ink text on the info surface as the prototype draws it, with an Alert title in --info. Alert now
+    also carries data-variant, as Badge does, so a test can tell the variants apart. Contrast: ink #111827 on
+    #E8F0FD is 15.47:1 and #1D5FD0 on #E8F0FD is 5.09:1, both over 4.5:1; the accessibility check (axe,
+    colour contrast included) passes the banner at every width with both brands. No F04 screen draws an info
+    banner: the F04 prototype screens use only `.bn.ok` and `.bn.wn`, so no F04 screen is drawn white in its
+    place. The plain-page CSS was regenerated and is unchanged (it holds no theme variable).
+    (13) shadcn/ui Switch and Collapsible were added with the pinned CLI; no new package (radix-ui already
+    held them; the CLI's `cn` package was removed as web.md says). The Switch takes the Checkbox's colours.
+    (14) The proxy's protected pages gain /workspace/services and /workspace/services/categories.
+    (15) Every workspace route, the existing ones included, logs Next.js's dev-only "uncached data during
+    prerendering" error in the browser console; it predates this stage.
+    (16) Two existing fixtures named catalogue as a module with no tables or paths (TableOwnership-,
+    ApiOwnershipIntegrationTest); they now use payment.
+    Test ids for QA: services-page, services-summary, services-new, categories-new, services-tabs,
+    services-tab-services, services-tab-categories, services-banner, services-loading, services-read-only,
+    services-conflict(-reload), services-unavailable, services-retry, services-refused, services-rule
+    (data-reason), service-group (data-id), service-group-empty, service-card (data-id, data-online) with
+    service-card-name/-status/-detail/-price/-time/-buffer/-photo/-edit/-online/-duplicate, service-sheet with
+    -close/-name/-price/-time/-more/-category (options service-sheet-category-option-<id>)/-description/-buffer/
+    -online/-save/-delete/-problems/-problem (data-problem)/-hidden, service-photo-file/-choose/-remove/
+    -preview/-error/-after-create, category-list, category-row (data-id) with category-row-name/-count/-up/-down/
+    -rename/-delete, category-sheet with -close/-name/-save/-error, service-delete-dialog/-cancel/-confirm,
+    category-delete-dialog/-cancel/-confirm, services-leave-dialog/-stay/-confirm, workspace-services.
+    Nothing is left unfinished. Time observed from the machine's clock, commits and logs: 18:37 to about 19:42,
+    about 1h 05m in all: reading and design to about 18:50, the API and its tests to 19:08 (dacf94b), the web and
+    its tests to 19:21 (5fe1350), the walk-through and its fixes to 19:32 (5af7b0e, 0812c8e), gates 19:32 to
+    19:40 with one test-list fix (87e318a). The elapsed times in my progress messages were estimates and wrong.
+    Gates, run from the root of a detached worktree of the tested commit, so that the running 8090/3100
+    instances' jar and .next were not rebuilt; logs stay there until the stage closes:
+    /private/tmp/claude-501/-Users-cmmrox-Personal-Projects-salon-sass/715cfef9-1213-4c28-9082-71b8eb4e4e54/scratchpad/gates-wt/.gate-logs/
+    | Command | Tested commit | Result | Log |
+    | --- | --- | --- | --- |
+    | cd apps/api && ./mvnw -q verify | 0812c8e | exit 0 (359 s) | 1-api-verify.log |
+    | pnpm -r lint | 1b495b5 | exit 0 | 2-lint-1b495b5.log |
+    | pnpm -r typecheck | 1b495b5 | exit 0 | 3-typecheck-1b495b5.log |
+    | pnpm -r test | 1b495b5 | exit 0 (format 10, api-contracts 25, web 946) | 4-test-1b495b5.log |
+    | pnpm --filter @salon/web test:a11y | 1b495b5 | exit 0 (183 cases, 7 files) | 5-a11y-1b495b5.log |
+    | pnpm --filter @salon/web build | 1b495b5 | exit 0 | 6-web-build-1b495b5.log |
+    | pnpm contracts:check | 0812c8e | exit 0 (document and client current) | 7-contracts.log |
+    1b495b5 (the information banner) changes only the web app, so the API gate and the contract check stand on
+    0812c8e and the five web gates ran again on it.
+    On 0812c8e `pnpm -r test` failed (4-test.log): packages/api-contracts' own tests listed the contract's
+    modules and error codes without catalogue, in_use and limit_reached. 87e318a adds them (only
+    packages/api-contracts/test changes), so the three gates that cover those files ran again on 87e318a; the
+    other four cover none of them and stand on 0812c8e.
 verification:
   commands:
   - cd apps/api && ./mvnw -q verify

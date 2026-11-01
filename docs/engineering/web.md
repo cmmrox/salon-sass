@@ -224,7 +224,7 @@ because the owner set one standard for all Next.js work in this product.
    | Status word, role, tag | Badge |
    | Nothing to show | Empty |
    | Page through a list | Pagination |
-   | Message, refusal, warning, success | Alert, or Sonner for a passing notice |
+   | Message, refusal, warning, success | Alert, or Sonner for a passing notice; the prototype's information banner (`.bn.in`) is Alert `variant="info"` on the theme's `--info-surface` (F05-S01) |
    | Pending data, busy action | Skeleton, Spinner |
    | Divider | Separator |
    | Confirmation, side panel | Sheet (bottom sheet on phones, right drawer from 900px), Dialog or Alert Dialog |

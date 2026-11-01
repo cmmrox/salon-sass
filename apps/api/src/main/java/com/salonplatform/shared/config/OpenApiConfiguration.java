@@ -94,6 +94,11 @@ class OpenApiConfiguration {
     }
 
     @Bean
+    GroupedOpenApi catalogueDocument(ModuleOwnership ownership) {
+        return moduleDocument(ownership, "catalogue");
+    }
+
+    @Bean
     GroupedOpenApi sharedDocument(ModuleOwnership ownership) {
         return moduleDocument(ownership, "shared");
     }

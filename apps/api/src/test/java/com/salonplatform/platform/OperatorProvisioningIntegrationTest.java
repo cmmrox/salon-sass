@@ -573,6 +573,7 @@ class OperatorProvisioningIntegrationTest extends IntegrationTest {
         Map<String, Object> request =
                 OperatorTestSupport.salon(slug, plan, ownerEmail, "owner synthetic " + UUID.randomUUID());
         long tenants = count("SELECT count(*) FROM tenant");
+        long categories = count("SELECT count(*) FROM catalogue_category");
         FAIL_AT.set(step);
         Http.Exchange failed = create("/salons", request, admin, key);
         status(failed, 500);
@@ -591,6 +592,9 @@ class OperatorProvisioningIntegrationTest extends IntegrationTest {
                         "SELECT count(*) FROM platform_audit_entry WHERE action = 'salon.created' AND details->>'slug' = ?",
                         slug))
                 .isZero();
+        // F05-S01: the default categories are written in the same transaction, after the brand, so a failure at
+        // or after the brand step leaves none behind.
+        assertThat(count("SELECT count(*) FROM catalogue_category")).isEqualTo(categories);
         status(http().getOnHost(slug + ".localhost:" + port(), "/api/v1/salon"), 404);
 
         FAIL_AT.set(null);
@@ -602,7 +606,53 @@ class OperatorProvisioningIntegrationTest extends IntegrationTest {
                                 + " WHERE t.slug = ? AND b.is_default",
                         slug))
                 .isEqualTo(1);
+        assertThat(count(
+                        "SELECT count(*) FROM catalogue_category c JOIN tenant t ON t.id = c.tenant_id WHERE t.slug = ?",
+                        slug))
+                .isEqualTo(10);
         status(http().getOnHost(slug + ".localhost:" + port(), "/api/v1/salon"), 200);
+    }
+
+    @Test
+    void aProvisionedSalonHasTheTenDefaultCategoriesInOrderOnItsDefaultBranch() {
+        String plan = newPlan();
+        String slug = OperatorTestSupport.uniqueKey("c");
+        Map<String, Object> request = OperatorTestSupport.salon(
+                slug, plan, "c-" + slug + "@example.test", "owner synthetic " + UUID.randomUUID());
+
+        status(create("/salons", request, admin, UUID.randomUUID().toString()), 201);
+
+        UUID salon = owner.queryForObject("SELECT id FROM tenant WHERE slug = ?", UUID.class, slug);
+        List<Map<String, Object>> categories = owner.execute((java.sql.Connection connection) -> {
+            try (var statement = connection.createStatement()) {
+                statement.execute("BEGIN");
+                statement.execute("SELECT set_config('app.tenant_id', '" + salon + "', true)");
+                var rows = statement.executeQuery("SELECT c.name, c.position, c.branch_id = b.id AS on_default"
+                        + " FROM catalogue_category c JOIN branding_branch b ON b.tenant_id = c.tenant_id"
+                        + " AND b.is_default WHERE c.tenant_id = '" + salon + "' ORDER BY c.position");
+                List<Map<String, Object>> found = new java.util.ArrayList<>();
+                while (rows.next()) {
+                    found.add(Map.of(
+                            "name", rows.getString(1), "position", rows.getInt(2), "onDefault", rows.getBoolean(3)));
+                }
+                statement.execute("COMMIT");
+                return found;
+            }
+        });
+        assertThat(categories)
+                .extracting(category -> category.get("name"))
+                .containsExactly(
+                        "Cuts & styling",
+                        "Colour",
+                        "Facials & skin",
+                        "Nails",
+                        "Brows & lashes",
+                        "Waxing",
+                        "Makeup & draping",
+                        "Massage & spa",
+                        "Bridal",
+                        "Consultations");
+        assertThat(categories).extracting(category -> category.get("onDefault")).containsOnly(true);
     }
 
     // --- AC-3: permissions -------------------------------------------------------------------------
