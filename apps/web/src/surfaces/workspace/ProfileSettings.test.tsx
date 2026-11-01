@@ -258,7 +258,7 @@ describe('the Profile tab', () => {
   it('is built of the shadcn/ui components the map names for its jobs', async () => {
     const { container } = render();
     await screen.findByTestId('profile-tab');
-    for (const slot of ['card', 'field', 'field-label', 'input', 'textarea', 'input-group', 'button', 'badge'])
+    for (const slot of ['card', 'field', 'field-label', 'input', 'textarea', 'button', 'badge'])
       expect(container.querySelector(`[data-slot="${slot}"]`), slot).not.toBeNull();
   });
 });

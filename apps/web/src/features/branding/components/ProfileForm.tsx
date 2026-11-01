@@ -5,7 +5,7 @@ import type { ReactNode } from 'react';
 import { Card } from '@/components/ui/card';
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from '@/components/ui/input-group';
+import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { DESCRIPTION_LENGTH, mapLink, type ProfileField, type ProfileForm } from '../client/profile-form';
 
@@ -26,7 +26,7 @@ const describedBy = (field: ProfileField, error: boolean, description: boolean) 
 function Label({ field, label, hint }: { field: ProfileField; label: string; hint?: string }) {
   const t = useTranslations('settings.profile');
   return (
-    <FieldLabel htmlFor={testId(field)}>
+    <FieldLabel htmlFor={testId(field)} className="flex-row flex-wrap gap-x-1 gap-y-0">
       {label}
       {hint && <span className="font-normal text-muted-foreground">{t('hint', { hint })}</span>}
     </FieldLabel>
@@ -67,7 +67,7 @@ export function ProfileForm({ form, errors, disabled, onChange }: Props) {
   );
   const map = mapLink(form.location);
   return (
-    <Card className="gap-6" data-testid="profile-form">
+    <Card className="gap-6 p-4 rail:p-6" data-testid="profile-form">
       <FieldGroup>
         <h2 className="text-large font-semibold">{t('contact')}</h2>
         {text('phone', t('phone'), { hint: t('phoneHint'), placeholder: t('phonePlaceholder') })}
@@ -78,10 +78,12 @@ export function ProfileForm({ form, errors, disabled, onChange }: Props) {
         {text('address', t('address'), { placeholder: t('addressPlaceholder') })}
         <Field data-invalid={errors.location || undefined}>
           <Label field="location" label={t('mapPosition')} />
-          <InputGroup>
-            <InputGroupInput
+          {/* The prototype's map position: the field, and "Check on map" beside it (below it when narrow). */}
+          <div className="flex flex-wrap items-center gap-2">
+            <Input
               id={testId('location')}
               data-testid={testId('location')}
+              className="min-w-0 flex-1 basis-48"
               value={form.location}
               placeholder={t('mapPlaceholder')}
               inputMode="decimal"
@@ -90,21 +92,19 @@ export function ProfileForm({ form, errors, disabled, onChange }: Props) {
               aria-describedby={describedBy('location', Boolean(errors.location), true)}
               onChange={(event) => onChange('location', event.target.value)}
             />
-            <InputGroupAddon align="inline-end">
-              {map ? (
-                <InputGroupButton asChild variant="link" data-testid="profile-check-map">
-                  <a href={map} target="_blank" rel="noopener noreferrer" aria-label={t('checkOnMapLabel')}>
-                    {t('checkOnMap')}
-                    <ExternalLinkIcon aria-hidden="true" />
-                  </a>
-                </InputGroupButton>
-              ) : (
-                <InputGroupButton variant="link" disabled data-testid="profile-check-map">
+            {map ? (
+              <Button asChild variant="outline" size="sm" data-testid="profile-check-map">
+                <a href={map} target="_blank" rel="noopener noreferrer" aria-label={t('checkOnMapLabel')}>
                   {t('checkOnMap')}
-                </InputGroupButton>
-              )}
-            </InputGroupAddon>
-          </InputGroup>
+                  <ExternalLinkIcon aria-hidden="true" />
+                </a>
+              </Button>
+            ) : (
+              <Button variant="outline" size="sm" disabled data-testid="profile-check-map">
+                {t('checkOnMap')}
+              </Button>
+            )}
+          </div>
           <FieldDescription id={`${testId('location')}-description`}>{t('mapPositionHelp')}</FieldDescription>
           {errors.location && <Refused field="location">{t('errors.location')}</Refused>}
         </Field>

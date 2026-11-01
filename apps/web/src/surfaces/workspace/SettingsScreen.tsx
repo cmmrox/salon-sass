@@ -18,7 +18,8 @@ export function SettingsScreen({ tab, children }: { tab: SettingsTab; children: 
   const router = useRouter();
   return (
     <div className="flex min-w-0 flex-col gap-4">
-      <p className="m-0 text-foreground">{t('intro')}</p>
+      {/* Ink, not muted: small muted text on the warm canvas is under 4.5:1 (ui-ux-standards.md). */}
+      <p className="-mt-5 mb-1 text-small text-foreground">{t('intro')}</p>
       <Tabs
         value={tab}
         onValueChange={(next) => {

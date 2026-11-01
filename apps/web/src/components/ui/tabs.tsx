@@ -4,8 +4,8 @@ import * as React from 'react';
 import { Tabs as TabsPrimitive } from 'radix-ui';
 
 // Written by the shadcn/ui CLI (tabs), adapted to the prototype (docs/engineering/web.md, "Styling"):
-// the one cn(), and the prototype's settings section chips (`.chips.brtabs`): pill triggers on a white
-// card with a line border, the selected one filled with ink; a row that scrolls sideways below 900px
+// the one cn(), and the prototype's settings section chips (`.chips.brtabs`): pill triggers outlined in
+// ink, the selected one filled with the salon's brand and its readable foreground; a row that scrolls sideways below 900px
 // and wraps from it. No dark variants, no CLI focus ring (the theme's focus outline), the unused
 // variants removed. Radix keeps the tab roles, arrow-key movement and the active panel's labelling.
 import { cn } from '@/lib/utils';
@@ -29,7 +29,7 @@ function TabsTrigger({ className, ...props }: React.ComponentProps<typeof TabsPr
     <TabsPrimitive.Trigger
       data-slot="tabs-trigger"
       className={cn(
-        'inline-flex min-h-touch shrink-0 items-center justify-center rounded-action border border-border bg-card px-4 text-small font-medium whitespace-nowrap text-foreground disabled:pointer-events-none disabled:opacity-50 data-[state=active]:border-foreground data-[state=active]:bg-foreground data-[state=active]:text-card',
+        'inline-flex min-h-touch shrink-0 items-center justify-center rounded-action border border-foreground bg-transparent px-4 text-small font-medium whitespace-nowrap text-foreground disabled:pointer-events-none disabled:opacity-50 data-[state=active]:border-primary data-[state=active]:bg-primary data-[state=active]:text-primary-foreground',
         className,
       )}
       {...props}

@@ -3,6 +3,9 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardTitle } from '@/components/ui/card';
 import type { ProfileForm } from '../client/profile-form';
 
+/** The customer's small outline buttons, as the prototype draws them: a picture, so a label. */
+const pictureOfAButton = 'min-h-touch border-foreground px-4 text-small';
+
 /**
  * "What customers see" (F04-S01): the salon's name and the profile as it is being typed, laid out as
  * the customer app will show it. Its Call, Chat on WhatsApp and Directions are pictures of the customer's
@@ -23,7 +26,7 @@ export function ProfilePreview({ salonName, form }: { salonName: string; form: P
       </h2>
       <Card className="gap-3" data-testid="profile-preview">
         <div className="flex min-w-0 flex-col gap-1">
-          <CardTitle className="wrap-anywhere" data-testid="profile-preview-name">
+          <CardTitle className="text-body font-semibold wrap-anywhere" data-testid="profile-preview-name">
             {salonName}
           </CardTitle>
           <p className="text-small wrap-anywhere text-muted-foreground" data-testid="profile-preview-description">
@@ -45,17 +48,21 @@ export function ProfilePreview({ salonName, form }: { salonName: string; form: P
         </dl>
         <ul className="flex flex-wrap gap-1.5" aria-label={t('previewActions')}>
           <li>
-            <Badge variant="outline">{t('previewCall')}</Badge>
+            <Badge variant="outline" className={pictureOfAButton}>
+              {t('previewCall')}
+            </Badge>
           </li>
           {form.whatsapp.trim() && (
             <li>
-              <Badge variant="outline" data-testid="profile-preview-chat">
+              <Badge variant="outline" className={pictureOfAButton} data-testid="profile-preview-chat">
                 {t('previewChat')}
               </Badge>
             </li>
           )}
           <li>
-            <Badge variant="outline">{t('previewDirections')}</Badge>
+            <Badge variant="outline" className={pictureOfAButton}>
+              {t('previewDirections')}
+            </Badge>
           </li>
         </ul>
       </Card>
