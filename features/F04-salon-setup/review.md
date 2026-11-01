@@ -219,6 +219,46 @@ its change by toggling Monday instead of picking a time. Run 3 above stays the r
 (`evidence.last_run`, `evidence.full_pass_revision`), and `integration.qa_revision` moves to 93821ab
 so `pr-check` accepts the unchanged product.
 
+### Re-verification after the PR #18 review fixes (2026-11-01, revision ac68e66)
+
+The fixes (cbdc7da, 7a76e38, 54dc397, merged as 4c060be) change only apps/web, in three ways.
+The Hours tab's rows are now Items with a new `divided` variant. The tab shows a Public holidays
+card for every published year that still has days to come. The Add a closure sheet now opens empty
+after a closure is added. The S03 spec gained a "Corrections at close" bullet on several years.
+Scope under decision 069:
+- Re-run: the S03 browser cases on the Hours tab and the closure sheet, TC-F04-S03-022 to 025 and
+  027 to 030.
+- Added: TC-F04-S03-032. Two fresh consecutive years are published, and the case checks five things.
+  There is one card per year, in year order, each listing only its own days. Accepting the later
+  year leaves the earlier one "To review" with its unsaved choice kept, and the API shows the
+  earlier year not accepted. Accepting the earlier year saves only its own choices. A later choice
+  saves to its own year only. Once the earlier year's days have all passed, only the later year is
+  shown, and it takes the plain test ids.
+- Changed: TC-F04-S03-025 now checks that the sheet opens with no day, no reason, no bookings and
+  Close disabled, both at first and after a closure is added. Its locators keep to visible
+  elements. This settles SUG-F04-06.
+- Not re-run, because their code did not change: the S03 API cases (the API is unchanged and serves
+  the same years as before), TC-F04-S03-026 (console only; the new Item variant is used only by
+  the Hours tab), the F04 journeys (API only), and S01, S02 and S04.
+
+Both new checks can fail against the build before the fix. That build showed one card, so
+`holidays-card-<next>` is absent. Its sheet kept the last day after a closure was added, so the
+date reads that day, not "Choose a day". This is reasoned from the earlier code and the earlier
+review's observation; the earlier build was not run again.
+
+Runs used Playwright `--grep` on the S03 screens file, because `sdlc run` selects only whole
+entries. Each ran on a fresh database (`f04qa_reverify2`, since dropped), with API 8390 and web 3390
+built from 4c060be (`/actuator/info`):
+- Run 1, `qa/reports/20261101-153618-F04-S03-reverify-b755d2b`: 8 of 9 passed. TC-F04-S03-032
+  failed only in its last step. Moving the clock 26 days on outlives a staff session (seven days,
+  absolute; `docs/architecture/identity-and-access.md`), so the sign-in screen showed. This was a
+  test defect, repaired in ac68e66: a Manager signs in at the new time.
+- Run 2, `qa/reports/20261101-153732-F04-S03-reverify-ac68e66`: the failed case alone, 1 of 1
+  passed.
+
+The product never failed. Run 3 above stays the recorded full pass. `integration.qa_revision` moves
+to ac68e66, whose product is 4c060be's.
+
 ## Notes for the lead (documents)
 
 - `docs/operations/git-delivery.md` ("never in place of its `integration.qa_revision`") and
