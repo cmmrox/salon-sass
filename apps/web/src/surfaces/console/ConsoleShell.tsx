@@ -4,13 +4,14 @@ import { SidebarInset } from '@/components/ui/sidebar';
 import { Navigation, NavigationProvider, NavigationTrigger, type NavigationItem } from '@/components/shared/Navigation';
 import { ConsoleSignOut } from './ConsoleSignOut';
 
-export type ConsoleView = 'salons' | 'plans' | 'support' | 'none';
+export type ConsoleView = 'salons' | 'plans' | 'support' | 'holidays' | 'none';
 
 /**
  * The operator console frame: the final Salon-mode workspace grammar (sticky white header from
  * 900px, the shadcn/ui Sidebar as a rail from 900px and its sheet below), in the platform's neutral
  * theme. Only the sections the operator may use appear: Salons, Plans and Support sessions for an
- * Admin; Salons and Support sessions for Support (F03-S04). Sign out is always in the header.
+ * Admin; Salons and Support sessions for Support (F03-S04); the Holiday calendar for both (F04-S03). Sign
+ * out is always in the header.
  */
 export function ConsoleShell({
   children,
@@ -48,6 +49,14 @@ export function ConsoleShell({
       icon: 'support',
       testId: 'console-nav-support',
       current: view === 'support',
+    });
+  if (permissions.includes('operator.holiday.read'))
+    items.push({
+      href: '/console/holidays',
+      label: t('holidays.title'),
+      icon: 'holidays',
+      testId: 'console-nav-holidays',
+      current: view === 'holidays',
     });
   return (
     <NavigationProvider className="flex-col bg-background" data-testid="console-shell">

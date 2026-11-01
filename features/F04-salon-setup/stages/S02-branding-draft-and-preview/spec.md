@@ -246,7 +246,8 @@ pnpm contracts:check
 
 Recorded by the lead when the stage closed. No requirement changed:
 - **Security limits added during the build.** A cover is kept at most 1600 high as well as 1600
-  wide, so a cover taller than it is wide is refused as a 400 field error. Decoding is held to a
+  wide. A cover of any shape is accepted, and refused as a 400 field error only when its kept
+  height would exceed 1600 pixels (corrected at F04-S03 close). Decoding is held to a
   16M-pixel budget, and two images at most are decoded at once (503 beyond).
 - **Upload size errors.** A file of 5 to 10 MB is a 400 field error on `file`. Only a request
   over 10 MB is 413.

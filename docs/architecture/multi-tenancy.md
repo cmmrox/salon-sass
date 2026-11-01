@@ -138,7 +138,9 @@ Three consequences of how the framework works, which every later stage follows:
   time zone; `tenant_by_id` the same for an id; `active_tenant_ids` the ids of active salons, for
   jobs. The outbox reaches across salons only through `outbox_due`, `outbox_due_events` and `outbox_backlog`, which
   return ids and counts and nothing of a message, and the scheduler only through `job_claim` and
-  `job_finish`.
+  `job_finish`. The published holiday calendar is read only through
+  `holiday_calendar_published(first_year, last_year)`, which returns published years and days and
+  never a draft or who published (decision 090).
 - **Row-level security is forced, so it holds for the owning role too**, which is not a superuser
   outside a developer's machine. A `SECURITY DEFINER` function that must see several salons' rows
   (`outbox_due`, `outbox_due_events`, `outbox_backlog`) sets each active salon in turn inside the function, and puts the
@@ -216,6 +218,8 @@ Initial creation does not grant an operator ongoing access to tenant records or 
 
 The yearly Sri Lankan holiday and Poya calendar is platform reference data with no `tenant_id`,
 published by the operator. A salon's accepted or edited copy of it is tenant data (STF-04, decision 078).
+The application role has no grant on the calendar's tables and reads published days only through
+`holiday_calendar_published` (decision 090).
 
 ## Tests you must write
 

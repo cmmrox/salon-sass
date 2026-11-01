@@ -22,6 +22,7 @@ this table in step when a major version changes.
 | Background work | Database-backed job scheduler and transactional outbox, which also carries versioned events between modules. No message broker |
 | Files | Brand images (F04-S02) are stored in PostgreSQL, in `branding`'s tenant tables, re-encoded and size-limited, and served through the API (decision 086). S3-compatible object storage with one prefix per tenant arrives with the first feature whose files outgrow that (catalogue and staff photos); its provider is chosen with the owner then |
 | Images and phone numbers (API) | TwelveMonkeys `imageio-webp` 3.15.3 for reading WebP; the JDK's ImageIO writes PNG and JPEG (F04-S02). libphonenumber 9.0.42; libphonenumber-js 1.13.15 in `@salon/format` (F04-S01, decision 084) |
+| Date picker (web) | react-day-picker 10.0.2, exact pin, behind shadcn/ui Calendar; it brings date-fns and @date-fns/tz (F04-S03) |
 | Developer tests | JUnit and Testcontainers, in the versions Spring Boot manages (API); Vitest with Testing Library (web); Jest (customer app) |
 | QA tools | Playwright (browser and API), Maestro (customer app), k6 (load and concurrency) |
 | Source hosting | GitHub. `main` is the trunk |

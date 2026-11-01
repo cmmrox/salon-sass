@@ -5,8 +5,11 @@ import { Button } from '@/components/ui/button';
 import type { SettingsNotice } from './use-settings-draft';
 
 type Props = {
-  /** Which tab speaks: the profile (F04-S01) or the brand (F04-S02); it names the test ids and the words. */
-  subject: 'profile' | 'brand';
+  /**
+   * Which tab speaks: the profile (F04-S01), the brand (F04-S02) or the hours (F04-S03); it names the test
+   * ids and the words.
+   */
+  subject: 'profile' | 'brand' | 'hours';
   readOnly: 'support' | 'salon' | null;
   notice: SettingsNotice;
   refusal: string | null;

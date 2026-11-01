@@ -1,6 +1,28 @@
 {
   "components": {
     "schemas": {
+      "AcceptSalonHolidays": {
+        "additionalProperties": false,
+        "properties": {
+          "choices": {
+            "description": "One for every day still to come that is to review; others may be included.",
+            "items": {
+              "$ref": "#/components/schemas/SalonHolidayChoiceInput"
+            },
+            "type": "array"
+          },
+          "version": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "choices",
+          "version"
+        ],
+        "type": "object"
+      },
       "AccountDeletionRequest": {
         "additionalProperties": false,
         "properties": {
@@ -32,6 +54,49 @@
         "required": [
           "eventId",
           "result"
+        ],
+        "type": "object"
+      },
+      "AddSalonClosure": {
+        "additionalProperties": false,
+        "properties": {
+          "date": {
+            "description": "The salon's local date: today to a year ahead.",
+            "format": "date",
+            "type": "string"
+          },
+          "reason": {
+            "description": "Only the team sees it; up to 60 characters, empty or null for none.",
+            "maxLength": 60,
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "date"
+        ],
+        "type": "object"
+      },
+      "AffectedBooking": {
+        "properties": {
+          "customerName": {
+            "type": "string"
+          },
+          "serviceName": {
+            "type": "string"
+          },
+          "time": {
+            "description": "When it starts, local `HH:MM`.",
+            "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "customerName",
+          "serviceName",
+          "time"
         ],
         "type": "object"
       },
@@ -159,6 +224,25 @@
         },
         "required": [
           "version"
+        ],
+        "type": "object"
+      },
+      "ClosureImpact": {
+        "properties": {
+          "bookings": {
+            "items": {
+              "$ref": "#/components/schemas/AffectedBooking"
+            },
+            "type": "array"
+          },
+          "date": {
+            "format": "date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "bookings",
+          "date"
         ],
         "type": "object"
       },
@@ -506,6 +590,289 @@
         "required": [
           "customDomain",
           "dedicatedApp"
+        ],
+        "type": "object"
+      },
+      "HolidayCalendarImport": {
+        "properties": {
+          "file": {
+            "description": "A UTF-8 CSV file of up to 64 KB: one day per line as `date,name,kind`, with an optional first line naming those columns.",
+            "format": "binary",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "type": "object"
+      },
+      "HolidayDayChangeRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "enum": [
+              "poya",
+              "public",
+              "bank",
+              "mercantile"
+            ],
+            "type": "string"
+          },
+          "name": {
+            "description": "1 to 120 characters after trimming.",
+            "maxLength": 120,
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "name"
+        ],
+        "type": "object"
+      },
+      "HolidayDayRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "date": {
+            "description": "`YYYY-MM-DD`, inside the year, not already in the draft.",
+            "format": "date",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "poya",
+              "public",
+              "bank",
+              "mercantile"
+            ],
+            "type": "string"
+          },
+          "name": {
+            "description": "1 to 120 characters after trimming.",
+            "maxLength": 120,
+            "type": "string"
+          }
+        },
+        "required": [
+          "date",
+          "kind",
+          "name"
+        ],
+        "type": "object"
+      },
+      "HolidayDayView": {
+        "properties": {
+          "date": {
+            "format": "date",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "poya",
+              "public",
+              "bank",
+              "mercantile"
+            ],
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "date",
+          "kind",
+          "name"
+        ],
+        "type": "object"
+      },
+      "HolidayDraftDayView": {
+        "properties": {
+          "change": {
+            "description": "Against the published year: a day salons do not have yet, one whose name or kind differs from what they have, or one they have as it is.",
+            "enum": [
+              "added",
+              "changed",
+              "unchanged"
+            ],
+            "type": "string"
+          },
+          "date": {
+            "format": "date",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "poya",
+              "public",
+              "bank",
+              "mercantile"
+            ],
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "change",
+          "date",
+          "kind",
+          "name"
+        ],
+        "type": "object"
+      },
+      "HolidayPublicationRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "version": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "version"
+        ],
+        "type": "object"
+      },
+      "HolidayRevisionCounts": {
+        "properties": {
+          "added": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "changed": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "withdrawn": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "added",
+          "changed",
+          "withdrawn"
+        ],
+        "type": "object"
+      },
+      "HolidayYearDetail": {
+        "properties": {
+          "changes": {
+            "$ref": "#/components/schemas/HolidayRevisionCounts"
+          },
+          "days": {
+            "description": "The draft's days, in date order.",
+            "items": {
+              "$ref": "#/components/schemas/HolidayDraftDayView"
+            },
+            "type": "array"
+          },
+          "publishedAt": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "revision": {
+            "description": "How many times the year has been published; 0 before the first publication.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "state": {
+            "enum": [
+              "draft",
+              "published",
+              "changed"
+            ],
+            "type": "string"
+          },
+          "version": {
+            "description": "Moves on with every change to the draft and every publication; publishing names it.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "withdrawn": {
+            "description": "Published days the draft no longer has, in date order.",
+            "items": {
+              "$ref": "#/components/schemas/HolidayDayView"
+            },
+            "type": "array"
+          },
+          "year": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "changes",
+          "days",
+          "publishedAt",
+          "revision",
+          "state",
+          "version",
+          "withdrawn",
+          "year"
+        ],
+        "type": "object"
+      },
+      "HolidayYearList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/HolidayYearSummary"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "type": "object"
+      },
+      "HolidayYearSummary": {
+        "properties": {
+          "dayCount": {
+            "description": "How many days the draft has.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "publishedAt": {
+            "description": "The latest publication.",
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "revision": {
+            "description": "How many times the year has been published; 0 before the first publication.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "state": {
+            "description": "`draft`: never published. `published`: salons see the draft as it is. `changed`: published, with draft changes not yet published.",
+            "enum": [
+              "draft",
+              "published",
+              "changed"
+            ],
+            "type": "string"
+          },
+          "year": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "dayCount",
+          "publishedAt",
+          "revision",
+          "state",
+          "year"
         ],
         "type": "object"
       },
@@ -890,6 +1257,166 @@
           "email",
           "sms",
           "whatsapp"
+        ],
+        "type": "object"
+      },
+      "OpeningException": {
+        "properties": {
+          "closes": {
+            "description": "Special hours' local closing time; null when closed.",
+            "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "date": {
+            "description": "The salon's local date.",
+            "format": "date",
+            "type": "string"
+          },
+          "holidayName": {
+            "description": "The public holiday on the date, or null.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "kind": {
+            "enum": [
+              "closed",
+              "special"
+            ],
+            "type": "string"
+          },
+          "opens": {
+            "description": "Special hours' local opening time; null when closed.",
+            "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "closes",
+          "date",
+          "holidayName",
+          "kind",
+          "opens"
+        ],
+        "type": "object"
+      },
+      "OpeningHoursSettings": {
+        "properties": {
+          "outsideHours": {
+            "description": "Upcoming bookings these hours leave outside opening time. They are kept.",
+            "items": {
+              "$ref": "#/components/schemas/AffectedBooking"
+            },
+            "type": "array"
+          },
+          "version": {
+            "description": "The version a save is made from: 0 before the first save.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "weekly": {
+            "description": "Monday to Sunday; null before the first save.",
+            "items": {
+              "$ref": "#/components/schemas/OpeningWeekday"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "outsideHours",
+          "version",
+          "weekly"
+        ],
+        "type": "object"
+      },
+      "OpeningWeekday": {
+        "properties": {
+          "closes": {
+            "description": "The local closing time, after `opens`; null when closed.",
+            "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "day": {
+            "enum": [
+              "monday",
+              "tuesday",
+              "wednesday",
+              "thursday",
+              "friday",
+              "saturday",
+              "sunday"
+            ],
+            "type": "string"
+          },
+          "open": {
+            "type": "boolean"
+          },
+          "opens": {
+            "description": "The local opening time, `HH:MM`; null when closed.",
+            "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "closes",
+          "day",
+          "open",
+          "opens"
+        ],
+        "type": "object"
+      },
+      "OpeningWeekdayInput": {
+        "additionalProperties": false,
+        "properties": {
+          "closes": {
+            "description": "`HH:MM` on a quarter hour after `opens`; null when closed.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "day": {
+            "enum": [
+              "monday",
+              "tuesday",
+              "wednesday",
+              "thursday",
+              "friday",
+              "saturday",
+              "sunday"
+            ],
+            "type": "string"
+          },
+          "open": {
+            "type": "boolean"
+          },
+          "opens": {
+            "description": "`HH:MM` on a quarter hour when open; null when closed.",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "day",
+          "open"
         ],
         "type": "object"
       },
@@ -1551,6 +2078,12 @@
                 "field": {
                   "description": "The field, as the request names it; a dotted path when nested.",
                   "type": "string"
+                },
+                "line": {
+                  "description": "For an uploaded file read line by line (a holiday calendar CSV): the line that failed, counted from 1. Absent otherwise.",
+                  "format": "int32",
+                  "minimum": 1,
+                  "type": "integer"
                 }
               },
               "required": [
@@ -1958,6 +2491,38 @@
         ],
         "type": "object"
       },
+      "SalonClosure": {
+        "properties": {
+          "affectedBookings": {
+            "description": "How many bookings are on the date. They are kept.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "date": {
+            "description": "The salon's local date, closed all day.",
+            "format": "date",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "reason": {
+            "description": "The team's note; never public.",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "affectedBookings",
+          "date",
+          "id",
+          "reason"
+        ],
+        "type": "object"
+      },
       "SalonCreated": {
         "properties": {
           "createdAt": {
@@ -2128,6 +2693,222 @@
           "timeZone",
           "updatedAt",
           "version"
+        ],
+        "type": "object"
+      },
+      "SalonHolidayChoiceInput": {
+        "additionalProperties": false,
+        "properties": {
+          "choice": {
+            "enum": [
+              "closed",
+              "open",
+              "special"
+            ],
+            "type": "string"
+          },
+          "closes": {
+            "description": "`HH:MM` after `opens` for special hours; else null.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "date": {
+            "format": "date",
+            "type": "string"
+          },
+          "opens": {
+            "description": "`HH:MM` on a quarter hour for special hours; else null.",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "choice",
+          "date"
+        ],
+        "type": "object"
+      },
+      "SalonHolidayDay": {
+        "properties": {
+          "choice": {
+            "description": "The salon's latest choice; null when it has made none. Not applied while `toReview`.",
+            "enum": [
+              "closed",
+              "open",
+              "special",
+              null
+            ],
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "closes": {
+            "description": "Special hours' closing time, `HH:MM`.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "date": {
+            "format": "date",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "poya",
+              "public",
+              "bank",
+              "mercantile"
+            ],
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "opens": {
+            "description": "Special hours' opening time, `HH:MM`.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "past": {
+            "description": "The day is before the salon's today.",
+            "type": "boolean"
+          },
+          "toReview": {
+            "description": "No choice applies to the day as it is published now.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "choice",
+          "closes",
+          "date",
+          "kind",
+          "name",
+          "opens",
+          "past",
+          "toReview"
+        ],
+        "type": "object"
+      },
+      "SalonHolidayDayChoice": {
+        "additionalProperties": false,
+        "properties": {
+          "choice": {
+            "enum": [
+              "closed",
+              "open",
+              "special"
+            ],
+            "type": "string"
+          },
+          "closes": {
+            "description": "`HH:MM` after `opens` for special hours; else null.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "opens": {
+            "description": "`HH:MM` on a quarter hour for special hours; else null.",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "choice"
+        ],
+        "type": "object"
+      },
+      "SalonHolidayYear": {
+        "properties": {
+          "days": {
+            "description": "Every published day of the year, in date order.",
+            "items": {
+              "$ref": "#/components/schemas/SalonHolidayDay"
+            },
+            "type": "array"
+          },
+          "publishedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "reviewed": {
+            "description": "The salon accepted its choices, and no day still to come is to review.",
+            "type": "boolean"
+          },
+          "revision": {
+            "description": "The operator's latest revision of the year.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "version": {
+            "description": "The version an acceptance is made from: 0 before the first.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "year": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "days",
+          "publishedAt",
+          "reviewed",
+          "revision",
+          "version",
+          "year"
+        ],
+        "type": "object"
+      },
+      "SalonHolidays": {
+        "properties": {
+          "years": {
+            "description": "Oldest first; empty when the operator has published none.",
+            "items": {
+              "$ref": "#/components/schemas/SalonHolidayYear"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "years"
+        ],
+        "type": "object"
+      },
+      "SalonOpeningHours": {
+        "properties": {
+          "exceptions": {
+            "description": "From the salon's today to 180 days ahead, in date order.",
+            "items": {
+              "$ref": "#/components/schemas/OpeningException"
+            },
+            "type": "array"
+          },
+          "weekly": {
+            "description": "Monday to Sunday; null before the salon first saves its hours.",
+            "items": {
+              "$ref": "#/components/schemas/OpeningWeekday"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "exceptions",
+          "weekly"
         ],
         "type": "object"
       },
@@ -2752,6 +3533,28 @@
           "page",
           "size",
           "total"
+        ],
+        "type": "object"
+      },
+      "SaveOpeningHours": {
+        "additionalProperties": false,
+        "properties": {
+          "version": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "weekly": {
+            "description": "Each of the seven weekdays once.",
+            "items": {
+              "$ref": "#/components/schemas/OpeningWeekdayInput"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "version",
+          "weekly"
         ],
         "type": "object"
       },
@@ -4422,6 +5225,599 @@
         "summary": "The service's name, version, commit and time.",
         "tags": [
           "shared"
+        ]
+      }
+    },
+    "/api/v1/operator/holiday-calendars": {
+      "get": {
+        "operationId": "listHolidayCalendars",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HolidayYearList"
+                }
+              }
+            },
+            "description": "The years."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No valid operator session: `invalid_session`."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Without the permission: `permission_denied`."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "summary": "Every year started, newest first. Admin and Support.",
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/operator/holiday-calendars/{year}": {
+      "get": {
+        "operationId": "getHolidayCalendar",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "year",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HolidayYearDetail"
+                }
+              }
+            },
+            "description": "The year."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No valid operator session: `invalid_session`."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Without the permission: `permission_denied`."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The year has not been started, or is outside 2000 to 2100: `not_found`."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "summary": "A year's draft against what salons have, and what a publication would add, change and withdraw. Admin and Support.",
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/operator/holiday-calendars/{year}/days": {
+      "post": {
+        "operationId": "addHolidayCalendarDay",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "year",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HolidayDayRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HolidayYearDetail"
+                }
+              }
+            },
+            "description": "The year, with the day."
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "A field broke a rule: `bad_request`, with `errors` naming `date`, `name` or `kind`."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No valid operator session: `invalid_session`."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Not an Admin: `permission_denied`."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The year is outside 2000 to 2100: `not_found`."
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The draft has that date already: `conflict`."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "summary": "Adds a day to the year's draft, starting the year when needed. Admin.",
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/operator/holiday-calendars/{year}/days/{date}": {
+      "delete": {
+        "operationId": "removeHolidayCalendarDay",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "year",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "date",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HolidayYearDetail"
+                }
+              }
+            },
+            "description": "The year, without the day."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No valid operator session: `invalid_session`."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Not an Admin: `permission_denied`."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No such year, or the draft has no such date: `not_found`."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "summary": "Removes a day from the year's draft. Admin.",
+        "tags": [
+          "platform"
+        ]
+      },
+      "put": {
+        "operationId": "changeHolidayCalendarDay",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "year",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "date",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HolidayDayChangeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HolidayYearDetail"
+                }
+              }
+            },
+            "description": "The year, with the day changed."
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "A field broke a rule: `bad_request`, with `errors` naming `name` or `kind`."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No valid operator session: `invalid_session`."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Not an Admin: `permission_denied`."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No such year, or the draft has no such date: `not_found`."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "summary": "Changes a draft day's name and kind. Admin.",
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/operator/holiday-calendars/{year}/import": {
+      "post": {
+        "description": "UTF-8, up to 64 KB and 400 days: one day per line as `date,name,kind`, the date `YYYY-MM-DD` inside the year, the name 1 to 120 characters, the kind `poya`, `public`, `bank` or `mercantile`. An optional first line names the columns; a field holding a comma is quoted. All or nothing: any bad line refuses the whole file.",
+        "operationId": "importHolidayCalendar",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "year",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/HolidayCalendarImport"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HolidayYearDetail"
+                }
+              }
+            },
+            "description": "The year, its draft replaced."
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The file is missing, or has bad lines: `bad_request`, with one error per bad line (`field` `file`, its `line` and the reason as `detail`). Nothing changes."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No valid operator session: `invalid_session`."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Not an Admin: `permission_denied`."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The year is outside 2000 to 2100: `not_found`."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "summary": "Replaces the year's draft with a CSV file's days, starting the year when needed. Admin.",
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/operator/holiday-calendars/{year}/publication": {
+      "post": {
+        "description": "Salons see the days the revision adds or changes as \"To review\"; their choices for unchanged days still apply, and a withdrawn day's choice no longer does.",
+        "operationId": "publishHolidayCalendar",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "year",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HolidayPublicationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HolidayYearDetail"
+                }
+              }
+            },
+            "description": "The year, published."
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The body is not the documented shape: `bad_request`."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No valid operator session: `invalid_session`."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Not an Admin: `permission_denied`."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The year has not been started: `not_found`."
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The year changed since `version`: `conflict`. The draft adds, changes and withdraws nothing: `invalid_state`. Nothing is published."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "summary": "Publishes the year's draft to every salon as its next revision. Admin.",
+        "tags": [
+          "platform"
         ]
       }
     },
@@ -6511,6 +7907,347 @@
         ]
       }
     },
+    "/api/v1/salon/closures": {
+      "get": {
+        "description": "Not paginated: a closure is at most a year ahead, so the list is short.",
+        "operationId": "listSalonClosures",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SalonClosure"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "The closures."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No valid session for this salon: `invalid_session`."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Without `settings.read`: `permission_denied`. A suspended salon: `salon_suspended`."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The hostname names no salon: `not_found`."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The database is down or not answering: `service_unavailable`."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "summary": "The closures from the salon's today on, in date order. `settings.read`.",
+        "tags": [
+          "staff"
+        ]
+      },
+      "post": {
+        "description": "The date is the salon's local date, today to a year ahead. Bookings on it are kept and listed. The reason is for the team only and is never public.",
+        "operationId": "addSalonClosure",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddSalonClosure"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SalonClosure"
+                }
+              }
+            },
+            "description": "The closure."
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The date is not today to a year ahead, the reason is over 60 characters, or the body is not the documented shape: `bad_request`, with `errors` naming `date` or `reason`."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No valid session for this salon: `invalid_session`."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Without `settings.manage`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The hostname names no salon: `not_found`."
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The date is closed already: `conflict`."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The database is down or not answering: `service_unavailable`."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "summary": "Closes the salon all day on a date; it applies at once. `settings.manage`.",
+        "tags": [
+          "staff"
+        ]
+      }
+    },
+    "/api/v1/salon/closures/impact": {
+      "get": {
+        "operationId": "getSalonClosureImpact",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "date",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClosureImpact"
+                }
+              }
+            },
+            "description": "The bookings; empty when there are none."
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The date is missing, not `YYYY-MM-DD`, past or more than a year ahead: `bad_request`, with `errors` naming `date`."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No valid session for this salon: `invalid_session`."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Without `settings.read`: `permission_denied`. A suspended salon: `salon_suspended`."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The hostname names no salon: `not_found`."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "summary": "The bookings on a date that closing it would affect. `settings.read`.",
+        "tags": [
+          "staff"
+        ]
+      }
+    },
+    "/api/v1/salon/closures/{id}": {
+      "delete": {
+        "operationId": "reopenSalonClosure",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Reopened."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No valid session for this salon: `invalid_session`."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Without `settings.manage`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No such closure of this salon (another salon's answers the same): `not_found`."
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The date has passed: `invalid_state`."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The database is down or not answering: `service_unavailable`."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "summary": "Reopens a closed date that has not passed. `settings.manage`.",
+        "tags": [
+          "staff"
+        ]
+      }
+    },
     "/api/v1/salon/entitlements": {
       "get": {
         "operationId": "entitlements",
@@ -6538,6 +8275,308 @@
         },
         "tags": [
           "platform"
+        ]
+      }
+    },
+    "/api/v1/salon/holidays": {
+      "get": {
+        "operationId": "getSalonHolidays",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SalonHolidays"
+                }
+              }
+            },
+            "description": "The years; empty when the operator has published none."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No valid session for this salon: `invalid_session`."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Without `settings.read`: `permission_denied`. A suspended salon: `salon_suspended`."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The hostname names no salon: `not_found`."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The database is down or not answering: `service_unavailable`."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "summary": "The published holiday years from the salon's current year on, with its choices. `settings.read`.",
+        "tags": [
+          "staff"
+        ]
+      }
+    },
+    "/api/v1/salon/holidays/{year}/acceptance": {
+      "post": {
+        "description": "A choice for every day still to come that is to review, and optionally for other days still to come: `closed`, `open` (as usual) or `special` with times on a quarter hour.",
+        "operationId": "acceptSalonHolidays",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "year",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcceptSalonHolidays"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SalonHolidayYear"
+                }
+              }
+            },
+            "description": "The year, reviewed."
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "A choice broke a rule, a day to review has no choice, or the body is not the documented shape: `bad_request`, with `errors` naming each field (`choices[0].closes`). Nothing is saved."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No valid session for this salon: `invalid_session`."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Without `settings.manage`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The year is not published, or the hostname names no salon: `not_found`."
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The review changed since `version`: `conflict`. Nothing is saved."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The database is down or not answering: `service_unavailable`."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "summary": "Accepts the salon's choices for a published year; they apply at once. `settings.manage`.",
+        "tags": [
+          "staff"
+        ]
+      }
+    },
+    "/api/v1/salon/holidays/{year}/days/{date}": {
+      "put": {
+        "operationId": "chooseSalonHoliday",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "year",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "date",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SalonHolidayDayChoice"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SalonHolidayYear"
+                }
+              }
+            },
+            "description": "The year, with the choice."
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The choice broke a rule: `bad_request`, with `errors` naming `choice`, `opens` or `closes`. Nothing is saved."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No valid session for this salon: `invalid_session`."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Without `settings.manage`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The year is not published, or the date is not one of its holidays: `not_found`."
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The year has not been accepted yet, or the day has passed: `invalid_state`."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The database is down or not answering: `service_unavailable`."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "summary": "Changes one holiday's choice after the year's acceptance; it applies at once. `settings.manage`.",
+        "tags": [
+          "staff"
         ]
       }
     },
@@ -6632,6 +8671,239 @@
         },
         "tags": [
           "platform"
+        ]
+      }
+    },
+    "/api/v1/salon/opening-hours": {
+      "get": {
+        "description": "The exceptions run from the salon's today to 180 days ahead in its time zone: closed days (special closures and holidays the salon closes) and holidays with special hours. A closure's reason is never included.",
+        "operationId": "getSalonOpeningHours",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SalonOpeningHours"
+                }
+              }
+            },
+            "description": "The opening information."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "A suspended salon: `salon_suspended`."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The hostname names no salon: `not_found`."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The database is down or not answering: `service_unavailable`."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "summary": "The salon's opening information: its weekly hours and the coming exceptions. Public.",
+        "tags": [
+          "staff"
+        ]
+      }
+    },
+    "/api/v1/salon/opening-hours/settings": {
+      "get": {
+        "operationId": "getSalonOpeningHoursSettings",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpeningHoursSettings"
+                }
+              }
+            },
+            "description": "The hours."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No valid session for this salon: `invalid_session`."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Without `settings.read`: `permission_denied`. A suspended salon: `salon_suspended`."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The hostname names no salon: `not_found`."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The database is down or not answering: `service_unavailable`."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "summary": "The weekly hours as settings staff keep them, with the bookings they leave outside. `settings.read`.",
+        "tags": [
+          "staff"
+        ]
+      },
+      "put": {
+        "description": "Each of the seven weekdays once: open with an opening and a closing time on a quarter hour (`HH:MM`), closing after opening, or closed with no times. Bookings the new hours leave outside are kept and listed.",
+        "operationId": "saveSalonOpeningHours",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveOpeningHours"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpeningHoursSettings"
+                }
+              }
+            },
+            "description": "The hours as saved."
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "A field broke a rule, or the body is not the documented shape: `bad_request`, with `errors` naming each field (`weekly[0].closes`). Nothing is saved."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No valid session for this salon: `invalid_session`."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Without `settings.manage`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The hostname names no salon: `not_found`."
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The hours changed since `version`: `conflict`. Nothing is saved."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The database is down or not answering: `service_unavailable`."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "summary": "Saves the weekly hours; they apply at once. `settings.manage`.",
+        "tags": [
+          "staff"
         ]
       }
     },
@@ -7174,6 +9446,10 @@
     {
       "description": "Salons, plans, entitlements, billing, lifecycle, exports, support sessions and operators.",
       "name": "platform"
+    },
+    {
+      "description": "Each branch's opening hours, its choices for the published holidays and its special closures.",
+      "name": "staff"
     },
     {
       "description": "Technical capabilities every module runs on, and the service's own metadata.",

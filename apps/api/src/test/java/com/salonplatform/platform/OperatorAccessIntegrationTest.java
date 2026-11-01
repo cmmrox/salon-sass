@@ -611,7 +611,8 @@ class OperatorAccessIntegrationTest extends IntegrationTest {
     @Test
     void supportHasItsOwnPrincipalSalonReadsAndSupportSessionsOnly() {
         // F03-S04 grants Support the salon directory and detail (operator.salon.read) and its own support
-        // sessions, superseding S01's denial of salon reads; plans stay the Admin's.
+        // sessions, superseding S01's denial of salon reads; plans stay the Admin's. F04-S03 lets it read the
+        // holiday calendar, never change it.
         Operator support = console.create("OPERATOR_SUPPORT");
         Map<String, Object> tokens = console.signIn(support);
         String token = (String) tokens.get("accessToken");
@@ -621,7 +622,11 @@ class OperatorAccessIntegrationTest extends IntegrationTest {
                 .containsEntry("role", "OPERATOR_SUPPORT")
                 .containsEntry(
                         "permissions",
-                        List.of("operator.salon.read", "operator.session.manage", "operator.support.start"));
+                        List.of(
+                                "operator.holiday.read",
+                                "operator.salon.read",
+                                "operator.session.manage",
+                                "operator.support.start"));
         for (String path : List.of("/plans", "/plans/" + UUID.randomUUID())) {
             Http.Exchange denied = console.call("GET", path, null, token);
             status(denied, 403);

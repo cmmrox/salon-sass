@@ -26,9 +26,10 @@ import tools.jackson.databind.json.JsonMapper;
 /**
  * The people who reach a salon's settings, over real HTTP and PostgreSQL: staff of every role, written the
  * way identity's fixtures write them and signed in through the real sign-in (an Owner with a known
- * authenticator), and an operator's support session entered through the real entry code.
+ * authenticator), and an operator's support session entered through the real entry code. Shared with the
+ * staff module's settings tests (F04-S03).
  */
-final class SettingsTestSupport {
+public final class SettingsTestSupport {
 
     private final Http http;
     private final int port;
@@ -43,7 +44,7 @@ final class SettingsTestSupport {
     private final Map<UUID, Set<Long>> usedSteps = new HashMap<>();
     private final String password = "synthetic staff " + UUID.randomUUID();
 
-    SettingsTestSupport(
+    public SettingsTestSupport(
             Http http,
             int port,
             TestSalons salons,
@@ -65,9 +66,9 @@ final class SettingsTestSupport {
     }
 
     /** A staff member of the salon in this role, signed in: the account and its access token. */
-    record Staff(StaffAccount account, String token) {}
+    public record Staff(StaffAccount account, String token) {}
 
-    Staff signedIn(TestSalon salon, StaffRole role) {
+    public Staff signedIn(TestSalon salon, StaffRole role) {
         StaffAccount account;
         try {
             account = staff(salon, role);
@@ -131,7 +132,7 @@ final class SettingsTestSupport {
     }
 
     /** An operator's support session in the salon, entered with its single-use code: its access token. */
-    String supportSession(TestSalon salon) {
+    public String supportSession(TestSalon salon) {
         String operator = console.token(console.create("OPERATOR_SUPPORT"));
         Http.Exchange started = console.call(
                 "POST",
@@ -149,7 +150,7 @@ final class SettingsTestSupport {
         return (String) body(entered).get("accessToken");
     }
 
-    Http.Exchange call(TestSalon salon, String method, String path, Object request, String token) {
+    public Http.Exchange call(TestSalon salon, String method, String path, Object request, String token) {
         Map<String, String> headers = new HashMap<>();
         if (request != null) {
             headers.put("Content-Type", "application/json");
@@ -206,7 +207,7 @@ final class SettingsTestSupport {
 
     // JSON is read as an untyped map (Map.class).
     @SuppressWarnings("unchecked")
-    Map<String, Object> body(Http.Exchange exchange) {
+    public Map<String, Object> body(Http.Exchange exchange) {
         return json.readValue(exchange.body(), Map.class);
     }
 }

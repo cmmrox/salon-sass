@@ -7,9 +7,10 @@ import { contextFromTraceparent, runInRequest } from '@/lib/observability/reques
 import { createIdentityWeb, supportCsrf } from '@/features/identity/server';
 import { salonSettingsFor } from '@/features/branding/server';
 import { salonAccountFor } from '@/features/platform/server';
+import { salonHoursFor } from '@/features/staff/server';
 
 /** The support session's BFF (F03-S04), as the route wires it, against a fake API on loopback. */
-const handleIdentity = createIdentityWeb(salonAccountFor, salonSettingsFor);
+const handleIdentity = createIdentityWeb(salonAccountFor, salonSettingsFor, salonHoursFor);
 let server: Server;
 let calls: { method: string; path: string; host?: string; authorization?: string; body: string }[];
 let answer: (method: string, path: string) => { status: number; data: unknown };

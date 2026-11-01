@@ -3,6 +3,8 @@ import { join } from 'node:path';
 import type { NextConfig } from 'next';
 import createNextIntlPlugin from 'next-intl/plugin';
 
+import { PROXY_BODY_LIMIT_BYTES } from './src/lib/http/upload-limits';
+
 const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 
 const nextConfig: NextConfig = {
@@ -23,6 +25,12 @@ const nextConfig: NextConfig = {
   // The workspace's packages (the generated API client, formatting) are shipped as TypeScript source.
   transpilePackages: ['@salon/api-contracts', '@salon/format'],
   poweredByHeader: false,
+  experimental: {
+    // The proxy buffers a request body only up to this size and passes the rest on truncated, without an
+    // error. It is set above the BFF's upload limit, so an upload over that limit still arrives too long and
+    // is refused 413 instead of being read as a cut-off form (F04-S02 fix; src/lib/http/upload-limits.ts).
+    proxyClientMaxBodySize: PROXY_BODY_LIMIT_BYTES,
+  },
   turbopack: {
     rules: {
       // `import text from './x.css?raw'` gives a style sheet's source as a string, for the plain

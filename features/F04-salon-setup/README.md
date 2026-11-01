@@ -99,3 +99,8 @@ why the feature is divided the way it is.
 - **Recorded at F04-S02 close.** The brand and the profile share one draft component. The publish
   bar and leave dialog keep their F04-S01 test ids (`profile-publish` and the rest) on both tabs,
   so QA's existing tests keep working. QA should scope those ids by tab.
+- **Recorded at F04-S03 close.** The Settings intro now says that hours and closures save at once
+  while Profile and Branding are published. Closures and hours changes that affect bookings cannot
+  be shown on the running product until F07 registers its `BookingsOnDate`; until then they are
+  proved by integration and component tests. The holiday calendar is platform data shared by every
+  salon on a database: a year published locally is seen by every local salon.

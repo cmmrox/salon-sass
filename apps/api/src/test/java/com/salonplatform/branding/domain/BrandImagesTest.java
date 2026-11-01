@@ -218,6 +218,21 @@ public class BrandImagesTest {
     }
 
     @Test
+    void aCoverIsAcceptedWhateverItsShapeWhileItIsKeptAtMost1600High() throws IOException {
+        for (int[] shape : new int[][] {{900, 1200}, {1000, 1600}}) {
+            BrandImages.Accepted kept =
+                    (BrandImages.Accepted) check(image(shape[0], shape[1], "png"), BrandImages.Kind.COVER);
+            assertThat(kept.width()).isEqualTo(shape[0]);
+            assertThat(kept.height()).isEqualTo(shape[1]);
+        }
+        for (int[] shape : new int[][] {{1000, 1601}, {1000, 2000}, {2000, 2100}}) {
+            assertThat(check(image(shape[0], shape[1], "png"), BrandImages.Kind.COVER))
+                    .as("%d x %d", shape[0], shape[1])
+                    .isEqualTo(new BrandImages.Refused("is too tall: a cover is kept at most 1600 pixels high"));
+        }
+    }
+
+    @Test
     void aWideShortLogoIsDecodedWithinTheBudget() {
         int factor = BrandImages.decodeFactor(40_000, 1000, BrandImages.Kind.LOGO);
 

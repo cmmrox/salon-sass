@@ -35,7 +35,7 @@ One deployable, divided into modules by business area. The module list follows t
 | `shared` | Tenant context, errors, time, money, audit trail, outbox, jobs. No business rules |
 | `identity` | Staff accounts, roles, sessions, customer one-time-code sign-in |
 | `catalogue` | Services, categories, variants, tax settings |
-| `staff` | Professionals, working hours, leave, blocked time |
+| `staff` | Professionals, working hours, leave, blocked time; the salon's opening hours, special closures and holiday choices per branch, `OpeningSchedule` and the declared `BookingsOnDate` (decision 087) |
 | `booking` | Availability, holds, bookings, waitlist, policies |
 | `payment` | Gateway accounts, payments, refunds, receipts, checkout |
 | `notification` | Templates, channels, delivery log, preferences |
@@ -270,7 +270,9 @@ signature:
 - A request that creates a booking, a payment or a refund carries an `Idempotency-Key`. Repeating it
   returns the first result and never a second side effect.
 - Request records are validated at the edge. A validation failure answers 400 `bad_request` with
-  `errors: [{ field, detail }]`, one entry per failing field.
+  `errors: [{ field, detail }]`, one entry per failing field. An uploaded file refused for its
+  lines (the holiday CSV) uses the same items with `field: "file"`, the reason in `detail` and an
+  optional `line` number; `line` is absent everywhere else (F04-S03).
 - Request bodies are read strictly: no coercion between JSON types (`"5"` is not 5, `1.5` is not 1,
   `1` is not `true`). Each such value is a validation failure naming its field.
 - The OpenAPI document is generated from the controllers and committed. A drift check fails the
