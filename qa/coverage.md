@@ -6,7 +6,7 @@
 
 | Release | Requirements | Owned by a feature | Assigned to a stage | Passed QA |
 | --- | --- | --- | --- | --- |
-| R1 | 97 | 97 | 30 | 23 |
+| R1 | 97 | 97 | 30 | 30 |
 | R2 | 74 | 48 | 44 | 0 |
 | R3 | 21 | 8 | 8 | 0 |
 

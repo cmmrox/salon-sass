@@ -4,13 +4,13 @@ summary: "A salon creates, edits, duplicates, hides and safely deletes its servi
 release: R1
 milestone: M1-web
 status: in-qa
-qa_status: not-run
+qa_status: pass
 released_in: null
 depends_on: [F04]
 integration:
   branch: charithm/feature/F05-service-catalogue
   pull_request: null
-  qa_revision: null
+  qa_revision: f11b829926c0d017b3fff32e71d53aec1d9175b9
   merged_commit: null
   merged_at: null
 surfaces: [api, web]
@@ -27,5 +27,5 @@ verification:
   manual: []
   deferred: []
 evidence:
-  last_run: null
-  last_result: null
+  last_run: qa/reports/20261101-220610-F05-cb818e8d1e03
+  last_result: pass
