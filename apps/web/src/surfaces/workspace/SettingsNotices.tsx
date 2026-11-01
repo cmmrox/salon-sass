@@ -6,10 +6,10 @@ import type { SettingsNotice } from './use-settings-draft';
 
 type Props = {
   /**
-   * Which tab speaks: the profile (F04-S01), the brand (F04-S02) or the hours (F04-S03); it names the test
-   * ids and the words.
+   * Which tab speaks: the profile (F04-S01), the brand (F04-S02), the hours (F04-S03) or the booking rules
+   * (F04-S04); it names the test ids and the words.
    */
-  subject: 'profile' | 'brand' | 'hours';
+  subject: 'profile' | 'brand' | 'hours' | 'rules';
   readOnly: 'support' | 'salon' | null;
   notice: SettingsNotice;
   refusal: string | null;

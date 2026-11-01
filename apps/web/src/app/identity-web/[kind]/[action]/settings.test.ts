@@ -8,9 +8,10 @@ import { salonSettingsFor } from '@/features/branding/server';
 import { createIdentityWeb } from '@/features/identity/server';
 import { salonAccountFor } from '@/features/platform/server';
 import { salonHoursFor } from '@/features/staff/server';
+import { salonBookingRulesFor } from '@/features/booking/server';
 
 /** The settings actions of the workspace BFF (F04-S01), as the route wires them, against a fake API on loopback. */
-const handleIdentity = createIdentityWeb(salonAccountFor, salonSettingsFor, salonHoursFor);
+const handleIdentity = createIdentityWeb(salonAccountFor, salonSettingsFor, salonHoursFor, salonBookingRulesFor);
 let server: Server;
 let calls: { method: string; path: string; host?: string; authorization?: string; body: string }[];
 let answer: (method: string, path: string) => { status: number; data: unknown };
@@ -535,4 +536,136 @@ describe('the settings user’s hours, holidays and closures actions (F04-S03)',
       expect(calls).toEqual([]);
     },
   );
+});
+
+describe('the settings user’s booking rules actions (F04-S04)', () => {
+  const kept = { version: 2, rules: null, currency: 'LKR' };
+  const rules = {
+    slotIntervalMinutes: 15,
+    minimumNoticeMinutes: 60,
+    bookingHorizonDays: 60,
+    deposit: { kind: 'percentage', percent: 20, capMinor: 200000 },
+    freeCancellationHours: 24,
+    lateCancellation: { kind: 'deposit' },
+    noShow: { kind: 'share', percent: 100 },
+    reschedule: { limit: null, untilHours: 12 },
+  };
+  const me = (path: string, data: unknown) =>
+    path === '/api/v1/identity/me'
+      ? {
+          status: 200,
+          data: {
+            id: 's',
+            kind: 'staff',
+            role: 'MANAGER',
+            permissions,
+            scope: 'salon',
+            staffId: 's',
+            mfaEnabled: false,
+          },
+        }
+      : { status: 200, data };
+
+  it('reads the rules and a history page for the salon’s hostname with the user’s credential', async () => {
+    answer = (_method, path) => me(path, path.endsWith('/history') ? { items: [], page: 1, size: 10, total: 0 } : kept);
+    expect((await run('GET', 'staff', 'booking-rules')).status).toBe(200);
+    const context = {
+      ...contextFromTraceparent(undefined),
+      clientAddress: '127.0.0.2',
+      deadline: performance.now() + 3000,
+    };
+    const paged = new NextRequest('http://alpha.localhost:3100/identity-web/staff/booking-rules-history?page=1', {
+      method: 'GET',
+      headers: { Host: 'alpha.localhost:3100', Cookie: 'salon_staff_access=private-access; salon_staff_session=s' },
+    });
+    expect((await runInRequest(context, () => handleIdentity(paged, 'staff', 'booking-rules-history'))).status).toBe(
+      200,
+    );
+
+    expect(apiCalls().map((call) => [call.method, call.path, call.host, call.authorization])).toEqual([
+      ['GET', '/api/v1/salon/booking-rules/settings', 'alpha.localhost', 'Bearer private-access'],
+      ['GET', '/api/v1/salon/booking-rules/history', 'alpha.localhost', 'Bearer private-access'],
+    ]);
+  });
+
+  it('sends a save rebuilt from the contract’s fields, and nothing else the browser sent', async () => {
+    answer = (_method, path) => me(path, { ...kept, version: 3, rules });
+    const response = await run('POST', 'staff', 'booking-rules-save', {
+      version: 2,
+      tenantId: 'other-salon',
+      rules: {
+        ...rules,
+        colour: 'pink',
+        deposit: { ...rules.deposit, amountMinor: null, salon: 'x' },
+        lateCancellation: { kind: 'deposit', extra: 1 },
+      },
+    });
+
+    expect(response.status).toBe(200);
+    const [save] = apiCalls();
+    expect(save).toMatchObject({ method: 'PUT', path: '/api/v1/salon/booking-rules/settings' });
+    expect(JSON.parse(save!.body)).toEqual({ version: 2, rules });
+  });
+
+  it('hands on the API’s refusal with its code and field names', async () => {
+    answer = (_method, path) =>
+      path === '/api/v1/identity/me'
+        ? me(path, null)
+        : { status: 400, data: { code: 'bad_request', errors: [{ field: 'rules.deposit.capMinor', detail: 'x' }] } };
+    const response = await run('POST', 'staff', 'booking-rules-save', { version: 0, rules });
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({
+      code: 'bad_request',
+      errors: [{ field: 'rules.deposit.capMinor' }],
+    });
+  });
+
+  it.each(['booking-rules', 'booking-rules-history'])(
+    'refuses %s to a role without settings.read, before any upstream call',
+    async (action) => {
+      permissions = ['session.manage'];
+      const response = await run('GET', 'staff', action);
+
+      expect(response.status).toBe(403);
+      expect(apiCalls()).toEqual([]);
+    },
+  );
+
+  it('refuses the save to a role without settings.manage, before any upstream call', async () => {
+    permissions = ['session.manage', 'settings.read'];
+    const response = await run('POST', 'staff', 'booking-rules-save', { version: 0, rules });
+
+    expect(response.status).toBe(403);
+    expect(apiCalls()).toEqual([]);
+  });
+
+  it('lets a support session read the rules and refuses its save with no upstream call', async () => {
+    answer = (_method, path) =>
+      path === '/api/v1/identity/me'
+        ? {
+            status: 200,
+            data: {
+              id: 'support',
+              kind: 'support',
+              role: null,
+              permissions: ['settings.read'],
+              scope: 'salon',
+              staffId: null,
+              mfaEnabled: false,
+              expiresAt: '2026-11-01T08:00:00Z',
+            },
+          }
+        : { status: 200, data: kept };
+    expect((await run('GET', 'support', 'booking-rules')).status).toBe(200);
+    expect(apiCalls().map((call) => [call.path, call.authorization])).toEqual([
+      ['/api/v1/salon/booking-rules/settings', 'Bearer private-support'],
+    ]);
+
+    calls = [];
+    const refused = await run('POST', 'support', 'booking-rules-save', { version: 0, rules });
+    expect(refused.status).toBe(403);
+    expect(await refused.json()).toMatchObject({ code: 'support_read_only' });
+    expect(calls).toEqual([]);
+  });
 });

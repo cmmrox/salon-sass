@@ -5,7 +5,8 @@ import { useEffect, useState } from 'react';
  * Asks before the person leaves a page with unsaved edits (F04-S01 AC-11): the browser's own prompt when
  * the tab closes or reloads, and, for a link inside the workspace (the navigation, the header, a tab),
  * the page's own confirmation. While `guarded`, a click on such a link is held and its address returned
- * as `pending`; `leave` follows it, `stay` forgets it.
+ * as `pending`; `leave` follows it, `stay` forgets it. `hold` holds an address the page itself was about to
+ * go to (a Settings tab chosen with the keyboard or the pointer, which is not a link; F04-S04).
  */
 export function useLeaveGuard(guarded: boolean, follow: (href: string) => void) {
   const [pending, setPending] = useState<string | null>(null);
@@ -34,6 +35,7 @@ export function useLeaveGuard(guarded: boolean, follow: (href: string) => void) 
   return {
     pending,
     stay: () => setPending(null),
+    hold: (href: string) => setPending(href),
     leave: () => {
       const href = pending;
       setPending(null);

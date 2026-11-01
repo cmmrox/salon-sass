@@ -271,7 +271,7 @@ describe('the Settings page', () => {
       </SettingsScreen>,
     );
     const tabs = within(screen.getByTestId('settings-tabs')).getAllByRole('tab');
-    expect(tabs.map((tab) => tab.textContent)).toEqual(['Profile', 'Hours & closures', 'Branding']);
+    expect(tabs.map((tab) => tab.textContent)).toEqual(['Profile', 'Hours & closures', 'Booking rules', 'Branding']);
     expect(screen.getByTestId('settings-tab-profile')).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('tabpanel')).toHaveTextContent('content');
   });
