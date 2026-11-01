@@ -9,7 +9,7 @@ found_on: 2026-11-02
 fixed_in: b6937a3
 fix_note: The four sheet messages take their limits through formatMoney in the lists' currency; LKR wording unchanged.
 developer_note: null
-verified_on: null
+verified_on: 2026-11-02
 approved_by: null
 found_in_release: null
 ---
@@ -54,4 +54,7 @@ in a USD salon.
 
 ## Re-verification
 
-<QA, after a fix: what was rerun, the run folder, and the result.>
+On build 25b1381, tests 7000ac9, TC-F05-S01-047 (AC-19) passed in
+`qa/reports/20261102-F05-reverify-7000ac9`: a USD salon reads the service price, a variant's price, a
+fixed deposit and a product's price in USD, and each message clears at the limit where the case
+checks; an LKR salon keeps "Price must be Rs. 100 to Rs. 500,000.".

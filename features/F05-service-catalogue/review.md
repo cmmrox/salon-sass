@@ -73,6 +73,7 @@ Ranked, most valuable first.
 | SUG-F05-01 | should | Merge the stacked information banners at the top of the Services and Products tabs into one | CR-025 |
 | SUG-F05-02 | should | Fold empty categories on the Services tab into one line instead of a heading and "No services yet." each | CR-025 |
 | SUG-F05-03 | idea | Write the preview's example rows as the spec words them ("A service at Rs. 2,500"), or update the spec to the two-column row | CR-025 (settled: two-column row) |
+| SUG-F05-04 | idea | Make the names in the folded line links that open New service in that category | |
 
 ### SUG-F05-01 One information banner at the top of each tab
 
@@ -107,6 +108,15 @@ Ranked, most valuable first.
   and the build differ, which a later reader may trip on.
 - **Instead:** the lead corrects the spec's wording to the built row (no code change).
 - **Evidence:** TC-F05-S03-017 checks the name and the price separately for this reason.
+
+### SUG-F05-04 Links in the folded line (after CR-025)
+
+- **Observed:** "No services yet in: Cuts & styling, Facials & skin, ..." is plain text. To add a service
+  to one of them, the person presses **+ New service** and then chooses the category under More options.
+- **Why it matters:** an owner building the menu category by category repeats those steps for each.
+- **Instead:** each name opens New service with that category chosen.
+- **Evidence:** `cr025-services-360.png` (QA scratchpad `f05-explore/`). AC-18 asks for the line only, so
+  this is an idea, not a defect.
 
 ## Compared with other products
 
@@ -178,9 +188,32 @@ limits in rupees. Wording only; amounts are right.
 The full pass of record stays `qa/reports/20261101-224201-F05-14614a3cc4de` at d8985b8
 (`evidence.full_pass_revision`); `integration.qa_revision` moved to 866669b, as F04's did for `pr-check`.
 
+### Re-verification after CR-025 and the upload hardening (2026-11-02, revision 7000ac9)
+
+The follow-up (merge 25b1381, decision 098) makes the top of the Services and Products tabs one banner,
+folds empty categories, states the sheets' limits in the salon's currency (BUG-F05-001), shows the
+preview's example rows in it, and reads an upload's bytes only after its checks, for service photos and
+brand images. `evidence.reverification` names the selection and what was left out and why.
+
+Targeted, not a full pass. New: TC-F05-S01-047 to 050, TC-F05-S03-027. Changed: TC-F05-S01-032,
+TC-F05-S03-017, 020, 021. On build 25b1381, tests 7000ac9, fresh database,
+`qa/reports/20261102-F05-reverify-7000ac9`: 42 of 42 passed in 4 min 19 s, F04's TC-F04-S02-008, 009 and
+010 among them. Smoke at the same revision, `qa/reports/20261102-013017-smoke-60a0b44ed0bb`: 9 of 9
+entries, 25 of 25 cases, 2 min 31 s. BUG-F05-001 is verified.
+
+Limits: the order inside an upload is the developer's tests' to prove (a test that fails if the bytes are
+read first). From outside, TC-F05-S01-048 proves that a refused caller or a wrong target gets the same
+answer for a 6 MB file as for a small one, which would hold on the old code too, so it guards today's
+answers rather than the order. A request over 10 MB is refused by the container for everyone, as before.
+
+Walked at 360 and 1280 as a salon's Owner, with services and as an empty salon: the first service comes
+well above where it was on a phone, and the Empty state and folded line read as specified. They were not
+compared again with the prototype, which still draws two banners; CR-025 is the approved departure.
+The full pass of record stays at d8985b8 (`evidence.full_pass_revision`).
+
 ## Bugs filed from this review
 
-- BUG-F05-001 (minor, open): a salon in another currency is told its price limits in rupees (found
-  re-verifying the PR #19 fixes; see above).
+- BUG-F05-001 (minor, verified 2026-11-02): a salon in another currency was told its price limits in
+  rupees (found re-verifying the PR #19 fixes; fixed with CR-025; see above).
 - The one product defect found during the build (a conflict hidden behind the open sheet, F05-S01 dry
   run) was reported to the lead during the build, fixed in 0d5f9ac and confirmed by TC-F05-S01-039.

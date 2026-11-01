@@ -14,7 +14,7 @@ depends_on:
 integration:
   branch: charithm/feature/F05-service-catalogue
   pull_request: https://github.com/cmmrox/salon-sass/pull/19
-  qa_revision: 866669b9e761d10030dbb4a199dc97a80c7df208
+  qa_revision: 7000ac950830005741811022cde53a730a97692e
   merged_commit: 3e60834a5bd2484b716aff11c68527ab962cd499
   merged_at: '2026-11-01T19:27:51Z'
 surfaces:
@@ -74,3 +74,29 @@ evidence:
       API 8291 and web 3291 built from 8ddb623, tests 866669b. qa/reports/20261102-F05-reverify-866669b,
       49 of 49 passed in 6 min 05 s. Result pass. One minor bug filed from checking
       the USD labels, BUG-F05-001, open.
+  - revision: 7000ac950830005741811022cde53a730a97692e
+    date: 2026-11-02
+    changed: 'CR-025 and the upload hardening (merge 25b1381, decision 098). Web: one information
+      banner on the Services and Products tabs (TaxSentence), empty categories folded
+      into one line, the Empty state, the sheets'' money limits in the salon''s currency
+      (BUG-F05-001), the tax preview''s example rows in it. API: a service photo and
+      a brand image upload check the caller, the target and the declared size before
+      reading the bytes (ServicePhotos, BrandImageService, shared ImageUpload). No migration
+      or contract change.'
+    scope: 'Written or changed for CR-025: TC-F05-S01-032, 047 to 050; TC-F05-S03-017,
+      020, 021, 027. Re-run, as what the changed files reach: TC-F05-S01-021 to 023,
+      026 to 029, 031 (they upload a photo); every browser case on the Services and
+      Products tabs and their sheets (TC-F05-S01-033 to 042, 045, 046; TC-F05-S02-016
+      to 021; TC-F05-S03-022 to 024, 026); and F04''s TC-F04-S02-008, 009, 010 (the
+      brand image upload). Then the smoke suite once. Not re-run, because their code
+      did not change (decision 069): the other F05 API cases (only the uploads changed),
+      the backfill check, the tax tab''s form cases TC-F05-S03-016, 018, 019 (one line
+      of use-tax-settings, the preview''s currency, is covered by 017 and 027), and
+      the rest of F04. The order inside an upload is the developer''s integration tests''
+      to prove; TC-F05-S01-048 proves from outside that the answers do not depend on
+      the file''s size.'
+    run: Playwright --grep (sdlc run selects only whole entries), fresh database f05qa_cr025,
+      API 8291 and web 3291 built from 25b1381, tests 7000ac9. qa/reports/20261102-F05-reverify-7000ac9,
+      42 of 42 passed in 4 min 19 s (39 F05, 3 F04). Smoke, qa/scripts/sdlc run --suite
+      smoke at 7000ac9, qa/reports/20261102-013017-smoke-60a0b44ed0bb, 9 of 9 entries,
+      25 of 25 cases, 2 min 31 s. Result pass. BUG-F05-001 verified.
