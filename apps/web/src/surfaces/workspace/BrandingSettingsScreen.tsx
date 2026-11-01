@@ -14,9 +14,10 @@ import { useBrandDraft } from './use-brand-draft';
 type ReadOnly = 'support' | 'salon' | null;
 
 /**
- * The Branding tab (F04-S02), on the Profile tab's pattern: the form, the preview beside it from 900px and
- * below it under, Save draft, and the brand's own publish bar. The preview follows every keystroke and choice
- * before anything is saved; an uploaded image not yet saved counts as an unsaved edit for the leave guard.
+ * The Branding tab (F04-S02), on the Profile tab's pattern: the preview above the form under 900px and beside
+ * it from there, as the prototype places it; Save draft; and the brand's own publish bar. The preview follows
+ * every keystroke and choice before anything is saved; an uploaded image not yet saved counts as an unsaved
+ * edit for the leave guard.
  */
 export function BrandingSettingsScreen({ kind, readOnly }: { kind: Kind; readOnly: ReadOnly }) {
   const t = useTranslations('settings.brand');
@@ -68,7 +69,19 @@ export function BrandingSettingsScreen({ kind, readOnly }: { kind: Kind; readOnl
     <div className="flex flex-col gap-6" data-testid="brand-tab">
       {notices}
       <div className="flex flex-col gap-6 rail:grid rail:grid-cols-[minmax(0,1fr)_var(--size-settings-preview-compact)] rail:items-start rail:gap-9 wide:grid-cols-[minmax(0,1fr)_var(--size-settings-preview)]">
-        <div className="flex w-full min-w-0 flex-col gap-4 rail:max-w-(--size-form)">
+        <section
+          aria-labelledby="brand-preview-title"
+          className="flex min-w-0 flex-col gap-3 rail:sticky rail:top-24 rail:col-start-2 rail:row-start-1"
+        >
+          <h2 id="brand-preview-title" className="text-large font-semibold">
+            {t('previewHeading')}
+          </h2>
+          <BrandPreview name={form.name} tagline={form.tagline} colour={colour} logo={form.logo} cover={form.cover} />
+          <p className="text-small text-foreground" data-testid="brand-preview-note">
+            {brand.unpublished ? t('previewDraftNote') : t('previewPublishedNote')}
+          </p>
+        </section>
+        <div className="flex w-full min-w-0 flex-col gap-4 rail:col-start-1 rail:row-start-1 rail:max-w-(--size-form)">
           <BrandForm
             form={form}
             errors={brand.errors}
@@ -89,15 +102,6 @@ export function BrandingSettingsScreen({ kind, readOnly }: { kind: Kind; readOnl
             {brand.busy === 'saving' ? t('saving') : t('save')}
           </Button>
         </div>
-        <section aria-labelledby="brand-preview-title" className="flex min-w-0 flex-col gap-3 rail:sticky rail:top-24">
-          <h2 id="brand-preview-title" className="text-large font-semibold">
-            {t('previewHeading')}
-          </h2>
-          <BrandPreview name={form.name} tagline={form.tagline} colour={colour} logo={form.logo} cover={form.cover} />
-          <p className="text-small text-foreground" data-testid="brand-preview-note">
-            {brand.unpublished ? t('previewDraftNote') : t('previewPublishedNote')}
-          </p>
-        </section>
       </div>
       <PublishBar
         subject="brand"
