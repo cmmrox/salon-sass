@@ -80,6 +80,8 @@ export function ServiceSheet(props: Props) {
   const t = useTranslations('services.sheet');
   // The prototype opens "More options" for an existing service with something set there.
   const [more, setMore] = useState(!isNew);
+  // A photo upload is a change of this service too: Save and Delete wait for it (Close does not).
+  const working = saving || props.photoUpload.state === 'uploading';
   const invalid = (field: keyof ServiceValues) =>
     problems.some((problem) => {
       const { key, index } = problemParts(problem);
@@ -127,7 +129,7 @@ export function ServiceSheet(props: Props) {
           className="flex flex-col gap-4"
           onSubmit={(event) => {
             event.preventDefault();
-            if (canSave) props.onSave();
+            if (canSave && !working) props.onSave();
           }}
         >
           {problems.length > 0 && (
@@ -301,7 +303,7 @@ export function ServiceSheet(props: Props) {
               />
             </CollapsibleContent>
           </Collapsible>
-          <Button type="submit" className="w-full" disabled={!canSave || saving} data-testid="service-sheet-save">
+          <Button type="submit" className="w-full" disabled={!canSave || working} data-testid="service-sheet-save">
             {saving && <Spinner />}
             {saving ? t('saving') : isNew ? t('create') : t('save')}
           </Button>
@@ -310,7 +312,7 @@ export function ServiceSheet(props: Props) {
               type="button"
               variant="destructive"
               className="w-full"
-              disabled={saving}
+              disabled={working}
               onClick={props.onDelete}
               data-testid="service-sheet-delete"
             >

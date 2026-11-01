@@ -754,3 +754,130 @@ describe('a service’s deposit (F05-S02 AC-7)', () => {
     expect(screen.getByLabelText('Deposit amount')).toHaveAttribute('aria-invalid', 'true');
   });
 });
+
+describe('a service’s photo, and a change answered after its sheet closed (AC-3, AC-10)', () => {
+  const BALAYAGE = SERVICES.items[1]!;
+  const GEL = SERVICES.items[2]!;
+  /** An answer the test gives later, so that the photo call is still running while the person moves on. */
+  const later = () => {
+    let answer: (response: Response) => void = () => {};
+    const pending = new Promise<Response>((resolve) => (answer = resolve));
+    return { pending, answer };
+  };
+  const choosePhoto = () =>
+    fireEvent.change(screen.getByTestId('service-photo-file'), {
+      target: { files: [new File(['jpeg'], 'balayage.jpg', { type: 'image/jpeg' })] },
+    });
+  // An existing service's sheet opens with More options, and its photo, shown.
+  const edit = async (name: string) => {
+    fireEvent.click(within(card(name)).getByTestId('service-card-edit'));
+    await screen.findByTestId('service-photo-choose');
+  };
+  const closeSheet = async () => {
+    fireEvent.click(screen.getByTestId('service-sheet-close'));
+    await waitFor(() => expect(screen.queryByTestId('service-sheet')).toBeNull());
+  };
+
+  it('keeps Save and Delete disabled while a photo uploads, and Close open', async () => {
+    const upload = later();
+    answers['catalogue-photo'] = () => upload.pending as unknown as Response;
+    render();
+    await screen.findAllByTestId('service-card');
+    await edit('Balayage');
+    fireEvent.change(screen.getByTestId('service-sheet-name'), { target: { value: 'Balayage and tone' } });
+    choosePhoto();
+
+    expect(await screen.findByTestId('service-photo-choose')).toHaveTextContent('Uploading…');
+    expect(screen.getByTestId('service-sheet-save')).toBeDisabled();
+    expect(screen.getByTestId('service-sheet-delete')).toBeDisabled();
+    expect(screen.getByTestId('service-sheet-close')).toBeEnabled();
+
+    upload.answer(Response.json({ ...BALAYAGE, photoId: 'photo-1', version: 1 }));
+    expect(await screen.findByText('Photo saved.')).toBeInTheDocument();
+    expect(screen.getByTestId('service-sheet-save')).toBeEnabled();
+  });
+
+  it('leaves a New service sheet opened while an earlier upload ran as it is, and creates the new service', async () => {
+    const upload = later();
+    answers['catalogue-photo'] = () => upload.pending as unknown as Response;
+    answers['catalogue-service-create'] = () => Response.json(service('new', 'Root touch-up', COLOUR), { status: 201 });
+    render();
+    await screen.findAllByTestId('service-card');
+    await edit('Balayage');
+    choosePhoto();
+    await closeSheet();
+
+    fireEvent.click(screen.getByTestId('services-new'));
+    fireEvent.change(await screen.findByTestId('service-sheet-name'), { target: { value: 'Root touch-up' } });
+    upload.answer(Response.json({ ...BALAYAGE, photoId: 'photo-1', version: 1 }));
+    expect(await screen.findByText('Photo saved.')).toBeInTheDocument();
+
+    const sheet = screen.getByTestId('service-sheet');
+    expect(within(sheet).getByRole('heading', { name: 'New service' })).toBeInTheDocument();
+    expect(screen.getByTestId('service-sheet-name')).toHaveValue('Root touch-up');
+    fireEvent.click(screen.getByTestId('service-sheet-save'));
+    await waitFor(() => expect(sent('catalogue-service-create')).toHaveLength(1));
+    expect(sent('catalogue-service-save')).toEqual([]);
+  });
+
+  it('leaves another service’s sheet on that service when an earlier upload fails after it opened', async () => {
+    const upload = later();
+    answers['catalogue-photo'] = () => upload.pending as unknown as Response;
+    render();
+    await screen.findAllByTestId('service-card');
+    await edit('Balayage');
+    choosePhoto();
+    await closeSheet();
+
+    await edit('Gel polish');
+    upload.answer(Response.json({ code: 'bad_request' }, { status: 400 }));
+    await waitFor(() => expect(sent('catalogue-photo')).toHaveLength(1));
+    // The refusal belongs to Balayage's sheet, which is closed: Gel polish's photo field says nothing.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(screen.queryByTestId('service-photo-error')).toBeNull();
+    expect(screen.getByTestId('service-sheet-name')).toHaveValue('Gel polish');
+  });
+
+  it('leaves another service’s sheet open when an earlier save finishes after it opened', async () => {
+    const save = later();
+    answers['catalogue-service-save'] = () => save.pending as unknown as Response;
+    render();
+    await screen.findAllByTestId('service-card');
+    await edit('Balayage');
+    fireEvent.change(screen.getByTestId('service-sheet-name'), { target: { value: 'Balayage and tone' } });
+    fireEvent.click(screen.getByTestId('service-sheet-save'));
+    fireEvent.click(screen.getByTestId('service-sheet-close'));
+    fireEvent.click(await screen.findByTestId('services-leave-confirm'));
+    await waitFor(() => expect(screen.queryByTestId('service-sheet')).toBeNull());
+
+    await edit('Gel polish');
+    save.answer(Response.json({ ...BALAYAGE, name: 'Balayage and tone', version: 1 }));
+    expect((await screen.findAllByText('Saved.')).length).toBeGreaterThan(0);
+    expect(screen.getByTestId('service-sheet')).toBeInTheDocument();
+    expect(screen.getByTestId('service-sheet-name')).toHaveValue('Gel polish');
+  });
+
+  it('saves the service whose sheet is open when an earlier photo removal finishes after it opened', async () => {
+    const removal = later();
+    answers['catalogue-services'] = () =>
+      Response.json({ items: [SERVICES.items[0], { ...BALAYAGE, photoId: 'photo-1' }, GEL] });
+    answers['catalogue-photo-remove'] = () => removal.pending as unknown as Response;
+    answers['catalogue-service-save'] = (body) => Response.json({ ...GEL, ...(body as object), version: 1 });
+    render();
+    await screen.findAllByTestId('service-card');
+    await edit('Balayage');
+    fireEvent.click(screen.getByTestId('service-photo-remove'));
+    await closeSheet();
+
+    await edit('Gel polish');
+    fireEvent.change(screen.getByTestId('service-sheet-name'), { target: { value: 'Gel polish and shape' } });
+    removal.answer(Response.json({ ...BALAYAGE, photoId: null, version: 1 }));
+    expect(await screen.findByText('Photo removed.')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('service-sheet-save'));
+    await waitFor(() => expect(sent('catalogue-service-save')).toHaveLength(1));
+    expect(sent('catalogue-service-save')).toEqual([
+      expect.objectContaining({ id: GEL.id, name: 'Gel polish and shape', version: GEL.version }),
+    ]);
+  });
+});
