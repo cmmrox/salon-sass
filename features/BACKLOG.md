@@ -43,9 +43,7 @@ Added by the lead at `stage-close` and `feature-close`, from suggestions classed
 | Web money entry for currencies without two fraction digits | F05-S01 handoff | The web counts 100 minor units per unit; only two-digit currencies can be provisioned today (F04 close). Fix before such a currency is offered |
 | Silence the dev-only Next.js "uncached data" error on workspace routes | F05-S01 handoff | Predates F05; seen in development only |
 | Let name inputs reach their limit with emoji (`maxLength` counts UTF-16 units, so a 40-character emoji name keeps 39) | PR #19 fixes | Nothing is corrupted; changing it touches every name input |
-| Use the salon's currency in the empty tax preview's example and in problem messages that say "Rs." | PR #19 fixes | Only non-rupee salons see it; the list's `currency` makes the preview a one-line change |
 | Measure lengths in code points in `HolidayDays`, `ClosureServiceImpl`, `SalonProvisioningServiceImpl`, and cut `OutboxStore`'s error text between characters | PR #19 fixes | Same mistake as `CopyNames`, outside F05 |
-| Word the tax preview's example rows one way in the spec and the screen ("A service at Rs. 2,500" or the two-column row) | SUG-F05-03 | Wording only; settle when CR-025 changes the same page |
 | Do not call a request the server refuses to understand (501, 505) an `internal_error` | SUG-F01-S01-05 | It will be noise in error-rate alerting; fits F01-S04 |
 | Set a page-weight budget and the security headers when the branded shell replaces the status page | SUG-F01-S01-06 | About 180 KB of compressed JavaScript today; fits F01-S03 |
 | Give a light brand's sign-in initial a readable outer line on the photograph | SUG-F02-06 | Add an ink or white line when the brand is under 3:1 on the card; fits F04 branding |

@@ -227,3 +227,23 @@ developer when the build started, in answer to QA's preparation:
 
 **After the PR #19 review** (merged on the feature branch): `GET /api/v1/catalogue/products` also
 returns a required `currency`, the salon's currency, so a salon's first product is priced in it.
+
+## CR-025 (follow-up after the merge of PR #19)
+
+These replace AC-7's and AC-10's banners on the Products tab and AC-5's example row, and are built and
+verified in one follow-up PR after F05's (decision 098). Read `docs/changes/CR-025-services-page-refinements.md`.
+
+- AC-14: The Products tab shows one information banner, an Alert `info`: "Products you sell at the
+  front desk, added to a sale at checkout. Stock isn’t tracked." followed by one sentence naming only
+  what applies to products:
+  - VAT on and service charge on products: "Prices include service charge (10%) and VAT (18%) where
+    it applies.";
+  - VAT on only: "Prices include VAT (18%) where it applies.";
+  - service charge on products only: "Prices include service charge (10%).";
+  - service charge on, not on products, VAT off: "No tax or service charge applies to products.";
+  - both off: "Tax and service charge are off. Turn them on in Settings if your salon is registered."
+
+  (CAT-05, INV-01, CR-025)
+- AC-15: With no service or no product, "What customers pay" shows the two-column example row as
+  built ("A service" and the amount; "A product" and the amount), in the salon's currency from the
+  lists' `currency`. This settles SUG-F05-03, and replaces AC-5's "A service at Rs. 2,500". (CAT-05)
