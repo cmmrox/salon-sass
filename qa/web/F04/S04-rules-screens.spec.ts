@@ -23,9 +23,9 @@ import { webUrl } from '../../shared/env';
 import { test as browserTest, expect, type AccountBrowser } from '../../shared/identity-browser';
 import type { Actor, Role } from '../../shared/identity';
 import { Operator, ownerSession, supportJson, type SupportStart } from '../../shared/operator';
-import { fit, focusIndicator, seriousViolations } from '../../shared/page-checks';
+import { drawnContrast, fit, focusIndicator, seriousViolations } from '../../shared/page-checks';
 import { message } from '../../shared/strings';
-import { alpha, salonUrl, type Salon } from '../../shared/tenants';
+import { alpha, gamma, salonUrl, type Salon } from '../../shared/tenants';
 
 const test = browserTest.extend<{ operator: Operator; book: BookingRules }>({
   operator: async ({ identity }, use) => {
@@ -490,7 +490,7 @@ test('TC-F04-S04-025 AC-10: at every width of the matrix the tab and the History
   }
 });
 
-test('TC-F04-S04-026 AC-10: the tab has no serious accessibility violation in its not-saved, field-error, saved, history and conflict states, every select and the deposit choice have their names, and the rules are changed and saved by keyboard alone', async ({ accounts, operator, book }) => {
+test('TC-F04-S04-026 AC-10: the tab has no serious accessibility violation in its not-saved, field-error, saved, history and conflict states, every select and the deposit choice have their names, the rules are changed and saved by keyboard alone, and it reads well on a dark, the default and a light brand', async ({ accounts, operator, book }) => {
   const { salon, owner } = await newSalon(operator, accounts);
   const { page } = await openRules(accounts, owner);
   await test.step('names: each select by its label, the deposit by its heading, each share kept by its context', async () => {
@@ -542,6 +542,8 @@ test('TC-F04-S04-026 AC-10: the tab has no serious accessibility violation in it
     await expect(id(page, 'rules-interval'), 'the next choice by the arrow').toHaveText('20 minutes');
     await tabTo(page, page.getByRole('radio', { checked: true }).and(page.locator('[data-testid^="rules-deposit-"]')));
     await page.keyboard.press('ArrowRight');
+    // The roving focus moves after the key press (Radix moves it on the next task): wait for it before choosing.
+    await expect(id(page, 'rules-deposit-amount'), 'the arrow moves to Fixed amount').toBeFocused();
     await page.keyboard.press('Space');
     await expect(id(page, 'rules-deposit-amount'), 'Fixed amount by the arrow').toHaveAttribute('data-state', 'on');
     await tabTo(page, id(page, 'rules-amount'));
@@ -553,5 +555,19 @@ test('TC-F04-S04-026 AC-10: the tab has no serious accessibility violation in it
     const saved = (await book.settings(salon, owner.tokens)).rules!;
     expect(saved.slotIntervalMinutes).toBe(20);
     expect(saved.deposit).toEqual({ kind: 'amount', amountMinor: 250000 });
+  });
+  await test.step('on the default pink and a light brand: no serious violation, and the chosen deposit chip and Save are readable', async () => {
+    // docs/design/ui-ux-standards.md: every salon screen with a dark and a light brand (the salon above is the neutral dark one).
+    for (const salonOf of [alpha, gamma]) {
+      const manager = await accounts.identity.staff(salonOf, 'MANAGER');
+      const { page: branded } = await openRules(accounts, manager);
+      await accessible(branded, `${salonOf.slug}'s brand`);
+      const chosen = branded.locator('[data-testid^="rules-deposit-"][data-state="on"]').filter({ visible: true });
+      await expect(chosen).toHaveCount(1);
+      expect(await drawnContrast(chosen), `${salonOf.slug}: the chosen deposit chip is readable`).toBeGreaterThanOrEqual(4.5);
+      await choose(branded, 'rules-free', (await id(branded, 'rules-free').innerText()).startsWith('2 ') ? '6' : '2');
+      await expect(id(branded, 'rules-save')).toBeEnabled();
+      expect(await drawnContrast(id(branded, 'rules-save')), `${salonOf.slug}: Save is readable`).toBeGreaterThanOrEqual(4.5);
+    }
   });
 });

@@ -195,7 +195,7 @@ test('TC-F04-S01-022 AC-7: when someone else saved first, the screen says so and
   await field(b.page, 'description').fill(unique('My description'));
   await id(b.page, 'profile-save').click();
   await expect(id(b.page, 'profile-conflict')).toBeVisible();
-  await expect(id(b.page, 'profile-conflict')).toContainText(message('settings.profile.conflictTitle'));
+  await expect(id(b.page, 'profile-conflict')).toContainText('Someone else changed the profile'); // AC-7: the screen says someone else changed the profile
   expect(profileSnapshot(alpha.id), 'the later save changed nothing').toBe(before);
   await id(b.page, 'profile-conflict-reload').click();
   await ready(b.page);
