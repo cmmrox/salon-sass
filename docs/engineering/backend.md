@@ -34,7 +34,7 @@ One deployable, divided into modules by business area. The module list follows t
 | `platform` | Tenants and their provisioning/contact profile, plans, entitlements, subscriptions, operator users. No `tenant_id` |
 | `shared` | Tenant context, errors, time, money, audit trail, outbox, jobs, image checks (decision 093). No business rules |
 | `identity` | Staff accounts, roles, sessions, customer one-time-code sign-in |
-| `catalogue` | Services, categories, variants, tax settings |
+| `catalogue` | Services, categories, variants, popular services, tax settings, products; provides `ServiceTerms`, `TaxSettings` and `Products`, and declares `UpcomingServiceBookings` and `ServiceBookingCounts` for `booking` to implement (decisions 093 to 095) |
 | `staff` | Professionals, working hours, leave, blocked time; the salon's opening hours, special closures and holiday choices per branch, `OpeningSchedule` and the declared `BookingsOnDate` (decision 087) |
 | `booking` | Availability, holds, bookings, waitlist, policies; the booking rules as immutable versions and the provided `BookingPolicies` (current, by version, `depositFor` with an optional service rule) that F07, F08 and F09 read (decision 089) |
 | `payment` | Gateway accounts, payments, refunds, receipts, checkout |
