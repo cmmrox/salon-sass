@@ -30,9 +30,10 @@ const DETAIL = {
     { date: '2027-01-14', name: 'Tamil Thai Pongal Day', kind: 'public', change: 'unchanged' },
     { date: '2027-01-22', name: 'Duruthu Full Moon Poya Day', kind: 'poya', change: 'changed' },
     { date: '2027-02-04', name: 'Independence Day', kind: 'public', change: 'added' },
+    { date: '2027-04-13', name: 'Day prior to Sinhala and Tamil New Year Day', kind: 'mercantile', change: 'added' },
   ],
   withdrawn: [{ date: '2027-03-01', name: 'Withdrawn Day', kind: 'bank' }],
-  changes: { added: 1, changed: 1, withdrawn: 1 },
+  changes: { added: 2, changed: 1, withdrawn: 1 },
 };
 let answers: Record<string, () => Response>;
 beforeEach(() => {
@@ -103,6 +104,36 @@ describe('the console Holiday calendar', () => {
     fireEvent.click(screen.getByTestId('console-holiday-publish'));
     const dialog = await screen.findByTestId('console-holiday-publish-dialog');
     expect(within(dialog).getByTestId('console-holiday-publish-confirm')).toBeInTheDocument();
+    await noViolations();
+  });
+
+  // QA's F04-S03 dry run (TC-F04-S03-029): at 360px the days table was 505px wide inside its card, its Change,
+  // Edit and Remove columns off-screen and names broken mid-word. Every day, its change and its actions fit.
+  it.each(WIDTHS)('a year’s days fit the screen at %ipx, every action visible and names whole', async (width) => {
+    await atWidth(width);
+    renderWithMessages(
+      <ConsoleShell permissions={PERMISSIONS} view="holidays">
+        <HolidayYearScreen year={2027} canManage />
+      </ConsoleShell>,
+    );
+    const days = await screen.findByTestId('console-holiday-days');
+    const card = screen.getByTestId('console-holiday-days-card');
+    expect(days.getBoundingClientRect().right).toBeLessThanOrEqual(card.getBoundingClientRect().right);
+    // A visually hidden header (`sr-only`) is clipped on purpose; everything people see must fit.
+    for (const scrolling of [days, ...days.querySelectorAll('*:not(.sr-only)')]) {
+      expect(scrolling.scrollWidth, scrolling.tagName).toBeLessThanOrEqual(scrolling.clientWidth + 1);
+    }
+    for (const action of [
+      ...within(days).getAllByTestId('console-holiday-day-edit'),
+      ...within(days).getAllByTestId('console-holiday-day-remove'),
+      ...within(days).getAllByTestId('console-holiday-day-change'),
+    ]) {
+      expect(action.getBoundingClientRect().right).toBeLessThanOrEqual(window.innerWidth);
+    }
+    for (const name of within(days).getAllByTestId('console-holiday-day-name')) {
+      expect(getComputedStyle(name).overflowWrap).not.toBe('anywhere');
+    }
+    expect(within(days).getAllByTestId('console-holiday-day')).toHaveLength(4);
     await noViolations();
   });
 });
