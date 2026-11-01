@@ -9,7 +9,7 @@ released_in: null
 depends_on: [F02]
 integration:
   branch: charithm/feature/F04-salon-setup
-  pull_request: null
+  pull_request: https://github.com/cmmrox/salon-sass/pull/18
   qa_revision: 70d452a008fb6034b45a9a35a9cb5bc8e3035e96
   merged_commit: null
   merged_at: null
