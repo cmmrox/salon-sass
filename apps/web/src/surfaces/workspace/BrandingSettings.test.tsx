@@ -4,6 +4,7 @@ import type { BrandDraft } from '@/features/branding';
 import { contrastColour } from '@/styles/brand';
 import { renderWithMessages } from '@test/render';
 import { BrandingSettingsScreen } from './BrandingSettingsScreen';
+import { SettingsScreen } from './SettingsScreen';
 import { StaffSignInFrame } from './StaffSignInFrame';
 import { WorkspaceShell } from './WorkspaceShell';
 
@@ -213,6 +214,30 @@ describe('the Branding tab', () => {
       ['/identity-web/staff/brand-save', 2],
       ['/identity-web/staff/brand-publish', 3],
     ]);
+  });
+
+  // Found while building F04-S04: a Settings tab is a button, not a link, so changing tab skipped the guard and
+  // lost the edits. A dirty brand draft now asks first; Stay keeps the edits, Leave goes to the tab.
+  it('asks before changing Settings tab with unsaved edits, and stays or leaves as chosen', async () => {
+    renderWithMessages(
+      <SettingsScreen tab="branding">
+        <BrandingSettingsScreen kind="staff" readOnly={null} />
+      </SettingsScreen>,
+    );
+    fireEvent.change(await screen.findByTestId('brand-name'), { target: { value: 'Beta Lounge' } });
+
+    fireEvent.mouseDown(screen.getByTestId('settings-tab-profile'));
+    const dialog = await screen.findByTestId('profile-leave-dialog');
+    expect(push).not.toHaveBeenCalled();
+    fireEvent.click(within(dialog).getByTestId('profile-leave-stay'));
+    await waitFor(() => expect(screen.queryByTestId('profile-leave-dialog')).toBeNull());
+    expect(screen.getByTestId('brand-name')).toHaveValue('Beta Lounge');
+    expect(screen.getByTestId('settings-tab-branding')).toHaveAttribute('aria-selected', 'true');
+    expect(push).not.toHaveBeenCalled();
+
+    fireEvent.mouseDown(screen.getByTestId('settings-tab-rules'));
+    fireEvent.click(within(await screen.findByTestId('profile-leave-dialog')).getByTestId('profile-leave-confirm'));
+    expect(push).toHaveBeenCalledWith('/workspace/settings/rules');
   });
 
   it('asks before leaving with an uploaded image not yet saved', async () => {

@@ -8,6 +8,7 @@ import { Toaster } from '@/components/ui/sonner';
 import { Spinner } from '@/components/ui/spinner';
 import { LeaveDialog, ProfileForm, ProfilePreview, PublishBar, useLeaveGuard } from '@/features/branding';
 import type { Kind } from '@/features/identity';
+import { useSettingsLeaveHold } from './settings-leave';
 import { SettingsNotices } from './SettingsNotices';
 import { useProfileDraft } from './use-profile-draft';
 
@@ -34,6 +35,8 @@ export function ProfileSettingsScreen({
     toast.success(event === 'saved' ? t('saved') : event === 'published' ? t('published') : t('discarded')),
   );
   const guard = useLeaveGuard(profile.dirty, (href) => router.push(href));
+  // A Settings tab is not a link: the Settings page asks this tab before changing to another (F04-S04).
+  useSettingsLeaveHold(profile.dirty, guard.hold);
   const locked = readOnly !== null || profile.busy !== null;
 
   if (profile.loading && !profile.draft)
