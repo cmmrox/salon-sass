@@ -91,9 +91,9 @@ why the feature is divided the way it is.
 
 ## Decisions and open questions
 
-- **Owner to confirm:** the design (the drawn screens above) and the tax model: VAT applies to the
-  price including the service charge; the service charge is on services only unless "Also on
-  products" is on; R1 has VAT and service charge only.
+- **Confirmed by the owner on 2026-11-01 (decision 092):** the drawn design, the outline, and the
+  tax model: VAT applies to the price including the service charge; the service charge is on
+  services only unless "Also on products" is on; R1 has VAT and service charge only.
 - **Per-service deposit is built here,** not in F17. BKG-09 (R1, must) requires it, F04 left room
   for it, and CAT-11's "custom deposit" (R2) then needs no new work.
 - **New salons start with suggested categories** (the prototype's set) that they rename, reorder
