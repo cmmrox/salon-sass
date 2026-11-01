@@ -19,7 +19,7 @@ import {
   comingDays,
   dayOfField,
   sameWeek,
-  shownYear,
+  shownYears,
   weekFormOf,
   weekSaveOf,
   type ChoiceForm,
@@ -38,8 +38,8 @@ type Busy = 'hours' | 'holidays' | 'closure' | 'reopen' | null;
 export type HoursEvent = 'hoursSaved' | 'holidaysAccepted' | 'holidaySaved' | 'closed' | 'reopened';
 
 /**
- * The Hours & closures tab's state (F04-S03): the weekly hours, the published holidays with the salon's
- * choices, and the special closures, each read through the workspace BFF. Everything saves at once: hours
+ * The Hours & closures tab's state (F04-S03): the weekly hours, the published holiday years with the salon's
+ * choices (each year with its own version, accepted on its own), and the special closures, each read through the workspace BFF. Everything saves at once: hours
  * with their version, holiday choices by acceptance and then one day at a time, closures as they are added
  * or reopened. Each change runs under the session's cross-tab lock.
  */
@@ -49,8 +49,11 @@ export function useHoursSettings(kind: Kind, timeZone: string, notify: (event: H
   const [hours, setHours] = useState<HoursSettings | null>(null);
   const [week, setWeek] = useState<DayForm[]>([]);
   const [bad, setBad] = useState<WeekdayName[]>([]);
-  const [year, setYear] = useState<HolidayYear | null>(null);
-  const [choices, setChoices] = useState<Record<string, ChoiceForm>>({});
+  const [years, setYears] = useState<HolidayYear[]>([]);
+  /** Each shown year's choices, by year and then date. */
+  const [choices, setChoices] = useState<Record<number, Record<string, ChoiceForm>>>({});
+  /** The year a holiday change is being saved for. */
+  const [holidayYear, setHolidayYear] = useState<number | null>(null);
   const [closures, setClosures] = useState<Closure[]>([]);
   const [loading, setLoading] = useState(true);
   const [loaded, setLoaded] = useState(false);
@@ -68,9 +71,18 @@ export function useHoursSettings(kind: Kind, timeZone: string, notify: (event: H
     setBad([]);
   }
 
-  function showYear(next: HolidayYear | null) {
-    setYear(next);
-    setChoices(next ? Object.fromEntries(comingDays(next).map((day) => [day.date, choiceFormOf(day)])) : {});
+  const choicesOf = (year: HolidayYear) =>
+    Object.fromEntries(comingDays(year).map((day) => [day.date, choiceFormOf(day)]));
+
+  function showYears(next: HolidayYear[]) {
+    setYears(next);
+    setChoices(Object.fromEntries(next.map((year) => [year.year, choicesOf(year)])));
+  }
+
+  /** One year as the API answered a change to it; the other years and their unsaved choices are kept. */
+  function showYear(next: HolidayYear) {
+    setYears((current) => current.map((year) => (year.year === next.year ? next : year)));
+    setChoices((current) => ({ ...current, [next.year]: choicesOf(next) }));
   }
 
   function failed(error: unknown): IdentityFailure | null {
@@ -103,7 +115,7 @@ export function useHoursSettings(kind: Kind, timeZone: string, notify: (event: H
         identityRequest<Closure[]>(kind, 'closures'),
       ]);
       showHours(settings);
-      showYear(shownYear(holidays.years, today));
+      showYears(shownYears(holidays.years));
       setClosures(upcoming);
       setNotice(null);
       setLoaded(true);
@@ -163,13 +175,16 @@ export function useHoursSettings(kind: Kind, timeZone: string, notify: (event: H
     setBusy(null);
   }
 
-  async function choose(date: string, change: Partial<ChoiceForm>) {
-    const next = { ...choices[date]!, ...change };
-    setChoices((current) => ({ ...current, [date]: next }));
+  async function choose(yearNumber: number, date: string, change: Partial<ChoiceForm>) {
+    const year = years.find((each) => each.year === yearNumber);
+    if (!year) return;
+    const next = { ...choices[yearNumber]![date]!, ...change };
+    setChoices((current) => ({ ...current, [yearNumber]: { ...current[yearNumber], [date]: next } }));
     // Before acceptance a choice is a proposal; after it, each change saves at once (AC-5).
-    if (!year || year.version === 0) return;
+    if (year.version === 0) return;
     if (next.choice === 'special' && next.closes <= next.opens) return;
     setBusy('holidays');
+    setHolidayYear(yearNumber);
     try {
       const saved = await request<HolidayYear>('holiday-choose', { year: year.year, ...choiceSaveOf(date, next) });
       showYear(saved);
@@ -179,25 +194,29 @@ export function useHoursSettings(kind: Kind, timeZone: string, notify: (event: H
       if (failed(error)) setNotice('fix');
     }
     setBusy(null);
+    setHolidayYear(null);
   }
 
-  async function accept() {
+  async function accept(yearNumber: number) {
+    const year = years.find((each) => each.year === yearNumber);
     if (!year) return;
     const coming = comingDays(year);
+    const chosen = choices[yearNumber]!;
     if (
       coming.some(
-        (day) => choices[day.date]!.choice === 'special' && choices[day.date]!.closes <= choices[day.date]!.opens,
+        (day) => chosen[day.date]!.choice === 'special' && chosen[day.date]!.closes <= chosen[day.date]!.opens,
       )
     ) {
       setNotice('fix');
       return;
     }
     setBusy('holidays');
+    setHolidayYear(yearNumber);
     try {
       const saved = await request<HolidayYear>('holidays-accept', {
         year: year.year,
         version: year.version,
-        choices: coming.map((day) => choiceSaveOf(day.date, choices[day.date]!)),
+        choices: coming.map((day) => choiceSaveOf(day.date, chosen[day.date]!)),
       });
       showYear(saved);
       setNotice(null);
@@ -206,6 +225,7 @@ export function useHoursSettings(kind: Kind, timeZone: string, notify: (event: H
       if (failed(error)) setNotice('fix');
     }
     setBusy(null);
+    setHolidayYear(null);
   }
 
   async function impactOn(date: string) {
@@ -263,8 +283,9 @@ export function useHoursSettings(kind: Kind, timeZone: string, notify: (event: H
     hours,
     week,
     bad,
-    year,
+    years,
     choices,
+    holidayYear,
     closures,
     loading,
     loaded,

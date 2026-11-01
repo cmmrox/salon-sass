@@ -274,6 +274,89 @@ describe('the Hours & closures tab: public holidays (AC-4, AC-5)', () => {
     });
   });
 
+  /** Next year, published before January with two days of its own. */
+  const nextYear = (overrides: Partial<HolidayYear> = {}): HolidayYear =>
+    yearOf({
+      year: 2027,
+      revision: 1,
+      publishedAt: '2026-10-20T04:30:00Z',
+      version: 0,
+      days: [
+        { ...yearOf().days[1]!, date: '2027-01-14', name: 'Tamil Thai Pongal Day' },
+        { ...yearOf().days[1]!, date: '2027-02-04', name: 'Independence Day', kind: 'bank' },
+      ],
+      ...overrides,
+    });
+
+  it('shows a card for each published year with days to come, in year order, each with its own status', async () => {
+    answers.holidays = () => Response.json({ years: [reviewed(1), nextYear()] });
+    render();
+    const current = await screen.findByTestId('holidays-card');
+    const next = screen.getByTestId('holidays-card-2027');
+    expect(current).toHaveAttribute('data-year', '2026');
+    expect(current).toHaveTextContent('Public holidays 2026');
+    expect(next).toHaveTextContent('Public holidays 2027');
+    expect(current.compareDocumentPosition(next) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByTestId('holidays-status')).toHaveTextContent('Reviewed');
+    expect(screen.getByTestId('holidays-status-2027')).toHaveTextContent('To review');
+    expect(within(screen.getByTestId('holidays-days-2027')).getAllByRole('listitem')).toHaveLength(2);
+    expect(screen.queryByTestId('holidays-accept')).not.toBeInTheDocument();
+    expect(screen.getByTestId('holidays-accept-2027')).toBeEnabled();
+  });
+
+  it('accepts next year with its own version and choices, leaving this year as it was', async () => {
+    // Next year was accepted once (version 2) and the operator has since revised a day, so it is to review
+    // again; this year has not been accepted, so its choices are a proposal.
+    const revised = nextYear({
+      version: 2,
+      days: nextYear().days.map((day) =>
+        day.kind === 'bank' ? { ...day, choice: 'open', toReview: false } : { ...day, choice: 'closed' },
+      ),
+    });
+    answers.holidays = () => Response.json({ years: [yearOf(), revised] });
+    answers['holidays-accept'] = () =>
+      Response.json({
+        ...revised,
+        reviewed: true,
+        version: 3,
+        days: revised.days.map((day) => ({ ...day, toReview: false })),
+      });
+    render();
+    await chooseOption(await screen.findByTestId('holiday-2026-12-25-choice'), 'Special hours');
+    expect(changes(), 'a choice in a year not yet accepted is only a proposal').toEqual([]);
+    expect(screen.getByTestId('holiday-2027-02-04-choice')).toHaveTextContent('Open as usual');
+    fireEvent.click(screen.getByTestId('holidays-accept-2027'));
+
+    expect(await screen.findByTestId('holidays-status-2027')).toHaveTextContent('Reviewed');
+    expect(changes()).toEqual([
+      {
+        url: expect.stringMatching(/\/holidays-accept$/),
+        body: {
+          year: 2027,
+          version: 2,
+          choices: [
+            { date: '2027-01-14', choice: 'closed', opens: null, closes: null },
+            { date: '2027-02-04', choice: 'open', opens: null, closes: null },
+          ],
+        },
+      },
+    ]);
+    expect(screen.queryByTestId('holidays-accept-2027')).not.toBeInTheDocument();
+    expect(screen.getByTestId('holidays-status')).toHaveTextContent('To review');
+    expect(screen.getByTestId('holiday-2026-12-25-choice'), 'this year keeps its unsaved proposal').toHaveTextContent(
+      'Special hours',
+    );
+    expect(screen.getByTestId('holidays-accept')).toBeEnabled();
+  });
+
+  it('leaves out a year whose days have all passed when a later year has days to come', async () => {
+    answers.holidays = () =>
+      Response.json({ years: [yearOf({ days: yearOf().days.map((day) => ({ ...day, past: true })) }), nextYear()] });
+    render();
+    expect(await screen.findByTestId('holidays-card')).toHaveAttribute('data-year', '2027');
+    expect(screen.queryByText('Public holidays 2026')).not.toBeInTheDocument();
+  });
+
   it('says the operator has not published this year’s holidays yet', async () => {
     answers.holidays = () => Response.json({ years: [] });
     render();

@@ -11,9 +11,10 @@ import { useHoursSettings } from './use-hours-settings';
 type ReadOnly = 'support' | 'salon' | null;
 
 /**
- * The Hours & closures tab (F04-S03, the prototype's `setHours`): Opening hours and Public holidays side by
- * side from 900px, Special closures below, one column under 900px. Every change saves at once; a toast says
- * what changed, and the same notices as the other settings tabs say what went wrong.
+ * The Hours & closures tab (F04-S03, the prototype's `setHours`): Opening hours and Public holidays (a card
+ * for each published year with days to come) side by side from 900px, Special closures below, one column
+ * under 900px. Every change saves at once; a toast says what changed, and the same notices as the other
+ * settings tabs say what went wrong.
  */
 export function HoursSettingsScreen({
   kind,
@@ -69,15 +70,34 @@ export function HoursSettingsScreen({
           onChange={state.changeDay}
           onSave={() => void state.saveHours()}
         />
-        <HolidaysCard
-          year={state.year}
-          timeZone={timeZone}
-          choices={state.choices}
-          disabled={locked}
-          busy={state.busy === 'holidays'}
-          onChoose={(date, change) => void state.choose(date, change)}
-          onAccept={() => void state.accept()}
-        />
+        {/* One card for each published year with days to come, stacked in the column beside Opening hours. */}
+        <div className="flex min-w-0 flex-col gap-4">
+          {state.years.length === 0 ? (
+            <HolidaysCard
+              year={null}
+              timeZone={timeZone}
+              choices={{}}
+              disabled={locked}
+              busy={false}
+              onChoose={() => undefined}
+              onAccept={() => undefined}
+            />
+          ) : (
+            state.years.map((year, index) => (
+              <HolidaysCard
+                key={year.year}
+                year={year}
+                first={index === 0}
+                timeZone={timeZone}
+                choices={state.choices[year.year] ?? {}}
+                disabled={locked}
+                busy={state.busy === 'holidays' && state.holidayYear === year.year}
+                onChoose={(date, change) => void state.choose(year.year, date, change)}
+                onAccept={() => void state.accept(year.year)}
+              />
+            ))
+          )}
+        </div>
         <ClosuresCard
           closures={state.closures}
           disabled={locked}

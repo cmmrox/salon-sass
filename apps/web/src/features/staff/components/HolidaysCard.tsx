@@ -1,6 +1,7 @@
 'use client';
 import { formatDate, formatDay } from '@salon/format';
 import { useTranslations } from 'next-intl';
+import { useId } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardDescription, CardTitle } from '@/components/ui/card';
@@ -13,6 +14,12 @@ import { TimeSelect } from './TimeSelect';
 
 type Props = {
   year: HolidayYear | null;
+  /**
+   * Whether this is the first year card of the tab. Its test ids are the plain ones (`holidays-card`,
+   * `holidays-status`, `holidays-days`, `holidays-accept`, `holidays-all-past`); a later year's carry its
+   * year (`holidays-card-2027`), so each stays unique.
+   */
+  first?: boolean;
   timeZone: string;
   choices: Record<string, ChoiceForm>;
   disabled: boolean;
@@ -28,9 +35,12 @@ const KINDS: HolidayChoiceKind[] = ['closed', 'open', 'special'];
  * day with its kind and a Select (Closed, Open as usual, Special hours with two time Selects). Before the
  * salon accepts, the choices are a proposal and Accept these choices applies them; after it, each change
  * saves at once. With no published year it says the operator has not published this year's holidays yet.
+ * The tab shows one card for each published year with days still to come (`shownYears`), each accepted on
+ * its own.
  */
-export function HolidaysCard({ year, timeZone, choices, disabled, busy, onChoose, onAccept }: Props) {
+export function HolidaysCard({ year, first = true, timeZone, choices, disabled, busy, onChoose, onAccept }: Props) {
   const t = useTranslations('settings.holidays');
+  const titleId = useId();
   if (!year)
     return (
       <Card className="gap-3" data-testid="holidays-card">
@@ -40,21 +50,24 @@ export function HolidaysCard({ year, timeZone, choices, disabled, busy, onChoose
     );
   const accepted = year.version > 0;
   const days = comingDays(year);
+  const testId = (name: string) => (first ? `holidays-${name}` : `holidays-${name}-${year.year}`);
   return (
-    <Card className="gap-3" data-testid="holidays-card" data-year={year.year}>
+    <Card className="gap-3" data-testid={testId('card')} data-year={year.year}>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <CardTitle className="text-large">{t('title', { year: year.year })}</CardTitle>
-        <Badge variant={year.reviewed ? 'positive' : 'secondary'} data-testid="holidays-status">
+        <CardTitle id={titleId} className="text-large">
+          {t('title', { year: year.year })}
+        </CardTitle>
+        <Badge variant={year.reviewed ? 'positive' : 'secondary'} data-testid={testId('status')}>
           {year.reviewed ? t('reviewed') : t('toReview')}
         </Badge>
       </div>
       <CardDescription>{t('published', { date: formatDate(year.publishedAt, timeZone) })}</CardDescription>
       {days.length === 0 ? (
-        <p className="text-small" data-testid="holidays-all-past">
+        <p className="text-small" data-testid={testId('all-past')}>
           {t('allPast')}
         </p>
       ) : (
-        <ItemGroup data-testid="holidays-days">
+        <ItemGroup data-testid={testId('days')}>
           {days.map((day) => {
             const choice = choices[day.date]!;
             const dayLabel = formatDay(day.date);
@@ -126,7 +139,8 @@ export function HolidaysCard({ year, timeZone, choices, disabled, busy, onChoose
           className="w-full"
           onClick={onAccept}
           disabled={disabled || busy}
-          data-testid="holidays-accept"
+          aria-describedby={titleId}
+          data-testid={testId('accept')}
         >
           {busy && <Spinner />}
           {t('accept')}

@@ -40,6 +40,24 @@ const YEAR = {
     DAY('2026-12-25', 'Christmas Day', 'public'),
   ],
 };
+/** Next year, published before January and already reviewed: the tab shows a card for each year. */
+const NEXT_YEAR = {
+  year: 2027,
+  revision: 1,
+  publishedAt: '2026-10-20T04:30:00Z',
+  reviewed: true,
+  version: 1,
+  days: [
+    { ...DAY('2027-01-14', 'Tamil Thai Pongal Day', 'public'), choice: 'closed', toReview: false },
+    {
+      ...DAY('2027-02-04', 'Independence Day', 'bank'),
+      choice: 'special',
+      opens: '09:00',
+      closes: '13:00',
+      toReview: false,
+    },
+  ],
+};
 const CLOSURE = {
   id: '2b0c4ad4-8f0d-4d3a-9d1f-1a0b9c8e7f61',
   date: '2026-11-05',
@@ -62,7 +80,7 @@ beforeEach(() => {
         })),
         outsideHours: [{ time: '18:30', customerName: 'Ishara Fernando', serviceName: 'Colour' }],
       }),
-    holidays: () => Response.json({ years: [YEAR] }),
+    holidays: () => Response.json({ years: [YEAR, NEXT_YEAR] }),
     closures: () => Response.json([CLOSURE]),
     'closure-impact': () =>
       Response.json({
@@ -106,6 +124,7 @@ describe('the Hours & closures tab', () => {
       await atWidth(width);
       page(brand);
       await screen.findByTestId('hours-tab');
+      expect(screen.getByTestId('holidays-card-2027')).toBeInTheDocument();
       await noViolations();
       expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(document.documentElement.clientWidth);
     },

@@ -11,7 +11,7 @@ export {
   comingDays,
   dayOfField,
   sameWeek,
-  shownYear,
+  shownYears,
   weekFormOf,
   weekSaveOf,
   type ChoiceForm,

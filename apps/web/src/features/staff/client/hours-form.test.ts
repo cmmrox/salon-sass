@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { HolidayDay, HoursSettings } from '../types';
+import type { HolidayDay, HolidayYear, HoursSettings } from '../types';
 import {
   badDays,
   choiceFormOf,
@@ -8,6 +8,7 @@ import {
   lastClosableDate,
   QUARTER_HOURS,
   sameWeek,
+  shownYears,
   SUGGESTED_WEEK,
   weekFormOf,
   weekSaveOf,
@@ -101,5 +102,30 @@ describe('holiday choices and closures (F04-S03)', () => {
   it('allows a closure at most a year ahead', () => {
     expect(lastClosableDate('2026-11-01')).toBe('2027-11-01');
     expect(lastClosableDate('2028-02-29')).toBe('2029-02-28');
+  });
+
+  it('shows every published year with a day still to come, in year order, and the first year when none has one', () => {
+    const yearOf = (year: number, past: boolean[]): HolidayYear => ({
+      year,
+      revision: 1,
+      publishedAt: `${year - 1}-10-01T04:30:00Z`,
+      reviewed: false,
+      version: 0,
+      days: past.map((isPast, index) => ({ ...day, date: `${year}-12-${10 + index}`, past: isPast })),
+    });
+    const passed = yearOf(2026, [true, true]);
+    const current = yearOf(2026, [true, false]);
+    const next = yearOf(2027, [false]);
+
+    expect(
+      shownYears([next, current]).map((year) => year.year),
+      'both, oldest first',
+    ).toEqual([2026, 2027]);
+    expect(
+      shownYears([passed, next]).map((year) => year.year),
+      'a year whose days have all passed is left out',
+    ).toEqual([2027]);
+    expect(shownYears([passed]), 'a passed year alone still says its days have passed').toEqual([passed]);
+    expect(shownYears([])).toEqual([]);
   });
 });
