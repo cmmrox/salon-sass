@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardDescription, CardTitle } from '@/components/ui/card';
+import { Item, ItemActions, ItemContent, ItemDescription, ItemGroup, ItemTitle } from '@/components/ui/item';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
 import { comingDays, type ChoiceForm } from '../client/hours-form';
@@ -53,29 +54,25 @@ export function HolidaysCard({ year, timeZone, choices, disabled, busy, onChoose
           {t('allPast')}
         </p>
       ) : (
-        <ul className="m-0 flex list-none flex-col p-0" data-testid="holidays-days">
+        <ItemGroup data-testid="holidays-days">
           {days.map((day) => {
             const choice = choices[day.date]!;
             const dayLabel = formatDay(day.date);
             return (
-              <li
-                key={day.date}
-                className="flex flex-wrap items-center justify-between gap-2 border-b border-border py-2.5 last:border-b-0"
-                data-testid={`holiday-${day.date}`}
-              >
-                <span className="flex min-w-0 flex-col gap-0.5">
-                  <span className="flex flex-wrap items-center gap-1.5">
-                    <span className="font-medium">{dayLabel}</span>
+              <Item variant="divided" key={day.date} className="justify-between" data-testid={`holiday-${day.date}`}>
+                <ItemContent className="flex-auto gap-0.5">
+                  <ItemTitle className="gap-1.5">
+                    <span>{dayLabel}</span>
                     <Badge variant="secondary">{t(`kinds.${day.kind}`)}</Badge>
                     {day.toReview && accepted && (
                       <Badge variant="outline" data-testid={`holiday-${day.date}-to-review`}>
                         {t('dayToReview')}
                       </Badge>
                     )}
-                  </span>
-                  <span className="text-small text-muted-foreground">{day.name}</span>
-                </span>
-                <span className="flex flex-wrap items-center justify-end gap-1.5">
+                  </ItemTitle>
+                  <ItemDescription>{day.name}</ItemDescription>
+                </ItemContent>
+                <ItemActions className="justify-end gap-1.5">
                   <Select
                     value={choice.choice}
                     onValueChange={(value) => onChoose(day.date, { choice: value as HolidayChoiceKind })}
@@ -117,11 +114,11 @@ export function HolidaysCard({ year, timeZone, choices, disabled, busy, onChoose
                       />
                     </span>
                   )}
-                </span>
-              </li>
+                </ItemActions>
+              </Item>
             );
           })}
-        </ul>
+        </ItemGroup>
       )}
       {(!accepted || !year.reviewed) && (
         <Button

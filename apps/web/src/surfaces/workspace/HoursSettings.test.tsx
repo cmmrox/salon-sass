@@ -129,6 +129,9 @@ describe('the Hours & closures tab: opening hours (AC-1)', { timeout: 15_000 }, 
     expect(screen.getByTestId('hours-monday-opens')).toHaveAccessibleName('Monday opens');
     expect(screen.getByTestId('hours-monday-open')).toHaveAccessibleName('Monday');
     expect(screen.getByTestId('hours-save')).toBeEnabled();
+    // Each weekday is an Item row of the week's ItemGroup (docs/engineering/web.md, "Styling").
+    expect(screen.getByTestId('hours-week')).toHaveAttribute('data-slot', 'item-group');
+    expect(screen.getByTestId('hours-day-monday')).toHaveAttribute('data-slot', 'item');
   });
 
   it('refuses a closing time at or before the opening time beside that day, sending nothing', async () => {
@@ -225,6 +228,9 @@ describe('the Hours & closures tab: public holidays (AC-4, AC-5)', () => {
     expect(days[0]).toHaveTextContent('Public');
     expect(screen.getByTestId('holiday-2026-11-08-choice')).toHaveTextContent('Closed');
     expect(screen.queryByTestId('holiday-2026-10-25')).not.toBeInTheDocument();
+    // Each day is an Item row of the year's ItemGroup (docs/engineering/web.md, "Styling").
+    expect(screen.getByTestId('holidays-days')).toHaveAttribute('data-slot', 'item-group');
+    expect(screen.getByTestId('holiday-2026-11-08')).toHaveAttribute('data-slot', 'item');
   });
 
   it('accepts the choices, special hours with their times', async () => {
@@ -329,6 +335,7 @@ describe('the Hours & closures tab: special closures (AC-7)', () => {
 
     expect(await within(sheet).findByTestId('closure-bookings')).toHaveTextContent('1 booking on this day.');
     expect(within(sheet).getByTestId('closure-booking')).toHaveTextContent('10:30 · Nimali Perera');
+    expect(within(sheet).getByTestId('closure-booking')).toHaveAttribute('data-slot', 'item');
     fireEvent.click(within(sheet).getByTestId('closure-confirm'));
     expect(await within(sheet).findByTestId('closure-date-error')).toHaveTextContent('This day is already closed.');
   });
