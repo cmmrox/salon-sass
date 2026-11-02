@@ -94,6 +94,34 @@ final class TeamFixture {
         return schedule(memberId) + "/date-changes";
     }
 
+    static String leave(Object memberId) {
+        return schedule(memberId) + "/leave";
+    }
+
+    static String blockedTime(Object memberId) {
+        return schedule(memberId) + "/blocked-time";
+    }
+
+    /** Leave as a request sends it. */
+    static Map<String, Object> leaveOf(Object firstDay, Object lastDay, String type, String note) {
+        Map<String, Object> leave = new LinkedHashMap<>();
+        leave.put("firstDay", firstDay.toString());
+        leave.put("lastDay", lastDay.toString());
+        leave.put("type", type);
+        leave.put("note", note);
+        return leave;
+    }
+
+    /** A block as a request sends it. */
+    static Map<String, Object> blockOf(Object date, String starts, String finishes, String label) {
+        Map<String, Object> block = new LinkedHashMap<>();
+        block.put("date", date.toString());
+        block.put("starts", starts);
+        block.put("finishes", finishes);
+        block.put("label", label);
+        return block;
+    }
+
     static Map<String, Object> pause(String starts, String finishes) {
         Map<String, Object> pause = new LinkedHashMap<>();
         pause.put("starts", starts);
@@ -176,6 +204,19 @@ final class TeamFixture {
     private static String template(String path) {
         String bare = path.replaceFirst("\\?.*$", "");
         return bare.replaceAll(
+                        "/team/members/[^/]+/schedule/leave/affected$", "/team/members/{id}/schedule/leave/affected")
+                .replaceAll(
+                        "/team/members/[^/]+/schedule/blocked-time/affected$",
+                        "/team/members/{id}/schedule/blocked-time/affected")
+                .replaceAll(
+                        "/team/members/[^/]+/schedule/leave/(?!affected$)[^/]+$",
+                        "/team/members/{id}/schedule/leave/{leaveId}")
+                .replaceAll("/team/members/[^/]+/schedule/leave$", "/team/members/{id}/schedule/leave")
+                .replaceAll(
+                        "/team/members/[^/]+/schedule/blocked-time/(?!affected$)[^/]+$",
+                        "/team/members/{id}/schedule/blocked-time/{blockId}")
+                .replaceAll("/team/members/[^/]+/schedule/blocked-time$", "/team/members/{id}/schedule/blocked-time")
+                .replaceAll(
                         "/team/members/[^/]+/schedule/date-changes/[^/]+$",
                         "/team/members/{id}/schedule/date-changes/{changeId}")
                 .replaceAll("/team/members/[^/]+/schedule/date-changes$", "/team/members/{id}/schedule/date-changes")

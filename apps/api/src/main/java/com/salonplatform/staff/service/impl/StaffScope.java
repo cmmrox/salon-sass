@@ -34,6 +34,9 @@ class StaffScope {
     /** Every change to the team (decision 100): the Owner and the Manager. */
     static final String TEAM_MANAGE = "team.manage";
 
+    /** Adding and removing blocked time (decision 099): the Owner, the Manager and the Receptionist. */
+    static final String TEAM_BLOCK = "team.block";
+
     /** Seeing the salon's sign-in accounts and who is linked to which (decision 100). */
     static final String STAFF_LIST = "staff.list";
 

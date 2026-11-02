@@ -26,6 +26,10 @@ class TeamAudit {
     static final String HOURS_SAVED = "staff.team_member_hours_saved";
     static final String DATE_CHANGE_ADDED = "staff.team_member_date_change_added";
     static final String DATE_CHANGE_REMOVED = "staff.team_member_date_change_removed";
+    static final String LEAVE_ADDED = "staff.team_member_leave_added";
+    static final String LEAVE_REMOVED = "staff.team_member_leave_removed";
+    static final String BLOCK_ADDED = "staff.team_member_blocked_time_added";
+    static final String BLOCK_REMOVED = "staff.team_member_blocked_time_removed";
 
     private static final String MEMBER = "staff_team_member";
 

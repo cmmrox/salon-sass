@@ -3,13 +3,16 @@ package com.salonplatform.staff;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.salonplatform.shared.tenancy.TenantContext;
+import com.salonplatform.staff.domain.LeaveType;
 import com.salonplatform.staff.entity.Closure;
 import com.salonplatform.staff.entity.HolidayChoice;
 import com.salonplatform.staff.entity.HolidayReview;
 import com.salonplatform.staff.entity.Member;
+import com.salonplatform.staff.entity.MemberBlockedTime;
 import com.salonplatform.staff.entity.MemberCategory;
 import com.salonplatform.staff.entity.MemberDateChange;
 import com.salonplatform.staff.entity.MemberDateChangeBreak;
+import com.salonplatform.staff.entity.MemberLeave;
 import com.salonplatform.staff.entity.MemberPhoto;
 import com.salonplatform.staff.entity.MemberSchedule;
 import com.salonplatform.staff.entity.MemberSingleService;
@@ -19,9 +22,11 @@ import com.salonplatform.staff.entity.OpeningHours;
 import com.salonplatform.staff.repository.ClosureRepository;
 import com.salonplatform.staff.repository.HolidayChoiceRepository;
 import com.salonplatform.staff.repository.HolidayReviewRepository;
+import com.salonplatform.staff.repository.MemberBlockedTimeRepository;
 import com.salonplatform.staff.repository.MemberCategoryRepository;
 import com.salonplatform.staff.repository.MemberDateChangeBreakRepository;
 import com.salonplatform.staff.repository.MemberDateChangeRepository;
+import com.salonplatform.staff.repository.MemberLeaveRepository;
 import com.salonplatform.staff.repository.MemberPhotoRepository;
 import com.salonplatform.staff.repository.MemberRepository;
 import com.salonplatform.staff.repository.MemberScheduleRepository;
@@ -172,6 +177,28 @@ class StaffRepositoriesHibernateFilterAloneIntegrationTest {
                                             LocalTime.of(10, 0),
                                             LocalTime.of(10, 15),
                                             now()));
+                            application
+                                    .bean(MemberLeaveRepository.class)
+                                    .persist(MemberLeave.of(
+                                            branch,
+                                            member.getId(),
+                                            LocalDate.of(2090, 4, 1),
+                                            LocalDate.of(2090, 4, 3),
+                                            LeaveType.SICK,
+                                            "Private",
+                                            UUID.randomUUID(),
+                                            now()));
+                            application
+                                    .bean(MemberBlockedTimeRepository.class)
+                                    .persist(MemberBlockedTime.of(
+                                            branch,
+                                            member.getId(),
+                                            LocalDate.of(2090, 5, 1),
+                                            LocalTime.of(10, 0),
+                                            LocalTime.of(11, 0),
+                                            "Training",
+                                            UUID.randomUUID(),
+                                            now()));
                             return null;
                         }));
             } catch (Exception ex) {
@@ -308,6 +335,70 @@ class StaffRepositoriesHibernateFilterAloneIntegrationTest {
                             .isEmpty();
                     return null;
                 }));
+    }
+
+    @Test
+    void alphaReadsNoneOfBetasLeaveOrBlockedTime() throws Exception {
+        JdbcTemplate owner = database.asOwner();
+        UUID betasMember =
+                owner.queryForObject("SELECT id FROM staff_team_member WHERE tenant_id = ?", UUID.class, beta.id());
+        UUID betasLeave =
+                owner.queryForObject("SELECT id FROM staff_member_leave WHERE tenant_id = ?", UUID.class, beta.id());
+        UUID betasBlock = owner.queryForObject(
+                "SELECT id FROM staff_member_blocked_time WHERE tenant_id = ?", UUID.class, beta.id());
+        LocalDate from = LocalDate.of(2000, 1, 1);
+        LocalDate to = LocalDate.of(2099, 1, 1);
+        as(
+                alpha,
+                () -> inTransaction(() -> {
+                    MemberLeaveRepository leaves = application.bean(MemberLeaveRepository.class);
+                    assertThat(leaves.findAll())
+                            .extracting(MemberLeave::getTenantId)
+                            .containsExactly(alpha.id());
+                    assertThat(leaves.notEnded(betasMember, from)).isEmpty();
+                    assertThat(leaves.overlapping(betasMember, from, to)).isEmpty();
+                    assertThat(leaves.countNotEnded(betasMember, from)).isZero();
+                    assertThat(leaves.nextOf(List.of(betasMember), from)).isEmpty();
+                    assertThat(leaves.findOf(betasLeave, betasMember)).isEmpty();
+                    MemberBlockedTimeRepository blocks = application.bean(MemberBlockedTimeRepository.class);
+                    assertThat(blocks.findAll())
+                            .extracting(MemberBlockedTime::getTenantId)
+                            .containsExactly(alpha.id());
+                    assertThat(blocks.upcoming(betasMember, from)).isEmpty();
+                    assertThat(blocks.between(betasMember, from, to)).isEmpty();
+                    assertThat(blocks.countUpcoming(betasMember, from)).isZero();
+                    assertThat(blocks.overlaps(
+                                    betasMember, LocalDate.of(2090, 5, 1), LocalTime.of(10, 0), LocalTime.of(11, 0)))
+                            .isFalse();
+                    assertThat(blocks.findOf(betasBlock, betasMember)).isEmpty();
+                    return null;
+                }));
+    }
+
+    @Test
+    void alphaCannotRemoveBetasLeaveOrBlockedTime() throws Exception {
+        JdbcTemplate owner = database.asOwner();
+        UUID betasLeave =
+                owner.queryForObject("SELECT id FROM staff_member_leave WHERE tenant_id = ?", UUID.class, beta.id());
+        UUID betasBlock = owner.queryForObject(
+                "SELECT id FROM staff_member_blocked_time WHERE tenant_id = ?", UUID.class, beta.id());
+        as(
+                alpha,
+                () -> inTransaction(() -> {
+                    assertThat(application.bean(MemberLeaveRepository.class).removeById(betasLeave))
+                            .isZero();
+                    assertThat(application
+                                    .bean(MemberBlockedTimeRepository.class)
+                                    .removeById(betasBlock))
+                            .isZero();
+                    return null;
+                }));
+        for (String table : List.of("staff_member_leave", "staff_member_blocked_time")) {
+            assertThat(owner.queryForObject(
+                            "SELECT count(*) FROM " + table + " WHERE tenant_id = ?", Long.class, beta.id()))
+                    .as(table)
+                    .isEqualTo(1);
+        }
     }
 
     @Test

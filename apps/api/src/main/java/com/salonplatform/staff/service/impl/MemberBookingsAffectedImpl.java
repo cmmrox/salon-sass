@@ -3,6 +3,7 @@ package com.salonplatform.staff.service.impl;
 import com.salonplatform.shared.tenancy.TenantContext;
 import com.salonplatform.staff.AffectedBooking;
 import com.salonplatform.staff.MemberBookingsAffected;
+import com.salonplatform.staff.MemberPeriod;
 import com.salonplatform.staff.TimeWindow;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -30,5 +31,11 @@ class MemberBookingsAffectedImpl implements MemberBookingsAffected {
     public List<AffectedBooking> outsideDate(UUID memberId, LocalDate date, List<TimeWindow> windows) {
         TenantContext.require();
         return List.of();
+    }
+
+    @Override
+    public Map<MemberPeriod, List<AffectedBooking>> inPeriods(UUID memberId, Set<MemberPeriod> periods) {
+        TenantContext.require();
+        return Map.of();
     }
 }

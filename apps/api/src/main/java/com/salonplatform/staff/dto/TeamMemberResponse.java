@@ -26,6 +26,7 @@ import java.util.UUID;
             "photoUrl",
             "services",
             "weekly",
+            "nextLeave",
             "version"
         })
 public record TeamMemberResponse(
@@ -81,6 +82,13 @@ public record TeamMemberResponse(
                 maxItems = 7)
         List<TeamWorkdayResponse> weekly,
 
+        @Schema(
+                types = {"object", "null"},
+                implementation = TeamNextLeaveResponse.class,
+                description = "Their current or next leave; null for none. Its `type` is only for a caller with"
+                        + " `team.manage`.")
+        TeamNextLeaveResponse nextLeave,
+
         @Schema(description = "Its version, which a save or removal is made from.", minimum = "0")
         long version) {
 
@@ -98,6 +106,7 @@ public record TeamMemberResponse(
                 view.signInVisible() ? Optional.ofNullable(view.signInAccountId()) : null,
                 view.signInVisible() ? Optional.ofNullable(view.signInLabel()) : null,
                 view.weekly().stream().map(TeamWorkdayResponse::from).toList(),
+                TeamNextLeaveResponse.from(view.nextLeave()),
                 view.version());
     }
 }

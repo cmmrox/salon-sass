@@ -45,8 +45,10 @@ class TeamScheduleController {
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(
             operationId = "getTeamMemberSchedule",
-            summary = "A person's weekly hours and their date changes from today on. `team.read`.",
-            description = "A date change's `note` is present only for a caller with `team.manage`.")
+            summary =
+                    "A person's weekly hours, and their date changes, leave and blocked time from today on. `team.read`.",
+            description = "A date change's `note`, and a leave's `type` and `note`, are present only for a caller with"
+                    + " `team.manage`.")
     @ApiResponse(responseCode = "200", description = "The schedule.")
     @ApiResponse(
             responseCode = "401",

@@ -1703,13 +1703,70 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * A person's weekly hours and their date changes from today on. `team.read`.
-         * @description A date change's `note` is present only for a caller with `team.manage`.
+         * A person's weekly hours, and their date changes, leave and blocked time from today on. `team.read`.
+         * @description A date change's `note`, and a leave's `type` and `note`, are present only for a caller with `team.manage`.
          */
         get: operations["getTeamMemberSchedule"];
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/team/members/{id}/schedule/blocked-time": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Blocks part of one date for a person, with a label. `team.block`.
+         * @description It is stored as entered, and may lie outside their hours or on their leave. Bookings in it are kept and listed, and are flagged for as long as they lie in it. Nothing is cancelled.
+         */
+        post: operations["addTeamMemberBlockedTime"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/team/members/{id}/schedule/blocked-time/affected": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The bookings a block of this time would affect, before it is added. `team.block`. */
+        get: operations["getTeamMemberBlockedTimeImpact"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/team/members/{id}/schedule/blocked-time/{blockId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Removes a block from today on. `team.block`.
+         * @description They become bookable in that time again, and bookings in it are no longer flagged.
+         */
+        delete: operations["removeTeamMemberBlockedTime"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1747,6 +1804,63 @@ export interface paths {
         post?: never;
         /** Removes a date change that has not passed: the date is back to the weekly hours. `team.manage`. */
         delete: operations["removeTeamMemberDateChange"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/team/members/{id}/schedule/leave": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Adds leave for a person, as whole days. `team.manage`.
+         * @description Customers can't book them on those days. Bookings in the period are kept and listed, and are flagged for as long as they lie in it. Nothing is cancelled.
+         */
+        post: operations["addTeamMemberLeave"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/team/members/{id}/schedule/leave/affected": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The bookings leave for these days would affect, before it is added. `team.manage`. */
+        get: operations["getTeamMemberLeaveImpact"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/team/members/{id}/schedule/leave/{leaveId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Removes leave that has not ended, including leave under way. `team.manage`.
+         * @description They become bookable on those days again, and bookings in it are no longer flagged.
+         */
+        delete: operations["removeTeamMemberLeave"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1853,6 +1967,19 @@ export interface components {
             /** @description Only the team sees it; up to 60 characters, empty or null for none. */
             reason?: string | null;
         };
+        AddTeamMemberBlockedTime: {
+            /**
+             * Format: date
+             * @description The salon's local date: today to a year ahead.
+             */
+            date: string;
+            /** @description `HH:MM` on a quarter hour, after `starts`. */
+            finishes: string;
+            /** @description 2 to 40 characters, trimmed. Everyone who reads the team sees it. */
+            label: string;
+            /** @description `HH:MM` on a quarter hour. */
+            starts: string;
+        };
         AddTeamMemberDateChange: {
             /** @description As on a weekday. A date not worked keeps none, whatever is sent. */
             breaks?: components["schemas"]["TeamBreakInput"][];
@@ -1869,9 +1996,33 @@ export interface components {
             starts?: string | null;
             working: boolean;
         };
+        AddTeamMemberLeave: {
+            /**
+             * Format: date
+             * @description The salon's local date: today to a year ahead.
+             */
+            firstDay: string;
+            /**
+             * Format: date
+             * @description On or after `firstDay`, and at most a year ahead.
+             */
+            lastDay: string;
+            /** @description Only those who can change the team see it; up to 60 characters, empty or null for none. */
+            note?: string | null;
+            /** @enum {string} */
+            type: "annual" | "sick" | "personal" | "other";
+        };
+        AddedTeamMemberBlockedTime: {
+            affected: components["schemas"]["TeamAffectedBooking"][];
+            block: components["schemas"]["TeamMemberBlockedTime"];
+        };
         AddedTeamMemberDateChange: {
             affected: components["schemas"]["TeamAffectedBooking"][];
             change: components["schemas"]["TeamMemberDateChange"];
+        };
+        AddedTeamMemberLeave: {
+            affected: components["schemas"]["TeamAffectedBooking"][];
+            leave: components["schemas"]["TeamMemberLeave"];
         };
         AffectedBooking: {
             customerName: string;
@@ -4021,6 +4172,8 @@ export interface components {
             /** Format: uuid */
             id: string;
             name: string;
+            /** @description Their current or next leave; null for none. Its `type` is only for a caller with `team.manage`. */
+            nextLeave: components["schemas"]["TeamNextLeave"] | null;
             /**
              * Format: uuid
              * @description Their photo; null when they have none.
@@ -4046,6 +4199,25 @@ export interface components {
             /** @description Their week: each of the seven weekdays, Monday first. */
             weekly: components["schemas"]["TeamWorkday"][];
         };
+        TeamMemberBlockedTime: {
+            /**
+             * Format: int32
+             * @description How many bookings lie in it. They are kept.
+             */
+            bookingsToResolve: number;
+            /**
+             * Format: date
+             * @description The salon's local date.
+             */
+            date: string;
+            /** @description When it finishes, local `HH:MM`, after `starts`. */
+            finishes: string;
+            /** Format: uuid */
+            id: string;
+            label: string;
+            /** @description When it starts, local `HH:MM`. */
+            starts: string;
+        };
         TeamMemberDateChange: {
             /** @description In time order; empty when not working. */
             breaks: components["schemas"]["TeamBreak"][];
@@ -4064,6 +4236,32 @@ export interface components {
             starts: string | null;
             working: boolean;
         };
+        TeamMemberLeave: {
+            /**
+             * Format: int32
+             * @description How many bookings lie in what is left of it. They are kept.
+             */
+            bookingsToResolve: number;
+            /**
+             * Format: date
+             * @description The first day, the salon's local date.
+             */
+            firstDay: string;
+            /** Format: uuid */
+            id: string;
+            /**
+             * Format: date
+             * @description The last day, on or after `firstDay`.
+             */
+            lastDay: string;
+            /** @description Its note; null for none. Only for a caller with `team.manage`. */
+            note?: string | null;
+            /**
+             * @description Its type. Only for a caller with `team.manage`.
+             * @enum {string}
+             */
+            type?: "annual" | "sick" | "personal" | "other";
+        };
         TeamMemberList: {
             items: components["schemas"]["TeamMember"][];
         };
@@ -4079,8 +4277,12 @@ export interface components {
             file: string;
         };
         TeamMemberSchedule: {
+            /** @description The blocks from `today` on, in date and time order. */
+            blockedTime: components["schemas"]["TeamMemberBlockedTime"][];
             /** @description The changes from `today` on, in date order; at most 100. */
             dateChanges: components["schemas"]["TeamMemberDateChange"][];
+            /** @description The leave that has not ended by `today`, in date order. */
+            leave: components["schemas"]["TeamMemberLeave"][];
             /**
              * Format: date
              * @description The salon's local date now: the first a date change may have.
@@ -4099,6 +4301,26 @@ export interface components {
             categoryIds?: string[];
             /** @description Single services, none inside a category also sent whole. */
             serviceIds?: string[];
+        };
+        TeamNextLeave: {
+            /**
+             * Format: date
+             * @description The first day, the salon's local date.
+             */
+            firstDay: string;
+            /**
+             * Format: date
+             * @description The last day, on or after `firstDay`.
+             */
+            lastDay: string;
+            /**
+             * @description Its type. Only for a caller with `team.manage`.
+             * @enum {string}
+             */
+            type?: "annual" | "sick" | "personal" | "other";
+        };
+        TeamPeriodImpact: {
+            affected: components["schemas"]["TeamAffectedBooking"][];
         };
         TeamSignInAccount: {
             /** Format: uuid */
@@ -11331,6 +11553,241 @@ export interface operations {
             };
         };
     };
+    addTeamMemberBlockedTime: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddTeamMemberBlockedTime"];
+            };
+        };
+        responses: {
+            /** @description The block. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AddedTeamMemberBlockedTime"];
+                };
+            };
+            /** @description The date is not today to a year ahead by the salon's date, a time is not on a quarter hour, the finish is not after the start, the label is not 2 to 40 characters, or the body is not the documented shape: `bad_request`, with `errors` naming each field. Nothing is saved. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No valid session for this salon: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Without `team.block`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No such person on the hostname's salon's team, or the hostname names no salon: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description It overlaps another of this person's blocks: `conflict`. They have 200 blocks from today on: `limit_reached`. Nothing is saved. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The database is down or not answering: `service_unavailable`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getTeamMemberBlockedTimeImpact: {
+        parameters: {
+            query: {
+                date: string;
+                starts: string;
+                finishes: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The bookings, which would be kept; empty when there are none. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeamPeriodImpact"];
+                };
+            };
+            /** @description The date or a time is missing or wrong, or the finish is not after the start: `bad_request`, with `errors` naming each. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No valid session for this salon: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Without `team.block`: `permission_denied`. A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No such person on the hostname's salon's team, or the hostname names no salon: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The database is down or not answering: `service_unavailable`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    removeTeamMemberBlockedTime: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                blockId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No valid session for this salon: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Without `team.block`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No such person, no such block of theirs, one whose date has passed, or the hostname names no salon: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The database is down or not answering: `service_unavailable`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     addTeamMemberDateChange: {
         parameters: {
             query?: never;
@@ -11458,6 +11915,240 @@ export interface operations {
                 };
             };
             /** @description No such person, no such change of theirs, one that has passed, or the hostname names no salon: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The database is down or not answering: `service_unavailable`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    addTeamMemberLeave: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddTeamMemberLeave"];
+            };
+        };
+        responses: {
+            /** @description The leave. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AddedTeamMemberLeave"];
+                };
+            };
+            /** @description A day is not today to a year ahead by the salon's date, the last is before the first, the type or the note is wrong, or the body is not the documented shape: `bad_request`, with `errors` naming each field. Nothing is saved. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No valid session for this salon: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Without `team.manage`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No such person on the hostname's salon's team, or the hostname names no salon: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description It overlaps this person's leave: `conflict`. They have 100 leaves that have not ended: `limit_reached`. Nothing is saved. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The database is down or not answering: `service_unavailable`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getTeamMemberLeaveImpact: {
+        parameters: {
+            query: {
+                firstDay: string;
+                lastDay: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The bookings, which would be kept; empty when there are none. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeamPeriodImpact"];
+                };
+            };
+            /** @description A day is missing, not `YYYY-MM-DD`, not today to a year ahead, or the last is before the first: `bad_request`, with `errors` naming each. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No valid session for this salon: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Without `team.manage`: `permission_denied`. A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No such person on the hostname's salon's team, or the hostname names no salon: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The database is down or not answering: `service_unavailable`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    removeTeamMemberLeave: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                leaveId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No valid session for this salon: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Without `team.manage`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No such person, no such leave of theirs, leave that has ended, or the hostname names no salon: `not_found`. */
             404: {
                 headers: {
                     [name: string]: unknown;

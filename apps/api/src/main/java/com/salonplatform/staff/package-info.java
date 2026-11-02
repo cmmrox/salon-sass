@@ -23,6 +23,9 @@
  * {@link com.salonplatform.staff.TeamSchedule}, which F07's availability uses, and declares
  * {@link com.salonplatform.staff.MemberBookingsAffected}, which {@code booking} implements in F07 (decision 102).
  *
+ * <p>From F06-S03: each team member's leave and blocked time, with {@code team.manage} and {@code team.block}, both taken out
+ * of {@link com.salonplatform.staff.TeamSchedule}'s answer. A leave's type and note are private (decision 104).
+ *
  * <p>What it owns, the layout inside it and the rules between modules are in
  * {@code docs/engineering/backend.md}.
  */

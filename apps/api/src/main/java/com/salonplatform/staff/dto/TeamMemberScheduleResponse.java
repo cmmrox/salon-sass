@@ -9,7 +9,7 @@ import java.util.List;
 @Schema(
         name = "TeamMemberSchedule",
         additionalProperties = Schema.AdditionalPropertiesValue.FALSE,
-        requiredProperties = {"version", "today", "weekly", "dateChanges"})
+        requiredProperties = {"version", "today", "weekly", "dateChanges", "leave", "blockedTime"})
 public record TeamMemberScheduleResponse(
         @Schema(minimum = "0", description = "The week's version, which a save is made from; 0 when never saved.")
         long version,
@@ -24,13 +24,21 @@ public record TeamMemberScheduleResponse(
         List<TeamWorkdayResponse> weekly,
 
         @ArraySchema(arraySchema = @Schema(description = "The changes from `today` on, in date order; at most 100."))
-        List<TeamDateChangeResponse> dateChanges) {
+        List<TeamDateChangeResponse> dateChanges,
+
+        @ArraySchema(arraySchema = @Schema(description = "The leave that has not ended by `today`, in date order."))
+        List<TeamLeaveResponse> leave,
+
+        @ArraySchema(arraySchema = @Schema(description = "The blocks from `today` on, in date and time order."))
+        List<TeamBlockedTimeResponse> blockedTime) {
 
     public static TeamMemberScheduleResponse from(ScheduleView view) {
         return new TeamMemberScheduleResponse(
                 view.version(),
                 view.today().toString(),
                 view.weekly().stream().map(TeamWorkdayResponse::from).toList(),
-                view.dateChanges().stream().map(TeamDateChangeResponse::from).toList());
+                view.dateChanges().stream().map(TeamDateChangeResponse::from).toList(),
+                view.leave().stream().map(TeamLeaveResponse::from).toList(),
+                view.blockedTime().stream().map(TeamBlockedTimeResponse::from).toList());
     }
 }

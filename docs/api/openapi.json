@@ -79,6 +79,35 @@
         ],
         "type": "object"
       },
+      "AddTeamMemberBlockedTime": {
+        "additionalProperties": false,
+        "properties": {
+          "date": {
+            "description": "The salon's local date: today to a year ahead.",
+            "format": "date",
+            "type": "string"
+          },
+          "finishes": {
+            "description": "`HH:MM` on a quarter hour, after `starts`.",
+            "type": "string"
+          },
+          "label": {
+            "description": "2 to 40 characters, trimmed. Everyone who reads the team sees it.",
+            "type": "string"
+          },
+          "starts": {
+            "description": "`HH:MM` on a quarter hour.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "date",
+          "finishes",
+          "label",
+          "starts"
+        ],
+        "type": "object"
+      },
       "AddTeamMemberDateChange": {
         "additionalProperties": false,
         "properties": {
@@ -126,6 +155,63 @@
         ],
         "type": "object"
       },
+      "AddTeamMemberLeave": {
+        "additionalProperties": false,
+        "properties": {
+          "firstDay": {
+            "description": "The salon's local date: today to a year ahead.",
+            "format": "date",
+            "type": "string"
+          },
+          "lastDay": {
+            "description": "On or after `firstDay`, and at most a year ahead.",
+            "format": "date",
+            "type": "string"
+          },
+          "note": {
+            "description": "Only those who can change the team see it; up to 60 characters, empty or null for none.",
+            "maxLength": 60,
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "type": {
+            "enum": [
+              "annual",
+              "sick",
+              "personal",
+              "other"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "firstDay",
+          "lastDay",
+          "type"
+        ],
+        "type": "object"
+      },
+      "AddedTeamMemberBlockedTime": {
+        "additionalProperties": false,
+        "properties": {
+          "affected": {
+            "items": {
+              "$ref": "#/components/schemas/TeamAffectedBooking"
+            },
+            "type": "array"
+          },
+          "block": {
+            "$ref": "#/components/schemas/TeamMemberBlockedTime"
+          }
+        },
+        "required": [
+          "affected",
+          "block"
+        ],
+        "type": "object"
+      },
       "AddedTeamMemberDateChange": {
         "additionalProperties": false,
         "properties": {
@@ -142,6 +228,25 @@
         "required": [
           "affected",
           "change"
+        ],
+        "type": "object"
+      },
+      "AddedTeamMemberLeave": {
+        "additionalProperties": false,
+        "properties": {
+          "affected": {
+            "items": {
+              "$ref": "#/components/schemas/TeamAffectedBooking"
+            },
+            "type": "array"
+          },
+          "leave": {
+            "$ref": "#/components/schemas/TeamMemberLeave"
+          }
+        },
+        "required": [
+          "affected",
+          "leave"
         ],
         "type": "object"
       },
@@ -6411,6 +6516,17 @@
             "minLength": 2,
             "type": "string"
           },
+          "nextLeave": {
+            "description": "Their current or next leave; null for none. Its `type` is only for a caller with `team.manage`.",
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/TeamNextLeave"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "photoId": {
             "description": "Their photo; null when they have none.",
             "format": "uuid",
@@ -6475,6 +6591,7 @@
           "highlights",
           "id",
           "name",
+          "nextLeave",
           "photoId",
           "photoUrl",
           "services",
@@ -6482,6 +6599,50 @@
           "title",
           "version",
           "weekly"
+        ],
+        "type": "object"
+      },
+      "TeamMemberBlockedTime": {
+        "additionalProperties": false,
+        "properties": {
+          "bookingsToResolve": {
+            "description": "How many bookings lie in it. They are kept.",
+            "format": "int32",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "date": {
+            "description": "The salon's local date.",
+            "format": "date",
+            "type": "string"
+          },
+          "finishes": {
+            "description": "When it finishes, local `HH:MM`, after `starts`.",
+            "pattern": "^([01][0-9]|2[0-3]):(00|15|30|45)$",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 40,
+            "minLength": 2,
+            "type": "string"
+          },
+          "starts": {
+            "description": "When it starts, local `HH:MM`.",
+            "pattern": "^([01][0-9]|2[0-3]):(00|15|30|45)$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "bookingsToResolve",
+          "date",
+          "finishes",
+          "id",
+          "label",
+          "starts"
         ],
         "type": "object"
       },
@@ -6543,6 +6704,56 @@
         ],
         "type": "object"
       },
+      "TeamMemberLeave": {
+        "additionalProperties": false,
+        "properties": {
+          "bookingsToResolve": {
+            "description": "How many bookings lie in what is left of it. They are kept.",
+            "format": "int32",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "firstDay": {
+            "description": "The first day, the salon's local date.",
+            "format": "date",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "lastDay": {
+            "description": "The last day, on or after `firstDay`.",
+            "format": "date",
+            "type": "string"
+          },
+          "note": {
+            "description": "Its note; null for none. Only for a caller with `team.manage`.",
+            "maxLength": 60,
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "type": {
+            "description": "Its type. Only for a caller with `team.manage`.",
+            "enum": [
+              "annual",
+              "sick",
+              "personal",
+              "other"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "bookingsToResolve",
+          "firstDay",
+          "id",
+          "lastDay"
+        ],
+        "type": "object"
+      },
       "TeamMemberList": {
         "additionalProperties": false,
         "properties": {
@@ -6598,10 +6809,24 @@
       "TeamMemberSchedule": {
         "additionalProperties": false,
         "properties": {
+          "blockedTime": {
+            "description": "The blocks from `today` on, in date and time order.",
+            "items": {
+              "$ref": "#/components/schemas/TeamMemberBlockedTime"
+            },
+            "type": "array"
+          },
           "dateChanges": {
             "description": "The changes from `today` on, in date order; at most 100.",
             "items": {
               "$ref": "#/components/schemas/TeamMemberDateChange"
+            },
+            "type": "array"
+          },
+          "leave": {
+            "description": "The leave that has not ended by `today`, in date order.",
+            "items": {
+              "$ref": "#/components/schemas/TeamMemberLeave"
             },
             "type": "array"
           },
@@ -6627,7 +6852,9 @@
           }
         },
         "required": [
+          "blockedTime",
           "dateChanges",
+          "leave",
           "today",
           "version",
           "weekly"
@@ -6654,6 +6881,51 @@
             "type": "array"
           }
         },
+        "type": "object"
+      },
+      "TeamNextLeave": {
+        "additionalProperties": false,
+        "properties": {
+          "firstDay": {
+            "description": "The first day, the salon's local date.",
+            "format": "date",
+            "type": "string"
+          },
+          "lastDay": {
+            "description": "The last day, on or after `firstDay`.",
+            "format": "date",
+            "type": "string"
+          },
+          "type": {
+            "description": "Its type. Only for a caller with `team.manage`.",
+            "enum": [
+              "annual",
+              "sick",
+              "personal",
+              "other"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "firstDay",
+          "lastDay"
+        ],
+        "type": "object"
+      },
+      "TeamPeriodImpact": {
+        "additionalProperties": false,
+        "properties": {
+          "affected": {
+            "items": {
+              "$ref": "#/components/schemas/TeamAffectedBooking"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "affected"
+        ],
         "type": "object"
       },
       "TeamSignInAccount": {
@@ -15675,7 +15947,7 @@
     },
     "/api/v1/team/members/{id}/schedule": {
       "get": {
-        "description": "A date change's `note` is present only for a caller with `team.manage`.",
+        "description": "A date change's `note`, and a leave's `type` and `note`, are present only for a caller with `team.manage`.",
         "operationId": "getTeamMemberSchedule",
         "parameters": [
           {
@@ -15749,7 +16021,318 @@
             "description": "Any error: problem details with a stable `code`."
           }
         },
-        "summary": "A person's weekly hours and their date changes from today on. `team.read`.",
+        "summary": "A person's weekly hours, and their date changes, leave and blocked time from today on. `team.read`.",
+        "tags": [
+          "staff"
+        ]
+      }
+    },
+    "/api/v1/team/members/{id}/schedule/blocked-time": {
+      "post": {
+        "description": "It is stored as entered, and may lie outside their hours or on their leave. Bookings in it are kept and listed, and are flagged for as long as they lie in it. Nothing is cancelled.",
+        "operationId": "addTeamMemberBlockedTime",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddTeamMemberBlockedTime"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddedTeamMemberBlockedTime"
+                }
+              }
+            },
+            "description": "The block."
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The date is not today to a year ahead by the salon's date, a time is not on a quarter hour, the finish is not after the start, the label is not 2 to 40 characters, or the body is not the documented shape: `bad_request`, with `errors` naming each field. Nothing is saved."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No valid session for this salon: `invalid_session`."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Without `team.block`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No such person on the hostname's salon's team, or the hostname names no salon: `not_found`."
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "It overlaps another of this person's blocks: `conflict`. They have 200 blocks from today on: `limit_reached`. Nothing is saved."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The database is down or not answering: `service_unavailable`."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "summary": "Blocks part of one date for a person, with a label. `team.block`.",
+        "tags": [
+          "staff"
+        ]
+      }
+    },
+    "/api/v1/team/members/{id}/schedule/blocked-time/affected": {
+      "get": {
+        "operationId": "getTeamMemberBlockedTimeImpact",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "starts",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "finishes",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamPeriodImpact"
+                }
+              }
+            },
+            "description": "The bookings, which would be kept; empty when there are none."
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The date or a time is missing or wrong, or the finish is not after the start: `bad_request`, with `errors` naming each."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No valid session for this salon: `invalid_session`."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Without `team.block`: `permission_denied`. A suspended salon: `salon_suspended`."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No such person on the hostname's salon's team, or the hostname names no salon: `not_found`."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The database is down or not answering: `service_unavailable`."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "summary": "The bookings a block of this time would affect, before it is added. `team.block`.",
+        "tags": [
+          "staff"
+        ]
+      }
+    },
+    "/api/v1/team/members/{id}/schedule/blocked-time/{blockId}": {
+      "delete": {
+        "description": "They become bookable in that time again, and bookings in it are no longer flagged.",
+        "operationId": "removeTeamMemberBlockedTime",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "blockId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Removed."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No valid session for this salon: `invalid_session`."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Without `team.block`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No such person, no such block of theirs, one whose date has passed, or the hostname names no salon: `not_found`."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The database is down or not answering: `service_unavailable`."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "summary": "Removes a block from today on. `team.block`.",
         "tags": [
           "staff"
         ]
@@ -15944,6 +16527,310 @@
           }
         },
         "summary": "Removes a date change that has not passed: the date is back to the weekly hours. `team.manage`.",
+        "tags": [
+          "staff"
+        ]
+      }
+    },
+    "/api/v1/team/members/{id}/schedule/leave": {
+      "post": {
+        "description": "Customers can't book them on those days. Bookings in the period are kept and listed, and are flagged for as long as they lie in it. Nothing is cancelled.",
+        "operationId": "addTeamMemberLeave",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddTeamMemberLeave"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddedTeamMemberLeave"
+                }
+              }
+            },
+            "description": "The leave."
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "A day is not today to a year ahead by the salon's date, the last is before the first, the type or the note is wrong, or the body is not the documented shape: `bad_request`, with `errors` naming each field. Nothing is saved."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No valid session for this salon: `invalid_session`."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Without `team.manage`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No such person on the hostname's salon's team, or the hostname names no salon: `not_found`."
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "It overlaps this person's leave: `conflict`. They have 100 leaves that have not ended: `limit_reached`. Nothing is saved."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The database is down or not answering: `service_unavailable`."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "summary": "Adds leave for a person, as whole days. `team.manage`.",
+        "tags": [
+          "staff"
+        ]
+      }
+    },
+    "/api/v1/team/members/{id}/schedule/leave/affected": {
+      "get": {
+        "operationId": "getTeamMemberLeaveImpact",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "firstDay",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "lastDay",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamPeriodImpact"
+                }
+              }
+            },
+            "description": "The bookings, which would be kept; empty when there are none."
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "A day is missing, not `YYYY-MM-DD`, not today to a year ahead, or the last is before the first: `bad_request`, with `errors` naming each."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No valid session for this salon: `invalid_session`."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Without `team.manage`: `permission_denied`. A suspended salon: `salon_suspended`."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No such person on the hostname's salon's team, or the hostname names no salon: `not_found`."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The database is down or not answering: `service_unavailable`."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "summary": "The bookings leave for these days would affect, before it is added. `team.manage`.",
+        "tags": [
+          "staff"
+        ]
+      }
+    },
+    "/api/v1/team/members/{id}/schedule/leave/{leaveId}": {
+      "delete": {
+        "description": "They become bookable on those days again, and bookings in it are no longer flagged.",
+        "operationId": "removeTeamMemberLeave",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "leaveId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Removed."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No valid session for this salon: `invalid_session`."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Without `team.manage`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No such person, no such leave of theirs, leave that has ended, or the hostname names no salon: `not_found`."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The database is down or not answering: `service_unavailable`."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "summary": "Removes leave that has not ended, including leave under way. `team.manage`.",
         "tags": [
           "staff"
         ]

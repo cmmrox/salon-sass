@@ -39,4 +39,4 @@ requirement detail is in `qa/coverage.md`.
 | --- | --- | --- | --- | --- | --- | --- |
 | F06-S01 | Team members and profiles | api, web | complete | - | 0 | - |
 | F06-S02 | Working hours and date changes | api, web | complete | - | 0 | - |
-| F06-S03 | Leave and blocked time | api, web | planned | - | 0 | **developer**: `stage-build F06-S03` |
+| F06-S03 | Leave and blocked time | api, web | in-progress | - | 0 | **developer**: `stage-build F06-S03` |

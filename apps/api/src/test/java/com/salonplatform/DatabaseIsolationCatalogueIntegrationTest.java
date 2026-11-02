@@ -92,6 +92,9 @@ class DatabaseIsolationCatalogueIntegrationTest {
                         "staff_member_weekday_break",
                         "staff_member_date_change",
                         "staff_member_date_change_break",
+                        // F06-S03: each member's leave and blocked time.
+                        "staff_member_leave",
+                        "staff_member_blocked_time",
                         // F04-S04: the booking rules' versions.
                         "booking_rules_version",
                         // F05-S01: the catalogue's category lists, categories, photos, services and terms versions.
@@ -284,6 +287,9 @@ class DatabaseIsolationCatalogueIntegrationTest {
                         org.assertj.core.api.Assertions.tuple("staff_member_weekday_break", "DELETE,INSERT,SELECT"),
                         org.assertj.core.api.Assertions.tuple("staff_member_date_change", "DELETE,INSERT,SELECT"),
                         org.assertj.core.api.Assertions.tuple("staff_member_date_change_break", "DELETE,INSERT,SELECT"),
+                        // F06-S03: leave and a block are added or removed, never changed.
+                        org.assertj.core.api.Assertions.tuple("staff_member_leave", "DELETE,INSERT,SELECT"),
+                        org.assertj.core.api.Assertions.tuple("staff_member_blocked_time", "DELETE,INSERT,SELECT"),
                         // F04-S04: a booking rules version is written once and read, never changed or removed.
                         org.assertj.core.api.Assertions.tuple("booking_rules_version", "INSERT,SELECT"),
                         // F05-S01: the category list exists from a salon's creation and is only changed;

@@ -49,7 +49,9 @@ class StaffTablesRowLevelSecurityAloneIntegrationTest {
             Map.entry("staff_member_weekday", "id"),
             Map.entry("staff_member_weekday_break", "id"),
             Map.entry("staff_member_date_change", "id"),
-            Map.entry("staff_member_date_change_break", "id")));
+            Map.entry("staff_member_date_change_break", "id"),
+            Map.entry("staff_member_leave", "id"),
+            Map.entry("staff_member_blocked_time", "id")));
 
     static final List<String> TABLES = List.copyOf(KEYS.keySet());
 
@@ -175,6 +177,25 @@ class StaffTablesRowLevelSecurityAloneIntegrationTest {
                     branch,
                     member,
                     change);
+            // F06-S03: their leave and a block.
+            owner.update(
+                    "INSERT INTO staff_member_leave (tenant_id, id, branch_id, member_id, first_day, last_day,"
+                            + " leave_type, note, created_by, created_at, updated_at)"
+                            + " VALUES (?, ?, ?, ?, '2090-04-01', '2090-04-03', 'sick', 'Private', ?, now(), now())",
+                    salon.id(),
+                    UUID.randomUUID(),
+                    branch,
+                    member,
+                    UUID.randomUUID());
+            owner.update(
+                    "INSERT INTO staff_member_blocked_time (tenant_id, id, branch_id, member_id, block_date, starts,"
+                            + " finishes, label, created_by, created_at, updated_at)"
+                            + " VALUES (?, ?, ?, ?, '2090-05-01', '10:00', '11:00', 'Training', ?, now(), now())",
+                    salon.id(),
+                    UUID.randomUUID(),
+                    branch,
+                    member,
+                    UUID.randomUUID());
         }
     }
 
