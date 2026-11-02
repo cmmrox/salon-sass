@@ -617,11 +617,18 @@ test('TC-F06-S02-042 AC-13: the Receptionist, the Professional and a support ses
   await schedules.add(salon, owner.tokens, person.id, changeInput(date, { note }));
   const checks = async (page: Page, label: string) => {
     await ready(page);
+    // What reached the browser, not only what it drew: a screen can hide what the answer carried.
+    const answers: Promise<string>[] = [];
+    page.on('response', r => { if (PENDING_F06_S02.bff.read(new URL(r.url()))) answers.push(r.text().catch(() => '')); });
     const sheet = await openSchedule(page, person.id);
     await expect(sheet.getByText(shownTime('13:00')).first(), `${label}: reads the break`).toBeVisible();
     await expectNoChangeControls(sheet, label);
     await expect(changeRow(sheet, date), `${label}: reads the change`).toBeVisible();
     expect(await page.content(), `${label}: no note anywhere in the page`).not.toContain(note);
+    const read = (await Promise.all(answers)).join('\n');
+    expect(read, `${label}: the schedule's answer was seen, or this proves nothing`).toContain(date);
+    expect(read, `${label}: no note in what the browser received`).not.toContain(note);
+    expect(read, `${label}: no note field at all`).not.toContain('"note"');
   };
   for (const role of ['RECEPTIONIST', 'PROFESSIONAL'] as const) {
     await test.step(role, async () => {
