@@ -142,16 +142,21 @@ class ClosureServiceImpl implements ClosureService {
                 bookings.on(at.branch(), closure.getClosureDate()).size());
     }
 
+    /** The date written {@code YYYY-MM-DD}, or null when it is not one. */
+    static LocalDate parsed(String date) {
+        if (date == null || !date.matches("\\d{4}-\\d{2}-\\d{2}")) {
+            return null;
+        }
+        try {
+            return LocalDate.parse(date);
+        } catch (DateTimeException ex) {
+            return null;
+        }
+    }
+
     /** A date a closure may have: today to a year ahead, in the salon's time zone; else 400 on {@code date}. */
     static LocalDate closable(String date, LocalDate today) {
-        LocalDate on = null;
-        if (date != null && date.matches("\\d{4}-\\d{2}-\\d{2}")) {
-            try {
-                on = LocalDate.parse(date);
-            } catch (DateTimeException ex) {
-                on = null;
-            }
-        }
+        LocalDate on = parsed(date);
         String problem = on == null
                 ? "must be a date written YYYY-MM-DD"
                 : on.isBefore(today)

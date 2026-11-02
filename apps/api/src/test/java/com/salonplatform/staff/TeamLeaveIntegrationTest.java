@@ -142,6 +142,22 @@ class TeamLeaveIntegrationTest extends TwoSalonTeam {
     }
 
     @Test
+    void aFirstDayBeyondAYearNamesFirstDayAloneAndALastDayBeyondWithAFineFirstNamesLastDay() {
+        LocalDate beyond = today.plusYears(1).plusDays(1);
+
+        fieldErrors(add(leaveOf(beyond, beyond, "annual", null)), "firstDay");
+        fieldErrors(add(leaveOf(beyond, beyond.plusDays(5), "annual", null)), "firstDay");
+        fieldErrors(add(leaveOf(today, beyond, "annual", null)), "lastDay");
+        assertThat(rows()).isZero();
+    }
+
+    @Test
+    void aFirstDayInThePastNamesFirstDayAloneThoughTheLastIsPastToo() {
+        fieldErrors(add(leaveOf(today.minusDays(3), today.minusDays(1), "annual", null)), "firstDay");
+        assertThat(rows()).isZero();
+    }
+
+    @Test
     void anUnknownTypeAndAMissingOneAreFieldErrors() {
         fieldErrors(add(leaveOf(today, today, "holiday", null)), "type");
         fieldErrors(add(leaveOf(today, today, null, null)), "type");

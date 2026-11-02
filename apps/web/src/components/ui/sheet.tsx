@@ -66,7 +66,9 @@ function SheetContent({
         data-slot="sheet-content"
         data-surface="canvas"
         className={cn(
-          "fixed z-50 flex flex-col gap-4 bg-background text-foreground",
+          // The phone's handle is a sheet's `::before`, an empty flex item with a set height: without `shrink-0`, a sheet whose
+          // content overflows shrinks it to nothing, as an empty box has no minimum height (F06-S03 AC-14).
+          "fixed z-50 flex flex-col gap-4 bg-background text-foreground before:shrink-0",
           side === "right" && "inset-y-0 right-0 h-full",
           side === "left" && "inset-y-0 left-0 h-full",
           side === "top" && "inset-x-0 top-0 h-auto",

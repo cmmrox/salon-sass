@@ -52,7 +52,13 @@ function page(brand: string, canManage = true, canSeeAccounts = true, readOnly: 
       permissions={['session.manage', 'team.read', 'team.manage']}
       view="team"
     >
-      <TeamScreen kind="staff" canManage={canManage} canSeeAccounts={canSeeAccounts} readOnly={readOnly} />
+      <TeamScreen
+        kind="staff"
+        canManage={canManage}
+        canBlock={canManage}
+        canSeeAccounts={canSeeAccounts}
+        readOnly={readOnly}
+      />
     </AccountFrame>,
   );
 }
@@ -69,6 +75,25 @@ const noHorizontalScroll = () =>
 const matrix = BRANDS.flatMap((brand) => WIDTHS.map((width) => [brand, width] as const));
 
 const card = (id: string) => screen.getAllByTestId('team-card').find((each) => each.dataset.id === id)!;
+
+describe('the card’s leave badge (F06-S03 AC-9, AC-13)', () => {
+  it.each(matrix)('with type and days, on a long range, brand %s at %ipx', async (brand, width) => {
+    answers['team-members'] = () =>
+      Response.json({
+        items: [
+          member(NIMALI, 'Nimali Perera', {
+            nextLeave: { firstDay: '2026-11-12', lastDay: '2027-11-02', type: 'annual' },
+          }),
+        ],
+      });
+    await atWidth(width);
+    page(brand);
+
+    expect(await screen.findByTestId('team-card-leave')).toBeVisible();
+    expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(document.documentElement.clientWidth);
+    expect(await axe(document.body)).toHaveNoViolations();
+  });
+});
 
 describe('the Team tab', () => {
   it.each(matrix)('with its cards, a long name and every initial colour, brand %s at %ipx', async (brand, width) => {

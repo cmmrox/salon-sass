@@ -90,11 +90,20 @@ final class TimeOffValidation {
         return new ValidBlock(part, label);
     }
 
+    /**
+     * The first day is today to a year ahead. The last day is on or after the first, and its own limit of a year ahead is
+     * said only when the first day is fine: a first day beyond a year names {@code firstDay} alone, whatever follows it.
+     */
     private static Days days(String firstDay, String lastDay, LocalDate today, List<FieldProblem> errors) {
         LocalDate first = date("firstDay", firstDay, today, errors);
-        LocalDate last = date("lastDay", lastDay, today, errors);
-        if (first != null && last != null && last.isBefore(first)) {
+        LocalDate writtenFirst = ClosureServiceImpl.parsed(firstDay);
+        LocalDate last = ClosureServiceImpl.parsed(lastDay);
+        if (last == null) {
+            errors.add(new FieldProblem("lastDay", "must be a date written YYYY-MM-DD"));
+        } else if (writtenFirst != null && last.isBefore(writtenFirst)) {
             errors.add(new FieldProblem("lastDay", "must not be before the first day"));
+        } else if (first != null && last.isAfter(today.plusYears(1))) {
+            errors.add(new FieldProblem("lastDay", "must be at most a year ahead"));
         }
         return new Days(first, last);
     }

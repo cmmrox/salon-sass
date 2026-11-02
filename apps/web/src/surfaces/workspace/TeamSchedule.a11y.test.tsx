@@ -78,7 +78,13 @@ function page(brand: string, canManage = true, readOnly: 'support' | 'salon' | n
       permissions={['session.manage', 'team.read', 'team.manage']}
       view="team"
     >
-      <TeamScreen kind="staff" canManage={canManage} canSeeAccounts={canManage} readOnly={readOnly} />
+      <TeamScreen
+        kind="staff"
+        canManage={canManage}
+        canBlock={canManage}
+        canSeeAccounts={canManage}
+        readOnly={readOnly}
+      />
     </AccountFrame>,
   );
 }
@@ -98,6 +104,13 @@ const noSidewaysScrolling = () => {
 const open = async () => {
   fireEvent.click(await screen.findByTestId('team-card-schedule'));
   return screen.findByTestId('schedule-week');
+};
+const openTimeOff = async (tab: 'leave' | 'blocked') => {
+  await open();
+  const trigger = screen.getByTestId(`schedule-tab-${tab}`);
+  fireEvent.mouseDown(trigger, { button: 0 });
+  fireEvent.focus(trigger);
+  return screen.findByTestId(tab === 'leave' ? 'schedule-leave' : 'schedule-blocks');
 };
 const openChanges = async () => {
   await open();
@@ -141,6 +154,220 @@ describe('date changes (F06-S02 AC-16)', () => {
       fireEvent.click(screen.getByTestId('change-add-break'));
       noSidewaysScrolling();
       await noViolations();
+    });
+  });
+});
+
+describe('leave and blocked time (F06-S03 AC-13)', () => {
+  const LEAVE = [
+    {
+      id: 'l1',
+      firstDay: '2026-11-12',
+      lastDay: '2026-11-14',
+      type: 'annual',
+      note: 'A note of the full sixty characters a person may write here',
+      bookingsToResolve: 2,
+    },
+    { id: 'l2', firstDay: '2026-12-01', lastDay: '2026-12-01', type: 'sick', note: null, bookingsToResolve: 0 },
+  ];
+  const BLOCKS = [
+    {
+      id: 'b1',
+      date: '2026-11-05',
+      starts: '10:00',
+      finishes: '12:00',
+      label: 'A label of forty characters, all of them',
+      bookingsToResolve: 0,
+    },
+    { id: 'b2', date: '2026-11-06', starts: '09:00', finishes: '09:15', label: 'Errand', bookingsToResolve: 1 },
+  ];
+  const AFFECTED = {
+    affected: [
+      { date: '2026-11-12', time: '10:30', customerName: 'Kasun Perera', serviceName: 'Balayage' },
+      { date: '2026-11-13', time: '15:00', customerName: 'Amara Silva', serviceName: 'Root touch-up' },
+    ],
+  };
+  const withTimeOff = (overrides: Record<string, unknown> = {}) =>
+    Response.json({
+      version: 1,
+      today: '2026-11-02',
+      weekly: WEEKLY,
+      dateChanges: [],
+      leave: LEAVE,
+      blockedTime: BLOCKS,
+      ...overrides,
+    });
+  const refusedWith = (code: string, status: number) => () => Response.json({ code, errors: [] }, { status });
+  const pick = async (control: string, day: string) => {
+    fireEvent.click(screen.getByTestId(control));
+    const calendar = await screen.findByTestId(`${control}-calendar`);
+    fireEvent.click(
+      within(calendar)
+        .getAllByRole('button')
+        .find((each) => each.textContent === day)!,
+    );
+    await waitFor(() => expect(screen.queryByTestId(`${control}-calendar`)).toBeNull());
+  };
+
+  beforeEach(() => {
+    answers['team-schedule'] = () => withTimeOff();
+    answers['team-leave-affected'] = () => Response.json(AFFECTED);
+    answers['team-block-affected'] = () => Response.json(AFFECTED);
+  });
+
+  it.each(matrix)(
+    'brand %s at %ipx: the Leave list, then its form with the bookings it affects',
+    async (brand, width) => {
+      await atWidth(width, async () => {
+        page(brand);
+        await openTimeOff('leave');
+        expect(screen.getAllByTestId('leave-row')).toHaveLength(2);
+        noSidewaysScrolling();
+        await noViolations();
+
+        fireEvent.click(screen.getByTestId('leave-add'));
+        await screen.findByTestId('leave-form');
+        await pick('leave-first', '12');
+        await pick('leave-last', '14');
+        await screen.findByTestId('period-affected');
+        noSidewaysScrolling();
+        await noViolations();
+      });
+    },
+  );
+
+  it.each(matrix)(
+    'brand %s at %ipx: the Blocked time list, then its form with the bookings it affects',
+    async (brand, width) => {
+      await atWidth(width, async () => {
+        page(brand);
+        await openTimeOff('blocked');
+        expect(screen.getAllByTestId('block-row')).toHaveLength(2);
+        noSidewaysScrolling();
+        await noViolations();
+
+        fireEvent.click(screen.getByTestId('block-add'));
+        await screen.findByTestId('block-form');
+        await pick('block-date', '12');
+        await screen.findByTestId('period-affected');
+        noSidewaysScrolling();
+        await noViolations();
+      });
+    },
+  );
+
+  it.each(WIDTHS)('empty at %ipx', async (width) => {
+    answers['team-schedule'] = () => withTimeOff({ leave: [], blockedTime: [] });
+    await atWidth(width, async () => {
+      page(BRANDS[0]!);
+      await openTimeOff('leave');
+      expect(screen.getByTestId('leave-empty')).toBeVisible();
+      await noViolations();
+      const blocked = screen.getByTestId('schedule-tab-blocked');
+      fireEvent.mouseDown(blocked, { button: 0 });
+      fireEvent.focus(blocked);
+      expect(await screen.findByTestId('block-empty')).toBeVisible();
+      await noViolations();
+    });
+  });
+
+  it('field errors, naming what to fix', async () => {
+    await atWidth(WIDTHS[0]!, async () => {
+      page(BRANDS[0]!);
+      await openTimeOff('leave');
+      fireEvent.click(screen.getByTestId('leave-add'));
+      await screen.findByTestId('leave-form');
+      fireEvent.click(screen.getByTestId('leave-save'));
+      await screen.findByTestId('leave-problem');
+      expect(screen.getByTestId('leave-first')).toHaveAttribute('aria-describedby', 'leave-problem');
+      noSidewaysScrolling();
+      await noViolations();
+      fireEvent.click(screen.getByTestId('leave-cancel'));
+
+      const blocked = screen.getByTestId('schedule-tab-blocked');
+      fireEvent.mouseDown(blocked, { button: 0 });
+      fireEvent.focus(blocked);
+      fireEvent.click(await screen.findByTestId('block-add'));
+      await screen.findByTestId('block-form');
+      fireEvent.click(screen.getByTestId('block-save'));
+      await screen.findByTestId('block-problem');
+      expect(screen.getByTestId('block-date')).toHaveAttribute('aria-describedby', 'block-problem');
+      await noViolations();
+    });
+  });
+
+  it('an overlap, and the question about bookings going unanswered', async () => {
+    answers['team-leave-affected'] = refusedWith('service_unavailable', 503);
+    answers['team-leave-add'] = refusedWith('conflict', 409);
+    await atWidth(WIDTHS[0]!, async () => {
+      page(BRANDS[0]!);
+      await openTimeOff('leave');
+      fireEvent.click(screen.getByTestId('leave-add'));
+      await screen.findByTestId('leave-form');
+      await pick('leave-first', '12');
+      await pick('leave-last', '14');
+      await screen.findByTestId('period-unavailable');
+      fireEvent.click(screen.getByTestId('leave-save'));
+      await screen.findByTestId('leave-problem');
+      noSidewaysScrolling();
+      await noViolations();
+    });
+  });
+
+  it('refused, unavailable and someone else’s change', async () => {
+    answers['team-block-remove'] = refusedWith('permission_denied', 403);
+    await atWidth(WIDTHS[0]!, async () => {
+      page(BRANDS[0]!);
+      await openTimeOff('blocked');
+      fireEvent.click(screen.getAllByTestId('block-remove')[0]!);
+      await screen.findByTestId('schedule-refused');
+      await noViolations();
+    });
+  });
+
+  it('asking before Remove, on top of the sheet', async () => {
+    await atWidth(WIDTHS[0]!, async () => {
+      page(BRANDS[0]!);
+      await openTimeOff('leave');
+      fireEvent.click(screen.getAllByTestId('leave-remove')[0]!);
+      await screen.findByTestId('leave-remove-dialog');
+      await noViolations();
+    });
+  });
+
+  it.each(['support', 'salon'] as const)('read-only with only the days, %s', async (readOnly) => {
+    answers['team-schedule'] = () =>
+      withTimeOff({
+        leave: [{ id: 'l1', firstDay: '2026-11-12', lastDay: '2026-11-14', bookingsToResolve: 2 }],
+      });
+    await atWidth(WIDTHS[0]!, async () => {
+      page(BRANDS[0]!, false, readOnly);
+      await openTimeOff('leave');
+      expect(screen.queryByTestId('leave-add')).toBeNull();
+      expect(screen.queryByTestId('leave-row-type')).toBeNull();
+      await noViolations();
+    });
+  });
+
+  it('names every control, reaches each from the keyboard, and moves to both new tabs with the arrow keys', async () => {
+    await atWidth(WIDTHS[0]!, async () => {
+      page(BRANDS[0]!);
+      await open();
+      const week = screen.getByTestId('schedule-tab-week');
+      week.focus();
+      fireEvent.keyDown(week, { key: 'End' });
+      expect(await screen.findByTestId('schedule-blocks')).toBeVisible();
+      fireEvent.keyDown(screen.getByTestId('schedule-tab-blocked'), { key: 'ArrowLeft' });
+      expect(await screen.findByTestId('schedule-leave')).toBeVisible();
+
+      const sheet = screen.getByTestId('schedule-sheet');
+      expect(within(sheet).getAllByRole('button', { name: /^Remove leave, / })).toHaveLength(2);
+      fireEvent.click(screen.getByTestId('leave-add'));
+      await screen.findByTestId('leave-form');
+      expect(within(sheet).getByRole('button', { name: 'First day' })).toBeVisible();
+      expect(within(sheet).getByRole('button', { name: 'Last day' })).toBeVisible();
+      expect(within(sheet).getByRole('combobox', { name: 'Type' })).toBeVisible();
+      expect(within(sheet).getByRole('textbox', { name: /Note/ })).toBeVisible();
     });
   });
 });

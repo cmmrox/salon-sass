@@ -69,6 +69,7 @@ export function member(id: string, name: string, overrides: Record<string, unkno
     signInAccountId: null as string | null,
     signInLabel: null as string | null,
     weekly: week(),
+    nextLeave: null as { firstDay: string; lastDay: string; type?: string } | null,
     version: 0,
     ...overrides,
   };

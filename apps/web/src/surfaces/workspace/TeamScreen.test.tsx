@@ -57,15 +57,21 @@ afterEach(() => {
 
 const render = (canManage = true, canSeeAccounts = true, readOnly: 'support' | 'salon' | null = null) =>
   renderWithMessages(
-    <TeamScreen kind="staff" canManage={canManage} canSeeAccounts={canSeeAccounts} readOnly={readOnly} />,
+    <TeamScreen
+      kind="staff"
+      canManage={canManage}
+      canBlock={canManage}
+      canSeeAccounts={canSeeAccounts}
+      readOnly={readOnly}
+    />,
   );
 const sent = (action: string) => calls.filter((call) => call.action === action).map((call) => call.body);
 const card = (name: string) =>
-  screen
-    .getAllByTestId('team-card')
-    .find((each) => within(each).getByTestId('team-card-name').textContent === name)!;
-const problem = (code: string, status: number, errors: unknown[] = []) => () =>
-  Response.json({ code, errors }, { status });
+  screen.getAllByTestId('team-card').find((each) => within(each).getByTestId('team-card-name').textContent === name)!;
+const problem =
+  (code: string, status: number, errors: unknown[] = []) =>
+  () =>
+    Response.json({ code, errors }, { status });
 const editNimali = async () => {
   await screen.findAllByTestId('team-card');
   fireEvent.click(within(card('Nimali Perera')).getByTestId('team-card-edit'));
@@ -329,9 +335,7 @@ describe('adding a person (F06-S01 AC-1)', () => {
 
 describe('what a person performs (F06-S01 AC-3)', () => {
   const rowOf = (name: string) =>
-    screen
-      .getAllByTestId('team-picker-row')
-      .find((each) => within(each).getByRole('checkbox', { name }) !== null)!;
+    screen.getAllByTestId('team-picker-row').find((each) => within(each).getByRole('checkbox', { name }) !== null)!;
   const row = (name: string) => {
     const all = screen.getAllByTestId('team-picker-row');
     return all.find((each) => within(each).queryByRole('checkbox', { name })) ?? rowOf(name);
@@ -355,9 +359,7 @@ describe('what a person performs (F06-S01 AC-3)', () => {
 
     fireEvent.click(within(row('Nails')).getByRole('checkbox', { name: 'Nails' }));
 
-    expect(within(row('Nails')).getByTestId('team-picker-summary')).toHaveTextContent(
-      '1 service, and any added later',
-    );
+    expect(within(row('Nails')).getByTestId('team-picker-summary')).toHaveTextContent('1 service, and any added later');
   });
 
   it('narrows a ticked category with Choose, named for the category', async () => {

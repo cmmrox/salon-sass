@@ -141,10 +141,11 @@ class TeamScheduleClockIntegrationTest extends TwoSalonTeam {
         salonOwner = signedInOwner();
         Object member = added("Clock Person").get("id");
 
-        fieldErrors(addLeave(member, "2088-07-14", "2088-07-14"), "firstDay", "lastDay");
+        fieldErrors(addLeave(member, "2088-07-14", "2088-07-14"), "firstDay");
         status(addLeave(member, "2088-07-15", "2088-07-15"), 201);
         status(addLeave(member, "2089-07-15", "2089-07-15"), 201);
-        fieldErrors(addLeave(member, "2089-07-16", "2089-07-16"), "firstDay", "lastDay");
+        fieldErrors(addLeave(member, "2089-07-16", "2089-07-16"), "firstDay");
+        fieldErrors(addLeave(member, "2088-07-20", "2089-07-16"), "lastDay");
         fieldErrors(addBlock(member, "2088-07-14"), "date");
         status(addBlock(member, "2088-07-15"), 201);
         status(addBlock(member, "2089-07-15"), 201);
@@ -160,7 +161,7 @@ class TeamScheduleClockIntegrationTest extends TwoSalonTeam {
 
         status(addLeave(member, "2088-09-14", "2088-09-14"), 201);
         status(addBlock(member, "2088-09-14"), 201);
-        fieldErrors(addLeave(member, "2088-09-13", "2088-09-13"), "firstDay", "lastDay");
+        fieldErrors(addLeave(member, "2088-09-13", "2088-09-13"), "firstDay");
         fieldErrors(addBlock(member, "2088-09-13"), "date");
     }
 

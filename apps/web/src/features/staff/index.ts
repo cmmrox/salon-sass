@@ -21,6 +21,31 @@ export type {
   TeamAffectedBooking,
   Weekday,
 } from './types';
+export type { AddedBlock, AddedLeave, MemberBlock, MemberLeave, PeriodImpact } from './types';
+export { BlockedTimeTab } from './components/BlockedTimeTab';
+export { ConfirmRemoveLeave } from './components/ConfirmRemoveLeave';
+export { LeaveTab } from './components/LeaveTab';
+export {
+  blockAsksImpact,
+  blockIsEdited,
+  blockProblem,
+  blockRefusalOfFields,
+  blockSaveOf,
+  leaveAsksImpact,
+  leaveIsEdited,
+  leaveProblem,
+  leaveRefusalOfFields,
+  leaveSaveOf,
+  newBlock,
+  newLeave,
+  withBlock,
+  withLeave,
+  type BlockForm,
+  type BlockRefusal,
+  type ImpactState as PeriodImpactState,
+  type LeaveForm,
+  type LeaveRefusal,
+} from './client/time-off-form';
 export { AffectedBookings } from './components/AffectedBookings';
 export { DateChangesTab, type ChangeRefusal } from './components/DateChangesTab';
 export { ScheduleSheet, type ScheduleTab } from './components/ScheduleSheet';

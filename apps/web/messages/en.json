@@ -144,7 +144,8 @@
       "settings_manage": "Change and publish the salon's settings",
       "catalogue_read": "Read the service catalogue",
       "team_read": "Read the team",
-      "team_manage": "Change the team"
+      "team_manage": "Change the team",
+      "team_block": "Add and remove blocked time"
     },
     "billing": "Plan and billing",
     "readOnlyReason": "This salon is read-only because an invoice is overdue, so staff changes are paused. They work again as soon as the overdue invoices are paid.",
@@ -1122,7 +1123,18 @@
       "oneBreak": " · break {at}",
       "manyBreaks": " · {count} breaks",
       "schedule": "Schedule",
-      "scheduleLabel": "Schedule of {name}"
+      "scheduleLabel": "Schedule of {name}",
+      "leaveTyped": "{type}, {days}",
+      "leaveDays": "On leave, {days}"
+    },
+    "leaveTypes": {
+      "annual": "Annual leave",
+      "sick": "Sick leave",
+      "personal": "Personal",
+      "other": "Other"
+    },
+    "leaveDays": {
+      "range": "{first} to {last}"
     },
     "schedule": {
       "title": "Schedule",
@@ -1130,7 +1142,9 @@
       "tabsLabel": "Schedule section",
       "tabs": {
         "week": "Weekly hours",
-        "changes": "Date changes"
+        "changes": "Date changes",
+        "leave": "Leave",
+        "blocked": "Blocked time"
       },
       "loading": "Loading the schedule",
       "weekBanner": "Customers can book this person inside these hours while the salon is open.",
@@ -1168,6 +1182,72 @@
       "affected": "{count, plural, one {# upcoming booking falls outside these hours. It is kept.} other {# upcoming bookings fall outside these hours. They are kept.}}",
       "affectedOnDate": "{count, plural, one {# upcoming booking on this date is affected. It is kept.} other {# upcoming bookings on this date are affected. They are kept.}}",
       "affectedAt": "{date}, {time}: {customer}",
+      "period": {
+        "affected": "{count, plural, one {<b># existing booking in this time.</b> It is kept and flagged for you. Nothing is cancelled.} other {<b># existing bookings in this time.</b> They are kept and flagged for you. Nothing is cancelled.}}",
+        "unavailable": "We could not check for bookings in this time. You can still save: nothing is cancelled."
+      },
+      "leave": {
+        "banner": "Customers can’t book this person on leave days. Existing bookings are kept and flagged, never cancelled for you. For part of a day, use Blocked time.",
+        "add": "+ Add leave",
+        "title": "Add leave",
+        "firstDay": "First day",
+        "lastDay": "Last day",
+        "chooseDay": "Choose a day",
+        "firstDayCalendar": "Choose the first day of leave",
+        "lastDayCalendar": "Choose the last day of leave",
+        "type": "Type",
+        "note": "Note",
+        "noteHint": "(optional, your team only)",
+        "save": "Add leave",
+        "cancel": "Cancel",
+        "empty": "No leave planned.",
+        "toResolve": "{count, plural, one {# booking to resolve} other {# bookings to resolve}}",
+        "remove": "Remove",
+        "removeLabel": "Remove leave, {days}",
+        "problemsTitle": "What to fix",
+        "problems": {
+          "daysMissing": "Choose the first and last day.",
+          "lastBeforeFirst": "The last day can’t be before the first.",
+          "daysRule": "Choose days from today to a year ahead.",
+          "overlap": "This overlaps leave already planned.",
+          "limit": "This person has 100 upcoming leaves. Remove one first.",
+          "note": "The note must be 60 characters or fewer."
+        },
+        "removal": {
+          "title": "Remove this leave?",
+          "body": "They become bookable on these days again.",
+          "cancel": "Keep leave",
+          "confirm": "Remove leave"
+        }
+      },
+      "block": {
+        "banner": "Blocked time is part of a day when this person can’t be booked, like training or an errand. It shows on the calendar with its label.",
+        "add": "+ Block time",
+        "title": "Block time",
+        "date": "Date",
+        "chooseDate": "Choose a date",
+        "calendarLabel": "Choose the date to block",
+        "from": "From",
+        "to": "to",
+        "until": "To",
+        "label": "Label",
+        "labelPlaceholder": "Training",
+        "save": "Block time",
+        "cancel": "Cancel",
+        "empty": "No blocked time.",
+        "when": "{date}, {starts} – {finishes}",
+        "remove": "Remove",
+        "removeLabel": "Remove blocked time, {when}",
+        "problemsTitle": "What to fix",
+        "problems": {
+          "dateMissing": "Choose a date.",
+          "endAfterStart": "The end must be after the start.",
+          "label": "Add a label, like Training.",
+          "dateRule": "Choose a date from today to a year ahead.",
+          "overlap": "This overlaps time already blocked.",
+          "limit": "This person has 200 upcoming blocks. Remove one first."
+        }
+      },
       "change": {
         "add": "+ Change a date",
         "title": "Change a date",
@@ -1296,7 +1376,13 @@
       "photoRemoved": "Photo removed.",
       "hoursSaved": "Hours saved. New bookings follow them. Existing bookings are kept.",
       "dateSaved": "Date saved.",
-      "dateRemoved": "Back to the weekly hours on that date."
+      "dateRemoved": "Back to the weekly hours on that date.",
+      "leaveAdded": "Leave added.",
+      "leaveAddedFlagged": "{count, plural, one {Leave added. The existing booking was kept and flagged.} other {Leave added. Existing bookings were kept and flagged.}}",
+      "leaveRemoved": "Leave removed.",
+      "timeBlocked": "Time blocked.",
+      "timeBlockedFlagged": "{count, plural, one {Time blocked. The existing booking was kept and flagged.} other {Time blocked. # existing bookings were kept and flagged.}}",
+      "blockRemoved": "Blocked time removed."
     },
     "notices": {
       "readOnlySupport": "A support session can read the team but cannot change it.",

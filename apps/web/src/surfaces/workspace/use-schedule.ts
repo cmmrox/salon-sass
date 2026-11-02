@@ -39,12 +39,13 @@ import {
   type WeekdayName,
   type WorkdayForm,
 } from '@/features/staff';
+import { useTimeOff, type TimeOffToast } from './use-time-off';
 
 /** What the sheet says above its tabs: someone else changed it, it could not be reached, or a change was refused. */
 export type ScheduleNotice = 'conflict' | 'unavailable' | 'refused' | 'unchanged' | null;
 
 /** The passing notices the sheet announces in a toast. */
-export type ScheduleToast = 'hoursSaved' | 'dateSaved' | 'dateRemoved';
+export type ScheduleToast = 'hoursSaved' | 'dateSaved' | 'dateRemoved' | TimeOffToast;
 
 type Loaded = {
   version: number;
@@ -58,11 +59,13 @@ type Loaded = {
  * The schedule sheet's state (F06-S02): the person's week and date changes, the salon's week beside them, the form with its
  * checks, and every change, each under the session's cross-tab lock. A saved week with no booking left outside closes the
  * sheet, as the prototype's does; one that leaves bookings outside stays open to list them (AC-11). Bookings are the API's.
+ * Leave and blocked time are `useTimeOff`'s, with the same lock and notices.
  */
 export function useSchedule(
   kind: Kind,
   canManage: boolean,
-  notify: (toast: ScheduleToast) => void,
+  canBlock: boolean,
+  notify: (toast: ScheduleToast, values?: { count: number }) => void,
   onSaved: () => void,
 ) {
   const router = useRouter();
@@ -85,11 +88,17 @@ export function useSchedule(
   // The opening a read or a change belongs to: an answer for a sheet since closed or reopened is dropped.
   const opening = useRef(0);
 
+  const timeOff = useTimeOff({ kind, opening, send, failed, clearSaid, notify, onLeaveChanged: onSaved });
+
   const may = canManage && !locked;
+  const mayBlock = canBlock && !locked;
   const clientProblems = weekProblems(week);
   const problems = clientProblems.length > 0 ? clientProblems : apiProblems;
   const weekEdited = Boolean(loaded && !sameWorkWeek(week, loaded.saved));
-  const dirty = open && may && (weekEdited || Boolean(change && changeIsEdited(change)));
+  const dirty =
+    open &&
+    ((may && (weekEdited || Boolean(change && changeIsEdited(change)) || timeOff.leaveEdited)) ||
+      (mayBlock && timeOff.blockEdited));
 
   /** A failure the sheet answers itself; one the caller says in its own words is returned to it. */
   function failed(error: unknown): IdentityFailure | null {
@@ -126,6 +135,7 @@ export function useSchedule(
         changes: schedule.dateChanges,
       });
       setWeek(saved);
+      timeOff.reset(schedule);
       setApiProblems([]);
       setNotice((current) => (current === 'refused' ? current : null));
     } catch (error) {
@@ -271,7 +281,9 @@ export function useSchedule(
     busy,
     notice,
     may,
+    mayBlock,
     dirty,
+    timeOff,
     saveWeek,
     addChange,
     removeChange,
@@ -288,6 +300,7 @@ export function useSchedule(
       setChangeRefusal(null);
       setAffected([]);
       setNotice(null);
+      timeOff.reset(null);
       void load(person, opening.current);
     },
     close: () => {

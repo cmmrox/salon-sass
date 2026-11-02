@@ -9,9 +9,9 @@ import { cn } from '@/lib/utils';
 import { SHEET_CLASSES } from './MemberSheet';
 import { MemberAvatar } from './TeamCards';
 
-/** The sheet's sections, in the prototype's order (`schTabs`); F06-S03 adds Leave and Blocked time. */
-export type ScheduleTab = 'week' | 'changes';
-const TABS: ScheduleTab[] = ['week', 'changes'];
+/** The sheet's sections, in the prototype's order (`schTabs`). */
+export type ScheduleTab = 'week' | 'changes' | 'leave' | 'blocked';
+const TABS: ScheduleTab[] = ['week', 'changes', 'leave', 'blocked'];
 
 type Props = {
   open: boolean;
@@ -25,13 +25,28 @@ type Props = {
   notices: ReactNode;
   week: ReactNode;
   changes: ReactNode;
+  leave: ReactNode;
+  blocked: ReactNode;
 };
 
 /**
  * The schedule sheet (F06-S02, the prototype's `schPaint`), over the Team page: headed with the person's avatar and name,
  * with a tab for each section, whose row scrolls sideways on a phone. Focus stays inside it and goes back to what opened it.
  */
-export function ScheduleSheet({ open, member, tab, loading, onTab, onClose, onClosed, notices, week, changes }: Props) {
+export function ScheduleSheet({
+  open,
+  member,
+  tab,
+  loading,
+  onTab,
+  onClose,
+  onClosed,
+  notices,
+  week,
+  changes,
+  leave,
+  blocked,
+}: Props) {
   const t = useTranslations('team.schedule');
   return (
     <Sheet open={open} onOpenChange={(next) => !next && onClose()}>
@@ -83,6 +98,8 @@ export function ScheduleSheet({ open, member, tab, loading, onTab, onClose, onCl
             </TabsList>
             <TabsContent value="week">{week}</TabsContent>
             <TabsContent value="changes">{changes}</TabsContent>
+            <TabsContent value="leave">{leave}</TabsContent>
+            <TabsContent value="blocked">{blocked}</TabsContent>
           </Tabs>
         )}
       </SheetContent>
