@@ -26,8 +26,8 @@ import { refused } from './booking-rules';
 import { expect, json, type Tokens } from './identity';
 import { identitySql } from './identity-storage';
 import { fieldsOf, sqlLiteral } from './operator';
-import { DAYS, HOURS_TABLES, type DayName, type Weekday } from './salon-hours';
-import { PENDING_F06_S01, S01_TEAM_TABLES, memberPath, type BreakTime, type Team, type WorkDay } from './team';
+import { DAYS, type DayName, type Weekday } from './salon-hours';
+import { PENDING_F06_S01, memberPath, type BreakTime, type Team, type WorkDay } from './team';
 import type { Salon } from './tenants';
 
 /** Names the spec leaves to the build, from the F06-S02 handoff. */
@@ -228,19 +228,9 @@ export function calendarDay(scope: Locator, date: string): Locator {
 
 // ---- database observations (owner role unless a tenant is given) ----
 
-/**
- * Every table this stage added, found rather than named: the storage is the developer's to record
- * (spec, "Storage"), so these are the `staff_` tables with a `tenant_id` that F04 and F06-S01 did not add.
- * F06-S03's leave and blocked-time tables will appear here too, and that stage's tests name them.
- */
-export function scheduleTables(): string[] {
-  const known = [...S01_TEAM_TABLES, ...HOURS_TABLES].map(sqlLiteral).join(', ');
-  const out = identitySql(`SELECT table_name FROM information_schema.columns WHERE table_schema = 'public' AND column_name = 'tenant_id'
-    AND table_name LIKE 'staff\\_%' AND table_name NOT IN (${known}) ORDER BY 1`);
-  const tables = out.split('\n').filter(Boolean);
-  expect(tables.length, 'the schedule tables, at the least the date changes').toBeGreaterThanOrEqual(1);
-  return tables;
-}
+/** The five tables this stage added, from its handoff. F06-S03's have their own helpers and may hold no row here. */
+export const S02_SCHEDULE_TABLES = ['staff_member_schedule', 'staff_member_weekday', 'staff_member_weekday_break', 'staff_member_date_change', 'staff_member_date_change_break'] as const;
+export const scheduleTables = (): string[] => [...S02_SCHEDULE_TABLES];
 
 /** A digest of a salon's schedule rows and its members, whose row may hold the schedule's version, to prove a refused call changed nothing. */
 export function scheduleSnapshot(salonId: string): string {

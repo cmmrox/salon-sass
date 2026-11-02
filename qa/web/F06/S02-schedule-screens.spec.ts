@@ -16,73 +16,31 @@
  * `cacheComponents` keeps a route it has left in the document, hidden, so every lookup targets the visible
  * element.
  */
-import type { BrowserContext, Locator, Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 
 import { DESIGN_WIDTHS } from '../../shared/design-reference';
-import { webUrl } from '../../shared/env';
-import { test as browserTest, expect, routes, type AccountBrowser } from '../../shared/identity-browser';
-import type { Actor, SignedStaff } from '../../shared/identity';
-import { Operator, supportJson, type SupportStart } from '../../shared/operator';
+import { expect, type AccountBrowser } from '../../shared/identity-browser';
+import type { SignedStaff } from '../../shared/identity';
+import type { Operator } from '../../shared/operator';
 import { fit, focusIndicator, seriousViolations } from '../../shared/page-checks';
-import { DAYS, Hours, localDate, plusDays, week, type DayName } from '../../shared/salon-hours';
-import { Team, memberInput, teamSalon, type TeamMember, type WorkDay } from '../../shared/team';
+import { DAYS, plusDays, week, type DayName } from '../../shared/salon-hours';
+import { memberInput, teamSalon, type Team, type TeamMember, type WorkDay } from '../../shared/team';
+import { TEAM_ROUTE, button, card, id, open, openSchedule, ready, salonToday, settled, sheetOf, supportBrowser, test } from '../../shared/team-browser';
 import {
-  LONG, PENDING_F06_S02, SCHEDULE_LIMITS, SCHEDULE_TEXT, Schedules, brk, calendarDay, changeInput, copyOf, expectWeek, noWorkingDays, offChange, offDay, shownTime, weekOf, workingDay,
+  LONG, PENDING_F06_S02, SCHEDULE_LIMITS, SCHEDULE_TEXT, brk, calendarDay, changeInput, copyOf, expectWeek, noWorkingDays, offChange, offDay, shownTime, weekOf, workingDay, type Schedules,
 } from '../../shared/team-schedule';
-import { salonUrl, type Salon } from '../../shared/tenants';
 
-const test = browserTest.extend<{ operator: Operator; team: Team; schedules: Schedules; hours: Hours }>({
-  operator: async ({ identity }, use) => {
-    const operator = new Operator(identity);
-    await operator.resetFixtures();
-    try { await use(operator); } finally { await operator.resetToBaseline(); }
-  },
-  team: async ({ identity }, use) => { const team = new Team(identity); try { await use(team); } finally { await team.dispose(); } },
-  schedules: async ({ team }, use) => { await use(new Schedules(team)); },
-  hours: async ({ identity }, use) => { await use(new Hours(identity)); },
-});
 test.describe.configure({ timeout: 180_000 });
 
 const W = PENDING_F06_S02.web;
 const N = PENDING_F06_S02.names;
 const TEXT = SCHEDULE_TEXT;
-const TEAM_ROUTE = routes.team;
-const COLOMBO = 'Asia/Colombo';
 
-const id = (scope: Page | Locator, name: string) => scope.getByTestId(name).filter({ visible: true });
-const card = (page: Page, memberId: string) => page.locator(`[data-testid="team-card"][data-id="${memberId}"]`).filter({ visible: true });
-const sheetOf = (page: Page) => id(page, W.sheet);
-const button = (scope: Page | Locator, name: string | RegExp) => scope.getByRole('button', { name }).filter({ visible: true });
 const SAVE = 'Save hours';
 const ADD_CHANGE = '+ Change a date';
 const COPY_MONDAY = 'Copy Monday to working days';
 const USE_SALON = /Use the salon.s hours/;
 const ADD_BREAK = /Add break/;
-
-async function settled(page: Page) {
-  await page.waitForFunction(() => document.getAnimations().every(a => a.playState !== 'running'));
-}
-
-async function ready(page: Page) {
-  await expect(page.getByTestId('team-loading').filter({ visible: true })).toHaveCount(0);
-  await expect(id(page, 'team-summary').or(id(page, 'team-empty')).first()).toBeVisible();
-}
-
-async function open(accounts: AccountBrowser, actor: Actor, width = 1280): Promise<{ context: BrowserContext; page: Page }> {
-  const context = await accounts.context(actor.salon, [actor], { width });
-  const page = await accounts.open(context, TEAM_ROUTE);
-  await ready(page);
-  return { context, page };
-}
-
-/** Opens a person's schedule sheet from their card and waits for it to load. */
-async function openSchedule(page: Page, memberId: string) {
-  await card(page, memberId).getByTestId(W.cardSchedule).click();
-  const sheet = sheetOf(page);
-  await expect(sheet).toBeVisible();
-  await expect(id(sheet, W.loading)).toHaveCount(0);
-  return sheet;
-}
 
 /** The sheet, whether a save left it open or closed it: the spec fixes that only when it has bookings to list (AC-11). */
 async function sheetStillOrAgain(page: Page, memberId: string) {
@@ -129,25 +87,12 @@ const segment = (sheet: Locator, name: string) => sheet.getByRole('radio', { nam
 const changeRow = (sheet: Locator, date: string) => sheet.locator(`[data-testid="${W.changeRow}"][data-date="${date}"]`).filter({ visible: true });
 const noteField = (sheet: Locator) => sheet.getByLabel(/^Note/);
 
-const salonToday = async (accounts: AccountBrowser) => localDate(await accounts.identity.now(), COLOMBO);
-
 /** A salon with opening hours and a person on a known week. */
 async function arrange(operator: Operator, accounts: AccountBrowser, team: Team, schedules: Schedules, weekly: WorkDay[] = weekOf(), name = 'Sanduni Perera') {
   const made = await teamSalon(operator, accounts.identity);
   const person = await team.add(made.salon, made.owner.tokens, memberInput({ name }));
   await schedules.save(made.salon, made.owner.tokens, person.id, weekly);
   return { ...made, person };
-}
-
-/** A support session's browser, on the salon's own web address. */
-async function supportBrowser(browser: import('@playwright/test').Browser, operator: Operator, created: { id: string }, salon: Salon) {
-  const support = await operator.actor('OPERATOR_SUPPORT');
-  const session = await supportJson<SupportStart>(await operator.startSupport(support, created.id, { reason: 'QA F06 support reads a schedule' }), 'supportStart', 201);
-  const context = await browser.newContext({ baseURL: salonUrl(salon, webUrl), viewport: { width: 1280, height: 1000 }, locale: 'en' });
-  const entry = await context.newPage();
-  await entry.goto(`${salonUrl(salon, webUrl)}/workspace/support#${session.entryCode}`);
-  await expect(entry.getByTestId('support-banner')).toBeVisible();
-  return context;
 }
 
 /** The controls a caller without `team.manage` must not have. */

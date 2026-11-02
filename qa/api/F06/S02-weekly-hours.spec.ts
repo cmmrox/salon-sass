@@ -152,6 +152,7 @@ test('TC-F06-S02-006 AC-2: a finish at or before the start, a time off the 15-mi
     ['a finish off the step', { starts: '09:00', finishes: '17:59' }],
     ['working with no start', { starts: null, finishes: '18:00' }],
     ['working with no finish', { starts: '09:00', finishes: null }],
+    ['times sent on a day not worked', { working: false, starts: '09:00', finishes: '18:00' }],
   ];
   for (const [label, tuesday] of onDay) {
     await test.step(label, async () => {

@@ -99,6 +99,7 @@ test('TC-F06-S02-015 AC-7: a date past or beyond a year, a note of 61, and hours
     ['a start off the step', TIMES, changeInput(free, { starts: '09:10' })],
     ['a finish off the step', TIMES, changeInput(free, { finishes: '13:59' })],
     ['different hours with no times', TIMES, changeInput(free, { starts: null, finishes: null })],
+    ['times sent on a day not worked', TIMES, changeInput(free, { working: false })],
     ['a break ending at its start', BREAKS, breaksOf(brk('13:00', '13:00'))],
     ['a break off the step', BREAKS, breaksOf(brk('13:05', '14:00'))],
     ['a break outside the hours', BREAKS, breaksOf(brk('17:30', '18:15'))],
