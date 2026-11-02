@@ -200,6 +200,132 @@ class TeamScheduleSnapshotIntegrationTest extends TwoSalonTeam {
         isTheWholeNewWeek(read());
     }
 
+    // --- the sheet's and the cards' reads: a week shown without its breaks beside a version a save passes with loses
+    // them ----
+
+    private static final Map<String, Object> LUNCH = pause("13:00", "14:00");
+
+    private long scheduleVersion(Map<String, Object> schedule) {
+        return ((Number) schedule.get("version")).longValue();
+    }
+
+    private Map<String, Object> scheduleRead() {
+        Http.Exchange read = api.call(alpha, "GET", schedule(nimali), null, salonOwner);
+        status(read, 200);
+        return api.body(read);
+    }
+
+    private Map<String, Object> memberOnTheList() {
+        Http.Exchange list = api.call(alpha, "GET", TeamFixture.MEMBERS, null, salonOwner);
+        status(list, 200);
+        return maps(api.body(list).get("items")).stream()
+                .filter(each -> nimali.toString().equals(each.get("id")))
+                .findFirst()
+                .orElseThrow();
+    }
+
+    private Map<String, Object> memberRead() {
+        Http.Exchange one = api.call(alpha, "GET", TeamFixture.MEMBERS + "/" + nimali, null, salonOwner);
+        status(one, 200);
+        return api.body(one);
+    }
+
+    private void weeklyIsTheWholeOldWeek(Object weekly) {
+        List<Map<String, Object>> days = maps(weekly);
+        assertThat(days.get(0))
+                .containsEntry("starts", "09:00")
+                .containsEntry("finishes", "18:00")
+                .containsEntry("breaks", List.of(LUNCH));
+        assertThat(days.get(1)).containsEntry("working", true).containsEntry("starts", "09:00");
+    }
+
+    private void weeklyIsTheWholeNewWeek(Object weekly) {
+        List<Map<String, Object>> days = maps(weekly);
+        assertThat(days.get(0))
+                .containsEntry("starts", "10:00")
+                .containsEntry("finishes", "16:00")
+                .containsEntry("breaks", List.of(pause("12:00", "12:30")));
+        assertThat(days.get(1)).containsEntry("working", false);
+    }
+
+    @Test
+    void aSaveCommittingPartWayThroughTheSchedulesReadLeavesItOnTheWholeOldWeekAndItsVersion() {
+        long before = scheduleVersion(scheduleRead());
+        BEFORE_READING_BREAKS.set(() -> status(saving(newWeek()), 200));
+
+        Map<String, Object> whileItCommitted = scheduleRead();
+
+        assertThat(BEFORE_READING_BREAKS.get())
+                .as("the save ran part way through the read")
+                .isNull();
+        assertThat(scheduleVersion(whileItCommitted)).isEqualTo(before);
+        weeklyIsTheWholeOldWeek(whileItCommitted.get("weekly"));
+        Map<String, Object> after = scheduleRead();
+        assertThat(scheduleVersion(after)).isEqualTo(before + 1);
+        weeklyIsTheWholeNewWeek(after.get("weekly"));
+    }
+
+    @Test
+    void aSaveCommittingPartWayThroughTheMemberListLeavesItOnTheWholeOldWeek() {
+        BEFORE_READING_BREAKS.set(() -> status(saving(newWeek()), 200));
+
+        Map<String, Object> whileItCommitted = memberOnTheList();
+
+        assertThat(BEFORE_READING_BREAKS.get())
+                .as("the save ran part way through the read")
+                .isNull();
+        weeklyIsTheWholeOldWeek(whileItCommitted.get("weekly"));
+        weeklyIsTheWholeNewWeek(memberOnTheList().get("weekly"));
+    }
+
+    @Test
+    void aSaveCommittingPartWayThroughReadingOneMemberLeavesItOnTheWholeOldWeek() {
+        BEFORE_READING_BREAKS.set(() -> status(saving(newWeek()), 200));
+
+        Map<String, Object> whileItCommitted = memberRead();
+
+        assertThat(BEFORE_READING_BREAKS.get())
+                .as("the save ran part way through the read")
+                .isNull();
+        weeklyIsTheWholeOldWeek(whileItCommitted.get("weekly"));
+        weeklyIsTheWholeNewWeek(memberRead().get("weekly"));
+    }
+
+    @Test
+    void whileASaveIsHeldOpenTheScheduleAndTheMemberListAnswerTheWholeOldWeekAndAfterItTheWholeNewOne()
+            throws Exception {
+        long before = scheduleVersion(scheduleRead());
+        CountDownLatch written = new CountDownLatch(1);
+        CountDownLatch release = new CountDownLatch(1);
+        WHEN_WEEK_WRITTEN.set(() -> {
+            written.countDown();
+            try {
+                assertThat(release.await(20, TimeUnit.SECONDS)).isTrue();
+            } catch (InterruptedException ex) {
+                Thread.currentThread().interrupt();
+                throw new IllegalStateException(ex);
+            }
+        });
+
+        CompletableFuture<Http.Exchange> save = CompletableFuture.supplyAsync(() -> saving(newWeek()));
+        assertThat(written.await(20, TimeUnit.SECONDS)).isTrue();
+
+        Map<String, Object> heldSchedule = scheduleRead();
+        assertThat(scheduleVersion(heldSchedule)).isEqualTo(before);
+        weeklyIsTheWholeOldWeek(heldSchedule.get("weekly"));
+        weeklyIsTheWholeOldWeek(memberOnTheList().get("weekly"));
+        weeklyIsTheWholeOldWeek(memberRead().get("weekly"));
+        assertThat(save).as("still held open while it was read").isNotDone();
+
+        release.countDown();
+        status(save.get(30, TimeUnit.SECONDS), 200);
+
+        Map<String, Object> after = scheduleRead();
+        assertThat(scheduleVersion(after)).isEqualTo(before + 1);
+        weeklyIsTheWholeNewWeek(after.get("weekly"));
+        weeklyIsTheWholeNewWeek(memberOnTheList().get("weekly"));
+    }
+
     @Test
     void leaveCommittingPartWayThroughAReadIsNotHalfSeenAndTheNextReadHasIt() throws Exception {
         BEFORE_READING_BREAKS.set(() -> status(

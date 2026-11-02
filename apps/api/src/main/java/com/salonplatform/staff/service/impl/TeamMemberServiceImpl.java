@@ -38,6 +38,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
@@ -68,6 +69,12 @@ class TeamMemberServiceImpl implements TeamMemberService {
     private final Clock clock;
     private final TransactionTemplate writing;
     private final TransactionTemplate reading;
+
+    /**
+     * What a person is read in, their week included, as one snapshot: a weekly save replaces every row of the week, so a save
+     * committing between two of the read's queries would otherwise show the old hours with their breaks gone.
+     */
+    private final TransactionTemplate readingMembers;
 
     TeamMemberServiceImpl(
             StaffScope scope,
@@ -100,13 +107,16 @@ class TeamMemberServiceImpl implements TeamMemberService {
         this.writing = new TransactionTemplate(transactions);
         this.reading = new TransactionTemplate(transactions);
         this.reading.setReadOnly(true);
+        this.readingMembers = new TransactionTemplate(transactions);
+        this.readingMembers.setReadOnly(true);
+        this.readingMembers.setIsolationLevel(TransactionDefinition.ISOLATION_REPEATABLE_READ);
     }
 
     @Override
     public List<MemberView> list() {
         Scope at = scope.of(StaffScope.TEAM_READ);
         CatalogueListing listing = catalogue.current();
-        List<Row> read = reading.execute(status -> {
+        List<Row> read = readingMembers.execute(status -> {
             List<Member> active = members.active(at.branch());
             List<UUID> ids = active.stream().map(Member::getId).toList();
             Map<UUID, Choice> choices = rows.choices(ids, listing);
@@ -127,7 +137,7 @@ class TeamMemberServiceImpl implements TeamMemberService {
     public MemberView get(UUID id) {
         Scope at = scope.of(StaffScope.TEAM_READ);
         CatalogueListing listing = catalogue.current();
-        return views.of(reading.execute(status -> rowOf(active(id, at), listing, at)), listing, at.actor());
+        return views.of(readingMembers.execute(status -> rowOf(active(id, at), listing, at)), listing, at.actor());
     }
 
     @Override

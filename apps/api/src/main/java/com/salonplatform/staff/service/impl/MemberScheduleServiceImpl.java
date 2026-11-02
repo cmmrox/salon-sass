@@ -36,6 +36,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
@@ -90,6 +91,10 @@ class MemberScheduleServiceImpl implements MemberScheduleService {
         this.writing = new TransactionTemplate(transactions);
         this.reading = new TransactionTemplate(transactions);
         this.reading.setReadOnly(true);
+        // One snapshot: a weekly save replaces every row of the week, so a save committing between two of the read's
+        // queries
+        // would otherwise show the old hours with their breaks gone.
+        this.reading.setIsolationLevel(TransactionDefinition.ISOLATION_REPEATABLE_READ);
     }
 
     @Override
