@@ -8,7 +8,8 @@
  * Expected results are the F06-S01 spec's (acceptance criteria, "API and data changes", "Design
  * notes", "Corrections at close") and decisions 099 to 101. Seats and everything sent at once are in
  * S01-seats-and-races.spec.ts. The names the build gives are in `PENDING_F06_S01` (qa/shared/team.ts),
- * confirmed at the dry run (c9b2d57).
+ * confirmed at the dry run (c9b2d57). F06-S02 adds a required `weekly` to every member answer, which these
+ * cases compare whole between answers and do not assert: S02-weekly-hours.spec.ts does.
  *
  * Not automated here (`verification.deferred` of the stage):
  * - cases 011 and 012, AC-7's and AC-8's refusals while an upcoming booking needs the person. No

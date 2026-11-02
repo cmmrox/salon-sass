@@ -138,16 +138,17 @@ test('TC-F06-S02-022 AC-13: a support session reads a schedule as the Owner does
       expect(body, label).not.toContain(removedNote);
     });
   }
-  await test.step('no note in the audit it can read, which does show the changes', async () => {
+  await test.step('no note in the audit it can read, or in the entries stored about the changes', async () => {
     const page = await json<{ items: unknown[] }>(await onSalonHost(identity, salon, 'GET', AUDIT, tokens), 'PageAuditView');
     const body = JSON.stringify(page.items);
     expect(page.items.length, 'there are entries to read').toBeGreaterThan(0);
-    expect(body, 'the date change is in the audit').toContain(change.date);
-    expect(body, 'the removed one too').toContain(removedDate);
     expect(body).not.toContain(note);
     expect(body).not.toContain(removedNote);
-    expect(auditEntriesWith(created.id, note), 'and it is in no entry stored, added').toBe(0);
-    expect(auditEntriesWith(created.id, removedNote), 'or removed').toBe(0);
+    // The list shows `identity.*` and `support.*` actions only, so the stored entries are what the check rests on.
+    expect(auditEntriesWith(created.id, change.date), 'the change was audited, so there is an entry to search').toBeGreaterThan(0);
+    expect(auditEntriesWith(created.id, removedDate), 'and the removed one').toBeGreaterThan(0);
+    expect(auditEntriesWith(created.id, note), 'and no entry stored has its note').toBe(0);
+    expect(auditEntriesWith(created.id, removedNote), 'or the removed one\'s').toBe(0);
   });
   await test.step('every change', async () => {
     for (const route of changeRoutes(person.id, asOwner, change, plusDays(today, 20))) {
@@ -351,8 +352,10 @@ test('TC-F06-S02-027 AC-15: every save of weekly hours, naming the weekdays it c
   await test.step('a save names the weekdays it changed, with before and after', async () => {
     const changed = first.map(d => (d.day === 'tuesday' ? { ...d, starts: '10:15', finishes: '16:45' } : d.day === 'sunday' ? { ...d, working: true, starts: '11:30', finishes: '13:30' } : d));
     const details = await audited('a save', owner.principal.id, () => schedules.save(salon, owner.tokens, person.id, changed));
+    expect(details, 'its action').toContain('staff.team_member_hours_saved');
     expect(details, 'names Tuesday').toMatch(/tuesday/i);
     expect(details, 'names Sunday').toMatch(/sunday/i);
+    for (const unchanged of ['monday', 'wednesday', 'thursday', 'friday', 'saturday']) expect(details, `does not name ${unchanged}, which did not change`).not.toMatch(new RegExp(unchanged, 'i'));
     expect(details, 'Tuesday before').toContain('09:00');
     expect(details, 'Tuesday after').toContain('10:15');
     expect(details, 'Sunday after').toContain('11:30');
@@ -362,12 +365,15 @@ test('TC-F06-S02-027 AC-15: every save of weekly hours, naming the weekdays it c
   let change!: DateChange;
   await test.step('adding a change, with what it holds and without its note', async () => {
     const details = await audited('add', owner.principal.id, async () => { change = (await schedules.add(salon, owner.tokens, person.id, changeInput(date, { starts: '10:45', finishes: '15:15', note }))).change; });
+    expect(details, 'its action').toContain('staff.team_member_date_change_added');
     expect(details, 'the date').toContain(date);
     expect(details, 'after').toContain('10:45');
     expect(details, 'no note').not.toContain(note);
+    expect(details, 'only that there is one').toMatch(/hasNote\\*"?\s*:\s*true/);
   });
   await test.step('removing it, by another actor, with what it held and without its note', async () => {
     const details = await audited('remove', manager.principal.id, () => schedules.remove(salon, manager.tokens, person.id, change.id));
+    expect(details, 'its action').toContain('staff.team_member_date_change_removed');
     expect(details, 'the date').toContain(date);
     expect(details, 'before').toContain('10:45');
     expect(details, 'no note').not.toContain(note);
