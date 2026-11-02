@@ -15,7 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Spinner } from '@/components/ui/spinner';
 import { dayButtonLabel } from '@/lib/dates/calendar-labels';
 import { cn } from '@/lib/utils';
-import { lastClosableDate } from '../client/hours-form';
+import { dateOfText as asDate, lastClosableDate, textOfDate as asText } from '../client/hours-form';
 import type { AffectedBooking } from '../types';
 
 /** The bookings on the chosen date: not asked yet, being asked, known, or not reachable. */
@@ -35,14 +35,6 @@ type Props = {
   onDate: (date: string) => void;
   onClose: (date: string, reason: string) => void;
 };
-
-/** A `YYYY-MM-DD` date as the calendar's local Date, and back: only the date's parts are used. */
-const asDate = (value: string) => {
-  const [year, month, day] = value.split('-').map(Number) as [number, number, number];
-  return new Date(year, month - 1, day);
-};
-const asText = (date: Date) =>
-  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 
 /**
  * The Add a closure sheet (F04-S03, the prototype's `cloPaint`): a bottom sheet on phones and a right drawer

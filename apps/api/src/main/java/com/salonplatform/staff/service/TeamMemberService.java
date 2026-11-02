@@ -1,5 +1,6 @@
 package com.salonplatform.staff.service;
 
+import com.salonplatform.staff.domain.WorkDay;
 import java.util.List;
 import java.util.UUID;
 
@@ -27,6 +28,7 @@ public interface TeamMemberService {
      * @param signInVisible whether the caller may see the account, with {@code staff.list}
      * @param signInAccountId the linked account, or null for none or when the caller may not see it
      * @param signInLabel that account's label, or null likewise
+     * @param weekly their week, the seven weekdays Monday first
      */
     record MemberView(
             UUID id,
@@ -41,6 +43,7 @@ public interface TeamMemberService {
             boolean signInVisible,
             UUID signInAccountId,
             String signInLabel,
+            List<WorkDay> weekly,
             long version) {}
 
     /**
@@ -57,7 +60,8 @@ public interface TeamMemberService {
     MemberView get(UUID id);
 
     /**
-     * Adds a person. A person with no sign-in takes a staff seat; one linked to a free account does not.
+     * Adds a person. A person with no sign-in takes a staff seat; one linked to a free account does not. Their week is
+     * copied once from the salon's weekly opening hours, and is not linked to them afterwards (decision 102).
      *
      * @throws com.salonplatform.shared.web.ApplicationProblemException 400 naming each field; 409
      *     {@code limit_reached} at 200 people; 409 {@code entitlement_exceeded} naming {@code staffSeats}

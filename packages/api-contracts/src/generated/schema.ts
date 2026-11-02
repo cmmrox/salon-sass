@@ -1695,6 +1695,83 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/team/members/{id}/schedule": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A person's weekly hours and their date changes from today on. `team.read`.
+         * @description A date change's `note` is present only for a caller with `team.manage`.
+         */
+        get: operations["getTeamMemberSchedule"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/team/members/{id}/schedule/date-changes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Changes a person's hours for one date. `team.manage`.
+         * @description It replaces the weekly hours on that date only, both the times and the breaks. Bookings it leaves outside are kept and listed.
+         */
+        post: operations["addTeamMemberDateChange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/team/members/{id}/schedule/date-changes/{changeId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Removes a date change that has not passed: the date is back to the weekly hours. `team.manage`. */
+        delete: operations["removeTeamMemberDateChange"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/team/members/{id}/schedule/weekly": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Saves a person's whole week. `team.manage`.
+         * @description Each of the seven weekdays once. Date changes are left alone. It may go beyond the salon's opening hours, and bookings still follow those. Bookings the new hours leave outside are kept and listed.
+         */
+        put: operations["saveTeamMemberWeek"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/team/photos/{id}": {
         parameters: {
             query?: never;
@@ -1775,6 +1852,26 @@ export interface components {
             date: string;
             /** @description Only the team sees it; up to 60 characters, empty or null for none. */
             reason?: string | null;
+        };
+        AddTeamMemberDateChange: {
+            /** @description As on a weekday. A date not worked keeps none, whatever is sent. */
+            breaks?: components["schemas"]["TeamBreakInput"][];
+            /**
+             * Format: date
+             * @description The salon's local date: today to a year ahead.
+             */
+            date: string;
+            /** @description `HH:MM` on a quarter hour after `starts` when working; null when not. */
+            finishes?: string | null;
+            /** @description Only those who can change the team see it; up to 60 characters, empty or null for none. */
+            note?: string | null;
+            /** @description `HH:MM` on a quarter hour when working; null when not. */
+            starts?: string | null;
+            working: boolean;
+        };
+        AddedTeamMemberDateChange: {
+            affected: components["schemas"]["TeamAffectedBooking"][];
+            change: components["schemas"]["TeamMemberDateChange"];
         };
         AffectedBooking: {
             customerName: string;
@@ -3735,6 +3832,21 @@ export interface components {
              */
             version: number;
         };
+        SaveTeamMemberWeek: {
+            /**
+             * Format: int64
+             * @description The schedule's version as read; 0 when it has never been saved.
+             */
+            version: number;
+            /** @description Each of the seven weekdays once. */
+            weekly: components["schemas"]["TeamWorkdayInput"][];
+        };
+        SavedTeamMemberWeek: {
+            affected: components["schemas"]["TeamAffectedBooking"][];
+            /** Format: int64 */
+            version: number;
+            weekly: components["schemas"]["TeamWorkday"][];
+        };
         SessionView: {
             /** Format: date-time */
             createdAt?: string;
@@ -3880,6 +3992,29 @@ export interface components {
             /** @enum {string} */
             state: "active" | "ended";
         };
+        TeamAffectedBooking: {
+            customerName: string;
+            /**
+             * Format: date
+             * @description Its local date.
+             */
+            date: string;
+            serviceName: string;
+            /** @description When it starts, local `HH:MM`. */
+            time: string;
+        };
+        TeamBreak: {
+            /** @description When it ends, local `HH:MM`. */
+            finishes: string;
+            /** @description When it starts, local `HH:MM`. */
+            starts: string;
+        };
+        TeamBreakInput: {
+            /** @description `HH:MM` on a quarter hour, after `starts`. */
+            finishes: string;
+            /** @description `HH:MM` on a quarter hour. */
+            starts: string;
+        };
         TeamMember: {
             bio: string | null;
             highlights: string | null;
@@ -3908,6 +4043,26 @@ export interface components {
              * @description Its version, which a save or removal is made from.
              */
             version: number;
+            /** @description Their week: each of the seven weekdays, Monday first. */
+            weekly: components["schemas"]["TeamWorkday"][];
+        };
+        TeamMemberDateChange: {
+            /** @description In time order; empty when not working. */
+            breaks: components["schemas"]["TeamBreak"][];
+            /**
+             * Format: date
+             * @description The salon's local date.
+             */
+            date: string;
+            /** @description When they finish, local `HH:MM`, after `starts`; null when not working. */
+            finishes: string | null;
+            /** Format: uuid */
+            id: string;
+            /** @description The note; null for none. Only for a caller with `team.manage`. */
+            note?: string | null;
+            /** @description When they start, local `HH:MM`; null when not working. */
+            starts: string | null;
+            working: boolean;
         };
         TeamMemberList: {
             items: components["schemas"]["TeamMember"][];
@@ -3922,6 +4077,22 @@ export interface components {
              * @description The image file: PNG, JPEG or WebP, up to 5 MB.
              */
             file: string;
+        };
+        TeamMemberSchedule: {
+            /** @description The changes from `today` on, in date order; at most 100. */
+            dateChanges: components["schemas"]["TeamMemberDateChange"][];
+            /**
+             * Format: date
+             * @description The salon's local date now: the first a date change may have.
+             */
+            today: string;
+            /**
+             * Format: int64
+             * @description The week's version, which a save is made from; 0 when never saved.
+             */
+            version: number;
+            /** @description Each of the seven weekdays, Monday first. */
+            weekly: components["schemas"]["TeamWorkday"][];
         };
         TeamMemberServices: {
             /** @description Categories performed whole, with any service added later. */
@@ -3944,6 +4115,28 @@ export interface components {
         };
         TeamSignInAccountList: {
             items: components["schemas"]["TeamSignInAccount"][];
+        };
+        TeamWorkday: {
+            /** @description In time order; empty when not working. */
+            breaks: components["schemas"]["TeamBreak"][];
+            /** @enum {string} */
+            day: "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" | "sunday";
+            /** @description When they finish, local `HH:MM`, after `starts`; null when not working. */
+            finishes: string | null;
+            /** @description When they start, local `HH:MM`; null when not working. */
+            starts: string | null;
+            working: boolean;
+        };
+        TeamWorkdayInput: {
+            /** @description Up to five, inside the hours, not overlapping, and leaving some of the day. A day not worked keeps none, whatever is sent. */
+            breaks?: components["schemas"]["TeamBreakInput"][];
+            /** @enum {string} */
+            day: "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" | "sunday";
+            /** @description `HH:MM` on a quarter hour after `starts` when working; null when not. */
+            finishes?: string | null;
+            /** @description `HH:MM` on a quarter hour when working; null when not. */
+            starts?: string | null;
+            working: boolean;
         };
         Tokens: {
             /** Format: date-time */
@@ -11043,6 +11236,317 @@ export interface operations {
                 };
             };
             /** @description The person has no photo: `invalid_state`. They changed at the same moment: `conflict`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The database is down or not answering: `service_unavailable`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getTeamMemberSchedule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The schedule. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeamMemberSchedule"];
+                };
+            };
+            /** @description No valid session for this salon: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Without `team.read`: `permission_denied`. A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No such person on the hostname's salon's team, or the hostname names no salon: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The database is down or not answering: `service_unavailable`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    addTeamMemberDateChange: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddTeamMemberDateChange"];
+            };
+        };
+        responses: {
+            /** @description The change. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AddedTeamMemberDateChange"];
+                };
+            };
+            /** @description The date is not today to a year ahead by the salon's date, another broken rule, or the body is not the documented shape: `bad_request`, with `errors` naming each field. Nothing is saved. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No valid session for this salon: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Without `team.manage`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No such person on the hostname's salon's team, or the hostname names no salon: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The date already has a change: `conflict`. The person has 100 upcoming changes: `limit_reached`. Nothing is saved. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The database is down or not answering: `service_unavailable`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    removeTeamMemberDateChange: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                changeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No valid session for this salon: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Without `team.manage`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No such person, no such change of theirs, one that has passed, or the hostname names no salon: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The database is down or not answering: `service_unavailable`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Any error: problem details with a stable `code`. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    saveTeamMemberWeek: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveTeamMemberWeek"];
+            };
+        };
+        responses: {
+            /** @description The week as saved. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedTeamMemberWeek"];
+                };
+            };
+            /** @description A broken rule, or the body is not the documented shape: `bad_request`, with `errors` naming each field (`weekly[0].finishes`, `weekly[0].breaks[1]`, `weekly[0].breaks`). Nothing is saved. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No valid session for this salon: `invalid_session`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Without `team.manage`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No such person on the hostname's salon's team, or the hostname names no salon: `not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `version` is not the schedule's: `conflict`. Nothing changes: `invalid_state`. Nothing is saved. */
             409: {
                 headers: {
                     [name: string]: unknown;

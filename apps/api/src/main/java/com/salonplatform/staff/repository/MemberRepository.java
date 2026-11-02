@@ -1,10 +1,12 @@
 package com.salonplatform.staff.repository;
 
 import com.salonplatform.staff.entity.Member;
+import jakarta.persistence.LockModeType;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -19,6 +21,14 @@ public interface MemberRepository extends JpaRepository<Member, UUID> {
     /** A member still on the team, of the branch. */
     @Query("select m from Member m where m.id = :id and m.branchId = :branch and m.removedAt is null")
     Optional<Member> findActive(@Param("id") UUID id, @Param("branch") UUID branchId);
+
+    /**
+     * A member still on the team, of the branch, held until the transaction ends: what every change to their schedule
+     * takes first, so that those changes run one after the other. Their version does not move.
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select m from Member m where m.id = :id and m.branchId = :branch and m.removedAt is null")
+    Optional<Member> lockActive(@Param("id") UUID id, @Param("branch") UUID branchId);
 
     /** A member by id, removed or not, through a query so that the tenant filter applies as it does to every read. */
     @Query("select m from Member m where m.id = :id")

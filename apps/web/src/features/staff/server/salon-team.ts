@@ -6,6 +6,8 @@ import { createServerApiClient } from '@/lib/api-core/client';
 
 type Call = { headers: Record<string, string | undefined>; signal: AbortSignal };
 type NewMember = components['schemas']['NewTeamMember'];
+type TeamBreakInput = components['schemas']['TeamBreakInput'];
+type TeamWorkdayInput = components['schemas']['TeamWorkdayInput'];
 
 const record = (value: unknown): Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
@@ -30,9 +32,28 @@ function memberOf(body: Record<string, unknown>): NewMember {
   };
 }
 
+/** A break as the contract names it; a value the API would refuse is passed on for it to refuse by name. */
+const breaksOf = (value: unknown): TeamBreakInput[] =>
+  (Array.isArray(value) ? value : []).map((each) => {
+    const pause = record(each);
+    return { starts: as<string>(pause.starts), finishes: as<string>(pause.finishes) };
+  });
+
+/** A weekday as the contract names it. */
+function weekdayOf(value: unknown): TeamWorkdayInput {
+  const day = record(value);
+  return {
+    day: as<TeamWorkdayInput['day']>(day.day),
+    working: as<boolean>(day.working),
+    starts: as<string | null>(day.starts ?? null),
+    finishes: as<string | null>(day.finishes ?? null),
+    breaks: breaksOf(day.breaks),
+  };
+}
+
 /**
- * The team paths the workspace BFF reaches (F06-S01). Every request is rebuilt from the contract's own fields; the BFF
- * checks the session and the permission before any of them. Null when the API is not configured.
+ * The team paths the workspace BFF reaches (F06-S01, F06-S02). Every request is rebuilt from the contract's own fields;
+ * the BFF checks the session and the permission before any of them. Null when the API is not configured.
  */
 export function salonTeamFor(hostname: string) {
   const client = createServerApiClient(createApiClient, { hostname });
@@ -40,10 +61,41 @@ export function salonTeamFor(hostname: string) {
   return {
     members: (call: Call) => client.GET('/api/v1/team/members', call),
     signInAccounts: (call: Call) => client.GET('/api/v1/team/sign-in-accounts', call),
+    schedule: (call: Call, memberId: unknown) =>
+      client.GET('/api/v1/team/members/{id}/schedule', { ...call, params: { path: { id: idOf(memberId) } } }),
+    // The salon's week, public: the schedule sheet compares a person's hours with it, for every role that reads them.
+    openingHours: (call: Call) => client.GET('/api/v1/salon/opening-hours', call),
     change: (call: Call, action: string, raw: unknown) => {
       const body = record(raw);
       const path = { path: { id: idOf(body.id) } };
       switch (action) {
+        case 'team-week-save':
+          return client.PUT('/api/v1/team/members/{id}/schedule/weekly', {
+            ...call,
+            params: path,
+            body: {
+              version: as<number>(body.version),
+              weekly: (Array.isArray(body.weekly) ? body.weekly : []).map(weekdayOf),
+            },
+          });
+        case 'team-date-change-add':
+          return client.POST('/api/v1/team/members/{id}/schedule/date-changes', {
+            ...call,
+            params: path,
+            body: {
+              date: as<string>(body.date),
+              working: as<boolean>(body.working),
+              starts: as<string | null>(body.starts ?? null),
+              finishes: as<string | null>(body.finishes ?? null),
+              breaks: breaksOf(body.breaks),
+              note: as<string | null>(body.note ?? null),
+            },
+          });
+        case 'team-date-change-remove':
+          return client.DELETE('/api/v1/team/members/{id}/schedule/date-changes/{changeId}', {
+            ...call,
+            params: { path: { id: idOf(body.id), changeId: idOf(body.changeId) } },
+          });
         case 'team-member-add':
           return client.POST('/api/v1/team/members', { ...call, body: memberOf(body) });
         case 'team-member-save':

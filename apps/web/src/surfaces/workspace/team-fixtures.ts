@@ -29,6 +29,32 @@ export const SERVICES = {
   ],
 };
 
+const WEEKDAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+
+type Pause = { starts: string; finishes: string };
+
+/** A working weekday as the API answers it (F06-S02). */
+export const workday = (day: string, starts: string, finishes: string, breaks: Pause[] = []) => ({
+  day,
+  working: true,
+  starts,
+  finishes,
+  breaks,
+});
+
+/** The seven weekdays as the API answers them: not working, but for the days given. */
+export const week = (...working: ReturnType<typeof workday>[]) =>
+  WEEKDAYS.map(
+    (day) =>
+      working.find((each) => each.day === day) ?? {
+        day,
+        working: false,
+        starts: null as string | null,
+        finishes: null as string | null,
+        breaks: [] as Pause[],
+      },
+  );
+
 export function member(id: string, name: string, overrides: Record<string, unknown> = {}) {
   return {
     id,
@@ -42,6 +68,7 @@ export function member(id: string, name: string, overrides: Record<string, unkno
     services: { categoryIds: [] as string[], serviceIds: [] as string[] },
     signInAccountId: null as string | null,
     signInLabel: null as string | null,
+    weekly: week(),
     version: 0,
     ...overrides,
   };

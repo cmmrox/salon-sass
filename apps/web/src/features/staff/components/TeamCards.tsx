@@ -1,4 +1,5 @@
 'use client';
+import { formatClock } from '@salon/format';
 import { useTranslations } from 'next-intl';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -6,8 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/ui/empty';
 import { cn } from '@/lib/utils';
+import { hoursSummaryOf } from '../client/schedule-form';
 import { initialOf, performedCategoryNames, toneOf } from '../client/team-form';
-import type { TeamCategory, TeamMember, TeamService } from '../types';
+import type { TeamCategory, TeamMember, TeamService, TeamWorkday } from '../types';
 
 /** Where the web serves a team photo on the salon's own hostname (F06-S01 AC-9): through its BFF route. */
 export const teamPhotoSource = (photoId: string) => `/team-photos/${photoId}`;
@@ -32,11 +34,7 @@ export function MemberAvatar({
     <Avatar className={large ? 'size-21' : 'size-13'} data-testid="team-member-avatar">
       {photoId && <AvatarImage src={teamPhotoSource(photoId)} alt={DECORATIVE} data-testid="team-member-photo" />}
       <AvatarFallback
-        className={cn(
-          'font-semibold text-avatar-ink',
-          large ? 'text-4xl' : 'text-xl',
-          id ? toneOf(id) : 'bg-avatar-1',
-        )}
+        className={cn('font-semibold text-avatar-ink', large ? 'text-4xl' : 'text-xl', id ? toneOf(id) : 'bg-avatar-1')}
         data-testid="team-member-initial"
       >
         {initialOf(name)}
@@ -53,14 +51,44 @@ type Props = {
   canSeeAccounts: boolean;
   onAdd: () => void;
   onEdit: (member: TeamMember) => void;
+  onSchedule: (member: TeamMember) => void;
 };
 
 /**
- * The Team tab's cards (F06-S01 AC-12, the prototype's `aStaff`): photo, name, title, bio, Services, the Online booking
- * badge and, for those who may see accounts, Sign-in. The card's Hours row and Schedule button are F06-S02's. With
- * nobody on the team it shows the prototype's Empty state.
+ * A person's week in one line (F06-S02 AC-12, the prototype's `hrsLine`): "Mon–Sat, 09:00 – 18:00 · break 13:00", a single
+ * day, "Varies by day" or "No working days". It says the weekly hours, whatever date changes there are.
  */
-export function TeamCards({ members, categories, services, canManage, canSeeAccounts, onAdd, onEdit }: Props) {
+function HoursLine({ weekly }: { weekly: TeamWorkday[] }) {
+  const t = useTranslations('team.card');
+  const short = useTranslations('settings.hours.short');
+  const summary = hoursSummaryOf(weekly);
+  if (summary.kind === 'none') return t('noHours');
+  if (summary.kind === 'varies') return t('variesByDay');
+  const times = { starts: formatClock(summary.starts), finishes: formatClock(summary.finishes) };
+  const line =
+    summary.first === summary.last
+      ? t('hoursDay', { day: short(summary.first), ...times })
+      : t('hoursRun', { first: short(summary.first), last: short(summary.last), ...times });
+  const breaks = summary.breaks;
+  if ('at' in breaks) return line + t('oneBreak', { at: formatClock(breaks.at) });
+  return breaks.count > 1 ? line + t('manyBreaks', { count: breaks.count }) : line;
+}
+
+/**
+ * The Team tab's cards (F06-S01 AC-12, the prototype's `aStaff`): photo, name, title, bio, Services, Hours, the Online
+ * booking badge and, for those who may see accounts, Sign-in; **Schedule** for everyone who reads the team, and **Edit
+ * profile** for those who may change it. With nobody on the team it shows the prototype's Empty state.
+ */
+export function TeamCards({
+  members,
+  categories,
+  services,
+  canManage,
+  canSeeAccounts,
+  onAdd,
+  onEdit,
+  onSchedule,
+}: Props) {
   const t = useTranslations('team');
   if (members.length === 0)
     return (
@@ -92,14 +120,14 @@ export function TeamCards({ members, categories, services, canManage, canSeeAcco
                   {member.name}
                 </h2>
                 {member.title && (
-                  <p className="text-small text-muted-foreground wrap-anywhere" data-testid="team-card-title">
+                  <p className="text-small wrap-anywhere text-muted-foreground" data-testid="team-card-title">
                     {member.title}
                   </p>
                 )}
               </div>
             </div>
             {member.bio && (
-              <p className="text-small text-muted-foreground wrap-anywhere" data-testid="team-card-bio">
+              <p className="text-small wrap-anywhere text-muted-foreground" data-testid="team-card-bio">
                 {member.bio}
               </p>
             )}
@@ -109,6 +137,12 @@ export function TeamCards({ members, categories, services, canManage, canSeeAcco
                 <dt className="shrink-0 text-muted-foreground">{t('card.services')}</dt>
                 <dd className="text-right font-medium wrap-anywhere" data-testid="team-card-services">
                   {names.length > 0 ? names.join(', ') : t('card.noServices')}
+                </dd>
+              </div>
+              <div className="flex items-start justify-between gap-4 py-2">
+                <dt className="shrink-0 text-muted-foreground">{t('card.hours')}</dt>
+                <dd className="text-right font-medium wrap-anywhere" data-testid="team-card-hours">
+                  <HoursLine weekly={member.weekly} />
                 </dd>
               </div>
               <div className="flex items-center justify-between gap-4 py-2">
@@ -128,18 +162,28 @@ export function TeamCards({ members, categories, services, canManage, canSeeAcco
                 </div>
               )}
             </dl>
-            {canManage && (
+            <div className="flex flex-wrap gap-1.5">
+              {canManage && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  aria-label={t('card.editLabel', { name: member.name })}
+                  onClick={() => onEdit(member)}
+                  data-testid="team-card-edit"
+                >
+                  {t('card.edit')}
+                </Button>
+              )}
               <Button
                 variant="outline"
                 size="sm"
-                className="w-fit"
-                aria-label={t('card.editLabel', { name: member.name })}
-                onClick={() => onEdit(member)}
-                data-testid="team-card-edit"
+                aria-label={t('card.scheduleLabel', { name: member.name })}
+                onClick={() => onSchedule(member)}
+                data-testid="team-card-schedule"
               >
-                {t('card.edit')}
+                {t('card.schedule')}
               </Button>
-            )}
+            </div>
           </Card>
         );
       })}

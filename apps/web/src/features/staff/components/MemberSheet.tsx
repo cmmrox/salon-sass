@@ -20,7 +20,7 @@ import { ROW_CLASSES, ROW_ON_CLASSES, ServicePicker } from './ServicePicker';
  * The prototype's sheet (CR-017, web.md "Styling" rule 11): a bottom sheet on phones capped in height, and from 900px a
  * full-height right drawer.
  */
-const SHEET_CLASSES = [
+export const SHEET_CLASSES = [
   'mx-auto max-h-(--size-sheet-max-height) w-full max-w-(--size-customer) gap-4 overflow-y-auto rounded-(--radius-sheet) p-6 pb-[calc(var(--spacing)*6+env(safe-area-inset-bottom,0px))] outline-none',
   'before:mx-auto before:mb-2 before:block before:h-1 before:w-(--size-sheet-handle) before:rounded-action before:bg-border before:content-[""]',
   'rail:top-0 rail:left-auto rail:m-0 rail:h-full rail:max-h-none rail:w-(--size-drawer) rail:max-w-full rail:rounded-none rail:px-8 rail:py-6 rail:before:hidden',
@@ -57,8 +57,8 @@ type Props = {
 /**
  * The profile sheet (F06-S01, the prototype's `stPaint`): photo, Name, Title, Highlights, Short bio, Services they
  * perform, Online booking and Sign-in. The broken rules are listed above the fields as the person types, and **Add to
- * team** or **Save changes** stays disabled while they last. **Remove from team** for an existing person. The
- * prototype's closing line about opening hours arrives with the schedule (F06-S02).
+ * team** or **Save changes** stays disabled while they last. **Remove from team** for an existing person, and the
+ * prototype's closing line about opening hours (F06-S02).
  */
 export function MemberSheet(props: Props) {
   const { open, memberId, values, problems, saving, onChange } = props;
@@ -215,9 +215,7 @@ export function MemberSheet(props: Props) {
               <Select
                 value={values.signInAccountId ?? NO_SIGN_IN}
                 disabled={saving}
-                onValueChange={(next) =>
-                  onChange({ ...values, signInAccountId: next === NO_SIGN_IN ? null : next })
-                }
+                onValueChange={(next) => onChange({ ...values, signInAccountId: next === NO_SIGN_IN ? null : next })}
               >
                 <SelectTrigger
                   id="team-sign-in"
@@ -256,6 +254,10 @@ export function MemberSheet(props: Props) {
               {t('remove')}
             </Button>
           )}
+          {/* Ink, not muted: the sheet is the warm canvas, where muted small text is under 4.5:1. */}
+          <p className="text-small text-foreground" data-testid="team-sheet-hours-note">
+            {t('startsOnSalonHours')}
+          </p>
         </form>
       </SheetContent>
     </Sheet>

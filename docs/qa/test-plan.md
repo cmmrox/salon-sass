@@ -91,7 +91,8 @@ shared helper, never by typing a password into a test.
   That stage's spec defines the hook, and the lead adds how to use it here.
 - **The test clock** (F01-S04), on the API's port, local profile only: `GET /local/clock` reads it;
   `PUT /local/clock {"instant": "2026-03-29T01:30:00Z"}` sets it, and it runs on from there;
-  `DELETE /local/clock` returns to real time. It is the application's one clock, for every salon,
+  `DELETE /local/clock` returns to real time. An account with an authenticator cannot sign in under a
+  moved clock, because its codes follow the real time: sign in first, or use a Manager without one. It is the application's one clock, for every salon,
   so a test that sets it must put it back, and tests that set it cannot run in parallel. Instants a
   probe shows are truncated to the second.
 - **The probe** (F01-S04), on a salon's hostname: `POST /local/probes {"failures", "delayMs",

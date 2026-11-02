@@ -115,7 +115,15 @@ export function shownYears(years: HolidayYear[]): HolidayYear[] {
   return coming.length > 0 ? coming : sorted.slice(0, 1);
 }
 
-/** The latest date a closure may have: a year from today (`today` is the salon's `YYYY-MM-DD`). */
+/** A `YYYY-MM-DD` date as the calendar's local Date, and back: only the date's parts are used. */
+export const dateOfText = (value: string) => {
+  const [year, month, day] = value.split('-').map(Number) as [number, number, number];
+  return new Date(year, month - 1, day);
+};
+export const textOfDate = (date: Date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+
+/** The latest date a closure or a date change may have: a year from today (`today` is the salon's `YYYY-MM-DD`). */
 export function lastClosableDate(today: string): string {
   const [year, month, day] = today.split('-').map(Number) as [number, number, number];
   const date = new Date(Date.UTC(year + 1, month - 1, day));

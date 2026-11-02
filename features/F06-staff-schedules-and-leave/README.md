@@ -103,3 +103,6 @@ why the feature is divided the way it is.
   it against F03 and verifies it. "Consultations" stays in the picker as an ordinary category. Removal's refusal, AC-8 and
   `TeamMembers` cannot be proved from outside until F07. Files written through the shell before the guard fix are listed in
   the stage's handoff.
+- **Recorded at F06-S02 close (decision 103).** The spec's "Corrections at close" hold the rulings. `TeamSchedule` and the affected
+  list cannot be proved from outside until F07, so the developer's integration tests carry them. The owner has been asked whether
+  the product should show a 12-hour clock.

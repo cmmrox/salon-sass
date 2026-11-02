@@ -4,6 +4,7 @@ import com.salonplatform.catalogue.CatalogueListing;
 import com.salonplatform.identity.Principal;
 import com.salonplatform.identity.StaffLabels;
 import com.salonplatform.staff.domain.PerformedServices.Choice;
+import com.salonplatform.staff.domain.WorkDay;
 import com.salonplatform.staff.entity.Member;
 import com.salonplatform.staff.service.TeamMemberService.MemberView;
 import java.util.List;
@@ -30,9 +31,10 @@ class TeamViews {
             UUID photoId,
             Choice choice,
             UUID signInAccountId,
+            List<WorkDay> weekly,
             long version) {
 
-        static Row of(Member member, Choice choice) {
+        static Row of(Member member, Choice choice, List<WorkDay> weekly) {
             return new Row(
                     member.getId(),
                     member.getName(),
@@ -43,6 +45,7 @@ class TeamViews {
                     member.getPhotoId(),
                     choice,
                     member.getSignInAccountId(),
+                    weekly,
                     member.getVersion());
         }
     }
@@ -90,6 +93,7 @@ class TeamViews {
                 visible,
                 account,
                 account == null ? null : named.get(account),
+                row.weekly(),
                 row.version());
     }
 }

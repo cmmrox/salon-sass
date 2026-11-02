@@ -79,6 +79,72 @@
         ],
         "type": "object"
       },
+      "AddTeamMemberDateChange": {
+        "additionalProperties": false,
+        "properties": {
+          "breaks": {
+            "description": "As on a weekday. A date not worked keeps none, whatever is sent.",
+            "items": {
+              "$ref": "#/components/schemas/TeamBreakInput"
+            },
+            "type": "array"
+          },
+          "date": {
+            "description": "The salon's local date: today to a year ahead.",
+            "format": "date",
+            "type": "string"
+          },
+          "finishes": {
+            "description": "`HH:MM` on a quarter hour after `starts` when working; null when not.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "note": {
+            "description": "Only those who can change the team see it; up to 60 characters, empty or null for none.",
+            "maxLength": 60,
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "starts": {
+            "description": "`HH:MM` on a quarter hour when working; null when not.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "working": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "date",
+          "working"
+        ],
+        "type": "object"
+      },
+      "AddedTeamMemberDateChange": {
+        "additionalProperties": false,
+        "properties": {
+          "affected": {
+            "items": {
+              "$ref": "#/components/schemas/TeamAffectedBooking"
+            },
+            "type": "array"
+          },
+          "change": {
+            "$ref": "#/components/schemas/TeamMemberDateChange"
+          }
+        },
+        "required": [
+          "affected",
+          "change"
+        ],
+        "type": "object"
+      },
       "AffectedBooking": {
         "properties": {
           "customerName": {
@@ -5711,6 +5777,59 @@
         ],
         "type": "object"
       },
+      "SaveTeamMemberWeek": {
+        "additionalProperties": false,
+        "properties": {
+          "version": {
+            "description": "The schedule's version as read; 0 when it has never been saved.",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "weekly": {
+            "description": "Each of the seven weekdays once.",
+            "items": {
+              "$ref": "#/components/schemas/TeamWorkdayInput"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "version",
+          "weekly"
+        ],
+        "type": "object"
+      },
+      "SavedTeamMemberWeek": {
+        "additionalProperties": false,
+        "properties": {
+          "affected": {
+            "items": {
+              "$ref": "#/components/schemas/TeamAffectedBooking"
+            },
+            "type": "array"
+          },
+          "version": {
+            "format": "int64",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "weekly": {
+            "items": {
+              "$ref": "#/components/schemas/TeamWorkday"
+            },
+            "maxItems": 7,
+            "minItems": 7,
+            "type": "array"
+          }
+        },
+        "required": [
+          "affected",
+          "version",
+          "weekly"
+        ],
+        "type": "object"
+      },
       "SessionView": {
         "properties": {
           "createdAt": {
@@ -6200,6 +6319,72 @@
         ],
         "type": "object"
       },
+      "TeamAffectedBooking": {
+        "additionalProperties": false,
+        "properties": {
+          "customerName": {
+            "type": "string"
+          },
+          "date": {
+            "description": "Its local date.",
+            "format": "date",
+            "type": "string"
+          },
+          "serviceName": {
+            "type": "string"
+          },
+          "time": {
+            "description": "When it starts, local `HH:MM`.",
+            "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "customerName",
+          "date",
+          "serviceName",
+          "time"
+        ],
+        "type": "object"
+      },
+      "TeamBreak": {
+        "additionalProperties": false,
+        "properties": {
+          "finishes": {
+            "description": "When it ends, local `HH:MM`.",
+            "pattern": "^([01][0-9]|2[0-3]):(00|15|30|45)$",
+            "type": "string"
+          },
+          "starts": {
+            "description": "When it starts, local `HH:MM`.",
+            "pattern": "^([01][0-9]|2[0-3]):(00|15|30|45)$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "finishes",
+          "starts"
+        ],
+        "type": "object"
+      },
+      "TeamBreakInput": {
+        "additionalProperties": false,
+        "properties": {
+          "finishes": {
+            "description": "`HH:MM` on a quarter hour, after `starts`.",
+            "type": "string"
+          },
+          "starts": {
+            "description": "`HH:MM` on a quarter hour.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "finishes",
+          "starts"
+        ],
+        "type": "object"
+      },
       "TeamMember": {
         "additionalProperties": false,
         "properties": {
@@ -6274,6 +6459,15 @@
             "format": "int64",
             "minimum": 0,
             "type": "integer"
+          },
+          "weekly": {
+            "description": "Their week: each of the seven weekdays, Monday first.",
+            "items": {
+              "$ref": "#/components/schemas/TeamWorkday"
+            },
+            "maxItems": 7,
+            "minItems": 7,
+            "type": "array"
           }
         },
         "required": [
@@ -6286,7 +6480,66 @@
           "services",
           "shownOnline",
           "title",
-          "version"
+          "version",
+          "weekly"
+        ],
+        "type": "object"
+      },
+      "TeamMemberDateChange": {
+        "additionalProperties": false,
+        "properties": {
+          "breaks": {
+            "description": "In time order; empty when not working.",
+            "items": {
+              "$ref": "#/components/schemas/TeamBreak"
+            },
+            "maxItems": 5,
+            "type": "array"
+          },
+          "date": {
+            "description": "The salon's local date.",
+            "format": "date",
+            "type": "string"
+          },
+          "finishes": {
+            "description": "When they finish, local `HH:MM`, after `starts`; null when not working.",
+            "pattern": "^([01][0-9]|2[0-3]):(00|15|30|45)$",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "note": {
+            "description": "The note; null for none. Only for a caller with `team.manage`.",
+            "maxLength": 60,
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "starts": {
+            "description": "When they start, local `HH:MM`; null when not working.",
+            "pattern": "^([01][0-9]|2[0-3]):(00|15|30|45)$",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "working": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "breaks",
+          "date",
+          "finishes",
+          "id",
+          "starts",
+          "working"
         ],
         "type": "object"
       },
@@ -6339,6 +6592,45 @@
         },
         "required": [
           "file"
+        ],
+        "type": "object"
+      },
+      "TeamMemberSchedule": {
+        "additionalProperties": false,
+        "properties": {
+          "dateChanges": {
+            "description": "The changes from `today` on, in date order; at most 100.",
+            "items": {
+              "$ref": "#/components/schemas/TeamMemberDateChange"
+            },
+            "type": "array"
+          },
+          "today": {
+            "description": "The salon's local date now: the first a date change may have.",
+            "format": "date",
+            "type": "string"
+          },
+          "version": {
+            "description": "The week's version, which a save is made from; 0 when never saved.",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "weekly": {
+            "description": "Each of the seven weekdays, Monday first.",
+            "items": {
+              "$ref": "#/components/schemas/TeamWorkday"
+            },
+            "maxItems": 7,
+            "minItems": 7,
+            "type": "array"
+          }
+        },
+        "required": [
+          "dateChanges",
+          "today",
+          "version",
+          "weekly"
         ],
         "type": "object"
       },
@@ -6408,6 +6700,104 @@
         },
         "required": [
           "items"
+        ],
+        "type": "object"
+      },
+      "TeamWorkday": {
+        "additionalProperties": false,
+        "properties": {
+          "breaks": {
+            "description": "In time order; empty when not working.",
+            "items": {
+              "$ref": "#/components/schemas/TeamBreak"
+            },
+            "maxItems": 5,
+            "type": "array"
+          },
+          "day": {
+            "enum": [
+              "monday",
+              "tuesday",
+              "wednesday",
+              "thursday",
+              "friday",
+              "saturday",
+              "sunday"
+            ],
+            "type": "string"
+          },
+          "finishes": {
+            "description": "When they finish, local `HH:MM`, after `starts`; null when not working.",
+            "pattern": "^([01][0-9]|2[0-3]):(00|15|30|45)$",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "starts": {
+            "description": "When they start, local `HH:MM`; null when not working.",
+            "pattern": "^([01][0-9]|2[0-3]):(00|15|30|45)$",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "working": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "breaks",
+          "day",
+          "finishes",
+          "starts",
+          "working"
+        ],
+        "type": "object"
+      },
+      "TeamWorkdayInput": {
+        "additionalProperties": false,
+        "properties": {
+          "breaks": {
+            "description": "Up to five, inside the hours, not overlapping, and leaving some of the day. A day not worked keeps none, whatever is sent.",
+            "items": {
+              "$ref": "#/components/schemas/TeamBreakInput"
+            },
+            "type": "array"
+          },
+          "day": {
+            "enum": [
+              "monday",
+              "tuesday",
+              "wednesday",
+              "thursday",
+              "friday",
+              "saturday",
+              "sunday"
+            ],
+            "type": "string"
+          },
+          "finishes": {
+            "description": "`HH:MM` on a quarter hour after `starts` when working; null when not.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "starts": {
+            "description": "`HH:MM` on a quarter hour when working; null when not.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "working": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "day",
+          "working"
         ],
         "type": "object"
       },
@@ -15283,6 +15673,394 @@
         ]
       }
     },
+    "/api/v1/team/members/{id}/schedule": {
+      "get": {
+        "description": "A date change's `note` is present only for a caller with `team.manage`.",
+        "operationId": "getTeamMemberSchedule",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamMemberSchedule"
+                }
+              }
+            },
+            "description": "The schedule."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No valid session for this salon: `invalid_session`."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Without `team.read`: `permission_denied`. A suspended salon: `salon_suspended`."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No such person on the hostname's salon's team, or the hostname names no salon: `not_found`."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The database is down or not answering: `service_unavailable`."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "summary": "A person's weekly hours and their date changes from today on. `team.read`.",
+        "tags": [
+          "staff"
+        ]
+      }
+    },
+    "/api/v1/team/members/{id}/schedule/date-changes": {
+      "post": {
+        "description": "It replaces the weekly hours on that date only, both the times and the breaks. Bookings it leaves outside are kept and listed.",
+        "operationId": "addTeamMemberDateChange",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddTeamMemberDateChange"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddedTeamMemberDateChange"
+                }
+              }
+            },
+            "description": "The change."
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The date is not today to a year ahead by the salon's date, another broken rule, or the body is not the documented shape: `bad_request`, with `errors` naming each field. Nothing is saved."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No valid session for this salon: `invalid_session`."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Without `team.manage`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No such person on the hostname's salon's team, or the hostname names no salon: `not_found`."
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The date already has a change: `conflict`. The person has 100 upcoming changes: `limit_reached`. Nothing is saved."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The database is down or not answering: `service_unavailable`."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "summary": "Changes a person's hours for one date. `team.manage`.",
+        "tags": [
+          "staff"
+        ]
+      }
+    },
+    "/api/v1/team/members/{id}/schedule/date-changes/{changeId}": {
+      "delete": {
+        "operationId": "removeTeamMemberDateChange",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "changeId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Removed."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No valid session for this salon: `invalid_session`."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Without `team.manage`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No such person, no such change of theirs, one that has passed, or the hostname names no salon: `not_found`."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The database is down or not answering: `service_unavailable`."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "summary": "Removes a date change that has not passed: the date is back to the weekly hours. `team.manage`.",
+        "tags": [
+          "staff"
+        ]
+      }
+    },
+    "/api/v1/team/members/{id}/schedule/weekly": {
+      "put": {
+        "description": "Each of the seven weekdays once. Date changes are left alone. It may go beyond the salon's opening hours, and bookings still follow those. Bookings the new hours leave outside are kept and listed.",
+        "operationId": "saveTeamMemberWeek",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveTeamMemberWeek"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SavedTeamMemberWeek"
+                }
+              }
+            },
+            "description": "The week as saved."
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "A broken rule, or the body is not the documented shape: `bad_request`, with `errors` naming each field (`weekly[0].finishes`, `weekly[0].breaks[1]`, `weekly[0].breaks`). Nothing is saved."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No valid session for this salon: `invalid_session`."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Without `team.manage`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No such person on the hostname's salon's team, or the hostname names no salon: `not_found`."
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`version` is not the schedule's: `conflict`. Nothing changes: `invalid_state`. Nothing is saved."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The database is down or not answering: `service_unavailable`."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "summary": "Saves a person's whole week. `team.manage`.",
+        "tags": [
+          "staff"
+        ]
+      }
+    },
     "/api/v1/team/photos/{id}": {
       "get": {
         "operationId": "getTeamMemberPhoto",
@@ -15508,7 +16286,7 @@
       "name": "platform"
     },
     {
-      "description": "The salon's team members and their profiles, and each branch's opening hours, its choices for the published holidays and its special closures.",
+      "description": "The salon's team members, their profiles and schedules, and each branch's opening hours, its choices for the published holidays and its special closures.",
       "name": "staff"
     },
     {

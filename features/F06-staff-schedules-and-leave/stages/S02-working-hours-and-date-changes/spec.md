@@ -214,3 +214,40 @@ pnpm contracts:check
   support session, and recorded it in the handoff.
 - The verification commands are green.
 - `TeamSchedule` and `MemberBookingsAffected` are documented in their Javadoc as the contracts F07 uses and implements.
+
+## Corrections at close
+
+Recorded by the lead when the stage closed (decision 103). No requirement changed. These were given during the build and
+take precedence over the criteria above:
+
+- **Clock format.** F06 uses the existing 24-hour `formatClock`, like F04: "Mon: the salon is open 09:00 – 18:00.",
+  "Mon–Sat, 09:00 – 18:00 · break 13:00", "Mon, 09:00 – 18:00". The owner may ask for 12-hour across the product later.
+- **A working day has time left.** Breaks that leave none are a 400 field error: "Mon: breaks can’t fill the whole day. Set it
+  as not working.", and on a date change, on `breaks`, "Breaks can’t fill the whole day. Set it as not working." A break
+  touching only the start or only the finish is allowed. `TeamSchedule` with `working: true` always has a window.
+- **"Today" (AC-10)** is the salon's date in either direction. The spec's example cannot happen in Colombo.
+- **Versions.** Adding or removing a date change does not raise the schedule's version.
+- **No saved opening hours (AC-5):** one warning, "The salon hasn’t set its opening hours yet, so nobody can be booked."
+- **AC-5's days** run Monday first.
+- **The sixth break.** The API answers 400; on the sheet **+ Add break** is disabled at five, with "Up to 5 breaks a day."
+- **AC-11's sentences.** "1 upcoming booking falls outside these hours. It is kept." and "N upcoming bookings fall outside these
+  hours. They are kept."; for a date change "1 upcoming booking on this date is affected. It is kept." and "N upcoming bookings on
+  this date are affected. They are kept."
+- **The 100 date-change limit** holds under simultaneous requests: adding a change locks the member's row, which also stops a
+  change being added to someone being removed.
+- **`GET` schedule** returns date changes from the salon's today on, breaks in time order, and also `today`, so the sheet's
+  calendar follows the application's clock.
+- **The Hours row.** The week starts on Monday, and Sunday to Monday is not one stretch.
+- **The sheet.** Moving between its tabs keeps unsaved edits with no prompt, and the leave guard applies on leaving the sheet.
+  **Save hours** is disabled while nothing has changed.
+- **Apostrophes** in messages are curly, as in the prototype and F05.
+- **AC-1.** No backfill: a member with no week rows has no working days.
+- **Audit.** A weekly save names only the weekdays that changed. A date change's note is never written to the audit trail,
+  which records `hasNote`, because a support session can read the audit and must not receive notes. This limits AC-15.
+- **As built.** The sheet reads the salon's week from the public opening-hours endpoint, so roles without `settings.read` get
+  the warning. Every member answer gains a required `weekly`. A removed member's schedule rows stay, unreadable by any route,
+  until salon erasure. A wait beyond the API's 3-second request limit answers 503.
+- **Not proved on the running product until F07:** AC-9, AC-11 and the part of AC-8 that shows only through `TeamSchedule`, proved
+  by integration tests and, for the sheet's words, by replacing the API's answer.
+- **The sheet's handle on a phone** measures 0px when content overflows, on this sheet and F06-S01's. F06-S03 corrects it in the
+  shared Sheet (decision 103).

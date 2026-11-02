@@ -13,7 +13,7 @@ requirement detail is in `qa/coverage.md`.
 | F03 | [Operator console: salons, plans and billing](F03-operator-console/) | M1-web | complete | merged | 4/4 | 5 | - |
 | F04 | [Salon setup: profile, branding, hours and policies](F04-salon-setup/) | M1-web | complete | merged | 4/4 | 6 | - |
 | F05 | [Service catalogue](F05-service-catalogue/) | M1-web | complete | merged | 3/3 | 7 | - |
-| F06 | [Staff, schedules and leave](F06-staff-schedules-and-leave/) | M1-web | in-progress | - | 1/3 | 4 | **developer**: `stage-build F06-S02` |
+| F06 | [Staff, schedules and leave](F06-staff-schedules-and-leave/) | M1-web | in-progress | - | 2/3 | 4 | **lead**: `stage-plan F06-S03` |
 | F07 | [Booking engine and staff booking foundations](F07-online-booking/) | M1-web | backlog | - | - | 7 | after F06 |
 | F08 | [Payments, deposits and refunds](F08-payments-deposits-and-refunds/) | M1-web | backlog | - | - | 8 | after F07 |
 | F09 | [Manage a booking: reschedule, cancel and waitlist](F09-manage-a-booking/) | M1-web | backlog | - | - | 4 | after F08 |
@@ -38,5 +38,5 @@ requirement detail is in `qa/coverage.md`.
 | Stage | Title | Surfaces | Status | Stage QA | Blocking bugs | Next |
 | --- | --- | --- | --- | --- | --- | --- |
 | F06-S01 | Team members and profiles | api, web | complete | - | 0 | - |
-| F06-S02 | Working hours and date changes | api, web | planned | - | 0 | **developer**: `stage-build F06-S02` |
+| F06-S02 | Working hours and date changes | api, web | complete | - | 0 | - |
 | F06-S03 | Leave and blocked time | api, web | outlined | - | 0 | **lead**: `stage-plan F06-S03` |

@@ -11,9 +11,13 @@ import com.salonplatform.shared.web.NotFoundException;
 import com.salonplatform.staff.UpcomingMemberBookings;
 import com.salonplatform.staff.domain.PerformedServices;
 import com.salonplatform.staff.domain.PerformedServices.Choice;
+import com.salonplatform.staff.domain.ScheduleRules;
+import com.salonplatform.staff.domain.WorkDay;
 import com.salonplatform.staff.entity.Member;
+import com.salonplatform.staff.entity.OpeningHours;
 import com.salonplatform.staff.repository.MemberPhotoRepository;
 import com.salonplatform.staff.repository.MemberRepository;
+import com.salonplatform.staff.repository.OpeningHoursRepository;
 import com.salonplatform.staff.service.TeamMemberService;
 import com.salonplatform.staff.service.impl.StaffScope.Scope;
 import com.salonplatform.staff.service.impl.TeamViews.Row;
@@ -52,6 +56,8 @@ class TeamMemberServiceImpl implements TeamMemberService {
     private final MemberRepository members;
     private final MemberPhotoRepository photos;
     private final TeamRows rows;
+    private final ScheduleRows scheduleRows;
+    private final OpeningHoursRepository hours;
     private final TeamViews views;
     private final TeamAudit audit;
     private final CatalogueListings catalogue;
@@ -67,6 +73,8 @@ class TeamMemberServiceImpl implements TeamMemberService {
             MemberRepository members,
             MemberPhotoRepository photos,
             TeamRows rows,
+            ScheduleRows scheduleRows,
+            OpeningHoursRepository hours,
             TeamViews views,
             TeamAudit audit,
             CatalogueListings catalogue,
@@ -79,6 +87,8 @@ class TeamMemberServiceImpl implements TeamMemberService {
         this.members = members;
         this.photos = photos;
         this.rows = rows;
+        this.scheduleRows = scheduleRows;
+        this.hours = hours;
         this.views = views;
         this.audit = audit;
         this.catalogue = catalogue;
@@ -97,10 +107,11 @@ class TeamMemberServiceImpl implements TeamMemberService {
         CatalogueListing listing = catalogue.current();
         List<Row> read = reading.execute(status -> {
             List<Member> active = members.active(at.branch());
-            Map<UUID, Choice> choices =
-                    rows.choices(active.stream().map(Member::getId).toList(), listing);
+            List<UUID> ids = active.stream().map(Member::getId).toList();
+            Map<UUID, Choice> choices = rows.choices(ids, listing);
+            Map<UUID, List<WorkDay>> weeks = scheduleRows.weeks(ids);
             return active.stream()
-                    .map(member -> Row.of(member, choices.get(member.getId())))
+                    .map(member -> Row.of(member, choices.get(member.getId()), weeks.get(member.getId())))
                     .toList();
         });
         return views.all(read, listing, at.actor());
@@ -118,6 +129,10 @@ class TeamMemberServiceImpl implements TeamMemberService {
         Scope at = scope.of(StaffScope.TEAM_MANAGE);
         CatalogueListing listing = catalogue.current();
         MemberValidation.Valid valid = MemberValidation.check(input, listing, true);
+        // Read before the adding transaction, as the salon's hours are; a change to them in between simply is not
+        // copied.
+        List<WorkDay> week = ScheduleRules.copiedFrom(reading.execute(status ->
+                hours.findByBranch(at.branch()).map(OpeningHours::week).orElse(null)));
         Row added = changing(() -> writing.execute(status -> {
             seats.hold();
             if (members.countActive() >= MAX_MEMBERS) {
@@ -132,9 +147,10 @@ class TeamMemberServiceImpl implements TeamMemberService {
             Member member =
                     members.saveAndFlush(Member.added(at.branch(), valid.profile(), valid.signInAccountId(), now));
             rows.replace(member.getId(), at.branch(), valid.choice(), now);
+            scheduleRows.write(member.getId(), at.branch(), week, now);
             audit.record(
                     at.actor(), TeamAudit.ADDED, member.getId(), null, values(member, valid.choice(), listing), now);
-            return Row.of(member, valid.choice());
+            return Row.of(member, valid.choice(), week);
         }));
         return views.of(added, listing, at.actor());
     }
@@ -173,7 +189,7 @@ class TeamMemberServiceImpl implements TeamMemberService {
                 rows.replace(id, at.branch(), valid.choice(), now);
             }
             audit.record(at.actor(), TeamAudit.CHANGED, id, beforeValues, values(member, valid.choice(), listing), now);
-            return Row.of(member, valid.choice());
+            return Row.of(member, valid.choice(), scheduleRows.week(id));
         }));
         return views.of(saved, listing, at.actor());
     }
@@ -272,7 +288,10 @@ class TeamMemberServiceImpl implements TeamMemberService {
     }
 
     private Row rowOf(Member member, CatalogueListing listing) {
-        return Row.of(member, rows.choices(List.of(member.getId()), listing).get(member.getId()));
+        return Row.of(
+                member,
+                rows.choices(List.of(member.getId()), listing).get(member.getId()),
+                scheduleRows.week(member.getId()));
     }
 
     private static void requireVersion(Member member, long expected) {

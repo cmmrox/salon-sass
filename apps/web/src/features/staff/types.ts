@@ -39,6 +39,27 @@ export type TeamSignInAccount = components['schemas']['TeamSignInAccount'];
 /** The salon's active sign-in accounts. */
 export type TeamSignInAccountList = components['schemas']['TeamSignInAccountList'];
 
+/** One weekday of a person's week (F06-S02). */
+export type TeamWorkday = components['schemas']['TeamWorkday'];
+
+/** A person's week and their date changes. */
+export type MemberSchedule = components['schemas']['TeamMemberSchedule'];
+
+/** A change to a person's hours for one date; `note` is present only for a caller with `team.manage`. */
+export type MemberDateChange = components['schemas']['TeamMemberDateChange'];
+
+/** A booking a change leaves outside the person's working time; it is kept. */
+export type TeamAffectedBooking = components['schemas']['TeamAffectedBooking'];
+
+/** The answer to saving a week. */
+export type SavedMemberWeek = components['schemas']['SavedTeamMemberWeek'];
+
+/** The answer to adding a date change. */
+export type AddedDateChange = components['schemas']['AddedTeamMemberDateChange'];
+
+/** The salon's public opening information, of which the sheet reads the week. */
+export type SalonOpeningWeek = components['schemas']['SalonOpeningHours'];
+
 /** A category as the service picker lists it; the workspace surface reads it from the catalogue. */
 export type TeamCategory = { id: string; name: string };
 

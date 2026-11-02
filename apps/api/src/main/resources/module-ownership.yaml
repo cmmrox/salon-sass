@@ -85,14 +85,19 @@ modules:
       - salon.retention
 
   staff:
-    description: The salon's team members and their profiles, and each branch's opening hours, its choices for the published holidays and its special closures.
+    description: The salon's team members, their profiles and schedules, and each branch's opening hours, its choices for the published holidays and its special closures.
     tables:
       - staff_closure
       - staff_holiday_choice
       - staff_holiday_review
       - staff_member_category
+      - staff_member_date_change
+      - staff_member_date_change_break
       - staff_member_photo
+      - staff_member_schedule
       - staff_member_service
+      - staff_member_weekday
+      - staff_member_weekday_break
       - staff_opening_hours
       - staff_team_member
     paths:
