@@ -241,7 +241,7 @@ take precedence over the criteria above:
 - **The sheet.** Moving between its tabs keeps unsaved edits with no prompt, and the leave guard applies on leaving the sheet.
   **Save hours** is disabled while nothing has changed.
 - **Apostrophes** in messages are curly, as in the prototype and F05.
-- **AC-1.** No backfill: a member with no week rows has no working days.
+- **No backfill (AC-1):** a member with no week rows has no working days.
 - **Audit.** A weekly save names only the weekdays that changed. A date change's note is never written to the audit trail,
   which records `hasNote`, because a support session can read the audit and must not receive notes. This limits AC-15.
 - **As built.** The sheet reads the salon's week from the public opening-hours endpoint, so roles without `settings.read` get
