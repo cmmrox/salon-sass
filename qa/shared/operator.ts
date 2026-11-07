@@ -271,8 +271,12 @@ export function base32Secret(): string {
  * that needs an operator other than the roster's takes the next one; the cursor goes back to the start
  * at every test. Seeding one resets it to the state the test asks for.
  */
+// Sixteen: the most one test holds at once is twelve support operators, each with a session of its own
+// (TC-F03-S04-016, one per screen width of the six-width matrix and six more for a long session list).
 export const EXTRA_OPERATORS = ['Asanka Wijeratne', 'Menaka Kulatunga', 'Dushan Abeywardena', 'Tharushi Senarath',
-  'Roshan Gunathilaka', 'Nayomi Jayamanne', 'Chaminda Rodrigo', 'Piumi Wickremeratne'].map(name => ({
+  'Roshan Gunathilaka', 'Nayomi Jayamanne', 'Chaminda Rodrigo', 'Piumi Wickremeratne', 'Lakmal Siriwardena',
+  'Hasini Ratnayake', 'Prasanna Jayakody', 'Shalika Edirisinghe', 'Kanishka Mahanama', 'Dilrukshi Gunaratne',
+  'Sudesh Weerakoon', 'Rasika Atapattu'].map(name => ({
   name, email: `${name.toLowerCase().replace(' ', '.')}@${OPERATOR_DOMAIN}`,
 }));
 let extraCursor = 0;
@@ -659,8 +663,13 @@ export class Operator {
       const account = rosterOperator(role);
       recordOperator('roster', role, account.email);
       actor = await this.login(account); this.rosterSignedIn.set(role, actor);
+      return actor;
     }
-    return actor;
+    // Shared within the test: if the clock moved since, its access may have lapsed (or not have begun).
+    const now = Date.parse(await this.now());
+    const issued = Date.parse(actor.signedInAt ?? '');
+    if (now >= issued && now < Date.parse(actor.tokens.accessExpiresAt) - 30_000) return actor;
+    return this.renew(actor);
   }
 
   /**
