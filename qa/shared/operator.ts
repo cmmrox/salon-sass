@@ -8,7 +8,17 @@
  * F03-S01 to S04 handoffs (stage.yaml `handoff.run`) and the generated contract; S04's values are in
  * SUPPORT and PENDING_S04 (the name is kept so the prepared tests read unchanged).
  *
- * Credentials and TOTP seeds are generated in memory and never logged or written to evidence.
+ * Credentials and TOTP seeds are generated in memory and never logged or written to evidence; the
+ * roster's development password is public by decision 099.
+ *
+ * Operator accounts (decision 099): the roster's operators (infra/local/accounts.json) are seeded with
+ * `keepExisting: true` before every test, so they exist and are never changed. A test signs in as its
+ * own extra operator (`operator.actor()`), a realistic person whose email no earlier run used:
+ * operators are never removed (no hook removes one, and the platform audit keeps their history), so a
+ * reused account would carry an earlier run's sessions, audit entries and consumed TOTP steps into a
+ * test that filters by its actor, and a roster operator signed in twice in one TOTP step is a refused
+ * replay. `operator.member()` signs in as the roster's operator where a test only needs that role
+ * and changes nothing about it.
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -17,6 +27,8 @@ import type { APIResponse } from '@playwright/test';
 
 import { answerOf, expectProblem } from './answers';
 import { reportDir } from './env';
+import { OPERATOR_DOMAIN, PROVISIONED_SALON_DOMAIN, passphrase, person, personNotIn } from './people';
+import { DEVELOPMENT_PASSWORD, isRosterEmail, rosterOperator, rosterOperators, type RosterOperatorRole } from './roster';
 import { test as identityTest, expect, json, totp, syntheticAccount, type Identity, type SeedAccount, type Tokens } from './identity';
 import { identitySql } from './identity-storage';
 import { committedContract, schemaValidator } from './openapi';
@@ -216,7 +228,8 @@ export const FORGED_FORWARDING: Record<string, string>[] = [
 const hex = (bytes: number) => randomBytes(bytes).toString('hex');
 /** A unique slug or plan key in the 3-30 character grammar, never reserved, never reused. */
 export const uniqueSlug = (prefix = 'qa') => `${prefix}-${hex(6)}`;
-export const strongPassword = () => `QA ${hex(20)}`;
+/** A password for a product path (provisioning an Owner, bootstrap): the policy refuses the development password. */
+export const strongPassword = () => passphrase();
 export const DAY = 86_400_000;
 export const SECOND = 1_000;
 export const plusMs = (instant: string, ms: number) => new Date(Date.parse(instant) + ms).toISOString();
@@ -246,8 +259,24 @@ export function base32Secret(): string {
   return syntheticAccount('OWNER', true).totpSecret!;
 }
 
+let operatorEmails: Set<string> | undefined;
+/** Every operator email the QA instance already has, read once per process, plus those issued since. */
+function takenOperatorEmails(): Set<string> {
+  operatorEmails ??= new Set(identitySql('SELECT lower(email) FROM operator_user').split('\n').filter(Boolean));
+  return operatorEmails;
+}
+
+/**
+ * An extra operator: a realistic person whose email the QA instance has never had, so nothing from an
+ * earlier run (sessions, audit, consumed TOTP steps) belongs to it. Seeding it through
+ * `operator.seed()` gives it the development password; until then it holds a passphrase.
+ */
 export function operatorAccount(role: OperatorRole = 'OPERATOR_ADMIN', enrolled = true): OperatorAccount {
-  return { email: `qa-op-${randomUUID()}@example.invalid`, password: strongPassword(), role, displayName: `QA ${role} ${hex(3)}`,
+  const taken = takenOperatorEmails();
+  const someone = personNotIn(taken, OPERATOR_DOMAIN);
+  const email = `${someone.local}@${OPERATOR_DOMAIN}`;
+  taken.add(email);
+  return { email, password: strongPassword(), role, displayName: someone.name,
     ...(enrolled ? { totpSecret: base32Secret() } : {}) };
 }
 
@@ -261,10 +290,16 @@ export function salonInput(planId: string, overrides: Partial<SalonInput> = {}):
   return {
     name: `QA Salon ${slug}`, slug, country: 'LK', currency: 'LKR', timeZone: 'Asia/Colombo', defaultLanguage: 'en',
     contactEmail: `contact-${hex(4)}@example.invalid`, contactPhone: '0771234567', address: `${hex(3)} QA Road, Colombo`,
-    planId, owner: { name: 'QA Owner', email: `owner-${randomUUID()}@example.invalid`, password: strongPassword() },
+    planId, owner: provisionedOwner(),
     subscription: { monthlyAmount: 250000, paymentMethod: 'bank_transfer' },
     ...overrides,
   };
+}
+
+/** The Owner a provisioning names: a realistic person with a passphrase (provisioning keeps the identity policy). */
+export function provisionedOwner(): SalonInput['owner'] {
+  const someone = person();
+  return { name: someone.name, email: `${someone.local}@${PROVISIONED_SALON_DOMAIN}`, password: strongPassword() };
 }
 
 /** The owner of a provisioned salon as an F02 staff fixture, for identity calls on its hostname. */
@@ -474,18 +509,36 @@ export class Operator {
 
   async resetFixtures() { await this.hookOk('fixtures', 204); }
 
+  /**
+   * Seeds operators through the local hook with the roster's development password (decision 099),
+   * written back onto each account. A roster operator is never seeded here: `seedRoster()` keeps them.
+   */
   async seed(...accounts: OperatorAccount[]) {
+    const roster = accounts.filter(a => isRosterEmail(a.email));
+    if (roster.length) throw new Error(`TEST DEFECT: ${roster.map(a => a.email).join(', ')} is a roster operator; seed it only with seedRoster() (keepExisting)`);
+    for (const account of accounts) account.password = DEVELOPMENT_PASSWORD;
     const body = await this.hookOk<{ accounts: number }>('seed', 200,
       { accounts: accounts.map(a => ({ email: a.email, displayName: a.displayName, role: a.role, password: a.password, totpSecret: a.totpSecret ?? null })) });
     expect(body.accounts).toBe(accounts.length);
+  }
+
+  /** Creates any roster operator that is missing and leaves every existing one exactly as it is. */
+  async seedRoster() {
+    const accounts = rosterOperators();
+    const body = await this.hookOk<{ accounts: number }>('seed', 200, { keepExisting: true,
+      accounts: accounts.map(a => ({ email: a.email, displayName: a.displayName, role: a.role, password: a.password, totpSecret: a.totpSecret })) });
+    expect(body.accounts, 'roster operators present').toBe(accounts.length);
   }
 
   async bootstrapFailure(step: 'owner' | 'brand' | 'receipt' | null) {
     expect(await this.hookOk('bootstrapFailure', 200, { step })).toEqual({ step });
   }
 
-  /** Disables or re-enables a hook-created operator (S02 handoff). */
-  async setActive(account: OperatorAccount, active: boolean) { await this.hookOk('operatorActive', 204, { email: account.email, active }); }
+  /** Disables or re-enables a hook-created operator (S02 handoff). Never a roster operator, which nobody changes. */
+  async setActive(account: OperatorAccount, active: boolean) {
+    if (isRosterEmail(account.email)) throw new Error(`TEST DEFECT: ${account.email} is a roster operator; disable an extra operator instead`);
+    await this.hookOk('operatorActive', 204, { email: account.email, active });
+  }
 
   async now(): Promise<string> { return this.identity.now(); }
 
@@ -537,10 +590,16 @@ export class Operator {
 
   async me(tokens: Tokens): Promise<OperatorPrincipal> { return operatorJson(await this.call('GET', '/me', { tokens }), 'principal'); }
 
+  /** An extra operator in this role, new to the instance, signed in. */
   async actor(role: OperatorRole = 'OPERATOR_ADMIN'): Promise<OperatorActor> {
     const account = operatorAccount(role);
     await this.seed(account);
     return this.login(account);
+  }
+
+  /** The roster's operator in this role, signed in. Only where nothing about the operator is changed. */
+  async member(role: RosterOperatorRole = 'OPERATOR_ADMIN'): Promise<OperatorActor> {
+    return this.login(rosterOperator(role));
   }
 
   /**
@@ -753,6 +812,7 @@ function clockMark(name: string, instant: string) {
 export const test = identityTest.extend<{ operator: Operator; clock: TestClock }>({
   operator: async ({ identity }, use) => {
     const operator = new Operator(identity);
+    await operator.seedRoster();
     await operator.resetFixtures();
     try { await use(operator); } finally { await operator.resetToBaseline(); }
   },
