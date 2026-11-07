@@ -18,8 +18,8 @@
 # suspend/activate change that salon's status in the registry, and colour changes that salon's
 # brand colour, as the role that owns the tables, and nothing else: no other salon, no name, no
 # other column (updated_at excepted). It refuses a slug that is not a salon and a colour that is not
-# #RRGGBB. It only ever reaches PostgreSQL in this project's own container (salon-postgres), which
-# must be running. local-reset.sh puts everything back: the three synthetic salons, all active, with
+# #RRGGBB. It only ever reaches PostgreSQL in this project's own container (salon-postgres, or
+# salon-qa-postgres with SALON_LOCAL_INSTANCE=qa), which must be running. local-reset.sh puts everything back: the three synthetic salons, all active, with
 # their seeded colours (alpha #D6086A, beta #1F2937, gamma #FDE68A).
 set -euo pipefail
 . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common.sh"
