@@ -9,7 +9,7 @@ import os from 'node:os';
 import { randomUUID } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 
-import { apiUrl } from '../../shared/env';
+import { apiUrl, POSTGRES_CONTAINER } from '../../shared/env';
 import { localService, mark } from '../../shared/identity-runtime';
 import { committedContract } from '../../shared/openapi';
 import {
@@ -26,7 +26,7 @@ function restartApi() {
 }
 
 function databaseAcceptsConnections(): boolean {
-  try { execFileSync('docker', ['exec', 'salon-postgres', 'pg_isready', '-q'], { timeout: 3_000 }); return true; } catch { return false; }
+  try { execFileSync('docker', ['exec', POSTGRES_CONTAINER, 'pg_isready', '-q'], { timeout: 3_000 }); return true; } catch { return false; }
 }
 
 test(`${id(14)} Email ceiling counts known and unknown operators and survives a restart`, async ({ operator, clock }) => {

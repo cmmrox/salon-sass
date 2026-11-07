@@ -14,8 +14,8 @@ trap 'rm -rf "$WORK"' EXIT
 PATTERNS="$WORK/patterns"
 : >"$PATTERNS"; chmod 600 "$PATTERNS"
 for file in identity-keys operator-keys billing-keys export-keys support-keys; do
-  path="$PRODUCT_ROOT/.local/$file.properties"
-  [ -f "$path" ] || { [ "$file" = billing-keys ] && continue; environment_fault "retained key file .local/$file.properties is absent"; }
+  path="$(key_file "${file%-keys}")"
+  [ -f "$path" ] || { [ "$file" = billing-keys ] && continue; environment_fault "retained key file ${path#"$PRODUCT_ROOT"/} is absent"; }
   sed -n 's/^[^=#]*=[[:space:]]*\([0-9a-fA-F]\{32,\}\)[[:space:]]*$/\1/p' "$path" >>"$PATTERNS"
 done
 KEY_COUNT="$(wc -l <"$PATTERNS" | tr -d ' ')"

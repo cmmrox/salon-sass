@@ -3,6 +3,7 @@ import { spawn } from 'node:child_process';
 import { test,expect,alpha,beta,problem } from '../../shared/identity';
 import { identitySql } from '../../shared/identity-storage';
 import { apiLog,localKeys,localService,mark,apiProcess } from '../../shared/identity-runtime';
+import { POSTGRES_CONTAINER } from '../../shared/env';
 
 // No request body, cookie, JWT or other credential is written to run artifacts.
 test('TC-F02-S01-027 API restart preserves local keys sessions and failed-attempt limits',async({identity})=>{
@@ -28,7 +29,7 @@ test('TC-F02-S01-028 stopped database answers identity requests within five seco
 
 test('TC-F02-S01-029 silent database answers in-flight identity requests and recovers within five seconds',async({identity})=>{
  const a=await identity.staff(alpha),b=await identity.staff(beta);const pid=apiProcess();
- const lock=spawn('docker',['exec','-i','salon-postgres','psql','-U',process.env.SALON_DB_USER??'salon','-d',process.env.SALON_DB_NAME??'salon','-X','-qAt'],{stdio:['pipe','pipe','pipe']});
+ const lock=spawn('docker',['exec','-i',POSTGRES_CONTAINER,'psql','-U',process.env.SALON_DB_USER??'salon','-d',process.env.SALON_DB_NAME??'salon','-X','-qAt'],{stdio:['pipe','pipe','pipe']});
  let held=false;lock.stdout.on('data',chunk=>{if(String(chunk).includes('QA_LOCK_HELD'))held=true;});lock.stdin.write("BEGIN;LOCK TABLE identity_staff IN ACCESS EXCLUSIVE MODE;SELECT 'QA_LOCK_HELD';\n");
  let outcomes:Promise<{r:Awaited<ReturnType<typeof identity.call>>;start:number;end:number}>[]=[];
  try{

@@ -3,9 +3,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {expect} from '@playwright/test';
 import {productRoot,mark} from './identity-runtime';
+import {keyFile as instanceKeyFile} from './env';
 
 export function assertIdentityArtifactsSafe(){
- const keyFile=process.env.SALON_IDENTITY_LOCAL_KEY_FILE??path.join(productRoot,'.local/identity-keys.properties');
+ const keyFile=instanceKeyFile('identity');
  if(!fs.existsSync(keyFile))throw new Error('ENVIRONMENT: retained four-key file unavailable for artifact check');
  const content=fs.readFileSync(keyFile,'utf8');
  const needles=['signing','challenge','encryption','proxy'].map(name=>{
@@ -13,7 +14,7 @@ export function assertIdentityArtifactsSafe(){
   if(!value)throw new Error(`ENVIRONMENT: retained ${name} key unavailable for artifact check`);
   return [Buffer.from(value),Buffer.from(value,'hex')];
  }).flat();
- const output=path.join(productRoot,'apps/web/.next/standalone');
+ const output=path.join(productRoot,'apps/web',process.env.SALON_WEB_DIST_DIR||'.next-qa','standalone');
  if(!fs.existsSync(output))throw new Error('ENVIRONMENT: final standalone artifact unavailable');
  const visited=new Set<string>();let files=0,bytes=0;const findings:string[]=[];
  const walk=(directory:string)=>{

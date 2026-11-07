@@ -3,13 +3,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
-import { PRODUCT_ROOT, reportDir, apiUrl } from './env';
+import { PRODUCT_ROOT, reportDir, apiUrl, logFile, keyFile, productEnv } from './env';
 import type {ApiClient} from './api-client';
 export const productRoot = PRODUCT_ROOT;
-export const apiLog = path.join(productRoot,'.local/logs/api.log');
+export const apiLog = logFile('api');
 export function localService(action:string,service:string,settings:Record<string,string>={}) {
   try { execFileSync(path.join(productRoot,'infra/scripts/local-service.sh'),[action,service],{
-    cwd:productRoot,env:{...process.env,...settings},timeout:180000,stdio:'pipe'}); }
+    cwd:productRoot,env:productEnv(settings),timeout:180000,stdio:'pipe'}); }
   catch { throw new Error(`ENVIRONMENT: local ${action} ${service} control failed`); }
 }
 export async function codeSettings<T>(settings:Record<string,string>,work:()=>Promise<T>,connection?:ApiClient):Promise<T>{
@@ -21,7 +21,7 @@ export async function codeSettings<T>(settings:Record<string,string>,work:()=>Pr
   });await connection?.reconnect();}
 }
 export function localKeys() {
-  const file = process.env.SALON_IDENTITY_LOCAL_KEY_FILE ?? path.join(productRoot,'.local/identity-keys.properties');
+  const file = keyFile('identity');
   if(!fs.existsSync(file)) throw new Error('ENVIRONMENT: generated local identity key file unavailable');
   return {mode:fs.statSync(file).mode&0o777,fingerprint:createHash('sha256').update(fs.readFileSync(file)).digest('hex')};
 }

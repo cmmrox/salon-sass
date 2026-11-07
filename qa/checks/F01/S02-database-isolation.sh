@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # F01-S02, AC-5 to AC-8: the database's own half of tenant isolation, checked in the local
-# database the way the handoff says to reach it (psql in the salon-postgres container), as the
+# database the way the handoff says to reach it (psql in the instance's PostgreSQL container, salon-qa-postgres for QA), as the
 # application's role and as the owning role.
 #
 # Cases: TC-F01-S02-030 to TC-F01-S02-043.
