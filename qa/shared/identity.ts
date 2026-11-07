@@ -13,9 +13,11 @@
  * Around every test the three salons' identity records are reset, which removes the extra accounts
  * the test made. The reset before a test leaves the salons without staff, exactly as the tests were
  * written (a test that proves "the last Owner cannot be removed" needs no other Owner present); the
- * roster account a test asks for is seeded when it asks. The reset after a test is followed by
- * seeding the whole roster again, so the instance always rests with the roster in place and a shell
- * check can rely on it.
+ * roster account a test asks for is seeded when it asks. When the Playwright process ends, after
+ * its last test's reset, the whole roster is seeded again, so the instance always rests with the
+ * roster in place and a shell check can rely on it. (Seeding it after every test instead cost 1.6 s
+ * a test, about 13 minutes of a regression, and changed nothing a test sees: the next test resets
+ * first.)
  */
 import { createHmac, randomBytes } from 'node:crypto';
 import type { APIResponse } from '@playwright/test';
@@ -185,8 +187,16 @@ export class Identity {
   }
 }
 
-export const test = base.extend<{identity:Identity}>({identity: async({api},use)=>{
-  const identity = new Identity(api); await identity.clock(); await identity.reset();
-  try { await use(identity); } finally { await identity.restoreClockFixture(); await identity.reset(); await identity.seedRoster(); }
-}});
+export const test = base.extend<{identity:Identity},{rosterAtRest:void}>({
+  // Once per Playwright process, after its last test: the instance rests with the fixed roster.
+  rosterAtRest:[async({},use)=>{
+    await use();
+    const api = await ApiClient.create();
+    try { await new Identity(api).seedRoster(); } finally { await api.dispose(); }
+  },{scope:'worker',auto:true}],
+  identity: async({api},use)=>{
+    const identity = new Identity(api); await identity.clock(); await identity.reset();
+    try { await use(identity); } finally { await identity.restoreClockFixture(); await identity.reset(); }
+  },
+});
 export { expect, alpha, beta, gamma };
