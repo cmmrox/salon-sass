@@ -6,6 +6,9 @@
 # Usage: infra/scripts/local-up.sh
 #        SALON_LOCAL_INSTANCE=qa infra/scripts/local-up.sh    the QA instance (ports 3200, 8190, 5540)
 #
+# Once the API answers in the local profile, the fixed account roster is seeded
+# (infra/scripts/local-accounts.sh): missing accounts are created, existing ones are left alone.
+#
 # Checks the prerequisites first (Docker running, JDK 25, Node.js with pnpm through Corepack) and
 # exits non-zero, naming what is missing, before starting anything.
 set -euo pipefail
@@ -17,5 +20,8 @@ acquire_lock
 
 start_postgres
 start_api
+if [ "$SPRING_PROFILES_ACTIVE" = "local" ]; then
+  seed_roster
+fi
 start_web
 print_addresses

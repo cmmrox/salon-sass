@@ -7,7 +7,8 @@
 #
 # Only the chosen instance's own database volume is deleted (salon-postgres-data, or
 # salon-qa-postgres-data for the QA instance); it says which before it starts. The other instance
-# and everything outside this project are not touched.
+# and everything outside this project are not touched. The fixed account roster is seeded again
+# once the API answers (infra/scripts/local-accounts.sh).
 set -euo pipefail
 . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common.sh"
 
@@ -24,5 +25,8 @@ say "postgres: stopped; its data is deleted"
 
 start_postgres
 start_api
+if [ "$SPRING_PROFILES_ACTIVE" = "local" ]; then
+  seed_roster
+fi
 start_web
 print_addresses

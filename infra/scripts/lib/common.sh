@@ -654,3 +654,56 @@ print_addresses() {
   say "Logs        ${LOG_DIR}"
 }
 
+# --- the fixed local account roster (decision 099) --------------------------------------------
+
+ROSTER="$ROOT/infra/local/accounts.json"
+
+# The roster read by infra/scripts/lib/accounts.mjs: `roster salons|staff <slug>|operators|keys`.
+roster() {
+  command -v node >/dev/null 2>&1 || fail "Node.js $REQUIRED_NODE or later is required to read $ROSTER, and 'node' was not found."
+  node "$ROOT/infra/scripts/lib/accounts.mjs" "$ROSTER" "$@"
+}
+
+# Sends the request body on standard input to a local seed hook of this instance's API, on the
+# given hostname; the roster's passwords never appear on a command line. Prints the status, and
+# leaves the answer (a count or the reason for a refusal, never a credential) in $SEED_ANSWER.
+seed_hook() {
+  curl -s -o "$SEED_ANSWER" -w '%{http_code}' --max-time 60 -X POST \
+    -H "Host: $1" -H 'Content-Type: application/json' --data-binary @- \
+    "http://127.0.0.1:${SALON_API_PORT}$2" 2>/dev/null || true
+}
+
+# Creates every roster account this instance's running API does not have yet, through the local
+# seed hooks: the staff seed creates only accounts no account holds the email or mobile of, and
+# the operator seed is asked to keep every existing account. Nothing existing is changed, re-keyed
+# or removed, so running it again changes nothing. Needs the API in the local profile.
+seed_roster() {
+  local slug status start="infra/scripts/local-up.sh"
+  [ "$INSTANCE" = "default" ] || start="SALON_LOCAL_INSTANCE=$INSTANCE $start"
+  [ "$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 "http://127.0.0.1:${SALON_API_PORT}/actuator/health" 2>/dev/null)" = "200" ] \
+    || fail "the $INSTANCE instance's API is not answering on port $SALON_API_PORT. Start it first: $start"
+  SEED_ANSWER="$RUN_DIR/seed-answer.json"
+  for slug in $(roster salons); do
+    status="$(roster staff "$slug" | seed_hook "$slug.${SALON_PLATFORM_DOMAIN}:${SALON_API_PORT}" /local/identity/seed)"
+    seed_outcome "$slug" "$status"
+  done
+  status="$(roster operators | seed_hook "localhost:${SALON_API_PORT}" /local/operator/seed)"
+  seed_outcome "console" "$status"
+  rm -f "$SEED_ANSWER"
+}
+
+seed_outcome() {
+  local count
+  case "$2" in
+    200)
+      count="$(sed -n 's/.*"accounts":\([0-9]*\).*/\1/p' "$SEED_ANSWER")"
+      say "accounts: $1: ${count:-?} roster accounts present (any that were missing were created)"
+      ;;
+    404)
+      fail "accounts: $1: the API on port $SALON_API_PORT has no local seed hook here. It must run in the local profile (SPRING_PROFILES_ACTIVE=local), and '$1' must be one of its salons."
+      ;;
+    *)
+      fail "accounts: $1: the seed hook answered ${2:-nothing}: $(head -c 400 "$SEED_ANSWER" 2>/dev/null)"
+      ;;
+  esac
+}
