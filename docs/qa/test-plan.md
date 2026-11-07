@@ -129,6 +129,8 @@ shared helper, never by typing a password into a test.
   credentials/TOTP seeds stay in ignored environment or `.local` files with mode `0600`, except the
   committed roster `infra/local/accounts.json` (decision 099). Only these seed hooks accept the
   development password `123456@321` below the identity policy.
+  `POST /local/operator/seed` with `keepExisting: true` creates only missing operators and leaves
+  existing ones exactly as they are; QA sends it when seeding the roster's operators.
 - **Brand colour** (CR-013): `infra/scripts/local-salon.sh colour <slug> <#RRGGBB>` sets a local
   salon's stored colour; check the sign-in and the workspace with a dark and a light colour, then
   put the seeded colour back (alpha `#D6086A`; read the others from `/api/v1/salon` first). A

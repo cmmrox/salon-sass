@@ -44,6 +44,8 @@ Created by stage F01-S01. Everything runs on the host except PostgreSQL, which r
 | PostgreSQL | `localhost:5440`, database `salon` | `SALON_POSTGRES_PORT` |
 | A salon | `http://<slug>.localhost:<port>`, for example `http://alpha.localhost:8090/api/v1/salon` | `SALON_PLATFORM_DOMAIN` |
 
+- Staff mobiles in the roster are Sri Lankan, gamma's too: staff identity accepts only Sri Lankan
+  mobile numbers.
 - Every setting is in `.env.example`; a variable in the shell wins over `.env`. The ports avoid the
   usual 3000, 8080 and 5432 because other projects on a developer's machine tend to hold them.
 - Docker names: Compose project `salon-local`, container `salon-postgres`, volume
@@ -93,7 +95,7 @@ can create them.
 | Script | Does |
 | --- | --- |
 | `infra/scripts/local-accounts.sh` | Creates every roster account that is missing, in the running instance. Never changes, re-keys or removes an account that exists. `local-up.sh` and `local-reset.sh` run it once the API answers |
-| `infra/scripts/local-accounts.sh keys` | Prints each authenticator's `otpauth://` link and a terminal QR code, to add it to an authenticator app once |
+| `infra/scripts/local-accounts.sh keys` | Prints each authenticator's `otpauth://` link, and a terminal QR code when `qrencode` is installed, to add it to an authenticator app once |
 
 - Only the `local`-profile seed hooks accept `123456@321`. Every product path that sets a password
   (adding staff, changing or resetting a password, operator bootstrap) keeps the identity policy.
@@ -108,17 +110,19 @@ local script takes `SALON_LOCAL_INSTANCE`; unset is the default instance, `qa` i
 
 | Instance | Web | API | PostgreSQL | Compose project, container, volume | Process ids, logs, keys |
 | --- | --- | --- | --- | --- | --- |
-| default | 3100 | 8090 | 5440 | `salon-local`, `salon-postgres`, `salon-postgres-data` | `.local/` |
-| `qa` | 3200 | 8190 | 5540 | `salon-qa`, `salon-qa-postgres`, `salon-qa-postgres-data` | `.local/qa/` |
+| default | 3100 | 8090 | 5440 | `salon-local`, `salon-postgres`, `salon-postgres-data` | `.local/` (API jar copy in `.local/api/`); web build `apps/web/.next` |
+| `qa` | 3200 | 8190 | 5540 | `salon-qa`, `salon-qa-postgres`, `salon-qa-postgres-data` | `.local/qa/` (API jar copy in `.local/qa/api/`); web build `apps/web/.next-qa` (`SALON_WEB_DIST_DIR`) |
 
 `SALON_LOCAL_INSTANCE=qa infra/scripts/local-up.sh` starts it; `qa/scripts/sdlc run` targets it and
-refuses the default instance. Both can run at once. The roster is the same in both, so the owner's
+refuses the default instance. Both can run at once. The QA instance never reads its ports or
+addresses from `.env` (which describes the default instance) and refuses any port the default
+instance uses, so it can never migrate or seed the owner's database. The roster is the same in both, so the owner's
 credentials and authenticator work in either.
-- **Restart after rebuilding the runtime artifacts.** Maven `verify` repackages the jar used by
-  the local API. Replacing it while that process is running can break later class loading even
-  though health initially answers. Stop the API before repackaging; start it from the completed
-  build before QA. Restart the web app after rebuilding its production output as well. Passing
-  build gates does not refresh an already-running process.
+- **Restart after rebuilding the runtime artifacts.** Each instance's API runs a copy of the jar
+  in its own state folder (`.local/api/`, `.local/qa/api/`), so Maven `verify` no longer replaces a
+  running API's jar; it still runs the old code until restarted. Start the API again from the
+  completed build before QA, and restart the web app after rebuilding its production output.
+  Passing build gates does not refresh an already-running process.
 
 ## The local production-like stack
 
