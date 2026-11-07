@@ -4,6 +4,7 @@ apps/web/src/lib/plain-page/plain-page.generated.css
 apps/web/next-env.d.ts
 # Build output.
 .next/
+.next-qa/
 coverage/
 # The prototype's theme tokens, kept as written: the proxy's plain pages inline this file byte for byte,
 # and the theme tests read its values as the prototype states them.

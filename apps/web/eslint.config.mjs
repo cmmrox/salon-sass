@@ -96,7 +96,7 @@ const IMPORT_POLICIES = [
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
-  globalIgnores(['.next/**', 'out/**', 'build/**', 'coverage/**', 'next-env.d.ts']),
+  globalIgnores(['.next/**', '.next-qa/**', 'out/**', 'build/**', 'coverage/**', 'next-env.d.ts']),
   {
     files: ['src/**/*.{ts,tsx}', 'test/**/*.{ts,tsx}'],
     plugins: { boundaries },

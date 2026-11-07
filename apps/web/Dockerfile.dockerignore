@@ -9,6 +9,7 @@
 !packages/
 **/node_modules
 **/.next
+**/.next-qa
 **/*.tsbuildinfo
 **/next-env.d.ts
 **/coverage
