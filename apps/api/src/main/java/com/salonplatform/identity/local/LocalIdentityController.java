@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.Hidden;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.net.InetAddress;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -22,12 +23,17 @@ class LocalIdentityController {
     private final StaffAccountService access;
     private final CustomerAccessService customers;
     private final CustomerMessageCapture capture;
+    private final String developmentPassword;
 
     LocalIdentityController(
-            StaffAccountService access, CustomerAccessService customers, CustomerMessageCapture capture) {
+            StaffAccountService access,
+            CustomerAccessService customers,
+            CustomerMessageCapture capture,
+            @Value("${salon.local.development-password}") String developmentPassword) {
         this.customers = customers;
         this.capture = capture;
         this.access = access;
+        this.developmentPassword = developmentPassword;
     }
 
     @PostMapping("/seed")
@@ -35,7 +41,8 @@ class LocalIdentityController {
         loopback(http);
         return ResponseEntity.ok()
                 .cacheControl(org.springframework.http.CacheControl.noStore())
-                .body(new SeedResult(access.seed(request.accounts()).size()));
+                .body(new SeedResult(
+                        access.seed(request.accounts(), developmentPassword).size()));
     }
 
     @DeleteMapping
