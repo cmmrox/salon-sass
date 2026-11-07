@@ -16,6 +16,7 @@ import { apiUrl, webUrl } from '../../shared/env';
 import { apiProcess, localService } from '../../shared/identity-runtime';
 import { operatorAccount, planInput } from '../../shared/operator';
 import { alpha, onHostname, salonUrl } from '../../shared/tenants';
+import { rosterOperator } from '../../shared/roster';
 
 const id = (n: number) => `TC-F03-S01-${String(n).padStart(3, '0')}`;
 const LIMIT_MS = 5_000;
@@ -35,6 +36,7 @@ test(`${id(5)} Console and operator BFF routes on any other host answer 404 (web
 });
 
 test(`${id(30)} Console mutations reject missing or foreign Origin and keep credentials in host-only cookies`, async ({ browser, operator }) => {
+  // Extra: signed in through the screens while this test also signs the roster admin in through the API (one TOTP step).
   const account = operatorAccount('OPERATOR_ADMIN');
   await operator.seed(account);
   const context = await consoleContext(browser);
@@ -77,8 +79,7 @@ test(`${id(30)} Console mutations reject missing or foreign Origin and keep cred
 });
 
 test(`${id(31)} Concurrent console tabs and a browser without Web Locks stay safe`, async ({ browser, operator }) => {
-  const account = operatorAccount('OPERATOR_ADMIN');
-  await operator.seed(account);
+  const account = rosterOperator('OPERATOR_ADMIN');
   const context = await consoleContext(browser);
   const first = await context.newPage();
   await signInByKeyboard(first, operator, account);

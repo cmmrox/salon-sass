@@ -50,7 +50,7 @@ function daysAfter(from: string, kinds: Day['kind'][]): Day[] {
 
 /** A salon the operator creates now, with its Owner signed in (MFA enrolled). */
 async function newSalon(operator: Operator, identity: Identity, overrides: { timeZone?: string } = {}) {
-  const admin = await operator.actor();
+  const admin = await operator.member();
   const plan = await operator.plan(admin);
   const { input, created, salon } = await operator.salon(admin, plan.id, overrides);
   const owner = await ownerSession(identity, salon, input);
@@ -60,7 +60,7 @@ async function newSalon(operator: Operator, identity: Identity, overrides: { tim
 /** The shared published year (shared/salon-hours.ts), with the clock at 10:00 in Colombo on its "today". */
 async function sharedYear(operator: Operator, calendar: Calendar, clock: TestClock) {
   await colomboAt(clock, SHARED.today);
-  const admin = await operator.actor();
+  const admin = await operator.member();
   await calendar.shared(admin);
   return { admin, ...SHARED };
 }
@@ -461,7 +461,7 @@ test('TC-F04-S03-011 AC-8: the public information follows weekly hours, then acc
 test('TC-F04-S03-012 AC-9: "today" is the salon\'s local date: at 23:30 in Colombo today\'s closure is allowed and yesterday\'s refused, and at 00:01 a holiday and a closure of the day before have passed', async ({ identity, operator, clock }) => {
   const calendar = new Calendar(identity);
   const hours = new Hours(identity);
-  await calendar.shared(await operator.actor());
+  await calendar.shared(await operator.member());
   const day = SHARED.days[0].date;
   await clock.set(`${day}T18:00:00Z`);
   expect(localDate(await identity.now(), COLOMBO), '18:00 UTC is 23:30 the same day in Colombo').toBe(day);
@@ -618,7 +618,7 @@ test('TC-F04-S03-016 AC-10: a support session reads hours, holidays and closures
   const calendar = new Calendar(identity);
   const hours = new Hours(identity);
   const { created, salon, owner } = await newSalon(operator, identity);
-  const { year, days } = await calendar.shared(await operator.actor());
+  const { year, days } = await calendar.shared(await operator.member());
   await hours.save(salon, owner.tokens, week());
   const date = plusDays(localDate(await identity.now(), COLOMBO), 5);
   const closure = await hours.add(salon, owner.tokens, date, 'QA team-only reason');
