@@ -106,8 +106,14 @@ shared helper, never by typing a password into a test.
   Moving the clock also makes the scheduler's own platform job passes (billing, export,
   deletion) due alongside any run-now hook, so a test settles those passes before reading and
   checks interrupted states as single-snapshot invariants (F03).
-  The shared identity fixture resets the fixed salons' staff around every Playwright test, so a
-  shell check that needs staff seeds its own.
+  The shared identity fixture resets the fixed salons' staff around every Playwright test and seeds
+  the fixed account roster again afterwards, so a shell check can rely on the roster.
+- **Accounts** (decision 099): QA runs against the QA instance (`SALON_LOCAL_INSTANCE=qa`), never
+  the default one. A test that needs only "someone in this role" signs in as that role's roster
+  account from `infra/local/accounts.json`. A test that changes a person (deactivates, locks out,
+  changes a password or MFA, fills seats) seeds its own extra accounts with realistic names, never
+  "QA", "test" or a random string, and the password `123456@321`, and removes only those. Tests of
+  the password policy keep using the product's own paths with their own passwords.
 - **Meters**, local profile only: `GET /actuator/metrics/salon.outbox.dead` and the others listed in
   `docs/engineering/backend.md`.
 - **Time:** bookings depend on the clock. Use the test clock hook to fix "now"; never write a test
@@ -120,8 +126,9 @@ shared helper, never by typing a password into a test.
   preserves existing accounts; `DELETE /local/identity` resets that salon's synthetic identity
   records/rate state while preserving immutable audit and other product data. Both hooks are
   loopback-only, `local`-only and absent from OpenAPI; nonfixed salons are refused. Supplied fixture
-  credentials/TOTP seeds stay in ignored environment or `.local` files with mode `0600`. Current
-  developer fixtures are `.local/f02-staff-fixtures.json`; never print or commit their contents.
+  credentials/TOTP seeds stay in ignored environment or `.local` files with mode `0600`, except the
+  committed roster `infra/local/accounts.json` (decision 099). Only these seed hooks accept the
+  development password `123456@321` below the identity policy.
 - **Brand colour** (CR-013): `infra/scripts/local-salon.sh colour <slug> <#RRGGBB>` sets a local
   salon's stored colour; check the sign-in and the workspace with a dark and a light colour, then
   put the seeded colour back (alpha `#D6086A`; read the others from `/api/v1/salon` first). A

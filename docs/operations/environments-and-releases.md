@@ -80,6 +80,40 @@ Created by stage F01-S01. Everything runs on the host except PostgreSQL, which r
   `local-service.sh start api` starts the API as it would run elsewhere.
 - **A QA run needs the product running.** Start it with `local-up.sh` before
   `qa/scripts/sdlc run`; the automation refuses to start otherwise.
+
+### Fixed local accounts (decision 099)
+
+`infra/local/accounts.json` is the one list of people who exist in a local environment: five staff
+per synthetic salon (Owner, Manager, Receptionist, Professional, Accountant) and one operator per
+operator role. Every account's password is `123456@321`. Each salon Owner and every operator has a
+fixed TOTP seed in the same file, so an authenticator is set up once and keeps working after any
+reset. These are synthetic, local-only credentials and are committed on purpose; no other profile
+can create them.
+
+| Script | Does |
+| --- | --- |
+| `infra/scripts/local-accounts.sh` | Creates every roster account that is missing, in the running instance. Never changes, re-keys or removes an account that exists. `local-up.sh` and `local-reset.sh` run it once the API answers |
+| `infra/scripts/local-accounts.sh keys` | Prints each authenticator's `otpauth://` link and a terminal QR code, to add it to an authenticator app once |
+
+- Only the `local`-profile seed hooks accept `123456@321`. Every product path that sets a password
+  (adding staff, changing or resetting a password, operator bootstrap) keeps the identity policy.
+- A person or test needing someone else (a second Manager, a person to deactivate) adds them with
+  a realistic name and the same password. Nobody edits or removes a roster account; a change to the
+  roster is a change to the file, reviewed in a PR.
+
+### The QA instance (decision 099)
+
+Automated QA never runs against the default instance, which holds the owner's manual testing. Every
+local script takes `SALON_LOCAL_INSTANCE`; unset is the default instance, `qa` is the QA instance:
+
+| Instance | Web | API | PostgreSQL | Compose project, container, volume | Process ids, logs, keys |
+| --- | --- | --- | --- | --- | --- |
+| default | 3100 | 8090 | 5440 | `salon-local`, `salon-postgres`, `salon-postgres-data` | `.local/` |
+| `qa` | 3200 | 8190 | 5540 | `salon-qa`, `salon-qa-postgres`, `salon-qa-postgres-data` | `.local/qa/` |
+
+`SALON_LOCAL_INSTANCE=qa infra/scripts/local-up.sh` starts it; `qa/scripts/sdlc run` targets it and
+refuses the default instance. Both can run at once. The roster is the same in both, so the owner's
+credentials and authenticator work in either.
 - **Restart after rebuilding the runtime artifacts.** Maven `verify` repackages the jar used by
   the local API. Replacing it while that process is running can break later class loading even
   though health initially answers. Stop the API before repackaging; start it from the completed
@@ -95,7 +129,8 @@ passes them from its ignored environment file. Local startup retains random keys
 `.local/identity-keys.properties` with mode `0600`; `SALON_IDENTITY_LOCAL_KEY_FILE` overrides the
 path, and the startup scripts set the default to an absolute path. Preserve this file when
 restarting the API so signatures, refresh credentials and abuse-counter hashes remain valid.
-Do not print or commit keys or synthetic account fixture files.
+Do not print or commit keys or synthetic account fixture files; the one exception is the fixed
+local account roster, `infra/local/accounts.json` (decision 099).
 Customer code limits use `SALON_IDENTITY_CODE_NUMBER_LIMIT`, `SALON_IDENTITY_CODE_DEVICE_LIMIT`,
 `SALON_IDENTITY_CODE_ADDRESS_LIMIT` and `SALON_IDENTITY_CODE_DAILY_LIMIT`, defaulting to 3, 10, 20
 and 1000. Focused local tests may override them explicitly, then must restore the defaults. Local
