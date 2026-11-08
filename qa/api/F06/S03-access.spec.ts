@@ -55,7 +55,7 @@ async function sickPerson(identity: Identity, operator: Operator) {
 
 async function supportTokens(operator: Operator, salonId: string, salon: Salon): Promise<Tokens> {
   const support = await operator.actor('OPERATOR_SUPPORT');
-  const session = await supportJson<SupportStart>(await operator.startSupport(support, salonId, { reason: 'QA F06 support reads leave' }), 'supportStart', 201);
+  const session = await supportJson<SupportStart>(await operator.startSupport(support, salonId, { reason: 'The salon asked about a stylist on leave' }), 'supportStart', 201);
   return operator.supportCredential(await operator.exchange(session.entryCode, salon.hostname));
 }
 
@@ -172,7 +172,7 @@ test('TC-F06-S03-023 AC-10: each role at every endpoint: the Owner and Manager d
   await team.dispose();
 });
 
-test('TC-F06-S03-024 AC-10: a support session reads leave\'s days and the blocks and is refused every change with 403 support_read_only and both previews, changing nothing', async ({ identity, operator }) => {
+test('TC-F06-S03-024 AC-10: a support session reads leave\'s days and the blocks and is refused every change with 403 support_read_only and both previews with 403 permission_denied, changing nothing', async ({ identity, operator }) => {
   const { salon, owner, created, team, absences, person, label, leave, block, free } = await sickPerson(identity, operator);
   const tokens = await supportTokens(operator, created.id, salon);
   const read = await absences.read(salon, tokens, person.id);
@@ -183,7 +183,8 @@ test('TC-F06-S03-024 AC-10: a support session reads leave\'s days and the blocks
     const before = absenceSnapshot(created.id);
     const answer = await team.call(salon, route.method, route.path, tokens, route.data);
     if (route.method === 'GET') {
-      expect(answer.status(), `support ${route.label}: refused`).toBe(403);
+      // A read it may not make, not a change refused (correction at close, decision 106).
+      await refused(answer, 403, 'permission_denied', `support ${route.label}`);
     } else {
       await refused(answer, 403, 'support_read_only', `support ${route.label}`);
     }

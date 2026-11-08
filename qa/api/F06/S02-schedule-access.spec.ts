@@ -51,7 +51,7 @@ async function arranged(identity: Identity, operator: Operator) {
 /** A support session's credential on the salon's hostname. */
 async function supportTokens(operator: Operator, salonId: string, salon: Salon): Promise<Tokens> {
   const support = await operator.actor('OPERATOR_SUPPORT');
-  const session = await supportJson<SupportStart>(await operator.startSupport(support, salonId, { reason: 'QA F06 support reads a schedule' }), 'supportStart', 201);
+  const session = await supportJson<SupportStart>(await operator.startSupport(support, salonId, { reason: 'The salon asked why a stylist shows no hours' }), 'supportStart', 201);
   return operator.supportCredential(await operator.exchange(session.entryCode, salon.hostname));
 }
 

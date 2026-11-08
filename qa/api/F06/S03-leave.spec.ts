@@ -66,7 +66,8 @@ test('TC-F06-S03-002 AC-1: a first day past or beyond a year, a last day before 
   const beyond = plusDays(plusYear(today), 1);
   const rows: [string, RegExp, unknown][] = [
     ['a first day yesterday', FIRST, leaveInput(plusDays(today, -1), { lastDay: free })],
-    ['a first day beyond a year', /^(firstDay|lastDay)$/, leaveInput(beyond)],
+    // The correction at close (decision 106): a first day beyond a year is a 400 on firstDay alone.
+    ['a first day beyond a year', FIRST, leaveInput(beyond)],
     ['a first day that is not a date', FIRST, leaveInput('next tuesday', { lastDay: free })],
     ['a first day that does not exist', FIRST, leaveInput('2099-02-30', { lastDay: free })],
     ['no first day', FIRST, leaveInput(free, { firstDay: null })],

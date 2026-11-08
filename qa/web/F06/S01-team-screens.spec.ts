@@ -146,7 +146,7 @@ async function arrangeMenu(cat: Catalogue, salon: Salon, tokens: Actor['tokens']
 /** A support session's browser, on the salon's own web address. */
 async function supportBrowser(browser: import('@playwright/test').Browser, operator: Operator, created: { id: string }, salon: Salon) {
   const support = await operator.actor('OPERATOR_SUPPORT');
-  const session = await supportJson<SupportStart>(await operator.startSupport(support, created.id, { reason: 'QA F06 support reads the team' }), 'supportStart', 201);
+  const session = await supportJson<SupportStart>(await operator.startSupport(support, created.id, { reason: 'The salon asked why a stylist is not shown online' }), 'supportStart', 201);
   const context = await browser.newContext({ baseURL: salonUrl(salon, webUrl), viewport: { width: 1280, height: 1000 }, locale: 'en' });
   const entry = await context.newPage();
   await entry.goto(`${salonUrl(salon, webUrl)}/workspace/support#${session.entryCode}`);

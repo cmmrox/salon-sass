@@ -19,6 +19,7 @@ import { refused } from './booking-rules';
 import { apiUrl } from './env';
 import { expect, json, syntheticAccount, type Identity, type Role, type SignedStaff, type Staff, type Tokens } from './identity';
 import { identitySql } from './identity-storage';
+import { person } from './people';
 import { fieldsOf, onSalonHost, ownerSession, sqlLiteral, type Entitlements, type Operator, type SalonInput } from './operator';
 import type { FileUpload } from './salon-brand';
 import type { DayName } from './salon-hours';
@@ -106,9 +107,12 @@ export type SignInAccount = { id: string; label: string; role: string; memberId:
 /** A short random marker, for names that must be findable afterwards. */
 export const mark = () => randomBytes(3).toString('hex');
 
-/** A person with no services, shown online and no sign-in, unless overridden. */
+/**
+ * A person with no services, shown online and no sign-in, unless overridden. The name is a realistic
+ * person's (shared/people.ts, decision 105), unique within this Playwright process.
+ */
 export const memberInput = (overrides: MemberInput = {}): MemberInput => ({
-  name: `QA Person ${mark()}`, title: 'Stylist', highlights: 'Balayage', bio: 'A person QA added.', shownOnline: true,
+  name: person().name, title: 'Stylist', highlights: 'Balayage', bio: 'Colour and cuts, eight years at the chair.', shownOnline: true,
   services: { categoryIds: [], serviceIds: [] }, signInAccountId: null, ...overrides,
 });
 

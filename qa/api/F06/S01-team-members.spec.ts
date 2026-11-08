@@ -502,7 +502,7 @@ test('TC-F06-S01-017 AC-9: a caller without permission or a wrong target gets th
   const foreign = await team.add(other.salon, other.owner.tokens);
   const receptionist = await identity.staff(salon, 'RECEPTIONIST');
   const support = await operator.actor('OPERATOR_SUPPORT');
-  const session = await supportJson<SupportStart>(await operator.startSupport(support, created.id, { reason: 'QA F06 support cannot upload a photo' }), 'supportStart', 201);
+  const session = await supportJson<SupportStart>(await operator.startSupport(support, created.id, { reason: 'The salon asked for help with a team photo' }), 'supportStart', 201);
   const supportTokens: Tokens = await operator.supportCredential(await operator.exchange(session.entryCode, salon.hostname));
   const rows: [string, number, string, Tokens | undefined, string][] = [
     ['signed out', 401, 'invalid_session', undefined, person.id],
@@ -685,7 +685,7 @@ test('TC-F06-S01-021 AC-13: each role, on every endpoint: the Owner and Manager 
       expect(read.signInAccountId, `${role}: sees the link`).toBe(account.id);
       expect(read.signInLabel, `${role}: and its label`).toBe(account.email);
       expect((await team.accounts(salon, tokens)).some(a => a.id === account.id), `${role}: reads the accounts`).toBe(true);
-      const own = await team.add(salon, tokens, memberInput({ name: `QA ${role}` }));
+      const own = await team.add(salon, tokens, memberInput());
       const edited = await team.save(salon, tokens, own, { title: 'Edited' });
       const pictured = await team.upload(salon, tokens, edited.id, SMALL_PHOTO());
       expect([200, 204]).toContain((await team.removePhotoRaw(salon, tokens, pictured.id)).status());
@@ -710,7 +710,7 @@ test('TC-F06-S01-022 AC-13: a support session reads the team as the Owner does, 
   const account = await team.createAccount(salon, owner.tokens);
   const person = await team.add(salon, owner.tokens, memberInput({ signInAccountId: account.id }));
   const support = await operator.actor('OPERATOR_SUPPORT');
-  const session = await supportJson<SupportStart>(await operator.startSupport(support, created.id, { reason: 'QA F06 support reads the team' }), 'supportStart', 201);
+  const session = await supportJson<SupportStart>(await operator.startSupport(support, created.id, { reason: 'The salon asked why a stylist is not shown online' }), 'supportStart', 201);
   const tokens: Tokens = await operator.supportCredential(await operator.exchange(session.entryCode, salon.hostname));
   expect(await team.list(salon, tokens), 'the same team').toEqual(await team.list(salon, owner.tokens));
   expect(await team.get(salon, tokens, person.id)).toEqual(await team.get(salon, owner.tokens, person.id));

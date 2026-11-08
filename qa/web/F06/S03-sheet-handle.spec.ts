@@ -26,8 +26,8 @@ test.describe.configure({ timeout: 180_000 });
 /** The prototype's handle: `width:40px;height:4px`. */
 const PROTOTYPE = { width: 40, height: 4 };
 const PHONES = [360, 390];
-/** Window heights tried, tallest first, until the sheet's content overflows. */
-const HEIGHTS = [800, 600, 440, 320, 240];
+/** Window heights tried, tallest first, until the sheet's content overflows. F02's confirmation is short enough to fit at 240. */
+const HEIGHTS = [800, 600, 440, 320, 240, 180, 150];
 /** If the fix uses a real element rather than the generated one. */
 const HANDLE_SLOT = '[data-slot="sheet-handle"]';
 

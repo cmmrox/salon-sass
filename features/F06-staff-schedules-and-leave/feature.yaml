@@ -3,7 +3,7 @@ title: "Staff, schedules and leave"
 summary: "A salon adds, edits and removes team members (removal refused while they have upcoming bookings), the services each performs, their public profile, working hours, leave and blocked time; a professional can be bookable without a sign-in account."
 release: R1
 milestone: M1-web
-status: in-progress
+status: in-qa
 qa_status: not-run
 released_in: null
 depends_on: [F04, F05]

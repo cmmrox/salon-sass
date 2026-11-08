@@ -63,7 +63,7 @@ export async function openSchedule(page: Page, memberId: string) {
 /** A support session's browser, on the salon's own web address. */
 export async function supportBrowser(browser: Browser, operator: Operator, created: { id: string }, salon: Salon, width = 1280) {
   const support = await operator.actor('OPERATOR_SUPPORT');
-  const session = await supportJson<SupportStart>(await operator.startSupport(support, created.id, { reason: 'QA F06 support reads a schedule' }), 'supportStart', 201);
+  const session = await supportJson<SupportStart>(await operator.startSupport(support, created.id, { reason: 'The salon asked why a stylist shows no hours' }), 'supportStart', 201);
   const context = await browser.newContext({ baseURL: salonUrl(salon, webUrl), viewport: { width, height: 1000 }, locale: 'en' });
   const entry = await context.newPage();
   await entry.goto(`${salonUrl(salon, webUrl)}/workspace/support#${session.entryCode}`);

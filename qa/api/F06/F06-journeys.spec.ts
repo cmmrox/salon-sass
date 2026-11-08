@@ -27,7 +27,7 @@ test('TC-F06-002 STF-01, STF-02, STF-03, STF-05: an operator Admin or Support ac
   const person = await team.add(salon, owner.tokens, memberInput({ name: 'Operator Must Not Read' }));
   const today = await salonDate(identity);
   const week = await schedules.save(salon, owner.tokens, person.id, weekOf('09:00', '18:00'));
-  const note = 'QA operator must not read this';
+  const note = 'Back after her surgery, keep it private';
   const change = (await schedules.add(salon, owner.tokens, person.id, changeInput(plusDays(today, 2), { note }))).change;
   const leave = (await absences.addLeave(salon, owner.tokens, person.id, leaveInput(plusDays(today, 5), { type: 'sick', note }))).leave;
   const block = (await absences.addBlock(salon, owner.tokens, person.id, blockInput(plusDays(today, 6), { label: note }))).block;

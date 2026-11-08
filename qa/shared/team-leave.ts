@@ -7,12 +7,10 @@
  * "UI and UX") and decision 104: a leave's type and note reach nobody without `team.manage`, and the audit
  * trail records neither.
  *
- * Every name the build gives is in `PENDING_F06_S03`, guessed from the F06-S02 handoff's pattern and unconfirmed
- * until this stage's handoff; nothing else in the F06-S03 tests spells one. Also to confirm then, as they are
- * not names:
- * - what a support session is answered on the two `affected` reads (spec, API table: it lacks `team.manage`
- *   and `team.block`; AC-10 gives `support_read_only` only for change endpoints), which the cases hold to any 403;
- * - that `rowCopies` can arrange a limit: a row copied with a new id and day breaks no constraint of the tables.
+ * Every name the build gives is in `PENDING_F06_S03`, confirmed against the F06-S03 handoff, V31 and the contract;
+ * nothing else in the F06-S03 tests spells one. The spec's "Corrections at close" (decision 106) settle what the
+ * spec left open: a support session's two `affected` reads are 403 `permission_denied`; dates print as `formatDay`
+ * does; "1 booking to resolve"; the 100 upcoming leaves include leave under way.
  */
 import { randomUUID } from 'node:crypto';
 
@@ -28,17 +26,17 @@ import { PENDING_F06_S02, S02_SCHEDULE_TABLES, calendarDay, schedulePath, shownT
 import type { Identity } from './identity';
 import type { Salon } from './tenants';
 
-/** Names the spec leaves to the build, guessed until the handoff. */
+/** Names the spec leaves to the build, confirmed against the F06-S03 handoff, V31 and the contract at feature-verify (ed7d126). */
 export const PENDING_F06_S03 = {
   /** Contract schemas (docs/api/openapi.json, components.schemas). */
-  schemas: { schedule: PENDING_F06_S02.schemas.schedule, addedLeave: 'AddedTeamMemberLeave', addedBlock: 'AddedTeamMemberBlock', affected: 'TeamAffectedBookings' },
+  schemas: { schedule: PENDING_F06_S02.schemas.schedule, addedLeave: 'AddedTeamMemberLeave', addedBlock: 'AddedTeamMemberBlockedTime', affected: 'TeamPeriodImpact' },
   /** The tables and columns a limit's direct arrangement writes. */
-  tables: { leave: 'staff_member_leave', block: 'staff_member_block' },
+  tables: { leave: 'staff_member_leave', block: 'staff_member_blocked_time' },
   columns: { firstDay: 'first_day', lastDay: 'last_day', blockDate: 'block_date' },
   /** Audit actions, as F06-S02's `staff.team_member_date_change_added`. */
   audit: {
     leaveAdded: 'staff.team_member_leave_added', leaveRemoved: 'staff.team_member_leave_removed',
-    blockAdded: 'staff.team_member_block_added', blockRemoved: 'staff.team_member_block_removed',
+    blockAdded: 'staff.team_member_blocked_time_added', blockRemoved: 'staff.team_member_blocked_time_removed',
   },
   /** The browser's calls for the two tabs, for holding, failing or adding to them. */
   bff: {
@@ -55,7 +53,8 @@ export const PENDING_F06_S03 = {
     leaveType: 'leave-type', leaveNote: 'leave-note', leaveProblem: 'leave-problem',
     leaveRemoveDialog: 'leave-remove-dialog', leaveRemoveConfirm: 'leave-remove-confirm', leaveRemoveCancel: 'leave-remove-cancel',
     blockBanner: 'block-banner', blockEmpty: 'block-empty', blockRow: 'block-row',
-    blockForm: 'block-form', blockDate: 'block-date', blockCalendar: 'block-calendar', blockStarts: 'block-starts', blockFinishes: 'block-finishes', blockLabel: 'block-label', blockProblem: 'block-problem',
+    affected: 'period-affected', affectedRow: 'period-affected-booking',
+    blockForm: 'block-form', blockDate: 'block-date', blockCalendar: 'block-date-calendar', blockStarts: 'block-starts', blockFinishes: 'block-finishes', blockLabel: 'block-label', blockProblem: 'block-problem',
   },
   /** Control names from the spec and the prototype (`schLv`, `schBl`). */
   names: {
@@ -186,13 +185,15 @@ export const nextDays = (from: string, count: number) => Array.from({ length: co
 
 // ---- the words the tabs and the card show ----
 
-/** A date as the spec writes it: "Thu 12 Nov". */
+/**
+ * A date as the screen prints it. The spec wrote "Thu 12 Nov"; the correction at close (decision 106) is the
+ * existing `formatDay` as it prints, "Thu, Nov 12, 2026". Written here from the ruling, not from the product's code.
+ */
 export function dayWords(date: string): string {
-  const d = new Date(`${date}T00:00:00Z`);
-  const part = (o: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat('en-GB', { ...o, timeZone: 'UTC' }).format(d);
-  return `${part({ weekday: 'short' })} ${part({ day: 'numeric' })} ${part({ month: 'short' })}`;
+  return new Intl.DateTimeFormat('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })
+    .format(new Date(`${date}T00:00:00Z`));
 }
-/** Leave's days: "Thu 12 Nov to Sat 14 Nov", or one day alone. */
+/** Leave's days: "Thu, Nov 12, 2026 to Sat, Nov 14, 2026", or one day alone. */
 export const daysWords = (firstDay: string, lastDay: string) => (firstDay === lastDay ? dayWords(firstDay) : `${dayWords(firstDay)} to ${dayWords(lastDay)}`);
 
 export const TYPE_WORDS: Record<LeaveType, string> = { annual: 'Annual leave', sick: 'Sick leave', personal: 'Personal', other: 'Other' };
@@ -202,7 +203,7 @@ export const ABSENCE_TEXT = {
   blockBanner: 'Blocked time is part of a day when this person can’t be booked, like training or an errand. It shows on the calendar with its label.',
   lastBeforeFirst: 'The last day can’t be before the first.',
   leaveAdded: 'Leave added.',
-  leaveAddedFlagged: 'Leave added. Existing bookings were kept and flagged.',
+  leaveAddedFlagged: (n: number) => (n === 1 ? 'Leave added. The existing booking was kept and flagged.' : 'Leave added. Existing bookings were kept and flagged.'),
   leaveOverlap: 'This overlaps leave already planned.',
   noLeave: 'No leave planned.',
   removeTitle: 'Remove this leave?',
