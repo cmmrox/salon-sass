@@ -20,12 +20,20 @@ export function formatTime(value: string, timeZone: string, locale = 'en-LK'): s
  */
 export function formatClock(value: string, locale = 'en-LK'): string {
   const [hours, minutes] = value.split(':').map(Number);
-  return new Intl.DateTimeFormat(locale, {
-    timeZone: 'UTC',
-    hour: '2-digit',
-    minute: '2-digit',
-    hourCycle: 'h23',
-  }).format(new Date(Date.UTC(2000, 0, 1, hours, minutes)));
+  return clockFormat(locale).format(new Date(Date.UTC(2000, 0, 1, hours, minutes)));
+}
+/**
+ * One clock formatter per locale, made once: building an `Intl.DateTimeFormat` costs far more than using one,
+ * and a time Select formats each of its 96 quarter hours.
+ */
+const clockFormats = new Map<string, Intl.DateTimeFormat>();
+function clockFormat(locale: string): Intl.DateTimeFormat {
+  let format = clockFormats.get(locale);
+  if (!format) {
+    format = new Intl.DateTimeFormat(locale, { timeZone: 'UTC', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+    clockFormats.set(locale, format);
+  }
+  return format;
 }
 /**
  * A salon's local date, as the API writes it (`2026-10-25`), with its weekday: a holiday or a closure
