@@ -253,7 +253,8 @@ verification:
       outside - whether a person works, the windows after breaks at every edge, in time order, always at least one when
       working; a date change replacing the week on that date only, and saying it decided the answer; a removed member working
       no date; an unknown or another salon's id "not found"; a range too long or reversed refused; closures and holidays
-      ignored; nothing cached. The developer's integration tests carry all of this until F07. From outside until then, cases
+      ignored; nothing cached. The developer's TeamScheduleContractIntegrationTest and ScheduleRulesTest carry this until F07,
+      read by QA and not run by QA; they try no published holiday and no past date. From outside until then, cases
       007, 009, 014, 015 and 019 prove what it reads, that a stored day holds what was sent and that no working day can be
       stored with no time left. With F07 the offered times must match the windows, for this salon only.
     unblocked_by: F07

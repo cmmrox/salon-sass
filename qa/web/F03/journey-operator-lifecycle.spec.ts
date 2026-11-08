@@ -13,7 +13,7 @@ import {
 import { syntheticAccount } from '../../shared/identity';
 import { unzip } from '../../shared/zip';
 import {
-  afterNewestPlan, ownerSession, operatorProblem, staffTokens, supportJson, supportTestId as tid, uniqueSlug, strongPassword,
+  afterNewestPlan, ownerSession, operatorProblem, staffTokens, supportJson, supportTestId as tid, uniqueSlug, provisionedOwner,
   type SupportStart,
 } from '../../shared/operator';
 import { webUrl } from '../../shared/env';
@@ -40,7 +40,7 @@ test('TC-F03-001 An operator takes one salon from creation through billing, susp
   const plan = (await operator.planPage(admin, `?q=${planKey}`)).items[0];
   expect(plan.staffSeats).toBe(2);
   const slug = uniqueSlug('journey');
-  const owner = { name: 'QA Journey Owner', email: `owner-${slug}@example.invalid`, password: strongPassword() };
+  const owner = provisionedOwner();
   await page.goto(consoleUrl('/console/salons'));
   await page.getByTestId('console-create-salon').click();
   await page.getByTestId('console-salon-name').fill(`QA Journey ${slug}`);

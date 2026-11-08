@@ -9,13 +9,14 @@ import os from 'node:os';
 import { randomUUID } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 
-import { apiUrl } from '../../shared/env';
+import { apiUrl, POSTGRES_CONTAINER } from '../../shared/env';
 import { localService, mark } from '../../shared/identity-runtime';
 import { committedContract } from '../../shared/openapi';
 import {
   test, expect, alpha, beta, gamma, CONTRACT, operatorAccount, operatorJson, operatorProblem, planInput, salonInput,
   type Plan,
 } from '../../shared/operator';
+import { rosterOperator } from '../../shared/roster';
 
 const id = (n: number) => `TC-F03-S01-${String(n).padStart(3, '0')}`;
 const LIMIT_MS = 5_000;
@@ -26,11 +27,11 @@ function restartApi() {
 }
 
 function databaseAcceptsConnections(): boolean {
-  try { execFileSync('docker', ['exec', 'salon-postgres', 'pg_isready', '-q'], { timeout: 3_000 }); return true; } catch { return false; }
+  try { execFileSync('docker', ['exec', POSTGRES_CONTAINER, 'pg_isready', '-q'], { timeout: 3_000 }); return true; } catch { return false; }
 }
 
 test(`${id(14)} Email ceiling counts known and unknown operators and survives a restart`, async ({ operator, clock }) => {
-  const known = operatorAccount('OPERATOR_ADMIN');
+  const known = operatorAccount('OPERATOR_ADMIN'); // extra: this test locks the operator's email out
   await operator.seed(known);
   const unknown = { email: `absent-${randomUUID()}@example.invalid`, password: 'QA wrong password value' };
   const bodies: string[] = [];
@@ -117,8 +118,7 @@ test(`${id(39)} Local operator hooks are loopback-only, absent from the contract
     expect(['unreachable', 404], `${hook.method} ${hook.path} through ${external}`).toContain(status);
   }
   // Local restart keeps fixture identities and the fixed salons.
-  const account = operatorAccount('OPERATOR_SUPPORT');
-  await operator.seed(account);
+  const account = rosterOperator('OPERATOR_SUPPORT');
   const fixed = await Promise.all([alpha, beta, gamma].map(async s => (await operator.identity.api.salon(s)).json()));
   restartApi();
   await operator.identity.api.reconnect();

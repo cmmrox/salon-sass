@@ -11,6 +11,7 @@ import json
 import os
 import signal
 import subprocess
+import urllib.parse
 import time
 import threading
 import uuid
@@ -157,6 +158,73 @@ def _revision():
         return None
 
 
+# Decision 105: automated QA runs only against the QA instance; the default instance holds the
+# owner's manual testing. qa/shared/env.ts and qa/shared/checks.sh refuse it too; this refusal
+# stops a run before any child starts.
+DEFAULT_INSTANCE_PORTS = (8090, 3100, 5440)
+_PORT_SETTINGS = ("SALON_API_PORT", "SALON_WEB_PORT", "SALON_POSTGRES_PORT")
+_URL_SETTINGS = ("QA_API_URL", "QA_WEB_URL")
+
+
+def _env_file(path):
+    """KEY=VALUE lines of a dotenv file (first value wins, as infra/scripts/lib/common.sh reads it)."""
+    values = {}
+    try:
+        with open(path, encoding="utf-8") as handle:
+            for line in handle:
+                line = line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                key, value = line.split("=", 1)
+                values.setdefault(key.strip(), value.strip().strip('"'))
+    except OSError:
+        pass
+    return values
+
+
+def default_instance_ports(environ):
+    """The ports the default instance uses: its documented defaults plus any the product's .env sets.
+
+    The product checkout is QA_PRODUCT_ROOT (shell, then qa/.env.local), else this repository,
+    the same rule qa/shared/env.ts follows."""
+    product_root = (environ.get("QA_PRODUCT_ROOT") or _env_file("qa/.env.local").get("QA_PRODUCT_ROOT") or ".")
+    configured = _env_file(os.path.join(product_root, ".env"))
+    ports = list(DEFAULT_INSTANCE_PORTS)
+    for name in _PORT_SETTINGS:
+        value = configured.get(name, "")
+        if value.isdigit() and int(value) not in ports:
+            ports.append(int(value))
+    return tuple(ports)
+
+
+def default_instance_refusal(environ):
+    """Why this environment would aim QA at the default instance, or None."""
+    instance = environ.get("SALON_LOCAL_INSTANCE")
+    if instance is not None and instance != "qa":
+        return (f"automated QA runs only against the QA instance (SALON_LOCAL_INSTANCE=qa), "
+                f"not '{instance or 'default'}'")
+    refused_ports = default_instance_ports(environ)
+    aimed = []
+    for name in _PORT_SETTINGS:
+        value = environ.get(name, "").strip()
+        if value.isdigit() and int(value) in refused_ports:
+            aimed.append(f"{name} is {value}")
+    for name in _URL_SETTINGS:
+        value = environ.get(name, "").strip()
+        if value:
+            parsed = urllib.parse.urlsplit(value)
+            try:
+                port = parsed.port or (443 if parsed.scheme == "https" else 80)
+            except ValueError:
+                continue
+            if port in refused_ports:
+                aimed.append(f"{name} is {value}")
+    if aimed:
+        return (f"{', '.join(aimed)}: a port of the default instance "
+                f"({', '.join(map(str, refused_ports))}), which holds the owner's manual testing")
+    return None
+
+
 def run(entries, label, dry_run=False, reports_root="qa/reports", *, heartbeat_seconds=30):
     """Returns (exit code, report directory).
 
@@ -173,12 +241,16 @@ def run(entries, label, dry_run=False, reports_root="qa/reports", *, heartbeat_s
         print(f"  {entry['scope']} {entry.get('id')}: {' '.join(argv)}", flush=True)
     if dry_run:
         return 0, None
+    refusal = default_instance_refusal(os.environ)
+    if refusal:
+        print(f"refusing: {refusal} (decision 105). Nothing was run.", flush=True)
+        return 2, None
 
     stamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     run_id = uuid.uuid4().hex[:12]
     report_dir = os.path.join(reports_root, f"{stamp}-{label.replace(' ', '-')}-{run_id}")
     os.makedirs(report_dir, exist_ok=False)
-    env = {**os.environ, "QA_REPORT_DIR": os.path.abspath(report_dir)}
+    env = {**os.environ, "QA_REPORT_DIR": os.path.abspath(report_dir), "SALON_LOCAL_INSTANCE": "qa"}
     started = time.monotonic()
     summary = {"label": label, "run_id": run_id, "source_revision": _revision(),
                "state": "running", "result": "running", "selected_count": len(entries),

@@ -152,6 +152,7 @@ test('TC-F06-S02-006 AC-2: a finish at or before the start, a time off the 15-mi
     ['a finish off the step', { starts: '09:00', finishes: '17:59' }],
     ['working with no start', { starts: null, finishes: '18:00' }],
     ['working with no finish', { starts: '09:00', finishes: null }],
+    ['times sent on a day not worked', { working: false, starts: '09:00', finishes: '18:00' }],
   ];
   for (const [label, tuesday] of onDay) {
     await test.step(label, async () => {
@@ -203,13 +204,13 @@ test('TC-F06-S02-007 AC-3: a working day holds up to 5 breaks, stored exactly at
   await team.dispose();
 });
 
-test('TC-F06-S02-008 AC-3: a weekday set to not working keeps no breaks or times when saved, and working again later has none', async ({ identity, operator }) => {
+test('TC-F06-S02-008 AC-3: a weekday set to not working keeps no breaks when saved, and working again later has none', async ({ identity, operator }) => {
   const team = new Team(identity);
   const schedules = new Schedules(team);
   const { salon, owner } = await teamSalon(operator, identity);
   const person = await team.add(salon, owner.tokens);
   const first = await schedules.save(salon, owner.tokens, person.id, weekOf('09:00', '18:00', ['sunday'], { monday: { breaks: [brk('13:00', '14:00')] } }));
-  const sentWithBreak = weekOf('09:00', '18:00', ['sunday'], { monday: { working: false, breaks: [brk('13:00', '14:00')] } });
+  const sentWithBreak = weekOf('09:00', '18:00', ['sunday'], { monday: { working: false, starts: null, finishes: null, breaks: [brk('13:00', '14:00')] } });
   const off = await schedules.save(salon, owner.tokens, person.id, sentWithBreak, first.version);
   expect(off.weekly.find(d => d.day === 'monday'), 'none kept').toEqual(offDay('monday'));
   const back = await schedules.save(salon, owner.tokens, person.id, weekOf(), off.version);
@@ -303,6 +304,7 @@ test('TC-F06-S02-012 AC-6: of two saves of one version sent at once exactly one 
   const { salon, owner } = await teamSalon(operator, identity);
   const person = await team.add(salon, owner.tokens);
   const wins = [0, 0];
+  let overlapped = 0;
   let round = 0;
   for (const gap of GAPS) {
     for (const first of [0, 1]) {
@@ -311,7 +313,9 @@ test('TC-F06-S02-012 AC-6: of two saves of one version sent at once exactly one 
         const { version } = await schedules.read(salon, owner.tokens, person.id);
         const weeks = [roundWeek(round % 8, 0), roundWeek(round % 8, 1)];
         const order = first === 0 ? [0, 1] : [1, 0];
-        const { answers } = await fireTogether(order.map(side => () => schedules.saveRaw(salon, owner.tokens, person.id, version, weeks[side])), gap);
+        const fired = await fireTogether(order.map(side => () => schedules.saveRaw(salon, owner.tokens, person.id, version, weeks[side])), gap);
+        if (fired.overlapped) overlapped += 1;
+        const { answers } = fired;
         const statuses = answers.map(a => a.status());
         expect(statuses.filter(worked).length, `exactly one succeeded (${statuses})`).toBe(1);
         const winnerAt = statuses.findIndex(worked);
@@ -325,6 +329,7 @@ test('TC-F06-S02-012 AC-6: of two saves of one version sent at once exactly one 
     }
   }
   expect(wins.every(n => n > 0), `each side won at least once (${wins}), so neither order went unfought`).toBe(true);
+  expect(overlapped, 'the requests really were in flight together').toBeGreaterThan(0);
   await team.dispose();
 });
 

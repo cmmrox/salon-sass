@@ -64,7 +64,7 @@ test(`${id(1)} A Support operator starts a bounded session for an accessible sal
     const lasts = Date.parse(session.expiresAt) - before;
     expect(lasts, `${minutes} minutes`).toBeGreaterThanOrEqual(minutes * 60_000 - 1_000);
     expect(lasts).toBeLessThanOrEqual(minutes * 60_000 + 2_000);
-    // SALON_SUPPORT_LINK_ORIGIN: https://<host> outside local, http://<host>:3100 locally (S04 handoff).
+    // SALON_SUPPORT_LINK_ORIGIN: https://<host> outside local, http://<host>:<the instance's web port> locally (S04 handoff).
     expect(session.entryUrl).toBe(`${salonUrl(target.salon, webUrl)}/workspace/support#${session.entryCode}`);
     expect((await operator.endSupport(support, session.id)).status()).toBe(204);
   }

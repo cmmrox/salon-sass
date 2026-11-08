@@ -3,14 +3,20 @@
 # product, so the API applies every migration to an empty database.
 #
 # Usage: infra/scripts/local-reset.sh
+#        SALON_LOCAL_INSTANCE=qa infra/scripts/local-reset.sh    the QA instance's database instead
 #
-# Only this project's local database volume is deleted. Nothing outside it is touched.
+# Only the chosen instance's own database volume is deleted (salon-postgres-data, or
+# salon-qa-postgres-data for the QA instance); it says which before it starts. The other instance
+# and everything outside this project are not touched. The fixed account roster is seeded again
+# once the API answers (infra/scripts/local-accounts.sh).
 set -euo pipefail
 . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common.sh"
 
 load_settings
 require_prerequisites postgres api web
 acquire_lock
+describe_instance
+require_own_containers
 
 stop_web
 stop_api
@@ -19,5 +25,8 @@ say "postgres: stopped; its data is deleted"
 
 start_postgres
 start_api
+if [ "$SPRING_PROFILES_ACTIVE" = "local" ]; then
+  seed_roster
+fi
 start_web
 print_addresses

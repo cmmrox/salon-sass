@@ -8,80 +8,39 @@
  * Staff, the F06 block: `hrsLine`, `schOpen`, `schErr`, `schOut`, `schWeek`, `schCopy`, `schSalon`, `schSave`,
  * `schOv`, `ovSave`, `schList`, `schPaint`), with the lead's rulings: F06 writes times with the 24-hour
  * `formatClock`, so every expected string with a time is in `SCHEDULE_TEXT` (qa/shared/team-schedule.ts), and
- * no working day may be filled by breaks. Rules the API cases prove (every boundary, every role on every
- * endpoint) are not proved again: each case checks what the person sees, and persistence once through the API.
+ * no working day may be filled by breaks. The spec's "Corrections at close" take precedence over its criteria.
+ * Rules the API cases prove (every boundary, every role on every endpoint) are not proved again: each case
+ * checks what the person sees, and persistence once through the API.
  *
- * The test ids and the names of the times are guesses until the handoff, all of them in `PENDING_F06_S02`.
+ * The test ids and the names of the times are the build's, from the handoff, all of them in `PENDING_F06_S02`.
  * `cacheComponents` keeps a route it has left in the document, hidden, so every lookup targets the visible
  * element.
  */
-import type { BrowserContext, Locator, Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 
 import { DESIGN_WIDTHS } from '../../shared/design-reference';
-import { webUrl } from '../../shared/env';
-import { test as browserTest, expect, routes, type AccountBrowser } from '../../shared/identity-browser';
-import type { Actor, SignedStaff } from '../../shared/identity';
-import { Operator, supportJson, type SupportStart } from '../../shared/operator';
+import { expect, type AccountBrowser } from '../../shared/identity-browser';
+import type { SignedStaff } from '../../shared/identity';
+import type { Operator } from '../../shared/operator';
 import { fit, focusIndicator, seriousViolations } from '../../shared/page-checks';
-import { DAYS, Hours, localDate, plusDays, week, type DayName } from '../../shared/salon-hours';
-import { Team, memberInput, teamSalon, type TeamMember, type WorkDay } from '../../shared/team';
+import { DAYS, plusDays, week, type DayName } from '../../shared/salon-hours';
+import { memberInput, teamSalon, type Team, type TeamMember, type WorkDay } from '../../shared/team';
+import { TEAM_ROUTE, button, card, id, open, openSchedule, ready, salonToday, settled, sheetOf, supportBrowser, test } from '../../shared/team-browser';
 import {
-  LONG, PENDING_F06_S02, SCHEDULE_LIMITS, SCHEDULE_TEXT, Schedules, brk, calendarDay, changeInput, copyOf, expectWeek, noWorkingDays, offChange, offDay, shownTime, weekOf, workingDay,
+  LONG, PENDING_F06_S02, SCHEDULE_LIMITS, SCHEDULE_TEXT, brk, calendarDay, changeInput, copyOf, expectWeek, noWorkingDays, offChange, offDay, shownTime, weekOf, workingDay, type Schedules,
 } from '../../shared/team-schedule';
-import { salonUrl, type Salon } from '../../shared/tenants';
 
-const test = browserTest.extend<{ operator: Operator; team: Team; schedules: Schedules; hours: Hours }>({
-  operator: async ({ identity }, use) => {
-    const operator = new Operator(identity);
-    await operator.resetFixtures();
-    try { await use(operator); } finally { await operator.resetToBaseline(); }
-  },
-  team: async ({ identity }, use) => { const team = new Team(identity); try { await use(team); } finally { await team.dispose(); } },
-  schedules: async ({ team }, use) => { await use(new Schedules(team)); },
-  hours: async ({ identity }, use) => { await use(new Hours(identity)); },
-});
 test.describe.configure({ timeout: 180_000 });
 
 const W = PENDING_F06_S02.web;
 const N = PENDING_F06_S02.names;
 const TEXT = SCHEDULE_TEXT;
-const TEAM_ROUTE = routes.team;
-const COLOMBO = 'Asia/Colombo';
 
-const id = (scope: Page | Locator, name: string) => scope.getByTestId(name).filter({ visible: true });
-const card = (page: Page, memberId: string) => page.locator(`[data-testid="team-card"][data-id="${memberId}"]`).filter({ visible: true });
-const sheetOf = (page: Page) => id(page, W.sheet);
-const button = (scope: Page | Locator, name: string | RegExp) => scope.getByRole('button', { name }).filter({ visible: true });
 const SAVE = 'Save hours';
 const ADD_CHANGE = '+ Change a date';
 const COPY_MONDAY = 'Copy Monday to working days';
 const USE_SALON = /Use the salon.s hours/;
 const ADD_BREAK = /Add break/;
-
-async function settled(page: Page) {
-  await page.waitForFunction(() => document.getAnimations().every(a => a.playState !== 'running'));
-}
-
-async function ready(page: Page) {
-  await expect(page.getByTestId('team-loading').filter({ visible: true })).toHaveCount(0);
-  await expect(id(page, 'team-summary').or(id(page, 'team-empty')).first()).toBeVisible();
-}
-
-async function open(accounts: AccountBrowser, actor: Actor, width = 1280): Promise<{ context: BrowserContext; page: Page }> {
-  const context = await accounts.context(actor.salon, [actor], { width });
-  const page = await accounts.open(context, TEAM_ROUTE);
-  await ready(page);
-  return { context, page };
-}
-
-/** Opens a person's schedule sheet from their card and waits for it to load. */
-async function openSchedule(page: Page, memberId: string) {
-  await card(page, memberId).getByTestId(W.cardSchedule).click();
-  const sheet = sheetOf(page);
-  await expect(sheet).toBeVisible();
-  await expect(id(sheet, W.loading)).toHaveCount(0);
-  return sheet;
-}
 
 /** The sheet, whether a save left it open or closed it: the spec fixes that only when it has bookings to list (AC-11). */
 async function sheetStillOrAgain(page: Page, memberId: string) {
@@ -92,9 +51,11 @@ async function sheetStillOrAgain(page: Page, memberId: string) {
 const dateTab = (sheet: Locator) => sheet.getByRole('tab', { name: 'Date changes' });
 const weekTab = (sheet: Locator) => sheet.getByRole('tab', { name: 'Weekly hours' });
 
-/** Sets a time through F04's TimeSelect, found by the accessible name AC-16 asks for. */
-async function setTime(page: Page, sheet: Locator, name: string | RegExp, hhmm: string) {
-  await sheet.getByRole('combobox', { name }).click();
+/** A time by the accessible name AC-16 asks for, whole: "Starts" is also part of "Break 1 starts". */
+const timeField = (sheet: Locator, name: string) => sheet.getByRole('combobox', { name, exact: true });
+/** Sets a time through F04's TimeSelect. */
+async function setTime(page: Page, sheet: Locator, name: string, hhmm: string) {
+  await timeField(sheet, name).click();
   await page.getByRole('option', { name: shownTime(hhmm), exact: true }).click();
   await expect(page.getByRole('listbox')).toHaveCount(0);
 }
@@ -111,7 +72,7 @@ async function addBreak(page: Page, sheet: Locator, day: DayName, n: number, sta
   await button(id(sheet, W.day(day)), ADD_BREAK).click();
   await breakOn(page, sheet, day, n, starts, ends);
 }
-const breakRows = (sheet: Locator, day: DayName) => id(sheet, W.breakRow(day));
+const breakRows = (sheet: Locator, day: DayName) => sheet.getByRole('combobox', { name: new RegExp(`^${LONG[day]} break \\d starts$`) });
 const savedToast = (page: Page) => page.getByText(TEXT.saved).filter({ visible: true });
 
 /** Chooses a date in the change form, moving the Calendar on to its month when it is not this one. */
@@ -123,10 +84,8 @@ async function pickDate(sheet: Locator, date: string) {
   await calendarDay(calendar, date).click();
 }
 const segment = (sheet: Locator, name: string) => sheet.getByRole('radio', { name, exact: true }).or(sheet.getByRole('button', { name, exact: true }));
-const changeRow = (sheet: Locator, changeId: string) => sheet.locator(`[data-testid="${W.changeRow}"][data-id="${changeId}"]`).filter({ visible: true });
+const changeRow = (sheet: Locator, date: string) => sheet.locator(`[data-testid="${W.changeRow}"][data-date="${date}"]`).filter({ visible: true });
 const noteField = (sheet: Locator) => sheet.getByLabel(/^Note/);
-
-const salonToday = async (accounts: AccountBrowser) => localDate(await accounts.identity.now(), COLOMBO);
 
 /** A salon with opening hours and a person on a known week. */
 async function arrange(operator: Operator, accounts: AccountBrowser, team: Team, schedules: Schedules, weekly: WorkDay[] = weekOf(), name = 'Sanduni Perera') {
@@ -134,17 +93,6 @@ async function arrange(operator: Operator, accounts: AccountBrowser, team: Team,
   const person = await team.add(made.salon, made.owner.tokens, memberInput({ name }));
   await schedules.save(made.salon, made.owner.tokens, person.id, weekly);
   return { ...made, person };
-}
-
-/** A support session's browser, on the salon's own web address. */
-async function supportBrowser(browser: import('@playwright/test').Browser, operator: Operator, created: { id: string }, salon: Salon) {
-  const support = await operator.actor('OPERATOR_SUPPORT');
-  const session = await supportJson<SupportStart>(await operator.startSupport(support, created.id, { reason: 'QA F06 support reads a schedule' }), 'supportStart', 201);
-  const context = await browser.newContext({ baseURL: salonUrl(salon, webUrl), viewport: { width: 1280, height: 1000 }, locale: 'en' });
-  const entry = await context.newPage();
-  await entry.goto(`${salonUrl(salon, webUrl)}/workspace/support#${session.entryCode}`);
-  await expect(entry.getByTestId('support-banner')).toBeVisible();
-  return context;
 }
 
 /** The controls a caller without `team.manage` must not have. */
@@ -173,13 +121,14 @@ test('TC-F06-S02-030 AC-12: each card\'s Hours row summarises the week: one unbr
     ['one stretch with none', stretch('10:00', '17:30', ['tuesday', 'wednesday', 'thursday']), row.stretch('tuesday', 'thursday', '10:00', '17:30')],
     ['a single day', stretch('09:00', '18:00', ['monday']), row.single('monday', '09:00', '18:00')],
     ['days not in one stretch', stretch('09:00', '18:00', ['monday', 'wednesday', 'friday']), row.varies],
+    ['Sunday and Monday, not one stretch as the week starts on Monday', stretch('09:00', '18:00', ['monday', 'sunday']), row.varies],
     ['the same days, different times', stretch('09:00', '18:00', monSat, { friday: { finishes: '17:00' } }), row.varies],
     ['the same times, different breaks', stretch('09:00', '18:00', monSat, { friday: { breaks: [brk('13:00', '14:00')] } }), row.varies],
     ['no working days', noWorkingDays(), row.none],
   ];
   const people: { label: string; member: TeamMember; expected: string }[] = [];
   for (const [label, weekly, expected] of rows) {
-    const member = await team.add(salon, owner.tokens, memberInput({ name: `Person ${label}` }));
+    const member = await team.add(salon, owner.tokens, memberInput({ name: `Person ${people.length + 1}` }));
     // This salon has saved no hours, so a person already has no working days, and saving that changes nothing (AC-6).
     if (expected !== row.none) await schedules.save(salon, owner.tokens, member.id, weekly);
     people.push({ label, member, expected });
@@ -227,7 +176,8 @@ test('TC-F06-S02-031 AC-1, AC-2: the Profile sheet says new people start on the 
     await expect(sheet.getByText(TEXT.weeklyBanner)).toBeVisible();
     for (const day of DAYS) await expect(id(sheet, W.toggle(day)), `${day}`).toHaveAttribute('aria-pressed', String(day !== 'sunday'));
     await expect(id(sheet, W.off('sunday')), 'Sunday reads not working').toBeVisible();
-    await expect(sheet.getByRole('combobox', { name: N.starts(LONG.monday) })).toContainText(shownTime('09:00'));
+    await expect(timeField(sheet, N.starts(LONG.monday))).toContainText(shownTime('09:00'));
+    await expect(button(sheet, SAVE), 'nothing to save while nothing has changed').toBeDisabled();
   });
   await test.step('a change and a save', async () => {
     await hoursOn(page, sheet, 'monday', '08:30', '16:45');
@@ -247,7 +197,6 @@ test('TC-F06-S02-032 AC-2: a finish at or before the start says "Mon: the finish
   const { page } = await open(accounts, owner);
   const sheet = await openSchedule(page, person.id);
   const words = TEXT.finishAfterStart('monday');
-  await expect(button(sheet, SAVE), 'nothing wrong yet').toBeEnabled();
   for (const [label, finishes] of [['equal', '09:00'], ['before', '08:00']] as const) {
     await test.step(label, async () => {
       await setTime(page, sheet, N.finishes(LONG.monday), finishes);
@@ -255,10 +204,14 @@ test('TC-F06-S02-032 AC-2: a finish at or before the start says "Mon: the finish
       await expect(button(sheet, SAVE)).toBeDisabled();
     });
   }
-  await test.step('corrected', async () => {
-    await setTime(page, sheet, N.finishes(LONG.monday), '18:00');
+  await test.step('corrected, to something new', async () => {
+    await setTime(page, sheet, N.finishes(LONG.monday), '17:30');
     await expect(sheet.getByText(words)).toHaveCount(0);
     await expect(button(sheet, SAVE)).toBeEnabled();
+  });
+  await test.step('back to what is saved, so there is nothing to save', async () => {
+    await setTime(page, sheet, N.finishes(LONG.monday), '18:00');
+    await expect(button(sheet, SAVE)).toBeDisabled();
   });
   expectWeek((await schedules.read(salon, owner.tokens, person.id)).weekly, weekOf(), 'nothing saved');
 });
@@ -272,16 +225,15 @@ test('TC-F06-S02-033 AC-3: a working day takes breaks up to 5 and no sixth, each
     for (const [n, [starts, ends]] of five.entries()) await addBreak(page, sheet, 'monday', n + 1, starts, ends);
     await expect(breakRows(sheet, 'monday'), 'five breaks').toHaveCount(SCHEDULE_LIMITS.breaks);
     await expect(button(sheet, SAVE), 'touching the start and the finish is allowed').toBeEnabled();
-    const add = button(id(sheet, W.day('monday')), ADD_BREAK);
-    if (await add.isEnabled()) await add.click();
-    await expect(breakRows(sheet, 'monday'), 'the sixth is refused').toHaveCount(SCHEDULE_LIMITS.breaks);
+    await expect(button(id(sheet, W.day('monday')), ADD_BREAK), '+ Add break is disabled at five').toBeDisabled();
+    await expect(id(sheet, W.breaksFull('monday')), 'and says why').toHaveText(TEXT.maxBreaks);
   });
   await test.step('removed by its own control, the others staying', async () => {
     await button(sheet, N.breakRemove(LONG.monday, 5)).click();
     await expect(breakRows(sheet, 'monday')).toHaveCount(4);
     for (const n of [4, 3, 2]) await button(sheet, N.breakRemove(LONG.monday, n)).click();
     await expect(breakRows(sheet, 'monday')).toHaveCount(1);
-    await expect(sheet.getByRole('combobox', { name: N.breakStarts(LONG.monday, 1) }), 'the first stays').toContainText(shownTime('09:00'));
+    await expect(timeField(sheet, N.breakStarts(LONG.monday, 1)), 'the first stays').toContainText(shownTime('09:00'));
   });
   const rules: [string, string, string, string][] = [
     ['a break that ends before it starts', TEXT.breakOrder('monday'), '13:00', '12:00'],
@@ -327,8 +279,8 @@ test('TC-F06-S02-034 AC-4: Copy Monday to working days copies Monday\'s times an
   const { page } = await open(accounts, owner);
   const sheet = await openSchedule(page, person.id);
   await button(sheet, COPY_MONDAY).click();
-  await expect(sheet.getByRole('combobox', { name: N.starts(LONG.tuesday) }), 'Tuesday takes Monday\'s start').toContainText(shownTime('08:00'));
-  await expect(sheet.getByRole('combobox', { name: N.breakStarts(LONG.friday, 1) }), 'Friday\'s break becomes Monday\'s').toContainText(shownTime('12:00'));
+  await expect(timeField(sheet, N.starts(LONG.tuesday)), 'Tuesday takes Monday\'s start').toContainText(shownTime('08:00'));
+  await expect(timeField(sheet, N.breakStarts(LONG.friday, 1)), 'Friday\'s break becomes Monday\'s').toContainText(shownTime('12:00'));
   await expect(id(sheet, W.off('wednesday')), 'a day off stays off').toBeVisible();
   expectWeek((await schedules.read(salon, owner.tokens, person.id)).weekly, start, 'nothing saved yet');
   await button(sheet, SAVE).click();
@@ -359,10 +311,10 @@ test('TC-F06-S02-035 AC-4: Use the salon\'s hours sets every weekday from the sa
   const { page } = await open(accounts, owner);
   const sheet = await openSchedule(page, person.id);
   await button(sheet, USE_SALON).click();
-  await expect(sheet.getByRole('combobox', { name: N.starts(LONG.monday) }), 'Monday takes the salon\'s').toContainText(shownTime('09:00'));
+  await expect(timeField(sheet, N.starts(LONG.monday)), 'Monday takes the salon\'s').toContainText(shownTime('09:00'));
   await expect(id(sheet, W.off('wednesday')), 'a day the salon is closed').toBeVisible();
-  await expect(sheet.getByRole('combobox', { name: N.starts(LONG.sunday) }), 'a day off the salon opens').toContainText(shownTime('11:00'));
-  await expect(sheet.getByRole('combobox', { name: N.breakStarts(LONG.tuesday, 1) }), 'Tuesday stays working and keeps its break').toContainText(shownTime('13:00'));
+  await expect(timeField(sheet, N.starts(LONG.sunday)), 'a day off the salon opens').toContainText(shownTime('11:00'));
+  await expect(timeField(sheet, N.breakStarts(LONG.tuesday, 1)), 'Tuesday stays working and keeps its break').toContainText(shownTime('13:00'));
   expectWeek((await schedules.read(salon, owner.tokens, person.id)).weekly, start, 'nothing saved yet');
   await button(sheet, SAVE).click();
   await expect(savedToast(page)).toBeVisible();
@@ -372,17 +324,28 @@ test('TC-F06-S02-035 AC-4: Use the salon\'s hours sets every weekday from the sa
 
 // ---------------------------------------------------------------- AC-5 the warning
 
-test('TC-F06-S02-036 AC-5: hours outside the salon\'s warn without refusing, naming each day and the salon\'s hours; inside them there is no warning; saving keeps the hours as entered', async ({ accounts, operator, team, schedules, hours }) => {
+test('TC-F06-S02-036 AC-5: hours outside the salon\'s warn without refusing, Monday first, naming each day and the salon\'s hours; inside them there is no warning; a salon with no saved hours has its one warning; saving keeps the hours as entered', async ({ accounts, operator, team, schedules, hours }) => {
   const { salon, owner, person } = await arrange(operator, accounts, team, schedules);
+  await test.step('no saved hours: the one warning, and it does not refuse', async () => {
+    const { page, context } = await open(accounts, owner);
+    const sheet = await openSchedule(page, person.id);
+    await expect(id(sheet, W.hoursUnset)).toHaveText(TEXT.hoursUnset);
+    await expect(id(sheet, W.outside), 'not the other warning').toHaveCount(0);
+    await setTime(page, sheet, N.finishes(LONG.monday), '17:00');
+    await expect(button(sheet, SAVE)).toBeEnabled();
+    await context.close();
+  });
   await hours.save(salon, owner.tokens, week('09:00', '18:00', ['sunday']));
   const { page } = await open(accounts, owner);
   const sheet = await openSchedule(page, person.id);
   await expect(id(sheet, W.outside), 'inside the salon\'s hours, no warning').toHaveCount(0);
+  await expect(id(sheet, W.hoursUnset), 'the salon has hours now').toHaveCount(0);
   await setTime(page, sheet, N.finishes(LONG.monday), '19:00');
   await id(sheet, W.toggle('sunday')).click();
   await hoursOn(page, sheet, 'sunday', '10:00', '14:00');
   const warning = id(sheet, W.outside);
-  for (const words of [TEXT.outsideHead, TEXT.outsideClosed('sunday'), TEXT.outsideOpen('monday', '09:00', '18:00'), TEXT.outsideTail]) await expect(warning, words).toContainText(words);
+  const inOrder = [TEXT.outsideHead, TEXT.outsideOpen('monday', '09:00', '18:00'), TEXT.outsideClosed('sunday'), TEXT.outsideTail];
+  await expect(warning, 'the whole warning, in the spec\'s order, Monday first').toHaveText(new RegExp(`^${inOrder.map(words => words.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('\\s*')}$`));
   await expect(warning, 'a day inside the hours is not named').not.toContainText('Tue:');
   await expect(button(sheet, SAVE), 'it does not refuse').toBeEnabled();
   await button(sheet, SAVE).click();
@@ -404,20 +367,27 @@ test('TC-F06-S02-037 AC-6, AC-16: a save someone else overtook shows the conflic
   await expect(id(sheet, W.conflict), 'told someone else changed it').toBeVisible();
   expectWeek((await schedules.read(salon, owner.tokens, person.id)).weekly, theirs, 'their week stands');
   await id(sheet, W.conflictReload).click();
-  await expect(sheet.getByRole('combobox', { name: N.starts(LONG.monday) }), 'Reload shows what is saved').toContainText(shownTime('11:00'));
+  await expect(timeField(sheet, N.starts(LONG.monday)), 'Reload shows what is saved').toContainText(shownTime('11:00'));
   await expect(id(sheet, W.conflict)).toHaveCount(0);
 });
 
-test('TC-F06-S02-038 AC-6: leaving the sheet with unsaved edits by Escape or Close asks first; Stay keeps the edits, Leave discards them, closing the page asks the browser, and an untouched sheet closes without asking', async ({ accounts, operator, team, schedules }) => {
+test('TC-F06-S02-038 AC-6: moving between the tabs keeps unsaved edits with no prompt; leaving the sheet with them by Escape or Close asks first; Stay keeps the edits, Leave discards them, closing the page asks the browser, and an untouched sheet closes without asking', async ({ accounts, operator, team, schedules }) => {
   const { salon, owner, person } = await arrange(operator, accounts, team, schedules);
   const { page } = await open(accounts, owner);
   const sheet = await openSchedule(page, person.id);
   await setTime(page, sheet, N.finishes(LONG.monday), '17:00');
+  await test.step('to Date changes and back', async () => {
+    await dateTab(sheet).click();
+    await expect(sheet.getByText(TEXT.datesBanner)).toBeVisible();
+    await expect(page.getByTestId(W.leaveDialog), 'no prompt').toHaveCount(0);
+    await weekTab(sheet).click();
+    await expect(timeField(sheet, N.finishes(LONG.monday)), 'the edit is kept').toContainText(shownTime('17:00'));
+  });
   await test.step('Escape, then Stay', async () => {
     await page.keyboard.press('Escape');
     await expect(id(page, W.leaveDialog)).toBeVisible();
     await id(page, W.leaveStay).click();
-    await expect(sheet.getByRole('combobox', { name: N.finishes(LONG.monday) }), 'the edit is kept').toContainText(shownTime('17:00'));
+    await expect(timeField(sheet, N.finishes(LONG.monday)), 'the edit is kept').toContainText(shownTime('17:00'));
   });
   await test.step('closing the page asks the browser', async () => {
     const dialog = page.waitForEvent('dialog');
@@ -425,7 +395,7 @@ test('TC-F06-S02-038 AC-6: leaving the sheet with unsaved edits by Escape or Clo
     const shown = await dialog;
     expect(shown.type()).toBe('beforeunload');
     await shown.dismiss();
-    await expect(sheet.getByRole('combobox', { name: N.finishes(LONG.monday) }), 'dismissing keeps the page and the edit').toContainText(shownTime('17:00'));
+    await expect(timeField(sheet, N.finishes(LONG.monday)), 'dismissing keeps the page and the edit').toContainText(shownTime('17:00'));
   });
   await test.step('Close, then Leave', async () => {
     await id(sheet, W.close).click();
@@ -481,16 +451,16 @@ test('TC-F06-S02-039 AC-7, AC-8: on Date changes an Owner adds different hours w
     expect(stored.dateChanges[1]).toMatchObject({ working: false, starts: null, finishes: null, breaks: [] });
     const rows = sheet.getByTestId(W.changeRow).filter({ visible: true });
     await expect(rows).toHaveCount(2);
-    await expect(rows.first(), 'today\'s comes first').toHaveAttribute('data-id', first.id);
+    await expect(rows.first(), 'today\'s comes first').toHaveAttribute('data-date', today);
     await expect(rows.first()).toContainText(shownTime('10:00'));
     await expect(rows.first()).toContainText('Half day for a family event');
     await expect(rows.nth(1)).toContainText('Not working');
   });
   expectWeek(stored.weekly, weekOf(), 'the week stays as it was');
   await test.step('Remove', async () => {
-    await button(changeRow(sheet, stored.dateChanges[0].id), /^Remove/).click();
+    await button(changeRow(sheet, today), /^Remove/).click();
     await expect(page.getByText(TEXT.changeRemoved).filter({ visible: true })).toBeVisible();
-    await button(changeRow(sheet, stored.dateChanges[1].id), /^Remove/).click();
+    await button(changeRow(sheet, later), /^Remove/).click();
     await expect(sheet.getByText(TEXT.noChanges), 'empty again').toBeVisible();
     expect((await schedules.read(salon, owner.tokens, person.id)).dateChanges).toEqual([]);
   });
@@ -507,8 +477,8 @@ test('TC-F06-S02-040 AC-7: the change form says "This date already has a change.
   await test.step('a finish before the start', async () => {
     await setTime(page, sheet, N.changeStarts, '14:00');
     await setTime(page, sheet, N.changeFinishes, '10:00');
-    await button(sheet, N.saveChange).click();
-    await expect(id(sheet, W.changeProblem)).toBeVisible();
+    await expect(id(sheet, W.changeProblem).filter({ hasText: TEXT.changeFinishAfterStart })).toBeVisible();
+    await expect(button(sheet, N.saveChange)).toBeDisabled();
   });
   await test.step('breaks that fill the day', async () => {
     await setTime(page, sheet, N.changeStarts, '10:00');
@@ -516,8 +486,8 @@ test('TC-F06-S02-040 AC-7: the change form says "This date already has a change.
     await button(id(sheet, W.changeForm), ADD_BREAK).click();
     await setTime(page, sheet, N.changeBreakStarts(1), '10:00');
     await setTime(page, sheet, N.changeBreakEnds(1), '14:00');
-    await button(sheet, N.saveChange).click();
-    await expect(sheet.getByText(TEXT.changeBreakFills)).toBeVisible();
+    await expect(id(sheet, W.changeProblem).filter({ hasText: TEXT.changeBreakFills })).toBeVisible();
+    await expect(button(sheet, N.saveChange)).toBeDisabled();
   });
   expect((await schedules.read(salon, owner.tokens, person.id)).dateChanges, 'nothing saved').toEqual([]);
   await test.step('a date someone else just changed', async () => {
@@ -531,15 +501,16 @@ test('TC-F06-S02-040 AC-7: the change form says "This date already has a change.
 
 // ---------------------------------------------------------------- AC-11 the bookings a change affects
 
-test('TC-F06-S02-041 AC-11: when the answer lists affected bookings the sheet says how many fall outside and that they are kept, with each one\'s date, time, customer and service, after a weekly save and after adding a change', async ({ accounts, operator, team, schedules }) => {
-  const { owner, person } = await arrange(operator, accounts, team, schedules);
+test('TC-F06-S02-041 AC-11: when the answer lists affected bookings the sheet says how many and that they are kept, singular and plural, with each one\'s date, time, customer and service, after a weekly save and after adding a change', async ({ accounts, operator, team, schedules }) => {
+  const { salon, owner, person } = await arrange(operator, accounts, team, schedules);
   const { page, context } = await open(accounts, owner);
   // No booking exists before F07 (deferred case 029), so the save is real and only its answer gains a list.
   const today = await salonToday(accounts);
-  const affected = [
+  const bookings = [
     { date: plusDays(today, 4), time: '17:30', customerName: 'Nimali Silva', serviceName: 'Root touch-up' },
     { date: plusDays(today, 5), time: '18:15', customerName: 'Tharushi Fernando', serviceName: 'Balayage' },
   ];
+  let affected = bookings;
   const addList = async (route: import('@playwright/test').Route) => {
     const answer = await route.fetch();
     await route.fulfill({ response: answer, json: { ...(await answer.json() as object), affected } });
@@ -548,26 +519,37 @@ test('TC-F06-S02-041 AC-11: when the answer lists affected bookings the sheet sa
   await context.route(PENDING_F06_S02.bff.addChange, addList);
   const expectList = async (sheet: Locator, label: string) => {
     const rows = id(sheet, W.affectedRow);
-    await expect(rows, `${label}: one row each`).toHaveCount(2);
+    await expect(rows, `${label}: one row each`).toHaveCount(affected.length);
     for (const [n, booking] of affected.entries()) {
       for (const words of [shownTime(booking.time), booking.customerName, booking.serviceName]) await expect(rows.nth(n), `${label}: ${words}`).toContainText(words);
     }
   };
   const sheet = await openSchedule(page, person.id);
-  await test.step('a weekly save', async () => {
-    await setTime(page, sheet, N.finishes(LONG.monday), '17:00');
-    await button(sheet, SAVE).click();
-    await expect(id(sheet, W.affected)).toContainText(TEXT.affected(2));
-    await expectList(sheet, 'a weekly save');
-  });
-  await test.step('adding a date change', async () => {
-    await dateTab(sheet).click();
-    await button(sheet, ADD_CHANGE).click();
-    await pickDate(sheet, plusDays(today, 4));
-    await segment(sheet, 'Not working').click();
-    await button(sheet, N.saveChange).click();
-    await expectList(sheet, 'adding a change');
-  });
+  const finishes = ['17:00', '16:30'];
+  for (const [n, count] of [2, 1].entries()) {
+    await test.step(`a weekly save with ${count}`, async () => {
+      affected = bookings.slice(0, count);
+      await setTime(page, sheet, N.finishes(LONG.monday), finishes[n]);
+      await button(sheet, SAVE).click();
+      await expect(id(sheet, W.affected), 'the sheet stays open to say so').toContainText(TEXT.affected(count));
+      await expectList(sheet, `a weekly save with ${count}`);
+    });
+  }
+  await dateTab(sheet).click();
+  for (const count of [2, 1]) {
+    await test.step(`adding a date change with ${count}`, async () => {
+      affected = bookings.slice(0, count);
+      await button(sheet, ADD_CHANGE).click();
+      await pickDate(sheet, plusDays(today, 4 + count));
+      await segment(sheet, 'Not working').click();
+      await button(sheet, N.saveChange).click();
+      await expect(id(sheet, W.affected)).toContainText(TEXT.affectedOnDate(count));
+      await expectList(sheet, `adding a change with ${count}`);
+    });
+  }
+  const stored = await schedules.read(salon, owner.tokens, person.id);
+  expect(stored.weekly.find(d => d.day === 'monday')?.finishes, 'the saves were real').toBe('16:30');
+  expect(stored.dateChanges.length, 'and so were the changes').toBe(2);
 });
 
 // ---------------------------------------------------------------- AC-13 who sees what
@@ -576,15 +558,22 @@ test('TC-F06-S02-042 AC-13: the Receptionist, the Professional and a support ses
   const weekly = weekOf('09:00', '18:00', ['sunday'], { monday: { breaks: [brk('13:00', '14:00')] } });
   const { salon, owner, created, person } = await arrange(operator, accounts, team, schedules, weekly);
   const note = 'A private reason for this half day';
-  const { change } = await schedules.add(salon, owner.tokens, person.id, changeInput(plusDays(await salonToday(accounts), 3), { note }));
+  const date = plusDays(await salonToday(accounts), 3);
+  await schedules.add(salon, owner.tokens, person.id, changeInput(date, { note }));
   const checks = async (page: Page, label: string) => {
     await ready(page);
+    // What reached the browser, not only what it drew: a screen can hide what the answer carried.
+    const answers: Promise<string>[] = [];
+    page.on('response', r => { if (PENDING_F06_S02.bff.read(new URL(r.url()))) answers.push(r.text().catch(() => '')); });
     const sheet = await openSchedule(page, person.id);
-    await expect(id(sheet, W.readOnly), `${label}: says it is read-only`).toBeVisible();
     await expect(sheet.getByText(shownTime('13:00')).first(), `${label}: reads the break`).toBeVisible();
     await expectNoChangeControls(sheet, label);
-    await expect(changeRow(sheet, change.id), `${label}: reads the change`).toBeVisible();
+    await expect(changeRow(sheet, date), `${label}: reads the change`).toBeVisible();
     expect(await page.content(), `${label}: no note anywhere in the page`).not.toContain(note);
+    const read = (await Promise.all(answers)).join('\n');
+    expect(read, `${label}: the schedule's answer was seen, or this proves nothing`).toContain(date);
+    expect(read, `${label}: no note in what the browser received`).not.toContain(note);
+    expect(read, `${label}: no note field at all`).not.toContain('"note"');
   };
   for (const role of ['RECEPTIONIST', 'PROFESSIONAL'] as const) {
     await test.step(role, async () => {
@@ -599,13 +588,14 @@ test('TC-F06-S02-042 AC-13: the Receptionist, the Professional and a support ses
     const page = await context.newPage();
     await page.goto(TEAM_ROUTE);
     await checks(page, 'support');
+    await expect(id(sheetOf(page), W.readOnly), 'a support session is told why it cannot change anything').toBeVisible();
     await context.close();
   });
   await test.step('the Owner does see the note', async () => {
     const { page } = await open(accounts, owner);
     const sheet = await openSchedule(page, person.id);
     await dateTab(sheet).click();
-    await expect(changeRow(sheet, change.id)).toContainText(note);
+    await expect(changeRow(sheet, date)).toContainText(note);
   });
 });
 
@@ -721,10 +711,9 @@ test('TC-F06-S02-045 AC-16: both tabs have no serious accessibility violation fo
   const sheet = await openSchedule(page, person.id);
   await scan('Weekly hours');
   await test.step('names say which weekday and which break', async () => {
-    for (const name of [N.starts(LONG.monday), N.finishes(LONG.monday), N.breakStarts(LONG.monday, 1), N.breakStarts(LONG.monday, 2)]) {
-      await expect(sheet.getByRole('combobox', { name }), name).toBeVisible();
+    for (const name of [N.starts(LONG.monday), N.finishes(LONG.monday), N.breakStarts(LONG.monday, 1), N.breakStarts(LONG.monday, 2), N.breakEnds(LONG.monday, 2)]) {
+      await expect(timeField(sheet, name), name).toBeVisible();
     }
-    await expect(sheet.getByRole('combobox', { name: N.breakEnds(LONG.monday, 2) })).toBeVisible();
     await expect(button(sheet, N.breakRemove(LONG.monday, 2))).toBeVisible();
     await expect(button(id(sheet, W.day('monday')), ADD_BREAK), 'Add break names its day').toHaveAccessibleName(/Monday/);
     await expect(id(sheet, W.toggle('monday')), 'the weekday\'s toggle').toHaveAccessibleName(/Monday|Mon/);
@@ -740,7 +729,8 @@ test('TC-F06-S02-045 AC-16: both tabs have no serious accessibility violation fo
   await button(sheet, ADD_CHANGE).click();
   await scan('the change form');
   await id(sheet, W.close).click();
-  if (await page.getByTestId(W.leaveDialog).isVisible()) await id(page, W.leaveConfirm).click();
+  await settled(page);
+  if ((await id(page, W.leaveDialog).count()) > 0) await id(page, W.leaveConfirm).click();
   await expect(sheetOf(page)).toHaveCount(0);
   await test.step('by keyboard alone', async () => {
     const opener = card(page, person.id).getByTestId(W.cardSchedule);
@@ -752,15 +742,17 @@ test('TC-F06-S02-045 AC-16: both tabs have no serious accessibility violation fo
     await page.keyboard.press('Enter');
     const opened = sheetOf(page);
     await expect(opened).toBeVisible();
-    const finishes = opened.getByRole('combobox', { name: N.finishes(LONG.wednesday) });
+    const finishes = timeField(opened, N.finishes(LONG.wednesday));
     steps = 0;
     while (!(await finishes.evaluate(el => el === document.activeElement)) && steps++ < 120) await page.keyboard.press('Tab');
     await expect(finishes, 'the time reached by Tab, inside the sheet').toBeFocused();
     await page.keyboard.press('Enter');
-    await expect(page.getByRole('listbox')).toBeVisible();
+    await expect(page.getByRole('option', { name: shownTime('18:00'), exact: true }), 'the list opens on the time it holds').toBeFocused();
     await page.keyboard.press('ArrowUp');
+    await expect(page.getByRole('option', { name: shownTime('17:45'), exact: true }), 'one step earlier').toBeFocused();
     await page.keyboard.press('Enter');
     await expect(page.getByRole('listbox')).toHaveCount(0);
+    await expect(finishes).toContainText(shownTime('17:45'));
     const save = opened.getByRole('button', { name: SAVE });
     steps = 0;
     while (!(await save.evaluate(el => el === document.activeElement)) && steps++ < 120) await page.keyboard.press('Tab');

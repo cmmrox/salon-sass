@@ -2,13 +2,15 @@
 # web app run on the machine itself, not in containers.
 #
 # Every name carries the project's prefix, so nothing here can be mistaken for, or collide with,
-# another project's containers on the same machine.
+# another project's containers on the same machine. The scripts pass the instance's own Compose
+# project and names (infra/scripts/lib/common.sh, decision 105): unset, the default instance's
+# below; SALON_LOCAL_INSTANCE=qa gives salon-qa, salon-qa-postgres and salon-qa-postgres-data.
 name: salon-local
 
 services:
   postgres:
     image: postgres:18.6
-    container_name: salon-postgres
+    container_name: ${SALON_POSTGRES_CONTAINER:-salon-postgres}
     environment:
       # Local-only values that protect nothing. Override them in .env (see .env.example).
       POSTGRES_DB: ${SALON_DB_NAME:-salon}
@@ -29,4 +31,4 @@ services:
 
 volumes:
   postgres-data:
-    name: salon-postgres-data
+    name: ${SALON_POSTGRES_VOLUME:-salon-postgres-data}

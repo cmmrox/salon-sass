@@ -15,11 +15,12 @@ import { billAt, crossBoundary, firstInvoice } from '../../shared/billing';
 import {
   test, expect, WIDTHS, consoleContext, consoleUrl, expectAccessible, expectFits, expectSheetFocus,
 } from '../../shared/console-browser';
-import type { SignedStaff } from '../../shared/identity';
+import { syntheticAccount, type SignedStaff } from '../../shared/identity';
 import { localService } from '../../shared/identity-runtime';
 import { DAY, SECOND, afterNewestPlan, ownerSession, plusMs, type Operator, type TestClock } from '../../shared/operator';
 import type { Identity } from '../../shared/identity';
 import type { AccountBrowser } from '../../shared/identity-browser';
+import { POSTGRES_CONTAINER } from '../../shared/env';
 
 const id = (n: number) => `TC-F03-S02-${String(n).padStart(3, '0')}`;
 const LIMIT_MS = 5_000;
@@ -97,7 +98,7 @@ test(`${id(24)} Console and workspace billing screens show every state with corr
   test.setTimeout(240_000);
   const { admin, created, input, salon } = await billedSalon(operator, clock, afterNewestPlan());
   const exceeded = await operator.plan(admin, { staffSeats: 1 });
-  await identity.seed(salon, [{ email: `seat-${Date.now()}@example.invalid`, mobile: '', password: 'QA seat password long', role: 'MANAGER' }]);
+  await identity.seed(salon, [syntheticAccount('MANAGER', false, salon)]);
   const legacy = await operator.unbilledSalon();
   let context = await consoleContext(browser, admin);
   let page = await context.newPage();
@@ -259,7 +260,7 @@ test(`${id(27)} A stopped or silent database is reported on billing screens with
   await card.goto(consoleUrl(`/console/salons/${created.id}`));
   await expect(card.getByTestId('console-subscription-card')).toBeVisible();
   await expect(billing.getByTestId('billing-page')).toBeVisible();
-  const accepting = () => { try { execFileSync('docker', ['exec', 'salon-postgres', 'pg_isready', '-q'], { timeout: 3_000 }); return true; } catch { return false; } };
+  const accepting = () => { try { execFileSync('docker', ['exec', POSTGRES_CONTAINER, 'pg_isready', '-q'], { timeout: 3_000 }); return true; } catch { return false; } };
   for (const mode of ['down', 'silent'] as const) {
     await test.step(mode, async () => {
       try {

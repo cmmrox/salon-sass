@@ -232,3 +232,45 @@ class RunnerProgressTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class DefaultInstanceRefusalTest(unittest.TestCase):
+    """Decision 105: the runner never aims QA at the default instance."""
+
+    def test_qa_instance_and_unset_are_accepted(self):
+        self.assertIsNone(runner.default_instance_refusal({}))
+        self.assertIsNone(runner.default_instance_refusal({
+            "SALON_LOCAL_INSTANCE": "qa", "SALON_API_PORT": "8190",
+            "QA_WEB_URL": "http://alpha.localhost:3200/"}))
+
+    def test_another_instance_is_refused(self):
+        for value in ("", "default", "prod"):
+            self.assertIn("SALON_LOCAL_INSTANCE=qa",
+                          runner.default_instance_refusal({"SALON_LOCAL_INSTANCE": value}))
+
+    def test_default_instance_ports_and_urls_are_refused(self):
+        for env in ({"SALON_API_PORT": "8090"}, {"SALON_WEB_PORT": "3100"},
+                    {"SALON_POSTGRES_PORT": "5440"}, {"QA_API_URL": "http://localhost:8090"},
+                    {"QA_WEB_URL": "http://alpha.localhost:3100/workspace"}):
+            self.assertIn("default instance", runner.default_instance_refusal(env), env)
+
+    def test_ports_the_product_env_gives_the_default_instance_are_refused(self):
+        with tempfile.TemporaryDirectory() as product:
+            with open(os.path.join(product, ".env"), "w", encoding="utf-8") as handle:
+                handle.write("# the default instance\nSALON_API_PORT=8095\nSALON_WEB_PORT=\"3105\"\n")
+            for env in ({"SALON_API_PORT": "8095"}, {"QA_API_URL": "http://localhost:8095"},
+                        {"QA_WEB_URL": "http://alpha.localhost:3105/"}, {"SALON_API_PORT": "8090"}):
+                refusal = runner.default_instance_refusal({"QA_PRODUCT_ROOT": product, **env})
+                self.assertIn("default instance", refusal or "", env)
+            self.assertIsNone(runner.default_instance_refusal(
+                {"QA_PRODUCT_ROOT": product, "SALON_API_PORT": "8190", "QA_WEB_URL": "http://localhost:3200"}))
+
+    def test_refused_run_creates_no_evidence(self):
+        with tempfile.TemporaryDirectory() as root, \
+                patch.dict(os.environ, {"SALON_API_PORT": "8090"}), \
+                contextlib.redirect_stdout(io.StringIO()) as out:
+            code, report = runner.run([{"scope": "feature", "id": "F07", "tool": "command", "cmd": "touch ran"}],
+                                      "refusal", reports_root=root)
+            self.assertEqual((code, report), (2, None))
+            self.assertEqual(os.listdir(root), [])
+        self.assertIn("refusing:", out.getvalue())

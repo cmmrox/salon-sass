@@ -63,7 +63,11 @@ class OperatorAccountServiceImpl implements OperatorAccountService {
         }
     }
 
-    private Valid validate(AccountInput input) {
+    /**
+     * @param developmentPassword the one password below the policy that the local seed also accepts (decision
+     *     105); {@code null} on every product path
+     */
+    private Valid validate(AccountInput input, String developmentPassword) {
         List<FieldProblem> errors = new ArrayList<>();
         String email = null;
         try {
@@ -82,7 +86,8 @@ class OperatorAccountServiceImpl implements OperatorAccountService {
         if (role == null) {
             errors.add(new FieldProblem("role", "must be OPERATOR_ADMIN or OPERATOR_SUPPORT"));
         }
-        if (!identity.acceptablePassword(input.password())) {
+        boolean development = developmentPassword != null && developmentPassword.equals(input.password());
+        if (!development && !identity.acceptablePassword(input.password())) {
             errors.add(new FieldProblem(
                     "password", "must contain 15 to 128 characters and must not be a common password"));
         }
@@ -97,8 +102,8 @@ class OperatorAccountServiceImpl implements OperatorAccountService {
 
     @Override
     public boolean bootstrap(AccountInput input) {
-        Valid account =
-                validate(new AccountInput(input.email(), input.displayName(), input.role(), input.password(), null));
+        Valid account = validate(
+                new AccountInput(input.email(), input.displayName(), input.role(), input.password(), null), null);
         return database.inTransaction(status -> {
             Instant now = clock.instant();
             UUID id = UUID.randomUUID();
@@ -118,12 +123,17 @@ class OperatorAccountServiceImpl implements OperatorAccountService {
     }
 
     @Override
-    public int seed(List<AccountInput> inputs) {
-        List<Valid> accounts = inputs.stream().map(this::validate).toList();
+    public int seed(List<AccountInput> inputs, boolean keepExisting, String developmentPassword) {
+        List<Valid> accounts = inputs.stream()
+                .map(input -> validate(input, developmentPassword))
+                .toList();
         return database.inTransaction(status -> {
             Instant now = clock.instant();
             for (Valid account : accounts) {
                 Optional<FixtureCandidate> existing = users.findFixtureCandidate(account.email());
+                if (existing.isPresent() && keepExisting) {
+                    continue;
+                }
                 if (existing.isPresent() && !existing.get().fixture()) {
                     throw new ApplicationProblemException(409, ErrorCode.CONFLICT);
                 }

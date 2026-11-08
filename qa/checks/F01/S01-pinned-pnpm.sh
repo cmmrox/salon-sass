@@ -47,7 +47,7 @@ printf '%s\n' "$UP" >"$REPORT_DIR/pinned-pnpm-local-up.log"
 expect_not_equal "exit code of local-up.sh without Corepack" 0 "$UP_EXIT"
 expect_matches "what local-up.sh says" 'corepack' "$UP"
 expect_equal "pnpm-lock.yaml after local-up.sh" "$LOCK_BEFORE" "$(cksum <"$COPY/pnpm-lock.yaml")"
-expect_equal "process-id files the refused start left in the copy" "" "$(ls "$COPY/.local/run" 2>/dev/null | grep '\.pid$' || true)"
+expect_equal "process-id files the refused start left in the copy" "" "$(ls "$COPY/$STATE_SUBDIR/run" 2>/dev/null | grep '\.pid$' || true)"
 
 # The documented way still works, and leaves the file alone too.
 GOOD="$(cd "$COPY" && corepack pnpm install --frozen-lockfile 2>&1)"; GOOD_EXIT=$?

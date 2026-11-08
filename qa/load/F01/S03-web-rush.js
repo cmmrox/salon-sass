@@ -4,7 +4,9 @@ import { check } from 'k6';
 import { Counter } from 'k6/metrics';
 import exec from 'k6/execution';
 import { salons, salonUrl } from '../../shared/tenants.ts';
-const url=__ENV.QA_WEB_URL || `http://localhost:${__ENV.SALON_WEB_PORT || '3100'}`;
+// The QA instance (decision 105); the default instance's ports are the owner's and are refused.
+const url=__ENV.QA_WEB_URL || `http://localhost:${__ENV.SALON_WEB_PORT || '3200'}`;
+if (/:(3100|8090|5440)(\/|$)/.test(url)) throw new Error(`REFUSED: ${url} is the default instance (decision 105). Nothing was run.`);
 const own=new Counter('own_brand'), mismatches=new Counter('other_brand');
 export const options={ scenarios:{rush:{executor:'per-vu-iterations',vus:60,iterations:5,maxDuration:'60s'}},thresholds:{own_brand:['count==300'],other_brand:['count==0'],http_req_failed:['rate==0'],checks:['rate==1']} };
 function entry(s){const root=http.get(salonUrl(s,url),{redirects:0});check(root,{'same-host workspace entry':()=>root.status===307&&[salonUrl(s,url)+'/workspace','/workspace'].includes(root.headers.Location)});if(root.status!==307||![salonUrl(s,url)+'/workspace','/workspace'].includes(root.headers.Location))throw Error('salon staff entry failed');return http.get(salonUrl(s,url)+'/workspace/sign-in');}

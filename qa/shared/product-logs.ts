@@ -1,14 +1,13 @@
 /**
- * The local product's API and web logs (infra/scripts: `.local/logs/<service>.log`), read from an
+ * The QA instance's API and web logs (infra/scripts: `.local/qa/logs/<service>.log`), read from an
  * offset so a test searches only what it caused. Read-only.
  */
 import fs from 'node:fs';
-import path from 'node:path';
 
-import { PRODUCT_ROOT } from './env';
+import { logFile } from './env';
 
 const SERVICES = ['api', 'web'] as const;
-const file = (service: string) => path.join(PRODUCT_ROOT, '.local', 'logs', `${service}.log`);
+const file = (service: string) => logFile(service);
 
 export type LogOffsets = Record<(typeof SERVICES)[number], number>;
 

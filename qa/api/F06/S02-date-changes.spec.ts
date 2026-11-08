@@ -53,6 +53,7 @@ const dates = (schedule: MemberSchedule) => schedule.dateChanges.map(c => c.date
 
 test('TC-F06-S02-014 AC-7, AC-11: a change is saved from today to a year ahead, as different hours with breaks or as not working, with a note of up to 60 characters or none; each answers with no affected bookings, and the list is in date order', async ({ identity, operator, clock }) => {
   const { today, team, schedules, salon, owner, person } = await arranged(identity, operator, clock);
+  expect((await schedules.read(salon, owner.tokens, person.id)).today, 'the schedule says the salon\'s today').toBe(today);
   const last = plusYear(today);
   const half: ChangeInput = changeInput(plusDays(today, 30), { starts: '10:15', finishes: '23:45', breaks: [brk('10:15', '10:45'), brk('13:00', '13:30'), brk('13:30', '14:00'), brk('20:00', '20:15'), brk('23:30', '23:45')], note: 'N'.repeat(SCHEDULE_LIMITS.noteLength) });
   const added: Record<string, DateChange> = {};
@@ -75,7 +76,7 @@ test('TC-F06-S02-014 AC-7, AC-11: a change is saved from today to a year ahead, 
   });
   await test.step('not working keeps no times or breaks, as a weekday does', async () => {
     const date = plusDays(today, 40);
-    const { change } = await schedules.add(salon, owner.tokens, person.id, changeInput(date, { working: false, breaks: [brk('11:00', '12:00')] }));
+    const { change } = await schedules.add(salon, owner.tokens, person.id, changeInput(date, { working: false, starts: null, finishes: null, breaks: [brk('11:00', '12:00')] }));
     expect(comparableChange(change)).toEqual({ date, working: false, starts: null, finishes: null, breaks: [] });
   });
   await team.dispose();
@@ -98,6 +99,7 @@ test('TC-F06-S02-015 AC-7: a date past or beyond a year, a note of 61, and hours
     ['a start off the step', TIMES, changeInput(free, { starts: '09:10' })],
     ['a finish off the step', TIMES, changeInput(free, { finishes: '13:59' })],
     ['different hours with no times', TIMES, changeInput(free, { starts: null, finishes: null })],
+    ['times sent on a day not worked', TIMES, changeInput(free, { working: false })],
     ['a break ending at its start', BREAKS, breaksOf(brk('13:00', '13:00'))],
     ['a break off the step', BREAKS, breaksOf(brk('13:05', '14:00'))],
     ['a break outside the hours', BREAKS, breaksOf(brk('17:30', '18:15'))],
@@ -129,6 +131,7 @@ test('TC-F06-S02-016 AC-7: a second change on a date is 409 conflict whatever ki
     }
   });
   const wins = [0, 0];
+  let overlapped = 0;
   let offset = 3;
   for (const gap of GAPS) {
     for (const first of [0, 1]) {
@@ -137,7 +140,9 @@ test('TC-F06-S02-016 AC-7: a second change on a date is 409 conflict whatever ki
         const date = plusDays(today, offset);
         const sides = [changeInput(date, { starts: '09:00', finishes: '12:00', note: 'Side 0' }), offChange(date, 'Side 1')];
         const order = first === 0 ? [0, 1] : [1, 0];
-        const { answers } = await fireTogether(order.map(side => () => schedules.addRaw(salon, owner.tokens, person.id, sides[side])), gap);
+        const fired = await fireTogether(order.map(side => () => schedules.addRaw(salon, owner.tokens, person.id, sides[side])), gap);
+        if (fired.overlapped) overlapped += 1;
+        const { answers } = fired;
         const statuses = answers.map(a => a.status());
         expect(statuses.filter(s => s === 201).length, `exactly one was kept (${statuses})`).toBe(1);
         const winnerAt = statuses.indexOf(201);
@@ -152,6 +157,7 @@ test('TC-F06-S02-016 AC-7: a second change on a date is 409 conflict whatever ki
     }
   }
   expect(wins.every(n => n > 0), `each side won at least once (${wins}), so neither order went unfought`).toBe(true);
+  expect(overlapped, 'the requests really were in flight together').toBeGreaterThan(0);
   await team.dispose();
 });
 
@@ -181,6 +187,35 @@ test('TC-F06-S02-017 AC-7: a person has at most 100 upcoming date changes: the 1
     const tokens = await signedInAgain(identity, owner);
     await schedules.add(salon, tokens, person.id, offChange(plusDays(today, 201)));
     await refused(await schedules.addRaw(salon, tokens, person.id, offChange(plusDays(today, 202))), 409, 'limit_reached', 'full again');
+  });
+  await team.dispose();
+});
+
+test('TC-F06-S02-046 AC-7: the limit of 100 upcoming date changes holds under simultaneous requests: a burst of different dates stops at exactly 100, every other request is told 409 limit_reached, and the same holds after making room', async ({ identity, operator, clock }) => {
+  test.setTimeout(240_000);
+  const { today, team, schedules, salon, owner, person } = await arranged(identity, operator, clock);
+  const kept: DateChange[] = [];
+  for (let n = 0; n < 95; n++) kept.push((await schedules.add(salon, owner.tokens, person.id, offChange(plusDays(today, n)))).change);
+  /** Sends one request per free date at once: exactly `room` are saved, and the list then holds exactly 100 with no date twice. */
+  const burst = async (label: string, from: number, requests: number, room: number) => {
+    const before = dates(await schedules.read(salon, owner.tokens, person.id));
+    expect(before.length, `${label}: the room is what it should be`).toBe(SCHEDULE_LIMITS.upcomingChanges - room);
+    const sent = Array.from({ length: requests }, (_, n) => plusDays(today, from + n));
+    const { answers, overlapped } = await fireTogether(sent.map(date => () => schedules.addRaw(salon, owner.tokens, person.id, offChange(date))), 0);
+    expect(overlapped, `${label}: every request was in flight before any was answered`).toBe(true);
+    const statuses = answers.map(a => a.status());
+    expect(statuses.filter(s => s === 201).length, `${label}: exactly the room left was taken (${statuses})`).toBe(room);
+    const refusals = answers.filter(a => a.status() !== 201);
+    for (const r of refusals) await refused(r, 409, 'limit_reached', `${label}: the others are told why`);
+    const after = dates(await schedules.read(salon, owner.tokens, person.id));
+    expect(after.length, `${label}: exactly 100 stored`).toBe(SCHEDULE_LIMITS.upcomingChanges);
+    expect(new Set(after).size, `${label}: no date twice`).toBe(SCHEDULE_LIMITS.upcomingChanges);
+    expect(after.filter(d => !before.includes(d)).sort(), `${label}: the ones stored are the ones answered 201`).toEqual(sent.filter((_, n) => statuses[n] === 201).sort());
+  };
+  await burst('five places, twelve requests', 150, 12, 5);
+  await test.step('a place made by removing three, then six requests', async () => {
+    for (const change of kept.slice(10, 13)) await schedules.remove(salon, owner.tokens, person.id, change.id);
+    await burst('three places, six requests', 170, 6, 3);
   });
   await team.dispose();
 });
@@ -236,6 +271,7 @@ test('TC-F06-S02-019 AC-8: a change holds its own hours and breaks and nothing o
     offToWorking: changeInput(on(6), { starts: '10:00', finishes: '12:00' }),
   };
   const added: DateChange[] = [];
+  const version = (await schedules.read(salon, owner.tokens, person.id)).version;
   await test.step('each kind holds only what was sent', async () => {
     for (const input of Object.values(inputs)) {
       const { change } = await schedules.add(salon, owner.tokens, person.id, input);
@@ -246,6 +282,7 @@ test('TC-F06-S02-019 AC-8: a change holds its own hours and breaks and nothing o
   await test.step('the week is untouched by adding them', async () => {
     const read = await schedules.read(salon, owner.tokens, person.id);
     expectWeek(read.weekly, weekly, 'the week');
+    expect(read.version, 'adding a change does not raise the schedule\'s version').toBe(version);
     expect(read.dateChanges.map(comparableChange), 'read back').toEqual(Object.values(inputs).map(comparableChange));
     expectWeek((await team.get(salon, owner.tokens, person.id)).weekly, weekly, 'the member\'s week');
   });
@@ -262,6 +299,7 @@ test('TC-F06-S02-019 AC-8: a change holds its own hours and breaks and nothing o
     await schedules.remove(salon, owner.tokens, person.id, added[0].id);
     const read = await schedules.read(salon, owner.tokens, person.id);
     expectWeek(read.weekly, before.weekly, 'the week');
+    expect(read.version, 'nor does removing one').toBe(before.version);
     expect(read.dateChanges, 'the others').toEqual(before.dateChanges.filter(c => c.id !== added[0].id));
   });
   await team.dispose();
@@ -294,7 +332,9 @@ test('TC-F06-S02-020 AC-10: "today" and the year ahead are the salon\'s date, on
       await refusedOnField(await schedules.addRaw(salon, owner.tokens, person.id, changeInput(plusDays(base, -1))), DATE, 'the salon\'s yesterday');
       await refusedOnField(await schedules.addRaw(salon, owner.tokens, person.id, changeInput(plusDays(plusYear(base), 1))), DATE, 'a year and a day from the salon\'s today');
       expect(scheduleSnapshot(created.id), 'nothing saved').toBe(before);
-      expect(dates(await schedules.read(salon, owner.tokens, person.id))[0], 'today\'s is listed').toBe(base);
+      const read = await schedules.read(salon, owner.tokens, person.id);
+      expect(read.today, 'the schedule says the salon\'s today').toBe(base);
+      expect(dates(read)[0], 'today\'s is listed').toBe(base);
       if (side.localTime === '23:30') {
         await clock.advance(31 * 60 * 1000);
         expect(localDate(await identity.now(), side.timeZone), '00:01 the next day at the salon').toBe(plusDays(base, 1));

@@ -8,16 +8,35 @@
  * F03-S01 to S04 handoffs (stage.yaml `handoff.run`) and the generated contract; S04's values are in
  * SUPPORT and PENDING_S04 (the name is kept so the prepared tests read unchanged).
  *
- * Credentials and TOTP seeds are generated in memory and never logged or written to evidence.
+ * Credentials and TOTP seeds are generated in memory and never logged or written to evidence; the
+ * roster's development password is public by decision 105.
+ *
+ * Operator accounts (decision 105): QA signs in as the same fixed operators the owner tests with,
+ * the roster's Ruwan Dissanayake (OPERATOR_ADMIN) and Shanika Abeysekera (OPERATOR_SUPPORT) in
+ * infra/local/accounts.json. They are seeded with `keepExisting: true` before every operator test and
+ * never changed; `DELETE /local/operator/fixtures`, also before every test, clears their consumed TOTP
+ * steps, MFA challenges, sessions and rate counters, so each test signs them in afresh.
+ * `operator.member(role)` is the roster operator, signed in once per test and shared by everything in
+ * the test that only needs "an admin" or "a support operator"; `operator.actor(role)` is the same
+ * operator the first time a test asks for the role. A test that needs a different person (a second
+ * operator of the role at once, an operator it changes, disables or locks out, or one with no MFA yet)
+ * gets an extra operator from a small fixed pool (EXTRA_OPERATORS): the same realistic people every
+ * run, seeded through the hook with the development password, which brings each back to exactly the
+ * state the test asks for (name, role, password, MFA, active). Operators are never removed, so the pool
+ * keeps their number fixed. When a Playwright process ends, the roster operators are checked against
+ * the file (name, role, active, and a sign-in with its password and TOTP seed).
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { randomBytes, randomUUID } from 'node:crypto';
-import type { APIResponse } from '@playwright/test';
+import { createHash, randomBytes, randomUUID } from 'node:crypto';
+import { test as playwrightTest, type APIResponse } from '@playwright/test';
 
 import { answerOf, expectProblem } from './answers';
 import { reportDir } from './env';
-import { test as identityTest, expect, json, totp, syntheticAccount, type Identity, type SeedAccount, type Tokens } from './identity';
+import { OPERATOR_DOMAIN, PROVISIONED_SALON_DOMAIN, passphrase, person } from './people';
+import { DEVELOPMENT_PASSWORD, isRosterEmail, rosterOperator, rosterOperators, type RosterOperatorRole } from './roster';
+import { Identity, test as identityTest, expect, json, totp, syntheticAccount, type SeedAccount, type Tokens } from './identity';
+import { ApiClient } from './api-client';
 import { identitySql } from './identity-storage';
 import { committedContract, schemaValidator } from './openapi';
 import { PLATFORM_DOMAIN, alpha, beta, gamma, type Salon } from './tenants';
@@ -216,7 +235,8 @@ export const FORGED_FORWARDING: Record<string, string>[] = [
 const hex = (bytes: number) => randomBytes(bytes).toString('hex');
 /** A unique slug or plan key in the 3-30 character grammar, never reserved, never reused. */
 export const uniqueSlug = (prefix = 'qa') => `${prefix}-${hex(6)}`;
-export const strongPassword = () => `QA ${hex(20)}`;
+/** A password for a product path (provisioning an Owner, bootstrap): the policy refuses the development password. */
+export const strongPassword = () => passphrase();
 export const DAY = 86_400_000;
 export const SECOND = 1_000;
 export const plusMs = (instant: string, ms: number) => new Date(Date.parse(instant) + ms).toISOString();
@@ -246,9 +266,52 @@ export function base32Secret(): string {
   return syntheticAccount('OWNER', true).totpSecret!;
 }
 
+/**
+ * The fixed pool of extra operators: realistic people, the same every run, never in the roster. A test
+ * that needs an operator other than the roster's takes the next one; the cursor goes back to the start
+ * at every test. Seeding one resets it to the state the test asks for.
+ */
+// Sixteen: the most one test holds at once is twelve support operators, each with a session of its own
+// (TC-F03-S04-016, one per screen width of the six-width matrix and six more for a long session list).
+export const EXTRA_OPERATORS = ['Asanka Wijeratne', 'Menaka Kulatunga', 'Dushan Abeywardena', 'Tharushi Senarath',
+  'Roshan Gunathilaka', 'Nayomi Jayamanne', 'Chaminda Rodrigo', 'Piumi Wickremeratne', 'Lakmal Siriwardena',
+  'Hasini Ratnayake', 'Prasanna Jayakody', 'Shalika Edirisinghe', 'Kanishka Mahanama', 'Dilrukshi Gunaratne',
+  'Sudesh Weerakoon', 'Rasika Atapattu'].map(name => ({
+  name, email: `${name.toLowerCase().replace(' ', '.')}@${OPERATOR_DOMAIN}`,
+}));
+let extraCursor = 0;
+/** Evidence of which operators a test used (`operator-accounts.jsonl` in the run's folder): names and roles only. */
+function recordOperator(kind: 'roster' | 'extra', role: OperatorRole, email: string) {
+  let title = '';
+  try { title = playwrightTest.info().titlePath.slice(1).join(' > '); } catch { title = '(outside a test)'; }
+  fs.appendFileSync(path.join(reportDir, 'operator-accounts.jsonl'), JSON.stringify({ test: title, kind, role, email }) + '\n');
+}
+/** Starts the pool again for a new test (the operator fixture calls it). */
+export function resetExtraOperators() { extraCursor = 0; }
+
+/** A fixed TOTP seed per pool member, derived from its email, so the pool is the same every run. */
+function poolSecret(email: string): string {
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  let bits = 0, value = 0, out = '';
+  for (const byte of createHash('sha1').update(`extra-operator:${email}`).digest()) {
+    value = (value << 8) | byte; bits += 8;
+    while (bits >= 5) { out += alphabet[(value >>> (bits - 5)) & 31]; bits -= 5; }
+  }
+  return out;
+}
+
+/**
+ * An extra operator from the fixed pool, for a test that needs someone other than the roster's
+ * operator. Seeding it through `operator.seed()` gives it the development password, the role asked
+ * for and its fixed TOTP seed, or no MFA when `enrolled` is false; until then it holds a passphrase.
+ */
 export function operatorAccount(role: OperatorRole = 'OPERATOR_ADMIN', enrolled = true): OperatorAccount {
-  return { email: `qa-op-${randomUUID()}@example.invalid`, password: strongPassword(), role, displayName: `QA ${role} ${hex(3)}`,
-    ...(enrolled ? { totpSecret: base32Secret() } : {}) };
+  if (extraCursor >= EXTRA_OPERATORS.length) {
+    throw new Error(`TEST DEFECT: a test asked for more than ${EXTRA_OPERATORS.length} extra operators; grow EXTRA_OPERATORS`);
+  }
+  const { name, email } = EXTRA_OPERATORS[extraCursor++];
+  recordOperator('extra', role, email);
+  return { email, password: strongPassword(), role, displayName: name, ...(enrolled ? { totpSecret: poolSecret(email) } : {}) };
 }
 
 export function planInput(overrides: Partial<PlanInput> = {}): PlanInput {
@@ -261,10 +324,16 @@ export function salonInput(planId: string, overrides: Partial<SalonInput> = {}):
   return {
     name: `QA Salon ${slug}`, slug, country: 'LK', currency: 'LKR', timeZone: 'Asia/Colombo', defaultLanguage: 'en',
     contactEmail: `contact-${hex(4)}@example.invalid`, contactPhone: '0771234567', address: `${hex(3)} QA Road, Colombo`,
-    planId, owner: { name: 'QA Owner', email: `owner-${randomUUID()}@example.invalid`, password: strongPassword() },
+    planId, owner: provisionedOwner(),
     subscription: { monthlyAmount: 250000, paymentMethod: 'bank_transfer' },
     ...overrides,
   };
+}
+
+/** The Owner a provisioning names: a realistic person with a passphrase (provisioning keeps the identity policy). */
+export function provisionedOwner(): SalonInput['owner'] {
+  const someone = person();
+  return { name: someone.name, email: `${someone.local}@${PROVISIONED_SALON_DOMAIN}`, password: strongPassword() };
 }
 
 /** The owner of a provisioned salon as an F02 staff fixture, for identity calls on its hostname. */
@@ -379,6 +448,14 @@ export function platformAuditWhere(where: string): PlatformAuditRow[] {
   return JSON.parse(rows || '[]');
 }
 export const platformAudit = (subjectId: string) => platformAuditWhere(`subject_id = ${sqlLiteral(subjectId)}`);
+/**
+ * A filter clause leaving out the platform audit entries that already match `where` now: the baseline
+ * of a test about an operator that earlier runs also used (the roster's, a pool member).
+ */
+export function auditBaseline(where: string): string {
+  const ids = identitySql(`SELECT id::text FROM platform_audit_entry WHERE ${where}`).split('\n').filter(Boolean);
+  return ids.length ? `id::text NOT IN (${ids.map(sqlLiteral).join(', ')})` : 'true';
+}
 
 export async function operatorJson<T>(response: APIResponse, schema: keyof typeof CONTRACT.schemas, status = 200): Promise<T> {
   const answer = await answerOf(response);
@@ -432,6 +509,10 @@ export function onSalonHost(identity: Identity, salon: Salon, method: string, ro
 export const comparable = (text: string) => text.replace(/"(traceId|instance)":"[^"]*"/g, '');
 
 export class Operator {
+  /** The roster operators this test signed in, shared by every caller that needs only the role. */
+  private readonly rosterSignedIn = new Map<RosterOperatorRole, OperatorActor>();
+  /** The roles a test already asked `actor()` for: a later request is a different person. */
+  private readonly actorAsked = new Set<OperatorRole>();
   constructor(readonly identity: Identity) {}
 
   /** A request on the API with an explicit Host: the console unless another is named. */
@@ -474,18 +555,36 @@ export class Operator {
 
   async resetFixtures() { await this.hookOk('fixtures', 204); }
 
+  /**
+   * Seeds operators through the local hook with the roster's development password (decision 105),
+   * written back onto each account. A roster operator is never seeded here: `seedRoster()` keeps them.
+   */
   async seed(...accounts: OperatorAccount[]) {
+    const roster = accounts.filter(a => isRosterEmail(a.email));
+    if (roster.length) throw new Error(`TEST DEFECT: ${roster.map(a => a.email).join(', ')} is a roster operator; seed it only with seedRoster() (keepExisting)`);
+    for (const account of accounts) account.password = DEVELOPMENT_PASSWORD;
     const body = await this.hookOk<{ accounts: number }>('seed', 200,
       { accounts: accounts.map(a => ({ email: a.email, displayName: a.displayName, role: a.role, password: a.password, totpSecret: a.totpSecret ?? null })) });
     expect(body.accounts).toBe(accounts.length);
+  }
+
+  /** Creates any roster operator that is missing and leaves every existing one exactly as it is. */
+  async seedRoster() {
+    const accounts = rosterOperators();
+    const body = await this.hookOk<{ accounts: number }>('seed', 200, { keepExisting: true,
+      accounts: accounts.map(a => ({ email: a.email, displayName: a.displayName, role: a.role, password: a.password, totpSecret: a.totpSecret })) });
+    expect(body.accounts, 'roster operators present').toBe(accounts.length);
   }
 
   async bootstrapFailure(step: 'owner' | 'brand' | 'receipt' | null) {
     expect(await this.hookOk('bootstrapFailure', 200, { step })).toEqual({ step });
   }
 
-  /** Disables or re-enables a hook-created operator (S02 handoff). */
-  async setActive(account: OperatorAccount, active: boolean) { await this.hookOk('operatorActive', 204, { email: account.email, active }); }
+  /** Disables or re-enables a hook-created operator (S02 handoff). Never a roster operator, which nobody changes. */
+  async setActive(account: OperatorAccount, active: boolean) {
+    if (isRosterEmail(account.email)) throw new Error(`TEST DEFECT: ${account.email} is a roster operator; disable an extra operator instead`);
+    await this.hookOk('operatorActive', 204, { email: account.email, active });
+  }
 
   async now(): Promise<string> { return this.identity.now(); }
 
@@ -537,10 +636,55 @@ export class Operator {
 
   async me(tokens: Tokens): Promise<OperatorPrincipal> { return operatorJson(await this.call('GET', '/me', { tokens }), 'principal'); }
 
+  /**
+   * Someone in this role: the roster's operator the first time the test asks, a different person
+   * (an extra operator from the pool) every later time, since every caller of a second `actor()`
+   * needs one: two operators of the role at once, or a session of its own for a browser context.
+   */
   async actor(role: OperatorRole = 'OPERATOR_ADMIN'): Promise<OperatorActor> {
+    if (!this.actorAsked.has(role)) { this.actorAsked.add(role); return this.member(role); }
+    return this.extra(role);
+  }
+
+  /** An extra operator from the fixed pool in this role, seeded to a known state and signed in. */
+  async extra(role: OperatorRole = 'OPERATOR_ADMIN'): Promise<OperatorActor> {
     const account = operatorAccount(role);
     await this.seed(account);
     return this.login(account);
+  }
+
+  /**
+   * The roster's operator in this role (Ruwan Dissanayake or Shanika Abeysekera), signed in once per
+   * test and shared by everything in it that only needs the role. Never changed or disabled.
+   */
+  async member(role: RosterOperatorRole = 'OPERATOR_ADMIN'): Promise<OperatorActor> {
+    let actor = this.rosterSignedIn.get(role);
+    if (!actor) {
+      const account = rosterOperator(role);
+      recordOperator('roster', role, account.email);
+      actor = await this.login(account); this.rosterSignedIn.set(role, actor);
+      return actor;
+    }
+    // Shared within the test: if the clock moved since, its access may have lapsed (or not have begun).
+    const now = Date.parse(await this.now());
+    const issued = Date.parse(actor.signedInAt ?? '');
+    if (now >= issued && now < Date.parse(actor.tokens.accessExpiresAt) - 30_000) return actor;
+    return this.renew(actor);
+  }
+
+  /**
+   * Fails loudly unless every roster operator is exactly as infra/local/accounts.json says: name,
+   * role and active in the database, and a sign-in with the file's password and TOTP seed.
+   */
+  async verifyRoster() {
+    await this.resetFixtures();
+    for (const entry of rosterOperators()) {
+      const row = identitySql(`SELECT display_name || '|' || role || '|' || active || '|' || fixture FROM operator_user WHERE lower(email) = ${sqlLiteral(entry.email.toLowerCase())}`);
+      if (row !== `${entry.displayName}|${entry.role}|true|true`) throw new Error(`ROSTER CHANGED: ${entry.email} is '${row}' in the QA instance, not '${entry.displayName}|${entry.role}|true|true'`);
+      const signed = await this.login({ ...entry });
+      if (signed.principal.role !== entry.role) throw new Error(`ROSTER CHANGED: ${entry.email} signs in as ${signed.principal.role}`);
+    }
+    await this.resetFixtures();
   }
 
   /**
@@ -750,9 +894,17 @@ function clockMark(name: string, instant: string) {
   fs.appendFileSync(path.join(reportDir, 'F03-control-marks.jsonl'), JSON.stringify({ name, instant, at: Date.now() }) + '\n');
 }
 
-export const test = identityTest.extend<{ operator: Operator; clock: TestClock }>({
+export const test = identityTest.extend<{ operator: Operator; clock: TestClock }, { rosterOperatorsIntact: void }>({
+  // Once per Playwright process, after its last test: the roster operators are exactly as the file says.
+  rosterOperatorsIntact: [async ({}, use) => {
+    await use();
+    const api = await ApiClient.create();
+    try { await new Operator(new Identity(api)).verifyRoster(); } finally { await api.dispose(); }
+  }, { scope: 'worker', auto: true }],
   operator: async ({ identity }, use) => {
+    resetExtraOperators();
     const operator = new Operator(identity);
+    await operator.seedRoster();
     await operator.resetFixtures();
     try { await use(operator); } finally { await operator.resetToBaseline(); }
   },

@@ -11,13 +11,12 @@
  *    `breaks` for a date change. A break touching only the start or only the finish is allowed.
  * 3. A date change's note is not written to the audit trail, and a support session never receives it.
  *
- * Every name the build gives is in `PENDING_F06_S02`, to confirm against the stage's handoff at the dry
- * run; nothing else in the F06-S02 tests spells one. Also to confirm then, as they are not names:
- * - that `memberBeforeThisStage` makes the state the migration leaves (no week stored for such a person);
- * - that the answer to adding a member carries `weekly`: TC-F06-S01-001 compares it with a read of the member;
- * - whether the audit entry of a save has a field naming only the changed weekdays, so that TC-F06-S02-027 can
- *   also assert an unchanged day is not named (a whole week in "before" and "after" would name them all);
- * - that the messages use a straight apostrophe, as the spec writes them; the prototype's is curly.
+ * The spec's "Corrections at close" (decision 103) carry these and take precedence over its criteria:
+ * Monday first, + Add break disabled at five, AC-11's sentences, versions, `today`, breaks in time order, a
+ * salon with no saved hours, curly apostrophes, and an audit entry naming only the weekdays changed.
+ *
+ * Every name the build gives is in `PENDING_F06_S02`, confirmed against the stage's handoff at the dry run
+ * (37129e9); nothing else in the F06-S02 tests spells one.
  */
 import { randomUUID } from 'node:crypto';
 
@@ -27,44 +26,41 @@ import { refused } from './booking-rules';
 import { expect, json, type Tokens } from './identity';
 import { identitySql } from './identity-storage';
 import { fieldsOf, sqlLiteral } from './operator';
-import { DAYS, HOURS_TABLES, type DayName, type Weekday } from './salon-hours';
-import { PENDING_F06_S01, S01_TEAM_TABLES, memberPath, type BreakTime, type Team, type WorkDay } from './team';
+import { DAYS, type DayName, type Weekday } from './salon-hours';
+import { PENDING_F06_S01, memberPath, type BreakTime, type Team, type WorkDay } from './team';
 import type { Salon } from './tenants';
 
-/** Names the spec leaves to the build, guessed from F04's and F06-S01's and unconfirmed until the handoff. */
+/** Names the spec leaves to the build, from the F06-S02 handoff. */
 export const PENDING_F06_S02 = {
   /** Contract schemas (docs/api/openapi.json, components.schemas). */
   schemas: { schedule: 'TeamMemberSchedule', saved: 'SavedTeamMemberWeek', added: 'AddedTeamMemberDateChange' },
-  /** A field error "on that weekday" (AC-2, AC-3): as F04's `weekly[1].closes`, or naming the day. The week is always sent in `DAYS` order. */
-  dayField: (day: DayName) => new RegExp(`^(weekly(\\[${DAYS.indexOf(day)}\\]|\\[${day}\\]|\\.${day})|${day})($|[.\\[])`),
+  /** A field error "on that weekday" (AC-2, AC-3): `weekly[n]`, or inside it. The week is always sent in `DAYS` order. */
+  dayField: (day: DayName) => new RegExp(`^weekly\\[${DAYS.indexOf(day)}\\]($|[.\\[])`),
   /** The browser's calls for the schedule sheet, for holding, failing or adding to them. */
   bff: {
     read: (url: URL) => url.pathname.startsWith('/identity-web/') && /\/team-schedule$/.test(url.pathname),
-    saveWeek: (url: URL) => url.pathname.startsWith('/identity-web/') && /\/team-schedule-save$/.test(url.pathname),
+    saveWeek: (url: URL) => url.pathname.startsWith('/identity-web/') && /\/team-week-save$/.test(url.pathname),
     addChange: (url: URL) => url.pathname.startsWith('/identity-web/') && /\/team-date-change-add$/.test(url.pathname),
   },
-  /** Test ids (the spec: every interactive element has one). A controlled element named by the spec is found by its role and name instead. */
+  /** Test ids (the spec: every interactive element has one). A control the spec names is found by its role and name instead. */
   web: {
     cardHours: 'team-card-hours', cardSchedule: 'team-card-schedule',
-    sheet: 'schedule-sheet', avatar: 'team-member-avatar', personName: 'schedule-person-name', close: 'schedule-close',
+    sheet: 'schedule-sheet', avatar: 'team-member-avatar', personName: 'schedule-name', close: 'schedule-close',
     loading: 'schedule-loading', unavailable: 'schedule-unavailable', retry: 'schedule-retry', refused: 'schedule-refused', readOnly: 'schedule-read-only',
-    conflict: 'schedule-conflict', conflictReload: 'schedule-conflict-reload', problems: 'schedule-problems', outside: 'schedule-outside', noHoursReason: 'schedule-no-salon-hours',
-    leaveDialog: 'schedule-leave-dialog', leaveStay: 'schedule-leave-stay', leaveConfirm: 'schedule-leave-confirm',
+    conflict: 'schedule-conflict', conflictReload: 'schedule-conflict-reload', problems: 'schedule-problems', outside: 'schedule-outside', hoursUnset: 'schedule-salon-hours-unset', noHoursReason: 'schedule-no-salon-hours',
+    leaveDialog: 'team-leave-dialog', leaveStay: 'team-leave-stay', leaveConfirm: 'team-leave-confirm',
     day: (day: DayName) => `schedule-day-${day}`, toggle: (day: DayName) => `schedule-${day}-working`, off: (day: DayName) => `schedule-${day}-off`,
-    breakRow: (day: DayName) => `schedule-${day}-break`, addBreak: (day: DayName) => `schedule-${day}-add-break`,
-    affected: 'schedule-affected', affectedRow: 'schedule-affected-row',
-    changeForm: 'schedule-change-form', changeDate: 'schedule-change-date', changeCalendar: 'schedule-change-calendar', changeProblem: 'schedule-change-problem',
-    changeBreakAdd: 'schedule-change-add-break', changeRow: 'schedule-change-row', changeEmpty: 'schedule-changes-empty',
+    addBreak: (day: DayName) => `schedule-${day}-add-break`, breaksFull: (day: DayName) => `schedule-${day}-breaks-full`,
+    affected: 'schedule-affected', affectedRow: 'schedule-affected-booking',
+    changeForm: 'change-form', changeDate: 'change-date', changeCalendar: 'change-calendar', changeProblem: 'change-problem',
+    changeRow: 'change-row',
   },
-  /**
-   * Accessible names of the times. AC-16 names only "Monday break 1 starts"; the rest are read from it and
-   * the prototype's `tselS` labels.
-   */
+  /** Accessible names of the times and their controls. AC-16 names "Monday break 1 starts"; the rest are the build's. */
   names: {
     starts: (day: string) => `${day} starts`, finishes: (day: string) => `${day} finishes`,
-    breakStarts: (day: string, n: number) => `${day} break ${n} starts`, breakEnds: (day: string, n: number) => new RegExp(`^${day} break ${n} (ends|finishes)$`),
-    breakRemove: (day: string, n: number) => new RegExp(`Remove ${day} break ${n}`),
-    changeStarts: 'Starts', changeFinishes: 'Finishes', changeBreakStarts: (n: number) => `Break ${n} starts`, changeBreakEnds: (n: number) => new RegExp(`^Break ${n} (ends|finishes)$`),
+    breakStarts: (day: string, n: number) => `${day} break ${n} starts`, breakEnds: (day: string, n: number) => `${day} break ${n} ends`,
+    breakRemove: (day: string, n: number) => `Remove ${day} break ${n}`,
+    changeStarts: 'Starts', changeFinishes: 'Finishes', changeBreakStarts: (n: number) => `Break ${n} starts`, changeBreakEnds: (n: number) => `Break ${n} ends`,
     saveChange: 'Save this date',
   },
 } as const;
@@ -81,7 +77,7 @@ export const SCHEDULE_LIMITS = { breaks: 5, noteLength: 60, upcomingChanges: 100
 
 export type DateChange = { id: string; date: string; working: boolean; starts: string | null; finishes: string | null; breaks: BreakTime[]; note?: string | null };
 export type ChangeInput = { date?: unknown; working?: unknown; starts?: unknown; finishes?: unknown; breaks?: unknown; note?: unknown };
-export type MemberSchedule = { version: number; weekly: WorkDay[]; dateChanges: DateChange[] };
+export type MemberSchedule = { version: number; today: string; weekly: WorkDay[]; dateChanges: DateChange[] };
 export type AffectedBooking = { date: string; time: string; customerName: string; serviceName: string };
 export type SavedWeek = { version: number; weekly: WorkDay[]; affected: AffectedBooking[] };
 export type AddedChange = { change: DateChange; affected: AffectedBooking[] };
@@ -112,24 +108,20 @@ export const offChange = (date: string, note: string | null = null): ChangeInput
 // ---- comparing ----
 
 const sortedBreaks = (breaks: BreakTime[]) => [...breaks].sort((a, b) => String(a.starts).localeCompare(String(b.starts)));
+const inDayOrder = (weekly: WorkDay[]) => [...weekly].sort((a, b) => DAYS.indexOf(a.day) - DAYS.indexOf(b.day));
 
 /**
- * A week in `DAYS` order with each day's breaks in time order. The spec fixes neither order for a stored
- * week, only for `TeamSchedule`'s windows (AC-9), so neither is held against the product here.
+ * The week is each of the seven weekdays once, and is the one expected. A week reads back with its breaks
+ * in time order, whatever order they were sent (corrections at close), so only what was sent is put in order.
  */
-export const comparableWeek = (weekly: WorkDay[]) => [...weekly]
-  .sort((a, b) => DAYS.indexOf(a.day) - DAYS.indexOf(b.day))
-  .map(d => ({ day: d.day, working: d.working, starts: d.starts, finishes: d.finishes, breaks: sortedBreaks(d.breaks) }));
-
-/** The week is each of the seven weekdays once, and is the one expected. */
 export function expectWeek(actual: WorkDay[], expected: WorkDay[], label: string) {
   expect([...actual.map(d => d.day)].sort(), `${label}: each of the seven weekdays once`).toEqual([...DAYS].sort());
-  expect(comparableWeek(actual), label).toEqual(comparableWeek(expected));
+  expect(inDayOrder(actual), label).toEqual(inDayOrder(expected).map(d => ({ ...d, breaks: sortedBreaks(d.breaks) })));
 }
 
-/** What a change holds, leaving out its id and its note, with its breaks in time order. */
+/** What a change holds, leaving out its id and its note. */
 export const comparableChange = (c: { date?: unknown; working?: unknown; starts?: unknown; finishes?: unknown; breaks?: unknown }) => ({
-  date: c.date, working: c.working, starts: c.starts ?? null, finishes: c.finishes ?? null, breaks: sortedBreaks((c.breaks ?? []) as BreakTime[]),
+  date: c.date, working: c.working, starts: c.starts ?? null, finishes: c.finishes ?? null, breaks: c.breaks ?? [],
 });
 
 /** A 400 bad_request whose every field error is on the weekday (AC-2, AC-3). */
@@ -194,22 +186,26 @@ const range = (starts: string, finishes: string) => `${shownTime(starts)} – ${
 export const SCHEDULE_TEXT = {
   weeklyBanner: 'Customers can book this person inside these hours while the salon is open.',
   datesBanner: 'A date change replaces the weekly hours on that date only. Use it for a half day or an extra working day.',
-  profileLine: 'New people start on the salon\'s opening hours. Change them under Schedule.',
+  profileLine: 'New people start on the salon’s opening hours. Change them under Schedule.',
   saved: 'Hours saved. New bookings follow them. Existing bookings are kept.',
   finishAfterStart: (day: DayName) => `${SHORT[day]}: the finish must be after the start.`,
   breakOrder: (day: DayName) => `${SHORT[day]}: a break must end after it starts.`,
   breakInside: (day: DayName) => `${SHORT[day]}: a break must be inside the working hours.`,
-  breakOverlap: (day: DayName) => `${SHORT[day]}: breaks can't overlap.`,
-  breakFills: (day: DayName) => `${SHORT[day]}: breaks can't fill the whole day. Set it as not working.`,
-  changeBreakFills: 'Breaks can\'t fill the whole day. Set it as not working.',
+  breakOverlap: (day: DayName) => `${SHORT[day]}: breaks can’t overlap.`,
+  breakFills: (day: DayName) => `${SHORT[day]}: breaks can’t fill the whole day. Set it as not working.`,
+  maxBreaks: 'Up to 5 breaks a day.',
+  changeFinishAfterStart: 'The finish must be after the start.',
+  changeBreakFills: 'Breaks can’t fill the whole day. Set it as not working.',
   outsideHead: 'Outside opening hours.',
   outsideClosed: (day: DayName) => `${SHORT[day]}: the salon is closed.`,
   outsideOpen: (day: DayName, opens: string, closes: string) => `${SHORT[day]}: the salon is open ${range(opens, closes)}.`,
-  outsideTail: 'Bookings still follow the salon\'s hours.',
+  outsideTail: 'Bookings still follow the salon’s hours.',
+  hoursUnset: 'The salon hasn’t set its opening hours yet, so nobody can be booked.',
   secondChange: 'This date already has a change. Remove it first.',
   changeRemoved: 'Back to the weekly hours on that date.',
   noChanges: 'No date changes.',
-  affected: (n: number) => `${n} upcoming bookings fall outside these hours. They are kept.`,
+  affected: (n: number) => (n === 1 ? '1 upcoming booking falls outside these hours. It is kept.' : `${n} upcoming bookings fall outside these hours. They are kept.`),
+  affectedOnDate: (n: number) => (n === 1 ? '1 upcoming booking on this date is affected. It is kept.' : `${n} upcoming bookings on this date are affected. They are kept.`),
   /** AC-12's Hours row. */
   row: {
     none: 'No working days', varies: 'Varies by day',
@@ -232,19 +228,9 @@ export function calendarDay(scope: Locator, date: string): Locator {
 
 // ---- database observations (owner role unless a tenant is given) ----
 
-/**
- * Every table this stage added, found rather than named: the storage is the developer's to record
- * (spec, "Storage"), so these are the `staff_` tables with a `tenant_id` that F04 and F06-S01 did not add.
- * F06-S03's leave and blocked-time tables will appear here too, and that stage's tests name them.
- */
-export function scheduleTables(): string[] {
-  const known = [...S01_TEAM_TABLES, ...HOURS_TABLES].map(sqlLiteral).join(', ');
-  const out = identitySql(`SELECT table_name FROM information_schema.columns WHERE table_schema = 'public' AND column_name = 'tenant_id'
-    AND table_name LIKE 'staff\\_%' AND table_name NOT IN (${known}) ORDER BY 1`);
-  const tables = out.split('\n').filter(Boolean);
-  expect(tables.length, 'the schedule tables, at the least the date changes').toBeGreaterThanOrEqual(1);
-  return tables;
-}
+/** The five tables this stage added, from its handoff. F06-S03's have their own helpers and may hold no row here. */
+export const S02_SCHEDULE_TABLES = ['staff_member_schedule', 'staff_member_weekday', 'staff_member_weekday_break', 'staff_member_date_change', 'staff_member_date_change_break'] as const;
+export const scheduleTables = (): string[] => [...S02_SCHEDULE_TABLES];
 
 /** A digest of a salon's schedule rows and its members, whose row may hold the schedule's version, to prove a refused call changed nothing. */
 export function scheduleSnapshot(salonId: string): string {
@@ -258,9 +244,8 @@ export const auditEntriesWith = (salonId: string, words: string) => Number(ident
 
 /**
  * A person as they stand after the F06-S01 migration: the member's row with no schedule stored, a state no
- * endpoint of this stage can make (AC-1). It writes one row to a salon the test created, copied from the
- * person given. Confirm at the dry run that the handoff stores no week for such people; a migration that
- * backfills them would leave no such row.
+ * endpoint of this stage can make (AC-1; corrections at close: no backfill). It writes one row to a salon the
+ * test created, copied from the person given, as the handoff says to.
  */
 export function memberBeforeThisStage(salonId: string, fromMemberId: string, name: string): string {
   const id = randomUUID();

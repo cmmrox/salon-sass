@@ -5,10 +5,6 @@
 # defaults below. .env.example documents every one of them.
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
-STATE_DIR="$ROOT/.local"
-RUN_DIR="$STATE_DIR/run"
-LOG_DIR="$STATE_DIR/logs"
-COMPOSE_PROJECT="salon-local"
 REQUIRED_JAVA="25"
 REQUIRED_NODE="24"
 
@@ -18,9 +14,88 @@ export COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 say()  { printf '%s\n' "$*"; }
 fail() { printf 'error: %s\n' "$*" >&2; exit 1; }
 
+# The value .env gives KEY (its first line for it, as load_env_file reads it), or nothing.
+env_file_value() {
+  local file="$ROOT/.env" line value
+  [ -f "$file" ] || return 0
+  while IFS= read -r line || [ -n "$line" ]; do
+    case "$line" in
+      "$1="*)
+        value="${line#*=}"
+        value="${value%\"}"; value="${value#\"}"
+        printf '%s' "$value"
+        return 0
+        ;;
+    esac
+  done < "$file"
+}
+
+# --- the instance -----------------------------------------------------------------------------
+
+# Two local instances can run side by side on one machine (decision 105): the default one, which
+# holds a person's manual testing, and `qa`, which automated QA runs against. Each has its own
+# Compose project, container, volume, ports, process ids, logs, keys and built artifacts, so that
+# nothing the scripts do for one instance reaches the other. SALON_LOCAL_INSTANCE chooses: unset
+# (or `default`) is the default instance, exactly as it was before there were two; `qa` is the
+# QA instance. The default instance's settings in .env are not the QA instance's: its ports,
+# addresses, key files and link origins come from the shell or from its own defaults below.
+SALON_LOCAL_INSTANCE="${SALON_LOCAL_INSTANCE-$(env_file_value SALON_LOCAL_INSTANCE)}"
+case "$SALON_LOCAL_INSTANCE" in
+  ''|default)
+    INSTANCE="default"
+    STATE_DIR="$ROOT/.local"
+    COMPOSE_PROJECT="salon-local"
+    POSTGRES_CONTAINER="salon-postgres"
+    POSTGRES_VOLUME="salon-postgres-data"
+    DEFAULT_PORTS="5440 8090 3100"
+    WEB_DIST_DIR=".next"
+    ;;
+  qa)
+    INSTANCE="qa"
+    STATE_DIR="$ROOT/.local/qa"
+    COMPOSE_PROJECT="salon-qa"
+    POSTGRES_CONTAINER="salon-qa-postgres"
+    POSTGRES_VOLUME="salon-qa-postgres-data"
+    DEFAULT_PORTS="5540 8190 3200"
+    WEB_DIST_DIR=".next-qa"
+    ;;
+  *) fail "SALON_LOCAL_INSTANCE must be unset (the default instance) or 'qa' (the QA instance), not '$SALON_LOCAL_INSTANCE'. Nothing was done." ;;
+esac
+export SALON_LOCAL_INSTANCE="$INSTANCE"
+RUN_DIR="$STATE_DIR/run"
+LOG_DIR="$STATE_DIR/logs"
+
+# The settings that belong to one instance. For the QA instance they are never read from .env,
+# which describes the default instance.
+INSTANCE_SETTINGS="SALON_POSTGRES_PORT SALON_API_PORT SALON_WEB_PORT SALON_DB_URL SALON_API_BASE_URL
+  SALON_IDENTITY_LOCAL_KEY_FILE SALON_OPERATOR_LOCAL_KEY_FILE SALON_BILLING_LOCAL_KEY_FILE
+  SALON_EXPORT_LOCAL_KEY_FILE SALON_SUPPORT_LOCAL_KEY_FILE SALON_BILLING_LINK_ORIGIN
+  SALON_EXPORT_LINK_ORIGIN SALON_SUPPORT_LINK_ORIGIN"
+
+# One line naming the instance a script is about to act on, for the scripts that delete, stop or
+# freeze something.
+describe_instance() {
+  say "instance: $INSTANCE (Compose project $COMPOSE_PROJECT, container $POSTGRES_CONTAINER, volume $POSTGRES_VOLUME; web $SALON_WEB_PORT, API $SALON_API_PORT, PostgreSQL $SALON_POSTGRES_PORT; ${STATE_DIR#"$ROOT"/})"
+}
+
+# Refuses unless every container of this instance's Compose project is this instance's own
+# PostgreSQL container: what a reset deletes or a pause freezes is never another instance's.
+require_own_containers() {
+  local name
+  while IFS= read -r name; do
+    [ -z "$name" ] || [ "$name" = "$POSTGRES_CONTAINER" ] \
+      || fail "Compose project $COMPOSE_PROJECT holds container '$name', which is not the $INSTANCE instance's ($POSTGRES_CONTAINER). Nothing was done."
+  done <<EOF
+$(compose ps --all --format '{{.Name}}' 2>/dev/null || true)
+EOF
+}
+
 # --- settings ---------------------------------------------------------------------------------
 
-# Reads KEY=VALUE lines from .env. A variable already set in the environment wins.
+# Reads KEY=VALUE lines from .env. A variable already set in the environment wins. For the QA
+# instance, the default instance's own settings (INSTANCE_SETTINGS) are skipped; one the QA
+# instance inherits from the environment is checked by refuse_default_instance_ports and
+# refuse_default_instance_addresses instead.
 load_env_file() {
   local file="$ROOT/.env" line key value
   [ -f "$file" ] || return 0
@@ -29,6 +104,9 @@ load_env_file() {
     key="${line%%=*}"
     value="${line#*=}"
     case "$key" in *[!A-Za-z0-9_]*|'') continue ;; esac
+    if [ "$INSTANCE" = "qa" ]; then
+      case " $(printf '%s' "$INSTANCE_SETTINGS" | tr -s ' \n' '  ') " in *" $key "*) continue ;; esac
+    fi
     value="${value%\"}"; value="${value#\"}"
     if [ -z "${!key+set}" ]; then
       export "$key=$value"
@@ -36,11 +114,73 @@ load_env_file() {
   done < "$file"
 }
 
+# The ports the default instance uses: those .env gives it, and its defaults.
+default_instance_ports() {
+  printf '%s' "$(env_file_value SALON_POSTGRES_PORT) $(env_file_value SALON_API_PORT) $(env_file_value SALON_WEB_PORT) 5440 8090 3100"
+}
+
+# The QA instance never takes a port the default instance uses (as .env or its defaults give it):
+# an API on the default instance's PostgreSQL port would migrate and seed the database a person
+# tests in by hand.
+refuse_default_instance_ports() {
+  local port name taken
+  [ "$INSTANCE" = "qa" ] || return 0
+  for name in SALON_POSTGRES_PORT SALON_API_PORT SALON_WEB_PORT; do
+    port="${!name}"
+    for taken in $(default_instance_ports); do
+      if [ "$port" = "$taken" ]; then
+        fail "the QA instance cannot use port $port ($name): the default instance uses it. Unset $name, or give the QA instance another port. Nothing was done."
+      fi
+    done
+  done
+}
+
+# The same for the addresses the QA instance inherits from the environment (.env never gives it
+# one). Its API connects only to the QA instance's own PostgreSQL, on localhost at
+# SALON_POSTGRES_PORT: a database URL inherited from a shell set up for the default instance would
+# otherwise have the QA API migrate it, and QA's tests reset its accounts. Another database on that
+# PostgreSQL is allowed (a QA check starts the API on an empty one); another host, another port or
+# connection parameters are not. The web app's SALON_API_BASE_URL may not name a port the default
+# instance uses. Called once the instance's ports are settled and before anything is started.
+refuse_default_instance_addresses() {
+  local url database authority port taken
+  [ "$INSTANCE" = "qa" ] || return 0
+  url="${SALON_DB_URL:-}"
+  if [ -n "$url" ]; then
+    case "$url" in
+      "jdbc:postgresql://localhost:${SALON_POSTGRES_PORT}/"*) database="${url#"jdbc:postgresql://localhost:${SALON_POSTGRES_PORT}/"}" ;;
+      "jdbc:postgresql://127.0.0.1:${SALON_POSTGRES_PORT}/"*) database="${url#"jdbc:postgresql://127.0.0.1:${SALON_POSTGRES_PORT}/"}" ;;
+      *) database="" ;;
+    esac
+    # A plain database name: nothing after it, so no parameters and no second host.
+    case "$database" in
+      ''|*[!A-Za-z0-9_]*)
+        fail "the QA instance cannot use SALON_DB_URL '$url': its API connects only to its own PostgreSQL, jdbc:postgresql://localhost:${SALON_POSTGRES_PORT}/<database> (SALON_POSTGRES_PORT), never to the default instance's or another. Unset SALON_DB_URL for the QA instance's own database. Nothing was done."
+        ;;
+    esac
+  fi
+  url="${SALON_API_BASE_URL:-}"
+  if [ -n "$url" ]; then
+    authority="${url#*://}"
+    authority="${authority%%[/?#]*}"
+    authority="${authority##*@}"
+    case "$authority" in *:*) port="${authority##*:}" ;; *) port="" ;; esac
+    for taken in $(default_instance_ports); do
+      if [ "$port" = "$taken" ]; then
+        fail "the QA instance cannot use SALON_API_BASE_URL '$url': port $port is the default instance's. Unset SALON_API_BASE_URL for the QA instance's own API (port $SALON_API_PORT). Nothing was done."
+      fi
+    done
+  fi
+}
+
 load_settings() {
   load_env_file
-  export SALON_POSTGRES_PORT="${SALON_POSTGRES_PORT:-5440}"
-  export SALON_API_PORT="${SALON_API_PORT:-8090}"
-  export SALON_WEB_PORT="${SALON_WEB_PORT:-3100}"
+  # shellcheck disable=SC2086 # three words: the instance's PostgreSQL, API and web ports
+  set -- $DEFAULT_PORTS
+  export SALON_POSTGRES_PORT="${SALON_POSTGRES_PORT:-$1}"
+  export SALON_API_PORT="${SALON_API_PORT:-$2}"
+  export SALON_WEB_PORT="${SALON_WEB_PORT:-$3}"
+  refuse_default_instance_ports
   export SALON_DB_NAME="${SALON_DB_NAME:-salon}"
   export SALON_DB_USER="${SALON_DB_USER:-salon}"
   export SALON_DB_PASSWORD="${SALON_DB_PASSWORD:-salon-local-only}"
@@ -59,17 +199,32 @@ load_settings() {
     true|false) export SALON_LISTEN_ON_NETWORK="${SALON_LISTEN_ON_NETWORK:-false}" ;;
     *) fail "SALON_LISTEN_ON_NETWORK must be 'true' or 'false', not '${SALON_LISTEN_ON_NETWORK}' (see .env.example)." ;;
   esac
+  refuse_default_instance_addresses
   # Remember whether the API will use the local database or one somebody pointed it at.
   if [ -z "${SALON_DB_URL:-}" ]; then DATABASE_IS_LOCAL=1; else DATABASE_IS_LOCAL=0; fi
   export SALON_DB_URL="${SALON_DB_URL:-jdbc:postgresql://localhost:${SALON_POSTGRES_PORT}/${SALON_DB_NAME}}"
   export SALON_API_BASE_URL="${SALON_API_BASE_URL:-http://localhost:${SALON_API_PORT}}"
-  export SALON_IDENTITY_LOCAL_KEY_FILE="${SALON_IDENTITY_LOCAL_KEY_FILE:-$ROOT/.local/identity-keys.properties}"
-  export SALON_OPERATOR_LOCAL_KEY_FILE="${SALON_OPERATOR_LOCAL_KEY_FILE:-$ROOT/.local/operator-keys.properties}"
+  # Each instance keeps its own keys, so signatures and secrets of one never meet the other's.
+  # For the default instance these are the paths application-local.yaml has always defaulted to.
+  export SALON_IDENTITY_LOCAL_KEY_FILE="${SALON_IDENTITY_LOCAL_KEY_FILE:-$STATE_DIR/identity-keys.properties}"
+  export SALON_OPERATOR_LOCAL_KEY_FILE="${SALON_OPERATOR_LOCAL_KEY_FILE:-$STATE_DIR/operator-keys.properties}"
+  export SALON_BILLING_LOCAL_KEY_FILE="${SALON_BILLING_LOCAL_KEY_FILE:-$STATE_DIR/billing-keys.properties}"
+  export SALON_EXPORT_LOCAL_KEY_FILE="${SALON_EXPORT_LOCAL_KEY_FILE:-$STATE_DIR/export-keys.properties}"
+  export SALON_SUPPORT_LOCAL_KEY_FILE="${SALON_SUPPORT_LOCAL_KEY_FILE:-$STATE_DIR/support-keys.properties}"
+  # Links in messages point at this instance's web app. The default instance keeps
+  # application-local.yaml's own defaults.
+  if [ "$INSTANCE" = "qa" ]; then
+    export SALON_BILLING_LINK_ORIGIN="${SALON_BILLING_LINK_ORIGIN:-http://%s:${SALON_WEB_PORT}}"
+    export SALON_EXPORT_LINK_ORIGIN="${SALON_EXPORT_LINK_ORIGIN:-http://%s:${SALON_WEB_PORT}}"
+    export SALON_SUPPORT_LINK_ORIGIN="${SALON_SUPPORT_LINK_ORIGIN:-http://%s:${SALON_WEB_PORT}}"
+  fi
+  # Where this instance's web app is built (apps/web/next.config.ts reads it).
+  export SALON_WEB_DIST_DIR="$WEB_DIST_DIR"
   export SALON_WEB_LOCAL_HTTP="${SALON_WEB_LOCAL_HTTP:-true}"
   export SALON_WEB_TRUSTED_PROXIES="${SALON_WEB_TRUSTED_PROXIES:-}"
   export SALON_WEB_MODE="${SALON_WEB_MODE:-production}"
   export SPRING_PROFILES_ACTIVE="${SPRING_PROFILES_ACTIVE:-local}"
-  mkdir -p "$RUN_DIR" "$LOG_DIR"
+  mkdir -p "$RUN_DIR" "$LOG_DIR" "$LOCK_DIR"
 }
 
 # --- prerequisites ----------------------------------------------------------------------------
@@ -185,7 +340,8 @@ require_prerequisites() {
 # --- helpers ----------------------------------------------------------------------------------
 
 compose() {
-  docker compose -p "$COMPOSE_PROJECT" -f "$ROOT/infra/docker-compose.yml" "$@"
+  SALON_POSTGRES_CONTAINER="$POSTGRES_CONTAINER" SALON_POSTGRES_VOLUME="$POSTGRES_VOLUME" \
+    docker compose -p "$COMPOSE_PROJECT" -f "$ROOT/infra/docker-compose.yml" "$@"
 }
 
 # pnpm at the version package.json pins, through Corepack, whether or not its shims are installed.
@@ -231,7 +387,11 @@ ps_problem() {
 # The lock is a symbolic link whose target names its holder (process id and start time). Creating
 # a link either succeeds or fails because one is there, with nothing in between, and it carries
 # the holder's name from the instant it exists.
-LOCK="$RUN_DIR/lock"
+#
+# Both instances share one lock: they build into the same checkout (apps/api/target, pnpm's
+# node_modules), so their scripts take turns as well.
+LOCK_DIR="$ROOT/.local/run"
+LOCK="$LOCK_DIR/lock"
 LOCK_WAIT_SECONDS=900
 LOCK_HOLDER=""
 
@@ -265,7 +425,7 @@ clear_abandoned_lock() {
 # exits. Call it once the prerequisites are known to be met and before starting or stopping anything.
 acquire_lock() {
   local me holder problem waited=0 told=0
-  [ -w "$RUN_DIR" ] || fail "cannot write to $RUN_DIR"
+  [ -w "$LOCK_DIR" ] || fail "cannot write to $LOCK_DIR"
   problem="$(ps_problem)"
   [ -z "$problem" ] || fail "$problem"
   me="$$ $(process_started "$$")"
@@ -482,7 +642,12 @@ start_api() {
   say "api: building"
   ( cd "$ROOT/apps/api" && JAVA_HOME="$RESOLVED_JAVA_HOME" ./mvnw -q -DskipTests package ) >"$LOG_DIR/api-build.log" 2>&1 \
     || { tail -n 30 "$LOG_DIR/api-build.log" >&2; fail "the API did not build. See $LOG_DIR/api-build.log"; }
-  ( cd "$ROOT/apps/api" && exec nohup "$RESOLVED_JAVA_HOME/bin/java" -jar target/salon-api.jar ) >"$LOG_DIR/api.log" 2>&1 &
+  # The instance runs its own copy of the jar: a later build, for the other instance or a Maven
+  # gate, replaces target/salon-api.jar and must not replace the file a running API is reading.
+  mkdir -p "$STATE_DIR/api"
+  cp "$ROOT/apps/api/target/salon-api.jar" "$STATE_DIR/api/salon-api.jar.new"
+  mv -f "$STATE_DIR/api/salon-api.jar.new" "$STATE_DIR/api/salon-api.jar"
+  ( cd "$ROOT/apps/api" && exec nohup "$RESOLVED_JAVA_HOME/bin/java" -jar "$STATE_DIR/api/salon-api.jar" ) >"$LOG_DIR/api.log" 2>&1 &
   record_pid api "$!"
   wait_until_up api "http://localhost:${SALON_API_PORT}/actuator/health" 90 "$!"
   say "api: started"
@@ -518,6 +683,7 @@ stop_web() { stop_process web; }
 
 print_addresses() {
   say ""
+  say "Instance    $INSTANCE (SALON_LOCAL_INSTANCE; Compose project $COMPOSE_PROJECT, container $POSTGRES_CONTAINER)"
   say "PostgreSQL  localhost:${SALON_POSTGRES_PORT}  (database ${SALON_DB_NAME}; owner ${SALON_DB_USER}, application role ${SALON_DB_APP_USER}, platform role ${SALON_DB_PLATFORM_USER})"
   say "API         http://localhost:${SALON_API_PORT}  (health: http://localhost:${SALON_API_PORT}/actuator/health)"
   say "Web         http://localhost:${SALON_WEB_PORT}"
@@ -531,4 +697,58 @@ print_addresses() {
     say "Listening   on this machine only (set SALON_LISTEN_ON_NETWORK=true to test from a phone on the same network)"
   fi
   say "Logs        ${LOG_DIR}"
+}
+
+# --- the fixed local account roster (decision 105) --------------------------------------------
+
+ROSTER="$ROOT/infra/local/accounts.json"
+
+# The roster read by infra/scripts/lib/accounts.mjs: `roster salons|staff <slug>|operators|keys`.
+roster() {
+  command -v node >/dev/null 2>&1 || fail "Node.js $REQUIRED_NODE or later is required to read $ROSTER, and 'node' was not found."
+  node "$ROOT/infra/scripts/lib/accounts.mjs" "$ROSTER" "$@"
+}
+
+# Sends the request body on standard input to a local seed hook of this instance's API, on the
+# given hostname; the roster's passwords never appear on a command line. Prints the status, and
+# leaves the answer (a count or the reason for a refusal, never a credential) in $SEED_ANSWER.
+seed_hook() {
+  curl -s -o "$SEED_ANSWER" -w '%{http_code}' --max-time 60 -X POST \
+    -H "Host: $1" -H 'Content-Type: application/json' --data-binary @- \
+    "http://127.0.0.1:${SALON_API_PORT}$2" 2>/dev/null || true
+}
+
+# Creates every roster account this instance's running API does not have yet, through the local
+# seed hooks: the staff seed creates only accounts no account holds the email or mobile of, and
+# the operator seed is asked to keep every existing account. Nothing existing is changed, re-keyed
+# or removed, so running it again changes nothing. Needs the API in the local profile.
+seed_roster() {
+  local slug status start="infra/scripts/local-up.sh"
+  [ "$INSTANCE" = "default" ] || start="SALON_LOCAL_INSTANCE=$INSTANCE $start"
+  [ "$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 "http://127.0.0.1:${SALON_API_PORT}/actuator/health" 2>/dev/null)" = "200" ] \
+    || fail "the $INSTANCE instance's API is not answering on port $SALON_API_PORT. Start it first: $start"
+  SEED_ANSWER="$RUN_DIR/seed-answer.json"
+  for slug in $(roster salons); do
+    status="$(roster staff "$slug" | seed_hook "$slug.${SALON_PLATFORM_DOMAIN}:${SALON_API_PORT}" /local/identity/seed)"
+    seed_outcome "$slug" "$status"
+  done
+  status="$(roster operators | seed_hook "localhost:${SALON_API_PORT}" /local/operator/seed)"
+  seed_outcome "console" "$status"
+  rm -f "$SEED_ANSWER"
+}
+
+seed_outcome() {
+  local count
+  case "$2" in
+    200)
+      count="$(sed -n 's/.*"accounts":\([0-9]*\).*/\1/p' "$SEED_ANSWER")"
+      say "accounts: $1: ${count:-?} roster accounts present (any that were missing were created)"
+      ;;
+    404)
+      fail "accounts: $1: the API on port $SALON_API_PORT has no local seed hook here. It must run in the local profile (SPRING_PROFILES_ACTIVE=local), and '$1' must be one of its salons."
+      ;;
+    *)
+      fail "accounts: $1: the seed hook answered ${2:-nothing}: $(head -c 400 "$SEED_ANSWER" 2>/dev/null)"
+      ;;
+  esac
 }

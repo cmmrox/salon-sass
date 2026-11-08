@@ -1,5 +1,25 @@
-/** F02 synthetic fixtures. Credentials stay in process memory and are never logged. */
-import { createHmac, randomBytes, randomInt, randomUUID } from 'node:crypto';
+/**
+ * F02 synthetic fixtures. Credentials stay in process memory and are never logged; the roster's own
+ * development password is public by decision 105.
+ *
+ * Accounts (decision 105, docs/qa/test-plan.md, "Accounts"): QA runs against the QA instance only.
+ * A test that needs only "someone in this role" at a synthetic salon gets the roster's account in that
+ * role (shared/roster.ts); `identity.staff()` hands it out the first time a test asks for a role at a
+ * salon, and an extra account (a realistic person, shared/people.ts) every later time, so two people
+ * a test asks for are always two people. Every account seeded through the local hook has the
+ * development password `123456@321`; an account made for a product path (adding staff, a new
+ * password) keeps a passphrase the identity policy accepts, because the product refuses `123456@321`.
+ *
+ * Around every test the three salons' identity records are reset, which removes the extra accounts
+ * the test made. The reset before a test leaves the salons without staff, exactly as the tests were
+ * written (a test that proves "the last Owner cannot be removed" needs no other Owner present); the
+ * roster account a test asks for is seeded when it asks. When the Playwright process ends, after
+ * its last test's reset, the whole roster is seeded again, so the instance always rests with the
+ * roster in place and a shell check can rely on it. (Seeding it after every test instead cost 1.6 s
+ * a test, about 13 minutes of a regression, and changed nothing a test sees: the next test resets
+ * first.)
+ */
+import { createHmac, randomBytes } from 'node:crypto';
 import type { APIResponse } from '@playwright/test';
 import type { components } from '@contracts/schema';
 import { ApiClient } from './api-client';
@@ -7,6 +27,8 @@ import { answerOf, expectProblem } from './answers';
 import { test as base, expect } from './fixtures';
 import { schemaValidator } from './openapi';
 import { alpha, beta, gamma, type Salon } from './tenants';
+import { mobile, passphrase, person, staffDomain } from './people';
+import { DEVELOPMENT_PASSWORD, hasRoster, roster, rosterStaff } from './roster';
 import { SchedulerClockGuard } from './identity-clock-cleanup';
 
 export const IDENTITY = '/api/v1/identity';
@@ -22,9 +44,16 @@ export type SeedAccount = { email: string; mobile: string; password: string; rol
 export type Actor = { salon: Salon; tokens: Tokens; principal: Principal };
 export type SignedStaff = Actor & { account: SeedAccount };
 
-export function syntheticAccount(role: Role = 'MANAGER', mfa = role === 'OWNER'): SeedAccount {
-  return { email: `qa-${randomUUID()}@example.invalid`, mobile: `077${randomInt(1000000,10000000)}`,
-    password: `QA ${randomBytes(20).toString('hex')}`, role,
+/**
+ * An extra account: a realistic person (unique within the test), a valid Sri Lankan mobile in local
+ * form (`07XXXXXXXX`) and a passphrase the identity policy accepts, for a product path. Seeding it
+ * through `identity.seed()` gives it the development password instead (decision 105).
+ * `salon` chooses the email's domain (alpha's when not given).
+ */
+export function syntheticAccount(role: Role = 'MANAGER', mfa = role === 'OWNER', salon?: Salon | string): SeedAccount {
+  const someone = person();
+  return { email: `${someone.local}@${staffDomain(typeof salon === 'string' ? salon : salon?.slug)}`, mobile: mobile(),
+    password: passphrase(), role,
     ...(mfa ? { totpSecret: base32(randomBytes(20)) } : {}) };
 }
 
@@ -79,6 +108,8 @@ export function assertTokens(tokens: components['schemas']['Tokens'] | undefined
 
 export class Identity {
   private schedulerClock:SchedulerClockGuard|undefined;
+  /** The roster accounts this test was already handed, `<slug>/<role>`: the next request for one is an extra account. */
+  private readonly rosterHanded=new Set<string>();
   constructor(readonly api: ApiClient) {}
   call(salon: Salon | null, method: string, path: string, data?: unknown, tokens?: Tokens, extra: Record<string,string> = {}) {
     return this.api.send(method, path.startsWith('/local/') ? path : `${IDENTITY}${path}`, {
@@ -94,8 +125,16 @@ export class Identity {
     headers: {'Content-Type':'application/json'}, data: instant ? JSON.stringify({instant}) : undefined }); expect(r.status()).toBe(200); }
   async restoreClockFixture(){await this.clock();if(this.schedulerClock)await this.schedulerClock.restoreAfterRealClock();}
   async reset() { for(const salon of [alpha,beta,gamma]) expect((await this.call(salon,'DELETE','/local/identity')).status()).toBe(204); }
+  /** Seeds the whole fixed roster of the three salons again (idempotent: present accounts are kept as they are). */
+  async seedRoster() { for(const salon of [alpha,beta,gamma]) await this.seed(salon,rosterStaff(salon)); }
+  /**
+   * Seeds accounts through the local hook. Every account seeded this way has the roster's development
+   * password (decision 105), written back onto the account so a later sign-in uses it.
+   */
   async seed(salon: Salon, accounts: SeedAccount[]) {
-    const r = await this.call(salon,'POST','/local/identity/seed',{accounts}); expect(r.status()).toBe(200);
+    for (const account of accounts) account.password = DEVELOPMENT_PASSWORD;
+    const payload = accounts.map(account => { const { name: _name, ...seeded } = account as SeedAccount & { name?: string }; return seeded; });
+    const r = await this.call(salon,'POST','/local/identity/seed',{accounts:payload}); expect(r.status()).toBe(200);
     const body = await r.json(); expect(body).toEqual({accounts:accounts.length});
   }
   async signIn(salon: Salon, account: SeedAccount, identifier = account.email, deviceLabel = 'QA device'): Promise<SignIn> {
@@ -118,8 +157,23 @@ export class Identity {
     } else { assertTokens(signIn.credentials); tokens = signIn.credentials; }
     return {salon,account,tokens,principal:await this.principal(salon,tokens)};
   }
+  /** The roster's account in this role at a synthetic salon, seeded if it is missing, signed in. */
+  async member(salon: Salon = alpha, role: Role = 'MANAGER'): Promise<SignedStaff> {
+    const account = roster(salon, role); await this.seed(salon,[account]); this.rosterHanded.add(`${salon.slug}/${role}`);
+    return this.login(salon,account);
+  }
+  /** An extra account in this role, a realistic person seeded for this test only, signed in. */
+  async extra(salon = alpha, role: Role = 'MANAGER', mfa = role === 'OWNER') {
+    const account = syntheticAccount(role,mfa,salon); await this.seed(salon,[account]); return this.login(salon,account);
+  }
+  /**
+   * Someone in this role, signed in: the roster's account the first time this test asks for the role
+   * at a synthetic salon (with the roster's own MFA arrangement: an Owner enrolled, the others not),
+   * an extra account otherwise.
+   */
   async staff(salon = alpha, role: Role = 'MANAGER', mfa = role === 'OWNER') {
-    const account = syntheticAccount(role,mfa); await this.seed(salon,[account]); return this.login(salon,account);
+    if (hasRoster(salon) && mfa === (role === 'OWNER') && !this.rosterHanded.has(`${salon.slug}/${role}`)) return this.member(salon, role);
+    return this.extra(salon, role, mfa);
   }
   async sessions(actor: Actor, page = 0, size = 100): Promise<SessionPage> {
     return json(await this.call(actor.salon,'GET',`/sessions?page=${page}&size=${size}`,undefined,actor.tokens),'PageSessionView');
@@ -133,8 +187,16 @@ export class Identity {
   }
 }
 
-export const test = base.extend<{identity:Identity}>({identity: async({api},use)=>{
-  const identity = new Identity(api); await identity.clock(); await identity.reset();
-  try { await use(identity); } finally { await identity.restoreClockFixture(); await identity.reset(); }
-}});
+export const test = base.extend<{identity:Identity},{rosterAtRest:void}>({
+  // Once per Playwright process, after its last test: the instance rests with the fixed roster.
+  rosterAtRest:[async({},use)=>{
+    await use();
+    const api = await ApiClient.create();
+    try { await new Identity(api).seedRoster(); } finally { await api.dispose(); }
+  },{scope:'worker',auto:true}],
+  identity: async({api},use)=>{
+    const identity = new Identity(api); await identity.clock(); await identity.reset();
+    try { await use(identity); } finally { await identity.restoreClockFixture(); await identity.reset(); }
+  },
+});
 export { expect, alpha, beta, gamma };
