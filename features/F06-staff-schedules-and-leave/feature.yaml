@@ -9,7 +9,7 @@ released_in: null
 depends_on: [F04, F05]
 integration:
   branch: charithm/feature/F06-staff-schedules-and-leave
-  pull_request: null
+  pull_request: https://github.com/cmmrox/salon-sass/pull/23
   qa_revision: a27b49730ca1755450f944e1deaaa22a1574c46b
   merged_commit: null
   merged_at: null
