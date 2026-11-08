@@ -75,7 +75,16 @@ function portOf(url: string): number {
   const parsed = new URL(url);
   return Number(parsed.port || (parsed.protocol === 'https:' ? 443 : 80));
 }
-const defaultPorts: number[] = Object.values(DEFAULT_INSTANCE_PORTS);
+/**
+ * Every port the default instance may be using: its documented defaults, plus any port the product's
+ * root .env gives it (that file describes the default instance, so a nonstandard port there is the
+ * owner's too).
+ */
+const configuredDefaultPorts = (['SALON_API_PORT', 'SALON_WEB_PORT', 'SALON_POSTGRES_PORT'] as const)
+  .map((name) => Number(productLocal[name]))
+  .filter((port) => Number.isInteger(port) && port > 0);
+const defaultPorts: number[] = [...new Set([...Object.values(DEFAULT_INSTANCE_PORTS), ...configuredDefaultPorts])];
+const defaultPortsSource = configuredDefaultPorts.length > 0 ? `its defaults and ${path.join(PRODUCT_ROOT, '.env')}` : 'its defaults';
 const aimed = [
   ['SALON_API_PORT', ports.api], ['SALON_WEB_PORT', ports.web], ['SALON_POSTGRES_PORT', ports.postgres],
   ['QA_API_URL', portOf(apiUrl)], ['QA_WEB_URL', portOf(webUrl)],
@@ -83,7 +92,7 @@ const aimed = [
 const refused = aimed.filter(([, port]) => defaultPorts.includes(port));
 if (refused.length > 0) {
   throw new Error(`REFUSED: ${refused.map(([name, port]) => `${name} is ${port}`).join(', ')}, a port of the default instance ` +
-    `(${defaultPorts.join(', ')}), which holds the owner's manual testing (decision 099). QA runs against the QA instance ` +
+    `(${defaultPorts.join(', ')}: ${defaultPortsSource}), which holds the owner's manual testing (decision 099). QA runs against the QA instance ` +
     `(${Object.values(QA_DEFAULT_PORTS).join(', ')}). Nothing was run.`);
 }
 // Children see the same ports this process tests.

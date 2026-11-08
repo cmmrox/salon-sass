@@ -71,18 +71,36 @@ DB_APP_PASSWORD="$(_setting SALON_DB_APP_PASSWORD salon-app-local-only)"
 API_URL="$(_instance_setting QA_API_URL "http://localhost:${API_PORT}")"; API_URL="${API_URL%/}"
 WEB_URL="$(_instance_setting QA_WEB_URL "http://localhost:${WEB_PORT}")"; WEB_URL="${WEB_URL%/}"
 POSTGRES_CONTAINER="salon-qa-postgres"
+# The QA instance's web build (WEB_DIST_DIR for SALON_LOCAL_INSTANCE=qa in infra/scripts/lib/common.sh,
+# which apps/web/next.config.ts reads as SALON_WEB_DIST_DIR). The default instance builds into .next.
+WEB_DIST_DIR=".next-qa"
+WEB_BUILD_DIR="$PRODUCT_ROOT/apps/web/$WEB_DIST_DIR"
 
-# The default instance's ports (3100, 8090, 5440) are the owner's. Refuse before anything is touched.
+# The default instance's ports are the owner's: its defaults (3100, 8090, 5440) plus any port the
+# product's root .env gives it, since that file describes the default instance. Refuse before
+# anything is touched.
 _port_of() { printf '%s' "$1" | sed -nE 's#^[a-z][a-z0-9+.-]*://(\[[^]]*\]|[^/:?\#]*):([0-9]+).*#\2#p'; }
+DEFAULT_INSTANCE_PORTS="3100 8090 5440"
+_default_ports_source="its defaults"
+if [ -f "$PRODUCT_ROOT/.env" ]; then
+  for _name in SALON_WEB_PORT SALON_API_PORT SALON_POSTGRES_PORT; do
+    _value="$(sed -n "s/^[[:space:]]*${_name}[[:space:]]*=[[:space:]]*//p" "$PRODUCT_ROOT/.env" | tail -n 1)"
+    _value="${_value%\"}"; _value="${_value#\"}"; _value="${_value%"${_value##*[![:space:]]}"}"
+    case "$_value" in ''|*[!0-9]*) continue ;; esac
+    _default_ports_source="its defaults and $PRODUCT_ROOT/.env"
+    case " $DEFAULT_INSTANCE_PORTS " in *" $_value "*) ;; *) DEFAULT_INSTANCE_PORTS="$DEFAULT_INSTANCE_PORTS $_value" ;; esac
+  done
+fi
 for _aimed in "SALON_API_PORT=$API_PORT" "SALON_WEB_PORT=$WEB_PORT" "SALON_POSTGRES_PORT=$POSTGRES_PORT" \
               "QA_API_URL=$(_port_of "$API_URL")" "QA_WEB_URL=$(_port_of "$WEB_URL")"; do
-  case "${_aimed#*=}" in
-    3100|8090|5440)
-      printf 'REFUSED: %s is a port of the default instance (3100, 8090, 5440), which holds the owner'"'"'s manual testing (decision 099). QA checks run against the QA instance (3200, 8190, 5540). Nothing was run.\n' "${_aimed%%=*} ${_aimed#*=}" >&2
+  [ -n "${_aimed#*=}" ] || continue
+  case " $DEFAULT_INSTANCE_PORTS " in
+    *" ${_aimed#*=} "*)
+      printf 'REFUSED: %s is a port of the default instance (%s: %s), which holds the owner'"'"'s manual testing (decision 099). QA checks run against the QA instance (3200, 8190, 5540). Nothing was run.\n' "${_aimed%%=*} ${_aimed#*=}" "$(printf '%s' "$DEFAULT_INSTANCE_PORTS" | sed 's/ /, /g')" "$_default_ports_source" >&2
       exit 3 ;;
   esac
 done
-unset _aimed
+unset _aimed _name _value _default_ports_source
 export SALON_API_PORT="$API_PORT" SALON_WEB_PORT="$WEB_PORT" SALON_POSTGRES_PORT="$POSTGRES_PORT"
 # key_file <identity|operator|billing|export|support>: the QA instance's local key file, or the shell's choice.
 key_file() {
