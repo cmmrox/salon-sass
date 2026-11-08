@@ -168,7 +168,7 @@ class GitCleanupTest(unittest.TestCase):
         self.git("config", "user.name", "Lifecycle test")
         self.git("config", "user.email", "lifecycle@example.invalid")
         self.git("remote", "add", "origin", str(self.remote))
-        Path(".gitignore").write_text("qa/reports/\n.env.local\n")
+        Path(".gitignore").write_text("qa/reports/\n.env.local\n.local/\n.next-qa/\nnext-env.d.ts\n")
         Path("apps").mkdir()
         Path("apps/source.txt").write_text("baseline\n")
         self.git("add", ".")
@@ -238,6 +238,19 @@ class GitCleanupTest(unittest.TestCase):
         with self.assertRaisesRegex(integration.Refusal, "preserve ignored file"):
             integration.cleanup([self.branch], apply=True)
         self.assertTrue((self.worktree / ".env.local").exists())
+
+    def test_qa_instance_services_block_removal(self):
+        (self.worktree / ".local/qa/run").mkdir(parents=True)
+        (self.worktree / ".local/qa/run/api.pid").write_text("12345 started")
+        with self.assertRaisesRegex(integration.Refusal, "stop the worktree's local services"):
+            integration.cleanup([self.branch], apply=True)
+        self.assertTrue(self.worktree.exists())
+
+    def test_qa_instance_build_and_next_types_are_regenerable(self):
+        (self.worktree / "apps/web/.next-qa").mkdir(parents=True)
+        (self.worktree / "apps/web/.next-qa/BUILD_ID").write_text("build")
+        (self.worktree / "apps/web/next-env.d.ts").write_text("/// generated")
+        integration.check_worktree({"worktree": str(self.worktree)})
 
     def test_main_and_current_branch_are_retained(self):
         with self.assertRaisesRegex(integration.Refusal, "main or the current"):

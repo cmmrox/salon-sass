@@ -187,16 +187,17 @@ def check_worktree(record):
         raise Refusal("switch to a retained checkout before removing this worktree")
     if run("git", "status", "--porcelain", "--untracked-files=all", cwd=path).stdout.strip():
         raise Refusal(f"worktree has uncommitted or untracked work: {path}")
-    if list(Path(path).glob(".local/run/*.pid")):
+    # Either local instance (decision 099) may still be running from this worktree.
+    if list(Path(path).glob(".local/run/*.pid")) or list(Path(path).glob(".local/qa/run/*.pid")):
         raise Refusal(f"stop the worktree's local services before cleanup: {path}")
     # Build caches can be regenerated; QA evidence is archived. Other ignored files
     # (credentials, local notes, environments) must be preserved by their owner first.
     ignored = run("git", "ls-files", "--others", "--ignored", "--exclude-standard", "-z", cwd=path).stdout
-    cache_parts = {"node_modules", "target", ".next", "__pycache__", ".venv", ".pnpm-store"}
+    cache_parts = {"node_modules", "target", ".next", ".next-qa", "__pycache__", ".venv", ".pnpm-store"}
     evidence_parts = ("qa/reports/", "qa/test-results/", "qa/playwright-report/")
     for name in filter(None, ignored.split("\0")):
         if (name.startswith(evidence_parts) or cache_parts.intersection(Path(name).parts) or
-                name.endswith((".pyc", ".tsbuildinfo")) or name == ".DS_Store"):
+                name.endswith((".pyc", ".tsbuildinfo")) or Path(name).name in (".DS_Store", "next-env.d.ts")):
             continue
         raise Refusal(f"preserve ignored file before cleanup: {path}/{name}")
 
