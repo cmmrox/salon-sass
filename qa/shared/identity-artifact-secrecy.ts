@@ -2,8 +2,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {expect} from '@playwright/test';
-import {productRoot,mark} from './identity-runtime';
-import {keyFile as instanceKeyFile} from './env';
+import {mark} from './identity-runtime';
+import {keyFile as instanceKeyFile,WEB_BUILD_DIR} from './env';
 
 export function assertIdentityArtifactsSafe(){
  const keyFile=instanceKeyFile('identity');
@@ -14,7 +14,7 @@ export function assertIdentityArtifactsSafe(){
   if(!value)throw new Error(`ENVIRONMENT: retained ${name} key unavailable for artifact check`);
   return [Buffer.from(value),Buffer.from(value,'hex')];
  }).flat();
- const output=path.join(productRoot,'apps/web',process.env.SALON_WEB_DIST_DIR||'.next-qa','standalone');
+ const output=path.join(WEB_BUILD_DIR,'standalone');
  if(!fs.existsSync(output))throw new Error('ENVIRONMENT: final standalone artifact unavailable');
  const visited=new Set<string>();let files=0,bytes=0;const findings:string[]=[];
  const walk=(directory:string)=>{

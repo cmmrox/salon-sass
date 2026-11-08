@@ -104,6 +104,14 @@ process.env.SALON_POSTGRES_PORT = String(ports.postgres);
 export const STATE_DIR = path.join(PRODUCT_ROOT, '.local', INSTANCE);
 export const RUN_DIR = path.join(STATE_DIR, 'run');
 export const LOG_DIR = path.join(STATE_DIR, 'logs');
+/**
+ * The QA instance's web build folder (WEB_DIST_DIR for SALON_LOCAL_INSTANCE=qa in
+ * infra/scripts/lib/common.sh, which apps/web/next.config.ts reads as SALON_WEB_DIST_DIR). Fixed, never
+ * read from the shell: an inherited SALON_WEB_DIST_DIR=.next would aim a check at the default
+ * instance's build. qa/shared/checks.sh defines the same folder for the shell checks.
+ */
+export const WEB_DIST_DIR = '.next-qa';
+export const WEB_BUILD_DIR = path.join(PRODUCT_ROOT, 'apps', 'web', WEB_DIST_DIR);
 /** The QA instance's PostgreSQL container (Compose project `salon-qa`). */
 export const POSTGRES_CONTAINER = 'salon-qa-postgres';
 /** A service's log in the QA instance: `api` or `web`. */

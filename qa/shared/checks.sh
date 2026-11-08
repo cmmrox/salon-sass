@@ -73,6 +73,7 @@ WEB_URL="$(_instance_setting QA_WEB_URL "http://localhost:${WEB_PORT}")"; WEB_UR
 POSTGRES_CONTAINER="salon-qa-postgres"
 # The QA instance's web build (WEB_DIST_DIR for SALON_LOCAL_INSTANCE=qa in infra/scripts/lib/common.sh,
 # which apps/web/next.config.ts reads as SALON_WEB_DIST_DIR). The default instance builds into .next.
+# Fixed, never read from the shell; qa/shared/env.ts defines the same folder for Playwright.
 WEB_DIST_DIR=".next-qa"
 WEB_BUILD_DIR="$PRODUCT_ROOT/apps/web/$WEB_DIST_DIR"
 
