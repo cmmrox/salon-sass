@@ -93,7 +93,9 @@ EOF
 # --- settings ---------------------------------------------------------------------------------
 
 # Reads KEY=VALUE lines from .env. A variable already set in the environment wins. For the QA
-# instance, the default instance's own settings (INSTANCE_SETTINGS) are skipped.
+# instance, the default instance's own settings (INSTANCE_SETTINGS) are skipped; one the QA
+# instance inherits from the environment is checked by refuse_default_instance_ports and
+# refuse_default_instance_addresses instead.
 load_env_file() {
   local file="$ROOT/.env" line key value
   [ -f "$file" ] || return 0
@@ -112,21 +114,63 @@ load_env_file() {
   done < "$file"
 }
 
+# The ports the default instance uses: those .env gives it, and its defaults.
+default_instance_ports() {
+  printf '%s' "$(env_file_value SALON_POSTGRES_PORT) $(env_file_value SALON_API_PORT) $(env_file_value SALON_WEB_PORT) 5440 8090 3100"
+}
+
 # The QA instance never takes a port the default instance uses (as .env or its defaults give it):
 # an API on the default instance's PostgreSQL port would migrate and seed the database a person
 # tests in by hand.
 refuse_default_instance_ports() {
-  local default_ports port name taken
+  local port name taken
   [ "$INSTANCE" = "qa" ] || return 0
-  default_ports="$(env_file_value SALON_POSTGRES_PORT) $(env_file_value SALON_API_PORT) $(env_file_value SALON_WEB_PORT) 5440 8090 3100"
   for name in SALON_POSTGRES_PORT SALON_API_PORT SALON_WEB_PORT; do
     port="${!name}"
-    for taken in $default_ports; do
+    for taken in $(default_instance_ports); do
       if [ "$port" = "$taken" ]; then
         fail "the QA instance cannot use port $port ($name): the default instance uses it. Unset $name, or give the QA instance another port. Nothing was done."
       fi
     done
   done
+}
+
+# The same for the addresses the QA instance inherits from the environment (.env never gives it
+# one). Its API connects only to the QA instance's own PostgreSQL, on localhost at
+# SALON_POSTGRES_PORT: a database URL inherited from a shell set up for the default instance would
+# otherwise have the QA API migrate it, and QA's tests reset its accounts. Another database on that
+# PostgreSQL is allowed (a QA check starts the API on an empty one); another host, another port or
+# connection parameters are not. The web app's SALON_API_BASE_URL may not name a port the default
+# instance uses. Called once the instance's ports are settled and before anything is started.
+refuse_default_instance_addresses() {
+  local url database authority port taken
+  [ "$INSTANCE" = "qa" ] || return 0
+  url="${SALON_DB_URL:-}"
+  if [ -n "$url" ]; then
+    case "$url" in
+      "jdbc:postgresql://localhost:${SALON_POSTGRES_PORT}/"*) database="${url#"jdbc:postgresql://localhost:${SALON_POSTGRES_PORT}/"}" ;;
+      "jdbc:postgresql://127.0.0.1:${SALON_POSTGRES_PORT}/"*) database="${url#"jdbc:postgresql://127.0.0.1:${SALON_POSTGRES_PORT}/"}" ;;
+      *) database="" ;;
+    esac
+    # A plain database name: nothing after it, so no parameters and no second host.
+    case "$database" in
+      ''|*[!A-Za-z0-9_]*)
+        fail "the QA instance cannot use SALON_DB_URL '$url': its API connects only to its own PostgreSQL, jdbc:postgresql://localhost:${SALON_POSTGRES_PORT}/<database> (SALON_POSTGRES_PORT), never to the default instance's or another. Unset SALON_DB_URL for the QA instance's own database. Nothing was done."
+        ;;
+    esac
+  fi
+  url="${SALON_API_BASE_URL:-}"
+  if [ -n "$url" ]; then
+    authority="${url#*://}"
+    authority="${authority%%[/?#]*}"
+    authority="${authority##*@}"
+    case "$authority" in *:*) port="${authority##*:}" ;; *) port="" ;; esac
+    for taken in $(default_instance_ports); do
+      if [ "$port" = "$taken" ]; then
+        fail "the QA instance cannot use SALON_API_BASE_URL '$url': port $port is the default instance's. Unset SALON_API_BASE_URL for the QA instance's own API (port $SALON_API_PORT). Nothing was done."
+      fi
+    done
+  fi
 }
 
 load_settings() {
@@ -155,6 +199,7 @@ load_settings() {
     true|false) export SALON_LISTEN_ON_NETWORK="${SALON_LISTEN_ON_NETWORK:-false}" ;;
     *) fail "SALON_LISTEN_ON_NETWORK must be 'true' or 'false', not '${SALON_LISTEN_ON_NETWORK}' (see .env.example)." ;;
   esac
+  refuse_default_instance_addresses
   # Remember whether the API will use the local database or one somebody pointed it at.
   if [ -z "${SALON_DB_URL:-}" ]; then DATABASE_IS_LOCAL=1; else DATABASE_IS_LOCAL=0; fi
   export SALON_DB_URL="${SALON_DB_URL:-jdbc:postgresql://localhost:${SALON_POSTGRES_PORT}/${SALON_DB_NAME}}"
