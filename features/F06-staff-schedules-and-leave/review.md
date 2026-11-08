@@ -93,12 +93,12 @@ Ranked, most valuable first. A finding that breaks a requirement is a bug, not a
 
 | Id | Class | Suggestion | Disposition |
 | --- | --- | --- | --- |
-| SUG-F06-01 | should | One-day leave in fewer steps: once the first day is chosen, set the last day to it and open the last-day calendar at it, offering no earlier day | |
-| SUG-F06-02 | should | Leave the year out of dates within the current year on the card badge and the leave and block rows | |
-| SUG-F06-03 | should | Do not show "Name must be 2 to 40 characters." on a blank Add team member sheet before anything is typed or saved | |
-| SUG-F06-04 | idea | Repeating blocked time (a weekly training slot) | |
-| SUG-F06-05 | idea | Week patterns that repeat every two to four weeks (rotas) | |
-| SUG-F06-06 | idea | When a date control's calendar opens, put focus on the chosen day or today, not on "Go to the Next Month" | |
+| SUG-F06-01 | should | One-day leave in fewer steps: once the first day is chosen, set the last day to it and open the last-day calendar at it, offering no earlier day || CR-026 |
+| SUG-F06-02 | should | Leave the year out of dates within the current year on the card badge and the leave and block rows || CR-026 |
+| SUG-F06-03 | should | Do not show "Name must be 2 to 40 characters." on a blank Add team member sheet before anything is typed or saved || CR-026 |
+| SUG-F06-04 | idea | Repeating blocked time (a weekly training slot) || backlog |
+| SUG-F06-05 | idea | Week patterns that repeat every two to four weeks (rotas) || backlog |
+| SUG-F06-06 | idea | When a date control's calendar opens, put focus on the chosen day or today, not on "Go to the Next Month" || backlog |
 
 ### SUG-F06-01 One-day leave in fewer steps
 

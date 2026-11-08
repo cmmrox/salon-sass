@@ -310,7 +310,11 @@ Staff routes are `/workspace/sign-in`, `/workspace/account`, `/workspace/team` (
 staff sign-in. No customer web navigation or public salon shell is delivered. Workspace is neutral.
 
 The web BFF accepts only `/identity-web/staff/{action}`, with existing permission, Origin,
-CSRF, renewal and credential-secrecy guarantees. Customer-kind requests return 404 before any
+CSRF, renewal and credential-secrecy guarantees. The Team page's actions go through it too
+(`team-members`, `team-member-add`, `team-schedule`, `team-leave-add`, `team-block-add` and the
+rest, F06), each checked against its `team.*` permission. A team member's photo is served on the
+salon's own hostname at `/team-photos/{id}`, passed through from the API with no session, as service
+photos are. Customer-kind requests return 404 before any
 upstream call or cookie issuance. Direct `/api/v1/identity/customers/*` APIs remain available for
 the later native client and API tests. All visible web text uses next-intl message keys.
 
