@@ -79,13 +79,49 @@ def allowed(role, path):
     return any(_regex(p).match(path) for p in rules["allow"])
 
 
+def _shared_git_dir(checkout):
+    """The repository's own .git directory as seen from a checkout, or None when it has none.
+
+    A linked worktree's .git is a file naming <repository>/.git/worktrees/<name>. No subprocess: this
+    runs on every edit.
+    """
+    dot_git = os.path.join(checkout, ".git")
+    if os.path.isdir(dot_git):
+        return os.path.realpath(dot_git)
+    if not os.path.isfile(dot_git):
+        return None
+    with open(dot_git, encoding="utf-8") as pointer:
+        text = pointer.read().strip()
+    if not text.startswith("gitdir:"):
+        return None
+    worktrees = os.path.dirname(os.path.realpath(text[len("gitdir:"):].strip()))
+    return os.path.dirname(worktrees) if os.path.basename(worktrees) == "worktrees" else None
+
+
+def _checkout_of(full, root):
+    """The checkout of this repository holding the file: the guard's own, or a linked worktree."""
+    shared = _shared_git_dir(root)
+    current = os.path.dirname(full)
+    while shared:
+        if _shared_git_dir(current) == shared:
+            return current
+        parent = os.path.dirname(current)
+        if parent == current:
+            break
+        current = parent
+    return root if full == root or full.startswith(root + os.sep) else None
+
+
 def relative(path):
-    """Repository-relative posix path, or None when the file is outside the repository."""
+    """Path relative to the file's own checkout, or None when it is outside the repository.
+
+    The hook runs the main checkout's guard for every agent, so a file in a linked worktree is judged
+    from that worktree's root, under the same rules, wherever the worktree sits.
+    """
     full = os.path.realpath(path if os.path.isabs(path) else os.path.join(os.getcwd(), path))
     root = os.path.realpath(ROOT)
-    if full != root and not full.startswith(root + os.sep):
-        return None
-    return os.path.relpath(full, root).replace(os.sep, "/")
+    checkout = _checkout_of(full, root)
+    return None if checkout is None else os.path.relpath(full, checkout).replace(os.sep, "/")
 
 
 def changed_paths():

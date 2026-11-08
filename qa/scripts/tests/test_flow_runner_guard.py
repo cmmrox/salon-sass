@@ -1,6 +1,8 @@
 import importlib.util
 import os
+import tempfile
 import unittest
+from unittest import mock
 
 from sdlc_lib import flow, runner
 from tests import fixtures as fx
@@ -108,6 +110,63 @@ class RunnerTest(unittest.TestCase):
                          ["pnpm", "--dir", "qa", "exec", "playwright", "test", "api/F07/slots.spec.ts", "--project", "api"])
         self.assertEqual(runner.command(entries[1]), ["k6", "run", "qa/load/F07/hold.js"])
         self.assertEqual(runner.command(entries[2]), ["maestro", "test", "qa/mobile/F07/book.yaml"])
+
+
+class GuardWorktreeTest(unittest.TestCase):
+    """The hook runs the main checkout's guard, but the file may be in a linked worktree of the repository."""
+
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.base = os.path.realpath(tmp.name)
+        self.repo = os.path.join(self.base, "repo")
+        os.makedirs(os.path.join(self.repo, ".git"))
+        self.inside = self.linked(os.path.join(self.repo, ".claude", "worktrees", "dev"), "dev")
+        self.beside = self.linked(os.path.join(self.base, "beside"), "beside")
+        patcher = mock.patch.object(guard, "ROOT", self.repo)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def linked(self, path, name):
+        os.makedirs(os.path.join(self.repo, ".git", "worktrees", name))
+        os.makedirs(path)
+        with open(os.path.join(path, ".git"), "w", encoding="utf-8") as pointer:
+            pointer.write("gitdir: " + os.path.join(self.repo, ".git", "worktrees", name) + "\n")
+        return path
+
+    def test_a_file_in_the_checkout_keeps_its_path(self):
+        self.assertEqual(guard.relative(os.path.join(self.repo, "apps", "a.java")), "apps/a.java")
+
+    def test_a_worktree_inside_the_checkout_is_judged_from_its_own_root(self):
+        target = os.path.join(self.inside, "apps", "new", "a.java")  # the directory need not exist yet
+        self.assertEqual(guard.relative(target), "apps/new/a.java")
+        self.assertTrue(guard.allowed("dev", guard.relative(target)))
+
+    def test_the_rules_still_hold_inside_a_worktree(self):
+        self.assertFalse(guard.allowed("dev", guard.relative(os.path.join(self.inside, "qa", "web", "a.spec.ts"))))
+        self.assertFalse(guard.allowed("dev", guard.relative(os.path.join(self.inside, "docs", "a.md"))))
+        self.assertFalse(guard.allowed("qa", guard.relative(os.path.join(self.inside, "apps", "a.java"))))
+        self.assertFalse(guard.allowed("qa", guard.relative(os.path.join(self.inside, "qa", "scripts", "guard.py"))))
+
+    def test_a_worktree_beside_the_checkout_is_judged_too(self):
+        self.assertEqual(guard.relative(os.path.join(self.beside, "qa", "a.spec.ts")), "qa/a.spec.ts")
+
+    def test_a_pointer_to_elsewhere_does_not_make_a_worktree(self):
+        fake = os.path.join(self.repo, "fake")
+        os.makedirs(fake)
+        with open(os.path.join(fake, ".git"), "w", encoding="utf-8") as pointer:
+            pointer.write("gitdir: " + os.path.join(self.base, "elsewhere", ".git", "worktrees", "x") + "\n")
+        path = guard.relative(os.path.join(fake, "apps", "a.java"))
+        self.assertEqual(path, "fake/apps/a.java")
+        self.assertFalse(guard.allowed("dev", path))
+
+    def test_a_file_outside_the_repository_is_not_judged(self):
+        self.assertIsNone(guard.relative(os.path.join(self.base, "other", "a.java")))
+
+    def test_the_guard_of_a_worktree_judges_the_main_checkout(self):
+        with mock.patch.object(guard, "ROOT", self.inside):
+            self.assertEqual(guard.relative(os.path.join(self.inside, "apps", "a.java")), "apps/a.java")
+            self.assertEqual(guard.relative(os.path.join(self.repo, "qa", "a.spec.ts")), "qa/a.spec.ts")
 
 
 class GuardTest(unittest.TestCase):
