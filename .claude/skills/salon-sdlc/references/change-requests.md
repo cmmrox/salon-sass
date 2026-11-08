@@ -40,7 +40,8 @@ apart.
      | --- | --- |
      | `outlined`, `planned` | Update the outline or `spec.md` in place |
      | `in-progress`, `built` | Update `spec.md`; set a `built` stage back to `in-progress`; tell the developer |
-     | `complete` (not released) | Reopen: set `status: in-progress`, `qa_status: not-run`, add `reopened_by: CR-<nnn>`, update `spec.md`. Stages that depend on it keep going; they cannot be closed until it is closed again. If its feature was `in-qa` or `complete`, set the feature back to `in-progress` and `qa_status: not-run` |
+     | `complete`, its feature not yet merged | Reopen: set `status: in-progress`, `qa_status: not-run`, add `reopened_by: CR-<nnn>`, update `spec.md`. Stages that depend on it keep going; they cannot be closed until it is closed again. If its feature was `in-qa` or `complete`, set the feature back to `in-progress` and `qa_status: not-run` |
+     | `complete`, its feature merged but not released | Do not reopen: statuses and the merge record stay, because they state what was merged. Add the new criteria to `spec.md`, ship one follow-up PR, and record QA's targeted re-verification in the feature's `evidence`. `integration` keeps describing the feature's own PR, so never move its `qa_revision`: the merge checks verify it against that PR's head, and moving it once blocked the next feature's start. `pr-check` does not apply to the follow-up's branch: check by hand that it is clean, on `origin/main`, and unchanged since QA's revision. The change is `implemented` once that PR's merge is verified |
      | `released` | Never rewritten. Add a new stage to the feature (or a new feature) that delivers the change |
 
    - A new feature gets the next free `F` number and a `feature.yaml` with `status: backlog`.
