@@ -678,11 +678,19 @@ test('TC-F06-S02-044 AC-16: at every width of the matrix both tabs fit with five
         const f = await fit(page);
         expect(f.counted, `${width} ${label}: elements measured`).toBeGreaterThan(0);
         expect(f.pageScrolls, `${width} ${label}: no sideways scrolling`).toBe(false);
-        expect(f.outside, `${width} ${label}: nothing outside the screen`).toEqual([]);
+        // Since F06-S03 the sheet has four tabs, which scroll sideways inside their own rail on a phone, as this
+        // spec's UI section and the prototype's chips have them: the rail fits, and each tab is reached below.
+        expect(f.outside.filter(o => !/^schedule-tab-[a-z]+ \(/.test(o)), `${width} ${label}: nothing outside the screen`).toEqual([]);
       };
       const sheet = await openSchedule(page, person.id);
       await expect(id(sheet, W.outside), 'the warning shows too').toBeVisible();
       await checkFit('Weekly hours');
+      for (const name of ['Weekly hours', 'Date changes', 'Leave', 'Blocked time']) {
+        const each = sheet.getByRole('tab', { name, exact: true });
+        await each.scrollIntoViewIfNeeded();
+        await expect(each, `${width}: the ${name} tab can be reached`).toBeInViewport({ ratio: 0.99 });
+      }
+      await weekTab(sheet).click();
       for (const [label, control] of [['Save hours', button(sheet, SAVE)], ['Copy Monday', button(sheet, COPY_MONDAY)], ['a break\'s control', button(sheet, N.breakRemove(LONG.sunday, 5))]] as const) {
         await control.scrollIntoViewIfNeeded();
         await expect(control, `${width}: ${label} can be reached`).toBeInViewport();
@@ -734,9 +742,15 @@ test('TC-F06-S02-045 AC-16: both tabs have no serious accessibility violation fo
   await expect(sheetOf(page)).toHaveCount(0);
   await test.step('by keyboard alone', async () => {
     const opener = card(page, person.id).getByTestId(W.cardSchedule);
+    // The sheet was opened by a click on this button and gives focus back to it when it closes: a focus that came
+    // from the mouse, which the browser rightly does not mark :focus-visible. Start the keyboard path from nothing.
+    await expect(opener, 'focus came back to Schedule when the sheet closed').toBeFocused();
+    await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+    await expect(opener, 'and is taken away, so Tab has to find it').not.toBeFocused();
     let steps = 0;
     while (!(await opener.evaluate(el => el === document.activeElement)) && steps++ < 120) await page.keyboard.press('Tab');
     await expect(opener, 'Schedule reached by Tab').toBeFocused();
+    expect(steps, 'reached by pressing Tab, not left focused').toBeGreaterThan(0);
     const focus = await focusIndicator(opener);
     expect(focus.focusVisible && focus.outlineWidth > 0 && focus.outlineStyle !== 'none', `a visible focus: ${JSON.stringify(focus)}`).toBe(true);
     await page.keyboard.press('Enter');
