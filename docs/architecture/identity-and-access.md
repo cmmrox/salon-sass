@@ -20,7 +20,7 @@ Use Spring Security's maintained password encoding and JWT primitives, without e
 default form-login behavior. Passwords are 15 to 128 Unicode code points, allow spaces and password
 managers, and reject a small documented common-password list; no forced character mixture.
 The only exception is the `local`-profile seed hooks, which also accept the development password
-`123456@321` for the fixed synthetic roster (decision 099); no product path and no other profile does.
+`123456@321` for the fixed synthetic roster (decision 105); no product path and no other profile does.
 Use PBKDF2-HMAC-SHA256, random 16-byte salt and 600,000 iterations with an identified encoding.
 These choices follow [Spring password storage](https://docs.spring.io/spring-security/reference/features/authentication/password-storage.html)
 and [NIST authentication guidance](https://pages.nist.gov/800-63-4/sp800-63b.html), interpreted as

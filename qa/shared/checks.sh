@@ -6,7 +6,7 @@
 # product is not running, a tool is missing) is reported as ENVIRONMENT and exits 3, so that it is
 # never mistaken for a failure of the product or for a pass.
 #
-# Addresses come from here and nowhere else. Checks run against the QA instance (decision 099,
+# Addresses come from here and nowhere else. Checks run against the QA instance (decision 105,
 # docs/operations/environments-and-releases.md, "The QA instance"), never the default instance that
 # holds the owner's manual testing: its ports, addresses and key files come from the shell or
 # qa/.env.local, then the QA instance's defaults, never from the root .env (which describes the
@@ -26,7 +26,7 @@ PRODUCT_ROOT="$(cd "$SCRIPTS/../.." && pwd)"
 # The QA instance (infra/scripts/lib/common.sh). Every infra script a check calls inherits it.
 case "${SALON_LOCAL_INSTANCE-qa}" in
   qa) ;;
-  *) printf 'REFUSED: QA checks run only against the QA instance (SALON_LOCAL_INSTANCE=qa), not %s; the default instance holds the owner'"'"'s manual testing (decision 099). Nothing was run.\n' "'${SALON_LOCAL_INSTANCE:-default}'" >&2; exit 3 ;;
+  *) printf 'REFUSED: QA checks run only against the QA instance (SALON_LOCAL_INSTANCE=qa), not %s; the default instance holds the owner'"'"'s manual testing (decision 105). Nothing was run.\n' "'${SALON_LOCAL_INSTANCE:-default}'" >&2; exit 3 ;;
 esac
 export SALON_LOCAL_INSTANCE=qa
 STATE_SUBDIR=".local/qa"
@@ -97,7 +97,7 @@ for _aimed in "SALON_API_PORT=$API_PORT" "SALON_WEB_PORT=$WEB_PORT" "SALON_POSTG
   [ -n "${_aimed#*=}" ] || continue
   case " $DEFAULT_INSTANCE_PORTS " in
     *" ${_aimed#*=} "*)
-      printf 'REFUSED: %s is a port of the default instance (%s: %s), which holds the owner'"'"'s manual testing (decision 099). QA checks run against the QA instance (3200, 8190, 5540). Nothing was run.\n' "${_aimed%%=*} ${_aimed#*=}" "$(printf '%s' "$DEFAULT_INSTANCE_PORTS" | sed 's/ /, /g')" "$_default_ports_source" >&2
+      printf 'REFUSED: %s is a port of the default instance (%s: %s), which holds the owner'"'"'s manual testing (decision 105). QA checks run against the QA instance (3200, 8190, 5540). Nothing was run.\n' "${_aimed%%=*} ${_aimed#*=}" "$(printf '%s' "$DEFAULT_INSTANCE_PORTS" | sed 's/ /, /g')" "$_default_ports_source" >&2
       exit 3 ;;
   esac
 done

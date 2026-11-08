@@ -3,7 +3,7 @@
 #
 # Every name carries the project's prefix, so nothing here can be mistaken for, or collide with,
 # another project's containers on the same machine. The scripts pass the instance's own Compose
-# project and names (infra/scripts/lib/common.sh, decision 099): unset, the default instance's
+# project and names (infra/scripts/lib/common.sh, decision 105): unset, the default instance's
 # below; SALON_LOCAL_INSTANCE=qa gives salon-qa, salon-qa-postgres and salon-qa-postgres-data.
 name: salon-local
 

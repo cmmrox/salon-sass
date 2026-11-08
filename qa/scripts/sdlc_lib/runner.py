@@ -158,7 +158,7 @@ def _revision():
         return None
 
 
-# Decision 099: automated QA runs only against the QA instance; the default instance holds the
+# Decision 105: automated QA runs only against the QA instance; the default instance holds the
 # owner's manual testing. qa/shared/env.ts and qa/shared/checks.sh refuse it too; this refusal
 # stops a run before any child starts.
 DEFAULT_INSTANCE_PORTS = (8090, 3100, 5440)
@@ -243,7 +243,7 @@ def run(entries, label, dry_run=False, reports_root="qa/reports", *, heartbeat_s
         return 0, None
     refusal = default_instance_refusal(os.environ)
     if refusal:
-        print(f"refusing: {refusal} (decision 099). Nothing was run.", flush=True)
+        print(f"refusing: {refusal} (decision 105). Nothing was run.", flush=True)
         return 2, None
 
     stamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")

@@ -235,7 +235,7 @@ if __name__ == "__main__":
 
 
 class DefaultInstanceRefusalTest(unittest.TestCase):
-    """Decision 099: the runner never aims QA at the default instance."""
+    """Decision 105: the runner never aims QA at the default instance."""
 
     def test_qa_instance_and_unset_are_accepted(self):
         self.assertIsNone(runner.default_instance_refusal({}))

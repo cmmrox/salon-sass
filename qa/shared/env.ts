@@ -2,7 +2,7 @@
  * Where the product under test is, and where a run writes its evidence. The only place an address,
  * a port, a container or a state folder is written: tests ask this module and never spell one out.
  *
- * Automated QA runs against the QA instance (decision 099, docs/operations/environments-and-releases.md,
+ * Automated QA runs against the QA instance (decision 105, docs/operations/environments-and-releases.md,
  * "The QA instance"), never the default instance that holds the owner's manual testing. Its ports,
  * addresses and key files come from the shell or qa/.env.local, then the QA instance's documented
  * defaults; never from the root .env, which describes the default instance. Anything that would
@@ -56,7 +56,7 @@ export const DEFAULT_INSTANCE_PORTS = { api: 8090, web: 3100, postgres: 5440 } a
 const chosenInstance = process.env.SALON_LOCAL_INSTANCE ?? qaLocal.SALON_LOCAL_INSTANCE;
 if (chosenInstance !== undefined && chosenInstance !== INSTANCE) {
   throw new Error(`REFUSED: automated QA runs only against the QA instance (SALON_LOCAL_INSTANCE=qa), not '${chosenInstance || 'default'}'. ` +
-    'The default instance holds the owner\'s manual testing (decision 099). Nothing was run.');
+    'The default instance holds the owner\'s manual testing (decision 105). Nothing was run.');
 }
 // Every child (an infra script, a shell check, a browser) inherits the QA instance.
 process.env.SALON_LOCAL_INSTANCE = INSTANCE;
@@ -92,7 +92,7 @@ const aimed = [
 const refused = aimed.filter(([, port]) => defaultPorts.includes(port));
 if (refused.length > 0) {
   throw new Error(`REFUSED: ${refused.map(([name, port]) => `${name} is ${port}`).join(', ')}, a port of the default instance ` +
-    `(${defaultPorts.join(', ')}: ${defaultPortsSource}), which holds the owner's manual testing (decision 099). QA runs against the QA instance ` +
+    `(${defaultPorts.join(', ')}: ${defaultPortsSource}), which holds the owner's manual testing (decision 105). QA runs against the QA instance ` +
     `(${Object.values(QA_DEFAULT_PORTS).join(', ')}). Nothing was run.`);
 }
 // Children see the same ports this process tests.

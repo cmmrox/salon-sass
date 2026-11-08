@@ -33,7 +33,7 @@ public interface OperatorAccountService {
      * Local fixtures only: as {@link #seed(List)}, except that with {@code keepExisting} an account that exists
      * already (whoever created it) is left exactly as it is and only the missing ones are created.
      *
-     * @param developmentPassword the local roster's development password (decision 099), accepted exactly as
+     * @param developmentPassword the local roster's development password (decision 105), accepted exactly as
      *     given although it is below the password policy; {@code null} accepts only the policy's passwords
      * @return how many accounts were seeded
      */

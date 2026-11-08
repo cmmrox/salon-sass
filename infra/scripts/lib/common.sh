@@ -32,7 +32,7 @@ env_file_value() {
 
 # --- the instance -----------------------------------------------------------------------------
 
-# Two local instances can run side by side on one machine (decision 099): the default one, which
+# Two local instances can run side by side on one machine (decision 105): the default one, which
 # holds a person's manual testing, and `qa`, which automated QA runs against. Each has its own
 # Compose project, container, volume, ports, process ids, logs, keys and built artifacts, so that
 # nothing the scripts do for one instance reaches the other. SALON_LOCAL_INSTANCE chooses: unset
@@ -699,7 +699,7 @@ print_addresses() {
   say "Logs        ${LOG_DIR}"
 }
 
-# --- the fixed local account roster (decision 099) --------------------------------------------
+# --- the fixed local account roster (decision 105) --------------------------------------------
 
 ROSTER="$ROOT/infra/local/accounts.json"
 

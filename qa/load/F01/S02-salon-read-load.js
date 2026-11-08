@@ -19,9 +19,9 @@ import { Counter } from 'k6/metrics';
 
 import { salons, salonUrl } from '../../shared/tenants.ts';
 
-// The QA instance (decision 099); the default instance's ports are the owner's and are refused.
+// The QA instance (decision 105); the default instance's ports are the owner's and are refused.
 const API_PORT = __ENV.SALON_API_PORT || '8190';
-if (['3100', '8090', '5440'].includes(API_PORT)) throw new Error(`REFUSED: port ${API_PORT} belongs to the default instance (decision 099). Nothing was run.`);
+if (['3100', '8090', '5440'].includes(API_PORT)) throw new Error(`REFUSED: port ${API_PORT} belongs to the default instance (decision 105). Nothing was run.`);
 const API_URL = (__ENV.QA_API_URL || `http://localhost:${API_PORT}`).replace(/\/+$/, '');
 const PATH = '/api/v1/salon';
 

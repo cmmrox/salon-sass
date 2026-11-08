@@ -34,7 +34,7 @@ import org.springframework.web.bind.annotation.RestController;
  * {@code local} profile only, never in the OpenAPI document. Seeds explicit synthetic Admin/Support
  * accounts with supplied credentials (never echoed), resets their MFA and rate state, and sets a
  * controlled bootstrap failure. Salons, plans and other accounts are never touched. The seed also accepts the
- * local roster's development password (decision 099), and with {@code keepExisting} only adds missing accounts.
+ * local roster's development password (decision 105), and with {@code keepExisting} only adds missing accounts.
  */
 @RestController
 @Profile("local")

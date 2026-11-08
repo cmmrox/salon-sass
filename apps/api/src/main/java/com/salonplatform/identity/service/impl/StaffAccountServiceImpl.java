@@ -156,7 +156,7 @@ class StaffAccountServiceImpl implements StaffAccountService {
 
     /**
      * @param developmentPassword the one password below the policy that the local seed also accepts (decision
-     *     099); {@code null} on every product path
+     *     105); {@code null} on every product path
      */
     private StaffAccount createAccount(StaffInput input, boolean enforceSeats, String developmentPassword) {
         String email = StaffValidation.email(input.email());

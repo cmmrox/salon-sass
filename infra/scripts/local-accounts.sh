@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# The fixed local account roster (decision 099): infra/local/accounts.json, five staff per synthetic
+# The fixed local account roster (decision 105): infra/local/accounts.json, five staff per synthetic
 # salon and one operator per operator role, every password 123456@321.
 #
 # Usage: infra/scripts/local-accounts.sh          creates every roster account the running instance
