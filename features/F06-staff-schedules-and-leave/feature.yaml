@@ -4,13 +4,13 @@ summary: "A salon adds, edits and removes team members (removal refused while th
 release: R1
 milestone: M1-web
 status: in-qa
-qa_status: not-run
+qa_status: pass
 released_in: null
 depends_on: [F04, F05]
 integration:
   branch: charithm/feature/F06-staff-schedules-and-leave
   pull_request: null
-  qa_revision: null
+  qa_revision: a27b49730ca1755450f944e1deaaa22a1574c46b
   merged_commit: null
   merged_at: null
 surfaces: [api, web]
@@ -39,5 +39,6 @@ verification:
       salon's own hours.
     unblocked_by: F07
 evidence:
-  last_run: null
-  last_result: null
+  last_run: qa/reports/20261109-031920-F06-ca7f75ae348c
+  last_result: pass
+  full_pass_revision: a27b49730ca1755450f944e1deaaa22a1574c46b

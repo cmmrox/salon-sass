@@ -86,6 +86,9 @@ offers days before the first.
 
 ## Suggestions
 
+Screenshots named below are in `qa/reports/20261109-031920-F06-ca7f75ae348c/review/` (reports are not
+committed), taken 2026-11-09 on the QA instance at a27b497 and on the prototype served locally.
+
 Ranked, most valuable first. A finding that breaks a requirement is a bug, not a suggestion: file it.
 
 | Id | Class | Suggestion | Disposition |
@@ -109,8 +112,8 @@ Ranked, most valuable first. A finding that breaks a requirement is a bug, not a
 - **Instead:** when the first day is chosen and the last day is empty or earlier, set the last day to
   the first day; open the last-day calendar on the first day's month and disable the days before it.
   The API's rule stays as it is.
-- **Evidence:** observed at 1280 on alpha as a Manager (screens `ours-leave-form-1280.png`,
-  `ours-leave-list-1280.png` in the run's scratch evidence). Fresha's time off takes a start date and
+- **Evidence:** observed at 1280 on alpha as a Manager (`ours-leave-form-1280.png`,
+  `ours-leave-list-1280.png`). Fresha's time off takes a start date and
   a repeat end date, so a single day is one date ([Manage time off](https://www.fresha.com/help-center/knowledge-base/calendar/21-manage-time-off-for-your-team-1), read 2026-11-09).
 
 ### SUG-F06-02 Leave the year out of this year's dates
