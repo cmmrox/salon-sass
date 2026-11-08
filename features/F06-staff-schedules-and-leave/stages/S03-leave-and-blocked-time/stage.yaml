@@ -3,7 +3,7 @@ feature: F06
 title: "Leave and blocked time"
 sequence: 3
 surfaces: [api, web]
-status: planned             # outlined | planned | in-progress | built | complete | released
+status: complete            # outlined | planned | in-progress | built | complete | released
 qa_status: not-run          # stays not-run: QA passes the feature. Set only by a stage pass the owner asked for
 blocked_reason: null        # QA: what stops a stage pass, when qa_status is blocked
 released_in: null
@@ -15,10 +15,181 @@ nfr_focus: []               # non-functional requirements of the feature that th
 # Written by the developer at handoff. The stage is closed on it, and QA starts the feature pass
 # from it. Facts; not how the code works.
 handoff:
-  run: null                 # commands that start the product and reach what this stage built
-  data: null                # the accounts and seed data that exist
-  notes: null               # criterion-to-result/evidence; gate commands, tested source, log paths,
-                            # results and relevant conditions; gaps and differences from docs/
+  run: |
+    The QA instance, left running from this stage's worktree on the stage's source:
+    /Users/cmmrox/Personal/Projects/salon-sass/.claude/worktrees/F06-S01-dev, branch charithm/feature/F06-S03-leave-and-blocked-time.
+    Web http://<salon>.localhost:3200, API http://<salon>.localhost:8190, PostgreSQL localhost:5540 (container salon-qa-postgres,
+    database salon). Migrations V1 to V31 ran at API start; V31 is this stage's. The owner's default instance (3100, 8090, 5440) was
+    not touched.
+    To start it again from the repository root of that worktree, in a plain (non-login) shell, with the QA key files in .local/qa/
+    (copied, mode 600, from the main checkout's .local/qa/, which the QA database was set up with):
+      SALON_LOCAL_INSTANCE=qa infra/scripts/local-up.sh        stop: SALON_LOCAL_INSTANCE=qa infra/scripts/local-down.sh
+    Screens: http://alpha.localhost:3200/workspace/team. Each card's Schedule button (team-card-schedule) opens the schedule sheet;
+    its tabs are schedule-tab-hours, -changes, -leave and -blocked. The card's leave badge is team-card-leave.
+    API, on the salon's host, under /api/v1/team/members/{id}/schedule: GET (now with leave and blockedTime); leave (POST);
+    leave/{leaveId} (DELETE); leave/affected?firstDay=&lastDay= (GET); blocked-time (POST); blocked-time/{blockId} (DELETE);
+    blocked-time/affected?date=&starts=&finishes= (GET). GET /api/v1/team/members and /{id} now carry nextLeave.
+    BFF actions under /identity-web/{kind}/: team-leave-add, team-leave-remove, team-leave-affected (team.manage); team-block-add,
+    team-block-remove, team-block-affected (team.block). Reading stays team-schedule?memberId= (team.read).
+    The test clock (/local/clock) moves "today", as in F06-S02.
+  data: |
+    Nothing is seeded by this stage. Accounts are the fixed roster, infra/local/accounts.json (decision 105), password 123456@321; each
+    Owner and the support operator sign in with the roster's TOTP seed, the other roles with the password alone. No roster account
+    was changed. The walk-through used alpha and beta for the API and gamma for the browser, and the operator
+    shanika.abeysekera@salonops.lk (OPERATOR_SUPPORT) for support sessions.
+    The QA database had no team members when this stage took it over, and has none now: the walk's people (realistic names) and their
+    schedules, leave and blocks were deleted with SQL at the end, and the tenants' plan, access state and status were as found. Audit
+    entries of the walk remain. Two support sessions the walk opened on alpha and gamma end at their 30 minutes.
+    API shapes as built (field names are the spec's):
+    GET schedule {version, today, weekly, dateChanges, leave: [leave], blockedTime: [block]}, both from the salon's today on: leave
+    whose last day is today or later, blocks dated today or later (a block earlier today included), in date (and time) order.
+    leave {id, firstDay, lastDay, type, note, bookingsToResolve}: type (annual | sick | personal | other) and note (null for none)
+    absent without team.manage.
+    block {id, date, starts, finishes, label, bookingsToResolve}.
+    nextLeave on a member: {firstDay, lastDay, type} for the current or next leave, or null; type absent without team.manage.
+    POST leave {firstDay, lastDay, type, note} -> 201 {leave, affected: [booking]}. POST blocked-time {date, starts, finishes, label}
+    -> 201 {block, affected: [booking]}. The affected GETs -> 200 {affected: [booking]}. booking {date, time, customerName,
+    serviceName}, as F06-S02's.
+    400 field errors name firstDay, lastDay, type, note on leave and date, starts, finishes, label on a block; an unknown body field is
+    a 400 naming it. 409: conflict (an overlap), limit_reached (the 101st upcoming leave, the 201st upcoming block). 404 not_found:
+    another salon's id, a removed person, leave that has ended or is gone, a block that has passed or is gone, another person's.
+    Storage: staff_member_leave (first_day, last_day, leave_type, note) and staff_member_blocked_time (block_date, starts, finishes,
+    label), each with branch_id, CHECKs for order, the quarter-hour steps, the type, the note and the trimmed 2-to-40 label, row-level
+    security forced, select, insert and delete granted, both in the ownership map, the erasure function and the isolation lists.
+    Audit actions, subject staff_team_member and the member's id: staff.team_member_leave_added and _removed (leaveId, firstDay,
+    lastDay, hasNote; never the type or note), staff.team_member_blocked_time_added and _removed (blockId, date, starts, finishes,
+    label).
+  notes: |
+    Tested source: 002a90c (the stage's three build commits 71e35cb, ab962ab, 1128a0d, with the F06 branch and main merged in by the
+    lead). This handoff commit changes only this file and the generated documents.
+
+    GATES, each once on 002a90c with a clean tree before and after, in this worktree. Logs and summary.txt:
+    /Users/cmmrox/Personal/Projects/salon-sass/.claude/worktrees/F06-S01-dev/.local/logs/gates-s03-002a90c/
+    | Command | Result | Log |
+    | cd apps/api && ./mvnw -q verify | exit 0; 1815 tests in 193 classes, 0 failures, 0 errors, 0 skipped | 1-api-verify.log |
+    | pnpm -r lint | exit 0 | 2-lint.log |
+    | pnpm -r typecheck | exit 0 | 3-typecheck.log |
+    | pnpm -r test | NOT PROVEN LOCALLY: exit 1 five times, every failure a 5-second Vitest timeout | 4-test.log, 4-test-rerun.log to -rerun4.log |
+    CLOSE (lead, 2026-11-09): pnpm -r test exit 0 on 41adf85 (source of 002a90c) after the machine was restarted, load about 2:
+    web 1279 of 1279 in 33 s, api-contracts 25, format 11. Log: /Users/cmmrox/Personal/Projects/salon-sass/.claude/worktrees/
+    F06-S01-dev/.local/logs/gates-s03-close/pnpm-test-3.log. Every gate now has a passing record on this source.
+    | pnpm --filter @salon/web test:a11y | exit 0; 368 tests in 12 files | 5-a11y.log |
+    | pnpm --filter @salon/web build | exit 0; artifact scan clean | 6-build.log |
+    | pnpm contracts:check | exit 0; document and client current | 7-contracts.log |
+    pnpm -r test: format 11 and api-contracts 25 passed every time. The web suite (1279 tests) failed 9, 25, 18, 11 and 11 tests
+    in the five runs, a different set each time, every one "Test timed out in 5000ms" and no assertion failure, across files this
+    stage did not touch (F04 HoursSettings and BookingRulesSettings, F05 ServicesScreen, the console, the pure colour computation in
+    brand.test) as well as TeamSchedule and TeamTimeOff. The suite took 94 to 144 s against 33 s at the F06-S02 gate on this machine.
+    The load was another project's iOS simulator regression (xcodebuild test-without-building) and emulators: load averages from 3.8
+    to 6.6 when a run started, rising to 28 to 55 during it, on 10 cores (each run's figures are in summary.txt). Not touched.
+    DIAGNOSTIC, not the gate, agreed with the lead: the same web suite with limited concurrency,
+    pnpm --filter @salon/web exec vitest run --project unit --maxWorkers=2, exit 0, 100 files, 1279 of 1279 tests passed in 130 s,
+    on 002a90c with a clean tree (diag-web-unit-maxWorkers2.log). The failing files alone also pass (TeamSchedule 54 of 54).
+    No test timeout and no test was changed. CI's verification commands run the exact gate on the PR.
+    The API gate ran beside the two walk-throughs, which is why it took longer than F06-S02's.
+
+    WALK-THROUGH on the QA instance, from outside, on the source of 002a90c, with the roster's accounts: API 205 of 205 checks, browser
+    206 of 206 in real Chromium. Evidence, with the scripts and screenshots (no credentials beyond the committed roster):
+    /Users/cmmrox/Personal/Projects/salon-sass/.claude/worktrees/F06-S01-dev/.local/f06-s03-walk2/ (api_walk_result.json,
+    browser_walk_result.json, api_walk.log, browser_walk.log, screens/). The scripts are not product code and were not committed. The
+    same scripts passed 205 and 206 on the stage's own source before the merge, in .local/f06-s03-walk/.
+
+    AC-1 checked (API 19, browser 10): added with the note trimmed, today alone and a year ahead alone, yesterday, both days past, last
+    before first, beyond a year, an unknown and a missing type, a note of 61 and of 60, a blank note as none, every type, impossible
+    dates, an unknown field, nothing saved by any refusal; on the sheet the banner, each message, the problem going as the form changes,
+    the note held to 60, "Leave added." and the flagged toast.
+    AC-2 checked (API 22, browser 2): overlap the same, at either edge, inside and around; the days either side allowed; another person
+    unaffected; 4 rounds of two overlapping requests, both seen waiting in the database behind a row this walk held, exactly one kept
+    each round; the 100th taken, the 101st limit_reached, ended leave not counted and leave under way counted; two for the last place,
+    both seen waiting, one kept. The sheet's overlap message with the form kept.
+    AC-3 checked (API 10, browser 15): date order without what has ended, its fields, one day alone, "No leave planned.", Remove asking
+    first with the spec's words (cancel keeps it), leave under way listed and removable, 404 for removed, ended and another person's,
+    the ended row kept, the days free again; "1 booking to resolve" and "N bookings to resolve" with the answer replaced in the browser.
+    AC-4 checked (API 16, browser 10): today, a year ahead, yesterday and a day beyond, the end not after the start, off-step times, a
+    label of 1 (after trimming), 41 and none, an unknown field, nothing saved; on the sheet each message and the three toasts.
+    AC-5 checked (API 20, browser 2): five overlaps refused, touching on both sides kept, another date kept, a block outside the hours
+    and on leave stored as entered; 4 rounds of two overlapping requests, both seen waiting, exactly one kept; the 200th taken, the
+    201st limit_reached; two for the last place, one kept. The sheet's overlap message; touching taken.
+    AC-6 checked (API 7, browser 6): "No blocked time.", date and time order from today on, the label, "Blocked time removed." with no
+    question, 404 for passed and gone, the passed row kept.
+    AC-7 NOT reachable from outside: TeamSchedule is a Java interface whose first caller is F07. Proved in the API gate by
+    TeamScheduleContractIntegrationTest (33, reading back real saves through the API with hand-written windows: leave beating a date
+    change whichever was saved first, a block at each edge and across the break, touching blocks leaving no time making the day not
+    worked, working true always with a window across a range, decidedBy, removal restoring the answer, closures still ignored, another
+    salon's rows not leaking), ScheduleRulesTest (47), TeamScheduleSnapshotIntegrationTest (8) and HolidaysAndScheduleIntegrationTest.
+    Its signature is unchanged; MemberWorkingDay gained decidedBy (LEAVE, BLOCKED_TIME, DATE_CHANGE, WEEK).
+    AC-8 checked as far as the running product allows (API 7, browser 5): both questions answer, "none" until F07; bad periods and an
+    unknown person refused; no flag column exists. The sheet's two sentences, the list (date, time, customer, service) and saving
+    allowed, with the answer replaced in the browser. The list, the count of AC-3 and the booking left untouched are proved by
+    MemberPeriodsAffectedIntegrationTest (10), with an implementation that reports bookings.
+    AC-9 checked (API 8, browser 8): the Owner's card with type and days, one day alone, none with no badge, the earliest shown, the badge
+    gone when the leave is removed, "On leave, …" for a Professional, a Receptionist and a support session; nextLeave null with none.
+    AC-10 checked (API 61, browser 34): every role and a support session at every endpoint; the type and note absent for Receptionist,
+    Professional and support in the schedule, the list and the member; the impact questions refused without the change permission; a
+    Receptionist adding and removing a block; a Professional and support with no + Block time; an Accountant 403 everywhere and no team
+    on screen; support_read_only on every change; salon_read_only and salon_suspended as the catalogue answers; nothing of it in the
+    public team list.
+    AC-11 checked (API 22, plus StaffRepositoriesHibernateFilterAloneIntegrationTest and the row-level-security test in the gate):
+    beta's Owner gets not found for alpha's schedule, leave, blocks and both questions by every method, through beta's own person too;
+    another salon's session on alpha's host reads nothing; alpha's rows intact afterwards; a removed person's schedule not found with the
+    rows kept until erasure; row-level security forced on both tables; the eraser names both. TeamSchedule: see AC-7.
+    AC-12 checked (API 13, in the audit_entry rows): actor and time, the days and hasNote, never the type or note in any row of the
+    person, a block's label written, one entry per change, before and after on removal. The route a support session reads,
+    GET /api/v1/identity/audit, was read and held nothing private; it lists no staff.* entry at all, so the trail is checked in the rows.
+    AC-13 checked (browser 92, plus TeamTimeOff, TeamSchedule.a11y and Team.a11y in the gates): at 360, 390, 768, 1024, 1280 and 1440 the
+    card, the tabs, both lists and both forms with a problem fit with no sideways scrolling and no axe violation; read-only roles with
+    no violation; loading, empty, field error, conflict, refused and unavailable; keyboard use with accessible names; the guard: a form
+    merely opened closes with no question, a started form asks.
+    AC-14 checked (browser 17, and components/ui/sheet.a11y.test.tsx in the a11y gate, which failed with 0px before the fix:
+    .local/f06-s03-walk/handle-before-fix.log): at 360 with the content overflowing, the handle measures 40 by 4 on the schedule and
+    profile sheets (F06), the category and tax-history sheets (F05), the closure and rules-history sheets (F04), the account
+    confirmation (F02) and the console's create-plan sheet (F03). The cause was the handle, the sheet's ::before, being an empty flex
+    item that the column shrank to nothing; the fix is before:shrink-0 on SheetContent, nothing else.
+    Design: the tabs, forms, lists and badge were compared with the prototype's (schLv, schBl) at 390 and 1280 (screens/, and the
+    prototype's own shots in .local/f06-s03-walk/screens/proto-*). Differences that follow the spec or the rulings, not defects: the
+    24-hour clock; dates as formatDay prints them ("Wed, Nov 18, 2026"), which wrap in the two date buttons at 1280; the sentences of
+    AC-8 without the prototype's "Move or contact them from Today."; on a phone the tab row scrolls inside itself, as the prototype's
+    chips do.
+    Limits of the walk: read-only and suspended states were set directly in the database and put back; rounds hold a row with a
+    2-second SQL hold; bookings were replaced in the browser, since none exist before F07. No screen reader was used.
+
+    PROOF THE TESTS CAN FAIL, on the stage's source before the merge (logs in .local/f06-s03-walk/): with the member lock removed 8
+    concurrency tests failed at "request must wait"; with the rules and the privacy filter broken 15 tests failed (TeamTimeOffAccess 3,
+    TeamLeave 2, TeamScheduleContract 3, TeamBlockedTime 1, ScheduleRulesTest 6). All reverted.
+
+    A DEFECT IN DELIVERED F06-S02 BEHAVIOUR, fixed in ab962ab: a person's schedule and the team's weeks were read in several queries, so
+    a weekly save committing between them answered the old hours with their breaks gone. They now read one snapshot; the failing test is
+    TeamScheduleSnapshotIntegrationTest (.local/f06-s03-walk/snapshot-*-before-the-fix.log).
+
+    AS BUILT, for the lead to check against the rulings given during the build and write into the spec at close (this session did not
+    receive the rulings' text; these are the behaviours the walk asserts under them):
+    - Dates print with formatDay as it prints in Chromium ("Thu, Nov 12, 2026 to Sat, Nov 14, 2026"), not the spec's "Thu 12 Nov".
+    - A support session asking either impact question gets 403 permission_denied, not support_read_only: it is a read it lacks the
+      permission for.
+    - The 100 upcoming leaves count leave whose last day is today or later; leave that has ended does not count.
+    - A block earlier today is still listed and removable; one on an earlier date answers 404.
+    - One booking: "Leave added. The existing booking was kept and flagged."
+    - The leave guard asks only when a form differs from how it opened (Annual leave; 10:00 to 11:00), not when one is merely opened.
+    - A first day beyond a year is a 400 on firstDay alone; a last day beyond a year with a fine first day is on lastDay.
+    - The first and last day on the sheet are two date buttons of the component map's Popover with Calendar, which offer only today to
+      a year ahead.
+
+    CHOICES THE DOCUMENTS LEAVE OPEN.
+    - Words the spec does not give: "Choose the first and last day.", "Choose days from today to a year ahead.", "This person has 100
+      upcoming leaves. Remove one first.", "The note must be 60 characters or fewer.", "Choose a date.", "Choose a date from today to a
+      year ahead.", "This person has 200 upcoming blocks. Remove one first.", "Leave removed.", Keep leave / Remove leave on the
+      dialog, and, when the impact question fails, "We could not check for bookings in this time. You can still save: nothing is
+      cancelled."
+    - Permission labels on the Sign-in accounts tab: "Change the team" and "Add and remove blocked time".
+    - Badge gained a caution variant, the prototype's warning pill (.pl.wn), for the leave badge and "N bookings to resolve".
+    - MemberBookingsAffected.inPeriods takes every listed period in one call, as a schedule lists up to 300.
+    - Adding leave or a block takes the member's row FOR NO KEY UPDATE, as a date change does; a removal does too.
+    - No new dependency.
+
+    NOTHING LEFT UNFINISHED that the stage can do before F07. TC-F06-S03-030 and -031 stay deferred to F07 as stage.yaml says.
+    Time observed this session: the seven gates 27 minutes (the API's 22, beside the walks); the walk-throughs about 15 minutes;
+    waiting on machine load and rerunning pnpm -r test about 50 minutes.
+    Building time of the earlier session: unknown.
 
 # Written by QA. A case is the test that proves it, titled with its id and the criteria it
 # covers before a colon: test('TC-F00-S01-001 AC-1, AC-2: a free slot is listed', ...), or a

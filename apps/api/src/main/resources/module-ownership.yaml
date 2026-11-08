@@ -90,9 +90,11 @@ modules:
       - staff_closure
       - staff_holiday_choice
       - staff_holiday_review
+      - staff_member_blocked_time
       - staff_member_category
       - staff_member_date_change
       - staff_member_date_change_break
+      - staff_member_leave
       - staff_member_photo
       - staff_member_schedule
       - staff_member_service

@@ -184,3 +184,35 @@ pnpm contracts:check
 - The developer has checked every acceptance criterion on the running product with two synthetic salons, each role and a support session, and recorded it in the handoff.
 - The verification commands are green.
 - `TeamSchedule` and `MemberBookingsAffected` state the new behaviour in their Javadoc for F07 and F10.
+
+## Corrections at close
+
+Recorded by the lead when the stage closed (decision 106). No requirement changed. These were given during the build (the
+lead's rulings of 2026-11-02 on QA's reading of the spec) and take precedence over the criteria above:
+
+- **Dates on screen** use the existing `formatDay` as it prints ("Thu, Nov 12, 2026 to Sat, Nov 14, 2026"), where AC-3 and
+  AC-9 write "Thu 12 Nov". There is no second date format.
+- **A support session asking either `affected` question** gets 403 `permission_denied`: it lacks `team.manage` and
+  `team.block`, so it is a read it may not make, not a change refused as `support_read_only`.
+- **The limit of 100 upcoming leaves** counts leave that has not ended, including leave under way; leave that has ended does
+  not count.
+- **A block earlier today** counts as today's: it is listed and removable until its date has passed. "Passed" goes by date;
+  a block on an earlier date answers 404.
+- **Singulars.** "1 booking to resolve" and "N bookings to resolve"; "Leave added. The existing booking was kept and
+  flagged." and "Leave added. Existing bookings were kept and flagged."
+- **`bookingsToResolve`** reaches everyone with `team.read`, since a Receptionist has to act on a flagged booking. Only
+  `type` and `note` are withheld.
+- **Audit.** Decision 104 holds. The audit rows hold neither the type nor the note, only the days and `hasNote`, for every
+  reader. The audit list a support session reads (`GET /api/v1/identity/audit`) shows no `staff.*` entries at all, so the audit
+  criterion is proved on the stored rows; a reader for those entries is a gap raised with the owner, as for F05.
+- **The leave guard** asks once something in a form has been typed or chosen, not when a form is merely opened.
+- **A first day beyond a year** is a 400 on `firstDay` alone; a last day beyond a year when the first day is fine is a 400
+  on `lastDay`.
+- **As built.** The first and last day are two date buttons (Popover with Calendar, from the component map) offering only
+  today to a year ahead. Badge has a `caution` variant, the prototype's warning pill (`.pl.wn`), for the leave badge and
+  "N bookings to resolve". The shared Sheet's phone handle no longer collapses to 0px when its content overflows
+  (`before:shrink-0`; decision 103 (e)). The words the spec does not give are listed in the handoff.
+- **A defect in delivered F06-S02 behaviour,** fixed in this stage: a person's schedule and the team's weeks were read in
+  several queries, so a weekly save committing between them could answer the old hours with their breaks missing. They now
+  read one snapshot (`TeamScheduleSnapshotIntegrationTest`).
+

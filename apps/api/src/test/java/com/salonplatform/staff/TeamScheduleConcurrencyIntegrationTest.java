@@ -345,4 +345,253 @@ class TeamScheduleConcurrencyIntegrationTest extends TwoSalonTeam {
                     .isInstanceOf(DataIntegrityViolationException.class);
         }
     }
+
+    // --- F06-S03 AC-2, AC-5: leave and blocks, held by the member's lock alone
+    // ----------------------------------------
+
+    private Callable<Http.Exchange> addingLeave(Object first, Object last) {
+        return () -> api.call(
+                alpha, "POST", TeamFixture.leave(nimali), TeamFixture.leaveOf(first, last, "annual", null), salonOwner);
+    }
+
+    private Callable<Http.Exchange> addingBlock(Object date, String starts, String finishes) {
+        return () -> api.call(
+                alpha,
+                "POST",
+                TeamFixture.blockedTime(nimali),
+                TeamFixture.blockOf(date, starts, finishes, "Training"),
+                salonOwner);
+    }
+
+    private long rowsOf(String table) {
+        return owner.queryForObject(
+                "SELECT count(*) FROM " + table + " WHERE tenant_id = ? AND member_id = ?::uuid",
+                Long.class,
+                alpha.id(),
+                nimali.toString());
+    }
+
+    @Test
+    void ofTwoOverlappingLeavesSentAtOnceExactlyOneIsKept() throws Exception {
+        List<Http.Exchange> answers = behind(
+                holdingTheMember(nimali),
+                addingLeave(today.plusDays(1), today.plusDays(5)),
+                addingLeave(today.plusDays(5), today.plusDays(9)));
+
+        assertThat(statuses(answers)).containsExactly(201, 409);
+        assertThat(codeOfThe409(answers)).isEqualTo("conflict");
+        assertThat(rowsOf("staff_member_leave")).isEqualTo(1);
+    }
+
+    @Test
+    void ofTwoLeavesForTheLastPlaceExactlyOneIsKept() throws Exception {
+        for (int i = 1; i <= 99; i++) {
+            owner.update(
+                    "INSERT INTO staff_member_leave (tenant_id, id, branch_id, member_id, first_day, last_day, leave_type,"
+                            + " created_by, created_at, updated_at) VALUES (?, ?, ?, ?::uuid, ?, ?, 'other', ?, now(), now())",
+                    alpha.id(),
+                    UUID.randomUUID(),
+                    salons.defaultBranch(alpha),
+                    nimali.toString(),
+                    java.sql.Date.valueOf(today.plusDays(i)),
+                    java.sql.Date.valueOf(today.plusDays(i)),
+                    UUID.randomUUID());
+        }
+
+        List<Http.Exchange> answers = behind(
+                holdingTheMember(nimali),
+                addingLeave(today.plusDays(200), today.plusDays(200)),
+                addingLeave(today.plusDays(201), today.plusDays(201)));
+
+        assertThat(statuses(answers)).containsExactly(201, 409);
+        assertThat(codeOfThe409(answers)).isEqualTo("limit_reached");
+        assertThat(rowsOf("staff_member_leave")).isEqualTo(100);
+    }
+
+    @Test
+    void ofTwoOverlappingBlocksSentAtOnceExactlyOneIsKept() throws Exception {
+        List<Http.Exchange> answers = behind(
+                holdingTheMember(nimali),
+                addingBlock(today.plusDays(1), "10:00", "11:00"),
+                addingBlock(today.plusDays(1), "10:30", "11:30"));
+
+        assertThat(statuses(answers)).containsExactly(201, 409);
+        assertThat(codeOfThe409(answers)).isEqualTo("conflict");
+        assertThat(rowsOf("staff_member_blocked_time")).isEqualTo(1);
+    }
+
+    @Test
+    void twoTouchingBlocksSentAtOnceAreBothKept() throws Exception {
+        List<Http.Exchange> answers = behind(
+                holdingTheMember(nimali),
+                addingBlock(today.plusDays(1), "10:00", "11:00"),
+                addingBlock(today.plusDays(1), "11:00", "12:00"));
+
+        assertThat(statuses(answers)).containsExactly(201, 201);
+    }
+
+    @Test
+    void ofTwoBlocksForTheLastPlaceExactlyOneIsKept() throws Exception {
+        for (int i = 1; i <= 199; i++) {
+            owner.update(
+                    "INSERT INTO staff_member_blocked_time (tenant_id, id, branch_id, member_id, block_date, starts, finishes,"
+                            + " label, created_by, created_at, updated_at)"
+                            + " VALUES (?, ?, ?, ?::uuid, ?, '10:00', '11:00', 'Training', ?, now(), now())",
+                    alpha.id(),
+                    UUID.randomUUID(),
+                    salons.defaultBranch(alpha),
+                    nimali.toString(),
+                    java.sql.Date.valueOf(today.plusDays(i)),
+                    UUID.randomUUID());
+        }
+
+        List<Http.Exchange> answers = behind(
+                holdingTheMember(nimali),
+                addingBlock(today.plusDays(250), "10:00", "11:00"),
+                addingBlock(today.plusDays(251), "10:00", "11:00"));
+
+        assertThat(statuses(answers)).containsExactly(201, 409);
+        assertThat(codeOfThe409(answers)).isEqualTo("limit_reached");
+        assertThat(rowsOf("staff_member_blocked_time")).isEqualTo(200);
+    }
+
+    @Test
+    void leaveOrABlockWaitingBehindARemovalFindsThePersonGoneAndNothingIsAdded() throws Exception {
+        List<Http.Exchange> answers = behind(
+                connection -> {
+                    try (PreparedStatement remove = connection.prepareStatement(
+                            "UPDATE staff_team_member SET removed_at = now(), shown_online = false, version = version + 1"
+                                    + " WHERE tenant_id = ? AND id = ?::uuid")) {
+                        remove.setObject(1, alpha.id());
+                        remove.setString(2, nimali.toString());
+                        remove.executeUpdate();
+                    }
+                },
+                addingLeave(today.plusDays(1), today.plusDays(1)),
+                addingBlock(today.plusDays(1), "10:00", "11:00"));
+
+        assertThat(statuses(answers)).containsExactly(404, 404);
+        assertThat(rowsOf("staff_member_leave")).isZero();
+        assertThat(rowsOf("staff_member_blocked_time")).isZero();
+    }
+
+    @Test
+    void leaveBesideAProfileEditDoesNotConflictAndBothAreKept() throws Exception {
+        Map<String, Object> edit = TeamFixture.saveOf(read(nimali));
+        edit.put("title", "Colourist");
+
+        List<Http.Exchange> answers = behind(
+                holdingTheMember(nimali),
+                addingLeave(today.plusDays(1), today.plusDays(1)),
+                () -> api.call(alpha, "PUT", TeamFixture.MEMBERS + "/" + nimali, edit, salonOwner));
+
+        assertThat(statuses(answers)).containsExactly(200, 201);
+        assertThat(read(nimali).get("title")).isEqualTo("Colourist");
+        assertThat(rowsOf("staff_member_leave")).isEqualTo(1);
+    }
+
+    @Test
+    void ofTwoRemovalsOfOneLeaveOrOneBlockExactlyOneSucceeds() throws Exception {
+        Object leave = map(api.body(addingLeave(today.plusDays(1), today.plusDays(1))
+                                .call())
+                        .get("leave"))
+                .get("id");
+        Object block = map(api.body(
+                                addingBlock(today.plusDays(1), "10:00", "11:00").call())
+                        .get("block"))
+                .get("id");
+        String leavePath = TeamFixture.leave(nimali) + "/" + leave;
+        String blockPath = TeamFixture.blockedTime(nimali) + "/" + block;
+
+        List<Http.Exchange> leaves = behind(
+                holdingTheMember(nimali),
+                () -> api.call(alpha, "DELETE", leavePath, null, salonOwner),
+                () -> api.call(alpha, "DELETE", leavePath, null, salonOwner));
+        List<Http.Exchange> blocks = behind(
+                holdingTheMember(nimali),
+                () -> api.call(alpha, "DELETE", blockPath, null, salonOwner),
+                () -> api.call(alpha, "DELETE", blockPath, null, salonOwner));
+
+        assertThat(statuses(leaves)).containsExactly(204, 404);
+        assertThat(statuses(blocks)).containsExactly(204, 404);
+    }
+
+    @Test
+    void theDatabaseRefusesABlockOffTheQuarterHourOrWithABadLabelAndLeaveWithBadDaysOrAType() {
+        Object member = nimali;
+        for (String values : List.of(
+                "'10:10', '11:00', 'Training'",
+                "'10:00', '11:05', 'Training'",
+                "'11:00', '10:00', 'Training'",
+                "'10:00', '10:00', 'Training'",
+                "'10:00', '11:00', 'A'",
+                "'10:00', '11:00', ' Padded '",
+                "'10:00', '11:00', '" + "x".repeat(41) + "'")) {
+            assertThatThrownBy(() -> owner.update(
+                            "INSERT INTO staff_member_blocked_time (tenant_id, id, branch_id, member_id, block_date, starts,"
+                                    + " finishes, label, created_by, created_at, updated_at)"
+                                    + " VALUES (?, ?, ?, ?::uuid, '2090-01-01', "
+                                    + values
+                                    + ", ?, now(), now())",
+                            alpha.id(),
+                            UUID.randomUUID(),
+                            salons.defaultBranch(alpha),
+                            member.toString(),
+                            UUID.randomUUID()))
+                    .as(values)
+                    .isInstanceOf(DataIntegrityViolationException.class);
+        }
+        for (String values : List.of(
+                "'2090-01-02', '2090-01-01', 'annual', NULL",
+                "'2090-01-01', '2090-01-01', 'holiday', NULL",
+                "'2090-01-01', '2090-01-01', 'annual', ''",
+                "'2090-01-01', '2090-01-01', 'annual', ' padded '",
+                "'2090-01-01', '2090-01-01', 'annual', '" + "x".repeat(61) + "'")) {
+            assertThatThrownBy(() -> owner.update(
+                            "INSERT INTO staff_member_leave (tenant_id, id, branch_id, member_id, first_day, last_day,"
+                                    + " leave_type, note, created_by, created_at, updated_at)"
+                                    + " VALUES (?, ?, ?, ?::uuid, "
+                                    + values
+                                    + ", ?, now(), now())",
+                            alpha.id(),
+                            UUID.randomUUID(),
+                            salons.defaultBranch(alpha),
+                            member.toString(),
+                            UUID.randomUUID()))
+                    .as(values)
+                    .isInstanceOf(DataIntegrityViolationException.class);
+        }
+    }
+
+    @Test
+    void aRowCannotPointAtAnotherSalonsMember() {
+        UUID betasMember = UUID.randomUUID();
+        owner.update(
+                "INSERT INTO staff_team_member (tenant_id, id, branch_id, name, shown_online, version, created_at,"
+                        + " updated_at) VALUES (?, ?, ?, 'Beta Person', true, 0, now(), now())",
+                beta.id(),
+                betasMember,
+                salons.defaultBranch(beta));
+
+        assertThatThrownBy(() -> owner.update(
+                        "INSERT INTO staff_member_leave (tenant_id, id, branch_id, member_id, first_day, last_day,"
+                                + " leave_type, created_by, created_at, updated_at)"
+                                + " VALUES (?, ?, ?, ?, '2090-01-01', '2090-01-01', 'annual', ?, now(), now())",
+                        alpha.id(),
+                        UUID.randomUUID(),
+                        salons.defaultBranch(alpha),
+                        betasMember,
+                        UUID.randomUUID()))
+                .isInstanceOf(DataIntegrityViolationException.class);
+        assertThatThrownBy(() -> owner.update(
+                        "INSERT INTO staff_member_blocked_time (tenant_id, id, branch_id, member_id, block_date, starts,"
+                                + " finishes, label, created_by, created_at, updated_at)"
+                                + " VALUES (?, ?, ?, ?, '2090-01-01', '10:00', '11:00', 'Training', ?, now(), now())",
+                        alpha.id(),
+                        UUID.randomUUID(),
+                        salons.defaultBranch(alpha),
+                        betasMember,
+                        UUID.randomUUID()))
+                .isInstanceOf(DataIntegrityViolationException.class);
+    }
 }

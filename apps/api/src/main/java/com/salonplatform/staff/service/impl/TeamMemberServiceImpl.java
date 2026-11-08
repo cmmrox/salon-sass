@@ -19,6 +19,7 @@ import com.salonplatform.staff.repository.MemberPhotoRepository;
 import com.salonplatform.staff.repository.MemberRepository;
 import com.salonplatform.staff.repository.OpeningHoursRepository;
 import com.salonplatform.staff.service.TeamMemberService;
+import com.salonplatform.staff.service.TeamMemberService.NextLeave;
 import com.salonplatform.staff.service.impl.StaffScope.Scope;
 import com.salonplatform.staff.service.impl.TeamViews.Row;
 import java.time.Clock;
@@ -37,6 +38,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
@@ -67,6 +69,12 @@ class TeamMemberServiceImpl implements TeamMemberService {
     private final Clock clock;
     private final TransactionTemplate writing;
     private final TransactionTemplate reading;
+
+    /**
+     * What a person is read in, their week included, as one snapshot: a weekly save replaces every row of the week, so a save
+     * committing between two of the read's queries would otherwise show the old hours with their breaks gone.
+     */
+    private final TransactionTemplate readingMembers;
 
     TeamMemberServiceImpl(
             StaffScope scope,
@@ -99,19 +107,27 @@ class TeamMemberServiceImpl implements TeamMemberService {
         this.writing = new TransactionTemplate(transactions);
         this.reading = new TransactionTemplate(transactions);
         this.reading.setReadOnly(true);
+        this.readingMembers = new TransactionTemplate(transactions);
+        this.readingMembers.setReadOnly(true);
+        this.readingMembers.setIsolationLevel(TransactionDefinition.ISOLATION_REPEATABLE_READ);
     }
 
     @Override
     public List<MemberView> list() {
         Scope at = scope.of(StaffScope.TEAM_READ);
         CatalogueListing listing = catalogue.current();
-        List<Row> read = reading.execute(status -> {
+        List<Row> read = readingMembers.execute(status -> {
             List<Member> active = members.active(at.branch());
             List<UUID> ids = active.stream().map(Member::getId).toList();
             Map<UUID, Choice> choices = rows.choices(ids, listing);
             Map<UUID, List<WorkDay>> weeks = scheduleRows.weeks(ids);
+            Map<UUID, NextLeave> nextLeaves = rows.nextLeaves(ids, at.today());
             return active.stream()
-                    .map(member -> Row.of(member, choices.get(member.getId()), weeks.get(member.getId())))
+                    .map(member -> Row.of(
+                            member,
+                            choices.get(member.getId()),
+                            weeks.get(member.getId()),
+                            nextLeaves.get(member.getId())))
                     .toList();
         });
         return views.all(read, listing, at.actor());
@@ -121,7 +137,7 @@ class TeamMemberServiceImpl implements TeamMemberService {
     public MemberView get(UUID id) {
         Scope at = scope.of(StaffScope.TEAM_READ);
         CatalogueListing listing = catalogue.current();
-        return views.of(reading.execute(status -> rowOf(active(id, at), listing)), listing, at.actor());
+        return views.of(readingMembers.execute(status -> rowOf(active(id, at), listing, at)), listing, at.actor());
     }
 
     @Override
@@ -150,7 +166,8 @@ class TeamMemberServiceImpl implements TeamMemberService {
             scheduleRows.write(member.getId(), at.branch(), week, now);
             audit.record(
                     at.actor(), TeamAudit.ADDED, member.getId(), null, values(member, valid.choice(), listing), now);
-            return Row.of(member, valid.choice(), week);
+            // Someone just added has no leave.
+            return Row.of(member, valid.choice(), week, null);
         }));
         return views.of(added, listing, at.actor());
     }
@@ -189,7 +206,7 @@ class TeamMemberServiceImpl implements TeamMemberService {
                 rows.replace(id, at.branch(), valid.choice(), now);
             }
             audit.record(at.actor(), TeamAudit.CHANGED, id, beforeValues, values(member, valid.choice(), listing), now);
-            return Row.of(member, valid.choice(), scheduleRows.week(id));
+            return Row.of(member, valid.choice(), scheduleRows.week(id), rows.nextLeave(id, at.today()));
         }));
         return views.of(saved, listing, at.actor());
     }
@@ -287,11 +304,12 @@ class TeamMemberServiceImpl implements TeamMemberService {
         return members.findActive(id, at.branch()).orElseThrow(NotFoundException::new);
     }
 
-    private Row rowOf(Member member, CatalogueListing listing) {
+    private Row rowOf(Member member, CatalogueListing listing, Scope at) {
         return Row.of(
                 member,
                 rows.choices(List.of(member.getId()), listing).get(member.getId()),
-                scheduleRows.week(member.getId()));
+                scheduleRows.week(member.getId()),
+                rows.nextLeave(member.getId(), at.today()));
     }
 
     private static void requireVersion(Member member, long expected) {

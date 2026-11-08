@@ -107,4 +107,109 @@ class TeamScheduleClockIntegrationTest extends TwoSalonTeam {
         assertThat(changes(member)).isEmpty();
         refused(api.call(alpha, "DELETE", path, null, salonOwner), 404, "not_found");
     }
+
+    // --- F06-S03: leave and blocks follow the salon's date too -----------------------------------------------------
+
+    private String signedInOwner() {
+        return settings.signedIn(alpha, com.salonplatform.identity.domain.StaffRole.OWNER)
+                .token();
+    }
+
+    private Http.Exchange addLeave(Object member, String first, String last) {
+        return api.call(
+                alpha, "POST", TeamFixture.leave(member), TeamFixture.leaveOf(first, last, "sick", null), salonOwner);
+    }
+
+    private Http.Exchange addBlock(Object member, String date) {
+        return api.call(
+                alpha,
+                "POST",
+                TeamFixture.blockedTime(member),
+                TeamFixture.blockOf(date, "10:00", "11:00", "Training"),
+                salonOwner);
+    }
+
+    private List<Map<String, Object>> listed(Object member, String field) {
+        Http.Exchange read = api.call(alpha, "GET", schedule(member), null, salonOwner);
+        status(read, 200);
+        return maps(api.body(read).get(field));
+    }
+
+    @Test
+    void leaveAndBlocksUseTheSalonsDateAtAnEdgeOfTheDayEastOfUtc() {
+        CLOCK.set(Instant.parse("2088-07-14T19:00:00Z")); // 00:30 on the 15th in the salon, still the 14th in UTC.
+        salonOwner = signedInOwner();
+        Object member = added("Clock Person").get("id");
+
+        fieldErrors(addLeave(member, "2088-07-14", "2088-07-14"), "firstDay");
+        status(addLeave(member, "2088-07-15", "2088-07-15"), 201);
+        status(addLeave(member, "2089-07-15", "2089-07-15"), 201);
+        fieldErrors(addLeave(member, "2089-07-16", "2089-07-16"), "firstDay");
+        fieldErrors(addLeave(member, "2088-07-20", "2089-07-16"), "lastDay");
+        fieldErrors(addBlock(member, "2088-07-14"), "date");
+        status(addBlock(member, "2088-07-15"), 201);
+        status(addBlock(member, "2089-07-15"), 201);
+        fieldErrors(addBlock(member, "2089-07-16"), "date");
+    }
+
+    @Test
+    void leaveAndBlocksUseTheSalonsDateWestOfUtc() {
+        owner.update("UPDATE tenant SET time_zone = 'America/New_York' WHERE id = ?", alpha.id());
+        CLOCK.set(Instant.parse("2088-09-15T03:30:00Z")); // 23:30 on the 14th in New York, the 15th in UTC.
+        salonOwner = signedInOwner();
+        Object member = added("Clock Person").get("id");
+
+        status(addLeave(member, "2088-09-14", "2088-09-14"), 201);
+        status(addBlock(member, "2088-09-14"), 201);
+        fieldErrors(addLeave(member, "2088-09-13", "2088-09-13"), "firstDay");
+        fieldErrors(addBlock(member, "2088-09-13"), "date");
+    }
+
+    @Test
+    void whenTheSalonsDatePassesLeaveThatEndsLeavesTheListAndTheCardAndCannotBeRemoved() {
+        CLOCK.set(Instant.parse("2088-08-14T18:00:00Z")); // 23:30 on the 14th in the salon.
+        salonOwner = signedInOwner();
+        Object member = added("Clock Person").get("id");
+        Http.Exchange ending = addLeave(member, "2088-08-14", "2088-08-14");
+        status(ending, 201);
+        Http.Exchange block = addBlock(member, "2088-08-14");
+        status(block, 201);
+        Http.Exchange goingOn = addLeave(member, "2088-08-16", "2088-08-18");
+        status(goingOn, 201);
+        String endingPath = TeamFixture.leave(member) + "/"
+                + map(api.body(ending).get("leave")).get("id");
+        String blockPath = TeamFixture.blockedTime(member) + "/"
+                + map(api.body(block).get("block")).get("id");
+        assertThat(listed(member, "leave")).hasSize(2);
+        assertThat(listed(member, "blockedTime")).hasSize(1);
+        assertThat(map(read(member).get("nextLeave"))).containsEntry("firstDay", "2088-08-14");
+
+        CLOCK.set(Instant.parse("2088-08-14T19:00:00Z")); // 00:30 on the 15th there.
+        salonOwner = signedInOwner();
+
+        assertThat(listed(member, "leave"))
+                .extracting(each -> each.get("firstDay"))
+                .containsExactly("2088-08-16");
+        assertThat(listed(member, "blockedTime")).isEmpty();
+        assertThat(map(read(member).get("nextLeave"))).containsEntry("firstDay", "2088-08-16");
+        refused(api.call(alpha, "DELETE", endingPath, null, salonOwner), 404, "not_found");
+        refused(api.call(alpha, "DELETE", blockPath, null, salonOwner), 404, "not_found");
+
+        CLOCK.set(Instant.parse("2088-08-16T19:00:00Z")); // 00:30 on the 17th: under way.
+        salonOwner = signedInOwner();
+
+        assertThat(map(read(member).get("nextLeave")))
+                .as("the card shows leave under way")
+                .containsEntry("firstDay", "2088-08-16");
+        status(
+                api.call(
+                        alpha,
+                        "DELETE",
+                        TeamFixture.leave(member) + "/"
+                                + map(api.body(goingOn).get("leave")).get("id"),
+                        null,
+                        salonOwner),
+                204);
+        assertThat(read(member).get("nextLeave")).isNull();
+    }
 }

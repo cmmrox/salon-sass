@@ -75,7 +75,15 @@ afterEach(() => {
 });
 
 const render = (canManage = true, readOnly: 'support' | 'salon' | null = null) =>
-  renderWithMessages(<TeamScreen kind="staff" canManage={canManage} canSeeAccounts={canManage} readOnly={readOnly} />);
+  renderWithMessages(
+    <TeamScreen
+      kind="staff"
+      canManage={canManage}
+      canBlock={canManage}
+      canSeeAccounts={canManage}
+      readOnly={readOnly}
+    />,
+  );
 const sent = (action: string) =>
   calls.filter((call) => call.action === action).map((call) => call.body) as Record<string, unknown>[];
 const problem =

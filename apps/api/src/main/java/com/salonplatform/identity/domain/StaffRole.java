@@ -31,6 +31,8 @@ public enum StaffRole {
                     // The team (F06, decision 100): adding, editing and removing the people who perform services.
                     "team.manage"));
         if (this == OWNER) p.addAll(Set.of("staff.manage", "invoice.read", "support.manage"));
+        // Blocked time (F06-S03, decision 099): a front desk marks a professional busy without a manager.
+        if (this == OWNER || this == MANAGER || this == RECEPTIONIST) p.add("team.block");
         if (this == OWNER || this == MANAGER || this == RECEPTIONIST || this == PROFESSIONAL)
             // Reading the team (F06, decisions 099, 100) goes with them: an Accountant has none of it.
             p.addAll(Set.of("calendar.read", "customer.read", "team.read"));

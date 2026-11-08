@@ -8,6 +8,7 @@ type Call = { headers: Record<string, string | undefined>; signal: AbortSignal }
 type NewMember = components['schemas']['NewTeamMember'];
 type TeamBreakInput = components['schemas']['TeamBreakInput'];
 type TeamWorkdayInput = components['schemas']['TeamWorkdayInput'];
+type AddLeave = components['schemas']['AddTeamMemberLeave'];
 
 const record = (value: unknown): Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
@@ -17,6 +18,8 @@ const as = <T>(value: unknown) => value as T;
 const UUID = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
 /** An id for a path, checked for its form, so nothing else reaches the path; the API decides the rest. */
 const idOf = (value: unknown) => (typeof value === 'string' && UUID.test(value) ? value : '0');
+/** A query's value as text; nothing at all is sent as empty, for the API to refuse by name. */
+const textOf = (value: unknown) => (typeof value === 'string' ? value : '');
 
 /** A person's fields, rebuilt from the contract's own names; nothing else of the browser's goes on. */
 function memberOf(body: Record<string, unknown>): NewMember {
@@ -52,7 +55,7 @@ function weekdayOf(value: unknown): TeamWorkdayInput {
 }
 
 /**
- * The team paths the workspace BFF reaches (F06-S01, F06-S02). Every request is rebuilt from the contract's own fields;
+ * The team paths the workspace BFF reaches (F06-S01, F06-S02, F06-S03). Every request is rebuilt from the contract's own fields;
  * the BFF checks the session and the permission before any of them. Null when the API is not configured.
  */
 export function salonTeamFor(hostname: string) {
@@ -63,6 +66,19 @@ export function salonTeamFor(hostname: string) {
     signInAccounts: (call: Call) => client.GET('/api/v1/team/sign-in-accounts', call),
     schedule: (call: Call, memberId: unknown) =>
       client.GET('/api/v1/team/members/{id}/schedule', { ...call, params: { path: { id: idOf(memberId) } } }),
+    leaveAffected: (call: Call, memberId: unknown, firstDay: unknown, lastDay: unknown) =>
+      client.GET('/api/v1/team/members/{id}/schedule/leave/affected', {
+        ...call,
+        params: { path: { id: idOf(memberId) }, query: { firstDay: textOf(firstDay), lastDay: textOf(lastDay) } },
+      }),
+    blockAffected: (call: Call, memberId: unknown, date: unknown, starts: unknown, finishes: unknown) =>
+      client.GET('/api/v1/team/members/{id}/schedule/blocked-time/affected', {
+        ...call,
+        params: {
+          path: { id: idOf(memberId) },
+          query: { date: textOf(date), starts: textOf(starts), finishes: textOf(finishes) },
+        },
+      }),
     // The salon's week, public: the schedule sheet compares a person's hours with it, for every role that reads them.
     openingHours: (call: Call) => client.GET('/api/v1/salon/opening-hours', call),
     change: (call: Call, action: string, raw: unknown) => {
@@ -95,6 +111,38 @@ export function salonTeamFor(hostname: string) {
           return client.DELETE('/api/v1/team/members/{id}/schedule/date-changes/{changeId}', {
             ...call,
             params: { path: { id: idOf(body.id), changeId: idOf(body.changeId) } },
+          });
+        case 'team-leave-add':
+          return client.POST('/api/v1/team/members/{id}/schedule/leave', {
+            ...call,
+            params: path,
+            body: {
+              firstDay: as<string>(body.firstDay),
+              lastDay: as<string>(body.lastDay),
+              type: as<AddLeave['type']>(body.type),
+              note: as<string | null>(body.note ?? null),
+            },
+          });
+        case 'team-leave-remove':
+          return client.DELETE('/api/v1/team/members/{id}/schedule/leave/{leaveId}', {
+            ...call,
+            params: { path: { id: idOf(body.id), leaveId: idOf(body.leaveId) } },
+          });
+        case 'team-block-add':
+          return client.POST('/api/v1/team/members/{id}/schedule/blocked-time', {
+            ...call,
+            params: path,
+            body: {
+              date: as<string>(body.date),
+              starts: as<string>(body.starts),
+              finishes: as<string>(body.finishes),
+              label: as<string>(body.label),
+            },
+          });
+        case 'team-block-remove':
+          return client.DELETE('/api/v1/team/members/{id}/schedule/blocked-time/{blockId}', {
+            ...call,
+            params: { path: { id: idOf(body.id), blockId: idOf(body.blockId) } },
           });
         case 'team-member-add':
           return client.POST('/api/v1/team/members', { ...call, body: memberOf(body) });

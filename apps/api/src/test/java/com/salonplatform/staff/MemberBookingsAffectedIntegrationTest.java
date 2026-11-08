@@ -62,6 +62,11 @@ class MemberBookingsAffectedIntegrationTest extends TwoSalonTeam {
                     ASKED_DATE.set(windows);
                     return REPORTED.get();
                 }
+
+                @Override
+                public Map<MemberPeriod, List<AffectedBooking>> inPeriods(UUID memberId, Set<MemberPeriod> periods) {
+                    return Map.of();
+                }
             };
         }
     }

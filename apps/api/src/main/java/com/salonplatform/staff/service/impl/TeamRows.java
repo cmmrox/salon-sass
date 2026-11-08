@@ -5,10 +5,14 @@ import com.salonplatform.shared.persistence.NewEntities;
 import com.salonplatform.staff.domain.PerformedServices;
 import com.salonplatform.staff.domain.PerformedServices.Choice;
 import com.salonplatform.staff.entity.MemberCategory;
+import com.salonplatform.staff.entity.MemberLeave;
 import com.salonplatform.staff.entity.MemberSingleService;
 import com.salonplatform.staff.repository.MemberCategoryRepository;
+import com.salonplatform.staff.repository.MemberLeaveRepository;
 import com.salonplatform.staff.repository.MemberSingleServiceRepository;
+import com.salonplatform.staff.service.TeamMemberService.NextLeave;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -26,10 +30,30 @@ class TeamRows {
 
     private final MemberCategoryRepository categories;
     private final MemberSingleServiceRepository services;
+    private final MemberLeaveRepository leaves;
 
-    TeamRows(MemberCategoryRepository categories, MemberSingleServiceRepository services) {
+    TeamRows(
+            MemberCategoryRepository categories, MemberSingleServiceRepository services, MemberLeaveRepository leaves) {
         this.categories = categories;
         this.services = services;
+        this.leaves = leaves;
+    }
+
+    /** Each member's current or next leave by the salon's today, with its type; a member with none is not in the answer. */
+    Map<UUID, NextLeave> nextLeaves(Collection<UUID> memberIds, LocalDate today) {
+        if (memberIds.isEmpty()) {
+            return Map.of();
+        }
+        Map<UUID, NextLeave> next = new HashMap<>();
+        for (MemberLeave leave : leaves.nextOf(memberIds, today)) {
+            next.put(leave.getMemberId(), new NextLeave(leave.getFirstDay(), leave.getLastDay(), leave.type()));
+        }
+        return next;
+    }
+
+    /** One member's current or next leave, or null for none. */
+    NextLeave nextLeave(UUID memberId, LocalDate today) {
+        return nextLeaves(List.of(memberId), today).get(memberId);
     }
 
     /** Each member's choice as it reads now against the listing; a member with no rows has an empty one. */

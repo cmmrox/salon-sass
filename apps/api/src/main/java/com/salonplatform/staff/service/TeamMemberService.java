@@ -1,6 +1,8 @@
 package com.salonplatform.staff.service;
 
+import com.salonplatform.staff.domain.LeaveType;
 import com.salonplatform.staff.domain.WorkDay;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -29,6 +31,7 @@ public interface TeamMemberService {
      * @param signInAccountId the linked account, or null for none or when the caller may not see it
      * @param signInLabel that account's label, or null likewise
      * @param weekly their week, the seven weekdays Monday first
+     * @param nextLeave their current or next leave, or null for none
      */
     record MemberView(
             UUID id,
@@ -44,7 +47,15 @@ public interface TeamMemberService {
             UUID signInAccountId,
             String signInLabel,
             List<WorkDay> weekly,
+            NextLeave nextLeave,
             long version) {}
+
+    /**
+     * A person's current or next leave, as a caller may see it.
+     *
+     * @param type its type, or null for a caller without {@code team.manage} (decision 104(a))
+     */
+    record NextLeave(LocalDate firstDay, LocalDate lastDay, LeaveType type) {}
 
     /**
      * An active account, and the member linked to it.

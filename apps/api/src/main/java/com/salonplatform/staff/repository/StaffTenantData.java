@@ -14,14 +14,16 @@ import org.springframework.stereotype.Component;
 /**
  * Staff's exporter and eraser for a closed salon (PLT-06): its opening hours, holiday reviews and choices, and
  * special closures, from F06-S01 its team members, the services each performs and their photos, and from F06-S02
- * their weeks and date changes. A closure's reason and a date change's note are the salon's own notes and are exported
- * with it; nothing is secret.
+ * their weeks and date changes, and from F06-S03 their leave and blocked time. A closure's reason, a date change's note
+ * and a leave's type and note are the salon's own notes and are exported with it; nothing is secret.
  */
 @Component
 class StaffTenantData implements TenantDataModule {
 
     /** In the order they are erased: each table before any table it references (choices before reviews). */
     private static final List<Table> TABLES = List.of(
+            new Table("staff_member_leave", "id", Map.of()),
+            new Table("staff_member_blocked_time", "id", Map.of()),
             new Table("staff_member_date_change_break", "id", Map.of()),
             new Table("staff_member_date_change", "id", Map.of()),
             new Table("staff_member_weekday_break", "id", Map.of()),

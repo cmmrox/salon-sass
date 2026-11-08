@@ -1,5 +1,5 @@
 'use client';
-import { formatClock } from '@salon/format';
+import { formatClock, formatDay } from '@salon/format';
 import { useTranslations } from 'next-intl';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -9,7 +9,7 @@ import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyTitle } from '
 import { cn } from '@/lib/utils';
 import { hoursSummaryOf } from '../client/schedule-form';
 import { initialOf, performedCategoryNames, toneOf } from '../client/team-form';
-import type { TeamCategory, TeamMember, TeamService, TeamWorkday } from '../types';
+import type { NextLeave, TeamCategory, TeamMember, TeamService, TeamWorkday } from '../types';
 
 /** Where the web serves a team photo on the salon's own hostname (F06-S01 AC-9): through its BFF route. */
 export const teamPhotoSource = (photoId: string) => `/team-photos/${photoId}`;
@@ -72,6 +72,23 @@ function HoursLine({ weekly }: { weekly: TeamWorkday[] }) {
   const breaks = summary.breaks;
   if ('at' in breaks) return line + t('oneBreak', { at: formatClock(breaks.at) });
   return breaks.count > 1 ? line + t('manyBreaks', { count: breaks.count }) : line;
+}
+
+/**
+ * A person's current or next leave (F06-S03 AC-9, the prototype's `nextOff`): with `team.manage` its type and days, and
+ * otherwise only that they are on leave, since the type is private (decision 104).
+ */
+function LeaveBadge({ leave }: { leave: NextLeave }) {
+  const t = useTranslations('team');
+  const days =
+    leave.firstDay === leave.lastDay
+      ? formatDay(leave.firstDay)
+      : t('leaveDays.range', { first: formatDay(leave.firstDay), last: formatDay(leave.lastDay) });
+  return (
+    <Badge variant="caution" className="whitespace-normal" data-testid="team-card-leave">
+      {leave.type ? t('card.leaveTyped', { type: t(`leaveTypes.${leave.type}`), days }) : t('card.leaveDays', { days })}
+    </Badge>
+  );
 }
 
 /**
@@ -162,6 +179,7 @@ export function TeamCards({
                 </div>
               )}
             </dl>
+            {member.nextLeave && <LeaveBadge leave={member.nextLeave} />}
             <div className="flex flex-wrap gap-1.5">
               {canManage && (
                 <Button

@@ -15,6 +15,8 @@ const badgeVariants = cva(
         secondary: "bg-secondary text-secondary-foreground",
         positive: "bg-positive-surface text-foreground",
         info: "bg-info-surface text-foreground",
+        // The prototype's warning pill (`.pl.wn`, F06-S03's leave and "N bookings to resolve"): caution text on its surface.
+        caution: "bg-caution-surface text-caution",
         destructive: "bg-negative-surface text-destructive",
         outline: "border-border text-foreground",
       },

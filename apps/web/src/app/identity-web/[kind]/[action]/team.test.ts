@@ -297,3 +297,111 @@ describe('the team actions of the BFF (F06-S01)', () => {
     expect(calls.map((call) => call.path)).toEqual(['/api/v1/team/members']);
   });
 });
+
+describe('leave and blocked time through the BFF (F06-S03)', () => {
+  const leaveBody = { id: MEMBER, firstDay: '2026-11-12', lastDay: '2026-11-14', type: 'sick', note: 'Mine' };
+  const blockBody = { id: MEMBER, date: '2026-11-12', starts: '10:00', finishes: '11:00', label: 'Training' };
+
+  it('rebuilds leave from the contract’s fields, and answers 201', async () => {
+    answer = () => ({ status: 201, data: { leave: { id: MEMBER }, affected: [] } });
+
+    const response = await send('team-leave-add', { ...leaveBody, extra: 'dropped', tenantId: 'other' });
+
+    expect(response.status).toBe(201);
+    expect(`${calls[0]?.method} ${calls[0]?.path}`).toBe(`POST /api/v1/team/members/${MEMBER}/schedule/leave`);
+    expect(JSON.parse(calls[0]!.body)).toEqual({
+      firstDay: '2026-11-12',
+      lastDay: '2026-11-14',
+      type: 'sick',
+      note: 'Mine',
+    });
+  });
+
+  it('rebuilds a block from the contract’s fields, with team.block alone, and answers 201', async () => {
+    permissions = ['team.read', 'team.block'];
+    answer = () => ({ status: 201, data: { block: { id: MEMBER }, affected: [] } });
+
+    const response = await send('team-block-add', { ...blockBody, extra: 'dropped' });
+
+    expect(response.status).toBe(201);
+    expect(`${calls[0]?.method} ${calls[0]?.path}`).toBe(`POST /api/v1/team/members/${MEMBER}/schedule/blocked-time`);
+    expect(JSON.parse(calls[0]!.body)).toEqual({
+      date: '2026-11-12',
+      starts: '10:00',
+      finishes: '11:00',
+      label: 'Training',
+    });
+  });
+
+  it('removes, answers no content as ok, and lets only ids reach the path', async () => {
+    permissions = ['team.read', 'team.manage', 'team.block'];
+    answer = () => ({ status: 204, data: null });
+
+    expect(await (await send('team-leave-remove', { id: MEMBER, leaveId: MEMBER })).json()).toEqual({ ok: true });
+    expect(await (await send('team-block-remove', { id: MEMBER, blockId: MEMBER })).json()).toEqual({ ok: true });
+    await send('team-leave-remove', { id: '../..', leaveId: '../../identity' });
+    await send('team-block-remove', { id: '../..', blockId: '../../identity' });
+
+    expect(calls.map((call) => `${call.method} ${call.path}`)).toEqual([
+      `DELETE /api/v1/team/members/${MEMBER}/schedule/leave/${MEMBER}`,
+      `DELETE /api/v1/team/members/${MEMBER}/schedule/blocked-time/${MEMBER}`,
+      'DELETE /api/v1/team/members/0/schedule/leave/0',
+      'DELETE /api/v1/team/members/0/schedule/blocked-time/0',
+    ]);
+  });
+
+  it('asks about a period with the person in the path and the period in the query', async () => {
+    permissions = ['team.read', 'team.manage', 'team.block'];
+    answer = () => ({ status: 200, data: { affected: [] } });
+
+    const leave = await send(`team-leave-affected?memberId=${MEMBER}&firstDay=2026-11-12&lastDay=2026-11-14`);
+    const block = await send(`team-block-affected?memberId=${MEMBER}&date=2026-11-12&starts=10:00&finishes=11:00`);
+
+    expect(leave.status).toBe(200);
+    expect(block.status).toBe(200);
+    expect(calls[0]?.path).toBe(
+      `/api/v1/team/members/${MEMBER}/schedule/leave/affected?firstDay=2026-11-12&lastDay=2026-11-14`,
+    );
+    expect(decodeURIComponent(calls[1]!.path)).toBe(
+      `/api/v1/team/members/${MEMBER}/schedule/blocked-time/affected?date=2026-11-12&starts=10:00&finishes=11:00`,
+    );
+  });
+
+  it('holds each to its own permission, before any call', async () => {
+    permissions = ['team.read', 'team.block'];
+    expect((await send('team-leave-add', leaveBody)).status).toBe(403);
+    expect((await send('team-leave-remove', { id: MEMBER, leaveId: MEMBER })).status).toBe(403);
+    expect((await send(`team-leave-affected?memberId=${MEMBER}&firstDay=2026-11-12&lastDay=2026-11-14`)).status).toBe(
+      403,
+    );
+
+    permissions = ['team.read', 'team.manage'];
+    expect((await send('team-block-add', blockBody)).status).toBe(403);
+    expect((await send('team-block-remove', { id: MEMBER, blockId: MEMBER })).status).toBe(403);
+    expect(
+      (await send(`team-block-affected?memberId=${MEMBER}&date=2026-11-12&starts=10:00&finishes=11:00`)).status,
+    ).toBe(403);
+
+    expect(calls).toEqual([]);
+  });
+
+  it('refuses a support session every change and both impact reads, with no call', async () => {
+    principalKind = 'support';
+    permissions = ['team.read', 'staff.list'];
+
+    for (const [action, body] of [
+      ['team-leave-add', leaveBody],
+      ['team-leave-remove', { id: MEMBER, leaveId: MEMBER }],
+      ['team-block-add', blockBody],
+      ['team-block-remove', { id: MEMBER, blockId: MEMBER }],
+    ] as const) {
+      const change = await send(action, body, 'support');
+      expect(change.status).toBe(403);
+      expect(await change.json()).toMatchObject({ code: 'support_read_only' });
+    }
+    const impact = await send(`team-block-affected?memberId=${MEMBER}&date=2026-11-12`, undefined, 'support');
+    expect(impact.status).toBe(403);
+    expect(await impact.json()).toMatchObject({ code: 'permission_denied' });
+    expect(calls).toEqual([]);
+  });
+});

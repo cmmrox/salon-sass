@@ -125,7 +125,11 @@ class MemberPhotosImpl implements MemberPhotos {
                     photoValue(previous),
                     photoValue(photo.getId()),
                     now);
-            return Row.of(member, rows.choices(List.of(memberId), listing).get(memberId), scheduleRows.week(memberId));
+            return Row.of(
+                    member,
+                    rows.choices(List.of(memberId), listing).get(memberId),
+                    scheduleRows.week(memberId),
+                    rows.nextLeave(memberId, at.today()));
         }));
         return views.of(changed, listing, at.actor());
     }
@@ -145,7 +149,11 @@ class MemberPhotosImpl implements MemberPhotos {
             members.flush();
             photos.remove(previous);
             audit.record(at.actor(), TeamAudit.PHOTO_REMOVED, memberId, photoValue(previous), photoValue(null), now);
-            return Row.of(member, rows.choices(List.of(memberId), listing).get(memberId), scheduleRows.week(memberId));
+            return Row.of(
+                    member,
+                    rows.choices(List.of(memberId), listing).get(memberId),
+                    scheduleRows.week(memberId),
+                    rows.nextLeave(memberId, at.today()));
         }));
         return views.of(changed, listing, at.actor());
     }

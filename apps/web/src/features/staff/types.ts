@@ -57,6 +57,24 @@ export type SavedMemberWeek = components['schemas']['SavedTeamMemberWeek'];
 /** The answer to adding a date change. */
 export type AddedDateChange = components['schemas']['AddedTeamMemberDateChange'];
 
+/** A person's leave (F06-S03); `type` and `note` are present only for a caller with `team.manage`. */
+export type MemberLeave = components['schemas']['TeamMemberLeave'];
+
+/** Part of one date when a person cannot be booked. */
+export type MemberBlock = components['schemas']['TeamMemberBlockedTime'];
+
+/** A person's current or next leave, as the card shows it; `type` only with `team.manage`. */
+export type NextLeave = components['schemas']['TeamNextLeave'];
+
+/** The answer to adding leave. */
+export type AddedLeave = components['schemas']['AddedTeamMemberLeave'];
+
+/** The answer to blocking time. */
+export type AddedBlock = components['schemas']['AddedTeamMemberBlockedTime'];
+
+/** The bookings a period of leave or a block would affect, before it is added. */
+export type PeriodImpact = components['schemas']['TeamPeriodImpact'];
+
 /** The salon's public opening information, of which the sheet reads the week. */
 export type SalonOpeningWeek = components['schemas']['SalonOpeningHours'];
 

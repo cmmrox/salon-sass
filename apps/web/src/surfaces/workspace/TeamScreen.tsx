@@ -11,8 +11,11 @@ import { LeaveDialog, useLeaveGuard } from '@/features/branding';
 import type { Kind } from '@/features/identity';
 import {
   AffectedBookings,
+  BlockedTimeTab,
+  ConfirmRemoveLeave,
   ConfirmRemoveMember,
   DateChangesTab,
+  LeaveTab,
   MemberSheet,
   ScheduleSheet,
   TeamCards,
@@ -26,6 +29,8 @@ type Props = {
   kind: Kind;
   /** Whether this person may change the team (`team.manage`, in a salon that is not read-only). */
   canManage: boolean;
+  /** Whether this person may add and remove blocked time (`team.block`, in a salon that is not read-only). */
+  canBlock: boolean;
   /** Whether this person may see accounts, with `staff.list`: the tab bar and each card's Sign-in. */
   canSeeAccounts: boolean;
   readOnly: 'support' | 'salon' | null;
@@ -36,14 +41,15 @@ type Props = {
  * profile sheet and confirmation they open. Loading, empty, field-error, conflict, refused and unavailable states;
  * leaving the sheet with unsaved edits asks first. Those who may not change the team read it.
  */
-export function TeamScreen({ kind, canManage, canSeeAccounts, readOnly }: Props) {
+export function TeamScreen({ kind, canManage, canBlock, canSeeAccounts, readOnly }: Props) {
   const t = useTranslations('team');
   const router = useRouter();
   const team = useTeam(kind, canManage, (key: TeamToast) => toast.success(t(`toasts.${key}`)));
   const schedule = useSchedule(
     kind,
     canManage && !team.locked && readOnly === null,
-    (key: ScheduleToast) => toast.success(t(`toasts.${key}`)),
+    canBlock && readOnly === null,
+    (key: ScheduleToast, values?: { count: number }) => toast.success(t(`toasts.${key}`, values)),
     () => void team.reload(),
   );
   const may = canManage && !team.locked;
@@ -171,8 +177,49 @@ export function TeamScreen({ kind, canManage, canSeeAccounts, readOnly }: Props)
               />
             )
           }
+          leave={
+            schedule.ready && (
+              <LeaveTab
+                today={schedule.today}
+                leave={schedule.timeOff.leave}
+                form={schedule.timeOff.leaveForm}
+                refusal={schedule.timeOff.leaveRefusal}
+                impact={schedule.timeOff.leaveImpact}
+                canChange={schedule.may}
+                busy={schedule.timeOff.busy}
+                onStart={schedule.timeOff.startLeave}
+                onForm={(form) => schedule.timeOff.editLeave(schedule.member!.id, form)}
+                onCancel={schedule.timeOff.cancelLeave}
+                onSave={() => void schedule.timeOff.addLeave(schedule.member!.id)}
+                onRemove={schedule.timeOff.askRemoveLeave}
+              />
+            )
+          }
+          blocked={
+            schedule.ready && (
+              <BlockedTimeTab
+                today={schedule.today}
+                blocks={schedule.timeOff.blocks}
+                form={schedule.timeOff.blockForm}
+                refusal={schedule.timeOff.blockRefusal}
+                impact={schedule.timeOff.blockImpact}
+                canChange={schedule.mayBlock}
+                busy={schedule.timeOff.busy}
+                onStart={schedule.timeOff.startBlock}
+                onForm={(form) => schedule.timeOff.editBlock(schedule.member!.id, form)}
+                onCancel={schedule.timeOff.cancelBlock}
+                onSave={() => void schedule.timeOff.addBlock(schedule.member!.id)}
+                onRemove={(block) => void schedule.timeOff.removeBlock(schedule.member!.id, block)}
+              />
+            )
+          }
         />
       )}
+      <ConfirmRemoveLeave
+        open={schedule.timeOff.removingLeave !== null}
+        onCancel={schedule.timeOff.cancelRemoveLeave}
+        onConfirm={() => schedule.member && void schedule.timeOff.confirmRemoveLeave(schedule.member.id)}
+      />
       <ConfirmRemoveMember
         open={team.confirming}
         name={team.sheet?.member?.name ?? ''}

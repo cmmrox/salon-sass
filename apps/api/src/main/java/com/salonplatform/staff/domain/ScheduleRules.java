@@ -1,6 +1,7 @@
 package com.salonplatform.staff.domain;
 
 import com.salonplatform.staff.MemberWorkingDay;
+import com.salonplatform.staff.MemberWorkingDay.DecidedBy;
 import com.salonplatform.staff.TimeWindow;
 import com.salonplatform.staff.WeekdayHours;
 import java.time.DayOfWeek;
@@ -13,8 +14,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * How a person's working time is worked out (STF-02, decision 102). Pure. F07 trusts these windows, so a stretch of time
- * taken out is handled at every edge: touching the start or the finish, touching another, and, for F06-S03's leave and
+ * How a person's working time is worked out (STF-02, STF-03, STF-05, decisions 102 and 104). Pure. F07 trusts these windows,
+ * so a stretch of time taken out is handled at every edge: touching the start or the finish, touching another, and, for
  * blocked time, overlapping another or lying outside the hours.
  */
 public final class ScheduleRules {
@@ -68,14 +69,28 @@ public final class ScheduleRules {
     }
 
     /**
-     * The answer for one date. A change replaces the weekly hours on that date, both the times and the breaks.
+     * The answer for one date. Leave beats everything. Otherwise a change replaces the weekly hours on that date, both the
+     * times and the breaks, and blocked time is taken out of what is left; a day with no time left is not worked, so that
+     * working always has a window (decision 104(d)).
      *
      * @param weekly the person's hours for the date's weekday
      * @param change the hours of the date's change, or null when it has none
+     * @param onLeave whether the date is within their leave
+     * @param blocks their blocked time on the date, in any order
      */
-    public static MemberWorkingDay decide(LocalDate date, WorkDay weekly, WorkDay change) {
+    public static MemberWorkingDay decide(
+            LocalDate date, WorkDay weekly, WorkDay change, boolean onLeave, List<TimeWindow> blocks) {
+        if (onLeave) {
+            return new MemberWorkingDay(date, false, List.of(), DecidedBy.LEAVE);
+        }
         WorkDay day = change != null ? change : weekly;
-        return new MemberWorkingDay(date, day.working(), windows(day), change != null);
+        List<TimeWindow> taken = new ArrayList<>(day.breaks());
+        taken.addAll(blocks);
+        List<TimeWindow> left = windows(day.starts(), day.finishes(), taken);
+        DecidedBy decidedBy = !left.equals(windows(day))
+                ? DecidedBy.BLOCKED_TIME
+                : change != null ? DecidedBy.DATE_CHANGE : DecidedBy.WEEK;
+        return new MemberWorkingDay(date, !left.isEmpty(), left, decidedBy);
     }
 
     /** A week of no working days, Monday first. */

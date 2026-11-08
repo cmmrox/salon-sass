@@ -117,6 +117,9 @@ class HolidaysAndScheduleIntegrationTest extends IntegrationTest {
     @Autowired
     OpeningSchedule schedule;
 
+    @Autowired
+    TeamSchedule teamSchedule;
+
     @PersistenceContext
     EntityManager entities;
 
@@ -558,5 +561,49 @@ class HolidaysAndScheduleIntegrationTest extends IntegrationTest {
         List<?> upcoming = (List<?>)
                 json.readValue(api.call(alpha, "GET", CLOSURES, null, later).body(), List.class);
         assertThat(upcoming).isEmpty();
+    }
+
+    // --- F06-S03: TeamSchedule ignores them all, so F07 has to read both answers
+    // ---------------------------------------
+
+    @Test
+    void aPublishedHolidayTheSalonClosesOrShortensStillAnswersThePersonsHoursInTeamSchedule() throws Exception {
+        CLOCK.set(Instant.parse("2087-01-05T06:00:00Z"));
+        String admin = admin();
+        addDay(admin, "2087-03-20", "Medin Full Moon Poya Day", "poya");
+        addDay(admin, "2087-04-14", "Sinhala and Tamil New Year Day", "public");
+        publish(admin, 2087);
+        String token = manager(alpha);
+        api.call(alpha, "PUT", HOURS_SETTINGS, save(0, week("09:00", "18:00")), token);
+        Http.Exchange accepted = api.call(
+                alpha,
+                "POST",
+                HOLIDAYS + "/2087/acceptance",
+                accept(
+                        0,
+                        List.of(
+                                choice("2087-03-20", "closed", null, null),
+                                choice("2087-04-14", "special", "10:00", "11:00"))),
+                token);
+        assertThat(accepted.status()).withFailMessage("%s", accepted.body()).isEqualTo(200);
+        Http.Exchange person =
+                settings.call(alpha, "POST", TeamFixture.MEMBERS, TeamFixture.person("Holiday Person"), token);
+        assertThat(person.status()).withFailMessage("%s", person.body()).isEqualTo(201);
+        UUID id = UUID.fromString(settings.body(person).get("id").toString());
+        LocalDate closed = LocalDate.of(2087, 3, 20);
+        LocalDate shortened = LocalDate.of(2087, 4, 14);
+
+        assertThat(openingOn(alpha, closed).open()).isFalse();
+        assertThat(openingOn(alpha, closed).reason()).isEqualTo(OpeningReason.HOLIDAY);
+        assertThat(openingOn(alpha, shortened).closes()).isEqualTo(LocalTime.of(11, 0));
+        MemberWorkingDay onClosed = TenantContext.callAs(salons.asCurrent(alpha), () -> teamSchedule.on(id, closed));
+        MemberWorkingDay onShortened =
+                TenantContext.callAs(salons.asCurrent(alpha), () -> teamSchedule.on(id, shortened));
+        TimeWindow copied = new TimeWindow(LocalTime.of(9, 0), LocalTime.of(18, 0));
+        assertThat(onClosed)
+                .as("a person's week was copied from the salon's, and the holiday takes nothing from it")
+                .isEqualTo(new MemberWorkingDay(closed, true, List.of(copied), MemberWorkingDay.DecidedBy.WEEK));
+        assertThat(onShortened)
+                .isEqualTo(new MemberWorkingDay(shortened, true, List.of(copied), MemberWorkingDay.DecidedBy.WEEK));
     }
 }

@@ -6,14 +6,19 @@ import com.salonplatform.shared.web.FieldProblem;
 import com.salonplatform.shared.web.NotFoundException;
 import com.salonplatform.staff.AffectedBooking;
 import com.salonplatform.staff.MemberBookingsAffected;
+import com.salonplatform.staff.MemberPeriod;
 import com.salonplatform.staff.TimeWindow;
 import com.salonplatform.staff.domain.LocalTimes;
 import com.salonplatform.staff.domain.ScheduleRules;
 import com.salonplatform.staff.domain.WorkDay;
+import com.salonplatform.staff.entity.MemberBlockedTime;
 import com.salonplatform.staff.entity.MemberDateChange;
 import com.salonplatform.staff.entity.MemberDateChangeBreak;
+import com.salonplatform.staff.entity.MemberLeave;
+import com.salonplatform.staff.repository.MemberBlockedTimeRepository;
 import com.salonplatform.staff.repository.MemberDateChangeBreakRepository;
 import com.salonplatform.staff.repository.MemberDateChangeRepository;
+import com.salonplatform.staff.repository.MemberLeaveRepository;
 import com.salonplatform.staff.repository.MemberRepository;
 import com.salonplatform.staff.service.MemberScheduleService;
 import com.salonplatform.staff.service.impl.ScheduleValidation.ValidChange;
@@ -22,6 +27,7 @@ import java.time.Clock;
 import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -30,6 +36,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
@@ -50,6 +57,8 @@ class MemberScheduleServiceImpl implements MemberScheduleService {
     private final MemberRepository members;
     private final MemberDateChangeRepository changes;
     private final MemberDateChangeBreakRepository changeBreaks;
+    private final MemberLeaveRepository leaves;
+    private final MemberBlockedTimeRepository blocks;
     private final ScheduleRows rows;
     private final TeamAudit audit;
     private final MemberBookingsAffected bookings;
@@ -62,6 +71,8 @@ class MemberScheduleServiceImpl implements MemberScheduleService {
             MemberRepository members,
             MemberDateChangeRepository changes,
             MemberDateChangeBreakRepository changeBreaks,
+            MemberLeaveRepository leaves,
+            MemberBlockedTimeRepository blocks,
             ScheduleRows rows,
             TeamAudit audit,
             MemberBookingsAffected bookings,
@@ -71,6 +82,8 @@ class MemberScheduleServiceImpl implements MemberScheduleService {
         this.members = members;
         this.changes = changes;
         this.changeBreaks = changeBreaks;
+        this.leaves = leaves;
+        this.blocks = blocks;
         this.rows = rows;
         this.audit = audit;
         this.bookings = bookings;
@@ -78,24 +91,55 @@ class MemberScheduleServiceImpl implements MemberScheduleService {
         this.writing = new TransactionTemplate(transactions);
         this.reading = new TransactionTemplate(transactions);
         this.reading.setReadOnly(true);
+        // One snapshot: a weekly save replaces every row of the week, so a save committing between two of the read's
+        // queries
+        // would otherwise show the old hours with their breaks gone.
+        this.reading.setIsolationLevel(TransactionDefinition.ISOLATION_REPEATABLE_READ);
     }
 
     @Override
     public ScheduleView read(UUID memberId) {
         Scope at = scope.of(StaffScope.TEAM_READ);
         boolean noteVisible = at.actor().permissions().contains(StaffScope.TEAM_MANAGE);
-        return reading.execute(status -> {
+        record Read(
+                long version,
+                List<WorkDay> week,
+                List<ChangeView> changes,
+                List<MemberLeave> leave,
+                List<MemberBlockedTime> blocks) {}
+        Read read = reading.execute(status -> {
             members.findActive(memberId, at.branch()).orElseThrow(NotFoundException::new);
             List<MemberDateChange> upcoming = changes.upcoming(memberId, at.today());
             Map<UUID, List<TimeWindow>> breaks = rows.changeBreaks(upcoming);
-            return new ScheduleView(
+            return new Read(
                     rows.version(memberId),
-                    at.today(),
                     rows.week(memberId),
                     upcoming.stream()
                             .map(change -> view(change, breaks.getOrDefault(change.getId(), List.of()), noteVisible))
-                            .toList());
+                            .toList(),
+                    leaves.notEnded(memberId, at.today()),
+                    blocks.upcoming(memberId, at.today()));
         });
+        Set<MemberPeriod> periods = new HashSet<>();
+        read.leave().forEach(leave -> periods.add(TimeOffViews.periodOf(leave, at.today())));
+        read.blocks().forEach(block -> periods.add(TimeOffViews.periodOf(block)));
+        Map<MemberPeriod, List<AffectedBooking>> flagged =
+                periods.isEmpty() ? Map.of() : bookings.inPeriods(memberId, periods);
+        return new ScheduleView(
+                read.version(),
+                at.today(),
+                read.week(),
+                read.changes(),
+                read.leave().stream()
+                        .map(leave -> TimeOffViews.leave(
+                                leave,
+                                noteVisible,
+                                TimeOffViews.countIn(flagged, TimeOffViews.periodOf(leave, at.today()))))
+                        .toList(),
+                read.blocks().stream()
+                        .map(block ->
+                                TimeOffViews.block(block, TimeOffViews.countIn(flagged, TimeOffViews.periodOf(block))))
+                        .toList());
     }
 
     @Override

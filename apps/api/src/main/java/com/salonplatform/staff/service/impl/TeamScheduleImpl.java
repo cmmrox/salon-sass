@@ -8,8 +8,12 @@ import com.salonplatform.staff.TimeWindow;
 import com.salonplatform.staff.domain.ScheduleRules;
 import com.salonplatform.staff.domain.WorkDay;
 import com.salonplatform.staff.entity.Member;
+import com.salonplatform.staff.entity.MemberBlockedTime;
 import com.salonplatform.staff.entity.MemberDateChange;
+import com.salonplatform.staff.entity.MemberLeave;
+import com.salonplatform.staff.repository.MemberBlockedTimeRepository;
 import com.salonplatform.staff.repository.MemberDateChangeRepository;
+import com.salonplatform.staff.repository.MemberLeaveRepository;
 import com.salonplatform.staff.repository.MemberRepository;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
@@ -20,30 +24,40 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * Reads the member, their week and the range's date changes in one read-only tenant transaction of its own, in a few queries
- * for the whole range. F06-S03 subtracts leave and blocked time here, with no change for F07.
+ * Reads the member, their week and the range's date changes, leave and blocks in one read-only tenant transaction of its own,
+ * in a few queries for the whole range. That transaction reads one snapshot: a weekly save replaces every row of the week, so
+ * under the default isolation a save committing between two of these queries would answer the old hours with their breaks gone.
+ * It takes no lock and never waits for a save.
  */
 @Service
 class TeamScheduleImpl implements TeamSchedule {
 
     private final MemberRepository members;
     private final MemberDateChangeRepository changes;
+    private final MemberLeaveRepository leaves;
+    private final MemberBlockedTimeRepository blocks;
     private final ScheduleRows rows;
     private final TransactionTemplate reading;
 
     TeamScheduleImpl(
             MemberRepository members,
             MemberDateChangeRepository changes,
+            MemberLeaveRepository leaves,
+            MemberBlockedTimeRepository blocks,
             ScheduleRows rows,
             PlatformTransactionManager transactions) {
         this.members = members;
         this.changes = changes;
+        this.leaves = leaves;
+        this.blocks = blocks;
         this.rows = rows;
         this.reading = new TransactionTemplate(transactions);
         this.reading.setReadOnly(true);
+        this.reading.setIsolationLevel(TransactionDefinition.ISOLATION_REPEATABLE_READ);
     }
 
     @Override
@@ -59,14 +73,35 @@ class TeamScheduleImpl implements TeamSchedule {
         TenantContext.require();
         return reading.execute(status -> {
             Member member = members.findAny(memberId).orElseThrow(NotFoundException::new);
-            List<WorkDay> week = member.isRemoved() ? ScheduleRules.noWorkingDays() : rows.week(memberId);
-            Map<LocalDate, WorkDay> changed = member.isRemoved() ? Map.of() : changedBetween(memberId, from, to);
+            boolean removed = member.isRemoved();
+            List<WorkDay> week = removed ? ScheduleRules.noWorkingDays() : rows.week(memberId);
+            Map<LocalDate, WorkDay> changed = removed ? Map.of() : changedBetween(memberId, from, to);
+            List<MemberLeave> away = removed ? List.of() : leaves.overlapping(memberId, from, to);
+            Map<LocalDate, List<TimeWindow>> blocked = removed ? Map.of() : blockedBetween(memberId, from, to);
             List<MemberWorkingDay> days = new ArrayList<>();
             for (LocalDate date = from; !date.isAfter(to); date = date.plusDays(1)) {
-                days.add(ScheduleRules.decide(date, week.get(date.getDayOfWeek().getValue() - 1), changed.get(date)));
+                days.add(ScheduleRules.decide(
+                        date,
+                        week.get(date.getDayOfWeek().getValue() - 1),
+                        changed.get(date),
+                        within(away, date),
+                        blocked.getOrDefault(date, List.of())));
             }
             return days;
         });
+    }
+
+    private static boolean within(List<MemberLeave> away, LocalDate date) {
+        return away.stream()
+                .anyMatch(leave -> !date.isBefore(leave.getFirstDay()) && !date.isAfter(leave.getLastDay()));
+    }
+
+    private Map<LocalDate, List<TimeWindow>> blockedBetween(UUID memberId, LocalDate from, LocalDate to) {
+        return blocks.between(memberId, from, to).stream()
+                .collect(Collectors.groupingBy(
+                        MemberBlockedTime::getBlockDate,
+                        Collectors.mapping(
+                                block -> new TimeWindow(block.getStarts(), block.getFinishes()), Collectors.toList())));
     }
 
     private Map<LocalDate, WorkDay> changedBetween(UUID memberId, LocalDate from, LocalDate to) {

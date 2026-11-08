@@ -3,6 +3,8 @@ package com.salonplatform.staff.service;
 import com.salonplatform.staff.AffectedBooking;
 import com.salonplatform.staff.TimeWindow;
 import com.salonplatform.staff.domain.WorkDay;
+import com.salonplatform.staff.service.MemberTimeOffService.BlockView;
+import com.salonplatform.staff.service.MemberTimeOffService.LeaveView;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
@@ -11,7 +13,8 @@ import java.util.UUID;
 /**
  * A team member's schedule as the salon's staff keep it (STF-02, decision 102): their weekly hours with breaks, and their
  * changes for single dates. Reading needs {@code team.read}, and every change {@code team.manage}. A date change's note
- * is for a caller with {@code team.manage} only.
+ * is for a caller with {@code team.manage} only. The schedule also lists the person's leave and blocked time, which
+ * {@link MemberTimeOffService} changes, a leave's type and note being for a caller with {@code team.manage} only.
  */
 public interface MemberScheduleService {
 
@@ -49,8 +52,16 @@ public interface MemberScheduleService {
      * @param today the salon's local date now, from which date changes are listed and may be added
      * @param weekly the seven weekdays, Monday first
      * @param dateChanges the changes from today on, in date order
+     * @param leave the leave that has not ended, in date order
+     * @param blockedTime the blocks from today on, in date and time order
      */
-    record ScheduleView(long version, LocalDate today, List<WorkDay> weekly, List<ChangeView> dateChanges) {}
+    record ScheduleView(
+            long version,
+            LocalDate today,
+            List<WorkDay> weekly,
+            List<ChangeView> dateChanges,
+            List<LeaveView> leave,
+            List<BlockView> blockedTime) {}
 
     /** The week as saved, and the upcoming bookings it leaves outside the person's working time. */
     record SavedWeek(long version, List<WorkDay> weekly, List<AffectedBooking> affected) {}
