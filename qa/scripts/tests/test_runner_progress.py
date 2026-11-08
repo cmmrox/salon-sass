@@ -254,6 +254,17 @@ class DefaultInstanceRefusalTest(unittest.TestCase):
                     {"QA_WEB_URL": "http://alpha.localhost:3100/workspace"}):
             self.assertIn("default instance", runner.default_instance_refusal(env), env)
 
+    def test_ports_the_product_env_gives_the_default_instance_are_refused(self):
+        with tempfile.TemporaryDirectory() as product:
+            with open(os.path.join(product, ".env"), "w", encoding="utf-8") as handle:
+                handle.write("# the default instance\nSALON_API_PORT=8095\nSALON_WEB_PORT=\"3105\"\n")
+            for env in ({"SALON_API_PORT": "8095"}, {"QA_API_URL": "http://localhost:8095"},
+                        {"QA_WEB_URL": "http://alpha.localhost:3105/"}, {"SALON_API_PORT": "8090"}):
+                refusal = runner.default_instance_refusal({"QA_PRODUCT_ROOT": product, **env})
+                self.assertIn("default instance", refusal or "", env)
+            self.assertIsNone(runner.default_instance_refusal(
+                {"QA_PRODUCT_ROOT": product, "SALON_API_PORT": "8190", "QA_WEB_URL": "http://localhost:3200"}))
+
     def test_refused_run_creates_no_evidence(self):
         with tempfile.TemporaryDirectory() as root, \
                 patch.dict(os.environ, {"SALON_API_PORT": "8090"}), \

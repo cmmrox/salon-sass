@@ -166,16 +166,48 @@ _PORT_SETTINGS = ("SALON_API_PORT", "SALON_WEB_PORT", "SALON_POSTGRES_PORT")
 _URL_SETTINGS = ("QA_API_URL", "QA_WEB_URL")
 
 
+def _env_file(path):
+    """KEY=VALUE lines of a dotenv file (first value wins, as infra/scripts/lib/common.sh reads it)."""
+    values = {}
+    try:
+        with open(path, encoding="utf-8") as handle:
+            for line in handle:
+                line = line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                key, value = line.split("=", 1)
+                values.setdefault(key.strip(), value.strip().strip('"'))
+    except OSError:
+        pass
+    return values
+
+
+def default_instance_ports(environ):
+    """The ports the default instance uses: its documented defaults plus any the product's .env sets.
+
+    The product checkout is QA_PRODUCT_ROOT (shell, then qa/.env.local), else this repository,
+    the same rule qa/shared/env.ts follows."""
+    product_root = (environ.get("QA_PRODUCT_ROOT") or _env_file("qa/.env.local").get("QA_PRODUCT_ROOT") or ".")
+    configured = _env_file(os.path.join(product_root, ".env"))
+    ports = list(DEFAULT_INSTANCE_PORTS)
+    for name in _PORT_SETTINGS:
+        value = configured.get(name, "")
+        if value.isdigit() and int(value) not in ports:
+            ports.append(int(value))
+    return tuple(ports)
+
+
 def default_instance_refusal(environ):
     """Why this environment would aim QA at the default instance, or None."""
     instance = environ.get("SALON_LOCAL_INSTANCE")
     if instance is not None and instance != "qa":
         return (f"automated QA runs only against the QA instance (SALON_LOCAL_INSTANCE=qa), "
                 f"not '{instance or 'default'}'")
+    refused_ports = default_instance_ports(environ)
     aimed = []
     for name in _PORT_SETTINGS:
         value = environ.get(name, "").strip()
-        if value.isdigit() and int(value) in DEFAULT_INSTANCE_PORTS:
+        if value.isdigit() and int(value) in refused_ports:
             aimed.append(f"{name} is {value}")
     for name in _URL_SETTINGS:
         value = environ.get(name, "").strip()
@@ -185,11 +217,11 @@ def default_instance_refusal(environ):
                 port = parsed.port or (443 if parsed.scheme == "https" else 80)
             except ValueError:
                 continue
-            if port in DEFAULT_INSTANCE_PORTS:
+            if port in refused_ports:
                 aimed.append(f"{name} is {value}")
     if aimed:
         return (f"{', '.join(aimed)}: a port of the default instance "
-                f"({', '.join(map(str, DEFAULT_INSTANCE_PORTS))}), which holds the owner's manual testing")
+                f"({', '.join(map(str, refused_ports))}), which holds the owner's manual testing")
     return None
 
 

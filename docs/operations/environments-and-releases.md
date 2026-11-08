@@ -116,7 +116,10 @@ local script takes `SALON_LOCAL_INSTANCE`; unset is the default instance, `qa` i
 `SALON_LOCAL_INSTANCE=qa infra/scripts/local-up.sh` starts it; `qa/scripts/sdlc run` targets it and
 refuses the default instance. Both can run at once. The QA instance never reads its ports or
 addresses from `.env` (which describes the default instance) and refuses any port the default
-instance uses, so it can never migrate or seed the owner's database. The roster is the same in both, so the owner's
+instance uses (its defaults and any `.env` gives it), an inherited `SALON_DB_URL` other than a
+database on its own PostgreSQL, and an inherited `SALON_API_BASE_URL` on a default-instance port,
+so it can never migrate or seed the owner's database. The QA automation and `qa/scripts/sdlc run`
+refuse the same ports. The roster is the same in both, so the owner's
 credentials and authenticator work in either.
 - **Restart after rebuilding the runtime artifacts.** Each instance's API runs a copy of the jar
   in its own state folder (`.local/api/`, `.local/qa/api/`), so Maven `verify` no longer replaces a
