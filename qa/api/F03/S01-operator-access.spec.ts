@@ -15,6 +15,7 @@ import {
   test, expect, alpha, CONSOLE_HOST, DAY, FORGED_FORWARDING, NON_CONSOLE_HOSTS, OPERATOR_PERMISSIONS, PRINCIPAL_KEYS,
   Operator, operatorAccount, operatorProblem, planInput, salonInput, expectNoStore, type OperatorActor,
 } from '../../shared/operator';
+import { rosterOperator } from '../../shared/roster';
 
 const id = (n: number) => `TC-F03-S01-${String(n).padStart(3, '0')}`;
 const idempotency = (method: string): Record<string, string> => (method === 'POST' ? { 'Idempotency-Key': randomUUID() } : {});
@@ -38,8 +39,7 @@ async function totals(operator: Operator, admin: OperatorActor) {
 }
 
 test(`${id(1)} An enrolled operator obtains console access only after password and TOTP`, async ({ operator }) => {
-  const account = operatorAccount('OPERATOR_ADMIN');
-  await operator.seed(account);
+  const account = rosterOperator('OPERATOR_ADMIN');
   const signIn = await operator.signInRaw(account);
   expectNoStore(signIn, 'sign-in');
   const challenge = await operator.signIn(account);
@@ -55,9 +55,10 @@ test(`${id(1)} An enrolled operator obtains console access only after password a
 });
 
 test(`${id(2)} A first-time operator must enroll MFA before any session exists`, async ({ operator }) => {
+  // Extra: a first-time operator with no MFA yet; the roster's operators are enrolled.
   const support = operatorAccount('OPERATOR_SUPPORT', false);
-  const admin = operatorAccount('OPERATOR_ADMIN');
-  await operator.seed(support, admin);
+  const admin = rosterOperator('OPERATOR_ADMIN');
+  await operator.seed(support);
   const enroll = await operator.signIn(support);
   expect(enroll.state).toBe('enroll_mfa');
   await operatorProblem(await operator.call('GET', '/me', { headers: { Authorization: `Bearer ${enroll.challengeToken}` } }), 401, 'invalid_session');
@@ -74,8 +75,7 @@ test(`${id(2)} A first-time operator must enroll MFA before any session exists`,
 });
 
 test(`${id(3)} Wrong, expired, consumed, exhausted or replayed MFA challenges issue no session`, async ({ operator, clock }) => {
-  const account = operatorAccount('OPERATOR_ADMIN');
-  await operator.seed(account);
+  const account = rosterOperator('OPERATOR_ADMIN');
   const secret = account.totpSecret!;
   const noSession = async (response: Awaited<ReturnType<Operator['verifyRaw']>>) => {
     await operatorProblem(response, 401, 'invalid_credentials');
@@ -99,8 +99,7 @@ test(`${id(3)} Wrong, expired, consumed, exhausted or replayed MFA challenges is
 });
 
 test(`${id(4)} Simultaneous verification of one challenge creates exactly one operator session`, async ({ operator }) => {
-  const account = operatorAccount('OPERATOR_ADMIN');
-  await operator.seed(account);
+  const account = rosterOperator('OPERATOR_ADMIN');
   const challenge = await operator.signIn(account);
   const code = await operator.code(account.totpSecret!);
   const outcomes = await Promise.all(Array.from({ length: 8 }, () => operator.verifyRaw(challenge, code)));
@@ -153,6 +152,7 @@ test(`${id(6)} Admin and Support receive exactly their documented operator permi
     expect(r.status(), `Admin ${action.name}`).toBe(action.admin);
   }
   for (const route of ['/sessions/refresh', '/sessions/sign-out']) {
+    // Extra for sign-out: a second support session, so the one refreshed above is not the one signed out.
     const actor = route.endsWith('refresh') ? support : await operator.actor('OPERATOR_SUPPORT');
     const r = route.endsWith('refresh') ? await operator.refreshRaw(actor.tokens.refreshToken) : await operator.signOut(actor.tokens);
     expect(r.status(), `Support ${route}`).toBe(route.endsWith('refresh') ? 200 : 204);
@@ -194,8 +194,7 @@ test(`${id(8)} An operator credential authenticates no tenant identity or worksp
 });
 
 test(`${id(9)} Matching operator and staff email and password grant no extra authority`, async ({ operator, identity }) => {
-  const shared = operatorAccount('OPERATOR_ADMIN');
-  await operator.seed(shared);
+  const shared = rosterOperator('OPERATOR_ADMIN');
   const staff = { email: shared.email, mobile: '', password: shared.password, role: 'MANAGER' as const };
   await identity.seed(alpha, [staff]);
   const asStaff = await identity.login(alpha, staff);
@@ -212,15 +211,15 @@ test(`${id(11)} Expired, signed-out, revoked and disabled operator sessions auth
   await clock.advance(5 * 60_000 + 1_000);
   await operatorProblem(await operator.call('GET', '/me', { tokens: expired.tokens }), 401, 'invalid_session');
   await clock.real();
-  const signedOut = await operator.actor('OPERATOR_ADMIN');
+  const signedOut = await operator.actor('OPERATOR_ADMIN'); // extra: a second admin session this test signs out
   expect((await operator.signOut(signedOut.tokens)).status()).toBe(204);
   await operatorProblem(await operator.call('GET', '/me', { tokens: signedOut.tokens }), 401, 'invalid_session');
   await operatorProblem(await operator.refreshRaw(signedOut.tokens.refreshToken), 401, 'invalid_session');
-  const absolute = await operator.actor('OPERATOR_ADMIN');
+  const absolute = await operator.actor('OPERATOR_ADMIN'); // extra: a third admin session this test lets run out
   await clock.advance(7 * DAY + 1_000);
   await operatorProblem(await operator.refreshRaw(absolute.tokens.refreshToken), 401, 'invalid_session');
   await clock.real();
-  const disabled = await operator.actor('OPERATOR_SUPPORT');
+  const disabled = await operator.extra('OPERATOR_SUPPORT'); // extra: an operator this test disables
   expect((await operator.call('GET', '/me', { tokens: disabled.tokens })).status(), 'usable before it is disabled').toBe(200);
   await operator.setActive(disabled.account, false);
   await operatorProblem(await operator.call('GET', '/me', { tokens: disabled.tokens }), 401, 'invalid_session');
@@ -272,6 +271,7 @@ test(`${id(16)} Concurrent failures cannot exceed the ceilings or reset MFA atte
   const outcomes = await Promise.all(Array.from({ length: 20 }, () => operator.signInRaw({ email, password: 'QA wrong password value' })));
   expect(outcomes.filter(r => r.status() === 401).length, 'ten counted failures').toBe(10);
   expect(outcomes.filter(r => r.status() === 429).length, 'the rest limited').toBe(10);
+  // Extra: this test exhausts the operator's MFA attempts.
   const account = operatorAccount('OPERATOR_ADMIN');
   await operator.seed(account);
   const challenge = await operator.signIn(account);

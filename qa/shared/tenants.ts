@@ -57,8 +57,8 @@ export const RESERVED_SLUGS: string[] = [
 ];
 
 /**
- * A service's address with a hostname in place of its own: `http://localhost:8090` and
- * `alpha.localhost` give `http://alpha.localhost:8090`. The scheme, the port and any path stay.
+ * A service's address with a hostname in place of its own: `http://localhost:8190` and
+ * `alpha.localhost` give `http://alpha.localhost:8190`. The scheme, the port and any path stay.
  */
 export function onHostname(serviceUrl: string, hostname: string): string {
   const match = /^([a-z][a-z0-9+.-]*:\/\/)(\[[^\]]*\]|[^/:?#]*)(.*)$/i.exec(serviceUrl);

@@ -25,6 +25,8 @@ Prerequisites, on the machine:
 infra/scripts/local-up.sh       # PostgreSQL, the API and the web app; prints each address
 infra/scripts/local-down.sh     # stop everything; the database's data is kept
 infra/scripts/local-reset.sh    # delete the local database's data and start again from nothing
+infra/scripts/local-accounts.sh # add any missing fixed account (infra/local/accounts.json; every password 123456@321); `keys` prints the authenticator QR codes
+SALON_LOCAL_INSTANCE=qa infra/scripts/local-up.sh   # the separate instance automated QA runs against (ports 3200, 8190, 5540)
 infra/scripts/local-service.sh stop api      # one service: <start|stop> <postgres|api|web>
 infra/scripts/local-service.sh pause postgres   # for tests: PostgreSQL stays up and answers nothing; `resume postgres` ends it
 infra/scripts/local-salon.sh suspend gamma      # for tests: suspends one local salon; `activate gamma` ends it

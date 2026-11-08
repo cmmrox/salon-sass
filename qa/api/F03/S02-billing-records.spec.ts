@@ -11,7 +11,7 @@ import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 
 import { attempts, crossBoundary, firstInvoice, settled } from '../../shared/billing';
-import { PRODUCT_ROOT } from '../../shared/env';
+import { keyFile } from '../../shared/env';
 import { identitySql } from '../../shared/identity-storage';
 import { logOffsets, logsSince } from '../../shared/product-logs';
 import {
@@ -19,7 +19,7 @@ import {
 } from '../../shared/operator';
 
 function providerKeyValues(): string[] {
-  const file = process.env.SALON_BILLING_LOCAL_KEY_FILE ?? path.join(PRODUCT_ROOT, '.local', 'billing-keys.properties');
+  const file = keyFile('billing');
   if (!fs.existsSync(file)) throw new Error('ENVIRONMENT: the retained local billing key file is absent');
   const values = fs.readFileSync(file, 'utf8').split('\n').map(l => l.split('=')[1]?.trim() ?? '').filter(v => /^[0-9a-fA-F]{64}$/.test(v));
   if (!values.length) throw new Error('ENVIRONMENT: no provider key value in the retained billing key file');

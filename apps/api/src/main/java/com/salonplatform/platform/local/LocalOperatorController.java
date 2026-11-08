@@ -17,6 +17,7 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.List;
 import java.util.Locale;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.CacheControl;
 import org.springframework.http.ResponseEntity;
@@ -32,7 +33,8 @@ import org.springframework.web.bind.annotation.RestController;
  * Local operator fixtures (docs/architecture/operator-console.md, "Local operation"): loopback only,
  * {@code local} profile only, never in the OpenAPI document. Seeds explicit synthetic Admin/Support
  * accounts with supplied credentials (never echoed), resets their MFA and rate state, and sets a
- * controlled bootstrap failure. Salons, plans and other accounts are never touched.
+ * controlled bootstrap failure. Salons, plans and other accounts are never touched. The seed also accepts the
+ * local roster's development password (decision 099), and with {@code keepExisting} only adds missing accounts.
  */
 @RestController
 @Profile("local")
@@ -42,10 +44,15 @@ class LocalOperatorController {
 
     private final OperatorAccountService accounts;
     private final LocalBootstrapFaults faults;
+    private final String developmentPassword;
 
-    LocalOperatorController(OperatorAccountService accounts, LocalBootstrapFaults faults) {
+    LocalOperatorController(
+            OperatorAccountService accounts,
+            LocalBootstrapFaults faults,
+            @Value("${salon.local.development-password}") String developmentPassword) {
         this.accounts = accounts;
         this.faults = faults;
+        this.developmentPassword = developmentPassword;
     }
 
     @PostMapping("/seed")
@@ -53,7 +60,8 @@ class LocalOperatorController {
         loopback(http);
         return ResponseEntity.ok()
                 .cacheControl(CacheControl.noStore())
-                .body(new OperatorSeedResult(accounts.seed(request.accounts())));
+                .body(new OperatorSeedResult(accounts.seed(
+                        request.accounts(), Boolean.TRUE.equals(request.keepExisting()), developmentPassword)));
     }
 
     @DeleteMapping("/fixtures")

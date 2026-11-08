@@ -4,6 +4,7 @@
 # local-reset.sh is the one that deletes it.
 #
 # Usage: infra/scripts/local-down.sh
+#        SALON_LOCAL_INSTANCE=qa infra/scripts/local-down.sh    the QA instance only
 set -euo pipefail
 . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common.sh"
 

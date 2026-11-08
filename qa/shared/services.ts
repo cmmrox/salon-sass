@@ -9,7 +9,7 @@ import net from 'node:net';
 import path from 'node:path';
 import { promisify } from 'node:util';
 
-import { PRODUCT_ROOT, apiUrl, ports } from './env';
+import { PRODUCT_ROOT, apiUrl, ports, productEnv } from './env';
 
 const run = promisify(execFile);
 const SERVICE_SCRIPT = path.join(PRODUCT_ROOT, 'infra', 'scripts', 'local-service.sh');
@@ -18,7 +18,7 @@ export type Service = 'postgres' | 'api' | 'web';
 
 async function service(action: 'start' | 'stop', name: Service): Promise<void> {
   try {
-    await run(SERVICE_SCRIPT, [action, name], { cwd: PRODUCT_ROOT, timeout: 180_000 });
+    await run(SERVICE_SCRIPT, [action, name], { cwd: PRODUCT_ROOT, env: productEnv(), timeout: 180_000 });
   } catch (error) {
     const output = error as { stdout?: string; stderr?: string; message: string };
     throw new Error(

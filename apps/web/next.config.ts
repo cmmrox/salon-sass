@@ -12,6 +12,9 @@ const nextConfig: NextConfig = {
   // with only the files the application needs. The local environment serves the same build through
   // scripts/serve.mjs, which this does not change.
   output: 'standalone',
+  // Where the build goes. Unset, `.next`, as everywhere else; the local QA instance builds into `.next-qa` so that
+  // building it never replaces the files the default instance is serving from the same checkout (decision 099).
+  distDir: process.env.SALON_WEB_DIST_DIR || '.next',
   // Runtime secrets and checkout-local state are never deployment artifacts.
   outputFileTracingExcludes: { '*': ['../../.local/**', '../../.env*', '../../qa/.env*', '.env*'] },
   // The workspace root, so that the workspace's own packages (the API client) are part of it.

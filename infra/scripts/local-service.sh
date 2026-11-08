@@ -11,6 +11,9 @@
 #   pause postgres   for tests: freezes PostgreSQL, which then accepts connections and answers
 #                    nothing (`docker pause` on this project's container only)
 #   resume postgres  thaws it again; `start postgres` does the same
+#
+# SALON_LOCAL_INSTANCE=qa acts on the QA instance's services instead; `pause` names the instance
+# it freezes before it does.
 set -euo pipefail
 . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common.sh"
 
@@ -35,5 +38,9 @@ if [ "$action" = "start" ] || [ "$service" = "postgres" ]; then
   require_prerequisites "$service"
 fi
 acquire_lock
+if [ "$action" = "pause" ]; then
+  describe_instance
+  require_own_containers
+fi
 
 "${action}_${service}"

@@ -9,15 +9,18 @@ import { randomUUID } from 'node:crypto';
 import { identitySql } from '../../shared/identity-storage';
 import { logOffsets, logsSince } from '../../shared/product-logs';
 import {
-  test, expect, operatorAccount, operatorProblem, platformAuditWhere, salonInput, sqlLiteral,
+  test, expect, auditBaseline, operatorProblem, platformAuditWhere, salonInput, sqlLiteral,
 } from '../../shared/operator';
+import { rosterOperator } from '../../shared/roster';
 
 test('TC-F03-S01-029 Platform audit records operator and creation events immutably and without secrets', async ({ operator, clock }) => {
   const fixed = '2026-11-21T06:00:00.000Z';
   await clock.set(fixed);
   const offsets = logOffsets();
-  const account = operatorAccount('OPERATOR_ADMIN');
-  await operator.seed(account);
+  const account = rosterOperator('OPERATOR_ADMIN');
+  // The roster admin has entries from earlier runs, at this same fixed instant too: only this test's count.
+  const adminId = identitySql(`SELECT id FROM operator_user WHERE lower(email) = ${sqlLiteral(account.email)}`);
+  const earlier = auditBaseline(`actor_id = ${sqlLiteral(adminId)} OR subject_id = ${sqlLiteral(adminId)}`);
   const errors: string[] = [];
   const failed = await operator.signInRaw({ email: account.email, password: `${account.password}-wrong` });
   await operatorProblem(failed, 401, 'invalid_credentials');
@@ -33,7 +36,7 @@ test('TC-F03-S01-029 Platform audit records operator and creation events immutab
   await operator.bootstrapFailure(null);
   expect((await operator.signOut(admin.tokens)).status()).toBe(204);
 
-  const audit = platformAuditWhere(`created_at >= ${sqlLiteral(fixed)} AND (actor_id = ${sqlLiteral(admin.principal.id)} OR subject_id IN (${
+  const audit = platformAuditWhere(`created_at >= ${sqlLiteral(fixed)} AND ${earlier} AND (actor_id = ${sqlLiteral(admin.principal.id)} OR subject_id IN (${
     [admin.principal.id, plan.id, made.created.id].map(sqlLiteral).join(', ')}))`);
   const actions = audit.map(e => e.action);
   // Action names as recorded (the spec does not name them; the S01 handoff abbreviates the operator. prefix).
