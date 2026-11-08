@@ -8,6 +8,7 @@ import {syntheticMobile} from '../../shared/customer-identity';
 import {identitySql} from '../../shared/identity-storage';
 import {apiProcess,localService,localKeys,productRoot,mark} from '../../shared/identity-runtime';
 import {standInForApi} from '../../shared/services';
+import {keyFile} from '../../shared/env';
 const c=(n:number)=>`TC-F02-S04-${String(n).padStart(3,'0')}`;
 const state=()=>identitySql(`SELECT jsonb_build_object('challenges',(SELECT count(*) FROM identity_customer_challenge),'rates',(SELECT coalesce(sum(attempts),0) FROM identity_rate_bucket),'outbox',(SELECT count(*) FROM outbox_message),'staff',(SELECT count(*) FROM identity_staff),'sessions',(SELECT count(*) FROM identity_session))`);
 
@@ -42,7 +43,7 @@ test(`${c(20)} API outage and slow BFF work preserve form values and present saf
  }finally{await fake?.close();localService('start','api');await identity.api.reconnect();}
 });
 test(`${c(22)} trusted client address assertions cannot alter tenant authority or evade abuse limits`,async({identity,accounts})=>{
- test.setTimeout(120000);const file=process.env.SALON_IDENTITY_LOCAL_KEY_FILE??path.join(productRoot,'.local/identity-keys.properties');const proxy=/^proxy=([0-9a-f]{64})$/m.exec(fs.readFileSync(file,'utf8'))?.[1];if(!proxy)throw new Error('ENVIRONMENT: final fourth local assertion key is absent');
+ test.setTimeout(120000);const file=keyFile('identity');const proxy=/^proxy=([0-9a-f]{64})$/m.exec(fs.readFileSync(file,'utf8'))?.[1];if(!proxy)throw new Error('ENVIRONMENT: final fourth local assertion key is absent');
  const now=await identity.now();await identity.clock(now);const target='/api/v1/identity/customers/challenges',ip='192.0.2.20';
  const sign=(host=alpha.hostname,method='POST',pathname=target,address=ip,instant=now)=>`v1;${address};${instant};${createHmac('sha256',Buffer.from(proxy,'hex')).update(['v1',host,method,pathname,address,instant].join('\n')).digest('hex')}`;
  const invalid=['forged',sign().replace(/.$/,'z'),sign(beta.hostname),sign(alpha.hostname,'GET'),sign(alpha.hostname,'POST','/api/v1/identity/staff/sign-in'),

@@ -6,8 +6,12 @@
 # product is not running, a tool is missing) is reported as ENVIRONMENT and exits 3, so that it is
 # never mistaken for a failure of the product or for a pass.
 #
-# Addresses come from here and nowhere else: a variable in the shell, then qa/.env.local, then the
-# root .env the product's own scripts read, then the product's documented defaults.
+# Addresses come from here and nowhere else. Checks run against the QA instance (decision 099,
+# docs/operations/environments-and-releases.md, "The QA instance"), never the default instance that
+# holds the owner's manual testing: its ports, addresses and key files come from the shell or
+# qa/.env.local, then the QA instance's defaults, never from the root .env (which describes the
+# default instance). Settings both instances share (role names, passwords of the local roles) also
+# fall back to the root .env. A check aimed at a default-instance port refuses to start.
 
 QA_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 REPO_ROOT="$(cd "$QA_ROOT/.." && pwd)"
@@ -18,7 +22,17 @@ SCRIPTS="${_QA_PRODUCT_ROOT:-$REPO_ROOT}/infra/scripts"
 # their lock. Derived from SCRIPTS, so that a check run against another checkout's scripts (to see
 # it fail on an older version of them) looks at that checkout's state and not this one's.
 PRODUCT_ROOT="$(cd "$SCRIPTS/../.." && pwd)"
-RUN_DIR="$PRODUCT_ROOT/.local/run"
+
+# The QA instance (infra/scripts/lib/common.sh). Every infra script a check calls inherits it.
+case "${SALON_LOCAL_INSTANCE-qa}" in
+  qa) ;;
+  *) printf 'REFUSED: QA checks run only against the QA instance (SALON_LOCAL_INSTANCE=qa), not %s; the default instance holds the owner'"'"'s manual testing (decision 099). Nothing was run.\n' "'${SALON_LOCAL_INSTANCE:-default}'" >&2; exit 3 ;;
+esac
+export SALON_LOCAL_INSTANCE=qa
+STATE_SUBDIR=".local/qa"
+STATE_DIR="$PRODUCT_ROOT/$STATE_SUBDIR"
+RUN_DIR="$STATE_DIR/run"
+LOG_DIR="$STATE_DIR/logs"
 
 _setting() {
   local name="$1" file value
@@ -32,18 +46,68 @@ _setting() {
   printf '%s' "${2:-}"
 }
 
-API_PORT="$(_setting SALON_API_PORT 8090)"
-WEB_PORT="$(_setting SALON_WEB_PORT 3100)"
-POSTGRES_PORT="$(_setting SALON_POSTGRES_PORT 5440)"
+# _instance_setting <name> [default]: a setting of the QA instance only: the shell, then
+# qa/.env.local, never the default instance's root .env.
+_instance_setting() {
+  local name="$1" value
+  if [ -n "${!name:-}" ]; then printf '%s' "${!name}"; return; fi
+  if [ -f "$QA_ROOT/.env.local" ]; then
+    value="$(sed -n "s/^[[:space:]]*${name}[[:space:]]*=[[:space:]]*//p" "$QA_ROOT/.env.local" | tail -n 1)"
+    value="${value%\"}"; value="${value#\"}"
+    if [ -n "$value" ]; then printf '%s' "$value"; return; fi
+  fi
+  printf '%s' "${2:-}"
+}
+
+API_PORT="$(_instance_setting SALON_API_PORT 8190)"
+WEB_PORT="$(_instance_setting SALON_WEB_PORT 3200)"
+POSTGRES_PORT="$(_instance_setting SALON_POSTGRES_PORT 5540)"
 DB_NAME="$(_setting SALON_DB_NAME salon)"
 DB_USER="$(_setting SALON_DB_USER salon)"
 # The application's role: what the API connects as. Its name and local-only password are in the
 # product's .env.example.
 DB_APP_USER="$(_setting SALON_DB_APP_USER salon_app)"
 DB_APP_PASSWORD="$(_setting SALON_DB_APP_PASSWORD salon-app-local-only)"
-API_URL="$(_setting QA_API_URL "http://localhost:${API_PORT}")"; API_URL="${API_URL%/}"
-WEB_URL="$(_setting QA_WEB_URL "http://localhost:${WEB_PORT}")"; WEB_URL="${WEB_URL%/}"
-POSTGRES_CONTAINER="salon-postgres"
+API_URL="$(_instance_setting QA_API_URL "http://localhost:${API_PORT}")"; API_URL="${API_URL%/}"
+WEB_URL="$(_instance_setting QA_WEB_URL "http://localhost:${WEB_PORT}")"; WEB_URL="${WEB_URL%/}"
+POSTGRES_CONTAINER="salon-qa-postgres"
+# The QA instance's web build (WEB_DIST_DIR for SALON_LOCAL_INSTANCE=qa in infra/scripts/lib/common.sh,
+# which apps/web/next.config.ts reads as SALON_WEB_DIST_DIR). The default instance builds into .next.
+# Fixed, never read from the shell; qa/shared/env.ts defines the same folder for Playwright.
+WEB_DIST_DIR=".next-qa"
+WEB_BUILD_DIR="$PRODUCT_ROOT/apps/web/$WEB_DIST_DIR"
+
+# The default instance's ports are the owner's: its defaults (3100, 8090, 5440) plus any port the
+# product's root .env gives it, since that file describes the default instance. Refuse before
+# anything is touched.
+_port_of() { printf '%s' "$1" | sed -nE 's#^[a-z][a-z0-9+.-]*://(\[[^]]*\]|[^/:?\#]*):([0-9]+).*#\2#p'; }
+DEFAULT_INSTANCE_PORTS="3100 8090 5440"
+_default_ports_source="its defaults"
+if [ -f "$PRODUCT_ROOT/.env" ]; then
+  for _name in SALON_WEB_PORT SALON_API_PORT SALON_POSTGRES_PORT; do
+    _value="$(sed -n "s/^[[:space:]]*${_name}[[:space:]]*=[[:space:]]*//p" "$PRODUCT_ROOT/.env" | tail -n 1)"
+    _value="${_value%\"}"; _value="${_value#\"}"; _value="${_value%"${_value##*[![:space:]]}"}"
+    case "$_value" in ''|*[!0-9]*) continue ;; esac
+    _default_ports_source="its defaults and $PRODUCT_ROOT/.env"
+    case " $DEFAULT_INSTANCE_PORTS " in *" $_value "*) ;; *) DEFAULT_INSTANCE_PORTS="$DEFAULT_INSTANCE_PORTS $_value" ;; esac
+  done
+fi
+for _aimed in "SALON_API_PORT=$API_PORT" "SALON_WEB_PORT=$WEB_PORT" "SALON_POSTGRES_PORT=$POSTGRES_PORT" \
+              "QA_API_URL=$(_port_of "$API_URL")" "QA_WEB_URL=$(_port_of "$WEB_URL")"; do
+  [ -n "${_aimed#*=}" ] || continue
+  case " $DEFAULT_INSTANCE_PORTS " in
+    *" ${_aimed#*=} "*)
+      printf 'REFUSED: %s is a port of the default instance (%s: %s), which holds the owner'"'"'s manual testing (decision 099). QA checks run against the QA instance (3200, 8190, 5540). Nothing was run.\n' "${_aimed%%=*} ${_aimed#*=}" "$(printf '%s' "$DEFAULT_INSTANCE_PORTS" | sed 's/ /, /g')" "$_default_ports_source" >&2
+      exit 3 ;;
+  esac
+done
+unset _aimed _name _value _default_ports_source
+export SALON_API_PORT="$API_PORT" SALON_WEB_PORT="$WEB_PORT" SALON_POSTGRES_PORT="$POSTGRES_PORT"
+# key_file <identity|operator|billing|export|support>: the QA instance's local key file, or the shell's choice.
+key_file() {
+  local variable; variable="SALON_$(printf '%s' "$1" | tr '[:lower:]' '[:upper:]')_LOCAL_KEY_FILE"
+  _instance_setting "$variable" "$STATE_DIR/$1-keys.properties"
+}
 
 # Where this run keeps its evidence. qa/scripts/sdlc run sets QA_REPORT_DIR.
 REPORT_DIR="${QA_REPORT_DIR:-$QA_ROOT/reports/adhoc}"
@@ -56,7 +120,8 @@ CURRENT_FAILED=0
 
 # Scoped synthetic nonlocal startup fixture. Never export keys into missing-secret negative cases.
 with_identity_keys() (
-  local file="${SALON_IDENTITY_LOCAL_KEY_FILE:-$PRODUCT_ROOT/.local/identity-keys.properties}" key value name count=0
+  local file key value name count=0
+  file="$(key_file identity)"
   [ -f "$file" ] || { printf 'ENVIRONMENT: retained synthetic identity key file is absent\n' >&2; exit 3; }
   while IFS='=' read -r key value; do
     case "$key" in signing) name=SALON_IDENTITY_SIGNING_KEY;; challenge) name=SALON_IDENTITY_CHALLENGE_KEY;; encryption) name=SALON_IDENTITY_ENCRYPTION_KEY;; proxy) name=SALON_IDENTITY_PROXY_KEY;; *) continue;; esac
@@ -199,7 +264,11 @@ require_product_up() {
 recorded_pid() { [ -f "$RUN_DIR/$1.pid" ] && cut -d' ' -f1 <"$RUN_DIR/$1.pid" || true; }
 
 # Processes running the API's jar or the web app's server, one id per line.
-product_processes() { pgrep -f 'salon-api\.jar|next-server|next start' || true; }
+# Only the QA instance's own: its API runs the jar copy in its state folder, its web app listens on
+# its port. The default instance's processes are never counted, and never stopped.
+product_processes() {
+  { pgrep -f "$STATE_DIR/api/salon-api\\.jar" || true; listener_pid "$WEB_PORT"; } | sed '/^$/d' | sort -u
+}
 
 # path_without <directory> <tool...>: fills the directory with links to every program in /usr/bin,
 # /bin, /usr/sbin and /sbin except the named ones, plus node, corepack and docker from this PATH,
@@ -283,8 +352,8 @@ salon_value() {
   printf '%s' "${!name}"
 }
 
-# on_hostname <service url> <hostname>: http://localhost:8090 and alpha.localhost give
-# http://alpha.localhost:8090.
+# on_hostname <service url> <hostname>: http://localhost:8190 and alpha.localhost give
+# http://alpha.localhost:8190.
 on_hostname() {
   printf '%s' "$1" | sed -E "s#^([a-z][a-z0-9+.-]*://)(\\[[^]]*\\]|[^/:?\#]*)#\\1$2#"
 }

@@ -245,7 +245,7 @@ export const photoIdOf = (url: string) => new URL(url, 'http://placeholder').pat
 
 /** A salon the operator creates now, with its Owner signed in (MFA enrolled). */
 export async function newSalon(operator: Operator, identity: Identity, overrides: Partial<SalonInput> = {}) {
-  const admin = await operator.actor();
+  const admin = await operator.member();
   const plan = await operator.plan(admin);
   const { input, created, salon } = await operator.salon(admin, plan.id, overrides);
   const owner = await ownerSession(identity, salon, input);

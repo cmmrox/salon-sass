@@ -4,7 +4,7 @@
 // key value (F03-S01 AC-20; F03-S02 adds the billing provider key, F03-S03 the export key, F03-S04 the support signing key). Every file is read, ignored paths included. Values are compared, never
 // printed. Exits non-zero naming only the offending file paths.
 //
-//   node scripts/scan-artifacts.mjs            scans apps/web/.next
+//   node scripts/scan-artifacts.mjs            scans apps/web/.next (SALON_WEB_DIST_DIR, as next.config.ts reads it)
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { basename, dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -80,9 +80,10 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     process.env.SALON_EXPORT_LOCAL_KEY_FILE ?? join(root, '.local', 'export-keys.properties'),
     process.env.SALON_SUPPORT_LOCAL_KEY_FILE ?? join(root, '.local', 'support-keys.properties'),
   ];
-  const roots = [join(web, '.next', 'standalone'), join(web, '.next', 'static')];
+  const dist = process.env.SALON_WEB_DIST_DIR || '.next';
+  const roots = [join(web, dist, 'standalone'), join(web, dist, 'static')];
   if (!existsSync(roots[0])) {
-    console.error('scan-artifacts: no .next/standalone output to scan; run next build first');
+    console.error(`scan-artifacts: no ${dist}/standalone output to scan; run next build first`);
     process.exit(2);
   }
   const values = knownKeyValues(process.env, keyFiles);

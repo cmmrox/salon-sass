@@ -48,7 +48,7 @@ class StaffAccountServiceImpl implements StaffAccountService {
     public StaffView create(StaffInput input) {
         return work.run(() -> {
             StaffAuthority.SignedIn current = authority.permitted("staff.manage");
-            StaffAccount account = createAccount(input, true);
+            StaffAccount account = createAccount(input, true, null);
             record(current.account(), "staff_created", account, null, accessValues(account));
             accounts.flush();
             return view(account);
@@ -107,7 +107,7 @@ class StaffAccountServiceImpl implements StaffAccountService {
     }
 
     @Override
-    public List<StaffView> seed(List<SeedAccount> inputs) {
+    public List<StaffView> seed(List<SeedAccount> inputs, String developmentPassword) {
         return work.run(() -> {
             SyntheticSalons.requireCurrentIsSynthetic();
             List<StaffView> seeded = new ArrayList<>();
@@ -124,7 +124,8 @@ class StaffAccountServiceImpl implements StaffAccountService {
                                     input.password(),
                                     input.role(),
                                     input.professionalGrant()),
-                            false);
+                            false,
+                            developmentPassword);
                     if (input.totpSecret() != null) {
                         seedSecret(account, input.totpSecret());
                     }
@@ -145,7 +146,11 @@ class StaffAccountServiceImpl implements StaffAccountService {
         });
     }
 
-    private StaffAccount createAccount(StaffInput input, boolean enforceSeats) {
+    /**
+     * @param developmentPassword the one password below the policy that the local seed also accepts (decision
+     *     099); {@code null} on every product path
+     */
+    private StaffAccount createAccount(StaffInput input, boolean enforceSeats, String developmentPassword) {
         String email = StaffValidation.email(input.email());
         String mobile = StaffValidation.mobile(input.mobile());
         if (email == null && mobile == null) {
@@ -154,7 +159,9 @@ class StaffAccountServiceImpl implements StaffAccountService {
         StaffRole role = StaffValidation.role(input.role());
         boolean grant = Boolean.TRUE.equals(input.professionalGrant());
         requireGrantOnlyForAProfessional(grant, role);
-        StaffValidation.requireAcceptablePassword(input.password(), "password");
+        if (developmentPassword == null || !developmentPassword.equals(input.password())) {
+            StaffValidation.requireAcceptablePassword(input.password(), "password");
+        }
         if (accounts.countHolding(email, mobile) > 0) {
             throw IdentityProblems.conflict();
         }

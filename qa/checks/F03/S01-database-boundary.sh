@@ -112,7 +112,7 @@ refuses() { # refuses <label> <log>
 # The retained local identity keys (values never printed), as with_identity_keys reads them, but in
 # this shell so the started process and its pid stay here.
 IDENTITY_KEYS=()
-IDENTITY_KEY_FILE="${SALON_IDENTITY_LOCAL_KEY_FILE:-$PRODUCT_ROOT/.local/identity-keys.properties}"
+IDENTITY_KEY_FILE="$(key_file identity)"
 [ -f "$IDENTITY_KEY_FILE" ] || environment_fault "retained identity key file is absent"
 while IFS='=' read -r key value; do
   case "$key" in signing) IDENTITY_KEYS+=(SALON_IDENTITY_SIGNING_KEY="$value");; challenge) IDENTITY_KEYS+=(SALON_IDENTITY_CHALLENGE_KEY="$value");;

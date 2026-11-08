@@ -1,0 +1,34 @@
+{
+  "about": "The fixed local account roster (decision 099, docs/operations/environments-and-releases.md, 'Fixed local accounts'). Synthetic, local-only credentials, committed on purpose: only the local profile's seed hooks accept the password, and no other profile can create these accounts. infra/scripts/local-accounts.sh creates any account here that is missing and never changes one that exists; `local-accounts.sh keys` prints the authenticator links: a salon Owner's entry is issued by issuers.staff followed by the salon ('Salon local alpha'), an operator's by issuers.operators. Staff mobiles are Sri Lankan because staff identity accepts only Sri Lankan mobile numbers. A change to this list is a change to this file, reviewed in a PR.",
+  "issuers": {
+    "staff": "Salon local",
+    "operators": "Salon Console local"
+  },
+  "salons": {
+    "alpha": [
+      { "name": "Nadeesha Perera", "email": "nadeesha.perera@alphasalon.lk", "mobile": "+94771234501", "role": "OWNER", "password": "123456@321", "totpSecret": "NT5HO6L2LNFLJGJAUOLK5VUYRTHA2TFY" },
+      { "name": "Kasun Jayawardena", "email": "kasun.jayawardena@alphasalon.lk", "mobile": "+94771234502", "role": "MANAGER", "password": "123456@321" },
+      { "name": "Dilani Fernando", "email": "dilani.fernando@alphasalon.lk", "mobile": "+94771234503", "role": "RECEPTIONIST", "password": "123456@321" },
+      { "name": "Tharindu Silva", "email": "tharindu.silva@alphasalon.lk", "mobile": "+94771234504", "role": "PROFESSIONAL", "password": "123456@321" },
+      { "name": "Ishara Wickramasinghe", "email": "ishara.wickramasinghe@alphasalon.lk", "mobile": "+94771234505", "role": "ACCOUNTANT", "password": "123456@321" }
+    ],
+    "beta": [
+      { "name": "Chamari Gunasekara", "email": "chamari.gunasekara@betasalon.lk", "mobile": "+94772345601", "role": "OWNER", "password": "123456@321", "totpSecret": "VSTTWRGJDCUZEKA4HMSHUGA3AXBHX2MK" },
+      { "name": "Lahiru Senanayake", "email": "lahiru.senanayake@betasalon.lk", "mobile": "+94772345602", "role": "MANAGER", "password": "123456@321" },
+      { "name": "Sachini Herath", "email": "sachini.herath@betasalon.lk", "mobile": "+94772345603", "role": "RECEPTIONIST", "password": "123456@321" },
+      { "name": "Malith Rathnayake", "email": "malith.rathnayake@betasalon.lk", "mobile": "+94772345604", "role": "PROFESSIONAL", "password": "123456@321" },
+      { "name": "Anoma Dias", "email": "anoma.dias@betasalon.lk", "mobile": "+94772345605", "role": "ACCOUNTANT", "password": "123456@321" }
+    ],
+    "gamma": [
+      { "name": "Emily Clarke", "email": "emily.clarke@gammasalon.co.uk", "mobile": "+94773456701", "role": "OWNER", "password": "123456@321", "totpSecret": "MYAIVAKLFJOGFHMQGKF6LTU5V4XRZM75" },
+      { "name": "James Whitfield", "email": "james.whitfield@gammasalon.co.uk", "mobile": "+94773456702", "role": "MANAGER", "password": "123456@321" },
+      { "name": "Priya Shah", "email": "priya.shah@gammasalon.co.uk", "mobile": "+94773456703", "role": "RECEPTIONIST", "password": "123456@321" },
+      { "name": "Oliver Bennett", "email": "oliver.bennett@gammasalon.co.uk", "mobile": "+94773456704", "role": "PROFESSIONAL", "password": "123456@321" },
+      { "name": "Hannah Lewis", "email": "hannah.lewis@gammasalon.co.uk", "mobile": "+94773456705", "role": "ACCOUNTANT", "password": "123456@321" }
+    ]
+  },
+  "operators": [
+    { "name": "Ruwan Dissanayake", "email": "ruwan.dissanayake@salonops.lk", "role": "OPERATOR_ADMIN", "password": "123456@321", "totpSecret": "T4SWAIJ7M5RHT7BC5DGTMJRMXT56NKGZ" },
+    { "name": "Shanika Abeysekera", "email": "shanika.abeysekera@salonops.lk", "role": "OPERATOR_SUPPORT", "password": "123456@321", "totpSecret": "7O6YG7VYI772CD5X2E7BUYVR5X3KLYPQ" }
+  ]
+}

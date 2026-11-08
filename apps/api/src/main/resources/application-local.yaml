@@ -31,6 +31,11 @@ salon:
     local-key-file: ${SALON_SUPPORT_LOCAL_KEY_FILE:../../.local/support-keys.properties}
     link-origin: ${SALON_SUPPORT_LINK_ORIGIN:http://%s:3100}
   platform-domain: ${SALON_PLATFORM_DOMAIN:localhost}
+  local:
+    # The one password of the fixed local account roster (infra/local/accounts.json, decision 099).
+    # Only the local seed hooks (/local/identity/seed, /local/operator/seed) accept it below the
+    # password policy; every product path keeps the policy. No other profile has this value.
+    development-password: "123456@321"
   server:
     # This machine only (CR-002). SALON_LISTEN_ON_NETWORK=true opens the ports to the network, for
     # testing from a phone on the same network.

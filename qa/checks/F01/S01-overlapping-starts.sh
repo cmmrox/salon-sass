@@ -32,6 +32,14 @@ trap restore EXIT
 in_background() {
   local label="$1"; shift
   ( "$@" >"$WORK/$label.out" 2>&1; echo $? >"$WORK/$label.exit" ) &
+  echo $! >"$WORK/$label.pid"
+}
+# stop_background <label>: stops that one background run by its exact process ids (the subshell and
+# the script it started), never by a pattern that could match another checkout's or instance's run.
+stop_background() {
+  local sub child; sub="$(cat "$WORK/$1.pid" 2>/dev/null)"; [ -n "$sub" ] || return 0
+  for child in $(pgrep -P "$sub" 2>/dev/null); do kill -TERM "$child" 2>/dev/null; done
+  kill -TERM "$sub" 2>/dev/null; return 0
 }
 exit_of() { cat "$WORK/$1.exit" 2>/dev/null || echo none; }
 
@@ -112,7 +120,7 @@ for holder in "999999 Thu Jan  1 00:00:00 1970" "1 Thu Jan  1 00:00:00 1970"; do
   while [ ! -f "$WORK/left.exit" ] && [ "$waited" -lt 240 ]; do sleep 1; waited=$((waited + 1)); done
   if [ ! -f "$WORK/left.exit" ]; then
     wrong "lock naming '$holder': local-up.sh had not finished after 240 s; it is waiting on a lock nobody holds"
-    pkill -TERM -f "$SCRIPTS/local-up.sh" 2>/dev/null; wait
+    stop_background left; wait
     rm -f "$LOCK"
   else
     wait

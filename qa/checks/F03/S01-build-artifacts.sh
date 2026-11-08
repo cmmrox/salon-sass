@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 # TC-F03-S01-040: built web artifacts contain no environment file and no identity, operator,
 # billing, export or support key value. Reads the existing build output; never builds, never edits the
-# repository. Key values are read from the retained local key files and never printed.
+# repository. Key values are read from the retained local key files and never printed. Scans the QA
+# instance's build (WEB_BUILD_DIR, apps/web/.next-qa), never the default instance's apps/web/.next.
 set -u
 . "$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)/shared/checks.sh"
 require_tool grep find
-BUILD="$PRODUCT_ROOT/apps/web/.next"
-[ -d "$BUILD" ] || environment_fault "no web build output at $BUILD; run the developer gate 'pnpm --filter @salon/web build' first"
+BUILD="$WEB_BUILD_DIR"
+[ -d "$BUILD" ] || environment_fault "no QA-instance web build output at $BUILD; build it with 'SALON_LOCAL_INSTANCE=qa infra/scripts/local-up.sh' or the developer gate 'SALON_WEB_DIST_DIR=$WEB_DIST_DIR pnpm --filter @salon/web build'"
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 
@@ -14,8 +15,8 @@ trap 'rm -rf "$WORK"' EXIT
 PATTERNS="$WORK/patterns"
 : >"$PATTERNS"; chmod 600 "$PATTERNS"
 for file in identity-keys operator-keys billing-keys export-keys support-keys; do
-  path="$PRODUCT_ROOT/.local/$file.properties"
-  [ -f "$path" ] || { [ "$file" = billing-keys ] && continue; environment_fault "retained key file .local/$file.properties is absent"; }
+  path="$(key_file "${file%-keys}")"
+  [ -f "$path" ] || { [ "$file" = billing-keys ] && continue; environment_fault "retained key file ${path#"$PRODUCT_ROOT"/} is absent"; }
   sed -n 's/^[^=#]*=[[:space:]]*\([0-9a-fA-F]\{32,\}\)[[:space:]]*$/\1/p' "$path" >>"$PATTERNS"
 done
 KEY_COUNT="$(wc -l <"$PATTERNS" | tr -d ' ')"

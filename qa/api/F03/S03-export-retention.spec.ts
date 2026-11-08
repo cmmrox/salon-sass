@@ -22,6 +22,7 @@ import {
   type ExportView, type Operator, type OperatorActor, type SalonDetail, type TestClock,
 } from '../../shared/operator';
 import { rowsOf, unzip } from '../../shared/zip';
+import { ports } from '../../shared/env';
 
 const id = (n: number) => `TC-F03-S03-${String(n).padStart(3, '0')}`;
 const sha256 = (bytes: Buffer | string) => createHash('sha256').update(bytes).digest('hex');
@@ -85,7 +86,7 @@ const SECRET_COLUMN = /hash|secret|payload|encrypted|lease_token|credential/;
 async function exportToken(operator: Operator, ownerEmail: string): Promise<string> {
   const [email] = await operator.emailsOfKind(ownerEmail, 'export.ready', 1);
   expect(email.links.length, 'one download link').toBe(1);
-  const match = /^http:\/\/localhost:3100\/exports#([A-Za-z0-9_-]{43})$/.exec(email.links[0]);
+  const match = new RegExp(`^http://localhost:${ports.web}/exports#([A-Za-z0-9_-]{43})$`).exec(email.links[0]);
   expect(match, `the link is the platform-host page with a 256-bit token in the fragment: ${email.links[0].replace(/#.*/, '#…')}`).not.toBeNull();
   return match![1];
 }

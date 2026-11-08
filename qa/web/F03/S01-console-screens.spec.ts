@@ -42,7 +42,7 @@ async function seeded(operator: Operator, role: 'OPERATOR_ADMIN' | 'OPERATOR_SUP
 test(`${id(32)} A keyboard user signs in, defines a plan, creates a salon and inspects it`, async ({ browser, operator, clock }) => {
   test.setTimeout(120_000);
   await clock.set(afterNewestPlan());
-  const account = operatorAccount('OPERATOR_ADMIN', false);
+  const account = operatorAccount('OPERATOR_ADMIN', false); // extra: a first-time operator who enrolls MFA on screen
   await operator.seed(account);
   const context = await consoleContext(browser);
   const page = await context.newPage();
