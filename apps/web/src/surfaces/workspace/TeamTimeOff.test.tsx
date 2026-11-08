@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, isInaccessible, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderWithMessages } from '@test/render';
 import { chooseOption } from '@test/select';
@@ -108,9 +108,19 @@ const pick = async (control: string, date: string) => {
   fireEvent.click(screen.getByTestId(control));
   const calendar = await screen.findByTestId(`${control}-calendar`);
   const [, , day] = date.split('-');
+  // The first accessible, enabled day button that says the day. The buttons saying it are found by their text
+  // first: a role query over the whole month worked out the style of every day, which was most of a test's time.
   const button = within(calendar)
-    .getAllByRole('button')
-    .find((each) => each.textContent === String(Number(day)) && !each.hasAttribute('disabled'));
+    .queryAllByText(String(Number(day)))
+    .map((text) => text.closest('button'))
+    .find(
+      (each) =>
+        each !== null &&
+        calendar.contains(each) &&
+        each.textContent === String(Number(day)) &&
+        !each.hasAttribute('disabled') &&
+        !isInaccessible(each),
+    );
   fireEvent.click(button!);
 };
 const leaveFilled = async (first = '2026-11-12', last = '2026-11-14') => {
