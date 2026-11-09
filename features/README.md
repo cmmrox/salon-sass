@@ -39,4 +39,4 @@ requirement detail is in `qa/coverage.md`.
 | --- | --- | --- | --- | --- | --- | --- |
 | F07-S01 | Bookings, holds and booking states | api | complete | - | 0 | - |
 | F07-S02 | Availability and "No preference" assignment | api, web | complete | - | 0 | - |
-| F07-S03 | Staff booking screens | web | planned | - | 0 | **developer**: `stage-build F07-S03` |
+| F07-S03 | Staff booking screens | web | in-progress | - | 0 | **developer**: `stage-build F07-S03` |
