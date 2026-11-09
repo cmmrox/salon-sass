@@ -568,6 +568,33 @@ describe('date changes (AC-7)', () => {
     expect(within(rows[0]!).getByTestId('change-remove')).toHaveAccessibleName(/Remove the change on/);
   });
 
+  it("prints the rows in the short day form, without the year within the salon's year (F06-S02 AC-17)", async () => {
+    answers['team-schedule'] = () =>
+      Response.json(schedule({ dateChanges: [change('2026-11-05'), change('2027-01-05')] }));
+    render();
+    await openChanges();
+
+    const [thisYear, nextYear] = screen.getAllByTestId('change-row');
+    expect(within(thisYear!).getByTestId('change-row-date').textContent).toBe('Thu, Nov 5');
+    expect(within(thisYear!).getByTestId('change-remove')).toHaveAccessibleName('Remove the change on Thu, Nov 5');
+    expect(within(nextYear!).getByTestId('change-row-date').textContent).toBe('Tue, Jan 5, 2027');
+    expect(within(nextYear!).getByTestId('change-remove')).toHaveAccessibleName(
+      'Remove the change on Tue, Jan 5, 2027',
+    );
+  });
+
+  it("keeps the year on the form's date button (F06-S02 AC-17)", async () => {
+    render();
+    await openChanges();
+    fireEvent.click(screen.getByTestId('change-add'));
+    await screen.findByTestId('change-form');
+    fireEvent.click(screen.getByTestId('change-date'));
+    const calendar = await screen.findByTestId('change-calendar');
+    fireEvent.click(calendar.querySelector('button[aria-label*="November 5,"]')!);
+
+    await waitFor(() => expect(screen.getByTestId('change-date').textContent).toBe('Thu, Nov 5, 2026'));
+  });
+
   it('asks for a date before saving', async () => {
     render();
     await openChanges();
