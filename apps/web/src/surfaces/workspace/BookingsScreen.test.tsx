@@ -462,6 +462,89 @@ describe('New appointment (F07-S03 AC-4 to AC-6)', () => {
     await waitFor(() => expect(screen.queryByTestId('new-appointment')).toBeNull());
   });
 
+  /** An answer the test holds back until it lets it go, as a slow connection does. */
+  function heldBack() {
+    let letGo!: () => void;
+    const gate = new Promise<void>((resolve) => (letGo = resolve));
+    return {
+      answer: (respond: () => Response) => async () => {
+        await gate;
+        return respond();
+      },
+      letGo: async () => {
+        letGo();
+        // The answer reaches the screen, and whatever it starts (a release) is sent.
+        await act(async () => new Promise((resolve) => setTimeout(resolve, 20)));
+      },
+    };
+  }
+  async function pick(sheet: HTMLElement, field: string, index: number) {
+    fireEvent.keyDown(within(sheet).getByTestId(`new-appointment-${field}`), { key: 'Enter' });
+    fireEvent.keyDown((await screen.findAllByTestId(`new-appointment-${field}-option`))[index]!, { key: 'Enter' });
+  }
+  async function pickDay(sheet: HTMLElement, day: string) {
+    fireEvent.click(within(sheet).getByTestId('new-appointment-day'));
+    const calendar = await screen.findByTestId('new-appointment-calendar');
+    fireEvent.click(
+      within(calendar)
+        .getAllByRole('button')
+        .find((each) => each.textContent === day)!,
+    );
+  }
+  const CHANGES: [string, (sheet: HTMLElement) => Promise<void>][] = [
+    ['the day', (sheet) => pickDay(sheet, '17')],
+    ['the service', (sheet) => pick(sheet, 'service', 1)],
+    ['the variant', (sheet) => pick(sheet, 'variant', 1)],
+    [
+      'the professional',
+      (sheet) => chooseOption(within(sheet).getByTestId('new-appointment-professional'), 'Ishara Fonseka'),
+    ],
+    [
+      'the customer’s name',
+      async (sheet) =>
+        void fireEvent.change(within(sheet).getByTestId('new-appointment-name'), { target: { value: 'Ruwini F' } }),
+    ],
+    ['the source', (sheet) => chooseOption(within(sheet).getByTestId('new-appointment-source'), 'WhatsApp')],
+  ];
+
+  it.each(CHANGES)(
+    'free times answered after %s changed are not shown for the changed form (BUG-F07-002)',
+    async (field, changeIt) => {
+      const late = heldBack();
+      answers['booking-availability'] = late.answer(() => Response.json(FREE));
+      const sheet = await openDesk();
+      await fillCustomer(sheet);
+      // The variant has to be offered before it can change: the service with variants, chosen before the search.
+      if (field === 'the variant') await pick(sheet, 'service', 1);
+      fireEvent.click(within(sheet).getByTestId('new-appointment-find'));
+      await waitFor(() => expect(sent('booking-availability')).toHaveLength(1));
+      await changeIt(sheet);
+      await late.letGo();
+      expect(within(sheet).queryAllByTestId('new-appointment-time')).toEqual([]);
+      expect(within(sheet).queryByTestId('new-appointment-times-intro')).toBeNull();
+    },
+  );
+
+  it('an earlier search answered last does not replace the times of the search after it (BUG-F07-002)', async () => {
+    const late = heldBack();
+    const LATER = { date: '2086-06-17', reason: null, times: [{ ...FREE.times[0]!, time: '11:00' }] };
+    answers['booking-availability'] = (call) =>
+      call.query.get('date') === '2086-06-15' ? late.answer(() => Response.json(FREE))() : Response.json(LATER);
+    const sheet = await openDesk();
+    await fillCustomer(sheet);
+    fireEvent.click(within(sheet).getByTestId('new-appointment-find'));
+    await pickDay(sheet, '17');
+    fireEvent.click(within(sheet).getByTestId('new-appointment-find'));
+    await within(sheet).findAllByTestId('new-appointment-time');
+    await late.letGo();
+    expect(
+      within(sheet)
+        .getAllByTestId('new-appointment-time')
+        .map((chip) => chip.textContent),
+    ).toEqual(['11:00 · Ishara']);
+    expect(within(sheet).getByTestId('new-appointment-times-intro')).toHaveTextContent(/(17 Jun|Jun 17), 2086/);
+  });
+
   it('rules never saved: the words, and the link only for those who may set them', async () => {
     answers['booking-availability'] = problem('rules_not_set');
     for (const canSetRules of [true, false]) {
