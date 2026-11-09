@@ -615,6 +615,17 @@ describe('the settings user’s booking rules actions (F04-S04)', () => {
     expect(JSON.parse(save!.body)).toEqual({ version: 2, rules });
   });
 
+  it('passes on the hold length and the "No preference" strategy, and leaves them out when the browser did (F07-S02)', async () => {
+    answer = (_method, path) => me(path, { ...kept, version: 3, rules });
+    const chosen = { ...rules, holdMinutes: 20, noPreference: 'most_booked' };
+    await run('POST', 'staff', 'booking-rules-save', { version: 2, rules: chosen });
+    expect(JSON.parse(apiCalls()[0]!.body)).toEqual({ version: 2, rules: chosen });
+
+    await run('POST', 'staff', 'booking-rules-save', { version: 3, rules });
+    expect(JSON.parse(apiCalls()[1]!.body).rules).not.toHaveProperty('holdMinutes');
+    expect(JSON.parse(apiCalls()[1]!.body).rules).not.toHaveProperty('noPreference');
+  });
+
   it('hands on the API’s refusal with its code and field names', async () => {
     answer = (_method, path) =>
       path === '/api/v1/identity/me'

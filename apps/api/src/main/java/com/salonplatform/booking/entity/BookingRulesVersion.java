@@ -3,6 +3,7 @@ package com.salonplatform.booking.entity;
 import com.salonplatform.booking.BookingRules;
 import com.salonplatform.booking.BookingTerms;
 import com.salonplatform.booking.DepositRule;
+import com.salonplatform.booking.NoPreference;
 import com.salonplatform.booking.Rescheduling;
 import com.salonplatform.booking.Retention;
 import jakarta.persistence.Column;
@@ -100,6 +101,12 @@ public class BookingRulesVersion {
     @Column(name = "reschedule_until_hours", updatable = false)
     private Integer rescheduleUntilHours;
 
+    @Column(name = "hold_minutes", nullable = false, updatable = false)
+    private int holdMinutes;
+
+    @Column(name = "no_preference", nullable = false, updatable = false)
+    private String noPreference;
+
     @JdbcTypeCode(SqlTypes.ARRAY)
     @Column(name = "changed_fields", nullable = false, updatable = false)
     private String[] changedFields;
@@ -160,6 +167,8 @@ public class BookingRulesVersion {
             }
             case Rescheduling.Unlimited unlimited -> row.rescheduleUntilHours = unlimited.untilHours();
         }
+        row.holdMinutes = terms.holdMinutes();
+        row.noPreference = terms.noPreference().value();
         row.changedFields = changedFields.toArray(String[]::new);
         row.createdBy = createdBy;
         row.createdAt = at;
@@ -190,7 +199,9 @@ public class BookingRulesVersion {
                 freeCancellationHours,
                 retention(lateCancellationKind, lateCancellationPercent),
                 retention(noShowKind, noShowPercent),
-                reschedule);
+                reschedule,
+                holdMinutes,
+                NoPreference.parse(noPreference).orElseThrow());
     }
 
     /** This version as other modules read it. */

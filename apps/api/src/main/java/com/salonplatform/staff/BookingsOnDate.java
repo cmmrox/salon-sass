@@ -9,10 +9,9 @@ import java.util.UUID;
  * so the screen can list them (STF-04, decision 087). Nothing is ever cancelled or moved because of the
  * answer: the bookings are kept, and the salon deals with each one.
  *
- * <p>Declared by {@code staff} and implemented by {@code booking} in F07, so that dependencies point one way
- * ({@code booking} depends on {@code staff}). Until then {@code staff}'s own implementation answers that no
- * booking is affected. F07 registers its implementation as the {@code @Primary} bean of this type, which
- * replaces that one with no change to {@code staff}. This is the contract F07 implements.
+ * <p>Declared by {@code staff} and implemented by {@code booking} (F07-S01), so that dependencies point one way
+ * ({@code booking} depends on {@code staff}). A live booking here is one still expected: a hold that has not run
+ * out, a booking waiting for its payment, confirmed, arrived or in service.
  *
  * <p>The salon is the request's, never a parameter. An implementation opens its own read-only tenant
  * transaction and never joins the caller's; {@code staff} calls it outside its own transactions. Bookings

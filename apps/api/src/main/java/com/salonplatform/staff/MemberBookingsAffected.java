@@ -12,9 +12,9 @@ import java.util.UUID;
  * to the change (STF-02, decision 102), and those in a period of their leave or blocked time (STF-03, STF-05, decision
  * 104). Nothing is ever moved or cancelled because of the answer: the bookings are kept, and the salon deals with each one.
  *
- * <p>Declared here and <strong>implemented by {@code booking} in F07</strong>, so that dependencies point one way
- * ({@code booking} depends on {@code staff}; decision 087's pattern). Until then {@code staff}'s own implementation
- * answers that no booking is affected; F07 deletes that implementation when {@code booking} provides its own.
+ * <p>Declared here and implemented by {@code booking} (F07-S01), so that dependencies point one way ({@code booking}
+ * depends on {@code staff}; decision 087's pattern). A booking listed is one still expected: a hold that has not run
+ * out, a booking waiting for its payment, confirmed, arrived or in service.
  *
  * <p>A change's questions are asked after the change has committed, since nothing depends on the answer. The salon is the
  * request's, never a parameter. An implementation opens its own read-only tenant transaction and never joins the

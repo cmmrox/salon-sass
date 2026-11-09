@@ -16,10 +16,10 @@ public record PublicBookingRulesResponse(
         @Schema(pattern = "^[A-Z]{3}$", description = "The ISO 4217 currency of the amounts.")
         String currency,
 
-        BookingRulesResponse rules) {
+        PublicBookingRuleTermsResponse rules) {
 
     public static PublicBookingRulesResponse from(BookingRules rules) {
         return new PublicBookingRulesResponse(
-                rules.versionId(), rules.currency(), BookingRulesResponse.from(rules.terms()));
+                rules.versionId(), rules.currency(), PublicBookingRuleTermsResponse.from(rules.terms()));
     }
 }

@@ -269,6 +269,11 @@ salon.staff:
     # Photos decoded at once per instance; one more waits up to two seconds, then is refused 503.
     concurrent-decodes: ${SALON_STAFF_IMAGE_CONCURRENT_DECODES:2}
 
+# Bookings (F07-S01): a customer's mobile number is checked for this region, stored in E.164 and shown in its national
+# format (decision 084). It follows branding's region unless it is set on its own.
+salon.booking:
+  phone-region: ${SALON_BOOKING_PHONE_REGION:${SALON_BRANDING_PHONE_REGION:LK}}
+
 # Service photos (F05-S01, decision 093): the same checks as brand images, with the catalogue's own limits. A
 # larger file within the request limit (spring.servlet.multipart, 10 MB) is a field error; beyond it, 413.
 salon.catalogue:

@@ -25,6 +25,12 @@ public final class RuleOptions {
 
     public static final List<Integer> RESCHEDULE_UNTIL_HOURS = List.of(2, 6, 12, 24);
 
+    /** How long a hold lasts (F07-S02). */
+    public static final List<Integer> HOLD_MINUTES = List.of(5, 10, 15, 20, 30);
+
+    /** A hold's length for a salon that has not chosen one (BKG-04: 10 minutes by default). */
+    public static final int DEFAULT_HOLD_MINUTES = 10;
+
     public static final int MIN_PERCENT = 1;
 
     public static final int MAX_PERCENT = 100;

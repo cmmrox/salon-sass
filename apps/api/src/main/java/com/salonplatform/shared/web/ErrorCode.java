@@ -42,6 +42,14 @@ public enum ErrorCode {
     SUPPORT_READ_ONLY("support_read_only", "A support session can read the workspace but cannot change anything."),
     /** The operator already has an open support session for this salon (F03-S04). */
     SUPPORT_SESSION_ACTIVE("support_session_active", "You already have an open support session for this salon."),
+    /** Another live hold or booking of the same professional overlaps this time (F07-S01, BKG-05). */
+    SLOT_TAKEN("slot_taken", "This time has just been taken. Choose another time."),
+    /** The time cannot be booked for this professional and service; the detail says why (F07-S01). */
+    SLOT_UNAVAILABLE("slot_unavailable", "This time cannot be booked."),
+    /** The hold ran out before it was confirmed, and its time is free for others (F07-S01, BKG-04). */
+    HOLD_EXPIRED("hold_expired", "This hold has run out. Choose the time again."),
+    /** The salon has never saved its booking rules, so no booking can keep them (F07-S01, decision 089). */
+    RULES_NOT_SET("rules_not_set", "Save the salon's booking rules before booking."),
     BAD_REQUEST("bad_request", "The request could not be understood."),
     NOT_FOUND("not_found", "The requested resource was not found."),
     METHOD_NOT_ALLOWED("method_not_allowed", "The method is not allowed for this resource."),

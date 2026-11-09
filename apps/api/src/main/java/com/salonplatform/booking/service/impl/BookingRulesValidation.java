@@ -1,7 +1,9 @@
 package com.salonplatform.booking.service.impl;
 
 import static com.salonplatform.booking.domain.RuleOptions.BOOKING_HORIZON_DAYS;
+import static com.salonplatform.booking.domain.RuleOptions.DEFAULT_HOLD_MINUTES;
 import static com.salonplatform.booking.domain.RuleOptions.FREE_CANCELLATION_HOURS;
+import static com.salonplatform.booking.domain.RuleOptions.HOLD_MINUTES;
 import static com.salonplatform.booking.domain.RuleOptions.MAX_AMOUNT_UNITS;
 import static com.salonplatform.booking.domain.RuleOptions.MAX_PERCENT;
 import static com.salonplatform.booking.domain.RuleOptions.MAX_SAFE_MINOR;
@@ -15,6 +17,7 @@ import static com.salonplatform.booking.domain.RuleOptions.SLOT_INTERVAL_MINUTES
 
 import com.salonplatform.booking.BookingTerms;
 import com.salonplatform.booking.DepositRule;
+import com.salonplatform.booking.NoPreference;
 import com.salonplatform.booking.Rescheduling;
 import com.salonplatform.booking.Retention;
 import com.salonplatform.booking.domain.MinorUnits;
@@ -46,7 +49,10 @@ final class BookingRulesValidation {
         this.units = units;
     }
 
-    /** The rules, or 400 naming each field that broke a rule. */
+    /**
+     * The rules, or 400 naming each field that broke a rule. A hold length or strategy left out reads as the
+     * default; the save puts the current version's in its place ({@link #keepingUnsent}).
+     */
     static BookingTerms valid(RulesInput input, MinorUnits units) {
         BookingRulesValidation check = new BookingRulesValidation(units);
         BookingTerms terms = check.terms(input);
@@ -69,10 +75,45 @@ final class BookingRulesValidation {
         Retention late = retention(RULES + ".lateCancellation", input.lateCancellation(), true);
         Retention noShow = retention(RULES + ".noShow", input.noShow(), false);
         Rescheduling reschedule = reschedule(input.reschedule());
+        Integer hold = input.holdMinutes() == null
+                ? Integer.valueOf(DEFAULT_HOLD_MINUTES)
+                : oneOf(RULES + ".holdMinutes", input.holdMinutes(), HOLD_MINUTES);
+        NoPreference strategy = noPreference(input.noPreference());
         if (!errors.isEmpty()) {
             return null;
         }
-        return new BookingTerms(interval, notice, horizon, deposit, free, late, noShow, reschedule);
+        return new BookingTerms(interval, notice, horizon, deposit, free, late, noShow, reschedule, hold, strategy);
+    }
+
+    /**
+     * The terms a save keeps: those sent, with the hold length and the strategy of {@code before} where the request
+     * left them out. With no {@code before} (a first save) the defaults stand.
+     */
+    static BookingTerms keepingUnsent(BookingTerms sent, RulesInput input, BookingTerms before) {
+        if (before == null) {
+            return sent;
+        }
+        return new BookingTerms(
+                sent.slotIntervalMinutes(),
+                sent.minimumNoticeMinutes(),
+                sent.bookingHorizonDays(),
+                sent.deposit(),
+                sent.freeCancellationHours(),
+                sent.lateCancellation(),
+                sent.noShow(),
+                sent.reschedule(),
+                input.holdMinutes() == null ? before.holdMinutes() : sent.holdMinutes(),
+                input.noPreference() == null ? before.noPreference() : sent.noPreference());
+    }
+
+    private NoPreference noPreference(String value) {
+        if (value == null) {
+            return NoPreference.LEAST_BOOKED;
+        }
+        return NoPreference.parse(value).orElseGet(() -> {
+            errors.add(new FieldProblem(RULES + ".noPreference", "must be least_booked or most_booked"));
+            return null;
+        });
     }
 
     private DepositRule deposit(DepositInput input) {

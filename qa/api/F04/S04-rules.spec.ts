@@ -13,9 +13,10 @@
 import { readOnlySalon } from '../../shared/billing';
 import {
   ALLOWED, BookingRules, PUBLIC_RULES, RULE_NAMES, RULES_HISTORY, RULES_SETTINGS, RULES_TABLE, SUGGESTED,
-  distinct, fieldErrors, refused, rules, rulesAudit, rulesSnapshot, stored, versionRow, versionRows,
+  distinct, fieldErrors, refused, ruleNames, rules, rulesAudit, rulesSnapshot, stored, storedPublic, versionRow, versionRows,
   type RulesInput,
 } from '../../shared/booking-rules';
+import { sorted } from '../../shared/openapi';
 import type { Identity, Role, Tokens } from '../../shared/identity';
 import { identitySql } from '../../shared/identity-storage';
 import {
@@ -59,7 +60,7 @@ test('TC-F04-S04-001 AC-1, AC-5: before the first save the public read is a JSON
     const saved = await book.save(salon, owner.tokens, SUGGESTED, 0);
     expect(saved).toEqual({ version: 1, rules: stored(SUGGESTED), currency: 'LKR' });
     const pub = await book.published(salon);
-    expect(pub.rules, 'the next public read returns the saved rules').toEqual(stored(SUGGESTED));
+    expect(pub.rules, 'the next public read returns the saved rules').toEqual(storedPublic(SUGGESTED));
     expect(pub.currency).toBe('LKR');
     const [entry] = (await book.history(salon, owner.tokens)).items;
     expect(pub.versionId, 'the public read names the version just made').toBe(entry.versionId);
@@ -125,11 +126,11 @@ test('TC-F04-S04-003 AC-3: every deposit, cancellation, no-show and rescheduling
     await test.step(row.label, async () => {
       let current = await book.settings(alpha, manager.tokens);
       // alpha keeps its rules between runs: move off a fixed row's values first, so its save is never an identical one.
-      if (JSON.stringify(current.rules) === JSON.stringify(stored(row.input))) current = await book.save(alpha, manager.tokens, distinct(), current.version);
+      if (JSON.stringify(sorted(current.rules)) === JSON.stringify(sorted(stored(row.input)))) current = await book.save(alpha, manager.tokens, distinct(), current.version);
       const saved = await book.save(alpha, manager.tokens, row.input, current.version);
       expect(saved.rules, `${row.label}: saved as sent`).toEqual(stored(row.input));
       const pub = await book.published(alpha);
-      expect(pub.rules, `${row.label}: served publicly as saved (contract-checked)`).toEqual(stored(row.input));
+      expect(pub.rules, `${row.label}: served publicly as saved (contract-checked)`).toEqual(storedPublic(row.input));
       expect(pub.currency).toBe('LKR');
       if (row.columns) {
         expect(identitySql(`SELECT coalesce(deposit_percent::text, '-') || ' ' || coalesce(deposit_cap_minor::text, '-') || ' ' || coalesce(deposit_amount_minor::text, '-')
@@ -194,7 +195,7 @@ test('TC-F04-S04-005 AC-5: each save makes a new current version and leaves the 
   const saved = await book.save(salon, owner.tokens, second, first.version);
   expect(saved.version, 'the next version').toBe(2);
   const pub = await book.published(salon);
-  expect(pub.rules, 'the new version is current').toEqual(stored(second));
+  expect(pub.rules, 'the new version is current').toEqual(storedPublic(second));
   expect(pub.versionId, 'with a new version id').not.toBe(v1);
   expect(versionRow(salon.id, v1), 'version 1 is unchanged').toBe(v1Row);
   const history = await book.history(salon, owner.tokens);
@@ -213,7 +214,7 @@ test('TC-F04-S04-005 AC-5: each save makes a new current version and leaves the 
     await refused(await book.saveRaw(salon, owner.tokens, 0, distinct()), 409, 'conflict', 'save as if never saved');
     await refused(await book.saveRaw(salon, owner.tokens, 7, distinct()), 409, 'conflict', 'a version from the future');
     expect(rulesSnapshot(salon.id), 'nothing changed').toBe(before);
-    expect((await book.published(salon)).rules, 'the current rules are as they were').toEqual(stored(second));
+    expect((await book.published(salon)).rules, 'the current rules are as they were').toEqual(storedPublic(second));
   });
 });
 
@@ -276,7 +277,7 @@ test('TC-F04-S04-008 AC-7: the history lists each version newest first with its 
     expect(Date.parse(item.createdAt)).toBeGreaterThanOrEqual(Date.parse(t0) - 1000);
     expect(Date.parse(item.createdAt)).toBeLessThanOrEqual(Date.parse(t1) + 1000);
   }
-  expect([...history.items[2].changedFields].sort(), 'the first version: every rule').toEqual([...RULE_NAMES].sort());
+  expect([...history.items[2].changedFields].sort(), 'the first version: every rule').toEqual([...ruleNames()].sort());
   expect([...history.items[1].changedFields].sort(), 'the second: the deposit and rescheduling').toEqual(['deposit', 'reschedule']);
   expect(history.items[0].changedFields, 'the third: the start times').toEqual(['slotIntervalMinutes']);
   await test.step('pages', async () => {
@@ -345,8 +346,8 @@ test('TC-F04-S04-010 AC-8: another salon\'s Manager gets "not found" from every 
     }
   });
   await test.step('each public read and history is its own salon\'s', async () => {
-    expect(alphaPub.rules).toEqual(stored(alphaRules));
-    expect(betaPub.rules).toEqual(stored(betaRules));
+    expect(alphaPub.rules).toEqual(storedPublic(alphaRules));
+    expect(betaPub.rules).toEqual(storedPublic(betaRules));
     expect(alphaPub.versionId).not.toBe(betaPub.versionId);
     const alphaHistory = await book.history(alpha, alphaManager.tokens, '?size=100');
     const betaHistory = await book.history(beta, betaManager.tokens, '?size=100');
@@ -369,7 +370,7 @@ test('TC-F04-S04-010 AC-8: another salon\'s Manager gets "not found" from every 
     expect(latest.createdByLabel, 'the latest version names alpha\'s Manager').toBe(alphaManager.account.email);
   });
   expect(rulesSnapshot(beta.id), 'beta changed in no way').toBe(betaBefore);
-  expect((await book.published(beta)).rules, 'beta\'s public rules are its own still').toEqual(stored(betaRules));
+  expect((await book.published(beta)).rules, 'beta\'s public rules are its own still').toEqual(storedPublic(betaRules));
 });
 
 test('TC-F04-S04-011 AC-8: with no tenant context the booking rules table returns no rows to the application role, and a salon\'s context shows only its own', async ({ identity }) => {
@@ -417,7 +418,7 @@ test('TC-F04-S04-013 AC-8: a suspended salon answers 403 salon_suspended on ever
     const now = await identity.login(salon, owner.account);
     expect((await book.settings(salon, now.tokens)).rules, 'the rules are still readable').toEqual(stored(SUGGESTED));
     expect((await book.history(salon, now.tokens)).total).toBe(1);
-    expect((await book.published(salon)).rules, 'customers still read them').toEqual(stored(SUGGESTED));
+    expect((await book.published(salon)).rules, 'customers still read them').toEqual(storedPublic(SUGGESTED));
     const before = rulesSnapshot(salon.id);
     await refused(await book.saveRaw(salon, now.tokens, 1, distinct()), 403, 'salon_read_only', 'read-only save');
     expect(rulesSnapshot(salon.id), 'nothing changed').toBe(before);

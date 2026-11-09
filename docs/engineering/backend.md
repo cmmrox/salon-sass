@@ -176,6 +176,14 @@ signature:
   in-process hook for others to implement, as `platform.inprocess.SalonBootstrapStep` is called in
   the transaction that provisions a salon so each module seeds its defaults (decision 094). If its module is ever
   extracted, the contract becomes an event with a compensating action, not a remote call.
+- A module that needs an answer from a module that depends on it declares the interface in its own
+  root package for that one module to implement, so dependencies still point one way (decision 087):
+  `staff.BookingsOnDate`, `staff.UpcomingMemberBookings`, `staff.MemberBookingsAffected`,
+  `catalogue.UpcomingServiceBookings` and `catalogue.ServiceBookingCounts` are implemented by
+  `booking`. `booking.Availability` gives the free times for a service on a date, with a STAFF or
+  CUSTOMER audience (its Javadoc states each audience's rules), for F09, F10 and F15 (F07-S02). The architecture rule names each such interface with the one module allowed to
+  implement it; any other module's interface implemented by a `@Service` is still refused
+  (decision 109).
 - A state change that another module reacts to is an event (next section), not a call into that
   module.
 - No `@HttpExchange` or other HTTP annotation on a provided interface. On extraction, the calling
@@ -221,7 +229,7 @@ signature:
 
 - Every table belongs to exactly one module, declared in the ownership map that the architecture
   tests read, and only that module's code and migrations touch it. A table created from CR-021 on is
-  named with its module's prefix (`catalogue_service`, `booking_hold`); existing tables keep their
+  named with its module's prefix (`catalogue_service`, `booking_appointment`); existing tables keep their
   names, because a rename breaks the rule that a migration works while the previous version runs.
 - No foreign key crosses modules, except `tenant_id` to the platform's tenant. Another module's row
   is held as its id.
@@ -397,11 +405,47 @@ change, and a stage leaves the code it touches meeting them.
 
 ## Booking integrity
 
-- A hold and a booking are one table with a state. An exclusion constraint forbids two active rows
-  for the same tenant and professional with overlapping time ranges.
-- The loser of a race gets the constraint violation, which the use case turns into `slot_taken`.
-  Do not "check availability then insert" as the protection; the check is only for a good message.
-- A hold has an expiry. Availability ignores an expired hold immediately; a job removes it later.
+- A hold and a booking are one table, `booking_appointment`, with a state; its history is
+  `booking_state_change`, one row per change, the placing included. The time a booking occupies
+  its professional is a `tstzmultirange` (`occupied`) of the segments that occupy them (active and
+  buffer; processing left out), adjacent ones merged, half-open, so bookings that only touch are both
+  kept. The exclusion constraint `booking_appointment_no_overlap` is
+  `EXCLUDE USING gist (tenant_id WITH =, member_id WITH =, occupied WITH &&)` over the live states
+  (held, pending payment, confirmed, arrived, in service, completed); `btree_gist` gives the uuid
+  columns their equality (F07-S01).
+- The loser of a race gets the constraint violation, which the use case turns into `slot_taken`:
+  only SQLSTATE 23P01 on that constraint is translated. Do not "check availability then insert" as
+  the protection; the checks before inserting never look at other bookings and exist only for a good
+  message.
+- A hold has an expiry. A hold past its expiry is still `held` in its row, so the transaction about
+  to need the time (placing a hold, undoing a no-show) first ends that professional's run-out holds
+  over the time (state `expired`, history by the system), flushes, then inserts; availability and
+  every read ignore a run-out hold at once. The `booking-hold-expiry` job ends the rest every minute,
+  salon by salon, never one with a payment in progress. An ended hold (`released` or `expired`) is
+  kept as a row, never shown (404) and occupying nothing, so its history exists; the application
+  never deletes a booking row.
+- **Guard windows** (decision 094 (f)): `shared.persistence.TransactionLocks.hold(purpose, subject)`
+  takes `pg_advisory_xact_lock` on `<purpose>/<salon id>/<subject id>` and is refused outside a
+  writable transaction. The purposes are constants on the declaring interfaces:
+  `UpcomingMemberBookings.GUARD_LOCK` (keyed by member) and `UpcomingServiceBookings.GUARD_LOCK`
+  (keyed by service). Placing a hold, and undoing a no-show, lock the member, then the service, and
+  check again inside the transaction that the service is listed and the member is on the team and
+  performs it. Removing a member, a team save that takes services away, and deleting a service take
+  the same lock after their own checks and ask the booking contract again inside their transaction.
+  Whichever goes second sees the first. The re-ask opens its own read transaction, so it holds a
+  second connection while the lock is held; these are rare admin actions.
+- A hold lasts the `holdMinutes` of the booking rules version current when it is placed; a rules
+  change never shortens a hold already placed. Free times are worked out by one pure calculation
+  (`booking.domain.FreeTimes`) from the opening day, each eligible professional's working windows,
+  their occupied ranges (live bookings and unexpired holds, buffers included, processing left
+  out), the service's segments, the slot interval counted from local midnight, the clock and the
+  audience; a local time the clocks skip is never offered. A "No preference" hold (`memberId` null
+  or left out) tries, in the strategy's order, each professional the calculation finds free at that
+  start, each in its own transaction, so the constraint still decides; the booking records that it
+  was `assigned`, for reports (decision 110).
+- The booking keeps the names of its professional, service and variant as they were when it was
+  placed, so a list needs no read of another module per row and a rename never changes an existing
+  booking.
 - Confirming a payment and converting the hold happen in one transaction, deliberately across
   `payment` and `booking` through an in-process-only contract. That transaction writes a
   `BookingConfirmed` event to the outbox; `notification` schedules the messages when it consumes
@@ -422,7 +466,9 @@ change, and a stage leaves the code it touches meeting them.
   it through `SalonBranches` (decision 083, `docs/architecture/multi-tenancy.md`, "Adding a table").
 - Phone numbers are stored in E.164 and checked with libphonenumber against the region in
   configuration (`salon.branding.phone-region`, `LK` by default); screens show the national format
-  (decision 084, NFR-13). A WhatsApp number must be a mobile number of that region.
+  (decision 084, NFR-13). A WhatsApp number must be a mobile number of that region. `booking` reads
+  its own `salon.booking.phone-region`, which defaults to the branding region, for a customer's
+  mobile on a booking (F07-S01).
 
 ## Health and service metadata
 

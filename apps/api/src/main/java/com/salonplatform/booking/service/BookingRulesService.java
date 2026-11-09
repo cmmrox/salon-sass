@@ -13,7 +13,12 @@ import java.util.UUID;
  */
 public interface BookingRulesService {
 
-    /** The rules as a request sends them, validated here. Wrappers, so that a missing value is told apart. */
+    /**
+     * The rules as a request sends them, validated here. Wrappers, so that a missing value is told apart.
+     * {@code holdMinutes} and {@code noPreference} (F07-S02) may be left out: the save then keeps the current
+     * version's, or 10 minutes and {@code least_booked} on a first save, so a client written before them never
+     * changes them by saving.
+     */
     record RulesInput(
             Integer slotIntervalMinutes,
             Integer minimumNoticeMinutes,
@@ -22,7 +27,9 @@ public interface BookingRulesService {
             Integer freeCancellationHours,
             RetentionInput lateCancellation,
             RetentionInput noShow,
-            RescheduleInput reschedule) {}
+            RescheduleInput reschedule,
+            Integer holdMinutes,
+            String noPreference) {}
 
     /** {@code none}, {@code percentage} with {@code percent} and {@code capMinor}, or {@code amount}. */
     record DepositInput(String kind, Integer percent, Long capMinor, Long amountMinor) {}

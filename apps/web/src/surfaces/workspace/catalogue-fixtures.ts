@@ -101,6 +101,7 @@ export const RULES: PublicBookingRules = {
     lateCancellation: { kind: 'deposit' },
     noShow: { kind: 'deposit' },
     reschedule: { limit: 2, untilHours: 24 },
+    holdMinutes: 10,
   },
 };
 

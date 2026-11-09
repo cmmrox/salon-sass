@@ -19,6 +19,8 @@ describe('the Booking rules form (F04-S04)', () => {
       slotIntervalMinutes: 15,
       minimumNoticeMinutes: 60,
       bookingHorizonDays: 60,
+      holdMinutes: 10,
+      noPreference: 'least_booked',
       deposit: { kind: 'percentage', percent: 20, capMinor: 200_000 },
       freeCancellationHours: 24,
       lateCancellation: { kind: 'deposit' },
@@ -33,6 +35,8 @@ describe('the Booking rules form (F04-S04)', () => {
       slotIntervalMinutes: 30,
       minimumNoticeMinutes: 0,
       bookingHorizonDays: 180,
+      holdMinutes: 20,
+      noPreference: 'most_booked' as const,
       deposit: { kind: 'amount' as const, amountMinor: 150_000 },
       freeCancellationHours: 48,
       lateCancellation: { kind: 'share' as const, percent: 40 },
@@ -78,6 +82,9 @@ describe('the Booking rules form (F04-S04)', () => {
     const changedHidden = typeNumber(choose(formOf(null), 'deposit', 'none'), 'percent', '50');
     expect(sameRules(changedHidden.values, { ...SUGGESTED, deposit: 'none' })).toBe(true);
     expect(sameRules(SUGGESTED, { ...SUGGESTED, slotIntervalMinutes: 30 })).toBe(false);
+    // F07-S02: the hold length and the "No preference" strategy are rules like the others.
+    expect(sameRules(SUGGESTED, choose(formOf(null), 'holdMinutes', 5).values)).toBe(false);
+    expect(sameRules(SUGGESTED, choose(formOf(null), 'noPreference', 'most_booked').values)).toBe(false);
   });
 
   it('places the API’s refusal of an amount or a share beside its field', () => {

@@ -132,6 +132,7 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         ProblemDetail problem = ex.errors().isEmpty()
                 ? Problems.of(HttpStatusCode.valueOf(ex.status()), ex.code())
                 : Problems.invalid(HttpStatusCode.valueOf(ex.status()), ex.code(), ex.errors());
+        problem.setDetail(ex.detail());
         HttpHeaders headers = new HttpHeaders();
         headers.setCacheControl("no-store");
         if (ex.status() == 429)

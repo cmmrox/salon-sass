@@ -340,7 +340,8 @@ final class ModuleRules {
      * A service is an interface first, then its implementation (decision 067): every {@code @Service} class is
      * in an implementation package ({@code <module>.service.impl}, or {@code shared.<capability>.impl}) and
      * implements an interface of its own module, or the contract of {@code shared} it answers for
-     * {@code shared} (decision 057).
+     * {@code shared} (decision 057), an in-process contract, or one of the interfaces another module declares for it
+     * to implement ({@link #DECLARED_FOR_ANOTHER_MODULE}).
      */
     ArchRule servicesAreImplementationsOfTheirModulesInterfaces() {
         return classes()
@@ -442,6 +443,19 @@ final class ModuleRules {
     private static final String RESPONSE_MAPPER_CONFIG = "com.salonplatform.shared.mapping.ResponseMapperConfig";
 
     private static final String IN_PROCESS = "inprocess";
+
+    /**
+     * The interfaces a module declares in its root package for one other module to implement, so that dependencies
+     * point one way (decision 087's pattern): {@code staff} and {@code catalogue} ask about bookings, and {@code booking}
+     * answers (decisions 087, 093, 095, 100, 102; F07-S01). Named relative to the base package, each with the one
+     * module that may implement it; any other interface of another module is still refused.
+     */
+    private static final java.util.Map<String, String> DECLARED_FOR_ANOTHER_MODULE = java.util.Map.of(
+            "staff.BookingsOnDate", "booking",
+            "staff.UpcomingMemberBookings", "booking",
+            "staff.MemberBookingsAffected", "booking",
+            "catalogue.UpcomingServiceBookings", "booking",
+            "catalogue.ServiceBookingCounts", "booking");
 
     private String localHooks() {
         return base + "." + SHARED + ".local..";
@@ -558,7 +572,9 @@ final class ModuleRules {
                 .filter(type -> type.getPackageName().startsWith(base + "."))
                 .anyMatch(type -> moduleOf(type).equals(module)
                         || moduleOf(type).equals(SHARED)
-                        || type.getPackageName().endsWith("." + IN_PROCESS));
+                        || type.getPackageName().endsWith("." + IN_PROCESS)
+                        || module.equals(
+                                DECLARED_FOR_ANOTHER_MODULE.get(type.getName().substring(base.length() + 1))));
     }
 
     private static ArchCondition<JavaClass> beAContract() {

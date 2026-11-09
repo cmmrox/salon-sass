@@ -45,6 +45,9 @@ function rulesOf(value: unknown): RulesInput {
     lateCancellation: retention<RulesInput['lateCancellation']['kind']>(rules.lateCancellation),
     noShow: retention<RulesInput['noShow']['kind']>(rules.noShow),
     reschedule: { limit: numberOrNull(reschedule.limit), untilHours: numberOrNull(reschedule.untilHours) },
+    // F07-S02: left out when the browser leaves them out, so the API keeps the current version's.
+    ...(rules.holdMinutes === undefined ? {} : { holdMinutes: number(rules.holdMinutes) }),
+    ...(rules.noPreference === undefined ? {} : { noPreference: rules.noPreference as RulesInput['noPreference'] }),
   };
 }
 
