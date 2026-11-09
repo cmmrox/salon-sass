@@ -84,6 +84,7 @@ const render = ({ canManage = true, canBlock = true, readOnly = null }: Roles = 
   renderWithMessages(
     <TeamScreen
       kind="staff"
+      timeZone="Asia/Colombo"
       canManage={canManage}
       canBlock={canBlock}
       canSeeAccounts={canManage}
@@ -162,7 +163,7 @@ describe('the Leave tab (F06-S03 AC-1 to AC-3)', () => {
     await openTab('leave');
 
     const row = screen.getByTestId('leave-row');
-    expect(within(row).getByTestId('leave-row-days').textContent).toBe('Thu, Nov 12, 2026 to Sat, Nov 14, 2026');
+    expect(within(row).getByTestId('leave-row-days').textContent).toBe('Thu, Nov 12 to Sat, Nov 14');
     expect(within(row).getByTestId('leave-row-type').textContent).toBe('Annual leave');
     expect(within(row).getByTestId('leave-row-note').textContent).toBe('Family trip');
     expect(within(row).getByTestId('leave-row-resolve').textContent).toBe('2 bookings to resolve');
@@ -182,10 +183,32 @@ describe('the Leave tab (F06-S03 AC-1 to AC-3)', () => {
     await openTab('leave');
 
     const [one, two] = screen.getAllByTestId('leave-row');
-    expect(within(one!).getByTestId('leave-row-days').textContent).toBe('Thu, Nov 12, 2026');
+    expect(within(one!).getByTestId('leave-row-days').textContent).toBe('Thu, Nov 12');
     expect(within(one!).getByTestId('leave-row-resolve').textContent).toBe('1 booking to resolve');
     expect(within(two!).queryByTestId('leave-row-resolve')).toBeNull();
     expect(within(two!).queryByTestId('leave-row-note')).toBeNull();
+  });
+
+  it('writes the year on both ends of a period reaching into another year, and on its Remove (AC-16)', async () => {
+    answers['team-schedule'] = () =>
+      Response.json(
+        schedule({
+          leave: [
+            { ...sickLeave, id: 'a', firstDay: '2026-11-12', lastDay: '2026-11-14' },
+            { ...sickLeave, id: 'b', firstDay: '2026-12-30', lastDay: '2027-01-02' },
+            { ...sickLeave, id: 'c', firstDay: '2027-01-05', lastDay: '2027-01-05' },
+          ],
+        }),
+      );
+    render();
+    await openTab('leave');
+
+    const [thisYear, across, nextYear] = screen.getAllByTestId('leave-row');
+    expect(within(thisYear!).getByTestId('leave-remove')).toHaveAccessibleName(
+      'Remove leave, Thu, Nov 12 to Sat, Nov 14',
+    );
+    expect(within(across!).getByTestId('leave-row-days').textContent).toBe('Wed, Dec 30, 2026 to Sat, Jan 2, 2027');
+    expect(within(nextYear!).getByTestId('leave-row-days').textContent).toBe('Tue, Jan 5, 2027');
   });
 
   it('for a role without team.manage shows only the days, with nothing to change', async () => {
@@ -199,7 +222,7 @@ describe('the Leave tab (F06-S03 AC-1 to AC-3)', () => {
     await openTab('leave');
 
     const row = screen.getByTestId('leave-row');
-    expect(within(row).getByTestId('leave-row-days').textContent).toBe('Thu, Nov 12, 2026 to Sat, Nov 14, 2026');
+    expect(within(row).getByTestId('leave-row-days').textContent).toBe('Thu, Nov 12 to Sat, Nov 14');
     expect(within(row).queryByTestId('leave-row-type')).toBeNull();
     expect(within(row).queryByTestId('leave-row-note')).toBeNull();
     expect(within(row).queryByTestId('leave-remove')).toBeNull();
@@ -222,7 +245,7 @@ describe('the Leave tab (F06-S03 AC-1 to AC-3)', () => {
       { id: NIMALI, firstDay: '2026-11-12', lastDay: '2026-11-14', type: 'sick', note: 'Mine' },
     ]);
     expect(screen.queryByTestId('leave-form')).toBeNull();
-    expect(screen.getByTestId('leave-row-days').textContent).toBe('Thu, Nov 12, 2026 to Sat, Nov 14, 2026');
+    expect(screen.getByTestId('leave-row-days').textContent).toBe('Thu, Nov 12 to Sat, Nov 14');
     await waitFor(() => expect(calls.filter((call) => call.action === 'team-members').length).toBeGreaterThan(before));
   });
 
@@ -244,7 +267,7 @@ describe('the Leave tab (F06-S03 AC-1 to AC-3)', () => {
     await toastSays(words);
   });
 
-  it('asks for the days, then for their order, without asking the API', async () => {
+  it('asks for the days without asking the API', async () => {
     render();
     await openTab('leave');
     fireEvent.click(screen.getByTestId('leave-add'));
@@ -252,15 +275,65 @@ describe('the Leave tab (F06-S03 AC-1 to AC-3)', () => {
 
     fireEvent.click(screen.getByTestId('leave-save'));
     expect((await screen.findByTestId('leave-problem')).textContent).toContain('Choose the first and last day.');
-
-    await pick('leave-first', '2026-11-14');
-    await pick('leave-last', '2026-11-12');
-    fireEvent.click(screen.getByTestId('leave-save'));
-
-    expect((await screen.findByTestId('leave-problem')).textContent).toContain(
-      'The last day can’t be before the first.',
-    );
     expect(sent('team-leave-add')).toHaveLength(0);
+  });
+
+  const dayButton = (calendar: HTMLElement, name: string) =>
+    calendar.querySelector<HTMLButtonElement>(`button[aria-label*="${name}"]`)!;
+  /** The first day, in the month after today's. */
+  const pickFirstNextMonth = async (name: string) => {
+    fireEvent.click(screen.getByTestId('leave-first'));
+    const calendar = await screen.findByTestId('leave-first-calendar');
+    fireEvent.click(within(calendar).getByRole('button', { name: /next/i }));
+    await waitFor(() => expect(calendar.textContent).toContain('December 2026'));
+    fireEvent.click(dayButton(calendar, name));
+    await waitFor(() => expect(screen.queryByTestId('leave-first-calendar')).toBeNull());
+  };
+
+  it('sets the last day to the first, so one day of leave takes one choice (AC-15)', async () => {
+    // Unanswered, so that no toast outlives this test: what was sent is the point.
+    answers['team-leave-add'] = problem('service_unavailable', 503);
+    render();
+    await openTab('leave');
+    fireEvent.click(screen.getByTestId('leave-add'));
+    await screen.findByTestId('leave-form');
+
+    await pick('leave-first', '2026-11-20');
+
+    expect(screen.getByTestId('leave-last').textContent).toBe('Fri, Nov 20, 2026');
+    fireEvent.click(screen.getByTestId('leave-save'));
+    await waitFor(() => expect(sent('team-leave-add')).toHaveLength(1));
+    expect(sent('team-leave-add')[0]).toMatchObject({ firstDay: '2026-11-20', lastDay: '2026-11-20' });
+  });
+
+  it("opens the last day on the first day's month and offers no day before it (AC-15)", async () => {
+    render();
+    await openTab('leave');
+    fireEvent.click(screen.getByTestId('leave-add'));
+    await screen.findByTestId('leave-form');
+    await pickFirstNextMonth('December 10, 2026');
+    expect(screen.getByTestId('leave-last').textContent).toBe('Thu, Dec 10, 2026');
+
+    fireEvent.click(screen.getByTestId('leave-last'));
+    const calendar = await screen.findByTestId('leave-last-calendar');
+    expect(calendar.textContent).toContain('December 2026');
+    expect(dayButton(calendar, 'December 9, 2026')).toBeDisabled();
+    expect(dayButton(calendar, 'December 10, 2026')).toBeEnabled();
+    expect(dayButton(calendar, 'December 11, 2026')).toBeEnabled();
+    expect(within(calendar).getByRole('button', { name: /previous/i })).toHaveAttribute('aria-disabled', 'true');
+  });
+
+  it('moves an earlier last day up to a new first day, and keeps a later one (AC-15)', async () => {
+    render();
+    await openTab('leave');
+    await leaveFilled('2026-11-12', '2026-11-14');
+
+    await pick('leave-first', '2026-11-13');
+    expect(screen.getByTestId('leave-last').textContent).toBe('Sat, Nov 14, 2026');
+
+    await pick('leave-first', '2026-11-20');
+    expect(screen.getByTestId('leave-last').textContent).toBe('Fri, Nov 20, 2026');
+    expect(screen.getByTestId('leave-first').textContent).toBe('Fri, Nov 20, 2026');
   });
 
   it('says an overlap, the limit and the API-named rules in the sheet, and keeps the form', async () => {
@@ -364,8 +437,22 @@ describe('the Blocked time tab (F06-S03 AC-4 to AC-6)', () => {
     render();
     await openTab('blocked');
 
-    expect(screen.getByTestId('block-row-when').textContent).toBe('Thu, Nov 5, 2026, 10:00 – 12:00');
+    expect(screen.getByTestId('block-row-when').textContent).toBe('Thu, Nov 5, 10:00 – 12:00');
     expect(screen.getByTestId('block-row-label').textContent).toBe('Colour training');
+  });
+
+  it('writes the year of a block in another year (AC-16)', async () => {
+    answers['team-schedule'] = () =>
+      Response.json(schedule({ blockedTime: [aBlock, { ...aBlock, id: 'block-2', date: '2027-01-05' }] }));
+    render();
+    await openTab('blocked');
+
+    const [thisYear, nextYear] = screen.getAllByTestId('block-row-when');
+    expect(thisYear!.textContent).toBe('Thu, Nov 5, 10:00 – 12:00');
+    expect(nextYear!.textContent).toBe('Tue, Jan 5, 2027, 10:00 – 12:00');
+    expect(screen.getAllByTestId('block-remove')[0]).toHaveAccessibleName(
+      'Remove blocked time, Thu, Nov 5, 10:00 – 12:00',
+    );
   });
 
   it('is read-only for a role without team.block', async () => {
@@ -508,12 +595,19 @@ describe('the bookings a period would affect (F06-S03 AC-8)', () => {
     await waitFor(() => expect(asked()).toBe(before + 1));
   });
 
-  it('says nothing with none in the period, and asks nothing for a period a save would refuse', async () => {
+  it('asks nothing before the days are chosen, then asks for the one day the first day sets', async () => {
     render();
     await openTab('leave');
-    await leaveFilled('2026-11-14', '2026-11-12');
-
+    fireEvent.click(screen.getByTestId('leave-add'));
+    await screen.findByTestId('leave-form');
     expect(calls.filter((call) => call.action === 'team-leave-affected')).toHaveLength(0);
+
+    await pick('leave-first', '2026-11-12');
+
+    await waitFor(() => expect(calls.filter((call) => call.action === 'team-leave-affected')).toHaveLength(1));
+    const asked = calls.find((call) => call.action === 'team-leave-affected')!.url;
+    expect(asked).toContain('firstDay=2026-11-12');
+    expect(asked).toContain('lastDay=2026-11-12');
     expect(screen.queryByTestId('period-affected')).toBeNull();
   });
 
@@ -531,8 +625,15 @@ describe('the bookings a period would affect (F06-S03 AC-8)', () => {
   });
 });
 
-describe('the card’s leave badge (F06-S03 AC-9)', () => {
+describe('the card’s leave badge (F06-S03 AC-9, AC-16)', () => {
   const nextLeave = { firstDay: '2026-11-12', lastDay: '2026-11-14' };
+  // The badge's year follows the salon's own date (Asia/Colombo, UTC+05:30), on the browser's clock.
+  const at = (instant: string) => vi.setSystemTime(new Date(instant));
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    at('2026-11-09T06:00:00Z');
+  });
+  afterEach(() => vi.useRealTimers());
   const withLeave = (leave: unknown) => () =>
     Response.json({ items: [member(NIMALI, 'Nimali Perera', { nextLeave: leave })] });
 
@@ -540,34 +641,50 @@ describe('the card’s leave badge (F06-S03 AC-9)', () => {
     answers['team-members'] = withLeave({ ...nextLeave, type: 'annual' });
     render();
 
-    expect((await screen.findByTestId('team-card-leave')).textContent).toBe(
-      'Annual leave, Thu, Nov 12, 2026 to Sat, Nov 14, 2026',
-    );
+    expect((await screen.findByTestId('team-card-leave')).textContent).toBe('Annual leave, Thu, Nov 12 to Sat, Nov 14');
   });
 
   it('shows Sick leave only when the API sent it', async () => {
     answers['team-members'] = withLeave({ ...nextLeave, type: 'sick' });
     render();
 
-    expect((await screen.findByTestId('team-card-leave')).textContent).toBe(
-      'Sick leave, Thu, Nov 12, 2026 to Sat, Nov 14, 2026',
-    );
+    expect((await screen.findByTestId('team-card-leave')).textContent).toBe('Sick leave, Thu, Nov 12 to Sat, Nov 14');
   });
 
   it('says only On leave without the type', async () => {
     answers['team-members'] = withLeave(nextLeave);
     render({ canManage: false, canBlock: true });
 
-    expect((await screen.findByTestId('team-card-leave')).textContent).toBe(
-      'On leave, Thu, Nov 12, 2026 to Sat, Nov 14, 2026',
-    );
+    expect((await screen.findByTestId('team-card-leave')).textContent).toBe('On leave, Thu, Nov 12 to Sat, Nov 14');
   });
 
   it('says one day alone', async () => {
     answers['team-members'] = withLeave({ firstDay: '2026-11-12', lastDay: '2026-11-12' });
     render({ canManage: false, canBlock: false });
 
-    expect((await screen.findByTestId('team-card-leave')).textContent).toBe('On leave, Thu, Nov 12, 2026');
+    expect((await screen.findByTestId('team-card-leave')).textContent).toBe('On leave, Thu, Nov 12');
+  });
+
+  it('writes the year on both ends when either is in another year', async () => {
+    answers['team-members'] = withLeave({ firstDay: '2026-12-30', lastDay: '2027-01-02', type: 'annual' });
+    render();
+
+    expect((await screen.findByTestId('team-card-leave')).textContent).toBe(
+      'Annual leave, Wed, Dec 30, 2026 to Sat, Jan 2, 2027',
+    );
+  });
+
+  it.each([
+    // 23:30 on 31 December in Colombo, though 18:00 in UTC: still 2026 there.
+    ['2026-12-31T18:00:00Z', 'On leave, Tue, Jan 5, 2027'],
+    // 01:30 on 1 January in Colombo, though still 31 December in UTC: 2027 there.
+    ['2026-12-31T20:00:00Z', 'On leave, Tue, Jan 5'],
+  ])('decides the year by the salon’s own date at %s', async (instant, words) => {
+    at(instant);
+    answers['team-members'] = withLeave({ firstDay: '2027-01-05', lastDay: '2027-01-05' });
+    render({ canManage: false, canBlock: false });
+
+    expect((await screen.findByTestId('team-card-leave')).textContent).toBe(words);
   });
 
   it('has no badge with none', async () => {

@@ -80,6 +80,7 @@ function page(brand: string, canManage = true, readOnly: 'support' | 'salon' | n
     >
       <TeamScreen
         kind="staff"
+        timeZone="Asia/Colombo"
         canManage={canManage}
         canBlock={canManage}
         canSeeAccounts={canManage}

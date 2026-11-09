@@ -1,6 +1,6 @@
 'use client';
 import { useTranslations } from 'next-intl';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Field, FieldContent, FieldDescription, FieldLabel } from '@/components/ui/field';
@@ -57,13 +57,17 @@ type Props = {
 /**
  * The profile sheet (F06-S01, the prototype's `stPaint`): photo, Name, Title, Highlights, Short bio, Services they
  * perform, Online booking and Sign-in. The broken rules are listed above the fields as the person types, and **Add to
- * team** or **Save changes** stays disabled while they last. **Remove from team** for an existing person, and the
+ * team** or **Save changes** stays disabled while they last. A new person's Name says nothing until it has been typed
+ * in, left or saved (F06-S01 AC-17, CR-026), though its rule still keeps **Add to team** disabled. **Remove from team** for an existing person, and the
  * prototype's closing line about opening hours (F06-S02).
  */
 export function MemberSheet(props: Props) {
-  const { open, memberId, values, problems, saving, onChange } = props;
+  const { open, memberId, values, problems: broken, saving, onChange } = props;
   const t = useTranslations('team.sheet');
   const isNew = memberId === null;
+  // The sheet is mounted afresh each time it opens (its key), so this starts over with every new person.
+  const [nameTouched, setNameTouched] = useState(!isNew);
+  const problems = nameTouched ? broken : broken.filter((problem) => problem !== 'name');
   const working = saving || props.photoUpload.state === 'uploading';
   const invalid = (field: MemberProblem) => problems.includes(field);
   const aria = (field: MemberProblem, help?: string) => ({
@@ -95,7 +99,8 @@ export function MemberSheet(props: Props) {
           className="flex flex-col gap-4"
           onSubmit={(event) => {
             event.preventDefault();
-            if (problems.length === 0 && !working) props.onSave();
+            setNameTouched(true);
+            if (broken.length === 0 && !working) props.onSave();
           }}
         >
           <MemberPhotoField
@@ -127,7 +132,11 @@ export function MemberSheet(props: Props) {
             <Input
               id="team-name"
               value={values.name}
-              onChange={(event) => onChange({ ...values, name: event.target.value })}
+              onChange={(event) => {
+                setNameTouched(true);
+                onChange({ ...values, name: event.target.value });
+              }}
+              onBlur={() => setNameTouched(true)}
               {...aria('name')}
               data-testid="team-name"
             />
@@ -239,7 +248,7 @@ export function MemberSheet(props: Props) {
               <FieldDescription id="team-sign-in-help">{t('signInHelp')}</FieldDescription>
             </Field>
           </section>
-          <Button type="submit" disabled={problems.length > 0 || working} data-testid="team-sheet-save">
+          <Button type="submit" disabled={broken.length > 0 || working} data-testid="team-sheet-save">
             {saving && <Spinner />}
             {isNew ? t('addToTeam') : t('save')}
           </Button>
