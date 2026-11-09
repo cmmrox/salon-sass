@@ -36,11 +36,22 @@ class StaffTablesRowLevelSecurityAloneIntegrationTest {
     private static final String INSUFFICIENT_PRIVILEGE = "42501";
 
     /** Each table and the column that tells one of a salon's rows from another. */
-    static final Map<String, String> KEYS = new LinkedHashMap<>(Map.of(
-            "staff_opening_hours", "id",
-            "staff_holiday_review", "id",
-            "staff_holiday_choice", "id",
-            "staff_closure", "id"));
+    static final Map<String, String> KEYS = new LinkedHashMap<>(Map.ofEntries(
+            Map.entry("staff_opening_hours", "id"),
+            Map.entry("staff_holiday_review", "id"),
+            Map.entry("staff_holiday_choice", "id"),
+            Map.entry("staff_closure", "id"),
+            Map.entry("staff_member_photo", "id"),
+            Map.entry("staff_team_member", "id"),
+            Map.entry("staff_member_category", "id"),
+            Map.entry("staff_member_service", "id"),
+            Map.entry("staff_member_schedule", "id"),
+            Map.entry("staff_member_weekday", "id"),
+            Map.entry("staff_member_weekday_break", "id"),
+            Map.entry("staff_member_date_change", "id"),
+            Map.entry("staff_member_date_change_break", "id"),
+            Map.entry("staff_member_leave", "id"),
+            Map.entry("staff_member_blocked_time", "id")));
 
     static final List<String> TABLES = List.copyOf(KEYS.keySet());
 
@@ -91,6 +102,99 @@ class StaffTablesRowLevelSecurityAloneIntegrationTest {
                     salon.id(),
                     UUID.randomUUID(),
                     branch,
+                    UUID.randomUUID());
+            // F06-S01: a team member with a photo, a whole category and a single service.
+            UUID photo = UUID.randomUUID();
+            UUID member = UUID.randomUUID();
+            owner.update(
+                    "INSERT INTO staff_member_photo (tenant_id, id, branch_id, media_type, width, height, bytes,"
+                            + " created_at, updated_at) VALUES (?, ?, ?, 'image/jpeg', 320, 320, '\\x01', now(), now())",
+                    salon.id(),
+                    photo,
+                    branch);
+            owner.update(
+                    "INSERT INTO staff_team_member (tenant_id, id, branch_id, name, shown_online, photo_id, version,"
+                            + " created_at, updated_at) VALUES (?, ?, ?, 'Policy Person', true, ?, 0, now(), now())",
+                    salon.id(),
+                    member,
+                    branch,
+                    photo);
+            owner.update(
+                    "INSERT INTO staff_member_category (tenant_id, id, branch_id, member_id, category_id, created_at,"
+                            + " updated_at) VALUES (?, ?, ?, ?, ?, now(), now())",
+                    salon.id(),
+                    UUID.randomUUID(),
+                    branch,
+                    member,
+                    UUID.randomUUID());
+            owner.update(
+                    "INSERT INTO staff_member_service (tenant_id, id, branch_id, member_id, service_id, created_at,"
+                            + " updated_at) VALUES (?, ?, ?, ?, ?, now(), now())",
+                    salon.id(),
+                    UUID.randomUUID(),
+                    branch,
+                    member,
+                    UUID.randomUUID());
+            // F06-S02: their schedule's version, a weekday with a break, and a date change with a break.
+            UUID weekday = UUID.randomUUID();
+            UUID change = UUID.randomUUID();
+            owner.update(
+                    "INSERT INTO staff_member_schedule (tenant_id, id, branch_id, member_id, version, created_at,"
+                            + " updated_at) VALUES (?, ?, ?, ?, 1, now(), now())",
+                    salon.id(),
+                    UUID.randomUUID(),
+                    branch,
+                    member);
+            owner.update(
+                    "INSERT INTO staff_member_weekday (tenant_id, id, branch_id, member_id, weekday, starts, finishes,"
+                            + " created_at, updated_at) VALUES (?, ?, ?, ?, 1, '09:00', '18:00', now(), now())",
+                    salon.id(),
+                    weekday,
+                    branch,
+                    member);
+            owner.update(
+                    "INSERT INTO staff_member_weekday_break (tenant_id, id, branch_id, member_id, weekday_id, starts,"
+                            + " finishes, created_at, updated_at) VALUES (?, ?, ?, ?, ?, '13:00', '14:00', now(), now())",
+                    salon.id(),
+                    UUID.randomUUID(),
+                    branch,
+                    member,
+                    weekday);
+            owner.update(
+                    "INSERT INTO staff_member_date_change (tenant_id, id, branch_id, member_id, change_date, starts,"
+                            + " finishes, note, created_by, created_at, updated_at)"
+                            + " VALUES (?, ?, ?, ?, '2090-03-01', '09:00', '13:00', 'Half day', ?, now(), now())",
+                    salon.id(),
+                    change,
+                    branch,
+                    member,
+                    UUID.randomUUID());
+            owner.update(
+                    "INSERT INTO staff_member_date_change_break (tenant_id, id, branch_id, member_id, change_id, starts,"
+                            + " finishes, created_at, updated_at) VALUES (?, ?, ?, ?, ?, '10:00', '10:15', now(), now())",
+                    salon.id(),
+                    UUID.randomUUID(),
+                    branch,
+                    member,
+                    change);
+            // F06-S03: their leave and a block.
+            owner.update(
+                    "INSERT INTO staff_member_leave (tenant_id, id, branch_id, member_id, first_day, last_day,"
+                            + " leave_type, note, created_by, created_at, updated_at)"
+                            + " VALUES (?, ?, ?, ?, '2090-04-01', '2090-04-03', 'sick', 'Private', ?, now(), now())",
+                    salon.id(),
+                    UUID.randomUUID(),
+                    branch,
+                    member,
+                    UUID.randomUUID());
+            owner.update(
+                    "INSERT INTO staff_member_blocked_time (tenant_id, id, branch_id, member_id, block_date, starts,"
+                            + " finishes, label, created_by, created_at, updated_at)"
+                            + " VALUES (?, ?, ?, ?, '2090-05-01', '10:00', '11:00', 'Training', ?, now(), now())",
+                    salon.id(),
+                    UUID.randomUUID(),
+                    branch,
+                    member,
                     UUID.randomUUID());
         }
     }

@@ -65,7 +65,7 @@ class OperatorAccountServiceImpl implements OperatorAccountService {
 
     /**
      * @param developmentPassword the one password below the policy that the local seed also accepts (decision
-     *     099); {@code null} on every product path
+     *     105); {@code null} on every product path
      */
     private Valid validate(AccountInput input, String developmentPassword) {
         List<FieldProblem> errors = new ArrayList<>();

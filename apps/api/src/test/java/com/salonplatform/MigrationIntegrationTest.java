@@ -53,7 +53,11 @@ class MigrationIntegrationTest {
                         tuple("24", "add branding default branch id"),
                         tuple("25", "create catalogue"),
                         tuple("26", "add catalogue variants popular and deposits"),
-                        tuple("27", "create catalogue tax and products"));
+                        tuple("27", "create catalogue tax and products"),
+                        tuple("28", "create staff team members"),
+                        tuple("29", "read salon entitlements after the lock"),
+                        tuple("30", "create staff member schedules"),
+                        tuple("31", "create staff leave and blocked time"));
         assertThat(afterFirstStart).allSatisfy(row -> assertThat(row).containsEntry("success", true));
 
         try (StartedApplication application = database.start()) {

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Reads the fixed local account roster (infra/local/accounts.json, decision 099) for
+// Reads the fixed local account roster (infra/local/accounts.json, decision 105) for
 // infra/scripts/local-accounts.sh. Sourced by nothing else and never part of a deployed build.
 //
 //   node accounts.mjs <roster> salons            the salons' slugs, one per line

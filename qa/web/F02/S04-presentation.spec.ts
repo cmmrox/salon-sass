@@ -83,7 +83,8 @@ test(`${c(23)} staff identity screens follow the supplied salon layout with acce
  }
  fs.writeFileSync(path.join(reportDir,'CR012-keyboard-observations.json'),JSON.stringify(keyboardObservations,null,2));
  const professional=await identity.staff(alpha,'PROFESSIONAL'),limited=await accounts.context(alpha,[professional]),page=await accounts.open(limited,routes.staff);await accounts.ready(page);
- await expect(page.getByTestId('workspace-staff')).toHaveCount(0);await expect(page.getByTestId('workspace-audit')).toHaveCount(0);await referenceNavigation(page,'workspace-navigation',1280);
+ // F06-S01: a Professional reads the team through the Staff entry, and still has no route to the accounts screen or the audit log.
+ await expect(page.getByTestId('workspace-team')).toHaveAttribute('href',routes.team);await expect(page.locator(`a[href="${routes.staffList}"]`)).toHaveCount(0);await expect(page.getByTestId('workspace-audit')).toHaveCount(0);await referenceNavigation(page,'workspace-navigation',1280);
 });
 test(`${c(17)} all screens pass automated accessibility checks and announce errors`,async({identity,accounts})=>{
  test.setTimeout(180000);for(const salon of salons){const owner=await identity.staff(salon,'OWNER'),context=await accounts.context(salon,[owner]);

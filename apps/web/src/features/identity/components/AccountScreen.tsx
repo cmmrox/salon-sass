@@ -48,6 +48,8 @@ type Device = components['schemas']['SessionView'];
 type Audit = components['schemas']['AuditView'];
 type Page<T> = { items?: T[]; page?: number; size?: number; total?: number };
 type View = 'account' | 'staff' | 'audit';
+/** What this screen reads of the team: the name of the person linked to an account (F06-S01). */
+type TeamProfiles = { items: { name: string; signInAccountId?: string | null }[] };
 // The workspace's recurring arrangements: a row of actions, a form, a secret shown once.
 const actions = 'flex flex-wrap items-center gap-2';
 const form = 'flex min-w-0 flex-col gap-4';
@@ -82,6 +84,7 @@ export function AccountScreen({
   const [supported, setSupported] = useState<boolean | null>(null);
   const [devices, setDevices] = useState<Page<Device>>({});
   const [staff, setStaff] = useState<Page<Staff>>({});
+  const [profiles, setProfiles] = useState<Map<string, string> | null>(null);
   const [audit, setAudit] = useState<Page<Audit>>({});
   const [page, setPage] = useState(0);
   const [password, setPassword] = useState({ oldPassword: '', newPassword: '' });
@@ -118,8 +121,23 @@ export function AccountScreen({
     if (view === 'account') {
       // A support view has no devices of its own (F03-S04).
       if (kind !== 'support') setDevices(await identityRequest(kind, `sessions?page=${nextPage}`));
-    } else if (view === 'staff') setStaff(await identityRequest(kind, `staff?page=${nextPage}`));
-    else setAudit(await identityRequest(kind, `audit?page=${nextPage}`));
+    } else if (view === 'staff') {
+      setStaff(await identityRequest(kind, `staff?page=${nextPage}`));
+      // Who each account is linked to (F06-S01 AC-11); the accounts work without it, so a failed read names nobody.
+      setProfiles(
+        p.permissions.includes('team.read')
+          ? await identityRequest<TeamProfiles>(kind, 'team-members').then(
+              (team) =>
+                new Map(
+                  team.items.flatMap((member) =>
+                    member.signInAccountId ? [[member.signInAccountId, member.name] as const] : [],
+                  ),
+                ),
+              () => null,
+            )
+          : null,
+      );
+    } else setAudit(await identityRequest(kind, `audit?page=${nextPage}`));
     setLoaded(true);
   }
   async function perform(work: () => Promise<void>) {
@@ -570,6 +588,11 @@ export function AccountScreen({
                     >
                       <ItemContent>
                         <ItemTitle>{person.email ?? person.mobile}</ItemTitle>
+                        {profiles && (
+                          <p className="text-small text-foreground" data-testid="account-staff-team-profile">
+                            {profiles.get(person.id ?? '') ?? t('noTeamProfile')}
+                          </p>
+                        )}
                         <div className={actions}>
                           <Badge variant="secondary" data-testid="account-staff-role-label">
                             {t(person.role as 'OWNER')}

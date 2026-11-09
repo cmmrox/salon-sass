@@ -51,7 +51,7 @@ public interface StaffAccountService {
      * email or mobile of yet, with its authenticator secret when one is given. An existing account is left
      * unchanged.
      *
-     * @param developmentPassword the local roster's development password (decision 099), accepted exactly as
+     * @param developmentPassword the local roster's development password (decision 105), accepted exactly as
      *     given although it is below the password policy; {@code null} accepts only the policy's passwords
      */
     List<StaffView> seed(List<SeedAccount> accounts, String developmentPassword);

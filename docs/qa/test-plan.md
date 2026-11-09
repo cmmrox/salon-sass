@@ -91,7 +91,8 @@ shared helper, never by typing a password into a test.
   That stage's spec defines the hook, and the lead adds how to use it here.
 - **The test clock** (F01-S04), on the API's port, local profile only: `GET /local/clock` reads it;
   `PUT /local/clock {"instant": "2026-03-29T01:30:00Z"}` sets it, and it runs on from there;
-  `DELETE /local/clock` returns to real time. It is the application's one clock, for every salon,
+  `DELETE /local/clock` returns to real time. An account with an authenticator cannot sign in under a
+  moved clock, because its codes follow the real time: sign in first, or use a Manager without one. It is the application's one clock, for every salon,
   so a test that sets it must put it back, and tests that set it cannot run in parallel. Instants a
   probe shows are truncated to the second.
 - **The probe** (F01-S04), on a salon's hostname: `POST /local/probes {"failures", "delayMs",
@@ -108,7 +109,7 @@ shared helper, never by typing a password into a test.
   checks interrupted states as single-snapshot invariants (F03).
   The shared identity fixture resets the fixed salons' staff around every Playwright test and seeds
   the fixed account roster again afterwards, so a shell check can rely on the roster.
-- **Accounts** (decision 099): QA runs against the QA instance (`SALON_LOCAL_INSTANCE=qa`), never
+- **Accounts** (decision 105): QA runs against the QA instance (`SALON_LOCAL_INSTANCE=qa`), never
   the default one. A test that needs only "someone in this role" signs in as that role's roster
   account from `infra/local/accounts.json`. A test that changes a person (deactivates, locks out,
   changes a password or MFA, fills seats) seeds its own extra accounts with realistic names, never
@@ -127,7 +128,7 @@ shared helper, never by typing a password into a test.
   records/rate state while preserving immutable audit and other product data. Both hooks are
   loopback-only, `local`-only and absent from OpenAPI; nonfixed salons are refused. Supplied fixture
   credentials/TOTP seeds stay in ignored environment or `.local` files with mode `0600`, except the
-  committed roster `infra/local/accounts.json` (decision 099). Only these seed hooks accept the
+  committed roster `infra/local/accounts.json` (decision 105). Only these seed hooks accept the
   development password `123456@321` below the identity policy.
   `POST /local/operator/seed` with `keepExisting: true` creates only missing operators and leaves
   existing ones exactly as they are; QA sends it when seeding the roster's operators.

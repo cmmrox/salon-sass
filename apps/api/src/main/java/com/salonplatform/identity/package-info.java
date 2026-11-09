@@ -1,8 +1,9 @@
 /**
  * The {@code identity} module: staff accounts, roles and sessions, and customers' one-time-code sign-in.
  * Other modules ask who the current request acts as through {@link com.salonplatform.identity.Principals};
- * platform provisions a salon's first Owner and closes its sessions through the in-process-only
- * contracts of {@link com.salonplatform.identity.inprocess}.
+ * platform provisions a salon's first Owner and closes its sessions, and staff holds a staff seat, through the
+ * in-process-only contracts of {@link com.salonplatform.identity.inprocess}. Staff offers its team a salon's sign-in
+ * accounts through {@link com.salonplatform.identity.SignInAccounts}.
  *
  * <p>What it owns, the layout inside it and the rules between modules are in
  * {@code docs/engineering/backend.md}.

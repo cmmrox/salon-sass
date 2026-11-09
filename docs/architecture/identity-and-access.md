@@ -20,7 +20,7 @@ Use Spring Security's maintained password encoding and JWT primitives, without e
 default form-login behavior. Passwords are 15 to 128 Unicode code points, allow spaces and password
 managers, and reject a small documented common-password list; no forced character mixture.
 The only exception is the `local`-profile seed hooks, which also accept the development password
-`123456@321` for the fixed synthetic roster (decision 099); no product path and no other profile does.
+`123456@321` for the fixed synthetic roster (decision 105); no product path and no other profile does.
 Use PBKDF2-HMAC-SHA256, random 16-byte salt and 600,000 iterations with an identified encoding.
 These choices follow [Spring password storage](https://docs.spring.io/spring-security/reference/features/authentication/password-storage.html)
 and [NIST authentication guidance](https://pages.nist.gov/800-63-4/sp800-63b.html), interpreted as
@@ -118,13 +118,17 @@ salon-wide calendar/customer/figures access (IAM-08), not arbitrary role customi
 | Change salon settings and publish them (`settings.manage`, F04) | yes | yes | no | no | no |
 | Read the service catalogue in the workspace (`catalogue.read`, F05) | yes | yes | yes | yes | yes |
 | Change the service catalogue: categories, services, prices, photos (`catalogue.price.change`, F05) | yes | yes | no | no | no |
+| Read the team and its hours (`team.read`, F06) | yes | yes | yes | yes | no |
+| Change the team, hours and leave, and read leave notes (`team.manage`, F06) | yes | yes | no | no | no |
+| Add and remove blocked time (`team.block`, F06-S03) | yes | yes | yes | no | no |
 
 The API permission keys for these rows are `session.manage`, `password.change`, `mfa.enroll`,
 `staff.list`, `staff.manage`, `audit.list`, `payment.refund`, `catalogue.price.change`,
 `policy.change`, `customer.export`, `calendar.read`, `customer.read`, `financial.read`,
-`settings.read`, `settings.manage` (decision 085) and `catalogue.read` (decision 093). A support
-session may read settings and the catalogue (`settings.read` and `catalogue.read` join its read set)
-and never change them. `catalogue.price.change` guards every change to the catalogue, not only
+`settings.read`, `settings.manage` (decision 085), `catalogue.read` (decision 093), and `team.read`,
+`team.manage` and `team.block` (decisions 099, 100). A support session may read settings, the catalogue
+and the team (`settings.read`, `catalogue.read` and `team.read` join its read set) and never change
+them. `catalogue.price.change` guards every change to the catalogue, not only
 prices (decision 093).
 All staff receive the first three own-account permissions; the table determines the rest.
 The customer principal has kind `customer`, null role/staff id, own scope, MFA false and
@@ -301,12 +305,16 @@ the API uses its real servlet peer. The header confers no tenant or session auth
 
 ## Implemented web boundary
 
-Staff routes are `/workspace/sign-in`, `/workspace/account`, `/workspace/staff` and
-`/workspace/audit`. Tenant `/` enters `/workspace`; old `/sign-in` and `/account` redirect to
+Staff routes are `/workspace/sign-in`, `/workspace/account`, `/workspace/team` (F06), `/workspace/staff`
+(the Team page's Sign-in accounts tab) and `/workspace/audit`. Tenant `/` enters `/workspace`; old `/sign-in` and `/account` redirect to
 staff sign-in. No customer web navigation or public salon shell is delivered. Workspace is neutral.
 
 The web BFF accepts only `/identity-web/staff/{action}`, with existing permission, Origin,
-CSRF, renewal and credential-secrecy guarantees. Customer-kind requests return 404 before any
+CSRF, renewal and credential-secrecy guarantees. The Team page's actions go through it too
+(`team-members`, `team-member-add`, `team-schedule`, `team-leave-add`, `team-block-add` and the
+rest, F06), each checked against its `team.*` permission. A team member's photo is served on the
+salon's own hostname at `/team-photos/{id}`, passed through from the API with no session, as service
+photos are. Customer-kind requests return 404 before any
 upstream call or cookie issuance. Direct `/api/v1/identity/customers/*` APIs remain available for
 the later native client and API tests. All visible web text uses next-intl message keys.
 

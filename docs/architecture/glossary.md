@@ -9,6 +9,8 @@ everywhere.
 | Operator | The company running the platform. Operator users are not tenant users |
 | Owner, Manager, Receptionist, Professional, Accountant | The staff roles of a salon, each with a defined set of permissions |
 | Professional | A staff member who performs services and has a calendar |
+| Team member | A person who performs services and can be booked, with a profile and a schedule. They may have a sign-in account or none (STF-01). Also the role-free word for a Professional on the Team page |
+| Staff seat | What a plan limits: one person, whether a sign-in account, a team member or a linked pair of the two (decision 099) |
 | Customer | A person who books with one salon. The same phone number at two salons is two unrelated customers |
 | Service | Something bookable, with a price, a duration and a buffer. Its time is stored as segments: active, processing (the professional is free) and buffer |
 | Product | Something sold at checkout with a price and tax; stock is not tracked in R1 |

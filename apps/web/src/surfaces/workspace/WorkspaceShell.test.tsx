@@ -19,7 +19,7 @@ vi.mock('next/link', () => ({
 }));
 
 const salon = { slug: 'alpha', name: 'Alpha Studio', brandColour: '#D6086A', timeZone: 'Asia/Colombo' };
-const all = ['session.manage', 'staff.list', 'audit.list'];
+const all = ['session.manage', 'team.read', 'staff.list', 'audit.list'];
 const t = messages.account;
 
 describe('workspace route navigation', () => {
@@ -29,7 +29,7 @@ describe('workspace route navigation', () => {
         <div />
       </WorkspaceShell>,
     );
-    expect(screen.getByTestId('workspace-staff')).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByTestId('workspace-team')).toHaveAttribute('aria-current', 'page');
     expect(screen.getByTestId('workspace-account')).not.toHaveAttribute('aria-current');
     expect(screen.getByTestId('workspace-audit')).toHaveAttribute('href', '/workspace/audit');
     expect(screen.getByTestId('account-nav')).toBeInTheDocument();
@@ -48,9 +48,35 @@ describe('workspace route navigation', () => {
         <div />
       </WorkspaceShell>,
     );
-    expect(screen.queryByTestId('workspace-staff')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('workspace-team')).not.toBeInTheDocument();
     expect(screen.queryByTestId('workspace-audit')).not.toBeInTheDocument();
     expect(screen.getByTestId('workspace-account')).toHaveAttribute('href', '/workspace/account');
+  });
+  it('shows the Staff entry for team.read, going to the Team page, current on both of its tabs (F06-S01 AC-11)', () => {
+    const { unmount } = renderWithMessages(
+      <WorkspaceShell salon={salon} permissions={['team.read']} view="team">
+        <div />
+      </WorkspaceShell>,
+    );
+    const entry = screen.getByTestId('workspace-team');
+    expect(entry).toHaveAttribute('href', '/workspace/team');
+    expect(entry).toHaveTextContent(t.teamNav);
+    expect(entry).toHaveAttribute('aria-current', 'page');
+    unmount();
+    renderWithMessages(
+      <WorkspaceShell salon={salon} permissions={['team.read', 'staff.list']} view="staff">
+        <div />
+      </WorkspaceShell>,
+    );
+    expect(screen.getByTestId('workspace-team')).toHaveAttribute('aria-current', 'page');
+  });
+  it('shows no Staff entry for staff.list alone or for an Accountant’s permissions (F06-S01 AC-13)', () => {
+    renderWithMessages(
+      <WorkspaceShell salon={salon} permissions={['session.manage', 'catalogue.read', 'financial.read']}>
+        <div />
+      </WorkspaceShell>,
+    );
+    expect(screen.queryByTestId('workspace-team')).not.toBeInTheDocument();
   });
 });
 
@@ -69,7 +95,7 @@ describe('the Sidebar from 900px (CR-017)', () => {
     const buttons = within(navigation).getAllByRole('link');
     expect(buttons.map((link) => link.getAttribute('data-testid'))).toEqual([
       'workspace-account',
-      'workspace-staff',
+      'workspace-team',
       'workspace-audit',
     ]);
     for (const link of buttons) expect(link).toHaveAttribute('data-slot', 'sidebar-menu-button');
@@ -139,9 +165,9 @@ describe('the Sidebar below 900px (CR-017)', () => {
       within(navigation)
         .getAllByRole('link')
         .map((link) => link.getAttribute('data-testid')),
-    ).toEqual(['workspace-account', 'workspace-staff', 'workspace-audit']);
-    expect(within(navigation).getByTestId('workspace-staff')).toHaveAttribute('aria-current', 'page');
-    expect(within(navigation).getByTestId('workspace-staff')).toHaveAttribute('data-active', 'true');
+    ).toEqual(['workspace-account', 'workspace-team', 'workspace-audit']);
+    expect(within(navigation).getByTestId('workspace-team')).toHaveAttribute('aria-current', 'page');
+    expect(within(navigation).getByTestId('workspace-team')).toHaveAttribute('data-active', 'true');
   });
 
   it('puts the focus on the current route when the sheet opens, not on the sheet itself', async () => {
@@ -152,7 +178,7 @@ describe('the Sidebar below 900px (CR-017)', () => {
       </WorkspaceShell>,
     );
     const { sheet } = openSheet();
-    await waitFor(() => expect(within(sheet).getByTestId('workspace-staff')).toHaveFocus());
+    await waitFor(() => expect(within(sheet).getByTestId('workspace-team')).toHaveFocus());
   });
 
   it('closes on choosing a route and gives the focus back to the menu button', async () => {

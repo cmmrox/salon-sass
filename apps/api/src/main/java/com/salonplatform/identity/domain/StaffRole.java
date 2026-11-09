@@ -27,10 +27,15 @@ public enum StaffRole {
                     "customer.export",
                     // Salon settings (F04, decision 085): reading them, and changing and publishing them.
                     "settings.read",
-                    "settings.manage"));
+                    "settings.manage",
+                    // The team (F06, decision 100): adding, editing and removing the people who perform services.
+                    "team.manage"));
         if (this == OWNER) p.addAll(Set.of("staff.manage", "invoice.read", "support.manage"));
+        // Blocked time (F06-S03, decision 099): a front desk marks a professional busy without a manager.
+        if (this == OWNER || this == MANAGER || this == RECEPTIONIST) p.add("team.block");
         if (this == OWNER || this == MANAGER || this == RECEPTIONIST || this == PROFESSIONAL)
-            p.addAll(Set.of("calendar.read", "customer.read"));
+            // Reading the team (F06, decisions 099, 100) goes with them: an Accountant has none of it.
+            p.addAll(Set.of("calendar.read", "customer.read", "team.read"));
         if (this == OWNER || this == MANAGER || this == ACCOUNTANT || (this == PROFESSIONAL && grant))
             p.add("financial.read");
         return Set.copyOf(p);
@@ -51,7 +56,9 @@ public enum StaffRole {
             // F04 (decision 085): a support session reads salon settings and never changes them.
             "settings.read",
             // F05 (decision 093): and the service catalogue.
-            "catalogue.read");
+            "catalogue.read",
+            // F06 (decision 100): and the team.
+            "team.read");
 
     public String scope(boolean grant) {
         return this == PROFESSIONAL && !grant ? "own" : "salon";

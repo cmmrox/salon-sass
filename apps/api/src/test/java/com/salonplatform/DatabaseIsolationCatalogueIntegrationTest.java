@@ -81,6 +81,20 @@ class DatabaseIsolationCatalogueIntegrationTest {
                         "staff_holiday_review",
                         "staff_holiday_choice",
                         "staff_closure",
+                        // F06-S01: team members, their photos, whole categories and single services.
+                        "staff_team_member",
+                        "staff_member_photo",
+                        "staff_member_category",
+                        "staff_member_service",
+                        // F06-S02: each member's week, its breaks, and their date changes with theirs.
+                        "staff_member_schedule",
+                        "staff_member_weekday",
+                        "staff_member_weekday_break",
+                        "staff_member_date_change",
+                        "staff_member_date_change_break",
+                        // F06-S03: each member's leave and blocked time.
+                        "staff_member_leave",
+                        "staff_member_blocked_time",
                         // F04-S04: the booking rules' versions.
                         "booking_rules_version",
                         // F05-S01: the catalogue's category lists, categories, photos, services and terms versions.
@@ -261,6 +275,21 @@ class DatabaseIsolationCatalogueIntegrationTest {
                         org.assertj.core.api.Assertions.tuple("staff_holiday_review", "INSERT,SELECT,UPDATE"),
                         org.assertj.core.api.Assertions.tuple("staff_holiday_choice", "INSERT,SELECT,UPDATE"),
                         org.assertj.core.api.Assertions.tuple("staff_closure", "DELETE,INSERT,SELECT"),
+                        // F06-S01: a member is never deleted, a photo never changed, and a save replaces the rows.
+                        org.assertj.core.api.Assertions.tuple("staff_team_member", "INSERT,SELECT,UPDATE"),
+                        org.assertj.core.api.Assertions.tuple("staff_member_photo", "DELETE,INSERT,SELECT"),
+                        org.assertj.core.api.Assertions.tuple("staff_member_category", "DELETE,INSERT,SELECT"),
+                        org.assertj.core.api.Assertions.tuple("staff_member_service", "DELETE,INSERT,SELECT"),
+                        // F06-S02: a save moves the version on and replaces the week's rows; a date change is added
+                        // or removed, never changed.
+                        org.assertj.core.api.Assertions.tuple("staff_member_schedule", "INSERT,SELECT,UPDATE"),
+                        org.assertj.core.api.Assertions.tuple("staff_member_weekday", "DELETE,INSERT,SELECT"),
+                        org.assertj.core.api.Assertions.tuple("staff_member_weekday_break", "DELETE,INSERT,SELECT"),
+                        org.assertj.core.api.Assertions.tuple("staff_member_date_change", "DELETE,INSERT,SELECT"),
+                        org.assertj.core.api.Assertions.tuple("staff_member_date_change_break", "DELETE,INSERT,SELECT"),
+                        // F06-S03: leave and a block are added or removed, never changed.
+                        org.assertj.core.api.Assertions.tuple("staff_member_leave", "DELETE,INSERT,SELECT"),
+                        org.assertj.core.api.Assertions.tuple("staff_member_blocked_time", "DELETE,INSERT,SELECT"),
                         // F04-S04: a booking rules version is written once and read, never changed or removed.
                         org.assertj.core.api.Assertions.tuple("booking_rules_version", "INSERT,SELECT"),
                         // F05-S01: the category list exists from a salon's creation and is only changed;
@@ -331,6 +360,8 @@ class DatabaseIsolationCatalogueIntegrationTest {
                 "outbox_erase_salon_rows",
                 // F04-S03: staff's guarded eraser.
                 "staff_erase_salon_rows",
+                // F06-S01: the count of active members with no linked account, for usage and the plan move.
+                "staff_active_unlinked_member_count",
                 // F04-S04: booking's guarded eraser.
                 "booking_erase_salon_rows",
                 // F05-S01: a new salon's default categories, in the platform transaction that creates it, and

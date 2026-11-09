@@ -32,5 +32,9 @@ public interface StaffAccountRepository extends JpaRepository<StaffAccount, UUID
 
     long countByActiveTrue();
 
+    /** The salon's active accounts, oldest first. */
+    @Query("select a from StaffAccount a where a.active order by a.createdAt, a.id")
+    List<StaffAccount> findActiveOldestFirst();
+
     long countByActiveTrueAndRole(StaffRole role);
 }

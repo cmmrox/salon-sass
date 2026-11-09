@@ -32,7 +32,7 @@ salon:
     link-origin: ${SALON_SUPPORT_LINK_ORIGIN:http://%s:3100}
   platform-domain: ${SALON_PLATFORM_DOMAIN:localhost}
   local:
-    # The one password of the fixed local account roster (infra/local/accounts.json, decision 099).
+    # The one password of the fixed local account roster (infra/local/accounts.json, decision 105).
     # Only the local seed hooks (/local/identity/seed, /local/operator/seed) accept it below the
     # password policy; every product path keeps the policy. No other profile has this value.
     development-password: "123456@321"

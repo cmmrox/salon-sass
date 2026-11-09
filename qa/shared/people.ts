@@ -1,5 +1,5 @@
 /**
- * Realistic people for the accounts a test adds beside the fixed roster (decision 099,
+ * Realistic people for the accounts a test adds beside the fixed roster (decision 105,
  * docs/qa/test-plan.md, "Accounts"): a real-sounding name, an email made from it, a valid Sri Lankan
  * mobile, never "QA", "test" or a random string. The names are disjoint from the roster's
  * (infra/local/accounts.json), so an extra account can never be mistaken for a roster account.

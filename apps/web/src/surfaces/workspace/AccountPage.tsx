@@ -16,12 +16,16 @@ import { SettingsScreen, type SettingsTab } from './SettingsScreen';
 import { SupportAccessScreen } from './SupportAccessScreen';
 import { SupportBanner } from './SupportBanner';
 import { TaxSettingsScreen } from './TaxSettingsScreen';
+import { TeamFrame } from './TeamFrame';
+import { TeamScreen } from './TeamScreen';
 
-type View = 'account' | 'staff' | 'audit' | 'billing' | 'support-access' | 'settings' | 'services';
+type View = 'account' | 'team' | 'staff' | 'audit' | 'billing' | 'support-access' | 'settings' | 'services';
 type PageProps = { kind: Kind; view?: View; signIn?: boolean; tab?: SettingsTab; servicesTab?: ServicesTab };
 
 const REQUIRED: Record<View, string> = {
   account: 'session.manage',
+  // The Team page (F06-S01): every role but the Accountant, and a support session (decisions 099, 100).
+  team: 'team.read',
   staff: 'staff.list',
   audit: 'audit.list',
   billing: 'invoice.read',
@@ -101,7 +105,26 @@ export async function AccountPage({ kind: requested, view, signIn, tab, services
       supportBanner={supportBanner}
       support={support}
     >
-      {view === 'billing' ? (
+      {view === 'team' ? (
+        <TeamScreen
+          kind={kind}
+          canManage={Boolean(principal?.permissions.includes('team.manage')) && !readOnly}
+          canBlock={Boolean(principal?.permissions.includes('team.block')) && !readOnly}
+          canSeeAccounts={Boolean(principal?.permissions.includes('staff.list'))}
+          readOnly={support ? 'support' : readOnly ? 'salon' : null}
+        />
+      ) : view === 'staff' ? (
+        // F02's screen, its behaviour unchanged, under the Team page's tabs (F06-S01 AC-11).
+        <TeamFrame tab="accounts" showTabs>
+          <AccountScreen
+            kind={kind}
+            initialPrincipal={principal}
+            timeZone={salon.timeZone}
+            view={view}
+            readOnly={readOnly}
+          />
+        </TeamFrame>
+      ) : view === 'billing' ? (
         <BillingScreen kind={kind} timeZone={salon.timeZone} />
       ) : view === 'support-access' ? (
         <SupportAccessScreen timeZone={salon.timeZone} />

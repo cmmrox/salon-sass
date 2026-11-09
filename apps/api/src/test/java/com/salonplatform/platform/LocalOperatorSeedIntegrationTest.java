@@ -26,7 +26,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * Decision 099: the local operator seed hook accepts the fixed roster's development password and nothing else
+ * Decision 105: the local operator seed hook accepts the fixed roster's development password and nothing else
  * below the policy, and with {@code keepExisting} only adds the accounts that are missing, leaving every existing
  * one exactly as it is. The operator bootstrap keeps the policy in the profile that has the development password.
  */

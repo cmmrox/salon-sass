@@ -24,7 +24,7 @@ import org.junit.jupiter.api.io.TempDir;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * Decision 099: the local staff seed hook accepts the fixed roster's development password, which is below the
+ * Decision 105: the local staff seed hook accepts the fixed roster's development password, which is below the
  * password policy, and nothing else below it; adding staff and changing a password through the product keep the
  * policy, in the very profile that has the development password.
  */

@@ -65,6 +65,12 @@ describe("a salon's local times and dates (F04-S03)", () => {
     expect(formatClock('09:30')).toBe('09:30');
     expect(formatClock('18:00')).toBe('18:00');
   });
+  it('keeps each locale its own clock, however often and in whatever order they are asked', () => {
+    expect(formatClock('09:30', 'ar-EG')).toBe('٠٩:٣٠');
+    expect(formatClock('09:30')).toBe('09:30');
+    expect(formatClock('23:45', 'ar-EG')).toBe('٢٣:٤٥');
+    expect(formatClock('00:00')).toBe('00:00');
+  });
   it('writes a local date with its weekday, the same in every time zone', () => {
     const shown = formatDay('2026-10-25');
     expect(shown).toContain('Sun');

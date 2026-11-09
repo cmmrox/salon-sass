@@ -34,6 +34,14 @@ import {
   readCatalogue,
   type SalonCatalogueFor,
 } from './salon-catalogue';
+import {
+  readTeam,
+  TEAM_PERMISSIONS,
+  TEAM_PHOTO,
+  TEAM_READS,
+  TEAM_WRITES,
+  type SalonTeamFor,
+} from './salon-team';
 import { UPLOAD_LIMIT_BYTES } from '@/lib/http/upload-limits';
 
 type Tokens = components['schemas']['Tokens'];
@@ -76,6 +84,7 @@ const SUPPORT_READS = [
   ...HOURS_READS,
   ...RULES_READS,
   ...CATALOGUE_READS,
+  ...TEAM_READS,
 ];
 export function proxyKey(): Buffer {
   const value = process.env.SALON_IDENTITY_PROXY_KEY;
@@ -177,6 +186,7 @@ async function handleSupport(
   salonHoursFor: SalonHoursFor,
   salonBookingRulesFor: SalonBookingRulesFor,
   salonCatalogueFor: SalonCatalogueFor,
+  salonTeamFor: SalonTeamFor,
 ) {
   if (request.method === 'GET' && !SUPPORT_READS.includes(action))
     return action === 'sessions' || action === 'support-sessions'
@@ -192,7 +202,8 @@ async function handleSupport(
   const hours = salonHoursFor(host.hostname);
   const bookingRules = salonBookingRulesFor(host.hostname);
   const catalogue = salonCatalogueFor(host.hostname);
-  if (!client || !account || !settings || !hours || !bookingRules || !catalogue)
+  const team = salonTeamFor(host.hostname);
+  if (!client || !account || !settings || !hours || !bookingRules || !catalogue || !team)
     return problem('service_unavailable', 503);
   const access = request.cookies.get(cookieName('support', 'access'))?.value;
   const options = { headers: access ? { Authorization: `Bearer ${access}` } : {}, signal: requestSignal() };
@@ -243,6 +254,7 @@ async function handleSupport(
     ...HOURS_PERMISSIONS,
     ...RULES_PERMISSIONS,
     ...CATALOGUE_PERMISSIONS,
+    ...TEAM_PERMISSIONS,
   };
   if (permission[action] && !principal.permissions.includes(permission[action]!))
     return problem('permission_denied', 403);
@@ -255,7 +267,9 @@ async function handleSupport(
       ? await readRules(bookingRules, action, options, request.nextUrl.searchParams)
       : CATALOGUE_READS.includes(action)
         ? await readCatalogue(catalogue, action, options, request.nextUrl.searchParams)
-        : action === 'staff'
+        : TEAM_READS.includes(action)
+          ? await readTeam(team, action, options, request.nextUrl.searchParams)
+          : action === 'staff'
           ? await client.GET('/api/v1/identity/staff', { ...options, params: { query } })
           : action === 'audit'
             ? await client.GET('/api/v1/identity/audit', { ...options, params: { query } })
@@ -301,6 +315,7 @@ export function createIdentityWeb(
   salonHoursFor: SalonHoursFor,
   salonBookingRulesFor: SalonBookingRulesFor,
   salonCatalogueFor: SalonCatalogueFor,
+  salonTeamFor: SalonTeamFor,
 ) {
   return (request: NextRequest, kind: Kind, action: string) =>
     handleIdentity(request, kind, action, {
@@ -309,6 +324,7 @@ export function createIdentityWeb(
       salonHoursFor,
       salonBookingRulesFor,
       salonCatalogueFor,
+      salonTeamFor,
     });
 }
 
@@ -319,11 +335,13 @@ type Ports = {
   salonHoursFor: SalonHoursFor;
   salonBookingRulesFor: SalonBookingRulesFor;
   salonCatalogueFor: SalonCatalogueFor;
+  salonTeamFor: SalonTeamFor;
 };
 
 /** Allowlisted account operations only; neither a URL nor a tenant selector comes from input. */
 async function handleIdentity(request: NextRequest, kind: Kind, action: string, ports: Ports) {
-  const { salonAccountFor, salonSettingsFor, salonHoursFor, salonBookingRulesFor, salonCatalogueFor } = ports;
+  const { salonAccountFor, salonSettingsFor, salonHoursFor, salonBookingRulesFor, salonCatalogueFor, salonTeamFor } =
+    ports;
   try {
     const host = requestHost(request.headers.get('host'));
     if (!host) return problem('not_found', 404);
@@ -337,6 +355,7 @@ async function handleIdentity(request: NextRequest, kind: Kind, action: string, 
         salonHoursFor,
         salonBookingRulesFor,
         salonCatalogueFor,
+        salonTeamFor,
       );
     const reads = [
       'principal',
@@ -351,6 +370,7 @@ async function handleIdentity(request: NextRequest, kind: Kind, action: string, 
       ...HOURS_READS,
       ...RULES_READS,
       ...CATALOGUE_READS,
+      ...TEAM_READS,
     ];
     if (request.method === 'GET' && !reads.includes(action)) return problem('method_not_allowed', 405);
     if (request.method !== 'GET' && !csrf(request)) return problem('request_rejected', 403);
@@ -360,15 +380,17 @@ async function handleIdentity(request: NextRequest, kind: Kind, action: string, 
     const hours = salonHoursFor(host.hostname);
     const bookingRules = salonBookingRulesFor(host.hostname);
     const catalogue = salonCatalogueFor(host.hostname);
-    if (!client || !account || !settings || !hours || !bookingRules || !catalogue)
+    const team = salonTeamFor(host.hostname);
+    if (!client || !account || !settings || !hours || !bookingRules || !catalogue || !team)
       return problem('service_unavailable', 503);
     const access = request.cookies.get(cookieName(kind, 'access'))?.value;
     const refresh = request.cookies.get(cookieName(kind, 'refresh'))?.value;
     const headers: Record<string, string> = access ? { Authorization: `Bearer ${access}` } : {};
     const signal = requestSignal();
-    // A brand image and a service photo are the multipart actions; their forms are read after the session check.
+    // A brand image, a service photo and a team photo are the multipart actions; their forms are read after the
+    // session check.
     const read =
-      request.method === 'GET' || action === 'brand-image' || action === CATALOGUE_PHOTO
+      request.method === 'GET' || action === 'brand-image' || action === CATALOGUE_PHOTO || action === TEAM_PHOTO
         ? { ok: true as const, value: {} }
         : await readBoundedJson(request, 16384);
     if (!read.ok) return problem('bad_request', 400);
@@ -438,6 +460,7 @@ async function handleIdentity(request: NextRequest, kind: Kind, action: string, 
       ...HOURS_PERMISSIONS,
       ...RULES_PERMISSIONS,
       ...CATALOGUE_PERMISSIONS,
+      ...TEAM_PERMISSIONS,
     };
     if (principal && permission[action] && !principal.permissions.includes(permission[action]!))
       return problem('permission_denied', 403);
@@ -455,6 +478,8 @@ async function handleIdentity(request: NextRequest, kind: Kind, action: string, 
           ? await readRules(bookingRules, action, options, request.nextUrl.searchParams)
           : CATALOGUE_READS.includes(action)
             ? await readCatalogue(catalogue, action, options, request.nextUrl.searchParams)
+            : TEAM_READS.includes(action)
+              ? await readTeam(team, action, options, request.nextUrl.searchParams)
             : action === 'sessions'
               ? await client.GET('/api/v1/identity/sessions', { ...options, params: { query } })
               : action === 'staff'
@@ -626,6 +651,13 @@ async function handleIdentity(request: NextRequest, kind: Kind, action: string, 
         const r = await catalogue.uploadPhoto(options, upload.text, upload.file);
         return r.data ? output(r.data) : failure(r);
       }
+      case TEAM_PHOTO: {
+        // A team member's photo (F06-S01): the member named in the form, the file passed on as it came.
+        const upload = await uploadForm(request, 'memberId');
+        if ('refused' in upload) return problem(upload.refused, upload.status, { errors: upload.errors });
+        const r = await team.uploadPhoto(options, upload.text, upload.file);
+        return r.data ? output(r.data) : failure(r);
+      }
       case 'booking-rules-save': {
         // Booking rules (F04-S04): the answer is allowlisted by its contract, the request rebuilt by booking.
         const r = await changeRules(bookingRules, options, body);
@@ -636,6 +668,13 @@ async function handleIdentity(request: NextRequest, kind: Kind, action: string, 
           // The catalogue (F05-S01): the answer is allowlisted by its contract, the request rebuilt by the
           // catalogue. A delete answers no content; a creation or a duplicate answers 201.
           const r = await catalogue.change(options, action, body);
+          if (r.data) return output(r.data, r.response.status === 201 ? 201 : 200);
+          return r.response.ok ? output({ ok: true }) : failure(r);
+        }
+        if (TEAM_WRITES.includes(action)) {
+          // The team (F06-S01): the answer is allowlisted by its contract, the request rebuilt by staff. A removal
+          // answers no content; an addition answers 201.
+          const r = await team.change(options, action, body);
           if (r.data) return output(r.data, r.response.status === 201 ? 201 : 200);
           return r.response.ok ? output({ ok: true }) : failure(r);
         }
@@ -694,7 +733,7 @@ async function boundedBody(request: NextRequest, limit: number): Promise<Uint8Ar
  */
 async function uploadForm(
   request: NextRequest,
-  field: 'kind' | 'serviceId',
+  field: 'kind' | 'serviceId' | 'memberId',
 ): Promise<{ text: string; file: Blob } | { refused: string; status: number; errors?: unknown }> {
   const declared = request.headers.get('content-length');
   if (declared !== null && Number(declared) > UPLOAD_LIMIT) return { refused: 'request_rejected', status: 413 };

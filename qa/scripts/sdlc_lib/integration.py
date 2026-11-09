@@ -187,7 +187,7 @@ def check_worktree(record):
         raise Refusal("switch to a retained checkout before removing this worktree")
     if run("git", "status", "--porcelain", "--untracked-files=all", cwd=path).stdout.strip():
         raise Refusal(f"worktree has uncommitted or untracked work: {path}")
-    # Either local instance (decision 099) may still be running from this worktree.
+    # Either local instance (decision 105) may still be running from this worktree.
     if list(Path(path).glob(".local/run/*.pid")) or list(Path(path).glob(".local/qa/run/*.pid")):
         raise Refusal(f"stop the worktree's local services before cleanup: {path}")
     # Build caches can be regenerated; QA evidence is archived. Other ignored files

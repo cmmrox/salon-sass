@@ -1,8 +1,8 @@
 /**
  * F02 synthetic fixtures. Credentials stay in process memory and are never logged; the roster's own
- * development password is public by decision 099.
+ * development password is public by decision 105.
  *
- * Accounts (decision 099, docs/qa/test-plan.md, "Accounts"): QA runs against the QA instance only.
+ * Accounts (decision 105, docs/qa/test-plan.md, "Accounts"): QA runs against the QA instance only.
  * A test that needs only "someone in this role" at a synthetic salon gets the roster's account in that
  * role (shared/roster.ts); `identity.staff()` hands it out the first time a test asks for a role at a
  * salon, and an extra account (a realistic person, shared/people.ts) every later time, so two people
@@ -47,7 +47,7 @@ export type SignedStaff = Actor & { account: SeedAccount };
 /**
  * An extra account: a realistic person (unique within the test), a valid Sri Lankan mobile in local
  * form (`07XXXXXXXX`) and a passphrase the identity policy accepts, for a product path. Seeding it
- * through `identity.seed()` gives it the development password instead (decision 099).
+ * through `identity.seed()` gives it the development password instead (decision 105).
  * `salon` chooses the email's domain (alpha's when not given).
  */
 export function syntheticAccount(role: Role = 'MANAGER', mfa = role === 'OWNER', salon?: Salon | string): SeedAccount {
@@ -129,7 +129,7 @@ export class Identity {
   async seedRoster() { for(const salon of [alpha,beta,gamma]) await this.seed(salon,rosterStaff(salon)); }
   /**
    * Seeds accounts through the local hook. Every account seeded this way has the roster's development
-   * password (decision 099), written back onto the account so a later sign-in uses it.
+   * password (decision 105), written back onto the account so a later sign-in uses it.
    */
   async seed(salon: Salon, accounts: SeedAccount[]) {
     for (const account of accounts) account.password = DEVELOPMENT_PASSWORD;

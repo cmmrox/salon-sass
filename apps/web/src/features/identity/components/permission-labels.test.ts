@@ -27,6 +27,10 @@ const GRANTED = [
   'settings.manage',
   // F05 (decision 093): reading the service catalogue, which every role holds.
   'catalogue.read',
+  // F06 (decision 100): reading and changing the team, and blocked time (F06-S03, decision 099).
+  'team.read',
+  'team.manage',
+  'team.block',
 ];
 
 describe('permission labels', () => {

@@ -54,9 +54,11 @@ export async function referenceFit(page: Page, fullName?: string) {
 }
 /**
  * The workspace navigation's routes: only these, each once (CR-010), plus the Owner's Plan and
- * billing (F03-S02) and Support access (F03-S04) pages, which F03 added to the staff workspace.
+ * billing (F03-S02) and Support access (F03-S04) pages, which F03 added to the staff workspace, and
+ * Settings (F04-S01) and Services (F05-S01). Since F06-S01 the Staff entry opens the Team page, and
+ * `/workspace/staff` is reached only by its Sign-in accounts tab, so it is not a route of the navigation.
  */
-const NAVIGATION_ROUTES = ['/workspace/account', '/workspace/staff', '/workspace/audit', '/workspace/billing', '/workspace/support-access'];
+const NAVIGATION_ROUTES = ['/workspace/account', '/workspace/team', '/workspace/services', '/workspace/audit', '/workspace/billing', '/workspace/support-access', '/workspace/settings'];
 async function navigationLinks(nav: Locator) {
   const links = nav.getByRole('link');
   const hrefs = await links.evaluateAll(elements => elements.map(el => el.getAttribute('href')));

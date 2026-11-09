@@ -9,9 +9,9 @@
  * SUPPORT and PENDING_S04 (the name is kept so the prepared tests read unchanged).
  *
  * Credentials and TOTP seeds are generated in memory and never logged or written to evidence; the
- * roster's development password is public by decision 099.
+ * roster's development password is public by decision 105.
  *
- * Operator accounts (decision 099): QA signs in as the same fixed operators the owner tests with,
+ * Operator accounts (decision 105): QA signs in as the same fixed operators the owner tests with,
  * the roster's Ruwan Dissanayake (OPERATOR_ADMIN) and Shanika Abeysekera (OPERATOR_SUPPORT) in
  * infra/local/accounts.json. They are seeded with `keepExisting: true` before every operator test and
  * never changed; `DELETE /local/operator/fixtures`, also before every test, clears their consumed TOTP
@@ -556,7 +556,7 @@ export class Operator {
   async resetFixtures() { await this.hookOk('fixtures', 204); }
 
   /**
-   * Seeds operators through the local hook with the roster's development password (decision 099),
+   * Seeds operators through the local hook with the roster's development password (decision 105),
    * written back onto each account. A roster operator is never seeded here: `seedRoster()` keeps them.
    */
   async seed(...accounts: OperatorAccount[]) {

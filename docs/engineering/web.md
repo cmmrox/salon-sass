@@ -221,7 +221,7 @@ because the owner set one standard for all Next.js work in this product.
    | Container | Card |
    | Row of a list (device, staff member, audit entry, any record) | Item (`ItemGroup`, `Item`, `ItemContent`, `ItemTitle`, `ItemDescription`, `ItemActions`); the `divided` variant rules a line under each row, as the prototype's settings lists do (F04) |
    | Tabular data meant to be compared across columns | Table |
-   | Status word, role, tag | Badge |
+   | Status word, role, tag | Badge; the prototype's warning pill (`.pl.wn`) is Badge `variant="caution"` (F06-S03) |
    | Nothing to show | Empty |
    | Page through a list | Pagination |
    | Message, refusal, warning, success | Alert, or Sonner for a passing notice; the prototype's information banner (`.bn.in`) is Alert `variant="info"` on the theme's `--info-surface` (F05-S01) |

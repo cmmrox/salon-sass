@@ -1,5 +1,5 @@
 /**
- * The fixed local account roster (decision 099): `infra/local/accounts.json` of the product under
+ * The fixed local account roster (decision 105): `infra/local/accounts.json` of the product under
  * test, the one list of people who exist in every local instance. Five staff per synthetic salon (one
  * per role) and one operator per operator role, every password `123456@321`, a fixed TOTP seed for
  * each salon Owner and each operator. A test that needs only "someone in this role" signs in as the
@@ -30,7 +30,7 @@ export type RosterOperator = { email: string; password: string; role: RosterOper
 let loaded: RosterFile | undefined;
 function file(): RosterFile {
   if (!loaded) {
-    if (!fs.existsSync(ROSTER_FILE)) throw new Error(`ENVIRONMENT: the fixed account roster ${ROSTER_FILE} is not there (decision 099)`);
+    if (!fs.existsSync(ROSTER_FILE)) throw new Error(`ENVIRONMENT: the fixed account roster ${ROSTER_FILE} is not there (decision 105)`);
     loaded = JSON.parse(fs.readFileSync(ROSTER_FILE, 'utf8')) as RosterFile;
     if (!loaded.salons || !Array.isArray(loaded.operators)) throw new Error(`ENVIRONMENT: ${ROSTER_FILE} is not the roster's shape`);
   }
