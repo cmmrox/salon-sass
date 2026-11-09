@@ -104,6 +104,8 @@ export const PENDING_F07_S03 = {
     action: (a: string) => `appointment-${a}`,
   },
   cancel: { dialog: 'cancel-dialog', reason: 'cancel-reason', note: 'cancel-note', confirm: 'cancel-confirm', keep: 'cancel-keep' },
+  /** The URL's names for the day and the search (AC-3 says the URL keeps them; the names are the build's). */
+  query: { day: 'day', q: 'q' },
   /** The status Select's values, in the spec's order (AC-3). */
   statusOptions: ['all', 'held', 'confirmed', 'arrived', 'in_service', 'completed', 'cancelled', 'no_show'],
   sourceOptions: ['phone', 'whatsapp', 'front_desk', 'walk_in', 'instagram', 'google'],
@@ -172,3 +174,16 @@ export const S03_TEXT = {
 
 /** Every width the design standards name for the workspace. */
 export { DESIGN_WIDTHS } from './design-reference';
+
+/**
+ * How S03 writes a time and a day (its AC-12, decisions 103, 106 and 107): the existing 24-hour `formatClock` and the
+ * existing `formatDay` (en-LK: weekday, day, month and year). Written here from those documented formats, so a change
+ * to the product's formatter shows as a difference. The prototype's "10:30 AM" is its 12-hour clock, which decision 103
+ * leaves to its own request.
+ */
+export const shownTime = (hhmm: string) => hhmm;
+export const shownDay = (date: string) => new Intl.DateTimeFormat('en-LK', { timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
+  .format(new Date(`${date}T00:00:00Z`));
+export const firstName = (name: string) => name.split(' ')[0];
+/** `m:ss` left until an instant, by the application's clock. */
+export const left = (until: string, now: string) => { const s = Math.max(0, Math.ceil((Date.parse(until) - Date.parse(now)) / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
