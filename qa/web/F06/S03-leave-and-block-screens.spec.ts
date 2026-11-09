@@ -13,7 +13,12 @@
  * passed a check of the page, because the sheet hid it from a read-only role.
  *
  * AC-8's list can only be shown here from a real request whose answer gains a list in the browser: no booking exists
- * before F07 (deferred case 031). The test ids and names are guesses until the handoff, all in `PENDING_F06_S03`.
+ * before F07 (deferred case 031). The test ids and names are the build's, all in `PENDING_F06_S03`.
+ *
+ * CR-026 (decision 107): the badge and the rows print the short day form (`shortDayWords`), the forms' date buttons and
+ * the affected bookings keep `formatDay` (`dayWords`), and choosing the first day sets an empty or earlier last day to
+ * it (AC-15), so `fillLeave` makes one date choice for a one-day leave. Cases 045 and 046 were written before the CR-026
+ * build, from its criteria; `block-row-when` and `change-row-date` are F06's test ids as built.
  */
 import type { Locator, Page, Route } from '@playwright/test';
 
@@ -22,13 +27,13 @@ import { expect, type AccountBrowser } from '../../shared/identity-browser';
 import type { SignedStaff } from '../../shared/identity';
 import type { Operator } from '../../shared/operator';
 import { fit, focusIndicator, seriousViolations } from '../../shared/page-checks';
-import { plusDays } from '../../shared/salon-hours';
+import { plusDays, plusYear } from '../../shared/salon-hours';
 import { memberInput, teamSalon, type Team } from '../../shared/team';
 import { TEAM_ROUTE, browserReceived, button, card, id, open, openSchedule, ready, salonToday, settled, sheetOf, supportBrowser, test } from '../../shared/team-browser';
 import {
-  ABSENCE_TEXT, Absences, PENDING_F06_S03, TYPE_WORDS, blockInput, daysWords, dayWords, leaveInput, pickDay,
+  ABSENCE_TEXT, Absences, PENDING_F06_S03, TYPE_WORDS, blockInput, dayWords, leaveInput, nextYearDay, pickDay, shortDayWords, shortDaysWords, thisYearDay,
 } from '../../shared/team-leave';
-import { PENDING_F06_S02, shownTime } from '../../shared/team-schedule';
+import { PENDING_F06_S02, calendarDay, shownTime } from '../../shared/team-schedule';
 
 test.describe.configure({ timeout: 180_000 });
 
@@ -51,9 +56,10 @@ async function setTime(page: Page, sheet: Locator, trigger: string, hhmm: string
   await expect(page.getByRole('listbox')).toHaveCount(0);
 }
 
+/** Fills the leave form. Choosing the first day sets the last day to it (CR-026, AC-15), so one day alone is one choice. */
 async function fillLeave(page: Page, sheet: Locator, first: string, last: string, type?: keyof typeof TYPE_WORDS, note?: string) {
   await pickDay(page, id(sheet, W.leaveFirst), W.leaveFirstCalendar, first);
-  await pickDay(page, id(sheet, W.leaveLast), W.leaveLastCalendar, last);
+  if (last !== first) await pickDay(page, id(sheet, W.leaveLast), W.leaveLastCalendar, last);
   if (type) {
     await id(sheet, W.leaveType).click();
     await page.getByRole('option', { name: TYPE_WORDS[type], exact: true }).click();
@@ -77,7 +83,7 @@ async function arrange(operator: Operator, accounts: AccountBrowser, team: Team,
 
 // ---------------------------------------------------------------- AC-1, AC-2, AC-3 leave
 
-test('TC-F06-S03-032 AC-1, AC-3: on Leave an Owner adds leave of many days and of one, sees them in date order with their days, type and note, "No leave planned." before and after, and Remove asks first, Cancel keeps it', async ({ accounts, operator, team }) => {
+test('TC-F06-S03-032 AC-1, AC-3, AC-16: on Leave an Owner adds leave of many days and of one, sees them in date order with their days, type and note, "No leave planned." before and after, and Remove asks first, Cancel keeps it', async ({ accounts, operator, team }) => {
   const { salon, owner, person, absences, today } = await arrange(operator, accounts, team);
   const { page } = await open(accounts, owner);
   const sheet = await openSchedule(page, person.id);
@@ -99,8 +105,8 @@ test('TC-F06-S03-032 AC-1, AC-3: on Leave an Owner adds leave of many days and o
   });
   const rows = id(sheet, W.leaveRow);
   await test.step('the list', async () => {
-    await expect(rows.nth(0).getByTestId(W.leaveRowDays), 'one day alone, first').toHaveText(dayWords(single));
-    await expect(rows.nth(1).getByTestId(W.leaveRowDays)).toHaveText(daysWords(first, last));
+    await expect(rows.nth(0).getByTestId(W.leaveRowDays), 'one day alone, first').toHaveText(shortDayWords(single, today));
+    await expect(rows.nth(1).getByTestId(W.leaveRowDays)).toHaveText(shortDaysWords(first, last, today));
     await expect(rows.nth(1).getByTestId(W.leaveRowType)).toHaveText(TYPE_WORDS.sick);
     await expect(rows.nth(1).getByTestId(W.leaveRowNote)).toHaveText('Back on the fifteenth');
     await expect(rows.nth(1).getByTestId(W.leaveRowResolve), 'no bookings to resolve').toHaveCount(0);
@@ -126,20 +132,14 @@ test('TC-F06-S03-032 AC-1, AC-3: on Leave an Owner adds leave of many days and o
   });
 });
 
-test('TC-F06-S03-033 AC-1, AC-2: the leave form says "The last day can’t be before the first." for days out of order and "This overlaps leave already planned." for days someone else just took, saving nothing of its own', async ({ accounts, operator, team }) => {
+// Days out of order can no longer be chosen (CR-026, AC-15: case 045); the API's 400 for them is case 002.
+test('TC-F06-S03-033 AC-2: the leave form says "This overlaps leave already planned." for days someone else just took, saving nothing of its own', async ({ accounts, operator, team }) => {
   const { salon, owner, person, absences, today } = await arrange(operator, accounts, team);
   const { page } = await open(accounts, owner);
   const sheet = await openSchedule(page, person.id);
   await leaveTab(sheet).click();
   await button(sheet, N.addLeave, true).click();
   const [a, b] = [plusDays(today, 6), plusDays(today, 8)];
-  await test.step('days out of order', async () => {
-    await fillLeave(page, sheet, b, a);
-    // Said on saving, as the prototype's lvSave does; the S03 spec, unlike S01's and S02's, asks for no disabled button.
-    await button(sheet, N.saveLeave, true).click();
-    await expect(id(sheet, W.leaveProblem).filter({ hasText: TEXT.lastBeforeFirst })).toBeVisible();
-  });
-  expect((await absences.read(salon, owner.tokens, person.id)).leave, 'nothing saved').toEqual([]);
   await test.step('days someone else just took', async () => {
     await fillLeave(page, sheet, a, b);
     await absences.addLeave(salon, owner.tokens, person.id, leaveInput(b, { type: 'other' }));
@@ -151,7 +151,7 @@ test('TC-F06-S03-033 AC-1, AC-2: the leave form says "The last day can’t be be
 
 // ---------------------------------------------------------------- AC-4, AC-5, AC-6 blocks
 
-test('TC-F06-S03-034 AC-4, AC-6: a Receptionist blocks time with a trimmed label, sees it in date and time order with "No blocked time." before and after, and Remove says "Blocked time removed."; they have no control over leave', async ({ accounts, operator, team }) => {
+test('TC-F06-S03-034 AC-4, AC-6, AC-16: a Receptionist blocks time with a trimmed label, sees it in date and time order with "No blocked time." before and after, and Remove says "Blocked time removed."; they have no control over leave', async ({ accounts, operator, team }) => {
   const { salon, owner, person, absences, today } = await arrange(operator, accounts, team);
   const receptionist = await accounts.identity.staff(salon, 'RECEPTIONIST');
   const { page } = await open(accounts, receptionist);
@@ -174,8 +174,8 @@ test('TC-F06-S03-034 AC-4, AC-6: a Receptionist blocks time with a trimmed label
   const rows = id(sheet, W.blockRow);
   await expect(rows).toHaveCount(2);
   await test.step('the list', async () => {
-    for (const words of [dayWords(sooner), TEXT.blockTimes('15:00', '15:45'), 'Errand']) await expect(rows.nth(0), words).toContainText(words);
-    for (const words of [dayWords(later), TEXT.blockTimes('10:00', '11:30'), 'Training']) await expect(rows.nth(1), words).toContainText(words);
+    for (const words of [shortDayWords(sooner, today), TEXT.blockTimes('15:00', '15:45'), 'Errand']) await expect(rows.nth(0), words).toContainText(words);
+    for (const words of [shortDayWords(later, today), TEXT.blockTimes('10:00', '11:30'), 'Training']) await expect(rows.nth(1), words).toContainText(words);
   });
   expect((await absences.read(salon, owner.tokens, person.id)).blockedTime.map(b => [b.date, b.starts, b.finishes, b.label]), 'stored, trimmed').toEqual([[sooner, '15:00', '15:45', 'Errand'], [later, '10:00', '11:30', 'Training']]);
   await test.step('Remove', async () => {
@@ -284,7 +284,7 @@ test('TC-F06-S03-036 AC-3, AC-8: both forms show the bookings a period would aff
 
 // ---------------------------------------------------------------- AC-9, AC-10 the badge and who sees what
 
-test('TC-F06-S03-037 AC-9: each card has a badge for the current or next leave: with team.manage its type and days, otherwise "On leave" and the days; with none, no badge', async ({ accounts, operator, team }) => {
+test('TC-F06-S03-037 AC-9, AC-16: each card has a badge for the current or next leave: with team.manage its type and days, otherwise "On leave" and the days; with none, no badge', async ({ accounts, operator, team }) => {
   const { salon, owner, person, absences, today } = await arrange(operator, accounts, team);
   const none = await team.add(salon, owner.tokens, memberInput({ name: 'No Leave' }));
   const [first, last] = [plusDays(today, 2), plusDays(today, 4)];
@@ -296,8 +296,8 @@ test('TC-F06-S03-037 AC-9: each card has a badge for the current or next leave: 
   for (const [who, actor] of [['the Owner', owner], ['a Manager', manager]] as const) {
     await test.step(who, async () => {
       const { page, context } = await open(accounts, actor);
-      await expect(id(card(page, person.id), W.cardLeave), 'the nearer leave, its type and days').toHaveText(TEXT.badge('sick', first, last));
-      await expect(id(card(page, single.id), W.cardLeave), 'one day alone').toHaveText(TEXT.badge('annual', first, first));
+      await expect(id(card(page, person.id), W.cardLeave), 'the nearer leave, its type and days').toHaveText(TEXT.badge('sick', first, last, today));
+      await expect(id(card(page, single.id), W.cardLeave), 'one day alone').toHaveText(TEXT.badge('annual', first, first, today));
       await expect(card(page, none.id).getByTestId(W.cardLeave), 'no leave, no badge').toHaveCount(0);
       await context.close();
     });
@@ -306,7 +306,7 @@ test('TC-F06-S03-037 AC-9: each card has a badge for the current or next leave: 
     await test.step(role, async () => {
       const actor = await accounts.identity.staff(salon, role);
       const { page, context } = await open(accounts, actor);
-      await expect(id(card(page, person.id), W.cardLeave), 'days alone').toHaveText(TEXT.badgeWithoutType(first, last));
+      await expect(id(card(page, person.id), W.cardLeave), 'days alone').toHaveText(TEXT.badgeWithoutType(first, last, today));
       await expect(card(page, none.id).getByTestId(W.cardLeave)).toHaveCount(0);
       await context.close();
     });
@@ -325,11 +325,11 @@ test('TC-F06-S03-038 AC-9, AC-10: sick leave\'s type and note reach no browser w
     const received = browserReceived(page);
     await page.goto(TEAM_ROUTE);
     await ready(page);
-    await expect(id(card(page, person.id), W.cardLeave), `${who}: the card's days`).toHaveText(TEXT.badgeWithoutType(first, last));
+    await expect(id(card(page, person.id), W.cardLeave), `${who}: the card's days`).toHaveText(TEXT.badgeWithoutType(first, last, today));
     const sheet = await openSchedule(page, person.id);
     await leaveTab(sheet).click();
     const row = id(sheet, W.leaveRow).first();
-    await expect(row.getByTestId(W.leaveRowDays), `${who}: the tab's days`).toHaveText(daysWords(first, last));
+    await expect(row.getByTestId(W.leaveRowDays), `${who}: the tab's days`).toHaveText(shortDaysWords(first, last, today));
     await expect(row.getByTestId(W.leaveRowType), `${who}: no type`).toHaveCount(0);
     await expect(row.getByTestId(W.leaveRowNote), `${who}: no note`).toHaveCount(0);
     await expect(sheet.getByRole('button', { name: N.addLeave, exact: true }), `${who}: no + Add leave`).toHaveCount(0);
@@ -372,7 +372,7 @@ test('TC-F06-S03-038 AC-9, AC-10: sick leave\'s type and note reach no browser w
     const received = browserReceived(page);
     await page.goto(TEAM_ROUTE);
     await ready(page);
-    await expect(id(card(page, person.id), W.cardLeave)).toHaveText(TEXT.badge('sick', first, last));
+    await expect(id(card(page, person.id), W.cardLeave)).toHaveText(TEXT.badge('sick', first, last, today));
     const sheet = await openSchedule(page, person.id);
     await leaveTab(sheet).click();
     await expect(id(sheet, W.leaveRow).first().getByTestId(W.leaveRowNote)).toHaveText(note);
@@ -613,3 +613,145 @@ function calendarToday(page: Page, today: string) {
   const written = new Intl.DateTimeFormat('en-LK', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${today}T00:00:00Z`));
   return page.getByTestId(W.blockCalendar).getByRole('button', { name: new RegExp(`^(Today, )?${written}`) });
 }
+
+// ---------------------------------------------------------------- CR-026 (decision 098): AC-15 and AC-16
+
+/** How many lines an element's text takes: the distinct tops of its text's line boxes. */
+async function lineCount(element: Locator) {
+  return element.evaluate(el => {
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    return new Set([...range.getClientRects()].filter(r => r.width > 0 && r.height > 0).map(r => Math.round(r.top))).size;
+  });
+}
+
+/** The 11th of the month after next: a first day whose month is not today's and whose day before is in the same month. */
+function laterMonthDay(today: string) {
+  const [y, m] = today.split('-').map(Number);
+  const at = new Date(Date.UTC(y, m + 1, 11));
+  return at.toISOString().slice(0, 10);
+}
+
+test('TC-F06-S03-045 AC-15: choosing the first day sets an empty or earlier last day to it and keeps a later one; the last day\'s calendar then opens on the first day\'s month offering no day before it and none beyond a year, so one-day leave is one date choice', async ({ accounts, operator, team }) => {
+  const { salon, owner, person, absences, today } = await arrange(operator, accounts, team);
+  const { page } = await open(accounts, owner);
+  const sheet = await openSchedule(page, person.id);
+  await leaveTab(sheet).click();
+  await button(sheet, N.addLeave, true).click();
+  const first = laterMonthDay(today);
+  const lastCalendar = page.getByTestId(W.leaveLastCalendar);
+  const closeCalendar = async () => {
+    await page.keyboard.press('Escape');
+    await expect(lastCalendar, 'the calendar closes').toHaveCount(0);
+    await expect(sheetOf(page), 'and the sheet stays').toBeVisible();
+    await expect(page.getByTestId(S.leaveDialog), 'with no question about leaving').toHaveCount(0);
+  };
+  await test.step('an empty last day takes the first day', async () => {
+    await expect(id(sheet, W.leaveLast), 'no last day yet').not.toHaveText(/\d/);
+    await pickDay(page, id(sheet, W.leaveFirst), W.leaveFirstCalendar, first);
+    await expect(id(sheet, W.leaveLast), 'the last day is the first, with the year as the form prints it').toContainText(dayWords(first));
+  });
+  await test.step('the last day\'s calendar opens on the first day\'s month and offers nothing before it', async () => {
+    await id(sheet, W.leaveLast).click();
+    await expect(calendarDay(lastCalendar, first), 'the first day\'s month, with no move').toBeVisible();
+    await expect(calendarDay(lastCalendar, first)).toBeEnabled();
+    await expect(calendarDay(lastCalendar, plusDays(first, 1))).toBeEnabled();
+    await expect(calendarDay(lastCalendar, plusDays(first, -1)), 'the day before the first is not offered').toBeDisabled();
+    await expect(calendarDay(lastCalendar, plusDays(first, -10)), 'nor any earlier day of the month').toBeDisabled();
+  });
+  await test.step('and still none beyond a year ahead', async () => {
+    const yearAhead = plusYear(today);
+    const next = lastCalendar.getByRole('button', { name: /next month/i });
+    // To the last month offered: an outside day of the month before can show a year ahead too early.
+    for (let n = 0; n < 13 && !(await next.isDisabled()); n++) await next.click();
+    await expect(next, 'the calendar stops at a month').toBeDisabled();
+    await expect(calendarDay(lastCalendar, yearAhead), 'and a year ahead is in it, offered').toBeEnabled();
+    const beyond = plusDays(yearAhead, 1);
+    // The day after a year ahead is in this month, or in the next, which cannot be reached.
+    if (beyond.slice(0, 7) === yearAhead.slice(0, 7)) await expect(calendarDay(lastCalendar, beyond), 'the day after is not offered').toBeDisabled();
+    await closeCalendar();
+  });
+  await test.step('one date choice saves one day', async () => {
+    await button(sheet, N.saveLeave, true).click();
+    await expect(toast(page, TEXT.leaveAdded)).toBeVisible();
+    expect((await absences.read(salon, owner.tokens, person.id)).leave.map(l => [l.firstDay, l.lastDay]), 'one day, from one choice').toEqual([[first, first]]);
+  });
+  // All in the first day's month, from its 13th to its 19th, so each day checked is in the calendar's month.
+  const [a, later, b, past] = [plusDays(first, 2), plusDays(first, 5), plusDays(first, 3), plusDays(first, 8)];
+  await test.step('a later last day already chosen is kept', async () => {
+    await button(sheet, N.addLeave, true).click();
+    await pickDay(page, id(sheet, W.leaveFirst), W.leaveFirstCalendar, a);
+    await pickDay(page, id(sheet, W.leaveLast), W.leaveLastCalendar, later);
+    await pickDay(page, id(sheet, W.leaveFirst), W.leaveFirstCalendar, b);
+    await expect(id(sheet, W.leaveFirst)).toContainText(dayWords(b));
+    await expect(id(sheet, W.leaveLast), 'kept').toContainText(dayWords(later));
+  });
+  await test.step('an earlier last day follows the first, and a day before it cannot be chosen', async () => {
+    await pickDay(page, id(sheet, W.leaveFirst), W.leaveFirstCalendar, past);
+    await expect(id(sheet, W.leaveLast), 'set to the first day').toContainText(dayWords(past));
+    await id(sheet, W.leaveLast).click();
+    await expect(calendarDay(lastCalendar, later), 'the old last day is no longer offered').toBeDisabled();
+    await expect(calendarDay(lastCalendar, plusDays(past, -1))).toBeDisabled();
+    await closeCalendar();
+    await button(sheet, N.saveLeave, true).click();
+    await expect(id(sheet, W.leaveProblem), 'nothing to correct').toHaveCount(0);
+    await expect(toast(page, TEXT.leaveAdded)).toBeVisible();
+  });
+  expect((await absences.read(salon, owner.tokens, person.id)).leave.map(l => [l.firstDay, l.lastDay]), 'stored as chosen').toEqual([[first, first], [past, past]]);
+});
+
+test('TC-F06-S03-046 AC-16: the card\'s badge, the Leave rows and the Blocked time rows print a date in the salon\'s current year without the year, and a period with an end in another year with the year on both ends; at 1280 this year\'s badge is one line; the forms\' date buttons keep the year', async ({ accounts, operator, team }) => {
+  const { salon, owner, person, absences, today } = await arrange(operator, accounts, team);
+  const year = today.slice(0, 4);
+  const [first, last] = [thisYearDay(today, 2), thisYearDay(today, 4)];
+  const [spanFirst, spanLast] = [`${year}-12-31`, `${Number(year) + 1}-01-01`];
+  const nextYear = nextYearDay(today);
+  const across = await team.add(salon, owner.tokens, memberInput({ name: 'Across The Year' }));
+  // Annual leave, the longest type's words, for the one-line check.
+  await absences.addLeave(salon, owner.tokens, person.id, leaveInput(first, { lastDay: last, type: 'annual' }));
+  await absences.addLeave(salon, owner.tokens, across.id, leaveInput(spanFirst, { lastDay: spanLast, type: 'sick' }));
+  await absences.addBlock(salon, owner.tokens, person.id, blockInput(first, { starts: '10:00', finishes: '11:00', label: 'Training' }));
+  await absences.addBlock(salon, owner.tokens, person.id, blockInput(nextYear, { starts: '15:00', finishes: '16:00', label: 'Errand' }));
+  /** The short form, written out here so that a fault shared with `shortDayWords` cannot hide: no year in it. */
+  const short = (date: string) => new Intl.DateTimeFormat('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' }).format(new Date(`${date}T00:00:00Z`));
+  const thisYears = first === last ? short(first) : `${short(first)} to ${short(last)}`;
+  expect(shortDaysWords(first, last, today), 'the helper agrees').toBe(thisYears);
+  const spanning = `${dayWords(spanFirst)} to ${dayWords(spanLast)}`;
+  const { page } = await open(accounts, owner, 1280);
+  await test.step('the card\'s badge', async () => {
+    const badge = id(card(page, person.id), W.cardLeave);
+    await expect(badge, 'this year: no year').toHaveText(`${TYPE_WORDS.annual}, ${thisYears}`);
+    await expect(id(card(page, across.id), W.cardLeave), 'an end in another year: the year on both ends').toHaveText(`${TYPE_WORDS.sick}, ${spanning}`);
+    await settled(page);
+    expect(await lineCount(badge), 'one line on a 1280 card').toBe(1);
+  });
+  await test.step('the Leave rows, and the form keeps the year', async () => {
+    const sheet = await openSchedule(page, person.id);
+    await leaveTab(sheet).click();
+    await expect(id(sheet, W.leaveRow).first().getByTestId(W.leaveRowDays)).toHaveText(thisYears);
+    await button(sheet, N.addLeave, true).click();
+    await pickDay(page, id(sheet, W.leaveFirst), W.leaveFirstCalendar, first);
+    await expect(id(sheet, W.leaveFirst), 'the first day\'s button').toContainText(dayWords(first));
+    await button(sheet, 'Cancel', true).click();
+  });
+  await test.step('the Blocked time rows, and the form keeps the year', async () => {
+    const sheet = sheetOf(page);
+    await blockTab(sheet).click();
+    const rows = id(sheet, W.blockRow);
+    await expect(rows).toHaveCount(2);
+    await expect(rows.nth(0), 'this year').toContainText(short(first));
+    await expect(rows.nth(0), 'this year: no year').not.toContainText(year);
+    await expect(rows.nth(1), 'another year: with it').toContainText(dayWords(nextYear));
+    await button(sheet, N.addBlock, true).click();
+    await pickDay(page, id(sheet, W.blockDate), W.blockCalendar, first);
+    await expect(id(sheet, W.blockDate), 'the date button').toContainText(dayWords(first));
+    await button(sheet, 'Cancel', true).click();
+    await id(sheet, S.close).click();
+    await expect(sheetOf(page)).toHaveCount(0);
+  });
+  await test.step('a Leave row with an end in another year', async () => {
+    const sheet = await openSchedule(page, across.id);
+    await leaveTab(sheet).click();
+    await expect(id(sheet, W.leaveRow).first().getByTestId(W.leaveRowDays)).toHaveText(spanning);
+  });
+});
