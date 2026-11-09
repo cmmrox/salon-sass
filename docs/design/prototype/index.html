@@ -3195,4 +3195,96 @@ function schPaint(){const p=ST.find(x=>x.id==SC.id),sc=document.querySelector('#
 </body></html>
 
 
+<script>
+/* ===== F07 booking screens (CR-023). Drawn in the prototype's grammar for owner confirmation (decisions 068, 070). =====
+   Bookings lists any day's bookings and holds with their state, source and reference. New appointment books any open day:
+   name and mobile required, the source chosen, "Find free times" offers times across the eligible team, and choosing one
+   places a hold with a visible countdown that the desk confirms. The appointment sheet offers only the state changes the
+   rules allow (BKG-06) and shows who changed what, when and why. Booking rules gain how "No preference" is assigned and
+   how long a hold lasts. Not built in F07 and so not drawn: payment columns and Take payment (F08, F10), Reschedule (F09),
+   the calendar and walk-ins (F10), reminders (F11). */
+ST_LBL.held=['Held','wn'];ST_LBL.inservice=['In service','in'];
+const F7SRC=['Phone','WhatsApp','Front desk','Walk-in','Instagram','Google'];
+const f7Ref=id=>{let h=2166136261,s='';for(let i=0;i<6;i++){for(const c of String(id)+i)h=Math.imul(h^c.charCodeAt(0),16777619)>>>0;s+=GCA[h%GCA.length]}return s.slice(0,3)+'-'+s.slice(3)};
+const f7RefOf=a=>a.ref||(a.ref=f7Ref(a.id));
+const F7={hold:null,tm:null,rules:{who:'even',hold:10}};
+A.forEach(a=>{if(!a.hist)a.hist=[{t:'Booked',by:a.src=='Online'?'Customer':'Front desk',at:'Earlier',why:''}]});
+A.push({id:'VL-10490',st:'s',d:0,s:780,du:45,sv:'Manicure',cu:'Ruwini Fernando',ph:'077 300 1188',status:'held',pay:'Unpaid',paid:0,tot:3000,src:'Phone',items:[],exp:Date.now()+7*60000,hist:[{t:'Held',by:'Front desk',at:T(NOW),why:''}]});
+const f7Left=a=>{const s=Math.max(0,Math.ceil((a.exp-Date.now())/1000));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
+const f7Can={
+ arrive:a=>a.status=='confirmed'&&a.d==0,
+ start:a=>a.status=='arrived',
+ cancel:a=>['confirmed','held'].includes(a.status)&&(a.d>0||(a.d==0&&NOW<a.s)),
+ noshow:a=>a.status=='confirmed'&&(a.d<0||(a.d==0&&NOW>=a.s)),
+ undo:a=>a.status=='noshow'&&a.d==0};
+function f7Badges(a){return '<span class="pl '+ST_LBL[a.status][1]+'">'+ST_LBL[a.status][0]+(a.status=='held'?' · '+f7Left(a)+' left':'')+'</span> <span class="pl ne">'+bx(a.src)+'</span>'}
+/* the Bookings page (wide and narrow) */
+function f7Filt(){const f=S.f7=S.f7||{d:'0',s:'all',p:'all',q:''};return [f,A.slice().sort((x,y)=>x.d-y.d||x.s-y.s).filter(a=>brM(a)&&(f.d=='all'||a.d==+f.d)&&(f.s=='all'||a.status==f.s)&&(f.p=='all'||a.st==f.p)&&(a.cu+' '+a.ph+' '+f7RefOf(a)+' '+a.sv).toLowerCase().includes(f.q.toLowerCase()))]}
+function f7Tools(f){return '<div class="tools"><input id="f7q" type="search" aria-label="Search bookings" placeholder="Search name, mobile or reference" value="'+bx(f.q)+'" oninput="S.f7.q=this.value;render(1)">'
+ +'<label class="sr" for="f7d">Day</label><select id="f7d" style="width:auto" onchange="S.f7.d=this.value;render()">'+DAYS.map((x,i)=>'<option value="'+i+'"'+(f.d==String(i)?' selected':'')+'>'+DL[i]+(x.closed?' (closed)':'')+'</option>').join('')+'<option value="all"'+(f.d=='all'?' selected':'')+'>All upcoming days</option></select>'
+ +'<label class="sr" for="f7s">Status</label><select id="f7s" style="width:auto" onchange="S.f7.s=this.value;render()">'+[['all','All statuses'],['held','Held'],['confirmed','Confirmed'],['arrived','Arrived'],['inservice','In service'],['completed','Completed'],['cancelled','Cancelled'],['noshow','No-show']].map(x=>'<option value="'+x[0]+'"'+(f.s==x[0]?' selected':'')+'>'+x[1]+'</option>').join('')+'</select>'
+ +'<label class="sr" for="f7p">Professional</label><select id="f7p" style="width:auto" onchange="S.f7.p=this.value;render()"><option value="all">Everyone</option>'+ST.map(p=>'<option value="'+p.id+'"'+(f.p==p.id?' selected':'')+'>'+bx(p.n)+'</option>').join('')+'</select></div>'}
+const f7Empty='<div class="card" style="text-align:center"><h3>No bookings match.</h3><p class="m s">Try another day, or clear the search.</p><button class="btn sm" onclick="S.f7={d:\'0\',s:\'all\',p:\'all\',q:\'\'};render()">Clear filters</button></div>';
+aApptsW=function(){const[f,L]=f7Filt();
+ return hdr('Bookings',L.length+' booking'+(L.length==1?'':'s')+(f.d=='all'?'':' on '+DL[+f.d]),'<button class="btn sm" onclick="f7New()">+ New appointment</button>')+f7Tools(f)
+ +(L.length?'<div class="tcard"><table class="tbl"><thead><tr><th>When</th><th>Customer</th><th>Service</th><th>Professional</th><th>Status</th><th>Reference</th></tr></thead><tbody>'+L.map(a=>'<tr class="rw" tabindex="0" onclick="openA(\''+a.id+'\')" onkeydown="if(event.key==\'Enter\')openA(\''+a.id+'\')"><td><b style="font-weight:500">'+DAYS[a.d].l+'</b><br><span class="s m">'+T(a.s)+' – '+T(a.s+a.du)+'</span></td><td><b style="font-weight:500">'+bx(a.cu)+'</b><br><span class="s m">'+bx(a.ph)+'</span></td><td>'+bx(a.sv)+'</td><td>'+bx(stf(a.st).n)+'</td><td>'+f7Badges(a)+'</td><td><span class="s">'+f7RefOf(a)+'</span></td></tr>').join('')+'</tbody></table></div>':f7Empty)
+ +'<p class="s m" style="margin-top:10px">Held times are kept for the customer for '+F7.rules.hold+' minutes, then released by themselves. Payment, rescheduling and the calendar arrive in later features.</p>'};
+aAppts=function(){const[f,L]=f7Filt();
+ return hdr('Bookings',L.length+' booking'+(L.length==1?'':'s'),'<button class="btn sm" onclick="f7New()">+ New</button>')+f7Tools(f)
+ +(L.length?L.map(a=>'<button class="ev" onclick="openA(\''+a.id+'\')"><span class="t">'+T(a.s)+'</span><span class="g"><b style="font-weight:500">'+bx(a.sv)+'</b> · '+bx(a.cu)+'<br><span class="s m">'+bx(stf(a.st).n)+' · '+f7RefOf(a)+'</span><br>'+f7Badges(a)+'</span></button>').join(''):f7Empty)};
+/* New appointment: details, free times, then a hold the desk confirms */
+function f7New(r){r=r||{};f7Stop();F7.hold=null;
+ $('#sh').innerHTML='<div class="sheet" onclick="if(event.target==this)f7Close()"><div role="dialog" aria-label="New appointment"><div class="r sb"><h1>New appointment</h1><button class="btn o sm" onclick="f7Close()">Close</button></div><p class="m s" style="margin:4px 0 0">For phone calls, messages and front-desk bookings on any open day.</p>'
+ +'<label for="wn">Customer name</label><input id="wn" maxlength="60" value="'+bx(r.n||'')+'"><label for="wph">Mobile number</label><input id="wph" inputmode="tel" placeholder="077 123 4567" value="'+bx(r.ph||'')+'"><p class="s m" style="margin:4px 0 0">Required. The confirmation goes to this number.</p>'
+ +'<label for="wday">Day</label><select id="wday">'+DAYS.map((d,i)=>d.closed?'':'<option value="'+i+'">'+DL[i]+'</option>').join('')+'</select><p class="s m" style="margin:4px 0 0">Any day the salon is open, up to a year ahead. Closed days are not listed.</p>'
+ +'<label for="wsv">Service</label><select id="wsv" onchange="wsSet(this.value)">'+SV.filter(s=>svOn(s,null)).map(s=>'<option value="'+s.id+'">'+bx(s.n)+' · '+svPrice(s)+'</option>').join('')+'</select><div id="wopt"></div>'
+ +'<label for="wpr">Professional</label><select id="wpr"><option value="any">No preference</option>'+ST.map(s=>'<option value="'+s.id+'">'+bx(s.n)+'</option>').join('')+'</select>'
+ +'<label for="wsrc">How did they book?</label><select id="wsrc">'+F7SRC.map(x=>'<option'+(x=='Phone'?' selected':'')+'>'+x+'</option>').join('')+'</select>'
+ +'<button class="btn bl" style="margin-top:16px" onclick="f7Find()">Find free times</button><div id="wres" aria-live="polite"></div></div></div>';
+ wsSet((SV.find(s=>svOn(s,null))||SV[0]).id)}
+function f7Find(){const d=+$('#wday').value,ws=svb(+$('#wsv').value),s=svRes(ws,WS.sel),out=$('#wres');
+ if(!s.ok){out.innerHTML='<div class="bn wn s">Choose the options above first.</div>';return}
+ if(!$('#wn').value.trim()){out.innerHTML='<div class="bn wn s" role="alert">Add the customer’s name.</div>';return}
+ if(!mobOk($('#wph').value)){out.innerHTML='<div class="bn wn s" role="alert">Add a valid mobile number so the customer gets the confirmation.</div>';return}
+ const pr=$('#wpr').value,L=s.m+s.b,cs=[s.c],pool=pr=='any'?elig(cs):elig(cs).filter(x=>x.id==pr);
+ if(!pool.length){out.innerHTML='<div class="bn wn s">'+(pr=='any'?'Nobody on the team does this service.':bx(stf(pr).n)+' doesn’t do this service. Choose another professional.')+'</div>';return}
+ const load=id=>A.filter(a=>a.st==id&&a.d==d&&live(a)).reduce((n,a)=>n+a.du,0),order=pool.slice().sort((x,y)=>F7.rules.who=='even'?load(x.id)-load(y.id):load(y.id)-load(x.id));
+ window._w={name:$('#wn').value.trim(),ph:$('#wph').value.trim(),src:$('#wsrc').value,s,L,sv:ws.n,sid:ws.id,d,any:pr=='any'};const o=[];
+ for(let t=d==0?Math.ceil(NOW/15)*15:OPEN;t+L<=CLOSE;t+=15){const p=order.find(x=>!busy(x.id,d,t,t+L));if(p)o.push({t,p})}
+ out.innerHTML=o.length?'<p class="s m" style="margin:12px 0 6px">Free times on '+DL[d]+'. '+(pr=='any'?'Each time shows who would take it, '+(F7.rules.who=='even'?'sharing bookings evenly':'filling the busiest day first')+'. ':'')+'Choose one to hold it.</p><div class="chips" style="flex-wrap:wrap">'+o.slice(0,28).map(x=>'<button class="chip" onclick="f7Hold(\''+x.p.id+'\','+x.t+')">'+T(x.t)+' · '+bx(x.p.n.split(' ')[0])+'</button>').join('')+'</div>':'<div class="bn er s">No free time on '+DL[d]+' for this service. Try another day or professional.</div>'}
+function f7Hold(st,t){const w=window._w;f7Stop();
+ if(busy(st,w.d,t,t+w.L)){$('#wres').innerHTML='<div class="bn er s" role="alert">That time was just taken. Choose another.</div>';f7Find();return}
+ const a={id:'VL-'+(seq++),st,d:w.d,s:t,du:w.L,sv:w.sv,items:[{sid:w.sid,vr:JSON.parse(JSON.stringify(WS.sel))}],cu:w.name,ph:w.ph,status:'held',pay:'Unpaid',paid:0,tot:w.s.p,src:w.src,exp:Date.now()+F7.rules.hold*60000,hist:[{t:'Held',by:'You',at:T(NOW),why:''}]};
+ A.push(a);F7.hold=a.id;f7HoldPaint();F7.tm=setInterval(()=>{const h=A.find(x=>x.id==F7.hold);if(!h){f7Stop();return}if(Date.now()>=h.exp){f7Expire();return}const c=$('#f7cd');if(c)c.textContent=f7Left(h)},1000)}
+function f7HoldPaint(){const a=A.find(x=>x.id==F7.hold);
+ $('#wres').innerHTML='<div class="card" style="margin-top:14px"><div class="r sb"><b style="font-weight:600">Holding this time</b><span class="pl wn" role="timer" aria-live="off"><span id="f7cd">'+f7Left(a)+'</span> left</span></div>'
+ +[['Customer',bx(a.cu)+' · '+bx(a.ph)],['Service',bx(a.sv)],['Professional',bx(stf(a.st).n)],['When',DL[a.d]+', '+T(a.s)+' – '+T(a.s+a.du)],['Source',bx(a.src)]].map(k=>'<div class="kv s"><span class="m">'+k[0]+'</span><b>'+k[1]+'</b></div>').join('')
+ +'<p class="s m" style="margin:8px 0 0">Nobody else can take this time while it is held. It is released by itself when the time runs out.</p></div>'
+ +'<button class="btn bl" style="margin-top:12px" onclick="f7Confirm()">Confirm booking</button><button class="btn o bl" style="margin-top:8px" onclick="f7Release(1)">Choose another time</button>'}
+function f7Confirm(){const a=A.find(x=>x.id==F7.hold);if(!a||Date.now()>=a.exp){f7Expire();return}f7Stop();a.status='confirmed';a.hist.push({t:'Confirmed',by:'You',at:T(NOW),why:''});F7.hold=null;closeS();toast('Booked for '+DL[a.d]+' at '+T(a.s)+' with '+stf(a.st).n.split(' ')[0]+'. Reference '+f7RefOf(a)+'.');render()}
+function f7Release(again){const i=A.findIndex(x=>x.id==F7.hold);f7Stop();if(i>=0)A.splice(i,1);F7.hold=null;if(again)f7Find()}
+function f7Expire(){f7Release(0);const o=$('#wres');if(o)o.innerHTML='<div class="bn er s" role="alert">The hold ran out and the time was released. Find free times again.</div>'}
+function f7Stop(){if(F7.tm)clearInterval(F7.tm);F7.tm=null}
+function f7Close(){if(F7.hold)f7Release(0);closeS();render()}
+/* the appointment sheet: only the changes the rules allow, and the history */
+openA=function(id){const a=A.find(x=>x.id==id);if(!a)return;window._a=a;
+ const acts=[f7Can.arrive(a)&&['Mark arrived',"f7Set('arrived')",''],f7Can.start(a)&&['Start service',"f7Set('inservice')",''],f7Can.noshow(a)&&['Mark no-show',"f7Set('noshow')",'o'],f7Can.undo(a)&&['Undo no-show',"f7Set('confirmed','Undo no-show')",'o'],f7Can.cancel(a)&&[a.status=='held'?'Release hold':'Cancel booking','f7Cancel()','d']].filter(Boolean);
+ const why={confirmed:a.d==0&&NOW>=a.s?'':a.d==0?'You can mark a no-show once the start time has passed.':'Arrival is marked on the day.',arrived:'Cancel and no-show are no longer possible once the customer has arrived.',inservice:'The booking is completed at checkout, which arrives with the front desk.',noshow:a.d==0?'A no-show can be undone today only.':'',cancelled:'Cancelled bookings can’t be changed. Make a new booking instead.',completed:'Completed at checkout.',held:'The desk confirms or releases this hold.'}[a.status]||'';
+ $('#sh').innerHTML='<div class="sheet" onclick="if(event.target==this)closeS()"><div role="dialog" aria-label="Appointment"><div class="r sb"><h1>'+bx(a.cu)+'</h1><button class="btn o sm" onclick="closeS()">Close</button></div><div style="margin:6px 0 12px">'+f7Badges(a)+'</div>'
+ +(S.leave[a.st+a.d]||DAYS[a.d].closed?'<div class="bn er s">'+(DAYS[a.d].closed?'The salon is closed on this day.':bx(stf(a.st).n)+' is on leave.')+' Contact the customer to move it.</div>':'')
+ +'<div class="card">'+[['Reference',f7RefOf(a)],['Mobile',bx(a.ph)],['Service',bx(a.sv)],['Professional',bx(stf(a.st).n)],['Date',DL[a.d]],['Time',T(a.s)+' – '+T(a.s+a.du)],['Source',bx(a.src)]].map(k=>'<div class="kv s"><span class="m">'+k[0]+'</span><b>'+k[1]+'</b></div>').join('')+'</div>'
+ +(acts.length?'<div class="r w" style="margin-top:12px;gap:8px">'+acts.map(x=>'<button class="btn sm '+x[2]+'" onclick="'+x[1]+'">'+x[0]+'</button>').join('')+'</div>':'')+(why?'<p class="s m" style="margin-top:8px">'+why+'</p>':'')
+ +'<h2>History</h2><div class="card">'+a.hist.slice().reverse().map(h=>'<div class="kv s"><span><b style="font-weight:500">'+bx(h.t)+'</b>'+(h.why?'<br><span class="m">'+bx(h.why)+'</span>':'')+'</span><span class="m">'+bx(h.by)+' · '+bx(h.at)+'</span></div>').join('')+'</div></div></div>'};
+function f7Set(s,label){const a=window._a;a.status=s;a.hist.push({t:label||{arrived:'Marked arrived',inservice:'Service started',noshow:'Marked no-show'}[s],by:'You',at:T(NOW),why:''});closeS();toast({arrived:'Marked arrived.',inservice:'Service started.',noshow:a.cu.split(' ')[0]+' marked no-show.',confirmed:'No-show undone.'}[s]);render()}
+function f7Cancel(){const a=window._a;if(a.status=='held'){A.splice(A.indexOf(a),1);closeS();toast('Hold released. The time is open again.');render();return}
+ $('#sh').innerHTML='<div class="sheet" onclick="if(event.target==this)closeS()"><div role="dialog" aria-label="Cancel booking"><h1>Cancel this booking?</h1><p class="m s">'+bx(a.cu)+', '+DL[a.d]+' at '+T(a.s)+'. The time opens again for others.</p>'
+ +'<label for="f7why">Reason</label><select id="f7why"><option>Customer asked to cancel</option><option>The salon can’t do it</option><option>Booked by mistake</option><option>Other</option></select><label for="f7note">Note <span class="m">(optional, your team only)</span></label><input id="f7note" maxlength="200">'
+ +'<button class="btn d bl" style="margin-top:14px" onclick="f7CancelGo()">Cancel booking</button><button class="btn o bl" style="margin-top:8px" onclick="openA(\''+a.id+'\')">Keep booking</button></div></div>'}
+function f7CancelGo(){const a=window._a,w=$('#f7why').value,n=$('#f7note').value.trim();a.status='cancelled';a.hist.push({t:'Cancelled',by:'You',at:T(NOW),why:w+(n?': '+n:'')});closeS();toast('Cancelled. The time is open again.');render()}
+openNew=function(r){f7New(r)};
+/* Booking rules: who takes "No preference" bookings, and how long a hold lasts */
+const f7SetRules=setRules;
+setRules=function(){const r=F7.rules;return f7SetRules().replace('<h2>Deposit</h2>','<h2>Holding and assigning</h2><label for="ru_hold">Hold a chosen time for</label><select id="ru_hold" onchange="F7.rules.hold=+this.value">'+[5,10,15,20,30].map(n=>'<option value="'+n+'"'+(r.hold==n?' selected':'')+'>'+n+' minutes</option>').join('')+'</select><p class="s m" style="margin:4px 0 0">While a time is held nobody else can take it. It is released by itself afterwards, unless a payment is in progress.</p>'
+ +'<label for="ru_who">“No preference” bookings go to</label><select id="ru_who" onchange="F7.rules.who=this.value"><option value="even"'+(r.who=='even'?' selected':'')+'>Whoever has the least booked that day</option><option value="fill"'+(r.who=='fill'?' selected':'')+'>Whoever has the most booked that day</option></select><p class="s m" style="margin:4px 0 0">The first shares work evenly. The second fills one person’s day first and keeps others free for walk-ins. Only people who do the service and are free are considered.</p><h2>Deposit</h2>')};
+</script>
 </body></html>
