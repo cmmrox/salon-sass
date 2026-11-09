@@ -309,3 +309,13 @@ developer during the build and take precedence over the criteria above:
   page title "Team", on `/workspace/staff` too, with F02's "Staff access" kept as that screen's section heading.
 - **Not proved on the running product until F07:** AC-4 (a Java interface), AC-8 and AC-7's refusal, which are proved by
   integration tests with an implementation that reports a booking, and by screen tests with the answer mocked.
+
+## CR-026 (follow-up after the merge of PR #23)
+
+This replaces AC-1's "shows the message ... while it lasts" for a blank sheet, and is built and verified in one follow-up PR after F06's (decision 098). Read
+`docs/changes/CR-026-team-page-refinements.md` and decision 107.
+
+- AC-17: **+ Add team member** opens with no field error: Name is not outlined and no message shows. Once Name has been
+  typed in, or left, a name that breaks the rule shows "Name must be 2 to 40 characters." as today. **Add to team** stays
+  disabled while the name is not valid, before and after the message shows. Editing an existing member is unchanged.
+  (STF-01, CR-026)

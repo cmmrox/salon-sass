@@ -1,5 +1,5 @@
 'use client';
-import { formatClock, formatDay } from '@salon/format';
+import { formatClock, formatShortDay } from '@salon/format';
 import { useTranslations } from 'next-intl';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -58,7 +58,7 @@ export function BlockedTimeTab(props: Props) {
   );
 }
 
-function BlockList({ blocks, canChange, busy, onRemove }: Props) {
+function BlockList({ today, blocks, canChange, busy, onRemove }: Props) {
   const t = useTranslations('team.schedule.block');
   if (blocks.length === 0)
     return (
@@ -70,7 +70,8 @@ function BlockList({ blocks, canChange, busy, onRemove }: Props) {
     <ItemGroup className="rounded-card bg-card px-4" data-testid="block-list">
       {blocks.map((block) => {
         const when = t('when', {
-          date: formatDay(block.date),
+          // The short day form of decision 107 (F06-S03 AC-16).
+          date: formatShortDay(block.date, today),
           starts: formatClock(block.starts),
           finishes: formatClock(block.finishes),
         });

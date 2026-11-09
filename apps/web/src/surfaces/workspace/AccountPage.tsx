@@ -108,6 +108,7 @@ export async function AccountPage({ kind: requested, view, signIn, tab, services
       {view === 'team' ? (
         <TeamScreen
           kind={kind}
+          timeZone={salon.timeZone}
           canManage={Boolean(principal?.permissions.includes('team.manage')) && !readOnly}
           canBlock={Boolean(principal?.permissions.includes('team.block')) && !readOnly}
           canSeeAccounts={Boolean(principal?.permissions.includes('staff.list'))}

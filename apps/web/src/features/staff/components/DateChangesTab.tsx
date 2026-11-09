@@ -1,5 +1,5 @@
 'use client';
-import { formatClock, formatDay } from '@salon/format';
+import { formatClock, formatDay, formatShortDay } from '@salon/format';
 import { CalendarIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
@@ -69,7 +69,7 @@ export function DateChangesTab(props: Props) {
   );
 }
 
-function ChangeList({ changes, canChange, busy, onRemove }: Props) {
+function ChangeList({ today, changes, canChange, busy, onRemove }: Props) {
   const t = useTranslations('team.schedule');
   const card = useTranslations('team.card');
   if (changes.length === 0)
@@ -82,6 +82,8 @@ function ChangeList({ changes, canChange, busy, onRemove }: Props) {
     <ItemGroup className="rounded-card bg-card px-4" data-testid="change-list">
       {changes.map((change) => {
         const breaks = breakSummaryOf(change.breaks);
+        // The short day form of decision 107 (F06-S02 AC-17); the form's date button keeps the year.
+        const day = formatShortDay(change.date, today);
         const parts = [
           change.working && change.starts && change.finishes
             ? t('change.hours', { starts: formatClock(change.starts), finishes: formatClock(change.finishes) }) +
@@ -102,7 +104,7 @@ function ChangeList({ changes, canChange, busy, onRemove }: Props) {
             data-date={change.date}
           >
             <ItemContent>
-              <ItemTitle data-testid="change-row-date">{formatDay(change.date)}</ItemTitle>
+              <ItemTitle data-testid="change-row-date">{day}</ItemTitle>
               <ItemDescription className="wrap-anywhere text-foreground" data-testid="change-row-hours">
                 {parts.join(' · ')}
               </ItemDescription>
@@ -113,7 +115,7 @@ function ChangeList({ changes, canChange, busy, onRemove }: Props) {
                   variant="outline"
                   size="sm"
                   disabled={busy}
-                  aria-label={t('change.removeLabel', { date: formatDay(change.date) })}
+                  aria-label={t('change.removeLabel', { date: day })}
                   onClick={() => onRemove(change)}
                   data-testid="change-remove"
                 >

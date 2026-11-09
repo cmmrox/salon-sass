@@ -251,3 +251,12 @@ take precedence over the criteria above:
   by integration tests and, for the sheet's words, by replacing the API's answer.
 - **The sheet's handle on a phone** measures 0px when content overflows, on this sheet and F06-S01's. F06-S03 corrects it in the
   shared Sheet (decision 103).
+
+## CR-026 (follow-up after the merge of PR #23)
+
+This changes how the Date changes rows print their dates, and is built and verified in one follow-up PR after F06's (decision 098). Read
+`docs/changes/CR-026-team-page-refinements.md` and decision 107.
+
+- AC-17: The **Date changes** tab's rows print their dates in the short day form of decision 107: a date in the salon's
+  current year, by the salon's own date, without the year ("Thu, Nov 12"), and a date in another year with it ("Tue, Jan 5,
+  2027"). The Remove button's accessible name uses the same form. The form's date button keeps the year. (STF-02, CR-026)

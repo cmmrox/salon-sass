@@ -6,6 +6,8 @@ import {
   formatDay,
   formatMoney,
   formatPhoneNational,
+  formatShortDay,
+  formatShortPeriod,
   minorUnitsText,
   parseMinorUnits,
   todayInZone,
@@ -77,6 +79,43 @@ describe("a salon's local times and dates (F04-S03)", () => {
     expect(shown).toContain('25');
     expect(shown).toContain('2026');
     expect(formatDay('2026-12-31')).toContain('31');
+  });
+});
+
+describe("the Team page's short day (decision 107)", () => {
+  it("leaves the year out of a date in the salon's current year", () => {
+    expect(formatShortDay('2026-11-12', '2026-11-09')).toBe('Thu, Nov 12');
+    expect(formatShortDay('2026-01-01', '2026-12-31')).toBe('Thu, Jan 1');
+  });
+  it('writes the year of a date in another year, as formatDay does', () => {
+    expect(formatShortDay('2027-01-05', '2026-11-09')).toBe('Tue, Jan 5, 2027');
+    expect(formatShortDay('2027-01-05', '2026-11-09')).toBe(formatDay('2027-01-05'));
+    expect(formatShortDay('2026-12-31', '2027-01-01')).toBe('Thu, Dec 31, 2026');
+  });
+  it("follows the salon's today across the new year", () => {
+    expect(formatShortDay('2027-01-01', '2026-12-31')).toBe('Fri, Jan 1, 2027');
+    expect(formatShortDay('2027-01-01', '2027-01-01')).toBe('Fri, Jan 1');
+  });
+  it('writes a period within the current year without the year on either end', () => {
+    expect(formatShortPeriod('2026-11-12', '2026-11-14', '2026-11-09')).toEqual({
+      first: 'Thu, Nov 12',
+      last: 'Sat, Nov 14',
+    });
+  });
+  it('writes both ends with the year when either end is in another year', () => {
+    expect(formatShortPeriod('2026-12-30', '2027-01-02', '2026-11-09')).toEqual({
+      first: 'Wed, Dec 30, 2026',
+      last: 'Sat, Jan 2, 2027',
+    });
+    expect(formatShortPeriod('2027-01-04', '2027-01-06', '2026-11-09')).toEqual({
+      first: 'Mon, Jan 4, 2027',
+      last: 'Wed, Jan 6, 2027',
+    });
+  });
+  it('keeps each locale its own form, however often asked', () => {
+    expect(formatShortDay('2026-11-12', '2026-11-09', 'en-GB')).toBe('Thu 12 Nov');
+    expect(formatShortDay('2026-11-12', '2026-11-09')).toBe('Thu, Nov 12');
+    expect(formatShortDay('2027-11-12', '2026-11-09', 'en-GB')).toBe('Fri, 12 Nov 2027');
   });
 });
 

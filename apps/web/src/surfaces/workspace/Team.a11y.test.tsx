@@ -54,6 +54,7 @@ function page(brand: string, canManage = true, canSeeAccounts = true, readOnly: 
     >
       <TeamScreen
         kind="staff"
+        timeZone="Asia/Colombo"
         canManage={canManage}
         canBlock={canManage}
         canSeeAccounts={canSeeAccounts}
@@ -92,6 +93,35 @@ describe('the card’s leave badge (F06-S03 AC-9, AC-13)', () => {
     expect(await screen.findByTestId('team-card-leave')).toBeVisible();
     expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(document.documentElement.clientWidth);
     expect(await axe(document.body)).toHaveNoViolations();
+  });
+
+  describe('within the salon’s year (F06-S03 AC-16)', () => {
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date('2026-11-09T06:00:00Z'));
+    });
+    afterEach(() => vi.useRealTimers());
+
+    it('fits on one line of a 1280 card, without the year', async () => {
+      answers['team-members'] = () =>
+        Response.json({
+          items: [
+            member(NIMALI, 'Nimali Perera', {
+              nextLeave: { firstDay: '2026-11-12', lastDay: '2026-11-14', type: 'annual' },
+            }),
+          ],
+        });
+      await atWidth(1280);
+      page(BRANDS[0]);
+
+      const badge = await screen.findByTestId('team-card-leave');
+      expect(badge.textContent).toBe('Annual leave, Thu, Nov 12 to Sat, Nov 14');
+      const text = document.createRange();
+      text.selectNodeContents(badge);
+      const lines = new Set([...text.getClientRects()].map((rect) => Math.round(rect.top)));
+      expect(lines.size).toBe(1);
+      expect(await axe(document.body)).toHaveNoViolations();
+    });
   });
 });
 
@@ -157,6 +187,8 @@ describe('the profile sheet', () => {
     page(BRANDS[0]);
     fireEvent.click(await screen.findByTestId('team-add'));
     await screen.findByTestId('team-sheet');
+    // Name says its rule once it has been left (F06-S01 AC-17).
+    fireEvent.blur(screen.getByTestId('team-name'));
     fireEvent.change(screen.getByTestId('team-title'), { target: { value: 'x'.repeat(41) } });
     fireEvent.change(screen.getByTestId('team-bio'), { target: { value: 'x'.repeat(141) } });
     await screen.findAllByTestId('team-sheet-problem');

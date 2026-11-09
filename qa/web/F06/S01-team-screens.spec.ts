@@ -737,3 +737,67 @@ test('TC-F06-S01-054 AC-16: the Team tab, the sheet with a field error and the r
     await accessible(other.page, 'Team tab, Receptionist');
   });
 });
+
+// ---------------------------------------------------------------- CR-026 (decision 098): AC-17, written before its build
+
+test('TC-F06-S01-056 AC-17: + Add team member opens with no field error, Name not outlined and Add to team disabled; once Name is left or typed in, a broken name says "Name must be 2 to 40 characters." and Add to team stays disabled until it is valid; editing a member is unchanged', async ({ accounts, operator, team }) => {
+  const { salon, owner } = await teamSalon(operator, accounts.identity);
+  const person = await team.add(salon, owner.tokens, memberInput({ name: 'Sanduni' }));
+  const { context, page: first } = await open(accounts, owner);
+  /** A fresh page on the Team tab, so each step starts from a sheet nobody has touched. */
+  const fresh = async () => { const page = await accounts.open(context, TEAM_ROUTE); await ready(page); return page; };
+  const nameError = (page: Page) => id(page, T.problem).filter({ hasText: TEXT.err.name });
+  const noError = async (page: Page, label: string) => {
+    await expect(page.getByTestId(T.problems), `${label}: no message`).toHaveCount(0);
+    await expect(page.getByText(TEXT.err.name), `${label}: not the name's rule anywhere`).toHaveCount(0);
+    // The outline is the input's aria-invalid (the shadcn Input draws its destructive border from it).
+    await expect(id(page, T.name), `${label}: Name is not outlined`).not.toHaveAttribute('aria-invalid', 'true');
+  };
+  const broken = async (page: Page, label: string) => {
+    await expect(nameError(page), `${label}: the rule is said`).toBeVisible();
+    await expect(id(page, T.name), `${label}: Name is outlined`).toHaveAttribute('aria-invalid', 'true');
+    await expect(id(page, T.save), `${label}: Add to team stays disabled`).toBeDisabled();
+  };
+  const blankSheet = async (page: Page) => {
+    await id(page, T.newMember).click();
+    await expect(id(page, T.sheet)).toBeVisible();
+    await expect(id(page, T.name)).toHaveValue('');
+    await settled(page);
+  };
+  await test.step('a blank sheet', async () => {
+    await blankSheet(first);
+    await noError(first, 'on opening');
+    await expect(id(first, T.save), 'Add to team is disabled before anything is typed').toBeDisabled();
+    await expect(id(first, T.save)).toHaveText('Add to team');
+  });
+  await test.step('Name left empty', async () => {
+    await id(first, T.name).click();
+    await noError(first, 'while Name has the focus');
+    await id(first, T.title).click();
+    await broken(first, 'once Name is left');
+    await first.close();
+  });
+  await test.step('Name typed in', async () => {
+    const page = await fresh();
+    await blankSheet(page);
+    await id(page, T.name).fill('A');
+    await broken(page, 'one letter');
+    await id(page, T.name).fill('Nimal Perera');
+    await noError(page, 'a valid name');
+    await expect(id(page, T.save), 'Add to team is enabled').toBeEnabled();
+    await id(page, T.name).fill('');
+    await broken(page, 'typed in, then emptied');
+    await page.close();
+  });
+  await test.step('editing a member is unchanged', async () => {
+    const page = await fresh();
+    await card(page, person.id).getByTestId(T.cardEdit).click();
+    await expect(id(page, T.name)).toHaveValue('Sanduni');
+    await noError(page, 'a saved name');
+    await expect(id(page, T.save)).toBeEnabled();
+    await id(page, T.name).fill('A');
+    await broken(page, 'a broken edit');
+    await expect(id(page, T.save)).toHaveText('Save changes');
+  });
+  expect((await team.list(salon, owner.tokens)).map(m => m.name), 'nobody added, nothing saved').toEqual(['Sanduni']);
+});

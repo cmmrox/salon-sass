@@ -59,6 +59,7 @@ const render = (canManage = true, canSeeAccounts = true, readOnly: 'support' | '
   renderWithMessages(
     <TeamScreen
       kind="staff"
+      timeZone="Asia/Colombo"
       canManage={canManage}
       canBlock={canManage}
       canSeeAccounts={canSeeAccounts}
@@ -223,12 +224,65 @@ describe('roles (F06-S01 AC-11, AC-13)', () => {
 });
 
 describe('adding a person (F06-S01 AC-1)', () => {
-  it('disables Add to team and says why while a rule is broken', async () => {
+  it('opens blank with no name error, though Add to team is disabled (AC-17)', async () => {
     render();
     await openNew();
 
     expect(screen.getByTestId('team-sheet-save')).toBeDisabled();
+    expect(screen.queryByTestId('team-sheet-problems')).toBeNull();
+    expect(screen.getByTestId('team-name')).not.toHaveAttribute('aria-invalid');
+  });
+
+  it('says the name rule once Name has been left, and keeps Add to team disabled (AC-17)', async () => {
+    render();
+    await openNew();
+
+    fireEvent.blur(screen.getByTestId('team-name'));
+
     expect(screen.getByTestId('team-sheet-problem')).toHaveTextContent('Name must be 2 to 40 characters.');
+    expect(screen.getByTestId('team-name')).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByTestId('team-sheet-save')).toBeDisabled();
+  });
+
+  it('says the name rule once a broken name has been typed in (AC-17)', async () => {
+    render();
+    await openNew();
+
+    fireEvent.change(screen.getByTestId('team-name'), { target: { value: 'K' } });
+
+    expect(screen.getByTestId('team-sheet-problem')).toHaveTextContent('Name must be 2 to 40 characters.');
+    expect(screen.getByTestId('team-sheet-save')).toBeDisabled();
+
+    fireEvent.change(screen.getByTestId('team-name'), { target: { value: '' } });
+    expect(screen.getByTestId('team-sheet-problem')).toHaveTextContent('Name must be 2 to 40 characters.');
+  });
+
+  it("says another field's rule on a blank sheet, without the name's (AC-17)", async () => {
+    render();
+    await openNew();
+
+    fireEvent.change(screen.getByTestId('team-title'), { target: { value: 'x'.repeat(41) } });
+
+    expect(screen.getAllByTestId('team-sheet-problem').map((each) => each.dataset.problem)).toEqual(['title']);
+    expect(screen.getByTestId('team-sheet-save')).toBeDisabled();
+  });
+
+  it('starts over on the next blank sheet', async () => {
+    render();
+    await openNew();
+    fireEvent.blur(screen.getByTestId('team-name'));
+    expect(screen.getByTestId('team-sheet-problem')).toBeTruthy();
+
+    fireEvent.click(screen.getByTestId('team-sheet-close'));
+    await waitFor(() => expect(screen.queryByTestId('team-sheet')).toBeNull());
+    await openNew();
+
+    expect(screen.queryByTestId('team-sheet-problems')).toBeNull();
+  });
+
+  it('disables Add to team and says why while a rule is broken', async () => {
+    render();
+    await openNew();
 
     fireEvent.change(screen.getByTestId('team-name'), { target: { value: 'Ka' } });
     fireEvent.change(screen.getByTestId('team-title'), { target: { value: 'x'.repeat(41) } });
@@ -397,6 +451,17 @@ describe('what a person performs (F06-S01 AC-3)', () => {
 });
 
 describe('editing a person (F06-S01 AC-2, AC-5)', () => {
+  it('says a broken name rule as soon as the sheet opens, as before (AC-17)', async () => {
+    answers['team-members'] = () => Response.json({ items: [member(NIMALI, 'N')] });
+    render();
+    await screen.findAllByTestId('team-card');
+    fireEvent.click(screen.getByTestId('team-card-edit'));
+    await screen.findByTestId('team-sheet');
+
+    expect(screen.getByTestId('team-sheet-problem')).toHaveTextContent('Name must be 2 to 40 characters.');
+    expect(screen.getByTestId('team-sheet-save')).toBeDisabled();
+  });
+
   it('saves from the version read, says so and closes', async () => {
     answers['team-member-save'] = () => Response.json(TEAM.items[1]);
     render();

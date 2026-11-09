@@ -1,20 +1,31 @@
 id: F06
-title: "Staff, schedules and leave"
-summary: "A salon adds, edits and removes team members (removal refused while they have upcoming bookings), the services each performs, their public profile, working hours, leave and blocked time; a professional can be bookable without a sign-in account."
+title: Staff, schedules and leave
+summary: A salon adds, edits and removes team members (removal refused while they
+  have upcoming bookings), the services each performs, their public profile, working
+  hours, leave and blocked time; a professional can be bookable without a sign-in
+  account.
 release: R1
 milestone: M1-web
 status: complete
 qa_status: pass
 released_in: null
-depends_on: [F04, F05]
+depends_on:
+- F04
+- F05
 integration:
   branch: charithm/feature/F06-staff-schedules-and-leave
   pull_request: https://github.com/cmmrox/salon-sass/pull/23
   qa_revision: 7aa5f7b7698b24a10ab980e4c7bdab1e8ee21d03
-  merged_commit: null
-  merged_at: null
-surfaces: [api, web]
-requirements: [STF-01, STF-02, STF-03, STF-05]
+  merged_commit: b6e18f9d4feb134027028964f3d9edf14eb02e62
+  merged_at: '2026-11-09T00:12:27Z'
+surfaces:
+- api
+- web
+requirements:
+- STF-01
+- STF-02
+- STF-03
+- STF-05
 nfr_focus: []
 cases: []
 verification:
@@ -23,20 +34,28 @@ verification:
     tool: playwright
     file: qa/web/F06/journey-a-person-and-their-time.spec.ts
     project: web
-    suites: [smoke, regression]
+    suites:
+    - smoke
+    - regression
   - id: journeys
     tool: playwright
     file: qa/api/F06/F06-journeys.spec.ts
     project: api
-    suites: [regression]
+    suites:
+    - regression
   manual: []
   deferred:
   - case: TC-F06-004
-    covers: [STF-02, STF-03, STF-05]
-    reason: The README's journey ends with "the working windows and the public team API then say exactly that". The working windows
-      are TeamSchedule's, a Java interface with no route until F07, so TC-F06-001 stops at the schedule, the card and the public team
-      API. With F07 the times offered for a person with a week, a half day, leave and a block must be exactly those windows inside the
-      salon's own hours.
+    covers:
+    - STF-02
+    - STF-03
+    - STF-05
+    reason: The README's journey ends with "the working windows and the public team
+      API then say exactly that". The working windows are TeamSchedule's, a Java interface
+      with no route until F07, so TC-F06-001 stops at the schedule, the card and the
+      public team API. With F07 the times offered for a person with a week, a half
+      day, leave and a block must be exactly those windows inside the salon's own
+      hours.
     unblocked_by: F07
 evidence:
   last_run: qa/reports/20261109-041519-F06-d54eee4e1822
@@ -45,25 +64,71 @@ evidence:
   reverification:
   - revision: 7aa5f7b7698b24a10ab980e4c7bdab1e8ee21d03
     date: 2026-11-09
-    changed: 'PR #23 CI fix (8f9886c, merged as 7aa5f7b): TimeSelect mounts its 96 options only while its list
-      is open or its trigger has focus, and the trigger shows the chosen time itself; @salon/format formatClock
-      reuses one Intl formatter per locale with the same output. Test-only: apps/web/test/select.ts,
-      TeamTimeOff.test.tsx and new unit tests. No API, contract or migration change. Since the full pass at
-      a27b497 the branch also gained the lead''s close and PR records and CR-026 (documents only).'
-    scope: 'Every F06 entry (sdlc run --feature F06): the time Select is on every schedule screen of F06-S02 and
-      F06-S03, so the whole feature is the affected scope. Its neighbour, F04''s Hours tab, uses the same
-      TimeSelect: sdlc run --stage F04-S03, the narrowest scope that selects the hours screens, which also
-      selects F04''s hours API entry, unaffected by the fix. By hand on the QA web at 1280 and 360, as the
-      roster Manager on the schedule sheet (and the block form at 360): typing 14 or 16 on a closed time
-      control reached by Tab chooses that hour without opening it; opening one lists 96 options with the
-      current time selected, and choosing closes it with focus back on the control; keyboard only (Tab,
-      Enter, arrows, Enter) chooses, with a visible focus; after Save hours or Block time and a reload each
-      closed control shows the chosen time (Mon 14:00 to 17:30, Tue 07:45, Wed to 16:00, Thu 08:00, Fri to
-      17:00; a block 15:00 to 16:00), and the card reads "Varies by day". No problem found.'
-    run: 'QA instance restarted from the QA worktree through local-down and local-up; API and web run from it,
-      the web rebuilt into apps/web/.next-qa at 04:14:43 from a clean tree at 7aa5f7b, and the served chunk
-      holding the time Select has the fix''s focus and open handlers. qa/reports/20261109-041519-F06-d54eee4e1822:
+    changed: 'PR #23 CI fix (8f9886c, merged as 7aa5f7b): TimeSelect mounts its 96
+      options only while its list is open or its trigger has focus, and the trigger
+      shows the chosen time itself; @salon/format formatClock reuses one Intl formatter
+      per locale with the same output. Test-only: apps/web/test/select.ts, TeamTimeOff.test.tsx
+      and new unit tests. No API, contract or migration change. Since the full pass
+      at a27b497 the branch also gained the lead''s close and PR records and CR-026
+      (documents only).'
+    scope: 'Every F06 entry (sdlc run --feature F06): the time Select is on every
+      schedule screen of F06-S02 and F06-S03, so the whole feature is the affected
+      scope. Its neighbour, F04''s Hours tab, uses the same TimeSelect: sdlc run --stage
+      F04-S03, the narrowest scope that selects the hours screens, which also selects
+      F04''s hours API entry, unaffected by the fix. By hand on the QA web at 1280
+      and 360, as the roster Manager on the schedule sheet (and the block form at
+      360): typing 14 or 16 on a closed time control reached by Tab chooses that hour
+      without opening it; opening one lists 96 options with the current time selected,
+      and choosing closes it with focus back on the control; keyboard only (Tab, Enter,
+      arrows, Enter) chooses, with a visible focus; after Save hours or Block time
+      and a reload each closed control shows the chosen time (Mon 14:00 to 17:30,
+      Tue 07:45, Wed to 16:00, Thu 08:00, Fri to 17:00; a block 15:00 to 16:00), and
+      the card reads "Varies by day". No problem found.'
+    run: 'QA instance restarted from the QA worktree through local-down and local-up;
+      API and web run from it, the web rebuilt into apps/web/.next-qa at 04:14:43
+      from a clean tree at 7aa5f7b, and the served chunk holding the time Select has
+      the fix''s focus and open handlers. qa/reports/20261109-041519-F06-d54eee4e1822:
       14 of 14 entries, 141 of 141 cases passed in 7 min 49 s. qa/reports/20261109-042309-F04-S03-d1db0ee00dea:
-      2 of 2 entries, 31 of 31 cases (hours API 21, hours screens 10) passed. Manual screenshots in the F06
-      report''s manual/ folder. The person added for the manual checks on alpha was removed with their rows
-      afterwards. Result pass; qa_status stays pass.'
+      2 of 2 entries, 31 of 31 cases (hours API 21, hours screens 10) passed. Manual
+      screenshots in the F06 report''s manual/ folder. The person added for the manual
+      checks on alpha was removed with their rows afterwards. Result pass; qa_status
+      stays pass.'
+  - revision: a72288586cf48ea50fa4c6a906eceedba9682d7b
+    date: 2026-11-09
+    changed: 'CR-026, built as a follow-up after PR #23 (decision 098, decision 107).
+      Web only: @salon/format gains formatShortDay and formatShortPeriod (formatDay
+      unchanged); the card''s leave badge and the Leave, Blocked time and Date changes
+      rows print dates without the salon''s current year, and the rows'' Remove names
+      follow them; the leave form''s first day sets an empty or earlier last day and
+      DateChooser takes an earliest day; a blank Add team member sheet shows no name
+      error until Name is typed in, left or saved; TeamScreen takes the salon''s timeZone
+      for the badge''s today. No API, contract or migration change.'
+    scope: 'Written for CR-026: TC-F06-S01-056, TC-F06-S02-047, TC-F06-S03-045, 046.
+      Changed by it: TC-F06-S03-032, 033, 034, 037, 038, TC-F06-001, and 039 through
+      fillLeave. Re-run as what the changed files reach: every F06 web entry (Team tab
+      and profile sheet, schedule sheet, both time-off tabs, the sheet handle, the journey),
+      selected with sdlc run --feature F06, the narrowest run that holds them all with
+      the journey; its seven API entries came with it and are unaffected. F04-S03 not
+      re-run (decision 069): formatDay is unchanged, and DateChooser and the new functions
+      are used only by F06''s tabs and card, so no F03 or F04 screen''s code changed.
+      By hand on the QA web at 1280, 390 and 360 as the roster Manager on alpha: a blank
+      Add sheet has no message, Name without aria-invalid and Add to team disabled;
+      leaving Name says "Name must be 2 to 40 characters."; choosing a first day sets
+      the last day to it ("Thu, Nov 12, 2026" on the button) with the day before not
+      offered; the Leave row reads "Thu, Nov 12" (Remove "Remove leave, Thu, Nov 12"),
+      the block row "Fri, Nov 13, 10:00 – 11:00", the change row "Sun, Nov 15" (Remove
+      "Remove the change on Sun, Nov 15"), the form buttons keep the year; the badge
+      "Annual leave, Thu, Nov 12" is one line at 1280, 390 and 360, and no screen scrolls
+      sideways. No problem found. Smoke was not asked for and was not run.'
+    run: 'QA instance stopped in the developer''s worktree and started from the QA worktree
+      through local-down and local-up; API and web run from it, the web rebuilt into
+      apps/web/.next-qa at 06:37 from a clean tree at a722885. qa/reports/20261109-063728-F06-7798b2cbc556:
+      13 of 14 entries passed in 8 min 0 s; 144 of 145 cases. The one failure, TC-F06-S03-045,
+      was a test defect: it read the stored leave before its second save finished, the
+      first save''s toast still showing; the page then listed both leaves. Repaired at
+      5bd5fe9 (it waits for each save''s row; no assertion changed) and re-run alone
+      with Playwright --grep, three times: qa/reports/20261109-F06-S03-045-repair-5bd5fe9,
+      3 of 3 passed. Manual screenshots and their readings in the F06 report''s manual/
+      folder; the person added on alpha was removed afterwards. Targeted, not a full
+      pass. Result pass; qa_status stays pass, qa_revision and full_pass_revision stay
+      at 7aa5f7b.'

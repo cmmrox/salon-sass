@@ -1,4 +1,5 @@
 'use client';
+import { todayInZone } from '@salon/format';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useRef, useState } from 'react';
@@ -27,6 +28,8 @@ import { useTeam, type TeamToast } from './use-team';
 
 type Props = {
   kind: Kind;
+  /** The salon's time zone: its date decides whether a card's leave badge says the year (decision 107). */
+  timeZone: string;
   /** Whether this person may change the team (`team.manage`, in a salon that is not read-only). */
   canManage: boolean;
   /** Whether this person may add and remove blocked time (`team.block`, in a salon that is not read-only). */
@@ -41,7 +44,7 @@ type Props = {
  * profile sheet and confirmation they open. Loading, empty, field-error, conflict, refused and unavailable states;
  * leaving the sheet with unsaved edits asks first. Those who may not change the team read it.
  */
-export function TeamScreen({ kind, canManage, canBlock, canSeeAccounts, readOnly }: Props) {
+export function TeamScreen({ kind, timeZone, canManage, canBlock, canSeeAccounts, readOnly }: Props) {
   const t = useTranslations('team');
   const router = useRouter();
   const team = useTeam(kind, canManage, (key: TeamToast) => toast.success(t(`toasts.${key}`)));
@@ -98,6 +101,7 @@ export function TeamScreen({ kind, canManage, canBlock, canSeeAccounts, readOnly
           </div>
         ) : team.members ? (
           <TeamCards
+            today={todayInZone(timeZone)}
             members={members}
             categories={team.categories}
             services={team.services}

@@ -1,13 +1,13 @@
 ---
 id: CR-026
 title: Team page refinements from the F06 review
-status: proposed
+status: approved
 requested_by: QA review of F06
 requested_on: 2026-11-09
-decided_on:
-requirements: [STF-01, STF-05]
+decided_on: 2026-11-09
+requirements: [STF-01, STF-02, STF-03, STF-05]
 features: [F06]
-stages: [F06-S01, F06-S03]
+stages: [F06-S01, F06-S02, F06-S03]
 ---
 
 # CR-026 Team page refinements from the F06 review
@@ -48,4 +48,12 @@ Approve all three, built after F06's pull request merges as one small follow-up.
 
 ## Decision
 
-Awaiting the owner. F06 closes and is submitted as QA passed it.
+Approved by the owner on 2026-11-09 ("approve all three, go ahead"), after F06's merge (PR #23,
+b6e18f9). A merged feature keeps its status and merge record (decision 098), so no stage is reopened:
+the new criteria are added to the specs of F06-S01, F06-S02 and F06-S03 and built in one follow-up PR,
+which also carries F06's merge record, and QA re-verifies the changed cases.
+
+For SUG-F06-02 the lead chose a short form beside `formatDay`, used on the Team page only (decision
+107): the card's leave badge and the rows of the Leave, Blocked time and Date changes tabs. The
+Date changes rows are included so the schedule sheet's tabs print dates alike. F03's and F04's
+screens keep `formatDay` with the year, so their cases do not change.

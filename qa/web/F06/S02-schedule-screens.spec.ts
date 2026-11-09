@@ -26,6 +26,7 @@ import { fit, focusIndicator, seriousViolations } from '../../shared/page-checks
 import { DAYS, plusDays, week, type DayName } from '../../shared/salon-hours';
 import { memberInput, teamSalon, type Team, type TeamMember, type WorkDay } from '../../shared/team';
 import { TEAM_ROUTE, button, card, id, open, openSchedule, ready, salonToday, settled, sheetOf, supportBrowser, test } from '../../shared/team-browser';
+import { dayWords, nextYearDay, shortDayWords, thisYearDay } from '../../shared/team-leave';
 import {
   LONG, PENDING_F06_S02, SCHEDULE_LIMITS, SCHEDULE_TEXT, brk, calendarDay, changeInput, copyOf, expectWeek, noWorkingDays, offChange, offDay, shownTime, weekOf, workingDay, type Schedules,
 } from '../../shared/team-schedule';
@@ -790,4 +791,35 @@ test('TC-F06-S02-045 AC-16: both tabs have no serious accessibility violation fo
     await settled(other.page);
     expect.soft(await seriousViolations(other.page), 'Date changes, Receptionist').toEqual([]);
   });
+});
+
+// ---------------------------------------------------------------- CR-026 (decision 098): AC-17, written before its build
+
+test('TC-F06-S02-047 AC-17: the Date changes rows print a date in the salon\'s current year without the year and one in another year with it, and each Remove is named alike; the form\'s date button keeps the year', async ({ accounts, operator, team, schedules }) => {
+  const { salon, owner, person } = await arrange(operator, accounts, team, schedules);
+  const today = await salonToday(accounts);
+  const [near, nextYear] = [thisYearDay(today, 3), nextYearDay(today)];
+  await schedules.add(salon, owner.tokens, person.id, offChange(nextYear));
+  const { page } = await open(accounts, owner);
+  const sheet = await openSchedule(page, person.id);
+  await dateTab(sheet).click();
+  await test.step('the form\'s date button keeps the year', async () => {
+    await button(sheet, ADD_CHANGE).click();
+    await pickDate(sheet, near);
+    await expect(id(sheet, W.changeDate)).toContainText(dayWords(near));
+    await segment(sheet, 'Not working').click();
+    await button(sheet, N.saveChange).click();
+    await expect(sheet.getByTestId(W.changeRow).filter({ visible: true })).toHaveCount(2);
+  });
+  // Written out, so that a fault shared with `shortDayWords` cannot hide: "Thu, Nov 12", with no year.
+  const short = new Intl.DateTimeFormat('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' }).format(new Date(`${near}T00:00:00Z`));
+  expect(shortDayWords(near, today), 'the helper agrees').toBe(short);
+  const rows: [string, string, string][] = [[near, short, 'this year: no year'], [nextYear, dayWords(nextYear), 'another year: with it']];
+  for (const [date, words, label] of rows) {
+    await test.step(label, async () => {
+      await expect(changeRow(sheet, date).getByTestId(W.changeRowDate), 'the row').toHaveText(words);
+      // The date and no year straight after it: "Thu, Nov 12" passes, "Thu, Nov 12, 2026" does not.
+      await expect(button(changeRow(sheet, date), /^Remove/), 'its Remove').toHaveAccessibleName(new RegExp(`${words}(?!,? \\d{4})`));
+    });
+  }
 });
