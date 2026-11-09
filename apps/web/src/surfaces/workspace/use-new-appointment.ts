@@ -302,6 +302,8 @@ export function useNewAppointment(
     /** Gives back the held time and shows the day's times again. */
     another: async () => {
       setRefusal(null);
+      // The times shown before the hold are stale until the release lands and they are read again.
+      setTimes({ state: 'searching' });
       await releaseHold();
       await search(values);
     },

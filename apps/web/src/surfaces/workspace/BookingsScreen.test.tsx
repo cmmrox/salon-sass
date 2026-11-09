@@ -381,8 +381,13 @@ describe('New appointment (F07-S03 AC-4 to AC-6)', () => {
     fireEvent.click((await within(sheet).findAllByTestId('new-appointment-time'))[1]!);
     await within(sheet).findByTestId('new-appointment-hold');
     fireEvent.click(within(sheet).getByTestId('new-appointment-another'));
+    // No time from before the hold is offered while it is being released.
+    expect(within(sheet).queryAllByTestId('new-appointment-time')).toEqual([]);
     await waitFor(() => expect(sent('booking-release')[0]?.body).toEqual({ id: HELD.id }));
     await within(sheet).findAllByTestId('new-appointment-time');
+    expect(calls.findIndex((call) => call.action === 'booking-release')).toBeLessThan(
+      calls.findLastIndex((call) => call.action === 'booking-availability'),
+    );
   });
 
   it('confirming after the hold ran out says it ran out', async () => {
