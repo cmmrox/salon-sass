@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderWithMessages } from '@test/render';
 import { chooseOption } from '@test/select';
 import { setViewportWidth } from '@test/viewport';
+import type { Booking } from '@/features/booking';
 import {
   AMAYA,
   DETAIL,
@@ -253,6 +254,56 @@ describe('the Bookings page (F07-S03 AC-2, AC-3)', () => {
     fireEvent.click(within(screen.getByTestId('bookings-pager')).getByTestId('bookings-next'));
     await waitFor(() => expect(sent('bookings').at(-1)?.query.get('page')).toBe('1'));
     expect(window.location.search).toBe('?page=2');
+  });
+
+  /** A day of 51 bookings, the 51st alone on page 2, until it leaves the day's list: then 50, all on page 1. */
+  function aLaterPageThatEmpties(last: Booking) {
+    let gone = false;
+    answers.bookings = (call) => {
+      const index = Number(call.query.get('page'));
+      const total = gone ? 50 : 51;
+      return Response.json({ ...page(index === 0 ? [AMAYA] : gone ? [] : [last], total), page: index });
+    };
+    return () => (gone = true);
+  }
+  async function showsTheLastPageThatExists(entries: number) {
+    // A hold runs out a second after the clock's 08:00, as in BUG-F07-001's cases.
+    await waitFor(() => expect(window.location.search).toBe(''), { timeout: 4000 });
+    await waitFor(() => expect(screen.getAllByTestId('booking-row')).toHaveLength(1));
+    expect(sent('bookings').at(-1)?.query.get('page')).toBe('0');
+    expect(heading()).toHaveTextContent(/^50 bookings on/);
+    expect(screen.queryByTestId('bookings-empty')).toBeNull();
+    // The address is corrected in place: back does not return to the empty page.
+    expect(window.history.length).toBe(entries);
+  }
+
+  it('a hold running out alone on a later page shows the last page that exists, not Empty (BUG-F07-004)', async () => {
+    const expired = { ...KAVINDI, holdExpiresAt: '2086-06-15T08:00:01+05:30' };
+    const empties = aLaterPageThatEmpties(expired);
+    window.history.replaceState(null, '', '/workspace/bookings?page=2');
+    const entries = window.history.length;
+    render();
+    await ready();
+    expect(within(screen.getByTestId('booking-row')).getByTestId('booking-reference')).toHaveTextContent('W6S-2Z5');
+    empties();
+    await showsTheLastPageThatExists(entries);
+  });
+
+  it('releasing the only booking on a later page shows the last page that exists, not Empty (BUG-F07-004)', async () => {
+    const empties = aLaterPageThatEmpties(KAVINDI);
+    answers.booking = () => Response.json({ ...DETAIL, booking: KAVINDI, allowedActions: ['confirm', 'release'] });
+    answers['booking-release'] = () => {
+      empties();
+      return Response.json({ ok: true });
+    };
+    window.history.replaceState(null, '', '/workspace/bookings?page=2');
+    const entries = window.history.length;
+    render();
+    await ready();
+    fireEvent.click(screen.getByTestId('booking-row'));
+    fireEvent.click(await within(await screen.findByTestId('appointment-sheet')).findByTestId('appointment-release'));
+    expect(await screen.findByText('Hold released. The time is open again.')).toBeInTheDocument();
+    await showsTheLastPageThatExists(entries);
   });
 
   it('says when the bookings cannot be reached, and tries again', async () => {
