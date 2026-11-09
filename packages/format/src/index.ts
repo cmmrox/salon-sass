@@ -48,6 +48,47 @@ export function formatDay(value: string, locale = 'en-LK'): string {
     year: 'numeric',
   }).format(new Date(`${value}T00:00:00Z`));
 }
+/** One short-day formatter per locale and form, made once: a list formats every row's dates. */
+const shortDayFormats = new Map<string, Intl.DateTimeFormat>();
+function shortDayFormat(locale: string, withYear: boolean): Intl.DateTimeFormat {
+  const key = `${locale}|${withYear}`;
+  let format = shortDayFormats.get(key);
+  if (!format) {
+    format = new Intl.DateTimeFormat(locale, {
+      timeZone: 'UTC',
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+      ...(withYear ? { year: 'numeric' } : {}),
+    });
+    shortDayFormats.set(key, format);
+  }
+  return format;
+}
+const yearOf = (value: string) => value.slice(0, 4);
+const shortDay = (value: string, withYear: boolean, locale: string) =>
+  shortDayFormat(locale, withYear).format(new Date(`${value}T00:00:00Z`));
+/**
+ * A salon's local date in the Team page's short form (decision 107): without the year when it falls in the year of the
+ * salon's `today` (`Thu, Nov 12`), and otherwise with it, as `formatDay` writes it (`Tue, Jan 5, 2027`). Both are the
+ * salon's own dates (`2026-11-12`), so no time zone applies.
+ */
+export function formatShortDay(value: string, today: string, locale = 'en-LK'): string {
+  return shortDay(value, yearOf(value) !== yearOf(today), locale);
+}
+/**
+ * A period's first and last day in the short form of decision 107: both without the year when both fall in the year of
+ * the salon's `today`, and both with it when either end is in another year.
+ */
+export function formatShortPeriod(
+  first: string,
+  last: string,
+  today: string,
+  locale = 'en-LK',
+): { first: string; last: string } {
+  const withYear = yearOf(first) !== yearOf(today) || yearOf(last) !== yearOf(today);
+  return { first: shortDay(first, withYear, locale), last: shortDay(last, withYear, locale) };
+}
 /**
  * A phone number the API stored in E.164, in its own country's national format (decision 084):
  * `+94771234567` is `077 123 4567`, `+94112504417` is `0112 504 417`. The country comes from the

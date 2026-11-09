@@ -1,5 +1,5 @@
 'use client';
-import { formatClock, formatDay } from '@salon/format';
+import { formatClock, formatShortDay, formatShortPeriod } from '@salon/format';
 import { useTranslations } from 'next-intl';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -44,6 +44,8 @@ export function MemberAvatar({
 }
 
 type Props = {
+  /** The salon's date, which decides whether the leave badge says the year (decision 107). */
+  today: string;
   members: TeamMember[];
   categories: TeamCategory[];
   services: TeamService[];
@@ -76,14 +78,15 @@ function HoursLine({ weekly }: { weekly: TeamWorkday[] }) {
 
 /**
  * A person's current or next leave (F06-S03 AC-9, the prototype's `nextOff`): with `team.manage` its type and days, and
- * otherwise only that they are on leave, since the type is private (decision 104).
+ * otherwise only that they are on leave, since the type is private (decision 104). Its days are in the short form of
+ * decision 107 (F06-S03 AC-16): no year within the salon's current year.
  */
-function LeaveBadge({ leave }: { leave: NextLeave }) {
+function LeaveBadge({ leave, today }: { leave: NextLeave; today: string }) {
   const t = useTranslations('team');
   const days =
     leave.firstDay === leave.lastDay
-      ? formatDay(leave.firstDay)
-      : t('leaveDays.range', { first: formatDay(leave.firstDay), last: formatDay(leave.lastDay) });
+      ? formatShortDay(leave.firstDay, today)
+      : t('leaveDays.range', formatShortPeriod(leave.firstDay, leave.lastDay, today));
   return (
     <Badge variant="caution" className="whitespace-normal" data-testid="team-card-leave">
       {leave.type ? t('card.leaveTyped', { type: t(`leaveTypes.${leave.type}`), days }) : t('card.leaveDays', { days })}
@@ -97,6 +100,7 @@ function LeaveBadge({ leave }: { leave: NextLeave }) {
  * profile** for those who may change it. With nobody on the team it shows the prototype's Empty state.
  */
 export function TeamCards({
+  today,
   members,
   categories,
   services,
@@ -179,7 +183,7 @@ export function TeamCards({
                 </div>
               )}
             </dl>
-            {member.nextLeave && <LeaveBadge leave={member.nextLeave} />}
+            {member.nextLeave && <LeaveBadge leave={member.nextLeave} today={today} />}
             <div className="flex flex-wrap gap-1.5">
               {canManage && (
                 <Button

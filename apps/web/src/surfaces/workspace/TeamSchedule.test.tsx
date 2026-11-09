@@ -78,6 +78,7 @@ const render = (canManage = true, readOnly: 'support' | 'salon' | null = null) =
   renderWithMessages(
     <TeamScreen
       kind="staff"
+      timeZone="Asia/Colombo"
       canManage={canManage}
       canBlock={canManage}
       canSeeAccounts={canManage}

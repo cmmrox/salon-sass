@@ -1,5 +1,5 @@
 'use client';
-import { formatDay } from '@salon/format';
+import { formatShortDay, formatShortPeriod } from '@salon/format';
 import { useTranslations } from 'next-intl';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -66,7 +66,7 @@ export function LeaveTab(props: Props) {
   );
 }
 
-function LeaveList({ leave, canChange, busy, onRemove }: Props) {
+function LeaveList({ today, leave, canChange, busy, onRemove }: Props) {
   const t = useTranslations('team.schedule.leave');
   const days = useTranslations('team.leaveDays');
   const types = useTranslations('team.leaveTypes');
@@ -79,10 +79,11 @@ function LeaveList({ leave, canChange, busy, onRemove }: Props) {
   return (
     <ItemGroup className="rounded-card bg-card px-4" data-testid="leave-list">
       {leave.map((each) => {
+        // The short day form of decision 107 (F06-S03 AC-16): no year within the salon's current year.
         const when =
           each.firstDay === each.lastDay
-            ? formatDay(each.firstDay)
-            : days('range', { first: formatDay(each.firstDay), last: formatDay(each.lastDay) });
+            ? formatShortDay(each.firstDay, today)
+            : days('range', formatShortPeriod(each.firstDay, each.lastDay, today));
         return (
           <Item
             key={each.id}
