@@ -32,6 +32,15 @@ export type ImpactState =
 export const newLeave = (): LeaveForm => ({ firstDay: null, lastDay: null, type: 'annual', note: '' });
 export const newBlock = (): BlockForm => ({ date: null, starts: '10:00', finishes: '11:00', label: '' });
 
+/**
+ * The leave with its first day chosen (F06-S03 AC-15, CR-026): an empty last day, or one before the new first day, becomes
+ * that day, so a one-day leave takes one choice; a later last day already chosen is kept.
+ */
+export function withFirstDay(form: LeaveForm, firstDay: string): LeaveForm {
+  const lastDay = form.lastDay === null || form.lastDay < firstDay ? firstDay : form.lastDay;
+  return { ...form, firstDay, lastDay };
+}
+
 /** Whether the form holds anything to lose. */
 export function leaveIsEdited(form: LeaveForm): boolean {
   const empty = newLeave();

@@ -10,6 +10,7 @@ import {
   leaveProblem,
   leaveRefusalOfFields,
   leaveSaveOf,
+  withFirstDay,
   newBlock,
   newLeave,
   withBlock,
@@ -140,5 +141,26 @@ describe('a block form (F06-S03 AC-4)', () => {
         (each) => each.id,
       ),
     ).toEqual(['2026-11-12-09:00', '2026-11-12-15:00', '2026-11-13-09:00']);
+  });
+});
+
+describe('choosing the first day of leave (F06-S03 AC-15, CR-026)', () => {
+  const form = (lastDay: string | null) => ({ ...newLeave(), firstDay: null, lastDay, note: 'Trip' });
+
+  it('sets an empty last day to the first, so one day takes one choice', () => {
+    expect(withFirstDay(form(null), '2026-11-12')).toEqual({
+      ...form(null),
+      firstDay: '2026-11-12',
+      lastDay: '2026-11-12',
+    });
+  });
+  it('moves a last day before the first up to it', () => {
+    expect(withFirstDay(form('2026-11-10'), '2026-11-12').lastDay).toBe('2026-11-12');
+    expect(withFirstDay(form('2026-12-31'), '2027-01-02').lastDay).toBe('2027-01-02');
+  });
+  it('keeps a later last day, and the same day', () => {
+    expect(withFirstDay(form('2026-11-14'), '2026-11-12').lastDay).toBe('2026-11-14');
+    expect(withFirstDay(form('2026-11-12'), '2026-11-12').lastDay).toBe('2026-11-12');
+    expect(withFirstDay(form('2027-01-05'), '2026-12-30').lastDay).toBe('2027-01-05');
   });
 });

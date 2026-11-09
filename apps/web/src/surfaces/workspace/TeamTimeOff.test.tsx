@@ -267,7 +267,7 @@ describe('the Leave tab (F06-S03 AC-1 to AC-3)', () => {
     await toastSays(words);
   });
 
-  it('asks for the days, then for their order, without asking the API', async () => {
+  it('asks for the days without asking the API', async () => {
     render();
     await openTab('leave');
     fireEvent.click(screen.getByTestId('leave-add'));
@@ -275,15 +275,65 @@ describe('the Leave tab (F06-S03 AC-1 to AC-3)', () => {
 
     fireEvent.click(screen.getByTestId('leave-save'));
     expect((await screen.findByTestId('leave-problem')).textContent).toContain('Choose the first and last day.');
-
-    await pick('leave-first', '2026-11-14');
-    await pick('leave-last', '2026-11-12');
-    fireEvent.click(screen.getByTestId('leave-save'));
-
-    expect((await screen.findByTestId('leave-problem')).textContent).toContain(
-      'The last day can’t be before the first.',
-    );
     expect(sent('team-leave-add')).toHaveLength(0);
+  });
+
+  const dayButton = (calendar: HTMLElement, name: string) =>
+    calendar.querySelector<HTMLButtonElement>(`button[aria-label*="${name}"]`)!;
+  /** The first day, in the month after today's. */
+  const pickFirstNextMonth = async (name: string) => {
+    fireEvent.click(screen.getByTestId('leave-first'));
+    const calendar = await screen.findByTestId('leave-first-calendar');
+    fireEvent.click(within(calendar).getByRole('button', { name: /next/i }));
+    await waitFor(() => expect(calendar.textContent).toContain('December 2026'));
+    fireEvent.click(dayButton(calendar, name));
+    await waitFor(() => expect(screen.queryByTestId('leave-first-calendar')).toBeNull());
+  };
+
+  it('sets the last day to the first, so one day of leave takes one choice (AC-15)', async () => {
+    // Unanswered, so that no toast outlives this test: what was sent is the point.
+    answers['team-leave-add'] = problem('service_unavailable', 503);
+    render();
+    await openTab('leave');
+    fireEvent.click(screen.getByTestId('leave-add'));
+    await screen.findByTestId('leave-form');
+
+    await pick('leave-first', '2026-11-20');
+
+    expect(screen.getByTestId('leave-last').textContent).toBe('Fri, Nov 20, 2026');
+    fireEvent.click(screen.getByTestId('leave-save'));
+    await waitFor(() => expect(sent('team-leave-add')).toHaveLength(1));
+    expect(sent('team-leave-add')[0]).toMatchObject({ firstDay: '2026-11-20', lastDay: '2026-11-20' });
+  });
+
+  it("opens the last day on the first day's month and offers no day before it (AC-15)", async () => {
+    render();
+    await openTab('leave');
+    fireEvent.click(screen.getByTestId('leave-add'));
+    await screen.findByTestId('leave-form');
+    await pickFirstNextMonth('December 10, 2026');
+    expect(screen.getByTestId('leave-last').textContent).toBe('Thu, Dec 10, 2026');
+
+    fireEvent.click(screen.getByTestId('leave-last'));
+    const calendar = await screen.findByTestId('leave-last-calendar');
+    expect(calendar.textContent).toContain('December 2026');
+    expect(dayButton(calendar, 'December 9, 2026')).toBeDisabled();
+    expect(dayButton(calendar, 'December 10, 2026')).toBeEnabled();
+    expect(dayButton(calendar, 'December 11, 2026')).toBeEnabled();
+    expect(within(calendar).getByRole('button', { name: /previous/i })).toHaveAttribute('aria-disabled', 'true');
+  });
+
+  it('moves an earlier last day up to a new first day, and keeps a later one (AC-15)', async () => {
+    render();
+    await openTab('leave');
+    await leaveFilled('2026-11-12', '2026-11-14');
+
+    await pick('leave-first', '2026-11-13');
+    expect(screen.getByTestId('leave-last').textContent).toBe('Sat, Nov 14, 2026');
+
+    await pick('leave-first', '2026-11-20');
+    expect(screen.getByTestId('leave-last').textContent).toBe('Fri, Nov 20, 2026');
+    expect(screen.getByTestId('leave-first').textContent).toBe('Fri, Nov 20, 2026');
   });
 
   it('says an overlap, the limit and the API-named rules in the sheet, and keeps the form', async () => {
@@ -545,12 +595,19 @@ describe('the bookings a period would affect (F06-S03 AC-8)', () => {
     await waitFor(() => expect(asked()).toBe(before + 1));
   });
 
-  it('says nothing with none in the period, and asks nothing for a period a save would refuse', async () => {
+  it('asks nothing before the days are chosen, then asks for the one day the first day sets', async () => {
     render();
     await openTab('leave');
-    await leaveFilled('2026-11-14', '2026-11-12');
-
+    fireEvent.click(screen.getByTestId('leave-add'));
+    await screen.findByTestId('leave-form');
     expect(calls.filter((call) => call.action === 'team-leave-affected')).toHaveLength(0);
+
+    await pick('leave-first', '2026-11-12');
+
+    await waitFor(() => expect(calls.filter((call) => call.action === 'team-leave-affected')).toHaveLength(1));
+    const asked = calls.find((call) => call.action === 'team-leave-affected')!.url;
+    expect(asked).toContain('firstDay=2026-11-12');
+    expect(asked).toContain('lastDay=2026-11-12');
     expect(screen.queryByTestId('period-affected')).toBeNull();
   });
 

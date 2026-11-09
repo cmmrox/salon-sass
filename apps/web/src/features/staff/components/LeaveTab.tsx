@@ -16,6 +16,7 @@ import {
   type LeaveForm,
   type LeaveRefusal,
   type LeaveType,
+  withFirstDay,
 } from '../client/time-off-form';
 import type { MemberLeave } from '../types';
 import { DateChooser } from './DateChooser';
@@ -169,7 +170,7 @@ function LeaveFormFields({
             disabled={busy}
             describedBy={daysRefused ? PROBLEM_ID : undefined}
             testId="leave-first"
-            onChange={(firstDay) => set({ firstDay })}
+            onChange={(firstDay) => onForm(withFirstDay(form, firstDay))}
           />
         </Field>
         <Field data-invalid={daysRefused || undefined}>
@@ -177,6 +178,7 @@ function LeaveFormFields({
           <DateChooser
             id="leave-last"
             today={today}
+            earliest={form.firstDay}
             value={form.lastDay}
             placeholder={t('chooseDay')}
             calendarLabel={t('lastDayCalendar')}
