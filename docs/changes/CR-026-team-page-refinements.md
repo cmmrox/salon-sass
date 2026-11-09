@@ -1,7 +1,7 @@
 ---
 id: CR-026
 title: Team page refinements from the F06 review
-status: approved
+status: implemented
 requested_by: QA review of F06
 requested_on: 2026-11-09
 decided_on: 2026-11-09
@@ -57,3 +57,6 @@ For SUG-F06-02 the lead chose a short form beside `formatDay`, used on the Team 
 107): the card's leave badge and the rows of the Leave, Blocked time and Date changes tabs. The
 Date changes rows are included so the schedule sheet's tabs print dates alike. F03's and F04's
 screens keep `formatDay` with the year, so their cases do not change.
+
+Implemented: PR #24 merged on 2026-11-09 as 7c3e3c0, verified on GitHub. QA re-verified it at a722885
+(`evidence.reverification` in F06's `feature.yaml`), and smoke passed 10 of 10 at its head, 4bb3c0f.
