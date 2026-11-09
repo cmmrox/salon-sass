@@ -2,12 +2,12 @@
 id: BUG-F07-004
 title: When a change empties the later page being shown, the Bookings page says "No bookings match." with no pager, hiding the day's remaining bookings
 severity: minor
-status: open
+status: fixed
 found_by: "TC-F07-S03-021; PR #26 review (Codex, use-bookings.ts)"
 breaks: AC-3
 found_on: 2026-11-10
-fixed_in: null
-fix_note: null
+fixed_in: 67d873a43ba26b161d536f5c8eba56cfe517dee7
+fix_note: "When a read comes back empty for a page past the last while the day still has bookings, the list shows the last page that exists, replacing the address's page in place; this covers an action and a hold running out."
 developer_note: null
 verified_on: null
 approved_by: null

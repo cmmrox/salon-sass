@@ -2,12 +2,12 @@
 id: BUG-F07-003
 title: A hold whose answer arrives after the New appointment sheet was closed, or after a field was changed, is never released and stays on the time until it runs out
 severity: major
-status: open
+status: fixed
 found_by: "TC-F07-S03-020; PR #26 review (Codex, use-new-appointment.ts holdTime)"
 breaks: AC-6
 found_on: 2026-11-10
-fixed_in: null
-fix_note: null
+fixed_in: 15e9917b922834b5001d6a6efb53e1b6de93c3ea
+fix_note: "A hold answered after the sheet closed or the form changed is released at once (kept-alive release, else booking-release) and never adopted or confirmed; the change also clears busy and the attempt, so the next time chosen gets a new Idempotency-Key."
 developer_note: null
 verified_on: null
 approved_by: null
