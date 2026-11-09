@@ -4,7 +4,7 @@ feature: F07
 title: Bookings, holds and booking states
 sequence: 1
 surfaces: [api]                # api | web | mobile | infra | docs
-status: in-progress         # outlined | planned | in-progress | built | complete | released
+status: built               # outlined | planned | in-progress | built | complete | released
 qa_status: not-run          # stays not-run: QA passes the feature. Set only by a stage pass the owner asked for
 blocked_reason: null        # QA: what stops a stage pass, when qa_status is blocked
 released_in: null
@@ -16,10 +16,202 @@ nfr_focus: [NFR-05]               # non-functional requirements of the feature t
 # Written by the developer at handoff. The stage is closed on it, and QA starts the feature pass
 # from it. Facts; not how the code works.
 handoff:
-  run: null                 # commands that start the product and reach what this stage built
-  data: null                # the accounts and seed data that exist
-  notes: null               # criterion-to-result/evidence; gate commands, tested source, log paths,
-                            # results and relevant conditions; gaps and differences from docs/
+  run: |
+    API only; no screen changes (S03 builds them). Local, from the repository root, in a plain (non-login) shell.
+    The stage's own instance, beside the owner's (API 8090, web 3100, database salon on salon-postgres 5440, untouched):
+      database f07s01_walk on salon-postgres (created with: docker exec salon-postgres psql -U salon -d postgres
+      -c "CREATE DATABASE f07s01_walk OWNER salon"), API on 8292, local key files of its own in the walk folder.
+      Start: SALON_DB_NAME=f07s01_walk SALON_API_PORT=8292 SALON_WEB_PORT=3292, source infra/scripts/lib/common.sh,
+      call load_settings, point SALON_{IDENTITY,OPERATOR,BILLING,EXPORT,SUPPORT}_LOCAL_KEY_FILE at a folder of your own,
+      JAVA_HOME=~/.sdkman/candidates/java/25.0.1.0+8-amzn, then $JAVA_HOME/bin/java -jar apps/api/target/salon-api.jar
+      (built by ./mvnw verify from a9723d3; GET /api/v1/meta answers that commit). The script used is
+      /private/tmp/claude-501/-Users-cmmrox-Personal-Projects-salon-sass/9534d877-2318-4fae-b07d-abb1a398acde/scratchpad/walk/start-api.sh.
+      Then SALON_DB_NAME=f07s01_walk SALON_API_PORT=8292 SALON_WEB_PORT=3292 infra/scripts/local-accounts.sh seeds the
+      roster into that database only. Migrations V1 to V32 run at start; V32 is this stage's.
+    The API was stopped after the walk (by its PID); the database f07s01_walk was left for inspection. To remove it:
+      docker exec salon-postgres psql -U salon -d postgres -c "DROP DATABASE f07s01_walk".
+    Endpoints, on the salon's host (alpha.localhost:8292): POST /api/v1/bookings (Idempotency-Key header); GET
+    /api/v1/bookings?from=&to=&state=&memberId=&q=&page=&size=; GET /api/v1/bookings/{id}; POST /api/v1/bookings/{id}/
+    confirm | release | arrive | start | cancel | no-show | undo-no-show. The guards and lists come alive on staff's and
+    catalogue's existing endpoints (team member DELETE and PUT, service DELETE, closures/impact, opening-hours settings PUT,
+    schedule weekly PUT, leave/affected, blocked-time and blocked-time/affected, popular-setting "most_booked").
+    New setting: salon.booking.phone-region (SALON_BOOKING_PHONE_REGION, defaulting to SALON_BRANDING_PHONE_REGION, then
+    LK). New job: booking-hold-expiry, every minute. The test clock (PUT/DELETE /local/clock on 127.0.0.1) moves "now"; it
+    keeps running from the instant set.
+  data: |
+    Local seed (db/local/afterMigrate.sql): each synthetic salon (alpha, beta, gamma) that has never saved booking rules
+    gets version 1 with a fixed id (md5 of the salon id), 15-minute slots, no notice, 60-day horizon, no deposit, free
+    cancellation to 24 hours, late cancellation keeps nothing, a no-show keeps the deposit, one reschedule until 24 hours,
+    author 00000000-0000-4000-8000-000000000000 (no staff account, so the history shows no label). A salon with rules is
+    left alone. On the owner's instance this runs at its next start and only adds rules to a salon that has none.
+    Accounts: the fixed roster (infra/local/accounts.json, password 123456@321; Owners and operators with the roster's TOTP
+    seeds). It was seeded only into f07s01_walk; no roster account anywhere was changed. The walk signed in each role of
+    alpha (Nadeesha OWNER, Kasun MANAGER, Dilani RECEPTIONIST, Tharindu PROFESSIONAL, the ACCOUNTANT) and beta's, and
+    the operator shanika.abeysekera@salonops.lk for a support session on alpha (it ends at its 30 minutes).
+    Walk data in f07s01_walk only: per salon a "Cut and blow-dry" service (45 + 15 minutes, Rs. 4,500), team members
+    Sanduni Wickramasinghe and Ishara Fonseka (alpha's Sanduni linked to Tharindu's account), opening hours 09:00 to 19:00
+    every day, and bookings for synthetic customers (Amaya Rajapaksa, Kavindi Herath, Nethmi Bandara) on 15 to 17 June
+    2086 by the test clock.
+    Tests make their own salons (TestSalons) with random slugs in the test container; nothing is shared with any instance.
+  notes: |
+    Tested source: a847ff75 (commits df44b711 build, 51f2b0e5 tests, a9723d3f test fix, a847ff75 contract test), on the
+    stage branch charithm/feature/F07-S01-bookings-holds-and-states. This handoff commit changes only this file and the
+    generated documents. Logs in this checkout (keep it until close):
+    /Users/cmmrox/Personal/Projects/salon-sass/.local/logs/gates-f07s01-a9723d3f/ and .../gates-f07s01-a847ff75/,
+    walk: /Users/cmmrox/Personal/Projects/salon-sass/.local/logs/walk-f07s01-a9723d3f/ (walk.py, job.py, walk-2.log, api.log).
+
+    GATES, each on committed source with a clean tree (only the untracked .playwright-mcp/ that was there before I started):
+    | Command | Tested commit | Result | Log |
+    | cd apps/api && ./mvnw -q verify | a9723d3f | exit 0; 2181 tests in 238 classes, 0 failures, 0 errors, 0 skipped (surefire reports), 635 s | gates-f07s01-a9723d3f/1-api-verify.log |
+    | pnpm -r lint | a847ff75 | exit 0 | gates-f07s01-a847ff75/lint.log |
+    | pnpm -r typecheck | a847ff75 | exit 0 | gates-f07s01-a847ff75/typecheck.log |
+    | pnpm -r test | a847ff75 | exit 0; web 1303, api-contracts 25, format 18 | gates-f07s01-a847ff75/test.log |
+    | pnpm --filter @salon/web build | a847ff75 | exit 0 | gates-f07s01-a847ff75/web-build.log |
+    | pnpm contracts:check | a847ff75 | exit 0; document and client current | gates-f07s01-a847ff75/contracts-check.log |
+    a847ff75 differs from a9723d3f only in packages/api-contracts/test/contracts.test.ts, so the verify result stands
+    (docs/operations/verification-evidence.md). Earlier runs: verify on 51f2b0e5 failed once (2062 of 2063) on a test of
+    mine that placed two bookings at one minute, so their order fell to the random id; fixed in a9723d3f. pnpm -r test on
+    a9723d3f failed once: the api-contracts test lists every problem code and needed the four new ones; fixed in a847ff75.
+    python3 qa/scripts/guard.py --role dev --diff reports only the untracked .playwright-mcp/ files, which are not mine and
+    which I left alone; every path I changed is a developer path.
+
+    CRITERIA, each checked on the running product (walk: 52 of 52 checks passed, walk-2.log) and by the tests named:
+    AC-1 checked: 201 held, reference, startsAt/endsAt with +05:30, holdExpiresAt = createdAt + 10 min, channel; repeat
+      with the key answers the same booking, another body 422 request_rejected. Terms version, variant, segments, price,
+      rules version kept (HoldsIntegrationTest, database read).
+    AC-2 checked: 400 naming customer.name, customer.mobile, channel; 409 slot_unavailable with detail for a 5-minute step,
+      the past, beyond a year, outside opening hours (and in tests: closed day, outside working time incl. blocked time, not
+      performing); 404 for another salon's professional and service; rules_not_set in tests. Names 1/2/60/61, landline and
+      foreign numbers, now and exactly a year ahead, a booking ending exactly at closing: tests.
+    AC-3 checked: overlap 409 slot_taken, touching kept, another professional at the same time 201, a run-out hold blocks
+      nothing before the job. Ten simultaneous holds through the endpoint: exactly one 201, nine slot_taken; ten at one time
+      for ten professionals all 201 (BookingConcurrencyIntegrationTest). The constraint alone refuses an overlap written
+      through the domain with no check (SQLSTATE 23P01); cancelled, no-show, released and run-out rows occupy nothing.
+    AC-4 checked by tests only (no endpoint can make one in R1): a booking with a processing segment inserted through the
+      domain leaves that time free for another, and its active parts are refused (BookingOverlapIntegrationTest).
+    AC-5 checked: confirm 200; again 409 invalid_state; a hold past its expiry 409 hold_expired and its time free; release
+      204, then 404; releasing a booking 409 invalid_state.
+    AC-6 checked: on the running product the job ended a run-out hold within a minute, as system, with history and audit
+      ("Job booking-hold-expiry ran for 3 salons"); before it, the hold was 404 and blocked nothing. Never a pending payment,
+      salon by salon, once per run: HoldExpiryAndPaymentIntegrationTest. "At most once per occurrence across instances" is
+      the scheduler's existing claim, not retested.
+    AC-7 checked: no-show before the start 409, at/after 200; cancel after the start 409; undo the same day 200; arrive and
+      start by the linked Professional; no complete endpoint (404). Every pair and boundary (start minute, salon midnight,
+      expiry second, a London clock change) in BookingStateMachineTest (129 cases); undo after the time was booked 409
+      slot_taken and stays no_show; two changes at once, one applies (BookingConcurrencyIntegrationTest).
+    AC-8 checked by integration tests through the domain (BookingPayments, BookingCheckout): pending payment and back to
+      confirmed or held, never expired by the job; complete only from arrived or in service; confirming by either route
+      writes booking.BookingConfirmed.v1 in the same transaction, none when it rolls back.
+    AC-9 checked: history of six changes with who/when; audit entries staff/system with before/after states; no mobile
+      number in any of the walk API's 318 log lines, nor in tests' captured logs; audit never holds the name or mobile.
+    AC-10 checked: K7M-4QX shape, search without hyphen in lower case; same reference in two salons and a scripted
+      collision drawn again, and the unique constraint per salon (tests).
+    AC-11 checked: list by start time, released and run-out holds not listed, search by reference and E.164 mobile, more
+      than 31 days 400, detail with history and allowedActions, unlinked Professional sees none, linked sees only own,
+      granted sees all (tests).
+    AC-12 checked with each role and a support session: Receptionist places, confirms, releases; Professional 403 on
+      manage actions and 404 on another's booking; Accountant 403 permission_denied (list, place; every endpoint in tests);
+      support session reads, no allowedActions, 403 support_read_only on change. Suspended and read-only salons: tests.
+    AC-13 checked: removal and delete 409 in_use with an upcoming booking; closure impact lists the day's bookings. In tests:
+      cancelled-only and past/no-show-only succeed, a run-out hold is not upcoming, taking a service away refused, hours,
+      week, leave and blocked time list and count bookings (touching does not), Most booked ranks by bookings only. The three
+      races (delete vs hold, removal vs hold, taking a service vs hold) never both succeed, made deterministic by the test
+      holding the guard lock until both requests wait on it.
+    AC-14 checked: beta reading or cancelling alpha's booking 404, beta's list empty; another salon's professional and
+      service 404. Tests: every action 404 alike for a foreign and an unknown id, contracts per salon, two salons with one
+      reference, row-level security alone and Hibernate's filter alone for both new tables, no tenant context sees nothing.
+    AC-15 checked by tests: every response of every new endpoint in the integration tests, error statuses included, is
+      validated against the committed docs/api/openapi.json; the four codes are in ErrorCode and Problem.code.
+
+    FINAL ENDPOINT SHAPES (salon host, under /api/v1/bookings; booking module, OpenAPI tag booking)
+    POST /api/v1/bookings, header Idempotency-Key (UUID, required), body
+      {memberId, serviceId, variantId?, date YYYY-MM-DD, time HH:MM, customer: {name, mobile}, channel} -> 201 Booking.
+      An unknown field anywhere (customer.x included) is a 400 naming it.
+    GET /api/v1/bookings?from=&to=&state=(repeatable)&memberId=&q=&page=&size= -> 200 BookingPage {items, page, size, total};
+      from/to required, both included, at most 31 dates; page from 0; size 1 to 100, 50 by default; q at most 60 characters.
+    GET /api/v1/bookings/{id} -> 200 BookingDetail {booking: Booking, history: [entry], allowedActions: [name]}
+      (nested, not flattened: the spec allowed the shape to follow the conventions).
+    POST /{id}/confirm | arrive | start | no-show | undo-no-show -> 200 Booking; POST /{id}/cancel {reason, note?} -> 200 Booking;
+      POST /{id}/release -> 204. A path id that is not a UUID is 404.
+    Booking {id, reference "K7M-4QX", state, startsAt, endsAt, holdExpiresAt (null unless held), member {id, name},
+      service {id, name, variantId|null, variantName|null}, customer {name, mobile national "077 123 4567"}, channel,
+      priceMinor, currency, createdAt}. Every instant is an offset date-time in the salon's zone, to the second, +HH:MM.
+    History entry {at, from (null for the placing), to, by {kind: staff|system, label (email else mobile, null for the
+      system or an unknown account)}, reason|null, note|null}, oldest first.
+    allowedActions: the staff action names, in the order confirm, release, arrive, start, cancel, no-show, undo-no-show,
+      that the caller's permission reaches on this booking and the state machine allows now.
+    Problem codes added to ErrorCode and the contract: slot_taken, slot_unavailable, hold_expired, rules_not_set.
+      slot_unavailable and invalid_state carry a detail naming the rule (ApplicationProblemException.withDetail, new).
+    Refusal order of a placement: 403 -> 400 fields (Idempotency-Key, memberId, serviceId, variantId format, date, time,
+      customer.name, customer.mobile, channel) -> repeat of a key (same booking 201, or 422 request_rejected for another
+      body, or 404 if no longer shown) -> 409 rules_not_set -> 404 member/service -> 400 variantId (or 404 for an
+      unknown variant) -> 409 slot_unavailable (performs, five-minute step, past, more than a year ahead, closed, opening
+      hours, working time; in that order) -> 409 slot_taken.
+    In-process (booking.inprocess, unused until F08/F10): BookingPayments.begin/settle/abandon(bookingId, byStaff|null),
+      BookingCheckout.complete(bookingId, byStaff). Event booking.BookingConfirmed.v1 {bookingId, memberId, serviceId}.
+
+    OVERLAP MECHANISM (for docs/engineering/backend.md, "Booking integrity")
+    booking_appointment.occupied is a tstzmultirange of the segments that occupy the professional (active and buffer;
+    processing left out), adjacent ones merged, half-open. Constraint booking_appointment_no_overlap:
+      EXCLUDE USING gist (tenant_id WITH =, member_id WITH =, occupied WITH &&)
+      WHERE (state IN ('held','pending_payment','confirmed','arrived','in_service','completed')).
+    Extension btree_gist (trusted; created by the owning role in V32). A hold past its expiry is still 'held' in the row,
+    so the placing transaction, and an undone no-show's, first ends that professional's run-out holds over the time
+    (state 'expired', history by system, audit), flushes, then inserts. Only SQLSTATE 23P01 on
+    booking_appointment_no_overlap is translated, to slot_taken. The pre-insert checks never look at other bookings.
+
+    GUARD-WINDOW MECHANISM (decision 094(f))
+    shared.persistence.TransactionLocks.hold(purpose, subject): pg_advisory_xact_lock(hashtextextended(
+    "<purpose>/<salon id>/<subject id>", 0)), refused outside a writable transaction. Purposes are constants on the
+    declaring interfaces: UpcomingMemberBookings.GUARD_LOCK = "staff.member-bookings" (keyed by member) and
+    UpcomingServiceBookings.GUARD_LOCK = "catalogue.service-bookings" (keyed by service).
+      - Placing a hold, and undoing a no-show: lock member, then service, then check again, joining the transaction,
+        that the service is listed (CatalogueListings) and the member is on the team and performs it (TeamMembers).
+      - staff remove member: after the identity lock, lock member, ask countFor again inside the transaction.
+      - staff save that takes services away: after the identity lock, lock member, ask servicesBookedFor again.
+      - catalogue delete service: after the version check, lock service, ask anyFor again.
+    The pre-transaction questions are kept, for the answer before any transaction. Booking's contract answers open their
+    own REQUIRES_NEW read transaction, as their Javadoc says, so the second ask holds a second connection while the
+    lock is held (rare admin actions; a pool exhausted by holds waiting on the same lock makes it 503 after 2 s, it never
+    deadlocks).
+
+    DIFFERENCES FROM docs/ AND CHOICES FOR THE LEAD TO RECORD
+    1. Tables booking_appointment and booking_state_change (backend.md's example name is booking_hold).
+    2. A released or expired hold is kept as a row with an internal state 'released' or 'expired' (never shown, 404,
+       occupying nothing), so its history entry exists; nothing is deleted. The job "removes" a hold by ending it.
+    3. Confirming (or starting a payment for) a hold past its expiry is hold_expired whether or not the job has ended it;
+       every other action and read on it is 404. Releasing such a hold is 404.
+    4. Architecture rule extended (ModuleRules.DECLARED_FOR_ANOTHER_MODULE, fixture declaredforanother): a @Service may
+       implement the five interfaces staff and catalogue declared for booking; any other module's interface is still
+       refused. The rule had no room for decision 087's pattern at the root package.
+    5. shared.web.ApplicationProblemException gained withDetail(sentence) for slot_unavailable and invalid_state details.
+    6. salon.booking.phone-region is booking's own setting (backend.md names only salon.branding.phone-region).
+    7. Names are copied onto the booking when placed (member_name, service_name, variant_name) so lists need no read of
+       another module per row; a later rename does not change existing bookings.
+    8. Idempotency key unique per salon; the fingerprint is SHA-256 of the fields as sent; a repeat answers the booking as
+       it is now (404 once no longer shown). 422 request_rejected as the spec says, not the existing idempotency_conflict.
+    9. Variant rules: a service without variants refuses any variantId (400); with variants, none or another of the salon's
+       services' variants is 400 (found by reading each listed service's current terms, on that refusal only, at most 300);
+       any other id 404. A catalogue lookup of a variant's service would be cheaper.
+    10. A granted (IAM-08) Professional reads every booking but arrive/start on another's is 404, as the spec's wording;
+        403 might read better since the booking is visible.
+    11. Upcoming (guards) = held not run out, pending payment, confirmed, arrived, in service, whose end has not passed.
+        "Most booked" counts confirmed, arrived, in service, completed starting at or after the moment (future included).
+        BookingsOnDate and MemberBookingsAffected list held, pending payment, confirmed, arrived, in service.
+    12. Abandoning a payment returns the hold with its original expiry, so it may have run out at once.
+    13. The hold lasts 10 minutes (a constant in the entity until S02). The job ends at most 500 holds per salon per run,
+        skipping rows a placement has locked.
+    14. Audit actions: booking.hold_placed, .confirmed, .hold_released, .hold_expired, .arrived, .service_started,
+        .cancelled (reason in the entry), .no_show_marked, .no_show_undone, .payment_started, .payment_settled,
+        .payment_abandoned, .completed; subject booking_appointment; system actor id "booking".
+    15. Permissions booking.manage and booking.attend are in identity's StaffRole (there is no permission table);
+        calendar.read was already in the support read set.
+    16. Guard re-asks open a second connection while the lock is held (see the mechanism above).
+
+    NOT DONE, AND WHY: no web or screen change (S03). No new dependency. Time: by the commit and log clocks, from the
+    plan commit (15:17) to the handoff (about 16:50), about 1 h 35 min: building about 35 min, writing and running tests
+    about 30 min, gates about 25 min (two verify runs of 10.6 min, mostly waiting), diagnosing the two gate failures about
+    5 min, the walk about 10 min.
 
 # Written by QA. A case is the test that proves it, titled with its id and the criteria it
 # covers before a colon: test('TC-F07-S01-001 AC-1, AC-2: a free slot is listed', ...), or a
