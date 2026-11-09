@@ -317,6 +317,320 @@
         ],
         "type": "object"
       },
+      "Booking": {
+        "additionalProperties": false,
+        "properties": {
+          "channel": {
+            "enum": [
+              "customer_app",
+              "staff_web",
+              "shared_app_link",
+              "instagram",
+              "google",
+              "whatsapp",
+              "phone",
+              "front_desk",
+              "walk_in"
+            ],
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "currency": {
+            "pattern": "^[A-Z]{3}$",
+            "type": "string"
+          },
+          "customer": {
+            "$ref": "#/components/schemas/BookingCustomer"
+          },
+          "endsAt": {
+            "description": "The end of its last segment, its buffer included.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "holdExpiresAt": {
+            "description": "When the hold runs out, while it is a hold; else null.",
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "member": {
+            "$ref": "#/components/schemas/BookingMember"
+          },
+          "priceMinor": {
+            "description": "The price it was booked at, in minor units of `currency`.",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "reference": {
+            "description": "Six characters, shown with a hyphen: `K7M-4QX`.",
+            "pattern": "^[A-Z2-9]{3}-[A-Z2-9]{3}$",
+            "type": "string"
+          },
+          "service": {
+            "$ref": "#/components/schemas/BookingService"
+          },
+          "startsAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "held",
+              "pending_payment",
+              "confirmed",
+              "arrived",
+              "in_service",
+              "completed",
+              "cancelled",
+              "no_show"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "channel",
+          "createdAt",
+          "currency",
+          "customer",
+          "endsAt",
+          "holdExpiresAt",
+          "id",
+          "member",
+          "priceMinor",
+          "reference",
+          "service",
+          "startsAt",
+          "state"
+        ],
+        "type": "object"
+      },
+      "BookingActor": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "enum": [
+              "staff",
+              "system"
+            ],
+            "type": "string"
+          },
+          "label": {
+            "description": "The staff account's email, else mobile number; null for the system or an account no longer known.",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "kind",
+          "label"
+        ],
+        "type": "object"
+      },
+      "BookingCustomer": {
+        "additionalProperties": false,
+        "properties": {
+          "mobile": {
+            "description": "In the national format: `077 123 4567`.",
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "mobile",
+          "name"
+        ],
+        "type": "object"
+      },
+      "BookingCustomerInput": {
+        "additionalProperties": false,
+        "properties": {
+          "mobile": {
+            "description": "A mobile number of the salon's country, in any common form: `077 123 4567`.",
+            "type": "string"
+          },
+          "name": {
+            "description": "2 to 60 characters, trimmed.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "mobile",
+          "name"
+        ],
+        "type": "object"
+      },
+      "BookingDetail": {
+        "additionalProperties": false,
+        "properties": {
+          "allowedActions": {
+            "description": "The actions the caller's role allows on it now, by the booking's rules and the time.",
+            "items": {
+              "enum": [
+                "confirm",
+                "release",
+                "arrive",
+                "start",
+                "cancel",
+                "no-show",
+                "undo-no-show"
+              ],
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "booking": {
+            "$ref": "#/components/schemas/Booking"
+          },
+          "history": {
+            "items": {
+              "$ref": "#/components/schemas/BookingHistoryEntry"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "allowedActions",
+          "booking",
+          "history"
+        ],
+        "type": "object"
+      },
+      "BookingHistoryEntry": {
+        "additionalProperties": false,
+        "properties": {
+          "at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "by": {
+            "$ref": "#/components/schemas/BookingActor"
+          },
+          "from": {
+            "description": "The state before; null for the placing of the hold.",
+            "enum": [
+              "held",
+              "pending_payment",
+              "confirmed",
+              "arrived",
+              "in_service",
+              "completed",
+              "cancelled",
+              "no_show",
+              null
+            ],
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "reason": {
+            "enum": [
+              "customer_asked",
+              "salon_unable",
+              "booked_by_mistake",
+              "other",
+              null
+            ],
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "to": {
+            "enum": [
+              "held",
+              "pending_payment",
+              "confirmed",
+              "arrived",
+              "in_service",
+              "completed",
+              "cancelled",
+              "no_show"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "at",
+          "by",
+          "from",
+          "note",
+          "reason",
+          "to"
+        ],
+        "type": "object"
+      },
+      "BookingMember": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "type": "object"
+      },
+      "BookingPage": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Booking"
+            },
+            "type": "array"
+          },
+          "page": {
+            "format": "int32",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "size": {
+            "format": "int32",
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "total": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "page",
+          "size",
+          "total"
+        ],
+        "type": "object"
+      },
       "BookingRules": {
         "additionalProperties": false,
         "properties": {
@@ -535,6 +849,63 @@
           "currency",
           "rules",
           "version"
+        ],
+        "type": "object"
+      },
+      "BookingService": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "variantId": {
+            "format": "uuid",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "variantName": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "variantId",
+          "variantName"
+        ],
+        "type": "object"
+      },
+      "CancelBooking": {
+        "additionalProperties": false,
+        "properties": {
+          "note": {
+            "description": "Up to 200 characters, trimmed; blank is none.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "reason": {
+            "enum": [
+              "customer_asked",
+              "salon_unable",
+              "booked_by_mistake",
+              "other"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
         ],
         "type": "object"
       },
@@ -3669,6 +4040,62 @@
         ],
         "type": "object"
       },
+      "PlaceBooking": {
+        "additionalProperties": false,
+        "properties": {
+          "channel": {
+            "description": "Where the booking came from.",
+            "enum": [
+              "phone",
+              "whatsapp",
+              "front_desk",
+              "walk_in",
+              "instagram",
+              "google",
+              "staff_web"
+            ],
+            "type": "string"
+          },
+          "customer": {
+            "$ref": "#/components/schemas/BookingCustomerInput"
+          },
+          "date": {
+            "description": "The salon's local date: today to a year ahead.",
+            "format": "date",
+            "type": "string"
+          },
+          "memberId": {
+            "description": "The team member who performs it.",
+            "format": "uuid",
+            "type": "string"
+          },
+          "serviceId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "time": {
+            "description": "`HH:MM`, the salon's local time, on a five-minute step.",
+            "type": "string"
+          },
+          "variantId": {
+            "description": "Required, and one of the service's own, when the service has variants; else absent.",
+            "format": "uuid",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "channel",
+          "customer",
+          "date",
+          "memberId",
+          "serviceId",
+          "time"
+        ],
+        "type": "object"
+      },
       "PlanDefinition": {
         "properties": {
           "branches": {
@@ -3935,6 +4362,10 @@
               "limit_reached",
               "support_read_only",
               "support_session_active",
+              "slot_taken",
+              "slot_unavailable",
+              "hold_expired",
+              "rules_not_set",
               "bad_request",
               "not_found",
               "method_not_allowed",
@@ -7248,6 +7679,1009 @@
         },
         "tags": [
           "platform"
+        ]
+      }
+    },
+    "/api/v1/bookings": {
+      "get": {
+        "description": "A Professional who sees only their own bookings gets the bookings of the team member linked to their account, and none when no member is. Holds that ended or ran out are never listed.",
+        "operationId": "listBookings",
+        "parameters": [
+          {
+            "description": "The first local date, `YYYY-MM-DD`.",
+            "in": "query",
+            "name": "from",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "The last local date, at most 30 days after `from`.",
+            "in": "query",
+            "name": "to",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Only these states; repeat it for several. All by default.",
+            "in": "query",
+            "name": "state",
+            "required": false,
+            "schema": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          },
+          {
+            "description": "Only this professional's.",
+            "in": "query",
+            "name": "memberId",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Part of the customer's name, their mobile number in any common form, or the reference, with or without its hyphen.",
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "From 0.",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "1 to 100; 50 by default.",
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookingPage"
+                }
+              }
+            },
+            "description": "A page of bookings."
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`from` or `to` is missing or not `YYYY-MM-DD`, the range is longer than 31 days or ends before it starts, a `state` is not a booking state, or `memberId`, `q`, `page` or `size` is wrong: `bad_request`, with `errors` naming each."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No valid session for this salon: `invalid_session`."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Without `calendar.read`: `permission_denied`. A suspended salon: `salon_suspended`."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The hostname names no salon: `not_found`."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The database is down or not answering: `service_unavailable`."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "summary": "The salon's bookings on local dates, by start time. `calendar.read`.",
+        "tags": [
+          "booking"
+        ]
+      },
+      "post": {
+        "description": "Nobody else can take the time until the hold is confirmed, released or runs out. The booking keeps the service's terms version, variant, segments and price and the current booking rules version. A repeat with the same `Idempotency-Key` and body answers the same booking and places nothing new.",
+        "operationId": "placeBookingHold",
+        "parameters": [
+          {
+            "description": "A UUID the client makes for this request and sends again with any retry of it.",
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaceBooking"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Booking"
+                }
+              }
+            },
+            "description": "The hold, in state `held`."
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "A field is missing or wrong (the name, the mobile number, the channel, the variant, the date or the time), the key is not a UUID, or the body is not the documented shape: `bad_request`, with `errors` naming each. Nothing is stored."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No valid session for this salon: `invalid_session`."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Without `booking.manage`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The professional, the service or the variant is not the salon's (removed, deleted or unknown), the hold this key placed is no longer shown, or the hostname names no salon: `not_found`."
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Another live hold or booking of the professional overlaps it: `slot_taken`. The time cannot be booked (the professional does not perform the service, not a five-minute step, past, more than a year ahead, outside the opening hours or the professional's working time): `slot_unavailable`, the `detail` saying which. The salon has never saved its booking rules: `rules_not_set`. Nothing is stored."
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The key was already used with a different body: `request_rejected`."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The database is down or not answering: `service_unavailable`."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "summary": "Holds a professional's time for a service, for 10 minutes. `booking.manage`.",
+        "tags": [
+          "booking"
+        ]
+      }
+    },
+    "/api/v1/bookings/{id}": {
+      "get": {
+        "operationId": "getBooking",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookingDetail"
+                }
+              }
+            },
+            "description": "The booking."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No valid session for this salon: `invalid_session`."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Without `calendar.read`: `permission_denied`. A suspended salon: `salon_suspended`."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No such booking of the salon, one the caller does not see (a Professional's colleague's, a hold that ended or ran out), or the hostname names no salon: `not_found`."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The database is down or not answering: `service_unavailable`."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "summary": "One booking, its history and what the caller may do with it now. `calendar.read`.",
+        "tags": [
+          "booking"
+        ]
+      }
+    },
+    "/api/v1/bookings/{id}/arrive": {
+      "post": {
+        "operationId": "markBookingArrived",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Booking"
+                }
+              }
+            },
+            "description": "The booking, now `arrived`."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No valid session for this salon: `invalid_session`."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Without `booking.attend`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No such booking of the salon, another professional's for a Professional, a hold that ended or ran out, or the hostname names no salon: `not_found`."
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Not confirmed, or not the booking's date: `invalid_state`, the `detail` naming the rule."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The database is down or not answering: `service_unavailable`."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "summary": "Marks the customer arrived, on the booking's own date. `booking.attend`; a Professional on their own bookings.",
+        "tags": [
+          "booking"
+        ]
+      }
+    },
+    "/api/v1/bookings/{id}/cancel": {
+      "post": {
+        "operationId": "cancelBooking",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelBooking"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Booking"
+                }
+              }
+            },
+            "description": "The booking, now `cancelled`."
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The reason is missing or not one of the four, the note is longer than 200 characters, or the body is not the documented shape: `bad_request`, with `errors` naming each."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No valid session for this salon: `invalid_session`."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Without `booking.manage`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No such booking of the salon, a hold that ended or ran out, or the hostname names no salon: `not_found`."
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Not confirmed, or its start time has come: `invalid_state`, the `detail` naming the rule."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The database is down or not answering: `service_unavailable`."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "summary": "Cancels a confirmed booking before it starts, with a reason. `booking.manage`.",
+        "tags": [
+          "booking"
+        ]
+      }
+    },
+    "/api/v1/bookings/{id}/confirm": {
+      "post": {
+        "operationId": "confirmBooking",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Booking"
+                }
+              }
+            },
+            "description": "The booking, now `confirmed`."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No valid session for this salon: `invalid_session`."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Without `booking.manage`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No such booking of the salon, or the hostname names no salon: `not_found`."
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "It is not a hold: `invalid_state`. The hold has run out, and its time is free for others: `hold_expired`. The `detail` names the rule."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The database is down or not answering: `service_unavailable`."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "summary": "Confirms a hold that has not run out. `booking.manage`.",
+        "tags": [
+          "booking"
+        ]
+      }
+    },
+    "/api/v1/bookings/{id}/no-show": {
+      "post": {
+        "operationId": "markBookingNoShow",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Booking"
+                }
+              }
+            },
+            "description": "The booking, now `no_show`."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No valid session for this salon: `invalid_session`."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Without `booking.manage`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No such booking of the salon, a hold that ended or ran out, or the hostname names no salon: `not_found`."
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Not confirmed, or its start time has not come: `invalid_state`, the `detail` naming the rule."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The database is down or not answering: `service_unavailable`."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "summary": "Marks a confirmed booking a no-show, at or after its start time. `booking.manage`.",
+        "tags": [
+          "booking"
+        ]
+      }
+    },
+    "/api/v1/bookings/{id}/release": {
+      "post": {
+        "operationId": "releaseBookingHold",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Released."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No valid session for this salon: `invalid_session`."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Without `booking.manage`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No such booking of the salon, a hold already released or run out, or the hostname names no salon: `not_found`."
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "It is not a hold: `invalid_state`, the `detail` naming the rule."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The database is down or not answering: `service_unavailable`."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "summary": "Gives up a hold at once, freeing its time. `booking.manage`.",
+        "tags": [
+          "booking"
+        ]
+      }
+    },
+    "/api/v1/bookings/{id}/start": {
+      "post": {
+        "operationId": "startBookingService",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Booking"
+                }
+              }
+            },
+            "description": "The booking, now `in_service`."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No valid session for this salon: `invalid_session`."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Without `booking.attend`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No such booking of the salon, another professional's for a Professional, a hold that ended or ran out, or the hostname names no salon: `not_found`."
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The customer has not arrived: `invalid_state`, the `detail` naming the rule."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The database is down or not answering: `service_unavailable`."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "summary": "Starts the service of a customer who has arrived. `booking.attend`; a Professional on their own bookings.",
+        "tags": [
+          "booking"
+        ]
+      }
+    },
+    "/api/v1/bookings/{id}/undo-no-show": {
+      "post": {
+        "operationId": "undoBookingNoShow",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Booking"
+                }
+              }
+            },
+            "description": "The booking, `confirmed` again."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No valid session for this salon: `invalid_session`."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Without `booking.manage`: `permission_denied`. A support session: `support_read_only`. A read-only salon: `salon_read_only`. A suspended salon: `salon_suspended`."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No such booking of the salon, or the hostname names no salon: `not_found`."
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Not a no-show, not the booking's date, or the professional no longer performs the service: `invalid_state`, the `detail` naming the rule. The time has been booked since: `slot_taken`, and it stays a no-show."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The database is down or not answering: `service_unavailable`."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "summary": "Undoes a no-show on the booking's own date. `booking.manage`.",
+        "tags": [
+          "booking"
         ]
       }
     },
@@ -17177,7 +18611,7 @@
       "name": "staff"
     },
     {
-      "description": "The salon's booking rules and policies, each save an immutable version.",
+      "description": "Holds and bookings with their states and history, and the salon's booking rules and policies, each save an immutable version.",
       "name": "booking"
     },
     {

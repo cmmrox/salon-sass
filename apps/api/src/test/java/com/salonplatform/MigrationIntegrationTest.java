@@ -57,7 +57,8 @@ class MigrationIntegrationTest {
                         tuple("28", "create staff team members"),
                         tuple("29", "read salon entitlements after the lock"),
                         tuple("30", "create staff member schedules"),
-                        tuple("31", "create staff leave and blocked time"));
+                        tuple("31", "create staff leave and blocked time"),
+                        tuple("32", "create booking appointments"));
         assertThat(afterFirstStart).allSatisfy(row -> assertThat(row).containsEntry("success", true));
 
         try (StartedApplication application = database.start()) {

@@ -11,11 +11,23 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
 
-/** Booking's exporter and eraser for a closed salon (PLT-06): its booking rule versions. Nothing is secret. */
+/**
+ * Booking's exporter and eraser for a closed salon (PLT-06): its bookings' history, its holds and bookings, and its
+ * booking rule versions, in that order, a table before any it references. Nothing is secret; the idempotency
+ * fingerprint is a hash of the request and is left out.
+ */
 @Component
 class BookingTenantData implements TenantDataModule {
 
-    private static final List<Table> TABLES = List.of(new Table("booking_rules_version", "id", Map.of()));
+    private static final List<Table> TABLES = List.of(
+            new Table("booking_state_change", "id", Map.of()),
+            new Table(
+                    "booking_appointment",
+                    "id",
+                    Map.of(
+                            "request_fingerprint",
+                            "A hash of the request that placed it, used only to refuse a reused key")),
+            new Table("booking_rules_version", "id", Map.of()));
 
     private final JdbcClient jdbc;
     private final ObjectProvider<PlatformDatabase> platform;
