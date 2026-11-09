@@ -284,8 +284,18 @@ export async function staffAt(s: BookingSalon, role: Role, options: { linkTo?: T
   return actor;
 }
 
-/** Fresh credentials for someone after the test clock moved past their access (staff access is short). */
-export const again = async (identity: Identity, who: SignedStaff): Promise<SignedStaff> => identity.login(who.salon, who.account);
+const current = new WeakMap<SignedStaff, SignedStaff>();
+/**
+ * Someone's credentials after the test clock moved: the last ones while their access has more than 30 seconds left by
+ * the application's clock, else a new sign-in. A second sign-in in the same TOTP step would be a refused replay.
+ */
+export async function again(identity: Identity, who: SignedStaff): Promise<SignedStaff> {
+  const last = current.get(who) ?? who;
+  if (Date.parse(await identity.now()) < Date.parse(last.tokens.accessExpiresAt) - 30_000) return last;
+  const fresh = await identity.login(who.salon, who.account);
+  current.set(who, fresh);
+  return fresh;
+}
 
 // ---------------------------------------------------------------- answers
 
