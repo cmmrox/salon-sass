@@ -145,7 +145,9 @@
       "catalogue_read": "Read the service catalogue",
       "team_read": "Read the team",
       "team_manage": "Change the team",
-      "team_block": "Add and remove blocked time"
+      "team_block": "Add and remove blocked time",
+      "booking_manage": "Book, confirm, release and cancel bookings, and mark no-shows",
+      "booking_attend": "Mark bookings arrived and in service"
     },
     "billing": "Plan and billing",
     "readOnlyReason": "This salon is read-only because an invoice is overdue, so staff changes are paused. They work again as soon as the overdue invoices are paid.",

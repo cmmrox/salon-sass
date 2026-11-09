@@ -31,6 +31,9 @@ const GRANTED = [
   'team.read',
   'team.manage',
   'team.block',
+  // F07 (decision 108 (b)): booking for customers, and marking them arrived and in service.
+  'booking.manage',
+  'booking.attend',
 ];
 
 describe('permission labels', () => {
