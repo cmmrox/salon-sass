@@ -105,7 +105,7 @@ export const PENDING_F07_S03 = {
   },
   cancel: { dialog: 'cancel-dialog', reason: 'cancel-reason', note: 'cancel-note', confirm: 'cancel-confirm', keep: 'cancel-keep' },
   /** The URL's names for the day and the search (AC-3 says the URL keeps them; the names are the build's). */
-  query: { day: 'day', q: 'q' },
+  query: { day: 'day', q: 'q', booking: 'booking' },
   /** The status Select's values, in the spec's order (AC-3). */
   statusOptions: ['all', 'held', 'confirmed', 'arrived', 'in_service', 'completed', 'cancelled', 'no_show'],
   sourceOptions: ['phone', 'whatsapp', 'front_desk', 'walk_in', 'instagram', 'google'],
