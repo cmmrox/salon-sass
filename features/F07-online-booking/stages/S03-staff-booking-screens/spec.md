@@ -65,8 +65,8 @@ the APIs of F07-S01 and F07-S02.
   **Find free times**. Missing or invalid name or mobile show the prototype's messages ("Add the customer’s name.", "Add a
   valid mobile number so the customer gets the confirmation.") on their fields, and no search runs. (BKG-11)
 - AC-5: **Find free times** lists the day's times as chips "10:30 · Nimal" (the 24-hour `formatClock`, decision 103) under "Free times on <day>. Choose one to hold
-  it." (with "No preference": "Each time shows who would take it, sharing bookings evenly." or "… filling the busiest day
-  first." per the salon's strategy). An empty answer shows the reason: closed ("The salon is closed on <day>."), nobody
+  it." (with "No preference": "Each time shows who would take it.", the same for every role; the strategy is not
+  repeated here, since only the settings read carries it, decision 111). An empty answer shows the reason: closed ("The salon is closed on <day>."), nobody
   performs it ("Nobody on the team does this service."), not working ("<Name> isn’t working on <day>." or "Nobody who does
   this service is working on <day>."), fully booked ("No free time on <day> for this service. Try another day or
   professional."). Changing any field clears the times. (BKG-01, BKG-03, BKG-11)
@@ -87,7 +87,8 @@ the APIs of F07-S01 and F07-S02.
   no-show once the start time has passed.", "Cancel and no-show are no longer possible once the customer has arrived.",
   "The booking is completed at checkout, which arrives with the front desk.", "A no-show can be undone today only.",
   "Cancelled bookings can’t be changed. Make a new booking instead."). **History** lists every change, newest first, with
-  what, who ("You", the label, or "System") and when, and a cancellation's reason and note. (BKG-06)
+  what, who (the staff label, "A team member" when the account no longer resolves, or "System"; no "You", which the API
+  cannot tell every role, decision 111) and when, and a cancellation's reason and note. (BKG-06)
 - AC-8: **Cancel booking** asks first, in an Alert Dialog: "Cancel this booking?" with the customer, day and time and "The
   time opens again for others.", a required **Reason** Select (Customer asked to cancel, The salon can’t do it, Booked by
   mistake, Other), an optional **Note** of up to 200 characters ("your team only"), **Cancel booking** (destructive) and
