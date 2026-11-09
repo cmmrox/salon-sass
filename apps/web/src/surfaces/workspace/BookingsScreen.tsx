@@ -187,6 +187,11 @@ export function BookingsScreen({ kind, timeZone, scope, canBook, canAct, canSetR
             now={clock.now}
             onOpen={(booking) => {
               remember();
+              // A row opened with the pointer gives focus back to its customer's name, its keyboard control.
+              if (!opener.current?.closest('[data-testid="booking-row"], [data-testid="booking-item"]'))
+                opener.current = document.querySelector<HTMLElement>(
+                  `[data-testid="booking-open"][data-id="${booking.id}"]`,
+                );
               list.openBooking(booking.id);
             }}
           />

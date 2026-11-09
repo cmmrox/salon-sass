@@ -479,6 +479,15 @@ describe('the appointment sheet (F07-S03 AC-7 to AC-9)', () => {
     expect(sheet).not.toHaveTextContent('You ·');
   });
 
+  it('gives focus back to the name of the row it was opened from with the pointer', async () => {
+    const sheet = await openAmaya();
+    fireEvent.click(within(sheet).getByTestId('appointment-close'));
+    await waitFor(() => expect(screen.queryByTestId('appointment-sheet')).toBeNull());
+    await waitFor(() =>
+      expect(within(screen.getAllByTestId('booking-row')[0]!).getByTestId('booking-open')).toHaveFocus(),
+    );
+  });
+
   it('sends a change, says so, and shows the new state in the sheet and the list', async () => {
     const sheet = await openAmaya();
     answers.booking = () =>
