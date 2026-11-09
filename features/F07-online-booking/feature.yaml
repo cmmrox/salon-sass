@@ -14,7 +14,7 @@ depends_on:
 - F06
 integration:
   branch: charithm/feature/F07-online-booking
-  pull_request: null
+  pull_request: https://github.com/cmmrox/salon-sass/pull/26
   qa_revision: 0f7e321bd948b4367ba655e67ea18ad5f2d1ca6d
   merged_commit: null
   merged_at: null
