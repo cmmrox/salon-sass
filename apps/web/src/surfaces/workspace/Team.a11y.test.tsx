@@ -187,6 +187,8 @@ describe('the profile sheet', () => {
     page(BRANDS[0]);
     fireEvent.click(await screen.findByTestId('team-add'));
     await screen.findByTestId('team-sheet');
+    // Name says its rule once it has been left (F06-S01 AC-17).
+    fireEvent.blur(screen.getByTestId('team-name'));
     fireEvent.change(screen.getByTestId('team-title'), { target: { value: 'x'.repeat(41) } });
     fireEvent.change(screen.getByTestId('team-bio'), { target: { value: 'x'.repeat(141) } });
     await screen.findAllByTestId('team-sheet-problem');
