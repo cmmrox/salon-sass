@@ -19,6 +19,7 @@ import type { components } from '@contracts/schema';
 import { answerOf, expectProblem } from './answers';
 import { expect, json, type Identity, type Tokens } from './identity';
 import { identitySql } from './identity-storage';
+import { committedContract } from './openapi';
 import { onSalonHost, sqlLiteral } from './operator';
 import type { Salon } from './tenants';
 
@@ -71,8 +72,27 @@ export function distinct(overrides: Partial<RulesInput> = {}): RulesInput {
   return rules({ deposit: { kind: 'percentage', percent: 20, capMinor: rupees * 100 }, ...overrides });
 }
 
-/** What a saved input reads back as (the API answers every field; reschedule keeps nulls). */
-export const stored = (input: RulesInput): Rules => structuredClone(input) as Rules;
+/**
+ * F07-S02 adds two rules (spec AC-7): `holdMinutes` (10 for a salon that has not chosen) and `noPreference`
+ * (`least_booked` likewise). A save may leave them out and keeps the current version's values (the lead's note,
+ * 2026-11-09); every F04 save leaves them out, so they read back as the defaults. The public read gains `holdMinutes`
+ * only. Which reads carry them follows the committed contract, so these expectations hold before S02 merges and after.
+ */
+export const S02_RULE_DEFAULTS = { holdMinutes: 10, noPreference: 'least_booked' } as const;
+const RULES_SCHEMA = committedContract().components.schemas.BookingRules?.properties ?? {};
+const HISTORY_FIELDS = ((committedContract().components.schemas.BookingRulesHistoryEntry?.properties?.changedFields as { items?: { enum?: string[] } } | undefined)?.items?.enum) ?? [];
+function withNewRules(input: RulesInput, names: (keyof typeof S02_RULE_DEFAULTS)[]): Rules {
+  const out = structuredClone(input) as Record<string, unknown>;
+  for (const name of names) if (name in RULES_SCHEMA) out[name] = (input as Record<string, unknown>)[name] ?? S02_RULE_DEFAULTS[name];
+  return out as Rules;
+}
+
+/** What a saved input reads back as in the settings (the API answers every field; reschedule keeps nulls). */
+export const stored = (input: RulesInput): Rules => withNewRules(input, ['holdMinutes', 'noPreference']);
+/** What a saved input reads back as in the public read: never the "No preference" strategy (F07-S02 AC-7). */
+export const storedPublic = (input: RulesInput): Rules => withNewRules(input, ['holdMinutes']);
+/** Every rule a first version's history names: the eight of F04, and F07-S02's two once the contract has them. */
+export const ruleNames = (): string[] => [...RULE_NAMES, ...(['holdMinutes', 'noPreference'] as const).filter(n => HISTORY_FIELDS.includes(n))];
 
 export class BookingRules {
   constructor(readonly identity: Identity) {}

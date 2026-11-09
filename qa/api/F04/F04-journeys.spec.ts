@@ -7,7 +7,7 @@
  * and the four stage specs. Each stage's own rules are proved in its own file; these cases assert
  * only what passes between the stages.
  */
-import { BookingRules, RULES_HISTORY, RULES_SETTINGS, SUGGESTED, rules, rulesSnapshot, stored } from '../../shared/booking-rules';
+import { BookingRules, RULES_HISTORY, RULES_SETTINGS, SUGGESTED, rules, rulesSnapshot, storedPublic } from '../../shared/booking-rules';
 import type { Identity, Tokens } from '../../shared/identity';
 import { test, expect, ownerSession, type Operator, type OperatorActor } from '../../shared/operator';
 import { Brands, brandInput, brandSnapshot, BRAND_ENDPOINTS } from '../../shared/salon-brand';
@@ -53,7 +53,7 @@ test('TC-F04-001 BRD-01, BRD-02, BRD-04, STF-04, BKG-02, BKG-09: a new salon\'s 
     expect(served.brandColour, 'nor its colour').not.toBe(brand.colour);
     expect(JSON.stringify(served), 'nor its tagline').not.toContain(brand.tagline!);
     expect((await hours.published(salon)).weekly, 'the hours save at once').toEqual(storedWeek(weekly));
-    expect((await book.published(salon)).rules, 'the booking rules save at once').toEqual(stored(policy));
+    expect((await book.published(salon)).rules, 'the booking rules save at once').toEqual(storedPublic(policy));
   });
   await test.step('publishing serves exactly what was published', async () => {
     await profiles.publish(salon, owner.tokens, (await profiles.draft(salon, owner.tokens)).version);
@@ -65,7 +65,7 @@ test('TC-F04-001 BRD-01, BRD-02, BRD-04, STF-04, BKG-02, BKG-09: a new salon\'s 
     expect({ description: served.profile!.description, links: served.profile!.links, branch: own })
       .toEqual(expectedProfile(profileInput, { phone: e164(b.phone!), whatsapp: e164(b.whatsapp!) }));
     expect((await hours.published(salon)).weekly).toEqual(storedWeek(weekly));
-    expect((await book.published(salon)).rules).toEqual(stored(policy));
+    expect((await book.published(salon)).rules).toEqual(storedPublic(policy));
   });
   await test.step('a later draft is not served until it is published', async () => {
     const later = fullInput(branch);
