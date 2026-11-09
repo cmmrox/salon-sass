@@ -37,6 +37,6 @@ requirement detail is in `qa/coverage.md`.
 
 | Stage | Title | Surfaces | Status | Stage QA | Blocking bugs | Next |
 | --- | --- | --- | --- | --- | --- | --- |
-| F07-S01 | Bookings, holds and booking states | api | planned | - | 0 | **developer**: `stage-build F07-S01` |
+| F07-S01 | Bookings, holds and booking states | api | in-progress | - | 0 | **developer**: `stage-build F07-S01` |
 | F07-S02 | Availability and "No preference" assignment | api, web | outlined | - | 0 | **lead**: `stage-plan F07-S02` |
 | F07-S03 | Staff booking screens | web | outlined | - | 0 | **lead**: `stage-plan F07-S03` |

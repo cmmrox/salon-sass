@@ -4,6 +4,7 @@ import com.salonplatform.catalogue.CatalogueListing;
 import com.salonplatform.catalogue.CatalogueListings;
 import com.salonplatform.identity.SignInAccounts;
 import com.salonplatform.identity.inprocess.StaffSeats;
+import com.salonplatform.shared.persistence.TransactionLocks;
 import com.salonplatform.shared.web.ApplicationProblemException;
 import com.salonplatform.shared.web.ErrorCode;
 import com.salonplatform.shared.web.FieldProblem;
@@ -66,6 +67,7 @@ class TeamMemberServiceImpl implements TeamMemberService {
     private final SignInAccounts accounts;
     private final StaffSeats seats;
     private final UpcomingMemberBookings upcoming;
+    private final TransactionLocks locks;
     private final Clock clock;
     private final TransactionTemplate writing;
     private final TransactionTemplate reading;
@@ -89,6 +91,7 @@ class TeamMemberServiceImpl implements TeamMemberService {
             SignInAccounts accounts,
             StaffSeats seats,
             UpcomingMemberBookings upcoming,
+            TransactionLocks locks,
             Clock clock,
             PlatformTransactionManager transactions) {
         this.scope = scope;
@@ -103,6 +106,7 @@ class TeamMemberServiceImpl implements TeamMemberService {
         this.accounts = accounts;
         this.seats = seats;
         this.upcoming = upcoming;
+        this.locks = locks;
         this.clock = clock;
         this.writing = new TransactionTemplate(transactions);
         this.reading = new TransactionTemplate(transactions);
@@ -198,6 +202,11 @@ class TeamMemberServiceImpl implements TeamMemberService {
             if (linkChanges) {
                 requireLinkChangeAllowed(valid.signInAccountId());
             }
+            if (choiceChanges) {
+                // Under the guard lock a hold placed meanwhile has committed, or waits for this save (F07-S01 AC-13).
+                locks.hold(UpcomingMemberBookings.GUARD_LOCK, id);
+                refuseLosingBookedServices(id, before, valid.choice(), listing);
+            }
             Map<String, Object> beforeValues = values(member, before, listing);
             Instant now = clock.instant();
             member.change(valid.profile(), valid.signInAccountId(), now);
@@ -220,16 +229,15 @@ class TeamMemberServiceImpl implements TeamMemberService {
             requireVersion(active(id, at), expected);
             return id;
         });
-        // The booking module's answer, in its own transaction, before this one opens (decision 094's window).
-        long booked = upcoming.countFor(id);
-        if (booked > 0) {
-            throw new ApplicationProblemException(
-                    409, ErrorCode.IN_USE, List.of(new FieldProblem("upcomingBookings", Long.toString(booked))));
-        }
+        // The booking module's answer, in its own transaction, before this one opens, and again under the guard lock
+        // inside it, which closes decision 094's window (F07-S01 AC-13).
+        refuseUpcomingBookings(id);
         changing(() -> writing.execute(status -> {
             seats.hold();
             Member member = active(id, at);
             requireVersion(member, expected);
+            locks.hold(UpcomingMemberBookings.GUARD_LOCK, id);
+            refuseUpcomingBookings(id);
             Map<String, Object> before =
                     values(member, rows.choices(List.of(id), listing).get(id), listing);
             UUID photoId = member.getPhotoId();
@@ -264,6 +272,14 @@ class TeamMemberServiceImpl implements TeamMemberService {
                 .map(account ->
                         new AccountView(account.id(), account.label(), account.role(), linked.get(account.id())))
                 .toList();
+    }
+
+    private void refuseUpcomingBookings(UUID id) {
+        long booked = upcoming.countFor(id);
+        if (booked > 0) {
+            throw new ApplicationProblemException(
+                    409, ErrorCode.IN_USE, List.of(new FieldProblem("upcomingBookings", Long.toString(booked))));
+        }
     }
 
     /** A save may not stop someone performing a service they are booked for (AC-8), asked before the transaction. */

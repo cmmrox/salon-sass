@@ -10,10 +10,10 @@ import java.util.UUID;
  * services that are bookable online by it, most first, and shows up to six; when the answer is empty it shows the
  * services the salon chose instead.
  *
- * <p>Declared here and implemented by {@code booking} in F07, so that dependencies point one way ({@code booking}
- * depends on {@code catalogue}; decision 087's pattern). Until then the catalogue's own implementation answers that
- * no service has been booked; F07 removes it when {@code booking} provides its own. An implementation reads the
- * request's salon, opens its own read-only transaction and does not join the caller's.
+ * <p>Declared here and implemented by {@code booking} (F07-S01), so that dependencies point one way ({@code booking}
+ * depends on {@code catalogue}; decision 087's pattern). A booking counts once it is confirmed, arrived, in service or
+ * completed; a hold, a booking waiting for its payment, a cancellation and a no-show count for nothing. An
+ * implementation reads the request's salon, opens its own read-only transaction and does not join the caller's.
  */
 public interface ServiceBookingCounts {
 

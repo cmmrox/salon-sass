@@ -9,7 +9,15 @@
  * {@code identity}'s {@link com.salonplatform.identity.Principals}, and how an author is named its
  * {@link com.salonplatform.identity.StaffLabels}. From F05-S02 it reads the catalogue's
  * {@link com.salonplatform.catalogue.ServiceDeposit} to turn a service's own deposit into its {@link DepositRule}
- * ({@code domain.ServiceDeposits}). Nothing depends on {@code booking}.
+ * ({@code domain.ServiceDeposits}).
+ *
+ * <p>From F07-S01: holds and bookings, one table with a state ({@code booking_appointment}), their history, and the
+ * staff endpoints under {@code /api/v1/bookings}. The database's exclusion constraint keeps two live rows of one
+ * professional from overlapping. It reads {@code staff}'s {@link com.salonplatform.staff.TeamMembers},
+ * {@link com.salonplatform.staff.OpeningSchedule} and {@link com.salonplatform.staff.TeamSchedule} and the
+ * catalogue's {@link com.salonplatform.catalogue.ServiceTerms}, and implements the questions {@code staff} and
+ * {@code catalogue} declared about bookings. It publishes {@link BookingConfirmed} and declares, in {@code inprocess},
+ * the payment (F08) and checkout (F10) changes. Nothing depends on {@code booking}.
  *
  * <p>What it owns, the layout inside it and the rules between modules are in
  * {@code docs/engineering/backend.md}.
@@ -20,10 +28,14 @@
             "catalogue",
             "identity",
             "platform",
+            "staff",
             "shared :: audit",
+            "shared :: jobs",
             "shared :: lifecycle",
+            "shared :: outbox",
             "shared :: persistence",
             "shared :: tenancy",
+            "shared :: time",
             "shared :: web"
         })
 package com.salonplatform.booking;
