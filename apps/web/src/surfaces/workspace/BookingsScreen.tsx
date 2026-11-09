@@ -2,7 +2,7 @@
 import { formatClock, formatDay } from '@salon/format';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -21,7 +21,7 @@ import {
   type SheetAction,
 } from '@/features/booking';
 import { LeaveDialog, useLeaveGuard } from '@/features/branding';
-import { leaveEndedSession, type Kind } from '@/features/identity';
+import { ensurePrincipal, IdentityFailure, leaveEndedSession, type Kind } from '@/features/identity';
 import { BookingsEmpty, BookingsPager } from './BookingsParts';
 import { useApiClock } from './use-api-clock';
 import { useAppointment } from './use-appointment';
@@ -42,6 +42,11 @@ type Props = {
   readOnly: 'support' | 'salon' | null;
   /** The region a mobile number is checked against (decision 084). */
   phoneRegion: string;
+  /**
+   * Whether the server knew the principal: false when it rendered from an expired access credential that the browser
+   * renews (web.md, "Branding"), so the scope and permissions above are not yet the caller's.
+   */
+  principalKnown: boolean;
 };
 
 /**
@@ -49,10 +54,32 @@ type Props = {
  * narrow them, New appointment for the desk, and the appointment sheet with its allowed changes and history. Loading,
  * empty, refused and unavailable states; the day and filters are kept in the address.
  */
-export function BookingsScreen({ kind, timeZone, scope, canBook, canAct, canSetRules, readOnly, phoneRegion }: Props) {
+export function BookingsScreen({
+  kind,
+  timeZone,
+  scope,
+  canBook,
+  canAct,
+  canSetRules,
+  readOnly,
+  phoneRegion,
+  principalKnown,
+}: Props) {
   const t = useTranslations('bookings');
   const router = useRouter();
   const leave = useCallback(() => leaveEndedSession(kind, router), [kind, router]);
+  // Rendered without the principal: renew in the browser, then render again with the caller's scope and permissions,
+  // as the Account page does, so the desk is not left without New appointment after an idle reload.
+  useEffect(() => {
+    if (principalKnown) return;
+    let active = true;
+    ensurePrincipal(kind)
+      .then(() => active && router.refresh())
+      .catch((error) => active && error instanceof IdentityFailure && error.code === 'invalid_session' && leave());
+    return () => {
+      active = false;
+    };
+  }, [principalKnown, kind, router, leave]);
   const clock = useApiClock(kind, timeZone, true);
   const list = useBookings(kind, clock.today, clock.now, scope === 'salon', leave);
   function booked(booking: Booking) {

@@ -115,6 +115,7 @@ function render(brand: string, readOnly: 'support' | 'salon' | null = null) {
         canSetRules
         readOnly={readOnly}
         phoneRegion="LK"
+        principalKnown
       />
     </AccountFrame>,
   );

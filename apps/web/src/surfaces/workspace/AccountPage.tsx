@@ -128,6 +128,7 @@ export async function AccountPage({ kind: requested, view, signIn, tab, services
           canSetRules={Boolean(principal?.permissions.includes('settings.manage')) && !support}
           readOnly={support ? 'support' : readOnly ? 'salon' : null}
           phoneRegion={phoneRegion()}
+          principalKnown={principal !== null}
         />
       ) : view === 'team' ? (
         <TeamScreen
