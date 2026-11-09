@@ -211,7 +211,7 @@ export function BookingsScreen({ kind, timeZone, scope, canBook, canAct, canSetR
         onClosed={giveFocusBack}
       />
       <CancelBookingDialog
-        key={appointment.cancelOpened}
+        key={`cancel-${appointment.cancelOpened}`}
         booking={appointment.detail?.booking ?? null}
         open={appointment.cancelling}
         onKeep={appointment.keep}
@@ -219,7 +219,7 @@ export function BookingsScreen({ kind, timeZone, scope, canBook, canAct, canSetR
       />
       {clock.today && (
         <NewAppointmentSheet
-          key={desk.opened}
+          key={`desk-${desk.opened}`}
           open={desk.open}
           today={clock.today}
           choices={desk.choices}
