@@ -4,6 +4,7 @@ import com.salonplatform.booking.BookingPolicies;
 import com.salonplatform.booking.BookingRules;
 import com.salonplatform.booking.domain.BookingReference;
 import com.salonplatform.booking.domain.BookingStateMachine;
+import com.salonplatform.booking.domain.FreeTimes;
 import com.salonplatform.booking.domain.Occupation;
 import com.salonplatform.booking.entity.Booking;
 import com.salonplatform.booking.repository.BookingRepository;
@@ -24,8 +25,11 @@ import com.salonplatform.staff.TeamMember;
 import com.salonplatform.staff.TeamMembers;
 import com.salonplatform.staff.UpcomingMemberBookings;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.random.RandomGenerator;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -44,6 +48,12 @@ import org.springframework.transaction.support.TransactionTemplate;
  * racing this hold never also succeeds. It ends the professional's holds over this time that have run out, then inserts
  * the hold. The exclusion constraint is what refuses an overlap: its violation, and only it, is {@code slot_taken}. A
  * reference already taken is drawn again; a collision the check before the insert missed retries the transaction.
+ *
+ * <p>The hold lasts the current booking rules' {@code holdMinutes} (F07-S02 AC-7). With no professional ("No
+ * preference", AC-5) the availability calculation lists, for that start, the eligible professionals free for the whole
+ * booking in the rules' strategy order, and each is tried in its own transaction: when the constraint refuses one, the
+ * next is tried, and {@code slot_taken} is the answer only when every one was refused. The read decides only the order;
+ * the constraint still decides who gets the time.
  */
 @Service
 class HoldServiceImpl implements HoldService {
@@ -58,6 +68,7 @@ class HoldServiceImpl implements HoldService {
     private final ServiceTerms terms;
     private final CatalogueListings listings;
     private final HoldTimes times;
+    private final AvailabilityInputs availability;
     private final BookingRepository bookings;
     private final BookingChanges changes;
     private final TransactionLocks locks;
@@ -74,6 +85,7 @@ class HoldServiceImpl implements HoldService {
             ServiceTerms terms,
             CatalogueListings listings,
             HoldTimes times,
+            AvailabilityInputs availability,
             BookingRepository bookings,
             BookingChanges changes,
             TransactionLocks locks,
@@ -87,6 +99,7 @@ class HoldServiceImpl implements HoldService {
         this.terms = terms;
         this.listings = listings;
         this.times = times;
+        this.availability = availability;
         this.bookings = bookings;
         this.changes = changes;
         this.locks = locks;
@@ -97,8 +110,19 @@ class HoldServiceImpl implements HoldService {
         this.reading.setReadOnly(true);
     }
 
-    /** What the hold is placed with, once everything read before the transaction has been checked. */
-    private record Prepared(Caller at, Checked request, Booking.Terms terms, Instant startsAt, Occupation occupation) {}
+    /**
+     * What one attempt places, once everything read before the transaction has been checked.
+     *
+     * @param assigned whether the server chose the professional ("No preference")
+     */
+    private record Prepared(
+            Caller at,
+            Checked request,
+            Booking.Terms terms,
+            Instant startsAt,
+            Occupation occupation,
+            Duration holdFor,
+            boolean assigned) {}
 
     @Override
     public BookingView place(HoldInput input, String idempotencyKey) {
@@ -108,23 +132,35 @@ class HoldServiceImpl implements HoldService {
         if (earlier.isPresent()) {
             return earlier.get();
         }
-        Prepared prepared = prepare(at, request);
+        for (Prepared prepared : attempts(at, request)) {
+            try {
+                return place(prepared);
+            } catch (Taken | Unassignable next) {
+                // The constraint refused this professional, or they left the team or the service meanwhile: the next.
+            }
+        }
+        throw new ApplicationProblemException(409, ErrorCode.SLOT_TAKEN);
+    }
+
+    /** Places one attempt, drawing the reference again on a collision. */
+    private BookingView place(Prepared prepared) {
+        Caller at = prepared.at();
         for (int attempt = 1; ; attempt++) {
             try {
                 return BookingViews.of(
                         writing.execute(status -> placeHold(prepared)),
                         at.salon().timeZone());
             } catch (Replay replay) {
-                return replayed(at, request).orElseThrow(NotFoundException::new);
+                return replayed(at, prepared.request()).orElseThrow(NotFoundException::new);
             } catch (DataIntegrityViolationException violation) {
                 Optional<BookingConstraints> broken = BookingConstraints.of(violation);
                 if (broken.isEmpty()) {
                     throw violation;
                 }
                 switch (broken.get()) {
-                    case NO_OVERLAP -> throw new ApplicationProblemException(409, ErrorCode.SLOT_TAKEN);
+                    case NO_OVERLAP -> throw new Taken();
                     case IDEMPOTENCY -> {
-                        return replayed(at, request).orElseThrow(NotFoundException::new);
+                        return replayed(at, prepared.request()).orElseThrow(NotFoundException::new);
                     }
                     case REFERENCE -> {
                         if (attempt >= REFERENCE_ATTEMPTS) {
@@ -156,20 +192,69 @@ class HoldServiceImpl implements HoldService {
         return Optional.of(BookingViews.of(booking, at.salon().timeZone()));
     }
 
-    private Prepared prepare(Caller at, Checked request) {
+    /**
+     * What to try, in order: the named professional alone, or for "No preference" everyone the calculation finds free
+     * for the whole booking at that start, in the strategy's order. Each refusal before any transaction is as for a
+     * named professional; with nobody free it is {@code slot_taken}.
+     */
+    private List<Prepared> attempts(Caller at, Checked request) {
         BookingRules rules =
                 policies.current().orElseThrow(() -> new ApplicationProblemException(409, ErrorCode.RULES_NOT_SET));
-        TeamMember member = team.member(request.memberId())
-                .filter(found -> !found.removed())
-                .orElseThrow(NotFoundException::new);
-        ServiceTermsVersion service = terms.current(request.serviceId()).orElseThrow(NotFoundException::new);
-        Optional<ServiceVariant> variant = requests.variantOf(service, request.variantId());
-        if (!team.servicesOf(member.id()).contains(service.serviceId())) {
-            throw HoldTimes.unavailable("The professional does not perform this service.");
+        Duration holdFor = Duration.ofMinutes(rules.terms().holdMinutes());
+        if (request.memberId() != null) {
+            TeamMember member = team.member(request.memberId())
+                    .filter(found -> !found.removed())
+                    .orElseThrow(NotFoundException::new);
+            ServiceTermsVersion service = terms.current(request.serviceId()).orElseThrow(NotFoundException::new);
+            Optional<ServiceVariant> variant = requests.variantOf(service, request.variantId());
+            if (!team.servicesOf(member.id()).contains(service.serviceId())) {
+                throw HoldTimes.unavailable("The professional does not perform this service.");
+            }
+            Booking.Terms booked = terms(member.id(), member.name(), service, variant, rules);
+            Instant startsAt = times.startOf(at, request.date(), request.time(), clock.instant());
+            Occupation occupation = Occupation.of(startsAt, booked.segments());
+            times.requireOpenAndWorking(at, member.id(), request.date(), occupation);
+            return List.of(new Prepared(at, request, booked, startsAt, occupation, holdFor, false));
         }
-        Booking.Terms booked = new Booking.Terms(
-                member.id(),
-                member.name(),
+        AvailabilityInputs.BookedService service = availability.service(request.serviceId(), request.variantId());
+        Instant startsAt = times.startOf(at, request.date(), request.time(), clock.instant());
+        FreeTimes.Day day = availability.day(
+                at.branch(),
+                at.salon().timeZone(),
+                request.date(),
+                rules,
+                service.segments(),
+                availability.eligible(request.serviceId(), null),
+                clock.instant());
+        return switch (FreeTimes.assign(day, startsAt)) {
+            case FreeTimes.Assignment.Unavailable unavailable -> throw HoldTimes.unavailable(unavailable.detail());
+            case FreeTimes.Assignment.Candidates candidates ->
+                candidates.inOrder().stream()
+                        .map(candidate -> {
+                            Booking.Terms booked =
+                                    terms(candidate.id(), candidate.name(), service.terms(), service.variant(), rules);
+                            return new Prepared(
+                                    at,
+                                    request,
+                                    booked,
+                                    startsAt,
+                                    Occupation.of(startsAt, booked.segments()),
+                                    holdFor,
+                                    true);
+                        })
+                        .toList();
+        };
+    }
+
+    private static Booking.Terms terms(
+            UUID memberId,
+            String memberName,
+            ServiceTermsVersion service,
+            Optional<ServiceVariant> variant,
+            BookingRules rules) {
+        return new Booking.Terms(
+                memberId,
+                memberName,
                 service.serviceId(),
                 service.versionId(),
                 service.name(),
@@ -179,10 +264,6 @@ class HoldServiceImpl implements HoldService {
                 variant.map(ServiceVariant::segments).orElse(service.segments()),
                 variant.map(ServiceVariant::priceMinor).orElse(service.priceMinor()),
                 service.currency());
-        Instant startsAt = times.startOf(at, request.date(), request.time(), clock.instant());
-        Occupation occupation = Occupation.of(startsAt, booked.segments());
-        times.requireOpenAndWorking(at, member.id(), request.date(), occupation);
-        return new Prepared(at, request, booked, startsAt, occupation);
     }
 
     private Booking placeHold(Prepared prepared) {
@@ -194,13 +275,19 @@ class HoldServiceImpl implements HoldService {
         }
         // Under the guard locks, a removal or delete that won the race has committed, and is seen here.
         if (listings.current().services().stream()
-                        .noneMatch(listed -> listed.id().equals(booked.serviceId()))
-                || team.member(booked.memberId())
-                        .filter(found -> !found.removed())
-                        .isEmpty()) {
+                .noneMatch(listed -> listed.id().equals(booked.serviceId()))) {
             throw new NotFoundException();
         }
-        if (!team.servicesOf(booked.memberId()).contains(booked.serviceId())) {
+        boolean onTeam =
+                team.member(booked.memberId()).filter(found -> !found.removed()).isPresent();
+        boolean performs = onTeam && team.servicesOf(booked.memberId()).contains(booked.serviceId());
+        if (!performs) {
+            if (prepared.assigned()) {
+                throw new Unassignable();
+            }
+            if (!onTeam) {
+                throw new NotFoundException();
+            }
             throw HoldTimes.unavailable("The professional does not perform this service.");
         }
         Instant now = clock.instant();
@@ -224,7 +311,9 @@ class HoldServiceImpl implements HoldService {
                         request.fingerprint(),
                         at.staffId()),
                 prepared.startsAt(),
-                now);
+                now,
+                prepared.holdFor(),
+                prepared.assigned());
         bookings.saveAndFlush(booking);
         changes.placed(booking, at.staffId(), now);
         return booking;
@@ -237,6 +326,26 @@ class HoldServiceImpl implements HoldService {
             reference = BookingReference.draw(random);
         }
         return reference;
+    }
+
+    /** The exclusion constraint refused this professional's time. */
+    private static final class Taken extends RuntimeException {
+        @java.io.Serial
+        private static final long serialVersionUID = 1L;
+
+        Taken() {
+            super(null, null, false, false);
+        }
+    }
+
+    /** An assigned professional left the team or stopped performing the service before the lock was taken. */
+    private static final class Unassignable extends RuntimeException {
+        @java.io.Serial
+        private static final long serialVersionUID = 1L;
+
+        Unassignable() {
+            super(null, null, false, false);
+        }
     }
 
     /** A request with the same key committed while this one waited for the locks. */

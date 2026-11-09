@@ -87,7 +87,7 @@ class BookingRulesServiceImpl implements BookingRulesService {
                     400, ErrorCode.BAD_REQUEST, List.of(new FieldProblem("version", "must be zero or more")));
         }
         String salonCurrency = currency.current();
-        BookingTerms terms = BookingRulesValidation.valid(input, MinorUnits.of(salonCurrency));
+        BookingTerms sent = BookingRulesValidation.valid(input, MinorUnits.of(salonCurrency));
         BookingRules saved = writing.execute(status -> {
             Optional<BookingRulesVersion> newest = versions.findFirstByBranchIdOrderByVersionDesc(at.branch());
             long current = newest.map(BookingRulesVersion::getVersion).orElse(0L);
@@ -95,6 +95,7 @@ class BookingRulesServiceImpl implements BookingRulesService {
                 throw new ApplicationProblemException(409, ErrorCode.CONFLICT);
             }
             BookingTerms before = newest.map(BookingRulesVersion::terms).orElse(null);
+            BookingTerms terms = BookingRulesValidation.keepingUnsent(sent, input, before);
             if (newest.isPresent()
                     && before.equals(terms)
                     && newest.get().getCurrency().equals(salonCurrency)) {

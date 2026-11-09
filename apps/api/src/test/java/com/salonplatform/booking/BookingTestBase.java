@@ -282,7 +282,11 @@ abstract class BookingTestBase extends IntegrationTest {
     }
 
     static String template(String path) {
-        return path.replaceFirst("\\?.*$", "").replaceAll("^/api/v1/bookings/[^/]+", "/api/v1/bookings/{id}");
+        String bare = path.replaceFirst("\\?.*$", "");
+        if (bare.equals(BOOKINGS + "/availability") || bare.equals(BOOKINGS + "/open-days")) {
+            return bare;
+        }
+        return bare.replaceAll("^/api/v1/bookings/[^/]+", "/api/v1/bookings/{id}");
     }
 
     /** A hold placed with a new key; the answer as it came. */

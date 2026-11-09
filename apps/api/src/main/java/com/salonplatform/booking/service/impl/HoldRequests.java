@@ -56,7 +56,7 @@ class HoldRequests {
         this.listings = listings;
     }
 
-    /** A request whose every field has the right form. */
+    /** A request whose every field has the right form; {@code memberId} null for "No preference". */
     record Checked(
             UUID key,
             String fingerprint,
@@ -72,7 +72,8 @@ class HoldRequests {
     Checked check(HoldInput input, String keyHeader) {
         List<FieldProblem> errors = new ArrayList<>();
         UUID key = id(keyHeader, KEY_HEADER, true, errors);
-        UUID member = id(input.memberId(), "memberId", true, errors);
+        // Null, or left out, is "No preference" (F07-S02 AC-5): the server assigns the professional.
+        UUID member = id(input.memberId(), "memberId", false, errors);
         UUID service = id(input.serviceId(), "serviceId", true, errors);
         UUID variant = id(input.variantId(), "variantId", false, errors);
         LocalDate date = date(input.date(), errors);

@@ -30,6 +30,10 @@ public interface BookingRepository extends JpaRepository<Booking, UUID> {
     String EXPECTED = "b.state in ('pending_payment', 'confirmed', 'arrived', 'in_service')"
             + " or (b.state = 'held' and b.holdExpiresAt > :now)";
 
+    /** Occupies its professional now: live, with a hold that has run out left out (F07-S01 AC-3). */
+    String OCCUPYING = "b.state in ('pending_payment', 'confirmed', 'arrived', 'in_service', 'completed')"
+            + " or (b.state = 'held' and b.holdExpiresAt > :now)";
+
     @Query("select b from Booking b where b.id = :id")
     Optional<Booking> findBooking(@Param("id") UUID id);
 
@@ -97,6 +101,18 @@ public interface BookingRepository extends JpaRepository<Booking, UUID> {
             @Param("mobile") String mobile,
             @Param("reference") String reference,
             Pageable page);
+
+    /**
+     * The bookings and holds of these members that occupy them now and lie anywhere over the time: what availability
+     * counts as taken (F07-S02 AC-1). One read for the whole team.
+     */
+    @Query("select b from Booking b where b.memberId in :members and b.startsAt < :until and b.endsAt > :from"
+            + " and (" + OCCUPYING + ")")
+    List<Booking> occupying(
+            @Param("members") Collection<UUID> memberIds,
+            @Param("from") Instant from,
+            @Param("until") Instant until,
+            @Param("now") Instant now);
 
     /** How many of the member's expected bookings have not yet ended. */
     @Query("select count(b) from Booking b where b.memberId = :member and b.endsAt > :now and (" + EXPECTED + ")")

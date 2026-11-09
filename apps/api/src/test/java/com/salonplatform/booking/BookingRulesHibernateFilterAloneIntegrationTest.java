@@ -40,7 +40,9 @@ class BookingRulesHibernateFilterAloneIntegrationTest {
             24,
             new Retention.Nothing(),
             new Retention.Deposit(),
-            new Rescheduling.NotOnline());
+            new Rescheduling.NotOnline(),
+            10,
+            NoPreference.LEAST_BOOKED);
 
     private static TestDatabase database;
     private static StartedApplication application;

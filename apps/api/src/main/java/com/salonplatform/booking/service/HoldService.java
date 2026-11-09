@@ -4,8 +4,9 @@ import com.salonplatform.booking.service.BookingReadService.BookingView;
 
 /**
  * Placing a hold on a professional's time for a service, with {@code booking.manage} (F07-S01 AC-1 to AC-4, AC-10): it
- * lasts 10 minutes, keeps the terms it was made on, and gets a reference. The database refuses one that overlaps
- * another live hold or booking of the same professional.
+ * lasts the current booking rules' hold length (F07-S02), keeps the terms it was made on, and gets a reference. With no
+ * professional ("No preference", F07-S02 AC-5) the server assigns one by the salon's strategy. The database refuses one
+ * that overlaps another live hold or booking of the same professional.
  */
 public interface HoldService {
 

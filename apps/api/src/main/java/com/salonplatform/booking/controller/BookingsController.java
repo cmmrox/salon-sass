@@ -59,8 +59,11 @@ class BookingsController {
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(
             operationId = "placeBookingHold",
-            summary = "Holds a professional's time for a service, for 10 minutes. `booking.manage`.",
-            description = "Nobody else can take the time until the hold is confirmed, released or runs out. The"
+            summary = "Holds a professional's time for a service, for the booking rules' hold length."
+                    + " `booking.manage`.",
+            description = "Nobody else can take the time until the hold is confirmed, released or runs out. Without"
+                    + " `memberId` (\"No preference\") the server assigns, at that moment, an eligible professional free"
+                    + " for the whole booking by the salon's strategy, trying the next when the time was just taken. The"
                     + " booking keeps the service's terms version, variant, segments and price and the current"
                     + " booking rules version. A repeat with the same `Idempotency-Key` and body answers the same"
                     + " booking and places nothing new.")
@@ -94,9 +97,11 @@ class BookingsController {
             content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(ref = PROBLEM)))
     @ApiResponse(
             responseCode = "409",
-            description = "Another live hold or booking of the professional overlaps it: `slot_taken`. The time cannot"
+            description = "Another live hold or booking of the professional overlaps it, or with \"No preference\""
+                    + " nobody eligible is free then: `slot_taken`. The time cannot"
                     + " be booked (the professional does not perform the service, not a five-minute step, past, more"
-                    + " than a year ahead, outside the opening hours or the professional's working time):"
+                    + " than a year ahead, outside the opening hours or the professional's working time; with \"No"
+                    + " preference\", nobody on the team performs the service or works then):"
                     + " `slot_unavailable`, the `detail` saying which. The salon has never saved its booking rules:"
                     + " `rules_not_set`. Nothing is stored.",
             content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(ref = PROBLEM)))

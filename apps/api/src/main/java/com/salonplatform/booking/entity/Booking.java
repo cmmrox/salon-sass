@@ -11,6 +11,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.ArrayList;
@@ -36,9 +37,6 @@ import org.hibernate.type.SqlTypes;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Booking {
-
-    /** How long a hold lasts until F07-S02 makes it a setting (BKG-04). */
-    private static final java.time.Duration HOLD = java.time.Duration.ofMinutes(10);
 
     @Id
     @Column(nullable = false, updatable = false)
@@ -126,6 +124,10 @@ public class Booking {
     @Column(name = "created_by", nullable = false, updatable = false)
     private UUID createdBy;
 
+    /** Whether the server chose the professional for a "No preference" request (F07-S02, for F13's reports). */
+    @Column(name = "assigned", nullable = false, updatable = false)
+    private boolean assigned;
+
     @Version
     private Long version;
 
@@ -158,9 +160,21 @@ public class Booking {
             String fingerprint,
             UUID createdBy) {}
 
-    /** A new hold on the professional's time from {@code startsAt}, lasting {@link #HOLD} from {@code now}. */
+    /**
+     * A new hold on the professional's time from {@code startsAt}, lasting {@code holdFor} from {@code now}: the hold
+     * length of the booking rules it is placed under (F07-S02). A hold placed earlier keeps its expiry.
+     *
+     * @param assigned whether the server chose the professional for a "No preference" request
+     */
     public static Booking hold(
-            UUID branchId, String reference, Terms terms, Request request, Instant startsAt, Instant now) {
+            UUID branchId,
+            String reference,
+            Terms terms,
+            Request request,
+            Instant startsAt,
+            Instant now,
+            Duration holdFor,
+            boolean assigned) {
         Occupation occupation = Occupation.of(startsAt, terms.segments());
         Booking booking = new Booking();
         booking.id = UUID.randomUUID();
@@ -188,7 +202,8 @@ public class Booking {
         booking.customerName = request.customerName();
         booking.customerMobile = request.customerMobile();
         booking.channel = request.channel().value();
-        booking.holdExpiresAt = now.plus(HOLD);
+        booking.holdExpiresAt = now.plus(holdFor);
+        booking.assigned = assigned;
         booking.idempotencyKey = request.idempotencyKey();
         booking.requestFingerprint = request.fingerprint();
         booking.createdBy = request.createdBy();

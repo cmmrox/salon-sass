@@ -317,6 +317,84 @@
         ],
         "type": "object"
       },
+      "Availability": {
+        "additionalProperties": false,
+        "properties": {
+          "date": {
+            "description": "The salon's local date asked for.",
+            "format": "date",
+            "type": "string"
+          },
+          "reason": {
+            "description": "Why `times` is empty: the salon is closed that date, nobody performs the service, the professional (or every eligible one) works no time that date, or no booking fits in what is free. Null when there are times.",
+            "enum": [
+              "closed",
+              "nobody_performs",
+              "not_working",
+              "fully_booked",
+              null
+            ],
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "times": {
+            "description": "In time order; each time once.",
+            "items": {
+              "$ref": "#/components/schemas/AvailableTime"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "date",
+          "reason",
+          "times"
+        ],
+        "type": "object"
+      },
+      "AvailableMember": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "type": "object"
+      },
+      "AvailableTime": {
+        "additionalProperties": false,
+        "properties": {
+          "member": {
+            "$ref": "#/components/schemas/AvailableMember"
+          },
+          "startsAt": {
+            "description": "The start, an offset date-time in the salon's zone.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "time": {
+            "description": "The salon's local start time, `HH:MM`.",
+            "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "member",
+          "startsAt",
+          "time"
+        ],
+        "type": "object"
+      },
       "Booking": {
         "additionalProperties": false,
         "properties": {
@@ -647,6 +725,11 @@
             "format": "int32",
             "type": "integer"
           },
+          "holdMinutes": {
+            "description": "How long a hold lasts: 5, 10, 15, 20 or 30 minutes.",
+            "format": "int32",
+            "type": "integer"
+          },
           "lateCancellation": {
             "$ref": "#/components/schemas/RetentionRule"
           },
@@ -654,6 +737,14 @@
             "description": "How long before an appointment it must be booked: 0 (any time before), 30, 60, 120, 240 or 1440 minutes.",
             "format": "int32",
             "type": "integer"
+          },
+          "noPreference": {
+            "description": "Who a \"No preference\" booking goes to: the eligible, free professional with the least (or the most) booked that day.",
+            "enum": [
+              "least_booked",
+              "most_booked"
+            ],
+            "type": "string"
           },
           "noShow": {
             "$ref": "#/components/schemas/RetentionRule",
@@ -672,8 +763,10 @@
           "bookingHorizonDays",
           "deposit",
           "freeCancellationHours",
+          "holdMinutes",
           "lateCancellation",
           "minimumNoticeMinutes",
+          "noPreference",
           "noShow",
           "reschedule",
           "slotIntervalMinutes"
@@ -726,6 +819,8 @@
                 "slotIntervalMinutes",
                 "minimumNoticeMinutes",
                 "bookingHorizonDays",
+                "holdMinutes",
+                "noPreference",
                 "deposit",
                 "freeCancellationHours",
                 "lateCancellation",
@@ -788,6 +883,11 @@
             "format": "int32",
             "type": "integer"
           },
+          "holdMinutes": {
+            "description": "How long a hold lasts: 5, 10, 15, 20 or 30 minutes. Left out, the current version's (10 before any is chosen).",
+            "format": "int32",
+            "type": "integer"
+          },
           "lateCancellation": {
             "$ref": "#/components/schemas/LateCancellationInput"
           },
@@ -795,6 +895,14 @@
             "description": "How long before an appointment it must be booked: 0 (any time before), 30, 60, 120, 240 or 1440 minutes.",
             "format": "int32",
             "type": "integer"
+          },
+          "noPreference": {
+            "description": "Who a \"No preference\" booking goes to: of the professionals who perform the service and are free, the one with the least (or the most) booked that day. Left out, the current version's (`least_booked` before any is chosen).",
+            "enum": [
+              "least_booked",
+              "most_booked"
+            ],
+            "type": "string"
           },
           "noShow": {
             "$ref": "#/components/schemas/NoShowInput"
@@ -3513,6 +3621,23 @@
         ],
         "type": "object"
       },
+      "OpenDays": {
+        "additionalProperties": false,
+        "properties": {
+          "days": {
+            "description": "In date order.",
+            "items": {
+              "format": "date",
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "days"
+        ],
+        "type": "object"
+      },
       "OpeningException": {
         "properties": {
           "closes": {
@@ -4065,9 +4190,12 @@
             "type": "string"
           },
           "memberId": {
-            "description": "The team member who performs it.",
+            "description": "The team member who performs it; null or left out for \"No preference\", when the server assigns an eligible, free professional by the salon's strategy.",
             "format": "uuid",
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "serviceId": {
             "format": "uuid",
@@ -4090,7 +4218,6 @@
           "channel",
           "customer",
           "date",
-          "memberId",
           "serviceId",
           "time"
         ],
@@ -4493,6 +4620,61 @@
         ],
         "type": "object"
       },
+      "PublicBookingRuleTerms": {
+        "additionalProperties": false,
+        "properties": {
+          "bookingHorizonDays": {
+            "description": "How far ahead customers can book: 14, 30, 60, 90 or 180 days.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "deposit": {
+            "$ref": "#/components/schemas/DepositRule"
+          },
+          "freeCancellationHours": {
+            "description": "Until how many hours before the appointment cancelling keeps nothing: 2, 6, 12, 24 or 48.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "holdMinutes": {
+            "description": "How long a chosen time is held: 5, 10, 15, 20 or 30 minutes.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "lateCancellation": {
+            "$ref": "#/components/schemas/RetentionRule"
+          },
+          "minimumNoticeMinutes": {
+            "description": "How long before an appointment it must be booked: 0 (any time before), 30, 60, 120, 240 or 1440 minutes.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "noShow": {
+            "$ref": "#/components/schemas/RetentionRule",
+            "description": "`deposit` or `share`, never `nothing`."
+          },
+          "reschedule": {
+            "$ref": "#/components/schemas/RescheduleRule"
+          },
+          "slotIntervalMinutes": {
+            "description": "How often start times are offered: 10, 15, 20 or 30 minutes.",
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "bookingHorizonDays",
+          "deposit",
+          "freeCancellationHours",
+          "holdMinutes",
+          "lateCancellation",
+          "minimumNoticeMinutes",
+          "noShow",
+          "reschedule",
+          "slotIntervalMinutes"
+        ],
+        "type": "object"
+      },
       "PublicBookingRules": {
         "additionalProperties": false,
         "properties": {
@@ -4502,7 +4684,7 @@
             "type": "string"
           },
           "rules": {
-            "$ref": "#/components/schemas/BookingRules"
+            "$ref": "#/components/schemas/PublicBookingRuleTerms"
           },
           "versionId": {
             "description": "The current version, which a booking made now keeps.",
@@ -7832,7 +8014,7 @@
         ]
       },
       "post": {
-        "description": "Nobody else can take the time until the hold is confirmed, released or runs out. The booking keeps the service's terms version, variant, segments and price and the current booking rules version. A repeat with the same `Idempotency-Key` and body answers the same booking and places nothing new.",
+        "description": "Nobody else can take the time until the hold is confirmed, released or runs out. Without `memberId` (\"No preference\") the server assigns, at that moment, an eligible professional free for the whole booking by the salon's strategy, trying the next when the time was just taken. The booking keeps the service's terms version, variant, segments and price and the current booking rules version. A repeat with the same `Idempotency-Key` and body answers the same booking and places nothing new.",
         "operationId": "placeBookingHold",
         "parameters": [
           {
@@ -7915,7 +8097,7 @@
                 }
               }
             },
-            "description": "Another live hold or booking of the professional overlaps it: `slot_taken`. The time cannot be booked (the professional does not perform the service, not a five-minute step, past, more than a year ahead, outside the opening hours or the professional's working time): `slot_unavailable`, the `detail` saying which. The salon has never saved its booking rules: `rules_not_set`. Nothing is stored."
+            "description": "Another live hold or booking of the professional overlaps it, or with \"No preference\" nobody eligible is free then: `slot_taken`. The time cannot be booked (the professional does not perform the service, not a five-minute step, past, more than a year ahead, outside the opening hours or the professional's working time; with \"No preference\", nobody on the team performs the service or works then): `slot_unavailable`, the `detail` saying which. The salon has never saved its booking rules: `rules_not_set`. Nothing is stored."
           },
           "422": {
             "content": {
@@ -7948,7 +8130,239 @@
             "description": "Any error: problem details with a stable `code`."
           }
         },
-        "summary": "Holds a professional's time for a service, for 10 minutes. `booking.manage`.",
+        "summary": "Holds a professional's time for a service, for the booking rules' hold length. `booking.manage`.",
+        "tags": [
+          "booking"
+        ]
+      }
+    },
+    "/api/v1/bookings/availability": {
+      "get": {
+        "description": "Each time fits the whole booking inside the salon's opening hours and one of the professional's working windows, and overlaps none of their live bookings or unexpired holds, buffers included. Times are on the booking rules' slot interval from local midnight and after the current time; the customer notice and horizon do not apply to staff. Without `memberId` (\"No preference\") each time shows the eligible professional the salon's strategy picks among those free then.",
+        "operationId": "getBookingAvailability",
+        "parameters": [
+          {
+            "description": "The service.",
+            "in": "query",
+            "name": "serviceId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "One of the service's variants; required when it has them.",
+            "in": "query",
+            "name": "variantId",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "The salon's local date, `YYYY-MM-DD`: today to one year ahead.",
+            "in": "query",
+            "name": "date",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "The professional; leave it out for \"No preference\".",
+            "in": "query",
+            "name": "memberId",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Availability"
+                }
+              }
+            },
+            "description": "The times, or none and why."
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`serviceId` missing or not a UUID, `variantId` or `memberId` not a UUID, `date` not `YYYY-MM-DD` or before today or more than one year ahead, or the variant wrong for the service: `bad_request`, with `errors` naming each."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No valid session for this salon: `invalid_session`."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Without `booking.manage` (a support session included): `permission_denied`. A suspended salon: `salon_suspended`."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The service, the variant or the professional is not the salon's (removed, deleted or unknown), or the hostname names no salon: `not_found`."
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The professional does not perform the service: `slot_unavailable`. The salon has never saved its booking rules: `rules_not_set`."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The database is down or not answering: `service_unavailable`."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "summary": "The start times a booking of a service could take on a local date. `booking.manage`.",
+        "tags": [
+          "booking"
+        ]
+      }
+    },
+    "/api/v1/bookings/open-days": {
+      "get": {
+        "description": "Weekly hours, holiday choices and closures decide, as for the opening hours.",
+        "operationId": "getBookingOpenDays",
+        "parameters": [
+          {
+            "description": "The first local date, `YYYY-MM-DD`: today or later.",
+            "in": "query",
+            "name": "from",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "The last local date, at most 399 days after `from`.",
+            "in": "query",
+            "name": "to",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpenDays"
+                }
+              }
+            },
+            "description": "The open dates, in order."
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`from` or `to` missing or not `YYYY-MM-DD`, `from` before today, `to` before `from`, or more than 400 days: `bad_request`, with `errors` naming each."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No valid session for this salon: `invalid_session`."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Without `booking.manage` (a support session included): `permission_denied`. A suspended salon: `salon_suspended`."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The hostname names no salon: `not_found`."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The database is down or not answering: `service_unavailable`."
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Any error: problem details with a stable `code`."
+          }
+        },
+        "summary": "The local dates in a range on which the salon is open. `booking.manage`.",
         "tags": [
           "booking"
         ]

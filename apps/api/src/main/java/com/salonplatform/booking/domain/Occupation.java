@@ -16,7 +16,14 @@ import java.util.stream.Collectors;
  */
 public final class Occupation {
 
-    private record Range(Instant from, Instant to) {}
+    /** One stretch of time the professional is occupied, half-open: {@code to} itself is free. */
+    public record Range(Instant from, Instant to) {
+
+        /** Whether the two share any moment (touching ranges do not). */
+        public boolean overlaps(Range other) {
+            return from.isBefore(other.to) && other.from.isBefore(to);
+        }
+    }
 
     private final Instant startsAt;
     private final Instant endsAt;
@@ -59,6 +66,16 @@ public final class Occupation {
     /** When the last segment ends. */
     public Instant endsAt() {
         return endsAt;
+    }
+
+    /** The ranges that occupy the professional, in order, adjacent ones merged. */
+    public List<Range> ranges() {
+        return ranges;
+    }
+
+    /** Whether any range of this booking overlaps any of {@code others}. */
+    public boolean overlapsAny(List<Range> others) {
+        return ranges.stream().anyMatch(mine -> others.stream().anyMatch(mine::overlaps));
     }
 
     /** The occupied ranges as PostgreSQL's {@code tstzmultirange} literal, in UTC, in order. */

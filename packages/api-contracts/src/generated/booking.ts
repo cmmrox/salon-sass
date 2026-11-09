@@ -13,6 +13,8 @@ export type { ApiClientOptions };
 
 export type paths = Pick<contractPaths,
     | "/api/v1/bookings"
+    | "/api/v1/bookings/availability"
+    | "/api/v1/bookings/open-days"
     | "/api/v1/bookings/{id}"
     | "/api/v1/bookings/{id}/arrive"
     | "/api/v1/bookings/{id}/cancel"
@@ -30,6 +32,8 @@ export type operations = Pick<contractOperations,
     | "cancelBooking"
     | "confirmBooking"
     | "getBooking"
+    | "getBookingAvailability"
+    | "getBookingOpenDays"
     | "getSalonBookingRules"
     | "getSalonBookingRulesHistory"
     | "getSalonBookingRulesSettings"
@@ -45,6 +49,9 @@ export type operations = Pick<contractOperations,
 
 export interface components {
     schemas: Pick<contract["schemas"],
+        | "Availability"
+        | "AvailableMember"
+        | "AvailableTime"
         | "Booking"
         | "BookingActor"
         | "BookingCustomer"
@@ -65,8 +72,10 @@ export interface components {
         | "LateCancellationInput"
         | "NoBookingRules"
         | "NoShowInput"
+        | "OpenDays"
         | "PlaceBooking"
         | "Problem"
+        | "PublicBookingRuleTerms"
         | "PublicBookingRules"
         | "RescheduleInput"
         | "RescheduleRule"
