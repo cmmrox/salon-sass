@@ -545,6 +545,67 @@ describe('New appointment (F07-S03 AC-4 to AC-6)', () => {
     expect(within(sheet).getByTestId('new-appointment-times-intro')).toHaveTextContent(/(17 Jun|Jun 17), 2086/);
   });
 
+  it('a hold answered after the sheet closed is released, not kept (BUG-F07-003)', async () => {
+    const late = heldBack();
+    answers['booking-place'] = late.answer(() => Response.json(HELD, { status: 201 }));
+    const sheet = await openDesk();
+    await fillCustomer(sheet);
+    fireEvent.click(within(sheet).getByTestId('new-appointment-find'));
+    fireEvent.click((await within(sheet).findAllByTestId('new-appointment-time'))[0]!);
+    await waitFor(() => expect(sent('booking-place')).toHaveLength(1));
+    fireEvent.click(within(sheet).getByTestId('new-appointment-close'));
+    fireEvent.click(await screen.findByTestId('new-appointment-leave-confirm'));
+    await waitFor(() => expect(screen.queryByTestId('new-appointment')).toBeNull());
+    expect(sent('booking-release')).toEqual([]);
+    await late.letGo();
+    await waitFor(() => expect(sent('booking-release').map((call) => call.body)).toEqual([{ id: HELD.id }]));
+    expect(sent('booking-release')[0]?.keepalive).toBe(true);
+  });
+
+  it('a hold answered after a field changed is released and never confirmed; the changed form holds anew (BUG-F07-003)', async () => {
+    const late = heldBack();
+    const EARLIER = { ...HELD, id: '66666666-0000-4000-8000-000000000009' };
+    answers['booking-place'] = (call) =>
+      sent('booking-place').length === 1
+        ? late.answer(() => Response.json(EARLIER, { status: 201 }))()
+        : // The hold as the API places it: for the customer it was sent.
+          Response.json({ ...HELD, customer: call.body?.customer }, { status: 201 });
+    const sheet = await openDesk();
+    await fillCustomer(sheet);
+    fireEvent.click(within(sheet).getByTestId('new-appointment-find'));
+    fireEvent.click((await within(sheet).findAllByTestId('new-appointment-time'))[0]!);
+    await waitFor(() => expect(sent('booking-place')).toHaveLength(1));
+    fireEvent.change(within(sheet).getByTestId('new-appointment-name'), { target: { value: 'Ruwini F' } });
+    // The changed form searches and holds at once, not held up by the attempt from before the change.
+    fireEvent.click(within(sheet).getByTestId('new-appointment-find'));
+    fireEvent.click((await within(sheet).findAllByTestId('new-appointment-time'))[0]!);
+    await within(sheet).findByTestId('new-appointment-hold');
+    const [first, second] = sent('booking-place');
+    expect(second!.body).toMatchObject({ time: '09:00', customer: { name: 'Ruwini F' } });
+    // A new attempt, with its own key: the same key would answer with the hold placed for the earlier values.
+    expect(second!.body?.idempotencyKey).not.toBe(first!.body?.idempotencyKey);
+    await late.letGo();
+    await waitFor(() => expect(sent('booking-release').map((call) => call.body)).toEqual([{ id: EARLIER.id }]));
+    expect(within(sheet).getByTestId('new-appointment-hold')).toHaveTextContent('Ruwini F · 077 300 1188');
+    fireEvent.click(within(sheet).getByTestId('new-appointment-confirm'));
+    await waitFor(() => expect(sent('booking-confirm').map((call) => call.body)).toEqual([{ id: HELD.id }]));
+  });
+
+  it('a hold answered after a field changed, with nothing chosen since, leaves no hold on screen (BUG-F07-003)', async () => {
+    const late = heldBack();
+    answers['booking-place'] = late.answer(() => Response.json(HELD, { status: 201 }));
+    const sheet = await openDesk();
+    await fillCustomer(sheet);
+    fireEvent.click(within(sheet).getByTestId('new-appointment-find'));
+    fireEvent.click((await within(sheet).findAllByTestId('new-appointment-time'))[0]!);
+    await waitFor(() => expect(sent('booking-place')).toHaveLength(1));
+    fireEvent.change(within(sheet).getByTestId('new-appointment-name'), { target: { value: 'Ruwini F' } });
+    await late.letGo();
+    await waitFor(() => expect(sent('booking-release').map((call) => call.body)).toEqual([{ id: HELD.id }]));
+    expect(within(sheet).queryByTestId('new-appointment-hold')).toBeNull();
+    expect(within(sheet).queryByTestId('new-appointment-confirm')).toBeNull();
+  });
+
   it('rules never saved: the words, and the link only for those who may set them', async () => {
     answers['booking-availability'] = problem('rules_not_set');
     for (const canSetRules of [true, false]) {

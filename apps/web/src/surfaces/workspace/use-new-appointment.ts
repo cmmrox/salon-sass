@@ -72,8 +72,8 @@ export function useNewAppointment(
   const [announcement, setAnnouncement] = useState('');
   const attempt = useRef<{ startsAt: string; key: string } | null>(null);
   const holdId = useRef<string | null>(null);
-  // The form as it stands: moved on by every change, by opening and by closing the sheet. An answer to a search asked
-  // for an earlier form is not the sheet's (BUG-F07-002).
+  // The form as it stands: moved on by every change, by opening and by closing the sheet. An answer to a search or a
+  // hold asked for an earlier form is not the sheet's (BUG-F07-002, BUG-F07-003).
   const form = useRef(0);
   // The latest search: an earlier one answered last does not replace its times.
   const searches = useRef(0);
@@ -81,9 +81,14 @@ export function useNewAppointment(
 
   const problems = asked ? [...new Set([...problemsOf(values, region), ...apiProblems])] : [];
 
-  /** Moves the form on: what was asked for the form before is no longer the sheet's. */
+  /**
+   * Moves the form on: what was asked for the form before is no longer the sheet's, and nothing is being held for it,
+   * so the next time chosen is a new attempt with its own key.
+   */
   function moveOn() {
     form.current += 1;
+    attempt.current = null;
+    setBusy(false);
   }
 
   /** The free times read again for the values (after a refusal), keeping what the person chose. */
@@ -134,6 +139,11 @@ export function useNewAppointment(
     if (!id) return;
     holdId.current = null;
     setHold(null);
+    await release(id);
+  }
+
+  /** Releases a hold by its id, as {@link releaseHold} does: kept alive through leaving the page, else the usual way. */
+  async function release(id: string) {
     if (!(await releaseKept(kind, id))) await bookingChange(kind, 'booking-release', { id }).catch(() => undefined);
   }
 
@@ -144,6 +154,8 @@ export function useNewAppointment(
     return () => {
       window.removeEventListener('pagehide', gone);
       gone();
+      // A hold still on its way when the sheet goes away is released when it arrives.
+      form.current += 1;
     };
   }, [kind]);
 
@@ -283,11 +295,16 @@ export function useNewAppointment(
       }
       void search(values);
     },
-    /** Holds a time: one attempt per chip, so a double click sends one key and places one hold (AC-6). */
+    /**
+     * Holds a time: one attempt per chip, so a double click sends one key and places one hold (AC-6). A hold answered
+     * after the sheet closed or the form changed was placed for values the sheet no longer has: it is released, not
+     * kept, and the attempt (its key and `busy`) is already the changed form's to start again (BUG-F07-003).
+     */
     holdTime: async (time: Availability['times'][number]) => {
       if (busy) return;
       if (attempt.current?.startsAt !== time.startsAt)
         attempt.current = { startsAt: time.startsAt, key: crypto.randomUUID() };
+      const asked = form.current;
       setBusy(true);
       setRefusal(null);
       try {
@@ -296,11 +313,13 @@ export function useNewAppointment(
           'booking-place',
           holdRequest(values, time.time, attempt.current.key),
         );
+        if (asked !== form.current) return void (await release(held.id));
         attempt.current = null;
         holdId.current = held.id;
         setHold(held);
         setAnnouncement(t('holding'));
       } catch (error) {
+        if (asked !== form.current) return;
         attempt.current = null;
         refused(error);
         const code = failureOf(error).code;
