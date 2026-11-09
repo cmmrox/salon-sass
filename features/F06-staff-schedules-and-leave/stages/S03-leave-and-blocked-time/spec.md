@@ -230,3 +230,9 @@ These change AC-1's last day and how AC-3, AC-6 and AC-9 print dates, and are bu
   Nov 12 to Sat, Nov 14"), and a period with either end in another year with the year on both ends, as today. On a 1280 card
   the badge of a leave within the current year fits on one line. The forms' date buttons keep the year. (STF-03, STF-05,
   CR-026)
+
+As built, accepted by the lead on 2026-11-09: the tabs take "today" from the schedule's answer, and the card badge,
+whose team list carries no date, works it out from the salon's time zone on the browser's clock (`TeamScreen` takes the
+salon's `timeZone`). A test that moves the API's clock across a year moves the browser's clock too. Once a first day is
+chosen, the last day's calendar opens on the first day's month, even when a later last day in another month is kept. The
+shared `@salon/format` functions are `formatShortDay` and `formatShortPeriod`; `formatDay` is unchanged.
