@@ -11,7 +11,7 @@ import type { Locator, Page } from '@playwright/test';
 
 import { bookingSalon, holdInput, liveRowsOf, storedBooking, variantService, type BookingSalon } from '../../shared/booking';
 import {
-  BOOKINGS_ROUTE, PENDING_F07_S03 as W, S03_TEXT as T, button, firstName, id, openAs, shownDay, shownTime, test, expect,
+  BOOKINGS_ROUTE, PENDING_F07_S03 as W, S03_TEXT as T, button, calendarDayButton, chooseCalendarDay, firstName, id, openAs, shownDay, shownTime, test, expect,
 } from '../../shared/booking-browser';
 import { customer } from '../../shared/booking';
 import { plusDays, week, weekdayOf } from '../../shared/salon-hours';
@@ -34,7 +34,7 @@ async function pick(page: Page, trigger: Locator, option: string) {
 }
 async function chooseDay(page: Page, sheet: Locator, date: string) {
   await id(sheet, N.day).click();
-  await id(page, N.calendar).getByRole('gridcell', { name: String(Number(date.slice(8))) }).filter({ hasNot: page.locator('[disabled]') }).first().click();
+  await chooseCalendarDay(id(page, N.calendar), date);
 }
 /** Fills the form for a customer and searches, returning the chips. */
 async function search(page: Page, sheet: Locator, s: BookingSalon, date: string, who = customer(), professional: string = T.noPreference) {
@@ -59,13 +59,12 @@ test('TC-F07-S03-005 AC-4: + New appointment opens the sheet with its intro, the
   await expect(sheet).toContainText(T.mobileHelp);
   await test.step('the day: open days only', async () => {
     await id(sheet, N.day).click();
-    const closed = id(page, N.calendar).getByRole('gridcell', { name: String(Number(plusDays(s.today, 2).slice(8))) }).first();
-    await expect(closed.getByRole('button').or(closed), 'a closed weekday cannot be chosen').toBeDisabled();
+    const calendar = id(page, N.calendar);
+    if (plusDays(s.today, 2).slice(0, 7) === s.today.slice(0, 7)) await expect(calendarDayButton(calendar, plusDays(s.today, 2)), 'a closed weekday cannot be chosen').toBeDisabled();
     // Yesterday, or the previous month when yesterday is in it: a day before today cannot be reached.
     const past = plusDays(s.today, -1).slice(0, 7) === s.today.slice(0, 7)
-      ? id(page, N.calendar).getByRole('gridcell', { name: String(Number(plusDays(s.today, -1).slice(8))) }).first()
-      : id(page, N.calendar).getByRole('button', { name: /previous/i });
-    await expect(past.getByRole('button').or(past).first(), 'nor a past day').toBeDisabled();
+      ? calendarDayButton(calendar, plusDays(s.today, -1)) : calendar.getByRole('button', { name: /previous month/i });
+    await expect(past, 'nor a past day').toBeDisabled();
     await page.keyboard.press('Escape');
   });
   await test.step('the service, its price and variants; the professionals who do it', async () => {

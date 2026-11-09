@@ -9,7 +9,7 @@
  */
 import { REFERENCE_SHOWN, bookingSalon, customer, holdInput, liveRowsOf, staffAt } from '../../shared/booking';
 import {
-  BOOKINGS_ROUTE, PENDING_F07_S03 as W, S03_TEXT as T, button, firstName, id, openAs, shownDay, test, expect,
+  BOOKINGS_ROUTE, PENDING_F07_S03 as W, S03_TEXT as T, button, chooseCalendarDay, firstName, id, openAs, shownDay, test, expect,
 } from '../../shared/booking-browser';
 import { plusDays } from '../../shared/salon-hours';
 
@@ -34,7 +34,7 @@ test('TC-F07-001 BKG-01, BKG-03, BKG-04, BKG-06, BKG-11, BKG-14, BKG-16: the des
     await id(sheet, W.sheet.service).click();
     await page.getByRole('option', { name: new RegExp(`^${s.service.name}`) }).filter({ visible: true }).click();
     await id(sheet, W.sheet.day).click();
-    await id(page, W.sheet.calendar).getByRole('gridcell', { name: String(Number(date.slice(8))) }).first().click();
+    await chooseCalendarDay(id(page, W.sheet.calendar), date);
     await id(sheet, W.sheet.professional).click();
     await page.getByRole('option', { name: T.noPreference, exact: true }).filter({ visible: true }).click();
     await button(sheet, T.find).click();

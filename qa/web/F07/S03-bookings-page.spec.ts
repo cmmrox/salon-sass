@@ -11,7 +11,7 @@ import type { Page } from '@playwright/test';
 
 import { bookingSalon, customer, holdInput, national, staffAt, type BookingSalon } from '../../shared/booking';
 import {
-  BOOKINGS_ROUTE, PENDING_F07_S03 as W, S03_TEXT as T, button, id, left, openAs, shownDay, shownTime, test, expect,
+  BOOKINGS_ROUTE, PENDING_F07_S03 as W, S03_TEXT as T, button, chooseCalendarDay, id, left, openAs, shownDay, shownTime, test, expect,
 } from '../../shared/booking-browser';
 import { plusDays } from '../../shared/salon-hours';
 
@@ -147,7 +147,7 @@ test('TC-F07-S03-004 AC-3: the search (name, mobile or reference, as typed), the
   });
   await test.step('the day chooser and Today', async () => {
     await id(page, P.day).click();
-    await id(page, P.calendar).getByRole('gridcell', { name: String(Number(plusDays(s.today, 1).slice(8))) }).first().click();
+    await chooseCalendarDay(id(page, P.calendar), plusDays(s.today, 1));
     await expect(id(page, P.heading)).toHaveText(T.heading(1, shownDay(plusDays(s.today, 1))));
     await page.goBack();
     await expect(id(page, P.heading), 'back restores the day').toHaveText(T.heading(3, shownDay(s.today)));

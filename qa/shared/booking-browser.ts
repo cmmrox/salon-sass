@@ -37,9 +37,18 @@ export async function settled(page: Page) {
   await page.waitForFunction(() => document.getAnimations().every(a => a.playState !== 'running'));
 }
 
-/** A workspace page, signed in as the actor, at a width. */
+/**
+ * The browser's clock set to the application's: every F07 test moves the test clock (to a date after every plan), and a
+ * calendar or countdown that reads the browser's date would otherwise show another month. Time runs on from there.
+ */
+export async function alignClock(context: BrowserContext, identity: { now(): Promise<string> }) {
+  await context.clock.setSystemTime(new Date(await identity.now()));
+}
+
+/** A workspace page, signed in as the actor, at a width, its clock the application's. */
 export async function openAs(accounts: AccountBrowser, actor: Actor, path: string, width = 1280): Promise<{ context: BrowserContext; page: Page }> {
   const context = await accounts.context(actor.salon, [actor], { width });
+  await alignClock(context, accounts.identity);
   const page = await accounts.open(context, path);
   return { context, page };
 }
@@ -49,6 +58,7 @@ export async function supportBrowser(browser: Browser, operator: Operator, creat
   const support = await operator.actor('OPERATOR_SUPPORT');
   const session = await supportJson<SupportStart>(await operator.startSupport(support, created.id, { reason: 'The salon asked about a booking on the list' }), 'supportStart', 201);
   const context = await browser.newContext({ baseURL: salonUrl(salon, webUrl), viewport: { width, height: 1000 }, locale: 'en' });
+  await alignClock(context, operator.identity);
   const entry = await context.newPage();
   await entry.goto(`${salonUrl(salon, webUrl)}/workspace/support#${session.entryCode}`);
   await expect(entry.getByTestId('support-banner')).toBeVisible();
@@ -187,3 +197,16 @@ export const shownDay = (date: string) => new Intl.DateTimeFormat('en-LK', { tim
 export const firstName = (name: string) => name.split(' ')[0];
 /** `m:ss` left until an instant, by the application's clock. */
 export const left = (until: string, now: string) => { const s = Math.max(0, Math.ceil((Date.parse(until) - Date.parse(now)) / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+
+/** A day's button in a shadcn Calendar by its accessible name, as F04's hours screens find it ("Thursday, 12 November 2026"). */
+export function calendarDayButton(scope: Locator, date: string): Locator {
+  const written = new Intl.DateTimeFormat('en-LK', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
+    .format(new Date(`${date}T00:00:00Z`));
+  return scope.getByRole('button', { name: new RegExp(`^(Today, )?${written}(, selected)?$`) });
+}
+/** Chooses a day in an open Calendar, moving a month on at most twelve times until it shows. */
+export async function chooseCalendarDay(calendar: Locator, date: string) {
+  const day = calendarDayButton(calendar, date);
+  for (let n = 0; n < 12 && !(await day.count()); n++) await calendar.getByRole('button', { name: /next month/i }).click();
+  await day.click();
+}
