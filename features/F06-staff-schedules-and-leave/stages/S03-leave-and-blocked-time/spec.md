@@ -216,3 +216,17 @@ lead's rulings of 2026-11-02 on QA's reading of the spec) and take precedence ov
   several queries, so a weekly save committing between them could answer the old hours with their breaks missing. They now
   read one snapshot (`TeamScheduleSnapshotIntegrationTest`).
 
+## CR-026 (follow-up after the merge of PR #23)
+
+These change AC-1's last day and how AC-3, AC-6 and AC-9 print dates, and are built and verified in one follow-up PR after F06's (decision 098). Read
+`docs/changes/CR-026-team-page-refinements.md` and decision 107.
+
+- AC-15: On the leave form, choosing the first day sets the last day to the same day when the last day is empty or earlier
+  than it; a later last day already chosen is kept. The last day's calendar then opens on the first day's month and offers no
+  day before the first day, and still none beyond a year ahead. A one-day leave therefore needs one date choice, and a last
+  day before the first can no longer be chosen. The API's 400 for it is unchanged. (STF-03, CR-026)
+- AC-16: The card's leave badge (AC-9), the Leave rows (AC-3) and the Blocked time rows (AC-6) print their dates in the short
+  day form of decision 107: a date in the salon's current year, by the salon's own date, without the year ("Sick leave, Thu,
+  Nov 12 to Sat, Nov 14"), and a period with either end in another year with the year on both ends, as today. On a 1280 card
+  the badge of a leave within the current year fits on one line. The forms' date buttons keep the year. (STF-03, STF-05,
+  CR-026)

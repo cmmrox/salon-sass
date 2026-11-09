@@ -37,9 +37,9 @@ asked for. A case is a test titled with its id and criteria, or a manual or defe
 | F05-S01 | complete | - | CAT-01, CAT-02, CAT-04 | 20 | 50 | 49 | 0 | 1 |
 | F05-S02 | complete | - | CAT-03, CAT-06 | 11 | 21 | 20 | 0 | 1 |
 | F05-S03 | complete | - | CAT-05, INV-01 | 15 | 27 | 27 | 0 | 0 |
-| F06-S01 | complete | - | STF-01 | 16 | 55 | 52 | 0 | 3 |
-| F06-S02 | complete | - | STF-02 | 16 | 46 | 44 | 0 | 2 |
-| F06-S03 | complete | - | STF-03, STF-05 | 14 | 44 | 42 | 0 | 2 |
+| F06-S01 | complete | - | STF-01 | 17 | 55 | 52 | 0 | 3 |
+| F06-S02 | complete | - | STF-02 | 17 | 46 | 44 | 0 | 2 |
+| F06-S03 | complete | - | STF-03, STF-05 | 16 | 44 | 42 | 0 | 2 |
 
 ## Deferred cases
 
