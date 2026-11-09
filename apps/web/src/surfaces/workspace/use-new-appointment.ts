@@ -132,6 +132,12 @@ export function useNewAppointment(
     };
   }, [kind]);
 
+  // A chosen time's chip is gone once it is held: keyboard focus goes to the hold, once it is on screen (AC-11).
+  const heldId = hold?.id ?? null;
+  useEffect(() => {
+    if (heldId) holdTitle.current?.focus();
+  }, [heldId]);
+
   // At zero the countdown asks the API whether the hold has run out, and says what the API says (design notes).
   const left = hold?.holdExpiresAt && now !== null ? secondsLeft(hold.holdExpiresAt, now) : null;
   const [checks, setChecks] = useState(0);
@@ -276,7 +282,6 @@ export function useNewAppointment(
         holdId.current = held.id;
         setHold(held);
         setAnnouncement(t('holding'));
-        requestAnimationFrame(() => holdTitle.current?.focus());
       } catch (error) {
         attempt.current = null;
         refused(error);

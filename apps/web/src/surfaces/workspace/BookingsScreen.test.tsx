@@ -357,6 +357,7 @@ describe('New appointment (F07-S03 AC-4 to AC-6)', () => {
     fireEvent.click(chip!);
     fireEvent.click(chip!);
     const card = await within(sheet).findByTestId('new-appointment-hold');
+    await waitFor(() => expect(within(card).getByTestId('new-appointment-holding')).toHaveFocus());
     expect(sent('booking-place')).toHaveLength(1);
     expect(sent('booking-place')[0]!.body).toMatchObject({
       memberId: null,
