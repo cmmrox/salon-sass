@@ -53,7 +53,7 @@ export const PENDING_F06_S02 = {
     addBreak: (day: DayName) => `schedule-${day}-add-break`, breaksFull: (day: DayName) => `schedule-${day}-breaks-full`,
     affected: 'schedule-affected', affectedRow: 'schedule-affected-booking',
     changeForm: 'change-form', changeDate: 'change-date', changeCalendar: 'change-calendar', changeProblem: 'change-problem',
-    changeRow: 'change-row',
+    changeRow: 'change-row', changeRowDate: 'change-row-date',
   },
   /** Accessible names of the times and their controls. AC-16 names "Monday break 1 starts"; the rest are the build's. */
   names: {

@@ -15,7 +15,7 @@ import { Hours, plusDays, week } from '../../shared/salon-hours';
 import { teamSalon, type TeamMember } from '../../shared/team';
 import { button, card, id, open, openSchedule, ready, salonToday, settled, sheetOf, test } from '../../shared/team-browser';
 import {
-  ABSENCE_TEXT, Absences, LEAVE_KEYS_WITHOUT_MANAGE, PENDING_F06_S03, TYPE_WORDS, daysWords, pickDay, type MemberWithLeave,
+  ABSENCE_TEXT, Absences, LEAVE_KEYS_WITHOUT_MANAGE, PENDING_F06_S03, TYPE_WORDS, pickDay, shortDaysWords, type MemberWithLeave,
 } from '../../shared/team-leave';
 import { LONG, PENDING_F06_S02, SCHEDULE_TEXT, copyOf, expectWeek, shownTime, workingDay } from '../../shared/team-schedule';
 
@@ -109,7 +109,8 @@ test('TC-F06-001 STF-01, STF-02, STF-03, STF-05: an Owner adds a person with no 
     await page.reload();
     await ready(page);
     await expect(id(card(page, person.id), S.cardHours), 'the week, which no date change or leave moves').toHaveText(SCHEDULE_TEXT.row.varies);
-    await expect(id(card(page, person.id), L.cardLeave)).toHaveText(`${TYPE_WORDS.sick}, ${daysWords(leaveFirst, leaveLast)}`);
+    // The short day form of decision 107 (CR-026).
+    await expect(id(card(page, person.id), L.cardLeave)).toHaveText(`${TYPE_WORDS.sick}, ${shortDaysWords(leaveFirst, leaveLast, today)}`);
   });
   await test.step('the schedule says exactly that', async () => {
     const read = await absences.read(salon, owner.tokens, person.id);

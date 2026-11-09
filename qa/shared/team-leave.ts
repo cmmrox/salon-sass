@@ -10,7 +10,9 @@
  * Every name the build gives is in `PENDING_F06_S03`, confirmed against the F06-S03 handoff, V31 and the contract;
  * nothing else in the F06-S03 tests spells one. The spec's "Corrections at close" (decision 106) settle what the
  * spec left open: a support session's two `affected` reads are 403 `permission_denied`; dates print as `formatDay`
- * does; "1 booking to resolve"; the 100 upcoming leaves include leave under way.
+ * does; "1 booking to resolve"; the 100 upcoming leaves include leave under way. CR-026 (decision 107) then gives the
+ * card's badge and the tabs' rows a short day form without the year within the salon's current year (`shortDayWords`);
+ * the forms' date buttons and the bookings a period would affect keep `formatDay` (`dayWords`).
  */
 import { randomUUID } from 'node:crypto';
 
@@ -20,7 +22,7 @@ import { refused } from './booking-rules';
 import { expect, json, type Tokens } from './identity';
 import { identitySql } from './identity-storage';
 import { afterNewestPlan, fieldsOf, sqlLiteral, type Operator, type TestClock } from './operator';
-import { HOURS_TABLES, localDate, plusDays } from './salon-hours';
+import { HOURS_TABLES, localDate, plusDays, plusYear } from './salon-hours';
 import { PENDING_F06_S01, S01_TEAM_TABLES, Team, teamSalon, type TeamMember } from './team';
 import { PENDING_F06_S02, S02_SCHEDULE_TABLES, calendarDay, schedulePath, shownTime, type MemberSchedule } from './team-schedule';
 import type { Identity } from './identity';
@@ -186,15 +188,44 @@ export const nextDays = (from: string, count: number) => Array.from({ length: co
 // ---- the words the tabs and the card show ----
 
 /**
- * A date as the screen prints it. The spec wrote "Thu 12 Nov"; the correction at close (decision 106) is the
+ * A date as `formatDay` prints it. The spec wrote "Thu 12 Nov"; the correction at close (decision 106) is the
  * existing `formatDay` as it prints, "Thu, Nov 12, 2026". Written here from the ruling, not from the product's code.
+ * Since CR-026 it is what the forms' date buttons and the affected bookings print; the badge and the rows use
+ * `shortDayWords`.
  */
 export function dayWords(date: string): string {
   return new Intl.DateTimeFormat('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })
     .format(new Date(`${date}T00:00:00Z`));
 }
-/** Leave's days: "Thu, Nov 12, 2026 to Sat, Nov 14, 2026", or one day alone. */
+/** Leave's days as `formatDay` prints them: "Thu, Nov 12, 2026 to Sat, Nov 14, 2026", or one day alone. */
 export const daysWords = (firstDay: string, lastDay: string) => (firstDay === lastDay ? dayWords(firstDay) : `${dayWords(firstDay)} to ${dayWords(lastDay)}`);
+
+const sameYear = (date: string, today: string) => date.slice(0, 4) === today.slice(0, 4);
+/**
+ * A date in the short day form of decision 107 (CR-026), the Team page's badge and rows: in the salon's current year,
+ * by the salon's own date `today`, without the year ("Thu, Nov 12"); in another year as `formatDay` ("Tue, Jan 5, 2027").
+ * Written from the decision's words, not from the product's code.
+ */
+export function shortDayWords(date: string, today: string): string {
+  if (!sameYear(date, today)) return dayWords(date);
+  return new Intl.DateTimeFormat('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' }).format(new Date(`${date}T00:00:00Z`));
+}
+/** A period in the short day form: both ends without the year when both are in the salon's current year, otherwise both with it. */
+export function shortDaysWords(firstDay: string, lastDay: string, today: string): string {
+  const one = (date: string) => (sameYear(firstDay, today) && sameYear(lastDay, today) ? shortDayWords(date, today) : dayWords(date));
+  return firstDay === lastDay ? one(firstDay) : `${one(firstDay)} to ${one(lastDay)}`;
+}
+/** The `n`-th day after `today` while it is still in the salon's current year, else that year's last day. */
+export const thisYearDay = (today: string, n: number) => {
+  const day = plusDays(today, n);
+  return sameYear(day, today) ? day : `${today.slice(0, 4)}-12-31`;
+};
+/** A day in the next year that is never beyond a year ahead: 5 January, as decision 107's example, or a year from `today` if sooner. */
+export const nextYearDay = (today: string) => {
+  const fifth = `${Number(today.slice(0, 4)) + 1}-01-05`;
+  const yearAhead = plusYear(today);
+  return fifth < yearAhead ? fifth : yearAhead;
+};
 
 export const TYPE_WORDS: Record<LeaveType, string> = { annual: 'Annual leave', sick: 'Sick leave', personal: 'Personal', other: 'Other' };
 
@@ -217,8 +248,9 @@ export const ABSENCE_TEXT = {
   noBlocks: 'No blocked time.',
   blockRemoved: 'Blocked time removed.',
   affected: (n: number) => (n === 1 ? '1 existing booking in this time. It is kept and flagged for you. Nothing is cancelled.' : `${n} existing bookings in this time. They are kept and flagged for you. Nothing is cancelled.`),
-  badge: (type: LeaveType, firstDay: string, lastDay: string) => `${TYPE_WORDS[type]}, ${daysWords(firstDay, lastDay)}`,
-  badgeWithoutType: (firstDay: string, lastDay: string) => `On leave, ${daysWords(firstDay, lastDay)}`,
+  /** The card's badge, in the short day form (CR-026, AC-16): `today` is the salon's date. */
+  badge: (type: LeaveType, firstDay: string, lastDay: string, today: string) => `${TYPE_WORDS[type]}, ${shortDaysWords(firstDay, lastDay, today)}`,
+  badgeWithoutType: (firstDay: string, lastDay: string, today: string) => `On leave, ${shortDaysWords(firstDay, lastDay, today)}`,
   blockTimes: (starts: string, finishes: string) => `${shownTime(starts)} – ${shownTime(finishes)}`,
 };
 
