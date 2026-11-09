@@ -189,11 +189,13 @@ export function NewAppointmentSheet(props: Props) {
                   className="w-auto p-0"
                   align="start"
                   aria-label={t('dayCalendar')}
+                  onOpenAutoFocus={(event) => event.preventDefault()}
                   data-testid="new-appointment-calendar"
                 >
                   <Calendar
                     labels={{ labelDayButton: dayButtonLabel }}
-                    // Keyboard focus starts on the chosen day, so the arrow keys move between days at once.
+                    // Keyboard focus starts on the chosen day (the Popover leaves it to the Calendar), so the arrow keys move
+                    // between days at once.
                     autoFocus
                     mode="single"
                     today={dateOfText(props.today)}
