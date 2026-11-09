@@ -93,3 +93,42 @@ evidence:
       screenshots in the F06 report''s manual/ folder. The person added for the manual
       checks on alpha was removed with their rows afterwards. Result pass; qa_status
       stays pass.'
+  - revision: a72288586cf48ea50fa4c6a906eceedba9682d7b
+    date: 2026-11-09
+    changed: 'CR-026, built as a follow-up after PR #23 (decision 098, decision 107).
+      Web only: @salon/format gains formatShortDay and formatShortPeriod (formatDay
+      unchanged); the card''s leave badge and the Leave, Blocked time and Date changes
+      rows print dates without the salon''s current year, and the rows'' Remove names
+      follow them; the leave form''s first day sets an empty or earlier last day and
+      DateChooser takes an earliest day; a blank Add team member sheet shows no name
+      error until Name is typed in, left or saved; TeamScreen takes the salon''s timeZone
+      for the badge''s today. No API, contract or migration change.'
+    scope: 'Written for CR-026: TC-F06-S01-056, TC-F06-S02-047, TC-F06-S03-045, 046.
+      Changed by it: TC-F06-S03-032, 033, 034, 037, 038, TC-F06-001, and 039 through
+      fillLeave. Re-run as what the changed files reach: every F06 web entry (Team tab
+      and profile sheet, schedule sheet, both time-off tabs, the sheet handle, the journey),
+      selected with sdlc run --feature F06, the narrowest run that holds them all with
+      the journey; its seven API entries came with it and are unaffected. F04-S03 not
+      re-run (decision 069): formatDay is unchanged, and DateChooser and the new functions
+      are used only by F06''s tabs and card, so no F03 or F04 screen''s code changed.
+      By hand on the QA web at 1280, 390 and 360 as the roster Manager on alpha: a blank
+      Add sheet has no message, Name without aria-invalid and Add to team disabled;
+      leaving Name says "Name must be 2 to 40 characters."; choosing a first day sets
+      the last day to it ("Thu, Nov 12, 2026" on the button) with the day before not
+      offered; the Leave row reads "Thu, Nov 12" (Remove "Remove leave, Thu, Nov 12"),
+      the block row "Fri, Nov 13, 10:00 – 11:00", the change row "Sun, Nov 15" (Remove
+      "Remove the change on Sun, Nov 15"), the form buttons keep the year; the badge
+      "Annual leave, Thu, Nov 12" is one line at 1280, 390 and 360, and no screen scrolls
+      sideways. No problem found. Smoke was not asked for and was not run.'
+    run: 'QA instance stopped in the developer''s worktree and started from the QA worktree
+      through local-down and local-up; API and web run from it, the web rebuilt into
+      apps/web/.next-qa at 06:37 from a clean tree at a722885. qa/reports/20261109-063728-F06-7798b2cbc556:
+      13 of 14 entries passed in 8 min 0 s; 144 of 145 cases. The one failure, TC-F06-S03-045,
+      was a test defect: it read the stored leave before its second save finished, the
+      first save''s toast still showing; the page then listed both leaves. Repaired at
+      5bd5fe9 (it waits for each save''s row; no assertion changed) and re-run alone
+      with Playwright --grep, three times: qa/reports/20261109-F06-S03-045-repair-5bd5fe9,
+      3 of 3 passed. Manual screenshots and their readings in the F06 report''s manual/
+      folder; the person added on alpha was removed afterwards. Targeted, not a full
+      pass. Result pass; qa_status stays pass, qa_revision and full_pass_revision stay
+      at 7aa5f7b.'
