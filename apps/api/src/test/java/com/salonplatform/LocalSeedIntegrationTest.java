@@ -81,6 +81,31 @@ class LocalSeedIntegrationTest {
         assertThat(before).extracting(row -> row.get("display_name")).contains("Gamma, renamed");
     }
 
+    /**
+     * Each synthetic salon has saved booking rules, so bookings can be made locally (F07-S01): one first version with a
+     * fixed id, nothing added to a salon that already has rules, and the same version again for one whose rules are
+     * gone.
+     */
+    @Test
+    void eachSyntheticSalonGetsSavedBookingRulesOnceWithAFixedId() {
+        TestDatabase database = TestDatabase.createEmpty(TestPostgres.shared());
+        String versions = "SELECT t.slug, r.version, r.id::text AS id, r.slot_interval_minutes, r.currency"
+                + " FROM booking_rules_version r JOIN tenant t ON t.id = r.tenant_id ORDER BY t.slug, r.version";
+        try (StartedApplication _ = database.start(LOCAL)) {
+            // Seeded.
+        }
+        List<Map<String, Object>> first = database.asOwner().queryForList(versions);
+        assertThat(first)
+                .extracting(row -> row.get("slug") + " v" + row.get("version") + " " + row.get("slot_interval_minutes"))
+                .containsExactly("alpha v1 15", "beta v1 15", "gamma v1 15");
+        database.asOwner()
+                .update("DELETE FROM booking_rules_version WHERE tenant_id = 'b2b2b2b2-0000-4000-8000-000000000002'");
+
+        try (StartedApplication _ = database.start(LOCAL)) {
+            assertThat(database.asOwner().queryForList(versions)).isEqualTo(first);
+        }
+    }
+
     @Test
     void anyOtherProfileCreatesTheSchemaAndNoSalon() {
         TestDatabase database = TestDatabase.createEmpty(TestPostgres.shared());

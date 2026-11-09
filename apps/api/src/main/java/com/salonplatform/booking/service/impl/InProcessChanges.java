@@ -41,7 +41,7 @@ class InProcessChanges {
         Instant now = clock.instant();
         Booking booking = bookings.lockBooking(bookingId).orElseThrow(NotFoundException::new);
         boolean shown = BookingStateMachine.shown(booking.situation(zone), now);
-        if (!shown && action != BookingAction.BEGIN_PAYMENT) {
+        if (!shown && !(action == BookingAction.BEGIN_PAYMENT && BookingStateMachine.heldOrExpired(booking.state()))) {
             throw new NotFoundException();
         }
         changes.take(booking, action, zone, byStaff, Why.NONE, now);

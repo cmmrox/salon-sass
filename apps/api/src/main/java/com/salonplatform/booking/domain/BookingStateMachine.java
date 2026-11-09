@@ -126,6 +126,15 @@ public final class BookingStateMachine {
                 && !now.isBefore(booking.holdExpiresAt());
     }
 
+    /**
+     * Whether, not being shown, it is a hold that ran out rather than one released: confirming it, or starting its
+     * payment, then says so ({@code hold_expired}) instead of not finding it. Whether the job has ended it yet makes no
+     * difference.
+     */
+    public static boolean heldOrExpired(BookingState state) {
+        return state == BookingState.HELD || state == BookingState.EXPIRED;
+    }
+
     /** Whether a caller may see it: never a hold that ended or whose time has run out. */
     public static boolean shown(Situation booking, Instant now) {
         return BookingState.SHOWN.contains(booking.state()) && !runOut(booking, now);

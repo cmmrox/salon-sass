@@ -115,7 +115,8 @@ class BookingChangeServiceImpl implements BookingChangeService {
                 }
                 boolean shown =
                         BookingStateMachine.shown(booking.situation(at.salon().timeZone()), now);
-                if (!shown && action != BookingAction.CONFIRM) {
+                if (!shown
+                        && !(action == BookingAction.CONFIRM && BookingStateMachine.heldOrExpired(booking.state()))) {
                     throw new NotFoundException();
                 }
                 if (action == BookingAction.UNDO_NO_SHOW) {
