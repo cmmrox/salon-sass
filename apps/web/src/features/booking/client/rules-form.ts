@@ -13,6 +13,10 @@ export const NOTICES = [0, 30, 60, 120, 240, 1440] as const;
 export const HORIZONS = [14, 30, 60, 90, 180] as const;
 export const FREE_CANCELLATION = [2, 6, 12, 24, 48] as const;
 export const RESCHEDULE_UNTIL = [2, 6, 12, 24] as const;
+/** How long a chosen time is held (F07-S02). */
+export const HOLD_MINUTES = [5, 10, 15, 20, 30] as const;
+/** Who a "No preference" booking goes to: the least or the most booked that day (F07-S02). */
+export const NO_PREFERENCE = ['least_booked', 'most_booked'] as const;
 /** Not online, once, twice, any number of times (`null` to the API). */
 export const RESCHEDULE_LIMITS = ['0', '1', '2', 'any'] as const;
 
@@ -20,6 +24,7 @@ export type DepositKind = 'none' | 'percentage' | 'amount';
 export type LateKind = 'nothing' | 'deposit' | 'share';
 export type NoShowKind = 'deposit' | 'share';
 export type RescheduleLimit = (typeof RESCHEDULE_LIMITS)[number];
+export type NoPreference = (typeof NO_PREFERENCE)[number];
 
 /** A typed number field of the form. */
 export type NumberField = 'percent' | 'cap' | 'amount' | 'latePercent' | 'noShowPercent';
@@ -35,6 +40,8 @@ export type RulesValues = {
   slotIntervalMinutes: number;
   minimumNoticeMinutes: number;
   bookingHorizonDays: number;
+  holdMinutes: number;
+  noPreference: NoPreference;
   deposit: DepositKind;
   /** Whole percent. */
   percent: number;
@@ -69,6 +76,8 @@ export const SUGGESTED: RulesValues = {
   slotIntervalMinutes: 15,
   minimumNoticeMinutes: 60,
   bookingHorizonDays: 60,
+  holdMinutes: 10,
+  noPreference: 'least_booked',
   deposit: 'percentage',
   percent: 20,
   capMinor: 2_000 * MINOR_PER_RUPEE,
@@ -103,6 +112,8 @@ export function valuesOf(rules: BookingRules | null): RulesValues {
     slotIntervalMinutes: rules.slotIntervalMinutes,
     minimumNoticeMinutes: rules.minimumNoticeMinutes,
     bookingHorizonDays: rules.bookingHorizonDays,
+    holdMinutes: rules.holdMinutes,
+    noPreference: rules.noPreference,
     deposit: deposit.kind,
     percent: deposit.percent ?? SUGGESTED.percent,
     capMinor: deposit.capMinor ?? SUGGESTED.capMinor,
@@ -201,6 +212,8 @@ export function saveOf(values: RulesValues): BookingRulesInput {
     slotIntervalMinutes: values.slotIntervalMinutes,
     minimumNoticeMinutes: values.minimumNoticeMinutes,
     bookingHorizonDays: values.bookingHorizonDays,
+    holdMinutes: values.holdMinutes,
+    noPreference: values.noPreference,
     deposit:
       values.deposit === 'percentage'
         ? { kind: 'percentage', percent: values.percent, capMinor: values.capMinor }

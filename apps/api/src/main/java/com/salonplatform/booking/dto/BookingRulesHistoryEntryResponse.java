@@ -35,6 +35,8 @@ public record BookingRulesHistoryEntryResponse(
                                     "slotIntervalMinutes",
                                     "minimumNoticeMinutes",
                                     "bookingHorizonDays",
+                                    "holdMinutes",
+                                    "noPreference",
                                     "deposit",
                                     "freeCancellationHours",
                                     "lateCancellation",

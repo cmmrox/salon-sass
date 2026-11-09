@@ -109,7 +109,9 @@ class BookingHibernateFilterAloneIntegrationTest {
                         "f",
                         UUID.randomUUID()),
                 START,
-                NOW);
+                NOW,
+                java.time.Duration.ofMinutes(10),
+                false);
         bookings().saveAndFlush(booking);
         application
                 .bean(BookingStateChangeRepository.class)

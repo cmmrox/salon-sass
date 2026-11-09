@@ -956,6 +956,16 @@
         "90": "3 months ahead",
         "180": "6 months ahead"
       },
+      "holding": "Holding and assigning",
+      "hold": "Hold a chosen time for",
+      "holdOption": "{minutes} minutes",
+      "holdHelp": "While a time is held nobody else can take it. It is released by itself afterwards, unless a payment is in progress.",
+      "noPreference": "“No preference” bookings go to",
+      "noPreferenceOption": {
+        "least_booked": "Whoever has the least booked that day",
+        "most_booked": "Whoever has the most booked that day"
+      },
+      "noPreferenceHelp": "The first shares work evenly. The second fills one person’s day first and keeps others free for walk-ins. Only people who do the service and are free are considered.",
       "deposit": "Deposit",
       "depositKind": {
         "none": "No deposit",
@@ -1021,6 +1031,8 @@
         "slotIntervalMinutes": "start times",
         "minimumNoticeMinutes": "notice",
         "bookingHorizonDays": "how far ahead",
+        "holdMinutes": "how long a time is held",
+        "noPreference": "“No preference” bookings",
         "deposit": "deposit",
         "freeCancellationHours": "free cancellation",
         "lateCancellation": "late cancellation",

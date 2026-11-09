@@ -28,6 +28,8 @@ const RULES = {
   lateCancellation: { kind: 'share', percent: 50 },
   noShow: { kind: 'share', percent: 100 },
   reschedule: { limit: 2, untilHours: 12 },
+  holdMinutes: 15,
+  noPreference: 'most_booked',
 };
 const HISTORY = {
   items: [3, 2, 1].map((version) => ({
@@ -42,6 +44,8 @@ const HISTORY = {
             'slotIntervalMinutes',
             'minimumNoticeMinutes',
             'bookingHorizonDays',
+            'holdMinutes',
+            'noPreference',
             'deposit',
             'freeCancellationHours',
             'lateCancellation',

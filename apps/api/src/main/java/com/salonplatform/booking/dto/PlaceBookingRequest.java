@@ -8,9 +8,13 @@ import io.swagger.v3.oas.annotations.media.Schema;
 @Schema(
         name = "PlaceBooking",
         additionalProperties = Schema.AdditionalPropertiesValue.FALSE,
-        requiredProperties = {"memberId", "serviceId", "date", "time", "customer", "channel"})
+        requiredProperties = {"serviceId", "date", "time", "customer", "channel"})
 public record PlaceBookingRequest(
-        @Schema(format = "uuid", description = "The team member who performs it.")
+        @Schema(
+                types = {"string", "null"},
+                format = "uuid",
+                description = "The team member who performs it; null or left out for \"No preference\", when the"
+                        + " server assigns an eligible, free professional by the salon's strategy.")
         String memberId,
 
         @Schema(format = "uuid") String serviceId,

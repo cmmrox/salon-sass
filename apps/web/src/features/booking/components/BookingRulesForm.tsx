@@ -5,7 +5,9 @@ import { FieldGroup } from '@/components/ui/field';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import {
   FREE_CANCELLATION,
+  HOLD_MINUTES,
   HORIZONS,
+  NO_PREFERENCE,
   NOTICES,
   RESCHEDULE_LIMITS,
   RESCHEDULE_UNTIL,
@@ -13,6 +15,7 @@ import {
   type DepositKind,
   type FieldError,
   type LateKind,
+  type NoPreference,
   type NoShowKind,
   type NumberField,
   type RescheduleLimit,
@@ -37,9 +40,10 @@ const NO_SHOW_KINDS: NoShowKind[] = ['deposit', 'share'];
 const heading = 'm-0 mt-2 text-large font-semibold first:mt-0';
 
 /**
- * The Booking rules form (F04-S04, the prototype's `setRules`): Booking times, Deposit (a Toggle Group of No
- * deposit, Percentage and Fixed amount, with its amounts), Cancelling and no-shows, and Rescheduling. Every
- * list is a Select with the prototype's labels; every typed number shows its rule's message beside it.
+ * The Booking rules form (F04-S04, the prototype's `setRules`): Booking times, Holding and assigning (F07-S02: how
+ * long a chosen time is held, and who "No preference" bookings go to), Deposit (a Toggle Group of No deposit,
+ * Percentage and Fixed amount, with its amounts), Cancelling and no-shows, and Rescheduling. Every list is a Select
+ * with the prototype's labels; every typed number shows its rule's message beside it.
  */
 export function BookingRulesForm({ form, errors, currency, disabled, onChoose, onType }: Props) {
   const t = useTranslations('settings.rules');
@@ -103,6 +107,30 @@ export function BookingRulesForm({ form, errors, currency, disabled, onChoose, o
           onChange={(value) => onChoose('bookingHorizonDays', Number(value))}
           disabled={disabled}
           testId="rules-horizon"
+        />
+      </FieldGroup>
+
+      <h2 className={heading}>{t('holding')}</h2>
+      <FieldGroup className="gap-4">
+        <RuleSelect
+          id="rules-hold"
+          label={t('hold')}
+          description={t('holdHelp')}
+          value={String(values.holdMinutes)}
+          options={HOLD_MINUTES.map((each) => ({ value: String(each), label: t('holdOption', { minutes: each }) }))}
+          onChange={(value) => onChoose('holdMinutes', Number(value))}
+          disabled={disabled}
+          testId="rules-hold"
+        />
+        <RuleSelect
+          id="rules-no-preference"
+          label={t('noPreference')}
+          description={t('noPreferenceHelp')}
+          value={values.noPreference}
+          options={NO_PREFERENCE.map((each) => ({ value: each, label: t(`noPreferenceOption.${each}`) }))}
+          onChange={(value) => onChoose('noPreference', value as NoPreference)}
+          disabled={disabled}
+          testId="rules-no-preference"
         />
       </FieldGroup>
 

@@ -194,7 +194,9 @@ class BookingOverlapIntegrationTest extends BookingTestBase {
                         "direct",
                         UUID.randomUUID()),
                 startsAt,
-                CLOCK.instant());
+                CLOCK.instant(),
+                java.time.Duration.ofMinutes(10),
+                false);
     }
 
     private static String sqlState(Throwable refused) {

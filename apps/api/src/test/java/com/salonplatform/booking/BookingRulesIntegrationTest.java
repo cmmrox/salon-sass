@@ -142,7 +142,12 @@ class BookingRulesIntegrationTest extends IntegrationTest {
         Http.Exchange first = put(0, suggested());
         assertThat(first.status()).withFailMessage("%s", first.body()).isEqualTo(200);
         assertThat(body(first)).containsEntry("version", 1).containsEntry("currency", "LKR");
-        assertThat(body(first).get("rules")).isEqualTo(json.readValue(json.writeValueAsString(suggested()), Map.class));
+        // A save that leaves out the hold length and the strategy (F07-S02) gets 10 minutes and least_booked.
+        Map<String, Object> withDefaults = new java.util.LinkedHashMap<>(suggested());
+        withDefaults.put("holdMinutes", 10);
+        withDefaults.put("noPreference", "least_booked");
+        assertThat(body(first).get("rules"))
+                .isEqualTo(json.readValue(json.writeValueAsString(withDefaults), Map.class));
 
         Map<String, Object> publicFirst = body(api.call(alpha, "GET", RULES, null, null));
         String firstId = (String) publicFirst.get("versionId");
@@ -402,6 +407,8 @@ class BookingRulesIntegrationTest extends IntegrationTest {
                         "slotIntervalMinutes",
                         "minimumNoticeMinutes",
                         "bookingHorizonDays",
+                        "holdMinutes",
+                        "noPreference",
                         "deposit",
                         "freeCancellationHours",
                         "lateCancellation",

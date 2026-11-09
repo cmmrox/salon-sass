@@ -180,7 +180,8 @@ signature:
   root package for that one module to implement, so dependencies still point one way (decision 087):
   `staff.BookingsOnDate`, `staff.UpcomingMemberBookings`, `staff.MemberBookingsAffected`,
   `catalogue.UpcomingServiceBookings` and `catalogue.ServiceBookingCounts` are implemented by
-  `booking`. The architecture rule names each such interface with the one module allowed to
+  `booking`. `booking.Availability` gives the free times for a service on a date, with a STAFF or
+  CUSTOMER audience (its Javadoc states each audience's rules), for F09, F10 and F15 (F07-S02). The architecture rule names each such interface with the one module allowed to
   implement it; any other module's interface implemented by a `@Service` is still refused
   (decision 109).
 - A state change that another module reacts to is an event (next section), not a call into that
@@ -433,6 +434,15 @@ change, and a stage leaves the code it touches meeting them.
   the same lock after their own checks and ask the booking contract again inside their transaction.
   Whichever goes second sees the first. The re-ask opens its own read transaction, so it holds a
   second connection while the lock is held; these are rare admin actions.
+- A hold lasts the `holdMinutes` of the booking rules version current when it is placed; a rules
+  change never shortens a hold already placed. Free times are worked out by one pure calculation
+  (`booking.domain.FreeTimes`) from the opening day, each eligible professional's working windows,
+  their occupied ranges (live bookings and unexpired holds, buffers included, processing left
+  out), the service's segments, the slot interval counted from local midnight, the clock and the
+  audience; a local time the clocks skip is never offered. A "No preference" hold (`memberId` null
+  or left out) tries, in the strategy's order, each professional the calculation finds free at that
+  start, each in its own transaction, so the constraint still decides; the booking records that it
+  was `assigned`, for reports (decision 110).
 - The booking keeps the names of its professional, service and variant as they were when it was
   placed, so a list needs no read of another module per row and a rename never changes an existing
   booking.

@@ -140,7 +140,9 @@ class BookingPoliciesIntegrationTest extends IntegrationTest {
                         24,
                         new Retention.Deposit(),
                         new Retention.Deposit(),
-                        new Rescheduling.Limited(2, 12)));
+                        new Rescheduling.Limited(2, 12),
+                        10,
+                        NoPreference.LEAST_BOOKED));
 
         saved(alpha, alphasManager.token(), 1, with("deposit", map("kind", "amount", "amountMinor", 250_000L)));
         saved(alpha, alphasManager.token(), 2, with("reschedule", map("limit", 0, "untilHours", null)));
