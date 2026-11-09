@@ -64,7 +64,7 @@ the APIs of F07-S01 and F07-S02.
   the chosen service); **How did they book?** (Phone, WhatsApp, Front desk, Walk-in, Instagram, Google; Phone first); and
   **Find free times**. Missing or invalid name or mobile show the prototype's messages ("Add the customer’s name.", "Add a
   valid mobile number so the customer gets the confirmation.") on their fields, and no search runs. (BKG-11)
-- AC-5: **Find free times** lists the day's times as chips "10:30 AM · Nimal" under "Free times on <day>. Choose one to hold
+- AC-5: **Find free times** lists the day's times as chips "10:30 · Nimal" (the 24-hour `formatClock`, decision 103) under "Free times on <day>. Choose one to hold
   it." (with "No preference": "Each time shows who would take it, sharing bookings evenly." or "… filling the busiest day
   first." per the salon's strategy). An empty answer shows the reason: closed ("The salon is closed on <day>."), nobody
   performs it ("Nobody on the team does this service."), not working ("<Name> isn’t working on <day>." or "Nobody who does
