@@ -128,10 +128,14 @@ public interface BookingRepository extends JpaRepository<Booking, UUID> {
     @Query("select count(b) > 0 from Booking b where b.serviceId = :service and b.endsAt > :now and (" + EXPECTED + ")")
     boolean anyUpcomingForService(@Param("service") UUID serviceId, @Param("now") Instant now);
 
-    /** For each service with any, how many bookings starting at or after {@code from} are in these states. */
-    @Query("select b.serviceId, count(b) from Booking b where b.startsAt >= :from and b.state in :states"
-            + " group by b.serviceId")
-    List<Object[]> countByService(@Param("from") Instant from, @Param("states") Collection<String> states);
+    /**
+     * For each service with any, how many bookings in these states started at or after {@code from} and before
+     * {@code until}; a booking still to come is not counted.
+     */
+    @Query("select b.serviceId, count(b) from Booking b where b.startsAt >= :from and b.startsAt < :until"
+            + " and b.state in :states group by b.serviceId")
+    List<Object[]> countByService(
+            @Param("from") Instant from, @Param("until") Instant until, @Param("states") Collection<String> states);
 
     /** The branch's expected bookings starting in the time, by start time. */
     @Query("select b from Booking b where b.branchId = :branch and b.startsAt >= :from and b.startsAt < :until"

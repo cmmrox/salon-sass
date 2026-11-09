@@ -223,22 +223,44 @@ class BookingContractsIntegrationTest extends BookingTestBase {
         held(alpha, hold(alpha, "12:00"));
         held(alpha, hold(alpha, alpha.kasun(), TOMORROW, "12:00"));
         status(cancel(confirmed(alpha, hold(alpha, alpha.kasun(), TOMORROW, "14:00"))), 200);
+        // Tomorrow at 15:00: every one of them has started, so each counts by its state alone.
+        moveClock(Duration.ofHours(31));
 
+        assertThat(mostBooked()).containsExactly(massage.toString(), alpha.service().toString());
+    }
+
+    @Test
+    void mostBookedCountsTheLastNinetyDaysUpToNowAndNotBookingsStillToCome() {
+        // Decisions 092 and 095 (c): the last 90 days, which end at now by the application's clock (BUG-F07-005).
+        UUID massage = service(alpha.salon(), alpha.owner(), alpha.category(), "Head massage", 2_000, 30, 0);
+        UUID ishara = member(alpha.salon(), alpha.owner(), "Ishara Fonseka", List.of(massage, alpha.service()));
+        String inFiveDays = LocalDate.parse(TODAY).plusDays(5).toString();
+        confirmed(alpha, hold(alpha, alpha.nimali(), TODAY, "09:00"));
+        confirmed(alpha, with(hold(alpha, ishara, inFiveDays, "10:00"), "serviceId", massage.toString()));
+        confirmed(alpha, with(hold(alpha, ishara, inFiveDays, "11:00"), "serviceId", massage.toString()));
+        // 10:30: the 09:00 booking has taken place; the two in five days are still to come.
+        moveClock(Duration.ofMinutes(150));
+
+        assertThat(mostBooked()).containsExactly(alpha.service().toString());
+    }
+
+    /** Switches the Popular card to "Most booked" and reads the services it ranks, as the menu shows them. */
+    private List<Object> mostBooked() {
         Http.Exchange setting =
-                settings.call(alpha.salon(), "GET", "/api/v1/catalogue/popular-setting", null, alpha.owner());
+                settings.call(alpha.salon(), "GET", "/api/v1/catalogue/popular-setting", null, ownerNow(alpha));
         Http.Exchange switched = settings.call(
                 alpha.salon(),
                 "PUT",
                 "/api/v1/catalogue/popular-setting",
                 Map.of("mode", "most_booked", "version", body(setting).get("version")),
-                alpha.owner());
+                ownerNow(alpha));
         status(switched, 200);
-
         Http.Exchange menu = settings.call(alpha.salon(), "GET", "/api/v1/catalogue/menu", null, null);
         status(menu, 200);
-        assertThat((List<?>) body(menu).get("popular"))
-                .extracting(service -> service instanceof Map<?, ?> each ? each.get("id") : service)
-                .containsExactly(massage.toString(), alpha.service().toString());
+        return ((List<?>) body(menu).get("popular"))
+                .stream()
+                .map(service -> service instanceof Map<?, ?> each ? each.get("id") : service)
+                .toList();
     }
 
     @Test
