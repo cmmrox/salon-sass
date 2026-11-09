@@ -24,6 +24,7 @@ import com.salonplatform.catalogue.service.impl.CatalogueScope.Scope;
 import com.salonplatform.catalogue.service.impl.ServiceValidation.Valid;
 import com.salonplatform.catalogue.service.impl.ServiceValidation.ValidVariant;
 import com.salonplatform.platform.SalonCurrency;
+import com.salonplatform.shared.persistence.TransactionLocks;
 import com.salonplatform.shared.web.ApplicationProblemException;
 import com.salonplatform.shared.web.ErrorCode;
 import com.salonplatform.shared.web.FieldProblem;
@@ -70,6 +71,7 @@ class SalonServicesImpl implements SalonServices {
     private final PopularSettingRepository popularSettings;
     private final ServiceViews views;
     private final UpcomingServiceBookings upcoming;
+    private final TransactionLocks locks;
     private final SalonCurrency currency;
     private final CatalogueAudit audit;
     private final Clock clock;
@@ -87,6 +89,7 @@ class SalonServicesImpl implements SalonServices {
             PopularSettingRepository popularSettings,
             ServiceViews views,
             UpcomingServiceBookings upcoming,
+            TransactionLocks locks,
             SalonCurrency currency,
             CatalogueAudit audit,
             Clock clock,
@@ -101,6 +104,7 @@ class SalonServicesImpl implements SalonServices {
         this.popularSettings = popularSettings;
         this.views = views;
         this.upcoming = upcoming;
+        this.locks = locks;
         this.currency = currency;
         this.audit = audit;
         this.clock = clock;
@@ -295,15 +299,16 @@ class SalonServicesImpl implements SalonServices {
     public void delete(UUID id, Long version) {
         Scope at = scope.of(CatalogueScope.CHANGE);
         long expected = requiredVersion("version", version);
-        // The booking module's answer, in its own transaction, before this one opens (decision 093).
-        if (upcoming.anyFor(id)) {
-            throw new ApplicationProblemException(409, ErrorCode.IN_USE);
-        }
+        // The booking module's answer, in its own transaction, before this one opens (decision 093), and again under
+        // the guard lock inside it, which closes decision 094(f)'s window (F07-S01 AC-13).
+        refuseUpcomingBookings(id);
         changing(() -> writing.execute(status -> {
             SalonService service = live(id, at);
             if (service.getVersion() != expected) {
                 throw new ApplicationProblemException(409, ErrorCode.CONFLICT);
             }
+            locks.hold(UpcomingServiceBookings.GUARD_LOCK, id);
+            refuseUpcomingBookings(id);
             Map<String, Object> before = values(service, terms.require(service.getCurrentTermsId()));
             UUID photoId = service.getPhotoId();
             Instant now = clock.instant();
@@ -315,6 +320,12 @@ class SalonServicesImpl implements SalonServices {
             audit.record(at.actor(), DELETED, CatalogueAudit.SERVICE, id, before, null, now);
             return null;
         }));
+    }
+
+    private void refuseUpcomingBookings(UUID id) {
+        if (upcoming.anyFor(id)) {
+            throw new ApplicationProblemException(409, ErrorCode.IN_USE);
+        }
     }
 
     private SalonService live(UUID id, Scope at) {

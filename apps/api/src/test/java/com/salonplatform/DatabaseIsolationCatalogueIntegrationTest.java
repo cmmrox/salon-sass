@@ -97,6 +97,9 @@ class DatabaseIsolationCatalogueIntegrationTest {
                         "staff_member_blocked_time",
                         // F04-S04: the booking rules' versions.
                         "booking_rules_version",
+                        // F07-S01: holds and bookings, and their history.
+                        "booking_appointment",
+                        "booking_state_change",
                         // F05-S01: the catalogue's category lists, categories, photos, services and terms versions.
                         "catalogue_category_list",
                         "catalogue_category",
@@ -292,6 +295,9 @@ class DatabaseIsolationCatalogueIntegrationTest {
                         org.assertj.core.api.Assertions.tuple("staff_member_blocked_time", "DELETE,INSERT,SELECT"),
                         // F04-S04: a booking rules version is written once and read, never changed or removed.
                         org.assertj.core.api.Assertions.tuple("booking_rules_version", "INSERT,SELECT"),
+                        // F07-S01: a booking changes state and is never removed; a history entry is written once.
+                        org.assertj.core.api.Assertions.tuple("booking_appointment", "INSERT,SELECT,UPDATE"),
+                        org.assertj.core.api.Assertions.tuple("booking_state_change", "INSERT,SELECT"),
                         // F05-S01: the category list exists from a salon's creation and is only changed;
                         // categories are added, changed and removed; a photo is replaced, never changed; a service
                         // is never removed (deleting it makes a tombstone); a terms version is written once.

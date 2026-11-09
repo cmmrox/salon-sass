@@ -12,6 +12,7 @@ public final class ApplicationProblemException extends RuntimeException {
     private final ErrorCode code;
     private final transient List<FieldProblem> errors;
     private Long retryAfterSeconds;
+    private String detail;
 
     public ApplicationProblemException(int status, ErrorCode code) {
         this(status, code, List.of());
@@ -28,6 +29,21 @@ public final class ApplicationProblemException extends RuntimeException {
         if (seconds < 1) throw new IllegalArgumentException("Retry time must be positive");
         this.retryAfterSeconds = seconds;
         return this;
+    }
+
+    /**
+     * A sentence that says more than the code's own detail, such as which booking rule refused a change. It is
+     * written by the application, never taken from the request or another exception.
+     */
+    public ApplicationProblemException withDetail(String sentence) {
+        if (sentence == null || sentence.isBlank()) throw new IllegalArgumentException("A detail is a sentence");
+        this.detail = sentence;
+        return this;
+    }
+
+    /** The detail the body carries: {@link #withDetail}'s, else the code's own. */
+    public String detail() {
+        return detail == null ? code.detail() : detail;
     }
 
     public Long retryAfterSeconds() {

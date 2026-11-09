@@ -126,6 +126,11 @@ describe('the committed contract', () => {
       'limit_reached',
       'support_read_only',
       'support_session_active',
+      // F07-S01: bookings and holds.
+      'slot_taken',
+      'slot_unavailable',
+      'hold_expired',
+      'rules_not_set',
       'bad_request',
       'not_found',
       'method_not_allowed',

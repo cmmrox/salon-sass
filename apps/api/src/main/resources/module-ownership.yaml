@@ -111,10 +111,13 @@ modules:
       - salon.staff
 
   booking:
-    description: The salon's booking rules and policies, each save an immutable version.
+    description: Holds and bookings with their states and history, and the salon's booking rules and policies, each save an immutable version.
     tables:
+      - booking_appointment
       - booking_rules_version
+      - booking_state_change
     paths:
+      - /api/v1/bookings
       - /api/v1/salon/booking-rules
     settings:
       - salon.booking
