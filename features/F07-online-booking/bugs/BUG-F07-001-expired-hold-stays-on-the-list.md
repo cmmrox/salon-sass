@@ -2,12 +2,12 @@
 id: BUG-F07-001
 title: A hold whose countdown reaches zero stays on the Bookings list at "Held · 0:00 left" until the page is reloaded
 severity: major
-status: open
+status: fixed
 found_by: TC-F07-S03-003
 breaks: AC-2
 found_on: 2026-11-09
-fixed_in: null
-fix_note: null
+fixed_in: bdf2e35499e4ecbc3686c51da911b63136c4b8b2
+fix_note: "The Bookings list asks the API again every 2 seconds while it still lists a hold whose time is up, as the appointment sheet does, so the row leaves once the API stops listing it."
 developer_note: null
 verified_on: null
 approved_by: null
