@@ -674,6 +674,7 @@ test('TC-F06-S03-045 AC-15: choosing the first day sets an empty or earlier last
   await test.step('one date choice saves one day', async () => {
     await button(sheet, N.saveLeave, true).click();
     await expect(toast(page, TEXT.leaveAdded)).toBeVisible();
+    await expect(id(sheet, W.leaveRow), 'listed').toHaveCount(1);
     expect((await absences.read(salon, owner.tokens, person.id)).leave.map(l => [l.firstDay, l.lastDay]), 'one day, from one choice').toEqual([[first, first]]);
   });
   // All in the first day's month, from its 13th to its 19th, so each day checked is in the calendar's month.
@@ -695,7 +696,9 @@ test('TC-F06-S03-045 AC-15: choosing the first day sets an empty or earlier last
     await closeCalendar();
     await button(sheet, N.saveLeave, true).click();
     await expect(id(sheet, W.leaveProblem), 'nothing to correct').toHaveCount(0);
-    await expect(toast(page, TEXT.leaveAdded)).toBeVisible();
+    // The first save's "Leave added." can still be showing, so the save is known done by its row, not by a toast.
+    await expect(id(sheet, W.leaveRow), 'the second leave is listed').toHaveCount(2);
+    await expect(toast(page, TEXT.leaveAdded).first()).toBeVisible();
   });
   expect((await absences.read(salon, owner.tokens, person.id)).leave.map(l => [l.firstDay, l.lastDay]), 'stored as chosen').toEqual([[first, first], [past, past]]);
 });
