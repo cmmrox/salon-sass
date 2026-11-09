@@ -77,7 +77,7 @@ class BookingReadsIntegrationTest extends BookingTestBase {
     void stateAndProfessionalFilterTheList() {
         Map<String, Object> holdOnly = held(alpha, hold(alpha, "10:00"));
         Map<String, Object> booked = confirmed(alpha, hold(alpha, "12:00"));
-        Map<String, Object> kasuns = confirmed(alpha, hold(alpha, alpha.kasun(), TOMORROW, "12:00"));
+        Map<String, Object> kasuns = confirmed(alpha, hold(alpha, alpha.kasun(), TOMORROW, "13:00"));
         String day = "from=" + TOMORROW + "&to=" + TOMORROW;
 
         assertThat(items(list(alpha, day + "&state=held", alpha.owner())))
