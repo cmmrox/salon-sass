@@ -3,7 +3,7 @@ import { salonSettingsFor } from '@/features/branding/server';
 import { createIdentityWeb } from '@/features/identity/server';
 import { salonAccountFor } from '@/features/platform/server';
 import { salonHoursFor, salonTeamFor } from '@/features/staff/server';
-import { salonBookingRulesFor } from '@/features/booking/server';
+import { salonBookingRulesFor, salonBookingsFor } from '@/features/booking/server';
 import { salonCatalogueFor } from '@/features/catalogue/server';
 
 const handleIdentity = createIdentityWeb(
@@ -13,6 +13,7 @@ const handleIdentity = createIdentityWeb(
   salonBookingRulesFor,
   salonCatalogueFor,
   salonTeamFor,
+  salonBookingsFor,
 );
 
 export async function GET(request: NextRequest, context: { params: Promise<{ kind: string; action: string }> }) {
