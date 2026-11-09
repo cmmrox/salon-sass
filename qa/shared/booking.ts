@@ -243,10 +243,14 @@ export async function bookingSalon(identity: Identity, operator: Operator, clock
   const team = new Team(identity);
   const members: TeamMember[] = [];
   for (let n = 0; n < (options.people ?? 2); n++) {
-    members.push(await team.add(salon, owner.tokens, memberInput({ services: { categoryIds: [], serviceIds: [service.id] } })));
+    members.push(await team.add(salon, owner.tokens, memberInputFor(service.id)));
   }
   return { ...made, identity, today, hours, bookingRules, catalogue, category, service, team, members, bookings: new Bookings(identity) };
 }
+
+/** A new team member, a realistic person, who performs the one service given. */
+export const memberInputFor = (serviceId: string, overrides: Record<string, unknown> = {}) =>
+  memberInput({ services: { categoryIds: [], serviceIds: [serviceId] }, ...overrides });
 
 /** A service with Short, Medium and Long variants in the same salon, performed by the given members. */
 export async function variantService(s: BookingSalon, performers: TeamMember[] = s.members): Promise<ServiceS02> {
