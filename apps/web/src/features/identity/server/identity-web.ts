@@ -34,14 +34,15 @@ import {
   readCatalogue,
   type SalonCatalogueFor,
 } from './salon-catalogue';
+import { readTeam, TEAM_PERMISSIONS, TEAM_PHOTO, TEAM_READS, TEAM_WRITES, type SalonTeamFor } from './salon-team';
 import {
-  readTeam,
-  TEAM_PERMISSIONS,
-  TEAM_PHOTO,
-  TEAM_READS,
-  TEAM_WRITES,
-  type SalonTeamFor,
-} from './salon-team';
+  BOOKING_PERMISSIONS,
+  BOOKING_READS,
+  BOOKING_WRITES,
+  changeBooking,
+  readBookings,
+  type SalonBookingsFor,
+} from './salon-bookings';
 import { UPLOAD_LIMIT_BYTES } from '@/lib/http/upload-limits';
 
 type Tokens = components['schemas']['Tokens'];
@@ -85,6 +86,7 @@ const SUPPORT_READS = [
   ...RULES_READS,
   ...CATALOGUE_READS,
   ...TEAM_READS,
+  ...BOOKING_READS,
 ];
 export function proxyKey(): Buffer {
   const value = process.env.SALON_IDENTITY_PROXY_KEY;
@@ -187,6 +189,7 @@ async function handleSupport(
   salonBookingRulesFor: SalonBookingRulesFor,
   salonCatalogueFor: SalonCatalogueFor,
   salonTeamFor: SalonTeamFor,
+  salonBookingsFor: SalonBookingsFor,
 ) {
   if (request.method === 'GET' && !SUPPORT_READS.includes(action))
     return action === 'sessions' || action === 'support-sessions'
@@ -203,7 +206,8 @@ async function handleSupport(
   const bookingRules = salonBookingRulesFor(host.hostname);
   const catalogue = salonCatalogueFor(host.hostname);
   const team = salonTeamFor(host.hostname);
-  if (!client || !account || !settings || !hours || !bookingRules || !catalogue || !team)
+  const bookings = salonBookingsFor(host.hostname);
+  if (!client || !account || !settings || !hours || !bookingRules || !catalogue || !team || !bookings)
     return problem('service_unavailable', 503);
   const access = request.cookies.get(cookieName('support', 'access'))?.value;
   const options = { headers: access ? { Authorization: `Bearer ${access}` } : {}, signal: requestSignal() };
@@ -255,6 +259,7 @@ async function handleSupport(
     ...RULES_PERMISSIONS,
     ...CATALOGUE_PERMISSIONS,
     ...TEAM_PERMISSIONS,
+    ...BOOKING_PERMISSIONS,
   };
   if (permission[action] && !principal.permissions.includes(permission[action]!))
     return problem('permission_denied', 403);
@@ -269,17 +274,19 @@ async function handleSupport(
         ? await readCatalogue(catalogue, action, options, request.nextUrl.searchParams)
         : TEAM_READS.includes(action)
           ? await readTeam(team, action, options, request.nextUrl.searchParams)
-          : action === 'staff'
-          ? await client.GET('/api/v1/identity/staff', { ...options, params: { query } })
-          : action === 'audit'
-            ? await client.GET('/api/v1/identity/audit', { ...options, params: { query } })
-            : action === 'entitlements'
-              ? await account.entitlements(options)
-              : action === 'profile-draft'
-                ? await settings.profileDraft(options)
-                : action === 'brand-draft'
-                  ? await settings.brandDraft(options)
-                  : await account.invoices(options, query);
+          : BOOKING_READS.includes(action)
+            ? await readBookings(bookings, action, options, request.nextUrl.searchParams, () => apiTime(host.hostname))
+            : action === 'staff'
+              ? await client.GET('/api/v1/identity/staff', { ...options, params: { query } })
+              : action === 'audit'
+                ? await client.GET('/api/v1/identity/audit', { ...options, params: { query } })
+                : action === 'entitlements'
+                  ? await account.entitlements(options)
+                  : action === 'profile-draft'
+                    ? await settings.profileDraft(options)
+                    : action === 'brand-draft'
+                      ? await settings.brandDraft(options)
+                      : await account.invoices(options, query);
   if (result.response.status === 401) {
     const response = problem('invalid_session', 401, { renewable: false });
     endSupportView(response);
@@ -316,6 +323,7 @@ export function createIdentityWeb(
   salonBookingRulesFor: SalonBookingRulesFor,
   salonCatalogueFor: SalonCatalogueFor,
   salonTeamFor: SalonTeamFor,
+  salonBookingsFor: SalonBookingsFor,
 ) {
   return (request: NextRequest, kind: Kind, action: string) =>
     handleIdentity(request, kind, action, {
@@ -325,6 +333,7 @@ export function createIdentityWeb(
       salonBookingRulesFor,
       salonCatalogueFor,
       salonTeamFor,
+      salonBookingsFor,
     });
 }
 
@@ -336,12 +345,20 @@ type Ports = {
   salonBookingRulesFor: SalonBookingRulesFor;
   salonCatalogueFor: SalonCatalogueFor;
   salonTeamFor: SalonTeamFor;
+  salonBookingsFor: SalonBookingsFor;
 };
 
 /** Allowlisted account operations only; neither a URL nor a tenant selector comes from input. */
 async function handleIdentity(request: NextRequest, kind: Kind, action: string, ports: Ports) {
-  const { salonAccountFor, salonSettingsFor, salonHoursFor, salonBookingRulesFor, salonCatalogueFor, salonTeamFor } =
-    ports;
+  const {
+    salonAccountFor,
+    salonSettingsFor,
+    salonHoursFor,
+    salonBookingRulesFor,
+    salonCatalogueFor,
+    salonTeamFor,
+    salonBookingsFor,
+  } = ports;
   try {
     const host = requestHost(request.headers.get('host'));
     if (!host) return problem('not_found', 404);
@@ -356,6 +373,7 @@ async function handleIdentity(request: NextRequest, kind: Kind, action: string, 
         salonBookingRulesFor,
         salonCatalogueFor,
         salonTeamFor,
+        salonBookingsFor,
       );
     const reads = [
       'principal',
@@ -371,6 +389,7 @@ async function handleIdentity(request: NextRequest, kind: Kind, action: string, 
       ...RULES_READS,
       ...CATALOGUE_READS,
       ...TEAM_READS,
+      ...BOOKING_READS,
     ];
     if (request.method === 'GET' && !reads.includes(action)) return problem('method_not_allowed', 405);
     if (request.method !== 'GET' && !csrf(request)) return problem('request_rejected', 403);
@@ -381,7 +400,8 @@ async function handleIdentity(request: NextRequest, kind: Kind, action: string, 
     const bookingRules = salonBookingRulesFor(host.hostname);
     const catalogue = salonCatalogueFor(host.hostname);
     const team = salonTeamFor(host.hostname);
-    if (!client || !account || !settings || !hours || !bookingRules || !catalogue || !team)
+    const bookings = salonBookingsFor(host.hostname);
+    if (!client || !account || !settings || !hours || !bookingRules || !catalogue || !team || !bookings)
       return problem('service_unavailable', 503);
     const access = request.cookies.get(cookieName(kind, 'access'))?.value;
     const refresh = request.cookies.get(cookieName(kind, 'refresh'))?.value;
@@ -461,6 +481,7 @@ async function handleIdentity(request: NextRequest, kind: Kind, action: string, 
       ...RULES_PERMISSIONS,
       ...CATALOGUE_PERMISSIONS,
       ...TEAM_PERMISSIONS,
+      ...BOOKING_PERMISSIONS,
     };
     if (principal && permission[action] && !principal.permissions.includes(permission[action]!))
       return problem('permission_denied', 403);
@@ -480,23 +501,27 @@ async function handleIdentity(request: NextRequest, kind: Kind, action: string, 
             ? await readCatalogue(catalogue, action, options, request.nextUrl.searchParams)
             : TEAM_READS.includes(action)
               ? await readTeam(team, action, options, request.nextUrl.searchParams)
-            : action === 'sessions'
-              ? await client.GET('/api/v1/identity/sessions', { ...options, params: { query } })
-              : action === 'staff'
-                ? await client.GET('/api/v1/identity/staff', { ...options, params: { query } })
-                : action === 'audit'
-                  ? await client.GET('/api/v1/identity/audit', { ...options, params: { query } })
-                  : action === 'entitlements'
-                    ? await account.entitlements(options)
-                    : action === 'invoices'
-                      ? await account.invoices(options, { page, size: 10 })
-                      : action === 'support-sessions'
-                        ? await account.supportSessions(options, query)
-                        : action === 'profile-draft'
-                          ? await settings.profileDraft(options)
-                          : action === 'brand-draft'
-                            ? await settings.brandDraft(options)
-                            : null;
+              : BOOKING_READS.includes(action)
+                ? await readBookings(bookings, action, options, request.nextUrl.searchParams, () =>
+                    apiTime(host.hostname),
+                  )
+                : action === 'sessions'
+                  ? await client.GET('/api/v1/identity/sessions', { ...options, params: { query } })
+                  : action === 'staff'
+                    ? await client.GET('/api/v1/identity/staff', { ...options, params: { query } })
+                    : action === 'audit'
+                      ? await client.GET('/api/v1/identity/audit', { ...options, params: { query } })
+                      : action === 'entitlements'
+                        ? await account.entitlements(options)
+                        : action === 'invoices'
+                          ? await account.invoices(options, { page, size: 10 })
+                          : action === 'support-sessions'
+                            ? await account.supportSessions(options, query)
+                            : action === 'profile-draft'
+                              ? await settings.profileDraft(options)
+                              : action === 'brand-draft'
+                                ? await settings.brandDraft(options)
+                                : null;
       if (!result) return problem('not_found', 404);
       return result.data
         ? output(result.data)
@@ -668,6 +693,13 @@ async function handleIdentity(request: NextRequest, kind: Kind, action: string, 
           // The catalogue (F05-S01): the answer is allowlisted by its contract, the request rebuilt by the
           // catalogue. A delete answers no content; a creation or a duplicate answers 201.
           const r = await catalogue.change(options, action, body);
+          if (r.data) return output(r.data, r.response.status === 201 ? 201 : 200);
+          return r.response.ok ? output({ ok: true }) : failure(r);
+        }
+        if (BOOKING_WRITES.includes(action)) {
+          // Bookings (F07-S03): the answer is allowlisted by its contract, the request rebuilt by booking. A hold
+          // answers 201, a release no content.
+          const r = await changeBooking(bookings, action, options, body);
           if (r.data) return output(r.data, r.response.status === 201 ? 201 : 200);
           return r.response.ok ? output({ ok: true }) : failure(r);
         }

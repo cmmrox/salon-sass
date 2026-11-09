@@ -11,6 +11,7 @@ import type { SalonHours, SalonHoursFor } from './salon-hours';
 import type { SalonBookingRules, SalonBookingRulesFor } from './salon-booking-rules';
 import type { SalonCatalogue, SalonCatalogueFor } from './salon-catalogue';
 import type { SalonTeam, SalonTeamFor } from './salon-team';
+import type { SalonBookings, SalonBookingsFor } from './salon-bookings';
 import { normalizeIp, strictInstant } from '@/lib/http/network';
 import { formatInstant } from '@salon/format';
 
@@ -38,6 +39,10 @@ const unreachedCatalogue: SalonCatalogueFor = () =>
   new Proxy({} as SalonCatalogue, {
     get: () => () => Promise.reject(new Error('the catalogue module is not reached here')),
   });
+const unreachedBookings: SalonBookingsFor = () =>
+  new Proxy({} as SalonBookings, {
+    get: () => () => Promise.reject(new Error('the booking paths are not reached here')),
+  });
 const unreachedTeam: SalonTeamFor = () =>
   new Proxy({} as SalonTeam, {
     get: () => () => Promise.reject(new Error('the team paths are not reached here')),
@@ -49,6 +54,7 @@ const handleIdentity = createIdentityWeb(
   unreachedRules,
   unreachedCatalogue,
   unreachedTeam,
+  unreachedBookings,
 );
 let server: Server;
 let calls: { path: string; host?: string; proof?: string }[];

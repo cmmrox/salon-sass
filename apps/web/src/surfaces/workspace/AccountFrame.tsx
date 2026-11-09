@@ -50,21 +50,23 @@ export function AccountFrame({
           >
             {signIn
               ? t('staffTitle')
-              : view === 'team' || view === 'staff'
-                ? t('team')
-                : view === 'audit'
-                  ? t('audit')
-                  : view === 'billing'
-                    ? t('billing')
-                    : view === 'support-access'
-                      ? t('supportAccess')
-                      : view === 'settings'
-                        ? t('settings')
-                        : view === 'services'
-                          ? t('services')
-                          : support
-                            ? t('supportView')
-                            : t('account')}
+              : view === 'bookings'
+                ? t('bookings')
+                : view === 'team' || view === 'staff'
+                  ? t('team')
+                  : view === 'audit'
+                    ? t('audit')
+                    : view === 'billing'
+                      ? t('billing')
+                      : view === 'support-access'
+                        ? t('supportAccess')
+                        : view === 'settings'
+                          ? t('settings')
+                          : view === 'services'
+                            ? t('services')
+                            : support
+                              ? t('supportView')
+                              : t('account')}
           </h1>
           {children}
         </div>

@@ -4,7 +4,7 @@ feature: F07
 title: Staff booking screens
 sequence: 3
 surfaces: [web]                # api | web | mobile | infra | docs
-status: outlined            # outlined | planned | in-progress | built | complete | released
+status: complete              # outlined | planned | in-progress | built | complete | released
 qa_status: not-run          # stays not-run: QA passes the feature. Set only by a stage pass the owner asked for
 blocked_reason: null        # QA: what stops a stage pass, when qa_status is blocked
 released_in: null
@@ -16,17 +16,270 @@ nfr_focus: [NFR-12]               # non-functional requirements of the feature t
 # Written by the developer at handoff. The stage is closed on it, and QA starts the feature pass
 # from it. Facts; not how the code works.
 handoff:
-  run: null                 # commands that start the product and reach what this stage built
-  data: null                # the accounts and seed data that exist
-  notes: null               # criterion-to-result/evidence; gate commands, tested source, log paths,
-                            # results and relevant conditions; gaps and differences from docs/
+  run: |
+    Web only (no API or contract change). Local, from the worktree /Users/cmmrox/Personal/Projects/salon-sass-f07-s03
+    (branch charithm/feature/F07-S03-staff-booking-screens), in a plain (non-login) shell. The stage's own instance,
+    beside the owner's (3100/8090, database salon) and QA's (3200/8190/5540), neither touched:
+      database f07s03_walk on salon-postgres (5440), API on 8294, web on 3294, key files in a folder of its own.
+    Scripts and server logs in /Users/cmmrox/Personal/Projects/salon-sass-f07-s03/.local/logs/walk-f07s03/:
+      start-api.sh sets SALON_DB_NAME=f07s03_walk SALON_API_PORT=8294 SALON_WEB_PORT=3294, sources
+      infra/scripts/lib/common.sh, calls load_settings, points SALON_{IDENTITY,OPERATOR,BILLING,EXPORT,SUPPORT}_LOCAL_KEY_FILE
+      at keys/ there, JAVA_HOME=JDK 25 (~/.sdkman/candidates/java/25.0.1.0+8-amzn), and runs salon-api.jar there (built
+      by ./mvnw -DskipTests package from this branch; the API is unchanged since F07-S02, GET /api/v1/meta answers commit
+      6705c113). start-web.sh does the same settings (the web needs the instance's key files to sign in) and serves
+      apps/web's production build (pnpm --filter @salon/web build) with node scripts/serve.mjs --port 3294.
+      Then SALON_DB_NAME=f07s03_walk SALON_API_PORT=8294 SALON_WEB_PORT=3294 infra/scripts/local-accounts.sh seeds the
+      roster into that database only. Migrations V1 to V33 run at start; this stage adds none.
+    Both servers were stopped after the walk by their PIDs; f07s03_walk was left for inspection. To remove it:
+      docker exec salon-postgres psql -U salon -d postgres -c "DROP DATABASE f07s03_walk".
+    Screen: http://alpha.localhost:3294/workspace/bookings (navigation: Bookings, right after Account and before Staff).
+    Address (URL query) of the Bookings page, each left out at its default; reload and back restore them:
+      day=YYYY-MM-DD (the salon's today by the API's clock when absent), q=<search as typed, at most 60>,
+      status=held|confirmed|arrived|in_service|completed|cancelled|no_show (absent: all),
+      professional=<team member id> (only for callers with the salon scope), page=<from 1> (absent: 1),
+      booking=<booking id> (the appointment sheet open on it).
+      Day, status, professional and page push a history entry; the search (debounced 300 ms) and booking replace it.
+    New BFF actions (/identity-web/{staff|support}/<action>), each permission-checked before any API call:
+      GET bookings?from&to&state&memberId&q&page&size (calendar.read), booking?id (calendar.read),
+      booking-clock (calendar.read; the API's GET /api/v1/meta time, {now}), booking-availability?serviceId&variantId&date
+      &memberId (booking.manage), booking-open-days?from&to (booking.manage); POST booking-place {idempotencyKey,
+      memberId|null, serviceId, variantId?, date, time, customer{name,mobile}, channel} (booking.manage), booking-confirm,
+      booking-release, booking-cancel {id, reason, note?}, booking-no-show, booking-undo-no-show (booking.manage),
+      booking-arrive, booking-start (booking.attend). A support session reads and is refused every change
+      (support_read_only).
+    The test clock (PUT/DELETE /local/clock on 127.0.0.1:8294) moves "now"; the page reads the API's clock once on
+    load, so a browser whose clock differs still counts down by the server's expiry.
+  data: |
+    Local seed: unchanged. Accounts: the fixed roster (infra/local/accounts.json, password 123456@321; Owners and
+    operators with the roster's TOTP seeds), seeded only into f07s03_walk; no roster account anywhere was changed. One
+    synthetic non-roster account was added in f07s03_walk only, for the IAM-08 case: walk.granted@alphasalon.lk, role
+    PROFESSIONAL with the salon-wide grant (password Walk-granted-2086!, local and synthetic; the roster password was
+    refused by the password rules).
+    Walk data in f07s03_walk only, with the test clock from 15 June 2086 07:30 Colombo (moved forward during the walk):
+    alpha: opening hours 09:00-19:00 every day, a closure on 20 June; services Cut and blow-dry (45 + 15 min, Rs. 4,500),
+    Head massage (30 min, Rs. 2,000), Hair colour (Hair length: Short 60 min Rs. 6,000, Long 90 min Rs. 9,000); team
+    Sanduni Wickramasinghe (cut, colour; linked to the roster Professional Tharindu), Ishara Fonseka (cut), Nethmi
+    Bandara (massage); bookings for synthetic customers (Amaya Rajapaksa, Nethmi Silva, Nanayakkara Wanigasekara
+    Basnayake Dharmasena, Sewwandi Perera, Dinithi Gunawardena, Kavindi Herath, Ruwini Fernando) on 15 and 16 June in
+    every state the walk reached; hold length back at 10 minutes. beta: the same hours, one service, Ruwan Perera and one
+    confirmed booking for Thilini Jayasuriya on 15 June (isolation).
+    Tests make their own fixtures (apps/web/src/surfaces/workspace/bookings-fixtures.ts); nothing is shared with any
+    instance.
+  notes: |
+    Tested source: 4b26112f (the last code commit) on the stage branch. The handoff commit changes only this file and the
+    generated documents. Logs in this worktree (keep it until close): /Users/cmmrox/Personal/Projects/salon-sass-f07-s03/
+    .local/logs/gates-f07s03-4b26112f/ (and gates-f07s03-77a6ab3c/ for contracts:check); walk: .local/logs/walk-f07s03/
+    (walk-*.log, shots/, api.log, web.log; run1/ holds the first, pre-restart run). The walk scripts are in the session
+    scratchpad, not the repository: a hook refuses authored scripts under .local, and the scratchpad does not survive a
+    restart (the first copies were lost to the machine restart).
+
+    GATES, each on committed source with a clean tree:
+    | Command | Tested commit | Result | Log |
+    | pnpm -r lint | 4b26112f | exit 0 | gates-f07s03-4b26112f/lint.log |
+    | pnpm -r typecheck | 4b26112f | exit 0 | gates-f07s03-4b26112f/typecheck.log |
+    | pnpm -r test | 4b26112f | exit 0; web 1385, api-contracts 25, format 21 | gates-f07s03-4b26112f/test.log |
+    | pnpm --filter @salon/web test:a11y | 4b26112f | exit 0; 403 tests in 13 files | gates-f07s03-4b26112f/a11y.log |
+    | pnpm --filter @salon/web build | 4b26112f | exit 0 | gates-f07s03-4b26112f/web-build.log |
+    | pnpm contracts:check | 77a6ab3c | exit 0; document and client current | gates-f07s03-77a6ab3c/contracts-check.log |
+    4b26112f differs from 77a6ab3c only under apps/web (git diff --stat 77a6ab3c 4b26112f -- apps/api packages docs/api
+    pnpm-lock.yaml package.json pnpm-workspace.yaml is empty), so the contracts result stands. The web gates were also
+    green on 77a6ab3c, 7d2b51c0, 85be743c, 8027ad98 and 73b7acfa (each folder beside it); each later commit fixed a defect
+    the walk found (below). No gate failed; neither known branding flake (decision 110) appeared.
+    python3 qa/scripts/guard.py --role dev --diff: every changed path is a developer path, before every commit.
+
+    CRITERIA, each checked on the running product (logs in walk-f07s03/) and by the tests named. Widths 360, 768 and
+    1280 with every role: walk-4-roles.log (149 of 150; the one miss is the walk's own crude isolation check, superseded by
+    walk-5-isolation.log) on 85be743c, and walk-9-roles-final.log on 4b26112f (135 of 135, everything but the support
+    session and isolation blocks, whose code did not change; the run stopped at its last sign-in, refused after many
+    sign-ins of one account). The page and New appointment: walk-1-page.log (73 of 74) and walk-8-page-final.log; the
+    sheet, cancelling and refusals: walk-2-sheet.log (65 of 66; the miss lists the 409 and 503 responses the walk itself
+    caused); the countdown to zero: walk-3-countdown.log; renewal: walk-6-renew.log; keyboard: walk-7-keyboard-*.log.
+    AC-1 checked: Owner, Manager, Receptionist, linked and granted Professional and a support session see Bookings right
+      after Account and before Staff, opening /workspace/bookings; the Accountant has no entry and the page shows the
+      workspace's not-permitted state (account-denied) at 360/768/1280, and the BFF refuses the list 403. Tests:
+      WorkspaceShell.test.tsx, bookings.test.ts.
+    AC-2 checked: today by the API's clock (2086), the day's bookings and holds in time order; wide a Table of When
+      (day, start-end), Customer (name, national mobile), Service (with variant), Professional, Status (Badge and source
+      Badge) and Reference; below 900 px the prototype's rows with the same facts; "N bookings on <day>" and "1 booking on
+      <day>"; a hold "Held · 9:41 left" counting down, within 5 s of the server's expiry; a hold whose time is up leaves
+      the list without a reload (the list is read again at zero and shows what the API says). Tests: BookingsScreen.test.
+    AC-3 checked: search by name, mobile and reference (lower case, no hyphen) through q, one read per search typed,
+      kept in the URL; the Calendar day chooser and Today; the status Select (All statuses, Held … No-show); the
+      professional Select (Everyone, then each member; hidden for the own scope); Empty "No bookings match." / "Try
+      another day, or clear the search." with Clear filters; reload and back/forward restore the day and filters;
+      Pagination for more than 50 (the heading counts all pages; checked in tests with 54).
+    AC-4 checked: + New appointment for those with booking.manage; the intro, Customer name, Mobile number and its help,
+      Day (Calendar of open days from today to a year ahead: the closure and past days disabled), Service with price
+      ("From Rs. 6,000" when variants differ) and its variant Select (labelled with the set's name, each with its price),
+      Professional (No preference, then who performs it), How did they book? (Phone first …); a missing name or mobile and
+      a landline show the prototype's messages on their fields, focus goes to the first, and no search runs.
+    AC-5 checked: chips "10:15 · Ishara" (24-hour), under "Free times on <day>. Choose one to hold it." and, with No
+      preference, "Each time shows who would take it." (decision 111); a time a professional has goes to another; a
+      professional chosen shows only theirs; changing any field clears the times (and releases a hold). The four reasons
+      with their words: tests (BookingsScreen.test, one case each, the professional's name for not_working with one).
+    AC-6 checked: choosing a time holds it (No preference sends memberId null) and shows "Holding this time", the
+      countdown (role=timer, aria-live=off) within 5 s of the hold's holdExpiresAt by the API's clock, the customer,
+      service, professional, when and source and the note; a double click placed one hold; Choose another time released
+      it (404 after) and showed the times again; Confirm booking confirmed it (API state confirmed), closed the sheet and
+      said "Booked for Sun, Jun 16, 2086 at 09:15 with Ishara. Reference …."; a time taken meanwhile said "That time was
+      just taken. Choose another." with fresh times; confirming after the server's expiry said "The hold ran out …"
+      (and the hold was 404); closing the sheet with a hold released it, also when the page was left at once; with the
+      shortest hold (5 minutes) the countdown ran to zero in real time, the sheet asked the API and said "The hold ran out
+      and the time was released. Find free times again." (walk-3-countdown.log).
+    AC-7 checked: the sheet shows the customer, status and source Badges, the rows Reference, Mobile, Service,
+      Professional, Date, Time, Source; exactly the actions allowedActions permits (confirm left out) in the prototype's
+      order, compared with the API's answer before the start, after it, as a no-show, and on a hold; each says its words
+      ("Marked arrived.", "Service started.", "Amaya marked no-show.", "No-show undone.", "Hold released. The time is open
+      again."); the explanations ("Arrival is marked on the day." on a later day, the no-show one before the start, the
+      arrived, in-service, undo-today and cancelled ones); History newest first, six changes after no-show, undo, arrive
+      and start, with the staff label and "Sat, Jun 15, 2086, 10:05", and a cancellation's reason and note.
+    AC-8 checked: Cancel booking asks in an Alert Dialog "Cancel this booking?" with "<name>, <day> at <time>. The time
+      opens again for others.", the four reasons, Note "(optional, your team only)" kept to 200 characters; Keep booking
+      changes nothing; without a reason "Choose a reason." and nothing sent; with one "Cancelled. The time is open
+      again.", the reason and note in the API's history.
+    AC-9 checked: invalid_state (cancelled elsewhere, then Mark arrived) said "This booking changed. Here is its current
+      state." and showed Cancelled; rules_not_set said its words with the link for the Owner (routed in the browser, as no
+      salon in the instance lacks rules; the Receptionist's no-link case in tests); a hold refused by an unreachable API
+      said so; support_read_only refused by the BFF; permission_denied, slot_taken on undo, and the unavailable states:
+      tests. After every change the list and the sheet showed the new state without a reload.
+    AC-10 checked: Owner, Manager and Receptionist: everything; the linked Professional: only Sanduni's bookings, no
+      professional filter, no New appointment, only Mark arrived then only Start service, both done; the granted
+      Professional: the salon's bookings and the filter, no New appointment, no action on another's booking; a support
+      session: everything with the read-only notice and no action. Isolation: beta's reference finds nothing on alpha,
+      beta's booking id opens nothing, cancelling it from alpha is 404, and no beta customer, mobile or professional is in
+      any booking response (walk-5-isolation.log; only alpha's own page HTML echoes the reference that was typed).
+    AC-11 checked: loading, empty, error/refused and unavailable states (tests and Bookings.a11y.test.tsx); no sideways
+      scrolling and nothing clipped at 360/768/1280 for every role, and axe WCAG 2.2 AA clean on the page, the appointment
+      sheet and New appointment (problems, times, hold) at all three widths for Owner, Manager and Receptionist and the
+      support session (walk-4-roles.log, 48 axe runs); the a11y gate at every width with a dark and a light brand.
+      Keyboard alone (walk-7-keyboard-*.log, three runs, 9 of 9 each): 40 Tabs stay in the sheet, the form, a Select and
+      the Calendar by keys, Enter on a chip, focus to "Holding this time", Confirm, focus back on + New appointment; a
+      booking opened from its name by Enter, closed by Escape, focus back on the name. The countdown is announced through
+      one polite status line: "Holding this time", then "N minutes left on the hold." at each whole minute, never its
+      seconds (5-minute run: 4, 3, 2, 1). A started form asks before it closes and before a link leaves the page.
+    AC-12 checked: formatClock (24-hour) and formatDay, national mobiles, curly apostrophes, singulars; every
+      interactive element carries a data-testid (list below).
+
+    DEFECTS THE WALK AND TESTS FOUND, EACH FIXED WITH A TEST: two sibling keys of 0 (10c83070); stale free times offered
+      while Choose another time released the hold (397d7b84); focus not returned after a pointer-opened sheet (77a6ab3c);
+      a page loaded with an expired access credential had no New appointment until a reload (7d2b51c0, renews and
+      router.refresh as the Account page does); a closed sheet's hold left held when the page was left at once (85be743c,
+      keepalive release); Calendar focus not on the chosen day (8027ad98, 73b7acfa); focus to the hold racing its card
+      (4b26112f). And from F07-S01: booking.manage and booking.attend had no label on the Account page (937a4b6f).
+
+    TEST IDS (QA's PENDING_F07_S03 guesses differ where marked *)
+    Navigation: workspace-bookings* (QA guessed nav-bookings; the workspace's convention). Not permitted: account-denied*
+      (the existing Denied state; QA guessed workspace-not-permitted).
+    Page: bookings-page, bookings-heading, bookings-new, bookings-tools, bookings-search, bookings-day, bookings-calendar,
+      bookings-day-today (shown only when another day is shown), bookings-status, bookings-status-option-<all|held|
+      confirmed|arrived|in_service|completed|cancelled|no_show>, bookings-professional, bookings-professional-option-all,
+      bookings-professional-option (data-id), bookings-read-only, bookings-loading, bookings-unavailable, bookings-retry,
+      bookings-error, bookings-empty, bookings-clear, bookings-empty-new, bookings-table, bookings-items, bookings-pager,
+      bookings-previous, bookings-next, bookings-page.
+    Rows (data-id, data-state on the row): booking-row (wide), booking-item (narrow), booking-open (the customer's name,
+      the row's keyboard control, data-id), booking-when, booking-time (narrow), booking-mobile, booking-service,
+      booking-professional, booking-status (data-state), booking-source (data-channel), booking-reference.
+    New appointment: new-appointment (the sheet), new-appointment-close, new-appointment-intro,
+      new-appointment-announcement, new-appointment-loading, new-appointment-no-services, new-appointment-name,
+      new-appointment-name-error, new-appointment-mobile, new-appointment-mobile-error, new-appointment-day,
+      new-appointment-calendar, new-appointment-service, new-appointment-service-option (data-id),
+      new-appointment-variant, new-appointment-variant-option (data-id), new-appointment-professional,
+      new-appointment-professional-option-any, new-appointment-professional-option (data-id), new-appointment-source,
+      new-appointment-source-option-<phone|whatsapp|front_desk|walk_in|instagram|google>, new-appointment-find,
+      new-appointment-results, new-appointment-searching, new-appointment-times-intro, new-appointment-no-preference,
+      new-appointment-times, new-appointment-time (data-time, data-member), new-appointment-reason (data-reason),
+      new-appointment-refusal (data-refusal), new-appointment-rules-link, new-appointment-hold (data-id),
+      new-appointment-holding, new-appointment-countdown, hold-customer, hold-service, hold-professional, hold-when,
+      hold-source, new-appointment-hold-note, new-appointment-confirm, new-appointment-another; leave dialog
+      new-appointment-leave-dialog*, new-appointment-leave-stay, new-appointment-leave-confirm (QA guessed
+      new-appointment-leave for the dialog).
+    Appointment: appointment-sheet, appointment-close, appointment-name, appointment-status, appointment-source,
+      appointment-refusal (data-refusal), appointment-loading, appointment-unavailable, appointment-retry,
+      appointment-details, appointment-row (data-row: reference|mobile|service|professional|date|time|source),
+      appointment-actions, appointment-<arrive|start|no-show|undo-no-show|cancel|release>, appointment-explanation
+      (data-explanation), appointment-history, appointment-history-row (data-to), appointment-history-why,
+      appointment-history-by.
+    Cancel: cancel-dialog, cancel-summary, cancel-reason, cancel-reason-option-<customer_asked|salon_unable|
+      booked_by_mistake|other>, cancel-reason-error, cancel-note, cancel-note-count, cancel-keep, cancel-confirm.
+
+    DIFFERENCES FROM docs/ AND CHOICES FOR THE LEAD TO RECORD
+    1. Decision 111 (the lead's rulings): no strategy sentence, "Each time shows who would take it."; History "who" is
+       the staff label, "A team member" for an unknown account, "System"; never "You"; Bookings after Account, before
+       Team.
+    2. "Now" and "today" are the API's: a BFF read booking-clock answers GET /api/v1/meta's time; the page reads it once
+       on load and keeps the offset (half the round trip), so the countdown and today follow the server, not the browser.
+       At zero the sheet asks the API for the booking: 404 or not held says it ran out; still held asks again every 2 s.
+    3. The mobile check: @salon/format gains a separate entry @salon/format/mobile (isMobileNumber, libphonenumber-js's
+       mobile metadata; no new dependency), so only screens that check a mobile load it. The region is read by the web
+       server from SALON_BOOKING_PHONE_REGION, else SALON_BRANDING_PHONE_REGION, else LK (the web read neither before;
+       docs/operations/environments-and-releases.md names them for the API only). A name of 1 or over 60 characters
+       says the same "Add the customer’s name.".
+    4. Words the spec does not give (new strings, prototype tone): refusals on New appointment for slot_unavailable
+       ("That time can no longer be booked. Choose another."), not_found ("The service or professional has changed.
+       Choose them again."), permission, support, salon read-only, offline and other failures; on the appointment sheet
+       not_found ("This booking is no longer on the list. A hold may have run out or been released."), slot_taken on
+       undo ("That time has been booked since, so the no-show stays."), permission, support, salon read-only, offline,
+       failed; the page's refused and unavailable states; "There are no services to book yet. Add them on the Services
+       page."; "The salon is not open on any day in the next year. Set its opening hours in Settings."; the countdown's
+       announcement "N minutes left on the hold."; explanations for a hold ("The desk confirms or releases this hold.")
+       and a completed booking ("Completed at checkout.") from the prototype's openA; state "Pending" for
+       pending_payment (prototype); channel labels App (customer_app), Shared link (shared_app_link), Workspace
+       (staff_web); history verbs from the prototype (Held, Confirmed, Marked arrived, Service started, Marked no-show,
+       No-show undone, Cancelled; Payment started, Payment not completed, Completed for F08/F10's changes); the Account
+       page's labels for booking.manage and booking.attend.
+    5. Explanations follow the prototype's mapping: "The booking is completed at checkout …" only for in service; none
+       for a confirmed booking once a no-show is possible; "A no-show can be undone today only." while undo is allowed.
+    6. The appointment sheet never offers Confirm (the spec's list has none; a hold is confirmed in New appointment);
+       Release closes the sheet, every other change keeps it open and reads it again.
+    7. A read-only salon (overdue invoices) is treated like a support session: no New appointment, no actions, the
+       notice (the spec is silent; every other workspace screen does this).
+    8. Not built from the prototype: the wide page's closing line ("Held times are kept … Payment, rescheduling and the
+       calendar arrive in later features."); the narrow heading's "N bookings" without the day and "+ New" (the spec's
+       wording is used at every width).
+    9. Page size 50 (the API's default); the heading counts every page. Today is a shortcut shown only on another day.
+    10. Changing any field of New appointment while a time is held releases the hold. A started form (name or mobile
+        typed) asks before the sheet closes; LeaveDialog gains the area new-appointment.
+    11. A page rendered without the principal (an expired access credential) renews in the browser and refreshes, as
+        AccountScreen does; a hold is released with a keepalive request, falling back to the locked request.
+    12. The professional filter lists every team member (team-members), New appointment only those who perform the
+        service (by service or whole category, as staff counts them).
+    13. Radix Select ignores keys while its list is opening (about 0.2 s): a keyboard choice works, a script needs a
+        short wait after Enter. Existing screens behave the same.
+
+    API GAPS: none beyond the two decision 111 settled (the strategy is readable only with settings.read; the history's
+    actor carries no account id the caller can match).
+
+    FOR QA (not changed by me, it is under qa/): the prepared F07-S03 tests guess some ids (marked * above) and some
+    behaviour that follows the prototype instead: TC-F07-S03-010 expects the newest history row to read "In service"
+    (it reads "Service started") and the completed-at-checkout explanation on a confirmed booking (prototype: in
+    service only); TC-F07-S03-012's "API unavailable" route matches the page URL itself (/workspace/bookings contains
+    "booking"), so the page navigation is fulfilled with JSON; TC-F07-S03-014 presses keys in a Select without a pause
+    (see 13) and clicks a navigation link behind the open modal sheet, which the overlay intercepts (the leave guard is
+    reached by any link click that does land); TC-F07-S03-018 waits out a 5-minute hold, as the walk did.
+
+    NOT DONE, AND WHY: rules_not_set was shown on the product by routing the browser's request (no salon in the instance
+    lacks rules; creating one needs the operator console flow), and the Receptionist's no-link case only in tests. The
+    final-build reruns repeat the criteria on data the earlier walks had changed, so four page checks there missed for
+    data reasons (walk-8-page-final.log: Amaya already in service, several bookings on one mobile, 10:00 freed by the
+    cancellation, a racy list check); all passed on the clean run (walk-1-page.log, 73 of 74, the one miss the same racy
+    check, the booking then seen on the list: walk-1b-probe-16-june.log). No load or release-suite check. No new
+    dependency. Time, by the commit and log clocks: reading and planning until the first commit; building until about
+    20:17 (with a network interruption); tests and fixes 20:17-21:41 with a machine restart (instance and scratchpad
+    lost, database rebuilt and reseeded); walks and gate reruns to the end, about a third of it waiting on the 5-minute
+    hold and gate runs.
 
 # Written by QA. A case is the test that proves it, titled with its id and the criteria it
 # covers before a colon: test('TC-F07-S03-001 AC-1, AC-2: a free slot is listed', ...), or a
 # '# TC-F07-S03-002 AC-3: ...' header comment in a k6 or shell script. The tooling reads the
 # cases from the registered files; there is no case list or cases.md to keep in step.
 verification:
-  commands: []              # developer gates, exact shell commands, run from the repository root
+  commands:                 # developer gates, exact shell commands, run from the repository root
+    - pnpm -r lint
+    - pnpm -r typecheck
+    - pnpm -r test
+    - pnpm --filter @salon/web test:a11y
+    - pnpm --filter @salon/web build
+    - pnpm contracts:check
   automation: []
   #  - id: <short name>
   #    tool: playwright      # playwright | maestro | k6 | script

@@ -5,7 +5,8 @@
   "description": "Formatting of money, dates, times, phone numbers and sizes for the salon's locale and time zone. Used by the web app, and later by the customer app.",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./mobile": "./src/mobile.ts"
   },
   "scripts": {
     "lint": "eslint --max-warnings 0",

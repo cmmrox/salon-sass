@@ -8,6 +8,7 @@ import { readEntitlements } from '@/features/platform/server';
 import { AccountFrame } from './AccountFrame';
 import { BillingScreen } from './BillingScreen';
 import { BookingRulesSettingsScreen } from './BookingRulesSettingsScreen';
+import { BookingsScreen } from './BookingsScreen';
 import { BrandingSettingsScreen } from './BrandingSettingsScreen';
 import { HoursSettingsScreen } from './HoursSettingsScreen';
 import { ProfileSettingsScreen } from './ProfileSettingsScreen';
@@ -19,11 +20,14 @@ import { TaxSettingsScreen } from './TaxSettingsScreen';
 import { TeamFrame } from './TeamFrame';
 import { TeamScreen } from './TeamScreen';
 
-type View = 'account' | 'team' | 'staff' | 'audit' | 'billing' | 'support-access' | 'settings' | 'services';
+type View =
+  'account' | 'bookings' | 'team' | 'staff' | 'audit' | 'billing' | 'support-access' | 'settings' | 'services';
 type PageProps = { kind: Kind; view?: View; signIn?: boolean; tab?: SettingsTab; servicesTab?: ServicesTab };
 
 const REQUIRED: Record<View, string> = {
   account: 'session.manage',
+  // The Bookings page (F07-S03): the calendar's readers, each in their data scope; not the Accountant (decision 108).
+  bookings: 'calendar.read',
   // The Team page (F06-S01): every role but the Accountant, and a support session (decisions 099, 100).
   team: 'team.read',
   staff: 'staff.list',
@@ -34,6 +38,15 @@ const REQUIRED: Record<View, string> = {
   // The Services & pricing page (F05-S01): every role and a support session read it (decision 093).
   services: 'catalogue.read',
 };
+
+/**
+ * The region a typed mobile number is checked against (decision 084): the booking module's setting, else the branding
+ * one, else `LK`, as the API reads them (docs/operations/environments-and-releases.md). Not a secret.
+ */
+function phoneRegion(): string {
+  const region = process.env.SALON_BOOKING_PHONE_REGION || process.env.SALON_BRANDING_PHONE_REGION || 'LK';
+  return /^[A-Za-z]{2}$/.test(region) ? region.toUpperCase() : 'LK';
+}
 
 /**
  * A salon staff page, decided on the server before anything is sent (CR-013): no Suspense fallback
@@ -105,7 +118,19 @@ export async function AccountPage({ kind: requested, view, signIn, tab, services
       supportBanner={supportBanner}
       support={support}
     >
-      {view === 'team' ? (
+      {view === 'bookings' ? (
+        <BookingsScreen
+          kind={kind}
+          timeZone={salon.timeZone}
+          scope={principal?.scope ?? 'own'}
+          canBook={Boolean(principal?.permissions.includes('booking.manage')) && !readOnly}
+          canAct={!readOnly}
+          canSetRules={Boolean(principal?.permissions.includes('settings.manage')) && !support}
+          readOnly={support ? 'support' : readOnly ? 'salon' : null}
+          phoneRegion={phoneRegion()}
+          principalKnown={principal !== null}
+        />
+      ) : view === 'team' ? (
         <TeamScreen
           kind={kind}
           timeZone={salon.timeZone}
