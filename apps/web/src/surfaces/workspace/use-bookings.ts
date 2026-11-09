@@ -6,6 +6,9 @@ import type { Kind } from '@/features/identity';
 import type { TeamMemberList } from '@/features/staff';
 import { bookingRead, failureOf } from './booking-requests';
 
+/** How long to wait before asking again whether a hold the API still lists has run out by its clock. */
+const RECHECK_MS = 2000;
+
 /** How long the search waits after the last key before it asks the API (AC-3, "applied as typed"). */
 const SEARCH_WAIT_MS = 300;
 
@@ -96,21 +99,28 @@ export function useBookings(
     };
   }, [kind, withProfessionals]);
 
-  // A hold whose time has run out is no longer the API's to list: read the list again, and show what it says.
+  // A hold whose time has run out is no longer the API's to list: read the list again, and show what it says. The API
+  // decides: while it still lists the hold (a read that reached it a moment before the expiry by its clock), ask again
+  // every few seconds, as the sheet does (BUG-F07-001).
   const items = page?.items ?? [];
   const expired =
     now === null
       ? null
       : items.find((each) => each.state === 'held' && each.holdExpiresAt && Date.parse(each.holdExpiresAt) <= now);
   const expiredKey = expired ? `${expired.id}@${expired.holdExpiresAt}` : null;
+  const askedAfter = useRef<string | null>(null);
   useEffect(() => {
     if (!expiredKey) return;
-    let active = true;
-    Promise.resolve().then(() => active && setReloads((n) => n + 1));
-    return () => {
-      active = false;
-    };
-  }, [expiredKey]);
+    // The first read at zero goes at once; each read that still lists the hold (a new page) waits before the next.
+    const id = setTimeout(
+      () => {
+        askedAfter.current = expiredKey;
+        setReloads((n) => n + 1);
+      },
+      askedAfter.current === expiredKey ? RECHECK_MS : 0,
+    );
+    return () => clearTimeout(id);
+  }, [expiredKey, page]);
 
   return {
     query,

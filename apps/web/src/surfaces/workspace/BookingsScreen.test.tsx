@@ -185,6 +185,18 @@ describe('the Bookings page (F07-S03 AC-2, AC-3)', () => {
     expect(sent('bookings').length).toBeGreaterThan(1);
   });
 
+  it('asks again while the API still lists a hold whose time is up, until it no longer does (BUG-F07-001)', async () => {
+    const expired = { ...KAVINDI, holdExpiresAt: '2086-06-15T08:00:01+05:30' };
+    // The first read at zero lands a moment before the expiry by the API's clock, so it still lists the hold.
+    answers.bookings = () => Response.json(page(sent('bookings').length > 2 ? [AMAYA] : [AMAYA, expired]));
+    render();
+    await ready();
+    await waitFor(() => expect(sent('bookings').length).toBe(2), { timeout: 4000 });
+    expect(screen.getAllByTestId('booking-row')).toHaveLength(2);
+    await waitFor(() => expect(screen.getAllByTestId('booking-row')).toHaveLength(1), { timeout: 5000 });
+    expect(sent('bookings')).toHaveLength(3);
+  }, 10_000);
+
   it('searches as typed, through the API’s q, keeping it in the address', async () => {
     render();
     await ready();
