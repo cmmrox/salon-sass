@@ -24,7 +24,7 @@ vi.mock('next/link', () => ({
   default: (props: React.AnchorHTMLAttributes<HTMLAnchorElement> & { href: string }) => <a {...props} />,
 }));
 
-type Call = { action: string; query: URLSearchParams; body: Record<string, unknown> | null };
+type Call = { action: string; query: URLSearchParams; body: Record<string, unknown> | null; keepalive?: boolean };
 let calls: Call[];
 let answers: Record<string, (call: Call) => Response | Promise<Response>>;
 const FREE = {
@@ -81,6 +81,7 @@ beforeEach(() => {
       action,
       query: new URLSearchParams(search ?? ''),
       body: init?.body ? JSON.parse(String(init.body)) : null,
+      keepalive: init?.keepalive,
     };
     calls.push(call);
     return (answers[action] ?? (() => Response.json({ code: 'not_found' }, { status: 404 })))(call);
@@ -435,6 +436,8 @@ describe('New appointment (F07-S03 AC-4 to AC-6)', () => {
     fireEvent.click(within(sheet).getByTestId('new-appointment-close'));
     fireEvent.click(await screen.findByTestId('new-appointment-leave-confirm'));
     await waitFor(() => expect(sent('booking-release')[0]?.body).toEqual({ id: HELD.id }));
+    // Sent so that leaving the page at once does not cancel it.
+    expect(sent('booking-release')[0]?.keepalive).toBe(true);
     await waitFor(() => expect(screen.queryByTestId('new-appointment')).toBeNull());
   });
 

@@ -26,7 +26,7 @@ import {
 import type { ServiceList } from '@/features/catalogue';
 import type { Kind } from '@/features/identity';
 import type { TeamMemberList } from '@/features/staff';
-import { bookingChange, bookingRead, failureOf, releaseOnLeaving } from './booking-requests';
+import { bookingChange, bookingRead, failureOf, releaseKept } from './booking-requests';
 
 /** How long to wait before asking again whether a hold the countdown ended has run out by the API's clock. */
 const RECHECK_MS = 2000;
@@ -110,18 +110,21 @@ export function useNewAppointment(
     setRefusal(REFUSALS[failure.code] ?? 'failed');
   }
 
-  /** Releases the hold the sheet owns, if any; a hold already gone is no matter. */
+  /**
+   * Releases the hold the sheet owns, if any, by a request that survives leaving the page at once; when that one
+   * cannot say (an access credential to renew), under the session's lock. A hold already gone is no matter.
+   */
   async function releaseHold() {
     const id = holdId.current;
     if (!id) return;
     holdId.current = null;
     setHold(null);
-    await bookingChange(kind, 'booking-release', { id }).catch(() => undefined);
+    if (!(await releaseKept(kind, id))) await bookingChange(kind, 'booking-release', { id }).catch(() => undefined);
   }
 
   // Leaving the page, or the page going away, releases the hold (design notes: "on leaving the page").
   useEffect(() => {
-    const gone = () => holdId.current && releaseOnLeaving(kind, holdId.current);
+    const gone = () => holdId.current && void releaseKept(kind, holdId.current);
     window.addEventListener('pagehide', gone);
     return () => {
       window.removeEventListener('pagehide', gone);

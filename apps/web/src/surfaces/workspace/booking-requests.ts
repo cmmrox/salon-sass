@@ -37,18 +37,22 @@ export const failureOf = (error: unknown) =>
   error instanceof IdentityFailure ? error : new IdentityFailure('service_unavailable');
 
 /**
- * A hold released as the page goes away (closed, reloaded or left): the request outlives the page, and nothing waits
- * for it. The hold runs out by itself if it does not arrive.
+ * A hold released so that the request outlives the page (the sheet closed and the page left at once, reloaded or
+ * closed): it is sent with `keepalive`, which navigation does not cancel. True when the API released it or it was gone
+ * already; false when it could not say (the session needs renewing, or the API was not reached), for the caller to try
+ * the ordinary way. A hold never released runs out by itself.
  */
-export function releaseOnLeaving(kind: Kind, id: string) {
+export async function releaseKept(kind: Kind, id: string): Promise<boolean> {
   try {
-    void fetch(`/identity-web/${kind}/booking-release`, {
+    const response = await fetch(`/identity-web/${kind}/booking-release`, {
       method: 'POST',
       keepalive: true,
+      cache: 'no-store',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id }),
-    }).catch(() => undefined);
+    });
+    return response.ok || response.status === 404;
   } catch {
-    // The page is going; the hold runs out by itself.
+    return false;
   }
 }
