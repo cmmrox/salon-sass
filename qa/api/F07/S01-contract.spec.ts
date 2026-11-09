@@ -8,54 +8,15 @@
  */
 import { randomUUID } from 'node:crypto';
 
-import type { APIResponse } from '@playwright/test';
-
-import Ajv2020 from 'ajv/dist/2020';
-import addFormats from 'ajv-formats';
-
 import { ACTIONS, BOOKINGS, again, bookingSalon, holdInput, staffAt, utcOf } from '../../shared/booking';
-import { committedContract } from '../../shared/openapi';
+import { Seen, problemCodes } from '../../shared/contract';
 import { plusDays } from '../../shared/salon-hours';
 import { test, expect } from '../../shared/operator';
 
 test.describe.configure({ timeout: 180_000 });
 
-type Response = { content?: Record<string, { schema: unknown }> };
-type Operation = { operationId: string; responses: Record<string, Response> };
-
-const contract = committedContract();
-const ajv = new Ajv2020({ allErrors: true, strict: false });
-addFormats(ajv);
-ajv.addSchema({ $id: 'https://contract.test/openapi.json', components: contract.components });
-
-function operation(method: string, template: string): Operation {
-  const op = (contract.paths[template] as Record<string, Operation> | undefined)?.[method.toLowerCase()];
-  expect(op, `${method} ${template} is in the contract`).toBeTruthy();
-  return op!;
-}
-
-/** Asserts the answer's status is documented for the operation, and its body is the documented response. */
-async function asDocumented(answer: APIResponse, method: string, template: string, label: string) {
-  const op = operation(method, template);
-  const status = String(answer.status());
-  const documented = op.responses[status];
-  expect(documented, `${label}: ${op.operationId} documents ${status} (it documents ${Object.keys(op.responses).join(', ')})`).toBeTruthy();
-  const body = await answer.text();
-  if (!documented.content) {
-    expect(body, `${label}: ${status} has no body`).toBe('');
-    return status;
-  }
-  const mediaType = (answer.headers()['content-type'] ?? '').split(';')[0].trim();
-  const declared = documented.content[mediaType];
-  expect(declared, `${label}: ${status} as ${mediaType} is documented (${Object.keys(documented.content).join(', ')})`).toBeTruthy();
-  const schema = JSON.parse(JSON.stringify(declared.schema).replace(/"#\/components\//g, '"https://contract.test/openapi.json#/components/'));
-  const validate = ajv.compile(schema);
-  expect(validate(JSON.parse(body)), `${label}: ${status} body matches the contract: ${JSON.stringify(validate.errors)?.slice(0, 400)}`).toBe(true);
-  return status;
-}
-
 test('TC-F07-S01-036 AC-15: every booking endpoint answers each of its successes and documented errors exactly as the committed contract declares, and slot_taken, slot_unavailable, hold_expired and rules_not_set are its problem codes', async ({ identity, operator, clock }) => {
-  const codes = (contract.components.schemas.Problem as { properties: { code: { enum: string[] } } }).properties.code.enum;
+  const codes = problemCodes();
   for (const code of ['slot_taken', 'slot_unavailable', 'hold_expired', 'rules_not_set']) expect(codes, `${code} is a problem code`).toContain(code);
 
   const s = await bookingSalon(identity, operator, clock, { people: 1 });
@@ -63,12 +24,8 @@ test('TC-F07-S01-036 AC-15: every booking endpoint answers each of its successes
   const accountant = await staffAt(s, 'ACCOUNTANT');
   const m = s.members[0].id;
   const d = plusDays(s.today, 2);
-  const seen = new Map<string, Set<string>>();
-  const check = async (answer: APIResponse | Promise<APIResponse>, method: string, template: string, label: string) => {
-    const status = await asDocumented(await answer, method, template, label);
-    const key = `${method} ${template}`;
-    seen.set(key, (seen.get(key) ?? new Set()).add(status));
-  };
+  const seen = new Seen();
+  const check = seen.check.bind(seen);
   const one = '/api/v1/bookings/{id}';
   const act = (a: string) => `/api/v1/bookings/{id}/${a}`;
 
@@ -130,11 +87,6 @@ test('TC-F07-S01-036 AC-15: every booking endpoint answers each of its successes
 
   // Every success and documented 4xx of every operation was seen at least once, but the list's 404, which no salon host
   // reaches with a valid credential.
-  const notProvoked: Record<string, string[]> = { [`GET ${BOOKINGS}`]: ['404'] };
-  for (const [method, template] of [['POST', BOOKINGS], ['GET', BOOKINGS], ['GET', one], ...ACTIONS.map(a => ['POST', act(a)])]) {
-    const name = `${method} ${template}`;
-    const documented = Object.keys(operation(method, template).responses).filter(st => /^[24]\d\d$/.test(st));
-    const missed = documented.filter(st => !(seen.get(name)?.has(st)) && !(notProvoked[name] ?? []).includes(st));
-    expect(missed, `${name}: every documented answer was seen`).toEqual([]);
-  }
+  seen.expectAllSeen([['POST', BOOKINGS], ['GET', BOOKINGS], ['GET', one], ...ACTIONS.map(a => ['POST', act(a)] as [string, string])],
+    { [`GET ${BOOKINGS}`]: ['404'] });
 });
