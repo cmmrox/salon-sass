@@ -5,13 +5,19 @@ summary: Staff create bookings on any open day using shared availability, holds 
   are delivered later in the React Native app.
 release: R1
 milestone: M1-web
-status: backlog
+status: planned
 qa_status: not-run
 released_in: null
 depends_on:
 - F02
 - F05
 - F06
+integration:
+  branch: charithm/feature/F07-online-booking
+  pull_request: null
+  qa_revision: null
+  merged_commit: null
+  merged_at: null
 surfaces:
 - api
 - web
@@ -21,6 +27,7 @@ requirements:
 - BKG-04
 - BKG-05
 - BKG-06
+- BKG-11
 - BKG-14
 - BKG-16
 nfr_focus:
