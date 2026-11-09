@@ -50,13 +50,13 @@ export const PENDING_F07_S01 = {
   schemas: { booking: 'Booking', detail: 'BookingDetail', page: 'BookingPage' },
 } as const;
 
-/** F07-S02's names, from its spec; confirmed against its handoff when it closes. */
+/** F07-S02's names, confirmed against its handoff ("FINAL ENDPOINT SHAPES") and decision 110 at the dry run (17c41afa). */
 export const PENDING_F07_S02 = {
-  schemas: { availability: 'BookingAvailability', openDays: 'BookingOpenDays' },
+  schemas: { availability: 'Availability', openDays: 'OpenDays' },
   reasons: ['closed', 'nobody_performs', 'not_working', 'fully_booked'] as const,
   strategies: ['least_booked', 'most_booked'] as const,
   holdMinutes: [5, 10, 15, 20, 30] as const,
-  /** Where a booking records that it was assigned for "No preference" (AC-5, for F13): a field the handoff names. */
+  /** `booking_appointment.assigned`: true for a "No preference" hold, for F13; returned by no endpoint (decision 110 e). */
   assignedField: 'assigned',
 } as const;
 

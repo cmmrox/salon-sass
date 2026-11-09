@@ -5,9 +5,9 @@
  * next free person when the first is taken, and racing for three free people.
  *
  * Expected results are the F07-S02 spec's AC-3 and AC-5 and decision 108 (a). Every expected answer is worked out by
- * `qa/shared/availability.ts` from the arrangement. Prepared during the build from the approved spec; the strategy
- * setting is `noPreference` in the booking rules and the field recording an assignment is `PENDING_F07_S02.assignedField`,
- * both confirmed against the S02 handoff when it closes.
+ * `qa/shared/availability.ts` from the arrangement.  an
+ * assignment is recorded in `booking_appointment.assigned`, returned by no endpoint (decision 110 e), so it is read from
+ * the database. "Booked that day" counts active and buffer minutes of live bookings and unexpired holds (decision 110 i).
  */
 import { refused, rules, type RulesInput } from '../../shared/booking-rules';
 import { minus, noPreference, range, type Person } from '../../shared/availability';
@@ -90,8 +90,11 @@ test('TC-F07-S02-012 AC-5: a hold with no professional goes to the person the st
   const nextByStrategy = remaining.find(m => m.id !== first.id)!;
   expect(assigned.member.id, 'the next free person by the strategy').toBe(nextByStrategy.id);
   expect(storedBooking(s.created.id, assigned.id) as unknown as Record<string, unknown>, 'recorded as assigned').toMatchObject({ [PENDING_F07_S02.assignedField]: true });
-  const last = await s.bookings.place(s.salon, s.owner.tokens, holdInput(null, s.service.id, date, '12:00'));
+  // memberId left out is "No preference" too (decision 110 a).
+  const { memberId: _left, ...withoutMember } = holdInput(null, s.service.id, date, '12:00');
+  const last = await s.bookings.place(s.salon, s.owner.tokens, withoutMember);
   expect(last.member.id, 'then the last free one').toBe(first.id);
+  expect(storedBooking(s.created.id, last.id) as unknown as Record<string, unknown>, 'left out: assigned too').toMatchObject({ [PENDING_F07_S02.assignedField]: true });
   await refused(await s.bookings.placeRaw(s.salon, s.owner.tokens, holdInput(null, s.service.id, date, '12:00')), 409, 'slot_taken', 'nobody is free');
 });
 

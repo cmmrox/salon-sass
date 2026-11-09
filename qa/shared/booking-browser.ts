@@ -68,9 +68,12 @@ export async function supportBrowser(browser: Browser, operator: Operator, creat
 // ---------------------------------------------------------------- F07-S02: Settings, Booking rules
 
 export const RULES_ROUTE = '/workspace/settings/rules';
+/** Confirmed against the S02 handoff (note 15) at the dry run (17c41afa). */
 export const PENDING_F07_S02_WEB = {
   hold: 'rules-hold',
+  holdHelp: 'rules-hold-help',
   noPreference: 'rules-no-preference',
+  noPreferenceHelp: 'rules-no-preference-help',
   /** F04's convention: `<trigger>-option-<value>`. */
   option: (trigger: string, value: string) => `${trigger}-option-${value}`,
 } as const;

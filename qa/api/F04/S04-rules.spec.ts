@@ -72,7 +72,7 @@ test('TC-F04-S04-001 AC-1, AC-5: before the first save the public read is a JSON
 test('TC-F04-S04-002 AC-2: every interval, notice and horizon of the prototype is accepted and read back, and any other value is a 400 on that field that saves nothing', async ({ identity }) => {
   const book = new BookingRules(identity);
   const manager = await identity.staff(alpha, 'MANAGER');
-  const choices: [keyof RulesInput, number[]][] = [
+  const choices: ['slotIntervalMinutes' | 'minimumNoticeMinutes' | 'bookingHorizonDays', number[]][] = [
     ['slotIntervalMinutes', ALLOWED.interval], ['minimumNoticeMinutes', ALLOWED.notice], ['bookingHorizonDays', ALLOWED.horizon],
   ];
   for (const [field, values] of choices) {

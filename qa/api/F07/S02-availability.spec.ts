@@ -5,8 +5,9 @@
  *
  * Expected results are the F07-S02 spec's (AC-1 to AC-4, AC-6, AC-9, AC-10, AC-12) and decision 108 (c). Every expected
  * list of times is worked out by `qa/shared/availability.ts` from the arrangement the test made, never read from the
- * product. Prepared from the approved spec during the build; names the build gives are in `PENDING_F07_S02`, confirmed
- * against the S02 handoff when it closes. "No preference" and holds without a professional are in
+ * product. Names the build gives are in `PENDING_F07_S02`, confirmed against the S02 handoff and decision 110 (f: 409
+ * rules_not_set without rules; g: today strictly after now; h: fully_booked also for a window too short). "No preference"
+ * and holds without a professional are in
  * S02-no-preference.spec.ts; the rule settings in S02-rules.spec.ts.
  */
 import { randomUUID } from 'node:crypto';
@@ -129,7 +130,7 @@ test('TC-F07-S02-003 AC-2: starts follow the salon\'s slot interval from midnigh
 
 // ---------------------------------------------------------------- AC-3 one professional
 
-test('TC-F07-S02-004 AC-3, AC-10: a professional who does not perform the service is 409 slot_unavailable; a removed one, another salon\'s, and another salon\'s or an unknown service or variant answer 404 not_found as an unknown id', async ({ identity, operator, clock }) => {
+test('TC-F07-S02-004 AC-3, AC-10: a professional who does not perform the service is 409 slot_unavailable and a salon without rules 409 rules_not_set; a removed one, another salon\'s, and another salon\'s or an unknown service or variant answer 404 not_found as an unknown id', async ({ identity, operator, clock }) => {
   const s = await bookingSalon(identity, operator, clock, { people: 3 });
   const other = await bookingSalon(identity, operator, clock, { people: 1, keepClock: true });
   const otherColour = await variantService(other);
@@ -152,6 +153,9 @@ test('TC-F07-S02-004 AC-3, AC-10: a professional who does not perform the servic
     const { answer } = await refused(await q(query), 404, 'not_found', label);
     if (query.memberId) expect(strip(answer.body), `${label}: as an unknown id`).toBe(strip(unknown.answer.body));
   }
+  const bare = await bookingSalon(identity, operator, clock, { people: 1, rulesSaved: false, keepClock: true });
+  await refused(await bare.bookings.availabilityRaw(bare.salon, bare.owner.tokens, { serviceId: bare.service.id, date, memberId: bare.members[0].id }),
+    409, 'rules_not_set', 'a salon that never saved its rules (decision 110 f)');
 });
 
 // ---------------------------------------------------------------- AC-4 empty answers
@@ -274,5 +278,6 @@ test('TC-F07-S02-009 AC-12: the free-times and open-days reads, and a hold with 
   await seen.check(s.bookings.openDaysRaw(s.salon, undefined, s.today, date), 'GET', OPEN_DAYS, '401');
   await seen.check(s.bookings.openDaysRaw(s.salon, accountant.tokens, s.today, date), 'GET', OPEN_DAYS, '403');
   await seen.check(s.bookings.placeRaw(s.salon, s.owner.tokens, holdInput(null, s.service.id, date, '10:00')), 'POST', '/api/v1/bookings', '201 no preference');
-  seen.expectAllSeen([['GET', AVAILABILITY], ['GET', OPEN_DAYS]], {});
+  // Open days' documented 404 answers a host that is no salon's; with a salon's own host it cannot be reached.
+  seen.expectAllSeen([['GET', AVAILABILITY], ['GET', OPEN_DAYS]], { [`GET ${OPEN_DAYS}`]: ['404'] });
 });

@@ -4,9 +4,9 @@
  * taking their expiry from the current version while a hold already placed keeps its own, refused values, a save that
  * leaves them out keeping the current ones, and the public read showing the hold length but never the strategy.
  *
- * Expected results are the F07-S02 spec's AC-7 and decision 089, and the lead's note for the build (2026-11-09): both
- * fields are optional on a save, which keeps the current version's value when one is left out, and the public rules
- * read gains `holdMinutes` only. Prepared during the build; confirmed against the S02 handoff when it closes.
+ * Expected results are the F07-S02 spec's AC-7, decision 089 and decision 110 (b, c, d): both fields may be left out of a
+ * save, which keeps the current version's values, a value sent is checked strictly, and the public rules read gains
+ * `holdMinutes` only (schema PublicBookingRuleTerms).
  */
 import { BookingRules, fieldErrors, rules, type RulesInput } from '../../shared/booking-rules';
 import { PENDING_F07_S02, bookingSalon, holdInput, minutesBetween } from '../../shared/booking';
@@ -57,7 +57,8 @@ test('TC-F07-S02-015 AC-7: every allowed hold length and strategy saves; any oth
   ];
   for (const [label, field, change] of rows) {
     const { errors } = await fieldErrors(await book.saveRaw(s.salon, s.owner.tokens, current.version, { ...base(), ...change }), label);
-    expect(errors.map(e => e.field), `${label}: on ${field}`).toEqual([field]);
+    // The save's body is {version, rules}, so the error names rules.<field> (S02 handoff).
+    expect(errors.map(e => e.field), `${label}: on ${field}`).toEqual([`rules.${field}`]);
   }
   expect((await book.settings(s.salon, s.owner.tokens)).version, 'nothing saved').toBe(current.version);
 

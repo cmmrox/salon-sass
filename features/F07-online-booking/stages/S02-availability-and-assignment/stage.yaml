@@ -222,7 +222,24 @@ verification:
     - pnpm --filter @salon/web test:a11y
     - pnpm --filter @salon/web build
     - pnpm contracts:check
-  automation: []
+  # Registered for the build-time dry run (sdlc run --stage F07-S02); suites are chosen at feature-verify.
+  automation:
+  - id: availability-api
+    tool: playwright
+    file: qa/api/F07/S02-availability.spec.ts
+    project: api
+  - id: no-preference-api
+    tool: playwright
+    file: qa/api/F07/S02-no-preference.spec.ts
+    project: api
+  - id: rules-api
+    tool: playwright
+    file: qa/api/F07/S02-rules.spec.ts
+    project: api
+  - id: rules-section-web
+    tool: playwright
+    file: qa/web/F07/S02-rules-section.spec.ts
+    project: web
   #  - id: <short name>
   #    tool: playwright      # playwright | maestro | k6 | script
   #    file: <path under qa/, as laid out in docs/qa/test-plan.md>

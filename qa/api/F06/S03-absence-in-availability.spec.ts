@@ -51,7 +51,7 @@ test('TC-F06-S03-030 AC-7, AC-11: leave takes a person\'s whole day out, even a 
   for (const [a, b] of [['09:00', '13:00'], ['14:00', '17:00']]) await absences.addBlock(s.salon, s.owner.tokens, person.id, blockInput(full, { starts: a, finishes: b }));
   const filled = await ask(full);
   expect(filled.times, 'blocks that fill the day leave no time').toEqual([]);
-  expect(['not_working', 'fully_booked'], 'and say why').toContain(filled.reason);
+  expect(filled.reason, 'no working window at all is not_working (decision 110 h)').toBe('not_working');
 
   const theirs = other.members[0];
   await new Absences(other.team).addLeave(other.salon, other.owner.tokens, theirs.id, leaveInput(d(12)));
