@@ -38,7 +38,7 @@ expiry instant by the API's clock. The page never asks again. Meanwhile the API 
 `GET /api/v1/bookings/{id}` answers 404 and its time can be held by someone else, so the desk is shown a held time that is
 in fact free.
 
-Happens every time: 3 of 3 attempts (TC-F07-S03-003 in the feature run, and two probes recording the page's requests,
+Happens every time: 4 of 4 attempts (TC-F07-S03-003 in a direct run and in the feature run, and two probes recording the page's requests,
 one with the browser's clock left as it is, so it is not caused by the test aligning the browser's clock).
 
 The appointment sheet does not have this fault: at zero it asks again every 2 seconds while the API still says held
@@ -58,8 +58,10 @@ GET /identity-web/staff/bookings?from=2101-01-06&to=2101-01-06&page=0&size=50   
 GET /api/v1/bookings/bd16cb9f-...   -> 404 not_found
 ```
 
-The failing case's screenshot and page snapshot are in the feature run's folder under `playwright/`, for
-TC-F07-S03-003 (see `features/F07-online-booking/feature.yaml`, `evidence.last_run`).
+The feature run's failure of TC-F07-S03-003 ("gone at zero", expected 0 rows, received 1): its screenshot and page
+snapshot are in qa/reports/20261109-223501-F07-10961619c25e/playwright/2026-11-09T17-07-00-096Z-36838/
+web-F07-S03-bookings-page--c1a40--its-countdown-reaches-zero-web/, and the entry's log is
+qa/reports/20261109-223501-F07-10961619c25e/013-F07-S03-bookings-page-web.log.
 
 ## Re-verification
 

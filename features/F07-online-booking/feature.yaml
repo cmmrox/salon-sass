@@ -6,7 +6,7 @@ summary: Staff create bookings on any open day using shared availability, holds 
 release: R1
 milestone: M1-web
 status: in-qa
-qa_status: not-run
+qa_status: failing
 released_in: null
 depends_on:
 - F02
@@ -15,7 +15,7 @@ depends_on:
 integration:
   branch: charithm/feature/F07-online-booking
   pull_request: null
-  qa_revision: null
+  qa_revision: dcf0033233221719a4b5b1b7d4ad895dd4308a19
   merged_commit: null
   merged_at: null
 surfaces:
@@ -47,5 +47,5 @@ verification:
   manual: []
   deferred: []
 evidence:
-  last_run: null
-  last_result: null
+  last_run: qa/reports/20261109-223501-F07-10961619c25e
+  last_result: fail

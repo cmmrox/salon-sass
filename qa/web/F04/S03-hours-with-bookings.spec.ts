@@ -19,7 +19,8 @@ const HOURS = '/workspace/settings/hours';
 const plural = (key: string, n: number) => message(key).replace(/\{count, plural, one \{([^}]*)\} other \{([^}]*)\}\}/, (_, one: string, other: string) => (n === 1 ? one : other).replace('#', String(n)));
 
 test('TC-F04-S03-031 AC-8: the closure sheet lists the bookings on the day it would close, and saving hours that close their weekday says how many upcoming bookings fall outside; every booking is kept', async ({ accounts, identity, operator, clock }) => {
-  const s = await bookingSalon(identity, operator, clock, { people: 2 });
+  // On the real clock: under the test clock's date in 2101 the Hours tab refuses the Owner (noted for the lead, F07 review).
+  const s = await bookingSalon(identity, operator, clock, { people: 2, realClock: true });
   const date = plusDays(s.today, 3);
   const [amaya, kavindi] = [customer(), customer()];
   const confirmed = await s.bookings.confirm(s.salon, s.owner.tokens, (await s.bookings.place(s.salon, s.owner.tokens, holdInput(s.members[0].id, s.service.id, date, '10:00', { customer: amaya }))).id);

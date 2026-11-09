@@ -222,9 +222,11 @@ export type BookingSalon = Awaited<ReturnType<typeof bookingSalon>>;
  * test without moving the clock.
  */
 export async function bookingSalon(identity: Identity, operator: Operator, clock: TestClock,
-  options: { people?: number; rulesSaved?: boolean; rules?: Partial<RulesInput>; startAt?: string; keepClock?: boolean } = {}) {
+  options: { people?: number; rulesSaved?: boolean; rules?: Partial<RulesInput>; startAt?: string; keepClock?: boolean; realClock?: boolean } = {}) {
   // A second salon in the same test keeps the clock: setting it back would make the first salon's credentials not yet valid.
-  if (!options.keepClock) {
+  // `realClock` leaves the application's clock as it is, for a screen that cannot work in the far-future year the date
+  // after every plan has reached (F04's Hours tab in 2101); such a test books days ahead, never today.
+  if (!options.keepClock && !options.realClock) {
     const day = afterNewestPlan().slice(0, 10);
     await clock.set(utcOf(day, options.startAt ?? '08:00'));
     expect(localDate(await identity.now(), COLOMBO), 'the clock is on the chosen local day').toBe(day);
