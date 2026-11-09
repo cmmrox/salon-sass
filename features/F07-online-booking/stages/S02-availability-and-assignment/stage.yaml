@@ -222,24 +222,27 @@ verification:
     - pnpm --filter @salon/web test:a11y
     - pnpm --filter @salon/web build
     - pnpm contracts:check
-  # Registered for the build-time dry run (sdlc run --stage F07-S02); suites are chosen at feature-verify.
   automation:
   - id: availability-api
     tool: playwright
     file: qa/api/F07/S02-availability.spec.ts
     project: api
+    suites: [regression]
   - id: no-preference-api
     tool: playwright
     file: qa/api/F07/S02-no-preference.spec.ts
     project: api
+    suites: [regression]
   - id: rules-api
     tool: playwright
     file: qa/api/F07/S02-rules.spec.ts
     project: api
+    suites: [regression]
   - id: rules-section-web
     tool: playwright
     file: qa/web/F07/S02-rules-section.spec.ts
     project: web
+    suites: [regression]
   #  - id: <short name>
   #    tool: playwright      # playwright | maestro | k6 | script
   #    file: <path under qa/, as laid out in docs/qa/test-plan.md>
@@ -250,7 +253,13 @@ verification:
   #    covers: [AC-4]
   #    reason: <why it cannot be automated, and how it was checked>
   #    performed_on: <YYYY-MM-DD>   # required: a manual case counts only once it was done
-  deferred: []
+  deferred:
+    - case: TC-F07-S02-018
+      covers: [AC-11]
+      reason: "load test; the release suite runs only when the owner asks (decision 068). The developer measured p95 99 ms on
+        200 sequential calls (F07-S02 handoff). The scenario is qa/api/F07/S02-availability-load.spec.ts with
+        qa/load/F07/S02-availability.js, unregistered (the lead's ruling)."
+      unblocked_by: release-prepare, where the lead adds it to the release manifest's gates
   #  - case: TC-F07-S02-010
   #    covers: [AC-5]
   #    reason: <why it cannot be run yet>

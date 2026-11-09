@@ -27,16 +27,16 @@ test('TC-F07-001 BKG-01, BKG-03, BKG-04, BKG-06, BKG-11, BKG-14, BKG-16: the des
   let heldTime = '';
   let heldMember = '';
   await test.step('the desk holds a time with No preference', async () => {
-    await button(page, T.newAppointment).click();
+    await id(page, W.page.newAppointment).click();
     const sheet = id(page, W.sheet.sheet);
     await id(sheet, W.sheet.name).fill(who.name);
     await id(sheet, W.sheet.mobile).fill(who.mobile);
     await id(sheet, W.sheet.service).click();
-    await page.getByRole('option', { name: new RegExp(`^${s.service.name}`) }).filter({ visible: true }).click();
+    await page.locator(`[data-testid="${W.sheet.serviceOption}"][data-id="${s.service.id}"]`).click();
     await id(sheet, W.sheet.day).click();
     await chooseCalendarDay(id(page, W.sheet.calendar), date);
     await id(sheet, W.sheet.professional).click();
-    await page.getByRole('option', { name: T.noPreference, exact: true }).filter({ visible: true }).click();
+    await page.getByTestId(W.sheet.professionalAny).click();
     await button(sheet, T.find).click();
     const chip = id(sheet, W.sheet.time).first();
     heldTime = (await chip.innerText()).split(' · ')[0];
@@ -67,7 +67,7 @@ test('TC-F07-001 BKG-01, BKG-03, BKG-04, BKG-06, BKG-11, BKG-14, BKG-16: the des
   await test.step('arrived and started from the list', async () => {
     const row = id(page, W.page.row).or(id(page, W.page.item)).filter({ hasText: reference });
     await expect(row, 'on the list without a reload').toContainText(T.statusLabels.confirmed);
-    await row.click();
+    await row.getByTestId(W.page.open).click();
     const sheet = id(page, W.appointment.sheet);
     await sheet.getByTestId(W.appointment.action('arrive')).click();
     await expect(page.getByText(T.done.arrive)).toBeVisible();
@@ -78,7 +78,7 @@ test('TC-F07-001 BKG-01, BKG-03, BKG-04, BKG-06, BKG-11, BKG-14, BKG-16: the des
   await test.step('another is cancelled with a reason', async () => {
     const other = await s.bookings.confirm(s.salon, receptionist.tokens, (await s.bookings.place(s.salon, receptionist.tokens, holdInput(s.members[0].id, s.service.id, plusDays(date, 1), '16:00'))).id);
     const { page: next } = await openAs(accounts, receptionist, `${BOOKINGS_ROUTE}?${W.query.day}=${plusDays(date, 1)}`);
-    await id(next, W.page.row).or(id(next, W.page.item)).filter({ hasText: other.reference }).click();
+    await id(next, W.page.row).or(id(next, W.page.item)).filter({ hasText: other.reference }).getByTestId(W.page.open).click();
     await id(next, W.appointment.sheet).getByTestId(W.appointment.action('cancel')).click();
     const dialog = next.getByRole('alertdialog');
     await id(dialog, W.cancel.reason).click();

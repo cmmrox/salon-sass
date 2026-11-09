@@ -225,40 +225,47 @@ verification:
     - pnpm -r test
     - pnpm --filter @salon/web build
     - pnpm contracts:check
-  # Registered for the build-time dry run (sdlc run --stage F07-S01); suites are chosen at feature-verify.
   automation:
   - id: holds-api
     tool: playwright
     file: qa/api/F07/S01-holds.spec.ts
     project: api
+    suites: [regression]
   - id: overlaps-api
     tool: playwright
     file: qa/api/F07/S01-overlaps.spec.ts
     project: api
+    suites: [regression]
   - id: states-api
     tool: playwright
     file: qa/api/F07/S01-states.spec.ts
     project: api
+    suites: [regression]
   - id: reads-api
     tool: playwright
     file: qa/api/F07/S01-reads.spec.ts
     project: api
+    suites: [regression]
   - id: access-api
     tool: playwright
     file: qa/api/F07/S01-access.spec.ts
     project: api
+    suites: [regression]
   - id: isolation-api
     tool: playwright
     file: qa/api/F07/S01-isolation.spec.ts
     project: api
+    suites: [regression]
   - id: guards-api
     tool: playwright
     file: qa/api/F07/S01-guards.spec.ts
     project: api
+    suites: [regression]
   - id: contract-api
     tool: playwright
     file: qa/api/F07/S01-contract.spec.ts
     project: api
+    suites: [regression]
   #  - id: <short name>
   #    tool: playwright      # playwright | maestro | k6 | script
   #    file: <path under qa/, as laid out in docs/qa/test-plan.md>
@@ -269,7 +276,22 @@ verification:
   #    covers: [AC-4]
   #    reason: <why it cannot be automated, and how it was checked>
   #    performed_on: <YYYY-MM-DD>   # required: a manual case counts only once it was done
-  deferred: []
+  deferred:
+    - case: TC-F07-S01-037
+      covers: [AC-4]
+      reason: A processing segment occupies no professional (decision 074), but no R1 service has one and no endpoint
+        can make one; only F17 brings them. The developer's BookingOverlapIntegrationTest inserts one through the domain.
+        From outside, TC-F07-S01-009 proves the active and buffer segments occupy the professional.
+      unblocked_by: F17
+    - case: TC-F07-S01-038
+      covers: [AC-8]
+      reason: Only AC-8's payment and checkout routes are deferred. The in-process contracts that move a hold to pending
+        payment and back, and that complete a booking, have no route until F08 (payment) and F10 (checkout); the same
+        holds for AC-6's one clause that the job never ends a hold in pending payment. AC-6 itself (the job ending run-out
+        holds as the system, with history and audit) is automated in TC-F07-S01-014 and -015, and AC-8's confirmation
+        event in TC-F07-S01-021, with TC-F07-S01-018 proving that no route reaches pending payment or completed. The
+        developer's integration tests through the domain hold the payment and checkout paths until then.
+      unblocked_by: F08 and F10
   #  - case: TC-F07-S01-010
   #    covers: [AC-5]
   #    reason: <why it cannot be run yet>

@@ -280,12 +280,36 @@ verification:
     - pnpm --filter @salon/web test:a11y
     - pnpm --filter @salon/web build
     - pnpm contracts:check
-  automation: []
+  automation:
   #  - id: <short name>
   #    tool: playwright      # playwright | maestro | k6 | script
   #    file: <path under qa/, as laid out in docs/qa/test-plan.md>
   #    project: <name>       # only for a tool that groups tests into projects
   #    suites: [regression]  # smoke | regression | release; decided at feature-verify
+  - id: bookings-page-web
+    tool: playwright
+    file: qa/web/F07/S03-bookings-page.spec.ts
+    project: web
+    suites:
+    - regression
+  - id: new-appointment-web
+    tool: playwright
+    file: qa/web/F07/S03-new-appointment.spec.ts
+    project: web
+    suites:
+    - regression
+  - id: appointment-web
+    tool: playwright
+    file: qa/web/F07/S03-appointment.spec.ts
+    project: web
+    suites:
+    - regression
+  - id: access-and-quality-web
+    tool: playwright
+    file: qa/web/F07/S03-access-and-quality.spec.ts
+    project: web
+    suites:
+    - regression
   manual: []
   #  - case: TC-F07-S03-009
   #    covers: [AC-4]

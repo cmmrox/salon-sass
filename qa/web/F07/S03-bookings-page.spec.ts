@@ -53,7 +53,7 @@ test('TC-F07-S03-001 AC-1: the Owner, a Manager, a Receptionist and a Profession
       const order = (await page.getByRole('navigation').first().getByRole('link').allInnerTexts()).map(t => t.trim());
       const at = order.indexOf(T.nav);
       expect(order[at - 1], `${who}: right after ${T.navAfter} (${order.join(', ')})`).toBe(T.navAfter);
-      if (order.includes(T.navBefore)) expect(order[at + 1], `${who}: before ${T.navBefore}`).toBe(T.navBefore);
+      expect(order[at + 1], `${who}: before ${T.navBefore}`).toBe(T.navBefore);
       await entry.click();
       await page.waitForURL(`**${BOOKINGS_ROUTE}**`);
       await ready(page);
@@ -123,7 +123,8 @@ test('TC-F07-S03-004 AC-3: the search (name, mobile or reference, as typed), the
   const rows = await bookingsOf(page);
   const search = id(page, P.search);
   await test.step('search by name, mobile and reference', async () => {
-    for (const [what, q, expected] of [['name', amaya.name.split(' ')[1], confirmed.reference], ['mobile', national(kavindi.mobile), held.reference], ['reference', confirmed.reference.replace('-', '').toLowerCase(), confirmed.reference]] as const) {
+    // The whole name: consecutive generated people share a surname (qa/shared/people.ts), so part of it matches several.
+    for (const [what, q, expected] of [['name', amaya.name, confirmed.reference], ['mobile', national(kavindi.mobile), held.reference], ['reference', confirmed.reference.replace('-', '').toLowerCase(), confirmed.reference]] as const) {
       await search.fill(q);
       await expect(rows, `${what}: one`).toHaveCount(1);
       await expect(rows.first(), what).toContainText(expected);

@@ -23,26 +23,28 @@ const N = W.sheet;
 
 async function openSheet(page: Page): Promise<Locator> {
   await expect(id(page, W.page.loading)).toHaveCount(0);
-  await button(page, T.newAppointment).click();
+  await id(page, W.page.newAppointment).click();
   const sheet = id(page, N.sheet);
   await expect(sheet).toBeVisible();
   return sheet;
-}
-async function pick(page: Page, trigger: Locator, option: string) {
-  await trigger.click();
-  await page.getByRole('option', { name: option, exact: true }).filter({ visible: true }).click();
 }
 async function chooseDay(page: Page, sheet: Locator, date: string) {
   await id(sheet, N.day).click();
   await chooseCalendarDay(id(page, N.calendar), date);
 }
-/** Fills the form for a customer and searches, returning the chips. */
-async function search(page: Page, sheet: Locator, s: BookingSalon, date: string, who = customer(), professional: string = T.noPreference) {
+/** Chooses an option of a Select by the option's test id and `data-id` (S03 handoff), waiting for the list to close. */
+async function choose(page: Page, trigger: Locator, option: Locator) {
+  await trigger.click();
+  await option.click();
+  await expect(page.getByRole('listbox')).toHaveCount(0);
+}
+/** Fills the form for a customer and searches, returning the chips; `memberId` null is No preference. */
+async function search(page: Page, sheet: Locator, s: BookingSalon, date: string, who = customer(), memberId: string | null = null) {
   await id(sheet, N.name).fill(who.name);
   await id(sheet, N.mobile).fill(who.mobile);
   await chooseDay(page, sheet, date);
-  await pick(page, id(sheet, N.service), s.service.name);
-  await pick(page, id(sheet, N.professional), professional);
+  await choose(page, id(sheet, N.service), page.locator(`[data-testid="${N.serviceOption}"][data-id="${s.service.id}"]`));
+  await choose(page, id(sheet, N.professional), memberId ? page.locator(`[data-testid="${N.professionalOption}"][data-id="${memberId}"]`) : page.getByTestId(N.professionalAny));
   await button(sheet, T.find).click();
   return id(sheet, N.time);
 }
@@ -158,7 +160,7 @@ test('TC-F07-S03-008 AC-6: Choose another time releases the hold and searches ag
   const date = plusDays(s.today, 2);
   const { page } = await openAs(accounts, s.owner, BOOKINGS_ROUTE);
   let sheet = await openSheet(page);
-  let chips = await search(page, sheet, s, date, customer(), s.members[0].name);
+  let chips = await search(page, sheet, s, date, customer(), s.members[0].id);
   await chips.first().dblclick();
   await expect(id(sheet, N.hold)).toBeVisible();
   expect(holdsOf(s).length, 'a double click places one hold').toBe(1);
@@ -176,7 +178,7 @@ test('TC-F07-S03-008 AC-6: Choose another time releases the hold and searches ag
   await expect(id(page, N.sheet)).toHaveCount(0);
   await expect.poll(() => holdsOf(s).length, { message: 'closing releases the hold' }).toBe(0);
   sheet = await openSheet(page);
-  chips = await search(page, sheet, s, date, customer(), s.members[0].name);
+  chips = await search(page, sheet, s, date, customer(), s.members[0].id);
   await expect(chips.first()).toBeVisible();
 });
 
@@ -186,7 +188,7 @@ test('TC-F07-S03-009 AC-6: a time taken meanwhile says "That time was just taken
   const [m] = s.members;
   const { page } = await openAs(accounts, s.owner, BOOKINGS_ROUTE);
   const sheet = await openSheet(page);
-  const chips = await search(page, sheet, s, date, customer(), m.name);
+  const chips = await search(page, sheet, s, date, customer(), m.id);
   await test.step('taken meanwhile', async () => {
     const taken = (await chips.first().innerText()).split(' · ')[0];
     await s.bookings.place(s.salon, s.owner.tokens, holdInput(m.id, s.service.id, date, taken));
@@ -213,7 +215,7 @@ test('TC-F07-S03-018 AC-6: when a held time\'s countdown reaches zero in the she
   const date = plusDays(s.today, 2);
   const { page } = await openAs(accounts, s.owner, BOOKINGS_ROUTE);
   const sheet = await openSheet(page);
-  const chips = await search(page, sheet, s, date, customer(), s.members[0].name);
+  const chips = await search(page, sheet, s, date, customer(), s.members[0].id);
   const time = (await chips.first().innerText()).split(' · ')[0];
   await chips.first().click();
   await expect(id(sheet, N.countdown)).toHaveText(/^[45]:\d\d/);

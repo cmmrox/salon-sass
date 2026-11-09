@@ -20,6 +20,7 @@ import { plusDays } from '../../shared/salon-hours';
 test.describe.configure({ timeout: 300_000 });
 
 const rowsOf = (page: Page) => id(page, W.page.row).or(id(page, W.page.item));
+const openRow = (row: ReturnType<typeof rowsOf>) => row.getByTestId(W.page.open).first().click();
 async function ready(page: Page) {
   await expect(id(page, W.page.loading)).toHaveCount(0);
   await expect(id(page, W.page.heading)).toBeVisible();
@@ -35,7 +36,7 @@ test('TC-F07-S03-013 AC-10: a Professional sees only their own bookings with no 
     await expect(rowsOf(page).first()).toContainText(mine.reference);
     await expect(page.getByTestId(W.page.professional), 'no professional filter').toHaveCount(0);
     await expect(button(page, T.newAppointment), 'no New appointment').toHaveCount(0);
-    await rowsOf(page).first().click();
+    await openRow(rowsOf(page).first());
     const sheet = id(page, W.appointment.sheet);
     for (const a of ['cancel', 'no-show', 'undo-no-show', 'release']) await expect(sheet.getByTestId(W.appointment.action(a)), `no ${a}`).toHaveCount(0);
     await sheet.getByTestId(W.appointment.action('arrive')).click();
@@ -48,7 +49,7 @@ test('TC-F07-S03-013 AC-10: a Professional sees only their own bookings with no 
     await ready(page);
     await expect(rowsOf(page), 'the salon\'s').toHaveCount(2);
     await expect(button(page, T.newAppointment)).toHaveCount(0);
-    await rowsOf(page).filter({ hasText: theirs.reference }).click();
+    await openRow(rowsOf(page).filter({ hasText: theirs.reference }));
     const sheet = id(page, W.appointment.sheet);
     for (const a of ['cancel', 'no-show', 'release', 'arrive', 'start']) await expect(sheet.getByTestId(W.appointment.action(a)), `no ${a} on another's`).toHaveCount(0);
   });
@@ -59,7 +60,7 @@ test('TC-F07-S03-013 AC-10: a Professional sees only their own bookings with no 
     await ready(page);
     await expect(rowsOf(page), 'everything').toHaveCount(2);
     await expect(button(page, T.newAppointment)).toHaveCount(0);
-    await rowsOf(page).filter({ hasText: theirs.reference }).click();
+    await openRow(rowsOf(page).filter({ hasText: theirs.reference }));
     for (const a of ['arrive', 'start', 'cancel', 'no-show', 'release']) await expect(id(page, W.appointment.sheet).getByTestId(W.appointment.action(a)), `read-only: no ${a}`).toHaveCount(0);
     await context.close();
   });
@@ -69,7 +70,7 @@ test('TC-F07-S03-014 AC-11: by keyboard alone the desk opens New appointment, fi
   const s = await bookingSalon(identity, operator, clock, { people: 1 });
   const { page } = await openAs(accounts, s.owner, BOOKINGS_ROUTE);
   await ready(page);
-  const opener = button(page, T.newAppointment);
+  const opener = id(page, W.page.newAppointment);
   await opener.focus();
   await page.keyboard.press('Enter');
   const sheet = id(page, W.sheet.sheet);
@@ -88,8 +89,12 @@ test('TC-F07-S03-014 AC-11: by keyboard alone the desk opens New appointment, fi
     for (const field of [W.sheet.service, W.sheet.professional]) {
       await id(sheet, field).focus();
       await page.keyboard.press('Enter');
+      // Radix Select ignores keys while its list opens (S03 handoff, note 13): wait for the list, as a person would.
+      await expect(page.getByRole('listbox')).toBeVisible();
+      await expect(page.getByRole('option').filter({ visible: true }).first()).toBeFocused();
       await page.keyboard.press('ArrowDown');
       await page.keyboard.press('Enter');
+      await expect(page.getByRole('listbox')).toHaveCount(0);
     }
     await id(sheet, W.sheet.day).focus();
     await page.keyboard.press('Enter');
@@ -125,7 +130,8 @@ test('TC-F07-S03-014 AC-11: by keyboard alone the desk opens New appointment, fi
   await test.step('leaving a started form asks first', async () => {
     await opener.click();
     await id(id(page, W.sheet.sheet), W.sheet.name).fill('Thilini Jayasuriya');
-    await page.getByRole('link', { name: 'Team' }).filter({ visible: true }).first().click();
+    // A link behind the open sheet cannot be clicked (its overlay is modal); closing the started form asks the same.
+    await id(page, W.sheet.close).click();
     await expect(id(page, W.sheet.leaveDialog)).toBeVisible();
     await id(page, W.sheet.leaveStay).click();
     await expect(id(page, W.sheet.sheet), 'kept').toBeVisible();
@@ -148,11 +154,11 @@ test('TC-F07-S03-015 AC-11: the page, the New appointment sheet and the appointm
         if ([360, 768, 1280].includes(viewport.width)) expect(await seriousViolations(page), `${viewport.width}, ${where}: accessibility`).toEqual([]);
       };
       await check('the page');
-      await rowsOf(page).filter({ hasText: booking.reference }).click();
+      await openRow(rowsOf(page).filter({ hasText: booking.reference }));
       await expect(id(page, W.appointment.sheet)).toBeVisible();
       await check('the appointment sheet');
       await page.keyboard.press('Escape');
-      await button(page, T.newAppointment).click();
+      await id(page, W.page.newAppointment).click();
       await expect(id(page, W.sheet.sheet)).toBeVisible();
       await check('New appointment');
     });
@@ -166,8 +172,8 @@ test('TC-F07-S03-016 AC-12: words have curly apostrophes and the right singulars
   await ready(page);
   const surfaces: [string, () => Promise<void>][] = [
     ['the page', async () => undefined],
-    ['the appointment sheet', async () => { await rowsOf(page).first().click(); await expect(id(page, W.appointment.sheet)).toBeVisible(); }],
-    ['New appointment', async () => { await page.keyboard.press('Escape'); await button(page, T.newAppointment).click(); await expect(id(page, W.sheet.sheet)).toBeVisible(); }],
+    ['the appointment sheet', async () => { await openRow(rowsOf(page).first()); await expect(id(page, W.appointment.sheet)).toBeVisible(); }],
+    ['New appointment', async () => { await page.keyboard.press('Escape'); await id(page, W.page.newAppointment).click(); await expect(id(page, W.sheet.sheet)).toBeVisible(); }],
   ];
   for (const [where, open] of surfaces) {
     await test.step(where, async () => {

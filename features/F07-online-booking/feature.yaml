@@ -5,7 +5,7 @@ summary: Staff create bookings on any open day using shared availability, holds 
   are delivered later in the React Native app.
 release: R1
 milestone: M1-web
-status: in-progress
+status: in-qa
 qa_status: not-run
 released_in: null
 depends_on:
@@ -36,7 +36,14 @@ nfr_focus:
 - NFR-12
 cases: []
 verification:
-  automation: []
+  automation:
+  - id: journey-desk-books-a-customer
+    tool: playwright
+    file: qa/web/F07/journey-desk-books-a-customer.spec.ts
+    project: web
+    suites:
+    - smoke
+    - regression
   manual: []
   deferred: []
 evidence:

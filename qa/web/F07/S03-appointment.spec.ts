@@ -23,7 +23,7 @@ const ACTION_ORDER = ['arrive', 'start', 'no-show', 'undo-no-show', 'cancel', 'r
 
 async function openBooking(page: Page, reference: string): Promise<Locator> {
   await expect(id(page, W.page.loading)).toHaveCount(0);
-  await id(page, W.page.row).or(id(page, W.page.item)).filter({ hasText: reference }).first().click();
+  await id(page, W.page.row).or(id(page, W.page.item)).filter({ hasText: reference }).first().getByTestId(W.page.open).click();
   const sheet = id(page, A.sheet);
   await expect(sheet).toBeVisible();
   return sheet;
@@ -54,7 +54,8 @@ test('TC-F07-S03-010 AC-7: the sheet shows the customer, status and source, the 
   await test.step('before the start', async () => {
     await expectOffered(s, s.owner, sheet, booking.id, 'confirmed, before the start');
     await expect(sheet).toContainText(T.explanations.noShowAfterStart);
-    await expect(sheet).toContainText(T.explanations.completedAtCheckout);
+    // The prototype's mapping (S03 handoff, choice 5): the checkout line belongs to a booking in service only.
+    await expect(sheet).not.toContainText(T.explanations.completedAtCheckout);
   });
   await test.step('at the start: no-show and undo', async () => {
     await clock.set(utcOf(s.today, '09:05'));
@@ -77,7 +78,8 @@ test('TC-F07-S03-010 AC-7: the sheet shows the customer, status and source, the 
     await expect(id(later, W.page.row).or(id(later, W.page.item)).filter({ hasText: booking.reference }), 'the list follows without a reload').toContainText(T.statusLabels.in_service);
     const rows = now.getByTestId(A.historyRow);
     await expect(rows, 'six changes').toHaveCount(6);
-    await expect(rows.first(), 'newest first').toContainText(T.statusLabels.in_service);
+    await expect(rows.first(), 'newest first, in the prototype\'s verb').toContainText(T.verbs.in_service);
+    await expect(now, 'in service: completed at checkout').toContainText(T.explanations.completedAtCheckout);
     await expect(rows.first(), 'who: the staff label').toContainText(owner.account.email);
     for (let n = 0; n < 6; n++) await expect(rows.nth(n), 'never "You"').not.toContainText(new RegExp(`\\b${T.notYou}\\b`));
   });
@@ -141,7 +143,7 @@ test('TC-F07-S03-012 AC-9: every refusal is shown: a booking changed elsewhere r
   await test.step('rules_not_set', async () => {
     const bare = await bookingSalon(identity, operator, clock, { people: 1, rulesSaved: false, keepClock: true });
     const { page: p } = await openAs(accounts, bare.owner, BOOKINGS_ROUTE);
-    await button(p, T.newAppointment).click();
+    await id(p, W.page.newAppointment).click();
     const sheet = id(p, W.sheet.sheet);
     await id(sheet, W.sheet.name).fill('Nethmi Bandara');
     await id(sheet, W.sheet.mobile).fill(customer().mobile);
@@ -150,7 +152,7 @@ test('TC-F07-S03-012 AC-9: every refusal is shown: a booking changed elsewhere r
     await expect(sheet.getByRole('link', { name: /settings|booking rules/i }), 'a link for the Owner').toBeVisible();
     const receptionist = await staffAt(bare, 'RECEPTIONIST');
     const { page: r } = await openAs(accounts, receptionist, BOOKINGS_ROUTE);
-    await button(r, T.newAppointment).click();
+    await id(r, W.page.newAppointment).click();
     const theirs = id(r, W.sheet.sheet);
     await id(theirs, W.sheet.name).fill('Nethmi Bandara');
     await id(theirs, W.sheet.mobile).fill(customer().mobile);
@@ -168,7 +170,8 @@ test('TC-F07-S03-012 AC-9: every refusal is shown: a booking changed elsewhere r
   });
   await test.step('the API unavailable', async () => {
     const { page: p } = await openAs(accounts, s.owner, '/workspace/account');
-    await p.route(url => new URL(url).pathname.includes('booking'), route => route.fulfill({ status: 503, contentType: 'application/problem+json',
+    // Only the BFF's booking actions; the page's own address also contains "booking".
+    await p.route(url => new URL(url).pathname.startsWith('/identity-web/') && new URL(url).pathname.includes('booking'), route => route.fulfill({ status: 503, contentType: 'application/problem+json',
       body: JSON.stringify({ type: 'about:blank', title: 'Service Unavailable', status: 503, code: 'service_unavailable', detail: 'Try again shortly.' }) }));
     await p.goto(BOOKINGS_ROUTE);
     await expect(id(p, W.page.unavailable)).toBeVisible();

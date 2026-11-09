@@ -93,33 +93,43 @@ export const S02_TEXT = {
 // ---------------------------------------------------------------- F07-S03: Bookings
 
 export const BOOKINGS_ROUTE = '/workspace/bookings';
+/** S03's test ids and URL parameters, confirmed against its handoff ("TEST IDS", the address) at feature-verify (76e3b080). */
 export const PENDING_F07_S03 = {
-  nav: 'nav-bookings',
+  nav: 'workspace-bookings',
   page: {
-    heading: 'bookings-heading', loading: 'bookings-loading', empty: 'bookings-empty', error: 'bookings-error', unavailable: 'bookings-unavailable',
-    retry: 'bookings-retry', notPermitted: 'workspace-not-permitted', table: 'bookings-table', row: 'booking-row', item: 'booking-item',
-    search: 'bookings-search', day: 'bookings-day', dayToday: 'bookings-day-today', calendar: 'bookings-calendar', status: 'bookings-status',
-    professional: 'bookings-professional', clear: 'bookings-clear', pager: 'bookings-pager', next: 'bookings-next', previous: 'bookings-previous',
-    statusBadge: 'booking-status', reference: 'booking-reference', newAppointment: 'bookings-new',
+    page: 'bookings-page', heading: 'bookings-heading', loading: 'bookings-loading', empty: 'bookings-empty', error: 'bookings-error',
+    unavailable: 'bookings-unavailable', retry: 'bookings-retry', notPermitted: 'account-denied', readOnly: 'bookings-read-only',
+    table: 'bookings-table', items: 'bookings-items', row: 'booking-row', item: 'booking-item', open: 'booking-open',
+    search: 'bookings-search', day: 'bookings-day', dayToday: 'bookings-day-today', calendar: 'bookings-calendar',
+    status: 'bookings-status', statusOption: (v: string) => `bookings-status-option-${v}`,
+    professional: 'bookings-professional', professionalAll: 'bookings-professional-option-all', professionalOption: 'bookings-professional-option',
+    clear: 'bookings-clear', pager: 'bookings-pager', next: 'bookings-next', previous: 'bookings-previous', pageNumber: 'bookings-page',
+    statusBadge: 'booking-status', source: 'booking-source', reference: 'booking-reference', when: 'booking-when', mobile: 'booking-mobile',
+    newAppointment: 'bookings-new', emptyNew: 'bookings-empty-new',
   },
   sheet: {
-    sheet: 'new-appointment', close: 'new-appointment-close', name: 'new-appointment-name', mobile: 'new-appointment-mobile',
-    day: 'new-appointment-day', calendar: 'new-appointment-calendar', service: 'new-appointment-service', variant: 'new-appointment-variant',
-    professional: 'new-appointment-professional', source: 'new-appointment-source', find: 'new-appointment-find', times: 'new-appointment-times',
-    time: 'new-appointment-time', timesIntro: 'new-appointment-times-intro', reason: 'new-appointment-reason', hold: 'new-appointment-hold',
-    countdown: 'new-appointment-countdown', confirm: 'new-appointment-confirm', another: 'new-appointment-another', refusal: 'new-appointment-refusal',
-    leaveDialog: 'new-appointment-leave', leaveStay: 'new-appointment-leave-stay', leaveConfirm: 'new-appointment-leave-confirm',
+    sheet: 'new-appointment', close: 'new-appointment-close', intro: 'new-appointment-intro', announcement: 'new-appointment-announcement',
+    name: 'new-appointment-name', nameError: 'new-appointment-name-error', mobile: 'new-appointment-mobile', mobileError: 'new-appointment-mobile-error',
+    day: 'new-appointment-day', calendar: 'new-appointment-calendar', service: 'new-appointment-service', serviceOption: 'new-appointment-service-option',
+    variant: 'new-appointment-variant', variantOption: 'new-appointment-variant-option',
+    professional: 'new-appointment-professional', professionalAny: 'new-appointment-professional-option-any', professionalOption: 'new-appointment-professional-option',
+    source: 'new-appointment-source', sourceOption: (v: string) => `new-appointment-source-option-${v}`, find: 'new-appointment-find',
+    times: 'new-appointment-times', time: 'new-appointment-time', timesIntro: 'new-appointment-times-intro', noPreference: 'new-appointment-no-preference',
+    reason: 'new-appointment-reason', refusal: 'new-appointment-refusal', rulesLink: 'new-appointment-rules-link', hold: 'new-appointment-hold',
+    holding: 'new-appointment-holding', countdown: 'new-appointment-countdown', holdNote: 'new-appointment-hold-note',
+    confirm: 'new-appointment-confirm', another: 'new-appointment-another',
+    leaveDialog: 'new-appointment-leave-dialog', leaveStay: 'new-appointment-leave-stay', leaveConfirm: 'new-appointment-leave-confirm',
   },
   appointment: {
     sheet: 'appointment-sheet', close: 'appointment-close', name: 'appointment-name', status: 'appointment-status', source: 'appointment-source',
-    rows: 'appointment-row', history: 'appointment-history', historyRow: 'appointment-history-row', explanation: 'appointment-explanation',
-    refusal: 'appointment-refusal',
+    rows: 'appointment-row', history: 'appointment-history', historyRow: 'appointment-history-row', historyBy: 'appointment-history-by',
+    historyWhy: 'appointment-history-why', explanation: 'appointment-explanation', refusal: 'appointment-refusal', loading: 'appointment-loading',
     action: (a: string) => `appointment-${a}`,
   },
-  cancel: { dialog: 'cancel-dialog', reason: 'cancel-reason', note: 'cancel-note', confirm: 'cancel-confirm', keep: 'cancel-keep' },
-  /** The URL's names for the day and the search (AC-3 says the URL keeps them; the names are the build's). */
-  query: { day: 'day', q: 'q', booking: 'booking' },
-  /** The status Select's values, in the spec's order (AC-3). */
+  cancel: { dialog: 'cancel-dialog', summary: 'cancel-summary', reason: 'cancel-reason', reasonOption: (v: string) => `cancel-reason-option-${v}`,
+    reasonError: 'cancel-reason-error', note: 'cancel-note', confirm: 'cancel-confirm', keep: 'cancel-keep' },
+  /** The page's address (handoff): page counts from 1. */
+  query: { day: 'day', q: 'q', status: 'status', professional: 'professional', page: 'page', booking: 'booking' },
   statusOptions: ['all', 'held', 'confirmed', 'arrived', 'in_service', 'completed', 'cancelled', 'no_show'],
   sourceOptions: ['phone', 'whatsapp', 'front_desk', 'walk_in', 'instagram', 'google'],
 } as const;
@@ -178,8 +188,13 @@ export const S03_TEXT = {
   },
   /** History's "who": the staff label for every role, "A team member" for a staff actor with no label, or "System"; never "You" (6705c113). */
   history: 'History', teamMember: 'A team member', system: 'System', notYou: 'You',
-  /** The navigation's order around the new entry (6705c113): after Account, before Team. */
-  navAfter: 'Account', navBefore: 'Team',
+  /** History's verbs, the prototype's (S03 handoff, choice 4). */
+  verbs: { held: 'Held', confirmed: 'Confirmed', arrived: 'Marked arrived', in_service: 'Service started', no_show: 'Marked no-show', undone: 'No-show undone', cancelled: 'Cancelled' } as Record<string, string>,
+  /**
+   * The navigation's order around the new entry (decision 111 c: after Account, before Team). The entries read "Account
+   * and security" and "Staff" (Staff opens the team's people), as the S03 handoff's walk names them.
+   */
+  navAfter: 'Account and security', navBefore: 'Staff',
   cancelTitle: 'Cancel this booking?',
   cancelOpens: 'The time opens again for others.',
   cancelReason: 'Reason',
