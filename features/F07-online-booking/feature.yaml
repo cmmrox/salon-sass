@@ -5,8 +5,8 @@ summary: Staff create bookings on any open day using shared availability, holds 
   are delivered later in the React Native app.
 release: R1
 milestone: M1-web
-status: complete
-qa_status: pass
+status: in-qa
+qa_status: failing
 released_in: null
 depends_on:
 - F02
