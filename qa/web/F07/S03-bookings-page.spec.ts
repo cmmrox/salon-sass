@@ -41,7 +41,7 @@ async function aDay(s: BookingSalon) {
   return { amaya, kavindi, confirmed, held, cancelled, tomorrow };
 }
 
-test('TC-F07-S03-001 AC-1: the Owner, a Manager, a Receptionist and a Professional find Bookings in the navigation and it opens the page; an Accountant has no entry and the page shows the workspace\'s not-permitted state', async ({ accounts, identity, operator, clock }) => {
+test('TC-F07-S03-001 AC-1: the Owner, a Manager, a Receptionist and a Professional find Bookings in the navigation, after Account and before Team, and it opens the page; an Accountant has no entry and the page shows the workspace\'s not-permitted state', async ({ accounts, identity, operator, clock }) => {
   const s = await bookingSalon(identity, operator, clock, { people: 1 });
   const allowed = [['the Owner', s.owner], ['a Manager', await staffAt(s, 'MANAGER')], ['a Receptionist', await staffAt(s, 'RECEPTIONIST')],
     ['a Professional', await staffAt(s, 'PROFESSIONAL', { linkTo: s.members[0] })]] as const;
@@ -50,6 +50,10 @@ test('TC-F07-S03-001 AC-1: the Owner, a Manager, a Receptionist and a Profession
       const { page } = await openAs(accounts, actor, '/workspace/account');
       const entry = id(page, W.nav);
       await expect(entry, `${who}: the entry`).toHaveText(T.nav);
+      const order = (await page.getByRole('navigation').first().getByRole('link').allInnerTexts()).map(t => t.trim());
+      const at = order.indexOf(T.nav);
+      expect(order[at - 1], `${who}: right after ${T.navAfter} (${order.join(', ')})`).toBe(T.navAfter);
+      if (order.includes(T.navBefore)) expect(order[at + 1], `${who}: before ${T.navBefore}`).toBe(T.navBefore);
       await entry.click();
       await page.waitForURL(`**${BOOKINGS_ROUTE}**`);
       await ready(page);

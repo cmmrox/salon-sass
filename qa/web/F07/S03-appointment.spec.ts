@@ -40,7 +40,7 @@ async function expectOffered(s: BookingSalon, who: SignedStaff, sheet: Locator, 
   for (const a of allowed) if (T.actions[a]) await expect(sheet.getByTestId(A.action(a)), a).toHaveText(T.actions[a]);
 }
 
-test('TC-F07-S03-010 AC-7: the sheet shows the customer, status and source, the rows Reference to Source, exactly the actions the API allows with the words each says after it, the prototype\'s explanations, and the History newest first with what, who and when', async ({ accounts, identity, operator, clock }) => {
+test('TC-F07-S03-010 AC-7: the sheet shows the customer, status and source, the rows Reference to Source, exactly the actions the API allows with the words each says after it, the prototype\'s explanations, and the History newest first with what, who (the staff label, never "You") and when', async ({ accounts, identity, operator, clock }) => {
   const s = await bookingSalon(identity, operator, clock, { people: 1 });
   const who = customer();
   const booking = await s.bookings.confirm(s.salon, s.owner.tokens, (await s.bookings.place(s.salon, s.owner.tokens, holdInput(s.members[0].id, s.service.id, s.today, '09:00', { customer: who, channel: 'instagram' }))).id);
@@ -78,7 +78,8 @@ test('TC-F07-S03-010 AC-7: the sheet shows the customer, status and source, the 
     const rows = now.getByTestId(A.historyRow);
     await expect(rows, 'six changes').toHaveCount(6);
     await expect(rows.first(), 'newest first').toContainText(T.statusLabels.in_service);
-    await expect(rows.first(), 'by you').toContainText(T.you);
+    await expect(rows.first(), 'who: the staff label').toContainText(owner.account.email);
+    for (let n = 0; n < 6; n++) await expect(rows.nth(n), 'never "You"').not.toContainText(new RegExp(`\\b${T.notYou}\\b`));
   });
   await test.step('a hold is released', async () => {
     const owner = await again(identity, s.owner);

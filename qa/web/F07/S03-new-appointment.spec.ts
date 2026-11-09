@@ -95,7 +95,7 @@ test('TC-F07-S03-005 AC-4: + New appointment opens the sheet with its intro, the
   });
 });
 
-test('TC-F07-S03-006 AC-5: Find free times shows the day\'s times as chips with who would take them, under the day\'s sentence and the strategy\'s line for No preference; an empty answer says why in the prototype\'s words; changing a field clears the times', async ({ accounts, identity, operator, clock }) => {
+test('TC-F07-S03-006 AC-5: Find free times shows the day\'s times as chips with who would take them, under the day\'s sentence and "Each time shows who would take it." for No preference; an empty answer says why in the prototype\'s words; changing a field clears the times', async ({ accounts, identity, operator, clock }) => {
   const s = await bookingSalon(identity, operator, clock, { people: 2 });
   const date = plusDays(s.today, 3);
   const free = await s.bookings.availability(s.salon, s.owner.tokens, { serviceId: s.service.id, date });
@@ -103,7 +103,8 @@ test('TC-F07-S03-006 AC-5: Find free times shows the day\'s times as chips with 
   const sheet = await openSheet(page);
   const chips = await search(page, sheet, s, date);
   await expect(id(sheet, N.timesIntro)).toHaveText(T.timesIntro(shownDay(date)));
-  await expect(sheet).toContainText(T.noPreferenceLeast);
+  await expect(sheet, 'one line for No preference').toContainText(T.noPreferenceLine);
+  for (const retired of T.retiredStrategyLines) await expect(sheet, `no "${retired}"`).not.toContainText(retired);
   await expect(chips, 'every free time, in order, with who would take it').toHaveText(free.times.map(t => T.chip(shownTime(t.time), firstName(t.member.name))));
   await id(sheet, N.name).fill('Kavindi Herath');
   await expect(chips, 'changing a field clears them').toHaveCount(0);

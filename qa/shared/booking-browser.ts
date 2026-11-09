@@ -148,8 +148,10 @@ export const S03_TEXT = {
   nameMissing: 'Add the customer’s name.',
   mobileMissing: 'Add a valid mobile number so the customer gets the confirmation.',
   timesIntro: (day: string) => `Free times on ${day}. Choose one to hold it.`,
-  noPreferenceLeast: 'Each time shows who would take it, sharing bookings evenly.',
-  noPreferenceMost: 'Each time shows who would take it, filling the busiest day first.',
+  /** One line for every role and strategy (the S03 spec as changed before build, 6705c113; decision 111). */
+  noPreferenceLine: 'Each time shows who would take it.',
+  /** Retired by that change; a screen must no longer show them. */
+  retiredStrategyLines: ['sharing bookings evenly', 'filling the busiest day first'],
   chip: (time: string, name: string) => `${time} · ${name}`,
   closed: (day: string) => `The salon is closed on ${day}.`,
   nobodyPerforms: 'Nobody on the team does this service.',
@@ -174,7 +176,10 @@ export const S03_TEXT = {
     undoToday: 'A no-show can be undone today only.',
     cancelledFinal: 'Cancelled bookings can’t be changed. Make a new booking instead.',
   },
-  history: 'History', you: 'You', system: 'System',
+  /** History's "who": the staff label for every role, "A team member" for a staff actor with no label, or "System"; never "You" (6705c113). */
+  history: 'History', teamMember: 'A team member', system: 'System', notYou: 'You',
+  /** The navigation's order around the new entry (6705c113): after Account, before Team. */
+  navAfter: 'Account', navBefore: 'Team',
   cancelTitle: 'Cancel this booking?',
   cancelOpens: 'The time opens again for others.',
   cancelReason: 'Reason',
