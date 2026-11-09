@@ -6,7 +6,7 @@ summary: Staff create bookings on any open day using shared availability, holds 
 release: R1
 milestone: M1-web
 status: in-qa
-qa_status: failing
+qa_status: pass
 released_in: null
 depends_on:
 - F02
@@ -15,7 +15,7 @@ depends_on:
 integration:
   branch: charithm/feature/F07-online-booking
   pull_request: null
-  qa_revision: dcf0033233221719a4b5b1b7d4ad895dd4308a19
+  qa_revision: 0f7e321bd948b4367ba655e67ea18ad5f2d1ca6d
   merged_commit: null
   merged_at: null
 surfaces:
@@ -47,5 +47,22 @@ verification:
   manual: []
   deferred: []
 evidence:
-  last_run: qa/reports/20261109-223501-F07-10961619c25e
-  last_result: fail
+  last_run: qa/reports/20261109-225843-F07-S03-433387f968b2
+  last_result: pass
+  full_pass_revision: dcf0033233221719a4b5b1b7d4ad895dd4308a19
+  full_pass_run: qa/reports/20261109-223501-F07-10961619c25e
+  reverification:
+  - revision: 0f7e321bd948b4367ba655e67ea18ad5f2d1ca6d
+    date: 2026-11-09
+    changed: 'BUG-F07-001 fix bdf2e354 (merged as 0f7e321b): the Bookings list asks again every 2 s while the API still
+      lists a hold whose time is up. Only apps/web/src/surfaces/workspace/use-bookings.ts and BookingsScreen.test.tsx;
+      no API, contract or migration change (git diff 76e3b080 0f7e321b -- apps/api packages docs/api is empty).'
+    scope: 'sdlc run --stage F07-S03, the narrowest scope the runner selects that holds TC-F07-S03-003: its four entries
+      each open the Bookings page, whose only data hook is the changed use-bookings.ts. Not rerun, with the reason: S01 and
+      S02 (API only, unchanged); the feature journey TC-F07-001, which also opens the page and passed in the full pass, but
+      runs only in the feature scope; the F04 to F06 cases F07 unblocked (other screens and the API). The bug''s own steps
+      were repeated by hand with the page''s requests recorded.'
+    run: 'QA instance web rebuilt at 0f7e321b (apps/web/.next-qa at 22:58, PID 67534); API at 76e3b080 (unchanged).
+      Report qa/reports/20261109-225843-F07-S03-433387f968b2: 4 of 4 entries, 18 of 18 cases passed; BUG-F07-001-steps.log
+      in it.'
+    result: pass; BUG-F07-001 verified.

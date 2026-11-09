@@ -41,8 +41,9 @@ allowed role against "refused": 8 of 8 rejected.
 
 The desk can book a phoned customer in one sheet on any open day: free times are offered with who would take them, the
 chosen time is held with an honest countdown from the server's expiry, and the booking moves only through the states the
-rules allow, each recorded. The engine underneath held every race and every isolation check we put to it. One major bug
-stands (BUG-F07-001: a hold that runs out stays on the list at "Held · 0:00 left"). The one change that would most help
+rules allow, each recorded. The engine underneath held every race and every isolation check we put to it. The one bug
+found (BUG-F07-001, major: a hold that ran out stayed on the list at "Held · 0:00 left") is fixed and verified. The one
+change that would most help
 the desk is a list row they can read at a glance: the time on one line instead of the full date on every row (SUG-F07-01).
 
 ## What works well
@@ -158,4 +159,5 @@ appointments (.../286-cancel-appointments), Set up new appointment assignment (.
 
 ## Bugs filed from this review
 
-- BUG-F07-001 (major), found by TC-F07-S03-003 and confirmed by hand with the page's requests recorded.
+- BUG-F07-001 (major), found by TC-F07-S03-003 and confirmed by hand with the page's requests recorded; fixed in
+  bdf2e354 and verified on 0f7e321b (qa/reports/20261109-225843-F07-S03-433387f968b2).

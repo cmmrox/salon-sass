@@ -2,14 +2,14 @@
 id: BUG-F07-001
 title: A hold whose countdown reaches zero stays on the Bookings list at "Held · 0:00 left" until the page is reloaded
 severity: major
-status: fixed
+status: verified
 found_by: TC-F07-S03-003
 breaks: AC-2
 found_on: 2026-11-09
 fixed_in: bdf2e35499e4ecbc3686c51da911b63136c4b8b2
 fix_note: "The Bookings list asks the API again every 2 seconds while it still lists a hold whose time is up, as the appointment sheet does, so the row leaves once the API stops listing it."
 developer_note: null
-verified_on: null
+verified_on: 2026-11-09
 approved_by: null
 found_in_release: null
 ---
@@ -65,4 +65,16 @@ qa/reports/20261109-223501-F07-10961619c25e/013-F07-S03-bookings-page-web.log.
 
 ## Re-verification
 
-None yet.
+2026-11-09, on 0f7e321b (the fix bdf2e354 merged; only apps/web/src/surfaces/workspace/use-bookings.ts and its screen test
+changed; the API is unchanged since 76e3b080). The QA instance's web was rebuilt at 0f7e321b (22:58); the API runs 76e3b080.
+
+1. The bug's own steps, with the page's requests recorded (qa/reports/20261109-225843-F07-S03-433387f968b2/
+   BUG-F07-001-steps.log): at zero the list still answered the hold as held (02:40:00.433Z), the page asked again two
+   seconds later (02:40:02.461Z), no hold was listed, and the row left the list without a reload; the API answered 404 for
+   the hold. The symptom is gone.
+2. `qa/scripts/sdlc run --stage F07-S03`: TC-F07-S03-003 and every other case of the four S03 entries, each of which opens
+   the Bookings page that the changed hook drives (the hook's only user is BookingsScreen). 18 of 18 passed, TC-F07-S03-018's
+   real five-minute hold included. Report: qa/reports/20261109-225843-F07-S03-433387f968b2.
+3. TC-F07-S03-003 is the test that would catch it again; it failed on 76e3b080 in the feature run and passes on 0f7e321b.
+
+Result: verified.
