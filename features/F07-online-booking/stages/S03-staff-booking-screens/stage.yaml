@@ -4,7 +4,7 @@ feature: F07
 title: Staff booking screens
 sequence: 3
 surfaces: [web]                # api | web | mobile | infra | docs
-status: outlined            # outlined | planned | in-progress | built | complete | released
+status: planned             # outlined | planned | in-progress | built | complete | released
 qa_status: not-run          # stays not-run: QA passes the feature. Set only by a stage pass the owner asked for
 blocked_reason: null        # QA: what stops a stage pass, when qa_status is blocked
 released_in: null
@@ -26,7 +26,13 @@ handoff:
 # '# TC-F07-S03-002 AC-3: ...' header comment in a k6 or shell script. The tooling reads the
 # cases from the registered files; there is no case list or cases.md to keep in step.
 verification:
-  commands: []              # developer gates, exact shell commands, run from the repository root
+  commands:                 # developer gates, exact shell commands, run from the repository root
+    - pnpm -r lint
+    - pnpm -r typecheck
+    - pnpm -r test
+    - pnpm --filter @salon/web test:a11y
+    - pnpm --filter @salon/web build
+    - pnpm contracts:check
   automation: []
   #  - id: <short name>
   #    tool: playwright      # playwright | maestro | k6 | script
