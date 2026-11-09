@@ -172,3 +172,27 @@ test('TC-F07-S03-004 AC-3: the search (name, mobile or reference, as typed), the
     await expect(id(busy, P.row).or(id(busy, P.item)), 'the rest on the second page').not.toHaveCount(0);
   });
 });
+
+test('TC-F07-S03-021 AC-3, AC-9: when a change empties the page being shown (the second page\'s only hold released), the list still shows the day\'s remaining bookings and a way to them, never the empty state', async ({ accounts, identity, operator, clock }) => {
+  // Found by PR #26's review (BUG-F07-004). AC-3: more than one page of results uses Pagination; AC-9: after any change the
+  // list shows the new state without a reload. 51 holds: 50 fill the first page and one is alone on the second.
+  const s = await bookingSalon(identity, operator, clock, { people: 6 });
+  const day = plusDays(s.today, 3);
+  for (const [n, m] of s.members.entries()) {
+    for (let h = 9; h < (n < 5 ? 18 : 15); h++) await s.bookings.place(s.salon, s.owner.tokens, holdInput(m.id, s.service.id, day, `${String(h).padStart(2, '0')}:00`));
+  }
+  const { page } = await openAs(accounts, s.owner, `${BOOKINGS_ROUTE}?${W.query.day}=${day}`);
+  await ready(page);
+  await expect(id(page, P.heading)).toHaveText(T.heading(51, shownDay(day)));
+  await id(page, P.next).click();
+  const rows = id(page, P.row).or(id(page, P.item));
+  await expect(rows, 'the second page: one hold').toHaveCount(1);
+  await rows.first().getByTestId(P.open).click();
+  const sheet = id(page, W.appointment.sheet);
+  await sheet.getByTestId(W.appointment.action('release')).click();
+  await expect(page.getByText(T.done.release)).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(id(page, P.heading), 'the list was read again: 50 left on the day').toHaveText(T.heading(50, shownDay(day)));
+  await expect(id(page, P.empty), 'not "No bookings match." while the day has 50 bookings').toHaveCount(0);
+  await expect(rows.or(id(page, P.pager)).first(), 'the remaining bookings, or the pager to reach them').toBeVisible();
+});

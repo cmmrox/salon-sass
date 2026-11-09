@@ -220,3 +220,23 @@ test('TC-F07-S01-035 AC-13: "Most booked" ranks services by their real bookings,
   const setting = await s.catalogue.setMode(s.salon, s.owner.tokens, 'most_booked');
   expect(setting.popular.slice(0, 2), 'Blow-dry, with three bookings, before Head massage with one').toEqual([x.id, y.id]);
 });
+
+test('TC-F07-S01-039 AC-13: "Most booked" ranks by the bookings of the last 90 days up to now (decision 092, 095 c); confirmed bookings still to come do not count as popular', async ({ identity, operator, clock }) => {
+  // Found by PR #26's review (BUG-F07-005). The owner ruled that the 90 days end at now, as decision 092 says, over the
+  // S01 handoff's note 11 ("future included").
+  const s = await bookingSalon(identity, operator, clock, { people: 2 });
+  const [m1, m2] = s.members;
+  const past = await anotherService(s, 'Blow-dry', [m1, m2]);
+  const ahead = await anotherService(s, 'Head massage', [m1, m2]);
+  const book = async (m: TeamMember, service: Service, date: string, time: string) =>
+    s.bookings.confirm(s.salon, s.owner.tokens, (await s.bookings.place(s.salon, s.owner.tokens, holdInput(m.id, service.id, date, time))).id);
+  // Blow-dry: one confirmed booking this morning, which will have taken place. Head massage: two confirmed for next week.
+  const done = await book(m1, past, s.today, '09:00');
+  for (const m of [m1, m2]) await book(m, ahead, plusDays(s.today, 5), '10:00');
+  await clock.set(utcOf(s.today, '10:30'));
+  const owner = await again(identity, s.owner);
+  expect(Date.parse(done.endsAt), 'the Blow-dry booking has taken place').toBeLessThanOrEqual(Date.parse(await identity.now()));
+  const setting = await s.catalogue.setMode(s.salon, owner.tokens, 'most_booked');
+  const named = (ids: string[]) => ids.map(i => ({ [past.id]: past.name, [ahead.id]: ahead.name, [s.service.id]: s.service.name })[i] ?? i);
+  expect(named(setting.popular), 'only Blow-dry was booked in the last 90 days; Head massage\'s bookings are still to come').toEqual([past.name]);
+});

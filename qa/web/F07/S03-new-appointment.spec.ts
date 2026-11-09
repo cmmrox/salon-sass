@@ -223,3 +223,92 @@ test('TC-F07-S03-018 AC-6: when a held time\'s countdown reaches zero in the she
   const owner = await identity.login(s.salon, s.owner.account);
   await s.bookings.place(s.salon, owner.tokens, holdInput(s.members[0].id, s.service.id, date, time));
 });
+
+/**
+ * Holds back the BFF's answers to the requests `matches` picks until `let go` is called, so that the person can change
+ * the form while one is on its way (PR #26's review). The request itself reaches the API at once; only its answer waits.
+ */
+async function holdBack(page: Page, matches: (url: URL, method: string) => boolean) {
+  let letGo!: () => void;
+  const gate = new Promise<void>(resolve => { letGo = resolve; });
+  let delivered!: () => void;
+  const answered = new Promise<void>(resolve => { delivered = resolve; });
+  let caught = 0;
+  await page.route(url => matches(url, ''), async route => {
+    if (!matches(new URL(route.request().url()), route.request().method())) return route.fallback();
+    caught++;
+    const response = await route.fetch();
+    await gate;
+    await route.fulfill({ response });
+    delivered();
+  });
+  return { letGo: () => letGo(), answered, caught: () => caught };
+}
+/** For `ms`, the sheet never shows a chip: a late answer would show them within moments of landing. */
+async function noChipsFor(sheet: Locator, ms: number, label: string) {
+  for (const end = Date.now() + ms; Date.now() < end; await new Promise(r => setTimeout(r, 100))) {
+    expect(await id(sheet, N.time).count(), label).toBe(0);
+    expect(await id(sheet, N.timesIntro).count(), `${label}: nor the times' sentence`).toBe(0);
+  }
+}
+
+test('TC-F07-S03-019 AC-5: times asked for one day whose answer lands after the day was changed are never shown, so no time can be held from them for the day now chosen', async ({ accounts, identity, operator, clock }) => {
+  // Found by PR #26's review (BUG-F07-002): "Changing any field clears the times" must hold for an answer still on its way.
+  const s = await bookingSalon(identity, operator, clock, { people: 1 });
+  const first = plusDays(s.today, 2);
+  const second = plusDays(s.today, 3);
+  const { page } = await openAs(accounts, s.owner, BOOKINGS_ROUTE);
+  const sheet = await openSheet(page);
+  const late = await holdBack(page, url => url.pathname.endsWith('/booking-availability') && url.searchParams.get('date') === first);
+  const chips = await search(page, sheet, s, first, customer(), s.members[0].id);
+  await expect.poll(late.caught, { message: 'the first day\'s search is on its way' }).toBe(1);
+  await chooseDay(page, sheet, second);
+  late.letGo();
+  await late.answered;
+  await noChipsFor(sheet, 2_000, `${shownDay(first)}'s times are not shown while the form says ${shownDay(second)}`);
+  expect(holdsOf(s), 'nothing held').toEqual([]);
+  await expect(chips).toHaveCount(0);
+});
+
+test('TC-F07-S03-020 AC-6: a hold whose answer lands after the sheet was closed, or after a field was changed, is released and never kept for a form that no longer matches it', async ({ accounts, identity, operator, clock }) => {
+  // Found by PR #26's review (BUG-F07-003): "Closing the sheet with a hold releases it" and "Changing any field clears the
+  // times" (gives back the held time) must hold for a hold still on its way.
+  const s = await bookingSalon(identity, operator, clock, { people: 1 });
+  const date = plusDays(s.today, 2);
+  const soft = expect.configure({ soft: true });
+  const { page } = await openAs(accounts, s.owner, BOOKINGS_ROUTE);
+  const newHolds = (before: Set<string>) => holdsOf(s).filter(h => !before.has(h.id));
+
+  await test.step('the sheet closed while the hold is on its way', async () => {
+    const sheet = await openSheet(page);
+    const chips = await search(page, sheet, s, date, customer(), s.members[0].id);
+    await expect(chips.first()).toBeVisible();
+    const before = new Set(holdsOf(s).map(h => h.id));
+    const late = await holdBack(page, (url, method) => url.pathname.endsWith('/booking-place') && method !== 'GET');
+    await chips.first().click();
+    await expect.poll(() => newHolds(before).length, { message: 'the API placed the hold; its answer is held back' }).toBe(1);
+    await id(sheet, N.close).click();
+    const leave = id(page, N.leaveConfirm);
+    if (await leave.isVisible()) await leave.click();
+    await expect(id(page, N.sheet), 'the sheet closed').toHaveCount(0);
+    late.letGo();
+    await late.answered;
+    await soft.poll(() => newHolds(before).length, { message: 'the late hold is released, not left on the time', timeout: 10_000 }).toBe(0);
+    await page.unrouteAll({ behavior: 'wait' });
+  });
+
+  await test.step('a field changed while the hold is on its way', async () => {
+    const sheet = await openSheet(page);
+    const chips = await search(page, sheet, s, date, customer(), s.members[0].id);
+    await expect(chips.first()).toBeVisible();
+    const before = new Set(holdsOf(s).map(h => h.id));
+    const late = await holdBack(page, (url, method) => url.pathname.endsWith('/booking-place') && method !== 'GET');
+    await chips.first().click();
+    await expect.poll(() => newHolds(before).length, { message: 'the API placed the hold; its answer is held back' }).toBe(1);
+    await id(sheet, N.name).fill('Nethmi Bandara');
+    late.letGo();
+    await late.answered;
+    await soft.poll(() => newHolds(before).length, { message: 'the late hold is released, not kept for the changed form', timeout: 10_000 }).toBe(0);
+    await soft(id(sheet, N.hold), 'no "Holding this time" for a form that changed after the time was chosen').toHaveCount(0);
+  });
+});

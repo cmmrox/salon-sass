@@ -40,9 +40,9 @@ asked for. A case is a test titled with its id and criteria, or a manual or defe
 | F06-S01 | complete | - | STF-01 | 17 | 56 | 56 | 0 | 0 |
 | F06-S02 | complete | - | STF-02 | 17 | 47 | 47 | 0 | 0 |
 | F06-S03 | complete | - | STF-03, STF-05 | 16 | 46 | 46 | 0 | 0 |
-| F07-S01 | complete | - | BKG-04, BKG-05, BKG-06, BKG-14, BKG-16, NFR-05 | 15 | 38 | 36 | 0 | 2 |
+| F07-S01 | complete | - | BKG-04, BKG-05, BKG-06, BKG-14, BKG-16, NFR-05 | 15 | 39 | 37 | 0 | 2 |
 | F07-S02 | complete | - | BKG-01, BKG-03, NFR-03 | 12 | 16 | 15 | 0 | 1 |
-| F07-S03 | complete | - | BKG-04, BKG-11, NFR-12 | 12 | 18 | 18 | 0 | 0 |
+| F07-S03 | complete | - | BKG-04, BKG-11, NFR-12 | 12 | 21 | 21 | 0 | 0 |
 
 ## Deferred cases
 
