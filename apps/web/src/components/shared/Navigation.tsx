@@ -22,6 +22,7 @@ export type NavigationItem = {
   icon:
     | 'home'
     | 'account'
+    | 'bookings'
     | 'staff'
     | 'services'
     | 'audit'
@@ -40,6 +41,8 @@ function NavigationIcon({ icon }: { icon: NavigationItem['icon'] }) {
   const paths = {
     home: 'm3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z',
     account: 'M20 21v-2a7 7 0 0 0-14 0v2M17 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z',
+    // The prototype's list glyph (its Bookings item, F07-S03).
+    bookings: 'M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01',
     staff:
       'M16 21v-2a6 6 0 0 0-12 0v2M14 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0ZM20 21v-2a6 6 0 0 0-3-5.2M17 3.2a4 4 0 0 1 0 7.6',
     // The prototype's lines glyph (its Services item, F05-S01).

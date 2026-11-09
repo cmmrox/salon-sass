@@ -15,14 +15,7 @@ const DECORATIVE = '';
  * header's menu button) and the main area (CR-017).
  */
 export type WorkspaceView =
-  | 'account'
-  | 'team'
-  | 'staff'
-  | 'audit'
-  | 'billing'
-  | 'support-access'
-  | 'settings'
-  | 'services';
+  'account' | 'bookings' | 'team' | 'staff' | 'audit' | 'billing' | 'support-access' | 'settings' | 'services';
 
 /**
  * In the support view (F03-S04) the support banner opens the main area and sticks just under the
@@ -56,6 +49,15 @@ export function WorkspaceShell({
       current: signIn || view === 'account',
     },
   ];
+  // Bookings (F07-S03): after Today's place in the prototype's order, which F10 delivers, so first after Account.
+  if (permissions.includes('calendar.read'))
+    items.push({
+      href: '/workspace/bookings',
+      label: t('bookingsNav'),
+      icon: 'bookings',
+      testId: 'workspace-bookings',
+      current: view === 'bookings',
+    });
   // The Team page (F06-S01, decision 100), whose Sign-in accounts tab is F02's staff screen.
   if (permissions.includes('team.read'))
     items.push({
