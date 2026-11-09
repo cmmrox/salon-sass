@@ -80,6 +80,8 @@ export function BookingsTools(props: Props) {
         >
           <Calendar
             labels={{ labelDayButton: dayButtonLabel }}
+            // Keyboard focus starts on the chosen day, so the arrow keys move between days at once.
+            autoFocus
             mode="single"
             required
             today={dateOfText(props.today)}

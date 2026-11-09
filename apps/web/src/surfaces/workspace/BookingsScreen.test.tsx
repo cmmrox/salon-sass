@@ -214,6 +214,14 @@ describe('the Bookings page (F07-S03 AC-2, AC-3)', () => {
     expect(screen.getByTestId('bookings-day-today')).toBeInTheDocument();
   });
 
+  it('opens the day’s Calendar with keyboard focus on the chosen day', async () => {
+    render();
+    await ready();
+    fireEvent.click(screen.getByTestId('bookings-day'));
+    const calendar = await screen.findByTestId('bookings-calendar');
+    await waitFor(() => expect(within(calendar).getByRole('button', { name: /selected$/ })).toHaveFocus());
+  });
+
   it('shows Empty with Clear filters when nothing matches', async () => {
     window.history.replaceState(null, '', '/workspace/bookings?status=no_show');
     answers.bookings = () => Response.json(page([]));

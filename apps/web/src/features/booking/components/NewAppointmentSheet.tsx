@@ -193,6 +193,8 @@ export function NewAppointmentSheet(props: Props) {
                 >
                   <Calendar
                     labels={{ labelDayButton: dayButtonLabel }}
+                    // Keyboard focus starts on the chosen day, so the arrow keys move between days at once.
+                    autoFocus
                     mode="single"
                     today={dateOfText(props.today)}
                     selected={values.day ? dateOfText(values.day) : undefined}
