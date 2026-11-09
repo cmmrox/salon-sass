@@ -55,7 +55,10 @@ async function busyTeam(s: BookingSalon, date: string) {
   return { eligible: order.map(id => people[id]), excluded: [erandi.id, gayan.id], amaya, buddhika, chathura, dinithi };
 }
 
+/** The salon's strategy; saving the one it already has would be an identical save, which F04 refuses. */
 async function withStrategy(s: BookingSalon, strategy: Strategy) {
+  const current = await s.bookingRules.settings(s.salon, s.owner.tokens);
+  if ((current.rules as { noPreference?: string } | null)?.noPreference === strategy) return;
   await s.bookingRules.save(s.salon, s.owner.tokens, { ...rules({ minimumNoticeMinutes: 60, bookingHorizonDays: 60 }), noPreference: strategy } as RulesInput);
 }
 

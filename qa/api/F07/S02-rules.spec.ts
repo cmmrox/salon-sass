@@ -66,7 +66,7 @@ test('TC-F07-S02-015 AC-7: every allowed hold length and strategy saves; any oth
   expect(kept.rules as Stored, 'left out, they keep the current values').toMatchObject({ holdMinutes: 30, noPreference: 'most_booked' });
   const published = await book.publicRaw(s.salon);
   expect(published.status, 'the public read').toBe(200);
-  expect((published.body as Stored).holdMinutes, 'shows how long a hold lasts').toBe(30);
+  expect((published.body as unknown as { rules: Stored }).rules.holdMinutes, 'shows how long a hold lasts').toBe(30);
   expect(published.text, 'never the strategy').not.toContain('noPreference');
   expect(published.text, 'nor its value').not.toContain('most_booked');
 });

@@ -147,7 +147,7 @@ test('TC-F07-S02-004 AC-3, AC-10: a professional who does not perform the servic
     ['another salon\'s professional', { memberId: other.members[0].id }],
     ['an unknown service', { serviceId: randomUUID() }],
     ['another salon\'s service', { serviceId: other.service.id }],
-    ['another salon\'s variant', { serviceId: (await variantService(s)).id, variantId: otherColour.terms.variants[0].id }],
+    ['another salon\'s variant', { serviceId: (await variantService(s, [s.members[0]])).id, variantId: otherColour.terms.variants[0].id }],
   ];
   for (const [label, query] of rows) {
     const { answer } = await refused(await q(query), 404, 'not_found', label);
@@ -264,12 +264,13 @@ test('TC-F07-S02-009 AC-12: the free-times and open-days reads, and a hold with 
   const accountant = await staffAt(s, 'ACCOUNTANT');
   const date = plusDays(s.today, 2);
   const seen = new Seen();
-  const free = (query: Record<string, string>, tokens: Tokens | undefined = s.owner.tokens) =>
-    s.bookings.availabilityRaw(s.salon, tokens, { serviceId: s.service.id, date, ...query });
+  // `null` is signed out: an undefined argument would take the Owner's credentials by default.
+  const free = (query: Record<string, string>, tokens: Tokens | null = s.owner.tokens) =>
+    s.bookings.availabilityRaw(s.salon, tokens ?? undefined, { serviceId: s.service.id, date, ...query });
   await seen.check(free({ memberId: m.id }), 'GET', AVAILABILITY, '200 one professional');
   await seen.check(free({}), 'GET', AVAILABILITY, '200 no preference');
   await seen.check(free({ date: 'soon' }), 'GET', AVAILABILITY, '400');
-  await seen.check(free({}, undefined), 'GET', AVAILABILITY, '401');
+  await seen.check(free({}, null), 'GET', AVAILABILITY, '401');
   await seen.check(free({}, accountant.tokens), 'GET', AVAILABILITY, '403');
   await seen.check(free({ memberId: randomUUID() }), 'GET', AVAILABILITY, '404');
   await seen.check(free({ memberId: notCut.id }), 'GET', AVAILABILITY, '409');

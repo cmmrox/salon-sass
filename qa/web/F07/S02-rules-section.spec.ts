@@ -61,7 +61,7 @@ test('TC-F07-S02-016 AC-8: the Owner finds "Holding and assigning" after "Bookin
   await test.step('the history names the change', async () => {
     await id(page, 'rules-history').click();
     const changed = id(page, 'rules-history-sheet').getByTestId('rules-history-row').first().getByTestId('rules-history-changed');
-    await expect(changed, 'how long a hold lasts').toContainText(/hold/i);
+    await expect(changed, 'how long a hold lasts').toContainText(/\bhold|\bheld\b/i);
     await expect(changed, 'the "No preference" strategy').toContainText(/no preference/i);
   });
   await test.step('a Manager', async () => {
@@ -86,8 +86,12 @@ test('TC-F07-S02-017 AC-12: the section is used by keyboard alone, fits every wi
     while (!(await hold.evaluate(el => el === document.activeElement)) && presses++ < 80) await page.keyboard.press('Tab');
     await expect(hold, 'reached by Tab').toBeFocused();
     await page.keyboard.press('Enter');
+    await expect(page.getByRole('listbox')).toBeVisible();
+    await expect(page.getByRole('option', { name: '10 minutes', exact: true }), 'the open list starts on the current choice').toBeFocused();
     await page.keyboard.press('ArrowDown');
+    await expect(page.getByRole('option', { name: '15 minutes', exact: true }), 'the arrow moves to the next').toBeFocused();
     await page.keyboard.press('Enter');
+    await expect(page.getByRole('listbox')).toHaveCount(0);
     await expect(hold, 'the next length chosen by keys').toHaveText('15 minutes');
     await page.keyboard.press('Tab');
     await expect(id(page, W.noPreference), 'the strategy is next').toBeFocused();
@@ -100,7 +104,8 @@ test('TC-F07-S02-017 AC-12: the section is used by keyboard alone, fits every wi
       await settled(page);
       const overflow = await fit(page);
       expect(overflow.pageScrolls, `${viewport.width}: no sideways scrolling`).toBe(false);
-      expect(overflow.clipped, `${viewport.width}: nothing clipped`).toEqual([]);
+      // F04's Settings tab strip scrolls sideways inside itself by design; F04's own width cases leave it out the same way.
+      expect(overflow.clipped.filter(c => !c.startsWith('settings-tabs ')), `${viewport.width}: nothing clipped`).toEqual([]);
       for (const control of [W.hold, W.noPreference]) await expect(id(page, control), `${viewport.width}: ${control} is there`).toBeVisible();
       if (viewport.width === 360 || viewport.width === 1280) expect(await seriousViolations(page), `${viewport.width}: no serious or critical violation`).toEqual([]);
     });
