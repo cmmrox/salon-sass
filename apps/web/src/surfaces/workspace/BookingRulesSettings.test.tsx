@@ -20,6 +20,8 @@ const RULES: NonNullable<BookingRulesSettings['rules']> = {
   lateCancellation: { kind: 'deposit' },
   noShow: { kind: 'deposit' },
   reschedule: { limit: 2, untilHours: 12 },
+  holdMinutes: 10,
+  noPreference: 'least_booked',
 };
 const ME = '0b6f9f43-5a1d-4c5e-9a2b-3f3f6e1d2c10';
 const unsaved: BookingRulesSettings = { version: 0, rules: null, currency: 'LKR' };
@@ -360,5 +362,75 @@ describe('the Booking rules tab', () => {
       window.dispatchEvent(unload);
     });
     expect(unload.defaultPrevented).toBe(true);
+  });
+});
+
+describe('Holding and assigning on the Booking rules tab (F07-S02)', () => {
+  it('comes after Booking times with the hold length and the strategy, each with its help (AC-8)', async () => {
+    answers['booking-rules'] = () => Response.json(saved(1));
+    render();
+    await screen.findByTestId('rules-hold');
+    const headings = screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent);
+    expect(headings.indexOf('Holding and assigning')).toBe(headings.indexOf('Booking times') + 1);
+    expect(headings.indexOf('Deposit')).toBe(headings.indexOf('Holding and assigning') + 1);
+
+    expect(screen.getByLabelText('Hold a chosen time for')).toHaveTextContent('10 minutes');
+    expect(screen.getByTestId('rules-hold')).toHaveAccessibleDescription(
+      'While a time is held nobody else can take it. It is released by itself afterwards, unless a payment is in progress.',
+    );
+    expect(screen.getByLabelText('“No preference” bookings go to')).toHaveTextContent(
+      'Whoever has the least booked that day',
+    );
+    expect(screen.getByTestId('rules-no-preference')).toHaveAccessibleDescription(
+      'The first shares work evenly. The second fills one person’s day first and keeps others free for walk-ins. Only people who do the service and are free are considered.',
+    );
+
+    fireEvent.keyDown(screen.getByTestId('rules-hold'), { key: 'Enter' });
+    expect((await screen.findAllByRole('option')).map((option) => option.textContent)).toEqual([
+      '5 minutes',
+      '10 minutes',
+      '15 minutes',
+      '20 minutes',
+      '30 minutes',
+    ]);
+    fireEvent.keyDown(screen.getAllByRole('option')[0]!, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryAllByRole('option')).toHaveLength(0));
+    fireEvent.keyDown(screen.getByTestId('rules-no-preference'), { key: 'Enter' });
+    expect((await screen.findAllByRole('option')).map((option) => option.textContent)).toEqual([
+      'Whoever has the least booked that day',
+      'Whoever has the most booked that day',
+    ]);
+  });
+
+  it('saves both with Save booking rules, and the history names either change (AC-8)', async () => {
+    answers['booking-rules'] = () => Response.json(saved(1));
+    const after = { ...RULES, holdMinutes: 20, noPreference: 'most_booked' as const };
+    answers['booking-rules-save'] = () => Response.json(saved(2, after));
+    render();
+    expect(await screen.findByTestId('rules-save')).toBeDisabled();
+    await chooseOption(screen.getByTestId('rules-hold'), '20 minutes');
+    await chooseOption(screen.getByTestId('rules-no-preference'), 'Whoever has the most booked that day');
+    expect(screen.getByTestId('rules-save')).toBeEnabled();
+    fireEvent.click(screen.getByTestId('rules-save'));
+
+    await waitFor(() =>
+      expect(saves()).toEqual([{ url: '/identity-web/staff/booking-rules-save', body: { version: 1, rules: after } }]),
+    );
+    // The saved rules are now the form's: nothing left to save, and the new choices shown.
+    await waitFor(() => expect(screen.getByTestId('rules-save')).toBeDisabled());
+    expect(screen.getByTestId('rules-hold')).toHaveTextContent('20 minutes');
+
+    answers['booking-rules-history'] = () =>
+      Response.json({
+        items: [{ ...entry(2, ME, 'me@example.test'), changedFields: ['holdMinutes', 'noPreference'] }],
+        page: 0,
+        size: 10,
+        total: 1,
+      });
+    fireEvent.click(screen.getByTestId('rules-history'));
+    const row = await within(await screen.findByTestId('rules-history-sheet')).findByTestId('rules-history-row');
+    expect(within(row).getByTestId('rules-history-changed')).toHaveTextContent(
+      'Changed: how long a time is held, “No preference” bookings',
+    );
   });
 });
