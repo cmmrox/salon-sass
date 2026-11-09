@@ -182,7 +182,9 @@ test('TC-F07-S03-016 AC-12: words have curly apostrophes and the right singulars
       expect(shown.filter(t => /\w'\w/.test(t)), `${where}: no straight apostrophe in a word`).toEqual([]);
       expect(shown.filter(t => /\b1 bookings\b/.test(t)), `${where}: singulars`).toEqual([]);
       expect(shown.filter(t => /\b\d{1,2}:\d\d\s?(AM|PM)\b/i.test(t)), `${where}: the 24-hour clock (decision 103)`).toEqual([]);
-      const missing = (await pressables(page)).filter(p => !p.testId);
+      // Radix's focus guards (invisible, aria-hidden spans with tabindex at a modal's edges) are not controls a person presses.
+      const guards = await page.locator('[data-radix-focus-guard]').count();
+      const missing = (await pressables(page)).filter(p => !p.testId && !(p.tag === 'span' && p.text === '' && guards > 0));
       expect(missing, `${where}: every control has a test id`).toEqual([]);
     });
   }

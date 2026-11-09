@@ -9,7 +9,7 @@
  */
 import { REFERENCE_SHOWN, bookingSalon, customer, holdInput, liveRowsOf, staffAt } from '../../shared/booking';
 import {
-  BOOKINGS_ROUTE, PENDING_F07_S03 as W, S03_TEXT as T, button, chooseCalendarDay, firstName, id, openAs, shownDay, test, expect,
+  BOOKINGS_ROUTE, PENDING_F07_S03 as W, S03_TEXT as T, button, firstName, id, openAs, shownDay, test, expect,
 } from '../../shared/booking-browser';
 import { plusDays } from '../../shared/salon-hours';
 
@@ -33,8 +33,7 @@ test('TC-F07-001 BKG-01, BKG-03, BKG-04, BKG-06, BKG-11, BKG-14, BKG-16: the des
     await id(sheet, W.sheet.mobile).fill(who.mobile);
     await id(sheet, W.sheet.service).click();
     await page.locator(`[data-testid="${W.sheet.serviceOption}"][data-id="${s.service.id}"]`).click();
-    await id(sheet, W.sheet.day).click();
-    await chooseCalendarDay(id(page, W.sheet.calendar), date);
+    await expect(id(sheet, W.sheet.day), 'the day starts on today').toHaveText(shownDay(date));
     await id(sheet, W.sheet.professional).click();
     await page.getByTestId(W.sheet.professionalAny).click();
     await button(sheet, T.find).click();
