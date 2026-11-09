@@ -225,7 +225,40 @@ verification:
     - pnpm -r test
     - pnpm --filter @salon/web build
     - pnpm contracts:check
-  automation: []
+  # Registered for the build-time dry run (sdlc run --stage F07-S01); suites are chosen at feature-verify.
+  automation:
+  - id: holds-api
+    tool: playwright
+    file: qa/api/F07/S01-holds.spec.ts
+    project: api
+  - id: overlaps-api
+    tool: playwright
+    file: qa/api/F07/S01-overlaps.spec.ts
+    project: api
+  - id: states-api
+    tool: playwright
+    file: qa/api/F07/S01-states.spec.ts
+    project: api
+  - id: reads-api
+    tool: playwright
+    file: qa/api/F07/S01-reads.spec.ts
+    project: api
+  - id: access-api
+    tool: playwright
+    file: qa/api/F07/S01-access.spec.ts
+    project: api
+  - id: isolation-api
+    tool: playwright
+    file: qa/api/F07/S01-isolation.spec.ts
+    project: api
+  - id: guards-api
+    tool: playwright
+    file: qa/api/F07/S01-guards.spec.ts
+    project: api
+  - id: contract-api
+    tool: playwright
+    file: qa/api/F07/S01-contract.spec.ts
+    project: api
   #  - id: <short name>
   #    tool: playwright      # playwright | maestro | k6 | script
   #    file: <path under qa/, as laid out in docs/qa/test-plan.md>
