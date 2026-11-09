@@ -78,6 +78,31 @@ describe('workspace route navigation', () => {
     );
     expect(screen.queryByTestId('workspace-team')).not.toBeInTheDocument();
   });
+  it('shows Bookings for calendar.read, after Account and before Staff, current on its page (F07-S03 AC-1)', () => {
+    const { unmount } = renderWithMessages(
+      <WorkspaceShell salon={salon} permissions={['session.manage', 'calendar.read', 'team.read']} view="bookings">
+        <div />
+      </WorkspaceShell>,
+    );
+    const navigation = screen.getByRole('navigation');
+    expect(
+      within(navigation)
+        .getAllByRole('link')
+        .map((link) => link.getAttribute('data-testid')),
+    ).toEqual(['workspace-account', 'workspace-bookings', 'workspace-team']);
+    const entry = screen.getByTestId('workspace-bookings');
+    expect(entry).toHaveAttribute('href', '/workspace/bookings');
+    expect(entry).toHaveTextContent(t.bookingsNav);
+    expect(entry).toHaveAttribute('aria-current', 'page');
+    unmount();
+    // An Accountant has no calendar (decision 108 (b)).
+    renderWithMessages(
+      <WorkspaceShell salon={salon} permissions={['session.manage', 'catalogue.read', 'financial.read']}>
+        <div />
+      </WorkspaceShell>,
+    );
+    expect(screen.queryByTestId('workspace-bookings')).not.toBeInTheDocument();
+  });
 });
 
 describe('the Sidebar from 900px (CR-017)', () => {
