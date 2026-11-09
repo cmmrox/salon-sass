@@ -67,11 +67,11 @@ Ranked, most valuable first. A finding that breaks a requirement is a bug, not a
 
 | Id | Class | Suggestion | Disposition |
 | --- | --- | --- | --- |
-| SUG-F07-01 | should | On the wide list, show each booking's time on one line and leave the day to the heading | |
-| SUG-F07-02 | should | Name the staff member in a booking's History, not their sign-in email | |
-| SUG-F07-03 | should | When a day has no free time, offer the next day that has one | |
-| SUG-F07-04 | idea | Put the status and source badges side by side in the wide table | |
-| SUG-F07-05 | idea | Show an example mobile number in the empty field, and keep the search placeholder whole at 360 pixels | |
+| SUG-F07-01 | should | On the wide list, show each booking's time on one line and leave the day to the heading || CR-027 |
+| SUG-F07-02 | should | Name the staff member in a booking's History, not their sign-in email || CR-027 |
+| SUG-F07-03 | should | When a day has no free time, offer the next day that has one || CR-027 |
+| SUG-F07-04 | idea | Put the status and source badges side by side in the wide table || backlog |
+| SUG-F07-05 | idea | Show an example mobile number in the empty field, and keep the search placeholder whole at 360 pixels || backlog |
 
 ### SUG-F07-01 On the wide list, show each booking's time on one line and leave the day to the heading
 
