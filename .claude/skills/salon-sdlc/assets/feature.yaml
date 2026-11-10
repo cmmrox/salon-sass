@@ -26,5 +26,8 @@ verification:               # journeys across stages, added by feature-verify
   manual: []
   deferred: []
 evidence:
-  last_run: null
-  last_result: null
+  last_run: null            # the latest run, as a path: qa/reports/<folder>
+  last_result: null         # pass | fail
+  full_pass_run: null       # the full --feature run the pass rests on, when last_run is a later rerun; it may have failed
+  full_pass_revision: null  # the commit that full run tested
+  reruns: []                # the later runs (qa/reports/<folder>) that passed each entry the full run did not pass

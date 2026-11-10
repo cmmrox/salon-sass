@@ -264,8 +264,13 @@ lead has not recorded `integration.reviewed_revision` and reported every finding
 5. Run each deferred case whose unblocking event has happened.
 6. Explore as a user and write the feature's `review.md` (`references/product-review.md`).
 7. Record `integration.qa_revision`, `evidence.last_run`, `evidence.last_result` and `qa_status`. A
-   pass rests on a full `--feature` run; a later `--entry` or `--rerun-failed` run after a repair is
-   recorded beside it, never in its place. Then
+   pass rests on one full `--feature` run, which may have failed, and the later runs that passed
+   each entry it did not pass. When `last_run` is a later rerun (an `--entry` or `--rerun-failed`
+   run, whose folder is `...-partial-...`, or a stage-scoped one), name the full run in
+   `evidence.full_pass_run` and its commit in `full_pass_revision`, and list every rerun folder in
+   `evidence.reruns`. `validate` refuses a narrowed run as the full run, a pass without
+   `integration.reviewed_revision`, and, where the folders are in the checkout, a full run that
+   did not finish or a failed entry no listed rerun passed. Then
    generate, validate, guard, commit `test(<F>): ...`.
 
 **Do, when re-verifying fixed bugs:** verify each fix and what depends on it, not the whole feature
