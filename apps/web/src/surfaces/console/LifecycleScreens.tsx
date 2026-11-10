@@ -552,7 +552,7 @@ export function ExportCard({ salon }: { salon: Detail }) {
       });
       if (!response.ok) {
         const data = await response.json().catch(() => ({ code: 'service_unavailable' }));
-        throw new OperatorFailure(data.code ?? 'service_unavailable', [], 0, false, response.status);
+        throw new OperatorFailure(data.code ?? 'service_unavailable', { status: response.status });
       }
       const blob = await response.blob();
       const name =
