@@ -46,6 +46,12 @@ const REFUSALS: Record<string, NewAppointmentRefusal> = {
 };
 
 /**
+ * The failures that are no answer from the API (a dropped connection, the BFF's time limit, a browser that cannot
+ * send): whether the hold was placed is unknown, so the attempt keeps its Idempotency-Key (BUG-F07-006).
+ */
+const OUTCOME_UNKNOWN = new Set(['service_unavailable', 'browser_unsupported']);
+
+/**
  * New appointment (F07-S03 AC-4 to AC-6): the services, team and open days it offers, the form and its checks, the free
  * times, and one hold at a time, which the sheet owns: confirmed, released on "Choose another time", on closing, and on
  * leaving the page, and checked with the API when its countdown (from the API's expiry and clock) reaches zero.
@@ -320,9 +326,11 @@ export function useNewAppointment(
         setAnnouncement(t('holding'));
       } catch (error) {
         if (asked !== form.current) return;
-        attempt.current = null;
-        refused(error);
         const code = failureOf(error).code;
+        // A lost answer may have placed the hold: the same time chosen again sends the same key and gets that hold,
+        // not a refusal of its own (BUG-F07-006). Only an answer from the API ends the attempt.
+        if (!OUTCOME_UNKNOWN.has(code)) attempt.current = null;
+        refused(error);
         if (code === 'slot_taken' || code === 'slot_unavailable') await search(values);
       }
       setBusy(false);
