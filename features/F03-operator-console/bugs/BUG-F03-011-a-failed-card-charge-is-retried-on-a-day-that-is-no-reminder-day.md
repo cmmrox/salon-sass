@@ -2,14 +2,14 @@
 id: BUG-F03-011
 title: "A failed card charge is retried by the next billing pass on any day, not on the next reminder day, and a reminder day skipped while an attempt was unsettled is made up later"
 severity: minor
-status: open
+status: fixed
 found_after_merge: 2026-11-10
 found_by: TC-F03-S02-029
 breaks: "F03-S02 AC-4 (a failed charge is retried on each reminder day); docs/architecture/operator-console.md, Payment; decision 049 (the reminder days)"
 found_on: 2026-11-10
-fixed_in: null
-fix_note: null
-developer_note: null
+fixed_in: 16eb64e34d562bb2addd4357c8819732e71c0db3
+fix_note: "A failed card charge is retried only by the billing pass that sends one of the invoice's reminders, at most once per invoice under the latest reminder it sends, and not while an attempt is in flight; a pass that sends no reminder requests no charge, and a blocked reminder day's retry is not made up."
+developer_note: "Reproduced by SubscriptionBillingIntegrationTest.aFailedChargeIsRetriedOnlyByThePassThatSendsAReminderDaysReminder and aLatePassThatSendsSeveralMissedRemindersRetriesOnceUnderTheLatest. Recorded by the lead from the developer's report: the bug file was on QA's branch when the fix was made."
 verified_on: null
 approved_by: null
 found_in_release: null
