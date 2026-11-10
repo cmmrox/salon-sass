@@ -16,7 +16,8 @@
 # build's sources (lib/build-sources.txt, the one list of them) have uncommitted changes: a build
 # of them would not be HEAD, though /api/v1/meta would say it was. Commit them first. Refuses, too,
 # while a `qa/scripts/sdlc run` of this checkout is in progress (its qa/reports summary.json),
-# which restarting the services would break partway.
+# which restarting the services would break partway, and when a prerequisite of local-up.sh is
+# missing, which would leave the instance down.
 set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -75,6 +76,11 @@ active_run() {
   done
   return 1
 }
+
+# What local-up.sh needs to start the instance again (Docker, JDK 25, Node.js with Corepack, curl),
+# checked by the same function before anything is stopped: a missing one would otherwise leave the
+# QA instance down.
+require_prerequisites postgres api web
 
 if run="$(active_run)"; then
   fail "a QA run of this checkout is in progress: ${run#"$ROOT"/}. Restarting the API and web app now would break it partway. Wait for it to finish, or stop it, and run again. Nothing was stopped."

@@ -28,6 +28,16 @@ printf '%s %s\n' "curl" "${*: -1}" >>"$CALLS"
 printf '%s' "$META"
 STUB
 chmod +x "$test_dir/bin/curl"
+# The prerequisites local-up.sh checks, met by stubs: Docker answers unless DOCKER_DOWN is set, and
+# a stand-in JDK 25 that only reports its version. Node.js, Corepack and ps are this machine's.
+cat >"$test_dir/bin/docker" <<'STUB'
+#!/usr/bin/env bash
+[ -z "${DOCKER_DOWN:-}" ]
+STUB
+chmod +x "$test_dir/bin/docker"
+mkdir -p "$test_dir/jdk/bin"
+printf '#!/bin/sh\necho "    java.specification.version = 25" >&2\n' >"$test_dir/jdk/bin/java"
+chmod +x "$test_dir/jdk/bin/java"
 printf 'api\n' >"$repo/apps/api/source.txt"
 git -C "$repo" init -q -b main
 git -C "$repo" -c user.email=t@example.invalid -c user.name=t add .
@@ -39,7 +49,8 @@ redeploy() { # <meta body> [VAR=value ...]: runs the copy; prints its exit statu
   local meta="$1"; shift
   rm -f "$test_dir/calls"
   set +e
-  env -u SALON_LOCAL_INSTANCE -u SALON_API_PORT PATH="$test_dir/bin:$PATH" CALLS="$test_dir/calls" META="$meta" "$@" \
+  env -u SALON_LOCAL_INSTANCE -u SALON_API_PORT -u DOCKER_DOWN PATH="$test_dir/bin:$PATH" JAVA25_HOME="$test_dir/jdk" \
+    CALLS="$test_dir/calls" META="$meta" "$@" \
     "$repo/infra/scripts/qa-redeploy.sh" >"$test_dir/out.log" 2>&1
   printf '%s' "$?"
   set -e
@@ -94,6 +105,17 @@ git -C "$repo" checkout -q -- apps/api/source.txt
 printf 'notes\n' >"$repo/notes.md"
 [ "$(redeploy "{\"commit\":\"$head\"}")" = 0 ] && check ok "a change outside the build's sources does not stop it" \
   || check fail "a change outside the build's sources was refused: $(cat "$test_dir/out.log")"
+
+# A missing prerequisite of local-up.sh is found before anything is stopped, or the instance would
+# be left down.
+for missing in "JAVA25_HOME=$test_dir/no-jdk" DOCKER_DOWN=1; do
+  status="$(redeploy "{\"commit\":\"$head\"}" "$missing")"
+  if [ "$status" != 0 ] && [ -z "$(calls)" ] && grep -q 'a prerequisite is missing' "$test_dir/out.log"; then
+    check ok "a missing prerequisite (${missing%%=*}) is refused before anything is stopped"
+  else
+    check fail "a missing prerequisite (${missing%%=*}) was not refused first (status $status): $(calls) $(cat "$test_dir/out.log")"
+  fi
+done
 
 # A run of this checkout in progress: summary.json says "running" and names a live runner. The
 # stand-in runner is a `sleep` this test starts and stops by its own process id.
