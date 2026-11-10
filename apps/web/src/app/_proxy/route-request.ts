@@ -56,6 +56,17 @@ const SIGN_IN = '/workspace/sign-in';
  */
 const PROTECTED = new Set(WORKSPACE_ROUTES.pages.map((page) => page.path));
 
+/**
+ * A salon's public photo (CR-030; BUG-F05-003): `/service-photos/<id>`, `/team-photos/<id>` and `/brand-images/<id>`.
+ * Their route handlers set the Cache-Control of every answer they give, the photo's own (`lib/http/photo-cache.ts`)
+ * or `no-store` for anything else (not found, a draft, an unavailable API). The proxy sets none on them, because
+ * Next.js sends the proxy's header over a handler's: `server/lib/router-server.js` sets the proxy's response headers
+ * first, and `server/send-response.js` adds a handler's header only when the response has none of that name. An
+ * unknown or suspended salon's hostname is still answered here, `no-store`, before any handler runs.
+ */
+const PUBLIC_PHOTO = /^\/(?:service-photos|team-photos|brand-images)\/[^/]+$/;
+const isPublicPhoto = (path: string) => PUBLIC_PHOTO.test(path);
+
 /** Settings, and the first of its tabs (F04-S01): Profile, the only one delivered so far. */
 const SETTINGS = '/workspace/settings';
 const SETTINGS_FIRST_TAB = '/workspace/settings/profile';
@@ -246,9 +257,10 @@ export async function routeRequest(
       // settings.read the page itself answers the workspace's "no access" state.
       if (path === SETTINGS && entry?.kind === 'signed-in' && entry.principal.permissions.includes('settings.read'))
         return redirect(request, SETTINGS_FIRST_TAB);
-      // Any other path on a salon's hostname is the application's, with the salon handed on.
+      // Any other path on a salon's hostname is the application's, with the salon handed on. Every answer is stored by
+      // no cache, except a public photo's, whose handler says how it may be kept (CR-030).
       const response = NextResponse.next({ request: { headers } });
-      response.headers.set('Cache-Control', NOT_STORED);
+      if (!isPublicPhoto(path)) response.headers.set('Cache-Control', NOT_STORED);
       return response;
     }
   }
