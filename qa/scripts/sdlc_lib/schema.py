@@ -58,6 +58,10 @@ RESOLVED_BUG_STATUSES = ("verified", "not-a-bug", "wont-fix")
 DEFERRABLE_SEVERITIES = ("minor", "trivial")
 
 CR_STATUSES = ("proposed", "approved", "rejected", "implemented")
+# A change request decided but not yet delivered: its new criteria are pending (no case needed
+# yet), the requirements it changes are not counted as passed, and a feature that depends on
+# the work it changes waits. Each becomes ordinary once the request is implemented.
+CR_IN_FLIGHT = ("approved",)
 
 FEATURE_ID_RE = re.compile(r"^F\d{2}$")
 COMMIT_RE = re.compile(r"^[0-9a-f]{40}$")

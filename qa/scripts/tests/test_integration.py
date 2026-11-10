@@ -48,6 +48,12 @@ class StateTest(unittest.TestCase):
         for status in ("implemented", "proposed", "rejected"):
             self.assertEqual(flow.feature_turn(following, [], features, [{**changing, "status": status}]),
                              ("lead", "feature-new F08"), status)
+        # A dependency not merged yet builds the request into its own delivery: the feature waits
+        # for that merge, not for the request, and once the dependency merges with the request
+        # still approved the request holds it.
+        building = fx.feature(status="in-progress")
+        self.assertEqual(flow.changing_dependencies(following, [changing], [building, following]), [])
+        self.assertEqual(flow.changing_dependencies(following, [changing], features), [("CR-028", "F07")])
         # Portfolio order alone does not hold a feature on a change request.
         unrelated = fx.feature(id="F08", status="backlog", requirements=[])
         self.assertEqual(flow.feature_turn(unrelated, [], [previous, unrelated], [changing]),

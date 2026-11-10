@@ -48,7 +48,7 @@ def cmd_status(_args):
             # Shown when it is someone's turn to start it, or when a change request is what holds
             # it; one waiting in ordinary order is in features/README.md. Its outlined stages
             # wait for feature-new, so they are not listed.
-            held = flow.changing_dependencies(feature, bundle["change_requests"])
+            held = flow.changing_dependencies(feature, bundle["change_requests"], bundle["features"])
             if role != "waiting" or (held and action == flow.change_request_wait(held)):
                 print(f"{feature.get('id')} {feature.get('status'):12} next: {role}: {action}")
             continue

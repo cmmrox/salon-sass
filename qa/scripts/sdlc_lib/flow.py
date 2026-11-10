@@ -25,20 +25,22 @@ def predecessors(feature, features):
 
 
 # A change request in this state is decided but its follow-up has not merged yet.
-OPEN_CHANGE_REQUESTS = ("approved",)
+OPEN_CHANGE_REQUESTS = S.CR_IN_FLIGHT
 
 
-def changing_dependencies(feature, change_requests):
-    """[(change request, dependency)] for each feature this one depends on that an approved change
-    request is still changing (it names one of that feature's stages). Work planned on it now
-    would be planned on what the follow-up replaces."""
+def changing_dependencies(feature, change_requests, features=()):
+    """[(change request, dependency)] for each merged feature this one depends on that an approved
+    change request is still changing (it names one of that feature's stages). Work planned on it
+    now would be planned on what the follow-up replaces. A dependency not merged yet holds the
+    feature anyway, and builds the request into its own delivery."""
+    delivered = {f.get("id") for f in features if merged(f)}
     held = []
     for request in change_requests or ():
         if request.get("status") not in OPEN_CHANGE_REQUESTS:
             continue
         changed = {str(sid).split("-")[0] for sid in request.get("stages") or []}
         for dep in feature.get("depends_on") or []:
-            if dep in changed and (request.get("id"), dep) not in held:
+            if dep in changed and dep in delivered and (request.get("id"), dep) not in held:
                 held.append((request.get("id"), dep))
     return held
 
@@ -95,7 +97,7 @@ def feature_turn(feature, stages, features=(), change_requests=()):
         unmet = [dep for dep in feature.get("depends_on") or [] if dep not in done]
         if unmet:
             return ("waiting", "after " + ", ".join(unmet))
-        held = changing_dependencies(feature, change_requests)
+        held = changing_dependencies(feature, change_requests, features)
         if held:
             return ("waiting", change_request_wait(held))
         mine = str(feature.get("milestone") or "")
