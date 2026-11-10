@@ -171,11 +171,14 @@ signature:
   extracted service will read it from the signed token.
 - An implementation opens its own transaction and does not join the caller's. A read interface
   runs read-only and refuses to be called inside a writing transaction, so a caller reads what it
-  needs before it opens its own; an architecture test holds this (decision 119; several F04 to F07
-  implementations still join the caller and are corrected before F08). A contract that
+  needs before it opens its own. Implementations read through `shared.persistence.ReadOnlyWork`, and
+  an architecture test with a fixture holds the rule (decision 119). A contract that
   genuinely must join the caller's transaction (it writes in the same unit of work, or holds a lock
   until the caller commits) is declared **in-process only**: it sits in a named interface called
-  `inprocess`, its Javadoc says why, and it is never exposed remotely. A module may declare an
+  `inprocess`, its Javadoc says why, and it is never exposed remotely. The guard re-checks made under
+  a lock are such contracts: `staff.inprocess.UpcomingMemberBookings` and `TeamUnderGuard`,
+  `catalogue.inprocess.UpcomingServiceBookings`, `ServiceMoveBookings` and `CatalogueUnderGuard`.
+  A module may declare an
   in-process hook for others to implement, as `platform.inprocess.SalonBootstrapStep` is called in
   the transaction that provisions a salon so each module seeds its defaults (decision 094). If its module is ever
   extracted, the contract becomes an event with a compensating action, not a remote call.
@@ -223,14 +226,18 @@ signature:
   records of its build and asks `outbox_due_events` for due events of those types only. An event of
   a type the instance does not know stays pending, unattempted, for an instance that knows it, so a
   rolling deployment never loses a newer event; it shows in the waiting and oldest-due meters
-  meanwhile. A declared type with no subscriber is delivered at once; decision 119 changes this, so
-  that an instance claims only types it has a subscriber for and a type nobody subscribes to stays
-  pending (otherwise the deployment that adds the first subscriber loses the events an older instance
-  still claims). An event record is therefore
+  meanwhile. An instance claims only the types it has a subscriber for (decision 119): any other event
+  stays pending, unattempted, so the deployment that adds a type's first subscriber cannot lose the
+  events an older instance would have marked sent. An event nobody subscribes to anywhere is closed
+  as `unrouted` by the outbox cleanup after `salon.outbox.unrouted-after` (7 days) and removed after
+  the retention; a new subscriber therefore receives events up to that old, and must ignore the ones
+  it has no use for (a reminder for a booking already past). An event record is therefore
   kept in the code until none of its events is pending anywhere; retiring a type means deleting its
   pending rows deliberately.
 - Meters: `salon.outbox.deliveries` carries a `kind` tag (`delivery` or `event`); the waiting, dead
-  and oldest-due meters count both kinds.
+  and oldest-due meters count both kinds, sampled every 10 seconds. Pending events of a type this
+  instance has no subscriber for are counted in `salon.outbox.unsubscribed` and left out of waiting
+  and oldest-due, so they never look like a stuck dispatcher.
 
 ## Ownership of tables and paths
 
@@ -573,7 +580,10 @@ this section when they close:
   in the same transaction and sent afterwards, with retry and a dead-letter state.
 - **The outbox** (`shared.outbox`): writing a message joins the caller's transaction and refuses to
   run outside one. The dispatcher polls every second, learns what is due across salons only through
-  `outbox_due` (ids, nothing else), and handles each message in a transaction with its salon set:
+  `outbox_due` (ids, nothing else), which reads `shared_outbox_due`, a platform table of the waiting
+  messages' ids and due times kept exact by a trigger in each message's own transaction, so a poll
+  costs one indexed query whatever the number of salons; and handles each message in a transaction
+  with its salon set:
   it claims the message with a lease, commits, calls the provider with no transaction open and the
   message id as the idempotency key, and records the outcome in a new transaction. Backoff starts at
   30 s and doubles to 1 h; after 10 attempts the message is `dead` with its last error. A delivery
@@ -641,9 +651,21 @@ test uses them is in `docs/qa/test-plan.md`.
 - A password is never hashed or checked inside a database transaction or while a lock is held
   (decision 120). Staff sign-in and password change go through `identity`'s `PasswordChecks`, which
   refuses to run inside a transaction and allows `salon.identity.password-checks.concurrent` checks
-  at once (the number of processors by default), then waits two seconds and answers 503. Two rare,
-  signed-in paths still hash inside a transaction (creating a staff account, provisioning an Owner)
-  and move to it with the platform hardening.
+  at once (the number of processors by default), then waits two seconds and answers 503. Creating a
+  staff account and provisioning an Owner hash through it too. A sign-in reserves its check before
+  it is counted, so one answered 503 counts toward no limit.
+- Every database connection has server-side limits (decision 120; settings under `salon.database`):
+  a statement 2.5 s, a lock wait 2 s, idle in a transaction 10 s. A request that needs longer is
+  long work and says so: jobs, exports and their downloads, and the erasers run through
+  `DatabaseLimits.longWork` (5 minutes, 10 s, 60 s); migrations have 25 s and 10 s. A statement the
+  server stops is answered 503 like any database outage. A report or an import that cannot answer
+  inside 2.5 s is built as long work or as a job, never by raising the limit for requests.
+- A scheduled job runs on its own thread, at most `salon.jobs.concurrent` (2) at once, and renews
+  its claim every third of its hold, so a job that runs long is never run twice; a run that has
+  lost its claim stops before its next salon.
+- Encrypted values carry the id of the key that wrote them (`shared.secrets.KeyRing`); earlier keys
+  are configured beside the current one, so a key can be rotated. A value written before ids
+  existed is tried with each key and never rewritten.
 - Permission checks are in the use case and are based on the role's permissions, not on the role's
   name.
 - One-time-code requests are rate limited per number, device and address, with a tenant ceiling.

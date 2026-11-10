@@ -20,6 +20,10 @@ evidence storage and transition from its earlier local workflow.
 - For F02, the owner requested implementation, independent QA and merge into `main` on
   2026-10-13. The lead may merge its feature PR after full QA, closure and required GitHub
   checks pass. This does not authorise deployment or later feature PR merges.
+- For packages 4, 5 and 6 of the foundation review's handover (`docs/reviews/2026-11-10-foundation-review/HANDOVER.md`),
+  the owner's answer on 2026-11-10 authorises the lead to merge each pull request once its CI is
+  green, every review finding is answered, and QA's smoke and regression have passed, and to tell
+  the owner after each. This does not authorise any other merge, a tag or a deployment.
 - Post-merge cleanup of related local/remote branches and worktrees is authorised when the
   lifecycle command proves they contain no work outside `origin/main`. It requires no renewed
   permission, but an unsafe target is retained with the reason reported.

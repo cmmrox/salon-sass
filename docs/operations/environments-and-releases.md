@@ -138,6 +138,12 @@ path, and the startup scripts set the default to an absolute path. Preserve this
 restarting the API so signatures, refresh credentials and abuse-counter hashes remain valid.
 Do not print or commit keys or synthetic account fixture files; the one exception is the fixed
 local account roster, `infra/local/accounts.json` (decision 105).
+The limit on failed sign-ins per address across salons is `SALON_IDENTITY_SIGN_IN_ADDRESS_LIMIT_ACROSS_SALONS`
+(60); the `local` and test profiles set it to 100000, because every local sign-in comes from one
+address. Earlier encryption keys, for rotating a key, are `SALON_IDENTITY_ENCRYPTION_EARLIER_KEYS`,
+`SALON_OPERATOR_ENCRYPTION_EARLIER_KEYS` and `SALON_EXPORT_EARLIER_KEYS` (comma-separated). The
+database's time limits are the `salon.database` settings, an unsubscribed event's life is
+`salon.outbox.unrouted-after` (7 days), and `salon.jobs.concurrent` (2) is how many jobs run at once.
 Customer code limits use `SALON_IDENTITY_CODE_NUMBER_LIMIT`, `SALON_IDENTITY_CODE_DEVICE_LIMIT`,
 `SALON_IDENTITY_CODE_ADDRESS_LIMIT` and `SALON_IDENTITY_CODE_DAILY_LIMIT`, defaulting to 3, 10, 20
 and 1000. Focused local tests may override them explicitly, then must restore the defaults. Local

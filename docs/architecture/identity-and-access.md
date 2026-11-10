@@ -63,7 +63,13 @@ authorize these staff/customer endpoints. Staff may change their own password
 after supplying the old password; revoke other sessions and rotate the current one immediately.
 
 Password sign-in is limited to 10 attempts per normalized identifier and 30 per trusted address
-within 15 minutes, including unknown identifiers. MFA challenges allow five attempts. Failed
+within each salon, and to 60 failed attempts per trusted address across every salon, all within 15
+minutes, including unknown identifiers. The salon limits count every attempt; the limit across
+salons counts an attempt before its password is checked and gives it back when the password proves
+correct, so staff of many salons sharing one carrier address do not use it up while password
+spraying does (decision 120). A sign-in refused 503 because password checks are at their limit
+counts toward none of these. A session is removed, with its refresh history, a week after it ended.
+Each encrypted secret carries its key's id, and earlier keys still decrypt. MFA challenges allow five attempts. Failed
 attempts, consumption, limits and security audit entries commit even when the HTTP outcome is an
 error; throwing inside a transaction must not undo these controls.
 Staff rate windows start on the first attempt and last fifteen minutes; a denied request returns
