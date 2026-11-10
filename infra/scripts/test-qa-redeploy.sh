@@ -7,7 +7,9 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 test_dir="$(mktemp -d)"
-trap 'rm -rf "$test_dir"' EXIT
+runner_pid=""
+# The only process this test starts is its stand-in runner; it is stopped by its own id.
+trap 'rm -rf "$test_dir"; if [ -n "$runner_pid" ] && ps -p "$runner_pid" >/dev/null 2>&1; then kill "$runner_pid"; fi' EXIT
 failures=0
 check() { if [ "$1" = ok ]; then printf 'PASS %s\n' "$2"; else printf 'FAIL %s\n' "$2"; failures=$((failures + 1)); fi; }
 
@@ -92,6 +94,31 @@ git -C "$repo" checkout -q -- apps/api/source.txt
 printf 'notes\n' >"$repo/notes.md"
 [ "$(redeploy "{\"commit\":\"$head\"}")" = 0 ] && check ok "a change outside the build's sources does not stop it" \
   || check fail "a change outside the build's sources was refused: $(cat "$test_dir/out.log")"
+
+# A run of this checkout in progress: summary.json says "running" and names a live runner. The
+# stand-in runner is a `sleep` this test starts and stops by its own process id.
+summary_of() { # <folder> <state> <pid> <process start>: writes a runner summary as sdlc run does
+  mkdir -p "$repo/qa/reports/$1"
+  printf '{\n  "label": "F07",\n  "state": "%s",\n  "entries": [],\n  "runner": {\n    "pid": %s,\n    "process_start": "%s"\n  }\n}\n' \
+    "$2" "$3" "$4" >"$repo/qa/reports/$1/summary.json"
+}
+sleep 60 &
+runner_pid=$!
+runner_start="$(ps -p "$runner_pid" -o lstart= | sed -e 's/^ *//' -e 's/ *$//')"
+summary_of 20261110-100000-F07-done complete "$runner_pid" "$runner_start"
+summary_of 20261110-110000-F07-abc running "$runner_pid" "$runner_start"
+status="$(redeploy "{\"commit\":\"$head\"}")"
+if [ "$status" != 0 ] && [ -z "$(calls)" ] && grep -q 'in progress: qa/reports/20261110-110000-F07-abc (process' "$test_dir/out.log"; then
+  check ok "a run in progress is refused before anything is stopped, naming its report folder"
+else
+  check fail "a run in progress was not refused first (status $status): $(cat "$test_dir/out.log") $(calls)"
+fi
+ps -p "$runner_pid" >/dev/null 2>&1 && kill "$runner_pid"
+wait "$runner_pid" 2>/dev/null || true
+[ "$(redeploy "{\"commit\":\"$head\"}")" = 0 ] \
+  && check ok "a summary left 'running' by a runner that is gone does not stop it" \
+  || check fail "a dead runner's summary was taken for a run: $(cat "$test_dir/out.log")"
+rm -rf "$repo/qa/reports"
 
 # The rule sdlc run applies too: a commit that changes no build source leaves the build current.
 commit_all() { # <message>: commits everything in the copy; prints the new HEAD

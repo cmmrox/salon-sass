@@ -14,7 +14,9 @@
 # Only ever the QA instance (decision 105): SALON_LOCAL_INSTANCE is set to qa, and any other value
 # in the shell is refused before anything is stopped. Refuses, before stopping anything, when the
 # build's sources (lib/build-sources.txt, the one list of them) have uncommitted changes: a build
-# of them would not be HEAD, though /api/v1/meta would say it was. Commit them first.
+# of them would not be HEAD, though /api/v1/meta would say it was. Commit them first. Refuses, too,
+# while a `qa/scripts/sdlc run` of this checkout is in progress (its qa/reports summary.json),
+# which restarting the services would break partway.
 set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -48,6 +50,35 @@ build_is_current() {
   git -C "$ROOT" merge-base --is-ancestor "$commit" HEAD 2>/dev/null || return 1
   git -C "$ROOT" diff --quiet "$commit" HEAD -- "${BUILD_SOURCES[@]}"
 }
+
+# The report folder of a run of this checkout's `qa/scripts/sdlc run` that is still going, or
+# nothing. The runner keeps summary.json current while it runs: state "running" and its own process
+# id and start time under "runner". A process with that id is the runner when it started at that
+# time, or when it is still a `sdlc_lib` process (ps may print the time in another zone); a summary
+# left "running" by a runner that was killed names a process that is gone, and is not a run.
+active_run() {
+  local summary pid started now
+  for summary in "$ROOT"/qa/reports/*/summary.json; do
+    [ -f "$summary" ] && grep -q '"state": *"running"' "$summary" || continue
+    # Node.js is a prerequisite of the web app, so it is here; it reads the JSON as JSON.
+    pid="$(node -e 'const s = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
+      if (s.state === "running" && Number.isInteger(s.runner?.pid)) process.stdout.write(String(s.runner.pid));' \
+      "$summary" 2>/dev/null || true)"
+    started="$(node -e 'const s = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
+      process.stdout.write(String(s.runner?.process_start ?? ""));' "$summary" 2>/dev/null || true)"
+    [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null || continue
+    now="$(ps -p "$pid" -o lstart= 2>/dev/null | sed -e 's/^ *//' -e 's/ *$//')"
+    if { [ -n "$started" ] && [ "$now" = "$started" ]; } || ps -p "$pid" -o command= 2>/dev/null | grep -q 'sdlc_lib'; then
+      printf '%s (process %s)' "${summary%/summary.json}" "$pid"
+      return 0
+    fi
+  done
+  return 1
+}
+
+if run="$(active_run)"; then
+  fail "a QA run of this checkout is in progress: ${run#"$ROOT"/}. Restarting the API and web app now would break it partway. Wait for it to finish, or stop it, and run again. Nothing was stopped."
+fi
 
 head="$(git -C "$ROOT" rev-parse HEAD 2>/dev/null)" || fail "cannot read HEAD of $ROOT. Nothing was done."
 changes="$(git -C "$ROOT" status --porcelain --untracked-files=all -- "${BUILD_SOURCES[@]}")"

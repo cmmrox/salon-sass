@@ -53,7 +53,9 @@ built from the tested commit and that the fixtures are the ones the run assumed.
 The runner writes `summary.json` atomically while it runs: the current entry, completed counts,
 elapsed time and the child process. An interrupted run is marked `interrupted` and is not a pass.
 Read the summary to report progress; never start a second run while the first one's process is
-alive. An entry that reaches its time limit is recorded `timeout`. A run narrowed by `--entry` or
+alive. `infra/scripts/qa-redeploy.sh` reads the same summaries and refuses, naming the report
+folder and stopping nothing, while a run of its checkout is alive: restarting the API and web app
+would break that run partway. An entry that reaches its time limit is recorded `timeout`. A run narrowed by `--entry` or
 `--rerun-failed` is `partial` and is not held to the suite budget.
 
 ## Older records
