@@ -53,7 +53,11 @@ class ServiceCategoryMoveIntegrationTest extends BookingTestBase {
 
     /** A save of the service as read, moved to this category. */
     private Http.Exchange move(Salon salon, UUID category) {
-        Map<String, Object> service = serviceOf(salon);
+        return move(salon, category, serviceOf(salon));
+    }
+
+    /** A save of the service as it was read in {@code service}, moved to this category. */
+    private Http.Exchange move(Salon salon, UUID category, Map<String, Object> service) {
         Map<String, Object> terms = map(service.get("terms"));
         Map<String, Object> save = new LinkedHashMap<>();
         save.put("name", service.get("name"));
@@ -85,6 +89,32 @@ class ServiceCategoryMoveIntegrationTest extends BookingTestBase {
         assertThat(serviceOf(alpha))
                 .containsEntry("categoryId", alpha.category().toString())
                 .containsEntry("version", 0);
+    }
+
+    /** PR #29's review: a stale edit is a conflict before it is anything else, as it was before BUG-F06-002. */
+    @Test
+    void aStaleMoveThatWouldBeRefusedIsAConflictAndTheCurrentOneIsInUse() {
+        UUID treatments = newCategory(alpha, "Treatments");
+        UUID nimal = performingWhole(alpha, "Nimal Fonseka", List.of(alpha.category()));
+        confirmed(alpha, hold(alpha, nimal, TOMORROW, "10:00"));
+        Map<String, Object> stale = serviceOf(alpha);
+        // Someone else saves the service first, from the same version.
+        Map<String, Object> terms = map(stale.get("terms"));
+        Map<String, Object> save = new LinkedHashMap<>();
+        save.put("name", stale.get("name"));
+        save.put("categoryId", stale.get("categoryId"));
+        save.put("description", "Changed by someone else");
+        save.put("priceMinor", terms.get("priceMinor"));
+        save.put("durationMinutes", terms.get("durationMinutes"));
+        save.put("bufferMinutes", terms.get("bufferMinutes"));
+        save.put("bookableOnline", stale.get("bookableOnline"));
+        save.put("version", stale.get("version"));
+        status(other(alpha, "PUT", SERVICES + alpha.service(), "/api/v1/catalogue/services/{id}", save), 200);
+
+        refused(move(alpha, treatments, stale), 409, "conflict");
+        refused(move(alpha, treatments), 409, "in_use");
+        assertThat(serviceOf(alpha))
+                .containsEntry("categoryId", alpha.category().toString());
     }
 
     @Test

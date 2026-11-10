@@ -161,9 +161,13 @@ class SalonServicesImpl implements SalonServices {
         long expected = requiredVersion("version", version);
         // A move to another category takes the service from those who perform the old one whole: staff's answer, in
         // its own transactions, before this one opens, and again under the guard lock inside it (BUG-F06-002).
-        // The field checks come first, as inside the transaction, so that a refused field is answered as one.
+        // The version and field checks come first, in the transaction's order, so that a stale edit is a conflict and a
+        // refused field is answered as one before any booking is asked about (PR #29's review).
         UUID heldCategory = reading.execute(status -> {
             SalonService service = live(id, at);
+            if (service.getVersion() != expected) {
+                throw new ApplicationProblemException(409, ErrorCode.CONFLICT);
+            }
             refuseForeignCategory(valid.categoryId(), at);
             refuseTakenName(valid.name(), id, at);
             return service.getCategoryId();
