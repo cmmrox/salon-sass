@@ -411,20 +411,14 @@ async function handleIdentity(request: NextRequest, kind: Kind, action: string, 
     const access = request.cookies.get(cookieName(kind, 'access'))?.value;
     const refresh = request.cookies.get(cookieName(kind, 'refresh'))?.value;
     const headers: Record<string, string> = access ? { Authorization: `Bearer ${access}` } : {};
-    // A brand image, a service photo and a team photo are the multipart actions; a refused form is answered after the
-    // session check, as before. A caller with no credential at all is not read for: the session check answers it.
+    // A brand image, a service photo and a team photo are the multipart actions; their forms are read only after the
+    // session and permission checks, so no caller who is refused has a form parsed.
     const uploadField = UPLOAD_FIELDS.get(action);
-    const credentialed = Boolean(access || refresh);
-    const upload =
-      request.method !== 'GET' && uploadField && credentialed ? await uploadForm(request, uploadField) : null;
     const read =
       request.method === 'GET' || uploadField
         ? { ok: true as const, value: {} }
         : await readBoundedJson(request, 16384);
-    // An upload has its own stated limit, which starts once its form has been read, however long a slow connection
-    // took to send it (docs/engineering/web.md, "Structure"; BUG-F04-001). Every other action keeps the request's
-    // budget, which the request log starts again once the body has arrived.
-    if (upload) restartRequestBudget(UPLOAD_API_TIMEOUT_MS);
+    // The request's budget, which the request log starts again once the body has arrived (BUG-F04-001).
     const signal = requestSignal();
     if (!read.ok) return problem('bad_request', 400);
     const body: Record<string, unknown> = read.value;
@@ -679,18 +673,23 @@ async function handleIdentity(request: NextRequest, kind: Kind, action: string, 
       case 'brand-image':
       case CATALOGUE_PHOTO:
       case TEAM_PHOTO: {
-        if (!upload) return problem('bad_request', 400);
+        if (!uploadField) return problem('not_found', 404);
+        const upload = await uploadForm(request, uploadField);
         if ('refused' in upload) return problem(upload.refused, upload.status, { errors: upload.errors });
+        // The upload's own stated limit, from the end of reading its form (docs/engineering/web.md, "Structure";
+        // BUG-F04-001).
+        restartRequestBudget(UPLOAD_API_TIMEOUT_MS);
+        const call = { headers, signal: requestSignal() };
         if (action === 'brand-image') {
-          const r = await settings.uploadBrandImage(options, upload.text, upload.file);
+          const r = await settings.uploadBrandImage(call, upload.text, upload.file);
           return r.data ? output(r.data, 201) : failure(r);
         }
         // A service photo (F05-S01) or a team member's (F06-S01): the service or member named in the form, the file
         // passed on as it came.
         const r =
           action === CATALOGUE_PHOTO
-            ? await catalogue.uploadPhoto(options, upload.text, upload.file)
-            : await team.uploadPhoto(options, upload.text, upload.file);
+            ? await catalogue.uploadPhoto(call, upload.text, upload.file)
+            : await team.uploadPhoto(call, upload.text, upload.file);
         return r.data ? output(r.data) : failure(r);
       }
       case 'booking-rules-save': {

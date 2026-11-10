@@ -69,7 +69,8 @@ beforeEach(async () => {
   vi.stubEnv('SALON_WEB_LOCAL_HTTP', 'true');
   vi.stubEnv('SALON_IDENTITY_PROXY_KEY', '12'.repeat(32));
   server = createServer((request, response) => {
-    if (!request.headers.authorization) {
+    // Only the session the tests sign in with is valid; any other credential is refused, as the API refuses it.
+    if (request.headers.authorization !== 'Bearer private-access') {
       response.writeHead(401, { 'Content-Type': 'application/json' });
       response.end(JSON.stringify({ code: 'invalid_session' }));
       return;
@@ -159,6 +160,22 @@ describe('an upload over a slow connection', () => {
 
     expect(response.status).toBe(401);
     expect(await response.json()).toMatchObject({ code: 'invalid_session' });
+    expect(partsRead).toBe(0);
+    expect(request.bodyUsed).toBe(false);
+    expect(uploads).toEqual([]);
+  });
+
+  it('with a credential the API refuses is answered 401 before any part of its body is read', async () => {
+    const request = await slowPhotoUpload('salon_staff_access=forged-access; salon_staff_refresh=forged-refresh');
+    const context = {
+      ...contextFromTraceparent(undefined),
+      clientAddress: '127.0.0.2',
+      deadline: performance.now() + 3000,
+    };
+
+    const response = await runInRequest(context, () => handleIdentity(request, 'staff', 'team-photo'));
+
+    expect(response.status).toBe(401);
     expect(partsRead).toBe(0);
     expect(request.bodyUsed).toBe(false);
     expect(uploads).toEqual([]);
