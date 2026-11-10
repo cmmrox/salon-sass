@@ -119,7 +119,11 @@ public class SalonLifecycleStore {
                         """).param(time(now)).query(UUID.class).list();
     }
 
-    /** Leaves the deleted salon's registry row as a tombstone. */
+    /**
+     * Leaves the deleted salon's registry row as a tombstone. The registry's guard clears the salon's name, contact
+     * email, contact phone, address and Owner email as the row becomes deleted (V34, BUG-F03-009), so the platform
+     * role needs no right to write them.
+     */
     public void markDeleted(UUID salonId, Instant at) {
         database.jdbc().sql("""
                         UPDATE tenant SET status = 'deleted', deleted_at = ?, version = version + 1, updated_at = ? WHERE id = ?

@@ -602,6 +602,56 @@ class SalonLifecycleIntegrationTest extends IntegrationTest {
         BillingTestSupport.status(gone, 404);
     }
 
+    /** BUG-F03-009, PLT-06: the tombstone keeps what the platform must keep and none of the salon's profile. */
+    @Test
+    void aDeletedSalonsTombstoneKeepsNoProfileOrOwnerContactAndTheConsoleReturnsNone() throws Exception {
+        String plan = billing.plan(5);
+        UUID id = UUID.fromString((String) billing.provisioned(plan, 150000, "bank_transfer", "Asia/Colombo")
+                .get("id"));
+        TestSalon salon = billing.testSalon(id);
+        Map<String, Object> neighbour = billing.provisioned(plan, 150000, "bank_transfer", "Asia/Colombo");
+        UUID neighbourId = UUID.fromString((String) neighbour.get("id"));
+        String profile = "SELECT name, contact_email, contact_phone, address, owner_email FROM tenant WHERE id = ?";
+        String kept = "SELECT id, slug, plan_id, country, currency, time_zone, default_language, access_state,"
+                + " created_at, closed_at, delete_at FROM tenant WHERE id = ?";
+        closed(salon);
+        exports.run(CLOCK.instant());
+        Map<String, Object> keptBefore = owner.queryForMap(kept, id);
+        Map<String, Object> neighbourBefore = owner.queryForMap(profile, neighbourId);
+        assertThat(owner.queryForMap(profile, id))
+                .allSatisfy((column, value) -> assertThat(value).as(column).isNotNull());
+
+        CLOCK.set(Instant.parse((String) detail(id).get("deleteAt")));
+        deletion.run(CLOCK.instant());
+
+        assertThat(owner.queryForMap(profile, id))
+                .allSatisfy((column, value) -> assertThat(value).as(column).isNull());
+        assertThat(owner.queryForMap(kept, id)).isEqualTo(keptBefore);
+        assertThat(owner.queryForMap("SELECT status, deleted_at FROM tenant WHERE id = ?", id))
+                .containsEntry("status", "deleted")
+                .extractingByKey("deleted_at")
+                .isNotNull();
+        Map<String, Object> detail = detail(id);
+        assertThat(detail)
+                .containsEntry("status", "deleted")
+                .containsEntry("slug", salon.slug())
+                .containsEntry("name", null)
+                .containsEntry("contactEmail", null)
+                .containsEntry("contactPhone", null)
+                .containsEntry("address", null)
+                .containsEntry("ownerEmail", null)
+                .containsEntry("country", "LK")
+                .containsEntry("currency", "LKR")
+                .containsEntry("timeZone", "Asia/Colombo");
+        assertThat(detail.get("plan")).isNotNull();
+        assertThat(owner.queryForMap(profile, neighbourId)).isEqualTo(neighbourBefore);
+
+        // Nothing can put a profile back on a tombstone afterwards, whoever writes.
+        owner.update("UPDATE tenant SET name = 'Back again', owner_email = 'back@example.test' WHERE id = ?", id);
+        assertThat(owner.queryForMap(profile, id))
+                .allSatisfy((column, value) -> assertThat(value).as(column).isNull());
+    }
+
     // --- AC-9 ------------------------------------------------------------------------------------------
 
     @Test
