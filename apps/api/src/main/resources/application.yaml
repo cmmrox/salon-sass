@@ -243,6 +243,9 @@ salon.identity:
   signing-key: ${SALON_IDENTITY_SIGNING_KEY:}
   challenge-key: ${SALON_IDENTITY_CHALLENGE_KEY:}
   encryption-key: ${SALON_IDENTITY_ENCRYPTION_KEY:}
+  # Keys that were the encryption key before, newest first, comma-separated: they decrypt what they encrypted,
+  # never encrypt (decision 120). To rotate, put the old key here and a new one above.
+  encryption-earlier-keys: ${SALON_IDENTITY_ENCRYPTION_EARLIER_KEYS:}
   proxy-key: ${SALON_IDENTITY_PROXY_KEY:}
   # Staff password checks (PBKDF2) running at once per instance, outside any transaction (decision 120); one more
   # waits up to two seconds, then is refused 503. Unset, it is the number of processors the JVM sees; set it with
@@ -268,6 +271,8 @@ salon.operator:
   signing-key: ${SALON_OPERATOR_SIGNING_KEY:}
   challenge-key: ${SALON_OPERATOR_CHALLENGE_KEY:}
   encryption-key: ${SALON_OPERATOR_ENCRYPTION_KEY:}
+  # As salon.identity.encryption-earlier-keys, for the operators' secrets.
+  encryption-earlier-keys: ${SALON_OPERATOR_ENCRYPTION_EARLIER_KEYS:}
   proxy-key: ${SALON_OPERATOR_PROXY_KEY:}
   fingerprint-key: ${SALON_OPERATOR_FINGERPRINT_KEY:}
 
@@ -281,6 +286,8 @@ salon.billing:
 # every other key. No nonlocal fallback: an environment without it refuses to start.
 salon.export:
   key: ${SALON_EXPORT_KEY:}
+  # As salon.identity.encryption-earlier-keys, for the export archives.
+  earlier-keys: ${SALON_EXPORT_EARLIER_KEYS:}
   # Where the Owner's export-ready email links to: the platform domain is put in place of %s.
   link-origin: ${SALON_EXPORT_LINK_ORIGIN:https://%s}
 

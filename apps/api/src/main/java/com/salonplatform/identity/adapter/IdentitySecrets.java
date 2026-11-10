@@ -1,5 +1,6 @@
 package com.salonplatform.identity.adapter;
 
+import com.salonplatform.shared.secrets.KeyRing;
 import com.salonplatform.shared.secrets.SecretKeys;
 import java.io.IOException;
 import java.io.InputStream;
@@ -36,6 +37,7 @@ public class IdentitySecrets implements SecretKeys {
     private final byte[] challenge;
     private final byte[] encryption;
     private final byte[] proxy;
+    private final List<byte[]> earlierEncryption;
 
     public IdentitySecrets(Environment environment) {
         Properties saved = environment.matchesProfiles("local") ? retained(environment) : new Properties();
@@ -43,6 +45,10 @@ public class IdentitySecrets implements SecretKeys {
         challenge = read(environment, saved, "challenge");
         encryption = read(environment, saved, "encryption");
         proxy = read(environment, saved, "proxy");
+        // Keys that encrypted values before the current one (decision 120): they decrypt, never encrypt.
+        earlierEncryption = KeyRing.keysOf(
+                environment.getProperty("salon.identity.encryption-earlier-keys"),
+                "salon.identity.encryption-earlier-keys");
         List<byte[]> keys = List.of(signing, challenge, encryption, proxy);
         for (int a = 0; a < keys.size(); a++) {
             for (int b = a + 1; b < keys.size(); b++) {
@@ -127,11 +133,17 @@ public class IdentitySecrets implements SecretKeys {
 
     @Override
     public Map<String, byte[]> byPurpose() {
-        return Map.of(
+        Map<String, byte[]> keys = new java.util.LinkedHashMap<>(Map.of(
                 "identity signing", signing(),
                 "identity challenge", challenge(),
                 "identity encryption", encryption(),
-                "identity proxy", proxy());
+                "identity proxy", proxy()));
+        for (int i = 0; i < earlierEncryption.size(); i++) {
+            keys.put(
+                    "identity encryption, earlier key " + (i + 1),
+                    earlierEncryption.get(i).clone());
+        }
+        return keys;
     }
 
     public byte[] signing() {
@@ -144,6 +156,11 @@ public class IdentitySecrets implements SecretKeys {
 
     public byte[] encryption() {
         return encryption.clone();
+    }
+
+    /** The keys that encrypted values before the current one, newest first. */
+    public List<byte[]> earlierEncryption() {
+        return earlierEncryption.stream().map(byte[]::clone).toList();
     }
 
     public byte[] proxy() {
