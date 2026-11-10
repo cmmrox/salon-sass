@@ -42,7 +42,9 @@ A project fact is never written into a skill, and a skill never restates a docum
   `docs/` or a skill. Fix findings at their source.
 - **Three kinds of QA run** (decision 068): feature QA once per feature after its stages close
   (QA dry-runs its tests as each stage closes); smoke on every PR, merge and deploy; regression
-  before a release and for refactors or upgrades touching delivered features. Slow checks (load, the
+  at every feature close while its PR waits (decision 122), before a release and for refactors or
+  upgrades touching delivered features. The lead reviews a feature's code before QA starts
+  (`feature-review`). Slow checks (load, the
   production-like stack, image scans) form the `release` suite, run only when the owner asks. After
   a fix, only the failed checks and those whose code it touched run again (decision 069). A single-stage pass runs only when the owner asks. Always
   through `qa/scripts/sdlc run`; a case is the test titled with its id (`TC-F07-S02-001 AC-2: ...`).

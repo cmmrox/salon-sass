@@ -62,7 +62,7 @@ Membership is the `suites` field of an automation entry, decided at `feature-ver
 | Suite | Contains | When it runs |
 | --- | --- | --- |
 | `smoke` | The few critical checks that prove each delivered feature is alive: the apps start, sign-in, one cross-salon refusal, one key journey per feature | Every PR, after every merge, before and after a deploy |
-| `regression` | Everything that must keep working, run in parallel | Before a release; for refactors and upgrades that touch delivered features; when the owner asks |
+| `regression` | Everything that must keep working, run in parallel | At every feature close while its pull request waits; before a release; for refactors and upgrades that touch delivered features; when the owner asks |
 | `release` | The slow checks: load, the production-like stack, image scans | Only when the owner asks: before a deploy they request and at `release-verify`; never during a fix or re-verification |
 
 Keep each suite inside its budget in `docs/qa/test-plan.md`: a slow test moves to `release` or is

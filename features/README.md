@@ -16,7 +16,7 @@ requirement detail is in `qa/coverage.md`.
 | F06 | [Staff, schedules and leave](F06-staff-schedules-and-leave/) | M1-web | complete | merged | 3/3 | 4 | - |
 | F07 | [Booking engine and staff booking foundations](F07-online-booking/) | M1-web | complete | merged | 3/3 | 10 | - |
 | F08 | [Payments, deposits and refunds](F08-payments-deposits-and-refunds/) | M1-web | backlog | - | - | 9 | after F12 |
-| F09 | [Manage a booking: reschedule, cancel and waitlist](F09-manage-a-booking/) | M1-web | backlog | - | - | 3 | after F08 |
+| F09 | [Manage a booking: reschedule and cancel](F09-manage-a-booking/) | M1-web | backlog | - | - | 3 | after F08 |
 | F10 | [Salon calendar and front desk](F10-salon-calendar-and-front-desk/) | M1-web | backlog | - | - | 12 | after F08 |
 | F11 | [Notifications and reminders](F11-notifications-and-reminders/) | M1-web | backlog | - | - | 9 | after F09 |
 | F12 | [Customer records](F12-customer-records/) | M1-web | backlog | - | - | 5 | **lead**: `feature-new F12` |

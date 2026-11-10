@@ -327,8 +327,8 @@ whether to run regression.
 
 **Request:** "The F07 PR is open." then "It's merged." then "Deploy to staging."
 
-**Expected:** Smoke on the PR and again on the merged `main`; no regression for an ordinary feature
-merge. Before the staging deploy, the `release` suite (load, production-like stack, image scans)
+**Expected:** Smoke on the PR and again on the merged `main`. Regression already ran once at
+`feature-close`, while the PR waited (decision 122); it is not run again for the merge. Before the staging deploy, the `release` suite (load, production-like stack, image scans)
 with the owner's explicit staging request in the current message. Each through
 `qa/scripts/sdlc run --suite <name>`, within the budgets in `docs/qa/test-plan.md`.
 
@@ -341,6 +341,50 @@ bug fix to the deploy scripts: "Is it fixed?"
 touched, naming the changed paths and why; the other passes stand. No whole suite or regression
 because a fix landed. The developer iterates with fast, focused checks and does not repeat a load or
 `release` check per adjustment; load checks run only when the owner asks (decision 069).
+
+## 39. Review comes before QA
+
+**Request:** "F12's last stage is closed. Get it verified."
+
+**Expected:** The lead runs `feature-review` first: reads the feature's diff (or has an independent
+reviewer read it, never the agent that built it), answers every finding on the draft pull request,
+its automated review's included, as fixed, filed as a bug or declined with the reason, and only then
+delegates `feature-verify`. QA refuses to start while a finding is unanswered.
+
+## 40. A design check before the outline
+
+**Request:** "Plan F08."
+
+**Expected:** `feature-new` writes the README's design check (records, states, events and read
+interfaces, and a row per later feature saying what it needs from this model) and its market check
+against the comparison products in `docs/qa/review-context.md`, puts each gap to the owner as a
+change request or backlog idea, and shows the owner the outline with both before any spec is
+written. It does not skip them because the requirements look complete.
+
+## 41. A stage closes into a draft pull request
+
+**Request:** "Close F12-S01."
+
+**Expected:** The lead rules on every difference and choice in the handoff one by one, closes and
+merges the stage into the feature branch, and pushes the feature branch to its draft pull request
+(opening it if this is the first stage) so CI and the automated review run now. The pull request
+stays a draft until `feature-close`; nothing is merged into `main`.
+
+## 42. Where QA spends a feature pass
+
+**Request:** "Verify F12." (a feature with list and form screens and six endpoints)
+
+**Expected:** QA's API cases cover isolation, roles, simultaneous requests, each endpoint's contract
+and the journeys, with one outside case per rule the developer's integration tests already prove.
+Each screen gets the browser cases in `docs/qa/test-types.md`, "Where QA's time goes": a late
+answer, a renewable expired session, a double submit, another person's change, a lost connection.
+It does not write an API case per validation branch.
+
+## CR-029 evaluation status
+
+Scenarios 39 to 42 were added with CR-029 on 2026-11-10 and have not yet been run in a fresh
+session of either client; packaging was checked by `qa/scripts/sdlc validate` only. Run them at the
+start of the next feature and correct the skills where the wrong file is read.
 
 ## CR-010 platform mapping evaluation
 
