@@ -2,7 +2,7 @@ import type { BookingAction, BookingDetail, BookingHistoryEntry, BookingState } 
 import { localDate } from './booking-time';
 
 /** The actions the appointment sheet offers, in the prototype's order (`openA`); confirming is New appointment's. */
-export const SHEET_ACTIONS = ['arrive', 'start', 'no-show', 'undo-no-show', 'cancel', 'release'] as const;
+const SHEET_ACTIONS = ['arrive', 'start', 'no-show', 'undo-no-show', 'cancel', 'release'] as const;
 export type SheetAction = (typeof SHEET_ACTIONS)[number];
 
 /** Exactly the actions the API allows on the booking now (`allowedActions`), never one it does not (AC-7, AC-10). */

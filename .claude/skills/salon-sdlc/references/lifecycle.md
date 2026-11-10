@@ -29,7 +29,7 @@ status it leaves behind. Each section stands alone; read only the one you are ru
 feature: backlog -> planned -> in-progress -> in-qa -> complete -> released
 stage:   outlined -> planned -> in-progress -> built -> complete -> released
 qa_status (a feature; a stage only when the owner asked for a stage pass): not-run | failing | blocked | pass
-integration (feature.yaml): branch, pull_request, qa_revision, merged_commit, merged_at
+integration (feature.yaml): branch, pull_request, reviewed_revision, qa_revision, merged_commit, merged_at
 ```
 
 A stage is `complete` when closed on the developer's gates; a feature is `complete` when QA passed
@@ -98,7 +98,9 @@ and architecture (`docs/README.md` says where).
   developer's gates already proved unchanged (decision 066).
 - The status is not `backlog`.
 - `qa/scripts/sdlc start-check <F>` fails: an earlier feature or a dependency is not merged into
-  GitHub `main`. A recorded `started_early` owner exception may waive order, never a dependency.
+  GitHub `main`, or an approved change request is still changing a stage of a merged dependency
+  ("after CR-028's follow-up to F07 is merged"). A recorded `started_early` owner exception may
+  waive order, never a dependency.
 - An earlier milestone is not released. Only the owner changes milestone order (`docs/ROADMAP.md`);
   record an early start in `started_early`.
 
@@ -233,7 +235,8 @@ is still running.
 2. Answer every finding, yours and any automated review's, on the pull request: fixed (the
    developer fixes on a branch from the feature branch, with a test, and the lead merges it),
    filed as a bug, or declined with the reason. No finding is left unanswered.
-3. Report the findings and their answers. `feature-verify` starts on the result.
+3. Record the commit you reviewed in `integration.reviewed_revision` (`qa/scripts/sdlc status` names
+   `feature-verify` only once it is set), and report the findings and their answers.
 
 **Does not:** certify anything. It finds; QA's pass is still the proof.
 
@@ -247,7 +250,7 @@ documents, `docs/qa/`, the running product. Code only to find a selector or endp
 come from the specs and requirements.
 
 **Refuse if:** a stage is not `complete`; you built a stage of this feature in this context; the
-lead has not reported `feature-review` done with every finding answered.
+lead has not recorded `integration.reviewed_revision` and reported every finding answered.
 
 **Do, on the first pass:**
 1. On the feature branch, set `status: in-qa`. Start the product from the handoffs; a product that
@@ -260,7 +263,9 @@ lead has not reported `feature-review` done with every finding answered.
    `features/<feature>/bugs/` (`BUG-F07-001`); confirm stage bugs still open.
 5. Run each deferred case whose unblocking event has happened.
 6. Explore as a user and write the feature's `review.md` (`references/product-review.md`).
-7. Record `integration.qa_revision`, `evidence.last_run`, `evidence.last_result` and `qa_status`;
+7. Record `integration.qa_revision`, `evidence.last_run`, `evidence.last_result` and `qa_status`. A
+   pass rests on a full `--feature` run; a later `--entry` or `--rerun-failed` run after a repair is
+   recorded beside it, never in its place. Then
    generate, validate, guard, commit `test(<F>): ...`.
 
 **Do, when re-verifying fixed bugs:** verify each fix and what depends on it, not the whole feature

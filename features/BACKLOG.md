@@ -18,7 +18,7 @@ Requirement text is in `docs/brd/requirements.yaml`.
 | Customer app extras: Sinhala and Tamil, favourites, gallery, saved payment method | APP-12, APP-14, APP-17, APP-19 |
 | Payment operations: reconciliation and late fees (payment links and the day-end close moved to R1 under CR-023) | PAY-11, PAY-12 |
 | Customer insight: segments and blocking | CRM-07, CRM-08 |
-| Deeper reports | REP-05, REP-06 |
+| Deeper reports (tax, discount and refund reports moved to R1 and F13 under CR-028) | REP-05 |
 | Staff workspace in Sinhala and Tamil (CR-023) | PLT-15 |
 | Custom domains and app links (design approved in CR-021: `docs/architecture/multi-tenancy.md`, "Domains a salon owns") | BRD-11, BRD-12 |
 | Notification centre in the workspace and the app (moved from R1 under CR-028) | NOT-08 |
@@ -77,3 +77,5 @@ Added by the lead at `stage-close` and `feature-close`, from suggestions classed
 | A quote and enquiry link that needs no app, for bridal customers (F19 ships before F20) | Foundation review 2026-11-10 | Revisit OCC-15 and OCC-16 at `feature-new F19` |
 | Decimal tax and service-charge rates on the Tax & charges screen | Decision 118 | Rates are stored in basis points; the screen keeps whole percentages until asked |
 | Self-serve salon sign-up with a trial | Foundation review 2026-11-10 | PLT-01 is operator-only; Fresha, Booksy and Vagaro offer trials |
+| Split CR-020 by feature, or give a change request a per-feature status, before F17 merges | Decision 124 | An `approved` change request holds the dependants of a merged feature it names; CR-020 spans F17 to F22 |
+| Shard the regression suite across QA instances (`qa-1` to `qa-N`, one build, `--shard k/N`, merged summaries); three instances is the ceiling on a 16 GB machine | Foundation review, package 3 | The suite took 78 minutes on one worker; a test clock per salon is the longer fix |

@@ -1,9 +1,13 @@
 /**
- * Refuses to start a run against a product that is not there. A test can only fail meaningfully
- * if it could have passed, so a stopped service is reported as what it is, an environment fault,
- * before any test runs.
+ * Refuses to start a run against a product that is not there, or not the build of the commit
+ * under test. A test can only fail meaningfully if it could have passed, so a stopped service is
+ * reported as what it is, an environment fault, before any test runs; and a pass is evidence for
+ * the checkout's HEAD only if the API under test was built from it (its /api/v1/meta commit).
  */
-import { apiUrl, webUrl } from './env';
+import { execFileSync } from 'node:child_process';
+
+import { buildMismatch, mismatchAllowed, ALLOW_MISMATCH } from './build-identity.mjs';
+import { apiUrl, REPO_ROOT, webUrl } from './env';
 
 async function status(url: string): Promise<number | string> {
   try {
@@ -12,6 +16,25 @@ async function status(url: string): Promise<number | string> {
   } catch (error) {
     const cause = (error as { cause?: { code?: string } }).cause;
     return cause?.code ?? (error as Error).name;
+  }
+}
+
+/** The commit /api/v1/meta reports, or undefined when it does not answer with one. */
+async function runningCommit(): Promise<string | undefined> {
+  try {
+    const response = await fetch(`${apiUrl}/api/v1/meta`, { signal: AbortSignal.timeout(10_000) });
+    const body = (await response.json()) as { commit?: unknown };
+    return typeof body.commit === 'string' ? body.commit : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function checkoutHead(): string | undefined {
+  try {
+    return execFileSync('git', ['-C', REPO_ROOT, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+  } catch {
+    return undefined;
   }
 }
 
@@ -30,5 +53,11 @@ export default async function globalSetup(): Promise<void> {
       `ENVIRONMENT: the product is not running, so nothing was tested: ${missing.join('; ')}. ` +
         'Start it with infra/scripts/local-up.sh and run again.',
     );
+  }
+  const mismatch = buildMismatch({ running: await runningCommit(), head: checkoutHead(), apiUrl });
+  if (mismatch && mismatchAllowed(process.env)) {
+    console.warn(`BUILD MISMATCH ALLOWED (${ALLOW_MISMATCH}=1): ${mismatch}`);
+  } else if (mismatch) {
+    throw new Error(`ENVIRONMENT: nothing was tested: ${mismatch}.`);
   }
 }

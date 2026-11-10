@@ -42,7 +42,12 @@ export function ServicePicker({ values, categories, services, disabled, onChange
         const ticked = row.state !== 'none';
         const opened = ticked && open.includes(row.category.id);
         return (
-          <div key={row.category.id} className="flex flex-col gap-2" data-testid="team-picker-row" data-id={row.category.id}>
+          <div
+            key={row.category.id}
+            className="flex flex-col gap-2"
+            data-testid="team-picker-row"
+            data-id={row.category.id}
+          >
             <div className="flex items-center gap-2">
               <Field orientation="horizontal" className={cn(ROW_CLASSES, 'min-w-0 flex-1', ticked && ROW_ON_CLASSES)}>
                 <Checkbox
@@ -103,7 +108,7 @@ export function ServicePicker({ values, categories, services, disabled, onChange
                     disabled={disabled}
                     pressed={row.state === 'whole' || row.chosen.includes(service.id)}
                     onPressedChange={() => onChange(toggleService(values, row, service.id))}
-                    className="h-auto whitespace-normal wrap-anywhere"
+                    className="h-auto wrap-anywhere whitespace-normal"
                     data-testid="team-picker-service"
                     data-id={service.id}
                   >

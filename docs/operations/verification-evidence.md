@@ -18,7 +18,9 @@ unchanged one is not repeated.
 ## A QA pass
 
 `qa/scripts/sdlc run` writes `qa/reports/<folder>/` with one log per automation entry and a
-`summary.json` holding the tested commit. QA records that folder in `evidence.last_run` and the
+`summary.json` holding the tested commit and whether the checkout had uncommitted changes
+(`source_dirty`, `source_changes`). `validate` requires `evidence.last_run` in the form
+`qa/reports/<folder>`. QA records that folder in `evidence.last_run` and the
 commit in `integration.qa_revision`.
 
 **A pass holds while the product is unchanged.** It stays valid as long as this prints nothing:
@@ -34,16 +36,18 @@ together with the feature's specs. Documents, skills, status and review changes 
 pass. A change to one of these paths is verified for its affected scope: the fixed bug and what
 depends on it, not the whole feature again, unless the change is broad.
 
-The tooling cannot see the state of a running service or database. Before relying on a run, check
-that the product under test was built from the tested commit and that its fixtures are the ones
-the run assumed.
+Playwright's global setup refuses a run unless the API was built from `HEAD`
+(`infra/scripts/qa-redeploy.sh` rebuilds the QA instance there). The tooling cannot see the web
+build's commit or the state of the database: before relying on a run, check that the web app was
+built from the tested commit and that the fixtures are the ones the run assumed.
 
 ## Progress and interruption
 
 The runner writes `summary.json` atomically while it runs: the current entry, completed counts,
 elapsed time and the child process. An interrupted run is marked `interrupted` and is not a pass.
 Read the summary to report progress; never start a second run while the first one's process is
-alive.
+alive. An entry that reaches its time limit is recorded `timeout`. A run narrowed by `--entry` or
+`--rerun-failed` is `partial` and is not held to the suite budget.
 
 ## Older records
 

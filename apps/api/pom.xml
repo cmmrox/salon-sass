@@ -34,6 +34,8 @@
         <maven-toolchains-plugin.version>3.3.0</maven-toolchains-plugin.version>
         <spotless-maven-plugin.version>3.10.4</spotless-maven-plugin.version>
         <palantir-java-format.version>2.102.0</palantir-java-format.version>
+        <!-- Read by the format check below: a build that skips the tests skips it too. -DskipTests sets it. -->
+        <skipTests>false</skipTests>
         <!--
           Patch releases ahead of the ones Spring Boot 4.1.1 manages, which have critical and high
           vulnerabilities with a fix (infra/scripts/images-scan.sh fails the image on them). Remove
@@ -336,10 +338,19 @@
                     </java>
                 </configuration>
                 <executions>
+                    <!--
+                      In the validate phase, the first one, so that `verify` reports a formatting slip in
+                      seconds rather than after the whole test run. A build that skips the tests
+                      (`package -DskipTests`: infra/scripts, the image build) skips it as it always has.
+                    -->
                     <execution>
+                        <phase>validate</phase>
                         <goals>
                             <goal>check</goal>
                         </goals>
+                        <configuration>
+                            <checkSkip>${skipTests}</checkSkip>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>

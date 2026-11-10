@@ -30,10 +30,10 @@ export interface SalonBookings {
 export type SalonBookingsFor = (hostname: string) => SalonBookings | null;
 
 /** The changes a booking takes after it is placed, by the API's own names. */
-export type BookingAction = 'confirm' | 'release' | 'arrive' | 'start' | 'cancel' | 'no-show' | 'undo-no-show';
+type BookingAction = 'confirm' | 'release' | 'arrive' | 'start' | 'cancel' | 'no-show' | 'undo-no-show';
 
 /** The API's clock, read so that a countdown follows the server's expiry rather than the browser's (F07-S03). */
-export const BOOKING_CLOCK = 'booking-clock';
+const BOOKING_CLOCK = 'booking-clock';
 
 /**
  * The BFF's reads of bookings: the list, one booking and the clock with `calendar.read` (the API applies its data

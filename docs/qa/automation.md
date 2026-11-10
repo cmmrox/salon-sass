@@ -20,7 +20,8 @@ its tools.
 
 ## Preparing a feature run
 
-Before a long feature run, confirm the committed source and actual running build, API/web health,
+Before a long feature run, confirm the committed source (the runner records `source_dirty`; global
+setup checks the API's build commit), API/web health,
 the registered current contract, synthetic fixtures, private keys and provider configuration.
 Keep credentials private. Check selectors on visible rendered states while developing automation;
 a streamed hidden element can have matching text and zero layout size. Measure sticky CSS offsets
@@ -63,12 +64,19 @@ qa/
   `QA_REPORT_DIR/playwright/<invocation>/`.
 - The product must already be running (`infra/scripts/local-up.sh`). The automation checks this
   first and stops with a line starting `ENVIRONMENT:` when it is not, so that a stopped product is
-  never reported as a failing one.
+  never reported as a failing one. It also refuses the run unless the API's `/api/v1/meta` commit is
+  this checkout's `HEAD`: rebuild the QA instance with `infra/scripts/qa-redeploy.sh`, or set
+  `QA_ALLOW_BUILD_MISMATCH=1` to test another build on purpose and say so in the evidence. The web
+  build's commit is not checked; `qa-redeploy.sh` rebuilds both.
 - Start a test's title with its case id:
 
   ```ts
   test('TC-F07-S02-004 a hold by another customer hides the slot', async ({ api }) => { ... });
   ```
+
+  Only a test that runs declares a case: a comment, `test.skip`, `test.fixme`, `test.only`, a test
+  inside a skipped describe, or one whose body calls `test.skip()` (even conditionally) counts for
+  nothing. k6, shell and Maestro files title their cases in a header comment.
 
 ## Playwright: salons and sign-in
 
@@ -200,6 +208,13 @@ slot today, an account with no bookings).
 qa/scripts/sdlc run --feature F07              # the feature's QA pass: every stage's automation, then the journeys
 qa/scripts/sdlc run --feature F07 --dry-run    # show what would run
 qa/scripts/sdlc run --stage F07-S02            # one stage's automation, for a stage pass the owner asked for
+qa/scripts/sdlc run --feature F07 --entry catalogue-api          # one named entry of the scope (`scope:id` where ids repeat); repeatable
+qa/scripts/sdlc run --feature F07 --rerun-failed qa/reports/<folder>   # only the entries that did not pass there (decision 069)
 ```
+
+Each entry stops at its time limit (30 minutes, or its own `timeout_minutes`) and is recorded as
+`timeout`. A run narrowed by `--entry` or `--rerun-failed` is recorded as `partial`: it re-verifies
+what it ran and never stands for the whole scope. Use `--entry` to leave a stage's load entries out
+of a rerun; they run only when the owner asks.
 
 While writing a test, running that one file directly with its tool is fine.

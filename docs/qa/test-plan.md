@@ -194,7 +194,9 @@ and its time budget on the local machine:
 | `release` | The slow checks: k6 load baselines, the production-like stack with its rolling deploy, image builds and scans | Only when the owner asks (before a deploy they request, or `release-verify`); never during a fix or re-verification (decision 069). No budget |
 
 A test that would take a suite past its budget is made faster (arrange through the API, reuse
-signed-in state, run in parallel) or moves to `release`. Going over budget is a defect in the suite.
+signed-in state, run in parallel) or moves to `release`. Going over budget is a defect in the suite: `sdlc run` prints a warning and records `budget` in
+`summary.json` when a full smoke or regression run passes it (`SUITE_BUDGET_MINUTES` in
+`qa/scripts/sdlc_lib/schema.py`).
 
 ## Severity examples
 
