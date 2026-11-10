@@ -2,7 +2,7 @@
 id: BUG-F03-011
 title: "A failed card charge is retried by the next billing pass on any day, not on the next reminder day, and a reminder day skipped while an attempt was unsettled is made up later"
 severity: minor
-status: fixed
+status: verified
 found_after_merge: 2026-11-10
 found_by: TC-F03-S02-029
 breaks: "F03-S02 AC-4 (a failed charge is retried on each reminder day); docs/architecture/operator-console.md, Payment; decision 049 (the reminder days)"
@@ -10,7 +10,7 @@ found_on: 2026-11-10
 fixed_in: 16eb64e34d562bb2addd4357c8819732e71c0db3
 fix_note: "A failed card charge is retried only by the billing pass that sends one of the invoice's reminders, at most once per invoice under the latest reminder it sends, and not while an attempt is in flight; a pass that sends no reminder requests no charge, and a blocked reminder day's retry is not made up."
 developer_note: "Reproduced by SubscriptionBillingIntegrationTest.aFailedChargeIsRetriedOnlyByThePassThatSendsAReminderDaysReminder and aLatePassThatSendsSeveralMissedRemindersRetriesOnceUnderTheLatest. Recorded by the lead from the developer's report: the bug file was on QA's branch when the fix was made."
-verified_on: null
+verified_on: 2026-11-10
 approved_by: null
 found_in_release: null
 ---
@@ -65,4 +65,13 @@ passes, if each fails before the next pass.
 
 ## Re-verification
 
-Not yet verified. TC-F03-S02-029 keeps its strict check and fails until this is fixed.
+Verified on 2026-11-10 on `c29d66f8` (fix `16eb64e3`; the rule is decision 125 and docs/architecture/operator-console.md, "Payment"), QA instance after `qa-redeploy.sh`.
+
+- **The bug's own steps:** TC-F03-S02-029, `qa/reports/20261110-121807-F03-S02-ff4ce2d927d9`. The case is the one that failed on `148bf6af` (`qa/reports/20261110-121014-F03-S02-87eae546dd2b`).
+  - The one attempt fails after the 3-day reminder day.
+  - A pass the day after, which sends no reminder, requests no charge (`issue:failed`).
+  - The pass that sends the ten-day reminder requests exactly one retry under that day's occasion, and it pays the invoice (`issue:failed, due_10:succeeded`).
+  - Two charge requests reached the provider in all.
+  - The case's expectation was brought to decision 125's wording first: the retry carries the ten-day reminder's occasion.
+- **Neighbours, for the reminder pass:** the rest of `billing-cycle` passed (14/14), including TC-F03-S02-008 (a failed charge retried on each reminder day) and -013 (the due, reminder and read-only boundaries). F03-S03 `lifecycle` (billing while suspended) passed: `qa/reports/20261110-121901-F03-S03-a8684883ef89`.
+- **Not exercised from outside:** a late pass that catches up several missed reminders at once. The developer's integration test `aLatePassThatSendsSeveralMissedRemindersRetriesOnceUnderTheLatest` covers it.
