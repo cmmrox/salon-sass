@@ -40,7 +40,8 @@ public class IdentityCrypto implements SignedTenantVerifier {
     private final KeyRing encryption;
 
     public IdentityCrypto(IdentitySecrets secrets, Clock clock) {
-        this.encryption = new KeyRing("identity encryption", secrets.encryption(), secrets.earlierEncryption());
+        this.encryption = new KeyRing(
+                "identity encryption", secrets.encryption(), secrets.earlierEncryption(), secrets.writeKeyIds());
         this.secrets = secrets;
         this.clock = clock;
         Pbkdf2PasswordEncoder pbkdf2 = new Pbkdf2PasswordEncoder(

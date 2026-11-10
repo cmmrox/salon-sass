@@ -63,7 +63,8 @@ public class OperatorCrypto {
     private final TimeBasedOneTimePasswordGenerator totp = new TimeBasedOneTimePasswordGenerator();
 
     public OperatorCrypto(OperatorSecrets secrets, Clock clock) {
-        this.encryption = new KeyRing("operator encryption", secrets.encryption(), secrets.earlierEncryption());
+        this.encryption = new KeyRing(
+                "operator encryption", secrets.encryption(), secrets.earlierEncryption(), secrets.writeKeyIds());
         this.secrets = secrets;
         this.clock = clock;
         Pbkdf2PasswordEncoder pbkdf2 = new Pbkdf2PasswordEncoder(

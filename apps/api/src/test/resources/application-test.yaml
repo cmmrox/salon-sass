@@ -34,6 +34,10 @@ springdoc:
   api-docs:
     enabled: true
 
+# The tests write key ids, so that the format with them keeps being exercised (decision 120).
+salon.secrets:
+  write-key-ids: true
+
 # Throwaway independent keys generated for each test context; never usable runtime credentials.
 salon.identity:
   signing-key: ${random.value}${random.value}

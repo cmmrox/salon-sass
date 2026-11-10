@@ -27,6 +27,11 @@ import javax.crypto.spec.SecretKeySpec;
  * a binary one {@code "SK1"} then the key id, the nonce and the ciphertext. A value written before key ids existed
  * ({@code <nonce>.<ciphertext>}, or the nonce and the ciphertext) is still read: it is tried with each key, the
  * current one first, and authenticated encryption tells the right one. Such a value is never rewritten here.
+ *
+ * <p><strong>Two steps, for a rolling deployment.</strong> A version before key ids reads only the format without an
+ * id, so while it still serves, a value written with an id would fail on a request routed to it. This version therefore
+ * reads both formats but writes the one without an id until {@value #WRITE_KEY_IDS} is turned on, once every instance
+ * runs a version that reads ids. Rotation works either way: a value without an id is tried with each key.
  */
 public final class KeyRing {
 
@@ -37,6 +42,9 @@ public final class KeyRing {
     private static final byte[] MARK = "SK1".getBytes(StandardCharsets.US_ASCII);
 
     private static final int ID_BYTES = 4;
+
+    /** The setting that turns on writing key ids ({@code SALON_SECRETS_WRITE_KEY_IDS}), off by default. */
+    public static final String WRITE_KEY_IDS = "salon.secrets.write-key-ids";
 
     private final String name;
 
@@ -52,13 +60,19 @@ public final class KeyRing {
 
     private final SecureRandom random = new SecureRandom();
 
+    /** Whether a new value carries its key's id ({@value #WRITE_KEY_IDS}). */
+    private final boolean writeKeyIds;
+
     /**
      * @param name what the keys are for, in error messages ({@code identity encryption})
      * @param current the key that encrypts
      * @param earlier keys that decrypt values written while they were current, newest first
+     * @param writeKeyIds whether a new value carries its key's id; until then it is written as a version before key
+     *     ids writes it
      */
-    public KeyRing(String name, byte[] current, List<byte[]> earlier) {
+    public KeyRing(String name, byte[] current, List<byte[]> earlier, boolean writeKeyIds) {
         this.name = name;
+        this.writeKeyIds = writeKeyIds;
         this.current = aes(current);
         this.currentId = idOf(current);
         Map<String, SecretKeySpec> keys = new LinkedHashMap<>();
@@ -93,12 +107,18 @@ public final class KeyRing {
         return keys;
     }
 
-    /** Encrypts a text value for one purpose, under the current key, carrying its id. */
+    /** Whether {@value #WRITE_KEY_IDS} is on in these settings; off unless it says so. */
+    public static boolean writesKeyIds(org.springframework.core.env.Environment environment) {
+        return environment.getProperty(WRITE_KEY_IDS, Boolean.class, false);
+    }
+
+    /** Encrypts a text value for one purpose, under the current key, carrying its id once key ids are written. */
     public String encrypt(String purpose, String plain) {
         byte[] nonce = nonce();
         byte[] sealed = cipher(Cipher.ENCRYPT_MODE, current, nonce, purpose, plain.getBytes(StandardCharsets.UTF_8));
         Base64.Encoder base64 = Base64.getEncoder();
-        return currentId + "." + base64.encodeToString(nonce) + "." + base64.encodeToString(sealed);
+        String value = base64.encodeToString(nonce) + "." + base64.encodeToString(sealed);
+        return writeKeyIds ? currentId + "." + value : value;
     }
 
     /** Decrypts a text value encrypted for this purpose, under any of the keys; fails when it was altered. */
@@ -124,10 +144,16 @@ public final class KeyRing {
         throw new IllegalStateException("A stored " + name + " value could not be authenticated");
     }
 
-    /** Encrypts a binary value for one purpose, under the current key, carrying its id. */
+    /** Encrypts a binary value for one purpose, under the current key, carrying its id once key ids are written. */
     public byte[] seal(byte[] plain, String purpose) {
         byte[] nonce = nonce();
         byte[] sealed = cipher(Cipher.ENCRYPT_MODE, current, nonce, purpose, plain);
+        if (!writeKeyIds) {
+            return ByteBuffer.allocate(NONCE + sealed.length)
+                    .put(nonce)
+                    .put(sealed)
+                    .array();
+        }
         return ByteBuffer.allocate(MARK.length + ID_BYTES + NONCE + sealed.length)
                 .put(MARK)
                 .put(HexFormat.of().parseHex(currentId))

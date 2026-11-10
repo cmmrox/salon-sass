@@ -238,6 +238,12 @@ springdoc:
     enabled: false
   writer-with-order-by-keys: true
 
+# Whether a new encrypted value carries its key's id (decision 120, KeyRing). Off until every running instance
+# reads key ids: a version before them reads only the format without one, so during a rolling deployment a value
+# written with an id would fail on the old instance. Values of either format are read either way.
+salon.secrets:
+  write-key-ids: ${SALON_SECRETS_WRITE_KEY_IDS:false}
+
 # No nonlocal fallback keys. Four independent 32-byte keys encoded as 64 hexadecimal characters.
 salon.identity:
   signing-key: ${SALON_IDENTITY_SIGNING_KEY:}

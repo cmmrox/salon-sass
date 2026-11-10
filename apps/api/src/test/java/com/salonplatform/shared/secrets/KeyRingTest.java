@@ -27,7 +27,7 @@ class KeyRingTest {
 
     @Test
     void aNewValueCarriesTheIdOfTheKeyThatEncryptedIt() {
-        KeyRing ring = new KeyRing("test", FIRST, List.of());
+        KeyRing ring = new KeyRing("test", FIRST, List.of(), true);
 
         String encrypted = ring.encrypt(PURPOSE, "a secret");
 
@@ -35,7 +35,7 @@ class KeyRingTest {
         assertThat(encrypted).startsWith(ring.currentKeyId() + ".");
         assertThat(ring.currentKeyId())
                 .matches("[0-9a-f]{8}")
-                .isNotEqualTo(new KeyRing("test", SECOND, List.of()).currentKeyId());
+                .isNotEqualTo(new KeyRing("test", SECOND, List.of(), true).currentKeyId());
         assertThat(ring.decrypt(PURPOSE, encrypted)).isEqualTo("a secret");
     }
 
@@ -43,31 +43,31 @@ class KeyRingTest {
     void aValueWrittenBeforeKeyIdsExistedIsStillRead() {
         String legacy = legacyText(FIRST, PURPOSE, "the fixed roster's authenticator secret");
 
-        assertThat(new KeyRing("test", FIRST, List.of()).decrypt(PURPOSE, legacy))
+        assertThat(new KeyRing("test", FIRST, List.of(), true).decrypt(PURPOSE, legacy))
                 .isEqualTo("the fixed roster's authenticator secret");
-        assertThat(new KeyRing("test", SECOND, List.of(FIRST)).decrypt(PURPOSE, legacy))
+        assertThat(new KeyRing("test", SECOND, List.of(FIRST), true).decrypt(PURPOSE, legacy))
                 .as("and still after the key it was written under has been rotated out")
                 .isEqualTo("the fixed roster's authenticator secret");
     }
 
     @Test
     void aValueWrittenUnderAnEarlierKeyIsReadAfterRotationAndNewValuesUseTheNewKey() {
-        String underFirst = new KeyRing("test", FIRST, List.of()).encrypt(PURPOSE, "before");
-        KeyRing rotated = new KeyRing("test", SECOND, List.of(FIRST));
+        String underFirst = new KeyRing("test", FIRST, List.of(), true).encrypt(PURPOSE, "before");
+        KeyRing rotated = new KeyRing("test", SECOND, List.of(FIRST), true);
 
         assertThat(rotated.decrypt(PURPOSE, underFirst)).isEqualTo("before");
         assertThat(rotated.encrypt(PURPOSE, "after")).startsWith(rotated.currentKeyId() + ".");
         assertThatIllegalStateException()
                 .as("without the earlier key it cannot be read")
-                .isThrownBy(() -> new KeyRing("test", SECOND, List.of()).decrypt(PURPOSE, underFirst));
+                .isThrownBy(() -> new KeyRing("test", SECOND, List.of(), true).decrypt(PURPOSE, underFirst));
     }
 
     @Test
     void anAlteredValueOrOneForAnotherPurposeIsRefused() {
-        KeyRing ring = new KeyRing("test", FIRST, List.of());
+        KeyRing ring = new KeyRing("test", FIRST, List.of(), true);
         String encrypted = ring.encrypt(PURPOSE, "a secret");
         String[] parts = encrypted.split("\\.");
-        String otherId = new KeyRing("test", SECOND, List.of()).currentKeyId();
+        String otherId = new KeyRing("test", SECOND, List.of(), true).currentKeyId();
 
         assertThatIllegalStateException().isThrownBy(() -> ring.decrypt("another purpose", encrypted));
         assertThatIllegalStateException()
@@ -79,9 +79,9 @@ class KeyRingTest {
     @Test
     void binaryValuesCarryTheirKeyIdAndOldOnesAreStillRead() {
         byte[] plain = "an export archive".getBytes(StandardCharsets.UTF_8);
-        byte[] underFirst = new KeyRing("test", FIRST, List.of()).seal(plain, "export-archive:1");
+        byte[] underFirst = new KeyRing("test", FIRST, List.of(), true).seal(plain, "export-archive:1");
         byte[] legacy = legacyBinary(FIRST, "export-archive:1", plain);
-        KeyRing rotated = new KeyRing("test", SECOND, List.of(FIRST));
+        KeyRing rotated = new KeyRing("test", SECOND, List.of(FIRST), true);
 
         assertThat(new String(underFirst, 0, 3, StandardCharsets.US_ASCII)).isEqualTo("SK1");
         assertThat(rotated.open(underFirst, "export-archive:1")).isEqualTo(plain);
@@ -90,12 +90,95 @@ class KeyRingTest {
                 .isEqualTo(plain);
         assertThatIllegalStateException().isThrownBy(() -> rotated.open(underFirst, "export-archive:2"));
         assertThatIllegalStateException()
-                .isThrownBy(() -> new KeyRing("test", SECOND, List.of()).open(legacy, "export-archive:1"));
+                .isThrownBy(() -> new KeyRing("test", SECOND, List.of(), true).open(legacy, "export-archive:1"));
+    }
+
+    /**
+     * The rolling deployment's first step: with key ids not yet written, what this version writes is exactly what the
+     * previous version wrote, so an instance still running it reads every new value.
+     */
+    @Test
+    void untilKeyIdsAreWrittenANewValueIsInTheFormatThePreviousVersionReads() {
+        KeyRing ring = new KeyRing("test", FIRST, List.of(), false);
+
+        String text = ring.encrypt(PURPOSE, "a secret");
+        byte[] binary = ring.seal("an archive".getBytes(StandardCharsets.UTF_8), "export-archive:1");
+
+        assertThat(text.split("\\.")).hasSize(2);
+        assertThat(previousTextReader(FIRST, PURPOSE, text)).isEqualTo("a secret");
+        assertThat(new String(previousBinaryReader(FIRST, "export-archive:1", binary), StandardCharsets.UTF_8))
+                .isEqualTo("an archive");
+    }
+
+    @Test
+    void bothFormatsAreReadWhicheverIsWritten() {
+        KeyRing withoutIds = new KeyRing("test", FIRST, List.of(), false);
+        KeyRing withIds = new KeyRing("test", FIRST, List.of(), true);
+        byte[] plain = "an archive".getBytes(StandardCharsets.UTF_8);
+
+        assertThat(withIds.encrypt(PURPOSE, "x")).startsWith(withIds.currentKeyId() + ".");
+        assertThat(withIds.decrypt(PURPOSE, withoutIds.encrypt(PURPOSE, "written without")))
+                .isEqualTo("written without");
+        assertThat(withoutIds.decrypt(PURPOSE, withIds.encrypt(PURPOSE, "written with")))
+                .isEqualTo("written with");
+        assertThat(withIds.open(withoutIds.seal(plain, "p"), "p")).isEqualTo(plain);
+        assertThat(withoutIds.open(withIds.seal(plain, "p"), "p")).isEqualTo(plain);
+    }
+
+    @Test
+    void withoutKeyIdsAValueWrittenUnderAnEarlierKeyIsStillReadAfterRotation() {
+        String underFirst = new KeyRing("test", FIRST, List.of(), false).encrypt(PURPOSE, "before");
+        byte[] sealedUnderFirst = new KeyRing("test", FIRST, List.of(), false).seal(new byte[] {1, 2, 3}, "p");
+        KeyRing rotated = new KeyRing("test", SECOND, List.of(FIRST), false);
+
+        assertThat(rotated.decrypt(PURPOSE, underFirst)).isEqualTo("before");
+        assertThat(rotated.open(sealedUnderFirst, "p")).containsExactly(1, 2, 3);
+    }
+
+    @Test
+    void theSettingIsOffUnlessItSaysOtherwise() {
+        assertThat(KeyRing.writesKeyIds(new org.springframework.mock.env.MockEnvironment()))
+                .isFalse();
+        assertThat(KeyRing.writesKeyIds(
+                        new org.springframework.mock.env.MockEnvironment().withProperty(KeyRing.WRITE_KEY_IDS, "true")))
+                .isTrue();
+    }
+
+    /** IdentityCrypto.decrypt and OperatorCrypto.decrypt as they were before key ids. */
+    private static String previousTextReader(byte[] key, String purpose, String encrypted) {
+        String[] parts = encrypted.split("\\.");
+        return new String(
+                gcmOpen(
+                        key,
+                        Base64.getDecoder().decode(parts[0]),
+                        purpose,
+                        Base64.getDecoder().decode(parts[1])),
+                StandardCharsets.UTF_8);
+    }
+
+    /** ExportKey.open as it was before key ids. */
+    private static byte[] previousBinaryReader(byte[] key, String purpose, byte[] sealed) {
+        return gcmOpen(
+                key,
+                java.util.Arrays.copyOf(sealed, 12),
+                purpose,
+                java.util.Arrays.copyOfRange(sealed, 12, sealed.length));
+    }
+
+    private static byte[] gcmOpen(byte[] key, byte[] nonce, String purpose, byte[] sealed) {
+        try {
+            Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+            cipher.init(Cipher.DECRYPT_MODE, new SecretKeySpec(key, "AES"), new GCMParameterSpec(128, nonce));
+            cipher.updateAAD(purpose.getBytes(StandardCharsets.UTF_8));
+            return cipher.doFinal(sealed);
+        } catch (java.security.GeneralSecurityException ex) {
+            throw new IllegalStateException(ex);
+        }
     }
 
     @Test
     void theSameKeyTwiceIsRefused() {
-        assertThatIllegalStateException().isThrownBy(() -> new KeyRing("test", FIRST, List.of(SECOND, FIRST)));
+        assertThatIllegalStateException().isThrownBy(() -> new KeyRing("test", FIRST, List.of(SECOND, FIRST), true));
     }
 
     @Test

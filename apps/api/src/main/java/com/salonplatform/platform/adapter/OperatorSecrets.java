@@ -41,6 +41,7 @@ public class OperatorSecrets implements SecretKeys {
     private final byte[] proxy;
     private final byte[] fingerprint;
     private final List<byte[]> earlierEncryption;
+    private final boolean writeKeyIds;
 
     public OperatorSecrets(Environment environment) {
         Properties saved = environment.matchesProfiles("local") ? retained(environment) : new Properties();
@@ -53,6 +54,7 @@ public class OperatorSecrets implements SecretKeys {
         earlierEncryption = KeyRing.keysOf(
                 environment.getProperty("salon.operator.encryption-earlier-keys"),
                 "salon.operator.encryption-earlier-keys");
+        writeKeyIds = KeyRing.writesKeyIds(environment);
         List<byte[]> keys = List.of(signing, challenge, encryption, proxy, fingerprint);
         for (int a = 0; a < keys.size(); a++) {
             for (int b = a + 1; b < keys.size(); b++) {
@@ -160,6 +162,11 @@ public class OperatorSecrets implements SecretKeys {
 
     byte[] encryption() {
         return encryption.clone();
+    }
+
+    /** Whether new values carry their key's id ({@link KeyRing#WRITE_KEY_IDS}). */
+    boolean writeKeyIds() {
+        return writeKeyIds;
     }
 
     /** The keys that encrypted values before the current one, newest first. */

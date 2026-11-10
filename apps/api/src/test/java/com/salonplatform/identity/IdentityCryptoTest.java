@@ -165,7 +165,9 @@ class IdentityCryptoTest {
     @Test
     void aSecretStoredBeforeKeyIdsStillDecryptsAndAfterTheKeyIsRotated() throws Exception {
         String encryptionKey = key();
-        MockEnvironment before = configured().withProperty("salon.identity.encryption-key", encryptionKey);
+        MockEnvironment before = configured()
+                .withProperty("salon.identity.encryption-key", encryptionKey)
+                .withProperty("salon.secrets.write-key-ids", "true");
         String purpose = "totp:" + UUID.randomUUID() + ":" + UUID.randomUUID();
         byte[] nonce = new byte[12];
         new SecureRandom().nextBytes(nonce);
@@ -187,7 +189,8 @@ class IdentityCryptoTest {
 
         MockEnvironment rotated = configured()
                 .withProperty("salon.identity.encryption-key", key())
-                .withProperty("salon.identity.encryption-earlier-keys", encryptionKey);
+                .withProperty("salon.identity.encryption-earlier-keys", encryptionKey)
+                .withProperty("salon.secrets.write-key-ids", "true");
         IdentityCrypto afterRotation = new IdentityCrypto(new IdentitySecrets(rotated), Clock.systemUTC());
         assertThat(afterRotation.decrypt(purpose, stored)).isEqualTo("JBSWY3DPEHPK3PXP");
         assertThat(afterRotation.decrypt(purpose, written)).isEqualTo("a newer secret");

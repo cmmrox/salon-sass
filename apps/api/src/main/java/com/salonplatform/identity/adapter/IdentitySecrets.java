@@ -38,6 +38,7 @@ public class IdentitySecrets implements SecretKeys {
     private final byte[] encryption;
     private final byte[] proxy;
     private final List<byte[]> earlierEncryption;
+    private final boolean writeKeyIds;
 
     public IdentitySecrets(Environment environment) {
         Properties saved = environment.matchesProfiles("local") ? retained(environment) : new Properties();
@@ -49,6 +50,7 @@ public class IdentitySecrets implements SecretKeys {
         earlierEncryption = KeyRing.keysOf(
                 environment.getProperty("salon.identity.encryption-earlier-keys"),
                 "salon.identity.encryption-earlier-keys");
+        writeKeyIds = KeyRing.writesKeyIds(environment);
         List<byte[]> keys = List.of(signing, challenge, encryption, proxy);
         for (int a = 0; a < keys.size(); a++) {
             for (int b = a + 1; b < keys.size(); b++) {
@@ -156,6 +158,11 @@ public class IdentitySecrets implements SecretKeys {
 
     public byte[] encryption() {
         return encryption.clone();
+    }
+
+    /** Whether new values carry their key's id ({@link KeyRing#WRITE_KEY_IDS}). */
+    public boolean writeKeyIds() {
+        return writeKeyIds;
     }
 
     /** The keys that encrypted values before the current one, newest first. */

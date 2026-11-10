@@ -73,7 +73,7 @@ public class ExportKey implements SecretKeys {
         key = new SecretKeySpec(bytes, "AES");
         // Keys that encrypted exports before the current one (decision 120): they decrypt, never encrypt.
         earlier = KeyRing.keysOf(environment.getProperty("salon.export.earlier-keys"), "salon.export.earlier-keys");
-        keys = new KeyRing("export", bytes, earlier);
+        keys = new KeyRing("export", bytes, earlier, KeyRing.writesKeyIds(environment));
     }
 
     @Override

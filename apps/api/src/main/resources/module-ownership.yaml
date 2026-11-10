@@ -154,6 +154,7 @@ modules:
       - salon.platform-domain
       - salon.platform.datasource
       - salon.database
+      - salon.secrets
       - salon.server
       - salon.outbox
       - salon.jobs
