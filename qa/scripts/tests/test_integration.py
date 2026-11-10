@@ -37,6 +37,62 @@ class StateTest(unittest.TestCase):
         previous["integration"] = merged_record()
         self.assertEqual(flow.feature_turn(following, [], [previous, following]), ("lead", "feature-new F08"))
 
+    def test_a_feature_waits_while_an_approved_change_request_changes_a_dependency(self):
+        previous = fx.feature(status="complete", qa_status="pass", integration=merged_record())
+        following = fx.feature(id="F08", status="backlog", requirements=[], depends_on=["F07"])
+        changing = {"id": "CR-028", "status": "approved", "stages": ["F07-S01", "F07-S02"]}
+        elsewhere = {"id": "CR-030", "status": "approved", "stages": ["F09-S01"]}
+        features = [previous, following]
+        self.assertEqual(flow.feature_turn(following, [], features, [changing, elsewhere]),
+                         ("waiting", "after CR-028's follow-up to F07 is merged"))
+        for status in ("implemented", "proposed", "rejected"):
+            self.assertEqual(flow.feature_turn(following, [], features, [{**changing, "status": status}]),
+                             ("lead", "feature-new F08"), status)
+        # A dependency not merged yet builds the request into its own delivery: the feature waits
+        # for that merge, not for the request, and once the dependency merges with the request
+        # still approved the request holds it.
+        building = fx.feature(status="in-progress")
+        self.assertEqual(flow.changing_dependencies(following, [changing], [building, following]), [])
+        self.assertEqual(flow.changing_dependencies(following, [changing], features), [("CR-028", "F07")])
+        # Portfolio order alone does not hold a feature on a change request.
+        unrelated = fx.feature(id="F08", status="backlog", requirements=[])
+        self.assertEqual(flow.feature_turn(unrelated, [], [previous, unrelated], [changing]),
+                         ("lead", "feature-new F08"))
+
+    def test_a_lower_numbered_feature_of_a_later_milestone_is_not_a_predecessor(self):
+        done = fx.feature(status="released", qa_status="pass", integration=merged_record(), released_in="v1.0.0")
+        assistance = fx.feature(id="F22", status="backlog", milestone="M4-assistance", requirements=[])
+        growth = fx.feature(id="F25", status="backlog", milestone="M3-growth", requirements=[])
+        same = fx.feature(id="F21", status="backlog", milestone="M3-growth", requirements=[])
+        features = [done, assistance, growth]
+        self.assertEqual([f["id"] for f in flow.predecessors(growth, features)], ["F07"])
+        self.assertEqual(flow.feature_turn(growth, [], features), ("lead", "feature-new F25"))
+        # The same milestone keeps portfolio order, and an explicit dependency always counts.
+        self.assertEqual(flow.feature_turn(growth, [], features + [same]),
+                         ("waiting", "after GitHub merge of F21"))
+        growth["depends_on"] = ["F22"]
+        self.assertEqual(flow.feature_turn(growth, [], features), ("waiting", "after F22"))
+        self.assertIn(assistance, flow.predecessors(growth, features))
+
+    def test_status_shows_a_backlog_feature_held_by_a_change_request(self):
+        import contextlib
+        import io
+        from sdlc_lib import __main__ as cli
+        previous = fx.feature(status="complete", qa_status="pass", integration=merged_record())
+        held = fx.feature(id="F08", status="backlog", requirements=[], depends_on=["F07"],
+                          _dir="features/F08-x")
+        later = fx.feature(id="F09", status="backlog", requirements=[], depends_on=["F08"],
+                           _dir="features/F09-x")
+        bundle = fx.bundle(features=[previous, held, later], stages=[fx.stage(status="outlined",
+                           id="F08-S01", _feature_dir="features/F08-x")],
+                           change_requests=[{"id": "CR-028", "status": "approved", "stages": ["F07-S01"]}])
+        with patch.object(cli.model, "load", return_value=bundle), \
+                contextlib.redirect_stdout(io.StringIO()) as out:
+            cli.cmd_status(None)
+        lines = out.getvalue().splitlines()
+        self.assertIn("F08 backlog      next: waiting: after CR-028's follow-up to F07 is merged", lines)
+        self.assertFalse(any(line.startswith(("F09", "  F08-S01")) for line in lines), lines)
+
     def test_validator_rejects_started_feature_before_merge(self):
         following = fx.feature(id="F08", status="planned", requirements=[],
                                _dir="features/F08-payments", _path="features/F08-payments/feature.yaml")
@@ -129,6 +185,33 @@ class LiveMergeTest(unittest.TestCase):
                 patch.object(integration, "merged_pr", return_value=merged_record()), \
                 patch.object(integration, "ancestor", return_value=True):
             self.assertEqual(integration.start_check(fx.bundle(features=[self.scope, next_feature]), "F08")["id"], "F08")
+
+    def test_start_check_refuses_while_an_approved_change_request_changes_a_dependency(self):
+        next_feature = fx.feature(id="F08", status="backlog", depends_on=["F07"])
+        changing = {"id": "CR-028", "status": "approved", "stages": ["F07-S01", "F07-S03"]}
+        bundle = fx.bundle(features=[self.scope, next_feature], change_requests=[changing])
+        with patch.object(integration, "remote_main", return_value="d" * 40), \
+                patch.object(integration, "merged_pr", return_value=merged_record()), \
+                patch.object(integration, "ancestor", return_value=True):
+            with self.assertRaisesRegex(integration.Refusal, "after CR-028's follow-up to F07 is merged"):
+                integration.start_check(bundle, "F08")
+            bundle["change_requests"][0]["status"] = "implemented"
+            self.assertEqual(integration.start_check(bundle, "F08")["id"], "F08")
+
+    def test_start_check_does_not_wait_for_a_lower_numbered_feature_of_a_later_milestone(self):
+        self.scope.update(status="released", released_in="v1.0.0", milestone="M1-web")
+        assistance = fx.feature(id="F22", status="backlog", milestone="M4-assistance", requirements=[])
+        growth = fx.feature(id="F25", status="backlog", milestone="M3-growth", requirements=[])
+        asked = []
+        def merged_pr(previous, _main):
+            asked.append(previous["id"])
+            return merged_record()
+        with patch.object(integration, "remote_main", return_value="d" * 40), \
+                patch.object(integration, "merged_pr", side_effect=merged_pr), \
+                patch.object(integration, "ancestor", return_value=True):
+            self.assertEqual(integration.start_check(fx.bundle(features=[self.scope, assistance, growth]), "F25")["id"],
+                             "F25")
+        self.assertEqual(asked, ["F07"])
 
     def test_ci_must_pass_on_the_pr_head(self):
         head = "c" * 40

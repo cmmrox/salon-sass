@@ -9,9 +9,11 @@ import datetime
 import hashlib
 import json
 import os
+import re
 import signal
 import subprocess
 import urllib.parse
+import urllib.request
 import time
 import threading
 import uuid
@@ -65,11 +67,76 @@ def select(bundle, stage=None, feature=None, suite=None):
     return sorted(entries, key=lambda e: (e.get("scope") or "", e.get("id") or ""))
 
 
+def _reference(entry):
+    return f"{entry.get('scope')}:{entry.get('id')}"
+
+
+def failed_in(report_dir, entries=()):
+    """The 'scope:id' of every entry an earlier run did not pass, from its summary.json.
+
+    That is each entry it selected and did not record as passed: a failure, a timeout, a missing
+    tool, the entry that was current when the run was interrupted, and every entry it never
+    reached. A summary from before the runner recorded its selection lists only finished entries;
+    for one whose run did not complete, every entry of `entries` (the scope chosen now) that it
+    did not pass is taken instead, since what it never reached cannot be read from it."""
+    path = os.path.join(report_dir, "summary.json")
+    try:
+        with open(path, encoding="utf-8") as handle:
+            summary = json.load(handle)
+    except (OSError, ValueError) as error:
+        raise SelectionError(f"cannot read {path}: {error}")
+    finished = summary.get("entries") or []
+    passed = {_reference(r) for r in finished if r.get("outcome") == "pass"}
+    if isinstance(summary.get("selected"), list):
+        return [ref for ref in summary["selected"] if ref not in passed]
+    if summary.get("state") == "complete":
+        return [_reference(r) for r in finished if r.get("outcome") != "pass"]
+    return [_reference(e) for e in entries if _reference(e) not in passed]
+
+
+def narrow(entries, names=(), rerun_report=None):
+    """The entries of one scope's selection that were asked for by name or failed in an earlier run.
+
+    A name is an entry id ('catalogue-api') or, where ids repeat across a feature's stages,
+    'scope:id' ('F05-S01:catalogue-api'). Narrowing never reaches outside the chosen scope."""
+    wanted = list(names or ())
+    if rerun_report:
+        failed = failed_in(rerun_report, entries)
+        if not failed:
+            raise SelectionError(f"{rerun_report} records no failed entry; there is nothing to run again")
+        wanted += failed
+    chosen = []
+    for name in wanted:
+        match = [e for e in entries if name in (_reference(e), e.get("id"))]
+        if not match:
+            known = ", ".join(_reference(e) for e in entries) or "none"
+            raise SelectionError(f"'{name}' is not an automation entry of this scope (entries: {known})")
+        if len(match) > 1 and ":" not in name:
+            raise SelectionError(f"'{name}' names entries in {len(match)} scopes; use "
+                                 + " or ".join(_reference(e) for e in match))
+        chosen += [e for e in match if e not in chosen]
+    return [e for e in entries if e in chosen]  # keep the scope's own order
+
+
+def time_limit_seconds(entry):
+    """How long an entry may run: its own timeout_minutes, or the runner's default."""
+    minutes = entry.get("timeout_minutes")
+    return (minutes if S.valid_time_limit(minutes) else S.ENTRY_TIME_LIMIT_MINUTES) * 60
+
+
+def budget_check(suite, elapsed_seconds, partial=False):
+    """summary.json's 'budget' for a full run of a suite that has one, else None."""
+    if partial or suite not in S.SUITE_BUDGET_MINUTES:
+        return None
+    minutes = S.SUITE_BUDGET_MINUTES[suite]
+    elapsed = round(elapsed_seconds / 60, 1)
+    return {"suite": suite, "minutes": minutes, "elapsed_minutes": elapsed,
+            "exceeded": elapsed_seconds > minutes * 60}
+
+
 def command(entry):
     """The argv that runs one automation entry, from the repository root."""
     tool, path = entry.get("tool"), entry.get("file")
-    if tool == "command":
-        return ["bash", "-c", entry["cmd"]]
     if tool == "playwright":
         argv = ["pnpm", "--dir", "qa", "exec", "playwright", "test", os.path.relpath(path, "qa")]
         return argv + (["--project", entry["project"]] if entry.get("project") else [])
@@ -104,7 +171,7 @@ def _process_start(pid):
 
 
 def _cancel_process_tree(child, grace_seconds=2):
-    """Cancellation only: never impose a deadline on ordinary test execution."""
+    """Stops an entry's whole process group: on cancellation, or when it reaches its time limit."""
     result = {"term_sent": False, "kill_sent": False, "reaped": False}
     group = child.pid if os.name == "posix" else None
 
@@ -156,6 +223,29 @@ def _revision():
         return found.stdout.strip() if found.returncode == 0 else None
     except OSError:
         return None
+
+
+SOURCE_CHANGES_LISTED = 200
+
+
+def _source_state():
+    """Whether the checkout differed from HEAD when the run started, and how.
+
+    A pass is evidence for source_revision only when source_dirty is false; otherwise
+    source_changes names what was uncommitted (git status --porcelain lines, untracked files
+    included, ignored ones such as qa/reports not). None when Git cannot say."""
+    try:
+        found = subprocess.run(["git", "status", "--porcelain", "--untracked-files=all"],
+                               capture_output=True, text=True)
+    except OSError:
+        return {"source_dirty": None, "source_changes": None}
+    if found.returncode != 0:
+        return {"source_dirty": None, "source_changes": None}
+    changes = [line for line in found.stdout.splitlines() if line.strip()]
+    state = {"source_dirty": bool(changes), "source_changes": changes[:SOURCE_CHANGES_LISTED]}
+    if len(changes) > SOURCE_CHANGES_LISTED:
+        state["source_changes_omitted"] = len(changes) - SOURCE_CHANGES_LISTED
+    return state
 
 
 # Decision 105: automated QA runs only against the QA instance; the default instance holds the
@@ -225,11 +315,213 @@ def default_instance_refusal(environ):
     return None
 
 
-def run(entries, label, dry_run=False, reports_root="qa/reports", *, heartbeat_seconds=30):
+# --- the build under test ---------------------------------------------------------------------
+#
+# Before the first entry the runner asks the QA instance's API which commit it was built from and
+# refuses the run unless that build is current for HEAD, by the rule qa/shared/build-identity.mjs
+# (Playwright's global setup) and infra/scripts/qa-redeploy.sh apply: the reported commit is an
+# ancestor of HEAD and HEAD has not changed the build's sources since.
+
+BUILD_SOURCES_FILE = "infra/scripts/lib/build-sources.txt"
+ALLOW_MISMATCH = "QA_ALLOW_BUILD_MISMATCH"
+QA_API_PORT = 8190  # the QA instance's API (qa/shared/env.ts, infra/scripts/lib/common.sh)
+# Tools that always talk to the running product. A shell check says it does by calling
+# require_product_up from qa/shared/checks.sh; one that does not (a reader of the CI workflow, a
+# scan of the build, a check that starts the product itself) runs without the API.
+PRODUCT_TOOLS = ("playwright", "k6", "maestro")
+_REQUIRES_PRODUCT = re.compile(r"^[^#\n]*\brequire_product_up\b", re.M)
+
+
+def needs_product(entry):
+    """Whether an automation entry tests the running product, from what it declares."""
+    if entry.get("tool") in PRODUCT_TOOLS:
+        return True
+    if entry.get("tool") == "script":
+        try:
+            with open(entry.get("file") or "", encoding="utf-8") as handle:
+                return bool(_REQUIRES_PRODUCT.search(handle.read()))
+        except OSError:
+            return False
+    return False
+
+
+def build_sources(root="."):
+    with open(os.path.join(root, BUILD_SOURCES_FILE), encoding="utf-8") as handle:
+        return [line.strip() for line in handle if line.strip() and not line.strip().startswith("#")]
+
+
+def qa_api_url(environ):
+    """The QA instance's API, as qa/shared/env.ts finds it: shell, then qa/.env.local, then the default."""
+    local = _env_file("qa/.env.local")
+    setting = lambda name: environ.get(name) or local.get(name)  # noqa: E731
+    return (setting("QA_API_URL") or f"http://localhost:{setting('SALON_API_PORT') or QA_API_PORT}").rstrip("/")
+
+
+def _api_commit(api_url, timeout=10):
+    # The QA instance is on this machine: never through a proxy the environment names.
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    try:
+        with opener.open(f"{api_url}/api/v1/meta", timeout=timeout) as response:
+            commit = json.load(response).get("commit")
+        return commit if isinstance(commit, str) else None, None
+    except (OSError, ValueError, AttributeError) as error:
+        return None, str(error)
+
+
+def _git_ok(*args):
+    try:
+        return subprocess.run(["git", *args], capture_output=True).returncode == 0
+    except OSError:
+        return False
+
+
+def stale_build(commit, root="."):
+    """Why a build of this commit is not current for HEAD, or None when it is."""
+    commit = (commit or "").strip().lower()
+    if len(commit) < 7 or not re.fullmatch(r"[0-9a-f]+", commit):
+        return "did not say which commit it was built from"
+    if not _git_ok("-C", root, "cat-file", "-e", f"{commit}^{{commit}}"):
+        return f"was built from commit {commit}, which is not a commit of this repository"
+    if not _git_ok("-C", root, "merge-base", "--is-ancestor", commit, "HEAD"):
+        return f"was built from commit {commit}, which is not an ancestor of this checkout's HEAD"
+    if not _git_ok("-C", root, "diff", "--quiet", commit, "HEAD", "--", *build_sources(root)):
+        return f"was built from commit {commit}, and HEAD has changed the build's sources ({BUILD_SOURCES_FILE}) since"
+    return None
+
+
+def build_check(entries, environ, root="."):
+    """summary.json's 'build': whether the run needs the API, which commit it reports, and whether
+    that build is current. 'refusal' is set when the run must not start."""
+    needing = [f"{e.get('scope')}:{e.get('id')}" for e in entries if needs_product(e)]
+    if not needing:
+        return {"needed": False, "api_commit": None, "api_current": None, "refusal": None}
+    api_url = qa_api_url(environ)
+    commit, error = _api_commit(api_url)
+    reason = stale_build(commit, root) if commit else (
+        f"did not answer /api/v1/meta ({error})" if error else "did not say which commit it was built from")
+    allowed = environ.get(ALLOW_MISMATCH) == "1"
+    check = {"needed": True, "entries_needing_it": len(needing), "api_url": api_url, "api_commit": commit,
+             "api_current": reason is None, "reason": reason, "mismatch_allowed": allowed and reason is not None,
+             "refusal": None}
+    if reason and not allowed:
+        check["refusal"] = (f"ENVIRONMENT: nothing was run: the API at {api_url} {reason}, so the run would not "
+                            f"test this checkout's HEAD {_revision() or '(unknown)'}. Rebuild the QA instance with "
+                            f"infra/scripts/qa-redeploy.sh and run again, or set {ALLOW_MISMATCH}=1 to test that "
+                            "build on purpose and say so in the evidence")
+    return check
+
+
+# --- one at a time on the QA instance ---------------------------------------------------------
+#
+# A run and infra/scripts/qa-redeploy.sh exclude each other: a redeploy stops the API and the web
+# app, which would break a run partway, and a run starting during a redeploy would test a build
+# that is being replaced. Both take one lock, the runner for its whole run (from before its build
+# check) and qa-redeploy.sh across its guard, stop, rebuild and start. It is the mechanism of
+# infra/scripts/lib/common.sh's own lock: a symbolic link, created in one step or not at all,
+# whose target names its holder as "<process id> <start time>" (ps -o lstart in UTC). A lock
+# whose holder is no longer that process (killed, or its id since reused) is stale and is
+# removed, one remover at a time (a "<lock>.clearing" directory), so a killed holder never leaves
+# it stuck. It lives in the product checkout, where qa-redeploy.sh runs.
+
+INSTANCE_LOCK = os.path.join(".local", "run", "qa-instance.lock")
+
+
+class InstanceBusy(Exception):
+    pass
+
+
+def instance_lock_path(environ):
+    """The lock in the product checkout: QA_PRODUCT_ROOT (shell, then qa/.env.local), else this one."""
+    product_root = environ.get("QA_PRODUCT_ROOT") or _env_file("qa/.env.local").get("QA_PRODUCT_ROOT") or "."
+    return os.path.join(product_root, INSTANCE_LOCK)
+
+
+def _started_utc(pid):
+    """When a process started, as common.sh's process_started prints it; '' when there is none."""
+    try:
+        found = subprocess.run(["ps", "-p", str(pid), "-o", "lstart="], capture_output=True, text=True,
+                               env={**os.environ, "LC_ALL": "C", "TZ": "UTC"})
+    except OSError:
+        return ""
+    return found.stdout.strip() if found.returncode == 0 else ""
+
+
+def _holder_alive(holder):
+    pid, _, started = (holder or "").partition(" ")
+    return pid.isdigit() and bool(started) and _started_utc(int(pid)) == started
+
+
+def _holder_described(holder):
+    pid = (holder or "").partition(" ")[0]
+    try:
+        command = subprocess.run(["ps", "-p", pid, "-o", "command="], capture_output=True, text=True).stdout.strip()
+    except OSError:
+        command = ""
+    return f"process {pid}" + (f" ({command[:120]})" if command else "")
+
+
+def _clear_stale(path, holder):
+    """Removes a stale lock, unless another remover is at it or someone has taken it since."""
+    clearing = path + ".clearing"
+    try:
+        if time.time() - os.stat(clearing).st_mtime > 60:  # left by a remover that was killed
+            os.rmdir(clearing)
+    except OSError:
+        pass
+    try:
+        os.mkdir(clearing)
+    except OSError:
+        return
+    try:
+        if os.readlink(path) == holder:
+            os.unlink(path)
+    except OSError:
+        pass
+    finally:
+        os.rmdir(clearing)
+
+
+def take_instance_lock(path):
+    """Takes the QA instance's lock for this process and returns what it holds; InstanceBusy if a
+    live process holds it."""
+    me = f"{os.getpid()} {_started_utc(os.getpid())}"
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    for _ in range(10):
+        try:
+            os.symlink(me, path)
+            return me
+        except FileExistsError:
+            try:
+                holder = os.readlink(path)
+            except OSError:
+                continue  # it went between the two calls
+            if _holder_alive(holder):
+                raise InstanceBusy(
+                    f"the QA instance is in use by {_holder_described(holder)}: a QA run, or "
+                    "infra/scripts/qa-redeploy.sh, holds its lock "
+                    f"({os.path.relpath(path)}); run again once it has finished")
+            _clear_stale(path, holder)
+    raise InstanceBusy(f"could not take the QA instance's lock {path}")
+
+
+def release_instance_lock(path, held):
+    try:
+        if os.readlink(path) == held:
+            os.unlink(path)
+    except OSError:
+        pass
+
+
+def run(entries, label, dry_run=False, reports_root="qa/reports", *, heartbeat_seconds=30,
+        suite=None, selection=None):
     """Returns (exit code, report directory).
 
-    A heartbeat is a subprocess wait interval, never a test timeout or retry. Raw
-    child output stays in its log; progress prints only scope, counts and timings.
+    A heartbeat is a subprocess wait interval, never a retry. Each entry has a time limit
+    (time_limit_seconds); one that reaches it is stopped and recorded as 'timeout', a failure,
+    and the run goes on to the next entry. Raw child output stays in its log; progress prints
+    only scope, counts and timings. suite names the suite being run, whose budget is then
+    checked; selection describes a narrowed run (--entry, --rerun-failed), which is recorded as
+    partial and is not held to the suite's budget.
     """
     if not entries:
         print(f"refusing: {label} selects no automation; there is nothing to run", flush=True)
@@ -245,18 +537,58 @@ def run(entries, label, dry_run=False, reports_root="qa/reports", *, heartbeat_s
     if refusal:
         print(f"refusing: {refusal} (decision 105). Nothing was run.", flush=True)
         return 2, None
+    lock = instance_lock_path(os.environ)
+    try:
+        held = take_instance_lock(lock)
+    except InstanceBusy as busy:
+        print(f"refusing: {busy}. Nothing was run.", flush=True)
+        return 2, None
+    try:
+        return _run_holding_the_lock(entries, plan, label, reports_root, heartbeat_seconds, suite, selection)
+    finally:
+        release_instance_lock(lock, held)
+
+
+def _run_holding_the_lock(entries, plan, label, reports_root, heartbeat_seconds, suite, selection):
+    build = build_check(entries, os.environ)
+    if build["refusal"]:
+        print(f"refusing: {build['refusal']}.", flush=True)
+        return 2, None
+    if build["needed"]:
+        state = "current" if build["api_current"] else f"NOT current ({build['reason']}; {ALLOW_MISMATCH}=1)"
+        print(f"build: the API reports commit {build['api_commit'] or 'none'}, {state}", flush=True)
+    else:
+        print("build: no entry of this run needs the running product; the API was not asked", flush=True)
 
     stamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     run_id = uuid.uuid4().hex[:12]
-    report_dir = os.path.join(reports_root, f"{stamp}-{label.replace(' ', '-')}-{run_id}")
+    # A narrowed run (--entry, --rerun-failed) says so in its folder's name, so that the name
+    # alone tells it from a full run of the scope: validate reads it where the folder is absent.
+    marker = f"-{S.PARTIAL_MARKER}" if selection else ""
+    report_dir = os.path.join(reports_root, f"{stamp}-{label.replace(' ', '-')}{marker}-{run_id}")
     os.makedirs(report_dir, exist_ok=False)
     env = {**os.environ, "QA_REPORT_DIR": os.path.abspath(report_dir), "SALON_LOCAL_INSTANCE": "qa"}
     started = time.monotonic()
-    summary = {"label": label, "run_id": run_id, "source_revision": _revision(),
+    summary = {"label": label, "run_id": run_id, "source_revision": _revision(), **_source_state(),
                "state": "running", "result": "running", "selected_count": len(entries),
+               # Every entry this run was asked to run, in order: --rerun-failed reruns those it
+               # did not pass, including one it was interrupted in and those it never reached.
+               "selected": [_reference(e) for e in entries],
                "entries": [], "started_at": datetime.datetime.now(datetime.timezone.utc).isoformat()}
+    if summary["source_dirty"]:
+        print(f"WARNING: the checkout has {len(summary['source_changes'])} uncommitted change(s); "
+              "summary.json lists them, and this run is not evidence for source_revision alone", flush=True)
     summary["runner"] = {"pid": os.getpid(), "process_start": _process_start(os.getpid()),
                          "started_at": summary["started_at"]}
+    # The build tested: the API's commit and whether it was current for source_revision. The run
+    # refuses one that is not, unless QA_ALLOW_BUILD_MISMATCH=1 (qa/shared/global-setup.ts too).
+    summary["build"] = {key: value for key, value in build.items() if key != "refusal"}
+    summary["api_commit"] = build["api_commit"]
+    summary["api_current"] = build["api_current"]
+    summary["build_mismatch_allowed"] = os.environ.get(ALLOW_MISMATCH) == "1"
+    summary["partial"] = bool(selection)
+    if selection:
+        summary["selection"] = selection
     results = summary["entries"]
 
     def progress(index, entry, entry_started):
@@ -285,6 +617,8 @@ def run(entries, label, dry_run=False, reports_root="qa/reports", *, heartbeat_s
             entry_started = time.monotonic()
             progress(index, entry, entry_started)
             log_path = os.path.join(report_dir, f"{index:03d}-{entry['scope']}-{entry.get('id')}.log")
+            limit = time_limit_seconds(entry)
+            timed_out = None
             with open(log_path, "w", encoding="utf-8") as log:
                 child = None
                 try:
@@ -298,8 +632,15 @@ def run(entries, label, dry_run=False, reports_root="qa/reports", *, heartbeat_s
                     summary["current"]["process_start"] = _process_start(child.pid)
                     _write_summary(report_dir, summary)
                     while True:
+                        remaining = limit - (time.monotonic() - entry_started)
+                        if remaining <= 0:
+                            timed_out = _cancel_process_tree(child)
+                            code = child.returncode if child.returncode is not None else -signal.SIGTERM
+                            log.write(f"\nsdlc run: stopped after reaching the entry's time limit of "
+                                      f"{limit / 60:g} minutes\n")
+                            break
                         try:
-                            code = child.wait(timeout=heartbeat_seconds)
+                            code = child.wait(timeout=min(heartbeat_seconds, remaining))
                             break
                         except subprocess.TimeoutExpired:
                             progress(index, entry, entry_started)
@@ -311,16 +652,32 @@ def run(entries, label, dry_run=False, reports_root="qa/reports", *, heartbeat_s
                         summary["cancellation"] = _cancel_process_tree(child)
                         active_child = None
                     raise
-            outcome = "pass" if code == 0 else ("tool-missing" if code == 127 else "fail")
-            print(f"  {outcome.upper():12} {entry['scope']} {entry.get('id')}", flush=True)
-            results.append({**entry, "argv": argv, "exit_code": code, "outcome": outcome,
-                            "log": log_path, "log_sha256": _file_digest(log_path),
-                            "elapsed_seconds": round(time.monotonic() - entry_started, 3)})
+            if timed_out is not None:
+                outcome = "timeout"
+            else:
+                outcome = "pass" if code == 0 else ("tool-missing" if code == 127 else "fail")
+            print(f"  {outcome.upper():12} {entry['scope']} {entry.get('id')}"
+                  + (f" (stopped at its {limit / 60:g}-minute limit)" if timed_out is not None else ""), flush=True)
+            result = {**entry, "argv": argv, "exit_code": code, "outcome": outcome,
+                      "log": log_path, "log_sha256": _file_digest(log_path),
+                      "elapsed_seconds": round(time.monotonic() - entry_started, 3),
+                      "time_limit_seconds": limit}
+            if timed_out is not None:
+                result["cancellation"] = timed_out
+            results.append(result)
             progress(index, entry, entry_started)
             active_child = None
         passed = len(results) == len(entries) and all(r["outcome"] == "pass" for r in results)
         summary.update(state="complete", result="pass" if passed else "fail", current=None,
+                       elapsed_seconds=round(time.monotonic() - started, 3),
                        finished_at=datetime.datetime.now(datetime.timezone.utc).isoformat())
+        budget = budget_check(suite, summary["elapsed_seconds"], partial=bool(selection))
+        if budget:
+            summary["budget"] = budget
+            if budget["exceeded"]:
+                print(f"WARNING: {suite} took {budget['elapsed_minutes']:g} minutes, over its budget of "
+                      f"{budget['minutes']} minutes (docs/qa/test-plan.md, \"Suites\"): going over budget "
+                      "is a defect in the suite", flush=True)
         _write_summary(report_dir, summary)
     except (KeyboardInterrupt, OSError):
         if active_child is not None:
@@ -348,7 +705,8 @@ def run_release(bundle, version, dry_run=False):
             rows.append((gate_id, "NOT RUN", "an earlier gate failed"))
             continue
         if gate.get("suite"):
-            code, report = run(select(bundle, suite=gate["suite"]), f"{version} {gate['suite']}", dry_run)
+            code, report = run(select(bundle, suite=gate["suite"]), f"{version} {gate['suite']}", dry_run,
+                               suite=gate["suite"])
             detail = report or gate["suite"]
         else:
             print(f"gate {gate_id}: {gate.get('cmd')}")

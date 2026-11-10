@@ -43,9 +43,15 @@ def cmd_status(_args):
     bundle = model.load()
     for feature in bundle["features"]:
         stages = [s for s in bundle["stages"] if s.get("_feature_dir") == feature["_dir"]]
+        role, action = flow.feature_turn(feature, stages, bundle["features"], bundle["change_requests"])
         if feature.get("status") == "backlog":
+            # Shown when it is someone's turn to start it, or when a change request is what holds
+            # it; one waiting in ordinary order is in features/README.md. Its outlined stages
+            # wait for feature-new, so they are not listed.
+            held = flow.changing_dependencies(feature, bundle["change_requests"], bundle["features"])
+            if role != "waiting" or (held and action == flow.change_request_wait(held)):
+                print(f"{feature.get('id')} {feature.get('status'):12} next: {role}: {action}")
             continue
-        role, action = flow.feature_turn(feature, stages, bundle["features"])
         print(f"{feature.get('id')} {feature.get('status'):12} next: {role}: {action}")
         for stage in sorted(stages, key=lambda s: (s.get("sequence") or 0, s.get("id") or "")):
             role, action = flow.stage_turn(stage)
@@ -56,10 +62,21 @@ def cmd_status(_args):
 def cmd_run(args):
     bundle = model.load()
     try:
+        narrowing = bool(args.entry or args.rerun_failed)
         if args.release:
+            if narrowing:
+                raise runner.SelectionError("--entry and --rerun-failed narrow a --stage, --feature or --suite run, "
+                                            "not a release's gates")
             return runner.run_release(bundle, args.release, args.dry_run)
         entries = runner.select(bundle, stage=args.stage, feature=args.feature, suite=args.suite)
-        return runner.run(entries, args.stage or args.feature or args.suite, args.dry_run)[0]
+        selection = None
+        if narrowing:
+            selected_from = len(entries)
+            entries = runner.narrow(entries, args.entry or (), args.rerun_failed)
+            selection = {"selected_from": selected_from, "entry": args.entry or [],
+                         "rerun_failed": args.rerun_failed}
+        return runner.run(entries, args.stage or args.feature or args.suite, args.dry_run,
+                          suite=args.suite, selection=selection)[0]
     except (runner.SelectionError, OSError) as error:
         print(f"refusing: {error}")
         return 2
@@ -111,6 +128,10 @@ def main(argv=None):
     run.add_argument("--feature", help="feature id, for example F07")
     run.add_argument("--suite", help="smoke, regression or release: closed work tagged with that suite")
     run.add_argument("--release", help="release version, for example v0.1.0: runs every gate of its manifest")
+    run.add_argument("--entry", action="append", metavar="ID",
+                     help="run only this automation entry of the chosen scope (id, or scope:id); repeat for more")
+    run.add_argument("--rerun-failed", metavar="REPORT",
+                     help="run only the entries of the chosen scope that did not pass in REPORT/summary.json")
     run.add_argument("--dry-run", action="store_true", help="print what would run and stop")
     run.set_defaults(func=cmd_run)
     commands.add_parser("selftest", help="run the unit tests of this tooling").set_defaults(func=cmd_selftest)

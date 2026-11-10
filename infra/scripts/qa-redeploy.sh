@@ -1,0 +1,152 @@
+#!/usr/bin/env bash
+# Rebuilds the QA instance from this checkout's HEAD and proves that it runs it.
+#
+# Usage: infra/scripts/qa-redeploy.sh
+#
+# Stops the QA instance's web app and API (by the process ids the local scripts recorded, through
+# local-service.sh), starts it again with local-up.sh, which rebuilds the API jar and the web app
+# and starts PostgreSQL first if it is down, and then asks the API's /api/v1/meta which commit it
+# was built from. Exits non-zero unless that build is current for HEAD: the reported commit is an
+# ancestor of HEAD and HEAD has not changed the build's sources since (git diff --quiet). That is
+# the rule `qa/scripts/sdlc run` and Playwright's global setup apply before a run. PostgreSQL and
+# its data are left as they are.
+#
+# Only ever the QA instance (decision 105): SALON_LOCAL_INSTANCE is set to qa, and any other value
+# in the shell is refused before anything is stopped. Refuses, before stopping anything, when the
+# build's sources (lib/build-sources.txt, the one list of them) have uncommitted changes: a build
+# of them would not be HEAD, though /api/v1/meta would say it was. Commit them first. Refuses, too,
+# while a `qa/scripts/sdlc run` of this checkout is in progress (its qa/reports summary.json),
+# which restarting the services would break partway, and when a prerequisite of local-up.sh is
+# missing, which would leave the instance down.
+set -euo pipefail
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+case "${SALON_LOCAL_INSTANCE-qa}" in
+  qa) ;;
+  *) printf "error: qa-redeploy.sh acts only on the QA instance, and SALON_LOCAL_INSTANCE is '%s'. Unset it, or set it to qa. Nothing was done.\n" \
+       "${SALON_LOCAL_INSTANCE:-default}" >&2
+     exit 1 ;;
+esac
+export SALON_LOCAL_INSTANCE=qa
+# shellcheck source=lib/common.sh
+. "$HERE/lib/common.sh"
+
+# What the build is made from (one path per line); a change to anything else does not change
+# what runs.
+BUILD_SOURCES=()
+while IFS= read -r source || [ -n "$source" ]; do
+  case "$source" in ''|'#'*) continue ;; esac
+  BUILD_SOURCES+=("$source")
+done <"$HERE/lib/build-sources.txt"
+[ "${#BUILD_SOURCES[@]}" -gt 0 ] || fail "$HERE/lib/build-sources.txt names no build source. Nothing was done."
+
+# Whether the build of commit $1 is current for HEAD: $1 is a commit of this repository, an
+# ancestor of HEAD, and HEAD has not changed the build's sources since.
+build_is_current() {
+  local commit
+  commit="$(printf '%s' "${1:-}" | tr '[:upper:]' '[:lower:]')"
+  case "$commit" in ''|*[!0-9a-f]*) return 1 ;; esac
+  [ "${#commit}" -ge 7 ] || return 1
+  git -C "$ROOT" cat-file -e "${commit}^{commit}" 2>/dev/null || return 1
+  git -C "$ROOT" merge-base --is-ancestor "$commit" HEAD 2>/dev/null || return 1
+  git -C "$ROOT" diff --quiet "$commit" HEAD -- "${BUILD_SOURCES[@]}"
+}
+
+# The report folder of a run of this checkout's `qa/scripts/sdlc run` that is still going, or
+# nothing. The runner keeps summary.json current while it runs: state "running" and its own process
+# id and start time under "runner". A process with that id is the runner when it started at that
+# time, or when it is still a `sdlc_lib` process (ps may print the time in another zone); a summary
+# left "running" by a runner that was killed names a process that is gone, and is not a run.
+active_run() {
+  local summary pid started now
+  for summary in "$ROOT"/qa/reports/*/summary.json; do
+    [ -f "$summary" ] && grep -q '"state": *"running"' "$summary" || continue
+    # Node.js is a prerequisite of the web app, so it is here; it reads the JSON as JSON.
+    pid="$(node -e 'const s = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
+      if (s.state === "running" && Number.isInteger(s.runner?.pid)) process.stdout.write(String(s.runner.pid));' \
+      "$summary" 2>/dev/null || true)"
+    started="$(node -e 'const s = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
+      process.stdout.write(String(s.runner?.process_start ?? ""));' "$summary" 2>/dev/null || true)"
+    [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null || continue
+    now="$(ps -p "$pid" -o lstart= 2>/dev/null | sed -e 's/^ *//' -e 's/ *$//')"
+    if { [ -n "$started" ] && [ "$now" = "$started" ]; } || ps -p "$pid" -o command= 2>/dev/null | grep -q 'sdlc_lib'; then
+      printf '%s (process %s)' "${summary%/summary.json}" "$pid"
+      return 0
+    fi
+  done
+  return 1
+}
+
+# What local-up.sh needs to start the instance again (Docker, JDK 25, Node.js with Corepack, curl),
+# checked by the same function before anything is stopped: a missing one would otherwise leave the
+# QA instance down.
+require_prerequisites postgres api web
+
+# The QA instance's lock, which `qa/scripts/sdlc run` holds for a whole run (from before its build
+# check): taken here before the guard below and held through the stop, rebuild, start and check,
+# so a run cannot start in between. The mechanism of this library's own lock (acquire_lock): a
+# symbolic link made in one step, naming its holder as "<process id> <start time>"; a lock whose
+# holder is no longer that process is stale and is removed by one remover at a time. It is not
+# the library's lock, which local-service.sh and local-up.sh take for themselves below.
+INSTANCE_LOCK="$LOCK_DIR/qa-instance.lock"
+INSTANCE_LOCK_HOLDER=""
+release_instance_lock() {
+  if [ -n "$INSTANCE_LOCK_HOLDER" ] && [ "$(readlink "$INSTANCE_LOCK" 2>/dev/null || true)" = "$INSTANCE_LOCK_HOLDER" ]; then
+    rm -f "$INSTANCE_LOCK"
+  fi
+}
+clear_stale_instance_lock() { # <holder>
+  find "$INSTANCE_LOCK.clearing" -maxdepth 0 -mmin +1 -exec rmdir {} \; 2>/dev/null || true
+  mkdir "$INSTANCE_LOCK.clearing" 2>/dev/null || return 0
+  if [ "$(readlink "$INSTANCE_LOCK" 2>/dev/null || true)" = "$1" ]; then
+    rm -f "$INSTANCE_LOCK"
+  fi
+  rmdir "$INSTANCE_LOCK.clearing"
+}
+take_instance_lock() {
+  local me holder tries=0
+  mkdir -p "$LOCK_DIR"
+  me="$$ $(process_started "$$")"
+  while ! ln -s "$me" "$INSTANCE_LOCK" 2>/dev/null; do
+    holder="$(readlink "$INSTANCE_LOCK" 2>/dev/null || true)"
+    if [ -n "$holder" ] && is_same_process "$holder"; then
+      fail "the QA instance is in use by process ${holder%% *} ($(ps -p "${holder%% *}" -o command= 2>/dev/null | cut -c1-120)): a QA run, or another redeploy, holds its lock (${INSTANCE_LOCK#"$ROOT"/}). Run again once it has finished. Nothing was stopped."
+    fi
+    [ -z "$holder" ] || clear_stale_instance_lock "$holder"
+    tries=$((tries + 1))
+    [ "$tries" -lt 10 ] || fail "could not take the QA instance's lock ${INSTANCE_LOCK#"$ROOT"/}. Nothing was stopped."
+  done
+  INSTANCE_LOCK_HOLDER="$me"
+  trap release_instance_lock EXIT
+  trap 'exit 130' INT
+  trap 'exit 143' TERM
+  trap 'exit 129' HUP
+}
+take_instance_lock
+
+if run="$(active_run)"; then
+  fail "a QA run of this checkout is in progress: ${run#"$ROOT"/}. Restarting the API and web app now would break it partway. Wait for it to finish, or stop it, and run again. Nothing was stopped."
+fi
+
+head="$(git -C "$ROOT" rev-parse HEAD 2>/dev/null)" || fail "cannot read HEAD of $ROOT. Nothing was done."
+changes="$(git -C "$ROOT" status --porcelain --untracked-files=all -- "${BUILD_SOURCES[@]}")"
+if [ -n "$changes" ]; then
+  printf '%s\n' "$changes" >&2
+  fail "the build's sources have uncommitted changes (above), so a build would not be HEAD $head. Commit them and run again. Nothing was stopped."
+fi
+
+# shellcheck disable=SC2086 # three words: the QA instance's PostgreSQL, API and web ports
+set -- $DEFAULT_PORTS
+api_port="${SALON_API_PORT:-$2}"
+
+say "qa-redeploy: rebuilding the QA instance at $head"
+"$HERE/local-service.sh" stop web
+"$HERE/local-service.sh" stop api
+"$HERE/local-up.sh"
+
+meta="$(curl -s --max-time 10 "http://localhost:${api_port}/api/v1/meta" 2>/dev/null || true)"
+running="$(printf '%s' "$meta" | sed -n 's/.*"commit"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')"
+if ! build_is_current "$running"; then
+  fail "the QA instance's API at http://localhost:${api_port}/api/v1/meta reports commit '${running:-none}', which is not a current build of HEAD $head. See $LOG_DIR/api-build.log and $LOG_DIR/api.log."
+fi
+say "qa-redeploy: the QA instance's API runs a current build of HEAD $head (commit $running)"

@@ -13,6 +13,7 @@ depends_on: []              # feature ids that must pass QA and be merged into G
 integration:               # lead owns branch/PR/merge fields; QA records the tested revision
   branch: null             # feature integration branch; stages and QA merge into it
   pull_request: null       # one GitHub PR into main, opened after feature-close
+  reviewed_revision: null  # full commit SHA the lead read at feature-review; QA's turn starts once it is set
   qa_revision: null        # full commit SHA tested by independent QA; product/automation must not change afterwards
   merged_commit: null      # written only by merge-sync after confirming the owner's GitHub merge
   merged_at: null          # GitHub's merge timestamp; complete does not mean merged or deployed
@@ -25,5 +26,8 @@ verification:               # journeys across stages, added by feature-verify
   manual: []
   deferred: []
 evidence:
-  last_run: null
-  last_result: null
+  last_run: null            # the latest run, as a path: qa/reports/<folder>
+  last_result: null         # pass | fail
+  full_pass_run: null       # the full --feature run the pass rests on, when last_run is a later rerun; it may have failed
+  full_pass_revision: null  # the commit that full run tested
+  reruns: []                # the later runs (qa/reports/<folder>) that passed each entry the full run did not pass

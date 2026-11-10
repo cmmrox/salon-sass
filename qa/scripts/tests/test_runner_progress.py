@@ -269,7 +269,7 @@ class DefaultInstanceRefusalTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as root, \
                 patch.dict(os.environ, {"SALON_API_PORT": "8090"}), \
                 contextlib.redirect_stdout(io.StringIO()) as out:
-            code, report = runner.run([{"scope": "feature", "id": "F07", "tool": "command", "cmd": "touch ran"}],
+            code, report = runner.run([{"scope": "feature", "id": "F07", "tool": "script", "file": "ran.sh"}],
                                       "refusal", reports_root=root)
             self.assertEqual((code, report), (2, None))
             self.assertEqual(os.listdir(root), [])

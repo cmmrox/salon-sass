@@ -2,6 +2,8 @@
 stage.yaml, feature.yaml and the bug files, never from a conversation, so that the roles can
 be different sessions or different tools.
 """
+import re
+
 from . import schema as S
 
 NOBODY = ("-", "-")
@@ -17,11 +19,52 @@ def merged(feature):
                 integration.get("merged_at"))
 
 
+def milestone_number(feature):
+    """M3-growth -> 3, or None when the feature names no milestone."""
+    match = re.match(r"M(\d+)-", str(feature.get("milestone") or ""))
+    return int(match.group(1)) if match else None
+
+
 def predecessors(feature, features):
-    """Portfolio order, plus any explicit dependency outside that order."""
+    """Portfolio order within the feature's milestone and the ones before it, plus any explicit
+    dependency outside that order. A lower-numbered feature of a later milestone is delivered
+    after this one (F22 in M4 comes after F25 in M3), so it is not a predecessor."""
     fid = feature.get("id", "")
     dependencies = feature.get("depends_on") or []
-    return [f for f in features if f.get("id", "") < fid or f.get("id") in dependencies]
+    mine = milestone_number(feature)
+
+    def earlier_in_order(other):
+        theirs = milestone_number(other)
+        later_milestone = mine is not None and theirs is not None and theirs > mine
+        return other.get("id", "") < fid and not later_milestone
+
+    return [f for f in features if earlier_in_order(f) or f.get("id") in dependencies]
+
+
+# A change request in this state is decided but its follow-up has not merged yet.
+OPEN_CHANGE_REQUESTS = S.CR_IN_FLIGHT
+
+
+def changing_dependencies(feature, change_requests, features=()):
+    """[(change request, dependency)] for each merged feature this one depends on that an approved
+    change request is still changing (it names one of that feature's stages). Work planned on it
+    now would be planned on what the follow-up replaces. A dependency not merged yet holds the
+    feature anyway, and builds the request into its own delivery."""
+    delivered = {f.get("id") for f in features if merged(f)}
+    held = []
+    for request in change_requests or ():
+        if request.get("status") not in OPEN_CHANGE_REQUESTS:
+            continue
+        changed = {str(sid).split("-")[0] for sid in request.get("stages") or []}
+        for dep in feature.get("depends_on") or []:
+            if dep in changed and dep in delivered and (request.get("id"), dep) not in held:
+                held.append((request.get("id"), dep))
+    return held
+
+
+def change_request_wait(held):
+    """The reason a feature waits on changing dependencies, for status and start-check."""
+    return "after " + ", ".join(f"{cr}'s follow-up to {dep} is merged" for cr, dep in held)
 
 
 def _awaiting_developer(scope):
@@ -58,11 +101,12 @@ def stage_turn(stage):
     return NOBODY
 
 
-def feature_turn(feature, stages, features=()):
+def feature_turn(feature, stages, features=(), change_requests=()):
     """Returns (role, next action) for one feature, given its own stages.
 
-    features is every feature, used to see whether a backlog feature's dependencies are done.
-    The role "waiting" means nobody can act yet.
+    features is every feature, used to see whether a backlog feature's dependencies are done;
+    change_requests, whether one of them is still being changed. The role "waiting" means
+    nobody can act yet.
     """
     fid, status = feature.get("id"), feature.get("status")
     if status == "backlog":
@@ -70,6 +114,9 @@ def feature_turn(feature, stages, features=()):
         unmet = [dep for dep in feature.get("depends_on") or [] if dep not in done]
         if unmet:
             return ("waiting", "after " + ", ".join(unmet))
+        held = changing_dependencies(feature, change_requests, features)
+        if held:
+            return ("waiting", change_request_wait(held))
         mine = str(feature.get("milestone") or "")
         earlier = sorted({str(f.get("milestone")) for f in features
                           if f.get("milestone") and str(f.get("milestone")) < mine and f.get("status") != "released"})
@@ -90,6 +137,10 @@ def feature_turn(feature, stages, features=()):
             return stage_turn(stage)
     if not stages:
         return ("lead", f"feature-new {fid}")
+    # feature-review: the lead reads the whole feature's code once its stages are closed and
+    # before QA starts, and records the commit it reviewed.
+    if feature.get("qa_status") == "not-run" and not (feature.get("integration") or {}).get("reviewed_revision"):
+        return ("lead", f"feature-review {fid}")
     # The feature pass is where every bug is settled, including one carried from a stage.
     carried = [bug for stage in stages for bug in stage.get("_bugs") or []]
     return _qa_turn({**feature, "_stage_bugs": carried}, f"feature-verify {fid}", f"feature-close {fid}")

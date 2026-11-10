@@ -6,7 +6,7 @@ export const LEAVE_TYPES: LeaveType[] = ['annual', 'sick', 'personal', 'other'];
 
 /** A leave's note is up to 60 characters, and a block's label 2 to 40 (F06-S03 AC-1, AC-4). */
 export const NOTE_MAX = 60;
-export const LABEL_MIN = 2;
+const LABEL_MIN = 2;
 export const LABEL_MAX = 40;
 
 /** Leave as the sheet's form holds it. */

@@ -6,6 +6,7 @@ directory tree.
 """
 import glob
 import hashlib
+import json
 import os
 import re
 
@@ -77,10 +78,27 @@ def _spec(text):
     return {
         "headings": H2_RE.findall(text),
         "acs": AC_RE.findall(text),
+        "cr_criteria": _cr_criteria(text),
         "read_first": named,
         "missing_docs": [path for path in named if not os.path.exists(path)],
         "commands": _commands(text),
     }
+
+
+# A section a change request added to a merged stage's spec (decision 098): "## CR-028 ...".
+CR_SECTION_RE = re.compile(r"^##\s+(CR-\d{3})\b[^\n]*$(.*?)(?=^## |\Z)", re.M | re.S)
+
+
+def _cr_criteria(text):
+    """The criteria declared under a '## CR-nnn' heading, each with the change request that added it.
+
+    Whether such a criterion must already be covered depends on that request's status, which
+    validate.py decides; the reader only records where each criterion was declared."""
+    found = {}
+    for request, body in CR_SECTION_RE.findall(text):
+        for criterion in AC_RE.findall(body):
+            found.setdefault(criterion, request)
+    return found
 
 
 def _commands(text):
@@ -142,6 +160,149 @@ def _automation(scope):
     return ((scope.get("verification") or {}).get("automation")) or []
 
 
+CASE_TITLE_RE = re.compile(r"""(TC-F\d{2}(?:-S\d{2}[a-z]?)?-\d{3})\b([^'"`\n]*)""")
+# The Playwright calls that open a test or a block that runs; only a test's title declares a case.
+# test.skip, test.fixme, test.only and describe.skip/fixme declare nothing that counts; neither
+# does a comment.
+_RUNNING_CALL_RE = re.compile(r"(?<![\w$.])test(?:\.describe(?:\.(?:serial|parallel))?)?\s*\(")
+_SKIPPED_CALL_RE = re.compile(r"(?<![\w$.])test(?:\.describe)?\.(?:skip|fixme)\s*\(")
+_REGEX_AFTER = set("(,=:[!&|?{};+-*%<>~^") | {""}
+
+
+def _ts_skeleton(text):
+    """The source with comments blanked and string contents blanked, positions unchanged.
+
+    Returns (skeleton, strings): strings maps each literal's opening offset to its closing
+    offset, so a caller can read a literal from the original text. A small lexer rather than a
+    regex, so that '//' in a URL or '/*' in a glob inside a string is not taken for a comment."""
+    out, strings, i, n = list(text), {}, 0, len(text)
+    previous = ""  # the last significant character outside comments and strings
+
+    def blank(start, end):
+        for k in range(start, end):
+            if out[k] != "\n":
+                out[k] = " "
+
+    while i < n:
+        c = text[i]
+        if c == "/" and text.startswith("//", i):
+            end = text.find("\n", i)
+            end = n if end == -1 else end
+            blank(i, end)
+            i = end
+        elif c == "/" and text.startswith("/*", i):
+            end = text.find("*/", i + 2)
+            end = n if end == -1 else end + 2
+            blank(i, end)
+            i = end
+        elif c in "'\"`":
+            j, depth = i + 1, 0
+            while j < n:
+                if text[j] == "\\":
+                    j += 2
+                    continue
+                if c == "`" and text.startswith("${", j):
+                    depth += 1
+                    j += 2
+                    continue
+                if c == "`" and depth and text[j] == "}":
+                    depth -= 1
+                elif text[j] == c and not depth:
+                    break
+                elif text[j] == "\n" and c != "`":
+                    break
+                j += 1
+            strings[i] = min(j, n)
+            blank(i + 1, min(j, n))
+            i, previous = j + 1, c
+        elif c == "/" and previous in _REGEX_AFTER:
+            j, in_class = i + 1, False  # a regular expression literal: skip it whole
+            while j < n and text[j] != "\n":
+                if text[j] == "\\":
+                    j += 2
+                    continue
+                if text[j] == "[":
+                    in_class = True
+                elif text[j] == "]":
+                    in_class = False
+                elif text[j] == "/" and not in_class:
+                    break
+                j += 1
+            blank(i + 1, min(j, n))
+            i, previous = j + 1, "/"
+        else:
+            if not c.isspace():
+                previous = c
+            i += 1
+    return "".join(out), strings
+
+
+def _closing(skeleton, open_paren):
+    """The offset of the parenthesis that closes the one at open_paren (end of file if none)."""
+    depth = 0
+    for k in range(open_paren, len(skeleton)):
+        if skeleton[k] == "(":
+            depth += 1
+        elif skeleton[k] == ")":
+            depth -= 1
+            if not depth:
+                return k
+    return len(skeleton)
+
+
+def _first_string(text, skeleton, strings, open_paren):
+    """The literal that is a call's first argument, or None when the first argument is not one."""
+    k = open_paren + 1
+    while k < len(skeleton) and skeleton[k].isspace():
+        k += 1
+    return text[k + 1:strings[k]] if k in strings else None
+
+
+def playwright_titles(text):
+    """The titles of the tests in a Playwright file that actually run.
+
+    Only a test(...) title declares a case. A describe block is read for what it holds (a test
+    inside a skipped describe, or one that calls test.skip(), does not run), but its own title
+    declares nothing: a criterion is covered by a test titled for it, never by the block around
+    untitled tests. A comment, a commented-out test, test.skip(...), test.fixme(...), and a test
+    whose body calls test.skip() or test.fixme() count for nothing either."""
+    skeleton, strings = _ts_skeleton(text)
+    calls = []  # (open paren, close paren, title, is a describe)
+    for match in _RUNNING_CALL_RE.finditer(skeleton):
+        paren = match.end() - 1
+        title = _first_string(text, skeleton, strings, paren)
+        if title is not None:
+            describe = skeleton.startswith("test.describe", match.start())
+            calls.append((paren, _closing(skeleton, paren), title, describe))
+    excluded = []
+    for match in _SKIPPED_CALL_RE.finditer(skeleton):
+        paren = match.end() - 1
+        if _first_string(text, skeleton, strings, paren) is not None:
+            excluded.append((paren, _closing(skeleton, paren)))  # a skipped test or block
+        else:
+            # A skip from inside a body skips the innermost test or block around it.
+            around = [(start, end) for start, end, _title, _describe in calls if start < paren < end]
+            if around:
+                excluded.append(max(around))
+    return [title for start, _end, title, describe in calls
+            if not describe and not any(lo <= start <= hi for lo, hi in excluded)]
+
+
+def _case_titles(entry, text):
+    """(case id, rest of title) for each case an automation entry's file declares.
+
+    Playwright declares a case by the title of a test that runs. k6, shell and Maestro have no
+    test call, so they title a case in a header comment ('# TC-F07-S01-004 AC-5: ...')."""
+    if entry.get("tool") == "playwright":
+        found = []
+        for title in playwright_titles(text):
+            match = CASE_TITLE_RE.match(title)
+            if match:
+                found.append(match.groups())
+        return found
+    return TITLE_CASE_RE.findall(text)
+
+
 def _title_cases(data):
     """Cases named in the titles of a scope's registered tests; each entry learns what it covers."""
     found, prefix = [], f"TC-{data.get('id')}-"
@@ -150,7 +311,7 @@ def _title_cases(data):
             continue
         text = _text(entry["file"]) or ""
         ids = []
-        for cid, rest in TITLE_CASE_RE.findall(text):
+        for cid, rest in _case_titles(entry, text):
             if cid.startswith(prefix) and cid[len(prefix):].isdigit():
                 found.append({"id": cid, "covers": COVER_RE.findall(rest.split(":", 1)[0]), "file": entry["file"]})
                 ids.append(cid)
@@ -158,7 +319,33 @@ def _title_cases(data):
     return found
 
 
-def _scope(directory, yaml_name):
+def _report_summaries(data, report_base):
+    """The summary.json of each report folder a scope's evidence names, read where the folder is
+    in this checkout (qa/reports is not committed, so in CI or another checkout it is not).
+
+    {path: summary dict}, None for a folder that is absent, {"_unreadable": True} for a summary
+    that is not JSON. report_base is the checkout whose qa/reports is read; this one by default."""
+    evidence = data.get("evidence") if isinstance(data.get("evidence"), dict) else {}
+    paths = [evidence.get("last_run"), evidence.get("full_pass_run")]
+    paths += evidence.get("reruns") if isinstance(evidence.get("reruns"), list) else []
+    found = {}
+    for path in paths:
+        if not isinstance(path, str) or not path or path in found:
+            continue
+        summary = os.path.join(report_base, path, "summary.json")
+        if not os.path.isfile(summary):
+            found[path] = None
+            continue
+        try:
+            with open(summary, encoding="utf-8") as handle:
+                value = json.load(handle)
+            found[path] = value if isinstance(value, dict) else {"_unreadable": True}
+        except (OSError, ValueError):
+            found[path] = {"_unreadable": True}
+    return found
+
+
+def _scope(directory, yaml_name, report_base="."):
     """Loads a feature or a stage: its yaml plus the facts about its sibling files."""
     path = os.path.join(directory, yaml_name)
     data = _yaml(path) or {"_unreadable": True}
@@ -174,6 +361,7 @@ def _scope(directory, yaml_name):
     data["_bugs"] = _bugs(directory)
     data["_has_review"] = os.path.isfile(os.path.join(directory, "review.md"))
     data["_has_readme"] = os.path.isfile(os.path.join(directory, "README.md"))
+    data["_reports"] = _report_summaries(data, report_base)
     data["_missing_files"] = sorted(
         entry["file"] for entry in _automation(data)
         if isinstance(entry, dict) and entry.get("file") and not os.path.exists(entry["file"])
@@ -250,20 +438,24 @@ def _releases():
     return releases
 
 
-def load(root="."):
-    """Builds the bundle. Paths inside it are relative to the repository root."""
+def load(root=".", report_base=None):
+    """Builds the bundle. Paths inside it are relative to the repository root.
+
+    report_base is the checkout whose qa/reports the evidence summaries are read from: this one
+    unless given (an absolute path, to read another checkout's reports without writing there)."""
     previous = os.getcwd()
     os.chdir(root)
+    report_base = report_base or "."
     try:
         register = _yaml("docs/brd/requirements.yaml") or {}
         features, stages = [], []
         for feature_dir in sorted(glob.glob("features/F[0-9][0-9]-*")):
             if not os.path.isdir(feature_dir):
                 continue
-            features.append(_scope(feature_dir, "feature.yaml"))
+            features.append(_scope(feature_dir, "feature.yaml", report_base))
             for stage_dir in sorted(glob.glob(os.path.join(feature_dir, "stages", "*"))):
                 if os.path.isdir(stage_dir):
-                    stage = _scope(stage_dir, "stage.yaml")
+                    stage = _scope(stage_dir, "stage.yaml", report_base)
                     stage["_feature_dir"] = feature_dir
                     stages.append(stage)
         return {

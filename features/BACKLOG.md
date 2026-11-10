@@ -77,3 +77,5 @@ Added by the lead at `stage-close` and `feature-close`, from suggestions classed
 | A quote and enquiry link that needs no app, for bridal customers (F19 ships before F20) | Foundation review 2026-11-10 | Revisit OCC-15 and OCC-16 at `feature-new F19` |
 | Decimal tax and service-charge rates on the Tax & charges screen | Decision 118 | Rates are stored in basis points; the screen keeps whole percentages until asked |
 | Self-serve salon sign-up with a trial | Foundation review 2026-11-10 | PLT-01 is operator-only; Fresha, Booksy and Vagaro offer trials |
+| Split CR-020 by feature, or give a change request a per-feature status, before F17 merges | Decision 124 | An `approved` change request holds the dependants of a merged feature it names; CR-020 spans F17 to F22 |
+| Shard the regression suite across QA instances (`qa-1` to `qa-N`, one build, `--shard k/N`, merged summaries); three instances is the ceiling on a 16 GB machine | Foundation review, package 3 | The suite took 78 minutes on one worker; a test clock per salon is the longer fix |

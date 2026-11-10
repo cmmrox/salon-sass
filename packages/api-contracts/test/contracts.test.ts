@@ -10,6 +10,21 @@ import { compareDocument, findStaleFiles, renderClient, SCHEMA_FILE } from '../s
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const committedDocument = resolve(packageRoot, '..', '..', 'docs', 'api', 'openapi.json');
 const generatedDirectory = join(packageRoot, 'src', 'generated');
+const errorCodeSource = resolve(
+  packageRoot,
+  '..',
+  '..',
+  'apps',
+  'api',
+  'src',
+  'main',
+  'java',
+  'com',
+  'salonplatform',
+  'shared',
+  'web',
+  'ErrorCode.java',
+);
 
 const document = JSON.stringify({
   openapi: '3.1.0',
@@ -103,44 +118,16 @@ describe('the committed contract', () => {
 
   it('lists every error code once, gives every problem a trace id, and names the fields of a validation failure', () => {
     const problem = committed.components.schemas.Problem;
+    // The codes are declared in one place, the API's ErrorCode enum (CR-001), and the contract
+    // lists exactly those, in their order: read from the source, so a new code does not fail this
+    // test merely by existing, while a code missing from the contract, or one it lists that is not
+    // declared, still does.
+    const declared = [...readFileSync(errorCodeSource, 'utf8').matchAll(/^\s+[A-Z][A-Z_]*\(\s*"([a-z_]+)"\s*,/gm)].map(
+      (match) => match[1],
+    );
+    expect(declared).toEqual(expect.arrayContaining(['bad_request', 'not_found', 'salon_suspended', 'internal_error']));
 
-    expect(problem.properties.code.enum).toEqual([
-      'invalid_client_assertion',
-      'confirmation_required',
-      'invalid_code',
-      'code_expired',
-      'provider_unavailable',
-      'invalid_credentials',
-      'invalid_session',
-      'permission_denied',
-      'conflict',
-      'rate_limited',
-      'slug_taken',
-      'plan_key_taken',
-      'idempotency_conflict',
-      'salon_read_only',
-      'entitlement_exceeded',
-      'invalid_state',
-      // F05-S01: a category or service still in use, and the catalogue's limits.
-      'in_use',
-      'limit_reached',
-      'support_read_only',
-      'support_session_active',
-      // F07-S01: bookings and holds.
-      'slot_taken',
-      'slot_unavailable',
-      'hold_expired',
-      'rules_not_set',
-      'bad_request',
-      'not_found',
-      'method_not_allowed',
-      'not_acceptable',
-      'unsupported_media_type',
-      'request_rejected',
-      'service_unavailable',
-      'salon_suspended',
-      'internal_error',
-    ]);
+    expect(problem.properties.code.enum).toEqual(declared);
     expect(new Set(problem.properties.code.enum).size).toBe(problem.properties.code.enum.length);
     expect(problem.required).toEqual(expect.arrayContaining(['code', 'status', 'title', 'traceId']));
     expect(problem.properties.traceId.pattern).toBe('^[0-9a-f]{32}$');

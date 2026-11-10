@@ -1,0 +1,13 @@
+# What the QA instance's build is made from: one path per line, relative to the repository root.
+# A commit that changes none of these leaves the running product as it was.
+#
+# Read by infra/scripts/qa-redeploy.sh (it refuses uncommitted changes here, and checks the rebuilt
+# API against them), qa/shared/build-identity.mjs (Playwright's global setup) and
+# qa/scripts/sdlc_lib/runner.py (`sdlc run`). The one definition: change it here only.
+apps
+packages
+package.json
+pnpm-lock.yaml
+pnpm-workspace.yaml
+.nvmrc
+.sdkmanrc

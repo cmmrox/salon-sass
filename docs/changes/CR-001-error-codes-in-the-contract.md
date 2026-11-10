@@ -1,7 +1,7 @@
 ---
 id: CR-001
 title: List the error codes in the API contract
-status: approved
+status: implemented
 requested_by: QA review of F01-S01
 requested_on: 2026-10-12
 decided_on: 2026-10-12
@@ -37,3 +37,5 @@ Approve, as part of F01-S04.
 ## Decision
 
 Approved by the owner on 2026-10-12, as recommended: built in F01-S04.
+
+Implemented in F01-S04, merged with F01. Marked `implemented` on 2026-11-10 (decision 124); the status had been left at `approved`.

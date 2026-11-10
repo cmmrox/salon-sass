@@ -13,7 +13,7 @@ import type {
 /** Catalogue answers for the Services & pricing page's tests: three categories and three services. */
 export const COLOUR = '6b0a3c1e-9a4e-4b8e-9d1f-2a3b4c5d6e70';
 export const NAILS = '6b0a3c1e-9a4e-4b8e-9d1f-2a3b4c5d6e71';
-export const WAXING = '6b0a3c1e-9a4e-4b8e-9d1f-2a3b4c5d6e72';
+const WAXING = '6b0a3c1e-9a4e-4b8e-9d1f-2a3b4c5d6e72';
 
 export const CATEGORIES: CategoryList = {
   listVersion: 4,

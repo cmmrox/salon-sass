@@ -56,7 +56,9 @@ afterEach(() => vi.unstubAllGlobals());
 
 const render = (permissions: string[]) => {
   current = principal(permissions);
-  return renderWithMessages(<AccountScreen kind="staff" initialPrincipal={current} timeZone="Asia/Colombo" view="staff" />);
+  return renderWithMessages(
+    <AccountScreen kind="staff" initialPrincipal={current} timeZone="Asia/Colombo" view="staff" />,
+  );
 };
 const row = (id: string) => screen.getAllByTestId('account-staff-row').find((each) => each.dataset.id === id)!;
 

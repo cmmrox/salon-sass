@@ -62,6 +62,12 @@ def feature(**changes):
     return data
 
 
+def reviewed(scope, revision="c" * 40):
+    """The scope with the commit the lead read at feature-review recorded."""
+    scope["integration"]["reviewed_revision"] = revision
+    return scope
+
+
 def bug(**changes):
     data = {"id": "BUG-F07-S01-001", "title": "Slot shown twice", "severity": "major",
             "status": "open", "_path": STAGE_DIR + "/bugs/BUG-F07-S01-001-slot-shown-twice.md"}

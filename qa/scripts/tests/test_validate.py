@@ -94,7 +94,7 @@ class ValidateTest(unittest.TestCase):
                                                   "file": "qa/web/F07/journey-book.spec.ts",
                                                   "covers": ["TC-F07-001"]}]})
         data.update(changes)
-        return fx.feature(**data)
+        return fx.reviewed(fx.feature(**data))
 
     def test_feature_pass_needs_every_stage_criterion_covered_by_a_case(self):
         covered = fx.stage(qa_status="not-run", evidence={}, _has_review=False)
@@ -302,9 +302,24 @@ class ValidateTest(unittest.TestCase):
                           _cases_md=["TC-F07-001"],
                           verification={"manual": [{"case": "TC-F07-001", "reason": "needs a real phone",
                                                     "performed_on": "2026-10-12"}]})
+        fx.reviewed(done)
         self.assertEqual(findings(fx.bundle(features=[done])), [])
         self.assertFinding(fx.bundle(features=[done], stages=[fx.stage(status="built", qa_status="not-run")]),
                            "but stage F07-S01 is 'built'")
+
+    def test_a_pass_needs_the_recorded_review_unless_the_feature_is_merged(self):
+        unreviewed = self.passed_feature()
+        unreviewed["integration"]["reviewed_revision"] = None
+        self.assertFinding(fx.bundle(features=[unreviewed]), "needs integration.reviewed_revision")
+        self.assertEqual(findings(fx.bundle(features=[self.passed_feature()])), [])
+        # A feature with a merge record is history: F01 to F07 merged before the review step.
+        merged = fx.feature(status="complete", qa_status="pass", integration={
+            "branch": "charithm/feature/F07-online-booking", "qa_revision": "a" * 40,
+            "pull_request": "https://github.com/example/salon/pull/26", "merged_commit": "b" * 40,
+            "merged_at": "2026-11-10T01:21:23Z"})
+        self.assertEqual([f for f in validate.check_integration(merged) if "reviewed_revision" in f], [])
+        # A feature not passed yet does not need it.
+        self.assertEqual([f for f in validate.check_integration(fx.feature()) if "reviewed_revision" in f], [])
 
     # --- generated documents and skills ---
 
