@@ -212,6 +212,10 @@ salon.identity:
   challenge-key: ${SALON_IDENTITY_CHALLENGE_KEY:}
   encryption-key: ${SALON_IDENTITY_ENCRYPTION_KEY:}
   proxy-key: ${SALON_IDENTITY_PROXY_KEY:}
+  # Staff password checks (PBKDF2) running at once per instance, outside any transaction (decision 120); one more
+  # waits up to two seconds, then is refused 503. Unset, it is the number of processors the JVM sees; set it with
+  # SALON_IDENTITY_PASSWORD_CHECKS_CONCURRENT.
+  # password-checks.concurrent:
   codes:
     number-limit: ${SALON_IDENTITY_CODE_NUMBER_LIMIT:3}
     device-limit: ${SALON_IDENTITY_CODE_DEVICE_LIMIT:10}
